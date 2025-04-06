@@ -29,21 +29,21 @@
       "short_name": "Feed",
       "description": "Open the feed page",
       "url": "/feed",
-      "icons": [{ "src": "icons/icon-128x128.png", "sizes": "128x128" }, { "src": "assets/icons/icon-96x96.png", "sizes": "96x96" }]
+      "icons": [{ "src": "icons/icon-128x128.png", "sizes": "128x128" }, { "src": "icons/icon-96x96.png", "sizes": "96x96" }]
     },
     {
       "name": "Notifications",
       "short_name": "Notifications",
       "description": "Open the notifications",
       "url": "/notifications",
-      "icons": [{ "src": "icons/icon-128x128.png", "sizes": "128x128" }, { "src": "assets/icons/icon-96x96.png", "sizes": "96x96" }]
+      "icons": [{ "src": "icons/icon-128x128.png", "sizes": "128x128" }, { "src": "icons/icon-96x96.png", "sizes": "96x96" }]
     },
     {
       "name": "Settings",
       "short_name": "Settings",
       "description": "Open the settings",
       "url": "/settings",
-      "icons": [{ "src": "icons/icon-128x128.png", "sizes": "128x128" }, { "src": "assets/icons/icon-96x96.png", "sizes": "96x96" }]
+      "icons": [{ "src": "icons/icon-128x128.png", "sizes": "128x128" }, { "src": "icons/icon-96x96.png", "sizes": "96x96" }]
     }
   ],
   "icons": [
