@@ -7,7 +7,7 @@
     "beforeDevCommand": "npm run start",
     "devUrl": "http://localhost:4200",
     "beforeBuildCommand": "npm run build",
-    "frontendDist": "../dist/app/browser"
+    "frontendDist": "../dist/browser"
   },
   "app": {
     "windows": [
@@ -23,7 +23,11 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": [
+      "msi", 
+      "appimage", 
+      "dmg"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
