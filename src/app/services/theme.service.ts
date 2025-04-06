@@ -8,7 +8,7 @@ export class ThemeService {
   private readonly darkThemeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
   
   // Theme colors for PWA
-  private readonly LIGHT_THEME_COLOR = '#f5f5f5'; // Light background color
+  private readonly LIGHT_THEME_COLOR = '#FEF7FA'; // Light background color
   private readonly DARK_THEME_COLOR = '#303030'; // Dark background color
   
   darkMode = signal<boolean>(this.getInitialThemePreference());
@@ -50,10 +50,10 @@ export class ThemeService {
     
     if (isDark) {
       document.documentElement.classList.add('dark');
-      document.body.style.backgroundColor = this.DARK_THEME_COLOR;
+      // document.body.style.backgroundColor = this.DARK_THEME_COLOR;
     } else {
       document.documentElement.classList.remove('dark');
-      document.body.style.backgroundColor = this.LIGHT_THEME_COLOR;
+      // document.body.style.backgroundColor = this.LIGHT_THEME_COLOR;
     }
     
     this.updateThemeMetaTag(themeColor);
