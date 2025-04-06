@@ -32,7 +32,7 @@ nav {
   
   // Make space for mobile nav when on mobile
   @media (max-width: 599px) {
-    height: calc(100% - 56px);
+    height: calc(100% - 56px); // Reverted back to 56px
   }
 }
 
@@ -77,11 +77,11 @@ mat-nav-list .mat-icon {
 
 // Mobile navigation footer
 .mobile-nav {
-  position: relative; // Changed from fixed to relative
+  position: relative;
   bottom: 0;
   left: 0;
   right: 0;
-  height: 56px;
+  height: 56px; // Reverted back to 56px
   background-color: var(--mat-toolbar-container-background-color);
   color: var(--mat-toolbar-container-text-color);
   display: flex;
@@ -93,15 +93,35 @@ mat-nav-list .mat-icon {
   flex: 1;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: center; // Center items horizontally
   justify-content: center;
-  padding: 4px 0;
+  padding: 0;
   min-width: unset;
+  line-height: normal;
+  height: 100%;
+  text-align: center; // Ensure text is centered
+}
+
+.mobile-nav-button .mat-icon {
+  font-size: 22px;
+  height: 22px;
+  width: 22px;
+  margin-bottom: 2px;
+  display: block; // Make icon a block element
+  margin-left: auto; // Center the icon horizontally
+  margin-right: auto;
 }
 
 .mobile-nav-label {
-  font-size: 12px;
-  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  display: block; // Make label a block element
+  width: 100%; // Full width to ensure centering
 }
 
 .sidenav-labels {
