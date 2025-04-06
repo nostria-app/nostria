@@ -10,7 +10,7 @@
     <span class="app-title">{{title}}</span>
     <span class="toolbar-spacer"></span>
     <button mat-icon-button (click)="themeService.toggleDarkMode()" aria-label="Toggle theme">
-      <mat-icon>{{ themeService.darkMode() ? 'light_mode' : 'dark_mode' }}</mat-icon>
+      <mat-icon>{{ themeService.darkMode() ? 'dark_mode' : 'light_mode' }}</mat-icon>
     </button>
   </mat-toolbar>
 
@@ -30,7 +30,7 @@
              [routerLink]="[item.path]" 
              routerLinkActive="active-link" 
              (click)="isHandset() ? toggleSidenav() : null">
-            <mat-icon>{{item.icon}}</mat-icon>
+            <mat-icon matListItemIcon>{{item.icon}}</mat-icon>
             <span class="nav-label">{{item.label}}</span>
           </a>
         }
