@@ -6,6 +6,11 @@ html {
   --mat-success-lighter: #c8e6c9;
   --mat-success-darker: #2e7d32;
 
+  // Scrollbar colors for light theme
+  --scrollbar-track: #f1f1f1;
+  --scrollbar-thumb: #c1c1c1;
+  --scrollbar-thumb-hover: #a1a1a1;
+
   @include mat.theme((color: (theme-type: light,
         primary: nostria-theme.$primary-palette,
         tertiary: nostria-theme.$tertiary-palette,
@@ -21,6 +26,11 @@ html {
   --mat-success-lighter: #a5d6a7;
   --mat-success-darker: #388e3c;
 
+  // Scrollbar colors for dark theme
+  --scrollbar-track: #424242;
+  --scrollbar-thumb: #686868;
+  --scrollbar-thumb-hover: #7e7e7e;
+
   @include mat.theme((color: (theme-type: dark,
         primary: nostria-theme.$primary-palette )));
 }
@@ -31,6 +41,31 @@ body {
   height: 100%;
   margin: 0;
   font-family: Roboto, "Helvetica Neue", sans-serif;
+}
+
+// Scrollbar styling
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+// Firefox scrollbar support
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
 mat-card {
