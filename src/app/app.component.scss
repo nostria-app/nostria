@@ -56,7 +56,15 @@ nav {
 }
 
 .app-title {
+  margin-left: 4px;
+}
+
+.app-icon {
   margin-left: 8px;
+  margin-right: 4px;
+  height: 32px;
+  width: 32px;
+  border-radius: 4px;
 }
 
 .content-wrapper {
