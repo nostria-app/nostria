@@ -7,3 +7,5 @@ The application uses Angular Material, so make sure to use Angular Material comp
 Make sure to put most styles in the global styles.scss file, and only use component styles for component-specific styles.
 
 Always use "fetch" for http request instead of HttpClient.
+
+Don't use constructor for dependency injection, use inject instead.
