@@ -145,3 +145,21 @@ mat-card-content ul {
 mat-card-content li {
   margin-bottom: 8px;
 }
+
+// Update icon animation
+.update-icon {
+  animation: pulse 1.5s infinite;
+  color: var(--mat-success-color);
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 1;
+  }
+}

@@ -6,6 +6,15 @@
     </button>
     <span class="app-title">{{title}}</span>
     <span class="toolbar-spacer"></span>
+    @if (!pwaUpdateService.updateAvailable()) {
+      <button mat-icon-button 
+              class="update-button"
+              (click)="pwaUpdateService.updateApplication()" 
+              matTooltip="Update available! Click to update and reload."
+              aria-label="Update application">
+        <mat-icon class="update-icon">system_update</mat-icon>
+      </button>
+    }
     <button mat-icon-button (click)="themeService.toggleDarkMode()" aria-label="Toggle theme">
       <mat-icon>{{ themeService.darkMode() ? 'dark_mode' : 'light_mode' }}</mat-icon>
     </button>

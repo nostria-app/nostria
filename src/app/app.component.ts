@@ -7,7 +7,9 @@ import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatListModule } from '@angular/material/list';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { ThemeService } from './services/theme.service';
+import { PwaUpdateService } from './services/pwa-update.service';
 import { CommonModule } from '@angular/common';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-root',
@@ -21,7 +23,8 @@ import { CommonModule } from '@angular/common';
     MatIconModule,
     MatSidenavModule,
     MatListModule,
-    CommonModule
+    CommonModule,
+    MatTooltipModule
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
@@ -30,6 +33,7 @@ export class AppComponent {
   title = 'Nostria';
   themeService = inject(ThemeService);
   breakpointObserver = inject(BreakpointObserver);
+  pwaUpdateService = inject(PwaUpdateService);
 
   isHandset = signal(false);
   opened = signal(true);
