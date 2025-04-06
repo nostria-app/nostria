@@ -6,7 +6,7 @@
     </button>
     <span class="app-title">{{title}}</span>
     <span class="toolbar-spacer"></span>
-    @if (!pwaUpdateService.updateAvailable()) {
+    @if (pwaUpdateService.updateAvailable()) {
       <button mat-icon-button 
               class="update-button"
               (click)="pwaUpdateService.updateApplication()" 
