@@ -29,6 +29,11 @@ nav {
 .sidenav-container {
   flex: 1;
   overflow: auto;
+  
+  // Make space for mobile nav when on mobile
+  @media (max-width: 599px) {
+    height: calc(100% - 56px);
+  }
 }
 
 .sidenav {
@@ -57,6 +62,8 @@ nav {
 .content-wrapper {
   padding: 1rem;
   box-sizing: border-box;
+  height: 100%;
+  overflow-y: auto;
   
   // Adjust for mobile footer presence
   @media (max-width: 599px) {
@@ -70,7 +77,7 @@ mat-nav-list .mat-icon {
 
 // Mobile navigation footer
 .mobile-nav {
-  position: fixed;
+  position: relative; // Changed from fixed to relative
   bottom: 0;
   left: 0;
   right: 0;
@@ -96,7 +103,6 @@ mat-nav-list .mat-icon {
   font-size: 12px;
   margin-top: 4px;
 }
-
 
 .sidenav-labels {
   width: 200px;

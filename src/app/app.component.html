@@ -28,7 +28,6 @@
           @if(displayLabels()) {
           <span class="nav-label">{{item.label}}</span>
           }
-
         </a>
         }
 
@@ -37,11 +36,8 @@
           <mat-icon>chevron_left</mat-icon>
           } @else {
           <mat-icon>chevron_right</mat-icon>
-
           }
-
         </a>
-
       </mat-nav-list>
     </mat-sidenav>
 
@@ -54,7 +50,7 @@
     </mat-sidenav-content>
   </mat-sidenav-container>
 
-  <!-- Mobile navigation footer -->
+  <!-- Mobile navigation footer - now outside of sidenav container -->
   @if (isHandset()) {
   <div class="mobile-nav">
     @for (item of navItems; track item.path) {
