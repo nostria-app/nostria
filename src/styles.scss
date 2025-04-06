@@ -109,3 +109,39 @@ body {
   margin: 0 auto;
   padding: 16px;
 }
+
+// About page styles
+.logo-container {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+
+.logo {
+  width: 128px;
+  height: 128px;
+  margin-left: 16px;
+  margin-right: 0;
+}
+
+.description {
+  font-size: 18px;
+  font-weight: 500;
+  margin: 16px 0;
+}
+
+mat-card-content h3 {
+  margin-top: 24px;
+  margin-bottom: 12px;
+  font-weight: 500;
+  color: var(--mat-sys-primary);
+}
+
+mat-card-content ul {
+  list-style-type: none;
+  padding-left: 16px;
+}
+
+mat-card-content li {
+  margin-bottom: 8px;
+}
