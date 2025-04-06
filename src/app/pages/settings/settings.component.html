@@ -1,12 +1,17 @@
-<mat-card>
-  <mat-card-header>
-    <mat-card-title>Settings</mat-card-title>
-  </mat-card-header>
-  <mat-card-content>
-    <div class="settings-container">
-      <mat-slide-toggle [(ngModel)]="darkMode" (change)="toggleDarkMode()">
-        Dark Mode
-      </mat-slide-toggle>
-    </div>
-  </mat-card-content>
-</mat-card>
+<div class="content">
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>Settings</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="setting-item">
+        <span>Dark Mode</span>
+        <mat-slide-toggle 
+          [checked]="themeService.darkMode()" 
+          (change)="toggleDarkMode()">
+          {{ themeService.darkMode() ? 'On' : 'Off' }}
+        </mat-slide-toggle>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

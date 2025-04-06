@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { FormsModule } from '@angular/forms';
+import { ThemeService } from '../../services/theme.service';
 
 @Component({
   selector: 'app-settings',
@@ -11,10 +12,9 @@ import { FormsModule } from '@angular/forms';
   styleUrl: './settings.component.scss'
 })
 export class SettingsComponent {
-  darkMode = false;
+  constructor(public themeService: ThemeService) {}
   
   toggleDarkMode() {
-    // Logic for toggling dark mode would go here
-    console.log('Dark mode toggled:', this.darkMode);
+    this.themeService.toggleDarkMode();
   }
 }

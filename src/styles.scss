@@ -54,3 +54,16 @@ a:hover {
   transition: color 250ms ease;
   color: var(--mat-sys-inverse-primary);
 }
+
+/* Add setting item styles */
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.dark .setting-item {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
