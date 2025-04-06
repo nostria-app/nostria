@@ -72,11 +72,6 @@ nav {
   box-sizing: border-box;
   height: 100%;
   overflow-y: auto;
-  
-  // Adjust for mobile footer presence
-  @media (max-width: 599px) {
-    padding-bottom: 72px;
-  }
 }
 
 mat-nav-list .mat-icon {
