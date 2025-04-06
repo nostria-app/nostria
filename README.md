@@ -1,5 +1,16 @@
 # Nostria
+
+<img src="public/icons/icon-128x128.png" alt="Nostria Logo" width="128" height="128">
+
 Reference Implementation of the most important features of Nostr with a global scale architecture.
+
+## Installation
+
+Nostria is accessible as both web app and desktop app.
+
+Web: https://nostria.brainbox.no
+
+Desktop: https://github.com/sondreb/nostria/releases
 
 ## Architecture
 
