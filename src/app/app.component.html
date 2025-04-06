@@ -1,13 +1,66 @@
-<mat-toolbar color="primary">
-  <span>{{ title }}</span>
-  <span class="spacer"></span>
-  <nav>
-    <a mat-button routerLink="/home" routerLinkActive="active">Home</a>
-    <a mat-button routerLink="/settings" routerLinkActive="active">Settings</a>
-    <a mat-button routerLink="/about" routerLinkActive="active">About</a>
-  </nav>
-</mat-toolbar>
+<div class="app-container" [class.dark-theme]="themeService.darkMode()">
+  <!-- Top toolbar - now outside and above the sidenav container -->
+  <mat-toolbar color="primary" class="app-toolbar">
+    <button
+      mat-icon-button
+      (click)="toggleSidenav()"
+      aria-label="Toggle sidenav">
+      <mat-icon>menu</mat-icon>
+    </button>
+    <span class="app-title">{{title}}</span>
+    <span class="toolbar-spacer"></span>
+    <button mat-icon-button (click)="themeService.toggleDarkMode()" aria-label="Toggle theme">
+      <mat-icon>{{ themeService.darkMode() ? 'light_mode' : 'dark_mode' }}</mat-icon>
+    </button>
+  </mat-toolbar>
 
-<div class="content">
-  <router-outlet />
+  <!-- Sidenav container now below the toolbar -->
+  <mat-sidenav-container class="sidenav-container">
+    <!-- Side navigation -->
+    <mat-sidenav 
+      #sidenav 
+      class="sidenav" 
+      [opened]="opened()" 
+      [mode]="isHandset() ? 'over' : 'side'"
+      [fixedInViewport]="false">
+      <mat-toolbar>Menu</mat-toolbar>
+      <mat-nav-list>
+        @for (item of navItems; track item.path) {
+          <a mat-list-item 
+             [routerLink]="[item.path]" 
+             routerLinkActive="active-link" 
+             (click)="isHandset() ? toggleSidenav() : null">
+            <mat-icon>{{item.icon}}</mat-icon>
+            <span class="nav-label">{{item.label}}</span>
+          </a>
+        }
+      </mat-nav-list>
+    </mat-sidenav>
+
+    <!-- Main content container -->
+    <mat-sidenav-content>
+      <!-- Page content -->
+      <div class="content-wrapper">
+        <router-outlet></router-outlet>
+      </div>
+    </mat-sidenav-content>
+  </mat-sidenav-container>
+
+  <!-- Mobile navigation footer -->
+  @if (isHandset()) {
+    <div class="mobile-nav">
+      @for (item of navItems; track item.path) {
+        <a mat-button class="mobile-nav-button" 
+          [routerLink]="[item.path]" 
+          routerLinkActive="active-link">
+          <mat-icon>{{item.icon}}</mat-icon>
+          <div class="mobile-nav-label">{{item.label}}</div>
+        </a>
+      }
+      <button mat-button class="mobile-nav-button" (click)="themeService.toggleDarkMode()">
+        <mat-icon>{{ themeService.darkMode() ? 'light_mode' : 'dark_mode' }}</mat-icon>
+        <div class="mobile-nav-label">Theme</div>
+      </button>
+    </div>
+  }
 </div>

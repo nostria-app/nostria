@@ -14,3 +14,85 @@ nav {
 .content {
   padding: 16px;
 }
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app-toolbar {
+  z-index: 2;
+}
+
+.sidenav-container {
+  flex: 1;
+  overflow: auto;
+}
+
+.sidenav {
+  width: 250px;
+}
+
+.active-link {
+  background-color: rgba(0, 0, 0, 0.04);
+  &.mat-mdc-list-item {
+    color: var(--mat-primary-500);
+  }
+}
+
+.dark-theme .active-link {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.toolbar-spacer {
+  flex: 1 1 auto;
+}
+
+.app-title {
+  margin-left: 8px;
+}
+
+.content-wrapper {
+  padding: 1rem;
+  box-sizing: border-box;
+  
+  // Adjust for mobile footer presence
+  @media (max-width: 599px) {
+    padding-bottom: 72px;
+  }
+}
+
+mat-nav-list .mat-icon {
+  margin-right: 12px;
+}
+
+// Mobile navigation footer
+.mobile-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  background-color: var(--mat-toolbar-container-background-color);
+  color: var(--mat-toolbar-container-text-color);
+  display: flex;
+  z-index: 2;
+  box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.mobile-nav-button {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 0;
+  min-width: unset;
+}
+
+.mobile-nav-label {
+  font-size: 12px;
+  margin-top: 4px;
+}

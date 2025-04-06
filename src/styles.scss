@@ -67,3 +67,45 @@ a:hover {
 .dark .setting-item {
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 }
+
+// Main theme-related styles
+body {
+  margin: 0;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.dark-theme {
+  --mat-toolbar-container-background-color: #424242;
+  --mat-toolbar-container-text-color: white;
+  
+  background-color: #303030;
+  color: white;
+  
+  .mat-drawer {
+    background-color: #424242;
+    color: white;
+  }
+  
+  .mat-drawer-container {
+    background-color: #303030;
+    color: white;
+  }
+  
+  .mat-mdc-card {
+    background-color: #424242;
+    color: white;
+  }
+}
+
+// Common card styling
+.mat-mdc-card {
+  margin-bottom: 16px;
+}
+
+.page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 16px;
+}
