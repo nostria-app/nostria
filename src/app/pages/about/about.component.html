@@ -1,11 +1,39 @@
 <div class="content">
-<mat-card>
-  <mat-card-header>
-    <mat-card-title>About</mat-card-title>
-  </mat-card-header>
-  <mat-card-content>
-    <p>This is a sample application built with Angular.</p>
-    <p>Version: {{ version }}</p>
-  </mat-card-content>
-</mat-card>
+  <mat-card>
+    <mat-card-header>
+      <div class="logo-container">
+        <img src="icons/icon-128x128.png" alt="Nostria Logo" class="logo">
+      </div>
+      <mat-card-title>About Nostria</mat-card-title>
+      <mat-card-subtitle>Version: {{ version }}</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <p class="description">
+        Reference Implementation of the most important features of Nostr with a global scale architecture.
+      </p>
+
+      <h3>What is Nostria?</h3>
+      <p>
+        Nostria is a client for the Nostr protocol, which is a decentralized social network protocol.
+        It allows users to communicate and share information without relying on a central server.
+      </p>
+      <p>
+        Nostria implements the usage of the Nostr protocol to ensure maximum decentralization and
+        global scalability, without compromising on user experience. The client is designed to be fast,
+        responsive, and easy to use, with a focus on providing a great user experience.
+      </p>
+
+      <h3>Desktop</h3>
+      <p>Nostria is also accessible as desktop app:</p>
+      <ul>
+        <li><a href="https://github.com/sondreb/nostria/releases"
+            target="_blank">https://github.com/sondreb/nostria/releases</a></li>
+      </ul>
+
+      <h3>Architecture</h3>
+      <p>
+        The client is built on Angular and Angular Material. It is utilizing Tauri to package the app for desktop users.
+      </p>
+    </mat-card-content>
+  </mat-card>
 </div>
