@@ -1,0 +1,16 @@
+.spacer {
+  flex: 1 1 auto;
+}
+
+nav {
+  display: flex;
+  gap: 8px;
+}
+
+.active {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.content {
+  padding: 16px;
+}

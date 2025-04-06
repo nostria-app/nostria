@@ -1,1 +1,13 @@
-<router-outlet />
+<mat-toolbar color="primary">
+  <span>{{ title }}</span>
+  <span class="spacer"></span>
+  <nav>
+    <a mat-button routerLink="/home" routerLinkActive="active">Home</a>
+    <a mat-button routerLink="/settings" routerLinkActive="active">Settings</a>
+    <a mat-button routerLink="/about" routerLinkActive="active">About</a>
+  </nav>
+</mat-toolbar>
+
+<div class="content">
+  <router-outlet />
+</div>

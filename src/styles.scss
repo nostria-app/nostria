@@ -25,14 +25,23 @@ html {
         primary: nostria-theme.$primary-palette )));
 }
 
+// Global styles
 html,
 body {
   height: 100%;
-}
-
-body {
   margin: 0;
   font-family: Roboto, "Helvetica Neue", sans-serif;
+}
+
+mat-card {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 16px;
 }
 
 a {
