@@ -96,3 +96,21 @@ mat-nav-list .mat-icon {
   font-size: 12px;
   margin-top: 4px;
 }
+
+
+.sidenav-labels {
+  width: 200px;
+}
+
+.sidenav-small {
+  // width: var(--mat-sidenav-container-width, 48px);
+  width: 56px;
+}
+
+.sidenav-small .mat-icon {
+  margin-right: 0 !important;
+}
+
+.sidenav-small .logo-icon {
+  width: 56px !important;
+}
