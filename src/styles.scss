@@ -109,6 +109,7 @@ body {
   font-family: Roboto, "Helvetica Neue", sans-serif;
   height: 100vh;
   overflow: hidden;
+  transition: background-color 0.3s ease;
 }
 
 .dark-theme {
