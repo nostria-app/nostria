@@ -73,11 +73,7 @@ export class RelayService {
     // After setting the user pool, check the online status of the relays
     this.logger.debug('User pool set, checking relay status...');
 
-    const poolRelays: Map<string, any> = (this.userPool as any).relays;
-    console.log(poolRelays);
-
     const connectionStatuses = this.userPool.listConnectionStatus();
-    console.log(connectionStatuses);
 
     // Update relay statuses using a for...of loop
     for (const [url, status] of connectionStatuses) {
@@ -92,6 +88,7 @@ export class RelayService {
     }
 
     // In case we need access to the relays in the pool, we can use this code:
+    // const poolRelays: Map<string, any> = (this.userPool as any).relays;
     // if (poolRelays instanceof Map) {
     //   for (const relay of this.relays()) {
     //     const poolRelay = poolRelays.get(relay.url);
