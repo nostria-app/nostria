@@ -8,6 +8,13 @@
       <div mat-dialog-content>
         <p class="dialog-subtitle">Choose how you would like to use Nostria:</p>
         
+        @if (extensionError()) {
+          <div class="extension-error">
+            <p>{{ extensionError() }}</p>
+            <p>Make sure you have a Nostr extension installed like Alby or nos2x</p>
+          </div>
+        }
+        
         <div class="login-options">
           <mat-card class="login-card" (click)="generateNewKey()">
             <mat-card-header>
@@ -45,6 +52,13 @@
             </mat-card-content>
           </mat-card>
         </div>
+      </div>
+    }
+    
+    @if (currentView() === 'extension-loading') {
+      <div mat-dialog-content class="loading-content">
+        <mat-spinner diameter="48"></mat-spinner>
+        <p class="loading-text">Connecting to your Nostr extension...</p>
       </div>
     }
     

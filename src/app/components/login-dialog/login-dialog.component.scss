@@ -87,3 +87,32 @@
   background-color: var(--mat-warn-container-color, rgba(244, 67, 54, 0.05));
   border: 1px solid var(--mat-warn-outline-color, rgba(244, 67, 54, 0.2));
 }
+
+.loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  min-height: 150px;
+}
+
+.loading-text {
+  margin-top: 16px;
+  text-align: center;
+  color: var(--mat-primary-text-color);
+}
+
+.extension-error {
+  margin-bottom: 16px;
+  color: var(--mat-warn-color, #f44336);
+  padding: 10px;
+  border-radius: 4px;
+  background-color: var(--mat-warn-container-color, rgba(244, 67, 54, 0.05));
+  border: 1px solid var(--mat-warn-outline-color, rgba(244, 67, 54, 0.2));
+  text-align: center;
+  
+  p {
+    margin: 4px 0;
+  }
+}

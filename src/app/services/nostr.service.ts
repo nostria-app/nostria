@@ -50,16 +50,43 @@ export class NostrService {
     });
   }
   
-  loginWithExtension(): void {
-    // In a real implementation, you'd use window.nostr to request the public key
-    // For now, we'll mock this behavior
-    setTimeout(() => {
-      const mockPubkey = `npub${Math.random().toString(36).substring(2, 15)}`;
+  async loginWithExtension(): Promise<void> {
+    try {
+      // Check if NIP-07 extension is available
+      if (!window.nostr) {
+        throw new Error('No Nostr extension found. Please install Alby, nos2x, or another NIP-07 compatible extension.');
+      }
+      
+      // Get the public key from the extension
+      const pubkey = await window.nostr.getPublicKey();
+      
+      if (!pubkey) {
+        throw new Error('Failed to get public key from extension');
+      }
+      
+      // Get user metadata if available
+      let name: string | undefined = undefined;
+      try {
+        // Some extensions may provide user metadata like name
+        const userInfo = await window.nostr.getUserMetadata();
+        name = userInfo?.name;
+      } catch (error) {
+        // Ignore errors for metadata, it's optional
+        console.warn('Could not get user metadata from extension', error);
+      }
+      
+      // Set the user with the public key from the extension
       this.user.set({
-        pubkey: mockPubkey,
+        pubkey,
+        name,
         source: 'extension'
       });
-    }, 500);
+      
+      return;
+    } catch (error) {
+      console.error('Error connecting to Nostr extension:', error);
+      throw error; // Re-throw to handle in the UI
+    }
   }
   
   loginWithNsec(nsec: string): void {

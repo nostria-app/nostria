@@ -7,6 +7,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { NostrService } from '../../services/nostr.service';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 @Component({
   selector: 'app-login-dialog',
@@ -18,7 +19,8 @@ import { NostrService } from '../../services/nostr.service';
     MatInputModule,
     MatFormFieldModule,
     FormsModule,
-    MatCardModule
+    MatCardModule,
+    MatProgressSpinnerModule
   ],
   templateUrl: './login-dialog.component.html',
   styleUrl: './login-dialog.component.scss',
@@ -27,17 +29,26 @@ export class LoginDialogComponent {
   private dialogRef = inject(MatDialogRef<LoginDialogComponent>);
   private nostrService = inject(NostrService);
 
-  currentView = signal<'main' | 'nsec'>('main');
+  currentView = signal<'main' | 'nsec' | 'extension-loading'>('main');
   nsecKey = '';
+  extensionError = signal<string | null>(null);
 
   generateNewKey(): void {
     this.nostrService.generateNewKey();
     this.dialogRef.close();
   }
 
-  loginWithExtension(): void {
-    this.nostrService.loginWithExtension();
-    this.dialogRef.close();
+  async loginWithExtension(): Promise<void> {
+    try {
+      this.currentView.set('extension-loading');
+      this.extensionError.set(null);
+      
+      await this.nostrService.loginWithExtension();
+      this.dialogRef.close();
+    } catch (error) {
+      this.extensionError.set(error instanceof Error ? error.message : 'Failed to connect with extension');
+      this.currentView.set('main');
+    }
   }
 
   loginWithNsec(): void {
