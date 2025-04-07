@@ -1,26 +1,88 @@
+.login-dialog {
+  padding: 16px 0;
+}
+
+.dialog-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 20px;
+  
+  .app-icon {
+    width: 80px;
+    height: 80px;
+    margin-bottom: 16px;
+  }
+}
+
+.dialog-subtitle {
+  text-align: center;
+  margin-bottom: 24px;
+  color: rgba(0, 0, 0, 0.7);
+  font-size: 16px;
+}
+
 .login-options {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin-top: 16px;
-  }
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.login-card {
+  cursor: pointer;
+  transition: all 0.3s ease;
+  height: 130px;
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  position: relative;
   
-  mat-card {
-    cursor: pointer;
-    transition: all 0.2s ease;
-    height: 120px;
-  }
-  
-  mat-card:hover {
-    background-color: rgba(0, 0, 0, 0.04);
-    transform: translateY(-2px);
-  }
-  
-  .full-width {
+  &::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
+    height: 4px;
+    background: linear-gradient(90deg, #9c27b0, #673ab7);
+    opacity: 0.7;
   }
   
-  .nsec-warning {
-    margin-top: 16px;
-    color: #f44336;
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(103, 58, 183, 0.15);
+    
+    &::after {
+      height: 6px;
+    }
   }
+  
+  mat-card-header {
+    padding-top: 16px;
+  }
+  
+  mat-card-title {
+    font-weight: 500;
+    font-size: 18px;
+  }
+  
+  mat-card-content {
+    color: rgba(0, 0, 0, 0.6);
+  }
+}
+
+.full-width {
+  width: 100%;
+}
+
+.nsec-warning {
+  margin-top: 16px;
+  color: #f44336;
+  padding: 10px;
+  border-radius: 4px;
+  background-color: rgba(244, 67, 54, 0.05);
+  border: 1px solid rgba(244, 67, 54, 0.2);
+}

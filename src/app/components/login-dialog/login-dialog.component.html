@@ -1,12 +1,15 @@
 <div class="login-dialog">
-    <h2 mat-dialog-title>Welcome to Nostria</h2>
+    <div class="dialog-header">
+        <img src="icons/icon-128x128.png" alt="Nostria Logo" class="app-icon">
+        <h2 mat-dialog-title>Welcome to Nostria</h2>
+    </div>
     
     @if (currentView() === 'main') {
       <div mat-dialog-content>
-        <p>Choose how you would like to use Nostria:</p>
+        <p class="dialog-subtitle">Choose how you would like to use Nostria:</p>
         
         <div class="login-options">
-          <mat-card (click)="generateNewKey()">
+          <mat-card class="login-card" (click)="generateNewKey()">
             <mat-card-header>
               <mat-card-title>New to Nostr</mat-card-title>
             </mat-card-header>
@@ -15,7 +18,7 @@
             </mat-card-content>
           </mat-card>
           
-          <mat-card (click)="loginWithExtension()">
+          <mat-card class="login-card" (click)="loginWithExtension()">
             <mat-card-header>
               <mat-card-title>Login with Extension</mat-card-title>
             </mat-card-header>
@@ -24,7 +27,7 @@
             </mat-card-content>
           </mat-card>
           
-          <mat-card (click)="currentView.set('nsec')">
+          <mat-card class="login-card" (click)="currentView.set('nsec')">
             <mat-card-header>
               <mat-card-title>Login with nsec</mat-card-title>
             </mat-card-header>
@@ -33,7 +36,7 @@
             </mat-card-content>
           </mat-card>
           
-          <mat-card (click)="usePreviewAccount()">
+          <mat-card class="login-card" (click)="usePreviewAccount()">
             <mat-card-header>
               <mat-card-title>Preview</mat-card-title>
             </mat-card-header>
@@ -47,7 +50,7 @@
     
     @if (currentView() === 'nsec') {
       <div mat-dialog-content>
-        <p>Enter your nsec private key:</p>
+        <p class="dialog-subtitle">Enter your nsec private key:</p>
         
         <mat-form-field appearance="fill" class="full-width">
           <mat-label>Private Key (nsec...)</mat-label>
