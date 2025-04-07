@@ -3,6 +3,8 @@ import { generateSecretKey, getPublicKey } from 'nostr-tools/pure';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
 import * as nip19 from 'nostr-tools/nip19';
 import { LoggerService } from './logger.service';
+import { RelayService } from './relay.service';
+import { StorageService, UserMetadata } from './storage.service';
 
 export interface NostrUser {
   pubkey: string;
@@ -20,16 +22,11 @@ export class NostrService {
   private readonly USER_STORAGE_KEY = 'nostria-user';
   private readonly USERS_STORAGE_KEY = 'nostria-users';
   private readonly logger = inject(LoggerService);
+  private readonly relayService = inject(RelayService);
+  private readonly storage = inject(StorageService);
 
   private user = signal<NostrUser | null>(null);
   private users = signal<NostrUser[]>([]);
-
-  // loadNotes = effect(() => {
-  //   if (this.activeId()) {
-  //     const result =  MOCK_NOTES_BY_ID[this.activeId()]
-  //     untracked(() => this.notes.set(result))
-  //   }
-  // })
 
   isLoggedIn = computed(() => {
     const result = !!this.user();
@@ -44,7 +41,7 @@ export class NostrService {
   allUsers = computed(() => {
     return this.users();
   });
-  
+
   get bootStrapRelays() {
     return this.#bootStrapRelays;
   }
@@ -56,15 +53,23 @@ export class NostrService {
 
     // Save user to localStorage whenever it changes
     effect(() => {
-      const currentUser = this.user();
-      this.logger.debug('User change effect triggered', {
-        hasUser: !!currentUser,
-        pubkey: currentUser?.pubkey
-      });
+      if (this.storage.isInitialized()) {
+        const currentUser = this.user();
+        this.logger.debug('User change effect triggered', {
+          hasUser: !!currentUser,
+          pubkey: currentUser?.pubkey
+        });
 
-      if (currentUser) {
-        this.logger.debug('Saving current user to localStorage', { pubkey: currentUser.pubkey });
-        localStorage.setItem(this.USER_STORAGE_KEY, JSON.stringify(currentUser));
+        if (currentUser) {
+          this.logger.debug('Saving current user to localStorage', { pubkey: currentUser.pubkey });
+          localStorage.setItem(this.USER_STORAGE_KEY, JSON.stringify(currentUser));
+
+          // Load relays for this user from storage
+          untracked(() => {
+            this.relayService.loadRelaysForUser(currentUser.pubkey)
+              .catch(err => this.logger.error('Failed to load relays for user', err));
+          });
+        }
       }
     });
 
@@ -73,10 +78,8 @@ export class NostrService {
       const allUsers = this.users();
       this.logger.debug('Users collection effect triggered', { count: allUsers.length });
 
-      // if (allUsers.length > 0) {
       this.logger.debug(`Saving ${allUsers.length} users to localStorage`);
       localStorage.setItem(this.USERS_STORAGE_KEY, JSON.stringify(allUsers));
-      // }
     });
 
     this.logger.debug('NostrService initialization completed');
@@ -128,8 +131,6 @@ export class NostrService {
       // Update lastUsed timestamp
       targetUser.lastUsed = Date.now();
 
-      // {{ account.name || nostrService.getTruncatedNpub(account.pubkey) }}
-
       this.user.set(targetUser);
       this.logger.debug('Successfully switched user');
       return true;
@@ -152,14 +153,10 @@ export class NostrService {
     if (existingUserIndex >= 0) {
       // Update existing user
       this.logger.debug('Updating existing user in collection', { index: existingUserIndex });
-      // const updatedUsers = [...allUsers];
-      // updatedUsers[existingUserIndex] = updatedUser;
-      // this.users.set(updatedUsers);
-      this.users.update(u => u.map(user => user.pubkey === user.pubkey ? user : user))
+      this.users.update(u => u.map(existingUser => existingUser.pubkey === user.pubkey ? user : existingUser));
     } else {
       // Add new user
       this.logger.debug('Adding new user to collection');
-      // this.users.set([...allUsers, updatedUser]);
       this.users.update(u => [...u, user]);
     }
 
@@ -186,7 +183,6 @@ export class NostrService {
 
     this.logger.debug('New keypair generated successfully', { pubkey });
     this.setAccount(newUser);
-    // this.user.set(newUser);
   }
 
   async loginWithExtension(): Promise<void> {
@@ -234,7 +230,6 @@ export class NostrService {
 
       this.logger.info('Login with extension successful', { pubkey });
       this.setAccount(newUser);
-      // this.user.set(newUser);
 
       return;
     } catch (error) {
@@ -277,7 +272,7 @@ export class NostrService {
       };
 
       this.logger.info('Login with nsec successful', { pubkey });
-      this.user.set(newUser);
+      this.setAccount(newUser);
     } catch (error) {
       this.logger.error('Error decoding nsec:', error);
       throw new Error('Invalid nsec key provided. Please check and try again.');
@@ -295,7 +290,6 @@ export class NostrService {
       lastUsed: Date.now()
     };
 
-    // this.user.set(newUser);
     this.setAccount(newUser);
     this.logger.debug('Preview account set successfully', { pubkey: previewPubkey });
   }
@@ -335,5 +329,57 @@ export class NostrService {
     // Convert the hex public key to a Nostr public key (npub)
     const npub = nip19.npubEncode(pubkey);
     return npub;
+  }
+
+  /**
+   * Save user metadata to storage
+   */
+  async saveUserMetadata(pubkey: string, metadata: Partial<UserMetadata>): Promise<void> {
+    try {
+      // Check if we already have metadata for this user
+      const existingMetadata = await this.storage.getUserMetadata(pubkey);
+
+      const updatedMetadata: UserMetadata = {
+        ...existingMetadata || { pubkey },
+        ...metadata,
+        pubkey,
+        last_updated: Date.now()
+      };
+
+      await this.storage.saveUserMetadata(updatedMetadata);
+      this.logger.debug(`Saved metadata for user ${pubkey} to storage`);
+    } catch (error) {
+      this.logger.error(`Error saving metadata for user ${pubkey}`, error);
+    }
+  }
+
+  /**
+   * Get user metadata from storage
+   */
+  async getUserMetadata(pubkey: string): Promise<UserMetadata | undefined> {
+    try {
+      return await this.storage.getUserMetadata(pubkey);
+    } catch (error) {
+      this.logger.error(`Error getting metadata for user ${pubkey}`, error);
+      return undefined;
+    }
+  }
+
+  /**
+   * Clears the cache while preserving current user data
+   */
+  async clearCache(): Promise<void> {
+    const currentUser = this.user();
+    if (!currentUser) {
+      this.logger.warn('Cannot clear cache: No user is logged in');
+      return;
+    }
+
+    try {
+      await this.storage.clearCache(currentUser.pubkey);
+      this.logger.info('Cache cleared successfully');
+    } catch (error) {
+      this.logger.error('Error clearing cache', error);
+    }
   }
 }

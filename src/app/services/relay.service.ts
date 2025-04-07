@@ -1,5 +1,6 @@
-import { Injectable, inject, signal, computed } from '@angular/core';
+import { Injectable, inject, signal, computed, effect } from '@angular/core';
 import { LoggerService } from './logger.service';
+import { StorageService, Nip11Info } from './storage.service';
 
 export interface Relay {
   url: string;
@@ -12,6 +13,7 @@ export interface Relay {
 })
 export class RelayService {
   private readonly logger = inject(LoggerService);
+  private readonly storage = inject(StorageService);
   
   // Signal to store the relays for the current user
   private relays = signal<Relay[]>([]);
@@ -21,6 +23,17 @@ export class RelayService {
   
   constructor() {
     this.logger.info('Initializing RelayService');
+    
+    // When relays change, sync with storage
+    effect(() => {
+      const currentRelays = this.relays();
+      this.logger.debug(`Relay effect triggered with ${currentRelays.length} relays`);
+      
+      // Since this is an effect, we don't want to persist on initialization
+      if (currentRelays.length > 0) {
+        this.syncRelaysToStorage();
+      }
+    });
   }
   
   /**
@@ -84,5 +97,112 @@ export class RelayService {
   clearRelays(): void {
     this.logger.debug('Clearing all relays');
     this.relays.set([]);
+  }
+  
+  /**
+   * Saves the current relays to storage for the current user
+   */
+  private async syncRelaysToStorage(): Promise<void> {
+    try {
+      const currentRelays = this.relays();
+      
+      // Save each relay to the storage
+      for (const relay of currentRelays) {
+        await this.storage.saveRelay(relay);
+      }
+      
+      this.logger.debug(`Synchronized ${currentRelays.length} relays to storage`);
+    } catch (error) {
+      this.logger.error('Error syncing relays to storage', error);
+    }
+  }
+  
+  /**
+   * Load relays from storage by pubkey
+   */
+  async loadRelaysForUser(pubkey: string): Promise<void> {
+    try {
+      const userRelays = await this.storage.getUserRelays(pubkey);
+      
+      if (userRelays && userRelays.relays.length > 0) {
+        this.logger.debug(`Found ${userRelays.relays.length} relays for user ${pubkey} in storage`);
+        this.setRelays(userRelays.relays);
+        return;
+      }
+      
+      this.logger.debug(`No relays found for user ${pubkey} in storage`);
+    } catch (error) {
+      this.logger.error(`Error loading relays for user ${pubkey}`, error);
+    }
+  }
+  
+  /**
+   * Save user relays to storage
+   */
+  async saveUserRelays(pubkey: string): Promise<void> {
+    try {
+      const currentRelays = this.relays();
+      const relayUrls = currentRelays.map(relay => relay.url);
+      
+      await this.storage.saveUserRelays({
+        pubkey,
+        relays: relayUrls,
+        last_updated: Date.now()
+      });
+      
+      this.logger.debug(`Saved ${relayUrls.length} relays for user ${pubkey} to storage`);
+    } catch (error) {
+      this.logger.error(`Error saving relays for user ${pubkey}`, error);
+    }
+  }
+  
+  /**
+   * Fetch NIP-11 information for a relay
+   */
+  async fetchNip11Info(relayUrl: string): Promise<Nip11Info | undefined> {
+    try {
+      this.logger.debug(`Fetching NIP-11 info for relay: ${relayUrl}`);
+      
+      // First check if we have cached NIP-11 info
+      const storedRelay = await this.storage.getRelay(relayUrl);
+      
+      // If we have recent info (less than 24 hours old), use it
+      if (storedRelay?.nip11 && 
+          storedRelay.nip11.last_checked && 
+          (Date.now() - storedRelay.nip11.last_checked) < 86400000) {
+        this.logger.debug(`Using cached NIP-11 info for ${relayUrl}`);
+        return storedRelay.nip11;
+      }
+      
+      // Convert WebSocket URL to HTTP for NIP-11 document
+      const httpUrl = relayUrl.replace(/^wss?:\/\//, 'https://');
+      
+      const response = await fetch(`${httpUrl}`, {
+        headers: {
+          'Accept': 'application/nostr+json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch NIP-11 info: ${response.status} ${response.statusText}`);
+      }
+      
+      const nip11Data = await response.json();
+      this.logger.debug(`Received NIP-11 info for ${relayUrl}`, nip11Data);
+      
+      // Save to storage
+      const relayToSave: Relay = { 
+        url: relayUrl, 
+        lastUsed: Date.now(),
+        status: storedRelay?.status || 'disconnected'
+      };
+      
+      await this.storage.saveRelay(relayToSave, nip11Data);
+      
+      return nip11Data;
+    } catch (error) {
+      this.logger.error(`Error fetching NIP-11 info for ${relayUrl}`, error);
+      return undefined;
+    }
   }
 }

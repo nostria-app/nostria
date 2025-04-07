@@ -137,6 +137,7 @@ export class AppComponent implements OnInit {
         this.toggleSidenav();
       }
 
+      debugger;
       // Load data for the switched account
       await this.dataLoadingService.loadData();
     }
@@ -170,6 +171,7 @@ export class AppComponent implements OnInit {
       // If user is logged in after dialog closes, simulate data loading
       if (this.nostrService.isLoggedIn()) {
         this.logger.debug('User logged in, loading data');
+        debugger;
         await this.dataLoadingService.loadData();
       } else {
         this.logger.debug('User not logged in after dialog closed');
