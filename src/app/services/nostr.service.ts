@@ -1,4 +1,5 @@
 import { Injectable, signal, computed, effect, inject } from '@angular/core';
+import { generateSecretKey, getPublicKey } from 'nostr-tools/pure'
 
 export interface NostrUser {
   pubkey: string;
