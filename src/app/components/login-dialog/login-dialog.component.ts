@@ -9,6 +9,7 @@ import { NostrService } from '../../services/nostr.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { DataLoadingService } from '../../services/data-loading.service';
 import { MatButtonModule } from '@angular/material/button';
+import { MatListModule } from '@angular/material/list';
 
 @Component({
   selector: 'app-login-dialog',
@@ -21,7 +22,8 @@ import { MatButtonModule } from '@angular/material/button';
     MatFormFieldModule,
     FormsModule,
     MatCardModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
+    MatListModule
   ],
   templateUrl: './login-dialog.component.html',
   styleUrl: './login-dialog.component.scss',
@@ -31,9 +33,40 @@ export class LoginDialogComponent {
   private nostrService = inject(NostrService);
   private dataLoadingService = inject(DataLoadingService);
 
-  currentView = signal<'main' | 'nsec' | 'extension-loading'>('main');
+  currentView = signal<'main' | 'nsec' | 'extension-loading' | 'existing-accounts'>('main');
   nsecKey = '';
   extensionError = signal<string | null>(null);
+
+  get savedAccounts() {
+    return this.nostrService.allUsers();
+  }
+
+  showExistingAccounts(): boolean {
+    return this.savedAccounts.length > 0;
+  }
+
+  switchToExistingAccounts(): void {
+    this.currentView.set('existing-accounts');
+  }
+
+  selectExistingAccount(pubkey: string): void {
+    if (this.nostrService.switchToUser(pubkey)) {
+      this.dialogRef.close();
+    }
+  }
+
+  getTruncatedNpub(pubkey: string): string {
+    const npub = this.nostrService.getNpubFromPubkey(pubkey);
+    // Show first 6 and last 6 characters
+    return npub.length > 12 
+      ? `${npub.substring(0, 6)}...${npub.substring(npub.length - 6)}`
+      : npub;
+  }
+
+  getFormattedDate(timestamp?: number): string {
+    if (!timestamp) return 'Unknown';
+    return new Date(timestamp).toLocaleDateString();
+  }
 
   generateNewKey(): void {
     this.nostrService.generateNewKey();

@@ -46,6 +46,27 @@
         </a>
         }
 
+        <!-- Accounts Section -->
+        @if (displayLabels() && nostrService.allUsers().length > 0) {
+          <mat-divider></mat-divider>
+          <div class="nav-subheader" *ngIf="displayLabels()">Accounts</div>
+          
+          @for (account of nostrService.allUsers(); track account.pubkey) {
+            <a mat-list-item 
+              [class.active-account]="nostrService.currentUser()?.pubkey === account.pubkey"
+              (click)="switchAccount(account.pubkey)">
+              <mat-icon matListItemIcon>
+                {{ nostrService.currentUser()?.pubkey === account.pubkey ? 'radio_button_checked' : 'radio_button_unchecked' }}
+              </mat-icon>
+              @if(displayLabels()) {
+                <span class="nav-label account-name">
+                  {{ account.name || getTruncatedNpub(account.pubkey) }}
+                </span>
+              }
+            </a>
+          }
+        }
+
         <a mat-list-item (click)="toggleMenuSize()">
           @if (displayLabels()) {
           <mat-icon>chevron_left</mat-icon>

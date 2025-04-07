@@ -8,6 +8,7 @@ export interface NostrUser {
   privkey?: string;
   name?: string;
   source: 'generated' | 'extension' | 'nsec' | 'preview';
+  lastUsed?: number; // Timestamp when this account was last used
 }
 
 @Injectable({
@@ -16,18 +17,33 @@ export interface NostrUser {
 export class NostrService {
   #bootStrapRelays = ['wss://relay.damus.io', 'wss://relay.primal.net', 'wss://nos.lol'];
   private readonly USER_STORAGE_KEY = 'nostria-user';
+  private readonly USERS_STORAGE_KEY = 'nostria-users';
+  
   private user = signal<NostrUser | null>(null);
+  private users = signal<NostrUser[]>([]);
+  
   isLoggedIn = computed(() => !!this.user());
   currentUser = computed(() => this.user());
+  allUsers = computed(() => this.users());
 
   constructor() {
-    this.loadUserFromStorage();
+    this.loadUsersFromStorage();
+    this.loadActiveUserFromStorage();
 
     // Save user to localStorage whenever it changes
     effect(() => {
       const currentUser = this.user();
       if (currentUser) {
         localStorage.setItem(this.USER_STORAGE_KEY, JSON.stringify(currentUser));
+        this.updateUserInCollection(currentUser);
+      }
+    });
+
+    // Save all users to localStorage whenever they change
+    effect(() => {
+      const allUsers = this.users();
+      if (allUsers.length > 0) {
+        localStorage.setItem(this.USERS_STORAGE_KEY, JSON.stringify(allUsers));
       }
     });
   }
@@ -36,7 +52,19 @@ export class NostrService {
     return this.#bootStrapRelays;
   }
 
-  private loadUserFromStorage(): void {
+  private loadUsersFromStorage(): void {
+    const usersJson = localStorage.getItem(this.USERS_STORAGE_KEY);
+    if (usersJson) {
+      try {
+        this.users.set(JSON.parse(usersJson));
+      } catch (e) {
+        console.error('Failed to parse users from localStorage', e);
+        this.users.set([]);
+      }
+    }
+  }
+
+  private loadActiveUserFromStorage(): void {
     const userJson = localStorage.getItem(this.USER_STORAGE_KEY);
     if (userJson) {
       try {
@@ -45,6 +73,38 @@ export class NostrService {
         console.error('Failed to parse user from localStorage', e);
       }
     }
+  }
+
+  private updateUserInCollection(updatedUser: NostrUser): void {
+    // Update lastUsed timestamp
+    updatedUser.lastUsed = Date.now();
+    
+    const allUsers = this.users();
+    const existingUserIndex = allUsers.findIndex(u => u.pubkey === updatedUser.pubkey);
+    
+    if (existingUserIndex >= 0) {
+      // Update existing user
+      const updatedUsers = [...allUsers];
+      updatedUsers[existingUserIndex] = updatedUser;
+      this.users.set(updatedUsers);
+    } else {
+      // Add new user
+      this.users.set([...allUsers, updatedUser]);
+    }
+  }
+
+  switchToUser(pubkey: string): boolean {
+    const allUsers = this.users();
+    const targetUser = allUsers.find(u => u.pubkey === pubkey);
+    
+    if (targetUser) {
+      // Update lastUsed timestamp
+      targetUser.lastUsed = Date.now();
+      this.user.set(targetUser);
+      return true;
+    }
+    
+    return false;
   }
 
   generateNewKey(): void {
@@ -56,11 +116,14 @@ export class NostrService {
     // In a real app, you might want to encrypt this before storing
     const privkeyHex = bytesToHex(secretKey);
 
-    this.user.set({
+    const newUser: NostrUser = {
       pubkey,
       privkey: privkeyHex,
-      source: 'generated'
-    });
+      source: 'generated',
+      lastUsed: Date.now()
+    };
+
+    this.user.set(newUser);
   }
 
   async loginWithExtension(): Promise<void> {
@@ -89,11 +152,14 @@ export class NostrService {
       }
 
       // Set the user with the public key from the extension
-      this.user.set({
+      const newUser: NostrUser = {
         pubkey,
         name,
-        source: 'extension'
-      });
+        source: 'extension',
+        lastUsed: Date.now()
+      };
+      
+      this.user.set(newUser);
 
       return;
     } catch (error) {
@@ -123,11 +189,14 @@ export class NostrService {
       const pubkey = getPublicKey(data);
       
       // Store the user info
-      this.user.set({
+      const newUser: NostrUser = {
         pubkey,
         privkey: privkeyHex,
-        source: 'nsec'
-      });
+        source: 'nsec',
+        lastUsed: Date.now()
+      };
+      
+      this.user.set(newUser);
     } catch (error) {
       console.error('Error decoding nsec:', error);
       throw new Error('Invalid nsec key provided. Please check and try again.');
@@ -137,16 +206,30 @@ export class NostrService {
   usePreviewAccount(): void {
     // jack
     const previewPubkey = '82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbfbe6a2';
-    this.user.set({
+    const newUser: NostrUser = {
       pubkey: previewPubkey,
       name: 'Preview User',
-      source: 'preview'
-    });
+      source: 'preview',
+      lastUsed: Date.now()
+    };
+    
+    this.user.set(newUser);
   }
 
   logout(): void {
     localStorage.removeItem(this.USER_STORAGE_KEY);
     this.user.set(null);
+  }
+
+  removeAccount(pubkey: string): void {
+    const allUsers = this.users();
+    const updatedUsers = allUsers.filter(u => u.pubkey !== pubkey);
+    this.users.set(updatedUsers);
+    
+    // If we're removing the active user, set active user to null
+    if (this.user()?.pubkey === pubkey) {
+      this.user.set(null);
+    }
   }
 
   getNsecFromPrivkey(privkey: string): string {

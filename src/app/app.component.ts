@@ -96,6 +96,26 @@ export class AppComponent {
   async logout(): Promise<void> {
     this.nostrService.logout();
   }
+  
+  async switchAccount(pubkey: string): Promise<void> {
+    if (this.nostrService.switchToUser(pubkey)) {
+      // Close sidenav on mobile after switching
+      if (this.isHandset()) {
+        this.toggleSidenav();
+      }
+      
+      // Load data for the switched account
+      await this.dataLoadingService.loadData();
+    }
+  }
+  
+  getTruncatedNpub(pubkey: string): string {
+    const npub = this.nostrService.getNpubFromPubkey(pubkey);
+    // Show first 6 and last 6 characters
+    return npub.length > 12 
+      ? `${npub.substring(0, 6)}...${npub.substring(npub.length - 6)}`
+      : npub;
+  }
 
   async showLoginDialog(): Promise<void> {
     // Apply the blur class to the document body before opening the dialog
