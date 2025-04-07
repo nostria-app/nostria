@@ -112,7 +112,7 @@ export class AppComponent {
       
       // If user is logged in after dialog closes, simulate data loading
       if (this.nostrService.isLoggedIn()) {
-        await this.dataLoadingService.simulateLoading(5000, 'Loading your Nostr data...');
+        await this.dataLoadingService.loadData();
       }
     });
   }
