@@ -256,3 +256,34 @@ mat-card-content li {
   margin: 0;
   line-height: 1.5;
 }
+
+/* Loading overlay styles */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 9999;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(3px);
+}
+
+.dark .loading-overlay {
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+/* Animation for the spinner */
+@keyframes spinner-grow {
+  0% {
+    transform: scale(0);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0);
+  }
+}

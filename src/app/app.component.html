@@ -119,4 +119,9 @@
     </button>
   </div>
   }
+
+  <!-- Loading overlay -->
+  @if (dataLoadingService.isLoading()) {
+    <app-loading-overlay [message]="dataLoadingService.loadingMessage()"></app-loading-overlay>
+  }
 </div>

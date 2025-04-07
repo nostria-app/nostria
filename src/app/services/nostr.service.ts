@@ -14,6 +14,7 @@ export interface NostrUser {
   providedIn: 'root'
 })
 export class NostrService {
+  #bootStrapRelays = ['wss://relay.damus.io', 'wss://relay.primal.net', 'wss://nos.lol'];
   private readonly USER_STORAGE_KEY = 'nostria-user';
   private user = signal<NostrUser | null>(null);
   isLoggedIn = computed(() => !!this.user());
@@ -29,6 +30,10 @@ export class NostrService {
         localStorage.setItem(this.USER_STORAGE_KEY, JSON.stringify(currentUser));
       }
     });
+  }
+
+  get bootStrapRelays() {
+    return this.#bootStrapRelays;
   }
 
   private loadUserFromStorage(): void {
