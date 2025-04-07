@@ -56,6 +56,7 @@ export interface UserMetadata {
   lud16?: string;
   banner?: string;
   website?: string;
+  tags?: string[][];  // Add tags field to store event tags
   last_updated?: number;
 }
 

@@ -93,7 +93,6 @@ export class DataLoadingService {
 
       if (metadata) {
         this.logger.info('Found user metadata', { metadata });
-        debugger;
         this.loadingMessage.set('Found your profile! 👍');
         
         try {
@@ -102,14 +101,15 @@ export class DataLoadingService {
 
           this.logger.debug('Parsed metadata content', { metadataContent });
           
-          // Save to storage
+          // Save to storage - include the tags field from the event
           await this.nostr.saveUserMetadata(pubkey, {
             name: metadataContent.name,
             about: metadataContent.about,
             picture: metadataContent.picture,
             nip05: metadataContent.nip05,
             banner: metadataContent.banner,
-            website: metadataContent.website
+            website: metadataContent.website,
+            tags: metadata.tags // Store the tags from the event
           });
         } catch (e) {
           this.logger.error('Failed to parse metadata content', e);
