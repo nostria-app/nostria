@@ -69,11 +69,15 @@
         <mat-form-field appearance="fill" class="full-width">
           <mat-label>Private Key (nsec...)</mat-label>
           <input matInput [(ngModel)]="nsecKey" type="password" 
-                placeholder="nsec1...">
+                placeholder="nsec1..." 
+                autocomplete="off" 
+                autocorrect="off" 
+                spellcheck="false">
         </mat-form-field>
         
         <div class="nsec-warning">
           <p>⚠️ Your private key will be stored locally on your device.</p>
+          <p>This form is configured to prevent password managers from saving your key.</p>
         </div>
       </div>
       
