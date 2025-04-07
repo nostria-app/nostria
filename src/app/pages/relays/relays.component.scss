@@ -1,0 +1,92 @@
+.relay-item-container {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-gap: 12px;
+  align-items: center;
+  width: 100%;
+  padding: 4px 0;
+}
+
+.status-icon {
+  display: flex;
+  align-items: center;
+}
+
+.relay-item {
+  height: auto !important;
+  min-height: 60px;
+  padding: 8px 0;
+  
+  .relay-url {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    word-break: break-all;
+    
+    @media (max-width: 768px) {
+      max-width: 200px;
+    }
+  }
+}
+
+.delete-button {
+  margin-left: auto;
+}
+
+@media (max-width: 768px) {
+  .relay-item {
+    .flex {
+      width: 100%;
+      
+      &.justify-end {
+        justify-content: flex-end;
+        width: auto; // Don't stretch this container
+      }
+    }
+  }
+}
+
+.flex-container {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.relay-input {
+  flex: 1;
+  width: 100%;
+}
+
+.add-button {
+  height: 56px; // Match the height of mat-form-field
+  align-self: flex-start;
+  margin-top: 4px; // Fine-tune vertical alignment
+}
+
+@media (max-width: 599px) {
+  .flex-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .add-button {
+    width: 100%;
+    margin-top: 0;
+  }
+}
+
+.text-green-500 {
+  color: #10b981;
+}
+
+.text-yellow-500 {
+  color: #f59e0b;
+}
+
+.text-red-500 {
+  color: #ef4444;
+}
+
+.text-gray-500 {
+  color: #6b7280;
+}

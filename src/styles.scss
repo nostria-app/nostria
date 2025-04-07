@@ -103,17 +103,25 @@ a:hover {
   color: var(--mat-sys-inverse-primary);
 }
 
-/* Add setting item styles */
-.setting-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+.top-margin {
+  margin-top: 16px;
 }
 
-.dark .setting-item {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+// Utility classes
+.flex-grow {
+  flex: 1 1 auto;
+}
+
+// Form field utilities
+.mat-mdc-form-field {
+  width: 100%;
+}
+
+.form-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
 // Main theme-related styles
