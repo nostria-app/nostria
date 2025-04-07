@@ -453,8 +453,6 @@ export class StorageService {
     try {
       this.logger.info('Wiping IndexedDB database');
 
-      debugger;
-      
       // Close the current database connection if it exists
       if (this.db) {
         this.db.close();

@@ -91,8 +91,16 @@
           @for (account of nostrService.allUsers(); track account.pubkey) {
             @if (account.pubkey !== nostrService.currentUser()?.pubkey) {
             <a mat-list-item (click)="switchAccount(account.pubkey)" class="account-item">
-              <mat-icon matListItemIcon>account_circle</mat-icon>
-              <span matListItemTitle>{{ account.name || getTruncatedNpub(account.pubkey) }}</span>
+              @if (getUserMetadataByPubkey(account.pubkey)?.content?.picture) {
+                <div class="account-avatar" matListItemIcon>
+                  <img [src]="getUserMetadataByPubkey(account.pubkey)?.content?.picture" alt="Profile picture" class="avatar-image">
+                </div>
+              } @else {
+                <mat-icon matListItemIcon>account_circle</mat-icon>
+              }
+              <span matListItemTitle>
+                {{ getUserMetadataByPubkey(account.pubkey)?.content?.name || account.name || getTruncatedNpub(account.pubkey) }}
+              </span>
               <span matListItemLine class="account-source">
                 {{ account.source }} • Last used: {{ account.lastUsed | date:'short' }}
               </span>

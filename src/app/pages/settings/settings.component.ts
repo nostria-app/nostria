@@ -88,8 +88,6 @@ export class SettingsComponent {
 
     dialogRef.afterClosed().subscribe(async confirmed => {
       if (confirmed) {
-        debugger;
-
         this.nostrService.reset();
 
         // Clear known localStorage keys related to the app
@@ -104,8 +102,6 @@ export class SettingsComponent {
           localStorage.removeItem(keysToRemove[i]);
         }
 
-        const user = localStorage.getItem('nostria-user'); // This is just to check if the key exists
-        debugger;
         await this.storage.wipe(); // Assuming this method clears all app data
         
         // Navigate to home page before reloading

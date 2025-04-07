@@ -351,14 +351,6 @@ export class NostrService {
         updated: Date.now()
       }
 
-      // Preserve all fields by merging the existing metadata with the new one
-      // const updatedMetadata: UserMetadata = {
-      //   ...(existingMetadata || { pubkey }),
-      //   ...metadata,
-      //   pubkey, // Ensure pubkey is always set correctly
-      //   updated: Date.now()
-      // };
-
       await this.storage.saveUserMetadata(pubkey, updatedData);
       this.logger.debug(`Saved metadata for user ${pubkey} to storage`);
       
@@ -381,6 +373,26 @@ export class NostrService {
       this.logger.error(`Error getting metadata for user ${pubkey}`, error);
       return undefined;
     }
+  }
+
+  /**
+   * Get user metadata from storage for multiple pubkeys
+   */
+  async getUsersMetadata(pubkeys: string[]): Promise<Map<string, NostrEventData<UserMetadata>>> {
+    const metadataMap = new Map<string, NostrEventData<UserMetadata>>();
+    
+    for (const pubkey of pubkeys) {
+      try {
+        const metadata = await this.storage.getUserMetadata(pubkey);
+        if (metadata) {
+          metadataMap.set(pubkey, metadata);
+        }
+      } catch (error) {
+        this.logger.error(`Error getting metadata for user ${pubkey}`, error);
+      }
+    }
+    
+    return metadataMap;
   }
 
   /**
