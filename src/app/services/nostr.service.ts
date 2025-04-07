@@ -40,13 +40,19 @@ export class NostrService {
   }
   
   generateNewKey(): void {
-    // In a real implementation, you'd use a proper key generation library
-    const mockPubkey = `npub${Math.random().toString(36).substring(2, 15)}`;
-    const mockPrivkey = `nsec${Math.random().toString(36).substring(2, 15)}`;
+    // Generate a proper Nostr key pair using nostr-tools
+    const secretKey = generateSecretKey(); // Returns a Uint8Array
+    const pubkey = getPublicKey(secretKey); // Converts to hex string
+    
+    // We'll store the hex string representation of the private key
+    // In a real app, you might want to encrypt this before storing
+    const privkeyHex = Array.from(secretKey)
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
     
     this.user.set({
-      pubkey: mockPubkey,
-      privkey: mockPrivkey,
+      pubkey,
+      privkey: privkeyHex,
       source: 'generated'
     });
   }
