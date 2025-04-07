@@ -4,7 +4,7 @@ import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
 import * as nip19 from 'nostr-tools/nip19';
 import { LoggerService } from './logger.service';
 import { RelayService } from './relay.service';
-import { StorageService, UserMetadata } from './storage.service';
+import { NostrEventData, StorageService, UserMetadata } from './storage.service';
 
 export interface NostrUser {
   pubkey: string;
@@ -83,6 +83,11 @@ export class NostrService {
     });
 
     this.logger.debug('NostrService initialization completed');
+  }
+
+  reset() {
+    this.users.set([]);
+    this.user.set(null);
   }
 
   private loadUsersFromStorage(): void {
@@ -334,20 +339,27 @@ export class NostrService {
   /**
    * Save user metadata to storage
    */
-  async saveUserMetadata(pubkey: string, metadata: Partial<UserMetadata>): Promise<void> {
+  async saveUserMetadata(pubkey: string, metadata: NostrEventData<UserMetadata>): Promise<void> {
     try {
       // Check if we already have metadata for this user
-      const existingMetadata = await this.storage.getUserMetadata(pubkey);
+      const existingData = await this.storage.getUserMetadata(pubkey);
+
+      const updatedData: NostrEventData<UserMetadata> = {
+        ...existingData,
+        ...metadata,
+        // pubkey, // Ensure pubkey is always set correctly
+        updated: Date.now()
+      }
 
       // Preserve all fields by merging the existing metadata with the new one
-      const updatedMetadata: UserMetadata = {
-        ...(existingMetadata || { pubkey }),
-        ...metadata,
-        pubkey, // Ensure pubkey is always set correctly
-        last_updated: Date.now()
-      };
+      // const updatedMetadata: UserMetadata = {
+      //   ...(existingMetadata || { pubkey }),
+      //   ...metadata,
+      //   pubkey, // Ensure pubkey is always set correctly
+      //   updated: Date.now()
+      // };
 
-      await this.storage.saveUserMetadata(updatedMetadata);
+      await this.storage.saveUserMetadata(pubkey, updatedData);
       this.logger.debug(`Saved metadata for user ${pubkey} to storage`);
     } catch (error) {
       this.logger.error(`Error saving metadata for user ${pubkey}`, error);
@@ -357,7 +369,7 @@ export class NostrService {
   /**
    * Get user metadata from storage
    */
-  async getUserMetadata(pubkey: string): Promise<UserMetadata | undefined> {
+  async getUserMetadata(pubkey: string): Promise<NostrEventData<UserMetadata> | undefined> {
     try {
       return await this.storage.getUserMetadata(pubkey);
     } catch (error) {

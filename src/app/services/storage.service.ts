@@ -1,7 +1,7 @@
 import { Injectable, inject, signal, effect } from '@angular/core';
 import { LoggerService } from './logger.service';
 import { Relay } from './relay.service';
-import { openDB, IDBPDatabase, DBSchema } from 'idb';
+import { openDB, IDBPDatabase, DBSchema, deleteDB } from 'idb';
 
 // Interface for NIP-11 relay information
 export interface Nip11Info {
@@ -45,6 +45,15 @@ export interface Nip11Info {
   last_checked?: number;
 }
 
+// Interface for raw event data storage
+export interface NostrEventData<T = any> {
+  pubkey?: string; // Public key of the user
+  content: Partial<T>;        // Parsed JSON content
+  tags: string[][];    // Original tags array
+  raw?: string;        // Optional original JSON string
+  updated?: number; // Timestamp of the last update
+}
+
 // Interface for user metadata
 export interface UserMetadata {
   pubkey: string;
@@ -57,6 +66,7 @@ export interface UserMetadata {
   banner?: string;
   website?: string;
   tags?: string[][];  // Add tags field to store event tags
+  eventData?: NostrEventData; // New field to store full content and tags
   last_updated?: number;
 }
 
@@ -64,7 +74,7 @@ export interface UserMetadata {
 export interface UserRelays {
   pubkey: string;
   relays: string[];
-  last_updated: number;
+  updated: number;
 }
 
 // Schema for the IndexedDB database
@@ -76,7 +86,7 @@ interface NostriaDBSchema extends DBSchema {
   };
   userMetadata: {
     key: string; // pubkey
-    value: UserMetadata;
+    value: NostrEventData<UserMetadata>;
     indexes: { 'by-updated': number };
   };
   userRelays: {
@@ -91,13 +101,13 @@ interface NostriaDBSchema extends DBSchema {
 })
 export class StorageService {
   private readonly logger = inject(LoggerService);
-  private db?: IDBPDatabase<NostriaDBSchema>;
+  private db!: IDBPDatabase<NostriaDBSchema>;
   private readonly DB_NAME = 'nostria-db';
   private readonly DB_VERSION = 1;
-  
+
   // Signal to track database initialization status
   isInitialized = signal(false);
-  
+
   // Database stats
   dbStats = signal<{
     relaysCount: number;
@@ -121,31 +131,31 @@ export class StorageService {
       this.db = await openDB<NostriaDBSchema>(this.DB_NAME, this.DB_VERSION, {
         upgrade: (db) => {
           this.logger.info('Creating or upgrading database schema');
-          
+
           // Create object stores if they don't exist
           if (!db.objectStoreNames.contains('relays')) {
             const relayStore = db.createObjectStore('relays', { keyPath: 'url' });
             relayStore.createIndex('by-status', 'status');
             this.logger.debug('Created relays object store');
           }
-          
+
           if (!db.objectStoreNames.contains('userMetadata')) {
             const userMetadataStore = db.createObjectStore('userMetadata', { keyPath: 'pubkey' });
-            userMetadataStore.createIndex('by-updated', 'last_updated');
+            userMetadataStore.createIndex('by-updated', 'updated');
             this.logger.debug('Created userMetadata object store');
           }
-          
+
           if (!db.objectStoreNames.contains('userRelays')) {
             const userRelaysStore = db.createObjectStore('userRelays', { keyPath: 'pubkey' });
-            userRelaysStore.createIndex('by-updated', 'last_updated');
+            userRelaysStore.createIndex('by-updated', 'updated');
             this.logger.debug('Created userRelays object store');
           }
         }
       });
-      
+
       this.logger.info('IndexedDB initialization completed');
       await this.updateStats();
-      
+
       // Set initialized status to true
       this.isInitialized.set(true);
     } catch (error) {
@@ -156,23 +166,23 @@ export class StorageService {
   }
 
   // Method to wait for database initialization
-//   async waitForInitialization(): Promise<void> {
-//     // If already initialized, return immediately
-//     if (this.isInitialized()) {
-//       return;
-//     }
-    
-//     // Otherwise, wait for initialization to complete
-//     return new Promise<void>((resolve) => {
-//       const unsubscribe = effect(() => {
-//         if (this.isInitialized()) {
-//           // Clean up the effect when initialized
-//           unsubscribe();
-//           resolve();
-//         }
-//       });
-//     });
-//   }
+  //   async waitForInitialization(): Promise<void> {
+  //     // If already initialized, return immediately
+  //     if (this.isInitialized()) {
+  //       return;
+  //     }
+
+  //     // Otherwise, wait for initialization to complete
+  //     return new Promise<void>((resolve) => {
+  //       const unsubscribe = effect(() => {
+  //         if (this.isInitialized()) {
+  //           // Clean up the effect when initialized
+  //           unsubscribe();
+  //           resolve();
+  //         }
+  //       });
+  //     });
+  //   }
 
   // Relay operations
   async saveRelay(relay: Relay, nip11Info?: Nip11Info): Promise<void> {
@@ -180,17 +190,17 @@ export class StorageService {
       this.logger.error('Database not initialized');
       return;
     }
-    
+
     try {
       const enhancedRelay: any = { ...relay };
-      
+
       if (nip11Info) {
         enhancedRelay['nip11'] = {
           ...nip11Info,
           last_checked: Date.now()
         };
       }
-      
+
       await this.db.put('relays', enhancedRelay);
       this.logger.debug(`Saved relay to IndexedDB: ${relay.url}`);
       await this.updateStats();
@@ -204,7 +214,7 @@ export class StorageService {
       this.logger.error('Database not initialized');
       return undefined;
     }
-    
+
     try {
       return await this.db.get('relays', url);
     } catch (error) {
@@ -218,7 +228,7 @@ export class StorageService {
       this.logger.error('Database not initialized');
       return [];
     }
-    
+
     try {
       return await this.db.getAll('relays');
     } catch (error) {
@@ -232,7 +242,7 @@ export class StorageService {
       this.logger.error('Database not initialized');
       return;
     }
-    
+
     try {
       await this.db.delete('relays', url);
       this.logger.debug(`Deleted relay from IndexedDB: ${url}`);
@@ -243,32 +253,29 @@ export class StorageService {
   }
 
   // User metadata operations
-  async saveUserMetadata(metadata: UserMetadata): Promise<void> {
-    if (!this.db) {
-      this.logger.error('Database not initialized');
-      return;
-    }
-    
+  async saveUserMetadata(pubkey: string, data: NostrEventData<UserMetadata>): Promise<void> {
+
     try {
-      const enhancedMetadata = {
-        ...metadata,
-        last_updated: Date.now()
+      const enhancedMetadata: NostrEventData<UserMetadata> = {
+        ...data,
+        pubkey,
+        updated: Date.now()
       };
-      
+
       await this.db.put('userMetadata', enhancedMetadata);
-      this.logger.debug(`Saved user metadata to IndexedDB: ${metadata.pubkey}`);
+      this.logger.debug(`Saved user metadata to IndexedDB: ${pubkey}`);
       await this.updateStats();
     } catch (error) {
-      this.logger.error(`Error saving user metadata for ${metadata.pubkey}`, error);
+      this.logger.error(`Error saving user metadata for ${pubkey}`, error);
     }
   }
 
-  async getUserMetadata(pubkey: string): Promise<UserMetadata | undefined> {
+  async getUserMetadata(pubkey: string): Promise<NostrEventData<UserMetadata> | undefined> {
     if (!this.db) {
       this.logger.error('Database not initialized');
       return undefined;
     }
-    
+
     try {
       return await this.db.get('userMetadata', pubkey);
     } catch (error) {
@@ -277,12 +284,7 @@ export class StorageService {
     }
   }
 
-  async getAllUserMetadata(): Promise<UserMetadata[]> {
-    if (!this.db) {
-      this.logger.error('Database not initialized');
-      return [];
-    }
-    
+  async getAllUserMetadata() {
     try {
       return await this.db.getAll('userMetadata');
     } catch (error) {
@@ -296,7 +298,7 @@ export class StorageService {
       this.logger.error('Database not initialized');
       return;
     }
-    
+
     try {
       await this.db.delete('userMetadata', pubkey);
       this.logger.debug(`Deleted user metadata from IndexedDB: ${pubkey}`);
@@ -312,13 +314,13 @@ export class StorageService {
       this.logger.error('Database not initialized');
       return;
     }
-    
+
     try {
       const enhancedUserRelays = {
         ...userRelays,
-        last_updated: Date.now()
+        updated: Date.now()
       };
-      
+
       await this.db.put('userRelays', enhancedUserRelays);
       this.logger.debug(`Saved user relays to IndexedDB: ${userRelays.pubkey}`);
       await this.updateStats();
@@ -332,7 +334,7 @@ export class StorageService {
       this.logger.error('Database not initialized');
       return undefined;
     }
-    
+
     try {
       return await this.db.get('userRelays', pubkey);
     } catch (error) {
@@ -346,7 +348,7 @@ export class StorageService {
       this.logger.error('Database not initialized');
       return [];
     }
-    
+
     try {
       return await this.db.getAll('userRelays');
     } catch (error) {
@@ -360,7 +362,7 @@ export class StorageService {
       this.logger.error('Database not initialized');
       return;
     }
-    
+
     try {
       await this.db.delete('userRelays', pubkey);
       this.logger.debug(`Deleted user relays from IndexedDB: ${pubkey}`);
@@ -376,18 +378,18 @@ export class StorageService {
       this.logger.error('Database not initialized');
       return;
     }
-    
+
     try {
       this.logger.info('Clearing cache while preserving current user data');
-      
+
       // Get all user metadata and filter out the current user
       const allUserMetadata = await this.getAllUserMetadata();
       for (const metadata of allUserMetadata) {
         if (metadata.pubkey !== currentUserPubkey) {
-          await this.deleteUserMetadata(metadata.pubkey);
+          await this.deleteUserMetadata(metadata.pubkey!);
         }
       }
-      
+
       // Get all user relays and filter out the current user
       const allUserRelays = await this.getAllUserRelays();
       for (const userRelays of allUserRelays) {
@@ -395,9 +397,9 @@ export class StorageService {
           await this.deleteUserRelays(userRelays.pubkey);
         }
       }
-      
+
       // For relays, we keep them all since they're used by all users
-      
+
       this.logger.info('Cache cleared successfully');
       await this.updateStats();
     } catch (error) {
@@ -411,39 +413,75 @@ export class StorageService {
       this.logger.error('Database not initialized');
       return;
     }
-    
+
     try {
       const relays = await this.getAllRelays();
       const userMetadata = await this.getAllUserMetadata();
       const userRelays = await this.getAllUserRelays();
-      
+
       // Calculate approximate size
       const relaysSize = JSON.stringify(relays).length;
       const userMetadataSize = JSON.stringify(userMetadata).length;
       const userRelaysSize = JSON.stringify(userRelays).length;
       const totalSize = relaysSize + userMetadataSize + userRelaysSize;
-      
+
       this.dbStats.set({
         relaysCount: relays.length,
         userMetadataCount: userMetadata.length,
         userRelaysCount: userRelays.length,
         estimatedSize: totalSize
       });
-      
+
       this.logger.debug('Database stats updated', this.dbStats());
     } catch (error) {
       this.logger.error('Error updating database stats', error);
     }
   }
-  
+
   // Format size for display
   formatSize(bytes: number): string {
     if (bytes === 0) return '0 Bytes';
-    
+
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    
+
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+
+  async wipe(): Promise<void> {
+    try {
+      this.logger.info('Wiping IndexedDB database');
+
+      debugger;
+      
+      // Close the current database connection if it exists
+      if (this.db) {
+        this.db.close();
+      }
+
+      // Delete the entire database
+      await deleteDB(this.DB_NAME);
+      
+      // Reset initialization status
+      this.isInitialized.set(false);
+      
+      // Reset stats
+      this.dbStats.set({
+        relaysCount: 0,
+        userMetadataCount: 0,
+        userRelaysCount: 0,
+        estimatedSize: 0
+      });
+      
+      this.logger.info('Database wiped successfully');
+      
+      // Re-initialize the database
+      await this.initDatabase();
+    } catch (error) {
+      this.logger.error('Error wiping database', error);
+      // Attempt to re-initialize in case of error
+      this.initDatabase();
+    }
   }
 }
