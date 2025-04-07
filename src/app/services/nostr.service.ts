@@ -21,8 +21,6 @@ export class NostrService {
   private readonly USERS_STORAGE_KEY = 'nostria-users';
   private readonly logger = inject(LoggerService);
 
-  private userIndex = signal<number>(-1);
-
   private user = signal<NostrUser | null>(null);
   private users = signal<NostrUser[]>([]);
 
@@ -46,6 +44,10 @@ export class NostrService {
   allUsers = computed(() => {
     return this.users();
   });
+  
+  get bootStrapRelays() {
+    return this.#bootStrapRelays;
+  }
 
   constructor() {
     this.logger.info('Initializing NostrService');
@@ -63,11 +65,6 @@ export class NostrService {
       if (currentUser) {
         this.logger.debug('Saving current user to localStorage', { pubkey: currentUser.pubkey });
         localStorage.setItem(this.USER_STORAGE_KEY, JSON.stringify(currentUser));
-
-        // Make sure this is untracked or we get infinite loop.
-        // untracked(() => {
-        //   this.updateUserInCollection(currentUser);
-        // });
       }
     });
 
@@ -83,10 +80,6 @@ export class NostrService {
     });
 
     this.logger.debug('NostrService initialization completed');
-  }
-
-  get bootStrapRelays() {
-    return this.#bootStrapRelays;
   }
 
   private loadUsersFromStorage(): void {
@@ -127,30 +120,6 @@ export class NostrService {
       : npub;
   }
 
-  // private updateUserInCollection(updatedUser: NostrUser): void {
-  //   this.logger.debug('Updating user in collection', { pubkey: updatedUser.pubkey });
-
-  //   // Update lastUsed timestamp
-  //   updatedUser.lastUsed = Date.now();
-
-  //   const allUsers = this.users();
-  //   const existingUserIndex = allUsers.findIndex(u => u.pubkey === updatedUser.pubkey);
-
-  //   if (existingUserIndex >= 0) {
-  //     // Update existing user
-  //     this.logger.debug('Updating existing user in collection', { index: existingUserIndex });
-  //     // const updatedUsers = [...allUsers];
-  //     // updatedUsers[existingUserIndex] = updatedUser;
-  //     // this.users.set(updatedUsers);
-  //     this.users.update(u => u.map(user => user.pubkey === updatedUser.pubkey ? updatedUser : user))
-  //   } else {
-  //     // Add new user
-  //     this.logger.debug('Adding new user to collection');
-  //     // this.users.set([...allUsers, updatedUser]);
-  //     this.users.update(u => [...u, updatedUser]);
-  //   }
-  // }
-
   switchToUser(pubkey: string): boolean {
     this.logger.info(`Switching to user with pubkey: ${pubkey}`);
     const targetUser = this.users().find(u => u.pubkey === pubkey);
@@ -158,7 +127,7 @@ export class NostrService {
     if (targetUser) {
       // Update lastUsed timestamp
       targetUser.lastUsed = Date.now();
-     
+
       // {{ account.name || nostrService.getTruncatedNpub(account.pubkey) }}
 
       this.user.set(targetUser);
@@ -171,7 +140,6 @@ export class NostrService {
   }
 
   setAccount(user: NostrUser) {
-
     this.logger.debug('Updating user in collection', { pubkey: user.pubkey });
 
     // Update lastUsed timestamp
@@ -197,16 +165,6 @@ export class NostrService {
 
     // Trigger the user signal which indicates user is logged on.
     this.user.set(user);
-
-    //  if (currentUser) {
-    //   this.logger.debug('Saving current user to localStorage', { pubkey: currentUser.pubkey });
-    //   localStorage.setItem(this.USER_STORAGE_KEY, JSON.stringify(currentUser));
-
-    //   // Make sure this is untracked or we get infinite loop.
-    //   untracked(() => {
-    //     this.updateUserInCollection(currentUser);
-    //   });
-
   }
 
   generateNewKey(): void {
