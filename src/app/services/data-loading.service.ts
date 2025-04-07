@@ -3,7 +3,7 @@ import { NostrService } from './nostr.service';
 import { kinds, SimplePool } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { RelayService } from './relay.service';
-import { StorageService, UserMetadata } from './storage.service';
+import { NostrEventData, StorageService, UserMetadata } from './storage.service';
 
 @Injectable({
   providedIn: 'root'
@@ -101,16 +101,15 @@ export class DataLoadingService {
 
           this.logger.debug('Parsed metadata content', { metadataContent });
           
-          // Save to storage - include the tags field from the event
-          await this.nostr.saveUserMetadata(pubkey, {
-            name: metadataContent.name,
-            about: metadataContent.about,
-            picture: metadataContent.picture,
-            nip05: metadataContent.nip05,
-            banner: metadataContent.banner,
-            website: metadataContent.website,
-            tags: metadata.tags // Store the tags from the event
-          });
+          // Create a NostrEventData object to store the full content and tags
+          const eventData: NostrEventData<UserMetadata> = {
+            content: metadataContent,  // Store the parsed JSON object 
+            tags: metadata.tags,       // Store the original tags
+            // raw: metadata.content      // Optionally store the raw JSON string
+          };
+          
+          // Save to storage with all fields and the full event data
+          await this.nostr.saveUserMetadata(pubkey, eventData);
         } catch (e) {
           this.logger.error('Failed to parse metadata content', e);
         }
@@ -133,41 +132,12 @@ export class DataLoadingService {
 
     // Show success animation instead of waiting
     this.isLoading.set(false);
+    debugger;
     this.showSuccess.set(true);
     
     // Hide success animation after 1.5 seconds
     setTimeout(() => {
       this.showSuccess.set(false);
     }, 1500);
-  }
-
-  /**
-   * Simulates loading data with a timeout
-   * @param duration Time in milliseconds to simulate loading
-   * @param message Optional custom loading message
-   * @returns Promise that resolves when loading is complete
-   */
-  async simulateLoading(duration: number = 5000, message: string = 'Loading data...'): Promise<void> {
-    this.logger.info(`Simulating loading for ${duration}ms with message: "${message}"`);
-    this.loadingMessage.set(message);
-    this.isLoading.set(true);
-    this.showSuccess.set(false);
-
-    try {
-      await new Promise(resolve => setTimeout(resolve, duration));
-      this.logger.debug('Simulated loading completed');
-      
-      // Show success animation
-      this.isLoading.set(false);
-      this.showSuccess.set(true);
-      
-      // Hide success animation after 1.5 seconds
-      setTimeout(() => {
-        this.showSuccess.set(false);
-      }, 1500);
-    } catch (error) {
-      this.isLoading.set(false);
-      throw error;
-    }
   }
 }

@@ -211,7 +211,7 @@ export class RelayService {
       await this.storage.saveUserRelays({
         pubkey,
         relays: relayUrls,
-        last_updated: Date.now()
+        updated: Date.now()
       });
 
       this.logger.debug(`Saved ${relayUrls.length} relays for user ${pubkey} to storage`);

@@ -18,6 +18,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { LoginDialogComponent } from '../../components/login-dialog/login-dialog.component';
 import { ConfirmDialogComponent } from '../../components/confirm-dialog/confirm-dialog.component';
 import { Router } from '@angular/router';
+import { StorageService } from '../../services/storage.service';
 
 @Component({
   selector: 'app-settings',
@@ -44,6 +45,7 @@ export class SettingsComponent {
   currentLogLevel = signal<LogLevel>(this.logger.logLevel());
   themeService = inject(ThemeService);
   nostrService = inject(NostrService);
+  storage = inject(StorageService);
   dialog = inject(MatDialog);
   router = inject(Router);
 
@@ -86,16 +88,25 @@ export class SettingsComponent {
 
     dialogRef.afterClosed().subscribe(async confirmed => {
       if (confirmed) {
+        debugger;
+
+        this.nostrService.reset();
+
         // Clear known localStorage keys related to the app
         const keysToRemove = [
           'nostria-theme',
           'nostria-users',
           'nostria-user',
+          'nostria-log-level',
         ];
         
-        keysToRemove.forEach(key => {
-          localStorage.removeItem(key);
-        });
+        for (let i = 0; i < keysToRemove.length; i++) {
+          localStorage.removeItem(keysToRemove[i]);
+        }
+
+        const user = localStorage.getItem('nostria-user'); // This is just to check if the key exists
+        debugger;
+        await this.storage.wipe(); // Assuming this method clears all app data
         
         // Navigate to home page before reloading
         await this.router.navigate(['/']);
