@@ -48,7 +48,8 @@ export class AppComponent {
   navItems = [
     { path: 'home', label: 'Home', icon: 'home' },
     { path: 'settings', label: 'Settings', icon: 'settings' },
-    { path: 'about', label: 'About', icon: 'info' }
+    { path: 'about', label: 'About', icon: 'info' },
+    { path: '', label: 'Logout', icon: 'logout', action: () => this.logout() }
   ];
 
   constructor() {
@@ -61,23 +62,7 @@ export class AppComponent {
       } else {
         this.opened.set(true);
       }
-    });// Show login dialog if user is not logged in
-    effect(() => {
-      if (!this.nostrService.isLoggedIn()) {
-        // Add a small delay to ensure the app is fully loaded
-        setTimeout(() => this.showLoginDialog(), 500);
-      }
     });
-
-
-    // Show login dialog if user is not logged in
-    effect(() => {
-      if (!this.nostrService.isLoggedIn()) {
-        // Add a small delay to ensure the app is fully loaded
-        setTimeout(() => this.showLoginDialog(), 500);
-      }
-    });
-
 
     // Show login dialog if user is not logged in
     effect(() => {
@@ -94,7 +79,10 @@ export class AppComponent {
 
   toggleMenuSize() {
     this.displayLabels.set(!this.displayLabels());
+  }
 
+  logout(): void {
+    this.nostrService.logout();
   }
 
   showLoginDialog(): void {
