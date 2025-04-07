@@ -44,7 +44,7 @@ export class NostrService {
   });
 
   allUsers = computed(() => {
-    return this.users();;
+    return this.users();
   });
 
   constructor() {
@@ -65,9 +65,9 @@ export class NostrService {
         localStorage.setItem(this.USER_STORAGE_KEY, JSON.stringify(currentUser));
 
         // Make sure this is untracked or we get infinite loop.
-        untracked(() => {
-          this.updateUserInCollection(currentUser);
-        });
+        // untracked(() => {
+        //   this.updateUserInCollection(currentUser);
+        // });
       }
     });
 
@@ -120,38 +120,47 @@ export class NostrService {
     }
   }
 
-  private updateUserInCollection(updatedUser: NostrUser): void {
-    this.logger.debug('Updating user in collection', { pubkey: updatedUser.pubkey });
-
-    // Update lastUsed timestamp
-    updatedUser.lastUsed = Date.now();
-
-    const allUsers = this.users();
-    const existingUserIndex = allUsers.findIndex(u => u.pubkey === updatedUser.pubkey);
-
-    if (existingUserIndex >= 0) {
-      // Update existing user
-      this.logger.debug('Updating existing user in collection', { index: existingUserIndex });
-      // const updatedUsers = [...allUsers];
-      // updatedUsers[existingUserIndex] = updatedUser;
-      // this.users.set(updatedUsers);
-      this.users.update(u => u.map(user => user.pubkey === updatedUser.pubkey ? updatedUser : user))
-    } else {
-      // Add new user
-      this.logger.debug('Adding new user to collection');
-      // this.users.set([...allUsers, updatedUser]);
-      this.users.update(u => [...u, updatedUser]);
-    }
+  getTruncatedNpub(pubkey: string): string {
+    const npub = this.getNpubFromPubkey(pubkey);
+    return npub.length > 12
+      ? `${npub.substring(0, 6)}...${npub.substring(npub.length - 6)}`
+      : npub;
   }
+
+  // private updateUserInCollection(updatedUser: NostrUser): void {
+  //   this.logger.debug('Updating user in collection', { pubkey: updatedUser.pubkey });
+
+  //   // Update lastUsed timestamp
+  //   updatedUser.lastUsed = Date.now();
+
+  //   const allUsers = this.users();
+  //   const existingUserIndex = allUsers.findIndex(u => u.pubkey === updatedUser.pubkey);
+
+  //   if (existingUserIndex >= 0) {
+  //     // Update existing user
+  //     this.logger.debug('Updating existing user in collection', { index: existingUserIndex });
+  //     // const updatedUsers = [...allUsers];
+  //     // updatedUsers[existingUserIndex] = updatedUser;
+  //     // this.users.set(updatedUsers);
+  //     this.users.update(u => u.map(user => user.pubkey === updatedUser.pubkey ? updatedUser : user))
+  //   } else {
+  //     // Add new user
+  //     this.logger.debug('Adding new user to collection');
+  //     // this.users.set([...allUsers, updatedUser]);
+  //     this.users.update(u => [...u, updatedUser]);
+  //   }
+  // }
 
   switchToUser(pubkey: string): boolean {
     this.logger.info(`Switching to user with pubkey: ${pubkey}`);
-    const allUsers = this.users();
-    const targetUser = allUsers.find(u => u.pubkey === pubkey);
+    const targetUser = this.users().find(u => u.pubkey === pubkey);
 
     if (targetUser) {
       // Update lastUsed timestamp
       targetUser.lastUsed = Date.now();
+      targetUser.name || this.getTruncatedNpub(targetUser.pubkey);
+      // {{ account.name || nostrService.getTruncatedNpub(account.pubkey) }}
+
       this.user.set(targetUser);
       this.logger.debug('Successfully switched user');
       return true;
@@ -159,6 +168,44 @@ export class NostrService {
 
     this.logger.warn(`User with pubkey ${pubkey} not found`);
     return false;
+  }
+
+  setAccount(user: NostrUser) {
+
+    this.logger.debug('Updating user in collection', { pubkey: user.pubkey });
+
+    // Update lastUsed timestamp
+    user.lastUsed = Date.now();
+
+    const allUsers = this.users();
+    const existingUserIndex = allUsers.findIndex(u => u.pubkey === user.pubkey);
+
+    if (existingUserIndex >= 0) {
+      // Update existing user
+      this.logger.debug('Updating existing user in collection', { index: existingUserIndex });
+      // const updatedUsers = [...allUsers];
+      // updatedUsers[existingUserIndex] = updatedUser;
+      // this.users.set(updatedUsers);
+      this.users.update(u => u.map(user => user.pubkey === user.pubkey ? user : user))
+    } else {
+      // Add new user
+      this.logger.debug('Adding new user to collection');
+      // this.users.set([...allUsers, updatedUser]);
+      this.users.update(u => [...u, user]);
+    }
+
+    // Trigger the user signal which indicates user is logged on.
+    this.user.set(user);
+
+    //  if (currentUser) {
+    //   this.logger.debug('Saving current user to localStorage', { pubkey: currentUser.pubkey });
+    //   localStorage.setItem(this.USER_STORAGE_KEY, JSON.stringify(currentUser));
+
+    //   // Make sure this is untracked or we get infinite loop.
+    //   untracked(() => {
+    //     this.updateUserInCollection(currentUser);
+    //   });
+
   }
 
   generateNewKey(): void {
@@ -179,7 +226,8 @@ export class NostrService {
     };
 
     this.logger.debug('New keypair generated successfully', { pubkey });
-    this.user.set(newUser);
+    this.setAccount(newUser);
+    // this.user.set(newUser);
   }
 
   async loginWithExtension(): Promise<void> {
@@ -226,7 +274,8 @@ export class NostrService {
       };
 
       this.logger.info('Login with extension successful', { pubkey });
-      this.user.set(newUser);
+      this.setAccount(newUser);
+      // this.user.set(newUser);
 
       return;
     } catch (error) {
@@ -287,7 +336,8 @@ export class NostrService {
       lastUsed: Date.now()
     };
 
-    this.user.set(newUser);
+    // this.user.set(newUser);
+    this.setAccount(newUser);
     this.logger.debug('Preview account set successfully', { pubkey: previewPubkey });
   }
 

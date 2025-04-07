@@ -8,13 +8,10 @@
     <span class="app-title">{{title}}</span>
     <span class="toolbar-spacer"></span>
     @if (pwaUpdateService.updateAvailable()) {
-      <button mat-icon-button 
-              class="update-button"
-              (click)="pwaUpdateService.updateApplication()" 
-              matTooltip="Update available! Click to update and reload."
-              aria-label="Update application">
-        <mat-icon class="update-icon">system_update</mat-icon>
-      </button>
+    <button mat-icon-button class="update-button" (click)="pwaUpdateService.updateApplication()"
+      matTooltip="Update available! Click to update and reload." aria-label="Update application">
+      <mat-icon class="update-icon">system_update</mat-icon>
+    </button>
     }
     <button mat-icon-button (click)="themeService.toggleDarkMode()" aria-label="Toggle theme">
       <mat-icon>{{ themeService.darkMode() ? 'dark_mode' : 'light_mode' }}</mat-icon>
@@ -27,44 +24,18 @@
   <!-- Sidenav container now below the toolbar -->
   <mat-sidenav-container class="sidenav-container" autosize="true">
     <!-- Side navigation -->
-    <mat-sidenav
-     #sidenav class="sidenav" 
-     [ngClass]="{ 'sidenav-labels': displayLabels(), 'sidenav-small': !displayLabels()  }"
-     [opened]="opened()"
-      [mode]="isHandset() ? 'over' : 'side'"
-      [fixedInViewport]="false">
+    <mat-sidenav #sidenav class="sidenav"
+      [ngClass]="{ 'sidenav-labels': displayLabels(), 'sidenav-small': !displayLabels()  }" [opened]="opened()"
+      [mode]="isHandset() ? 'over' : 'side'" [fixedInViewport]="false">
       <mat-nav-list>
         @for (item of navItems; track $index) {
-        <a mat-list-item 
-           [routerLink]="item.action ? undefined : [item.path]" 
-           routerLinkActive="active-link"
-           (click)="item.action ? item.action() : (isHandset() ? toggleSidenav() : null)">
+        <a mat-list-item [routerLink]="item.action ? undefined : [item.path]" routerLinkActive="active-link"
+          (click)="item.action ? item.action() : (isHandset() ? toggleSidenav() : null)">
           <mat-icon matListItemIcon>{{item.icon}}</mat-icon>
           @if(displayLabels()) {
           <span class="nav-label">{{item.label}}</span>
           }
         </a>
-        }
-
-        <!-- Accounts Section -->
-        @if (displayLabels() && nostrService.allUsers().length > 0) {
-          <mat-divider></mat-divider>
-          <div class="nav-subheader" *ngIf="displayLabels()">Accounts</div>
-          
-          @for (account of nostrService.allUsers(); track account.pubkey) {
-            <a mat-list-item 
-              [class.active-account]="nostrService.currentUser()?.pubkey === account.pubkey"
-              (click)="switchAccount(account.pubkey)">
-              <mat-icon matListItemIcon>
-                {{ nostrService.currentUser()?.pubkey === account.pubkey ? 'radio_button_checked' : 'radio_button_unchecked' }}
-              </mat-icon>
-              @if(displayLabels()) {
-                <span class="nav-label account-name">
-                  {{ account.name || getTruncatedNpub(account.pubkey) }}
-                </span>
-              }
-            </a>
-          }
         }
 
         <a mat-list-item (click)="toggleMenuSize()">
@@ -91,10 +62,30 @@
           <div class="profile-avatar">
             <mat-icon class="avatar-icon">account_circle</mat-icon>
           </div>
-          <h2>{{ nostrService.isLoggedIn() ? 'User Name' : 'Not Logged In' }}</h2>
+          <h2>{{ nostrService.currentUser()?.name }}</h2>
         </div>
         <mat-divider></mat-divider>
+
+        <!-- Account selection menu -->
+        @if (nostrService.allUsers().length > 1) {
+        <mat-nav-list class="accounts-list">
+          @for (account of nostrService.allUsers(); track account.pubkey) {
+            @if (account.pubkey !== nostrService.currentUser()?.pubkey) {
+            <a mat-list-item (click)="switchAccount(account.pubkey)" class="account-item">
+              <mat-icon matListItemIcon>account_circle</mat-icon>
+              <span matListItemTitle>{{ account.name || getTruncatedNpub(account.pubkey) }}</span>
+              <span matListItemLine class="account-source">
+                {{ account.source }} • Last used: {{ account.lastUsed | date:'short' }}
+              </span>
+            </a>
+            }
+          }
+        </mat-nav-list>
+        <mat-divider></mat-divider>
+        }
+
         <mat-nav-list>
+
           <a mat-list-item routerLink="/profile" (click)="isHandset() ? toggleProfileSidenav() : null">
             <mat-icon matListItemIcon>person</mat-icon>
             <span>My Profile</span>
@@ -125,10 +116,8 @@
   <div class="mobile-nav">
     @for (item of navItems; track $index) {
     @if (item.showInMobile) {
-    <a mat-button class="mobile-nav-button" 
-       [routerLink]="item.action ? undefined : [item.path]" 
-       routerLinkActive="active-link"
-       (click)="item.action ? item.action() : null">
+    <a mat-button class="mobile-nav-button" [routerLink]="item.action ? undefined : [item.path]"
+      routerLinkActive="active-link" (click)="item.action ? item.action() : null">
       <mat-icon>{{item.icon}}</mat-icon>
       <div class="mobile-nav-label">{{item.label}}</div>
     </a>
@@ -143,6 +132,6 @@
 
   <!-- Loading overlay -->
   @if (dataLoadingService.isLoading()) {
-    <app-loading-overlay [message]="dataLoadingService.loadingMessage()"></app-loading-overlay>
+  <app-loading-overlay [message]="dataLoadingService.loadingMessage()"></app-loading-overlay>
   }
 </div>

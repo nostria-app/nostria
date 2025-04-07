@@ -34,14 +34,14 @@ type LoginView = 'main' | 'nsec' | 'extension-loading' | 'existing-accounts';
 })
 export class LoginDialogComponent implements OnInit {
   private dialogRef = inject(MatDialogRef<LoginDialogComponent>);
-  private nostrService = inject(NostrService);
+  nostrService = inject(NostrService);
   private logger = inject(LoggerService);
   
   currentView = signal<LoginView>('main');
   extensionError = signal<string | null>(null);
   nsecKey = '';
   
-  savedAccounts: NostrUser[] = [];
+  // savedAccounts: NostrUser[] = [];
   
   constructor() {
     this.logger.debug('LoginDialogComponent constructor');
@@ -50,12 +50,12 @@ export class LoginDialogComponent implements OnInit {
   ngOnInit(): void {
     this.logger.debug('LoginDialogComponent ngOnInit');
     // Load saved accounts for display
-    this.savedAccounts = this.nostrService.allUsers();
-    this.logger.debug('Loaded saved accounts', { count: this.savedAccounts.length });
+    // this.savedAccounts = this.nostrService.allUsers();
+    // this.logger.debug('Loaded saved accounts', { count: this.savedAccounts.length });
   }
   
   showExistingAccounts(): boolean {
-    return this.savedAccounts.length > 0;
+    return this.nostrService.allUsers().length > 0;
   }
   
   switchToExistingAccounts(): void {
@@ -107,18 +107,6 @@ export class LoginDialogComponent implements OnInit {
     this.logger.debug('Selecting existing account', { pubkey });
     this.nostrService.switchToUser(pubkey);
     this.closeDialog();
-  }
-  
-  getTruncatedNpub(pubkey: string): string {
-    const npub = this.nostrService.getNpubFromPubkey(pubkey);
-    return npub.length > 12 
-      ? `${npub.substring(0, 6)}...${npub.substring(npub.length - 6)}`
-      : npub;
-  }
-  
-  getFormattedDate(timestamp?: number): string {
-    if (!timestamp) return 'Never';
-    return new Date(timestamp).toLocaleDateString();
   }
   
   closeDialog(): void {
