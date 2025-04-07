@@ -1,6 +1,7 @@
 {
   "name": "Nostria",
   "short_name": "Nostria",
+  "version": "0.1.0",
   "theme_color": "#303030",
   "background_color": "#303030",
   "description": "New ways to connect with humanity using Nostr",
