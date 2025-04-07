@@ -153,6 +153,7 @@ mat-nav-list .mat-icon {
   flex-direction: column;
   align-items: center;
   margin-bottom: 16px;
+  text-align: center; // Center all text content
 }
 
 .profile-avatar {
@@ -164,6 +165,13 @@ mat-nav-list .mat-icon {
   align-items: center;
   background-color: var(--mat-primary-300);
   margin-bottom: 16px;
+  overflow: hidden; // Add this to ensure image doesn't overflow
+}
+
+.avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; // Ensures image covers the area properly
 }
 
 .avatar-icon {
@@ -177,6 +185,24 @@ mat-nav-list .mat-icon {
   margin: 0;
   font-size: 20px;
   font-weight: 500;
+  margin-bottom: 4px; // Add space below name
+}
+
+.nip05-identifier {
+  font-size: 14px;
+  color: var(--mat-sys-primary);
+  margin-bottom: 8px; // Add space below NIP-05
+}
+
+.user-about {
+  font-size: 14px;
+  color: var(--mat-subtitle-text-color);
+  margin-top: 8px;
+  margin-bottom: 0;
+  max-height: 80px;
+  overflow-y: auto;
+  text-align: center;
+  line-height: 1.4;
 }
 
 .sidenav-labels {

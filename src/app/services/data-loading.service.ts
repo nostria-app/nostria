@@ -132,7 +132,6 @@ export class DataLoadingService {
 
     // Show success animation instead of waiting
     this.isLoading.set(false);
-    debugger;
     this.showSuccess.set(true);
     
     // Hide success animation after 1.5 seconds

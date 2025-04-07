@@ -361,6 +361,11 @@ export class NostrService {
 
       await this.storage.saveUserMetadata(pubkey, updatedData);
       this.logger.debug(`Saved metadata for user ${pubkey} to storage`);
+      
+      // If this is the current user, trigger a metadata refresh
+      if (this.currentUser()?.pubkey === pubkey) {
+        this.logger.debug('Current user metadata updated');
+      }
     } catch (error) {
       this.logger.error(`Error saving metadata for user ${pubkey}`, error);
     }

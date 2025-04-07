@@ -59,10 +59,29 @@
       </mat-toolbar>
       <div class="profile-content">
         <div class="profile-header">
-          <div class="profile-avatar">
-            <mat-icon class="avatar-icon">account_circle</mat-icon>
-          </div>
-          <h2>{{ nostrService.currentUser()?.name }}</h2>
+          @if (userMetadata(); as metadata) {
+            @if (metadata.content.picture) {
+              <div class="profile-avatar">
+                <img [src]="metadata.content.picture" alt="Profile picture" class="avatar-image">
+              </div>
+            } @else {
+              <div class="profile-avatar">
+                <mat-icon class="avatar-icon">account_circle</mat-icon>
+              </div>
+            }
+            <h2>{{ metadata.content.name || nostrService.getTruncatedNpub(nostrService.currentUser()?.pubkey || '') }}</h2>
+            @if (metadata.content.nip05) {
+              <span class="nip05-identifier">{{ metadata.content.nip05 }}</span>
+            }
+            @if (metadata.content.about) {
+              <p class="user-about">{{ metadata.content.about }}</p>
+            }
+          } @else {
+            <div class="profile-avatar">
+              <mat-icon class="avatar-icon">account_circle</mat-icon>
+            </div>
+            <h2>{{ nostrService.currentUser()?.name || nostrService.getTruncatedNpub(nostrService.currentUser()?.pubkey || '') }}</h2>
+          }
         </div>
         <mat-divider></mat-divider>
 
