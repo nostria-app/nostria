@@ -2,6 +2,7 @@ import { Injectable, signal, computed, effect, inject } from '@angular/core';
 import { generateSecretKey, getPublicKey } from 'nostr-tools/pure';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
 import * as nip19 from 'nostr-tools/nip19';
+import { LoggerService } from './logger.service';
 
 export interface NostrUser {
   pubkey: string;
@@ -18,6 +19,7 @@ export class NostrService {
   #bootStrapRelays = ['wss://relay.damus.io', 'wss://relay.primal.net', 'wss://nos.lol'];
   private readonly USER_STORAGE_KEY = 'nostria-user';
   private readonly USERS_STORAGE_KEY = 'nostria-users';
+  private readonly logger = inject(LoggerService);
   
   private user = signal<NostrUser | null>(null);
   private users = signal<NostrUser[]>([]);
@@ -27,6 +29,7 @@ export class NostrService {
   allUsers = computed(() => this.users());
 
   constructor() {
+    this.logger.info('Initializing NostrService');
     this.loadUsersFromStorage();
     this.loadActiveUserFromStorage();
 
@@ -34,6 +37,7 @@ export class NostrService {
     effect(() => {
       const currentUser = this.user();
       if (currentUser) {
+        this.logger.debug('Saving current user to localStorage', { pubkey: currentUser.pubkey });
         localStorage.setItem(this.USER_STORAGE_KEY, JSON.stringify(currentUser));
         this.updateUserInCollection(currentUser);
       }
@@ -43,6 +47,7 @@ export class NostrService {
     effect(() => {
       const allUsers = this.users();
       if (allUsers.length > 0) {
+        this.logger.debug(`Saving ${allUsers.length} users to localStorage`);
         localStorage.setItem(this.USERS_STORAGE_KEY, JSON.stringify(allUsers));
       }
     });
@@ -56,11 +61,15 @@ export class NostrService {
     const usersJson = localStorage.getItem(this.USERS_STORAGE_KEY);
     if (usersJson) {
       try {
-        this.users.set(JSON.parse(usersJson));
+        const parsedUsers = JSON.parse(usersJson);
+        this.logger.debug(`Loaded ${parsedUsers.length} users from localStorage`);
+        this.users.set(parsedUsers);
       } catch (e) {
-        console.error('Failed to parse users from localStorage', e);
+        this.logger.error('Failed to parse users from localStorage', e);
         this.users.set([]);
       }
+    } else {
+      this.logger.debug('No users found in localStorage');
     }
   }
 
@@ -68,10 +77,14 @@ export class NostrService {
     const userJson = localStorage.getItem(this.USER_STORAGE_KEY);
     if (userJson) {
       try {
-        this.user.set(JSON.parse(userJson));
+        const parsedUser = JSON.parse(userJson);
+        this.logger.debug('Loaded active user from localStorage', { pubkey: parsedUser.pubkey });
+        this.user.set(parsedUser);
       } catch (e) {
-        console.error('Failed to parse user from localStorage', e);
+        this.logger.error('Failed to parse user from localStorage', e);
       }
+    } else {
+      this.logger.debug('No active user found in localStorage');
     }
   }
 
@@ -94,6 +107,7 @@ export class NostrService {
   }
 
   switchToUser(pubkey: string): boolean {
+    this.logger.info(`Switching to user with pubkey: ${pubkey}`);
     const allUsers = this.users();
     const targetUser = allUsers.find(u => u.pubkey === pubkey);
     
@@ -101,13 +115,16 @@ export class NostrService {
       // Update lastUsed timestamp
       targetUser.lastUsed = Date.now();
       this.user.set(targetUser);
+      this.logger.debug('Successfully switched user');
       return true;
     }
     
+    this.logger.warn(`User with pubkey ${pubkey} not found`);
     return false;
   }
 
   generateNewKey(): void {
+    this.logger.info('Generating new Nostr keypair');
     // Generate a proper Nostr key pair using nostr-tools
     const secretKey = generateSecretKey(); // Returns a Uint8Array
     const pubkey = getPublicKey(secretKey); // Converts to hex string
@@ -123,32 +140,43 @@ export class NostrService {
       lastUsed: Date.now()
     };
 
+    this.logger.debug('New keypair generated successfully', { pubkey });
     this.user.set(newUser);
   }
 
   async loginWithExtension(): Promise<void> {
+    this.logger.info('Attempting to login with Nostr extension');
     try {
       // Check if NIP-07 extension is available
       if (!window.nostr) {
-        throw new Error('No Nostr extension found. Please install Alby, nos2x, or another NIP-07 compatible extension.');
+        const error = 'No Nostr extension found. Please install Alby, nos2x, or another NIP-07 compatible extension.';
+        this.logger.error(error);
+        throw new Error(error);
       }
 
       // Get the public key from the extension
+      this.logger.debug('Requesting public key from extension');
       const pubkey = await window.nostr.getPublicKey();
 
       if (!pubkey) {
-        throw new Error('Failed to get public key from extension');
+        const error = 'Failed to get public key from extension';
+        this.logger.error(error);
+        throw new Error(error);
       }
+
+      this.logger.debug('Received public key from extension', { pubkey });
 
       // Get user metadata if available
       let name: string | undefined = undefined;
       try {
         // Some extensions may provide user metadata like name
+        this.logger.debug('Requesting user metadata from extension');
         const userInfo = await window.nostr.getUserMetadata();
         name = userInfo?.name;
+        this.logger.debug('Received user metadata', { name });
       } catch (error) {
         // Ignore errors for metadata, it's optional
-        console.warn('Could not get user metadata from extension', error);
+        this.logger.warn('Could not get user metadata from extension', error);
       }
 
       // Set the user with the public key from the extension
@@ -159,27 +187,33 @@ export class NostrService {
         lastUsed: Date.now()
       };
       
+      this.logger.info('Login with extension successful', { pubkey });
       this.user.set(newUser);
 
       return;
     } catch (error) {
-      console.error('Error connecting to Nostr extension:', error);
+      this.logger.error('Error connecting to Nostr extension:', error);
       throw error; // Re-throw to handle in the UI
     }
   }
 
   loginWithNsec(nsec: string): void {
     try {
+      this.logger.info('Attempting to login with nsec');
       // Validate and decode the nsec
       if (!nsec.startsWith('nsec')) {
-        throw new Error('Invalid nsec format. Must start with "nsec"');
+        const error = 'Invalid nsec format. Must start with "nsec"';
+        this.logger.error(error);
+        throw new Error(error);
       }
 
       // Decode the nsec to get the private key bytes
       const { type, data } = nip19.decode(nsec);
       
       if (type !== 'nsec') {
-        throw new Error(`Expected nsec but got ${type}`);
+        const error = `Expected nsec but got ${type}`;
+        this.logger.error(error);
+        throw new Error(error);
       }
       
       // Convert the private key bytes to hex string
@@ -196,14 +230,16 @@ export class NostrService {
         lastUsed: Date.now()
       };
       
+      this.logger.info('Login with nsec successful', { pubkey });
       this.user.set(newUser);
     } catch (error) {
-      console.error('Error decoding nsec:', error);
+      this.logger.error('Error decoding nsec:', error);
       throw new Error('Invalid nsec key provided. Please check and try again.');
     }
   }
 
   usePreviewAccount(): void {
+    this.logger.info('Using preview account');
     // jack
     const previewPubkey = '82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbfbe6a2';
     const newUser: NostrUser = {
@@ -214,25 +250,33 @@ export class NostrService {
     };
     
     this.user.set(newUser);
+    this.logger.debug('Preview account set successfully', { pubkey: previewPubkey });
   }
 
   logout(): void {
+    this.logger.info('Logging out current user');
     localStorage.removeItem(this.USER_STORAGE_KEY);
     this.user.set(null);
+    this.logger.debug('User logged out successfully');
   }
 
   removeAccount(pubkey: string): void {
+    this.logger.info(`Removing account with pubkey: ${pubkey}`);
     const allUsers = this.users();
     const updatedUsers = allUsers.filter(u => u.pubkey !== pubkey);
     this.users.set(updatedUsers);
     
     // If we're removing the active user, set active user to null
     if (this.user()?.pubkey === pubkey) {
+      this.logger.debug('Removed account was the active user, logging out');
       this.user.set(null);
     }
+    
+    this.logger.debug('Account removed successfully');
   }
 
   getNsecFromPrivkey(privkey: string): string {
+    this.logger.debug('Converting private key to nsec');
     // Convert the hex private key to a Nostr secret key (nsec)
     const bytes = hexToBytes(privkey);
     const nsec = nip19.nsecEncode(bytes);
@@ -240,6 +284,7 @@ export class NostrService {
   }
 
   getNpubFromPubkey(pubkey: string): string {
+    this.logger.debug('Converting public key to npub');
     // Convert the hex public key to a Nostr public key (npub)
     const npub = nip19.npubEncode(pubkey);
     return npub;
