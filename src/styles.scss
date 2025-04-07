@@ -245,3 +245,14 @@ mat-card-content li {
     opacity: 1;
   }
 }
+
+// Credentials page styles
+.private-key {
+  font-family: 'Courier New', monospace;
+  letter-spacing: 1px;
+}
+
+.warning-message p {
+  margin: 0;
+  line-height: 1.5;
+}
