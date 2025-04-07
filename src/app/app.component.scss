@@ -200,3 +200,31 @@ mat-nav-list .mat-icon {
 .profile-sidenav.mat-drawer {
   transition: transform 0.3s ease-in-out;
 }
+
+// Accounts section
+.nav-subheader {
+  padding: 16px 16px 8px 16px;
+  color: var(--mat-subtitle-text-color);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.active-account {
+  background-color: rgba(0, 0, 0, 0.04);
+  
+  &.mat-mdc-list-item {
+    color: var(--mat-sys-primary);
+  }
+}
+
+.dark-theme .active-account {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.account-name {
+  font-size: 14px;
+  max-width: 150px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

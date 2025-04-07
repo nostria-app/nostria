@@ -75,6 +75,45 @@
   }
 }
 
+.login-card.use-existing {
+  width: 100%;
+  height: auto;
+  margin-bottom: 16px;
+  
+  &::after {
+    height: 4px;
+    background: linear-gradient(90deg, #4caf50, #8bc34a);
+  }
+  
+  &:hover {
+    &::after {
+      height: 6px;
+    }
+  }
+}
+
+.accounts-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.account-item {
+  border-bottom: 1px solid var(--mat-divider-color, rgba(0, 0, 0, 0.05));
+  
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.04);
+  }
+}
+
+.dark .account-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.account-source {
+  color: var(--mat-subtitle-text-color);
+  font-size: 12px;
+}
+
 .full-width {
   width: 100%;
 }
