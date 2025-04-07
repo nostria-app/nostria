@@ -50,10 +50,10 @@ export class AppComponent {
   displayLabels = signal(true);
 
   navItems = [
-    { path: 'home', label: 'Home', icon: 'home' },
-    { path: 'settings', label: 'Settings', icon: 'settings' },
-    { path: 'about', label: 'About', icon: 'info' },
-    { path: '', label: 'Logout', icon: 'logout', action: () => this.logout() }
+    { path: 'home', label: 'Home', icon: 'home', showInMobile: true },
+    { path: 'settings', label: 'Settings', icon: 'settings', showInMobile: true },
+    { path: 'about', label: 'About', icon: 'info', showInMobile: true },
+    { path: '', label: 'Logout', icon: 'logout', action: () => this.logout(), showInMobile: false }
   ];
 
   constructor() {
