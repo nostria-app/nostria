@@ -1,21 +1,22 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { MatButtonModule } from '@angular/material/button';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { NostrService } from '../../services/nostr.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { DataLoadingService } from '../../services/data-loading.service';
+import { MatButtonModule } from '@angular/material/button';
 
 @Component({
   selector: 'app-login-dialog',
   standalone: true,
   imports: [
     CommonModule,
-    MatDialogModule,
     MatButtonModule,
+    MatDialogModule,
     MatInputModule,
     MatFormFieldModule,
     FormsModule,
@@ -28,6 +29,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 export class LoginDialogComponent {
   private dialogRef = inject(MatDialogRef<LoginDialogComponent>);
   private nostrService = inject(NostrService);
+  private dataLoadingService = inject(DataLoadingService);
 
   currentView = signal<'main' | 'nsec' | 'extension-loading'>('main');
   nsecKey = '';

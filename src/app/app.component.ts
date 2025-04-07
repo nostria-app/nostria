@@ -14,6 +14,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { LoginDialogComponent } from './components/login-dialog/login-dialog.component';
 import { NostrService } from './services/nostr.service';
+import { LoadingOverlayComponent } from './components/loading-overlay/loading-overlay.component';
+import { DataLoadingService } from './services/data-loading.service';
 
 @Component({
   selector: 'app-root',
@@ -30,7 +32,8 @@ import { NostrService } from './services/nostr.service';
     CommonModule,
     MatTooltipModule,
     MatDialogModule,
-    MatDividerModule
+    MatDividerModule,
+    LoadingOverlayComponent
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
@@ -42,6 +45,7 @@ export class AppComponent {
   pwaUpdateService = inject(PwaUpdateService);
   dialog = inject(MatDialog);
   nostrService = inject(NostrService);
+  dataLoadingService = inject(DataLoadingService);
 
   @ViewChild('profileSidenav') profileSidenav!: MatSidenav;
 
@@ -89,11 +93,11 @@ export class AppComponent {
     this.displayLabels.set(!this.displayLabels());
   }
 
-  logout(): void {
+  async logout(): Promise<void> {
     this.nostrService.logout();
   }
 
-  showLoginDialog(): void {
+  async showLoginDialog(): Promise<void> {
     // Apply the blur class to the document body before opening the dialog
     document.body.classList.add('blur-backdrop');
     
@@ -102,9 +106,14 @@ export class AppComponent {
       disableClose: true,
     });
     
-    // Remove the blur class when the dialog is closed
-    dialogRef.afterClosed().subscribe(() => {
+    // Handle login completion and data loading
+    dialogRef.afterClosed().subscribe(async () => {
       document.body.classList.remove('blur-backdrop');
+      
+      // If user is logged in after dialog closes, simulate data loading
+      if (this.nostrService.isLoggedIn()) {
+        await this.dataLoadingService.simulateLoading(5000, 'Loading your Nostr data...');
+      }
     });
   }
 }
