@@ -69,6 +69,7 @@ export class AppComponent implements OnInit {
   navItems: NavItem[] = [
     { path: 'home', label: 'Home', icon: 'home', showInMobile: true },
     { path: 'settings', label: 'Settings', icon: 'settings', showInMobile: true },
+    { path: 'relays', label: 'Relays', icon: 'dns', showInMobile: false },
     { path: 'about', label: 'About', icon: 'info', showInMobile: true },
     // { path: '', label: 'Logout', icon: 'logout', action: () => this.logout(), showInMobile: false }
   ];
