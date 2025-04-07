@@ -19,6 +19,7 @@ import { DataLoadingService } from './services/data-loading.service';
 import { LoggerService } from './services/logger.service';
 import { MatMenuModule } from '@angular/material/menu';
 import { FormGroup } from '@angular/forms';
+import { StorageService } from './services/storage.service';
 
 interface NavItem {
   path: string;
@@ -58,6 +59,7 @@ export class AppComponent implements OnInit {
   dialog = inject(MatDialog);
   nostrService = inject(NostrService);
   dataLoadingService = inject(DataLoadingService);
+  storage = inject(StorageService);
   private logger = inject(LoggerService);
 
   @ViewChild('profileSidenav') profileSidenav!: MatSidenav;
@@ -97,6 +99,21 @@ export class AppComponent implements OnInit {
       if (!isLoggedIn) {
         this.logger.debug('Showing login dialog');
         this.showLoginDialog();
+      }
+    });
+
+    effect(() => {
+      if (this.nostrService.isLoggedIn() && this.storage.isInitialized()) {
+
+        const user = this.nostrService.currentUser();
+
+        // Whenever the user changes, ensure that we have the correct relays
+        if (user) {
+          this.logger.debug('User changed, updating relays', { pubkey: user.pubkey });
+          this.dataLoadingService.loadData();
+        } else {
+          this.logger.debug('No user logged in, not updating relays');
+        }
       }
     });
 
