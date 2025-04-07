@@ -22,7 +22,6 @@ export class DataLoadingService {
   }
 
   async loadData(): Promise<void> {
-    debugger;
     if (!this.nostr.currentUser()) {
       this.logger.warn('Cannot load data: No user is logged in');
       return;
