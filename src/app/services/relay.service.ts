@@ -1,6 +1,7 @@
 import { Injectable, inject, signal, computed, effect } from '@angular/core';
 import { LoggerService } from './logger.service';
 import { StorageService, Nip11Info } from './storage.service';
+import { SimplePool } from 'nostr-tools';
 
 export interface Relay {
   url: string;
@@ -21,6 +22,8 @@ export class RelayService {
   // Computed value for public access to relays
   userRelays = computed(() => this.relays());
   
+  private userPool: SimplePool | null = null;
+
   constructor() {
     this.logger.info('Initializing RelayService');
     
@@ -51,6 +54,20 @@ export class RelayService {
     
     this.relays.set(relayObjects);
     this.logger.debug('Relays updated successfully');
+  }
+
+  /**
+   * Sets the user pool
+   */
+  setUserPool(pool: SimplePool): void {
+    this.userPool = pool;
+  }
+
+  /**
+   * Gets the user pool
+   */
+  getUserPool(): SimplePool | null {
+    return this.userPool;
   }
   
   /**
