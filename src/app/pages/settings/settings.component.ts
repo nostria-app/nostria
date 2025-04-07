@@ -36,4 +36,22 @@ export class SettingsComponent {
       disableClose: true
     });
   }
+  
+  wipeData(): void {
+    if (confirm('Are you sure you want to delete all app data? This action cannot be undone.')) {
+      // Clear known localStorage keys related to the app
+      const keysToRemove = [
+        'nostria-theme',
+        'nostria-users',
+        'nostria-user',
+      ];
+      
+      keysToRemove.forEach(key => {
+        localStorage.removeItem(key);
+      });
+      
+      // Reload the application
+      window.location.reload();
+    }
+  }
 }
