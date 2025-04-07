@@ -10,19 +10,17 @@
     text-align: center;
     padding: 1rem;
     margin-bottom: 1rem;
-    background: rgba(0, 0, 0, 0.03);
     border-radius: 4px;
 }
 
 .stat-value {
     font-size: 2rem;
     font-weight: 500;
-    color: #3f51b5;
 }
 
 .stat-label {
     font-size: 0.9rem;
-    color: rgba(0, 0, 0, 0.6);
+    color: var(--mat-sys-outline);
 }
 
 .my-3 {
@@ -36,4 +34,24 @@
 
 .mb-3 {
     margin-bottom: 1.5rem;
+}
+
+h2 {
+    margin-top: 2em;
+}
+
+.storage-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 12px 0;
+
+    button {
+        align-self: flex-end;
+        margin-left: 8px;
+
+        &:first-child {
+            margin-left: 0;
+        }
+    }
 }

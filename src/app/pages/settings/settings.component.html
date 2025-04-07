@@ -1,26 +1,61 @@
-<div class="content">
-  <mat-card>
-    <mat-card-header>
-      <mat-card-title>Settings</mat-card-title>
-    </mat-card-header>
-    <mat-card-content>
-      <div class="setting-item">
-        <span>Dark Mode</span>
-        <mat-slide-toggle 
-          [checked]="themeService.darkMode()" 
-          (change)="toggleDarkMode()">
-        </mat-slide-toggle>
-      </div>
-      
-      <div class="setting-item danger-zone">
-        <div>
-          <h3>Danger Zone</h3>
-          <p>This will delete all your local app data and reload the application.</p>
-        </div>
-        <button mat-flat-button class="wipe-data-button" (click)="wipeData()">
-          Wipe Data
-        </button>
-      </div>
-    </mat-card-content>
-  </mat-card>
+<div class="content fixed-content">
+  <h1 class="page-title">Settings</h1>
+
+  <div class="setting-item">
+    <span>Dark Mode</span>
+    <mat-slide-toggle [checked]="themeService.darkMode()" (change)="toggleDarkMode()">
+    </mat-slide-toggle>
+  </div>
+
+  <!-- Storage Stats Component -->
+   <div class="setting-item">
+  <app-storage-stats class="mb-4"></app-storage-stats>
+  </div>
+
+  
+  <div>
+    <h2>Logging</h2>
+    <p>Configure application logging levels</p>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Log Level</mat-label>
+      <mat-select [ngModel]="currentLogLevel()" (selectionChange)="setLogLevel($event.value)">
+        <mat-option value="debug">Debug</mat-option>
+        <mat-option value="info">Info</mat-option>
+        <mat-option value="warn">Warning</mat-option>
+        <mat-option value="error">Error</mat-option>
+        <mat-option value="none">None</mat-option>
+      </mat-select>
+    </mat-form-field>
+    <p >
+      @switch (currentLogLevel()) {
+      @case ('debug') {
+      Shows all log messages including detailed debug information.
+      }
+      @case ('info') {
+      Shows informational messages, warnings and errors.
+      }
+      @case ('warn') {
+      Shows only warnings and errors.
+      }
+      @case ('error') {
+      Shows only error messages.
+      }
+      @case ('none') {
+      Disables all logging output.
+      }
+      }
+    </p>
+  </div>
+
+  <div class="setting-item danger-zone">
+    <div>
+      <h2>Danger Zone</h2>
+      <p>This will delete all your local app data and reload the application.</p>
+    </div>
+    <button mat-flat-button class="wipe-data-button" (click)="wipeData()">
+      Wipe Data
+    </button>
+  </div>
+
 </div>

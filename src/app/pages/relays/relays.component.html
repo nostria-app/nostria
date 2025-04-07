@@ -1,22 +1,17 @@
-<div class="container mx-auto px-4 py-8">
-  <h1 class="text-2xl font-bold mb-6">Nostr Relays</h1>
+<div class="content fixed-content">
+  <h1>Manage Relays</h1>
 
-  <mat-card class="mb-6">
-    <mat-card-header>
-      <mat-card-title>Add New Relay</mat-card-title>
-    </mat-card-header>
-    <mat-card-content class="top-margin">
-      <div class="flex-container">
-        <mat-form-field appearance="outline" class="relay-input">
-          <mat-label>Relay URL (wss://...)</mat-label>
-          <input matInput placeholder="wss://relay.example.com" [value]="newRelayUrl()" (keyup.enter)="addRelay()">
-        </mat-form-field>
-        <button mat-flat-button color="primary" class="add-button" (click)="addRelay()">
-          Add Relay
-        </button>
-      </div>
-    </mat-card-content>
-  </mat-card>
+  <h2>Add New Relay</h2>
+
+  <div class="flex-container add-relay-container">
+    <mat-form-field appearance="outline" class="relay-input">
+      <mat-label>Relay URL (wss://...)</mat-label>
+      <input matInput placeholder="wss://relay.example.com" [value]="newRelayUrl()" (keyup.enter)="addRelay()">
+    </mat-form-field>
+    <button mat-flat-button color="primary" class="add-button" (click)="addRelay()">
+      Add Relay
+    </button>
+  </div>
 
   <mat-card>
     <mat-card-header>
