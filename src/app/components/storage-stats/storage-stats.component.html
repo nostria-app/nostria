@@ -1,0 +1,52 @@
+<mat-card appearance="outlined">
+    <mat-card-header>
+        <mat-card-title>Local Database</mat-card-title>
+        <mat-card-subtitle>Statistics and management of cached data</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+        <div class="stats-container">
+            <div class="stat-item">
+                <div class="stat-value">{{ stats().relaysCount }}</div>
+                <div class="stat-label">Relays</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">{{ stats().userMetadataCount }}</div>
+                <div class="stat-label">User Profiles</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">{{ stats().userRelaysCount }}</div>
+                <div class="stat-label">User Relay Lists</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">{{ formattedSize() }}</div>
+                <div class="stat-label">Total Size</div>
+            </div>
+        </div>
+
+        <mat-divider class="my-3"></mat-divider>
+
+        <p class="mb-2">
+            The local database stores relay information, user metadata, and user relay lists to
+            improve performance and reduce network requests.
+        </p>
+
+        <p class="mb-3">
+            Clearing the cache will remove data for all users except the current user.
+            This can help if you're experiencing issues or want to free up space.
+        </p>
+
+        @if (isClearing()) {
+        <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+        }
+    </mat-card-content>
+    <mat-card-actions align="end">
+        <button mat-button color="warn" [disabled]="isClearing() || !nostr.isLoggedIn()" (click)="clearCache()">
+            <mat-icon>delete_sweep</mat-icon>
+            CLEAR CACHE
+        </button>
+        <button mat-button color="primary" [disabled]="isClearing()" (click)="refreshStats()">
+            <mat-icon>refresh</mat-icon>
+            REFRESH
+        </button>
+    </mat-card-actions>
+</mat-card>

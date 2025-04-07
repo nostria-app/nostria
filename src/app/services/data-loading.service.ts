@@ -3,6 +3,7 @@ import { NostrService } from './nostr.service';
 import { kinds, SimplePool } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { RelayService } from './relay.service';
+import { StorageService, UserMetadata } from './storage.service';
 
 @Injectable({
   providedIn: 'root'
@@ -14,6 +15,7 @@ export class DataLoadingService {
   nostr = inject(NostrService);
   private logger = inject(LoggerService);
   private relayService = inject(RelayService);
+  private storage = inject(StorageService);
 
   constructor() {
     this.logger.info('Initializing DataLoadingService');
@@ -36,6 +38,13 @@ export class DataLoadingService {
     let profile = null;
     let metadata = null;
 
+    // First check if we have metadata in storage
+    const storedMetadata = await this.storage.getUserMetadata(pubkey);
+    if (storedMetadata) {
+      this.logger.info('Found user metadata in storage', { storedMetadata });
+      this.loadingMessage.set('Found your profile in local storage! 👍');
+    }
+
     // To properly scale Nostr, the first step is simply getting the user's relay list and nothing more.
     const pool = new SimplePool();
     this.logger.debug('Connecting to bootstrap relays', { relays: this.nostr.bootStrapRelays });
@@ -55,10 +64,16 @@ export class DataLoadingService {
       
       // Store the relays in the relay service
       this.relayService.setRelays(relayUrls);
+      
+      // Save to storage
+      await this.relayService.saveUserRelays(pubkey);
     } else {
       this.logger.warn('No relay list found for user');
       // Set default bootstrap relays if no custom relays found
       this.relayService.setRelays([...this.nostr.bootStrapRelays]);
+      
+      // Save bootstrap relays to storage for this user
+      await this.relayService.saveUserRelays(pubkey);
     }
 
     // Attempt to connect to the user's defined relays, to help Nostr with
@@ -79,6 +94,23 @@ export class DataLoadingService {
       if (metadata) {
         this.logger.info('Found user metadata', { metadata });
         this.loadingMessage.set('Found your profile! 👍');
+        
+        try {
+          // Parse the content field which should be JSON
+          const metadataContent = JSON.parse(metadata.content);
+          
+          // Save to storage
+          await this.nostr.saveUserMetadata(pubkey, {
+            name: metadataContent.name,
+            about: metadataContent.about,
+            picture: metadataContent.picture,
+            nip05: metadataContent.nip05,
+            banner: metadataContent.banner,
+            website: metadataContent.website
+          });
+        } catch (e) {
+          this.logger.error('Failed to parse metadata content', e);
+        }
       } else {
         this.logger.warn('No metadata found for user');
       }
