@@ -12,6 +12,7 @@ export interface NostrUser {
   providedIn: 'root'
 })
 export class NostrService {
+  private readonly USER_STORAGE_KEY = 'nostria-user';
   private user = signal<NostrUser | null>(null);
   isLoggedIn = computed(() => !!this.user());
   currentUser = computed(() => this.user());
@@ -23,13 +24,13 @@ export class NostrService {
     effect(() => {
       const currentUser = this.user();
       if (currentUser) {
-        localStorage.setItem('nostr_user', JSON.stringify(currentUser));
+        localStorage.setItem(this.USER_STORAGE_KEY, JSON.stringify(currentUser));
       }
     });
   }
   
   private loadUserFromStorage(): void {
-    const userJson = localStorage.getItem('nostr_user');
+    const userJson = localStorage.getItem(this.USER_STORAGE_KEY);
     if (userJson) {
       try {
         this.user.set(JSON.parse(userJson));
@@ -118,7 +119,7 @@ export class NostrService {
   }
   
   logout(): void {
-    localStorage.removeItem('nostr_user');
+    localStorage.removeItem(this.USER_STORAGE_KEY);
     this.user.set(null);
   }
 }
