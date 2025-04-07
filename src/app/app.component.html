@@ -31,9 +31,11 @@
       [mode]="isHandset() ? 'over' : 'side'"
       [fixedInViewport]="false">
       <mat-nav-list>
-        @for (item of navItems; track item.path) {
-        <a mat-list-item [routerLink]="[item.path]" routerLinkActive="active-link"
-          (click)="isHandset() ? toggleSidenav() : null">
+        @for (item of navItems; track $index) {
+        <a mat-list-item 
+           [routerLink]="item.action ? null : [item.path]" 
+           routerLinkActive="active-link"
+           (click)="item.action ? item.action() : (isHandset() ? toggleSidenav() : null)">
           <mat-icon matListItemIcon>{{item.icon}}</mat-icon>
           @if(displayLabels()) {
           <span class="nav-label">{{item.label}}</span>
@@ -63,8 +65,11 @@
   <!-- Mobile navigation footer - now outside of sidenav container -->
   @if (isHandset()) {
   <div class="mobile-nav">
-    @for (item of navItems; track item.path) {
-    <a mat-button class="mobile-nav-button" [routerLink]="[item.path]" routerLinkActive="active-link">
+    @for (item of navItems; track $index) {
+    <a mat-button class="mobile-nav-button" 
+       [routerLink]="item.action ? null : [item.path]" 
+       routerLinkActive="active-link"
+       (click)="item.action ? item.action() : null">
       <mat-icon>{{item.icon}}</mat-icon>
       <div class="mobile-nav-label">{{item.label}}</div>
     </a>
