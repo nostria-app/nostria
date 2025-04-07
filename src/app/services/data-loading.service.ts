@@ -2,6 +2,7 @@ import { inject, Injectable, signal } from '@angular/core';
 import { NostrService } from './nostr.service';
 import { kinds, SimplePool } from 'nostr-tools';
 import { LoggerService } from './logger.service';
+import { RelayService } from './relay.service';
 
 @Injectable({
   providedIn: 'root'
@@ -11,6 +12,7 @@ export class DataLoadingService {
   loadingMessage = signal('Loading data...');
   nostr = inject(NostrService);
   private logger = inject(LoggerService);
+  private relayService = inject(RelayService);
 
   constructor() {
     this.logger.info('Initializing DataLoadingService');
@@ -48,8 +50,13 @@ export class DataLoadingService {
     if (relays) {
       relayUrls = relays.tags.filter(tag => tag.length >= 2 && tag[0] === 'r').map(tag => tag[1]);
       this.logger.info(`Found ${relayUrls.length} relays for user`, { relayUrls });
+      
+      // Store the relays in the relay service
+      this.relayService.setRelays(relayUrls);
     } else {
       this.logger.warn('No relay list found for user');
+      // Set default bootstrap relays if no custom relays found
+      this.relayService.setRelays([...this.nostr.bootStrapRelays]);
     }
 
     // Attempt to connect to the user's defined relays, to help Nostr with

@@ -1,0 +1,60 @@
+<div class="container mx-auto px-4 py-8">
+  <h1 class="text-2xl font-bold mb-6">Nostr Relays</h1>
+
+  <mat-card class="mb-6">
+    <mat-card-header>
+      <mat-card-title>Add New Relay</mat-card-title>
+    </mat-card-header>
+    <mat-card-content class="top-margin">
+      <div class="flex-container">
+        <mat-form-field appearance="outline" class="relay-input">
+          <mat-label>Relay URL (wss://...)</mat-label>
+          <input matInput placeholder="wss://relay.example.com" [value]="newRelayUrl()" (keyup.enter)="addRelay()">
+        </mat-form-field>
+        <button mat-flat-button color="primary" class="add-button" (click)="addRelay()">
+          Add Relay
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>Your Relays</mat-card-title>
+      <mat-card-subtitle>You have {{relays().length}} relays configured</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      @if (relays().length === 0) {
+      <div class="text-center py-8 text-gray-500">
+        <p>You don't have any relays configured yet.</p>
+        <p>Add a relay using the form above.</p>
+      </div>
+      } @else {
+      <mat-list>
+        @for (relay of relays(); track relay.url) {
+        <mat-list-item>
+          <div class="relay-item-container">
+            <div class="status-icon">
+              <mat-icon [ngClass]="getStatusColor(relay.status)">
+                {{getStatusIcon(relay.status)}}
+              </mat-icon>
+            </div>
+            <div class="relay-url">
+              {{formatRelayUrl(relay.url)}}
+            </div>
+            <div class="delete-button">
+              <button mat-icon-button color="warn" (click)="removeRelay(relay)" aria-label="Remove relay">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+          </div>
+        </mat-list-item>
+        @if(!$last) {
+        <mat-divider></mat-divider>
+        }
+        }
+      </mat-list>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>
