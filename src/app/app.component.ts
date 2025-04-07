@@ -20,6 +20,14 @@ import { LoggerService } from './services/logger.service';
 import { MatMenuModule } from '@angular/material/menu';
 import { FormGroup } from '@angular/forms';
 
+interface NavItem {
+  path: string;
+  label: string;
+  icon: string;
+  showInMobile: boolean;
+  action?: () => void;
+}
+
 @Component({
   selector: 'app-root',
   standalone: true,
@@ -58,11 +66,11 @@ export class AppComponent implements OnInit {
   opened = signal(true);
   displayLabels = signal(true);
 
-  navItems = [
+  navItems: NavItem[] = [
     { path: 'home', label: 'Home', icon: 'home', showInMobile: true },
     { path: 'settings', label: 'Settings', icon: 'settings', showInMobile: true },
     { path: 'about', label: 'About', icon: 'info', showInMobile: true },
-    { path: '', label: 'Logout', icon: 'logout', action: () => this.logout(), showInMobile: false }
+    // { path: '', label: 'Logout', icon: 'logout', action: () => this.logout(), showInMobile: false }
   ];
 
   constructor() {

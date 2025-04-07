@@ -158,7 +158,7 @@ export class NostrService {
     if (targetUser) {
       // Update lastUsed timestamp
       targetUser.lastUsed = Date.now();
-      targetUser.name || this.getTruncatedNpub(targetUser.pubkey);
+     
       // {{ account.name || nostrService.getTruncatedNpub(account.pubkey) }}
 
       this.user.set(targetUser);
@@ -176,6 +176,7 @@ export class NostrService {
 
     // Update lastUsed timestamp
     user.lastUsed = Date.now();
+    user.name ??= this.getTruncatedNpub(user.pubkey);
 
     const allUsers = this.users();
     const existingUserIndex = allUsers.findIndex(u => u.pubkey === user.pubkey);
