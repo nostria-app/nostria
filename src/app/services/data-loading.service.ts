@@ -10,6 +10,7 @@ import { RelayService } from './relay.service';
 export class DataLoadingService {
   isLoading = signal(false);
   loadingMessage = signal('Loading data...');
+  showSuccess = signal(false);
   nostr = inject(NostrService);
   private logger = inject(LoggerService);
   private relayService = inject(RelayService);
@@ -26,6 +27,7 @@ export class DataLoadingService {
 
     this.loadingMessage.set('Retrieving your relay list...');
     this.isLoading.set(true);
+    this.showSuccess.set(false);
     this.logger.info('Starting data loading process');
 
     const pubkey = this.nostr.currentUser()!.pubkey;
@@ -88,14 +90,17 @@ export class DataLoadingService {
     this.logger.debug('Closing bootstrap relay pool connections');
     pool.close(this.nostr.bootStrapRelays);
 
-    this.loadingMessage.set('Loading completed! ✅');
+    this.loadingMessage.set('Loading completed!');
     this.logger.info('Data loading process completed');
 
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    } finally {
-      this.isLoading.set(false);
-    }
+    // Show success animation instead of waiting
+    this.isLoading.set(false);
+    this.showSuccess.set(true);
+    
+    // Hide success animation after 1.5 seconds
+    setTimeout(() => {
+      this.showSuccess.set(false);
+    }, 1500);
   }
 
   /**
@@ -108,12 +113,23 @@ export class DataLoadingService {
     this.logger.info(`Simulating loading for ${duration}ms with message: "${message}"`);
     this.loadingMessage.set(message);
     this.isLoading.set(true);
+    this.showSuccess.set(false);
 
     try {
       await new Promise(resolve => setTimeout(resolve, duration));
       this.logger.debug('Simulated loading completed');
-    } finally {
+      
+      // Show success animation
       this.isLoading.set(false);
+      this.showSuccess.set(true);
+      
+      // Hide success animation after 1.5 seconds
+      setTimeout(() => {
+        this.showSuccess.set(false);
+      }, 1500);
+    } catch (error) {
+      this.isLoading.set(false);
+      throw error;
     }
   }
 }

@@ -133,4 +133,13 @@
   @if (dataLoadingService.isLoading()) {
   <app-loading-overlay [message]="dataLoadingService.loadingMessage()"></app-loading-overlay>
   }
+
+  <!-- Success overlay with checkmark -->
+  @if (dataLoadingService.showSuccess()) {
+  <div class="success-overlay">
+    <div class="success-checkmark">
+      <mat-icon class="success-icon">check</mat-icon>
+    </div>
+  </div>
+  }
 </div>
