@@ -98,15 +98,35 @@ export class NostrService {
   }
 
   loginWithNsec(nsec: string): void {
-    // In a real implementation, you'd validate and convert the nsec to a pubkey
-    // For now, we'll mock this behavior
-    const mockPubkey = `npub${Math.random().toString(36).substring(2, 15)}`;
+    try {
+      // Validate and decode the nsec
+      if (!nsec.startsWith('nsec')) {
+        throw new Error('Invalid nsec format. Must start with "nsec"');
+      }
 
-    this.user.set({
-      pubkey: mockPubkey,
-      privkey: nsec,
-      source: 'nsec'
-    });
+      // Decode the nsec to get the private key bytes
+      const { type, data } = nip19.decode(nsec);
+      
+      if (type !== 'nsec') {
+        throw new Error(`Expected nsec but got ${type}`);
+      }
+      
+      // Convert the private key bytes to hex string
+      const privkeyHex = bytesToHex(data);
+      
+      // Generate the public key from the private key
+      const pubkey = getPublicKey(data);
+      
+      // Store the user info
+      this.user.set({
+        pubkey,
+        privkey: privkeyHex,
+        source: 'nsec'
+      });
+    } catch (error) {
+      console.error('Error decoding nsec:', error);
+      throw new Error('Invalid nsec key provided. Please check and try again.');
+    }
   }
 
   usePreviewAccount(): void {
