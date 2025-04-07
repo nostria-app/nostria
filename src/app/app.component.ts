@@ -20,6 +20,7 @@ import { LoggerService } from './services/logger.service';
 import { MatMenuModule } from '@angular/material/menu';
 import { FormGroup } from '@angular/forms';
 import { StorageService } from './services/storage.service';
+import { NostrEventData, UserMetadata } from './services/storage.service';
 
 interface NavItem {
   path: string;
@@ -67,6 +68,7 @@ export class AppComponent implements OnInit {
   isHandset = signal(false);
   opened = signal(true);
   displayLabels = signal(true);
+  userMetadata = signal<NostrEventData<UserMetadata> | undefined>(undefined);
 
   navItems: NavItem[] = [
     { path: 'home', label: 'Home', icon: 'home', showInMobile: true },
@@ -104,16 +106,27 @@ export class AppComponent implements OnInit {
 
     effect(() => {
       if (this.nostrService.isLoggedIn() && this.storage.isInitialized()) {
-
         const user = this.nostrService.currentUser();
 
         // Whenever the user changes, ensure that we have the correct relays
         if (user) {
           this.logger.debug('User changed, updating relays', { pubkey: user.pubkey });
           this.dataLoadingService.loadData();
+          
+          // Also load the user metadata for the profile panel
+          this.loadUserMetadata();
         } else {
           this.logger.debug('No user logged in, not updating relays');
         }
+      }
+    });
+
+    // Effect to load metadata again after data loading completes
+    effect(() => {
+      const showSuccess = this.dataLoadingService.showSuccess();
+      if (showSuccess) {
+        this.logger.debug('Data loading completed, refreshing user metadata');
+        this.loadUserMetadata();
       }
     });
 
@@ -194,5 +207,29 @@ export class AppComponent implements OnInit {
         this.logger.debug('User not logged in after dialog closed');
       }
     });
+  }
+
+  async loadUserMetadata(): Promise<void> {
+    if (!this.nostrService.currentUser()) {
+      this.logger.debug('No user logged in, cannot load metadata');
+      return;
+    }
+    
+    const pubkey = this.nostrService.currentUser()!.pubkey;
+    this.logger.debug('Loading user metadata', { pubkey });
+    
+    try {
+      const metadata = await this.nostrService.getUserMetadata(pubkey);
+      if (metadata) {
+        this.logger.debug('User metadata loaded', { metadata });
+        this.userMetadata.set(metadata);
+      } else {
+        this.logger.debug('No metadata found for user');
+        this.userMetadata.set(undefined);
+      }
+    } catch (error) {
+      this.logger.error('Failed to load user metadata', error);
+      this.userMetadata.set(undefined);
+    }
   }
 }
