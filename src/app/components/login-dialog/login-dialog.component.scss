@@ -1,0 +1,26 @@
+.login-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 16px;
+  }
+  
+  mat-card {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    height: 120px;
+  }
+  
+  mat-card:hover {
+    background-color: rgba(0, 0, 0, 0.04);
+    transform: translateY(-2px);
+  }
+  
+  .full-width {
+    width: 100%;
+  }
+  
+  .nsec-warning {
+    margin-top: 16px;
+    color: #f44336;
+  }
