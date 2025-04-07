@@ -22,6 +22,7 @@ export class DataLoadingService {
   }
 
   async loadData(): Promise<void> {
+    debugger;
     if (!this.nostr.currentUser()) {
       this.logger.warn('Cannot load data: No user is logged in');
       return;
@@ -115,8 +116,11 @@ export class DataLoadingService {
         this.logger.warn('No metadata found for user');
       }
 
-      this.logger.debug('Closing user relay pool connections');
-      userPool.close(relayUrls);
+      // Attach the userPool to the relay service for further use.
+      this.relayService.setUserPool(userPool);
+
+      // this.logger.debug('Closing user relay pool connections');
+      // userPool.close(relayUrls);
     }
 
     this.logger.debug('Closing bootstrap relay pool connections');
