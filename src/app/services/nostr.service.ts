@@ -339,10 +339,11 @@ export class NostrService {
       // Check if we already have metadata for this user
       const existingMetadata = await this.storage.getUserMetadata(pubkey);
 
+      // Preserve all fields by merging the existing metadata with the new one
       const updatedMetadata: UserMetadata = {
-        ...existingMetadata || { pubkey },
+        ...(existingMetadata || { pubkey }),
         ...metadata,
-        pubkey,
+        pubkey, // Ensure pubkey is always set correctly
         last_updated: Date.now()
       };
 
