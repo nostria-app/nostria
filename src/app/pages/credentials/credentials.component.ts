@@ -61,4 +61,16 @@ export class CredentialsComponent {
     const suffix = nsec.substring(nsec.length - 4);
     return `${prefix}${'•'.repeat(Math.min(20, nsec.length - 8))}${suffix}`;
   }
+
+  getNpub(): string {
+    const pubkey = this.nostrService.currentUser()?.pubkey;
+    if (!pubkey) return '';
+    return this.nostrService.getNpubFromPubkey(pubkey);
+  }
+
+  getNsec(): string {
+    const privkey = this.nostrService.currentUser()?.privkey;
+    if (!privkey) return '';
+    return this.nostrService.getNsecFromPrivkey(privkey);
+  }
 }
