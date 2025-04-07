@@ -19,6 +19,9 @@
     <button mat-icon-button (click)="themeService.toggleDarkMode()" aria-label="Toggle theme">
       <mat-icon>{{ themeService.darkMode() ? 'dark_mode' : 'light_mode' }}</mat-icon>
     </button>
+    <button mat-icon-button (click)="toggleProfileSidenav()" aria-label="Toggle profile" class="profile-button">
+      <mat-icon>account_circle</mat-icon>
+    </button>
   </mat-toolbar>
 
   <!-- Sidenav container now below the toolbar -->
@@ -51,6 +54,36 @@
           }
         </a>
       </mat-nav-list>
+    </mat-sidenav>
+
+    <!-- Profile sidenav (right side) -->
+    <mat-sidenav #profileSidenav position="end" class="profile-sidenav" mode="over">
+      <mat-toolbar>
+        <span>Profile</span>
+        <span class="toolbar-spacer"></span>
+        <button mat-icon-button (click)="toggleProfileSidenav()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </mat-toolbar>
+      <div class="profile-content">
+        <div class="profile-header">
+          <div class="profile-avatar">
+            <mat-icon class="avatar-icon">account_circle</mat-icon>
+          </div>
+          <h2>{{ nostrService.isLoggedIn() ? 'User Name' : 'Not Logged In' }}</h2>
+        </div>
+        <mat-divider></mat-divider>
+        <mat-nav-list>
+          <a mat-list-item routerLink="/profile" (click)="isHandset() ? toggleProfileSidenav() : null">
+            <mat-icon matListItemIcon>person</mat-icon>
+            <span>My Profile</span>
+          </a>
+          <a mat-list-item (click)="logout(); toggleProfileSidenav()">
+            <mat-icon matListItemIcon>logout</mat-icon>
+            <span>Logout</span>
+          </a>
+        </mat-nav-list>
+      </div>
     </mat-sidenav>
 
     <!-- Main content container -->

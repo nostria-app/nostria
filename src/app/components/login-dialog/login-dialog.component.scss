@@ -18,7 +18,7 @@
 .dialog-subtitle {
   text-align: center;
   margin-bottom: 24px;
-  color: rgba(0, 0, 0, 0.7);
+  color: var(--mat-subtitle-text-color, rgba(0, 0, 0, 0.7));
   font-size: 16px;
 }
 
@@ -34,9 +34,9 @@
   transition: all 0.3s ease;
   height: 130px;
   border-radius: 12px;
-  background: white;
+  background: var(--mat-card-container-color, white);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--mat-divider-color, rgba(0, 0, 0, 0.05));
   overflow: hidden;
   position: relative;
   
@@ -67,10 +67,11 @@
   mat-card-title {
     font-weight: 500;
     font-size: 18px;
+    color: var(--mat-card-title-text-color);
   }
   
   mat-card-content {
-    color: rgba(0, 0, 0, 0.6);
+    color: var(--mat-card-subtitle-text-color, rgba(0, 0, 0, 0.6));
   }
 }
 
@@ -80,9 +81,9 @@
 
 .nsec-warning {
   margin-top: 16px;
-  color: #f44336;
+  color: var(--mat-warn-color, #f44336);
   padding: 10px;
   border-radius: 4px;
-  background-color: rgba(244, 67, 54, 0.05);
-  border: 1px solid rgba(244, 67, 54, 0.2);
+  background-color: var(--mat-warn-container-color, rgba(244, 67, 54, 0.05));
+  border: 1px solid var(--mat-warn-outline-color, rgba(244, 67, 54, 0.2));
 }

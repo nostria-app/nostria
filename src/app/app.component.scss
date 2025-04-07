@@ -127,6 +127,51 @@ mat-nav-list .mat-icon {
   width: 100%; // Full width to ensure centering
 }
 
+// Profile sidenav styles
+.profile-sidenav {
+  width: 300px;
+  max-width: 90vw;
+}
+
+.profile-button {
+  margin-left: 8px;
+}
+
+.profile-content {
+  padding: 16px;
+}
+
+.profile-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.profile-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: var(--mat-primary-300);
+  margin-bottom: 16px;
+}
+
+.avatar-icon {
+  font-size: 64px;
+  height: 64px;
+  width: 64px;
+  color: white;
+}
+
+.profile-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 500;
+}
+
 .sidenav-labels {
   width: 200px;
 }
@@ -142,4 +187,9 @@ mat-nav-list .mat-icon {
 
 .sidenav-small .logo-icon {
   width: 56px !important;
+}
+
+// Animation for the profile sidenav
+.profile-sidenav.mat-drawer {
+  transition: transform 0.3s ease-in-out;
 }
