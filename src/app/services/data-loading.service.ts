@@ -93,11 +93,14 @@ export class DataLoadingService {
 
       if (metadata) {
         this.logger.info('Found user metadata', { metadata });
+        debugger;
         this.loadingMessage.set('Found your profile! 👍');
         
         try {
           // Parse the content field which should be JSON
           const metadataContent = JSON.parse(metadata.content);
+
+          this.logger.debug('Parsed metadata content', { metadataContent });
           
           // Save to storage
           await this.nostr.saveUserMetadata(pubkey, {
