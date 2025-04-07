@@ -1,4 +1,4 @@
-import { Injectable, signal, computed, effect, inject } from '@angular/core';
+import { Injectable, signal, computed, effect, inject, untracked } from '@angular/core';
 import { generateSecretKey, getPublicKey } from 'nostr-tools/pure';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
 import * as nip19 from 'nostr-tools/nip19';
@@ -20,13 +20,32 @@ export class NostrService {
   private readonly USER_STORAGE_KEY = 'nostria-user';
   private readonly USERS_STORAGE_KEY = 'nostria-users';
   private readonly logger = inject(LoggerService);
-  
+
+  private userIndex = signal<number>(-1);
+
   private user = signal<NostrUser | null>(null);
   private users = signal<NostrUser[]>([]);
-  
-  isLoggedIn = computed(() => !!this.user());
-  currentUser = computed(() => this.user());
-  allUsers = computed(() => this.users());
+
+  // loadNotes = effect(() => {
+  //   if (this.activeId()) {
+  //     const result =  MOCK_NOTES_BY_ID[this.activeId()]
+  //     untracked(() => this.notes.set(result))
+  //   }
+  // })
+
+  isLoggedIn = computed(() => {
+    const result = !!this.user();
+    this.logger.debug('isLoggedIn computed value calculated', { isLoggedIn: result });
+    return result;
+  });
+
+  currentUser = computed(() => {
+    return this.user();
+  });
+
+  allUsers = computed(() => {
+    return this.users();;
+  });
 
   constructor() {
     this.logger.info('Initializing NostrService');
@@ -36,21 +55,34 @@ export class NostrService {
     // Save user to localStorage whenever it changes
     effect(() => {
       const currentUser = this.user();
+      this.logger.debug('User change effect triggered', {
+        hasUser: !!currentUser,
+        pubkey: currentUser?.pubkey
+      });
+
       if (currentUser) {
         this.logger.debug('Saving current user to localStorage', { pubkey: currentUser.pubkey });
         localStorage.setItem(this.USER_STORAGE_KEY, JSON.stringify(currentUser));
-        this.updateUserInCollection(currentUser);
+
+        // Make sure this is untracked or we get infinite loop.
+        untracked(() => {
+          this.updateUserInCollection(currentUser);
+        });
       }
     });
 
     // Save all users to localStorage whenever they change
     effect(() => {
       const allUsers = this.users();
-      if (allUsers.length > 0) {
-        this.logger.debug(`Saving ${allUsers.length} users to localStorage`);
-        localStorage.setItem(this.USERS_STORAGE_KEY, JSON.stringify(allUsers));
-      }
+      this.logger.debug('Users collection effect triggered', { count: allUsers.length });
+
+      // if (allUsers.length > 0) {
+      this.logger.debug(`Saving ${allUsers.length} users to localStorage`);
+      localStorage.setItem(this.USERS_STORAGE_KEY, JSON.stringify(allUsers));
+      // }
     });
+
+    this.logger.debug('NostrService initialization completed');
   }
 
   get bootStrapRelays() {
@@ -89,20 +121,26 @@ export class NostrService {
   }
 
   private updateUserInCollection(updatedUser: NostrUser): void {
+    this.logger.debug('Updating user in collection', { pubkey: updatedUser.pubkey });
+
     // Update lastUsed timestamp
     updatedUser.lastUsed = Date.now();
-    
+
     const allUsers = this.users();
     const existingUserIndex = allUsers.findIndex(u => u.pubkey === updatedUser.pubkey);
-    
+
     if (existingUserIndex >= 0) {
       // Update existing user
-      const updatedUsers = [...allUsers];
-      updatedUsers[existingUserIndex] = updatedUser;
-      this.users.set(updatedUsers);
+      this.logger.debug('Updating existing user in collection', { index: existingUserIndex });
+      // const updatedUsers = [...allUsers];
+      // updatedUsers[existingUserIndex] = updatedUser;
+      // this.users.set(updatedUsers);
+      this.users.update(u => u.map(user => user.pubkey === updatedUser.pubkey ? updatedUser : user))
     } else {
       // Add new user
-      this.users.set([...allUsers, updatedUser]);
+      this.logger.debug('Adding new user to collection');
+      // this.users.set([...allUsers, updatedUser]);
+      this.users.update(u => [...u, updatedUser]);
     }
   }
 
@@ -110,7 +148,7 @@ export class NostrService {
     this.logger.info(`Switching to user with pubkey: ${pubkey}`);
     const allUsers = this.users();
     const targetUser = allUsers.find(u => u.pubkey === pubkey);
-    
+
     if (targetUser) {
       // Update lastUsed timestamp
       targetUser.lastUsed = Date.now();
@@ -118,7 +156,7 @@ export class NostrService {
       this.logger.debug('Successfully switched user');
       return true;
     }
-    
+
     this.logger.warn(`User with pubkey ${pubkey} not found`);
     return false;
   }
@@ -186,7 +224,7 @@ export class NostrService {
         source: 'extension',
         lastUsed: Date.now()
       };
-      
+
       this.logger.info('Login with extension successful', { pubkey });
       this.user.set(newUser);
 
@@ -209,19 +247,19 @@ export class NostrService {
 
       // Decode the nsec to get the private key bytes
       const { type, data } = nip19.decode(nsec);
-      
+
       if (type !== 'nsec') {
         const error = `Expected nsec but got ${type}`;
         this.logger.error(error);
         throw new Error(error);
       }
-      
+
       // Convert the private key bytes to hex string
       const privkeyHex = bytesToHex(data);
-      
+
       // Generate the public key from the private key
       const pubkey = getPublicKey(data);
-      
+
       // Store the user info
       const newUser: NostrUser = {
         pubkey,
@@ -229,7 +267,7 @@ export class NostrService {
         source: 'nsec',
         lastUsed: Date.now()
       };
-      
+
       this.logger.info('Login with nsec successful', { pubkey });
       this.user.set(newUser);
     } catch (error) {
@@ -248,7 +286,7 @@ export class NostrService {
       source: 'preview',
       lastUsed: Date.now()
     };
-    
+
     this.user.set(newUser);
     this.logger.debug('Preview account set successfully', { pubkey: previewPubkey });
   }
@@ -265,13 +303,13 @@ export class NostrService {
     const allUsers = this.users();
     const updatedUsers = allUsers.filter(u => u.pubkey !== pubkey);
     this.users.set(updatedUsers);
-    
+
     // If we're removing the active user, set active user to null
     if (this.user()?.pubkey === pubkey) {
       this.logger.debug('Removed account was the active user, logging out');
       this.user.set(null);
     }
-    
+
     this.logger.debug('Account removed successfully');
   }
 

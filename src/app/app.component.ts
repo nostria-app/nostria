@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect, ViewChild } from '@angular/core';
+import { Component, inject, signal, effect, ViewChild, OnInit, afterNextRender } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
@@ -16,6 +16,7 @@ import { LoginDialogComponent } from './components/login-dialog/login-dialog.com
 import { NostrService } from './services/nostr.service';
 import { LoadingOverlayComponent } from './components/loading-overlay/loading-overlay.component';
 import { DataLoadingService } from './services/data-loading.service';
+import { LoggerService } from './services/logger.service';
 
 @Component({
   selector: 'app-root',
@@ -38,7 +39,7 @@ import { DataLoadingService } from './services/data-loading.service';
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })
-export class AppComponent {
+export class AppComponent implements OnInit {
   title = 'Nostria';
   themeService = inject(ThemeService);
   breakpointObserver = inject(BreakpointObserver);
@@ -46,6 +47,7 @@ export class AppComponent {
   dialog = inject(MatDialog);
   nostrService = inject(NostrService);
   dataLoadingService = inject(DataLoadingService);
+  private logger = inject(LoggerService);
 
   @ViewChild('profileSidenav') profileSidenav!: MatSidenav;
 
@@ -61,8 +63,11 @@ export class AppComponent {
   ];
 
   constructor() {
+    this.logger.debug('AppComponent constructor started');
+
     // Monitor only mobile devices (not tablets)
     this.breakpointObserver.observe('(max-width: 599px)').subscribe(result => {
+      this.logger.debug('Breakpoint observer update', { isMobile: result.matches });
       this.isHandset.set(result.matches);
       // Close sidenav automatically on mobile screens only
       if (result.matches) {
@@ -72,13 +77,29 @@ export class AppComponent {
       }
     });
 
-    // Show login dialog if user is not logged in
+    // Show login dialog if user is not logged in - with debugging
     effect(() => {
-      if (!this.nostrService.isLoggedIn()) {
-        // Add a small delay to ensure the app is fully loaded
-        setTimeout(() => this.showLoginDialog(), 500);
+      const isLoggedIn = this.nostrService.isLoggedIn();
+      this.logger.debug('Login status effect triggered', { isLoggedIn });
+
+      if (!isLoggedIn) {
+        this.logger.debug('Showing login dialog');
+        this.showLoginDialog();
       }
     });
+
+    this.logger.debug('AppComponent constructor completed');
+
+    // Register a one-time callback after the first render
+    afterNextRender(() => {
+      this.logger.debug('AppComponent first render completed');
+    });
+  }
+
+  ngOnInit(): void {
+    this.logger.debug('AppComponent ngOnInit');
+
+
   }
 
   toggleSidenav() {
@@ -96,43 +117,50 @@ export class AppComponent {
   async logout(): Promise<void> {
     this.nostrService.logout();
   }
-  
+
   async switchAccount(pubkey: string): Promise<void> {
     if (this.nostrService.switchToUser(pubkey)) {
       // Close sidenav on mobile after switching
       if (this.isHandset()) {
         this.toggleSidenav();
       }
-      
+
       // Load data for the switched account
       await this.dataLoadingService.loadData();
     }
   }
-  
+
   getTruncatedNpub(pubkey: string): string {
     const npub = this.nostrService.getNpubFromPubkey(pubkey);
     // Show first 6 and last 6 characters
-    return npub.length > 12 
+    return npub.length > 12
       ? `${npub.substring(0, 6)}...${npub.substring(npub.length - 6)}`
       : npub;
   }
 
   async showLoginDialog(): Promise<void> {
+    this.logger.debug('showLoginDialog called');
     // Apply the blur class to the document body before opening the dialog
     document.body.classList.add('blur-backdrop');
-    
+
     const dialogRef = this.dialog.open(LoginDialogComponent, {
       width: '500px',
       disableClose: true,
     });
-    
+
+    this.logger.debug('Login dialog opened');
+
     // Handle login completion and data loading
     dialogRef.afterClosed().subscribe(async () => {
+      this.logger.debug('Login dialog closed');
       document.body.classList.remove('blur-backdrop');
-      
+
       // If user is logged in after dialog closes, simulate data loading
       if (this.nostrService.isLoggedIn()) {
+        this.logger.debug('User logged in, loading data');
         await this.dataLoadingService.loadData();
+      } else {
+        this.logger.debug('User not logged in after dialog closed');
       }
     });
   }

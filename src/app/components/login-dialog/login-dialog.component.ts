@@ -1,100 +1,128 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { MatInputModule } from '@angular/material/input';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { FormsModule } from '@angular/forms';
-import { MatCardModule } from '@angular/material/card';
-import { NostrService } from '../../services/nostr.service';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { DataLoadingService } from '../../services/data-loading.service';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { MatListModule } from '@angular/material/list';
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { FormsModule } from '@angular/forms';
+import { NostrService, NostrUser } from '../../services/nostr.service';
+import { LoggerService } from '../../services/logger.service';
+
+type LoginView = 'main' | 'nsec' | 'extension-loading' | 'existing-accounts';
 
 @Component({
   selector: 'app-login-dialog',
   standalone: true,
   imports: [
     CommonModule,
-    MatButtonModule,
     MatDialogModule,
-    MatInputModule,
-    MatFormFieldModule,
-    FormsModule,
+    MatButtonModule,
     MatCardModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatListModule,
+    MatIconModule,
     MatProgressSpinnerModule,
-    MatListModule
+    FormsModule
   ],
   templateUrl: './login-dialog.component.html',
-  styleUrl: './login-dialog.component.scss',
+  styleUrls: ['./login-dialog.component.scss']
 })
-export class LoginDialogComponent {
+export class LoginDialogComponent implements OnInit {
   private dialogRef = inject(MatDialogRef<LoginDialogComponent>);
   private nostrService = inject(NostrService);
-  private dataLoadingService = inject(DataLoadingService);
-
-  currentView = signal<'main' | 'nsec' | 'extension-loading' | 'existing-accounts'>('main');
-  nsecKey = '';
+  private logger = inject(LoggerService);
+  
+  currentView = signal<LoginView>('main');
   extensionError = signal<string | null>(null);
-
-  get savedAccounts() {
-    return this.nostrService.allUsers();
+  nsecKey = '';
+  
+  savedAccounts: NostrUser[] = [];
+  
+  constructor() {
+    this.logger.debug('LoginDialogComponent constructor');
   }
-
+  
+  ngOnInit(): void {
+    this.logger.debug('LoginDialogComponent ngOnInit');
+    // Load saved accounts for display
+    this.savedAccounts = this.nostrService.allUsers();
+    this.logger.debug('Loaded saved accounts', { count: this.savedAccounts.length });
+  }
+  
   showExistingAccounts(): boolean {
     return this.savedAccounts.length > 0;
   }
-
+  
   switchToExistingAccounts(): void {
+    this.logger.debug('Switching to existing accounts view');
     this.currentView.set('existing-accounts');
   }
-
-  selectExistingAccount(pubkey: string): void {
-    if (this.nostrService.switchToUser(pubkey)) {
-      this.dialogRef.close();
+  
+  async generateNewKey(): Promise<void> {
+    this.logger.debug('Generating new key');
+    this.nostrService.generateNewKey();
+    this.closeDialog();
+  }
+  
+  async loginWithExtension(): Promise<void> {
+    this.logger.debug('Attempting login with extension');
+    this.currentView.set('extension-loading');
+    this.extensionError.set(null);
+    
+    try {
+      await this.nostrService.loginWithExtension();
+      this.logger.debug('Login with extension successful');
+      this.closeDialog();
+    } catch (err) {
+      this.logger.error('Login with extension failed', err);
+      this.extensionError.set(err instanceof Error ? err.message : 'Unknown error connecting to extension');
+      this.currentView.set('main');
     }
   }
-
+  
+  loginWithNsec(): void {
+    this.logger.debug('Attempting login with nsec');
+    try {
+      this.nostrService.loginWithNsec(this.nsecKey);
+      this.logger.debug('Login with nsec successful');
+      this.closeDialog();
+    } catch (err) {
+      this.logger.error('Login with nsec failed', err);
+      // Handle error display (could add an error signal here)
+    }
+  }
+  
+  usePreviewAccount(): void {
+    this.logger.debug('Using preview account');
+    this.nostrService.usePreviewAccount();
+    this.closeDialog();
+  }
+  
+  selectExistingAccount(pubkey: string): void {
+    this.logger.debug('Selecting existing account', { pubkey });
+    this.nostrService.switchToUser(pubkey);
+    this.closeDialog();
+  }
+  
   getTruncatedNpub(pubkey: string): string {
     const npub = this.nostrService.getNpubFromPubkey(pubkey);
-    // Show first 6 and last 6 characters
     return npub.length > 12 
       ? `${npub.substring(0, 6)}...${npub.substring(npub.length - 6)}`
       : npub;
   }
-
+  
   getFormattedDate(timestamp?: number): string {
-    if (!timestamp) return 'Unknown';
+    if (!timestamp) return 'Never';
     return new Date(timestamp).toLocaleDateString();
   }
-
-  generateNewKey(): void {
-    this.nostrService.generateNewKey();
-    this.dialogRef.close();
-  }
-
-  async loginWithExtension(): Promise<void> {
-    try {
-      this.currentView.set('extension-loading');
-      this.extensionError.set(null);
-      
-      await this.nostrService.loginWithExtension();
-      this.dialogRef.close();
-    } catch (error) {
-      this.extensionError.set(error instanceof Error ? error.message : 'Failed to connect with extension');
-      this.currentView.set('main');
-    }
-  }
-
-  loginWithNsec(): void {
-    if (this.nsecKey && this.nsecKey.startsWith('nsec')) {
-      this.nostrService.loginWithNsec(this.nsecKey);
-      this.dialogRef.close();
-    }
-  }
-
-  usePreviewAccount(): void {
-    this.nostrService.usePreviewAccount();
+  
+  closeDialog(): void {
+    this.logger.debug('Closing login dialog');
     this.dialogRef.close();
   }
 }

@@ -1,4 +1,4 @@
-import { Injectable, effect, inject, signal } from '@angular/core';
+import { Injectable, Signal, computed, effect, inject, signal } from '@angular/core';
 import { LoggerService } from './logger.service';
 
 @Injectable({
@@ -6,83 +6,65 @@ import { LoggerService } from './logger.service';
 })
 export class ThemeService {
   private readonly THEME_KEY = 'nostria-theme';
-  private readonly darkThemeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
   private readonly logger = inject(LoggerService);
   
-  // Theme colors for PWA
-  private readonly LIGHT_THEME_COLOR = '#FEF7FA'; // Light background color
-  private readonly DARK_THEME_COLOR = '#303030'; // Dark background color
+  private isDarkMode = signal<boolean>(this.getInitialThemeMode());
   
-  darkMode = signal<boolean>(this.getInitialThemePreference());
+  darkMode: Signal<boolean> = computed(() => {
+    const mode = this.isDarkMode();
+    this.logger.debug('darkMode computed value accessed', { isDarkMode: mode });
+    return mode;
+  });
   
   constructor() {
     this.logger.info('Initializing ThemeService');
     
-    // Set up effect to apply theme changes
+    // Apply theme whenever it changes
     effect(() => {
-      const isDark = this.darkMode();
-      this.logger.debug(`Applying theme change: ${isDark ? 'dark' : 'light'}`);
-      this.applyTheme(isDark);
-    });
-    
-    // Listen for system preference changes
-    this.darkThemeMediaQuery.addEventListener('change', e => {
-      // Only update if user hasn't explicitly set a preference
-      if (!localStorage.getItem(this.THEME_KEY)) {
-        this.logger.info(`System color scheme changed to ${e.matches ? 'dark' : 'light'}`);
-        this.darkMode.set(e.matches);
+      const isDark = this.isDarkMode();
+      this.logger.debug('Theme effect triggered', { isDarkMode: isDark });
+      
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
       }
+      
+      // Save to localStorage
+      localStorage.setItem(this.THEME_KEY, isDark ? 'dark' : 'light');
     });
     
-    this.logger.debug(`Initial theme set to: ${this.darkMode() ? 'dark' : 'light'}`);
+    this.logger.debug('ThemeService initialization completed');
+  }
+  
+  private getInitialThemeMode(): boolean {
+    this.logger.debug('Getting initial theme mode');
+    
+    // Check localStorage first
+    const savedTheme = localStorage.getItem(this.THEME_KEY);
+    
+    if (savedTheme) {
+      this.logger.debug('Found theme in localStorage', { theme: savedTheme });
+      return savedTheme === 'dark';
+    }
+    
+    // If not found in localStorage, check system preference
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      this.logger.debug('Using system dark mode preference');
+      return true;
+    }
+    
+    this.logger.debug('No theme preference found, defaulting to light mode');
+    return false;
   }
   
   toggleDarkMode(): void {
-    const newValue = !this.darkMode();
-    this.logger.info(`Toggling theme to: ${newValue ? 'dark' : 'light'}`);
-    this.darkMode.set(newValue);
-    localStorage.setItem(this.THEME_KEY, newValue ? 'dark' : 'light');
+    this.logger.debug('Toggling dark mode');
+    this.isDarkMode.update(current => !current);
   }
   
-  private getInitialThemePreference(): boolean {
-    // Check for saved preference
-    const savedPreference = localStorage.getItem(this.THEME_KEY);
-    if (savedPreference) {
-      this.logger.debug(`Using saved theme preference: ${savedPreference}`);
-      return savedPreference === 'dark';
-    }
-    
-    // Fall back to system preference
-    this.logger.debug(`No saved theme preference, using system preference: ${this.darkThemeMediaQuery.matches ? 'dark' : 'light'}`);
-    return this.darkThemeMediaQuery.matches;
-  }
-  
-  private applyTheme(isDark: boolean): void {
-    const themeColor = isDark ? this.DARK_THEME_COLOR : this.LIGHT_THEME_COLOR;
-    
-    if (isDark) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-    
-    this.updateThemeMetaTag(themeColor);
-  }
-  
-  private updateThemeMetaTag(color: string): void {
-    // Find the theme-color meta tag
-    let metaThemeColor = document.querySelector('meta[name="theme-color"]');
-    
-    // If it doesn't exist, create it
-    if (!metaThemeColor) {
-      this.logger.debug('Creating theme-color meta tag');
-      metaThemeColor = document.createElement('meta');
-      metaThemeColor.setAttribute('name', 'theme-color');
-      document.head.appendChild(metaThemeColor);
-    }
-    
-    // Set the color
-    this.logger.debug(`Setting theme-color to: ${color}`);
-    metaThemeColor.setAttribute('content', color);
+  setDarkMode(isDark: boolean): void {
+    this.logger.debug('Setting dark mode', { isDarkMode: isDark });
+    this.isDarkMode.set(isDark);
   }
 }
