@@ -11,6 +11,16 @@
           (change)="toggleDarkMode()">
         </mat-slide-toggle>
       </div>
+      
+      <div class="setting-item danger-zone">
+        <div>
+          <h3>Danger Zone</h3>
+          <p>This will delete all your local app data and reload the application.</p>
+        </div>
+        <button mat-flat-button class="wipe-data-button" (click)="wipeData()">
+          Wipe Data
+        </button>
+      </div>
     </mat-card-content>
   </mat-card>
 </div>
