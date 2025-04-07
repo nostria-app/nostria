@@ -4,7 +4,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSidenavModule, MatSidenav } from '@angular/material/sidenav';
-import { MatListModule } from '@angular/material/list';
+import { MatListModule, MatSelectionListChange } from '@angular/material/list';
 import { MatDividerModule } from '@angular/material/divider';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { ThemeService } from './services/theme.service';
@@ -17,6 +17,8 @@ import { NostrService } from './services/nostr.service';
 import { LoadingOverlayComponent } from './components/loading-overlay/loading-overlay.component';
 import { DataLoadingService } from './services/data-loading.service';
 import { LoggerService } from './services/logger.service';
+import { MatMenuModule } from '@angular/material/menu';
+import { FormGroup } from '@angular/forms';
 
 @Component({
   selector: 'app-root',
@@ -34,6 +36,7 @@ import { LoggerService } from './services/logger.service';
     MatTooltipModule,
     MatDialogModule,
     MatDividerModule,
+    MatMenuModule,
     LoadingOverlayComponent
   ],
   templateUrl: './app.component.html',
