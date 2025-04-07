@@ -86,11 +86,6 @@ mat-card {
   margin: 0 auto;
 }
 
-.content {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 16px;
-}
 
 a {
   color: var(--mdc-text-button-label-text-color, var(--mat-sys-primary));
@@ -135,20 +130,20 @@ body {
 .dark-theme {
   --mat-toolbar-container-background-color: #424242;
   --mat-toolbar-container-text-color: white;
-  
+
   background-color: #303030;
   color: white;
-  
+
   .mat-drawer {
     background-color: #424242;
     color: white;
   }
-  
+
   .mat-drawer-container {
     background-color: #303030;
     color: white;
   }
-  
+
   .mat-mdc-card {
     background-color: #424242;
     color: white;
@@ -177,7 +172,8 @@ body {
 // Add blur effect for dialog backdrops - fixed implementation
 .blur-backdrop .cdk-overlay-backdrop {
   backdrop-filter: blur(5px);
-  position: fixed; /* Ensure fixed positioning */
+  position: fixed;
+  /* Ensure fixed positioning */
 }
 
 .blur-backdrop.cdk-overlay-container {
@@ -247,9 +243,11 @@ mat-card-content li {
   0% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.6;
   }
+
   100% {
     opacity: 1;
   }
@@ -327,9 +325,11 @@ mat-card-content li {
   0% {
     opacity: 1;
   }
+
   70% {
     opacity: 1;
   }
+
   100% {
     opacity: 0;
   }
@@ -339,9 +339,11 @@ mat-card-content li {
   0% {
     transform: scale(0);
   }
+
   70% {
     transform: scale(1.1);
   }
+
   100% {
     transform: scale(1);
   }
@@ -352,12 +354,29 @@ mat-card-content li {
   0% {
     transform: scale(0);
   }
+
   50% {
     opacity: 1;
     transform: scale(1);
   }
+
   100% {
     opacity: 0;
     transform: scale(0);
   }
+}
+
+.content {
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  align-items: center;
+  padding: 16px;
+}
+
+.fixed-content {
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+  align-items: center;
 }
