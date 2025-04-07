@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, effect } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
@@ -10,6 +10,9 @@ import { ThemeService } from './services/theme.service';
 import { PwaUpdateService } from './services/pwa-update.service';
 import { CommonModule } from '@angular/common';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { LoginDialogComponent } from './components/login-dialog/login-dialog.component';
+import { NostrService } from './services/nostr.service';
 
 @Component({
   selector: 'app-root',
@@ -24,7 +27,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     MatSidenavModule,
     MatListModule,
     CommonModule,
-    MatTooltipModule
+    MatTooltipModule,
+    MatDialogModule
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
@@ -34,6 +38,8 @@ export class AppComponent {
   themeService = inject(ThemeService);
   breakpointObserver = inject(BreakpointObserver);
   pwaUpdateService = inject(PwaUpdateService);
+  dialog = inject(MatDialog);
+  nostrService = inject(NostrService);
 
   isHandset = signal(false);
   opened = signal(true);
@@ -55,6 +61,30 @@ export class AppComponent {
       } else {
         this.opened.set(true);
       }
+    });// Show login dialog if user is not logged in
+    effect(() => {
+      if (!this.nostrService.isLoggedIn()) {
+        // Add a small delay to ensure the app is fully loaded
+        setTimeout(() => this.showLoginDialog(), 500);
+      }
+    });
+
+
+    // Show login dialog if user is not logged in
+    effect(() => {
+      if (!this.nostrService.isLoggedIn()) {
+        // Add a small delay to ensure the app is fully loaded
+        setTimeout(() => this.showLoginDialog(), 500);
+      }
+    });
+
+
+    // Show login dialog if user is not logged in
+    effect(() => {
+      if (!this.nostrService.isLoggedIn()) {
+        // Add a small delay to ensure the app is fully loaded
+        setTimeout(() => this.showLoginDialog(), 500);
+      }
     });
   }
 
@@ -64,5 +94,13 @@ export class AppComponent {
 
   toggleMenuSize() {
     this.displayLabels.set(!this.displayLabels());
+
+  }
+
+  showLoginDialog(): void {
+    this.dialog.open(LoginDialogComponent, {
+      width: '500px',
+      disableClose: true
+    });
   }
 }

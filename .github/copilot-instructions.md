@@ -9,5 +9,3 @@ Make sure to put most styles in the global styles.scss file, and only use compon
 Always use "fetch" for http request instead of HttpClient.
 
 Don't use constructor for dependency injection, use inject instead.
-
-Never modify the breakpointObserver in app.component.ts..
