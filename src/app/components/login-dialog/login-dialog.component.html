@@ -110,10 +110,15 @@
           @for (account of this.nostrService.allUsers(); track account.pubkey) {
             <a mat-list-item (click)="selectExistingAccount(account.pubkey)" class="account-item">
               <mat-icon matListItemIcon>account_circle</mat-icon>
-              <span matListItemTitle>{{ account.name }}</span>
+              <span matListItemTitle>{{ account.name || nostrService.getTruncatedNpub(account.pubkey) }}</span>
               <span matListItemLine class="account-source">
                 {{ account.source }} • Last used: {{ account.lastUsed | date:'short' }}
               </span>
+              <button mat-icon-button class="delete-button" 
+                      (click)="removeAccount($event, account.pubkey)" 
+                      matTooltip="Remove account">
+                <mat-icon>delete</mat-icon>
+              </button>
             </a>
           }
         </mat-nav-list>

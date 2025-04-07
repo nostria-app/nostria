@@ -2,7 +2,6 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatListModule } from '@angular/material/list';
@@ -11,6 +10,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FormsModule } from '@angular/forms';
 import { NostrService, NostrUser } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
+import { MatCardModule } from '@angular/material/card';
 
 type LoginView = 'main' | 'nsec' | 'extension-loading' | 'existing-accounts';
 
@@ -107,6 +107,20 @@ export class LoginDialogComponent implements OnInit {
     this.logger.debug('Selecting existing account', { pubkey });
     this.nostrService.switchToUser(pubkey);
     this.closeDialog();
+  }
+  
+  removeAccount(event: Event, pubkey: string): void {
+    // Prevent the click event from propagating to the parent (which would select the account)
+    event.stopPropagation();
+    this.logger.debug('Removing account', { pubkey });
+    
+    // Call the service to remove the account
+    this.nostrService.removeAccount(pubkey);
+    
+    // If no more accounts exist, go back to main view
+    if (this.nostrService.allUsers().length === 0) {
+      this.currentView.set('main');
+    }
   }
   
   closeDialog(): void {
