@@ -94,9 +94,17 @@ export class AppComponent {
   }
 
   showLoginDialog(): void {
-    this.dialog.open(LoginDialogComponent, {
+    // Apply the blur class to the document body before opening the dialog
+    document.body.classList.add('blur-backdrop');
+    
+    const dialogRef = this.dialog.open(LoginDialogComponent, {
       width: '500px',
-      disableClose: true
+      disableClose: true,
+    });
+    
+    // Remove the blur class when the dialog is closed
+    dialogRef.afterClosed().subscribe(() => {
+      document.body.classList.remove('blur-backdrop');
     });
   }
 }

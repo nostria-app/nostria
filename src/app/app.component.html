@@ -36,7 +36,7 @@
       <mat-nav-list>
         @for (item of navItems; track $index) {
         <a mat-list-item 
-           [routerLink]="item.action ? null : [item.path]" 
+           [routerLink]="item.action ? undefined : [item.path]" 
            routerLinkActive="active-link"
            (click)="item.action ? item.action() : (isHandset() ? toggleSidenav() : null)">
           <mat-icon matListItemIcon>{{item.icon}}</mat-icon>
@@ -100,7 +100,7 @@
   <div class="mobile-nav">
     @for (item of navItems; track $index) {
     <a mat-button class="mobile-nav-button" 
-       [routerLink]="item.action ? null : [item.path]" 
+       [routerLink]="item.action ? undefined : [item.path]" 
        routerLinkActive="active-link"
        (click)="item.action ? item.action() : null">
       <mat-icon>{{item.icon}}</mat-icon>

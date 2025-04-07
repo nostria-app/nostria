@@ -120,7 +120,6 @@ body {
   margin: 0;
   font-family: Roboto, "Helvetica Neue", sans-serif;
   height: 100vh;
-  overflow: hidden;
   transition: background-color 0.3s ease;
 }
 
@@ -164,6 +163,27 @@ body {
   --mdc-dialog-with-divider-divider-color: rgba(255, 255, 255, 0.12);
   --mdc-dialog-subhead-color: rgba(255, 255, 255, 0.87);
   --mdc-dialog-supporting-text-color: rgba(255, 255, 255, 0.7);
+}
+
+// Add blur effect for dialog backdrops - fixed implementation
+.blur-backdrop .cdk-overlay-backdrop {
+  backdrop-filter: blur(5px);
+  position: fixed; /* Ensure fixed positioning */
+}
+
+.blur-backdrop.cdk-overlay-container {
+  position: fixed;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.blur-backdrop.cdk-overlay-container .cdk-overlay-dark-backdrop {
+  background: rgba(0, 0, 0, 0.5);
+  pointer-events: auto;
+}
+
+.dark .blur-backdrop.cdk-overlay-container .cdk-overlay-dark-backdrop {
+  background: rgba(0, 0, 0, 0.7);
 }
 
 .page-container {

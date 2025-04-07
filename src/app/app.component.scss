@@ -20,6 +20,8 @@ nav {
   flex-direction: column;
   height: 100vh;
   overflow: hidden;
+  width: 100%; /* Ensure it takes full width */
+  position: relative;
 }
 
 .app-toolbar {
@@ -29,6 +31,7 @@ nav {
 .sidenav-container {
   flex: 1;
   overflow: auto;
+  overflow-x: hidden; /* Prevent horizontal scrolling */
   
   // Make space for mobile nav when on mobile
   @media (max-width: 599px) {
@@ -72,6 +75,7 @@ nav {
   box-sizing: border-box;
   height: 100%;
   overflow-y: auto;
+  overflow-x: hidden; /* Prevent horizontal scrolling */
 }
 
 mat-nav-list .mat-icon {
@@ -90,6 +94,8 @@ mat-nav-list .mat-icon {
   display: flex;
   z-index: 2;
   box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
+  width: 100%; /* Ensure full width */
+  overflow-x: hidden; /* Prevent horizontal scrolling */
 }
 
 .mobile-nav-button {
@@ -125,6 +131,7 @@ mat-nav-list .mat-icon {
   max-width: 100%;
   display: block; // Make label a block element
   width: 100%; // Full width to ensure centering
+  padding: 0 2px; /* Add small padding to prevent text from touching edges */
 }
 
 // Profile sidenav styles
@@ -163,7 +170,7 @@ mat-nav-list .mat-icon {
   font-size: 64px;
   height: 64px;
   width: 64px;
-  color: white;
+  color: var(--mat-card-title-text-color); // Changed from fixed white color to theme-dependent variable
 }
 
 .profile-header h2 {
