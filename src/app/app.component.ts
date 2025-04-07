@@ -69,6 +69,7 @@ export class AppComponent implements OnInit {
   opened = signal(true);
   displayLabels = signal(true);
   userMetadata = signal<NostrEventData<UserMetadata> | undefined>(undefined);
+  allUsersMetadata = signal<Map<string, NostrEventData<UserMetadata>>>(new Map());
 
   navItems: NavItem[] = [
     { path: 'home', label: 'Home', icon: 'home', showInMobile: true },
@@ -115,6 +116,9 @@ export class AppComponent implements OnInit {
           
           // Also load the user metadata for the profile panel
           this.loadUserMetadata();
+          
+          // Load metadata for all accounts
+          this.loadAllUsersMetadata();
         } else {
           this.logger.debug('No user logged in, not updating relays');
         }
@@ -127,6 +131,7 @@ export class AppComponent implements OnInit {
       if (showSuccess) {
         this.logger.debug('Data loading completed, refreshing user metadata');
         this.loadUserMetadata();
+        this.loadAllUsersMetadata();
       }
     });
 
@@ -167,7 +172,6 @@ export class AppComponent implements OnInit {
         this.toggleSidenav();
       }
 
-      debugger;
       // Load data for the switched account
       await this.dataLoadingService.loadData();
     }
@@ -209,6 +213,31 @@ export class AppComponent implements OnInit {
     });
   }
 
+  async loadAllUsersMetadata(): Promise<void> {
+    const users = this.nostrService.allUsers();
+    if (users.length === 0) {
+      this.logger.debug('No users to load metadata for');
+      return;
+    }
+    
+    const metadataMap = new Map<string, NostrEventData<UserMetadata>>();
+    
+    for (const user of users) {
+      try {
+        const metadata = await this.nostrService.getUserMetadata(user.pubkey);
+        if (metadata) {
+          this.logger.debug(`Loaded metadata for user ${user.pubkey}`, { metadata });
+          metadataMap.set(user.pubkey, metadata);
+        }
+      } catch (error) {
+        this.logger.error(`Failed to load metadata for user ${user.pubkey}`, error);
+      }
+    }
+    
+    this.allUsersMetadata.set(metadataMap);
+    this.logger.debug(`Loaded metadata for ${metadataMap.size} users`);
+  }
+
   async loadUserMetadata(): Promise<void> {
     if (!this.nostrService.currentUser()) {
       this.logger.debug('No user logged in, cannot load metadata');
@@ -231,5 +260,9 @@ export class AppComponent implements OnInit {
       this.logger.error('Failed to load user metadata', error);
       this.userMetadata.set(undefined);
     }
+  }
+
+  getUserMetadataByPubkey(pubkey: string): NostrEventData<UserMetadata> | undefined {
+    return this.allUsersMetadata().get(pubkey);
   }
 }
