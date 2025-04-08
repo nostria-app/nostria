@@ -8,7 +8,7 @@ import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FormsModule } from '@angular/forms';
-import { NostrService, NostrUser } from '../../services/nostr.service';
+import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
 import { MatCardModule } from '@angular/material/card';
 
@@ -36,44 +36,53 @@ export class LoginDialogComponent implements OnInit {
   private dialogRef = inject(MatDialogRef<LoginDialogComponent>);
   nostrService = inject(NostrService);
   private logger = inject(LoggerService);
-  
+
   currentView = signal<LoginView>('main');
   extensionError = signal<string | null>(null);
   nsecKey = '';
-  
-  // savedAccounts: NostrUser[] = [];
-  
+
   constructor() {
     this.logger.debug('LoginDialogComponent constructor');
   }
-  
+
   ngOnInit(): void {
     this.logger.debug('LoginDialogComponent ngOnInit');
-    // Load saved accounts for display
-    // this.savedAccounts = this.nostrService.allUsers();
-    // this.logger.debug('Loaded saved accounts', { count: this.savedAccounts.length });
+    // Make sure we have the metadata for all accounts
+    // this.nostrService.loadAllUsersMetadata().catch(err =>
+    //   this.logger.error('Failed to load metadata for all users', err));
   }
-  
-  showExistingAccounts(): boolean {
-    return this.nostrService.allUsers().length > 0;
+
+  hasPicture(pubkey: string): boolean {
+    const metadata = this.nostrService.findUserMetadata(pubkey);
+    return metadata?.content?.picture ? true : false;
   }
-  
+
+  getPicture(pubkey: string): string | null {
+    const metadata = this.nostrService.findUserMetadata(pubkey);
+    return metadata?.content?.picture || null;
+  }
+
+  getName(pubkey: string): string {
+    const metadata = this.nostrService.findUserMetadata(pubkey);
+    return metadata?.content?.name || this.nostrService.getTruncatedNpub(pubkey);
+  }
+
   switchToExistingAccounts(): void {
     this.logger.debug('Switching to existing accounts view');
     this.currentView.set('existing-accounts');
   }
-  
+
   async generateNewKey(): Promise<void> {
     this.logger.debug('Generating new key');
     this.nostrService.generateNewKey();
     this.closeDialog();
   }
-  
+
   async loginWithExtension(): Promise<void> {
     this.logger.debug('Attempting login with extension');
     this.currentView.set('extension-loading');
     this.extensionError.set(null);
-    
+
     try {
       await this.nostrService.loginWithExtension();
       this.logger.debug('Login with extension successful');
@@ -84,7 +93,7 @@ export class LoginDialogComponent implements OnInit {
       this.currentView.set('main');
     }
   }
-  
+
   loginWithNsec(): void {
     this.logger.debug('Attempting login with nsec');
     try {
@@ -96,33 +105,33 @@ export class LoginDialogComponent implements OnInit {
       // Handle error display (could add an error signal here)
     }
   }
-  
+
   usePreviewAccount(): void {
     this.logger.debug('Using preview account');
     this.nostrService.usePreviewAccount();
     this.closeDialog();
   }
-  
+
   selectExistingAccount(pubkey: string): void {
     this.logger.debug('Selecting existing account', { pubkey });
     this.nostrService.switchToUser(pubkey);
     this.closeDialog();
   }
-  
+
   removeAccount(event: Event, pubkey: string): void {
     // Prevent the click event from propagating to the parent (which would select the account)
     event.stopPropagation();
     this.logger.debug('Removing account', { pubkey });
-    
+
     // Call the service to remove the account
     this.nostrService.removeAccount(pubkey);
-    
+
     // If no more accounts exist, go back to main view
     if (this.nostrService.allUsers().length === 0) {
       this.currentView.set('main');
     }
   }
-  
+
   closeDialog(): void {
     this.logger.debug('Closing login dialog');
     this.dialogRef.close();

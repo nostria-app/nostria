@@ -103,10 +103,10 @@
                 <mat-icon matListItemIcon>account_circle</mat-icon>
               }
               <span matListItemTitle>
-                {{ getUserMetadataByPubkey(account.pubkey)?.content?.name || account.name || getTruncatedNpub(account.pubkey) }}
+                {{ getUserMetadataByPubkey(account.pubkey)?.content?.name || account.name || nostrService.getTruncatedNpub(account.pubkey) }}
               </span>
               <span matListItemLine class="account-source">
-                {{ account.source }} • Last used: {{ account.lastUsed | date:'short' }}
+                {{ account.source }}Last used: {{ account.lastUsed | date:'short' }}
               </span>
             </a>
             }
