@@ -2,7 +2,7 @@
 
 <img src="public/icons/icon-128x128.png" alt="Nostria Logo" width="128" height="128">
 
-Reference Implementation of the most important features of Nostr with a global scale architecture.
+Making the Nostr protocol accessible to everyone, with a focus on user experience and performance for global scale.
 
 ## Installation
 
