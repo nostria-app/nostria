@@ -1,6 +1,6 @@
 import { Component, inject, signal, effect, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, ParamMap } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -13,6 +13,7 @@ import { LoadingOverlayComponent } from '../../components/loading-overlay/loadin
 import { RelayService } from '../../services/relay.service';
 import { NostrEvent } from '../../interfaces';
 import { ApplicationStateService } from '../../services/application-state.service';
+import { toSignal } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-profile',
@@ -43,11 +44,16 @@ export class ProfileComponent {
   error = signal<string | null>(null);
   isOwnProfile = signal<boolean>(false);
 
+  // Convert route params to a signal
+  private routeParams = toSignal<ParamMap>(this.route.paramMap);
+
   constructor() {
-    // Extract the pubkey from the route parameter
+    // React to changes in route parameters and app initialization
     effect(() => {
-      if (this.appState.initialized()) {
-        let id = this.route.snapshot.paramMap.get('id');
+      // Only proceed if app is initialized and route params are available
+      if (this.appState.initialized() && this.routeParams()) {
+        let id = this.routeParams()?.get('id');
+
         if (id) {
           this.logger.debug('Profile page opened with pubkey:', id);
 
@@ -57,11 +63,15 @@ export class ProfileComponent {
 
           this.pubkey.set(id);
 
+          // Reset state when loading a new profile
+          this.userMetadata.set(undefined);
+          this.error.set(null);
+
+          // Use untracked to avoid re-running this effect when these signals change
           untracked(async () => {
             await this.loadUserProfile(this.pubkey());
             this.checkIfOwnProfile(this.pubkey());
           });
-
         } else {
           this.error.set('No user ID provided');
           this.isLoading.set(false);
