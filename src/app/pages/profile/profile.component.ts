@@ -12,6 +12,7 @@ import { LoggerService } from '../../services/logger.service';
 import { LoadingOverlayComponent } from '../../components/loading-overlay/loading-overlay.component';
 import { RelayService } from '../../services/relay.service';
 import { NostrEvent } from '../../interfaces';
+import { ApplicationStateService } from '../../services/application-state.service';
 
 @Component({
   selector: 'app-profile',
@@ -33,6 +34,7 @@ export class ProfileComponent {
   private route = inject(ActivatedRoute);
   private nostrService = inject(NostrService);
   private relayService = inject(RelayService);
+  private appState = inject(ApplicationStateService);
   private logger = inject(LoggerService);
 
   pubkey = signal<string>('');
@@ -44,20 +46,21 @@ export class ProfileComponent {
   constructor() {
     // Extract the pubkey from the route parameter
     effect(() => {
-      debugger;
-      const id = this.route.snapshot.paramMap.get('id');
-      if (id) {
-        this.logger.debug('Profile page opened with pubkey:', id);
-        this.pubkey.set(id);
+      if (this.appState.initialized()) {
+        const id = this.route.snapshot.paramMap.get('id');
+        if (id) {
+          this.logger.debug('Profile page opened with pubkey:', id);
+          this.pubkey.set(id);
 
-        untracked(async () => {
-          await this.loadUserProfile(id);
-        });
+          untracked(async () => {
+            await this.loadUserProfile(id);
+            this.checkIfOwnProfile(id);
+          });
 
-        this.checkIfOwnProfile(id);
-      } else {
-        this.error.set('No user ID provided');
-        this.isLoading.set(false);
+        } else {
+          this.error.set('No user ID provided');
+          this.isLoading.set(false);
+        }
       }
     });
   }
@@ -65,6 +68,11 @@ export class ProfileComponent {
   private async loadUserProfile(pubkey: string): Promise<void> {
     this.isLoading.set(true);
     this.error.set(null);
+
+    if (pubkey.startsWith('npub')) {
+      debugger;
+      pubkey = this.nostrService.getPubkeyFromNpub(pubkey);
+    }
 
     debugger;
 

@@ -41,7 +41,6 @@ export class DataLoadingService {
     // First check if we have metadata in storage
     // const storedMetadata = await this.storage.getUserMetadata(pubkey);
     metadata = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Metadata);
-    debugger;
 
     if (metadata) {
       this.logger.info('Found user metadata in storage', { metadata });
@@ -62,7 +61,6 @@ export class DataLoadingService {
       // To properly scale Nostr, the first step is simply getting the user's relay list and nothing more.
       bootstrapPool = new SimplePool();
       this.logger.debug('Connecting to bootstrap relays', { relays: this.relayService.bootStrapRelays() });
-      debugger;
 
       this.logger.time('fetchRelayList');
       relays = await bootstrapPool.get(this.relayService.bootStrapRelays(), {
@@ -70,7 +68,6 @@ export class DataLoadingService {
         authors: [pubkey],
       });
       this.logger.timeEnd('fetchRelayList');
-      debugger;
 
       if (relays) {
         this.logger.info('Found your relays on network', { relays });

@@ -43,7 +43,7 @@ export class StorageStatsComponent {
 
   constructor() {
     effect(async () => {
-      if (this.storage.isInitialized()) {
+      if (this.storage.initialized()) {
         // Initialize stats
         await this.refreshStats();
       }

@@ -5,7 +5,7 @@ import * as nip19 from 'nostr-tools/nip19';
 import { LoggerService } from './logger.service';
 import { RelayService } from './relay.service';
 import { NostrEventData, StorageService, UserMetadata } from './storage.service';
-import { kinds } from 'nostr-tools';
+import { kinds, SimplePool } from 'nostr-tools';
 import { NostrEvent } from '../interfaces';
 
 export interface NostrUser {
@@ -74,24 +74,28 @@ export class NostrService {
     return this.accountsMetadata().find(meta => meta.pubkey === pubkey);
   }
 
+  initialized = signal(false);
+
   constructor() {
     this.logger.info('Initializing NostrService');
 
-    effect(() => {
-      if (this.storage.isInitialized()) {
+    effect(async () => {
+      if (this.storage.initialized()) {
         this.loadUsersFromStorage();
         this.loadActiveUserFromStorage();
 
         // We keep an in-memory copy of the user metadata and relay list for all accounts,
         // they won't take up too much memory space.
-        this.loadUsersMetadata();
-        this.loadUsersRelays();
+        await this.loadUsersMetadata();
+        await this.loadUsersRelays();
+
+        this.initialized.set(true);
       }
     });
 
     // Save user to localStorage whenever it changes
     effect(() => {
-      if (this.storage.isInitialized()) {
+      if (this.storage.initialized()) {
 
         const currentUser = this.account();
         this.logger.debug('User change effect triggered', {
@@ -150,7 +154,7 @@ export class NostrService {
   /**
  * Adds or updates an entry in the metadata cache with LRU behavior
  */
-  private updateMetadataCache(pubkey: string, event: Event): void {
+  private updateMetadataCache(pubkey: string, event: NostrEvent): void {
     // Get the current cache
     const cache = this.usersMetadata();
 
@@ -179,7 +183,7 @@ export class NostrService {
   /**
    * Adds or updates an entry in the relays cache with LRU behavior
    */
-  private updateRelaysCache(pubkey: string, event: Event): void {
+  private updateRelaysCache(pubkey: string, event: NostrEvent): void {
     // Get the current cache
     const cache = this.usersRelays();
 
@@ -208,7 +212,7 @@ export class NostrService {
   /**
    * Get metadata from cache or load it from storage
    */
-  async getMetadataForUser(pubkey: string): Promise<Event | undefined> {
+  async getMetadataForUser(pubkey: string): Promise<NostrEvent | undefined> {
     // Check cache first
     const cachedMetadata = this.usersMetadata().get(pubkey);
     if (cachedMetadata) {
@@ -219,13 +223,61 @@ export class NostrService {
 
     // Not in cache, get from storage
     const events = await this.storage.getEventsByPubkeyAndKind(pubkey, kinds.Metadata);
+
     if (events.length > 0) {
       // Add to cache
       this.updateMetadataCache(pubkey, events[0]);
       return events[0];
     } else {
-      // TODO: Implement this.
-      // Go get the metadata from the nostr relays.
+      debugger;
+
+      const metadata = await this.discoverMetadata(pubkey);
+
+      if (metadata) {
+        this.updateMetadataCache(pubkey, metadata);
+      }
+
+      return metadata;
+    }
+  }
+
+  async discoverMetadata(pubkey: string): Promise<NostrEvent | undefined> {
+    // FLOW: Find the user's relays first. Save it.
+    // Connect to their relays and get metadata. Save it.
+    const event = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
+
+    if (!event) {
+      // TODO: Duplicate code from data-loading service. Refactor and improve!!
+      let bootstrapPool = new SimplePool();
+      this.logger.debug('Connecting to bootstrap relays', { relays: this.relayService.bootStrapRelays() });
+
+      const relays = await bootstrapPool.get(this.relayService.bootStrapRelays(), {
+        kinds: [kinds.RelayList],
+        authors: [pubkey],
+      });
+
+      bootstrapPool.close(this.relayService.bootStrapRelays());
+
+      if (relays) {
+        await this.storage.saveEvent(relays);
+
+        const relayUrls = this.getRelayUrls(relays);
+
+        let userPool = new SimplePool();
+
+        const metadata = await userPool.get(relayUrls, {
+          kinds: [kinds.Metadata],
+          authors: [pubkey],
+        });
+
+        if (metadata) {
+          await this.storage.saveEvent(metadata);
+        }
+
+        userPool.close(relayUrls);
+
+        return metadata as NostrEvent;
+      }
     }
 
     return undefined;
@@ -600,6 +652,17 @@ export class NostrService {
     // Convert the hex public key to a Nostr public key (npub)
     const npub = nip19.npubEncode(pubkey);
     return npub;
+  }
+
+  getPubkeyFromNpub(npub: string): string {
+    this.logger.debug('Converting npub to pub key');
+    // Convert the hex public key to a Nostr public key (npub)
+    const result = nip19.decode(npub).data;
+    return result as string;
+  }
+
+  decode(value: string) {
+    return nip19.decode(value);
   }
 
   /**
