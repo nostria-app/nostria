@@ -22,7 +22,7 @@ export interface UserMetadataWithPubkey extends NostrEventData<UserMetadata> {
   providedIn: 'root'
 })
 export class NostrService {
-  #bootStrapRelays = ['wss://relay.damus.io', 'wss://relay.primal.net', 'wss://nos.lol'];
+  
   private readonly USER_STORAGE_KEY = 'nostria-user';
   private readonly USERS_STORAGE_KEY = 'nostria-users';
   private readonly logger = inject(LoggerService);
@@ -61,10 +61,6 @@ export class NostrService {
   // Method to easily find metadata by pubkey
   findUserMetadata(pubkey: string): UserMetadataWithPubkey | undefined {
     return this.allUserMetadata().find(meta => meta.pubkey === pubkey);
-  }
-
-  get bootStrapRelays() {
-    return this.#bootStrapRelays;
   }
 
   constructor() {
