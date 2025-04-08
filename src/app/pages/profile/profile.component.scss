@@ -6,7 +6,7 @@
 
 .profile-header {
   position: relative;
-  margin-bottom: 1rem;
+  margin-bottom: 5rem; /* Increased from 3rem to 5rem for more space */
 }
 
 .profile-banner {
@@ -27,13 +27,14 @@
 
 .profile-avatar-container {
   position: absolute;
-  bottom: -80px;
+  bottom: 120px; /* Moved from 70px to 120px (50px more) */
   left: 32px;
+  z-index: 2;
   
   @media (max-width: 768px) {
     left: 50%;
     transform: translateX(-50%);
-    bottom: -60px;
+    bottom: 100px; /* Adjusted from 50px to 100px */
   }
 }
 
@@ -86,13 +87,13 @@
 }
 
 .profile-info {
-  margin-top: 90px;
-  padding: 0 2rem;
+  margin-top: 20px; /* Increased from 10px to 20px to ensure content doesn't overlap */
+  padding: 0 2rem 0 210px; /* Added left padding (160px avatar width + 50px gap) to make room for avatar */
   
   @media (max-width: 768px) {
-    margin-top: 70px;
+    margin-top: 20px;
     text-align: center;
-    padding: 0 1rem;
+    padding: 0 1rem; /* Keep original padding for mobile */
   }
 }
 
@@ -142,12 +143,14 @@
 }
 
 .profile-actions {
-  margin: 1.5rem 2rem 0;
+  margin: 1rem 2rem 3rem; /* Increased bottom margin from 2.5rem to 3rem */
+  padding-left: 210px; /* Added left padding to align with profile-info */
   display: flex;
   gap: 1rem;
   
   @media (max-width: 768px) {
-    margin: 1.5rem 1rem 0;
+    margin: 1rem 1rem 3rem;
+    padding-left: 0; /* No padding needed for mobile */
     justify-content: center;
     flex-wrap: wrap;
   }
@@ -158,8 +161,9 @@
 }
 
 .profile-content {
-  margin-top: 1rem;
+  margin-top: 4rem; /* Increased from 3rem to 4rem */
   padding: 0 1rem;
+  clear: both; /* Ensure content stays below the profile section */
 }
 
 .tab-content {
