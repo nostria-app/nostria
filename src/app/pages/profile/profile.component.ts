@@ -47,14 +47,19 @@ export class ProfileComponent {
     // Extract the pubkey from the route parameter
     effect(() => {
       if (this.appState.initialized()) {
-        const id = this.route.snapshot.paramMap.get('id');
+        let id = this.route.snapshot.paramMap.get('id');
         if (id) {
           this.logger.debug('Profile page opened with pubkey:', id);
+
+          if (id.startsWith('npub')) {
+            id = this.nostrService.getPubkeyFromNpub(id);
+          }
+
           this.pubkey.set(id);
 
           untracked(async () => {
-            await this.loadUserProfile(id);
-            this.checkIfOwnProfile(id);
+            await this.loadUserProfile(this.pubkey());
+            this.checkIfOwnProfile(this.pubkey());
           });
 
         } else {
@@ -68,13 +73,6 @@ export class ProfileComponent {
   private async loadUserProfile(pubkey: string): Promise<void> {
     this.isLoading.set(true);
     this.error.set(null);
-
-    if (pubkey.startsWith('npub')) {
-      debugger;
-      pubkey = this.nostrService.getPubkeyFromNpub(pubkey);
-    }
-
-    debugger;
 
     try {
       // Try to get from cache first

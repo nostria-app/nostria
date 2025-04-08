@@ -229,8 +229,6 @@ export class NostrService {
       this.updateMetadataCache(pubkey, events[0]);
       return events[0];
     } else {
-      debugger;
-
       const metadata = await this.discoverMetadata(pubkey);
 
       if (metadata) {
