@@ -19,6 +19,7 @@ import { LoginDialogComponent } from '../../components/login-dialog/login-dialog
 import { ConfirmDialogComponent } from '../../components/confirm-dialog/confirm-dialog.component';
 import { Router } from '@angular/router';
 import { StorageService } from '../../services/storage.service';
+import { ApplicationStateService } from '../../services/application-state.service';
 
 @Component({
   selector: 'app-settings',
@@ -46,6 +47,7 @@ export class SettingsComponent {
   themeService = inject(ThemeService);
   nostrService = inject(NostrService);
   storage = inject(StorageService);
+  appState = inject(ApplicationStateService);
   dialog = inject(MatDialog);
   router = inject(Router);
 
@@ -88,27 +90,7 @@ export class SettingsComponent {
 
     dialogRef.afterClosed().subscribe(async confirmed => {
       if (confirmed) {
-        this.nostrService.reset();
-
-        // Clear known localStorage keys related to the app
-        const keysToRemove = [
-          'nostria-theme',
-          'nostria-accounts',
-          'nostria-account',
-          'nostria-log-level',
-        ];
-        
-        for (let i = 0; i < keysToRemove.length; i++) {
-          localStorage.removeItem(keysToRemove[i]);
-        }
-
-        await this.storage.wipe(); // Assuming this method clears all app data
-        
-        // Navigate to home page before reloading
-        await this.router.navigate(['/']);
-        
-        // Reload the application
-        window.location.reload();
+        await this.appState.wipe();
       }
     });
   }

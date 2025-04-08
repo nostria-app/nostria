@@ -60,6 +60,7 @@ nav {
 
 .app-title {
   margin-left: 4px;
+  margin-right: 1em;
 }
 
 .app-icon {
@@ -283,4 +284,13 @@ mat-nav-list .mat-icon {
   height: 24px;
   border-radius: 50%;
   object-fit: cover;
+}
+
+.search-input {
+  // background-color: var(--mat-app-background-color);
+  // color: var(--mat-app-text-color);
+  // border: 1px solid var(--mat-app-text-color);
+  border-radius: 20px;
+  padding: 0.8em 1.2em;
+  width: 100%;
 }

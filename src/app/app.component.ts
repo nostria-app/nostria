@@ -18,9 +18,12 @@ import { LoadingOverlayComponent } from './components/loading-overlay/loading-ov
 import { DataLoadingService } from './services/data-loading.service';
 import { LoggerService } from './services/logger.service';
 import { MatMenuModule } from '@angular/material/menu';
-import { FormGroup } from '@angular/forms';
+import { FormGroup, FormsModule } from '@angular/forms';
 import { StorageService } from './services/storage.service';
 import { NostrEventData, UserMetadata } from './services/storage.service';
+import { LayoutService } from './services/layout.service';
+import { ApplicationStateService } from './services/application-state.service';
+import { MatFormFieldModule } from '@angular/material/form-field';
 
 interface NavItem {
   path: string;
@@ -47,7 +50,9 @@ interface NavItem {
     MatDialogModule,
     MatDividerModule,
     MatMenuModule,
-    LoadingOverlayComponent
+    LoadingOverlayComponent,
+    FormsModule,
+    MatFormFieldModule,
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
@@ -61,6 +66,9 @@ export class AppComponent implements OnInit {
   nostrService = inject(NostrService);
   dataLoadingService = inject(DataLoadingService);
   storage = inject(StorageService);
+  appState = inject(ApplicationStateService);
+  layout = inject(LayoutService);
+
   private logger = inject(LoggerService);
 
   @ViewChild('profileSidenav') profileSidenav!: MatSidenav;

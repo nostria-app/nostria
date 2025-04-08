@@ -6,21 +6,94 @@
     </button>
     <img src="icons/icon-128x128.png" class="app-icon" alt="Nostria icon">
     <span class="app-title">{{title}}</span>
-    <span class="toolbar-spacer"></span>
+
+    <span class="toolbar-spacer">
+        @if (layout.search()) {
+        <input type="search" class="search-input" [(ngModel)]="layout.searchInput" (input)="layout.onSearchInput($event)" />
+        }
+
+        <!-- <mat-form-field class="small-search-input" subscriptSizing="dynamic">
+          <input type="search" matInput placeholder="Search" />
+          <mat-icon matSuffix>search</mat-icon>
+        </mat-form-field> -->
+      </span>
+
+
+    @if (layout.search()) {
+    <!-- <zxing-scanner [start]="true" (scanSuccess)="qrScan($event)"> </zxing-scanner> -->
+
+    <!-- <button mat-icon-button (click)="qrScan()"> -->
+    <button mat-icon-button>
+      <mat-icon>qr_code_scanner</mat-icon>
+    </button>
+    }
+
+    <button mat-icon-button (click)="layout.toggleSearch()">
+      @if (layout.search()) {
+      <mat-icon>close</mat-icon>
+      } @else {
+      <mat-icon>search</mat-icon>
+      }
+    </button>
+
+
     @if (pwaUpdateService.updateAvailable()) {
     <button mat-icon-button class="update-button" (click)="pwaUpdateService.updateApplication()"
       matTooltip="Update available! Click to update and reload." aria-label="Update application">
       <mat-icon class="update-icon">system_update</mat-icon>
     </button>
     }
+
+    <button class="notification-toolbar" mat-icon-button [matMenuTriggerFor]="menuNotifications">
+      <mat-icon>notifications</mat-icon>
+    </button>
+
+    <mat-menu #menuNotifications="matMenu">
+      <button mat-menu-item (click)="appState.wipe()">
+        <mat-icon>delete</mat-icon>
+        <span>Reset All Data (Wipe)</span>
+      </button>
+      <mat-divider></mat-divider>
+      <button mat-menu-item [routerLink]="['/settings', 'notifications']">
+        <mat-icon>settings</mat-icon>
+        <span>Notification Settings</span>
+      </button>
+      <mat-divider></mat-divider>
+      <!-- @for (notification of notifications(); track notification) {
+      <button mat-menu-item [routerLink]="['/notifications']">
+        <mat-icon>{{ notification.data.icon }}</mat-icon>
+        <span>{{ notification.data.title }}</span>
+        <div class="notification-details dimmed">{{ notification.data.app }} ({{ '2024-08-22 12:00' | ago }})</div>
+      </button>
+      } -->
+      <!-- <button mat-menu-item [routerLink]="['/notifications']">
+        <mat-icon>forum</mat-icon>
+        <span>Knitting Community posted new pattern</span>
+        <div class="notification-details dimmed">Community ({{ '2024-08-22 12:00' | ago }})</div>
+      </button>
+      <button mat-menu-item [routerLink]="['/notifications']">
+        <mat-icon>face</mat-icon>
+        <span>Joe sent you a message</span>
+        <div class="notification-details dimmed">Chat ({{ '2024-08-22 12:00' | ago }})</div>
+      </button>
+      <button mat-menu-item>
+        <mat-icon>key</mat-icon>
+        <span>New security request</span>
+      </button>
+      <button mat-menu-item>
+        <mat-icon>verified_user</mat-icon>
+        <span>Social account recovery request</span>
+      </button> -->
+    </mat-menu>
+
     <!-- <button mat-icon-button (click)="themeService.toggleDarkMode()" aria-label="Toggle theme">
       <mat-icon>{{ themeService.darkMode() ? 'dark_mode' : 'light_mode' }}</mat-icon>
     </button> -->
     <button mat-icon-button (click)="toggleProfileSidenav()" aria-label="Toggle profile" class="profile-button">
       @if (accountMetadata()?.content?.picture) {
-        <img [src]="accountMetadata()?.content?.picture" class="profile-button-avatar" alt="Profile picture">
+      <img [src]="accountMetadata()?.content?.picture" class="profile-button-avatar" alt="Profile picture">
       } @else {
-        <mat-icon>account_circle</mat-icon>
+      <mat-icon>account_circle</mat-icon>
       }
     </button>
   </mat-toolbar>
@@ -64,33 +137,36 @@
       <div class="profile-content">
         <div class="profile-header">
           @if (accountMetadata(); as metadata) {
-            @if (metadata?.content?.picture) {
-              <div class="profile-avatar">
-                <img [src]="metadata.content.picture" alt="Profile picture" class="avatar-image">
-              </div>
-            } @else {
-              <div class="profile-avatar">
-                <mat-icon class="avatar-icon">account_circle</mat-icon>
-              </div>
-            }
-            <h2>{{ metadata.content.name || nostrService.getTruncatedNpub(metadata.pubkey || '') }}</h2>
-            @if (metadata.content.nip05) {
-              <span class="nip05-identifier">{{ metadata.content.nip05.startsWith('_@') ? metadata.content.nip05.substring(1) : metadata.content.nip05 }}</span>
-            }
-            @if (metadata.content.about) {
-              <p class="user-about">{{ metadata.content.about }}</p>
-            }
+          @if (metadata?.content?.picture) {
+          <div class="profile-avatar">
+            <img [src]="metadata.content.picture" alt="Profile picture" class="avatar-image">
+          </div>
           } @else {
-            <div class="profile-avatar">
-              <mat-icon class="avatar-icon">account_circle</mat-icon>
-            </div>
-            <h2>{{ nostrService.activeAccount()?.name || nostrService.getTruncatedNpub(nostrService.activeAccount()?.pubkey || '') }}</h2>
+          <div class="profile-avatar">
+            <mat-icon class="avatar-icon">account_circle</mat-icon>
+          </div>
+          }
+          <h2>{{ metadata.content.name || nostrService.getTruncatedNpub(metadata.pubkey || '') }}</h2>
+          @if (metadata.content.nip05) {
+          <span class="nip05-identifier">{{ metadata.content.nip05.startsWith('_@') ?
+            metadata.content.nip05.substring(1) : metadata.content.nip05 }}</span>
+          }
+          @if (metadata.content.about) {
+          <p class="user-about">{{ metadata.content.about }}</p>
+          }
+          } @else {
+          <div class="profile-avatar">
+            <mat-icon class="avatar-icon">account_circle</mat-icon>
+          </div>
+          <h2>{{ nostrService.activeAccount()?.name ||
+            nostrService.getTruncatedNpub(nostrService.activeAccount()?.pubkey || '') }}</h2>
           }
         </div>
         <!-- <mat-divider></mat-divider> -->
 
         <mat-nav-list>
-          <a mat-list-item [routerLink]="['/p', nostrService.activeAccount()?.pubkey]" (click)="isHandset() ? toggleProfileSidenav() : null">
+          <a mat-list-item [routerLink]="['/p', nostrService.activeAccount()?.pubkey]"
+            (click)="isHandset() ? toggleProfileSidenav() : null">
             <mat-icon matListItemIcon>person</mat-icon>
             <span>My Profile</span>
           </a>
@@ -108,38 +184,39 @@
         @if (nostrService.hasAccounts()) {
         <mat-nav-list class="accounts-list">
           @for (account of nostrService.allAccounts(); track account.pubkey) {
-            @if (account.pubkey !== nostrService.activeAccount()?.pubkey) {
+          @if (account.pubkey !== nostrService.activeAccount()?.pubkey) {
 
-              @if(nostrService.getMetadataForAccount(account.pubkey); as metadata) {
-                <a mat-list-item (click)="switchAccount(account.pubkey)" class="account-item">
-                  @if (metadata.content?.picture; as account) {
-                    <div class="account-avatar" matListItemIcon>
-                      <img [src]="metadata?.content?.picture" alt="Profile picture" class="avatar-image">
-                    </div>
-                  } @else {
-                    <mat-icon matListItemIcon>account_circle</mat-icon>
-                  }
-                  <span matListItemTitle>
-                    {{ metadata.content?.display_name || metadata.content?.name || nostrService.getTruncatedNpub(account.pubkey) }}
-                  </span>
-                  <span matListItemLine class="account-source">
-                   {{ account.source }} - Last used: {{ account.lastUsed| date:'short' }}
-                  </span>
-                </a>
-              } @else {
-                <a mat-list-item (click)="switchAccount(account.pubkey)" class="account-item">
-                    <mat-icon matListItemIcon>account_circle</mat-icon>
-                  <span matListItemTitle>
-                    {{nostrService.getTruncatedNpub(account.pubkey) }}
-                  </span>
-                  <span matListItemLine class="account-source">
-                    {{ account.source }} - Last used: {{ account.lastUsed| date:'short' }}
-                  </span>
-                </a>
-              }
-
-           
+          @if(nostrService.getMetadataForAccount(account.pubkey); as metadata) {
+          <a mat-list-item (click)="switchAccount(account.pubkey)" class="account-item">
+            @if (metadata.content?.picture; as account) {
+            <div class="account-avatar" matListItemIcon>
+              <img [src]="metadata?.content?.picture" alt="Profile picture" class="avatar-image">
+            </div>
+            } @else {
+            <mat-icon matListItemIcon>account_circle</mat-icon>
             }
+            <span matListItemTitle>
+              {{ metadata.content?.display_name || metadata.content?.name ||
+              nostrService.getTruncatedNpub(account.pubkey) }}
+            </span>
+            <span matListItemLine class="account-source">
+              {{ account.source }} - Last used: {{ account.lastUsed| date:'short' }}
+            </span>
+          </a>
+          } @else {
+          <a mat-list-item (click)="switchAccount(account.pubkey)" class="account-item">
+            <mat-icon matListItemIcon>account_circle</mat-icon>
+            <span matListItemTitle>
+              {{nostrService.getTruncatedNpub(account.pubkey) }}
+            </span>
+            <span matListItemLine class="account-source">
+              {{ account.source }} - Last used: {{ account.lastUsed| date:'short' }}
+            </span>
+          </a>
+          }
+
+
+          }
           }
         </mat-nav-list>
         <mat-divider></mat-divider>
