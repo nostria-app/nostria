@@ -31,9 +31,11 @@
         <mat-icon class="verified-icon">verified</mat-icon>
       </div>
       }
-      <div class="profile-bio" *ngIf="profile.content.about">
+      @if (profile.content.about) {
+      <div class="profile-bio">
         {{ profile.content.about }}
       </div>
+      }
     </div>
     <div class="profile-actions">
       @if (isOwnProfile()) {
