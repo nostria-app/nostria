@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect } from '@angular/core';
+import { Component, inject, signal, effect, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -44,11 +44,16 @@ export class ProfileComponent {
   constructor() {
     // Extract the pubkey from the route parameter
     effect(() => {
+      debugger;
       const id = this.route.snapshot.paramMap.get('id');
       if (id) {
         this.logger.debug('Profile page opened with pubkey:', id);
         this.pubkey.set(id);
-        this.loadUserProfile(id);
+
+        untracked(async () => {
+          await this.loadUserProfile(id);
+        });
+
         this.checkIfOwnProfile(id);
       } else {
         this.error.set('No user ID provided');
@@ -60,6 +65,8 @@ export class ProfileComponent {
   private async loadUserProfile(pubkey: string): Promise<void> {
     this.isLoading.set(true);
     this.error.set(null);
+
+    debugger;
 
     try {
       // Try to get from cache first
@@ -73,7 +80,7 @@ export class ProfileComponent {
       //   metadata = await this.relayService.fetchUserMetadata(pubkey);
       //   this.userMetadata.set(metadata);
       // }
-      
+
       if (!metadata) {
         this.error.set('User profile not found');
       }
@@ -93,17 +100,17 @@ export class ProfileComponent {
   getFormattedName(): string {
     const metadata = this.userMetadata();
     if (!metadata) return this.getTruncatedPubkey();
-    
+
     return metadata.content.name || this.getTruncatedPubkey();
   }
 
   getVerifiedIdentifier(): string | null {
     const metadata = this.userMetadata();
     if (!metadata || !metadata.content.nip05) return null;
-    
+
     // Format NIP-05 identifier for display
-    return metadata.content.nip05.startsWith('_@') 
-      ? metadata.content.nip05.substring(1) 
+    return metadata.content.nip05.startsWith('_@')
+      ? metadata.content.nip05.substring(1)
       : metadata.content.nip05;
   }
 
