@@ -17,7 +17,11 @@
       <mat-icon>{{ themeService.darkMode() ? 'dark_mode' : 'light_mode' }}</mat-icon>
     </button>
     <button mat-icon-button (click)="toggleProfileSidenav()" aria-label="Toggle profile" class="profile-button">
-      <mat-icon>account_circle</mat-icon>
+      @if (userMetadata()?.content?.picture) {
+        <img [src]="userMetadata()?.content?.picture" class="profile-button-avatar" alt="Profile picture">
+      } @else {
+        <mat-icon>account_circle</mat-icon>
+      }
     </button>
   </mat-toolbar>
 
@@ -71,7 +75,7 @@
             }
             <h2>{{ metadata.content.name || nostrService.getTruncatedNpub(nostrService.currentUser()?.pubkey || '') }}</h2>
             @if (metadata.content.nip05) {
-              <span class="nip05-identifier">{{ metadata.content.nip05 }}</span>
+              <span class="nip05-identifier">{{ metadata.content.nip05.startsWith('_@') ? metadata.content.nip05.substring(1) : metadata.content.nip05 }}</span>
             }
             @if (metadata.content.about) {
               <p class="user-about">{{ metadata.content.about }}</p>
