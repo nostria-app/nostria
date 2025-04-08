@@ -101,16 +101,12 @@ export class AppComponent implements OnInit {
     // Show login dialog if user is not logged in - with debugging
     effect(() => {
       const isLoggedIn = this.nostrService.isLoggedIn();
-      this.logger.debug('Login status effect triggered', { isLoggedIn });
+      const isInitialized = this.storage.isInitialized();
 
-      if (!isLoggedIn) {
+      if (isInitialized && !isLoggedIn) {
         this.logger.debug('Showing login dialog');
         this.showLoginDialog();
-      }
-    });
-
-    effect(() => {
-      if (this.nostrService.isLoggedIn() && this.storage.isInitialized()) {
+      } else {
         const user = this.nostrService.currentUser();
 
         // Whenever the user changes, ensure that we have the correct relays
@@ -126,6 +122,12 @@ export class AppComponent implements OnInit {
         }
       }
     });
+
+    // effect(() => {
+    //   if (this.nostrService.isLoggedIn() && this.storage.isInitialized()) {
+        
+    //   }
+    // });
 
     // Effect to load metadata again after data loading completes
     effect(() => {
