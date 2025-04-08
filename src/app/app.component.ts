@@ -70,9 +70,9 @@ export class AppComponent implements OnInit {
   displayLabels = signal(true);
   
   // We'll compute the current user metadata from the nostrService's metadata array
-  userMetadata = computed(() => {
-    const pubkey = this.nostrService.currentUser()?.pubkey;
-    return pubkey ? this.nostrService.findUserMetadata(pubkey) : undefined;
+  accountMetadata = computed(() => {
+    const pubkey = this.nostrService.activeAccount()?.pubkey;
+    return pubkey ? this.nostrService.getMetadataForAccount(pubkey) : undefined;
   });
 
   navItems: NavItem[] = [
@@ -107,7 +107,7 @@ export class AppComponent implements OnInit {
         this.logger.debug('Showing login dialog');
         this.showLoginDialog();
       } else {
-        const user = this.nostrService.currentUser();
+        const user = this.nostrService.activeAccount();
 
         // Whenever the user changes, ensure that we have the correct relays
         if (user) {
@@ -200,9 +200,5 @@ export class AppComponent implements OnInit {
         this.logger.debug('User not logged in after dialog closed');
       }
     });
-  }
-
-  getUserMetadataByPubkey(pubkey: string): NostrEventData<UserMetadata> | undefined {
-    return this.nostrService.findUserMetadata(pubkey);
   }
 }

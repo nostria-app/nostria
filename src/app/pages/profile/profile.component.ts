@@ -8,10 +8,10 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDividerModule } from '@angular/material/divider';
 import { NostrService } from '../../services/nostr.service';
-import { UserMetadata, NostrEventData } from '../../services/storage.service';
 import { LoggerService } from '../../services/logger.service';
 import { LoadingOverlayComponent } from '../../components/loading-overlay/loading-overlay.component';
 import { RelayService } from '../../services/relay.service';
+import { NostrEvent } from '../../interfaces';
 
 @Component({
   selector: 'app-profile',
@@ -36,7 +36,7 @@ export class ProfileComponent {
   private logger = inject(LoggerService);
 
   pubkey = signal<string>('');
-  userMetadata = signal<NostrEventData<UserMetadata> | undefined>(undefined);
+  userMetadata = signal<NostrEvent | undefined>(undefined);
   isLoading = signal<boolean>(true);
   error = signal<string | null>(null);
   isOwnProfile = signal<boolean>(false);
@@ -63,15 +63,16 @@ export class ProfileComponent {
 
     try {
       // Try to get from cache first
-      let metadata = this.nostrService.findUserMetadata(pubkey);
+      let metadata = await this.nostrService.getMetadataForUser(pubkey);
       this.userMetadata.set(metadata);
 
-      if (!metadata) {
-        // If not in cache, try to fetch it
-        this.logger.debug('User metadata not found in cache, fetching from network');
-        metadata = await this.relayService.fetchUserMetadata(pubkey);
-        this.userMetadata.set(metadata);
-      }
+      // THIS WILL BE DONE IN THE GET METADATA FUNCTION SOON!
+      // if (!metadata) {
+      //   // If not in cache, try to fetch it
+      //   this.logger.debug('User metadata not found in cache, fetching from network');
+      //   metadata = await this.relayService.fetchUserMetadata(pubkey);
+      //   this.userMetadata.set(metadata);
+      // }
       
       if (!metadata) {
         this.error.set('User profile not found');
@@ -85,8 +86,8 @@ export class ProfileComponent {
   }
 
   private checkIfOwnProfile(pubkey: string): void {
-    const currentUser = this.nostrService.currentUser();
-    this.isOwnProfile.set(currentUser?.pubkey === pubkey);
+    const activeAccount = this.nostrService.activeAccount();
+    this.isOwnProfile.set(activeAccount?.pubkey === pubkey);
   }
 
   getFormattedName(): string {

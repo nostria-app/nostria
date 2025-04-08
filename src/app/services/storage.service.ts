@@ -3,6 +3,7 @@ import { LoggerService } from './logger.service';
 import { Relay } from './relay.service';
 import { openDB, IDBPDatabase, DBSchema, deleteDB } from 'idb';
 import { Event } from 'nostr-tools';
+import { NostrEvent } from '../interfaces';
 
 // Interface for NIP-11 relay information
 export interface Nip11Info {
@@ -78,17 +79,6 @@ export interface UserRelays {
   updated: number;
 }
 
-// Interface for Nostr events
-export interface NostrEvent extends Event {
-  // kind: number;
-  // tags: string[][];
-  content: any;
-  // created_at: number;
-  // pubkey: string;
-  // id: string;
-  // sig: string;
-}
-
 // Schema for the IndexedDB database
 interface NostriaDBSchema extends DBSchema {
   relays: {
@@ -134,13 +124,13 @@ export class StorageService {
   // Database stats
   dbStats = signal<{
     relaysCount: number;
-    userMetadataCount: number;
+    // userMetadataCount: number;
     userRelaysCount: number;
     eventsCount: number;
     estimatedSize: number;
   }>({
     relaysCount: 0,
-    userMetadataCount: 0,
+    // userMetadataCount: 0,
     userRelaysCount: 0,
     eventsCount: 0,
     estimatedSize: 0
@@ -222,7 +212,7 @@ export class StorageService {
   }
 
   // Get d-tag value from an event
-  private getDTagValue(event: Event): string | undefined {
+  private getDTagValue(event: NostrEvent): string | undefined {
     for (const tag of event.tags) {
       if (tag.length >= 2 && tag[0] === 'd') {
         return tag[1];
@@ -232,7 +222,7 @@ export class StorageService {
   }
 
   // Generic event storage methods
-  async saveEvent(event: Event): Promise<void> {
+  async saveEvent(event: NostrEvent): Promise<void> {
     if (!this.db) {
       this.logger.error('Database not initialized');
       return;
@@ -275,7 +265,7 @@ export class StorageService {
     }
   }
 
-  private async saveReplaceableEvent(event: Event): Promise<void> {
+  private async saveReplaceableEvent(event: NostrEvent): Promise<void> {
     // For replaceable events, find any existing events from the same pubkey and kind
     const index = this.db.transaction('events', 'readonly')
       .store.index('by-pubkey-kind');
@@ -308,7 +298,7 @@ export class StorageService {
     }
   }
 
-  private async saveParameterizedReplaceableEvent(event: Event): Promise<void> {
+  private async saveParameterizedReplaceableEvent(event: NostrEvent): Promise<void> {
     const dTagValue = this.getDTagValue(event);
 
     if (!dTagValue) {
@@ -352,7 +342,7 @@ export class StorageService {
     }
   }
 
-  async getEvent(id: string): Promise<Event | undefined> {
+  async getEvent(id: string): Promise<NostrEvent | undefined> {
     if (!this.db) {
       this.logger.error('Database not initialized');
       return undefined;
@@ -366,7 +356,7 @@ export class StorageService {
     }
   }
 
-  async getEventsByKind(kind: number): Promise<Event[]> {
+  async getEventsByKind(kind: number): Promise<NostrEvent[]> {
     if (!this.db) {
       this.logger.error('Database not initialized');
       return [];
@@ -380,59 +370,100 @@ export class StorageService {
     }
   }
 
-  async getEventsByPubkey(pubkey: string): Promise<Event[]> {
+  async getEventsByPubkey(pubkey: string | string[]): Promise<NostrEvent[]> {
     if (!this.db) {
       this.logger.error('Database not initialized');
       return [];
     }
 
     try {
-      return await this.db.getAllFromIndex('events', 'by-pubkey', pubkey);
+      if (Array.isArray(pubkey)) {
+        // Handle array of pubkeys
+        const allEvents: Event[] = [];
+        for (const pk of pubkey) {
+          const events = await this.db.getAllFromIndex('events', 'by-pubkey', pk);
+          allEvents.push(...events);
+        }
+        return allEvents;
+      } else {
+        // Handle single pubkey (original behavior)
+        return await this.db.getAllFromIndex('events', 'by-pubkey', pubkey);
+      }
     } catch (error) {
-      this.logger.error(`Error getting events by pubkey ${pubkey}`, error);
+      const pubkeyDisplay = Array.isArray(pubkey) ? `[multiple keys: ${pubkey.length}]` : pubkey;
+      this.logger.error(`Error getting events by pubkey ${pubkeyDisplay}`, error);
       return [];
     }
   }
 
-  async getEventByPubkeyAndKind(pubkey: string, kind: number): Promise<Event | null> {
+  async getEventByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<NostrEvent | null> {
     const events = await this.getEventsByPubkeyAndKind(pubkey, kind);
 
-    if (events) {
+    if (events && events.length > 0) {
       return events[0];
     } else {
       return null;
     }
   }
 
-  async getEventsByPubkeyAndKind(pubkey: string, kind: number): Promise<Event[]> {
+  async getEventsByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<NostrEvent[]> {
     if (!this.db) {
       this.logger.error('Database not initialized');
       return [];
     }
 
     try {
-      return await this.db.getAllFromIndex('events', 'by-pubkey-kind', [pubkey, kind]);
+      if (Array.isArray(pubkey)) {
+        // Handle array of pubkeys
+        const allEvents: NostrEvent[] = [];
+        for (const pk of pubkey) {
+          const events = await this.db.getAllFromIndex('events', 'by-pubkey-kind', [pk, kind]);
+          allEvents.push(...events);
+        }
+        return allEvents;
+      } else {
+        // Handle single pubkey (original behavior)
+        return await this.db.getAllFromIndex('events', 'by-pubkey-kind', [pubkey, kind]);
+      }
     } catch (error) {
-      this.logger.error(`Error getting events by pubkey ${pubkey} and kind ${kind}`, error);
+      const pubkeyDisplay = Array.isArray(pubkey) ? `[multiple keys: ${pubkey.length}]` : pubkey;
+      this.logger.error(`Error getting events by pubkey ${pubkeyDisplay} and kind ${kind}`, error);
       return [];
     }
   }
 
-  async getParameterizedReplaceableEvent(pubkey: string, kind: number, dTagValue: string): Promise<Event | undefined> {
+  async getParameterizedReplaceableEvent(pubkey: string | string[], kind: number, dTagValue: string): Promise<NostrEvent | undefined> {
     if (!this.db) {
       this.logger.error('Database not initialized');
       return undefined;
     }
 
     try {
-      const events = await this.db.getAllFromIndex('events', 'by-pubkey-kind-d-tag', [pubkey, kind, dTagValue]);
-      if (events.length > 0) {
-        // Return the most recent one
-        return events.sort((a, b) => b.created_at - a.created_at)[0];
+      if (Array.isArray(pubkey)) {
+        // For arrays, get events from all pubkeys and return the most recent one
+        const allEvents: NostrEvent[] = [];
+        for (const pk of pubkey) {
+          const events = await this.db.getAllFromIndex('events', 'by-pubkey-kind-d-tag', [pk, kind, dTagValue]);
+          allEvents.push(...events);
+        }
+        
+        if (allEvents.length > 0) {
+          // Return the most recent one across all pubkeys
+          return allEvents.sort((a, b) => b.created_at - a.created_at)[0];
+        }
+        return undefined;
+      } else {
+        // Original behavior for single pubkey
+        const events = await this.db.getAllFromIndex('events', 'by-pubkey-kind-d-tag', [pubkey, kind, dTagValue]);
+        if (events.length > 0) {
+          // Return the most recent one
+          return events.sort((a, b) => b.created_at - a.created_at)[0];
+        }
+        return undefined;
       }
-      return undefined;
     } catch (error) {
-      this.logger.error(`Error getting parameterized replaceable event for pubkey ${pubkey}, kind ${kind}, and d-tag ${dTagValue}`, error);
+      const pubkeyDisplay = Array.isArray(pubkey) ? `[multiple keys: ${pubkey.length}]` : pubkey;
+      this.logger.error(`Error getting parameterized replaceable event for pubkey ${pubkeyDisplay}, kind ${kind}, and d-tag ${dTagValue}`, error);
       return undefined;
     }
   }
@@ -519,59 +550,83 @@ export class StorageService {
     }
   }
 
-  async saveUserMetadata(pubkey: string, data: NostrEventData<UserMetadata>): Promise<void> {
-    try {
-      const enhancedMetadata: NostrEventData<UserMetadata> = {
-        ...data,
-        pubkey,
-        updated: Date.now()
-      };
+  // async saveUserMetadata(pubkey: string, data: NostrEventData<UserMetadata>): Promise<void> {
+  //   try {
+  //     const enhancedMetadata: NostrEventData<UserMetadata> = {
+  //       ...data,
+  //       pubkey,
+  //       updated: Date.now()
+  //     };
 
-      await this.db.put('userMetadata', enhancedMetadata);
-      this.logger.debug(`Saved user metadata to IndexedDB: ${pubkey}`);
-      await this.updateStats();
-    } catch (error) {
-      this.logger.error(`Error saving user metadata for ${pubkey}`, error);
-    }
-  }
+  //     await this.db.put('userMetadata', enhancedMetadata);
+  //     this.logger.debug(`Saved user metadata to IndexedDB: ${pubkey}`);
+  //     await this.updateStats();
+  //   } catch (error) {
+  //     this.logger.error(`Error saving user metadata for ${pubkey}`, error);
+  //   }
+  // }
 
-  async getUserMetadata(pubkey: string): Promise<NostrEventData<UserMetadata> | undefined> {
-    if (!this.db) {
-      this.logger.error('Database not initialized');
-      return undefined;
-    }
+  // async getUserMetadata(pubkey: string | string[]): Promise<NostrEventData<UserMetadata> | NostrEventData<UserMetadata>[] | undefined> {
+  //   if (!this.db) {
+  //     this.logger.error('Database not initialized');
+  //     return undefined;
+  //   }
 
-    try {
-      return await this.db.get('userMetadata', pubkey);
-    } catch (error) {
-      this.logger.error(`Error getting user metadata for ${pubkey}`, error);
-      return undefined;
-    }
-  }
+  //   try {
+  //     if (Array.isArray(pubkey)) {
+  //       // Handle array of pubkeys
+  //       const results: NostrEventData<UserMetadata>[] = [];
+  //       for (const pk of pubkey) {
+  //         const metadata = await this.db.get('userMetadata', pk);
+  //         if (metadata) {
+  //           results.push(metadata);
+  //         }
+  //       }
+  //       return results.length > 0 ? results : undefined;
+  //     } else {
+  //       // Handle single pubkey (original behavior)
+  //       return await this.db.get('userMetadata', pubkey);
+  //     }
+  //   } catch (error) {
+  //     const pubkeyDisplay = Array.isArray(pubkey) ? `[multiple keys: ${pubkey.length}]` : pubkey;
+  //     this.logger.error(`Error getting user metadata for ${pubkeyDisplay}`, error);
+  //     return undefined;
+  //   }
+  // }
 
-  async getAllUserMetadata() {
-    try {
-      return await this.db.getAll('userMetadata');
-    } catch (error) {
-      this.logger.error('Error getting all user metadata', error);
-      return [];
-    }
-  }
+  // async getAllUserMetadata() {
+  //   try {
+  //     return await this.db.getAll('userMetadata');
+  //   } catch (error) {
+  //     this.logger.error('Error getting all user metadata', error);
+  //     return [];
+  //   }
+  // }
 
-  async deleteUserMetadata(pubkey: string): Promise<void> {
-    if (!this.db) {
-      this.logger.error('Database not initialized');
-      return;
-    }
+  // async deleteUserMetadata(pubkey: string | string[]): Promise<void> {
+  //   if (!this.db) {
+  //     this.logger.error('Database not initialized');
+  //     return;
+  //   }
 
-    try {
-      await this.db.delete('userMetadata', pubkey);
-      this.logger.debug(`Deleted user metadata from IndexedDB: ${pubkey}`);
-      await this.updateStats();
-    } catch (error) {
-      this.logger.error(`Error deleting user metadata for ${pubkey}`, error);
-    }
-  }
+  //   try {
+  //     if (Array.isArray(pubkey)) {
+  //       // Handle array of pubkeys
+  //       for (const pk of pubkey) {
+  //         await this.db.delete('userMetadata', pk);
+  //       }
+  //       this.logger.debug(`Deleted user metadata for multiple pubkeys: ${pubkey.length}`);
+  //     } else {
+  //       // Handle single pubkey (original behavior)
+  //       await this.db.delete('userMetadata', pubkey);
+  //       this.logger.debug(`Deleted user metadata from IndexedDB: ${pubkey}`);
+  //     }
+  //     await this.updateStats();
+  //   } catch (error) {
+  //     const pubkeyDisplay = Array.isArray(pubkey) ? `[multiple keys: ${pubkey.length}]` : pubkey;
+  //     this.logger.error(`Error deleting user metadata for ${pubkeyDisplay}`, error);
+  //   }
+  // }
 
   async saveUserRelays(userRelays: UserRelays): Promise<void> {
     if (!this.db) {
@@ -593,16 +648,30 @@ export class StorageService {
     }
   }
 
-  async getUserRelays(pubkey: string): Promise<UserRelays | undefined> {
+  async getUserRelays(pubkey: string | string[]): Promise<UserRelays | UserRelays[] | undefined> {
     if (!this.db) {
       this.logger.error('Database not initialized');
       return undefined;
     }
 
     try {
-      return await this.db.get('userRelays', pubkey);
+      if (Array.isArray(pubkey)) {
+        // Handle array of pubkeys
+        const results: UserRelays[] = [];
+        for (const pk of pubkey) {
+          const relays = await this.db.get('userRelays', pk);
+          if (relays) {
+            results.push(relays);
+          }
+        }
+        return results.length > 0 ? results : undefined;
+      } else {
+        // Handle single pubkey (original behavior)
+        return await this.db.get('userRelays', pubkey);
+      }
     } catch (error) {
-      this.logger.error(`Error getting user relays for ${pubkey}`, error);
+      const pubkeyDisplay = Array.isArray(pubkey) ? `[multiple keys: ${pubkey.length}]` : pubkey;
+      this.logger.error(`Error getting user relays for ${pubkeyDisplay}`, error);
       return undefined;
     }
   }
@@ -621,18 +690,28 @@ export class StorageService {
     }
   }
 
-  async deleteUserRelays(pubkey: string): Promise<void> {
+  async deleteUserRelays(pubkey: string | string[]): Promise<void> {
     if (!this.db) {
       this.logger.error('Database not initialized');
       return;
     }
 
     try {
-      await this.db.delete('userRelays', pubkey);
-      this.logger.debug(`Deleted user relays from IndexedDB: ${pubkey}`);
+      if (Array.isArray(pubkey)) {
+        // Handle array of pubkeys
+        for (const pk of pubkey) {
+          await this.db.delete('userRelays', pk);
+        }
+        this.logger.debug(`Deleted user relays for multiple pubkeys: ${pubkey.length}`);
+      } else {
+        // Handle single pubkey (original behavior)
+        await this.db.delete('userRelays', pubkey);
+        this.logger.debug(`Deleted user relays from IndexedDB: ${pubkey}`);
+      }
       await this.updateStats();
     } catch (error) {
-      this.logger.error(`Error deleting user relays for ${pubkey}`, error);
+      const pubkeyDisplay = Array.isArray(pubkey) ? `[multiple keys: ${pubkey.length}]` : pubkey;
+      this.logger.error(`Error deleting user relays for ${pubkeyDisplay}`, error);
     }
   }
 
@@ -646,12 +725,12 @@ export class StorageService {
       this.logger.info('Clearing cache while preserving current user data');
 
       // Get all user metadata and filter out the current user
-      const allUserMetadata = await this.getAllUserMetadata();
-      for (const metadata of allUserMetadata) {
-        if (metadata.pubkey !== currentUserPubkey) {
-          await this.deleteUserMetadata(metadata.pubkey!);
-        }
-      }
+      // const allUserMetadata = await this.getAllUserMetadata();
+      // for (const metadata of allUserMetadata) {
+      //   if (metadata.pubkey !== currentUserPubkey) {
+      //     await this.deleteUserMetadata(metadata.pubkey!);
+      //   }
+      // }
 
       // Get all user relays and filter out the current user
       const allUserRelays = await this.getAllUserRelays();
@@ -690,7 +769,7 @@ export class StorageService {
 
     try {
       const relays = await this.getAllRelays();
-      const userMetadata = await this.getAllUserMetadata();
+      // const userMetadata = await this.getAllUserMetadata();
       const userRelays = await this.getAllUserRelays();
 
       // Count events (may need optimization for large datasets)
@@ -705,14 +784,14 @@ export class StorageService {
 
       // Calculate approximate size
       const relaysSize = JSON.stringify(relays).length;
-      const userMetadataSize = JSON.stringify(userMetadata).length;
+      // const userMetadataSize = JSON.stringify(userMetadata).length;
       const userRelaysSize = JSON.stringify(userRelays).length;
       const eventsSize = eventsCount * 500; // Rough estimation of average event size
-      const totalSize = relaysSize + userMetadataSize + userRelaysSize + eventsSize;
+      const totalSize = relaysSize + userRelaysSize + eventsSize;
 
       this.dbStats.set({
         relaysCount: relays.length,
-        userMetadataCount: userMetadata.length,
+        // userMetadataCount: userMetadata.length,
         userRelaysCount: userRelays.length,
         eventsCount,
         estimatedSize: totalSize
@@ -752,7 +831,7 @@ export class StorageService {
       // Reset stats
       this.dbStats.set({
         relaysCount: 0,
-        userMetadataCount: 0,
+        // userMetadataCount: 0,
         userRelaysCount: 0,
         eventsCount: 0,
         estimatedSize: 0

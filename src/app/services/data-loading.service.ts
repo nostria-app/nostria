@@ -22,7 +22,7 @@ export class DataLoadingService {
   }
 
   async loadData(): Promise<void> {
-    if (!this.nostr.currentUser()) {
+    if (!this.nostr.activeAccount()) {
       this.logger.warn('Cannot load data: No user is logged in');
       return;
     }
@@ -32,7 +32,7 @@ export class DataLoadingService {
     this.showSuccess.set(false);
     this.logger.info('Starting data loading process');
 
-    const pubkey = this.nostr.currentUser()!.pubkey;
+    const pubkey = this.nostr.activeAccount()!.pubkey;
     this.logger.debug('Loading data for pubkey', { pubkey });
 
     let profile = null;
