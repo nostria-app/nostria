@@ -87,8 +87,23 @@
             <h2>{{ nostrService.currentUser()?.name || nostrService.getTruncatedNpub(nostrService.currentUser()?.pubkey || '') }}</h2>
           }
         </div>
-        <mat-divider></mat-divider>
+        <!-- <mat-divider></mat-divider> -->
 
+        <mat-nav-list>
+          <a mat-list-item [routerLink]="['/p', nostrService.currentUser()?.pubkey]" (click)="isHandset() ? toggleProfileSidenav() : null">
+            <mat-icon matListItemIcon>person</mat-icon>
+            <span>My Profile</span>
+          </a>
+          <a mat-list-item routerLink="/credentials" (click)="isHandset() ? toggleProfileSidenav() : null">
+            <mat-icon matListItemIcon>key</mat-icon>
+            <span>Credentials</span>
+          </a>
+          <a mat-list-item (click)="logout(); toggleProfileSidenav()">
+            <mat-icon matListItemIcon>logout</mat-icon>
+            <span>Logout</span>
+          </a>
+        </mat-nav-list>
+        <mat-divider></mat-divider>
         <!-- Account selection menu -->
         @if (nostrService.allUsers().length > 1) {
         <mat-nav-list class="accounts-list">
@@ -115,8 +130,8 @@
         <mat-divider></mat-divider>
         }
 
-        <mat-nav-list>
-          <a mat-list-item routerLink="/profile" (click)="isHandset() ? toggleProfileSidenav() : null">
+        <!-- <mat-nav-list>
+          <a mat-list-item [routerLink]="['/p', nostrService.currentUser()?.pubkey]" (click)="isHandset() ? toggleProfileSidenav() : null">
             <mat-icon matListItemIcon>person</mat-icon>
             <span>My Profile</span>
           </a>
@@ -128,7 +143,7 @@
             <mat-icon matListItemIcon>logout</mat-icon>
             <span>Logout</span>
           </a>
-        </mat-nav-list>
+        </mat-nav-list> -->
       </div>
     </mat-sidenav>
 

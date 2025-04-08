@@ -1,0 +1,123 @@
+<div class="profile-page">
+  @if (isLoading()) {
+  <app-loading-overlay message="Loading profile..."></app-loading-overlay>
+  } @else if (error()) {
+  <div class="error-container">
+    <mat-icon>error</mat-icon>
+    <h2>{{ error() }}</h2>
+    <p>The profile you're looking for couldn't be loaded or doesn't exist.</p>
+  </div>
+  }
+
+  @if (userMetadata(); as profile) {
+  <div class="profile-header">
+    <div class="profile-banner"
+      [style.background-image]="profile.content.banner ? 'url(' + profile.content.banner + ')' : getDefaultBanner()">
+    </div>
+    <div class="profile-avatar-container">
+      <div class="profile-avatar">
+        @if (profile.content.picture) {
+        <img [src]="profile.content.picture" alt="Profile picture" class="avatar-image">
+        } @else {
+        <mat-icon class="default-avatar">account_circle</mat-icon>
+        }
+      </div>
+    </div>
+    <div class="profile-info">
+      <h1 class="profile-name">{{ getFormattedName() }}</h1>
+      @if (getVerifiedIdentifier()) {
+      <div class="verified-container">
+        <span class="verified-name">{{ getVerifiedIdentifier() }}</span>
+        <mat-icon class="verified-icon">verified</mat-icon>
+      </div>
+      }
+      <div class="profile-bio" *ngIf="profile.content.about">
+        {{ profile.content.about }}
+      </div>
+    </div>
+    <div class="profile-actions">
+      @if (isOwnProfile()) {
+      <button mat-flat-button color="primary">
+        <mat-icon>edit</mat-icon> Edit Profile
+      </button>
+      } @else {
+      <button mat-flat-button color="primary">
+        <mat-icon>person_add</mat-icon> Follow
+      </button>
+      <button mat-stroked-button color="primary">
+        <mat-icon>message</mat-icon> Message
+      </button>
+      }
+    </div>
+  </div>
+
+  <mat-divider></mat-divider>
+
+  <div class="profile-content">
+    <mat-tab-group animationDuration="300ms">
+      <mat-tab label="Posts">
+        <div class="tab-content">
+          <div class="empty-state">
+            <mat-icon>article</mat-icon>
+            <p>No posts to display yet</p>
+          </div>
+        </div>
+      </mat-tab>
+      <mat-tab label="About">
+        <div class="tab-content">
+          <mat-card>
+            <mat-card-content>
+              <h2>Profile Info</h2>
+
+              @if (profile.content.website) {
+              <div class="info-item">
+                <mat-icon>link</mat-icon>
+                <a [href]="profile.content.website" target="_blank" rel="noopener noreferrer">
+                  {{ profile.content.website }}
+                </a>
+              </div>
+              }
+
+              @if (profile.content.lud16) {
+              <div class="info-item">
+                <mat-icon>bolt</mat-icon>
+                <span>{{ profile.content.lud16 }}</span>
+              </div>
+              }
+
+              <div class="info-item">
+                <mat-icon>fingerprint</mat-icon>
+                <div class="pubkey-container">
+                  <span class="pubkey">{{ getFormattedNpub() }}</span>
+                  <button mat-icon-button matTooltip="Copy to clipboard">
+                    <mat-icon>content_copy</mat-icon>
+                  </button>
+                </div>
+              </div>
+
+              <div class="info-item">
+                <mat-icon>update</mat-icon>
+                <span>Updated: {{ profile.content.last_updated | date:'mediumDate' }}</span>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </div>
+      </mat-tab>
+      <mat-tab label="Photos">
+        <div class="tab-content">
+          <div class="empty-state">
+            <mat-icon>photo_library</mat-icon>
+            <p>No photos to display yet</p>
+          </div>
+        </div>
+      </mat-tab>
+    </mat-tab-group>
+  </div>
+  } @else {
+  <div class="empty-profile">
+    <mat-icon>person_outline</mat-icon>
+    <h2>Profile Not Found</h2>
+    <p>The user profile you're looking for doesn't exist or hasn't been loaded yet.</p>
+  </div>
+  }
+</div>

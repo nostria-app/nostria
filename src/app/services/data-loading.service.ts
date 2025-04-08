@@ -46,11 +46,11 @@ export class DataLoadingService {
     }
 
     // To properly scale Nostr, the first step is simply getting the user's relay list and nothing more.
-    const pool = new SimplePool();
-    this.logger.debug('Connecting to bootstrap relays', { relays: this.nostr.bootStrapRelays });
+    const bootstrapPool = new SimplePool();
+    this.logger.debug('Connecting to bootstrap relays', { relays: this.relayService.bootStrapRelays() });
     
     this.logger.time('fetchRelayList');
-    const relays = await pool.get(this.nostr.bootStrapRelays, {
+    const relays = await bootstrapPool.get(this.relayService.bootStrapRelays(), {
       kinds: [kinds.RelayList],
       authors: [pubkey],
     });
@@ -70,7 +70,7 @@ export class DataLoadingService {
     } else {
       this.logger.warn('No relay list found for user');
       // Set default bootstrap relays if no custom relays found
-      this.relayService.setRelays([...this.nostr.bootStrapRelays]);
+      this.relayService.setRelays([...this.relayService.defaultRelays()]);
       
       // Save bootstrap relays to storage for this user
       await this.relayService.saveUserRelays(pubkey);
@@ -125,7 +125,7 @@ export class DataLoadingService {
     }
 
     this.logger.debug('Closing bootstrap relay pool connections');
-    pool.close(this.nostr.bootStrapRelays);
+    bootstrapPool.close(this.relayService.bootStrapRelays());
 
     this.loadingMessage.set('Loading completed!');
     this.logger.info('Data loading process completed');
