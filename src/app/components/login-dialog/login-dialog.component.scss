@@ -114,6 +114,23 @@
   }
 }
 
+.account-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: var(--mat-primary-300);
+}
+
+.avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .dark .account-item:hover {
   background-color: rgba(255, 255, 255, 0.05);
 }

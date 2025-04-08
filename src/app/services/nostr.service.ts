@@ -14,6 +14,10 @@ export interface NostrUser {
   lastUsed?: number; // Timestamp when this account was last used
 }
 
+export interface UserMetadataWithPubkey extends NostrEventData<UserMetadata> {
+  pubkey: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -27,6 +31,9 @@ export class NostrService {
 
   private user = signal<NostrUser | null>(null);
   private users = signal<NostrUser[]>([]);
+
+  // Signal to store metadata for all users - using array instead of Map
+  private allUserMetadata = signal<UserMetadataWithPubkey[]>([]);
 
   isLoggedIn = computed(() => {
     const result = !!this.user();
@@ -42,18 +49,38 @@ export class NostrService {
     return this.users();
   });
 
+  hasUsers = computed(() => {
+    return this.allUsers().length > 0;
+  });
+
+  // Expose the metadata as a computed property
+  usersMetadata = computed(() => {
+    return this.allUserMetadata();
+  });
+
+  // Method to easily find metadata by pubkey
+  findUserMetadata(pubkey: string): UserMetadataWithPubkey | undefined {
+    return this.allUserMetadata().find(meta => meta.pubkey === pubkey);
+  }
+
   get bootStrapRelays() {
     return this.#bootStrapRelays;
   }
 
   constructor() {
     this.logger.info('Initializing NostrService');
-    this.loadUsersFromStorage();
-    this.loadActiveUserFromStorage();
+
+    effect(() => {
+      if (this.storage.isInitialized()) {
+        this.loadUsersFromStorage();
+        this.loadActiveUserFromStorage();
+      }
+    });
 
     // Save user to localStorage whenever it changes
     effect(() => {
       if (this.storage.isInitialized()) {
+
         const currentUser = this.user();
         this.logger.debug('User change effect triggered', {
           hasUser: !!currentUser,
@@ -76,18 +103,35 @@ export class NostrService {
     // Save all users to localStorage whenever they change
     effect(() => {
       const allUsers = this.users();
+
+      if (allUsers.length === 0) {
+        this.logger.debug('No users to save to localStorage');
+        return;
+      }
+
       this.logger.debug('Users collection effect triggered', { count: allUsers.length });
 
       this.logger.debug(`Saving ${allUsers.length} users to localStorage`);
       localStorage.setItem(this.USERS_STORAGE_KEY, JSON.stringify(allUsers));
+
+      // When users change, ensure we have metadata for all of them
+      untracked(() => {
+        this.loadAllUsersMetadata().catch(err =>
+          this.logger.error('Failed to load metadata for all users', err));
+      });
     });
 
     this.logger.debug('NostrService initialization completed');
+
+    // Initial load of metadata for all users
+    // this.loadAllUsersMetadata().catch(err => 
+    //   this.logger.error('Failed to load initial metadata for all users', err));
   }
 
   reset() {
     this.users.set([]);
     this.user.set(null);
+    this.allUserMetadata.set([]);
   }
 
   private loadUsersFromStorage(): void {
@@ -121,6 +165,63 @@ export class NostrService {
     }
   }
 
+  /**
+   * Loads metadata for all known users into the allUserMetadata signal
+   */
+  async loadAllUsersMetadata(): Promise<void> {
+    const users = this.users();
+    if (users.length === 0) {
+      this.logger.debug('No users to load metadata for');
+      return;
+    }
+
+    this.logger.debug(`Loading metadata for ${users.length} users`);
+    const metadataArray: UserMetadataWithPubkey[] = [];
+
+    for (const user of users) {
+      try {
+        const metadata = await this.storage.getUserMetadata(user.pubkey);
+        if (metadata) {
+          this.logger.debug(`Loaded metadata for user ${user.pubkey}`, { metadata });
+          metadataArray.push({
+            ...metadata,
+            pubkey: user.pubkey
+          });
+        }
+      } catch (error) {
+        this.logger.error(`Failed to load metadata for user ${user.pubkey}`, error);
+      }
+    }
+
+    this.allUserMetadata.set(metadataArray);
+    this.logger.debug(`Loaded metadata for ${metadataArray.length} users`);
+  }
+
+  /**
+   * Updates the metadata for a single user in the allUserMetadata signal
+   */
+  private updateUserMetadataInSignal(pubkey: string, metadata: NostrEventData<UserMetadata>): void {
+    const userMetadataWithPubkey: UserMetadataWithPubkey = {
+      ...metadata,
+      pubkey
+    };
+
+    this.allUserMetadata.update(array => {
+      const index = array.findIndex(m => m.pubkey === pubkey);
+      if (index >= 0) {
+        // Replace existing metadata
+        return [
+          ...array.slice(0, index),
+          userMetadataWithPubkey,
+          ...array.slice(index + 1)
+        ];
+      } else {
+        // Add new metadata
+        return [...array, userMetadataWithPubkey];
+      }
+    });
+  }
+
   getTruncatedNpub(pubkey: string): string {
     const npub = this.getNpubFromPubkey(pubkey);
     return npub.length > 12
@@ -138,6 +239,11 @@ export class NostrService {
 
       this.user.set(targetUser);
       this.logger.debug('Successfully switched user');
+
+      // Make sure we have the latest metadata for this user
+      this.getUserMetadata(pubkey).catch(err =>
+        this.logger.error(`Failed to refresh metadata for user ${pubkey}`, err));
+
       return true;
     }
 
@@ -167,6 +273,10 @@ export class NostrService {
 
     // Trigger the user signal which indicates user is logged on.
     this.user.set(user);
+
+    // Make sure we have the latest metadata for this user
+    this.getUserMetadata(user.pubkey).catch(err =>
+      this.logger.error(`Failed to get metadata for new user ${user.pubkey}`, err));
   }
 
   generateNewKey(): void {
@@ -318,6 +428,9 @@ export class NostrService {
       this.user.set(null);
     }
 
+    // Remove the user's metadata from the metadata array
+    this.allUserMetadata.update(array => array.filter(m => m.pubkey !== pubkey));
+
     this.logger.debug('Account removed successfully');
   }
 
@@ -347,13 +460,15 @@ export class NostrService {
       const updatedData: NostrEventData<UserMetadata> = {
         ...existingData,
         ...metadata,
-        // pubkey, // Ensure pubkey is always set correctly
         updated: Date.now()
       }
 
       await this.storage.saveUserMetadata(pubkey, updatedData);
       this.logger.debug(`Saved metadata for user ${pubkey} to storage`);
-      
+
+      // Update the metadata in our signal
+      this.updateUserMetadataInSignal(pubkey, updatedData);
+
       // If this is the current user, trigger a metadata refresh
       if (this.currentUser()?.pubkey === pubkey) {
         this.logger.debug('Current user metadata updated');
@@ -364,11 +479,26 @@ export class NostrService {
   }
 
   /**
-   * Get user metadata from storage
+   * Get user metadata from storage and update the metadata signal
    */
   async getUserMetadata(pubkey: string): Promise<NostrEventData<UserMetadata> | undefined> {
     try {
-      return await this.storage.getUserMetadata(pubkey);
+      // First check if we already have this metadata in our signal
+      const currentMetadata = this.findUserMetadata(pubkey);
+
+      // If we don't have it or it's older than 5 minutes, fetch from storage
+      const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+      if (!currentMetadata || (currentMetadata.updated && currentMetadata.updated < fiveMinutesAgo)) {
+        this.logger.debug(`Fetching fresh metadata for ${pubkey}`);
+        const metadata = await this.storage.getUserMetadata(pubkey);
+
+        if (metadata) {
+          this.updateUserMetadataInSignal(pubkey, metadata);
+          return metadata;
+        }
+      }
+
+      return currentMetadata;
     } catch (error) {
       this.logger.error(`Error getting metadata for user ${pubkey}`, error);
       return undefined;
@@ -380,10 +510,10 @@ export class NostrService {
    */
   async getUsersMetadata(pubkeys: string[]): Promise<Map<string, NostrEventData<UserMetadata>>> {
     const metadataMap = new Map<string, NostrEventData<UserMetadata>>();
-    
+
     for (const pubkey of pubkeys) {
       try {
-        const metadata = await this.storage.getUserMetadata(pubkey);
+        const metadata = await this.getUserMetadata(pubkey);
         if (metadata) {
           metadataMap.set(pubkey, metadata);
         }
@@ -391,7 +521,7 @@ export class NostrService {
         this.logger.error(`Error getting metadata for user ${pubkey}`, error);
       }
     }
-    
+
     return metadataMap;
   }
 

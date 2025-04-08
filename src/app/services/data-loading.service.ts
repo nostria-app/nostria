@@ -137,6 +137,10 @@ export class DataLoadingService {
     // Hide success animation after 1.5 seconds
     setTimeout(() => {
       this.showSuccess.set(false);
+      
+      // Refresh metadata after successful data loading
+      // this.nostr.loadAllUsersMetadata().catch(err => 
+      //   this.logger.error('Failed to refresh metadata after data loading', err));
     }, 1500);
   }
 }

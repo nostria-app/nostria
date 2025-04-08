@@ -15,7 +15,7 @@
           </div>
         }
         
-        @if (showExistingAccounts()) {
+        @if (nostrService.hasUsers()) {
           <mat-card class="login-card use-existing" (click)="switchToExistingAccounts()">
             <mat-card-header>
               <mat-card-title>Use Existing Account</mat-card-title>
@@ -107,12 +107,17 @@
         <p class="dialog-subtitle">Select an account to continue:</p>
         
         <mat-nav-list class="accounts-list">
-          @for (account of this.nostrService.allUsers(); track account.pubkey) {
+          @for (account of nostrService.usersMetadata(); track account) {
             <a mat-list-item (click)="selectExistingAccount(account.pubkey)" class="account-item">
-              <mat-icon matListItemIcon>account_circle</mat-icon>
-              <span matListItemTitle>{{ account.name || nostrService.getTruncatedNpub(account.pubkey) }}</span>
-              <span matListItemLine class="account-source">
-                {{ account.source }} • Last used: {{ account.lastUsed | date:'short' }}
+              @if (account.content.picture) {
+                <div class="account-avatar" matListItemIcon>
+                  <img [src]="account.content.picture" alt="Profile picture" class="avatar-image">
+                </div>
+              } @else {
+                <mat-icon matListItemIcon>account_circle</mat-icon>
+              }
+              <span matListItemTitle>{{ account.content.name }}</span>
+              <span matListItemLine class="account-source">{{ nostrService.getTruncatedNpub(account.pubkey) }}<br>Last used: {{ account.updated | date:'short' }}
               </span>
               <button mat-icon-button class="delete-button" 
                       (click)="removeAccount($event, account.pubkey)" 
