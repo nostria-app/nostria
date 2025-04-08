@@ -2,6 +2,7 @@ import { Injectable, inject, signal, effect } from '@angular/core';
 import { LoggerService } from './logger.service';
 import { Relay } from './relay.service';
 import { openDB, IDBPDatabase, DBSchema, deleteDB } from 'idb';
+import { Event } from 'nostr-tools';
 
 // Interface for NIP-11 relay information
 export interface Nip11Info {
@@ -78,14 +79,14 @@ export interface UserRelays {
 }
 
 // Interface for Nostr events
-export interface NostrEvent {
-  kind: number;
-  tags: string[][];
-  content: string;
-  created_at: number;
-  pubkey: string;
-  id: string;
-  sig: string;
+export interface NostrEvent extends Event {
+  // kind: number;
+  // tags: string[][];
+  content: any;
+  // created_at: number;
+  // pubkey: string;
+  // id: string;
+  // sig: string;
 }
 
 // Schema for the IndexedDB database
@@ -108,8 +109,8 @@ interface NostriaDBSchema extends DBSchema {
   events: {
     key: string; // event id
     value: NostrEvent;
-    indexes: { 
-      'by-kind': number; 
+    indexes: {
+      'by-kind': number;
       'by-pubkey': string;
       'by-created': number;
       'by-pubkey-kind': [string, number];
@@ -182,10 +183,10 @@ export class StorageService {
             eventsStore.createIndex('by-pubkey', 'pubkey');
             eventsStore.createIndex('by-created', 'created_at');
             eventsStore.createIndex('by-pubkey-kind', ['pubkey', 'kind']);
-            
+
             // For parameterized replaceable events (d-tag)
             eventsStore.createIndex('by-pubkey-kind-d-tag', ['pubkey', 'kind', 'dTag']);
-            
+
             this.logger.debug('Created events object store');
           }
         }
@@ -207,21 +208,21 @@ export class StorageService {
   private isReplaceableEvent(kind: number): boolean {
     return (kind === 0 || kind === 3 || (kind >= 10000 && kind < 20000));
   }
-  
+
   private isRegularEvent(kind: number): boolean {
     return (kind === 1 || kind === 2 || (kind >= 4 && kind < 45) || (kind >= 1000 && kind < 10000));
   }
-  
+
   private isEphemeralEvent(kind: number): boolean {
     return (kind >= 20000 && kind < 30000);
   }
-  
+
   private isParameterizedReplaceableEvent(kind: number): boolean {
     return (kind >= 30000 && kind < 40000);
   }
 
   // Get d-tag value from an event
-  private getDTagValue(event: NostrEvent): string | undefined {
+  private getDTagValue(event: Event): string | undefined {
     for (const tag of event.tags) {
       if (tag.length >= 2 && tag[0] === 'd') {
         return tag[1];
@@ -231,7 +232,7 @@ export class StorageService {
   }
 
   // Generic event storage methods
-  async saveEvent(event: NostrEvent): Promise<void> {
+  async saveEvent(event: Event): Promise<void> {
     if (!this.db) {
       this.logger.error('Database not initialized');
       return;
@@ -239,7 +240,16 @@ export class StorageService {
 
     try {
       const { kind } = event;
-      
+
+      // Always store the content serialized.
+      if (event.content && event.content !== '') {
+        try {
+          event.content = JSON.parse(event.content);
+        } catch (e) {
+          this.logger.error('Failed to parse event content', e);
+        }
+      }
+
       // Handle according to event classification
       if (this.isReplaceableEvent(kind)) {
         await this.saveReplaceableEvent(event);
@@ -249,34 +259,34 @@ export class StorageService {
         // Regular or ephemeral events are stored directly
         // For ephemeral events, we still store them but could implement a cleanup mechanism
         const eventToStore: any = { ...event };
-        
+
         // Add dTag field for indexing if it's a parameterized replaceable event
         if (this.isParameterizedReplaceableEvent(kind)) {
           eventToStore.dTag = this.getDTagValue(event) || '';
         }
-        
+
         await this.db.put('events', eventToStore);
         this.logger.debug(`Saved event to IndexedDB: ${event.id} (kind: ${event.kind})`);
       }
-      
+
       await this.updateStats();
     } catch (error) {
       this.logger.error(`Error saving event ${event.id}`, error);
     }
   }
 
-  private async saveReplaceableEvent(event: NostrEvent): Promise<void> {
+  private async saveReplaceableEvent(event: Event): Promise<void> {
     // For replaceable events, find any existing events from the same pubkey and kind
     const index = this.db.transaction('events', 'readonly')
       .store.index('by-pubkey-kind');
-    
+
     const existingEvents = await index.getAll([event.pubkey, event.kind]);
-    
+
     // Only keep the newest event
     if (existingEvents.length > 0) {
       // Sort by created_at to find the most recent one
       existingEvents.sort((a, b) => b.created_at - a.created_at);
-      
+
       // If this new event is newer than the most recent one, replace it
       if (event.created_at > existingEvents[0].created_at) {
         // Delete all older events
@@ -284,7 +294,7 @@ export class StorageService {
         for (const oldEvent of existingEvents) {
           await tx.store.delete(oldEvent.id);
         }
-        
+
         // Add the new event
         await this.db.put('events', event);
         this.logger.debug(`Replaced older event with newer event ${event.id} (kind: ${event.kind})`);
@@ -298,29 +308,29 @@ export class StorageService {
     }
   }
 
-  private async saveParameterizedReplaceableEvent(event: NostrEvent): Promise<void> {
+  private async saveParameterizedReplaceableEvent(event: Event): Promise<void> {
     const dTagValue = this.getDTagValue(event);
-    
+
     if (!dTagValue) {
       this.logger.debug(`Parameterized replaceable event ${event.id} has no d tag, storing as regular event`);
       await this.db.put('events', event);
       return;
     }
-    
+
     // For parameterized replaceable events, we need pubkey + kind + d-tag value
     const enhancedEvent: any = { ...event, dTag: dTagValue };
-    
+
     // Find any existing events with the same pubkey, kind, and d-tag
     const index = this.db.transaction('events', 'readonly')
       .store.index('by-pubkey-kind-d-tag');
-    
+
     const existingEvents = await index.getAll([event.pubkey, event.kind, dTagValue]);
-    
+
     // Only keep the newest event
     if (existingEvents.length > 0) {
       // Sort by created_at to find the most recent one
       existingEvents.sort((a, b) => b.created_at - a.created_at);
-      
+
       // If this new event is newer than the most recent one, replace it
       if (event.created_at > existingEvents[0].created_at) {
         // Delete all older events
@@ -328,7 +338,7 @@ export class StorageService {
         for (const oldEvent of existingEvents) {
           await tx.store.delete(oldEvent.id);
         }
-        
+
         // Add the new event
         await this.db.put('events', enhancedEvent);
         this.logger.debug(`Replaced older parameterized event with newer event ${event.id} (kind: ${event.kind}, d: ${dTagValue})`);
@@ -342,7 +352,7 @@ export class StorageService {
     }
   }
 
-  async getEvent(id: string): Promise<NostrEvent | undefined> {
+  async getEvent(id: string): Promise<Event | undefined> {
     if (!this.db) {
       this.logger.error('Database not initialized');
       return undefined;
@@ -356,7 +366,7 @@ export class StorageService {
     }
   }
 
-  async getEventsByKind(kind: number): Promise<NostrEvent[]> {
+  async getEventsByKind(kind: number): Promise<Event[]> {
     if (!this.db) {
       this.logger.error('Database not initialized');
       return [];
@@ -370,7 +380,7 @@ export class StorageService {
     }
   }
 
-  async getEventsByPubkey(pubkey: string): Promise<NostrEvent[]> {
+  async getEventsByPubkey(pubkey: string): Promise<Event[]> {
     if (!this.db) {
       this.logger.error('Database not initialized');
       return [];
@@ -384,7 +394,17 @@ export class StorageService {
     }
   }
 
-  async getEventsByPubkeyAndKind(pubkey: string, kind: number): Promise<NostrEvent[]> {
+  async getEventByPubkeyAndKind(pubkey: string, kind: number): Promise<Event | null> {
+    const events = await this.getEventsByPubkeyAndKind(pubkey, kind);
+
+    if (events) {
+      return events[0];
+    } else {
+      return null;
+    }
+  }
+
+  async getEventsByPubkeyAndKind(pubkey: string, kind: number): Promise<Event[]> {
     if (!this.db) {
       this.logger.error('Database not initialized');
       return [];
@@ -398,7 +418,7 @@ export class StorageService {
     }
   }
 
-  async getParameterizedReplaceableEvent(pubkey: string, kind: number, dTagValue: string): Promise<NostrEvent | undefined> {
+  async getParameterizedReplaceableEvent(pubkey: string, kind: number, dTagValue: string): Promise<Event | undefined> {
     if (!this.db) {
       this.logger.error('Database not initialized');
       return undefined;
@@ -645,7 +665,7 @@ export class StorageService {
       const tx = this.db.transaction('events', 'readwrite');
       const index = tx.store.index('by-pubkey');
       const events = await index.getAllKeys();
-      
+
       for (const eventKey of events) {
         const event = await tx.store.get(eventKey as string);
         if (event && event.pubkey !== currentUserPubkey) {
@@ -672,7 +692,7 @@ export class StorageService {
       const relays = await this.getAllRelays();
       const userMetadata = await this.getAllUserMetadata();
       const userRelays = await this.getAllUserRelays();
-      
+
       // Count events (may need optimization for large datasets)
       let eventsCount = 0;
       try {
@@ -725,10 +745,10 @@ export class StorageService {
 
       // Delete the entire database
       await deleteDB(this.DB_NAME);
-      
+
       // Reset initialization status
       this.isInitialized.set(false);
-      
+
       // Reset stats
       this.dbStats.set({
         relaysCount: 0,
@@ -737,9 +757,9 @@ export class StorageService {
         eventsCount: 0,
         estimatedSize: 0
       });
-      
+
       this.logger.info('Database wiped successfully');
-      
+
       // Re-initialize the database
       await this.initDatabase();
     } catch (error) {

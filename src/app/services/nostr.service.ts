@@ -1,5 +1,5 @@
 import { Injectable, signal, computed, effect, inject, untracked } from '@angular/core';
-import { generateSecretKey, getPublicKey } from 'nostr-tools/pure';
+import { Event, generateSecretKey, getPublicKey } from 'nostr-tools/pure';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
 import * as nip19 from 'nostr-tools/nip19';
 import { LoggerService } from './logger.service';
@@ -22,7 +22,7 @@ export interface UserMetadataWithPubkey extends NostrEventData<UserMetadata> {
   providedIn: 'root'
 })
 export class NostrService {
-  
+
   private readonly USER_STORAGE_KEY = 'nostria-user';
   private readonly USERS_STORAGE_KEY = 'nostria-users';
   private readonly logger = inject(LoggerService);
@@ -33,7 +33,11 @@ export class NostrService {
   private users = signal<NostrUser[]>([]);
 
   // Signal to store metadata for all users - using array instead of Map
-  private allUserMetadata = signal<UserMetadataWithPubkey[]>([]);
+  // private allUserMetadata = signal<UserMetadataWithPubkey[]>([]);
+
+  /** Holds the metadata event for all accounts in the app. */
+  accountsMetadata = signal<Event[]>([]);
+  accountsRelays = signal<Event[]>([]);
 
   isLoggedIn = computed(() => {
     const result = !!this.user();
@@ -54,13 +58,13 @@ export class NostrService {
   });
 
   // Expose the metadata as a computed property
-  usersMetadata = computed(() => {
-    return this.allUserMetadata();
-  });
+  // usersMetadata = computed(() => {
+  //   return this.allUserMetadata();
+  // });
 
   // Method to easily find metadata by pubkey
-  findUserMetadata(pubkey: string): UserMetadataWithPubkey | undefined {
-    return this.allUserMetadata().find(meta => meta.pubkey === pubkey);
+  findUserMetadata(pubkey: string): Event | undefined {
+    return this.accountsMetadata().find(meta => meta.pubkey === pubkey);
   }
 
   constructor() {
@@ -70,6 +74,11 @@ export class NostrService {
       if (this.storage.isInitialized()) {
         this.loadUsersFromStorage();
         this.loadActiveUserFromStorage();
+
+        // We keep an in-memory copy of the user metadata and relay list for all accounts,
+        // they won't take up too much memory space.
+        this.loadUsersMetadata();
+        this.loadUsersRelays();
       }
     });
 
@@ -127,7 +136,8 @@ export class NostrService {
   reset() {
     this.users.set([]);
     this.user.set(null);
-    this.allUserMetadata.set([]);
+    this.accountsMetadata.set([]);
+    this.accountsRelays.set([]);
   }
 
   private loadUsersFromStorage(): void {
@@ -160,6 +170,21 @@ export class NostrService {
       this.logger.debug('No active user found in localStorage');
     }
   }
+
+  async loadUsersMetadata() {
+    for(const user of this.users()) {
+      
+    }
+
+    this.storage.getEventByPubkeyAndKind
+  }
+
+  async loadUsersRelays() {
+
+  }
+
+  this.loadUsersMetadata();
+  this.loadUsersRelays();
 
   /**
    * Loads metadata for all known users into the allUserMetadata signal
@@ -223,6 +248,10 @@ export class NostrService {
     return npub.length > 12
       ? `${npub.substring(0, 6)}...${npub.substring(npub.length - 6)}`
       : npub;
+  }
+
+  getRelayUrls(event: Event): string[] {
+    return event.tags.filter(tag => tag.length >= 2 && tag[0] === 'r').map(tag => tag[1]);
   }
 
   switchToUser(pubkey: string): boolean {
