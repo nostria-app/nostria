@@ -173,7 +173,7 @@ export class AppComponent implements OnInit {
       }
 
       // Load data for the switched account
-      await this.dataLoadingService.loadData();
+      // await this.dataLoadingService.loadData();
     }
   }
 

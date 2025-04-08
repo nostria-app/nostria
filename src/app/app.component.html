@@ -64,7 +64,7 @@
       <div class="profile-content">
         <div class="profile-header">
           @if (userMetadata(); as metadata) {
-            @if (metadata.content.picture) {
+            @if (metadata?.content?.picture) {
               <div class="profile-avatar">
                 <img [src]="metadata.content.picture" alt="Profile picture" class="avatar-image">
               </div>
