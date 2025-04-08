@@ -63,13 +63,13 @@ export class CredentialsComponent {
   }
 
   getNpub(): string {
-    const pubkey = this.nostrService.currentUser()?.pubkey;
+    const pubkey = this.nostrService.activeAccount()?.pubkey;
     if (!pubkey) return '';
     return this.nostrService.getNpubFromPubkey(pubkey);
   }
 
   getNsec(): string {
-    const privkey = this.nostrService.currentUser()?.privkey;
+    const privkey = this.nostrService.activeAccount()?.privkey;
     if (!privkey) return '';
     return this.nostrService.getNsecFromPrivkey(privkey);
   }

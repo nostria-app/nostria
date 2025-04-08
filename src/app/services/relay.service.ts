@@ -194,21 +194,21 @@ export class RelayService {
   /**
    * Load relays from storage by pubkey
    */
-  async loadRelaysForUser(pubkey: string): Promise<void> {
-    try {
-      const userRelays = await this.storage.getUserRelays(pubkey);
+  // async loadRelaysForUser(pubkey: string): Promise<void> {
+  //   try {
+  //     const userRelays = await this.storage.getUserRelays(pubkey);
 
-      if (userRelays && userRelays.relays.length > 0) {
-        this.logger.debug(`Found ${userRelays.relays.length} relays for user ${pubkey} in storage`);
-        this.setRelays(userRelays.relays);
-        return;
-      }
+  //     if (userRelays && userRelays.relays.length > 0) {
+  //       this.logger.debug(`Found ${userRelays.relays.length} relays for user ${pubkey} in storage`);
+  //       this.setRelays(userRelays.relays);
+  //       return;
+  //     }
 
-      this.logger.debug(`No relays found for user ${pubkey} in storage`);
-    } catch (error) {
-      this.logger.error(`Error loading relays for user ${pubkey}`, error);
-    }
-  }
+  //     this.logger.debug(`No relays found for user ${pubkey} in storage`);
+  //   } catch (error) {
+  //     this.logger.error(`Error loading relays for user ${pubkey}`, error);
+  //   }
+  // }
 
   /**
    * Save user relays to storage
@@ -234,75 +234,73 @@ export class RelayService {
     return relayEvent.tags.filter(tag => tag.length >= 2 && tag[0] === 'r').map(tag => tag[1]);
   }
 
-  async fetchUserMetadata(pubkey: string): Promise<any> {
-    const userPool = new SimplePool();
-    let relayUrls: string[] = [];
+  // async fetchUserMetadata(pubkey: string): Promise<any> {
+  //   const userPool = new SimplePool();
+  //   let relayUrls: string[] = [];
 
-    // First fetch the relays for the user, if we don't have it.
-    const userRelays = await this.storage.getUserRelays(pubkey);
+  //   // First fetch the relays for the user, if we don't have it.
+  //   const userRelays = await this.storage.getUserRelays(pubkey);
 
-    if (!userRelays || userRelays.relays.length === 0) {
-      this.logger.warn(`No relays found for user ${pubkey}`);
+  //   if (!userRelays || userRelays.relays.length === 0) {
+  //     this.logger.warn(`No relays found for user ${pubkey}`);
 
-      const bootstrapPool = new SimplePool();
-      this.logger.debug('Connecting to user relays to fetch metadata');
+  //     const bootstrapPool = new SimplePool();
+  //     this.logger.debug('Connecting to user relays to fetch metadata');
 
-      // Get and updated list of relays for the user from bootstrap relays.
-      const relays = await bootstrapPool.get(this.#bootStrapRelays, {
-        kinds: [kinds.RelayList],
-        authors: [pubkey],
-      });
+  //     // Get and updated list of relays for the user from bootstrap relays.
+  //     const relays = await bootstrapPool.get(this.#bootStrapRelays, {
+  //       kinds: [kinds.RelayList],
+  //       authors: [pubkey],
+  //     });
 
-      bootstrapPool.close(this.#bootStrapRelays);
+  //     bootstrapPool.close(this.#bootStrapRelays);
 
-      if (relays) {
-        relayUrls = this.getRelaysFromRelayEvent(relays);
-      } else {
-        this.logger.warn('No relay list found for user!');
-        // TODO: Should we look for kind 3 and use that?
-      }
-    }
+  //     if (relays) {
+  //       relayUrls = this.getRelaysFromRelayEvent(relays);
+  //     } else {
+  //       this.logger.warn('No relay list found for user!');
+  //       // TODO: Should we look for kind 3 and use that?
+  //     }
+  //   }
 
-    const metadata = await userPool.get(relayUrls, {
-      kinds: [kinds.Metadata],
-      authors: [pubkey],
-    });
+  //   const metadata = await userPool.get(relayUrls, {
+  //     kinds: [kinds.Metadata],
+  //     authors: [pubkey],
+  //   });
 
-    if (metadata) {
-      this.logger.info('Found user metadata', { metadata });
+  //   if (metadata) {
+  //     this.logger.info('Found user metadata', { metadata });
 
-      try {
-        // Parse the content field which should be JSON
-        const metadataContent = JSON.parse(metadata.content);
-        this.logger.debug('Parsed metadata content', { metadataContent });
+  //     try {
+  //       // Parse the content field which should be JSON
+  //       const metadataContent = JSON.parse(metadata.content);
+  //       this.logger.debug('Parsed metadata content', { metadataContent });
 
-        // Create a NostrEventData object to store the full content and tags
-        const eventData: NostrEventData<UserMetadata> = {
-          content: metadataContent,  // Store the parsed JSON object 
-          tags: metadata.tags,       // Store the original tags
-          // raw: metadata.content      // Optionally store the raw JSON string
-        };
+  //       // Create a NostrEventData object to store the full content and tags
+  //       const eventData: NostrEventData<UserMetadata> = {
+  //         content: metadataContent,  // Store the parsed JSON object 
+  //         tags: metadata.tags,       // Store the original tags
+  //         // raw: metadata.content      // Optionally store the raw JSON string
+  //       };
 
-        // Save to storage with all fields and the full event data
-        await this.storage.saveUserMetadata(pubkey, eventData);
+  //       // Save to storage with all fields and the full event data
+  //       await this.storage.saveUserMetadata(pubkey, eventData);
 
-        return eventData;
+  //       return eventData;
 
-      } catch (e) {
-        this.logger.error('Failed to parse metadata content', e);
-      }
-    } else {
-      this.logger.warn('No metadata found for user');
-    }
+  //     } catch (e) {
+  //       this.logger.error('Failed to parse metadata content', e);
+  //     }
+  //   } else {
+  //     this.logger.warn('No metadata found for user');
+  //   }
 
-    return undefined;
+  //   return undefined;
 
-    // Get an updated list of relays from the user's relays.
+  //   // Get an updated list of relays from the user's relays.
 
-    // Fetch the user metadata from the user's relays.
-
-
-  }
+  //   // Fetch the user metadata from the user's relays.
+  // }
 
   /**
    * Fetch NIP-11 information for a relay

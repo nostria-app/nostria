@@ -17,8 +17,8 @@
       <mat-icon>{{ themeService.darkMode() ? 'dark_mode' : 'light_mode' }}</mat-icon>
     </button> -->
     <button mat-icon-button (click)="toggleProfileSidenav()" aria-label="Toggle profile" class="profile-button">
-      @if (userMetadata()?.content?.picture) {
-        <img [src]="userMetadata()?.content?.picture" class="profile-button-avatar" alt="Profile picture">
+      @if (accountMetadata()?.content?.picture) {
+        <img [src]="accountMetadata()?.content?.picture" class="profile-button-avatar" alt="Profile picture">
       } @else {
         <mat-icon>account_circle</mat-icon>
       }
@@ -63,7 +63,7 @@
       </mat-toolbar>
       <div class="profile-content">
         <div class="profile-header">
-          @if (userMetadata(); as metadata) {
+          @if (accountMetadata(); as metadata) {
             @if (metadata?.content?.picture) {
               <div class="profile-avatar">
                 <img [src]="metadata.content.picture" alt="Profile picture" class="avatar-image">
@@ -73,7 +73,7 @@
                 <mat-icon class="avatar-icon">account_circle</mat-icon>
               </div>
             }
-            <h2>{{ metadata.content.name || nostrService.getTruncatedNpub(nostrService.currentUser()?.pubkey || '') }}</h2>
+            <h2>{{ metadata.content.name || nostrService.getTruncatedNpub(metadata.pubkey || '') }}</h2>
             @if (metadata.content.nip05) {
               <span class="nip05-identifier">{{ metadata.content.nip05.startsWith('_@') ? metadata.content.nip05.substring(1) : metadata.content.nip05 }}</span>
             }
@@ -84,13 +84,13 @@
             <div class="profile-avatar">
               <mat-icon class="avatar-icon">account_circle</mat-icon>
             </div>
-            <h2>{{ nostrService.currentUser()?.name || nostrService.getTruncatedNpub(nostrService.currentUser()?.pubkey || '') }}</h2>
+            <h2>{{ nostrService.activeAccount()?.name || nostrService.getTruncatedNpub(nostrService.activeAccount()?.pubkey || '') }}</h2>
           }
         </div>
         <!-- <mat-divider></mat-divider> -->
 
         <mat-nav-list>
-          <a mat-list-item [routerLink]="['/p', nostrService.currentUser()?.pubkey]" (click)="isHandset() ? toggleProfileSidenav() : null">
+          <a mat-list-item [routerLink]="['/p', nostrService.activeAccount()?.pubkey]" (click)="isHandset() ? toggleProfileSidenav() : null">
             <mat-icon matListItemIcon>person</mat-icon>
             <span>My Profile</span>
           </a>
@@ -105,25 +105,40 @@
         </mat-nav-list>
         <mat-divider></mat-divider>
         <!-- Account selection menu -->
-        @if (nostrService.allUsers().length > 1) {
+        @if (nostrService.hasAccounts()) {
         <mat-nav-list class="accounts-list">
-          @for (account of nostrService.allUsers(); track account.pubkey) {
-            @if (account.pubkey !== nostrService.currentUser()?.pubkey) {
-            <a mat-list-item (click)="switchAccount(account.pubkey)" class="account-item">
-              @if (getUserMetadataByPubkey(account.pubkey)?.content?.picture) {
-                <div class="account-avatar" matListItemIcon>
-                  <img [src]="getUserMetadataByPubkey(account.pubkey)?.content?.picture" alt="Profile picture" class="avatar-image">
-                </div>
+          @for (account of nostrService.allAccounts(); track account.pubkey) {
+            @if (account.pubkey !== nostrService.activeAccount()?.pubkey) {
+
+              @if(nostrService.getMetadataForAccount(account.pubkey); as metadata) {
+                <a mat-list-item (click)="switchAccount(account.pubkey)" class="account-item">
+                  @if (metadata.content?.picture; as account) {
+                    <div class="account-avatar" matListItemIcon>
+                      <img [src]="metadata?.content?.picture" alt="Profile picture" class="avatar-image">
+                    </div>
+                  } @else {
+                    <mat-icon matListItemIcon>account_circle</mat-icon>
+                  }
+                  <span matListItemTitle>
+                    {{ metadata.content?.display_name || metadata.content?.name || nostrService.getTruncatedNpub(account.pubkey) }}
+                  </span>
+                  <span matListItemLine class="account-source">
+                   {{ account.source }} - Last used: {{ account.lastUsed| date:'short' }}
+                  </span>
+                </a>
               } @else {
-                <mat-icon matListItemIcon>account_circle</mat-icon>
+                <a mat-list-item (click)="switchAccount(account.pubkey)" class="account-item">
+                    <mat-icon matListItemIcon>account_circle</mat-icon>
+                  <span matListItemTitle>
+                    {{nostrService.getTruncatedNpub(account.pubkey) }}
+                  </span>
+                  <span matListItemLine class="account-source">
+                    {{ account.source }} - Last used: {{ account.lastUsed| date:'short' }}
+                  </span>
+                </a>
               }
-              <span matListItemTitle>
-                {{ getUserMetadataByPubkey(account.pubkey)?.content?.name || account.name || nostrService.getTruncatedNpub(account.pubkey) }}
-              </span>
-              <span matListItemLine class="account-source">
-                {{ account.source }}Last used: {{ account.lastUsed | date:'short' }}
-              </span>
-            </a>
+
+           
             }
           }
         </mat-nav-list>
@@ -131,7 +146,7 @@
         }
 
         <!-- <mat-nav-list>
-          <a mat-list-item [routerLink]="['/p', nostrService.currentUser()?.pubkey]" (click)="isHandset() ? toggleProfileSidenav() : null">
+          <a mat-list-item [routerLink]="['/p', nostrService.activeAccount()?.pubkey]" (click)="isHandset() ? toggleProfileSidenav() : null">
             <mat-icon matListItemIcon>person</mat-icon>
             <span>My Profile</span>
           </a>

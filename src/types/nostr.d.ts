@@ -10,15 +10,15 @@ interface UserMetadata {
   [key: string]: unknown;
 }
 
-interface NostrEvent {
-  id: string;
-  pubkey: string;
-  created_at: number;
-  kind: number;
-  tags: string[][];
-  content: string;
-  sig: string;
-}
+// interface NostrEvent {
+//   id: string;
+//   pubkey: string;
+//   created_at: number;
+//   kind: number;
+//   tags: string[][];
+//   content: string;
+//   sig: string;
+// }
 
 interface SignEventResponse {
   id: string;

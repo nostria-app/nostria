@@ -34,7 +34,7 @@ export class StorageStatsComponent {
   isClearing = signal(false);
   stats = signal({
     relaysCount: 0,
-    userMetadataCount: 0,
+    // userMetadataCount: 0,
     userRelaysCount: 0,
     estimatedSize: 0
   });

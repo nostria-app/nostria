@@ -52,21 +52,6 @@ export class LoginDialogComponent implements OnInit {
     //   this.logger.error('Failed to load metadata for all users', err));
   }
 
-  hasPicture(pubkey: string): boolean {
-    const metadata = this.nostrService.findUserMetadata(pubkey);
-    return metadata?.content?.picture ? true : false;
-  }
-
-  getPicture(pubkey: string): string | null {
-    const metadata = this.nostrService.findUserMetadata(pubkey);
-    return metadata?.content?.picture || null;
-  }
-
-  getName(pubkey: string): string {
-    const metadata = this.nostrService.findUserMetadata(pubkey);
-    return metadata?.content?.name || this.nostrService.getTruncatedNpub(pubkey);
-  }
-
   switchToExistingAccounts(): void {
     this.logger.debug('Switching to existing accounts view');
     this.currentView.set('existing-accounts');
@@ -127,7 +112,7 @@ export class LoginDialogComponent implements OnInit {
     this.nostrService.removeAccount(pubkey);
 
     // If no more accounts exist, go back to main view
-    if (this.nostrService.allUsers().length === 0) {
+    if (this.nostrService.allAccounts().length === 0) {
       this.currentView.set('main');
     }
   }

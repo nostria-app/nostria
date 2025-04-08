@@ -5,6 +5,8 @@ import * as nip19 from 'nostr-tools/nip19';
 import { LoggerService } from './logger.service';
 import { RelayService } from './relay.service';
 import { NostrEventData, StorageService, UserMetadata } from './storage.service';
+import { kinds } from 'nostr-tools';
+import { NostrEvent } from '../interfaces';
 
 export interface NostrUser {
   pubkey: string;
@@ -22,39 +24,44 @@ export interface UserMetadataWithPubkey extends NostrEventData<UserMetadata> {
   providedIn: 'root'
 })
 export class NostrService {
-
-  private readonly USER_STORAGE_KEY = 'nostria-user';
-  private readonly USERS_STORAGE_KEY = 'nostria-users';
+  private readonly ACCOUNT_STORAGE_KEY = 'nostria-account';
+  private readonly ACCOUNTS_STORAGE_KEY = 'nostria-accounts';
   private readonly logger = inject(LoggerService);
   private readonly relayService = inject(RelayService);
   private readonly storage = inject(StorageService);
 
-  private user = signal<NostrUser | null>(null);
-  private users = signal<NostrUser[]>([]);
+  private account = signal<NostrUser | null>(null);
+  private accounts = signal<NostrUser[]>([]);
 
   // Signal to store metadata for all users - using array instead of Map
   // private allUserMetadata = signal<UserMetadataWithPubkey[]>([]);
 
   /** Holds the metadata event for all accounts in the app. */
-  accountsMetadata = signal<Event[]>([]);
-  accountsRelays = signal<Event[]>([]);
+  accountsMetadata = signal<NostrEvent[]>([]);
+  accountsRelays = signal<NostrEvent[]>([]);
+
+  // These are cache-lookups for the metadata and relays of all users,
+  // to avoid query the database all the time.
+  // These lists will grow
+  usersMetadata = signal<Map<string, NostrEvent>>(new Map());
+  usersRelays = signal<Map<string, NostrEvent>>(new Map());
 
   isLoggedIn = computed(() => {
-    const result = !!this.user();
+    const result = !!this.account();
     this.logger.debug('isLoggedIn computed value calculated', { isLoggedIn: result });
     return result;
   });
 
-  currentUser = computed(() => {
-    return this.user();
+  activeAccount = computed(() => {
+    return this.account();
   });
 
-  allUsers = computed(() => {
-    return this.users();
+  allAccounts = computed(() => {
+    return this.accounts();
   });
 
-  hasUsers = computed(() => {
-    return this.allUsers().length > 0;
+  hasAccounts = computed(() => {
+    return this.allAccounts().length > 0;
   });
 
   // Expose the metadata as a computed property
@@ -63,7 +70,7 @@ export class NostrService {
   // });
 
   // Method to easily find metadata by pubkey
-  findUserMetadata(pubkey: string): Event | undefined {
+  getMetadataForAccount(pubkey: string): NostrEvent | undefined {
     return this.accountsMetadata().find(meta => meta.pubkey === pubkey);
   }
 
@@ -86,7 +93,7 @@ export class NostrService {
     effect(() => {
       if (this.storage.isInitialized()) {
 
-        const currentUser = this.user();
+        const currentUser = this.account();
         this.logger.debug('User change effect triggered', {
           hasUser: !!currentUser,
           pubkey: currentUser?.pubkey
@@ -94,20 +101,20 @@ export class NostrService {
 
         if (currentUser) {
           this.logger.debug('Saving current user to localStorage', { pubkey: currentUser.pubkey });
-          localStorage.setItem(this.USER_STORAGE_KEY, JSON.stringify(currentUser));
+          localStorage.setItem(this.ACCOUNT_STORAGE_KEY, JSON.stringify(currentUser));
 
           // Load relays for this user from storage
-          untracked(() => {
-            this.relayService.loadRelaysForUser(currentUser.pubkey)
-              .catch(err => this.logger.error('Failed to load relays for user', err));
-          });
+          // untracked(() => {
+          //   this.relayService.loadRelaysForUser(currentUser.pubkey)
+          //     .catch(err => this.logger.error('Failed to load relays for user', err));
+          // });
         }
       }
     });
 
     // Save all users to localStorage whenever they change
     effect(() => {
-      const allUsers = this.users();
+      const allUsers = this.accounts();
 
       if (allUsers.length === 0) {
         this.logger.debug('No users to save to localStorage');
@@ -117,13 +124,13 @@ export class NostrService {
       this.logger.debug('Users collection effect triggered', { count: allUsers.length });
 
       this.logger.debug(`Saving ${allUsers.length} users to localStorage`);
-      localStorage.setItem(this.USERS_STORAGE_KEY, JSON.stringify(allUsers));
+      localStorage.setItem(this.ACCOUNTS_STORAGE_KEY, JSON.stringify(allUsers));
 
       // When users change, ensure we have metadata for all of them
-      untracked(() => {
-        this.loadAllUsersMetadata().catch(err =>
-          this.logger.error('Failed to load metadata for all users', err));
-      });
+      // untracked(() => {
+      //   this.loadAllUsersMetadata().catch(err =>
+      //     this.logger.error('Failed to load metadata for all users', err));
+      // });
     });
 
     this.logger.debug('NostrService initialization completed');
@@ -134,22 +141,132 @@ export class NostrService {
   }
 
   reset() {
-    this.users.set([]);
-    this.user.set(null);
+    this.accounts.set([]);
+    this.account.set(null);
     this.accountsMetadata.set([]);
     this.accountsRelays.set([]);
   }
 
+  /**
+ * Adds or updates an entry in the metadata cache with LRU behavior
+ */
+  private updateMetadataCache(pubkey: string, event: Event): void {
+    // Get the current cache
+    const cache = this.usersMetadata();
+
+    // If the pubkey exists, delete it first (to update position in Map)
+    if (cache.has(pubkey)) {
+      cache.delete(pubkey);
+    }
+
+    // Add to the end (newest position)
+    cache.set(pubkey, event);
+
+    // Enforce size limit (100 items)
+    if (cache.size > 100) {
+      // Delete oldest item (first in the Map)
+      const oldestKey = cache.keys().next().value;
+
+      if (oldestKey) {
+        cache.delete(oldestKey);
+      }
+    }
+
+    // Update signal
+    this.usersMetadata.set(new Map(cache));
+  }
+
+  /**
+   * Adds or updates an entry in the relays cache with LRU behavior
+   */
+  private updateRelaysCache(pubkey: string, event: Event): void {
+    // Get the current cache
+    const cache = this.usersRelays();
+
+    // If the pubkey exists, delete it first (to update position in Map)
+    if (cache.has(pubkey)) {
+      cache.delete(pubkey);
+    }
+
+    // Add to the end (newest position)
+    cache.set(pubkey, event);
+
+    // Enforce size limit (100 items)
+    if (cache.size > 100) {
+      // Delete oldest item (first in the Map)
+      const oldestKey = cache.keys().next().value;
+
+      if (oldestKey) {
+        cache.delete(oldestKey);
+      }
+    }
+
+    // Update signal
+    this.usersRelays.set(new Map(cache));
+  }
+
+  /**
+   * Get metadata from cache or load it from storage
+   */
+  async getMetadataForUser(pubkey: string): Promise<Event | undefined> {
+    // Check cache first
+    const cachedMetadata = this.usersMetadata().get(pubkey);
+    if (cachedMetadata) {
+      // Move to end of LRU cache
+      this.updateMetadataCache(pubkey, cachedMetadata);
+      return cachedMetadata;
+    }
+
+    // Not in cache, get from storage
+    const events = await this.storage.getEventsByPubkeyAndKind(pubkey, kinds.Metadata);
+    if (events.length > 0) {
+      // Add to cache
+      this.updateMetadataCache(pubkey, events[0]);
+      return events[0];
+    } else {
+      // TODO: Implement this.
+      // Go get the metadata from the nostr relays.
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Get relays from cache or load from storage
+   */
+  async getRelaysForUser(pubkey: string): Promise<Event | undefined> {
+    // Check cache first
+    const cachedRelays = this.usersRelays().get(pubkey);
+    if (cachedRelays) {
+      // Move to end of LRU cache
+      this.updateRelaysCache(pubkey, cachedRelays);
+      return cachedRelays;
+    }
+
+    // Not in cache, get from storage
+    const events = await this.storage.getEventsByPubkeyAndKind(pubkey, kinds.RelayList);
+    if (events.length > 0) {
+      // Add to cache
+      this.updateRelaysCache(pubkey, events[0]);
+      return events[0];
+    } else {
+      // TODO: Implement this.
+      // Go get the relay list for the user from the nostr relays.
+    }
+
+    return undefined;
+  }
+
   private loadUsersFromStorage(): void {
-    const usersJson = localStorage.getItem(this.USERS_STORAGE_KEY);
+    const usersJson = localStorage.getItem(this.ACCOUNTS_STORAGE_KEY);
     if (usersJson) {
       try {
         const parsedUsers = JSON.parse(usersJson);
         this.logger.debug(`Loaded ${parsedUsers.length} users from localStorage`);
-        this.users.set(parsedUsers);
+        this.accounts.set(parsedUsers);
       } catch (e) {
         this.logger.error('Failed to parse users from localStorage', e);
-        this.users.set([]);
+        this.accounts.set([]);
       }
     } else {
       this.logger.debug('No users found in localStorage');
@@ -157,12 +274,12 @@ export class NostrService {
   }
 
   private loadActiveUserFromStorage(): void {
-    const userJson = localStorage.getItem(this.USER_STORAGE_KEY);
+    const userJson = localStorage.getItem(this.ACCOUNT_STORAGE_KEY);
     if (userJson) {
       try {
         const parsedUser = JSON.parse(userJson);
         this.logger.debug('Loaded active user from localStorage', { pubkey: parsedUser.pubkey });
-        this.user.set(parsedUser);
+        this.account.set(parsedUser);
       } catch (e) {
         this.logger.error('Failed to parse user from localStorage', e);
       }
@@ -172,76 +289,86 @@ export class NostrService {
   }
 
   async loadUsersMetadata() {
-    for(const user of this.users()) {
-      
-    }
-
-    this.storage.getEventByPubkeyAndKind
+    const pubkeys = this.accounts().map(user => user.pubkey);
+    const relays = await this.storage.getEventsByPubkeyAndKind(pubkeys, kinds.Metadata);
+    this.accountsMetadata.set(relays);
   }
 
   async loadUsersRelays() {
-
+    const pubkeys = this.accounts().map(user => user.pubkey);
+    const relays = await this.storage.getEventsByPubkeyAndKind(pubkeys, kinds.RelayList);
+    this.accountsRelays.set(relays);
   }
 
-  this.loadUsersMetadata();
-  this.loadUsersRelays();
+  async updateAccountMetadata(event: Event) {
+    const pubkey = event.pubkey;
+    const existingMetadata = this.accountsMetadata().find(meta => meta.pubkey === pubkey);
+
+    if (existingMetadata) {
+      this.logger.debug('Updating existing metadata', { pubkey });
+      this.accountsMetadata.update(array => array.map(meta => meta.pubkey === pubkey ? event : meta));
+    } else {
+      this.logger.debug('Adding new metadata', { pubkey });
+      this.accountsMetadata.update(array => [...array, event]);
+    }
+  }
 
   /**
    * Loads metadata for all known users into the allUserMetadata signal
    */
-  async loadAllUsersMetadata(): Promise<void> {
-    const users = this.users();
-    if (users.length === 0) {
-      this.logger.debug('No users to load metadata for');
-      return;
-    }
+  // async loadAllUsersMetadata(): Promise<void> {
+  //   const users = this.users();
+  //   if (users.length === 0) {
+  //     this.logger.debug('No users to load metadata for');
+  //     return;
+  //   }
 
-    this.logger.debug(`Loading metadata for ${users.length} users`);
-    const metadataArray: UserMetadataWithPubkey[] = [];
+  //   this.logger.debug(`Loading metadata for ${users.length} users`);
+  //   const metadataArray: UserMetadataWithPubkey[] = [];
 
-    for (const user of users) {
-      try {
-        const metadata = await this.storage.getUserMetadata(user.pubkey);
-        if (metadata) {
-          this.logger.debug(`Loaded metadata for user ${user.pubkey}`, { metadata });
-          metadataArray.push({
-            ...metadata,
-            pubkey: user.pubkey
-          });
-        }
-      } catch (error) {
-        this.logger.error(`Failed to load metadata for user ${user.pubkey}`, error);
-      }
-    }
+  //   for (const user of users) {
+  //     try {
+  //       const metadata = await this.storage.getUserMetadata(user.pubkey);
+  //       if (metadata) {
+  //         this.logger.debug(`Loaded metadata for user ${user.pubkey}`, { metadata });
+  //         metadataArray.push({
+  //           ...metadata,
+  //           pubkey: user.pubkey
+  //         });
+  //       }
+  //     } catch (error) {
+  //       this.logger.error(`Failed to load metadata for user ${user.pubkey}`, error);
+  //     }
+  //   }
 
-    this.allUserMetadata.set(metadataArray);
-    this.logger.debug(`Loaded metadata for ${metadataArray.length} users`);
-  }
+  //   this.allUserMetadata.set(metadataArray);
+  //   this.logger.debug(`Loaded metadata for ${metadataArray.length} users`);
+  // }
 
   /**
    * Updates the metadata for a single user in the allUserMetadata signal
    */
-  private updateUserMetadataInSignal(pubkey: string, metadata: NostrEventData<UserMetadata>): void {
-    const userMetadataWithPubkey: UserMetadataWithPubkey = {
-      ...metadata,
-      pubkey
-    };
+  // private updateUserMetadataInSignal(pubkey: string, metadata: NostrEventData<UserMetadata>): void {
+  //   const userMetadataWithPubkey: UserMetadataWithPubkey = {
+  //     ...metadata,
+  //     pubkey
+  //   };
 
-    this.allUserMetadata.update(array => {
-      const index = array.findIndex(m => m.pubkey === pubkey);
-      if (index >= 0) {
-        // Replace existing metadata
-        return [
-          ...array.slice(0, index),
-          userMetadataWithPubkey,
-          ...array.slice(index + 1)
-        ];
-      } else {
-        // Add new metadata
-        return [...array, userMetadataWithPubkey];
-      }
-    });
-  }
+  //   this.allUserMetadata.update(array => {
+  //     const index = array.findIndex(m => m.pubkey === pubkey);
+  //     if (index >= 0) {
+  //       // Replace existing metadata
+  //       return [
+  //         ...array.slice(0, index),
+  //         userMetadataWithPubkey,
+  //         ...array.slice(index + 1)
+  //       ];
+  //     } else {
+  //       // Add new metadata
+  //       return [...array, userMetadataWithPubkey];
+  //     }
+  //   });
+  // }
 
   getTruncatedNpub(pubkey: string): string {
     const npub = this.getNpubFromPubkey(pubkey);
@@ -256,18 +383,18 @@ export class NostrService {
 
   switchToUser(pubkey: string): boolean {
     this.logger.info(`Switching to user with pubkey: ${pubkey}`);
-    const targetUser = this.users().find(u => u.pubkey === pubkey);
+    const targetUser = this.accounts().find(u => u.pubkey === pubkey);
 
     if (targetUser) {
       // Update lastUsed timestamp
       targetUser.lastUsed = Date.now();
 
-      this.user.set(targetUser);
+      this.account.set(targetUser);
       this.logger.debug('Successfully switched user');
 
       // Make sure we have the latest metadata for this user
-      this.getUserMetadata(pubkey).catch(err =>
-        this.logger.error(`Failed to refresh metadata for user ${pubkey}`, err));
+      // this.getUserMetadata(pubkey).catch(err =>
+      //   this.logger.error(`Failed to refresh metadata for user ${pubkey}`, err));
 
       return true;
     }
@@ -283,25 +410,25 @@ export class NostrService {
     user.lastUsed = Date.now();
     user.name ??= this.getTruncatedNpub(user.pubkey);
 
-    const allUsers = this.users();
+    const allUsers = this.accounts();
     const existingUserIndex = allUsers.findIndex(u => u.pubkey === user.pubkey);
 
     if (existingUserIndex >= 0) {
       // Update existing user
       this.logger.debug('Updating existing user in collection', { index: existingUserIndex });
-      this.users.update(u => u.map(existingUser => existingUser.pubkey === user.pubkey ? user : existingUser));
+      this.accounts.update(u => u.map(existingUser => existingUser.pubkey === user.pubkey ? user : existingUser));
     } else {
       // Add new user
       this.logger.debug('Adding new user to collection');
-      this.users.update(u => [...u, user]);
+      this.accounts.update(u => [...u, user]);
     }
 
     // Trigger the user signal which indicates user is logged on.
-    this.user.set(user);
+    this.account.set(user);
 
     // Make sure we have the latest metadata for this user
-    this.getUserMetadata(user.pubkey).catch(err =>
-      this.logger.error(`Failed to get metadata for new user ${user.pubkey}`, err));
+    // this.getUserMetadata(user.pubkey).catch(err =>
+    //   this.logger.error(`Failed to get metadata for new user ${user.pubkey}`, err));
   }
 
   generateNewKey(): void {
@@ -436,26 +563,27 @@ export class NostrService {
 
   logout(): void {
     this.logger.info('Logging out current user');
-    localStorage.removeItem(this.USER_STORAGE_KEY);
-    this.user.set(null);
+    localStorage.removeItem(this.ACCOUNT_STORAGE_KEY);
+    this.account.set(null);
     this.logger.debug('User logged out successfully');
   }
 
   removeAccount(pubkey: string): void {
     this.logger.info(`Removing account with pubkey: ${pubkey}`);
-    const allUsers = this.users();
+    const allUsers = this.accounts();
     const updatedUsers = allUsers.filter(u => u.pubkey !== pubkey);
-    this.users.set(updatedUsers);
+    this.accounts.set(updatedUsers);
 
     // If we're removing the active user, set active user to null
-    if (this.user()?.pubkey === pubkey) {
+    if (this.account()?.pubkey === pubkey) {
       this.logger.debug('Removed account was the active user, logging out');
-      this.user.set(null);
+      this.account.set(null);
     }
 
     // Remove the user's metadata from the metadata array
-    this.allUserMetadata.update(array => array.filter(m => m.pubkey !== pubkey));
-
+    // this.accountsMetadata().update(array => array.filter(m => m.pubkey !== pubkey));
+    // this.accountsMetadata()
+    this.accountsMetadata.update(array => array.filter(m => m.pubkey !== pubkey));
     this.logger.debug('Account removed successfully');
   }
 
@@ -477,84 +605,84 @@ export class NostrService {
   /**
    * Save user metadata to storage
    */
-  async saveUserMetadata(pubkey: string, metadata: NostrEventData<UserMetadata>): Promise<void> {
-    try {
-      // Check if we already have metadata for this user
-      const existingData = await this.storage.getUserMetadata(pubkey);
+  // async saveUserMetadata(pubkey: string, metadata: NostrEventData<UserMetadata>): Promise<void> {
+  //   try {
+  //     // Check if we already have metadata for this user
+  //     const existingData = await this.storage.getUserMetadata(pubkey);
 
-      const updatedData: NostrEventData<UserMetadata> = {
-        ...existingData,
-        ...metadata,
-        updated: Date.now()
-      }
+  //     const updatedData: NostrEventData<UserMetadata> = {
+  //       ...existingData,
+  //       ...metadata,
+  //       updated: Date.now()
+  //     }
 
-      await this.storage.saveUserMetadata(pubkey, updatedData);
-      this.logger.debug(`Saved metadata for user ${pubkey} to storage`);
+  //     await this.storage.saveUserMetadata(pubkey, updatedData);
+  //     this.logger.debug(`Saved metadata for user ${pubkey} to storage`);
 
-      // Update the metadata in our signal
-      this.updateUserMetadataInSignal(pubkey, updatedData);
+  //     // Update the metadata in our signal
+  //     this.updateUserMetadataInSignal(pubkey, updatedData);
 
-      // If this is the current user, trigger a metadata refresh
-      if (this.currentUser()?.pubkey === pubkey) {
-        this.logger.debug('Current user metadata updated');
-      }
-    } catch (error) {
-      this.logger.error(`Error saving metadata for user ${pubkey}`, error);
-    }
-  }
+  //     // If this is the current user, trigger a metadata refresh
+  //     if (this.currentUser()?.pubkey === pubkey) {
+  //       this.logger.debug('Current user metadata updated');
+  //     }
+  //   } catch (error) {
+  //     this.logger.error(`Error saving metadata for user ${pubkey}`, error);
+  //   }
+  // }
 
   /**
    * Get user metadata from storage and update the metadata signal
    */
-  async getUserMetadata(pubkey: string): Promise<NostrEventData<UserMetadata> | undefined> {
-    try {
-      // First check if we already have this metadata in our signal
-      const currentMetadata = this.findUserMetadata(pubkey);
+  // async getUserMetadata(pubkey: string): Promise<NostrEventData<UserMetadata> | undefined> {
+  //   try {
+  //     // First check if we already have this metadata in our signal
+  //     const currentMetadata = this.findUserMetadata(pubkey);
 
-      // If we don't have it or it's older than 5 minutes, fetch from storage
-      const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
-      if (!currentMetadata || (currentMetadata.updated && currentMetadata.updated < fiveMinutesAgo)) {
-        this.logger.debug(`Fetching fresh metadata for ${pubkey}`);
-        const metadata = await this.storage.getUserMetadata(pubkey);
+  //     // If we don't have it or it's older than 5 minutes, fetch from storage
+  //     const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+  //     if (!currentMetadata || (currentMetadata.updated && currentMetadata.updated < fiveMinutesAgo)) {
+  //       this.logger.debug(`Fetching fresh metadata for ${pubkey}`);
+  //       const metadata = await this.storage.getUserMetadata(pubkey);
 
-        if (metadata) {
-          this.updateUserMetadataInSignal(pubkey, metadata);
-          return metadata;
-        }
-      }
+  //       if (metadata) {
+  //         this.updateUserMetadataInSignal(pubkey, metadata);
+  //         return metadata;
+  //       }
+  //     }
 
-      return currentMetadata;
-    } catch (error) {
-      this.logger.error(`Error getting metadata for user ${pubkey}`, error);
-      return undefined;
-    }
-  }
+  //     return currentMetadata;
+  //   } catch (error) {
+  //     this.logger.error(`Error getting metadata for user ${pubkey}`, error);
+  //     return undefined;
+  //   }
+  // }
 
   /**
    * Get user metadata from storage for multiple pubkeys
    */
-  async getUsersMetadata(pubkeys: string[]): Promise<Map<string, NostrEventData<UserMetadata>>> {
-    const metadataMap = new Map<string, NostrEventData<UserMetadata>>();
+  // async getUsersMetadata(pubkeys: string[]): Promise<Map<string, NostrEventData<UserMetadata>>> {
+  //   const metadataMap = new Map<string, NostrEventData<UserMetadata>>();
 
-    for (const pubkey of pubkeys) {
-      try {
-        const metadata = await this.getUserMetadata(pubkey);
-        if (metadata) {
-          metadataMap.set(pubkey, metadata);
-        }
-      } catch (error) {
-        this.logger.error(`Error getting metadata for user ${pubkey}`, error);
-      }
-    }
+  //   for (const pubkey of pubkeys) {
+  //     try {
+  //       const metadata = await this.getUserMetadata(pubkey);
+  //       if (metadata) {
+  //         metadataMap.set(pubkey, metadata);
+  //       }
+  //     } catch (error) {
+  //       this.logger.error(`Error getting metadata for user ${pubkey}`, error);
+  //     }
+  //   }
 
-    return metadataMap;
-  }
+  //   return metadataMap;
+  // }
 
   /**
    * Clears the cache while preserving current user data
    */
   async clearCache(): Promise<void> {
-    const currentUser = this.user();
+    const currentUser = this.account();
     if (!currentUser) {
       this.logger.warn('Cannot clear cache: No user is logged in');
       return;
