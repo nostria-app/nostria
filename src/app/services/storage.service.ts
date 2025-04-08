@@ -77,6 +77,17 @@ export interface UserRelays {
   updated: number;
 }
 
+// Interface for Nostr events
+export interface NostrEvent {
+  kind: number;
+  tags: string[][];
+  content: string;
+  created_at: number;
+  pubkey: string;
+  id: string;
+  sig: string;
+}
+
 // Schema for the IndexedDB database
 interface NostriaDBSchema extends DBSchema {
   relays: {
@@ -94,6 +105,17 @@ interface NostriaDBSchema extends DBSchema {
     value: UserRelays;
     indexes: { 'by-updated': number };
   };
+  events: {
+    key: string; // event id
+    value: NostrEvent;
+    indexes: { 
+      'by-kind': number; 
+      'by-pubkey': string;
+      'by-created': number;
+      'by-pubkey-kind': [string, number];
+      'by-pubkey-kind-d-tag': [string, number, string]; // For parameterized replaceable events
+    };
+  };
 }
 
 @Injectable({
@@ -103,7 +125,7 @@ export class StorageService {
   private readonly logger = inject(LoggerService);
   private db!: IDBPDatabase<NostriaDBSchema>;
   private readonly DB_NAME = 'nostria-db';
-  private readonly DB_VERSION = 1;
+  private readonly DB_VERSION = 2; // Increase version to trigger upgrade
 
   // Signal to track database initialization status
   isInitialized = signal(false);
@@ -113,11 +135,13 @@ export class StorageService {
     relaysCount: number;
     userMetadataCount: number;
     userRelaysCount: number;
+    eventsCount: number;
     estimatedSize: number;
   }>({
     relaysCount: 0,
     userMetadataCount: 0,
     userRelaysCount: 0,
+    eventsCount: 0,
     estimatedSize: 0
   });
 
@@ -129,7 +153,7 @@ export class StorageService {
     try {
       this.logger.info('Initializing IndexedDB storage');
       this.db = await openDB<NostriaDBSchema>(this.DB_NAME, this.DB_VERSION, {
-        upgrade: (db) => {
+        upgrade: (db, oldVersion, newVersion) => {
           this.logger.info('Creating or upgrading database schema');
 
           // Create object stores if they don't exist
@@ -150,6 +174,20 @@ export class StorageService {
             userRelaysStore.createIndex('by-updated', 'updated');
             this.logger.debug('Created userRelays object store');
           }
+
+          // Add the new events store if it doesn't exist
+          if (!db.objectStoreNames.contains('events')) {
+            const eventsStore = db.createObjectStore('events', { keyPath: 'id' });
+            eventsStore.createIndex('by-kind', 'kind');
+            eventsStore.createIndex('by-pubkey', 'pubkey');
+            eventsStore.createIndex('by-created', 'created_at');
+            eventsStore.createIndex('by-pubkey-kind', ['pubkey', 'kind']);
+            
+            // For parameterized replaceable events (d-tag)
+            eventsStore.createIndex('by-pubkey-kind-d-tag', ['pubkey', 'kind', 'dTag']);
+            
+            this.logger.debug('Created events object store');
+          }
         }
       });
 
@@ -165,26 +203,235 @@ export class StorageService {
     }
   }
 
-  // Method to wait for database initialization
-  //   async waitForInitialization(): Promise<void> {
-  //     // If already initialized, return immediately
-  //     if (this.isInitialized()) {
-  //       return;
-  //     }
+  // Event classification helper methods
+  private isReplaceableEvent(kind: number): boolean {
+    return (kind === 0 || kind === 3 || (kind >= 10000 && kind < 20000));
+  }
+  
+  private isRegularEvent(kind: number): boolean {
+    return (kind === 1 || kind === 2 || (kind >= 4 && kind < 45) || (kind >= 1000 && kind < 10000));
+  }
+  
+  private isEphemeralEvent(kind: number): boolean {
+    return (kind >= 20000 && kind < 30000);
+  }
+  
+  private isParameterizedReplaceableEvent(kind: number): boolean {
+    return (kind >= 30000 && kind < 40000);
+  }
 
-  //     // Otherwise, wait for initialization to complete
-  //     return new Promise<void>((resolve) => {
-  //       const unsubscribe = effect(() => {
-  //         if (this.isInitialized()) {
-  //           // Clean up the effect when initialized
-  //           unsubscribe();
-  //           resolve();
-  //         }
-  //       });
-  //     });
-  //   }
+  // Get d-tag value from an event
+  private getDTagValue(event: NostrEvent): string | undefined {
+    for (const tag of event.tags) {
+      if (tag.length >= 2 && tag[0] === 'd') {
+        return tag[1];
+      }
+    }
+    return undefined;
+  }
 
-  // Relay operations
+  // Generic event storage methods
+  async saveEvent(event: NostrEvent): Promise<void> {
+    if (!this.db) {
+      this.logger.error('Database not initialized');
+      return;
+    }
+
+    try {
+      const { kind } = event;
+      
+      // Handle according to event classification
+      if (this.isReplaceableEvent(kind)) {
+        await this.saveReplaceableEvent(event);
+      } else if (this.isParameterizedReplaceableEvent(kind)) {
+        await this.saveParameterizedReplaceableEvent(event);
+      } else {
+        // Regular or ephemeral events are stored directly
+        // For ephemeral events, we still store them but could implement a cleanup mechanism
+        const eventToStore: any = { ...event };
+        
+        // Add dTag field for indexing if it's a parameterized replaceable event
+        if (this.isParameterizedReplaceableEvent(kind)) {
+          eventToStore.dTag = this.getDTagValue(event) || '';
+        }
+        
+        await this.db.put('events', eventToStore);
+        this.logger.debug(`Saved event to IndexedDB: ${event.id} (kind: ${event.kind})`);
+      }
+      
+      await this.updateStats();
+    } catch (error) {
+      this.logger.error(`Error saving event ${event.id}`, error);
+    }
+  }
+
+  private async saveReplaceableEvent(event: NostrEvent): Promise<void> {
+    // For replaceable events, find any existing events from the same pubkey and kind
+    const index = this.db.transaction('events', 'readonly')
+      .store.index('by-pubkey-kind');
+    
+    const existingEvents = await index.getAll([event.pubkey, event.kind]);
+    
+    // Only keep the newest event
+    if (existingEvents.length > 0) {
+      // Sort by created_at to find the most recent one
+      existingEvents.sort((a, b) => b.created_at - a.created_at);
+      
+      // If this new event is newer than the most recent one, replace it
+      if (event.created_at > existingEvents[0].created_at) {
+        // Delete all older events
+        const tx = this.db.transaction('events', 'readwrite');
+        for (const oldEvent of existingEvents) {
+          await tx.store.delete(oldEvent.id);
+        }
+        
+        // Add the new event
+        await this.db.put('events', event);
+        this.logger.debug(`Replaced older event with newer event ${event.id} (kind: ${event.kind})`);
+      } else {
+        this.logger.debug(`Skipped saving older replaceable event ${event.id} (kind: ${event.kind})`);
+      }
+    } else {
+      // No existing event, just add this one
+      await this.db.put('events', event);
+      this.logger.debug(`Saved new replaceable event ${event.id} (kind: ${event.kind})`);
+    }
+  }
+
+  private async saveParameterizedReplaceableEvent(event: NostrEvent): Promise<void> {
+    const dTagValue = this.getDTagValue(event);
+    
+    if (!dTagValue) {
+      this.logger.debug(`Parameterized replaceable event ${event.id} has no d tag, storing as regular event`);
+      await this.db.put('events', event);
+      return;
+    }
+    
+    // For parameterized replaceable events, we need pubkey + kind + d-tag value
+    const enhancedEvent: any = { ...event, dTag: dTagValue };
+    
+    // Find any existing events with the same pubkey, kind, and d-tag
+    const index = this.db.transaction('events', 'readonly')
+      .store.index('by-pubkey-kind-d-tag');
+    
+    const existingEvents = await index.getAll([event.pubkey, event.kind, dTagValue]);
+    
+    // Only keep the newest event
+    if (existingEvents.length > 0) {
+      // Sort by created_at to find the most recent one
+      existingEvents.sort((a, b) => b.created_at - a.created_at);
+      
+      // If this new event is newer than the most recent one, replace it
+      if (event.created_at > existingEvents[0].created_at) {
+        // Delete all older events
+        const tx = this.db.transaction('events', 'readwrite');
+        for (const oldEvent of existingEvents) {
+          await tx.store.delete(oldEvent.id);
+        }
+        
+        // Add the new event
+        await this.db.put('events', enhancedEvent);
+        this.logger.debug(`Replaced older parameterized event with newer event ${event.id} (kind: ${event.kind}, d: ${dTagValue})`);
+      } else {
+        this.logger.debug(`Skipped saving older parameterized replaceable event ${event.id} (kind: ${event.kind}, d: ${dTagValue})`);
+      }
+    } else {
+      // No existing event, just add this one
+      await this.db.put('events', enhancedEvent);
+      this.logger.debug(`Saved new parameterized replaceable event ${event.id} (kind: ${event.kind}, d: ${dTagValue})`);
+    }
+  }
+
+  async getEvent(id: string): Promise<NostrEvent | undefined> {
+    if (!this.db) {
+      this.logger.error('Database not initialized');
+      return undefined;
+    }
+
+    try {
+      return await this.db.get('events', id);
+    } catch (error) {
+      this.logger.error(`Error getting event ${id}`, error);
+      return undefined;
+    }
+  }
+
+  async getEventsByKind(kind: number): Promise<NostrEvent[]> {
+    if (!this.db) {
+      this.logger.error('Database not initialized');
+      return [];
+    }
+
+    try {
+      return await this.db.getAllFromIndex('events', 'by-kind', kind);
+    } catch (error) {
+      this.logger.error(`Error getting events by kind ${kind}`, error);
+      return [];
+    }
+  }
+
+  async getEventsByPubkey(pubkey: string): Promise<NostrEvent[]> {
+    if (!this.db) {
+      this.logger.error('Database not initialized');
+      return [];
+    }
+
+    try {
+      return await this.db.getAllFromIndex('events', 'by-pubkey', pubkey);
+    } catch (error) {
+      this.logger.error(`Error getting events by pubkey ${pubkey}`, error);
+      return [];
+    }
+  }
+
+  async getEventsByPubkeyAndKind(pubkey: string, kind: number): Promise<NostrEvent[]> {
+    if (!this.db) {
+      this.logger.error('Database not initialized');
+      return [];
+    }
+
+    try {
+      return await this.db.getAllFromIndex('events', 'by-pubkey-kind', [pubkey, kind]);
+    } catch (error) {
+      this.logger.error(`Error getting events by pubkey ${pubkey} and kind ${kind}`, error);
+      return [];
+    }
+  }
+
+  async getParameterizedReplaceableEvent(pubkey: string, kind: number, dTagValue: string): Promise<NostrEvent | undefined> {
+    if (!this.db) {
+      this.logger.error('Database not initialized');
+      return undefined;
+    }
+
+    try {
+      const events = await this.db.getAllFromIndex('events', 'by-pubkey-kind-d-tag', [pubkey, kind, dTagValue]);
+      if (events.length > 0) {
+        // Return the most recent one
+        return events.sort((a, b) => b.created_at - a.created_at)[0];
+      }
+      return undefined;
+    } catch (error) {
+      this.logger.error(`Error getting parameterized replaceable event for pubkey ${pubkey}, kind ${kind}, and d-tag ${dTagValue}`, error);
+      return undefined;
+    }
+  }
+
+  async deleteEvent(id: string): Promise<void> {
+    if (!this.db) {
+      this.logger.error('Database not initialized');
+      return;
+    }
+
+    try {
+      await this.db.delete('events', id);
+      this.logger.debug(`Deleted event from IndexedDB: ${id}`);
+      await this.updateStats();
+    } catch (error) {
+      this.logger.error(`Error deleting event ${id}`, error);
+    }
+  }
+
   async saveRelay(relay: Relay, nip11Info?: Nip11Info): Promise<void> {
     if (!this.db) {
       this.logger.error('Database not initialized');
@@ -252,9 +499,7 @@ export class StorageService {
     }
   }
 
-  // User metadata operations
   async saveUserMetadata(pubkey: string, data: NostrEventData<UserMetadata>): Promise<void> {
-
     try {
       const enhancedMetadata: NostrEventData<UserMetadata> = {
         ...data,
@@ -308,7 +553,6 @@ export class StorageService {
     }
   }
 
-  // User relays operations
   async saveUserRelays(userRelays: UserRelays): Promise<void> {
     if (!this.db) {
       this.logger.error('Database not initialized');
@@ -372,7 +616,6 @@ export class StorageService {
     }
   }
 
-  // Clear cache operations (keeping current user data)
   async clearCache(currentUserPubkey: string): Promise<void> {
     if (!this.db) {
       this.logger.error('Database not initialized');
@@ -398,6 +641,18 @@ export class StorageService {
         }
       }
 
+      // For events, remove all except the current user's
+      const tx = this.db.transaction('events', 'readwrite');
+      const index = tx.store.index('by-pubkey');
+      const events = await index.getAllKeys();
+      
+      for (const eventKey of events) {
+        const event = await tx.store.get(eventKey as string);
+        if (event && event.pubkey !== currentUserPubkey) {
+          await tx.store.delete(eventKey as string);
+        }
+      }
+
       // For relays, we keep them all since they're used by all users
 
       this.logger.info('Cache cleared successfully');
@@ -407,7 +662,6 @@ export class StorageService {
     }
   }
 
-  // Database statistics
   async updateStats(): Promise<void> {
     if (!this.db) {
       this.logger.error('Database not initialized');
@@ -418,17 +672,29 @@ export class StorageService {
       const relays = await this.getAllRelays();
       const userMetadata = await this.getAllUserMetadata();
       const userRelays = await this.getAllUserRelays();
+      
+      // Count events (may need optimization for large datasets)
+      let eventsCount = 0;
+      try {
+        // Just get the count without loading all events
+        const tx = this.db.transaction('events', 'readonly');
+        eventsCount = await tx.store.count();
+      } catch (error) {
+        this.logger.error('Error counting events', error);
+      }
 
       // Calculate approximate size
       const relaysSize = JSON.stringify(relays).length;
       const userMetadataSize = JSON.stringify(userMetadata).length;
       const userRelaysSize = JSON.stringify(userRelays).length;
-      const totalSize = relaysSize + userMetadataSize + userRelaysSize;
+      const eventsSize = eventsCount * 500; // Rough estimation of average event size
+      const totalSize = relaysSize + userMetadataSize + userRelaysSize + eventsSize;
 
       this.dbStats.set({
         relaysCount: relays.length,
         userMetadataCount: userMetadata.length,
         userRelaysCount: userRelays.length,
+        eventsCount,
         estimatedSize: totalSize
       });
 
@@ -438,7 +704,6 @@ export class StorageService {
     }
   }
 
-  // Format size for display
   formatSize(bytes: number): string {
     if (bytes === 0) return '0 Bytes';
 
@@ -469,6 +734,7 @@ export class StorageService {
         relaysCount: 0,
         userMetadataCount: 0,
         userRelaysCount: 0,
+        eventsCount: 0,
         estimatedSize: 0
       });
       
