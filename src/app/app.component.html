@@ -13,9 +13,9 @@
       <mat-icon class="update-icon">system_update</mat-icon>
     </button>
     }
-    <button mat-icon-button (click)="themeService.toggleDarkMode()" aria-label="Toggle theme">
+    <!-- <button mat-icon-button (click)="themeService.toggleDarkMode()" aria-label="Toggle theme">
       <mat-icon>{{ themeService.darkMode() ? 'dark_mode' : 'light_mode' }}</mat-icon>
-    </button>
+    </button> -->
     <button mat-icon-button (click)="toggleProfileSidenav()" aria-label="Toggle profile" class="profile-button">
       @if (userMetadata()?.content?.picture) {
         <img [src]="userMetadata()?.content?.picture" class="profile-button-avatar" alt="Profile picture">
@@ -153,10 +153,10 @@
     </a>
     }
     }
-    <button mat-button class="mobile-nav-button" (click)="themeService.toggleDarkMode()">
+    <!-- <button mat-button class="mobile-nav-button" (click)="themeService.toggleDarkMode()">
       <mat-icon>{{ themeService.darkMode() ? 'light_mode' : 'dark_mode' }}</mat-icon>
       <div class="mobile-nav-label">Theme</div>
-    </button>
+    </button> -->
   </div>
   }
 
