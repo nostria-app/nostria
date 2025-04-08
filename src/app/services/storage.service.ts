@@ -119,7 +119,7 @@ export class StorageService {
   private readonly DB_VERSION = 2; // Increase version to trigger upgrade
 
   // Signal to track database initialization status
-  isInitialized = signal(false);
+  initialized = signal(false);
 
   // Database stats
   dbStats = signal<{
@@ -186,11 +186,11 @@ export class StorageService {
       await this.updateStats();
 
       // Set initialized status to true
-      this.isInitialized.set(true);
+      this.initialized.set(true);
     } catch (error) {
       this.logger.error('Failed to initialize IndexedDB', error);
       // Set initialized to false in case of error
-      this.isInitialized.set(false);
+      this.initialized.set(false);
     }
   }
 
@@ -826,7 +826,7 @@ export class StorageService {
       await deleteDB(this.DB_NAME);
 
       // Reset initialization status
-      this.isInitialized.set(false);
+      this.initialized.set(false);
 
       // Reset stats
       this.dbStats.set({

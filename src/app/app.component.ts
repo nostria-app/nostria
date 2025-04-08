@@ -109,7 +109,7 @@ export class AppComponent implements OnInit {
     // Show login dialog if user is not logged in - with debugging
     effect(() => {
       const isLoggedIn = this.nostrService.isLoggedIn();
-      const isInitialized = this.storage.isInitialized();
+      const isInitialized = this.appState.initialized();
 
       if (isInitialized && !isLoggedIn) {
         this.logger.debug('Showing login dialog');
