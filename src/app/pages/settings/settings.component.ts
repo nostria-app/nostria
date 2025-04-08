@@ -93,8 +93,8 @@ export class SettingsComponent {
         // Clear known localStorage keys related to the app
         const keysToRemove = [
           'nostria-theme',
-          'nostria-users',
-          'nostria-user',
+          'nostria-accounts',
+          'nostria-account',
           'nostria-log-level',
         ];
         
