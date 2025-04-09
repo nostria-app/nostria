@@ -42,11 +42,11 @@
         <span class="verified-name">{{ profile.content.lud16 }}</span>
 
         <!-- QR Code Popover -->
-        @if (showLightningQR()) {
+        @if (showLightningQR() && lightningQrCode()) {
           <div class="qr-popover">
             <div class="qr-container">
               <div class="qr-code">
-                <img [src]="getLightningQRCode()" alt="QR Code" class="qr-image">
+                <img [src]="lightningQrCode()" alt="Lightning QR Code" class="qr-image">
               </div>
               <p class="qr-caption">Scan to send sats</p>
             </div>
