@@ -21,6 +21,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { MatListModule } from '@angular/material/list';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import QRCode from 'qrcode';
 
 @Component({
   selector: 'app-profile',
@@ -59,6 +60,7 @@ export class ProfileComponent {
   isLoading = signal<boolean>(true);
   error = signal<string | null>(null);
   isOwnProfile = signal<boolean>(false);
+  showLightningQR = signal(false);
 
   // Convert route params to a signal
   private routeParams = toSignal<ParamMap>(this.route.paramMap);
@@ -81,6 +83,7 @@ export class ProfileComponent {
 
           // Reset state when loading a new profile
           this.userMetadata.set(undefined);
+          this.lightningQrCode.set('');
           this.error.set(null);
 
           // Use untracked to avoid re-running this effect when these signals change
@@ -108,7 +111,6 @@ export class ProfileComponent {
       if (!metadata) {
         this.error.set('User profile not found');
       } else {
-        console.log('SCROLLINGSOOON');
         // Only scroll if profile was successfully loaded
         setTimeout(() => this.scrollToOptimalPosition(), 100);
       }
@@ -312,6 +314,40 @@ export class ProfileComponent {
       });
 
       this.logger.debug('Opened profile picture dialog');
+    }
+  }
+
+  // lightningQrCode = signal<string>('');
+
+  /**
+   * Generates a QR code for the user's lightning address
+   */
+  async getLightningQRCode(): Promise<string> {
+    if (!this.userMetadata()?.content?.lud16) {
+      return '';
+    }
+    
+    try {
+      // Format lightning address for QR code
+      const lightning = this.userMetadata()?.content?.lud16;
+
+      const dataUrl = await QRCode.toDataURL(`lightning:${lightning}`, {
+        margin: 1,
+        width: 200,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      });
+
+      console.log('DATA URL:', dataUrl);
+
+      // this.lightningQrCode.set(dataUrl);
+
+      return dataUrl;
+    } catch (err) {
+      this.logger.error('Error generating QR code:', err);
+      return '';
     }
   }
 }
