@@ -7,6 +7,11 @@
 .profile-header {
   position: relative;
   margin-bottom: 5rem; /* Increased from 3rem to 5rem for more space */
+  
+  @media (max-width: 768px) {
+    margin-bottom: 2rem; /* Reduce bottom margin on mobile to compensate for layout changes */
+    padding-top: 60px; /* Add some top padding to ensure avatar has room above the banner */
+  }
 }
 
 .profile-banner {
@@ -29,12 +34,12 @@
   position: absolute;
   bottom: 120px; /* Moved from 70px to 120px (50px more) */
   left: 32px;
-  z-index: 2;
+  z-index: 10; /* Increased from 2 to 10 to ensure avatar appears in front of banner */
   
   @media (max-width: 768px) {
     left: 50%;
     transform: translateX(-50%);
-    bottom: 100px; /* Adjusted from 50px to 100px */
+    top: 180px;
   }
 }
 
@@ -102,9 +107,9 @@
   position: relative; /* Add this to position the menu button */
   
   @media (max-width: 768px) {
-    margin-top: 20px;
-    text-align: center;
-    padding: 0 1rem; /* Keep original padding for mobile */
+    margin-top: 80px; /* Reduced from 120px to 80px to adjust for new avatar position */
+    text-align: left; /* Changed from center to left */
+    padding: 0 1.5rem; /* Slightly increased from 1rem for better spacing */
   }
 }
 
@@ -140,7 +145,8 @@
   max-width: 100%;
   
   @media (max-width: 768px) {
-    justify-content: center;
+    /* Removed justify-content: center to keep left alignment */
+    padding-left: 0.5rem; /* Added slight padding for better visual spacing */
   }
   
   &:hover {
@@ -241,8 +247,9 @@
   max-width: 700px;
   
   @media (max-width: 768px) {
-    margin-left: auto;
-    margin-right: auto;
+    /* Remove auto margins that were centering the bio */
+    margin-left: 0.5rem;
+    margin-right: 0;
   }
 }
 
@@ -254,8 +261,9 @@
   
   @media (max-width: 768px) {
     margin: 1rem 1rem 3rem;
-    padding-left: 0; /* No padding needed for mobile */
-    justify-content: center;
+    padding-left: 0.5rem; /* Added slight padding for consistent alignment */
+    /* Changed from center to start for left alignment */
+    justify-content: flex-start;
     flex-wrap: wrap;
   }
   
