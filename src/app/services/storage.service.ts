@@ -223,11 +223,6 @@ export class StorageService {
 
   // Generic event storage methods
   async saveEvent(event: NostrEvent): Promise<void> {
-    if (!this.db) {
-      this.logger.error('Database not initialized');
-      return;
-    }
-
     try {
       const { kind } = event;
 
@@ -343,11 +338,6 @@ export class StorageService {
   }
 
   async getEvent(id: string): Promise<NostrEvent | undefined> {
-    if (!this.db) {
-      this.logger.error('Database not initialized');
-      return undefined;
-    }
-
     try {
       return await this.db.get('events', id);
     } catch (error) {
@@ -357,11 +347,6 @@ export class StorageService {
   }
 
   async getEventsByKind(kind: number): Promise<NostrEvent[]> {
-    if (!this.db) {
-      this.logger.error('Database not initialized');
-      return [];
-    }
-
     try {
       return await this.db.getAllFromIndex('events', 'by-kind', kind);
     } catch (error) {
@@ -371,11 +356,6 @@ export class StorageService {
   }
 
   async getEventsByPubkey(pubkey: string | string[]): Promise<NostrEvent[]> {
-    if (!this.db) {
-      this.logger.error('Database not initialized');
-      return [];
-    }
-
     try {
       if (Array.isArray(pubkey)) {
         // Handle array of pubkeys
@@ -407,11 +387,6 @@ export class StorageService {
   }
 
   async getEventsByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<NostrEvent[]> {
-    if (!this.db) {
-      this.logger.error('Database not initialized');
-      return [];
-    }
-
     try {
       if (Array.isArray(pubkey)) {
         // Handle array of pubkeys
@@ -433,11 +408,6 @@ export class StorageService {
   }
 
   async getParameterizedReplaceableEvent(pubkey: string | string[], kind: number, dTagValue: string): Promise<NostrEvent | undefined> {
-    if (!this.db) {
-      this.logger.error('Database not initialized');
-      return undefined;
-    }
-
     try {
       if (Array.isArray(pubkey)) {
         // For arrays, get events from all pubkeys and return the most recent one
@@ -469,11 +439,6 @@ export class StorageService {
   }
 
   async deleteEvent(id: string): Promise<void> {
-    if (!this.db) {
-      this.logger.error('Database not initialized');
-      return;
-    }
-
     try {
       await this.db.delete('events', id);
       this.logger.debug(`Deleted event from IndexedDB: ${id}`);
@@ -484,12 +449,7 @@ export class StorageService {
   }
 
   async saveRelay(relay: Relay, nip11Info?: Nip11Info): Promise<void> {
-    if (!this.db) {
-      this.logger.error('Database not initialized');
-      return;
-    }
-
-    try {
+     try {
       const enhancedRelay: any = { ...relay };
 
       if (nip11Info) {
@@ -508,11 +468,6 @@ export class StorageService {
   }
 
   async getRelay(url: string): Promise<(Relay & { nip11?: Nip11Info }) | undefined> {
-    if (!this.db) {
-      this.logger.error('Database not initialized');
-      return undefined;
-    }
-
     try {
       return await this.db.get('relays', url);
     } catch (error) {
@@ -522,11 +477,6 @@ export class StorageService {
   }
 
   async getAllRelays(): Promise<(Relay & { nip11?: Nip11Info })[]> {
-    if (!this.db) {
-      this.logger.error('Database not initialized');
-      return [];
-    }
-
     try {
       return await this.db.getAll('relays');
     } catch (error) {
@@ -536,11 +486,6 @@ export class StorageService {
   }
 
   async deleteRelay(url: string): Promise<void> {
-    if (!this.db) {
-      this.logger.error('Database not initialized');
-      return;
-    }
-
     try {
       await this.db.delete('relays', url);
       this.logger.debug(`Deleted relay from IndexedDB: ${url}`);
@@ -629,11 +574,6 @@ export class StorageService {
   // }
 
   async saveUserRelays(userRelays: UserRelays): Promise<void> {
-    if (!this.db) {
-      this.logger.error('Database not initialized');
-      return;
-    }
-
     try {
       const enhancedUserRelays = {
         ...userRelays,
@@ -649,11 +589,6 @@ export class StorageService {
   }
 
   async getUserRelays(pubkey: string | string[]): Promise<UserRelays | UserRelays[] | undefined> {
-    if (!this.db) {
-      this.logger.error('Database not initialized');
-      return undefined;
-    }
-
     try {
       if (Array.isArray(pubkey)) {
         // Handle array of pubkeys
@@ -677,11 +612,6 @@ export class StorageService {
   }
 
   async getAllUserRelays(): Promise<UserRelays[]> {
-    if (!this.db) {
-      this.logger.error('Database not initialized');
-      return [];
-    }
-
     try {
       return await this.db.getAll('userRelays');
     } catch (error) {
@@ -691,12 +621,7 @@ export class StorageService {
   }
 
   async deleteUserRelays(pubkey: string | string[]): Promise<void> {
-    if (!this.db) {
-      this.logger.error('Database not initialized');
-      return;
-    }
-
-    try {
+     try {
       if (Array.isArray(pubkey)) {
         // Handle array of pubkeys
         for (const pk of pubkey) {
@@ -716,11 +641,6 @@ export class StorageService {
   }
 
   async clearCache(currentUserPubkey: string): Promise<void> {
-    if (!this.db) {
-      this.logger.error('Database not initialized');
-      return;
-    }
-
     try {
       this.logger.info('Clearing cache while preserving current user data');
 
@@ -762,11 +682,6 @@ export class StorageService {
   }
 
   async updateStats(): Promise<void> {
-    if (!this.db) {
-      this.logger.error('Database not initialized');
-      return;
-    }
-
     try {
       const relays = await this.getAllRelays();
       // const userMetadata = await this.getAllUserMetadata();
