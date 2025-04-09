@@ -27,6 +27,11 @@
     <div class="profile-info">
       <h1 class="profile-name">{{ getFormattedName() }}</h1>
 
+      <div class="profile-item">
+        <mat-icon>key</mat-icon>
+        <span>{{ getFormattedNpub() }}</span>
+      </div>
+
       @if (getVerifiedIdentifier()) {
       <div class="profile-item">
         <mat-icon class="verified-icon">verified</mat-icon>
@@ -34,23 +39,28 @@
       </div>
       }
 
+      @if (profile.content.website) {
+      <div class="profile-item">
+        <mat-icon>link</mat-icon>
+        <span><a [href]="profile.content.website" target="_blank">{{ profile.content.website}}</a></span>
+      </div>
+      }
+
       @if (profile.content.lud16) {
-      <div class="profile-item" 
-           (mouseenter)="showLightningQR.set(true)" 
-           (mouseleave)="showLightningQR.set(false)">
+      <div class="profile-item" (mouseenter)="showLightningQR.set(true)" (mouseleave)="showLightningQR.set(false)">
         <mat-icon class="profile-icon-custom">⚡️</mat-icon>
         <span class="verified-name">{{ profile.content.lud16 }}</span>
 
         <!-- QR Code Popover -->
         @if (showLightningQR() && lightningQrCode()) {
-          <div class="qr-popover">
-            <div class="qr-container">
-              <div class="qr-code">
-                <img [src]="lightningQrCode()" alt="Lightning QR Code" class="qr-image">
-              </div>
-              <p class="qr-caption">Scan to send sats</p>
+        <div class="qr-popover">
+          <div class="qr-container">
+            <div class="qr-code">
+              <img [src]="lightningQrCode()" alt="Lightning QR Code" class="qr-image">
             </div>
+            <p class="qr-caption">Scan to send sats</p>
           </div>
+        </div>
         }
       </div>
       }

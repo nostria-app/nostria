@@ -133,7 +133,7 @@
 .profile-item {
   display: flex;
   align-items: center;
-  margin-top: 0.5rem;
+  margin-top: 0.2em;
   gap: 0.4em;
   cursor: pointer;
   position: relative;
@@ -202,10 +202,10 @@
 
 .verified-icon {
   color: var(--mat-sys-primary, #673ab7);
-  font-size: 18px;
-  height: 18px;
-  width: 18px;
-  margin-left: 4px;
+  // font-size: 18px;
+  // height: 18px;
+  // width: 18px;
+  // margin-left: 4px;
 }
 
 .profile-icon,
