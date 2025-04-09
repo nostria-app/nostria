@@ -7,6 +7,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
 import { LoadingOverlayComponent } from '../../components/loading-overlay/loading-overlay.component';
@@ -14,6 +16,9 @@ import { RelayService } from '../../services/relay.service';
 import { NostrEvent } from '../../interfaces';
 import { ApplicationStateService } from '../../services/application-state.service';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { MatListModule } from '@angular/material/list';
+import { FormsModule } from '@angular/forms';
+import { MatFormFieldModule } from '@angular/material/form-field';
 
 @Component({
   selector: 'app-profile',
@@ -26,7 +31,12 @@ import { toSignal } from '@angular/core/rxjs-interop';
     MatTabsModule,
     MatChipsModule,
     MatDividerModule,
-    LoadingOverlayComponent
+    MatMenuModule,
+    MatTooltipModule,
+    LoadingOverlayComponent,
+    MatListModule,
+    FormsModule,
+    MatFormFieldModule,
   ],
   templateUrl: './profile.component.html',
   styleUrl: './profile.component.scss'
@@ -189,5 +199,78 @@ export class ProfileComponent {
   getDefaultBanner(): string {
     // Return a default gradient for users without a banner
     return 'linear-gradient(135deg, #8e44ad, #3498db)';
+  }
+
+  copyToClipboard(text: string, type: string): void {
+    navigator.clipboard.writeText(text);
+    this.logger.debug(`Copied ${type} to clipboard:`, text);
+    // TODO: Add a snackbar/toast notification here
+  }
+
+  copyNpub(): void {
+    this.copyToClipboard(this.getFormattedNpub(), 'npub');
+  }
+
+  copyNprofile(): void {
+    // For simplicity, just using npub here. In a real implementation,
+    // would need to create a proper nprofile URI with relays
+    this.copyToClipboard(this.getFormattedNpub(), 'nprofile');
+  }
+
+  copyProfileData(): void {
+    const metadata = this.userMetadata();
+    if (metadata) {
+      this.copyToClipboard(JSON.stringify(metadata.content, null, 2), 'profile data');
+    }
+  }
+
+  copyFollowingList(): void {
+    // Placeholder for actual implementation that would fetch the following list
+    this.logger.debug('Copy following list requested for:', this.pubkey());
+    this.copyToClipboard('Following list not implemented yet', 'following list');
+  }
+
+  copyRelayList(): void {
+    // Placeholder for actual implementation that would fetch the relay list
+    this.logger.debug('Copy relay list requested for:', this.pubkey());
+    this.copyToClipboard('Relay list not implemented yet', 'relay list');
+  }
+
+  shareProfile(): void {
+    // Share profile action using the Web Share API if available
+    if (navigator.share) {
+      navigator.share({
+        title: `${this.getFormattedName()}'s Nostr Profile`,
+        text: `Check out ${this.getFormattedName()} on Nostr`,
+        url: window.location.href
+      }).then(() => {
+        this.logger.debug('Profile shared successfully');
+      }).catch((error) => {
+        this.logger.error('Error sharing profile:', error);
+      });
+    } else {
+      // Fallback if Web Share API is not available
+      this.copyToClipboard(window.location.href, 'profile URL');
+      // TODO: Add a snackbar/toast notification here
+    }
+  }
+
+  shareProfileUrl(): void {
+    this.copyToClipboard(window.location.href, 'profile URL');
+  }
+
+  unfollowUser(): void {
+    this.logger.debug('Unfollow requested for:', this.pubkey());
+    // TODO: Implement actual unfollow functionality
+  }
+
+  muteUser(): void {
+    this.logger.debug('Mute requested for:', this.pubkey());
+    // TODO: Implement actual mute functionality
+  }
+
+  blockUser(): void {
+    this.logger.debug('Block requested for:', this.pubkey());
+    // TODO: Implement actual block functionality
   }
 }
