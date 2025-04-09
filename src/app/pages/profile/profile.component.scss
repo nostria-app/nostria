@@ -137,7 +137,7 @@
   gap: 0.4em;
   cursor: pointer;
   position: relative;
-  
+  max-width: 100%;
   
   @media (max-width: 768px) {
     justify-content: center;
@@ -147,6 +147,23 @@
     .verified-name {
       text-decoration: underline;
     }
+  }
+  
+  /* Add truncation for text content */
+  span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: calc(100% - 40px); /* Leave space for the icon */
+  }
+  
+  /* Handle links inside spans */
+  span a {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 100%;
   }
 }
 
@@ -290,6 +307,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   font-family: 'Courier New', monospace;
+  max-width: calc(100% - 40px); /* Leave space for the copy button */
 }
 
 .empty-state {
