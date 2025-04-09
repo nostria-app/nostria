@@ -27,27 +27,27 @@
     <div class="profile-info">
       <h1 class="profile-name">{{ getFormattedName() }}</h1>
 
-      <div class="profile-item">
+      <div class="profile-item" title="{{ getFormattedNpub() }}">
         <mat-icon>key</mat-icon>
         <span>{{ getFormattedNpub() }}</span>
       </div>
 
       @if (getVerifiedIdentifier()) {
-      <div class="profile-item">
+      <div class="profile-item" title="{{ getVerifiedIdentifier() }}">
         <mat-icon class="verified-icon">verified</mat-icon>
         <span>{{ getVerifiedIdentifier() }}</span>
       </div>
       }
 
       @if (profile.content.website) {
-      <div class="profile-item">
+      <div class="profile-item" title="{{ profile.content.website }}">
         <mat-icon>link</mat-icon>
         <span><a [href]="profile.content.website" target="_blank">{{ profile.content.website}}</a></span>
       </div>
       }
 
       @if (profile.content.lud16) {
-      <div class="profile-item" (mouseenter)="showLightningQR.set(true)" (mouseleave)="showLightningQR.set(false)">
+      <div class="profile-item" (mouseenter)="showLightningQR.set(true)" (mouseleave)="showLightningQR.set(false)" title="{{ profile.content.lud16 }}">
         <mat-icon class="profile-icon-custom">⚡️</mat-icon>
         <span class="verified-name">{{ profile.content.lud16 }}</span>
 
@@ -198,7 +198,7 @@
               <div class="info-item">
                 <mat-icon>fingerprint</mat-icon>
                 <div class="pubkey-container">
-                  <span class="pubkey">{{ getFormattedNpub() }}</span>
+                  <span class="pubkey" title="{{ getFormattedNpub() }}">{{ getFormattedNpub() }}</span>
                   <button mat-icon-button matTooltip="Copy to clipboard">
                     <mat-icon>content_copy</mat-icon>
                   </button>
