@@ -6,6 +6,14 @@
   padding: 3rem 2rem;
 }
 
+h1 {
+  font: var(--mat-sys-display-large);
+}
+
+h2 {
+  font: var(--mat-sys-headline-medium);
+}
+
 // Hero section
 .hero-section {
   display: flex;
