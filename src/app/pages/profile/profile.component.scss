@@ -50,6 +50,16 @@
   justify-content: center;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   
+  &.clickable {
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    
+    &:hover {
+      transform: scale(1.05);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+  }
+  
   @media (max-width: 768px) {
     width: 120px;
     height: 120px;
@@ -266,4 +276,20 @@
 .empty-profile mat-icon {
   color: var(--mat-subtitle-text-color, rgba(0, 0, 0, 0.6));
   opacity: 0.5;
+}
+
+/* Add styles for the profile picture dialog */
+::ng-deep .profile-picture-dialog {
+  .mat-mdc-dialog-container {
+    padding: 0;
+    overflow: hidden;
+    border-radius: 0;
+    background-color: transparent;
+    box-shadow: none;
+    
+    .mdc-dialog__surface {
+      background-color: transparent;
+      box-shadow: none;
+    }
+  }
 }

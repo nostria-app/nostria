@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect, untracked } from '@angular/core';
+import { Component, inject, signal, effect, untracked, Inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, ParamMap } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -10,6 +10,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatDialog, MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
 import { LoadingOverlayComponent } from '../../components/loading-overlay/loading-overlay.component';
@@ -35,6 +36,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
     MatMenuModule,
     MatTooltipModule,
     MatSnackBarModule,
+    MatDialogModule,
     LoadingOverlayComponent,
     MatListModule,
     FormsModule,
@@ -50,6 +52,7 @@ export class ProfileComponent {
   private appState = inject(ApplicationStateService);
   private logger = inject(LoggerService);
   private snackBar = inject(MatSnackBar);
+  private dialog = inject(MatDialog);
 
   pubkey = signal<string>('');
   userMetadata = signal<NostrEvent | undefined>(undefined);
@@ -101,14 +104,6 @@ export class ProfileComponent {
       // Try to get from cache first
       let metadata = await this.nostrService.getMetadataForUser(pubkey);
       this.userMetadata.set(metadata);
-
-      // THIS WILL BE DONE IN THE GET METADATA FUNCTION SOON!
-      // if (!metadata) {
-      //   // If not in cache, try to fetch it
-      //   this.logger.debug('User metadata not found in cache, fetching from network');
-      //   metadata = await this.relayService.fetchUserMetadata(pubkey);
-      //   this.userMetadata.set(metadata);
-      // }
 
       if (!metadata) {
         this.error.set('User profile not found');
@@ -290,5 +285,74 @@ export class ProfileComponent {
   blockUser(): void {
     this.logger.debug('Block requested for:', this.pubkey());
     // TODO: Implement actual block functionality
+  }
+
+  /**
+   * Opens the profile picture in a larger view dialog
+   */
+  openProfilePicture(): void {
+    const metadata = this.userMetadata();
+    if (metadata?.content.picture) {
+      const dialogRef = this.dialog.open(ProfilePictureDialogComponent, {
+        data: {
+          imageUrl: metadata.content.picture,
+          userName: this.getFormattedName()
+        },
+        maxWidth: '100vw',
+        maxHeight: '100vh',
+        panelClass: 'profile-picture-dialog'
+      });
+
+      this.logger.debug('Opened profile picture dialog');
+    }
+  }
+}
+
+@Component({
+  selector: 'app-profile-picture-dialog',
+  standalone: true,
+  imports: [CommonModule, MatButtonModule, MatIconModule],
+  template: `
+    <div class="dialog-container">
+      <button mat-icon-button class="close-button" (click)="close()">
+        <mat-icon>close</mat-icon>
+      </button>
+      <img [src]="data.imageUrl" [alt]="data.userName + ' profile picture'" class="full-size-image">
+    </div>
+  `,
+  styles: `
+    .dialog-container {
+      position: relative;
+      padding: 0;
+      overflow: hidden;
+      text-align: center;
+      background-color: rgba(0, 0, 0, 0.8);
+      border-radius: 0;
+    }
+    
+    .close-button {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      color: white;
+      z-index: 10;
+      background-color: rgba(0, 0, 0, 0.5);
+    }
+    
+    .full-size-image {
+      max-width: 90vw;
+      max-height: 90vh;
+      object-fit: contain;
+    }
+  `
+})
+export class ProfilePictureDialogComponent {
+  constructor(
+    @Inject(MAT_DIALOG_DATA) public data: { imageUrl: string, userName: string },
+    private dialogRef: MatDialogRef<ProfilePictureDialogComponent>
+  ) {}
+
+  close(): void {
+    this.dialogRef.close();
   }
 }
