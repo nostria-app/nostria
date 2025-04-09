@@ -191,11 +191,11 @@ body {
   background: rgba(0, 0, 0, 0.7);
 }
 
-.page-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 16px;
-}
+// .page-container {
+//   max-width: 1200px;
+//   margin: 0 auto;
+//   padding: 16px;
+// }
 
 // About page styles
 .logo-container {
@@ -366,7 +366,7 @@ mat-card-content li {
   }
 }
 
-.content {
+.content, .content-medium, .content-small {
   max-width: 1200px;
   margin-left: auto;
   margin-right: auto;
@@ -374,15 +374,12 @@ mat-card-content li {
   padding: 16px;
 }
 
-.max-width {
-  max-width: 600px;
+.content-medium {
+  max-width: 800px;
 }
 
-.fixed-content {
-  max-width: 800px;
-  margin-left: auto;
-  margin-right: auto;
-  align-items: center;
+.content-small {
+  max-width: 600px;
 }
 
 @media screen and (max-width: 600px) {
