@@ -130,10 +130,11 @@
   }
 }
 
-.verified-container {
+.profile-item {
   display: flex;
   align-items: center;
   margin-top: 0.5rem;
+  gap: 0.4m;
   
   @media (max-width: 768px) {
     justify-content: center;
@@ -142,7 +143,6 @@
 
 .verified-name {
   color: var(--mat-sys-primary, #673ab7);
-  font-size: 1rem;
 }
 
 .verified-icon {
@@ -151,6 +151,15 @@
   height: 18px;
   width: 18px;
   margin-left: 4px;
+}
+
+.profile-icon,
+.profile-icon-custom {
+  text-align: center;
+}
+
+.profile-icon-custom {
+  font-size: 16px;
 }
 
 .profile-bio {
