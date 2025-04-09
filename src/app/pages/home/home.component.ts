@@ -1,7 +1,9 @@
-import { Component, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
+import { NostrService } from '../../services/nostr.service';
+import { RouterModule } from '@angular/router';
 
 interface Feature {
   icon: string;
@@ -20,12 +22,15 @@ interface Stat {
   imports: [
     MatCardModule,
     MatButtonModule,
-    MatIconModule
+    MatIconModule,
+    RouterModule,
   ],
   templateUrl: './home.component.html',
   styleUrl: './home.component.scss'
 })
 export class HomeComponent {
+  nostr = inject(NostrService);
+
   features = signal<Feature[]>([
     {
       icon: 'lock',

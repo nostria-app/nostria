@@ -1,5 +1,5 @@
-<div class="content">
-  <mat-card>
+<div class="content max-width">
+  <!-- <mat-card>
     <mat-card-header>
       <div class="logo-container">
         <img src="icons/icon-128x128.png" alt="Nostria Logo" class="logo">
@@ -7,7 +7,18 @@
       <mat-card-title>About Nostria</mat-card-title>
       <mat-card-subtitle>Version: {{ version() }}</mat-card-subtitle>
     </mat-card-header>
-    <mat-card-content>
+    <mat-card-content> -->
+
+      <div class="about-header">
+        <div>
+          <h1>About Nostria</h1>
+          <h3>Version: {{ version() }}</h3>
+        </div>
+        <div class="logo-container">
+          <img src="icons/icon-128x128.png" alt="Nostria Logo" class="logo">
+        </div>
+      </div>
+
       <p class="description">
         Making the Nostr protocol accessible to everyone, with a focus on user experience and performance for
         global scale. Let's make Nostr great again.
@@ -59,6 +70,6 @@
         </mat-list>
       </div>
 
-    </mat-card-content>
-  </mat-card>
+    <!-- </mat-card-content>
+  </mat-card> -->
 </div>
