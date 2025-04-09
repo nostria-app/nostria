@@ -15,7 +15,7 @@
       [style.background-image]="profile.content.banner ? 'url(' + profile.content.banner + ')' : getDefaultBanner()">
     </div>
     <div class="profile-avatar-container">
-      <div class="profile-avatar">
+      <div class="profile-avatar" [class.clickable]="profile.content.picture" (click)="profile.content.picture && openProfilePicture()">
         @if (profile.content.picture) {
         <img [src]="profile.content.picture" alt="Profile picture" class="avatar-image">
         } @else {
