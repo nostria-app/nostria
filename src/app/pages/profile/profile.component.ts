@@ -9,6 +9,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
 import { LoadingOverlayComponent } from '../../components/loading-overlay/loading-overlay.component';
@@ -33,6 +34,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
     MatDividerModule,
     MatMenuModule,
     MatTooltipModule,
+    MatSnackBarModule,
     LoadingOverlayComponent,
     MatListModule,
     FormsModule,
@@ -47,6 +49,7 @@ export class ProfileComponent {
   private relayService = inject(RelayService);
   private appState = inject(ApplicationStateService);
   private logger = inject(LoggerService);
+  private snackBar = inject(MatSnackBar);
 
   pubkey = signal<string>('');
   userMetadata = signal<NostrEvent | undefined>(undefined);
@@ -202,9 +205,25 @@ export class ProfileComponent {
   }
 
   copyToClipboard(text: string, type: string): void {
-    navigator.clipboard.writeText(text);
-    this.logger.debug(`Copied ${type} to clipboard:`, text);
-    // TODO: Add a snackbar/toast notification here
+    navigator.clipboard.writeText(text)
+      .then(() => {
+        this.logger.debug(`Copied ${type} to clipboard:`, text);
+        this.snackBar.open(`${type.charAt(0).toUpperCase() + type.slice(1)} copied to clipboard`, 'Dismiss', {
+          duration: 3000,
+          horizontalPosition: 'center',
+          verticalPosition: 'bottom',
+          panelClass: 'copy-snackbar'
+        });
+      })
+      .catch(error => {
+        this.logger.error('Failed to copy to clipboard:', error);
+        this.snackBar.open('Failed to copy to clipboard', 'Dismiss', {
+          duration: 3000,
+          horizontalPosition: 'center',
+          verticalPosition: 'bottom',
+          panelClass: 'error-snackbar'
+        });
+      });
   }
 
   copyNpub(): void {
