@@ -270,7 +270,6 @@ export class ProfileComponent {
     } else {
       // Fallback if Web Share API is not available
       this.copyToClipboard(window.location.href, 'profile URL');
-      // TODO: Add a snackbar/toast notification here
     }
   }
 
