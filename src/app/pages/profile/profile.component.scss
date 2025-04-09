@@ -152,7 +152,7 @@
 
 .qr-popover {
   position: absolute;
-  bottom: 100%;
+  top: 100%;  /* Changed from 'bottom: 100%' to 'top: 100%' */
   left: 50%;
   transform: translateX(-50%);
   background-color: white;
@@ -160,17 +160,17 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   padding: 16px;
   z-index: 100;
-  margin-bottom: 8px;
+  margin-top: 8px;  /* Changed from 'margin-bottom: 8px' to 'margin-top: 8px' */
   
   &::after {
     content: '';
     position: absolute;
-    top: 100%;
+    bottom: 100%;  /* Changed from 'top: 100%' to 'bottom: 100%' */
     left: 50%;
     transform: translateX(-50%);
     border-width: 8px;
     border-style: solid;
-    border-color: white transparent transparent transparent;
+    border-color: transparent transparent white transparent;  /* Changed arrow direction to point upward */
   }
 }
 

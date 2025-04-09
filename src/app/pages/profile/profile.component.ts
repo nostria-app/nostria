@@ -61,6 +61,7 @@ export class ProfileComponent {
   error = signal<string | null>(null);
   isOwnProfile = signal<boolean>(false);
   showLightningQR = signal(false);
+  lightningQrCode = signal<string>('');
 
   // Convert route params to a signal
   private routeParams = toSignal<ParamMap>(this.route.paramMap);
@@ -95,6 +96,14 @@ export class ProfileComponent {
           this.error.set('No user ID provided');
           this.isLoading.set(false);
         }
+      }
+    });
+
+    // Add an effect to generate QR code when showing it and the profile changes
+    effect(() => {
+      // Only generate QR code if the lightning address exists and the QR popover is shown
+      if (this.showLightningQR() && this.userMetadata()?.content?.lud16) {
+        this.generateLightningQRCode();
       }
     });
   }
@@ -317,19 +326,19 @@ export class ProfileComponent {
     }
   }
 
-  // lightningQrCode = signal<string>('');
-
   /**
-   * Generates a QR code for the user's lightning address
+   * Generates a QR code for the user's lightning address and stores it in the lightningQrCode signal
    */
-  async getLightningQRCode(): Promise<string> {
-    if (!this.userMetadata()?.content?.lud16) {
-      return '';
+  async generateLightningQRCode(): Promise<void> {
+    const metadata = this.userMetadata();
+    if (!metadata?.content?.lud16) {
+      this.lightningQrCode.set('');
+      return;
     }
     
     try {
       // Format lightning address for QR code
-      const lightning = this.userMetadata()?.content?.lud16;
+      const lightning = metadata.content.lud16;
 
       const dataUrl = await QRCode.toDataURL(`lightning:${lightning}`, {
         margin: 1,
@@ -340,14 +349,10 @@ export class ProfileComponent {
         }
       });
 
-      console.log('DATA URL:', dataUrl);
-
-      // this.lightningQrCode.set(dataUrl);
-
-      return dataUrl;
+      this.lightningQrCode.set(dataUrl);
     } catch (err) {
       this.logger.error('Error generating QR code:', err);
-      return '';
+      this.lightningQrCode.set('');
     }
   }
 }
