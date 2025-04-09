@@ -35,9 +35,23 @@
       }
 
       @if (profile.content.lud16) {
-      <div class="profile-item">
+      <div class="profile-item" 
+           (mouseenter)="showLightningQR.set(true)" 
+           (mouseleave)="showLightningQR.set(false)">
         <mat-icon class="profile-icon-custom">⚡️</mat-icon>
         <span class="verified-name">{{ profile.content.lud16 }}</span>
+
+        <!-- QR Code Popover -->
+        @if (showLightningQR()) {
+          <div class="qr-popover">
+            <div class="qr-container">
+              <div class="qr-code">
+                <img [src]="getLightningQRCode()" alt="QR Code" class="qr-image">
+              </div>
+              <p class="qr-caption">Scan to send sats</p>
+            </div>
+          </div>
+        }
       </div>
       }
 
