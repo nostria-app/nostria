@@ -15,7 +15,8 @@
       [style.background-image]="profile.content.banner ? 'url(' + profile.content.banner + ')' : getDefaultBanner()">
     </div>
     <div class="profile-avatar-container">
-      <div class="profile-avatar" [class.clickable]="profile.content.picture" (click)="profile.content.picture && openProfilePicture()">
+      <div class="profile-avatar" [class.clickable]="profile.content.picture"
+        (click)="profile.content.picture && openProfilePicture()">
         @if (profile.content.picture) {
         <img [src]="profile.content.picture" alt="Profile picture" class="avatar-image">
         } @else {
@@ -25,12 +26,21 @@
     </div>
     <div class="profile-info">
       <h1 class="profile-name">{{ getFormattedName() }}</h1>
+
       @if (getVerifiedIdentifier()) {
-      <div class="verified-container">
-        <span class="verified-name">{{ getVerifiedIdentifier() }}</span>
+      <div class="profile-item">
         <mat-icon class="verified-icon">verified</mat-icon>
+        <span>{{ getVerifiedIdentifier() }}</span>
       </div>
       }
+
+      @if (profile.content.lud16) {
+      <div class="profile-item">
+        <mat-icon class="profile-icon-custom">⚡️</mat-icon>
+        <span class="verified-name">{{ profile.content.lud16 }}</span>
+      </div>
+      }
+
       @if (profile.content.about) {
       <div class="profile-bio">
         {{ profile.content.about }}
@@ -38,18 +48,22 @@
       }
 
       <!-- Profile context menu button -->
-      <button mat-icon-button class="profile-menu-button" [matMenuTriggerFor]="profileMenu" 
-              matTooltip="Profile options">
+      <button mat-icon-button class="profile-menu-button" [matMenuTriggerFor]="profileMenu"
+        matTooltip="Profile options">
         <mat-icon>more_vert</mat-icon>
       </button>
 
       <!-- Profile context menu -->
       <mat-menu #profileMenu="matMenu">
         @if (!isOwnProfile()) {
-          <button mat-menu-item (click)="unfollowUser()">
-            <mat-icon>person_remove</mat-icon>
-            <span>Unfollow</span>
-          </button>
+        <button mat-menu-item (click)="followUser()">
+          <mat-icon>person_add</mat-icon>
+          <span>Follow</span>
+        </button>
+        <button mat-menu-item (click)="unfollowUser()">
+          <mat-icon>person_remove</mat-icon>
+          <span>Unfollow</span>
+        </button>
         }
 
         <!-- Copy submenu -->
@@ -65,15 +79,15 @@
         </button>
 
         @if (!isOwnProfile()) {
-          <mat-divider></mat-divider>
-          <button mat-menu-item (click)="muteUser()">
-            <mat-icon>notifications_off</mat-icon>
-            <span>Mute</span>
-          </button>
-          <button mat-menu-item (click)="blockUser()">
-            <mat-icon>block</mat-icon>
-            <span>Block</span>
-          </button>
+        <mat-divider></mat-divider>
+        <button mat-menu-item (click)="muteUser()">
+          <mat-icon>notifications_off</mat-icon>
+          <span>Mute</span>
+        </button>
+        <button mat-menu-item (click)="blockUser()">
+          <mat-icon>block</mat-icon>
+          <span>Block</span>
+        </button>
         }
       </mat-menu>
 

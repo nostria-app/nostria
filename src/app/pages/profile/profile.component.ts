@@ -288,6 +288,14 @@ export class ProfileComponent {
   }
 
   /**
+   * Follows the user
+   */
+  followUser(): void {
+    this.logger.debug('Follow requested for:', this.pubkey());
+    // TODO: Implement actual follow functionality
+  }
+
+  /**
    * Opens the profile picture in a larger view dialog
    */
   openProfilePicture(): void {
