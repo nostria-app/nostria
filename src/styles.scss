@@ -384,3 +384,15 @@ mat-card-content li {
   margin-right: auto;
   align-items: center;
 }
+
+@media screen and (max-width: 600px) {
+  .hide-small {
+    display: none;
+  }
+}
+
+@media screen and (max-width: 420px) {
+  .hide-tiny {
+    display: none;
+  }
+}
