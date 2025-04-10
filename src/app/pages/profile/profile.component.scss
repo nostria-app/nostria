@@ -11,7 +11,7 @@
   
   /* Compact header styles */
   &.compact-header {
-    margin-bottom: 1rem; /* Reduced margin in compact mode */
+    margin-bottom: 1rem;
     padding-top: 1rem;
     
     @media (max-width: 768px) {
@@ -524,15 +524,15 @@
 .compact-header {
   display: flex;
   flex-direction: row;
-  align-items: flex-start;
-  padding-right: 1rem;
+  // align-items: flex-start;
+  // padding-right: 1rem;
   
   .profile-avatar-container.compact {
-    flex: 0 0 auto; /* Don't grow or shrink, keep original size */
+    flex: 0 0 auto;
   }
   
   .profile-info.compact {
-    flex: 1 1 auto; /* Grow and shrink as needed */
+    flex: 1 1 auto;
   }
   
   @media (max-width: 768px) {

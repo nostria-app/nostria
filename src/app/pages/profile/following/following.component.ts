@@ -79,16 +79,16 @@ export class FollowingComponent implements OnInit, AfterViewInit {
 
   ngAfterViewInit(): void {
     // Ensure component is scrolled into view after view initialization
-    setTimeout(() => this.scrollToTop(), 350);
+    // setTimeout(() => this.scrollToTop(), 350);
   }
   
   /**
    * Scroll the component into view
    */
-  scrollToTop(): void {
-    this.layoutService.scrollToElement('.following-header');
-    this.logger.debug('Scrolled following container into view');
-  }
+  // scrollToTop(): void {
+  //   this.layoutService.scrollToElement('.following-header');
+  //   this.logger.debug('Scrolled following container into view');
+  // }
   
   async loadUserProfile(): Promise<void> {
     try {
@@ -150,7 +150,7 @@ export class FollowingComponent implements OnInit, AfterViewInit {
   
   onTabChanged(tabIndex: number): void {
     this.selectedTabIndex.set(tabIndex);
-    this.scrollToTop();
+    // this.scrollToTop();
   }
   
   goBack(): void {
