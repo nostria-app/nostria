@@ -4,7 +4,6 @@
   padding-bottom: 2rem;
 }
 
-
 .profile-header {
   position: relative;
   margin-bottom: 5rem; /* Increased from 3rem to 5rem for more space */
@@ -394,6 +393,29 @@
       margin-top: 0.5rem;
     }
   }
+  
+  /* Fix for sticky tab headers */
+  ::ng-deep .mat-mdc-tab-header {
+    background-color: var(--mat-app-background-color, white);
+    // position: sticky;
+    // top: 0;
+    z-index: 100;
+    /* Add shadow for visual separation when sticky */
+    &.mat-mdc-tab-header-pagination-controls-enabled {
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+  }
+  
+  /* Make sure the tab labels are clickable */
+  ::ng-deep .mdc-tab {
+    // position: relative;
+    z-index: 101; /* Higher than the header itself */
+  }
+  
+  /* Ensure the tab indicator is visible */
+  ::ng-deep .mdc-tab-indicator {
+    z-index: 102;
+  }
 }
 
 /* Add styles for router link tabs */
@@ -405,6 +427,8 @@
   padding: 0 16px;
   opacity: 0.7;
   transition: opacity 0.2s ease;
+  // position: relative;
+  z-index: 10; /* Ensure it's above other content */
   
   &.mdc-tab--active {
     opacity: 1;
@@ -417,6 +441,20 @@
   .nav-link-text {
     margin-left: 4px;
   }
+}
+
+/* Ensure tab header click events aren't intercepted */
+::ng-deep .mat-mdc-tab-header-pagination {
+  z-index: 101;
+}
+
+::ng-deep .mat-mdc-tab-header {
+  overflow: visible !important; /* Make sure nothing gets clipped */
+}
+
+::ng-deep .mat-mdc-tab-links,
+::ng-deep .mat-mdc-tab-nav-bar {
+  z-index: 100;
 }
 
 .tab-content {

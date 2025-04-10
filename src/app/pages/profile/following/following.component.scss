@@ -16,7 +16,7 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   position: sticky;
   top: 0;
-  z-index: 2;
+  z-index: 3;
   background-color: var(--mat-sidenav-content-background-color, var(--mat-sys-background));
 }
 
@@ -61,28 +61,27 @@
   }
 }
 
-// Tab styles
-::ng-deep .mat-mdc-tab-header {
-  position: sticky;
-  top: 73px; // Height of the header
-  z-index: 1;
-  background-color: var(--mat-sidenav-content-background-color, var(--mat-sys-background));
+// Tab styles - Fix for sticky tabs
+.following-tabs {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  
+  ::ng-deep .mat-mdc-tab-header {
+    position: sticky;
+    top: 73px; // Height of header including padding
+    z-index: 2;
+    background-color: var(--mat-sidenav-content-background-color, var(--mat-sys-background));
+  }
+  
+  ::ng-deep .mat-mdc-tab-body-wrapper {
+    flex-grow: 1;
+    overflow-y: auto;
+  }
 }
 
-::ng-deep .mat-mdc-tab-body-wrapper {
-  flex-grow: 1;
-}
-
-// .following-content {
-//   flex: 1;
-//   padding: 16px;
-//   overflow-y: auto;
-// }
-
-.following-title {
-  font-size: 20px;
-  font-weight: 500;
-  margin-bottom: 16px;
+.following-content {
+  padding: 16px;
 }
 
 .following-list {
@@ -154,27 +153,4 @@
   p {
     margin: 8px 0 0;
   }
-}
-
-.mat-mdc-tab-header {
-  /** A hack needed to move the tabs up to the header. */
-  position: initial !important;
-  background-color: var(--mat-sidenav-content-background-color, var(--mat-sys-background));
-}
-
-.following-tab {
-  background-color: red !important;
-  position: initial !important;
-}
-
-.mat-mdc-tab-labels {
-  background-color: red !important;
-}
-
-mat-tab-group {
-  background-color: green !important;
-}
-
-mat-tab-header {
-  background-color: yellow !important
 }
