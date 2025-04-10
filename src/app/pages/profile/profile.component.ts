@@ -1,6 +1,6 @@
 import { Component, inject, signal, effect, untracked, Inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, ParamMap } from '@angular/router';
+import { ActivatedRoute, ParamMap, RouterModule, RouterOutlet } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -23,11 +23,19 @@ import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import QRCode from 'qrcode';
 
+interface NavLink {
+  path: string;
+  label: string;
+  icon: string;
+}
+
 @Component({
   selector: 'app-profile',
   standalone: true,
   imports: [
     CommonModule,
+    RouterModule,
+    RouterOutlet,
     MatCardModule,
     MatButtonModule,
     MatIconModule,
@@ -62,6 +70,14 @@ export class ProfileComponent {
   isOwnProfile = signal<boolean>(false);
   showLightningQR = signal(false);
   lightningQrCode = signal<string>('');
+
+  // Navigation links for the profile tabs
+  navLinks: NavLink[] = [
+    { path: 'posts', label: 'Posts', icon: 'article' },
+    { path: 'connections', label: 'Connections', icon: 'people' },
+    { path: 'photos', label: 'Photos', icon: 'photo_library' },
+    { path: 'about', label: 'About', icon: 'info' }
+  ];
 
   // Convert route params to a signal
   private routeParams = toSignal<ParamMap>(this.route.paramMap);

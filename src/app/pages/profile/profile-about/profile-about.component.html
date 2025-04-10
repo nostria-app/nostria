@@ -1,0 +1,40 @@
+<div class="tab-content">
+  <mat-card>
+    <mat-card-content>
+      <h2>Profile Info</h2>
+
+      @if (userMetadata()?.content.website) {
+      <div class="info-item">
+        <mat-icon>link</mat-icon>
+        <a [href]="userMetadata()?.content.website" target="_blank" rel="noopener noreferrer">
+          {{ userMetadata()?.content.website }}
+        </a>
+      </div>
+      }
+
+      @if (userMetadata()?.content.lud16) {
+      <div class="info-item">
+        <mat-icon>bolt</mat-icon>
+        <span>{{ userMetadata()?.content.lud16 }}</span>
+      </div>
+      }
+
+      <div class="info-item">
+        <mat-icon>fingerprint</mat-icon>
+        <div class="pubkey-container">
+          <span class="pubkey" title="{{ getFormattedNpub() }}">{{ getFormattedNpub() }}</span>
+          <button mat-icon-button matTooltip="Copy to clipboard" (click)="copyToClipboard()">
+            <mat-icon>content_copy</mat-icon>
+          </button>
+        </div>
+      </div>
+
+      @if (userMetadata()?.content.last_updated) {
+      <div class="info-item">
+        <mat-icon>update</mat-icon>
+        <span>Updated: {{ userMetadata()?.content.last_updated | date:'mediumDate' }}</span>
+      </div>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>
