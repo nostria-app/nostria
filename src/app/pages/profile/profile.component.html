@@ -10,11 +10,15 @@
   }
 
   @if (userMetadata(); as profile) {
-  <div class="profile-header">
+  <div class="profile-header" [class.compact-header]="isCompactHeader()">
+    <!-- Show banner only when not in compact mode -->
+    @if (!isCompactHeader()) {
     <div class="profile-banner"
       [style.background-image]="profile.content.banner ? 'url(' + profile.content.banner + ')' : getDefaultBanner()">
     </div>
-    <div class="profile-avatar-container">
+    }
+    
+    <div class="profile-avatar-container" [class.compact]="isCompactHeader()">
       <div class="profile-avatar" [class.clickable]="profile.content.picture"
         (click)="profile.content.picture && openProfilePicture()">
         @if (profile.content.picture) {
@@ -24,7 +28,8 @@
         }
       </div>
     </div>
-    <div class="profile-info">
+    
+    <div class="profile-info" [class.compact]="isCompactHeader()">
       <h1 class="profile-name">{{ getFormattedName() }}</h1>
 
       <div class="profile-item" title="{{ getFormattedNpub() }}">
@@ -65,15 +70,19 @@
       </div>
       }
 
-      @if (profile.content.about) {
+      <!-- Show bio only when not in compact mode -->
+      @if (!isCompactHeader() && profile.content.about) {
       <div class="profile-bio">
         {{ profile.content.about }}
       </div>
       }
 
+      <!-- Show following count only when not in compact mode -->
+      @if (!isCompactHeader()) {
       <span class="following-count" [routerLink]="'following'" [queryParamsHandling]="'preserve'">
         Following {{ profileState.followingList().length }}
       </span>
+      }
 
       <!-- Profile context menu button -->
       <button mat-icon-button class="profile-menu-button" [matMenuTriggerFor]="profileMenu"
@@ -149,6 +158,8 @@
       </mat-menu>
     </div>
 
+    <!-- Show actions only when not in compact mode -->
+    @if (!isCompactHeader()) {
     <div class="profile-actions">
       @if (isOwnProfile()) {
       <button mat-flat-button color="primary">
@@ -163,6 +174,7 @@
       </button>
       }
     </div>
+    }
   </div>
 
   <div class="profile-outlet">

@@ -7,6 +7,18 @@
 .profile-header {
   position: relative;
   margin-bottom: 5rem; /* Increased from 3rem to 5rem for more space */
+  transition: all 0.3s ease-in-out; /* Animation for expanding/collapsing */
+  
+  /* Compact header styles */
+  &.compact-header {
+    margin-bottom: 1rem; /* Reduced margin in compact mode */
+    padding-top: 1rem;
+    
+    @media (max-width: 768px) {
+      padding-top: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+  }
   
   @media (max-width: 768px) {
     margin-bottom: 2rem; /* Reduce bottom margin on mobile to compensate for layout changes */
@@ -20,6 +32,7 @@
   background-position: center;
   border-radius: 0 0 8px 8px;
   position: relative;
+  transition: height 0.3s ease-in-out, opacity 0.3s ease-in-out;
   
   @media (max-width: 768px) {
     height: 200px;
@@ -35,6 +48,21 @@
   bottom: 120px; /* Moved from 70px to 120px (50px more) */
   left: 32px;
   z-index: 10; /* Increased from 2 to 10 to ensure avatar appears in front of banner */
+  transition: all 0.3s ease-in-out;
+  
+  &.compact {
+    position: relative;
+    bottom: auto;
+    left: 20px;
+    margin-bottom: 0;
+    
+    /* Adjust for mobile */
+    @media (max-width: 768px) {
+      left: 20px;
+      transform: none;
+      margin-bottom: 10px;
+    }
+  }
   
   @media (max-width: 768px) {
     left: 50%;
@@ -54,10 +82,22 @@
   align-items: center;
   justify-content: center;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  transition: width 0.3s ease-in-out, height 0.3s ease-in-out;
+  
+  /* Adjust size in compact mode through the parent class */
+  .compact & {
+    width: 80px;
+    height: 80px;
+    
+    @media (max-width: 480px) {
+      width: 60px;
+      height: 60px;
+    }
+  }
   
   &.clickable {
     cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, width 0.3s ease-in-out, height 0.3s ease-in-out;
     
     &:hover {
       transform: scale(1.05);
@@ -87,6 +127,13 @@
   height: 100px;
   width: 100px;
   color: var(--mat-sys-primary, #673ab7);
+  transition: font-size 0.3s ease-in-out, height 0.3s ease-in-out, width 0.3s ease-in-out;
+  
+  .compact & {
+    font-size: 50px;
+    height: 50px;
+    width: 50px;
+  }
   
   @media (max-width: 768px) {
     font-size: 80px;
@@ -105,6 +152,35 @@
   margin-top: 20px; /* Increased from 10px to 20px to ensure content doesn't overlap */
   padding: 0 2rem 0 210px; /* Added left padding (160px avatar width + 50px gap) to make room for avatar */
   position: relative; /* Add this to position the menu button */
+  transition: all 0.3s ease-in-out;
+  
+  &.compact {
+    margin-top: 10px;
+    padding: 0 2rem 0 120px; /* Reduced left padding for compact mode */
+    
+    /* In compact mode, adjust the profile name and other elements */
+    .profile-name {
+      font-size: 1.5rem;
+      margin-bottom: 5px;
+      
+      @media (max-width: 768px) {
+        font-size: 1.2rem;
+      }
+    }
+    
+    .profile-item {
+      margin-top: 0;
+    }
+    
+    @media (max-width: 768px) {
+      padding: 0 1rem 0 90px;
+      margin-top: 5px;
+    }
+    
+    @media (max-width: 480px) {
+      padding: 0 1rem 0 70px;
+    }
+  }
   
   @media (max-width: 768px) {
     margin-top: 80px; /* Reduced from 120px to 80px to adjust for new avatar position */
@@ -118,6 +194,11 @@
   position: absolute;
   top: 0;
   right: 1rem;
+  transition: top 0.3s ease-in-out;
+  
+  .compact & {
+    top: -5px;
+  }
   
   @media (max-width: 768px) {
     top: -10px;
@@ -129,6 +210,7 @@
   margin: 0;
   font-size: 2rem;
   font-weight: 700;
+  transition: font-size 0.3s ease-in-out;
   
   @media (max-width: 768px) {
     font-size: 1.5rem;
@@ -262,6 +344,7 @@
   padding-left: 210px; /* Added left padding to align with profile-info */
   display: flex;
   gap: 1rem;
+  transition: opacity 0.3s ease-in-out, max-height 0.3s ease-in-out, margin 0.3s ease-in-out;
   
   @media (max-width: 768px) {
     margin: 1rem 1rem 3rem;
@@ -273,6 +356,7 @@
   
   button {
     min-width: 120px;
+    transition: opacity 0.2s ease-in-out;
   }
 }
 
@@ -280,6 +364,15 @@
   margin-top: 4rem; /* Increased from 3rem to 4rem */
   padding: 0 1rem;
   clear: both; /* Ensure content stays below the profile section */
+  
+  /* Adjust top margin when in compact mode */
+  .compact-header + & {
+    margin-top: 1rem;
+    
+    @media (max-width: 768px) {
+      margin-top: 0.5rem;
+    }
+  }
 }
 
 /* Add styles for router link tabs */
