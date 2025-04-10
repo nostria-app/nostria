@@ -24,7 +24,7 @@
   </div>
   
   <mat-tab-group [selectedIndex]="selectedTabIndex()" (selectedIndexChange)="onTabChanged($event)" animationDuration="300ms">
-    <mat-tab label="Connections">
+    <mat-tab class="following-tab" label="Connections">
       <div class="following-content">
         @if (isLoading()) {
           <div class="loading-container">
@@ -64,7 +64,7 @@
       </div>
     </mat-tab>
     
-    <mat-tab label="Mutual Connections">
+    <mat-tab class="following-tab" label="Mutual Connections">
       <div class="following-content">
         @if (mutualConnectionsList().length === 0) {
           <div class="empty-list">
