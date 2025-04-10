@@ -7,7 +7,7 @@ import { FollowingComponent } from './following/following.component';
 @NgModule({
   declarations: [
     ProfileComponent,
-    FollowingComponent
+    FollowingComponent,
   ],
   imports: [
     CommonModule,

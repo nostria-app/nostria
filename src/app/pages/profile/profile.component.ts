@@ -24,6 +24,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import QRCode from 'qrcode';
 import { kinds, SimplePool } from 'nostr-tools';
 import { StorageService } from '../../services/storage.service';
+import { ProfileStateService } from '../../services/profile-state.service';
 
 @Component({
   selector: 'app-profile',
@@ -47,6 +48,7 @@ import { StorageService } from '../../services/storage.service';
     MatMenuModule,
     FormsModule,
     MatFormFieldModule,
+
   ],
   templateUrl: './profile.component.html',
   styleUrl: './profile.component.scss'
@@ -60,6 +62,7 @@ export class ProfileComponent {
   private logger = inject(LoggerService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
+  profileState = inject(ProfileStateService);
 
   pubkey = signal<string>('');
   userMetadata = signal<NostrEvent | undefined>(undefined);
@@ -115,7 +118,7 @@ export class ProfileComponent {
     });
   }
 
-  private async loadUserData(pubkey: string) {
+  private async loadUserData(pubkey: string, disconnect = true): Promise<void> {
 
     debugger;
 
@@ -123,14 +126,13 @@ export class ProfileComponent {
       this.nostrService.currentProfileUserPool = new SimplePool();
     }
 
-    let relays = await this.nostrService.getRelaysForUser(pubkey);
+    let relays = await this.nostrService.getRelaysForUser(pubkey, disconnect);
     if (!relays) {
       return this.error.set('No relays found for this user');
     }
 
     let relayUrls = this.nostrService.getRelayUrls(relays);
     this.nostrService.currentProfileRelayUrls = relayUrls;
-
     const pool = this.nostrService.currentProfileUserPool;
 
     pool?.subscribeMany(this.nostrService.currentProfileRelayUrls, [{
@@ -155,7 +157,8 @@ export class ProfileComponent {
           const followingList = this.storage.getPTagsValues(evt);
           debugger;
           console.log(followingList);
-          this.followingList.set(followingList);
+          // this.followingList.set(followingList);
+          this.profileState.followingList.set(followingList);
           // Now you can use 'this' here
           // For example: this.handleContacts(evt);
         }

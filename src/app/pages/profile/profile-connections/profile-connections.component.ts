@@ -12,6 +12,7 @@ import { LoggerService } from '../../../services/logger.service';
 import { LoadingOverlayComponent } from '../../../components/loading-overlay/loading-overlay.component';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { NostrEvent } from '../../../interfaces';
+import { ProfileStateService } from '../../../services/profile-state.service';
 
 interface Connection {
   pubkey: string;
@@ -44,6 +45,7 @@ export class ProfileConnectionsComponent {
   private location = inject(Location);
   private nostrService = inject(NostrService);
   private logger = inject(LoggerService);
+  profileState = inject(ProfileStateService);
 
   activeTabIndex = signal(0);
   isLoading = signal(true);
@@ -54,12 +56,9 @@ export class ProfileConnectionsComponent {
   mutuals = signal<Connection[]>([]);
   
   constructor() {
-    effect(() => {
-      const pubkey = this.getPubkey();
-      
-      if (pubkey) {
-        this.loadConnections(pubkey);
-      }
+    effect(async () => {
+      const list = this.profileState.followingList();
+      this.loadConnections(list);
     });
   }
   
@@ -68,7 +67,7 @@ export class ProfileConnectionsComponent {
     return this.route.parent?.snapshot.paramMap.get('id') || '';
   }
   
-  async loadConnections(pubkey: string): Promise<void> {
+  async loadConnections(following: string[]): Promise<void> {
     this.isLoading.set(true);
     this.error.set(null);
     
