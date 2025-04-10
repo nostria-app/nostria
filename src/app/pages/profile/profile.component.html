@@ -47,9 +47,9 @@
       }
 
       @if (profile.content.lud16) {
-      <div class="profile-item" (mouseenter)="showLightningQR.set(true)" (mouseleave)="showLightningQR.set(false)" title="{{ profile.content.lud16 }}">
+      <div class="profile-item">
         <mat-icon class="profile-icon-custom">⚡️</mat-icon>
-        <span class="verified-name">{{ profile.content.lud16 }}</span>
+        <span class="verified-name"  (mouseenter)="showLightningQR.set(true)" (mouseleave)="showLightningQR.set(false)" >{{ profile.content.lud16 }}</span>
 
         <!-- QR Code Popover -->
         @if (showLightningQR() && lightningQrCode()) {
