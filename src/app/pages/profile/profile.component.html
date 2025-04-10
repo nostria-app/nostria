@@ -80,9 +80,9 @@
 
       <!-- Show following count only when not in compact mode -->
       @if (!isCompactHeader()) {
-      <span class="following-count" [routerLink]="'following'" [queryParamsHandling]="'preserve'">
+      <a class="following-count" [routerLink]="'following'" [queryParamsHandling]="'preserve'">
         Following {{ profileState.followingList().length }}
-      </span>
+      </a>
       }
 
       <!-- Profile context menu button -->

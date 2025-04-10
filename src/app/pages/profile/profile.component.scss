@@ -12,10 +12,11 @@
   /* Compact header styles */
   &.compact-header {
     margin-bottom: 1rem;
-    padding-top: 1rem;
+    padding: 1em;
+    // padding-top: 1rem;
     
     @media (max-width: 768px) {
-      padding-top: 0.5rem;
+      // padding-top: 0.5rem;
       margin-bottom: 0.5rem;
     }
   }
@@ -280,7 +281,7 @@
   top: 100%;  /* Changed from 'bottom: 100%' to 'top: 100%' */
   left: 12%;
   transform: translateX(-50%);
-  background-color: white;
+  background-color: var(--mat-card-container-color, white);
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   padding: 16px;
@@ -295,7 +296,7 @@
     transform: translateX(-50%);
     border-width: 8px;
     border-style: solid;
-    border-color: transparent transparent white transparent;  /* Changed arrow direction to point upward */
+    border-color: transparent transparent var(--mat-card-container-color, white) transparent;
   }
 }
 
@@ -318,7 +319,7 @@
 .qr-caption {
   margin-top: 8px;
   font-size: 14px;
-  color: #666;
+  color: var(--mat-secondary-text-color, #666);
 }
 
 .verified-name {
@@ -389,31 +390,19 @@
     }
   }
   
-  /* Fix for sticky tab headers */
-  ::ng-deep .mat-mdc-tab-header {
-    background-color: var(--mat-app-background-color, white);
-    // position: sticky;
-    // top: 0;
-    z-index: 100;
-    /* Add shadow for visual separation when sticky */
-    &.mat-mdc-tab-header-pagination-controls-enabled {
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    }
-  }
-  
-  /* Make sure the tab labels are clickable */
-  ::ng-deep .mdc-tab {
-    // position: relative;
-    z-index: 101; /* Higher than the header itself */
-  }
-  
-  /* Ensure the tab indicator is visible */
-  ::ng-deep .mdc-tab-indicator {
-    z-index: 102;
-  }
+  /* Clean up tab header styling */
+  // ::ng-deep .mat-mdc-tab-header {
+  //   background-color: var(--mat-app-background-color, white);
+  //   z-index: 10;
+    
+  //   /* Add subtle shadow for visual separation */
+  //   &.mat-mdc-tab-header-pagination-controls-enabled {
+  //     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  //   }
+  // }
 }
 
-/* Add styles for router link tabs */
+/* Clean up tab navigation styles */
 ::ng-deep .mat-mdc-tab-link {
   display: flex !important;
   align-items: center;
@@ -422,8 +411,7 @@
   padding: 0 16px;
   opacity: 0.7;
   transition: opacity 0.2s ease;
-  // position: relative;
-  z-index: 10; /* Ensure it's above other content */
+  z-index: 5;
   
   &.mdc-tab--active {
     opacity: 1;
@@ -447,10 +435,10 @@
   overflow: visible !important; /* Make sure nothing gets clipped */
 }
 
-::ng-deep .mat-mdc-tab-links,
-::ng-deep .mat-mdc-tab-nav-bar {
-  z-index: 100;
-}
+// ::ng-deep .mat-mdc-tab-links,
+// ::ng-deep .mat-mdc-tab-nav-bar {
+//   z-index: 100;
+// }
 
 .tab-content {
   padding: 2rem 1rem;
