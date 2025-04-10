@@ -212,7 +212,7 @@ export class NostrService {
   /**
    * Get metadata from cache or load it from storage
    */
-  async getMetadataForUser(pubkey: string): Promise<NostrEvent | undefined> {
+  async getMetadataForUser(pubkey: string, disconnect = true): Promise<NostrEvent | undefined> {
     // Check cache first
     const cachedMetadata = this.usersMetadata().get(pubkey);
     if (cachedMetadata) {
@@ -229,7 +229,7 @@ export class NostrService {
       this.updateMetadataCache(pubkey, events[0]);
       return events[0];
     } else {
-      const metadata = await this.discoverMetadata(pubkey);
+      const metadata = await this.discoverMetadata(pubkey, disconnect);
 
       if (metadata) {
         this.updateMetadataCache(pubkey, metadata);
@@ -242,7 +242,7 @@ export class NostrService {
   currentProfileUserPool: SimplePool | null = null;
   currentProfileRelayUrls: string[] = [];
 
-  async discoverMetadata(pubkey: string): Promise<NostrEvent | undefined> {
+  async discoverMetadata(pubkey: string, disconnect = true): Promise<NostrEvent | undefined> {
     // FLOW: Find the user's relays first. Save it.
     // Connect to their relays and get metadata. Save it.
     const event = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
@@ -277,7 +277,10 @@ export class NostrService {
 
         this.currentProfileUserPool = userPool;
         this.currentProfileRelayUrls = relayUrls;
-       // userPool.close(relayUrls);
+
+        if (disconnect) {
+          userPool.close(relayUrls);
+        }
 
         return metadata as NostrEvent;
       }
@@ -286,10 +289,57 @@ export class NostrService {
     return undefined;
   }
 
+  // async discoverRelays(pubkey: string, disconnect = true): Promise<NostrEvent | undefined> {
+  //   // FLOW: Find the user's relays first. Save it.
+  //   // Connect to their relays and get metadata. Save it.
+  //   const event = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
+
+  //   if (!event) {
+  //     // TODO: Duplicate code from data-loading service. Refactor and improve!!
+  //     let bootstrapPool = new SimplePool();
+  //     this.logger.debug('Connecting to bootstrap relays', { relays: this.relayService.bootStrapRelays() });
+
+  //     const relays = await bootstrapPool.get(this.relayService.bootStrapRelays(), {
+  //       kinds: [kinds.RelayList],
+  //       authors: [pubkey],
+  //     });
+
+  //     bootstrapPool.close(this.relayService.bootStrapRelays());
+
+  //     if (relays) {
+  //       await this.storage.saveEvent(relays);
+
+  //       const relayUrls = this.getRelayUrls(relays);
+
+  //       let userPool = new SimplePool();
+
+  //       const metadata = await userPool.get(relayUrls, {
+  //         kinds: [kinds.Metadata],
+  //         authors: [pubkey],
+  //       });
+
+  //       if (metadata) {
+  //         await this.storage.saveEvent(metadata);
+  //       }
+
+  //       this.currentProfileUserPool = userPool;
+  //       this.currentProfileRelayUrls = relayUrls;
+
+  //       if (disconnect) {
+  //         userPool.close(relayUrls);
+  //       }
+
+  //       return metadata as NostrEvent;
+  //     }
+  //   }
+
+  //   return undefined;
+  // }
+
   /**
    * Get relays from cache or load from storage
    */
-  async getRelaysForUser(pubkey: string): Promise<Event | undefined> {
+  async getRelaysForUser(pubkey: string, disconnect = true): Promise<Event | undefined> {
     // Check cache first
     const cachedRelays = this.usersRelays().get(pubkey);
     if (cachedRelays) {
@@ -305,8 +355,20 @@ export class NostrService {
       this.updateRelaysCache(pubkey, events[0]);
       return events[0];
     } else {
+      // This should never happen, relays should be discovered while getting metadata
+      // and stored in database.
+      debugger;
+
+      // TODO!! and use "disconnect" paramter.
       // TODO: Implement this.
       // Go get the relay list for the user from the nostr relays.
+      // const relays = await this.discoverRelays(pubkey, disconnect);
+
+      // if (relays) {
+      //   this.updateRelaysCache(pubkey, relays);
+      // }
+
+      // return relays;
     }
 
     return undefined;
