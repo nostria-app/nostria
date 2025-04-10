@@ -239,6 +239,9 @@ export class NostrService {
     }
   }
 
+  currentProfileUserPool: SimplePool | null = null;
+  currentProfileRelayUrls: string[] = [];
+
   async discoverMetadata(pubkey: string): Promise<NostrEvent | undefined> {
     // FLOW: Find the user's relays first. Save it.
     // Connect to their relays and get metadata. Save it.
@@ -272,7 +275,9 @@ export class NostrService {
           await this.storage.saveEvent(metadata);
         }
 
-        userPool.close(relayUrls);
+        this.currentProfileUserPool = userPool;
+        this.currentProfileRelayUrls = relayUrls;
+       // userPool.close(relayUrls);
 
         return metadata as NostrEvent;
       }

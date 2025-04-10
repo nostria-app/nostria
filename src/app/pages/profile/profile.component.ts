@@ -22,6 +22,8 @@ import { MatListModule } from '@angular/material/list';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import QRCode from 'qrcode';
+import { kinds, SimplePool } from 'nostr-tools';
+import { StorageService } from '../../services/storage.service';
 
 @Component({
   selector: 'app-profile',
@@ -52,6 +54,7 @@ import QRCode from 'qrcode';
 export class ProfileComponent {
   private route = inject(ActivatedRoute);
   private nostrService = inject(NostrService);
+  private storage = inject(StorageService);
   private relayService = inject(RelayService);
   private appState = inject(ApplicationStateService);
   private logger = inject(LoggerService);
@@ -65,8 +68,7 @@ export class ProfileComponent {
   isOwnProfile = signal<boolean>(false);
   showLightningQR = signal(false);
   lightningQrCode = signal<string>('');
-  followingCount = signal(100); // This would be dynamically updated with real data
-
+  followingList = signal<string[]>([]); // This would be dynamically updated with real data
 
   // Convert route params to a signal
   private routeParams = toSignal<ParamMap>(this.route.paramMap);
@@ -113,6 +115,77 @@ export class ProfileComponent {
     });
   }
 
+  private async loadUserData(pubkey: string) {
+
+    debugger;
+
+    if (!this.nostrService.currentProfileUserPool) {
+      this.nostrService.currentProfileUserPool = new SimplePool();
+    }
+
+    let relays = await this.nostrService.getRelaysForUser(pubkey);
+    if (!relays) {
+      return this.error.set('No relays found for this user');
+    }
+
+    let relayUrls = this.nostrService.getRelayUrls(relays);
+    this.nostrService.currentProfileRelayUrls = relayUrls;
+
+    const pool = this.nostrService.currentProfileUserPool;
+
+    pool?.subscribeMany(this.nostrService.currentProfileRelayUrls, [{
+      kinds: [kinds.Contacts],
+      authors: [pubkey],
+    },
+    {
+      kinds: [kinds.ShortTextNote],
+      authors: [pubkey],
+      limit: 30
+    },
+    {
+      kinds: [kinds.LongFormArticle],
+      authors: [pubkey],
+      limit: 30
+    },
+    ], {
+      onevent: (evt) => {
+        console.log('Event received', evt);
+    
+        if (evt.kind === kinds.Contacts) {
+          const followingList = this.storage.getPTagsValues(evt);
+          debugger;
+          console.log(followingList);
+          this.followingList.set(followingList);
+          // Now you can use 'this' here
+          // For example: this.handleContacts(evt);
+        }
+      }, 
+      onclose: (reasons) => {
+        console.log('Pool closed', reasons);
+        // Also changed this to an arrow function for consistency
+      },
+    });
+
+
+    // this.isLoading.set(true);
+    // this.error.set(null);
+
+    // try {
+    //   // Fetch user data from the relay service
+    //   const userData = await this.relayService.getUserData(pubkey);
+    //   if (userData) {
+    //     this.userMetadata.set(userData);
+    //   } else {
+    //     this.error.set('No user data found');
+    //   }
+    // } catch (err) {
+    //   this.logger.error('Error loading user data', err);
+    //   this.error.set('Error loading user data');
+    // } finally {
+    //   this.isLoading.set(false);
+    // }
+  }
+
   private async loadUserProfile(pubkey: string): Promise<void> {
     this.isLoading.set(true);
     this.error.set(null);
@@ -127,6 +200,9 @@ export class ProfileComponent {
       } else {
         // Only scroll if profile was successfully loaded
         setTimeout(() => this.scrollToOptimalPosition(), 100);
+
+        // After getting the metadata, get other data from this user.
+        this.loadUserData(pubkey);
       }
     } catch (err) {
       this.logger.error('Error loading user profile', err);
@@ -142,11 +218,11 @@ export class ProfileComponent {
   private scrollToOptimalPosition(): void {
     // We need the banner height to calculate the optimal scroll position
     const bannerHeight = this.getBannerHeight();
-    
+
     // Calculate scroll position that shows half of the banner
     // We divide banner height by 2 to show half of it
     const scrollPosition = bannerHeight / 2;
-    
+
     // Find the content wrapper element
     const contentWrapper = document.querySelector('.content-wrapper');
     if (contentWrapper) {
@@ -155,7 +231,7 @@ export class ProfileComponent {
         top: scrollPosition,
         behavior: 'smooth'
       });
-      
+
       this.logger.debug('Scrolled content wrapper to optimal profile view position', scrollPosition);
     } else {
       this.logger.error('Could not find content-wrapper element for scrolling');
@@ -168,7 +244,7 @@ export class ProfileComponent {
   private getBannerHeight(): number {
     // Default height of the banner is 300px (as defined in CSS)
     let bannerHeight = 300;
-    
+
     // Check viewport width and return appropriate banner height
     // matching the responsive CSS values
     if (window.innerWidth <= 480) {
@@ -176,7 +252,7 @@ export class ProfileComponent {
     } else if (window.innerWidth <= 768) {
       bannerHeight = 200;
     }
-    
+
     return bannerHeight;
   }
 
@@ -340,7 +416,7 @@ export class ProfileComponent {
       this.lightningQrCode.set('');
       return;
     }
-    
+
     try {
       // Format lightning address for QR code
       const lightning = metadata.content.lud16;
@@ -404,7 +480,7 @@ export class ProfilePictureDialogComponent {
   constructor(
     @Inject(MAT_DIALOG_DATA) public data: { imageUrl: string, userName: string },
     private dialogRef: MatDialogRef<ProfilePictureDialogComponent>
-  ) {}
+  ) { }
 
   close(): void {
     this.dialogRef.close();
