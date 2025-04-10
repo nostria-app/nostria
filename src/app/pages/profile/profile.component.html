@@ -51,7 +51,8 @@
       </div>
       }
 
-      @if (profile.content.lud16) {
+      <!-- Hide lud16 in compact mode -->
+      @if (profile.content.lud16 && !isCompactHeader()) {
       <div class="profile-item">
         <mat-icon class="profile-icon-custom">⚡️</mat-icon>
         <span class="verified-name"  (mouseenter)="showLightningQR.set(true)" (mouseleave)="showLightningQR.set(false)" >{{ profile.content.lud16 }}</span>

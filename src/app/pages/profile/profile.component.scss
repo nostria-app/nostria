@@ -55,6 +55,8 @@
     bottom: auto;
     left: 20px;
     margin-bottom: 0;
+    display: flex; /* Add flex to align with profile info */
+    align-items: center; /* Vertically center the avatar */
     
     /* Adjust for mobile */
     @media (max-width: 768px) {
@@ -68,6 +70,11 @@
     left: 50%;
     transform: translateX(-50%);
     top: 180px;
+    
+    &.compact {
+      left: 20px;
+      transform: none;
+    }
   }
 }
 
@@ -157,6 +164,9 @@
   &.compact {
     margin-top: 10px;
     padding: 0 2rem 0 120px; /* Reduced left padding for compact mode */
+    display: flex; /* Add flex display */
+    flex-direction: column; /* Stack children vertically */
+    justify-content: center; /* Center content vertically */
     
     /* In compact mode, adjust the profile name and other elements */
     .profile-name {
@@ -173,12 +183,14 @@
     }
     
     @media (max-width: 768px) {
-      padding: 0 1rem 0 90px;
-      margin-top: 5px;
+      padding: 0 1rem 0 20px; /* Reduce left padding to align with avatar */
+      margin-top: 0; /* Remove top margin */
+      margin-left: 80px; /* Add left margin to account for avatar width (80px) */
     }
     
     @media (max-width: 480px) {
-      padding: 0 1rem 0 70px;
+      margin-left: 70px; /* Adjust for smaller avatar (60px) + spacing */
+      padding: 0 1rem 0 10px;
     }
   }
   
@@ -186,6 +198,10 @@
     margin-top: 80px; /* Reduced from 120px to 80px to adjust for new avatar position */
     text-align: left; /* Changed from center to left */
     padding: 0 1.5rem; /* Slightly increased from 1rem for better spacing */
+    
+    &.compact {
+      margin-top: 0; /* No top margin in compact mode on mobile */
+    }
   }
 }
 
@@ -500,6 +516,30 @@
     .mdc-dialog__surface {
       background-color: transparent;
       box-shadow: none;
+    }
+  }
+}
+
+/* Update the layout for compact mode to align avatar and profile info */
+.compact-header {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  padding-right: 1rem;
+  
+  .profile-avatar-container.compact {
+    flex: 0 0 auto; /* Don't grow or shrink, keep original size */
+  }
+  
+  .profile-info.compact {
+    flex: 1 1 auto; /* Grow and shrink as needed */
+  }
+  
+  @media (max-width: 768px) {
+    flex-wrap: nowrap;
+    
+    .profile-avatar-container.compact {
+      margin-right: 10px;
     }
   }
 }
