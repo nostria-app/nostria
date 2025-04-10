@@ -4,6 +4,7 @@
   padding-bottom: 2rem;
 }
 
+
 .profile-header {
   position: relative;
   margin-bottom: 5rem; /* Increased from 3rem to 5rem for more space */
@@ -53,7 +54,7 @@
   &.compact {
     position: relative;
     bottom: auto;
-    left: 20px;
+    left: 0px;
     margin-bottom: 0;
     display: flex; /* Add flex to align with profile info */
     align-items: center; /* Vertically center the avatar */
@@ -62,7 +63,11 @@
     @media (max-width: 768px) {
       left: 20px;
       transform: none;
-      margin-bottom: 10px;
+      margin-bottom: 0;
+    }
+    
+    @media (max-width: 480px) {
+      left: 15px;
     }
   }
   
@@ -163,10 +168,10 @@
   
   &.compact {
     margin-top: 10px;
-    padding: 0 2rem 0 120px; /* Reduced left padding for compact mode */
-    display: flex; /* Add flex display */
-    flex-direction: column; /* Stack children vertically */
-    justify-content: center; /* Center content vertically */
+    padding: 0 2rem 0 0; /* Remove left padding since we'll control spacing with margins */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
     
     /* In compact mode, adjust the profile name and other elements */
     .profile-name {
@@ -183,14 +188,14 @@
     }
     
     @media (max-width: 768px) {
-      padding: 0 1rem 0 20px; /* Reduce left padding to align with avatar */
-      margin-top: 0; /* Remove top margin */
-      margin-left: 80px; /* Add left margin to account for avatar width (80px) */
+      padding: 0 1rem 0 0;
+      margin-top: 0;
+      margin-left: 0; /* Remove the large margin */
     }
     
     @media (max-width: 480px) {
-      margin-left: 70px; /* Adjust for smaller avatar (60px) + spacing */
-      padding: 0 1rem 0 10px;
+      margin-left: 0; /* Remove the margin here as well */
+      padding: 0 1rem 0 0;
     }
   }
   
@@ -524,22 +529,30 @@
 .compact-header {
   display: flex;
   flex-direction: row;
-  // align-items: flex-start;
-  // padding-right: 1rem;
+  align-items: center;
+  padding: 0 1rem 0 0;
   
   .profile-avatar-container.compact {
-    flex: 0 0 auto;
+    flex: 0 0 auto; /* Don't grow or shrink */
+    margin-right: 15px; /* Add explicit spacing between avatar and content */
+    
+    @media (max-width: 768px) {
+      margin-right: 10px;
+    }
+    
+    @media (max-width: 480px) {
+      margin-right: 8px;
+    }
   }
   
   .profile-info.compact {
-    flex: 1 1 auto;
-  }
-  
-  @media (max-width: 768px) {
-    flex-wrap: nowrap;
+    flex: 1 1 auto; /* Allow growing and shrinking */
+    padding-left: 0; /* Remove left padding since we're using margin on the avatar */
+    margin-left: 0; /* Reset any margins */
     
-    .profile-avatar-container.compact {
-      margin-right: 10px;
+    @media (max-width: 768px) {
+      padding-left: 0;
+      margin-left: 0;
     }
   }
 }
