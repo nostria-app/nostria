@@ -23,12 +23,6 @@ import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import QRCode from 'qrcode';
 
-interface NavLink {
-  path: string;
-  label: string;
-  icon: string;
-}
-
 @Component({
   selector: 'app-profile',
   standalone: true,
@@ -48,6 +42,7 @@ interface NavLink {
     MatDialogModule,
     LoadingOverlayComponent,
     MatListModule,
+    MatMenuModule,
     FormsModule,
     MatFormFieldModule,
   ],
@@ -70,16 +65,8 @@ export class ProfileComponent {
   isOwnProfile = signal<boolean>(false);
   showLightningQR = signal(false);
   lightningQrCode = signal<string>('');
+  followingCount = signal(100); // This would be dynamically updated with real data
 
-  // Updated navigation links for the profile tabs
-  navLinks: NavLink[] = [
-    { path: 'notes', label: 'Notes', icon: 'chat' },
-    { path: 'replies', label: 'Replies', icon: 'reply_all' },
-    { path: 'reads', label: 'Reads', icon: 'bookmark' },
-    { path: 'media', label: 'Media', icon: 'image' },
-    { path: 'about', label: 'About', icon: 'info' },
-    { path: 'connections', label: 'Connections', icon: 'people' }
-  ];
 
   // Convert route params to a signal
   private routeParams = toSignal<ParamMap>(this.route.paramMap);

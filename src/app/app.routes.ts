@@ -11,6 +11,8 @@ import { ProfileReadsComponent } from './pages/profile/profile-reads/profile-rea
 import { ProfileMediaComponent } from './pages/profile/profile-media/profile-media.component';
 import { ProfileAboutComponent } from './pages/profile/profile-about/profile-about.component';
 import { ProfileConnectionsComponent } from './pages/profile/profile-connections/profile-connections.component';
+import { FollowingComponent } from './pages/profile/following/following.component';
+import { ProfileHomeComponent } from './pages/profile/profile-home/profile-home.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/home', pathMatch: 'full' },
@@ -19,19 +21,21 @@ export const routes: Routes = [
   { path: 'settings', component: SettingsComponent },
   { path: 'credentials', component: CredentialsComponent },
   { path: 'about', component: AboutComponent },
-  { 
-    path: 'p/:id', 
+  {
+    path: 'p/:id',
     component: ProfileComponent,
     children: [
-      { path: '', redirectTo: 'notes', pathMatch: 'full' },
-      { path: 'notes', component: ProfileNotesComponent },
+      // { path: '', redirectTo: 'notes', pathMatch: 'full' },
+      { path: '', component: ProfileHomeComponent, pathMatch: 'full' },
       { path: 'replies', component: ProfileRepliesComponent },
       { path: 'reads', component: ProfileReadsComponent },
       { path: 'media', component: ProfileMediaComponent },
       { path: 'about', component: ProfileAboutComponent },
-      { path: 'connections', component: ProfileConnectionsComponent }
+      { path: 'connections', component: ProfileConnectionsComponent },
+      { path: 'following', component: FollowingComponent }
+
     ]
   },
-  { path: 'profile', redirectTo: '/credentials' }, 
+  { path: 'profile', redirectTo: '/credentials' },
   { path: '**', redirectTo: '/home' }
 ];
