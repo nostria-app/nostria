@@ -1,6 +1,6 @@
 import { Component, inject, signal, effect, untracked, Inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, ParamMap, RouterModule, RouterOutlet } from '@angular/router';
+import { ActivatedRoute, ParamMap, RouterModule, RouterOutlet, Router, NavigationEnd } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -56,6 +56,7 @@ import { LayoutService } from '../../services/layout.service';
 })
 export class ProfileComponent {
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private nostrService = inject(NostrService);
   private storage = inject(StorageService);
   private relayService = inject(RelayService);
@@ -74,6 +75,7 @@ export class ProfileComponent {
   showLightningQR = signal(false);
   lightningQrCode = signal<string>('');
   followingList = signal<string[]>([]); // This would be dynamically updated with real data
+  isCompactHeader = signal<boolean>(false); // New signal to track compact header mode
 
   // Convert route params to a signal
   private routeParams = toSignal<ParamMap>(this.route.paramMap);
@@ -118,6 +120,28 @@ export class ProfileComponent {
         this.generateLightningQRCode();
       }
     });
+
+    // Add effect to monitor router events for sub-route changes
+    this.router.events.subscribe(event => {
+      if (event instanceof NavigationEnd) {
+        // Check if current route is one that should use compact header
+        const currentUrl = event.urlAfterRedirects;
+        const shouldBeCompact = this.shouldUseCompactHeader(currentUrl);
+        
+        // Only update if the value changes to avoid unnecessary renders
+        if (this.isCompactHeader() !== shouldBeCompact) {
+          this.isCompactHeader.set(shouldBeCompact);
+        }
+      }
+    });
+  }
+
+  // Helper method to determine if the current route should use compact header
+  private shouldUseCompactHeader(url: string): boolean {
+    // Check if URL contains these paths that require compact header
+    return url.includes('/following') || 
+           url.includes('/about') || 
+           url.includes('/media');
   }
 
   private async loadUserData(pubkey: string, disconnect = true): Promise<void> {
