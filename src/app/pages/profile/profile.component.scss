@@ -275,10 +275,6 @@
   }
 }
 
-.following-count {
-  color: red;
-}
-
 .qr-popover {
   position: absolute;
   top: 100%;  /* Changed from 'bottom: 100%' to 'top: 100%' */
@@ -348,7 +344,6 @@
 
 .profile-bio {
   margin-top: 1rem;
-  color: var(--mat-subtitle-text-color, rgba(0, 0, 0, 0.7));
   white-space: pre-line;
   max-width: 700px;
   
