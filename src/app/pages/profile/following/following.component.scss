@@ -39,7 +39,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: #e0e0e0;
+    background-color: var(--mat-card-subtle-surface-color, #e0e0e0);
 
     img {
       width: 100%;
@@ -51,7 +51,7 @@
       font-size: 40px;
       width: 40px;
       height: 40px;
-      color: #757575;
+      color: var(--mat-caption-text-color, #757575);
     }
   }
 
@@ -98,7 +98,7 @@
   transition: background-color 0.2s;
 
   &:hover {
-    background-color: rgba(0, 0, 0, 0.04);
+    background-color: var(--mat-surface-hover-state-layer-color, rgba(0, 0, 0, 0.04));
   }
 
   &-avatar {
@@ -109,7 +109,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: #e0e0e0;
+    background-color: var(--mat-card-subtle-surface-color, #e0e0e0);
 
     img {
       width: 100%;
@@ -121,7 +121,7 @@
       font-size: 48px;
       width: 48px;
       height: 48px;
-      color: #757575;
+      color: var(--mat-caption-text-color, #757575);
     }
   }
 
