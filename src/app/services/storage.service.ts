@@ -212,13 +212,26 @@ export class StorageService {
   }
 
   // Get d-tag value from an event
-  private getDTagValue(event: NostrEvent): string | undefined {
+  getDTagValue(event: NostrEvent): string | undefined {
     for (const tag of event.tags) {
       if (tag.length >= 2 && tag[0] === 'd') {
         return tag[1];
       }
     }
     return undefined;
+  }
+
+  // Get all p-tag values from an event
+  getPTagsValues(event: NostrEvent): string[] {
+    const pTagValues: string[] = [];
+
+    for (const tag of event.tags) {
+      if (tag.length >= 2 && tag[0] === 'p') {
+        pTagValues.push(tag[1]);
+      }
+    }
+
+    return pTagValues;
   }
 
   // Generic event storage methods
@@ -416,7 +429,7 @@ export class StorageService {
           const events = await this.db.getAllFromIndex('events', 'by-pubkey-kind-d-tag', [pk, kind, dTagValue]);
           allEvents.push(...events);
         }
-        
+
         if (allEvents.length > 0) {
           // Return the most recent one across all pubkeys
           return allEvents.sort((a, b) => b.created_at - a.created_at)[0];
@@ -449,7 +462,7 @@ export class StorageService {
   }
 
   async saveRelay(relay: Relay, nip11Info?: Nip11Info): Promise<void> {
-     try {
+    try {
       const enhancedRelay: any = { ...relay };
 
       if (nip11Info) {
@@ -543,7 +556,7 @@ export class StorageService {
   }
 
   async deleteUserRelays(pubkey: string | string[]): Promise<void> {
-     try {
+    try {
       if (Array.isArray(pubkey)) {
         // Handle array of pubkeys
         for (const pk of pubkey) {
