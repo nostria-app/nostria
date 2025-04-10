@@ -161,67 +161,26 @@
     </div>
   </div>
 
-  <mat-divider></mat-divider>
-
   <div class="profile-content">
-    <mat-tab-group animationDuration="300ms">
-      <mat-tab label="Posts">
-        <div class="tab-content">
-          <div class="empty-state">
-            <mat-icon>article</mat-icon>
-            <p>No posts to display yet</p>
-          </div>
-        </div>
-      </mat-tab>
-      <mat-tab label="About">
-        <div class="tab-content">
-          <mat-card>
-            <mat-card-content>
-              <h2>Profile Info</h2>
-
-              @if (profile.content.website) {
-              <div class="info-item">
-                <mat-icon>link</mat-icon>
-                <a [href]="profile.content.website" target="_blank" rel="noopener noreferrer">
-                  {{ profile.content.website }}
-                </a>
-              </div>
-              }
-
-              @if (profile.content.lud16) {
-              <div class="info-item">
-                <mat-icon>bolt</mat-icon>
-                <span>{{ profile.content.lud16 }}</span>
-              </div>
-              }
-
-              <div class="info-item">
-                <mat-icon>fingerprint</mat-icon>
-                <div class="pubkey-container">
-                  <span class="pubkey" title="{{ getFormattedNpub() }}">{{ getFormattedNpub() }}</span>
-                  <button mat-icon-button matTooltip="Copy to clipboard">
-                    <mat-icon>content_copy</mat-icon>
-                  </button>
-                </div>
-              </div>
-
-              <div class="info-item">
-                <mat-icon>update</mat-icon>
-                <span>Updated: {{ profile.content.last_updated | date:'mediumDate' }}</span>
-              </div>
-            </mat-card-content>
-          </mat-card>
-        </div>
-      </mat-tab>
-      <mat-tab label="Photos">
-        <div class="tab-content">
-          <div class="empty-state">
-            <mat-icon>photo_library</mat-icon>
-            <p>No photos to display yet</p>
-          </div>
-        </div>
-      </mat-tab>
-    </mat-tab-group>
+    <!-- Navigation tabs -->
+    <nav mat-tab-nav-bar [tabPanel]="tabPanel" mat-stretch-tabs="false" mat-align-tabs="start">
+      @for (link of navLinks; track link.path) {
+        <a mat-tab-link
+           [routerLink]="link.path"
+           routerLinkActive
+           #rla="routerLinkActive"
+           [active]="rla.isActive"
+           [queryParamsHandling]="'preserve'">
+           <mat-icon>{{ link.icon }}</mat-icon>
+           <span class="nav-link-text">{{ link.label }}</span>
+        </a>
+      }
+    </nav>
+    
+    <mat-tab-nav-panel #tabPanel>
+      <!-- Router outlet for tab content -->
+      <router-outlet></router-outlet>
+    </mat-tab-nav-panel>
   </div>
   } @else {
   <div class="empty-profile">
