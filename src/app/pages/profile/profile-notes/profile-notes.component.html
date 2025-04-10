@@ -1,0 +1,20 @@
+<div class="tab-content">
+  @if (isLoading()) {
+    <app-loading-overlay message="Loading notes..."></app-loading-overlay>
+  } @else if (error()) {
+    <div class="error-state">
+      <mat-icon>error</mat-icon>
+      <p>{{ error() }}</p>
+    </div>
+  } @else if (notes().length === 0) {
+    <div class="empty-state">
+      <mat-icon>chat</mat-icon>
+      <p>No notes to display yet</p>
+    </div>
+  } @else {
+    <div class="notes-list">
+      <!-- Notes will be displayed here -->
+      <p>Notes content will appear here</p>
+    </div>
+  }
+</div>

@@ -7,133 +7,142 @@
       <p>{{ error() }}</p>
     </div>
   } @else {
-    <mat-tab-group animationDuration="300ms" (selectedIndexChange)="onTabChange($event)">
-      <!-- Mutual connections tab -->
-      <mat-tab>
-        <ng-template mat-tab-label>
-          <mat-icon class="tab-icon">people</mat-icon>
-          <span class="tab-label">Mutual Connections</span>
-          <span class="connection-count">{{ mutuals().length }}</span>
-        </ng-template>
-        
-        <div class="tab-content">
-          @if (mutuals().length === 0) {
-            <div class="empty-state">
-              <mat-icon>people_outline</mat-icon>
-              <p>No mutual connections found</p>
-            </div>
-          } @else {
-            <mat-nav-list class="connection-list">
-              @for (connection of mutuals(); track connection.pubkey) {
-                <a mat-list-item class="connection-item" (click)="navigateToProfile(connection.pubkey)">
-                  <div class="connection-avatar" matListItemAvatar>
-                    @if (connection.picture) {
-                      <img [src]="connection.picture" alt="{{ connection.name || connection.npub }} avatar">
-                    } @else {
-                      <mat-icon class="default-avatar">account_circle</mat-icon>
-                    }
-                  </div>
-                  <div matListItemTitle class="connection-name">{{ connection.name || connection.npub }}</div>
-                  <div matListItemLine class="connection-npub">{{ connection.npub }}</div>
-                  <button mat-icon-button matListItemMeta color="warn" (click)="unfollowUser(connection.pubkey, $event)" matTooltip="Unfollow">
-                    <mat-icon>person_remove</mat-icon>
-                  </button>
-                </a>
-              }
-            </mat-nav-list>
-          }
-        </div>
-      </mat-tab>
+    <div class="tabs-container">
+      <!-- Back button styled to look like part of the tabs -->
+      <div class="back-button-container">
+        <button mat-button class="back-tab" (click)="goBack()" aria-label="Go back">
+          <mat-icon>arrow_back</mat-icon>
+        </button>
+      </div>
       
-      <!-- Following tab -->
-      <mat-tab>
-        <ng-template mat-tab-label>
-          <mat-icon class="tab-icon">person_add</mat-icon>
-          <span class="tab-label">Following</span>
-          <span class="connection-count">{{ following().length }}</span>
-        </ng-template>
+      <mat-tab-group animationDuration="300ms" (selectedIndexChange)="onTabChange($event)" class="connections-tabs">
+        <!-- Mutual connections tab -->
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon class="tab-icon">people</mat-icon>
+            <span class="tab-label">Mutual Connections</span>
+            <span class="connection-count">{{ mutuals().length }}</span>
+          </ng-template>
+          
+          <div class="tab-content">
+            @if (mutuals().length === 0) {
+              <div class="empty-state">
+                <mat-icon>people_outline</mat-icon>
+                <p>No mutual connections found</p>
+              </div>
+            } @else {
+              <mat-nav-list class="connection-list">
+                @for (connection of mutuals(); track connection.pubkey) {
+                  <a mat-list-item class="connection-item" (click)="navigateToProfile(connection.pubkey)">
+                    <div class="connection-avatar" matListItemAvatar>
+                      @if (connection.picture) {
+                        <img [src]="connection.picture" alt="{{ connection.name || connection.npub }} avatar">
+                      } @else {
+                        <mat-icon class="default-avatar">account_circle</mat-icon>
+                      }
+                    </div>
+                    <div matListItemTitle class="connection-name">{{ connection.name || connection.npub }}</div>
+                    <div matListItemLine class="connection-npub">{{ connection.npub }}</div>
+                    <button mat-icon-button matListItemMeta color="warn" (click)="unfollowUser(connection.pubkey, $event)" matTooltip="Unfollow">
+                      <mat-icon>person_remove</mat-icon>
+                    </button>
+                  </a>
+                }
+              </mat-nav-list>
+            }
+          </div>
+        </mat-tab>
         
-        <div class="tab-content">
-          @if (following().length === 0) {
-            <div class="empty-state">
-              <mat-icon>person_add_disabled</mat-icon>
-              <p>Not following anyone yet</p>
-            </div>
-          } @else {
-            <mat-nav-list class="connection-list">
-              @for (connection of following(); track connection.pubkey) {
-                <a mat-list-item class="connection-item" (click)="navigateToProfile(connection.pubkey)">
-                  <div class="connection-avatar" matListItemAvatar>
-                    @if (connection.picture) {
-                      <img [src]="connection.picture" alt="{{ connection.name || connection.npub }} avatar">
-                    } @else {
-                      <mat-icon class="default-avatar">account_circle</mat-icon>
+        <!-- Following tab -->
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon class="tab-icon">person_add</mat-icon>
+            <span class="tab-label">Following</span>
+            <span class="connection-count">{{ following().length }}</span>
+          </ng-template>
+          
+          <div class="tab-content">
+            @if (following().length === 0) {
+              <div class="empty-state">
+                <mat-icon>person_add_disabled</mat-icon>
+                <p>Not following anyone yet</p>
+              </div>
+            } @else {
+              <mat-nav-list class="connection-list">
+                @for (connection of following(); track connection.pubkey) {
+                  <a mat-list-item class="connection-item" (click)="navigateToProfile(connection.pubkey)">
+                    <div class="connection-avatar" matListItemAvatar>
+                      @if (connection.picture) {
+                        <img [src]="connection.picture" alt="{{ connection.name || connection.npub }} avatar">
+                      } @else {
+                        <mat-icon class="default-avatar">account_circle</mat-icon>
+                      }
+                    </div>
+                    <div matListItemTitle class="connection-name">{{ connection.name || connection.npub }}</div>
+                    <div matListItemLine class="connection-npub">{{ connection.npub }}</div>
+                    @if (connection.mutual) {
+                      <span class="mutual-badge" matTooltip="Mutual connection">
+                        <mat-icon>people</mat-icon>
+                      </span>
                     }
-                  </div>
-                  <div matListItemTitle class="connection-name">{{ connection.name || connection.npub }}</div>
-                  <div matListItemLine class="connection-npub">{{ connection.npub }}</div>
-                  @if (connection.mutual) {
-                    <span class="mutual-badge" matTooltip="Mutual connection">
-                      <mat-icon>people</mat-icon>
-                    </span>
-                  }
-                  <button mat-icon-button matListItemMeta color="warn" (click)="unfollowUser(connection.pubkey, $event)" matTooltip="Unfollow">
-                    <mat-icon>person_remove</mat-icon>
-                  </button>
-                </a>
-              }
-            </mat-nav-list>
-          }
-        </div>
-      </mat-tab>
-      
-      <!-- Followers tab -->
-      <mat-tab>
-        <ng-template mat-tab-label>
-          <mat-icon class="tab-icon">group</mat-icon>
-          <span class="tab-label">Followers</span>
-          <span class="connection-count">{{ followers().length }}</span>
-        </ng-template>
+                    <button mat-icon-button matListItemMeta color="warn" (click)="unfollowUser(connection.pubkey, $event)" matTooltip="Unfollow">
+                      <mat-icon>person_remove</mat-icon>
+                    </button>
+                  </a>
+                }
+              </mat-nav-list>
+            }
+          </div>
+        </mat-tab>
         
-        <div class="tab-content">
-          @if (followers().length === 0) {
-            <div class="empty-state">
-              <mat-icon>group_off</mat-icon>
-              <p>No followers yet</p>
-            </div>
-          } @else {
-            <mat-nav-list class="connection-list">
-              @for (connection of followers(); track connection.pubkey) {
-                <a mat-list-item class="connection-item" (click)="navigateToProfile(connection.pubkey)">
-                  <div class="connection-avatar" matListItemAvatar>
-                    @if (connection.picture) {
-                      <img [src]="connection.picture" alt="{{ connection.name || connection.npub }} avatar">
-                    } @else {
-                      <mat-icon class="default-avatar">account_circle</mat-icon>
+        <!-- Followers tab -->
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <mat-icon class="tab-icon">group</mat-icon>
+            <span class="tab-label">Followers</span>
+            <span class="connection-count">{{ followers().length }}</span>
+          </ng-template>
+          
+          <div class="tab-content">
+            @if (followers().length === 0) {
+              <div class="empty-state">
+                <mat-icon>group_off</mat-icon>
+                <p>No followers yet</p>
+              </div>
+            } @else {
+              <mat-nav-list class="connection-list">
+                @for (connection of followers(); track connection.pubkey) {
+                  <a mat-list-item class="connection-item" (click)="navigateToProfile(connection.pubkey)">
+                    <div class="connection-avatar" matListItemAvatar>
+                      @if (connection.picture) {
+                        <img [src]="connection.picture" alt="{{ connection.name || connection.npub }} avatar">
+                      } @else {
+                        <mat-icon class="default-avatar">account_circle</mat-icon>
+                      }
+                    </div>
+                    <div matListItemTitle class="connection-name">{{ connection.name || connection.npub }}</div>
+                    <div matListItemLine class="connection-npub">{{ connection.npub }}</div>
+                    @if (connection.mutual) {
+                      <span class="mutual-badge" matTooltip="Mutual connection">
+                        <mat-icon>people</mat-icon>
+                      </span>
                     }
-                  </div>
-                  <div matListItemTitle class="connection-name">{{ connection.name || connection.npub }}</div>
-                  <div matListItemLine class="connection-npub">{{ connection.npub }}</div>
-                  @if (connection.mutual) {
-                    <span class="mutual-badge" matTooltip="Mutual connection">
-                      <mat-icon>people</mat-icon>
-                    </span>
-                  }
-                  <button 
-                    mat-icon-button 
-                    matListItemMeta 
-                    color="primary" 
-                    (click)="followUser(connection.pubkey, $event)" 
-                    matTooltip="Follow back"
-                    *ngIf="!connection.mutual">
-                    <mat-icon>person_add</mat-icon>
-                  </button>
-                </a>
-              }
-            </mat-nav-list>
-          }
-        </div>
-      </mat-tab>
-    </mat-tab-group>
+                    <button 
+                      mat-icon-button 
+                      matListItemMeta 
+                      color="primary" 
+                      (click)="followUser(connection.pubkey, $event)" 
+                      matTooltip="Follow back"
+                      *ngIf="!connection.mutual">
+                      <mat-icon>person_add</mat-icon>
+                    </button>
+                  </a>
+                }
+              </mat-nav-list>
+            }
+          </div>
+        </mat-tab>
+      </mat-tab-group>
+    </div>
   }
 </div>

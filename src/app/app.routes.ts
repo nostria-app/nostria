@@ -5,10 +5,12 @@ import { SettingsComponent } from './pages/settings/settings.component';
 import { AboutComponent } from './pages/about/about.component';
 import { CredentialsComponent } from './pages/credentials/credentials.component';
 import { ProfileComponent } from './pages/profile/profile.component';
-import { ProfilePostsComponent } from './pages/profile/profile-posts/profile-posts.component';
+import { ProfileNotesComponent } from './pages/profile/profile-notes/profile-notes.component';
+import { ProfileRepliesComponent } from './pages/profile/profile-replies/profile-replies.component';
+import { ProfileReadsComponent } from './pages/profile/profile-reads/profile-reads.component';
+import { ProfileMediaComponent } from './pages/profile/profile-media/profile-media.component';
 import { ProfileAboutComponent } from './pages/profile/profile-about/profile-about.component';
 import { ProfileConnectionsComponent } from './pages/profile/profile-connections/profile-connections.component';
-import { ProfilePhotosComponent } from './pages/profile/profile-photos/profile-photos.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/home', pathMatch: 'full' },
@@ -21,13 +23,15 @@ export const routes: Routes = [
     path: 'p/:id', 
     component: ProfileComponent,
     children: [
-      { path: '', redirectTo: 'posts', pathMatch: 'full' },
-      { path: 'posts', component: ProfilePostsComponent },
+      { path: '', redirectTo: 'notes', pathMatch: 'full' },
+      { path: 'notes', component: ProfileNotesComponent },
+      { path: 'replies', component: ProfileRepliesComponent },
+      { path: 'reads', component: ProfileReadsComponent },
+      { path: 'media', component: ProfileMediaComponent },
       { path: 'about', component: ProfileAboutComponent },
-      { path: 'photos', component: ProfilePhotosComponent },
       { path: 'connections', component: ProfileConnectionsComponent }
     ]
   },
-  { path: 'profile', redirectTo: '/credentials' }, // Redirect to credentials when no profile specified
+  { path: 'profile', redirectTo: '/credentials' }, 
   { path: '**', redirectTo: '/home' }
 ];

@@ -1,0 +1,20 @@
+<div class="tab-content">
+  @if (isLoading()) {
+    <app-loading-overlay message="Loading replies..."></app-loading-overlay>
+  } @else if (error()) {
+    <div class="error-state">
+      <mat-icon>error</mat-icon>
+      <p>{{ error() }}</p>
+    </div>
+  } @else if (replies().length === 0) {
+    <div class="empty-state">
+      <mat-icon>reply_all</mat-icon>
+      <p>No replies to display yet</p>
+    </div>
+  } @else {
+    <div class="replies-list">
+      <!-- Replies will be displayed here -->
+      <p>Replies content will appear here</p>
+    </div>
+  }
+</div>
