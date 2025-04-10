@@ -7,6 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { ProfileStateService } from '../../../services/profile-state.service';
 
 @Component({
   selector: 'app-following',
@@ -42,6 +43,7 @@ export class FollowingComponent {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private location = inject(Location);
+  profileState = inject(ProfileStateService);
   
   isLoading = signal(true);
   error = signal<string | null>(null);
@@ -51,14 +53,20 @@ export class FollowingComponent {
   userProfile = signal<any>(null);
   
   constructor() {
-    effect(() => {
-      if (this.npub()) {
-        this.loadFollowingList();
-      }
+    effect(async () => {
+      const list = this.profileState.followingList();
+      debugger;
+      this.loadFollowingList(list);
     });
+
+    // effect(() => {
+    //   if (this.npub()) {
+    //     this.loadFollowingList();
+    //   }
+    // });
     
-    // Load user profile data
-    this.loadUserProfile();
+    // // Load user profile data
+    // this.loadUserProfile();
   }
   
   async loadUserProfile(): Promise<void> {
@@ -76,7 +84,7 @@ export class FollowingComponent {
     }
   }
   
-  async loadFollowingList(): Promise<void> {
+  async loadFollowingList(pubkeys: string[]): Promise<void> {
     try {
       this.isLoading.set(true);
       

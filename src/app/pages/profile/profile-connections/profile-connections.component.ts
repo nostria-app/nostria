@@ -58,6 +58,7 @@ export class ProfileConnectionsComponent {
   constructor() {
     effect(async () => {
       const list = this.profileState.followingList();
+      debugger;
       this.loadConnections(list);
     });
   }
@@ -68,34 +69,70 @@ export class ProfileConnectionsComponent {
   }
   
   async loadConnections(following: string[]): Promise<void> {
-    this.isLoading.set(true);
+    this.isLoading.set(false);
     this.error.set(null);
     
     try {
-      // Mock data for now - in a real implementation, you would fetch the actual connections
-      // using the NostrService
-      
       // Simulating a delay for loading
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // Mock data
-      const mockFollowing: Connection[] = Array.from({ length: 8 }, (_, i) => ({
-        pubkey: `pubkey${i + 1}`,
-        npub: `npub${i + 1}...`,
-        name: `User ${i + 1}`,
-        picture: i % 2 === 0 ? `https://i.pravatar.cc/150?img=${i + 10}` : undefined,
-        mutual: i < 3
-      }));
+      // Create mock connections from the following list
+      const mockFollowing: Connection[] = following.map((pubkey, index) => {
+        // Create a shortened npub representation
+        const npub = `npub${pubkey.substring(0, 6)}...`;
+        
+        return {
+          pubkey,
+          npub,
+          name: `User ${pubkey.substring(0, 4)}`,
+          picture: index % 3 === 0 ? `https://i.pravatar.cc/150?img=${(index * 3) % 70}` : undefined,
+          // Randomly mark some connections as mutual (30% chance)
+          mutual: Math.random() < 0.3
+        };
+      });
       
-      const mockFollowers: Connection[] = Array.from({ length: 6 }, (_, i) => ({
-        pubkey: `pubkey${i + 5}`,
-        npub: `npub${i + 5}...`,
-        name: `Follower ${i + 1}`,
-        picture: i % 3 === 0 ? `https://i.pravatar.cc/150?img=${i + 20}` : undefined,
-        mutual: i < 3
-      }));
+      // For demo purposes, create followers as a mix of following and new users
+      const followersCount = Math.max(5, Math.floor(following.length * 0.8));
+      const mockFollowers: Connection[] = Array.from({ length: followersCount }, (_, i) => {
+        // 40% of followers are from the following list (to create mutual connections)
+        if (i < followersCount * 0.4 && i < following.length) {
+          const followingUser = mockFollowing[i];
+          return {
+            ...followingUser,
+            mutual: true // Mark as mutual since they're both following and followers
+          };
+        } else {
+          // Create new follower that's not in the following list
+          const uniquePubkey = `follower${i}${Math.random().toString(36).substring(2, 6)}`;
+          return {
+            pubkey: uniquePubkey,
+            npub: `npub${uniquePubkey.substring(0, 6)}...`,
+            name: `Follower ${uniquePubkey.substring(0, 4)}`,
+            picture: i % 5 === 0 ? `https://i.pravatar.cc/150?img=${(i * 7) % 70 + 10}` : undefined,
+            mutual: false
+          };
+        }
+      });
       
-      // Calculate mutuals (those who are both followers and following)
+      // Find users who are both following and followers (mutuals)
+      const followingPubkeys = new Set(mockFollowing.map(f => f.pubkey));
+      const followerPubkeys = new Set(mockFollowers.map(f => f.pubkey));
+      
+      // Update the mutual flag for following users
+      mockFollowing.forEach(user => {
+        if (followerPubkeys.has(user.pubkey)) {
+          user.mutual = true;
+        }
+      });
+      
+      // Update the mutual flag for follower users
+      mockFollowers.forEach(user => {
+        if (followingPubkeys.has(user.pubkey)) {
+          user.mutual = true;
+        }
+      });
+      
+      // Calculate mutual connections (those who are both followers and following)
       const mutualConnections = mockFollowing
         .filter(f => f.mutual)
         .map(conn => ({
@@ -106,6 +143,12 @@ export class ProfileConnectionsComponent {
       this.following.set(mockFollowing);
       this.followers.set(mockFollowers);
       this.mutuals.set(mutualConnections);
+      
+      this.logger.debug('Connections loaded:', { 
+        following: mockFollowing.length, 
+        followers: mockFollowers.length, 
+        mutuals: mutualConnections.length 
+      });
       
     } catch (err) {
       this.logger.error('Error loading connections:', err);
