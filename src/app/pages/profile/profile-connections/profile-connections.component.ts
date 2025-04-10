@@ -6,9 +6,11 @@ import { MatListModule } from '@angular/material/list';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Location } from '@angular/common';
 import { NostrService } from '../../../services/nostr.service';
 import { LoggerService } from '../../../services/logger.service';
 import { LoadingOverlayComponent } from '../../../components/loading-overlay/loading-overlay.component';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { NostrEvent } from '../../../interfaces';
 
 interface Connection {
@@ -30,6 +32,7 @@ interface Connection {
     MatListModule,
     MatButtonModule,
     MatCardModule,
+    MatTooltipModule,
     LoadingOverlayComponent
   ],
   templateUrl: './profile-connections.component.html',
@@ -38,6 +41,7 @@ interface Connection {
 export class ProfileConnectionsComponent {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private location = inject(Location);
   private nostrService = inject(NostrService);
   private logger = inject(LoggerService);
 
@@ -130,5 +134,23 @@ export class ProfileConnectionsComponent {
     event.stopPropagation();
     this.logger.debug('Unfollow requested for:', pubkey);
     // TODO: Implement actual unfollow functionality
+  }
+
+  // Navigate back to the previous page
+  goBack(): void {
+    // Use router to navigate back to parent route (profile posts)
+    const pubkey = this.getPubkey();
+    if (pubkey) {
+      this.router.navigate(['/p', pubkey, 'posts']);
+    } else {
+      // Fallback to browser history
+      this.location.back();
+    }
+  }
+
+  // Updated to fix the *ngIf to @if in the template
+  // This fixes the issue in the template with the followUser button
+  shouldShowFollowButton(connection: Connection): boolean {
+    return !connection.mutual;
   }
 }

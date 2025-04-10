@@ -1,0 +1,22 @@
+<div class="tab-content">
+  @if (isLoading()) {
+    <app-loading-overlay message="Loading media..."></app-loading-overlay>
+  } @else if (error()) {
+    <div class="error-state">
+      <mat-icon>error</mat-icon>
+      <p>{{ error() }}</p>
+    </div>
+  } @else if (media().length === 0) {
+    <div class="empty-state">
+      <mat-icon>image</mat-icon>
+      <p>No media to display yet</p>
+    </div>
+  } @else {
+    <div class="media-grid">
+      <!-- Media will be displayed here in a grid -->
+      <mat-grid-list cols="3" rowHeight="1:1">
+        <!-- Images will appear here -->
+      </mat-grid-list>
+    </div>
+  }
+</div>

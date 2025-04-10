@@ -71,12 +71,14 @@ export class ProfileComponent {
   showLightningQR = signal(false);
   lightningQrCode = signal<string>('');
 
-  // Navigation links for the profile tabs
+  // Updated navigation links for the profile tabs
   navLinks: NavLink[] = [
-    { path: 'posts', label: 'Posts', icon: 'article' },
-    { path: 'connections', label: 'Connections', icon: 'people' },
-    { path: 'photos', label: 'Photos', icon: 'photo_library' },
-    { path: 'about', label: 'About', icon: 'info' }
+    { path: 'notes', label: 'Notes', icon: 'chat' },
+    { path: 'replies', label: 'Replies', icon: 'reply_all' },
+    { path: 'reads', label: 'Reads', icon: 'bookmark' },
+    { path: 'media', label: 'Media', icon: 'image' },
+    { path: 'about', label: 'About', icon: 'info' },
+    { path: 'connections', label: 'Connections', icon: 'people' }
   ];
 
   // Convert route params to a signal

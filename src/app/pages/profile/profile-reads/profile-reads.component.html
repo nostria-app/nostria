@@ -1,0 +1,20 @@
+<div class="tab-content">
+  @if (isLoading()) {
+    <app-loading-overlay message="Loading reads..."></app-loading-overlay>
+  } @else if (error()) {
+    <div class="error-state">
+      <mat-icon>error</mat-icon>
+      <p>{{ error() }}</p>
+    </div>
+  } @else if (reads().length === 0) {
+    <div class="empty-state">
+      <mat-icon>bookmark</mat-icon>
+      <p>No reads to display yet</p>
+    </div>
+  } @else {
+    <div class="reads-list">
+      <!-- Reads will be displayed here -->
+      <p>Reads content will appear here</p>
+    </div>
+  }
+</div>

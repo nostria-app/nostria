@@ -4,6 +4,58 @@
   position: relative;
 }
 
+.tabs-container {
+  display: flex;
+  align-items: stretch;
+  position: relative;
+}
+
+.back-button-container {
+  display: flex;
+  align-items: stretch;
+}
+
+.back-tab {
+  height: 100%;
+  padding: 0 12px;
+  border-radius: 4px 0 0 4px;
+  border-right: 1px solid rgba(0, 0, 0, 0.12);
+  
+  /* Make it visually integrate with the tabs */
+  background-color: transparent;
+  color: var(--mat-tab-header-inactive-label-text-color);
+  min-width: auto;
+  line-height: 48px;
+}
+
+.connections-tabs {
+  flex: 1;
+}
+
+/* Style the back button to match tabs better */
+::ng-deep .mat-mdc-tab-header {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.tabs-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.back-button {
+  margin-right: 8px;
+  color: var(--mat-sys-color-on-surface);
+  
+  @media (max-width: 768px) {
+    margin-left: 8px;
+  }
+}
+
+::ng-deep .tabs-header .mat-mdc-tab-header {
+  flex-grow: 1;
+}
+
 .tab-content {
   padding: 1rem 0;
 }
