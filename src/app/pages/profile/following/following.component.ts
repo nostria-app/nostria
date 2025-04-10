@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, effect } from '@angular/core';
+import { Component, inject, signal, computed, effect, OnInit, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { animate, style, transition, trigger } from '@angular/animations';
 import { Location } from '@angular/common';
@@ -8,6 +8,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { ProfileStateService } from '../../../services/profile-state.service';
+import { LayoutService } from '../../../services/layout.service';
+import { LoggerService } from '../../../services/logger.service';
 
 @Component({
   selector: 'app-following',
@@ -39,12 +41,16 @@ import { ProfileStateService } from '../../../services/profile-state.service';
     ])
   ]
 })
-export class FollowingComponent {
+export class FollowingComponent implements OnInit, AfterViewInit {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private location = inject(Location);
+  private layoutService = inject(LayoutService);
+  private logger = inject(LoggerService);
   profileState = inject(ProfileStateService);
   
+  @ViewChild('followingContainer') followingContainerRef!: ElementRef;
+
   isLoading = signal(true);
   error = signal<string | null>(null);
   followingList = signal<any[]>([]);
@@ -55,24 +61,43 @@ export class FollowingComponent {
   constructor() {
     effect(async () => {
       const list = this.profileState.followingList();
-      debugger;
-      this.loadFollowingList(list);
+      if (list && list.length > 0) {
+        await this.loadFollowingList(list);
+      }
     });
+  }
 
-    // effect(() => {
-    //   if (this.npub()) {
-    //     this.loadFollowingList();
-    //   }
-    // });
+  ngOnInit(): void {
+    setTimeout(() => this.scrollToTop(), 100);
+  }
+
+  ngAfterViewInit(): void {
+    setTimeout(() => this.scrollToTop(), 300);
+  }
+  
+  /**
+   * Scroll the component into view
+   */
+  scrollToTop(): void {
+    if (this.followingContainerRef) {
+      this.followingContainerRef.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      this.logger.debug('Scrolled following component into view using ElementRef');
+      return;
+    }
     
-    // // Load user profile data
-    // this.loadUserProfile();
+    const container = document.querySelector('.following-container');
+    if (container) {
+      container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      this.logger.debug('Scrolled following container into view using querySelector');
+      return;
+    }
+    
+    this.layoutService.scrollToElement('.following-container');
+    this.logger.debug('Attempted to scroll following container into view using layoutService');
   }
   
   async loadUserProfile(): Promise<void> {
     try {
-      // In a real implementation, get this from a service or parent component
-      // For now, using mock data
       setTimeout(() => {
         this.userProfile.set({
           name: 'Example User',
@@ -88,21 +113,28 @@ export class FollowingComponent {
     try {
       this.isLoading.set(true);
       
-      // Mock data - replace with actual implementation
-      setTimeout(() => {
-        const mockFollowing = Array(20).fill(null).map((_, index) => ({
-          id: `user${index}`,
-          npub: `npub${index}123456789abcdef`,
-          name: `User ${index}`,
-          picture: index % 3 === 0 ? null : `https://i.pravatar.cc/150?u=${index}`
-        }));
-        
-        this.followingList.set(mockFollowing);
+      if (!pubkeys || pubkeys.length === 0) {
+        this.followingList.set([]);
         this.isLoading.set(false);
-      }, 1000);
+        setTimeout(() => this.scrollToTop(), 100);
+        return;
+      }
+      
+      const followingProfiles = pubkeys.map((pubkey, index) => ({
+        id: pubkey,
+        npub: pubkey,
+        name: `User ${index + 1}`,
+        picture: null
+      }));
+      
+      this.followingList.set(followingProfiles);
+      this.isLoading.set(false);
+      
+      setTimeout(() => this.scrollToTop(), 100);
     } catch (err) {
       this.error.set('Failed to load following list');
       this.isLoading.set(false);
+      this.logger.error('Error loading following list', err);
     }
   }
   
@@ -112,5 +144,8 @@ export class FollowingComponent {
   
   navigateToProfile(npub: string): void {
     this.router.navigate(['../../', npub], { relativeTo: this.route });
+    setTimeout(() => {
+      this.layoutService.scrollToOptimalPosition();
+    }, 300);
   }
 }

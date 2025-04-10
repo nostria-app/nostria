@@ -25,6 +25,7 @@ import QRCode from 'qrcode';
 import { kinds, SimplePool } from 'nostr-tools';
 import { StorageService } from '../../services/storage.service';
 import { ProfileStateService } from '../../services/profile-state.service';
+import { LayoutService } from '../../services/layout.service';
 
 @Component({
   selector: 'app-profile',
@@ -62,6 +63,7 @@ export class ProfileComponent {
   private logger = inject(LoggerService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
+  private layoutService = inject(LayoutService);
   profileState = inject(ProfileStateService);
 
   pubkey = signal<string>('');
@@ -119,9 +121,6 @@ export class ProfileComponent {
   }
 
   private async loadUserData(pubkey: string, disconnect = true): Promise<void> {
-
-    debugger;
-
     if (!this.nostrService.currentProfileUserPool) {
       this.nostrService.currentProfileUserPool = new SimplePool();
     }
@@ -155,7 +154,6 @@ export class ProfileComponent {
     
         if (evt.kind === kinds.Contacts) {
           const followingList = this.storage.getPTagsValues(evt);
-          debugger;
           console.log(followingList);
           // this.followingList.set(followingList);
           this.profileState.followingList.set(followingList);
@@ -202,7 +200,7 @@ export class ProfileComponent {
         this.error.set('User profile not found');
       } else {
         // Only scroll if profile was successfully loaded
-        setTimeout(() => this.scrollToOptimalPosition(), 100);
+        setTimeout(() => this.layoutService.scrollToOptimalPosition(), 100);
 
         // After getting the metadata, get other data from this user.
         this.loadUserData(pubkey);
@@ -213,50 +211,6 @@ export class ProfileComponent {
     } finally {
       this.isLoading.set(false);
     }
-  }
-
-  /**
-   * Scrolls the page to show half of the banner and the full profile picture
-   */
-  private scrollToOptimalPosition(): void {
-    // We need the banner height to calculate the optimal scroll position
-    const bannerHeight = this.getBannerHeight();
-
-    // Calculate scroll position that shows half of the banner
-    // We divide banner height by 2 to show half of it
-    const scrollPosition = bannerHeight / 2;
-
-    // Find the content wrapper element
-    const contentWrapper = document.querySelector('.content-wrapper');
-    if (contentWrapper) {
-      // Scroll the content wrapper to the calculated position with smooth animation
-      contentWrapper.scrollTo({
-        top: scrollPosition,
-        behavior: 'smooth'
-      });
-
-      this.logger.debug('Scrolled content wrapper to optimal profile view position', scrollPosition);
-    } else {
-      this.logger.error('Could not find content-wrapper element for scrolling');
-    }
-  }
-
-  /**
-   * Returns the banner height based on the current viewport width
-   */
-  private getBannerHeight(): number {
-    // Default height of the banner is 300px (as defined in CSS)
-    let bannerHeight = 300;
-
-    // Check viewport width and return appropriate banner height
-    // matching the responsive CSS values
-    if (window.innerWidth <= 480) {
-      bannerHeight = 150;
-    } else if (window.innerWidth <= 768) {
-      bannerHeight = 200;
-    }
-
-    return bannerHeight;
   }
 
   private checkIfOwnProfile(pubkey: string): void {

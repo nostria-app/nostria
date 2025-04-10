@@ -1,4 +1,4 @@
-<div class="following-container" @slideInOut>
+<div class="following-container" @slideInOut #followingContainer>
   <div class="following-header" @profileShrink>
     <button mat-icon-button class="back-button" (click)="goBack()" aria-label="Back">
       <mat-icon>arrow_back</mat-icon>
@@ -33,6 +33,9 @@
       <div class="error-container">
         <mat-icon>error</mat-icon>
         <p>{{ error() }}</p>
+        <button mat-button color="primary" (click)="scrollToTop()">
+          <mat-icon>refresh</mat-icon> Try Again
+        </button>
       </div>
     } @else if (followingList().length === 0) {
       <div class="empty-list">

@@ -12,10 +12,10 @@ html {
   --scrollbar-thumb-hover: #a1a1a1;
 
   // Dialog and card colors for light theme
-  --mat-card-title-text-color: rgba(0, 0, 0, 0.87);
-  --mat-card-subtitle-text-color: rgba(0, 0, 0, 0.6);
-  --mat-subtitle-text-color: rgba(0, 0, 0, 0.7);
-  --mat-card-container-color: white;
+  // --mat-card-title-text-color: rgba(0, 0, 0, 0.87);
+  // --mat-card-subtitle-text-color: rgba(0, 0, 0, 0.6);
+  // --mat-subtitle-text-color: rgba(0, 0, 0, 0.7);
+  // --mat-card-container-color: white;
 
   @include mat.theme((color: (theme-type: light,
         primary: nostria-theme.$primary-palette,
@@ -38,10 +38,10 @@ html {
   --scrollbar-thumb-hover: #7e7e7e;
 
   // Dialog and card colors for dark theme
-  --mat-card-title-text-color: rgba(255, 255, 255, 0.87);
-  --mat-card-subtitle-text-color: rgba(255, 255, 255, 0.7);
-  --mat-subtitle-text-color: rgba(255, 255, 255, 0.7);
-  --mat-card-container-color: #424242;
+  // --mat-card-title-text-color: rgba(255, 255, 255, 0.87);
+  // --mat-card-subtitle-text-color: rgba(255, 255, 255, 0.7);
+  // --mat-subtitle-text-color: rgba(255, 255, 255, 0.7);
+  // --mat-card-container-color: #424242;
 
   @include mat.theme((color: (theme-type: dark,
         primary: nostria-theme.$primary-palette )));
@@ -128,38 +128,38 @@ body {
 }
 
 .dark-theme {
-  --mat-toolbar-container-background-color: #424242;
-  --mat-toolbar-container-text-color: white;
+  // --mat-toolbar-container-background-color: #424242;
+  // --mat-toolbar-container-text-color: white;
 
-  background-color: #303030;
+  // background-color: #303030;
   color: white;
 
-  .mat-drawer {
-    background-color: #424242;
-    color: white;
-  }
+  // .mat-drawer {
+  //   background-color: #424242;
+  //   color: white;
+  // }
 
   .mat-drawer-container {
-    background-color: #303030;
-    color: white;
+    // background-color: #303030;
+    // color: white;
   }
 
   .mat-mdc-card {
-    background-color: #424242;
-    color: white;
+    // background-color: #424242;
+    // color: white;
   }
 }
 
 // Common card styling
-.mat-mdc-card {
-  margin-bottom: 16px;
-}
+// .mat-mdc-card {
+//   margin-bottom: 16px;
+// }
 
 // Dark theme material card styles
-.dark .mat-mdc-card {
-  background-color: var(--mat-card-container-color);
-  color: var(--mat-card-title-text-color);
-}
+// .dark .mat-mdc-card {
+//   background-color: var(--mat-card-container-color);
+//   color: var(--mat-card-title-text-color);
+// }
 
 // Material dialog in dark mode
 .dark .mat-mdc-dialog-container {
