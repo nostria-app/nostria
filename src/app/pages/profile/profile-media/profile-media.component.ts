@@ -51,13 +51,34 @@ export class ProfileMediaComponent {
       this.isLoading.set(true);
       this.error.set(null);
       
-      // Mock data for now - would be replaced with actual fetch from NostrService
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 800));
       
-      // Set empty array for now
-      this.media.set([]);
+      // Create mock media data based on pubkey
+      const mockMedia = Array.from({ length: 12 }, (_, i) => {
+        // Use pubkey and index to generate consistent mock data
+        const id = `${pubkey.substring(0, 6)}-media-${i}`;
+        
+        // Alternate between images and videos
+        const mediaType = i % 3 === 0 ? 'video' : 'image';
+        
+        return {
+          id,
+          type: mediaType,
+          title: `${mediaType === 'video' ? 'Video' : 'Image'} ${i + 1}`,
+          url: mediaType === 'image' 
+            ? `https://picsum.photos/seed/${id}/400/300` 
+            : `https://example.com/videos/${id}.mp4`,
+          thumbnail: `https://picsum.photos/seed/${id}/400/300`,
+          createdAt: new Date(Date.now() - (i * 86400000)).toISOString(),
+          likes: Math.floor(Math.random() * 100),
+          comments: Math.floor(Math.random() * 20)
+        };
+      });
       
-      this.logger.debug('Loaded media for pubkey:', pubkey);
+      this.media.set(mockMedia);
+      
+      this.logger.debug('Loaded media for pubkey:', pubkey, mockMedia.length);
     } catch (err) {
       this.logger.error('Error loading media:', err);
       this.error.set('Failed to load media');

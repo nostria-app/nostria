@@ -1,4 +1,10 @@
 <div class="connections-container">
+
+  @for (item of profileState.followingList(); track item) {
+    {{ item}} <br>
+  }
+
+
   @if (isLoading()) {
     <app-loading-overlay message="Loading connections..."></app-loading-overlay>
   } @else if (error()) {
