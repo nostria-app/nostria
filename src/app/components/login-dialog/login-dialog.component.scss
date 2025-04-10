@@ -18,7 +18,7 @@
 .dialog-subtitle {
   text-align: center;
   margin-bottom: 24px;
-  color: var(--mat-subtitle-text-color, rgba(0, 0, 0, 0.7));
+  // color: var(--mat-subtitle-text-color, rgba(0, 0, 0, 0.7));
   font-size: 16px;
 }
 
@@ -34,7 +34,7 @@
   transition: all 0.3s ease;
   height: 130px;
   border-radius: 12px;
-  background: var(--mat-card-container-color, white);
+  // background: var(--mat-card-container-color, white);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   border: 1px solid var(--mat-divider-color, rgba(0, 0, 0, 0.05));
   overflow: hidden;
@@ -67,12 +67,12 @@
   mat-card-title {
     font-weight: 500;
     font-size: 18px;
-    color: var(--mat-card-title-text-color);
+    // color: var(--mat-card-title-text-color);
   }
   
-  mat-card-content {
-    color: var(--mat-card-subtitle-text-color, rgba(0, 0, 0, 0.6));
-  }
+  // mat-card-content {
+  //   color: var(--mat-card-subtitle-text-color, rgba(0, 0, 0, 0.6));
+  // }
 }
 
 .login-card.use-existing {
@@ -132,11 +132,11 @@
 }
 
 .dark .account-item:hover {
-  background-color: rgba(255, 255, 255, 0.05);
+  // background-color: rgba(255, 255, 255, 0.05);
 }
 
 .account-source {
-  color: var(--mat-subtitle-text-color);
+  // color: var(--mat-subtitle-text-color);
   font-size: 12px;
 }
 
