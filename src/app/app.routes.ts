@@ -13,10 +13,12 @@ import { ProfileAboutComponent } from './pages/profile/profile-about/profile-abo
 import { ProfileConnectionsComponent } from './pages/profile/profile-connections/profile-connections.component';
 import { FollowingComponent } from './pages/profile/following/following.component';
 import { ProfileHomeComponent } from './pages/profile/profile-home/profile-home.component';
+import { LearnComponent } from './pages/learn/learn.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/home', pathMatch: 'full' },
   { path: 'home', component: HomeComponent },
+  { path: 'learn', component: LearnComponent },
   { path: 'relays', component: RelaysComponent },
   { path: 'settings', component: SettingsComponent },
   { path: 'credentials', component: CredentialsComponent },

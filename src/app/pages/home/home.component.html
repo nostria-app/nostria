@@ -9,8 +9,8 @@
         global scale.
       </p>
       <div class="action-buttons">
-        <button mat-stroked-button color="primary">Your Feed</button>
-        <button mat-stroked-button color="accent" [routerLink]="['/p', this.nostr.activeAccount()?.pubkey]">Your Profile</button>
+        <button mat-flat-button [routerLink]="['/learn']">Learn more</button>
+        <button mat-stroked-button [routerLink]="['/p', this.nostr.activeAccount()?.pubkey]">Your Profile</button>
       </div>
     </div>
     <div class="hero-image">
