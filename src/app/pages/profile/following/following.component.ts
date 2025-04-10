@@ -7,6 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTabsModule } from '@angular/material/tabs';
 import { ProfileStateService } from '../../../services/profile-state.service';
 import { LayoutService } from '../../../services/layout.service';
 import { LoggerService } from '../../../services/logger.service';
@@ -19,7 +20,8 @@ import { LoggerService } from '../../../services/logger.service';
     MatButtonModule,
     MatIconModule,
     MatListModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
+    MatTabsModule
   ],
   templateUrl: './following.component.html',
   styleUrl: './following.component.scss',
@@ -54,6 +56,9 @@ export class FollowingComponent implements OnInit, AfterViewInit {
   isLoading = signal(true);
   error = signal<string | null>(null);
   followingList = signal<any[]>([]);
+  mutualConnectionsList = signal<any[]>([]);
+  
+  selectedTabIndex = signal(0);
   
   npub = computed(() => this.route.snapshot.parent?.paramMap.get('npub') || '');
   userProfile = signal<any>(null);
@@ -63,15 +68,13 @@ export class FollowingComponent implements OnInit, AfterViewInit {
       const list = this.profileState.followingList();
       if (list && list.length > 0) {
         await this.loadFollowingList(list);
-
-        // this.scrollToTop();
       }
     });
   }
 
   ngOnInit(): void {
-    // Call scrollToTop when component is initialized
-    // this.scrollToTop();
+    // Call loadMutualConnections to populate mutual connections list
+    this.loadMutualConnections();
   }
 
   ngAfterViewInit(): void {
@@ -124,6 +127,30 @@ export class FollowingComponent implements OnInit, AfterViewInit {
       this.isLoading.set(false);
       this.logger.error('Error loading following list', err);
     }
+  }
+  
+  async loadMutualConnections(): Promise<void> {
+    try {
+      // In a real app, fetch mutual connections from an API
+      // For demo purposes, we'll create mock data
+      setTimeout(() => {
+        const mockMutuals = Array(3).fill(0).map((_, index) => ({
+          id: `mutual-${index}`,
+          npub: `mutual-npub-${index}`,
+          name: `Mutual User ${index + 1}`,
+          picture: null
+        }));
+        
+        this.mutualConnectionsList.set(mockMutuals);
+      }, 500);
+    } catch (err) {
+      this.logger.error('Error loading mutual connections', err);
+    }
+  }
+  
+  onTabChanged(tabIndex: number): void {
+    this.selectedTabIndex.set(tabIndex);
+    this.scrollToTop();
   }
   
   goBack(): void {

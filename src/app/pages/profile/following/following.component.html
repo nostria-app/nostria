@@ -23,41 +23,72 @@
     </div>
   </div>
   
-  <div class="following-content">
-    @if (isLoading()) {
-      <div class="loading-container">
-        <mat-spinner diameter="40"></mat-spinner>
-        <p>Loading following list...</p>
-      </div>
-    } @else if (error()) {
-      <div class="error-container">
-        <mat-icon>error</mat-icon>
-        <p>{{ error() }}</p>
-        <button mat-button color="primary" (click)="scrollToTop()">
-          <mat-icon>refresh</mat-icon> Try Again
-        </button>
-      </div>
-    } @else if (followingList().length === 0) {
-      <div class="empty-list">
-        <mat-icon>people_outline</mat-icon>
-        <p>This user is not following anyone.</p>
-      </div>
-    } @else {
-      <mat-list class="following-list">
-        @for (user of followingList(); track user.id) {
-          <mat-list-item class="following-item" (click)="navigateToProfile(user.npub)">
-            <div class="following-item-avatar" matListItemAvatar>
-              @if (user.picture) {
-                <img [src]="user.picture" alt="{{ user.name }}'s profile picture">
-              } @else {
-                <mat-icon class="default-user-avatar">account_circle</mat-icon>
-              }
-            </div>
-            <div matListItemTitle>{{ user.name }}</div>
-            <div matListItemLine class="following-item-npub">{{ user.npub }}</div>
-          </mat-list-item>
+  <mat-tab-group [selectedIndex]="selectedTabIndex()" (selectedIndexChange)="onTabChanged($event)" animationDuration="300ms">
+    <mat-tab label="Connections">
+      <div class="following-content">
+        @if (isLoading()) {
+          <div class="loading-container">
+            <mat-spinner diameter="40"></mat-spinner>
+            <p>Loading following list...</p>
+          </div>
+        } @else if (error()) {
+          <div class="error-container">
+            <mat-icon>error</mat-icon>
+            <p>{{ error() }}</p>
+            <button mat-button color="primary" (click)="scrollToTop()">
+              <mat-icon>refresh</mat-icon> Try Again
+            </button>
+          </div>
+        } @else if (followingList().length === 0) {
+          <div class="empty-list">
+            <mat-icon>people_outline</mat-icon>
+            <p>This user is not following anyone.</p>
+          </div>
+        } @else {
+          <mat-list class="following-list">
+            @for (user of followingList(); track user.id) {
+              <mat-list-item class="following-item" (click)="navigateToProfile(user.npub)">
+                <div class="following-item-avatar" matListItemAvatar>
+                  @if (user.picture) {
+                    <img [src]="user.picture" alt="{{ user.name }}'s profile picture">
+                  } @else {
+                    <mat-icon class="default-user-avatar">account_circle</mat-icon>
+                  }
+                </div>
+                <div matListItemTitle>{{ user.name }}</div>
+                <div matListItemLine class="following-item-npub">{{ user.npub }}</div>
+              </mat-list-item>
+            }
+          </mat-list>
         }
-      </mat-list>
-    }
-  </div>
+      </div>
+    </mat-tab>
+    
+    <mat-tab label="Mutual Connections">
+      <div class="following-content">
+        @if (mutualConnectionsList().length === 0) {
+          <div class="empty-list">
+            <mat-icon>people_alt</mat-icon>
+            <p>No mutual connections found.</p>
+          </div>
+        } @else {
+          <mat-list class="following-list">
+            @for (user of mutualConnectionsList(); track user.id) {
+              <mat-list-item class="following-item" (click)="navigateToProfile(user.npub)">
+                <div class="following-item-avatar" matListItemAvatar>
+                  @if (user.picture) {
+                    <img [src]="user.picture" alt="{{ user.name }}'s profile picture">
+                  } @else {
+                    <mat-icon class="default-user-avatar">account_circle</mat-icon>
+                  }
+                </div>
+                <div matListItemTitle>{{ user.name }}</div>
+                <div matListItemLine class="following-item-npub">{{ user.npub }}</div>
+              </mat-list-item>
+            }
+          </mat-list>
+        }
+      </div>
+    </mat-tab>
+  </mat-tab-group>
 </div>
