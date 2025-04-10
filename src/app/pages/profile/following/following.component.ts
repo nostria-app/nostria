@@ -63,38 +63,28 @@ export class FollowingComponent implements OnInit, AfterViewInit {
       const list = this.profileState.followingList();
       if (list && list.length > 0) {
         await this.loadFollowingList(list);
-        this.scrollToTop();
+
+        // this.scrollToTop();
       }
     });
   }
 
   ngOnInit(): void {
-    // setTimeout(() => this.scrollToTop(), 100);
+    // Call scrollToTop when component is initialized
+    // this.scrollToTop();
   }
 
   ngAfterViewInit(): void {
-    // setTimeout(() => this.scrollToTop(), 300);
+    // Ensure component is scrolled into view after view initialization
+    setTimeout(() => this.scrollToTop(), 350);
   }
   
   /**
    * Scroll the component into view
    */
   scrollToTop(): void {
-    // if (this.followingContainerRef) {
-    //   this.followingContainerRef.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    //   this.logger.debug('Scrolled following component into view using ElementRef');
-    //   return;
-    // }
-    
-    // const container = document.querySelector('.following-container');
-    // if (container) {
-    //   container.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    //   this.logger.debug('Scrolled following container into view using querySelector');
-    //   return;
-    // }
-    debugger;
-    this.layoutService.scrollToElement('.following-container');
-    this.logger.debug('Attempted to scroll following container into view using layoutService');
+    this.layoutService.scrollToElement('.following-header');
+    this.logger.debug('Scrolled following container into view');
   }
   
   async loadUserProfile(): Promise<void> {
@@ -117,7 +107,6 @@ export class FollowingComponent implements OnInit, AfterViewInit {
       if (!pubkeys || pubkeys.length === 0) {
         this.followingList.set([]);
         this.isLoading.set(false);
-        // setTimeout(() => this.scrollToTop(), 100);
         return;
       }
       
@@ -130,8 +119,6 @@ export class FollowingComponent implements OnInit, AfterViewInit {
       
       this.followingList.set(followingProfiles);
       this.isLoading.set(false);
-      
-      // setTimeout(() => this.scrollToTop(), 100);
     } catch (err) {
       this.error.set('Failed to load following list');
       this.isLoading.set(false);
