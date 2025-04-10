@@ -23,7 +23,7 @@
     </div>
   </div>
   
-  <mat-tab-group [selectedIndex]="selectedTabIndex()" (selectedIndexChange)="onTabChanged($event)" animationDuration="300ms">
+  <mat-tab-group class="following-tabs" [selectedIndex]="selectedTabIndex()" (selectedIndexChange)="onTabChanged($event)" animationDuration="300ms">
     <mat-tab class="following-tab" label="Connections">
       <div class="following-content">
         @if (isLoading()) {
