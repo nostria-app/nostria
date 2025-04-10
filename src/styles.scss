@@ -387,3 +387,29 @@ mat-card-content li {
     display: none;
   }
 }
+
+/* Following count styles */
+.following-count {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 16px;
+  transition: background-color 0.2s;
+  font-weight: 500;
+  
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+}
+
+/* Animation related styles */
+.profile-page {
+  position: relative;
+  min-height: 100%;
+}
+
+.router-outlet-container {
+  position: relative;
+  overflow: hidden;
+}

@@ -71,7 +71,9 @@
       </div>
       }
 
-      <span class="following-count">Following 100</span>
+      <span class="following-count" [routerLink]="'following'" [queryParamsHandling]="'preserve'">
+        Following {{ followingCount() }}
+      </span>
 
       <!-- Profile context menu button -->
       <button mat-icon-button class="profile-menu-button" [matMenuTriggerFor]="profileMenu"
@@ -164,25 +166,7 @@
   </div>
 
   <div class="profile-content">
-    <!-- Navigation tabs -->
-    <nav mat-tab-nav-bar [tabPanel]="tabPanel" mat-stretch-tabs="false" mat-align-tabs="start">
-      @for (link of navLinks; track link.path) {
-        <a mat-tab-link
-           [routerLink]="link.path"
-           routerLinkActive
-           #rla="routerLinkActive"
-           [active]="rla.isActive"
-           [queryParamsHandling]="'preserve'">
-           <mat-icon>{{ link.icon }}</mat-icon>
-           <span class="nav-link-text">{{ link.label }}</span>
-        </a>
-      }
-    </nav>
-    
-    <mat-tab-nav-panel #tabPanel>
-      <!-- Router outlet for tab content -->
-      <router-outlet></router-outlet>
-    </mat-tab-nav-panel>
+    <router-outlet></router-outlet>
   </div>
   } @else {
   <div class="empty-profile">
