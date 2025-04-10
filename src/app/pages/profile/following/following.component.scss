@@ -7,7 +7,6 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  // background-color: var(--mat-app-background-color);
 }
 
 .following-header {
@@ -18,11 +17,7 @@
   position: sticky;
   top: 0;
   z-index: 2;
-
   background-color: var(--mat-sidenav-content-background-color, var(--mat-sys-background));
- 
-  // background-color: var(--mat-sys-outline);
-  // border-bottom: 1px solid var(--mat-divider-color, var(--mat-sys-outline));
 }
 
 .back-button {
@@ -64,6 +59,18 @@
     font-size: 18px;
     font-weight: 500;
   }
+}
+
+// Tab styles
+::ng-deep .mat-mdc-tab-header {
+  position: sticky;
+  top: 73px; // Height of the header
+  z-index: 1;
+  background-color: var(--mat-sidenav-content-background-color, var(--mat-sys-background));
+}
+
+::ng-deep .mat-mdc-tab-body-wrapper {
+  flex-grow: 1;
 }
 
 .following-content {
