@@ -141,23 +141,37 @@ export class LayoutService {
         }
     }
 
-    /**
-     * Scrolls to a specific position within a container
-     * @param containerSelector CSS selector for the container element
-     * @param position Position to scroll to (in pixels)
-     * @param behavior Scrolling behavior
-     */
-    scrollToPosition(containerSelector: string = '.content-wrapper', position: number = 0, behavior: ScrollBehavior = 'smooth'): void {
-        const container = document.querySelector(containerSelector);
-        if (container) {
-            container.scrollTo({
-                top: position,
-                behavior: behavior
-            });
-            this.logger.debug(`Scrolled ${containerSelector} to position ${position}`);
-        } else {
-            this.logger.error(`Could not find ${containerSelector} element for scrolling to position`);
-        }
+/**
+ * Scrolls the content wrapper to make a specific element visible
+ * @param elementSelector CSS selector for the element to scroll to
+ * @param offset Optional offset from the element's top (in pixels)
+ * @param behavior Scrolling behavior
+ */
+scrollToPosition(elementSelector: string, offset: number = 0, behavior: ScrollBehavior = 'smooth'): void {
+    const container = document.querySelector('.content-wrapper');
+    const targetElement = document.querySelector(elementSelector);
+    
+    if (!container) {
+        this.logger.error('Could not find .content-wrapper element for scrolling');
+        return;
     }
+    
+    if (!targetElement) {
+        this.logger.error(`Could not find target element "${elementSelector}" for scrolling to`);
+        return;
+    }
+    
+    // Calculate the target element's position relative to the container
+    const containerRect = container.getBoundingClientRect();
+    const targetRect = targetElement.getBoundingClientRect();
+    const relativeTop = targetRect.top - containerRect.top + container.scrollTop + offset;
+    
+    container.scrollTo({
+        top: relativeTop,
+        behavior: behavior
+    });
+    
+    this.logger.debug(`Scrolled .content-wrapper to show element "${elementSelector}" at position ${relativeTop}`);
+}
 }
 
