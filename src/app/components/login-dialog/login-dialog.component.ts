@@ -12,7 +12,7 @@ import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
 import { MatCardModule } from '@angular/material/card';
 
-type LoginView = 'main' | 'nsec' | 'extension-loading' | 'existing-accounts';
+type LoginView = 'main' | 'nsec' | 'extension-loading' | 'existing-accounts' | 'nostr-connect';
 
 @Component({
   selector: 'app-login-dialog',
@@ -40,6 +40,9 @@ export class LoginDialogComponent implements OnInit {
   currentView = signal<LoginView>('main');
   extensionError = signal<string | null>(null);
   nsecKey = '';
+  nostrConnectUrl = '';
+  nostrConnectError = signal<string | null>(null);
+  nostrConnectLoading = signal<boolean>(false);
 
   constructor() {
     this.logger.debug('LoginDialogComponent constructor');
@@ -88,6 +91,30 @@ export class LoginDialogComponent implements OnInit {
     } catch (err) {
       this.logger.error('Login with nsec failed', err);
       // Handle error display (could add an error signal here)
+    }
+  }
+
+  async loginWithNostrConnect(): Promise<void> {
+    this.logger.debug('Attempting login with Nostr Connect');
+    this.nostrConnectLoading.set(true);
+    this.nostrConnectError.set(null);
+
+    // if (!this.nostrConnectUrl || !this.nostrConnectUrl.startsWith('nostr+')) {
+    //   this.nostrConnectError.set('Invalid Nostr Connect URL. It should start with "nostr+"');
+    //   this.nostrConnectLoading.set(false);
+    //   return;
+    // }
+
+    try {
+      // Here you would implement the NIP-46 connection logic
+      // Assuming NostrService has a method for this
+      await this.nostrService.loginWithNostrConnect(this.nostrConnectUrl);
+      this.logger.debug('Login with Nostr Connect successful');
+      this.closeDialog();
+    } catch (err) {
+      this.logger.error('Login with Nostr Connect failed', err);
+      this.nostrConnectError.set(err instanceof Error ? err.message : 'Failed to connect using Nostr Connect');
+      this.nostrConnectLoading.set(false);
     }
   }
 

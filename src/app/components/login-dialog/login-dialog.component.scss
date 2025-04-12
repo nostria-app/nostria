@@ -153,6 +153,20 @@
   border: 1px solid var(--mat-warn-outline-color, rgba(244, 67, 54, 0.2));
 }
 
+.nostr-connect-info {
+  margin-top: 16px;
+  padding: 10px;
+  border-radius: 4px;
+  background-color: rgba(63, 81, 181, 0.05);
+  border: 1px solid rgba(63, 81, 181, 0.2);
+}
+
+.button-spinner {
+  display: inline-block;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
 .loading-content {
   display: flex;
   flex-direction: column;
