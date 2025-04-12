@@ -7,6 +7,9 @@ import { RelayService } from './relay.service';
 import { NostrEventData, StorageService, UserMetadata } from './storage.service';
 import { kinds, SimplePool } from 'nostr-tools';
 import { NostrEvent } from '../interfaces';
+import { finalizeEvent, verifyEvent } from 'nostr-tools/pure';
+import { BunkerSigner, parseBunkerInput } from 'nostr-tools/nip46';
+
 
 export interface NostrUser {
   pubkey: string;
@@ -287,6 +290,108 @@ export class NostrService {
     }
 
     return undefined;
+  }
+
+  async loginWithNostrConnect(remoteSigningUrl: string) {
+    this.logger.info('Attempting to login with Nostr Connect', { url: remoteSigningUrl });
+
+    const bunkerParsed = await parseBunkerInput(remoteSigningUrl);
+
+
+    debugger;
+
+    console.log(bunkerParsed);
+    
+    try {
+      // Parse the URL
+      if (!remoteSigningUrl.startsWith('bunker://')) {
+        throw new Error('Invalid Nostr Connect URL format. Must start with bunker://');
+      }
+      
+      // Extract components from the URL properly
+      // The format is bunker://PUBKEY?relay=URL&relay=URL&secret=SECRET
+      const withoutProtocol = remoteSigningUrl.substring('bunker://'.length);
+      
+      // Find the first ? which separates pubkey from params
+      const questionMarkIndex = withoutProtocol.indexOf('?');
+      if (questionMarkIndex === -1) {
+        throw new Error('Invalid Nostr Connect URL: missing parameters');
+      }
+      
+      // Extract pubkey (everything before ?)
+      const pubkey = withoutProtocol.substring(0, questionMarkIndex);
+      
+      // Parse the query parameters
+      const searchParams = new URLSearchParams(withoutProtocol.substring(questionMarkIndex));
+      
+      // Get all relay parameters
+      const relays = searchParams.getAll('relay');
+      
+      // Get the secret
+      const secret = searchParams.get('secret');
+
+      debugger;
+      
+      if (!pubkey || !secret || relays.length === 0) {
+        throw new Error('Invalid Nostr Connect URL: missing required components');
+      }
+      
+      this.logger.debug('Parsed Nostr Connect URL', { 
+        pubkey, 
+        relayCount: relays.length,
+        secret: `${secret?.substring(0, 4)}...` // Log only prefix for security
+      });
+      
+      // Create a connection pool for Nostr Connect
+      const connectPool = new SimplePool();
+
+      let privateKey = generateSecretKey();
+      let publicKey = getPublicKey(privateKey);
+
+      const pool = new SimplePool()
+      const bunker = new BunkerSigner(privateKey, bunkerParsed!, { pool });
+      await bunker.connect();
+
+      // let event = finalizeEvent({
+      //   kind: kinds.NostrConnect,
+      //   created_at: Math.floor(Date.now() / 1000),
+      //   tags: [["p", pubkey]],
+      //   content: 'hello',
+      // }, privateKey);
+      
+      // let isGood = verifyEvent(event)
+
+      // console.log('Event is good:', isGood, event, privateKey, publicKey);
+      
+      // const result = await connectPool.publish(relays, event);
+      // console.log('Result:', result);
+      
+      // Store connection information
+      // const newUser: NostrUser = {
+      //   pubkey,
+      //   name: this.getTruncatedNpub(pubkey),
+      //   source: 'extension', // Using extension as source type for remote signer
+      //   lastUsed: Date.now()
+      // };
+      
+      // // Add the user to our accounts
+      // this.setAccount(newUser);
+      
+      // TODO: Implement actual NIP-46 protocol communication
+      // This would establish WebSocket connections to the relays
+      // and implement the remote signing protocol
+      
+      this.logger.info('Nostr Connect login successful', { pubkey });
+      
+      return {
+        pubkey,
+        relays,
+        secret
+      };
+    } catch (error) {
+      this.logger.error('Error parsing Nostr Connect URL:', error);
+      throw error;
+    }
   }
 
   // async discoverRelays(pubkey: string, disconnect = true): Promise<NostrEvent | undefined> {

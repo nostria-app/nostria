@@ -1,136 +1,179 @@
 <div class="login-dialog">
-    <div class="dialog-header">
-        <img src="icons/icon-128x128.png" alt="Nostria Logo" class="app-icon">
-        <h2 mat-dialog-title>Welcome to Nostria</h2>
-    </div>
-    
-    @if (currentView() === 'main') {
-      <div mat-dialog-content>
-        <p class="dialog-subtitle">Choose how you would like to use Nostria:</p>
-        
-        @if (extensionError()) {
-          <div class="extension-error">
-            <p>{{ extensionError() }}</p>
-            <p>Make sure you have a Nostr extension installed like Alby or nos2x</p>
-          </div>
-        }
-        
-        @if (nostrService.hasAccounts()) {
-          <mat-card class="login-card use-existing" (click)="switchToExistingAccounts()">
-            <mat-card-header>
-              <mat-card-title>Use Existing Account</mat-card-title>
-            </mat-card-header>
-            <mat-card-content>
-              <p>Select from your previously used accounts</p>
-            </mat-card-content>
-          </mat-card>
-        }
-        
-        <div class="login-options">
-          <mat-card class="login-card" (click)="generateNewKey()">
-            <mat-card-header>
-              <mat-card-title>New Nostr account</mat-card-title>
-            </mat-card-header>
-            <mat-card-content>
-              <p>Generate a new Nostr private key</p>
-            </mat-card-content>
-          </mat-card>
-          
-          <mat-card class="login-card" (click)="loginWithExtension()">
-            <mat-card-header>
-              <mat-card-title>Login with Extension</mat-card-title>
-            </mat-card-header>
-            <mat-card-content>
-              <p>Use a browser extension like Alby or nos2x</p>
-            </mat-card-content>
-          </mat-card>
-          
-          <mat-card class="login-card" (click)="currentView.set('nsec')">
-            <mat-card-header>
-              <mat-card-title>Login with nsec</mat-card-title>
-            </mat-card-header>
-            <mat-card-content>
-              <p>Enter your Nostr private key</p>
-            </mat-card-content>
-          </mat-card>
-          
-          <mat-card class="login-card" (click)="usePreviewAccount()">
-            <mat-card-header>
-              <mat-card-title>Preview Nostria</mat-card-title>
-            </mat-card-header>
-            <mat-card-content>
-              <p>Try Nostria with a demo account</p>
-            </mat-card-content>
-          </mat-card>
-        </div>
-      </div>
-    }
-    
-    @if (currentView() === 'extension-loading') {
-      <div mat-dialog-content class="loading-content">
-        <mat-spinner diameter="48"></mat-spinner>
-        <p class="loading-text">Connecting to your Nostr extension...</p>
-      </div>
-    }
-    
-    @if (currentView() === 'nsec') {
-      <div mat-dialog-content>
-        <p class="dialog-subtitle">Enter your nsec private key:</p>
-        
-        <mat-form-field appearance="fill" class="full-width">
-          <mat-label>Private Key (nsec...)</mat-label>
-          <input matInput [(ngModel)]="nsecKey" type="password" 
-                placeholder="nsec1..." 
-                autocomplete="off" 
-                autocorrect="off" 
-                spellcheck="false">
-        </mat-form-field>
-        
-        <div class="nsec-warning">
-          <p>⚠️ Your private key will be stored locally on your device.</p>
-          <p>This form is configured to try and prevent password managers from saving your key. If your browser suggests to save, reject it.</p>
-        </div>
-      </div>
-      
-      <div mat-dialog-actions align="end">
-        <button mat-button (click)="currentView.set('main')">Back</button>
-        <button mat-raised-button color="primary" 
-               (click)="loginWithNsec()" 
-               [disabled]="!nsecKey || !nsecKey.startsWith('nsec')">
-          Login
-        </button>
-      </div>
-    }
-    
-    @if (currentView() === 'existing-accounts') {
-      <div mat-dialog-content>
-        <p class="dialog-subtitle">Select an account to continue:</p>
-        
-        <mat-nav-list class="accounts-list">
-          @for (account of nostrService.accountsMetadata(); track account) {
-            <a mat-list-item (click)="selectExistingAccount(account.pubkey)" class="account-item">
-              @if (account.content.picture) {
-                <div class="account-avatar" matListItemIcon>
-                  <img [src]="account.content.picture" alt="Profile picture" class="avatar-image">
-                </div>
-              } @else {
-                <mat-icon matListItemIcon>account_circle</mat-icon>
-              }
-              <span matListItemTitle>{{ account.content.name }}</span>
-              <span matListItemLine class="account-source">{{ nostrService.getTruncatedNpub(account.pubkey) }}<br>Last used: {{ account.created_at| date:'short' }}
-              </span>
-              <button mat-icon-button class="delete-button" 
-                      (click)="removeAccount($event, account.pubkey)" 
-                      matTooltip="Remove account">
-                <mat-icon>delete</mat-icon>
-              </button>
-            </a>
-          }
-        </mat-nav-list>
-      </div>
-      
-      <div mat-dialog-actions align="end">
-        <button mat-button (click)="currentView.set('main')">Back</button>
-      </div>
-    }
+  <div class="dialog-header">
+    <img src="icons/icon-128x128.png" alt="Nostria Logo" class="app-icon">
+    <h2 mat-dialog-title>Welcome to Nostria</h2>
   </div>
+
+  @if (currentView() === 'main') {
+  <div mat-dialog-content>
+    <p class="dialog-subtitle">Choose how you would like to use Nostria:</p>
+
+    @if (extensionError()) {
+    <div class="extension-error">
+      <p>{{ extensionError() }}</p>
+      <p>Make sure you have a Nostr extension installed like Alby or nos2x</p>
+    </div>
+    }
+
+    @if (nostrService.hasAccounts()) {
+    <mat-card class="login-card use-existing" (click)="switchToExistingAccounts()">
+      <mat-card-header>
+        <mat-card-title>Use Existing Account</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <p>Select from your previously used accounts</p>
+      </mat-card-content>
+    </mat-card>
+    }
+
+    <div class="login-options">
+      <mat-card class="login-card" (click)="generateNewKey()">
+        <mat-card-header>
+          <mat-card-title>New Nostr account</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <p>Generate a new Nostr private key</p>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="login-card" (click)="loginWithExtension()">
+        <mat-card-header>
+          <mat-card-title>Login with Extension</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <p>Use a browser extension like Alby or nos2x</p>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="login-card" (click)="currentView.set('nostr-connect')">
+        <mat-card-header>
+          <mat-card-title>Nostr Connect</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <p>Use remote signing with Nostria Signer app</p>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="login-card" (click)="currentView.set('nsec')">
+        <mat-card-header>
+          <mat-card-title>Login with nsec</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <p>Enter your Nostr private key</p>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="login-card" (click)="usePreviewAccount()">
+        <mat-card-header>
+          <mat-card-title>Preview Nostria</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <p>Try Nostria with a demo account</p>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+  }
+
+  @if (currentView() === 'extension-loading') {
+  <div mat-dialog-content class="loading-content">
+    <mat-spinner diameter="48"></mat-spinner>
+    <p class="loading-text">Connecting to your Nostr extension...</p>
+  </div>
+  }
+
+  @if (currentView() === 'nsec') {
+  <div mat-dialog-content>
+    <p class="dialog-subtitle">Enter your nsec private key:</p>
+
+    <mat-form-field appearance="fill" class="full-width">
+      <mat-label>Private Key (nsec...)</mat-label>
+      <input matInput [(ngModel)]="nsecKey" type="password" placeholder="nsec1..." autocomplete="off" autocorrect="off"
+        spellcheck="false">
+    </mat-form-field>
+
+    <div class="nsec-warning">
+      <p>⚠️ Your private key will be stored locally on your device.</p>
+      <p>This form is configured to try and prevent password managers from saving your key. If your browser suggests to
+        save, reject it.</p>
+    </div>
+  </div>
+
+  <div mat-dialog-actions align="end">
+    <button mat-button (click)="currentView.set('main')">Back</button>
+    <button mat-raised-button color="primary" (click)="loginWithNsec()"
+      [disabled]="!nsecKey || !nsecKey.startsWith('nsec')">
+      Login
+    </button>
+  </div>
+  }
+
+  @if (currentView() === 'existing-accounts') {
+  <div mat-dialog-content>
+    <p class="dialog-subtitle">Select an account to continue:</p>
+
+    <mat-nav-list class="accounts-list">
+      @for (account of nostrService.accountsMetadata(); track account) {
+      <a mat-list-item (click)="selectExistingAccount(account.pubkey)" class="account-item">
+        @if (account.content.picture) {
+        <div class="account-avatar" matListItemIcon>
+          <img [src]="account.content.picture" alt="Profile picture" class="avatar-image">
+        </div>
+        } @else {
+        <mat-icon matListItemIcon>account_circle</mat-icon>
+        }
+        <span matListItemTitle>{{ account.content.name }}</span>
+        <span matListItemLine class="account-source">{{ nostrService.getTruncatedNpub(account.pubkey) }}<br>Last used:
+          {{ account.created_at| date:'short' }}
+        </span>
+        <button mat-icon-button class="delete-button" (click)="removeAccount($event, account.pubkey)"
+          matTooltip="Remove account">
+          <mat-icon>delete</mat-icon>
+        </button>
+      </a>
+      }
+    </mat-nav-list>
+  </div>
+
+  <div mat-dialog-actions align="end">
+    <button mat-button (click)="currentView.set('main')">Back</button>
+  </div>
+  }
+
+  @if (currentView() === 'nostr-connect') {
+  <div mat-dialog-content>
+    <p class="dialog-subtitle">Enter your Nostr Connect URL:</p>
+
+    @if (nostrConnectError()) {
+    <div class="extension-error">
+      <p>{{ nostrConnectError() }}</p>
+    </div>
+    }
+
+    <mat-form-field appearance="fill" class="full-width">
+      <mat-label>Nostr Connect URL</mat-label>
+      <input matInput [(ngModel)]="nostrConnectUrl" placeholder="nostr+..." [disabled]="nostrConnectLoading()"
+        autocomplete="off" autocorrect="off" spellcheck="false">
+      <mat-hint>Scan QR code from Nostria Signer app to get this URL</mat-hint>
+    </mat-form-field>
+
+    <div class="nostr-connect-info">
+      <p>Nostr Connect allows you to use your private key from a separate device.</p>
+      <p>Use the Nostria Signer app to approve signing requests without exposing your private key to this browser.</p>
+    </div>
+  </div>
+
+  <div mat-dialog-actions align="end">
+    <button mat-button (click)="currentView.set('main')" [disabled]="nostrConnectLoading()">Back</button>
+    <button mat-raised-button color="primary" (click)="loginWithNostrConnect()"
+      [disabled]="!nostrConnectUrl || nostrConnectUrl.length < 10 || nostrConnectLoading()">
+      @if (nostrConnectLoading()) {
+      <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
+      Connecting...
+      } @else {
+      Connect
+      }
+    </button>
+  </div>
+  }
+</div>
