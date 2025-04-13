@@ -22,6 +22,8 @@ export class DataLoadingService {
   }
 
   async loadData(): Promise<void> {
+    debugger;
+    
     if (!this.nostr.activeAccount()) {
       this.logger.warn('Cannot load data: No user is logged in');
       return;
@@ -31,6 +33,8 @@ export class DataLoadingService {
     this.isLoading.set(true);
     this.showSuccess.set(false);
     this.logger.info('Starting data loading process');
+
+    debugger;
 
     const pubkey = this.nostr.activeAccount()!.pubkey;
     this.logger.debug('Loading data for pubkey', { pubkey });
@@ -92,11 +96,14 @@ export class DataLoadingService {
 
     }
 
+    
     // If there is no relayUrls (the kind:10002 might miss it), use default for fallback:
-    if (!relayUrls) {
+    if (!relayUrls || relayUrls.length == 0) {
       this.logger.warn('No relay list found for user');
       // Set default bootstrap relays if no custom relays found
-      this.relayService.setRelays([...this.relayService.defaultRelays()]);
+      const defaultRelays = [...this.relayService.defaultRelays()];
+      this.relayService.setRelays(defaultRelays);
+      relayUrls = defaultRelays;
     }
 
     const userPool = new SimplePool();
@@ -112,11 +119,17 @@ export class DataLoadingService {
     } else {
       this.loadingMessage.set(`Found your ${relayUrls.length} relays, retrieving your metadata...`);
     
+      debugger;
+
       this.logger.time('fetchMetadata');
       metadata = await userPool.get(relayUrls, {
         kinds: [kinds.Metadata],
         authors: [pubkey],
       });
+      // metadata = await userPool.get(relayUrls, {
+      //   kinds: [kinds.Metadata],
+      //   authors: [pubkey],
+      // }, { maxWait: 2000 });
       this.logger.timeEnd('fetchMetadata');
   
       if (metadata) {
