@@ -14,7 +14,7 @@ export interface NostrUser {
   pubkey: string;
   privkey?: string;
   name?: string;
-  source: 'generated' | 'extension' | 'nsec' | 'preview';
+  source: 'generated' | 'extension' | 'nsec' | 'preview' | 'remote';
   lastUsed?: number; // Timestamp when this account was last used
 }
 
@@ -369,6 +369,19 @@ export class NostrService {
 
       debugger;
 
+      this.logger.info('Using remote signer account');
+      // jack
+      const newUser: NostrUser = {
+        privkey: bytesToHex(privateKey),
+        pubkey: remotePublicKey,
+        name: 'Remote Signer',
+        source: 'remote', // With 'remote' type, the actually stored pubkey is not connected with the prvkey.
+        lastUsed: Date.now()
+      };
+  
+      this.setAccount(newUser);
+      this.logger.debug('Remote signer account set successfully', { pubkey: remotePublicKey });
+    
       // let event = finalizeEvent({
       //   kind: kinds.NostrConnect,
       //   created_at: Math.floor(Date.now() / 1000),
