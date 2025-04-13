@@ -10,7 +10,6 @@ import { NostrEvent } from '../interfaces';
 import { finalizeEvent, verifyEvent } from 'nostr-tools/pure';
 import { BunkerSigner, parseBunkerInput } from 'nostr-tools/nip46';
 
-
 export interface NostrUser {
   pubkey: string;
   privkey?: string;
@@ -297,7 +296,6 @@ export class NostrService {
 
     const bunkerParsed = await parseBunkerInput(remoteSigningUrl);
 
-
     debugger;
 
     console.log(bunkerParsed);
@@ -348,9 +346,28 @@ export class NostrService {
       let privateKey = generateSecretKey();
       let publicKey = getPublicKey(privateKey);
 
+      debugger;
+
+      // const connToken = "bunker://deadbeef...?relay=wss%3A%2F%2Frelay.nsecbunker.com&secret=..."
+      // const { signer, session } = await Nip46RemoteSigner.connectToRemote(remoteSigningUrl, { encryptionAlgorithm: 'nip44' });
+
+      // console.log('SESSION:', session);
+      // console.log('SIGNER:', signer);
+      // debugger;
+
+      // store session data to LocalStorage
+      // localStorage.setItem("nostr_connect_session", JSON.stringify(session));
+
       const pool = new SimplePool()
       const bunker = new BunkerSigner(privateKey, bunkerParsed!, { pool });
+      debugger;
       await bunker.connect();
+      debugger;
+
+      const remotePublicKey = await bunker.getPublicKey();
+      console.log('Remote Public Key:', remotePublicKey);
+
+      debugger;
 
       // let event = finalizeEvent({
       //   kind: kinds.NostrConnect,
