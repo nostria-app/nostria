@@ -73,4 +73,8 @@ export class CredentialsComponent {
     if (!privkey) return '';
     return this.nostrService.getNsecFromPrivkey(privkey);
   }
+
+  isRemoteAccount(): boolean {
+    return this.nostrService.activeAccount()?.source === 'remote';
+  }
 }
