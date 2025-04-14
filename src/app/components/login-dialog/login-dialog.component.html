@@ -150,12 +150,19 @@
     </div>
     }
 
-    <mat-form-field appearance="fill" class="full-width">
-      <mat-label>Nostr Connect URL</mat-label>
-      <input matInput [(ngModel)]="nostrConnectUrl" placeholder="bunker://..." [disabled]="nostrConnectLoading()"
-        autocomplete="off" autocorrect="off" spellcheck="false">
-      <mat-hint>Scan QR code from Nostria Signer app to get this URL</mat-hint>
-    </mat-form-field>
+    <div class="nostr-connect-input-container">
+      <mat-form-field appearance="fill" class="nostr-connect-input">
+        <mat-label>Nostr Connect URL</mat-label>
+        <input matInput [(ngModel)]="nostrConnectUrl" placeholder="bunker://..." [disabled]="nostrConnectLoading()"
+          autocomplete="off" autocorrect="off" spellcheck="false">
+        <mat-hint>Scan QR code from Nostria Signer app to get this URL</mat-hint>
+      </mat-form-field>
+      
+      <button mat-icon-button class="qr-scan-button" (click)="scanQrCodeForNostrConnect()" 
+        [disabled]="nostrConnectLoading()" matTooltip="Scan QR code">
+        <mat-icon>qr_code_scanner</mat-icon>
+      </button>
+    </div>
 
     <div class="nostr-connect-info">
       <p>Nostr Connect allows you to use your private key from a separate device.</p>
