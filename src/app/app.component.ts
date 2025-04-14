@@ -1,5 +1,5 @@
 import { Component, inject, signal, effect, ViewChild, OnInit, afterNextRender, computed } from '@angular/core';
-import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -24,6 +24,7 @@ import { NostrEventData, UserMetadata } from './services/storage.service';
 import { LayoutService } from './services/layout.service';
 import { ApplicationStateService } from './services/application-state.service';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { QRCodeScanDialogComponent } from './components/qrcode-scan-dialog/qrcode-scan-dialog.component';
 
 interface NavItem {
   path: string;
@@ -68,6 +69,7 @@ export class AppComponent implements OnInit {
   storage = inject(StorageService);
   appState = inject(ApplicationStateService);
   layout = inject(LayoutService);
+  router = inject(Router);
 
   private logger = inject(LoggerService);
 
@@ -159,6 +161,22 @@ export class AppComponent implements OnInit {
 
   ngOnInit(): void {
     this.logger.debug('AppComponent ngOnInit');
+  }
+
+  qrScan() {
+    const dialogRef = this.dialog.open(QRCodeScanDialogComponent, {
+      data: { did: '' },
+      width: '100vw',
+      height: '100vh',
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result) {
+        console.log('The dialog was closed', result);
+        this.layout.toggleSearch();
+        this.router.navigate(['/profile', result]);
+      }
+    });
   }
 
   toggleSidenav() {

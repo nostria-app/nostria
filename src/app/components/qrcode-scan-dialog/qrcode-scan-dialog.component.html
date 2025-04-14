@@ -1,0 +1,13 @@
+<h2 mat-dialog-title>Scan QR Code</h2>
+<mat-dialog-content>
+  <zxing-scanner
+    class="qr-scanner"
+    (scanSuccess)="scanSuccessHandler($event)"
+    (scanError)="scanErrorHandler($event)"
+    (scanFailure)="scanFailureHandler($event)"
+    (scanComplete)="scanCompleteHandler($event)"
+  ></zxing-scanner>
+</mat-dialog-content>
+<mat-dialog-actions>
+  <button mat-flat-button mat-dialog-close cdkFocusInitial>Close</button>
+</mat-dialog-actions>

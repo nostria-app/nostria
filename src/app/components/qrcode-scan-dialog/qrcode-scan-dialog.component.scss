@@ -1,0 +1,19 @@
+// .qr-scanner {
+//   width: 80%;
+//   height: 80%;
+// }
+
+:host {
+  width: 100vw;
+  height: 100vh;
+}
+
+:host zxing-scanner::ng-deep {
+  //   max-height: 70vh;
+  //   width: 100vw;
+  object-fit: contain;
+}
+
+// mat-dialog-content {
+//   width: 100vw;
+// }
