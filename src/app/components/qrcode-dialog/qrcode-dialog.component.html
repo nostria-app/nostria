@@ -1,0 +1,23 @@
+<h2 mat-dialog-title>QR Code</h2>
+<mat-dialog-content class="qr-code-content centered-dialog-content">
+  <canvas #qrCanvas></canvas>
+  <br />
+  <mat-button-toggle-group
+    hideSingleSelectionIndicator="true"
+    [(ngModel)]="qrStyle"
+    (change)="onToggleGroupChange($event)"
+  >
+    <mat-button-toggle value="did">Identifier (in-app)</mat-button-toggle>
+    <mat-button-toggle value="profile">Profile URL (camera)</mat-button-toggle>
+  </mat-button-toggle-group>
+
+  <p class="wrap">
+    {{ qrValue }}
+    <button class="copy-button" matTooltip="Copy the identifier" mat-icon-button (click)="copyValue()">
+      <mat-icon>content_copy</mat-icon>
+    </button>
+  </p>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button [mat-dialog-close]="true" cdkFocusInitial>Close</button>
+</mat-dialog-actions>
