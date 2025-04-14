@@ -78,7 +78,7 @@ export class AppComponent implements OnInit {
   isHandset = signal(false);
   opened = signal(true);
   displayLabels = signal(true);
-  
+
   // We'll compute the current user metadata from the nostrService's metadata array
   accountMetadata = computed(() => {
     const pubkey = this.nostrService.activeAccount()?.pubkey;
@@ -125,7 +125,7 @@ export class AppComponent implements OnInit {
           debugger;
           this.logger.debug('User changed, updating relays', { pubkey: user.pubkey });
           this.dataLoadingService.loadData();
-          
+
           // Also load the user metadata for the profile panel
           // this.nostrService.loadAllUsersMetadata().catch(err => 
           //   this.logger.error('Failed to load metadata after user change', err));
@@ -137,7 +137,7 @@ export class AppComponent implements OnInit {
 
     // effect(() => {
     //   if (this.nostrService.isLoggedIn() && this.storage.isInitialized()) {
-        
+
     //   }
     // });
 
@@ -170,11 +170,16 @@ export class AppComponent implements OnInit {
       height: '100vh',
     });
 
-    dialogRef.afterClosed().subscribe((result) => {
+    dialogRef.afterClosed().subscribe(async (result) => {
       if (result) {
         console.log('The dialog was closed', result);
         this.layout.toggleSearch();
-        this.router.navigate(['/profile', result]);
+
+        if (result.startsWith('bunker://')) {
+          await this.nostrService.loginWithNostrConnect(result);
+        } else if (result.startsWith('npub:')) {
+          this.router.navigate(['/profile', result]);
+        }
       }
     });
   }
