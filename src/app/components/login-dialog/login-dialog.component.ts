@@ -57,6 +57,16 @@ export class LoginDialogComponent implements OnInit {
       this.logger.error('Failed to load metadata for all users', err));
   }
 
+  getAccountMetadata(account: any) {
+    const metadata = this.nostrService.getMetadataForAccount(account.pubkey);
+
+    if (metadata) {
+      return metadata.content;
+    } else {
+      return { }
+    }
+  }
+
   switchToExistingAccounts(): void {
     this.logger.debug('Switching to existing accounts view');
     this.currentView.set('existing-accounts');

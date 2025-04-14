@@ -115,15 +115,18 @@
     <mat-nav-list class="accounts-list">
       @for (account of nostrService.allAccounts(); track account.pubkey) {
       <a mat-list-item (click)="selectExistingAccount(account.pubkey)" class="account-item">
-        @if (account.metadata?.content?.picture) {
+        @if (getAccountMetadata(account)?.picture) {
         <div class="account-avatar" matListItemIcon>
-          <img [src]="account.metadata.content.picture" alt="Profile picture" class="avatar-image">
-        </div>
+          <img [src]="getAccountMetadata(account)?.picture" alt="Profile picture" class="avatar-image">
+        </div>  
         } @else {
         <mat-icon matListItemIcon>account_circle</mat-icon>
         }
-        <span matListItemTitle>{{ account.metadata?.content?.name || 'Unknown User' }}</span>
-        <span matListItemLine class="account-source">{{ nostrService.getTruncatedNpub(account.pubkey) }}<br>Last used:
+        <span matListItemTitle>{{ getAccountMetadata(account)?.name || 'Unknown User' }}</span>
+        <span matListItemLine class="account-source">
+          {{ nostrService.getTruncatedNpub(account.pubkey) }}<br>
+          Type: {{ account.source }} - 
+          Last used:
           {{ account.lastUsed | date:'short' }}
         </span>
         <button mat-icon-button class="delete-button" (click)="removeAccount($event, account.pubkey)"
