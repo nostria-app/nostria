@@ -90,8 +90,9 @@ mat-nav-list .mat-icon {
   left: 0;
   right: 0;
   height: 56px; // Reverted back to 56px
-  background-color: var(--mat-toolbar-container-background-color);
-  color: var(--mat-toolbar-container-text-color);
+  // background-color: var(--mat-toolbar-container-background-color);
+  // color: var(--mat-toolbar-container-text-color);
+  background-color: var(--mat-sidenav-container-background-color, var(--mat-sys-surface));
   display: flex;
   z-index: 2;
   box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);

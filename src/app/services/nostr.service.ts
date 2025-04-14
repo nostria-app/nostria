@@ -296,8 +296,6 @@ export class NostrService {
 
     const bunkerParsed = await parseBunkerInput(remoteSigningUrl);
 
-    debugger;
-
     console.log(bunkerParsed);
     
     try {
@@ -328,8 +326,6 @@ export class NostrService {
       // Get the secret
       const secret = searchParams.get('secret');
 
-      debugger;
-      
       if (!pubkey || !secret || relays.length === 0) {
         throw new Error('Invalid Nostr Connect URL: missing required components');
       }
@@ -346,8 +342,6 @@ export class NostrService {
       let privateKey = generateSecretKey();
       let publicKey = getPublicKey(privateKey);
 
-      debugger;
-
       // const connToken = "bunker://deadbeef...?relay=wss%3A%2F%2Frelay.nsecbunker.com&secret=..."
       // const { signer, session } = await Nip46RemoteSigner.connectToRemote(remoteSigningUrl, { encryptionAlgorithm: 'nip44' });
 
@@ -360,14 +354,10 @@ export class NostrService {
 
       const pool = new SimplePool()
       const bunker = new BunkerSigner(privateKey, bunkerParsed!, { pool });
-      debugger;
       await bunker.connect();
-      debugger;
 
       const remotePublicKey = await bunker.getPublicKey();
       console.log('Remote Public Key:', remotePublicKey);
-
-      debugger;
 
       this.logger.info('Using remote signer account');
       // jack
