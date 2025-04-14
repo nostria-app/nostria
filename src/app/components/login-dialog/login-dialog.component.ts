@@ -42,7 +42,7 @@ export class LoginDialogComponent implements OnInit {
   currentView = signal<LoginView>('main');
   extensionError = signal<string | null>(null);
   nsecKey = '';
-  nostrConnectUrl = '';
+  nostrConnectUrl = signal('');
   nostrConnectError = signal<string | null>(null);
   nostrConnectLoading = signal<boolean>(false);
 
@@ -110,7 +110,7 @@ export class LoginDialogComponent implements OnInit {
     try {
       // Here you would implement the NIP-46 connection logic
       // Assuming NostrService has a method for this
-      await this.nostrService.loginWithNostrConnect(this.nostrConnectUrl);
+      await this.nostrService.loginWithNostrConnect(this.nostrConnectUrl());
       this.logger.debug('Login with Nostr Connect successful');
       this.closeDialog();
     } catch (err) {
@@ -122,20 +122,21 @@ export class LoginDialogComponent implements OnInit {
 
   scanQrCodeForNostrConnect(): void {
     this.logger.debug('Opening QR code scanner for Nostr Connect');
-    
+
     const scanDialogRef = this.dialog.open(QrcodeScanDialogComponent, {
       width: '100vw',
       height: '100vh',
     });
 
-    scanDialogRef.afterClosed().subscribe(result => {
+    scanDialogRef.afterClosed().subscribe(async result => {
       if (result && typeof result === 'string') {
         this.logger.debug('QR scan result:', { result });
         alert('QR result: ' + result); // Debugging line to show the result
-        
+
         // Only update the URL if it starts with the expected Nostr Connect protocol
         if (result.startsWith('nostr+') || result.startsWith('bunker://')) {
-          this.nostrConnectUrl = result;
+          this.nostrConnectUrl.set(result);
+          await this.loginWithNostrConnect();
         } else {
           this.nostrConnectError.set('Invalid QR code. Expected a Nostr Connect URL.');
         }
