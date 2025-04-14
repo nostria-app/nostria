@@ -161,6 +161,20 @@
   border: 1px solid rgba(63, 81, 181, 0.2);
 }
 
+.nostr-connect-input-container {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.nostr-connect-input {
+  flex-grow: 1;
+}
+
+.qr-scan-button {
+  margin-top: 10px; // Align with the input field
+}
+
 .button-spinner {
   display: inline-block;
   margin-right: 8px;

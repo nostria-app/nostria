@@ -1,6 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatDialogModule, MatDialogRef, MatDialog } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -11,6 +11,7 @@ import { FormsModule } from '@angular/forms';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
 import { MatCardModule } from '@angular/material/card';
+import { QrcodeScanDialogComponent } from '../qrcode-scan-dialog/qrcode-scan-dialog.component';
 
 type LoginView = 'main' | 'nsec' | 'extension-loading' | 'existing-accounts' | 'nostr-connect';
 
@@ -34,6 +35,7 @@ type LoginView = 'main' | 'nsec' | 'extension-loading' | 'existing-accounts' | '
 })
 export class LoginDialogComponent implements OnInit {
   private dialogRef = inject(MatDialogRef<LoginDialogComponent>);
+  private dialog = inject(MatDialog);
   nostrService = inject(NostrService);
   private logger = inject(LoggerService);
 
@@ -116,6 +118,29 @@ export class LoginDialogComponent implements OnInit {
       this.nostrConnectError.set(err instanceof Error ? err.message : 'Failed to connect using Nostr Connect');
       this.nostrConnectLoading.set(false);
     }
+  }
+
+  scanQrCodeForNostrConnect(): void {
+    this.logger.debug('Opening QR code scanner for Nostr Connect');
+    
+    const scanDialogRef = this.dialog.open(QrcodeScanDialogComponent, {
+      width: '100vw',
+      height: '100vh',
+    });
+
+    scanDialogRef.afterClosed().subscribe(result => {
+      if (result && typeof result === 'string') {
+        this.logger.debug('QR scan result:', { result });
+        alert('QR result: ' + result); // Debugging line to show the result
+        
+        // Only update the URL if it starts with the expected Nostr Connect protocol
+        if (result.startsWith('nostr+') || result.startsWith('bunker://')) {
+          this.nostrConnectUrl = result;
+        } else {
+          this.nostrConnectError.set('Invalid QR code. Expected a Nostr Connect URL.');
+        }
+      }
+    });
   }
 
   usePreviewAccount(): void {
