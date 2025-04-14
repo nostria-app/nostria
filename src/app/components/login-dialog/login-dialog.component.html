@@ -153,7 +153,7 @@
     <div class="nostr-connect-input-container">
       <mat-form-field appearance="fill" class="nostr-connect-input">
         <mat-label>Nostr Connect URL</mat-label>
-        <input matInput [(ngModel)]="nostrConnectUrl" placeholder="bunker://..." [disabled]="nostrConnectLoading()"
+        <input matInput [ngModel]="nostrConnectUrl()" (ngModelChange)="nostrConnectUrl.set($event)" placeholder="bunker://..." [disabled]="nostrConnectLoading()"
           autocomplete="off" autocorrect="off" spellcheck="false">
         <mat-hint>Scan QR code from Nostria Signer app to get this URL</mat-hint>
       </mat-form-field>
@@ -173,7 +173,7 @@
   <div mat-dialog-actions align="end">
     <button mat-button (click)="currentView.set('main')" [disabled]="nostrConnectLoading()">Back</button>
     <button mat-raised-button color="primary" (click)="loginWithNostrConnect()"
-      [disabled]="!nostrConnectUrl || nostrConnectUrl.length < 10 || nostrConnectLoading()">
+      [disabled]="!nostrConnectUrl() || nostrConnectUrl().length < 10 || nostrConnectLoading()">
       @if (nostrConnectLoading()) {
       <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
       Connecting...
