@@ -131,7 +131,6 @@ export class LoginDialogComponent implements OnInit {
     scanDialogRef.afterClosed().subscribe(async result => {
       if (result && typeof result === 'string') {
         this.logger.debug('QR scan result:', { result });
-        alert('QR result: ' + result); // Debugging line to show the result
 
         // Only update the URL if it starts with the expected Nostr Connect protocol
         if (result.startsWith('nostr+') || result.startsWith('bunker://')) {
