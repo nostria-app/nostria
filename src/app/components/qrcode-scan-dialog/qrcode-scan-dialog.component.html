@@ -6,7 +6,23 @@
     (scanError)="scanErrorHandler($event)"
     (scanFailure)="scanFailureHandler($event)"
     (scanComplete)="scanCompleteHandler($event)"
+    [device]="currentDevice()!"
+    (camerasFound)="camerasFoundHandler($event)"
   ></zxing-scanner>
+  
+  @if (availableCameras().length > 1) {
+    <div class="camera-controls">
+      <button mat-raised-button color="primary" (click)="switchCamera()">
+        <mat-icon>switch_camera</mat-icon>
+        Switch Camera ({{ currentCameraIndex() + 1 }}/{{ availableCameras().length }})
+      </button>
+      @if (currentDevice()) {
+        <div class="camera-info">
+          Current: {{ currentDevice()?.label || 'Unknown camera' }}
+        </div>
+      }
+    </div>
+  }
 </mat-dialog-content>
 <mat-dialog-actions>
   <button mat-flat-button mat-dialog-close cdkFocusInitial>Close</button>

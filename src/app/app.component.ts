@@ -24,7 +24,7 @@ import { NostrEventData, UserMetadata } from './services/storage.service';
 import { LayoutService } from './services/layout.service';
 import { ApplicationStateService } from './services/application-state.service';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { QRCodeScanDialogComponent } from './components/qrcode-scan-dialog/qrcode-scan-dialog.component';
+import { QrcodeScanDialogComponent } from './components/qrcode-scan-dialog/qrcode-scan-dialog.component';
 
 interface NavItem {
   path: string;
@@ -164,7 +164,7 @@ export class AppComponent implements OnInit {
   }
 
   qrScan() {
-    const dialogRef = this.dialog.open(QRCodeScanDialogComponent, {
+    const dialogRef = this.dialog.open(QrcodeScanDialogComponent, {
       data: { did: '' },
       width: '100vw',
       height: '100vh',
