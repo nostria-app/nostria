@@ -58,7 +58,6 @@ export class ProfileConnectionsComponent {
   constructor() {
     effect(async () => {
       const list = this.profileState.followingList();
-      debugger;
       this.loadConnections(list);
     });
   }

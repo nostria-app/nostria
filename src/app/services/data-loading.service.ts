@@ -22,8 +22,6 @@ export class DataLoadingService {
   }
 
   async loadData(): Promise<void> {
-    debugger;
-    
     if (!this.nostr.activeAccount()) {
       this.logger.warn('Cannot load data: No user is logged in');
       return;
@@ -33,8 +31,6 @@ export class DataLoadingService {
     this.isLoading.set(true);
     this.showSuccess.set(false);
     this.logger.info('Starting data loading process');
-
-    debugger;
 
     const pubkey = this.nostr.activeAccount()!.pubkey;
     this.logger.debug('Loading data for pubkey', { pubkey });
@@ -118,8 +114,6 @@ export class DataLoadingService {
       // this.nostr.refreshMetadata(relayUrls, metadata);
     } else {
       this.loadingMessage.set(`Found your ${relayUrls.length} relays, retrieving your metadata...`);
-    
-      debugger;
 
       this.logger.time('fetchMetadata');
       metadata = await userPool.get(relayUrls, {

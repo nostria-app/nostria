@@ -117,12 +117,10 @@ export class AppComponent implements OnInit {
         this.logger.debug('Showing login dialog');
         this.showLoginDialog();
       } else if (isInitialized && isLoggedIn) {
-        debugger;
         const user = this.nostrService.activeAccount();
 
         // Whenever the user changes, ensure that we have the correct relays
         if (user) {
-          debugger;
           this.logger.debug('User changed, updating relays', { pubkey: user.pubkey });
           this.dataLoadingService.loadData();
 
