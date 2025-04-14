@@ -1,44 +1,53 @@
-import { Component, Inject } from '@angular/core';
-import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { ZXingScannerModule } from '@zxing/ngx-scanner';
-import { MatDialogModule } from '@angular/material/dialog';
+import { Component, inject, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { ZXingScannerModule } from '@zxing/ngx-scanner';
 
 @Component({
-    selector: 'app-qrcode-scan-dialog',
-    imports: [ZXingScannerModule, MatDialogModule, MatButtonModule],
-    templateUrl: './qrcode-scan-dialog.component.html',
-    styleUrl: './qrcode-scan-dialog.component.scss'
+  selector: 'app-qrcode-scan-dialog',
+  templateUrl: './qrcode-scan-dialog.component.html',
+  styleUrls: ['./qrcode-scan-dialog.component.scss'],
+  standalone: true,
+  imports: [CommonModule, MatDialogModule, MatButtonModule, MatIconModule, ZXingScannerModule]
 })
-export class QRCodeScanDialogComponent {
-  constructor(
-    @Inject(MAT_DIALOG_DATA) public data: { did: string },
-    private dialogRef: MatDialogRef<QRCodeScanDialogComponent>,
-  ) {}
+export class QrcodeScanDialogComponent {
+  private dialogRef = inject(MatDialogRef<QrcodeScanDialogComponent>);
+  
+  availableCameras = signal<MediaDeviceInfo[]>([]);
+  currentCameraIndex = signal<number>(0);
+  currentDevice = signal<MediaDeviceInfo | null>(null);
 
-  ngAfterViewInit() {
-    // const canvas = document.querySelector('canvas');
-    // QRCode.toCanvas(canvas, this.data.did, (error: any) => {
-    //   if (error) {
-    //     console.error('Error generating QR code: ', error);
-    //   }
-    // });
+  scanSuccessHandler(result: string) {
+    this.dialogRef.close(result);
   }
 
-  scanSuccessHandler(event: any) {
-    console.log('Scan success:', event);
-    this.dialogRef.close(event);
+  scanErrorHandler(error: Error) {
+    console.error('Scan error:', error);
   }
 
-  scanErrorHandler(event: any) {
-    console.log('Scan success:', event);
+  scanFailureHandler(error: any) {
+    console.warn('Scan failure:', error);
   }
 
-  scanFailureHandler(event: any) {
-    console.log('Scan success:', event);
+  scanCompleteHandler(result: any) {
+    // Optional handling for scan complete
   }
 
-  scanCompleteHandler(event: any) {
-    console.log('Scan success:', event);
+  camerasFoundHandler(devices: MediaDeviceInfo[]) {
+    if (devices && devices.length > 0) {
+      this.availableCameras.set(devices);
+      this.currentDevice.set(devices[this.currentCameraIndex()]);
+    }
+  }
+
+  switchCamera() {
+    const cameras = this.availableCameras();
+    if (cameras.length <= 1) return;
+    
+    const nextIndex = (this.currentCameraIndex() + 1) % cameras.length;
+    this.currentCameraIndex.set(nextIndex);
+    this.currentDevice.set(cameras[nextIndex]);
   }
 }
