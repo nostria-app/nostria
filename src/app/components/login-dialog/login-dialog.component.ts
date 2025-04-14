@@ -53,8 +53,8 @@ export class LoginDialogComponent implements OnInit {
   ngOnInit(): void {
     this.logger.debug('LoginDialogComponent ngOnInit');
     // Make sure we have the metadata for all accounts
-    // this.nostrService.loadAllUsersMetadata().catch(err =>
-    //   this.logger.error('Failed to load metadata for all users', err));
+    this.nostrService.loadUsersMetadata().catch(err =>
+      this.logger.error('Failed to load metadata for all users', err));
   }
 
   switchToExistingAccounts(): void {

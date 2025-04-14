@@ -532,8 +532,8 @@ export class NostrService {
 
   async loadUsersMetadata() {
     const pubkeys = this.accounts().map(user => user.pubkey);
-    const relays = await this.storage.getEventsByPubkeyAndKind(pubkeys, kinds.Metadata);
-    this.accountsMetadata.set(relays);
+    const events = await this.storage.getEventsByPubkeyAndKind(pubkeys, kinds.Metadata);
+    this.accountsMetadata.set(events);
   }
 
   async loadUsersRelays() {
