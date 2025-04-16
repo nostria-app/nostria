@@ -8,7 +8,7 @@ Making the Nostr protocol accessible to everyone, with a focus on user experienc
 
 Nostria is accessible as both web app and desktop app.
 
-Web: https://nostria.brainbox.no
+Web: https://nostria.app
 
 Desktop: https://github.com/sondreb/nostria/releases
 
