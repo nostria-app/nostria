@@ -4,27 +4,24 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
+  background-color: rgba(0, 0, 0, 0.7);
   z-index: 1000;
-  backdrop-filter: blur(3px);
-}
-
-.loading-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 32px;
-  border-radius: 8px;
-  background-color: var(--mat-card-container-color, white);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
-}
-
-.loading-message {
-  margin-top: 16px;
-  font-size: 18px;
-  font-weight: 500;
-  color: var(--mat-card-title-text-color);
+  
+  .loading-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem;
+    border-radius: 8px;
+    background-color: var(--mat-card-background-color, rgba(66, 66, 66, 0.9));
+    
+    .loading-message {
+      margin-top: 1rem;
+      color: var(--mat-card-foreground-color, white);
+      font-size: 1.2rem;
+    }
+  }
 }
