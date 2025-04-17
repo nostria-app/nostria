@@ -151,7 +151,6 @@ export class StorageService {
   }
 
   private async initDatabase(): Promise<void> {
-    debugger;
     try {
       this.logger.info('Initializing IndexedDB storage');
       this.db = await openDB<NostriaDBSchema>(this.DB_NAME, this.DB_VERSION, {
@@ -196,12 +195,9 @@ export class StorageService {
       this.logger.info('IndexedDB initialization completed');
       await this.updateStats();
 
-      debugger;
       // Set initialized status to true
       this.initialized.set(true);
     } catch (error) {
-      debugger;
-
       this.logger.error('Failed to initialize IndexedDB', error);
       // Set initialized to false in case of error
       this.initialized.set(false);
@@ -733,7 +729,6 @@ export class StorageService {
       // Delete the entire database
       await deleteDB(this.DB_NAME);
 
-      debugger;
       // Reset initialization status
       this.initialized.set(false);
 

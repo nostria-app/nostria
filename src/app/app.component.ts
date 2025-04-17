@@ -115,7 +115,6 @@ export class AppComponent implements OnInit {
 
     // Show login dialog if user is not logged in - with debugging
     effect(() => {
-      debugger;
       const isLoggedIn = this.nostrService.isLoggedIn();
       const isInitialized = this.appState.initialized();
 
@@ -171,8 +170,6 @@ export class AppComponent implements OnInit {
 
   async ngOnInit() {
     this.logger.debug('AppComponent ngOnInit');
-
-    debugger;
 
     // Initialize storage, then nostr initialized and then app state.
     await this.storage.init();
@@ -238,7 +235,6 @@ export class AppComponent implements OnInit {
 
     // Handle login completion and data loading
     dialogRef.afterClosed().subscribe(async () => {
-      debugger;
       this.logger.debug('Login dialog closed');
       document.body.classList.remove('blur-backdrop');
 
