@@ -66,6 +66,10 @@ export class NostrService {
     return this.allAccounts().length > 0;
   });
 
+  discoveryQueue: any = [];
+  activeDiscoveries: any = [];
+  MAX_CONCURRENT_DISCOVERIES = 1;
+
   // Expose the metadata as a computed property
   // usersMetadata = computed(() => {
   //   return this.allUserMetadata();
@@ -231,7 +235,8 @@ export class NostrService {
       this.updateMetadataCache(pubkey, events[0]);
       return events[0];
     } else {
-      const metadata = await this.discoverMetadata(pubkey, disconnect);
+      // const metadata = await this.discoverMetadata(pubkey, disconnect);
+      const metadata = await this.queueMetadataDiscovery(pubkey, disconnect);
 
       if (metadata) {
         this.updateMetadataCache(pubkey, metadata);
@@ -248,8 +253,6 @@ export class NostrService {
     // FLOW: Find the user's relays first. Save it.
     // Connect to their relays and get metadata. Save it.
     const event = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
-
-    debugger;
 
     if (!event) {
       // TODO: Duplicate code from data-loading service. Refactor and improve!!
@@ -291,6 +294,50 @@ export class NostrService {
     }
 
     return undefined;
+  }
+
+  private async queueMetadataDiscovery(pubkey: string, disconnect = true): Promise<NostrEvent | undefined> {
+    return new Promise((resolve, reject) => {
+      this.discoveryQueue.push({ pubkey, disconnect, resolve, reject });
+      this.logger.debug('Queued metadata discovery', { pubkey, queueLength: this.discoveryQueue.length });
+      
+      this.processDiscoveryQueue();
+    });
+  }
+
+  private async processDiscoveryQueue(): Promise<void> {
+    if (this.activeDiscoveries >= this.MAX_CONCURRENT_DISCOVERIES) {
+      return;
+    }
+
+    const next = this.discoveryQueue.shift();
+    if (!next) {
+      return;
+    }
+
+    this.activeDiscoveries++;
+    this.logger.debug('Starting metadata discovery', { 
+      pubkey: next.pubkey, 
+      activeDiscoveries: this.activeDiscoveries,
+      queueRemaining: this.discoveryQueue.length 
+    });
+
+    try {
+      const result = await this.discoverMetadata(next.pubkey, next.disconnect);
+      next.resolve(result);
+    } catch (error) {
+      this.logger.error('Error discovering metadata', { pubkey: next.pubkey, error });
+      next.reject(error);
+    } finally {
+      this.activeDiscoveries--;
+      this.logger.debug('Completed metadata discovery', { 
+        pubkey: next.pubkey, 
+        activeDiscoveries: this.activeDiscoveries,
+        queueRemaining: this.discoveryQueue.length
+      });
+      
+      this.processDiscoveryQueue();
+    }
   }
 
   async loginWithNostrConnect(remoteSigningUrl: string) {
