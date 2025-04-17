@@ -9,14 +9,14 @@
     }
 
     &-avatar {
-        width: 48px;
-        height: 48px;
-        border-radius: 50%;
-        overflow: hidden;
+        width: 42px;
+        height: 42px;
         display: flex;
         align-items: center;
         justify-content: center;
         background-color: var(--mat-card-subtle-surface-color, #e0e0e0);
+        border: 2px solid;
+        border-color: var(--mdc-text-button-label-text-color, var(--mat-sys-primary));
 
         img {
             width: 100%;
@@ -25,17 +25,20 @@
         }
 
         .default-user-avatar {
-            font-size: 48px;
-            width: 48px;
-            height: 48px;
+            font-size: 42px;
+            width: 42px;
+            height: 42px;
             color: var(--mat-caption-text-color, #757575);
+   
         }
 
-        .user-profile-avatar {
-            width: 48px;
-            height: 48px;
+        .user-avatar {
             border-radius: 50%;
-            margin: 0 auto;
+            width: 42px;
+            height: 42px;
+            color: var(--mat-caption-text-color, #757575);
+            // border: 2px solid;
+            // border-color: var(--mdc-text-button-label-text-color, var(--mat-sys-primary));
         }
     }
 
