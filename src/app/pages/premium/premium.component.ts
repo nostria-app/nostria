@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { RouterLink } from '@angular/router';
 import { PremiumComparisonDialogComponent } from './premium-comparison-dialog/premium-comparison-dialog.component';
 
 interface PremiumFeature {
@@ -29,7 +30,8 @@ interface FaqItem {
     MatIconModule,
     MatExpansionModule,
     MatDividerModule,
-    MatDialogModule
+    MatDialogModule,
+    RouterLink
   ],
   templateUrl: './premium.component.html',
   styleUrl: './premium.component.scss'

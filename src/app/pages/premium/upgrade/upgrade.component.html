@@ -1,0 +1,253 @@
+<div class="upgrade-container">
+  <h1 class="upgrade-title">Upgrade to Nostria Premium</h1>
+  
+  <div class="stepper-container">
+    <div class="step-indicator-container">
+      @for (i of [0, 1, 2, 3]; track i) {
+        <div class="step-indicator" [class.active]="currentStep() >= i" [class.completed]="currentStep() > i">
+          <div class="step-circle">
+            @if (currentStep() > i) {
+              <mat-icon>check</mat-icon>
+            } @else {
+              {{ i + 1 }}
+            }
+          </div>
+          <div class="step-label">{{ getStepLabel(i) }}</div>
+        </div>
+        @if (i < 3) {
+          <div class="step-connector" [class.active]="currentStep() > i"></div>
+        }
+      }
+    </div>
+    
+    <!-- Step 1: Username Selection -->
+    @if (currentStep() === 0) {
+      <div class="step-content username-step">
+        <h2>Choose Your Premium Username</h2>
+        <p class="step-description">Your premium username will be uniquely yours across the Nostr network.</p>
+        
+        <form [formGroup]="usernameFormGroup">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Username</mat-label>
+            <input 
+              matInput 
+              formControlName="username" 
+              placeholder="Choose a username"
+              (input)="checkUsernameAvailability()"
+              autocomplete="off"
+            >
+            <mat-icon matPrefix>alternate_email</mat-icon>
+            @if (isCheckingUsername()) {
+              <mat-spinner matSuffix diameter="20"></mat-spinner>
+            } @else if (isUsernameAvailable() === true) {
+              <mat-icon matSuffix color="primary" matTooltip="Username is available">check_circle</mat-icon>
+            } @else if (isUsernameAvailable() === false) {
+              <mat-icon matSuffix color="warn" matTooltip="Username already taken">error</mat-icon>
+            }
+            
+            <mat-error *ngIf="usernameFormGroup.get('username')?.hasError('required')">
+              Username is required
+            </mat-error>
+            <mat-error *ngIf="usernameFormGroup.get('username')?.hasError('minlength')">
+              Username must be at least 3 characters
+            </mat-error>
+            <mat-error *ngIf="usernameFormGroup.get('username')?.hasError('pattern')">
+              Username must contain only letters, numbers, and underscores
+            </mat-error>
+          </mat-form-field>
+          
+          <div class="username-info">
+            <mat-icon color="primary">info</mat-icon>
+            <p>Your username must be at least 3 characters and can only contain letters, numbers, and underscores.</p>
+          </div>
+        </form>
+        
+        <div class="step-actions">
+          <button 
+            mat-raised-button 
+            color="primary" 
+            [disabled]="!usernameFormGroup.valid || isUsernameAvailable() !== true"
+            (click)="nextStep()"
+          >
+            Next
+          </button>
+        </div>
+      </div>
+    }
+    
+    <!-- Step 2: Payment Plan -->
+    @if (currentStep() === 1) {
+      <div class="step-content payment-plan-step">
+        <h2>Select Your Premium Plan</h2>
+        <p class="step-description">Choose a plan that works best for you.</p>
+        
+        <form [formGroup]="paymentFormGroup">
+          <div class="payment-options">
+            @for (option of paymentOptions(); track option.id) {
+              <mat-card 
+                class="payment-option-card"
+                [class.selected]="paymentFormGroup.get('paymentOption')?.value === option.id"
+                (click)="paymentFormGroup.get('paymentOption')?.setValue(option.id)"
+              >
+                <mat-card-content>
+                  <div class="payment-header">
+                    <mat-radio-button 
+                      [value]="option.id"
+                      [checked]="paymentFormGroup.get('paymentOption')?.value === option.id"
+                      formControlName="paymentOption"
+                      color="primary"
+                    >
+                      {{ option.name }}
+                    </mat-radio-button>
+                    @if (option.id === 'yearly') {
+                      <span class="best-value-tag">Best Value</span>
+                    }
+                  </div>
+                  
+                  <div class="payment-details">
+                    <div class="payment-price">
+                      <span class="price-amount">${{ option.pricePerMonth }}</span>/month
+                    </div>
+                    <div class="payment-period">
+                      Billed as ${{ option.totalPrice }} every {{ option.billingPeriod }}
+                    </div>
+                  </div>
+                </mat-card-content>
+              </mat-card>
+            }
+          </div>
+        </form>
+        
+        <div class="payment-summary" *ngIf="selectedPaymentOption()">
+          <h3>Order Summary</h3>
+          <div class="summary-row">
+            <span>Nostria Premium ({{ selectedPaymentOption()?.billingPeriod }})</span>
+            <span>${{ selectedPaymentOption()?.totalPrice }}.00</span>
+          </div>
+          <mat-divider></mat-divider>
+          <div class="summary-row total">
+            <span>Total</span>
+            <span>${{ selectedPaymentOption()?.totalPrice }}.00</span>
+          </div>
+        </div>
+        
+        <div class="step-actions">
+          <button mat-button (click)="prevStep()">Back</button>
+          <button mat-raised-button color="primary" (click)="nextStep()">
+            Continue to Payment
+          </button>
+        </div>
+      </div>
+    }
+    
+    <!-- Step 3: Bitcoin Lightning Payment -->
+    @if (currentStep() === 2) {
+      <div class="step-content payment-step">
+        <h2>Complete Your Payment</h2>
+        <p class="step-description">Pay using Bitcoin Lightning Network to activate your premium account.</p>
+        
+        @if (isGeneratingInvoice()) {
+          <div class="loading-container">
+            <mat-spinner diameter="50"></mat-spinner>
+            <p>Generating Lightning invoice...</p>
+          </div>
+        } @else if (paymentInvoice()) {
+          <div class="lightning-invoice">
+            @if (paymentInvoice()?.status === 'pending') {
+              <div class="qr-container">
+                <img 
+                  src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ paymentInvoice()?.paymentRequest }}" 
+                  alt="Lightning QR Code"
+                  class="qr-code"
+                >
+                <div class="payment-check-overlay" *ngIf="isPaymentCompleted()">
+                  <div class="payment-success">
+                    <mat-icon>check_circle</mat-icon>
+                    <span>Payment Received!</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="invoice-details">
+                <p class="invoice-instruction">Scan the QR code or copy the payment request below to pay with your Lightning wallet</p>
+                
+                <div class="invoice-request">
+                  <div class="invoice-text">{{ paymentInvoice()?.paymentRequest?.substring(0, 30) }}...{{ paymentInvoice()?.paymentRequest?.substring(paymentInvoice()?.paymentRequest!.length - 20) }}</div>
+                  <button mat-icon-button color="primary" (click)="copyToClipboard(paymentInvoice()?.paymentRequest || '')">
+                    <mat-icon>content_copy</mat-icon>
+                  </button>
+                </div>
+                
+                <div class="invoice-expiry">
+                  <mat-icon>timer</mat-icon>
+                  <span>This invoice expires in 15 minutes</span>
+                </div>
+                
+                <div class="payment-status">
+                  <mat-spinner diameter="20" *ngIf="!isPaymentCompleted()"></mat-spinner>
+                  <span *ngIf="!isPaymentCompleted()">Waiting for payment...</span>
+                  <mat-icon color="primary" *ngIf="isPaymentCompleted()">check_circle</mat-icon>
+                  <span *ngIf="isPaymentCompleted()">Payment successful!</span>
+                </div>
+              </div>
+            } @else if (paymentInvoice()?.status === 'expired') {
+              <div class="payment-expired">
+                <mat-icon color="warn">error_outline</mat-icon>
+                <h3>Payment Invoice Expired</h3>
+                <p>The payment invoice has expired. Please generate a new one to continue.</p>
+                <button mat-raised-button color="primary" (click)="generatePaymentInvoice()">
+                  Generate New Invoice
+                </button>
+              </div>
+            }
+          </div>
+        }
+        
+        <div class="step-actions">
+          <button mat-button (click)="resetPayment()" [disabled]="isPaymentCompleted()">Back</button>
+        </div>
+      </div>
+    }
+    
+    <!-- Step 4: Completion -->
+    @if (currentStep() === 3) {
+      <div class="step-content completion-step">
+        <div class="completion-container">
+          <mat-icon class="completion-icon">verified</mat-icon>
+          <h2>Welcome to Nostria Premium!</h2>
+          <p>Your premium account is now active. You can now enjoy all premium features.</p>
+          
+          <div class="premium-features">
+            <div class="feature-item">
+              <mat-icon>verified</mat-icon>
+              <div>
+                <h4>Verified Username</h4>
+                <p>Your username <strong>{{ usernameFormGroup.get('username')?.value }}</strong> is now uniquely yours</p>
+              </div>
+            </div>
+            
+            <div class="feature-item">
+              <mat-icon>cloud_done</mat-icon>
+              <div>
+                <h4>2GB Storage</h4>
+                <p>Your storage has been upgraded to 2GB</p>
+              </div>
+            </div>
+            
+            <div class="feature-item">
+              <mat-icon>backup</mat-icon>
+              <div>
+                <h4>Automatic Backups</h4>
+                <p>Your data will be automatically backed up</p>
+              </div>
+            </div>
+          </div>
+          
+          <button mat-raised-button color="primary" (click)="finishSetup()">
+            Continue to Nostria
+          </button>
+        </div>
+      </div>
+    }
+  </div>
+</div>
