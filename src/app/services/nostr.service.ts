@@ -87,7 +87,6 @@ export class NostrService {
 
     effect(async () => {
       if (this.storage.initialized()) {
-        debugger;
         this.loadAccountsFromStorage();
         this.loadActiveAccountFromStorage();
 

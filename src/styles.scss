@@ -86,10 +86,31 @@ mat-card {
   margin: 0 auto;
 }
 
-
 a {
   color: var(--mdc-text-button-label-text-color, var(--mat-sys-primary));
   text-decoration: none;
+}
+
+.title-font {
+  font-family: "Protest Strike", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 400;
+  font-style: normal;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: "Protest Strike", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 400;
+  font-style: normal;
+}
+
+h1 {
+  font-size: 2.4em;
+}
+
+h2 {
+  font-size: 1.8em;
 }
 
 a:hover {
