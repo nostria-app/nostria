@@ -1,0 +1,93 @@
+<div class="premium-container">
+  <div class="premium-header">
+    <h1 class="premium-title">Nostria Premium</h1>
+    <p class="premium-subtitle">Unlock the full potential of your Nostr experience</p>
+    
+    <div class="cta-container">
+      <button mat-raised-button color="primary" class="premium-cta-button">
+        <mat-icon>stars</mat-icon>
+        Upgrade to Premium
+      </button>
+      
+      <div class="premium-price-container">
+        <div class="price-option">
+          <span class="price-amount">$6</span>/month
+          <span class="price-period">quarterly billing</span>
+        </div>
+        <span class="price-divider">or</span>
+        <div class="price-option best-value">
+          <span class="price-amount">$5</span>/month
+          <span class="price-period">yearly billing</span>
+          <span class="price-tag">Best Value</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="benefits-section">
+    <h2>Premium Benefits</h2>
+    
+    <div class="features-grid">
+      @for (feature of features(); track feature.title) {
+        <mat-card class="feature-card">
+          <mat-card-header>
+            <div mat-card-avatar class="feature-icon-container">
+              <mat-icon>{{ feature.icon }}</mat-icon>
+            </div>
+            <mat-card-title>{{ feature.title }}</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <p>{{ feature.description }}</p>
+          </mat-card-content>
+        </mat-card>
+      }
+    </div>
+
+    <div class="storage-comparison">
+      <div class="storage-item">
+        <h3>Free Storage</h3>
+        <div class="storage-icon">
+          <mat-icon>storage</mat-icon>
+        </div>
+        <p class="storage-amount">50MB</p>
+      </div>
+
+      <div class="storage-vs">VS</div>
+      
+      <div class="storage-item premium">
+        <h3>Premium Storage</h3>
+        <div class="storage-icon">
+          <mat-icon>cloud_done</mat-icon>
+        </div>
+        <p class="storage-amount">2GB</p>
+        <p class="storage-multiplier">40x more storage</p>
+      </div>
+    </div>
+    
+    <div class="compare-section">
+      <button mat-stroked-button color="primary" (click)="openComparisonDialog()">
+        <mat-icon>compare</mat-icon>
+        Compare Free vs Premium
+      </button>
+    </div>
+  </div>
+  
+  <mat-divider></mat-divider>
+  
+  <div class="faq-section">
+    <h2>Frequently Asked Questions</h2>
+    
+    <mat-accordion>
+      @for (faq of faqItems(); track faq.question) {
+        <mat-expansion-panel>
+          <mat-expansion-panel-header>
+            <mat-panel-title>
+              {{ faq.question }}
+            </mat-panel-title>
+          </mat-expansion-panel-header>
+          <p>{{ faq.answer }}</p>
+        </mat-expansion-panel>
+      }
+    </mat-accordion>
+  </div>
+</div>

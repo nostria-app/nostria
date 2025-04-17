@@ -18,16 +18,17 @@ export class RelayService {
   // Default bootstrap relays
   private readonly DEFAULT_BOOTSTRAP_RELAYS = ['wss://purplepag.es/'];
   
-  #bootStrapRelays = this.loadBootstrapRelaysFromStorage() || this.DEFAULT_BOOTSTRAP_RELAYS;
-  bootStrapRelays = signal(this.#bootStrapRelays);
-
+  private readonly logger = inject(LoggerService);
+  private readonly storage = inject(StorageService);
+  
+  // Initialize signals with empty arrays first, then populate in constructor
+  #bootStrapRelays: string[] = [];
+  bootStrapRelays = signal<string[]>([]);
+  
   // TODO: Allow the user to set their own default relays in the settings?
   // TODO: Decided on a good default relay list.
   #defaultRelays = ['wss://relay.damus.io/', 'wss://relay.primal.net/'];
   defaultRelays = signal(this.#defaultRelays);
-
-  private readonly logger = inject(LoggerService);
-  private readonly storage = inject(StorageService);
 
   // Signal to store the relays for the current user
   private relays = signal<Relay[]>([]);
@@ -39,6 +40,10 @@ export class RelayService {
 
   constructor() {
     this.logger.info('Initializing RelayService');
+    
+    // Move bootstrap relay initialization to constructor
+    this.#bootStrapRelays = this.loadBootstrapRelaysFromStorage() || this.DEFAULT_BOOTSTRAP_RELAYS;
+    this.bootStrapRelays.set(this.#bootStrapRelays);
 
     // When relays change, sync with storage
     effect(() => {

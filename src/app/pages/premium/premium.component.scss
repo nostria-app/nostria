@@ -1,0 +1,277 @@
+.premium-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.premium-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.premium-title {
+  font-size: 3rem;
+  margin-bottom: 0.5rem;
+  background: linear-gradient(90deg, #8e44ad, #3498db);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
+}
+
+.premium-subtitle {
+  font-size: 1.2rem;
+  color: var(--text-secondary);
+  margin-bottom: 2rem;
+}
+
+.cta-container {
+  margin-top: 2rem;
+}
+
+.premium-cta-button {
+  padding: 0.75rem 2rem;
+  font-size: 1.2rem;
+}
+
+.premium-price {
+  margin-top: 1rem;
+  color: var(--text-secondary);
+}
+
+.premium-price-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 2rem;  // Increased from 1rem to 2rem for more spacing
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.price-option {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background-color: rgba(0, 0, 0, 0.03);
+  position: relative;
+  min-width: 120px;
+  text-align: center;
+  
+  &.best-value {
+    background: linear-gradient(145deg, rgba(142, 68, 173, 0.1), rgba(52, 152, 219, 0.1));
+    border: 1px solid rgba(142, 68, 173, 0.2);
+  }
+}
+
+.price-amount {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #8e44ad;
+}
+
+.price-period {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 0.2rem;
+}
+
+.price-divider {
+  font-weight: bold;
+  color: var(--text-secondary);
+}
+
+.price-tag {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  background-color: #27ae60;
+  color: white;
+  font-size: 0.7rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-weight: bold;
+  transform: rotate(3deg);
+}
+
+.benefits-section {
+  margin-bottom: 3rem;
+  
+  h2 {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 3rem;
+}
+
+.feature-card {
+  height: 100%;
+  width: 100%;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  }
+  
+  mat-card-header {
+    margin-bottom: 1rem;
+  }
+}
+
+// Fix for icon spacing
+.feature-icon-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-right: 16px;
+  color: #8e44ad;
+  background-color: transparent !important;
+  
+  mat-icon {
+    font-size: 24px;
+    height: 24px;
+    width: 24px;
+  }
+}
+
+// Add padding to the card title
+.mat-mdc-card-header .mat-mdc-card-title {
+  padding-top: 4px;
+}
+
+.feature-icon {
+  font-size: 2rem;
+  height: 2rem;
+  width: 2rem;
+  margin-right: 1.5rem !important; // Added important to ensure override
+  color: #8e44ad;
+  display: flex;
+  align-items: center;
+}
+
+.storage-comparison {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 3rem 0;
+  flex-wrap: wrap;
+}
+
+.storage-item {
+  text-align: center;
+  padding: 2rem;
+  width: 200px;
+  
+  h3 {
+    margin-bottom: 1rem;
+  }
+  
+  .storage-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    
+    mat-icon {
+      font-size: 3rem;
+      height: 3rem;
+      width: 3rem;
+    }
+  }
+  
+  .storage-amount {
+    font-size: 2rem;
+    font-weight: bold;
+  }
+  
+  &.premium {
+    border-radius: 8px;
+    background: linear-gradient(145deg, rgba(142, 68, 173, 0.1), rgba(52, 152, 219, 0.1));
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    
+    .storage-icon mat-icon {
+      color: #8e44ad;
+    }
+    
+    .storage-multiplier {
+      margin-top: 0.5rem;
+      color: #27ae60;
+    }
+  }
+}
+
+.storage-vs {
+  font-weight: bold;
+  font-size: 1.5rem;
+  margin: 0 2rem;
+  color: var(--text-secondary);
+}
+
+.compare-section {
+  text-align: center;
+  margin: 2rem 0;
+}
+
+.faq-section {
+  margin-top: 3rem;
+  margin-bottom: 3rem;
+  
+  h2 {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+  
+  mat-expansion-panel {
+    margin-bottom: 0.5rem;
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .premium-title {
+    font-size: 2.5rem;
+  }
+  
+  .storage-vs {
+    margin: 2rem 0;
+  }
+  
+  .storage-comparison {
+    flex-direction: column;
+  }
+  
+  .premium-price-container {
+    flex-direction: column;
+  }
+  
+  .price-divider {
+    margin: 0.5rem 0;
+  }
+  
+  .features-grid {
+    grid-template-columns: 1fr;  // Single column on smaller screens
+  }
+  
+  .feature-card {
+    width: 100%;  // Ensure cards take full width
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1100px) {
+  .features-grid {
+    grid-template-columns: repeat(2, 1fr);  // Two columns for medium screens
+  }
+}
+
+@media (max-width: 480px) {
+  .premium-title {
+    font-size: 2rem;
+  }
+  
+  .feature-card {
+    margin-bottom: 1rem;
+  }
+}

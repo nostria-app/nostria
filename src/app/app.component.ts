@@ -93,6 +93,7 @@ export class AppComponent implements OnInit {
     { path: 'home', label: 'Home', icon: 'home', showInMobile: true },
     { path: 'relays', label: 'Relays', icon: 'dns', showInMobile: false },
     { path: 'settings', label: 'Settings', icon: 'settings', showInMobile: true },
+    { path: 'premium', label: 'Premium', icon: 'diamond', showInMobile: false },
     { path: 'about', label: 'About', icon: 'info', showInMobile: true },
     // { path: '', label: 'Logout', icon: 'logout', action: () => this.logout(), showInMobile: false }
   ];
