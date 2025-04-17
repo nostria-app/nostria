@@ -1,7 +1,8 @@
 <mat-list-item class="user-profile" (click)="layout.navigateToProfile(pubkey())">
     <div class="user-profile-avatar" matListItemAvatar>
         @if (profile()?.content?.picture) {
-        <img [src]="profile().content.picture">
+        <img [src]="profile().content.picture" onerror="this.onerror=null; this.src='images/picture-failure.png';" alt="User Avatar" class="user-avatar" />
+        } @else if (profile()?.content?.nip05) {
         } @else {
         <mat-icon class="default-user-avatar">account_circle</mat-icon>
         }
