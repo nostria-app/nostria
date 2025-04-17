@@ -11,13 +11,11 @@
         <mat-spinner diameter="20" color="primary"></mat-spinner>
         } @else if (error()) {
         <mat-icon>error</mat-icon> Error loading user profile
-        } @else if (profile().name) {
-        {{ profile().name }}
+        } @else if (profile()) {
+        {{ profile().content.name }} ({{ profile().content.display_name }})
         } @else {
         <mat-icon>account_circle</mat-icon> Unknown User
         }
-
-        NAME
     </div>
     <div matListItemLine class="following-item-npub">{{ npub() }}</div>
-</mat-list-item>
+</mat-list-item>    
