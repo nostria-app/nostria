@@ -47,7 +47,7 @@
         } @else {
           <mat-list class="following-list">
             @for (user of followingList(); track user.id) {
-              <mat-list-item class="following-item" (click)="navigateToProfile(user.npub)">
+              <mat-list-item class="following-item" (click)="layout.navigateToProfile(user.npub)">
                 <div class="following-item-avatar" matListItemAvatar>
                   @if (user.picture) {
                     <img [src]="user.picture" alt="{{ user.name }}'s profile picture">
@@ -58,6 +58,9 @@
                 <div matListItemTitle>{{ user.name }}</div>
                 <div matListItemLine class="following-item-npub">{{ user.npub }}</div>
               </mat-list-item>
+
+              <app-user-profile [npub]="user.npub"></app-user-profile>
+
             }
           </mat-list>
         }
@@ -74,7 +77,7 @@
         } @else {
           <mat-list class="following-list">
             @for (user of mutualConnectionsList(); track user.id) {
-              <mat-list-item class="following-item" (click)="navigateToProfile(user.npub)">
+              <mat-list-item class="following-item" (click)="layout.navigateToProfile(user.npub)">
                 <div class="following-item-avatar" matListItemAvatar>
                   @if (user.picture) {
                     <img [src]="user.picture" alt="{{ user.name }}'s profile picture">

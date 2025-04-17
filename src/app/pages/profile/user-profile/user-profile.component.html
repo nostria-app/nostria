@@ -1,0 +1,23 @@
+<mat-list-item class="following-item" (click)="layout.navigateToProfile(npub())">
+    <div class="following-item-avatar" matListItemAvatar>
+        <!-- @if (user.picture) {
+        <img [src]="user.picture" alt="{{ user.name }}'s profile picture">
+      } @else {
+        <mat-icon class="default-user-avatar">account_circle</mat-icon>
+      } -->
+    </div>
+    <div matListItemTitle>
+        @if(isLoading()) {
+        <mat-spinner diameter="20" color="primary"></mat-spinner>
+        } @else if (error()) {
+        <mat-icon>error</mat-icon> Error loading user profile
+        } @else if (profile().name) {
+        {{ profile().name }}
+        } @else {
+        <mat-icon>account_circle</mat-icon> Unknown User
+        }
+
+        NAME
+    </div>
+    <div matListItemLine class="following-item-npub">{{ npub() }}</div>
+</mat-list-item>
