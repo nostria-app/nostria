@@ -533,7 +533,23 @@ export class NostrService {
   async loadUsersMetadata() {
     const pubkeys = this.accounts().map(user => user.pubkey);
     const events = await this.storage.getEventsByPubkeyAndKind(pubkeys, kinds.Metadata);
-    this.accountsMetadata.set(events);
+    
+    // Process each event to ensure content is parsed
+    const processedEvents = events.map(event => {
+      if (event.content && typeof event.content === 'string') {
+        try {
+          const parsedEvent = {...event};
+          parsedEvent.content = JSON.parse(event.content);
+          return parsedEvent;
+        } catch (e) {
+          this.logger.error('Failed to parse event content in loadUsersMetadata', e);
+        }
+      }
+      return event;
+    });
+    
+    this.accountsMetadata.set(processedEvents);
+    return processedEvents;
   }
 
   async loadUsersRelays() {
@@ -544,73 +560,33 @@ export class NostrService {
 
   async updateAccountMetadata(event: Event) {
     const pubkey = event.pubkey;
+    
+    // Ensure content is properly parsed
+    if (event.content && typeof event.content === 'string') {
+      try {
+        event.content = JSON.parse(event.content);
+      } catch (e) {
+        this.logger.error('Failed to parse event content in updateAccountMetadata', e);
+      }
+    }
+    
+    // Add to the metadata array
     const existingMetadata = this.accountsMetadata().find(meta => meta.pubkey === pubkey);
 
     if (existingMetadata) {
       this.logger.debug('Updating existing metadata', { pubkey });
-      this.accountsMetadata.update(array => array.map(meta => meta.pubkey === pubkey ? event : meta));
+      this.accountsMetadata.update(array => 
+        array.map(meta => meta.pubkey === pubkey ? event : meta));
     } else {
       this.logger.debug('Adding new metadata', { pubkey });
       this.accountsMetadata.update(array => [...array, event]);
     }
+    
+    // Also update the cache for getMetadataForUser
+    if (this.usersMetadata().has(pubkey)) {
+      this.updateMetadataCache(pubkey, event);
+    }
   }
-
-  /**
-   * Loads metadata for all known users into the allUserMetadata signal
-   */
-  // async loadAllUsersMetadata(): Promise<void> {
-  //   const users = this.users();
-  //   if (users.length === 0) {
-  //     this.logger.debug('No users to load metadata for');
-  //     return;
-  //   }
-
-  //   this.logger.debug(`Loading metadata for ${users.length} users`);
-  //   const metadataArray: UserMetadataWithPubkey[] = [];
-
-  //   for (const user of users) {
-  //     try {
-  //       const metadata = await this.storage.getUserMetadata(user.pubkey);
-  //       if (metadata) {
-  //         this.logger.debug(`Loaded metadata for user ${user.pubkey}`, { metadata });
-  //         metadataArray.push({
-  //           ...metadata,
-  //           pubkey: user.pubkey
-  //         });
-  //       }
-  //     } catch (error) {
-  //       this.logger.error(`Failed to load metadata for user ${user.pubkey}`, error);
-  //     }
-  //   }
-
-  //   this.allUserMetadata.set(metadataArray);
-  //   this.logger.debug(`Loaded metadata for ${metadataArray.length} users`);
-  // }
-
-  /**
-   * Updates the metadata for a single user in the allUserMetadata signal
-   */
-  // private updateUserMetadataInSignal(pubkey: string, metadata: NostrEventData<UserMetadata>): void {
-  //   const userMetadataWithPubkey: UserMetadataWithPubkey = {
-  //     ...metadata,
-  //     pubkey
-  //   };
-
-  //   this.allUserMetadata.update(array => {
-  //     const index = array.findIndex(m => m.pubkey === pubkey);
-  //     if (index >= 0) {
-  //       // Replace existing metadata
-  //       return [
-  //         ...array.slice(0, index),
-  //         userMetadataWithPubkey,
-  //         ...array.slice(index + 1)
-  //       ];
-  //     } else {
-  //       // Add new metadata
-  //       return [...array, userMetadataWithPubkey];
-  //     }
-  //   });
-  // }
 
   getTruncatedNpub(pubkey: string): string {
     const npub = this.getNpubFromPubkey(pubkey);

@@ -575,17 +575,61 @@ export class StorageService {
     }
   }
 
+  async saveUserMetadata(pubkey: string, metadata: NostrEventData<UserMetadata>): Promise<void> {
+    try {
+      const enhancedMetadata = {
+        ...metadata,
+        pubkey,
+        updated: Date.now()
+      };
+
+      await this.db.put('userMetadata', enhancedMetadata);
+      this.logger.debug(`Saved user metadata to IndexedDB: ${pubkey}`);
+      await this.updateStats();
+    } catch (error) {
+      this.logger.error(`Error saving user metadata for ${pubkey}`, error);
+    }
+  }
+
+  async getUserMetadata(pubkey: string): Promise<NostrEventData<UserMetadata> | undefined> {
+    try {
+      return await this.db.get('userMetadata', pubkey);
+    } catch (error) {
+      this.logger.error(`Error getting user metadata for ${pubkey}`, error);
+      return undefined;
+    }
+  }
+
+  async getAllUserMetadata(): Promise<NostrEventData<UserMetadata>[]> {
+    try {
+      return await this.db.getAll('userMetadata');
+    } catch (error) {
+      this.logger.error('Error getting all user metadata', error);
+      return [];
+    }
+  }
+
+  async deleteUserMetadata(pubkey: string): Promise<void> {
+    try {
+      await this.db.delete('userMetadata', pubkey);
+      this.logger.debug(`Deleted user metadata from IndexedDB: ${pubkey}`);
+      await this.updateStats();
+    } catch (error) {
+      this.logger.error(`Error deleting user metadata for ${pubkey}`, error);
+    }
+  }
+
   async clearCache(currentUserPubkey: string): Promise<void> {
     try {
       this.logger.info('Clearing cache while preserving current user data');
 
       // Get all user metadata and filter out the current user
-      // const allUserMetadata = await this.getAllUserMetadata();
-      // for (const metadata of allUserMetadata) {
-      //   if (metadata.pubkey !== currentUserPubkey) {
-      //     await this.deleteUserMetadata(metadata.pubkey!);
-      //   }
-      // }
+      const allUserMetadata = await this.getAllUserMetadata();
+      for (const metadata of allUserMetadata) {
+        if (metadata.pubkey !== currentUserPubkey) {
+          await this.deleteUserMetadata(metadata.pubkey!);
+        }
+      }
 
       // Get all user relays and filter out the current user
       const allUserRelays = await this.getAllUserRelays();
@@ -619,7 +663,7 @@ export class StorageService {
   async updateStats(): Promise<void> {
     try {
       const relays = await this.getAllRelays();
-      // const userMetadata = await this.getAllUserMetadata();
+      const userMetadata = await this.getAllUserMetadata();
       const userRelays = await this.getAllUserRelays();
 
       // Count events (may need optimization for large datasets)
@@ -634,10 +678,10 @@ export class StorageService {
 
       // Calculate approximate size
       const relaysSize = JSON.stringify(relays).length;
-      // const userMetadataSize = JSON.stringify(userMetadata).length;
+      const userMetadataSize = JSON.stringify(userMetadata).length;
       const userRelaysSize = JSON.stringify(userRelays).length;
       const eventsSize = eventsCount * 500; // Rough estimation of average event size
-      const totalSize = relaysSize + userRelaysSize + eventsSize;
+      const totalSize = relaysSize + userMetadataSize + userRelaysSize + eventsSize;
 
       this.dbStats.set({
         relaysCount: relays.length,
