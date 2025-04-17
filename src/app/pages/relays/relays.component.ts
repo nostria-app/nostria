@@ -7,6 +7,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatTabsModule } from '@angular/material/tabs';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { RelayService, Relay } from '../../services/relay.service';
@@ -24,7 +25,8 @@ import { LoggerService } from '../../services/logger.service';
     MatButtonModule,
     MatInputModule,
     MatFormFieldModule,
-    MatSlideToggleModule
+    MatSlideToggleModule,
+    MatTabsModule
   ],
   templateUrl: './relays.component.html',
   styleUrl: './relays.component.scss'
@@ -35,7 +37,10 @@ export class RelaysComponent {
   private snackBar = inject(MatSnackBar);
   
   relays = this.relayService.userRelays;
+  bootstrapRelays = this.relayService.bootStrapRelays;
+  
   newRelayUrl = signal('');
+  newBootstrapUrl = signal('');
   
   addRelay(): void {
     const url = this.newRelayUrl();
@@ -66,6 +71,37 @@ export class RelaysComponent {
     this.logger.info('Removing relay', { url: relay.url });
     this.relayService.removeRelay(relay.url);
     this.showMessage('Relay removed');
+  }
+  
+  addBootstrapRelay(): void {
+    const url = this.newBootstrapUrl();
+    
+    if (!url || !url.trim()) {
+      this.showMessage('Please enter a valid relay URL');
+      return;
+    }
+    
+    if (!url.startsWith('wss://')) {
+      this.showMessage('Relay URL must start with wss://');
+      return;
+    }
+    
+    // Check if relay already exists
+    if (this.bootstrapRelays().includes(url)) {
+      this.showMessage('This bootstrap relay is already in your list');
+      return;
+    }
+    
+    this.logger.info('Adding new bootstrap relay', { url });
+    this.relayService.addBootstrapRelay(url);
+    this.newBootstrapUrl.set('');
+    this.showMessage('Bootstrap relay added successfully');
+  }
+  
+  removeBootstrapRelay(url: string): void {
+    this.logger.info('Removing bootstrap relay', { url });
+    this.relayService.removeBootstrapRelay(url);
+    this.showMessage('Bootstrap relay removed');
   }
   
   getStatusIcon(status: Relay['status'] | undefined): string {
