@@ -82,7 +82,11 @@ export class AppComponent implements OnInit {
   // We'll compute the current user metadata from the nostrService's metadata array
   accountMetadata = computed(() => {
     const pubkey = this.nostrService.activeAccount()?.pubkey;
-    return pubkey ? this.nostrService.getMetadataForAccount(pubkey) : undefined;
+    if (!pubkey) return undefined;
+
+    // First check from accountsMetadata (which should be synchronized)
+    const metadata = this.nostrService.getMetadataForAccount(pubkey);
+    return metadata;
   });
 
   navItems: NavItem[] = [
@@ -133,19 +137,25 @@ export class AppComponent implements OnInit {
       }
     });
 
-    // effect(() => {
-    //   if (this.nostrService.isLoggedIn() && this.storage.isInitialized()) {
-
-    //   }
-    // });
-
     // Effect to load metadata again after data loading completes
     effect(() => {
       const showSuccess = this.dataLoadingService.showSuccess();
       if (showSuccess) {
         this.logger.debug('Data loading completed, refreshing user metadata');
-        // this.nostrService.loadAllUsersMetadata().catch(err => 
-        //   this.logger.error('Failed to load metadata after data loading', err));
+        this.nostrService.loadUsersMetadata().catch(err =>
+          this.logger.error('Failed to reload metadata after data loading', err));
+      }
+    });
+
+    // Additional effect to make sure we have metadata for the current user
+    effect(() => {
+      const currentUser = this.nostrService.activeAccount();
+      const isInitialized = this.appState.initialized();
+
+      if (currentUser && isInitialized && this.storage.initialized()) {
+        // Ensure we have the latest metadata for the current user
+        this.nostrService.loadUsersMetadata().catch(err =>
+          this.logger.error('Failed to load user metadata on user change', err));
       }
     });
 
