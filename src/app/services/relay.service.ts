@@ -15,7 +15,8 @@ export interface Relay {
 export class RelayService {
   // TODO: Allow the user to set their own bootstrap relays in the settings.
   // TODO: The Nostr ecosystem should have a list of bootstrap relays that are reliable and fast, potentially only storing kind:10002.
-  #bootStrapRelays = ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/'];
+  // #bootStrapRelays = ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/'];
+  #bootStrapRelays = ['wss://purplepag.es/'];
   bootStrapRelays = signal(this.#bootStrapRelays);
 
   // TODO: Allow the user to set their own default relays in the settings?
