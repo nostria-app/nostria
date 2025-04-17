@@ -20,6 +20,13 @@ export class LayoutService {
 
     private debounceTimer: any;
 
+    navigateToProfile(npub: string): void {
+        this.router.navigate(['/p', npub]);
+        setTimeout(() => {
+            this.scrollToOptimalPosition();
+        }, 300);
+    }
+
     onSearchInput(event: any) {
         if (event.target.value === null) {
             clearTimeout(this.debounceTimer);
@@ -128,7 +135,7 @@ export class LayoutService {
             this.logger.debug(`Scrolled ${elementSelector} into view`);
         } else {
             this.logger.error(`Could not find ${elementSelector} element for scrolling into view`);
-            
+
             // Fallback: try scrolling the parent container
             const contentWrapper = document.querySelector('.content-wrapper');
             if (contentWrapper) {
@@ -141,37 +148,37 @@ export class LayoutService {
         }
     }
 
-/**
- * Scrolls the content wrapper to make a specific element visible
- * @param elementSelector CSS selector for the element to scroll to
- * @param offset Optional offset from the element's top (in pixels)
- * @param behavior Scrolling behavior
- */
-scrollToPosition(elementSelector: string, offset: number = 0, behavior: ScrollBehavior = 'smooth'): void {
-    const container = document.querySelector('.content-wrapper');
-    const targetElement = document.querySelector(elementSelector);
-    
-    if (!container) {
-        this.logger.error('Could not find .content-wrapper element for scrolling');
-        return;
+    /**
+     * Scrolls the content wrapper to make a specific element visible
+     * @param elementSelector CSS selector for the element to scroll to
+     * @param offset Optional offset from the element's top (in pixels)
+     * @param behavior Scrolling behavior
+     */
+    scrollToPosition(elementSelector: string, offset: number = 0, behavior: ScrollBehavior = 'smooth'): void {
+        const container = document.querySelector('.content-wrapper');
+        const targetElement = document.querySelector(elementSelector);
+
+        if (!container) {
+            this.logger.error('Could not find .content-wrapper element for scrolling');
+            return;
+        }
+
+        if (!targetElement) {
+            this.logger.error(`Could not find target element "${elementSelector}" for scrolling to`);
+            return;
+        }
+
+        // Calculate the target element's position relative to the container
+        const containerRect = container.getBoundingClientRect();
+        const targetRect = targetElement.getBoundingClientRect();
+        const relativeTop = targetRect.top - containerRect.top + container.scrollTop + offset;
+
+        container.scrollTo({
+            top: relativeTop,
+            behavior: behavior
+        });
+
+        this.logger.debug(`Scrolled .content-wrapper to show element "${elementSelector}" at position ${relativeTop}`);
     }
-    
-    if (!targetElement) {
-        this.logger.error(`Could not find target element "${elementSelector}" for scrolling to`);
-        return;
-    }
-    
-    // Calculate the target element's position relative to the container
-    const containerRect = container.getBoundingClientRect();
-    const targetRect = targetElement.getBoundingClientRect();
-    const relativeTop = targetRect.top - containerRect.top + container.scrollTop + offset;
-    
-    container.scrollTo({
-        top: relativeTop,
-        behavior: behavior
-    });
-    
-    this.logger.debug(`Scrolled .content-wrapper to show element "${elementSelector}" at position ${relativeTop}`);
-}
 }
 

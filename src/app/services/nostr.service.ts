@@ -249,6 +249,8 @@ export class NostrService {
     // Connect to their relays and get metadata. Save it.
     const event = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
 
+    debugger;
+
     if (!event) {
       // TODO: Duplicate code from data-loading service. Refactor and improve!!
       let bootstrapPool = new SimplePool();

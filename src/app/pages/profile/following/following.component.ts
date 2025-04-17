@@ -11,6 +11,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { ProfileStateService } from '../../../services/profile-state.service';
 import { LayoutService } from '../../../services/layout.service';
 import { LoggerService } from '../../../services/logger.service';
+import { UserProfileComponent } from '../user-profile/user-profile.component';
 
 @Component({
   selector: 'app-following',
@@ -21,7 +22,8 @@ import { LoggerService } from '../../../services/logger.service';
     MatIconModule,
     MatListModule,
     MatProgressSpinnerModule,
-    MatTabsModule
+    MatTabsModule,
+    UserProfileComponent
   ],
   templateUrl: './following.component.html',
   styleUrl: './following.component.scss',
@@ -47,7 +49,7 @@ export class FollowingComponent implements OnInit, AfterViewInit {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private location = inject(Location);
-  private layoutService = inject(LayoutService);
+  layout = inject(LayoutService);
   private logger = inject(LoggerService);
   profileState = inject(ProfileStateService);
   
@@ -155,12 +157,5 @@ export class FollowingComponent implements OnInit, AfterViewInit {
   
   goBack(): void {
     this.location.back();
-  }
-  
-  navigateToProfile(npub: string): void {
-    this.router.navigate(['../../', npub], { relativeTo: this.route });
-    setTimeout(() => {
-      this.layoutService.scrollToOptimalPosition();
-    }, 300);
   }
 }

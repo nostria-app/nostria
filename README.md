@@ -41,6 +41,11 @@ Alternative if you want to run the desktop app:
    npm run tauri dev
    ```
 
+## Classifications
+
+* Account - This is accounts of the user within the app.
+* Users - This is Nostr users.
+
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
