@@ -148,7 +148,7 @@
         
         @if (isGeneratingInvoice()) {
           <div class="loading-container">
-            <mat-spinner diameter="50"></mat-spinner>
+            <mat-spinner color="primary" diameter="50"></mat-spinner>
             <p>Generating Lightning invoice...</p>
           </div>
         } @else if (paymentInvoice()) {
@@ -156,7 +156,7 @@
             @if (paymentInvoice()?.status === 'pending') {
               <div class="qr-container">
                 <img 
-                  src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ paymentInvoice()?.paymentRequest }}" 
+                  src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ paymentInvoice()?.paymentRequest }}&bgcolor=ffffff" 
                   alt="Lightning QR Code"
                   class="qr-code"
                 >
@@ -184,7 +184,7 @@
                 </div>
                 
                 <div class="payment-status">
-                  <mat-spinner diameter="20" *ngIf="!isPaymentCompleted()"></mat-spinner>
+                  <mat-spinner color="primary" diameter="20" *ngIf="!isPaymentCompleted()"></mat-spinner>
                   <span *ngIf="!isPaymentCompleted()">Waiting for payment...</span>
                   <mat-icon color="primary" *ngIf="isPaymentCompleted()">check_circle</mat-icon>
                   <span *ngIf="isPaymentCompleted()">Payment successful!</span>

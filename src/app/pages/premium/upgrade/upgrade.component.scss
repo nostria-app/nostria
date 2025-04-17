@@ -8,13 +8,13 @@
   text-align: center;
   font-size: 2rem;
   margin-bottom: 2rem;
-  background: linear-gradient(90deg, #8e44ad, #3498db);
+  background: linear-gradient(90deg, var(--mat-sys-primary), var(--mat-sys-tertiary));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 .stepper-container {
-  background-color: white;
+  background-color: var(--mat-card-container-color);
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   overflow: hidden;
@@ -25,7 +25,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 1.5rem 2rem;
-  background-color: #f9f9f9;
+  background-color: var(--mdc-filled-card-container-color);
 }
 
 .step-indicator {
@@ -40,8 +40,8 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background-color: #e0e0e0;
-  color: #757575;
+  background-color: var(--mat-divider-color);
+  color: var(--mat-text-secondary-color);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -51,34 +51,34 @@
 
 .step-indicator.active .step-circle,
 .step-indicator.completed .step-circle {
-  background-color: #8e44ad;
-  color: white;
+  background-color: var(--mat-sys-primary);
+  color: var(--mat-primary-contrast);
 }
 
 .step-label {
   margin-top: 0.5rem;
   font-size: 0.8rem;
-  color: #757575;
+  color: var(--mat-text-secondary-color);
   transition: all 0.3s ease;
 }
 
 .step-indicator.active .step-label,
 .step-indicator.completed .step-label {
-  color: #8e44ad;
+  color: var(--mat-sys-primary);
   font-weight: bold;
 }
 
 .step-connector {
   flex: 1;
   height: 2px;
-  background-color: #e0e0e0;
+  background-color: var(--mat-divider-color);
   margin: 0 0.5rem;
   position: relative;
   z-index: 0;
 }
 
 .step-connector.active {
-  background-color: #8e44ad;
+  background-color: var(--mat-sys-primary);
 }
 
 .step-content {
@@ -88,10 +88,11 @@
 h2 {
   margin-top: 0;
   margin-bottom: 0.5rem;
+  color: var(--mat-text-primary-color);
 }
 
 .step-description {
-  color: var(--text-secondary);
+  color: var(--mat-text-secondary-color);
   margin-bottom: 2rem;
 }
 
@@ -112,13 +113,13 @@ h2 {
   gap: 0.5rem;
   margin-top: 1rem;
   padding: 0.5rem;
-  background-color: rgba(142, 68, 173, 0.05);
+  background-color: rgba(var(--mat-primary-rgb), 0.05);
   border-radius: 4px;
   
   p {
     margin: 0;
     font-size: 0.9rem;
-    color: var(--text-secondary);
+    color: var(--mat-text-secondary-color);
   }
 }
 
@@ -140,8 +141,8 @@ h2 {
   }
   
   &.selected {
-    border: 2px solid #8e44ad;
-    background-color: rgba(142, 68, 173, 0.05);
+    border: 2px solid var(--mat-sys-primary);
+    background-color: rgba(var(--mat-primary-rgb), 0.05);
   }
 }
 
@@ -153,7 +154,7 @@ h2 {
 }
 
 .best-value-tag {
-  background-color: #27ae60;
+  background-color: var(--mat-success-color);
   color: white;
   font-size: 0.7rem;
   padding: 0.2rem 0.5rem;
@@ -171,18 +172,18 @@ h2 {
   .price-amount {
     font-size: 1.8rem;
     font-weight: bold;
-    color: #8e44ad;
+    color: var(--mat-sys-primary);
   }
 }
 
 .payment-period {
-  color: var(--text-secondary);
+  color: var(--mat-text-secondary-color);
   font-size: 0.9rem;
   margin-top: 0.3rem;
 }
 
 .payment-summary {
-  background-color: #f9f9f9;
+  background-color: var(--mdc-filled-card-container-color);
   padding: 1.5rem;
   border-radius: 8px;
   margin-bottom: 2rem;
@@ -190,6 +191,7 @@ h2 {
   h3 {
     margin-top: 0;
     margin-bottom: 1rem;
+    color: var(--mat-text-primary-color);
   }
 }
 
@@ -197,6 +199,7 @@ h2 {
   display: flex;
   justify-content: space-between;
   padding: 0.5rem 0;
+  color: var(--mat-text-primary-color);
   
   &.total {
     font-weight: bold;
@@ -222,7 +225,7 @@ h2 {
 
 .qr-code {
   max-width: 200px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--mat-divider-color);
   padding: 0.5rem;
   border-radius: 4px;
 }
@@ -233,7 +236,7 @@ h2 {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(255, 255, 255, 0.9);
+  background-color: rgba(var(--mat-background-rgb), 0.9);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -249,13 +252,13 @@ h2 {
     font-size: 48px;
     height: 48px;
     width: 48px;
-    color: #27ae60;
+    color: var(--mat-success-color);
   }
   
   span {
     margin-top: 0.5rem;
     font-weight: bold;
-    color: #27ae60;
+    color: var(--mat-success-color);
   }
 }
 
@@ -267,12 +270,13 @@ h2 {
 .invoice-instruction {
   margin-top: 0;
   margin-bottom: 1rem;
+  color: var(--mat-text-primary-color);
 }
 
 .invoice-request {
   display: flex;
   align-items: center;
-  background-color: #f5f5f5;
+  background-color: var(--mdc-filled-card-container-color);
   padding: 0.5rem;
   border-radius: 4px;
   margin-bottom: 1rem;
@@ -282,13 +286,14 @@ h2 {
     font-family: monospace;
     word-break: break-all;
     font-size: 0.8rem;
+    color: var(--mat-text-primary-color);
   }
 }
 
 .invoice-expiry {
   display: flex;
   align-items: center;
-  color: #f39c12;
+  color: var(--mat-warn-color);
   margin-bottom: 1rem;
   font-size: 0.9rem;
   
@@ -303,6 +308,7 @@ h2 {
 .payment-status {
   display: flex;
   align-items: center;
+  color: var(--mat-text-primary-color);
   
   mat-spinner, mat-icon {
     margin-right: 0.5rem;
@@ -318,12 +324,13 @@ h2 {
     font-size: 48px;
     height: 48px;
     width: 48px;
-    color: #e74c3c;
+    color: var(--mat-warn-color);
     margin-bottom: 1rem;
   }
   
   h3 {
     margin-top: 0;
+    color: var(--mat-text-primary-color);
   }
   
   button {
@@ -339,6 +346,7 @@ h2 {
   
   p {
     margin-top: 1rem;
+    color: var(--mat-text-primary-color);
   }
 }
 
@@ -352,7 +360,7 @@ h2 {
   font-size: 64px;
   height: 64px;
   width: 64px;
-  color: #8e44ad;
+  color: var(--mat-sys-primary);
   margin-bottom: 1.5rem;
 }
 
@@ -367,7 +375,7 @@ h2 {
   margin-bottom: 1rem;
   
   mat-icon {
-    color: #8e44ad;
+    color: var(--mat-sys-primary);
     margin-right: 1rem;
     margin-top: 0.2rem;
   }
@@ -375,11 +383,12 @@ h2 {
   h4 {
     margin: 0;
     margin-bottom: 0.3rem;
+    color: var(--mat-text-primary-color);
   }
   
   p {
     margin: 0;
-    color: var(--text-secondary);
+    color: var(--mat-text-secondary-color);
   }
 }
 
