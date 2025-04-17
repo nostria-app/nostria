@@ -14,6 +14,7 @@ import { ProfileConnectionsComponent } from './pages/profile/profile-connections
 import { FollowingComponent } from './pages/profile/following/following.component';
 import { ProfileHomeComponent } from './pages/profile/profile-home/profile-home.component';
 import { LearnComponent } from './pages/learn/learn.component';
+import { PremiumComponent } from './pages/premium/premium.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/home', pathMatch: 'full' },
@@ -37,6 +38,11 @@ export const routes: Routes = [
       { path: 'following', component: FollowingComponent }
 
     ]
+  },
+  {
+    path: 'premium',
+    component: PremiumComponent,
+    title: 'Nostria Premium'
   },
   { path: 'profile', redirectTo: '/credentials' },
   { path: '**', redirectTo: '/home' }
