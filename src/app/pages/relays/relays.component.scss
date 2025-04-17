@@ -94,3 +94,40 @@
 .text-gray-500 {
   color: #6b7280;
 }
+
+.text-blue-500 {
+  color: #3b82f6;
+}
+
+.tab-content {
+  padding: 16px 0;
+}
+
+::ng-deep .mat-mdc-tab-body-content {
+  overflow: hidden !important;
+}
+
+.info-card {
+  margin-top: 2rem;
+  border-left: 4px solid var(--mat-sys-primary);
+  background-color: var(--mat-sys-surface-container-lowest);
+}
+
+.info-title {
+  display: flex;
+  align-items: center;
+}
+
+.info-icon {
+  color: var(--mat-sys-primary);
+  margin-right: 8px;
+}
+
+.mat-mdc-card-content p {
+  margin-bottom: 1rem;
+  color: var(--mat-sys-on-surface);
+}
+
+.mat-mdc-card-content p:last-child {
+  margin-bottom: 0;
+}

@@ -13,10 +13,12 @@ export interface Relay {
   providedIn: 'root'
 })
 export class RelayService {
-  // TODO: Allow the user to set their own bootstrap relays in the settings.
-  // TODO: The Nostr ecosystem should have a list of bootstrap relays that are reliable and fast, potentially only storing kind:10002.
-  // #bootStrapRelays = ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/'];
-  #bootStrapRelays = ['wss://purplepag.es/'];
+  private readonly BOOTSTRAP_RELAYS_STORAGE_KEY = 'nostria-bootstrap-relays';
+  
+  // Default bootstrap relays
+  private readonly DEFAULT_BOOTSTRAP_RELAYS = ['wss://purplepag.es/'];
+  
+  #bootStrapRelays = this.loadBootstrapRelaysFromStorage() || this.DEFAULT_BOOTSTRAP_RELAYS;
   bootStrapRelays = signal(this.#bootStrapRelays);
 
   // TODO: Allow the user to set their own default relays in the settings?
@@ -48,6 +50,64 @@ export class RelayService {
         this.syncRelaysToStorage();
       }
     });
+    
+    // When bootstrap relays change, save to local storage
+    effect(() => {
+      const currentBootstrapRelays = this.bootStrapRelays();
+      this.logger.debug(`Bootstrap relays effect triggered with ${currentBootstrapRelays.length} relays`);
+      
+      // Save to local storage
+      localStorage.setItem(this.BOOTSTRAP_RELAYS_STORAGE_KEY, JSON.stringify(currentBootstrapRelays));
+    });
+  }
+  
+  /**
+   * Loads bootstrap relays from local storage
+   */
+  private loadBootstrapRelaysFromStorage(): string[] | null {
+    try {
+      const storedRelays = localStorage.getItem(this.BOOTSTRAP_RELAYS_STORAGE_KEY);
+      if (storedRelays) {
+        const parsedRelays = JSON.parse(storedRelays);
+        if (Array.isArray(parsedRelays)) {
+          this.logger.debug(`Loaded ${parsedRelays.length} bootstrap relays from storage`);
+          return parsedRelays;
+        }
+      }
+    } catch (error) {
+      this.logger.error('Error loading bootstrap relays from storage', error);
+    }
+    return null;
+  }
+  
+  /**
+   * Adds a bootstrap relay
+   */
+  addBootstrapRelay(url: string): void {
+    this.logger.debug(`Adding bootstrap relay: ${url}`);
+    
+    // Make sure URL ends with /
+    if (!url.endsWith('/')) {
+      url += '/';
+    }
+    
+    this.bootStrapRelays.update(relays => [...relays, url]);
+  }
+  
+  /**
+   * Removes a bootstrap relay
+   */
+  removeBootstrapRelay(url: string): void {
+    this.logger.debug(`Removing bootstrap relay: ${url}`);
+    this.bootStrapRelays.update(relays => relays.filter(relay => relay !== url));
+  }
+  
+  /**
+   * Resets bootstrap relays to defaults
+   */
+  resetBootstrapRelays(): void {
+    this.logger.debug('Resetting bootstrap relays to defaults');
+    this.bootStrapRelays.set(this.DEFAULT_BOOTSTRAP_RELAYS);
   }
 
   /**
@@ -97,28 +157,6 @@ export class RelayService {
 
       userRelay.status = status ? 'connected' : 'disconnected';
     }
-
-    // In case we need access to the relays in the pool, we can use this code:
-    // const poolRelays: Map<string, any> = (this.userPool as any).relays;
-    // if (poolRelays instanceof Map) {
-    //   for (const relay of this.relays()) {
-    //     const poolRelay = poolRelays.get(relay.url);
-    //     // const userRelay = this.relays().find(r => r.url === relay.url);
-
-    //     if (!poolRelay) {
-    //       this.logger.warn(`Relay ${relay.url} not found in user relays`);
-    //       continue;
-    //     }
-
-    //     debugger;
-
-    //     if (poolRelay._connected) {
-    //       relay.status = 'connected';
-    //     } else {
-    //       relay.status = 'disconnected';
-    //     }
-    //   }
-    // }
   }
 
   /**
@@ -193,25 +231,6 @@ export class RelayService {
   }
 
   /**
-   * Load relays from storage by pubkey
-   */
-  // async loadRelaysForUser(pubkey: string): Promise<void> {
-  //   try {
-  //     const userRelays = await this.storage.getUserRelays(pubkey);
-
-  //     if (userRelays && userRelays.relays.length > 0) {
-  //       this.logger.debug(`Found ${userRelays.relays.length} relays for user ${pubkey} in storage`);
-  //       this.setRelays(userRelays.relays);
-  //       return;
-  //     }
-
-  //     this.logger.debug(`No relays found for user ${pubkey} in storage`);
-  //   } catch (error) {
-  //     this.logger.error(`Error loading relays for user ${pubkey}`, error);
-  //   }
-  // }
-
-  /**
    * Save user relays to storage
    */
   async saveUserRelays(pubkey: string): Promise<void> {
@@ -234,74 +253,6 @@ export class RelayService {
   getRelaysFromRelayEvent(relayEvent: Event): string[] {
     return relayEvent.tags.filter(tag => tag.length >= 2 && tag[0] === 'r').map(tag => tag[1]);
   }
-
-  // async fetchUserMetadata(pubkey: string): Promise<any> {
-  //   const userPool = new SimplePool();
-  //   let relayUrls: string[] = [];
-
-  //   // First fetch the relays for the user, if we don't have it.
-  //   const userRelays = await this.storage.getUserRelays(pubkey);
-
-  //   if (!userRelays || userRelays.relays.length === 0) {
-  //     this.logger.warn(`No relays found for user ${pubkey}`);
-
-  //     const bootstrapPool = new SimplePool();
-  //     this.logger.debug('Connecting to user relays to fetch metadata');
-
-  //     // Get and updated list of relays for the user from bootstrap relays.
-  //     const relays = await bootstrapPool.get(this.#bootStrapRelays, {
-  //       kinds: [kinds.RelayList],
-  //       authors: [pubkey],
-  //     });
-
-  //     bootstrapPool.close(this.#bootStrapRelays);
-
-  //     if (relays) {
-  //       relayUrls = this.getRelaysFromRelayEvent(relays);
-  //     } else {
-  //       this.logger.warn('No relay list found for user!');
-  //       // TODO: Should we look for kind 3 and use that?
-  //     }
-  //   }
-
-  //   const metadata = await userPool.get(relayUrls, {
-  //     kinds: [kinds.Metadata],
-  //     authors: [pubkey],
-  //   });
-
-  //   if (metadata) {
-  //     this.logger.info('Found user metadata', { metadata });
-
-  //     try {
-  //       // Parse the content field which should be JSON
-  //       const metadataContent = JSON.parse(metadata.content);
-  //       this.logger.debug('Parsed metadata content', { metadataContent });
-
-  //       // Create a NostrEventData object to store the full content and tags
-  //       const eventData: NostrEventData<UserMetadata> = {
-  //         content: metadataContent,  // Store the parsed JSON object 
-  //         tags: metadata.tags,       // Store the original tags
-  //         // raw: metadata.content      // Optionally store the raw JSON string
-  //       };
-
-  //       // Save to storage with all fields and the full event data
-  //       await this.storage.saveUserMetadata(pubkey, eventData);
-
-  //       return eventData;
-
-  //     } catch (e) {
-  //       this.logger.error('Failed to parse metadata content', e);
-  //     }
-  //   } else {
-  //     this.logger.warn('No metadata found for user');
-  //   }
-
-  //   return undefined;
-
-  //   // Get an updated list of relays from the user's relays.
-
-  //   // Fetch the user metadata from the user's relays.
-  // }
 
   /**
    * Fetch NIP-11 information for a relay
