@@ -87,13 +87,14 @@ export class NostrService {
 
     effect(async () => {
       if (this.storage.initialized()) {
-        this.loadUsersFromStorage();
-        this.loadActiveUserFromStorage();
+        debugger;
+        this.loadAccountsFromStorage();
+        this.loadActiveAccountFromStorage();
 
         // We keep an in-memory copy of the user metadata and relay list for all accounts,
         // they won't take up too much memory space.
-        await this.loadUsersMetadata();
-        await this.loadUsersRelays();
+        await this.loadAccountsMetadata();
+        await this.loadAccountsRelays();
 
         this.initialized.set(true);
       }
@@ -271,23 +272,45 @@ export class NostrService {
 
         const relayUrls = this.getRelayUrls(relays);
 
-        let userPool = new SimplePool();
+        let metadata = null;
 
-        const metadata = await userPool.get(relayUrls, {
-          kinds: [kinds.Metadata],
-          authors: [pubkey],
-        });
+        this.logger.debug('Trying to fetch metadata from individual relays', { relayCount: relayUrls.length });
+
+        // Try each relay individually until we find metadata
+        for (const relayUrl of relayUrls) {
+          let userPool = new SimplePool();
+
+          try {
+            this.logger.debug('Attempting to fetch metadata from relay', { relay: relayUrl });
+            metadata = await userPool.get([relayUrl], {
+              kinds: [kinds.Metadata],
+              authors: [pubkey],
+            }, {
+              maxWait: 3000
+            });
+
+            userPool.close([relayUrl]); // Close the pool for this relay
+
+            if (metadata) {
+              this.logger.debug('Successfully retrieved metadata', { relay: relayUrl });
+              break; // Stop trying more relays once we've found metadata
+            }
+          } catch (error) {
+            this.logger.debug('Failed to fetch metadata from relay', { relay: relayUrl, error });
+            // Continue to the next relay on failure
+          }
+        }
 
         if (metadata) {
           await this.storage.saveEvent(metadata);
         }
 
-        this.currentProfileUserPool = userPool;
-        this.currentProfileRelayUrls = relayUrls;
+        // this.currentProfileUserPool = userPool;
+        // this.currentProfileRelayUrls = relayUrls;
 
-        if (disconnect) {
-          userPool.close(relayUrls);
-        }
+        // if (disconnect) {
+        //   userPool.close(relayUrls);
+        // }
 
         return metadata as NostrEvent;
       }
@@ -300,7 +323,7 @@ export class NostrService {
     return new Promise((resolve, reject) => {
       this.discoveryQueue.push({ pubkey, disconnect, resolve, reject });
       this.logger.debug('Queued metadata discovery', { pubkey, queueLength: this.discoveryQueue.length });
-      
+
       this.processDiscoveryQueue();
     });
   }
@@ -316,10 +339,10 @@ export class NostrService {
     }
 
     this.activeDiscoveries++;
-    this.logger.debug('Starting metadata discovery', { 
-      pubkey: next.pubkey, 
+    this.logger.debug('Starting metadata discovery', {
+      pubkey: next.pubkey,
       activeDiscoveries: this.activeDiscoveries,
-      queueRemaining: this.discoveryQueue.length 
+      queueRemaining: this.discoveryQueue.length
     });
 
     try {
@@ -330,12 +353,12 @@ export class NostrService {
       next.reject(error);
     } finally {
       this.activeDiscoveries--;
-      this.logger.debug('Completed metadata discovery', { 
-        pubkey: next.pubkey, 
+      this.logger.debug('Completed metadata discovery', {
+        pubkey: next.pubkey,
         activeDiscoveries: this.activeDiscoveries,
         queueRemaining: this.discoveryQueue.length
       });
-      
+
       this.processDiscoveryQueue();
     }
   }
@@ -346,45 +369,45 @@ export class NostrService {
     const bunkerParsed = await parseBunkerInput(remoteSigningUrl);
 
     console.log(bunkerParsed);
-    
+
     try {
       // Parse the URL
       if (!remoteSigningUrl.startsWith('bunker://')) {
         throw new Error('Invalid Nostr Connect URL format. Must start with bunker://');
       }
-      
+
       // Extract components from the URL properly
       // The format is bunker://PUBKEY?relay=URL&relay=URL&secret=SECRET
       const withoutProtocol = remoteSigningUrl.substring('bunker://'.length);
-      
+
       // Find the first ? which separates pubkey from params
       const questionMarkIndex = withoutProtocol.indexOf('?');
       if (questionMarkIndex === -1) {
         throw new Error('Invalid Nostr Connect URL: missing parameters');
       }
-      
+
       // Extract pubkey (everything before ?)
       const pubkey = withoutProtocol.substring(0, questionMarkIndex);
-      
+
       // Parse the query parameters
       const searchParams = new URLSearchParams(withoutProtocol.substring(questionMarkIndex));
-      
+
       // Get all relay parameters
       const relays = searchParams.getAll('relay');
-      
+
       // Get the secret
       const secret = searchParams.get('secret');
 
       if (!pubkey || !secret || relays.length === 0) {
         throw new Error('Invalid Nostr Connect URL: missing required components');
       }
-      
-      this.logger.debug('Parsed Nostr Connect URL', { 
-        pubkey, 
+
+      this.logger.debug('Parsed Nostr Connect URL', {
+        pubkey,
         relayCount: relays.length,
         secret: `${secret?.substring(0, 4)}...` // Log only prefix for security
       });
-      
+
       // Create a connection pool for Nostr Connect
       const connectPool = new SimplePool();
 
@@ -417,24 +440,24 @@ export class NostrService {
         source: 'remote', // With 'remote' type, the actually stored pubkey is not connected with the prvkey.
         lastUsed: Date.now()
       };
-  
+
       this.setAccount(newUser);
       this.logger.debug('Remote signer account set successfully', { pubkey: remotePublicKey });
-    
+
       // let event = finalizeEvent({
       //   kind: kinds.NostrConnect,
       //   created_at: Math.floor(Date.now() / 1000),
       //   tags: [["p", pubkey]],
       //   content: 'hello',
       // }, privateKey);
-      
+
       // let isGood = verifyEvent(event)
 
       // console.log('Event is good:', isGood, event, privateKey, publicKey);
-      
+
       // const result = await connectPool.publish(relays, event);
       // console.log('Result:', result);
-      
+
       // Store connection information
       // const newUser: NostrUser = {
       //   pubkey,
@@ -442,16 +465,16 @@ export class NostrService {
       //   source: 'extension', // Using extension as source type for remote signer
       //   lastUsed: Date.now()
       // };
-      
+
       // // Add the user to our accounts
       // this.setAccount(newUser);
-      
+
       // TODO: Implement actual NIP-46 protocol communication
       // This would establish WebSocket connections to the relays
       // and implement the remote signing protocol
-      
+
       this.logger.info('Nostr Connect login successful', { pubkey });
-      
+
       return {
         pubkey,
         relays,
@@ -548,7 +571,7 @@ export class NostrService {
     return undefined;
   }
 
-  private loadUsersFromStorage(): void {
+  private loadAccountsFromStorage(): void {
     const usersJson = localStorage.getItem(this.ACCOUNTS_STORAGE_KEY);
     if (usersJson) {
       try {
@@ -564,7 +587,7 @@ export class NostrService {
     }
   }
 
-  private loadActiveUserFromStorage(): void {
+  private loadActiveAccountFromStorage(): void {
     const userJson = localStorage.getItem(this.ACCOUNT_STORAGE_KEY);
     if (userJson) {
       try {
@@ -579,15 +602,15 @@ export class NostrService {
     }
   }
 
-  async loadUsersMetadata() {
+  async loadAccountsMetadata() {
     const pubkeys = this.accounts().map(user => user.pubkey);
     const events = await this.storage.getEventsByPubkeyAndKind(pubkeys, kinds.Metadata);
-    
+
     // Process each event to ensure content is parsed
     const processedEvents = events.map(event => {
       if (event.content && typeof event.content === 'string') {
         try {
-          const parsedEvent = {...event};
+          const parsedEvent = { ...event };
           parsedEvent.content = JSON.parse(event.content);
           return parsedEvent;
         } catch (e) {
@@ -596,12 +619,12 @@ export class NostrService {
       }
       return event;
     });
-    
+
     this.accountsMetadata.set(processedEvents);
     return processedEvents;
   }
 
-  async loadUsersRelays() {
+  async loadAccountsRelays() {
     const pubkeys = this.accounts().map(user => user.pubkey);
     const relays = await this.storage.getEventsByPubkeyAndKind(pubkeys, kinds.RelayList);
     this.accountsRelays.set(relays);
@@ -609,7 +632,7 @@ export class NostrService {
 
   async updateAccountMetadata(event: Event) {
     const pubkey = event.pubkey;
-    
+
     // Ensure content is properly parsed
     if (event.content && typeof event.content === 'string') {
       try {
@@ -618,19 +641,19 @@ export class NostrService {
         this.logger.error('Failed to parse event content in updateAccountMetadata', e);
       }
     }
-    
+
     // Add to the metadata array
     const existingMetadata = this.accountsMetadata().find(meta => meta.pubkey === pubkey);
 
     if (existingMetadata) {
       this.logger.debug('Updating existing metadata', { pubkey });
-      this.accountsMetadata.update(array => 
+      this.accountsMetadata.update(array =>
         array.map(meta => meta.pubkey === pubkey ? event : meta));
     } else {
       this.logger.debug('Adding new metadata', { pubkey });
       this.accountsMetadata.update(array => [...array, event]);
     }
-    
+
     // Also update the cache for getMetadataForUser
     if (this.usersMetadata().has(pubkey)) {
       this.updateMetadataCache(pubkey, event);

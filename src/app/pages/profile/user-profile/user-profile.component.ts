@@ -1,4 +1,4 @@
-import { Component, effect, inject, input, signal, untracked } from '@angular/core';
+import { Component, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute } from '@angular/router';
@@ -25,7 +25,8 @@ export class UserProfileComponent {
     private nostrService = inject(NostrService);
     private logger = inject(LoggerService);
     layout = inject(LayoutService);
-    npub = input<string>('');
+    pubkey = input<string>('');
+    npub = signal<string | undefined>(undefined);
     // Create a signal to store profile data
     profile = signal<any>(null);
     isLoading = signal(false);
@@ -34,11 +35,17 @@ export class UserProfileComponent {
     constructor() {
         // Set up an effect to watch for changes to npub input
         effect(() => {
-            const npubValue = this.npub();
-            if (npubValue) {
-                untracked(() => {
-                    this.loadProfileData(npubValue);
-                });
+            const pubkey = this.pubkey();
+
+            if (pubkey) {
+                const npub = this.nostrService.getNpubFromPubkey(pubkey);
+                this.npub.set(npub);
+
+                if (pubkey) {
+                    untracked(() => {
+                        this.loadProfileData(pubkey);
+                    });
+                }
             }
         });
     }
