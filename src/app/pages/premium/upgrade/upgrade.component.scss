@@ -123,6 +123,25 @@ h2 {
   }
 }
 
+.username-preview {
+  margin-top: 1.5rem;
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 500;
+  padding: 1rem;
+  border-radius: 8px;
+  background-color: rgba(var(--mat-primary-rgb), 0.05);
+  
+  .username-part {
+    color: var(--mat-sys-primary);
+    font-weight: bold;
+  }
+  
+  .domain-part {
+    color: var(--mat-text-secondary-color);
+  }
+}
+
 /* Step 2: Payment Plan */
 .payment-options {
   display: grid;
