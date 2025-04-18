@@ -8,6 +8,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTabsModule } from '@angular/material/tabs';
+import { ScrollingModule } from '@angular/cdk/scrolling';
 import { ProfileStateService } from '../../../services/profile-state.service';
 import { LayoutService } from '../../../services/layout.service';
 import { LoggerService } from '../../../services/logger.service';
@@ -23,6 +24,7 @@ import { UserProfileComponent } from '../user-profile/user-profile.component';
     MatListModule,
     MatProgressSpinnerModule,
     MatTabsModule,
+    ScrollingModule,
     UserProfileComponent
   ],
   templateUrl: './following.component.html',
@@ -64,6 +66,13 @@ export class FollowingComponent implements OnInit, AfterViewInit {
   
   npub = computed(() => this.route.snapshot.parent?.paramMap.get('npub') || '');
   userProfile = signal<any>(null);
+  
+  // Item size for virtual scrolling (approx. height of each item in pixels)
+  readonly itemSize = 72;
+  
+  // Buffer size determines how many items to render outside viewport
+  readonly minBufferPx = 200;
+  readonly maxBufferPx = 400;
   
   constructor() {
     effect(async () => {
