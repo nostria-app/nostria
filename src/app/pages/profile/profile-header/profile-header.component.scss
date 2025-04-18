@@ -3,11 +3,11 @@
     display: flex;
     flex-direction: column;
 
-    &.compact {
-        display: flex;
-        align-items: center;
-        padding: 1rem;
-    }
+    // &.compact {
+    //     display: flex;
+    //     align-items: center;
+    //     padding: 1rem;
+    // }
 }
 
 .profile-info-container {
@@ -29,18 +29,32 @@
     }
 
     // Switch to vertical layout on smaller screens
-    @media (max-width: 768px) {
-        flex-direction: column;
-        position: relative;
-        top: -120px;
-        gap: 0;
+    // @media (max-width: 768px) {
+    //     flex-direction: column;
+    //     position: relative;
+    //     top: -120px;
+    //     // gap: 0;
 
-        // First div still maintains 168px width even in vertical layout
+    //     // First div still maintains 168px width even in vertical layout
+    //     >div:first-child {
+    //         align-self: center; // Center align the div horizontally
+    //         margin: 0 auto; // Alternative centering approach
+    //         top: 0px;
+    //     }
+    // }
+
+    &.compact {
+        // When compact class is applied
+        flex-direction: row;
+        position: initial;
+
+        // First div should be fixed at 80px in compact mode
         >div:first-child {
-            width: 168px;
-            align-self: center; // Center align the div horizontally
-            margin: 0 auto; // Alternative centering approach
-            top: 0px;
+            flex: 0 0 80px !important; // Don't grow or shrink, always 80px
+            width: 80px !important;
+            align-self: auto;
+            margin: 0;
+            top: 0;
         }
     }
 }
@@ -66,8 +80,7 @@
     }
 
     .compact & {
-        height: 120px;
-        border-radius: 4px;
+        height: 80px;
     }
 }
 
@@ -95,27 +108,28 @@
     }
 
     .compact & {
-        position: relative;
-        width: 80px;
-        height: 80px;
-        left: 0;
-        bottom: 0;
-        margin-right: 16px;
+        // position: relative;
+        width: 80px !important;
+        height: 80px !important;
+        top: -10px;
+        // left: 0;
+        // bottom: 0;
+        // margin-right: 16px;
     }
 
-    @media (max-width: 768px) {
-        width: 140px;
-        height: 140px;
-        left: 24px;
-        bottom: -70px;
-    }
+    // @media (max-width: 768px) {
+    //     width: 140px;
+    //     height: 140px;
+    //     left: 24px;
+    //     bottom: -70px;
+    // }
 
-    @media (max-width: 480px) {
-        width: 120px;
-        height: 120px;
-        left: 16px;
-        bottom: -60px;
-    }
+    // @media (max-width: 480px) {
+    //     width: 120px;
+    //     height: 120px;
+    //     left: 16px;
+    //     bottom: -60px;
+    // }
 }
 
 .avatar-image {
@@ -130,11 +144,11 @@
     height: 120px;
     color: var(--mat-divider-color, #ccc);
 
-    .compact & {
-        font-size: 60px;
-        width: 60px;
-        height: 60px;
-    }
+    // .compact & {
+    //     font-size: 60px;
+    //     width: 60px;
+    //     height: 60px;
+    // }
 }
 
 .profile-info {
@@ -143,26 +157,38 @@
     max-width: 100%;
     overflow: hidden;
 
-    &.compact {
-        margin-top: 0;
-        padding: 0;
-        flex: 1;
-    }
+    // &.compact {
+    //     margin-top: 0;
+    //     padding: 0;
+    //     flex: 1;
+    // }
 
-    @media (max-width: 768px) {}
+    // @media (max-width: 768px) {}
 
-    @media (max-width: 480px) {}
+    // @media (max-width: 480px) {}
 }
 
-.profile-name {
-    margin-top: 0;
-    margin-bottom: 8px;
-    font-size: 24px;
+.profile-bio {
+    margin-top: 1rem;
+    white-space: pre-line;
+    max-width: 700px;
+    
+    // @media (max-width: 768px) {
+    //   /* Remove auto margins that were centering the bio */
+    //   margin-left: 0.5rem;
+    //   margin-right: 0;
+    // }
+  }
 
-    .compact & {
-        font-size: 18px;
-        margin-bottom: 4px;
-    }
+.profile-name {
+    margin-top: 0.4rem;
+    margin-bottom: 8px;
+    font-size: 2rem;
+
+    // .compact & {
+    //     font-size: 18px;
+    //     margin-bottom: 4px;
+    // }
 }
 
 .profile-item {
@@ -170,7 +196,8 @@
     align-items: center;
     margin-bottom: 8px;
     color: var(--mat-hint-color, #757575);
-    width: auto; /* Changed from 100% to auto to fit content */
+    width: auto;
+    /* Changed from 100% to auto to fit content */
     max-width: 100%;
     overflow: hidden;
 
@@ -180,7 +207,8 @@
         height: 18px;
         width: 18px;
         line-height: 18px;
-        flex-shrink: 0; /* Prevent icon from shrinking */
+        flex-shrink: 0;
+        /* Prevent icon from shrinking */
     }
 
     span {
@@ -188,28 +216,32 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-        max-width: 100%; /* Adjusted from calc(100% - 26px) */
-        display: inline-block; /* Added to ensure tooltip aligns properly */
+        max-width: 100%;
+        /* Adjusted from calc(100% - 26px) */
+        display: inline-block;
+        /* Added to ensure tooltip aligns properly */
     }
 
     a {
         color: var(--mat-primary-color, #1976d2);
         text-decoration: none;
-        display: inline-block; /* Changed from block to inline-block */
+        display: inline-block;
+        /* Changed from block to inline-block */
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-        max-width: 100%; /* Changed from width: 100% to max-width: 100% */
+        max-width: 100%;
+        /* Changed from width: 100% to max-width: 100% */
 
         &:hover {
             text-decoration: underline;
         }
     }
 
-    .compact & {
-        margin-bottom: 4px;
-        font-size: 12px;
-    }
+    // .compact & {
+    //     margin-bottom: 4px;
+    //     font-size: 12px;
+    // }
 }
 
 .profile-bio {
@@ -220,16 +252,16 @@
 }
 
 .profile-menu-button {
-    position: absolute;
-    top: 16px;
-    right: 16px;
-    background-color: rgba(255, 255, 255, 0.8);
+    position: relative;
+    float: right;
+    // top: 16px;
+    // right: 16px;
 
-    .compact & {
-        top: auto;
-        right: 0;
-        background-color: transparent;
-    }
+    // .compact & {
+    //     top: auto;
+    //     right: 0;
+    //     background-color: transparent;
+    // }
 }
 
 .verified-icon {

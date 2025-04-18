@@ -1,13 +1,10 @@
-<div class="profile-header-container" [class.compact]="isCompactHeader()">
+<div class="profile-header-container" [class.compact]="compact()">
     @if (profile(); as profile) {
     <div class="profile-banner" [class.clickable]="profile.content.banner"
         [style.background-image]="profile.content.banner ? 'url(' + profile.content.banner + ')' : getDefaultBanner()"
         (click)="profile.content.banner && layout.openProfileBanner(profile)">
-        <button mat-icon-button class="profile-menu-button" [matMenuTriggerFor]="profileMenu">
-            <mat-icon>more_vert</mat-icon>
-        </button>
     </div>
-    <div class="profile-info-container">
+    <div class="profile-info-container" [class.compact]="compact()">
         <div class="profile-avatar" [class.clickable]="profile.content.picture"
             (click)="profile.content.picture && layout.openProfilePicture(profile)">
             @if (profile.content.picture) {
@@ -17,7 +14,12 @@
             }
         </div>
 
-        <div class="profile-info" [class.compact]="isCompactHeader()">
+        <div class="profile-info" [class.compact]="compact()">
+
+            <button mat-icon-button class="profile-menu-button" [matMenuTriggerFor]="profileMenu">
+                <mat-icon>more_vert</mat-icon>
+            </button>
+
             <h1 class="profile-name">{{ name() }}</h1>
 
             <div class="profile-item" title="{{ npub() }}">
@@ -25,22 +27,28 @@
                 <span>{{ npub() }}</span>
             </div>
 
-            @if (getVerifiedIdentifier()) {
+            @if (!compact() && getVerifiedIdentifier()) {
             <div class="profile-item" title="{{ getVerifiedIdentifier() }}">
                 <mat-icon class="verified-icon">verified</mat-icon>
                 <span>{{ getVerifiedIdentifier() }}</span>
             </div>
             }
 
-            @if (profile.content.website) {
+            @if (!compact() && profile.content.website) {
             <div class="profile-item" title="{{ profile.content.website }}">
                 <mat-icon>link</mat-icon>
                 <span><a [href]="profile.content.website" target="_blank">{{ profile.content.website}}</a></span>
             </div>
             }
 
-            @if (!isCompactHeader() && profile.content.about) {
+            @if (!compact() && profile.content.about) {
             <div class="profile-bio">{{ profile.content.about }}</div>
+            }
+
+            @if (!compact()) {
+            <a class="following-count" [routerLink]="'following'" [queryParamsHandling]="'preserve'">
+                Following 50
+            </a>
             }
 
             <mat-menu #profileMenu="matMenu">
