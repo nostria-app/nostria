@@ -1,8 +1,8 @@
-// .profile-page {
-//   // max-width: 1200px;
-//   // margin: 0 auto;
-//   // padding-bottom: 2rem;
-// }
+.profile-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  // padding-bottom: 2rem;
+}
 
 // .profile-header {
 //   // position: relative;
@@ -243,14 +243,6 @@
 
 .verified-name {
   color: var(--mat-sys-primary, #673ab7);
-}
-
-.verified-icon {
-  color: var(--mat-sys-primary, #673ab7);
-  // font-size: 18px;
-  // height: 18px;
-  // width: 18px;
-  // margin-left: 4px;
 }
 
 .profile-icon,

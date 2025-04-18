@@ -1,7 +1,8 @@
 <div class="profile-header-container" [class.compact]="isCompactHeader()">
     @if (profile(); as profile) {
-    <div class="profile-banner"
-        [style.background-image]="profile.content.banner ? 'url(' + profile.content.banner + ')' : getDefaultBanner()">
+    <div class="profile-banner" [class.clickable]="profile.content.banner"
+        [style.background-image]="profile.content.banner ? 'url(' + profile.content.banner + ')' : getDefaultBanner()"
+        (click)="profile.content.banner && layout.openProfileBanner(profile)">
         <button mat-icon-button class="profile-menu-button" [matMenuTriggerFor]="profileMenu">
             <mat-icon>more_vert</mat-icon>
         </button>
@@ -23,6 +24,13 @@
                 <mat-icon>key</mat-icon>
                 <span>{{ npub() }}</span>
             </div>
+
+            @if (getVerifiedIdentifier()) {
+            <div class="profile-item" title="{{ getVerifiedIdentifier() }}">
+                <mat-icon class="verified-icon">verified</mat-icon>
+                <span>{{ getVerifiedIdentifier() }}</span>
+            </div>
+            }
 
             @if (profile.content.website) {
             <div class="profile-item" title="{{ profile.content.website }}">

@@ -11,3 +11,12 @@ Make sure to put most styles in the global styles.scss file, and only use compon
 Always use "fetch" for http request instead of HttpClient.
 
 Don't use constructor for dependency injection, use inject instead.
+
+For "box-shadow" CSS, make sure to always use the built-in for Angular Material:
+
+box-shadow: var(--mat-sys-level0)
+box-shadow: var(--mat-sys-level1)
+box-shadow: var(--mat-sys-level2)
+box-shadow: var(--mat-sys-level3)
+box-shadow: var(--mat-sys-level4)
+box-shadow: var(--mat-sys-level5)

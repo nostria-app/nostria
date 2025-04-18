@@ -221,7 +221,21 @@ export class LayoutService {
             const dialogRef = this.dialog.open(ProfilePictureDialogComponent, {
                 data: {
                     imageUrl: profile.content.picture,
-                    userName: 'JOHN!' //this.getFormattedName()
+                },
+                maxWidth: '100vw',
+                maxHeight: '100vh',
+                panelClass: 'profile-picture-dialog'
+            });
+
+            this.logger.debug('Opened profile picture dialog');
+        }
+    }
+
+    openProfileBanner(profile: NostrEvent): void {
+        if (profile?.content.banner) {
+            const dialogRef = this.dialog.open(ProfilePictureDialogComponent, {
+                data: {
+                    imageUrl: profile.content.banner,
                 },
                 maxWidth: '100vw',
                 maxHeight: '100vh',
