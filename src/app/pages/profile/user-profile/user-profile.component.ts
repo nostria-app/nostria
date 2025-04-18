@@ -142,7 +142,10 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
             
             if (isVisible && !this.isScrolling()) {
                 // Using the debounced load function to prevent rapid loading during scroll
-                this.debouncedLoadProfileData(this.pubkey());
+                if (!this.profile() && !this.isLoading()) {
+                    this.isLoading.set(true); // Set loading state immediately to show spinner
+                    this.debouncedLoadProfileData(this.pubkey());
+                }
             }
         }, {
             threshold: 0.1, // Trigger when at least 10% is visible
@@ -184,19 +187,23 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
     }
 
     private async loadProfileData(npubValue: string): Promise<void> {
-        // Don't reload if we're already loading or have data
-        if (this.isLoading() || this.profile()) return;
+        // Don't reload if we already have data
+        if (this.profile()) return;
         
         try {
-            this.isLoading.set(true);
+            // Note: isLoading is now set earlier when visibility is detected
             this.logger.debug('Loading profile data for:', npubValue);
 
             const data = await this.nostrService.getMetadataForUser(npubValue);
-            this.profile.set(data);
+            
+            // Set profile to an empty object if no data was found
+            // This will distinguish between "not loaded yet" and "loaded but empty"
+            this.profile.set(data || { isEmpty: true });
         } catch (error) {
             this.logger.error('Failed to load profile data:', error);
             this.error.set('Failed to load profile data:' + error);
-            this.profile.set(null);
+            // Set profile to empty object to indicate we tried loading but failed
+            this.profile.set({ isEmpty: true });
         } finally {
             this.isLoading.set(false);
         }

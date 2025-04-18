@@ -50,7 +50,7 @@
             [itemSize]="itemSize"
             [minBufferPx]="minBufferPx" 
             [maxBufferPx]="maxBufferPx">
-            <mat-list>
+            <mat-list class="full-width-list">
               @for (user of followingList(); track user.id) {
                 <app-user-profile [pubkey]="user.npub"></app-user-profile>
               }

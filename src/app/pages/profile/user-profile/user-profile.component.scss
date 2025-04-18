@@ -1,53 +1,99 @@
+:host {
+  display: block;
+  width: 100%; // Ensure component takes full width of parent
+}
+
 .user-profile {
+  cursor: pointer;
+  border-radius: 8px;
+  margin-bottom: 4px;
+  transition: background-color 0.2s;
+  width: 100%; // Ensure list item takes full width
+
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.04);
     cursor: pointer;
-    border-radius: 8px;
-    margin-bottom: 4px;
-    transition: background-color 0.2s;
+  }
 
-    &:hover {
-        background-color: var(--mat-surface-hover-state-layer-color, rgba(0, 0, 0, 0.04));
+  &-avatar {
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--mat-card-subtle-surface-color, #e0e0e0);
+    border: 2px solid;
+    border-color: var(--mdc-text-button-label-text-color, var(--mat-sys-primary));
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
     }
 
-    &-avatar {
-        width: 42px;
-        height: 42px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background-color: var(--mat-card-subtle-surface-color, #e0e0e0);
-        border: 2px solid;
-        border-color: var(--mdc-text-button-label-text-color, var(--mat-sys-primary));
-
-        img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .default-user-avatar {
-            font-size: 42px;
-            width: 42px;
-            height: 42px;
-            color: var(--mat-caption-text-color, #757575);
-   
-        }
-
-        .user-avatar {
-            border-radius: 50%;
-            width: 42px;
-            height: 42px;
-            color: var(--mat-caption-text-color, #757575);
-            // border: 2px solid;
-            // border-color: var(--mdc-text-button-label-text-color, var(--mat-sys-primary));
-        }
+    .default-user-avatar {
+      font-size: 42px;
+      width: 42px;
+      height: 42px;
+      color: var(--mat-caption-text-color, #757575);
     }
 
-    &-npub {
-        color: var(--mat-secondary-text-color);
-        font-size: 14px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 200px;
+    .user-avatar {
+      border-radius: 50%;
+      width: 42px;
+      height: 42px;
+      color: var(--mat-caption-text-color, #757575);
+      // border: 2px solid;
+      // border-color: var(--mdc-text-button-label-text-color, var(--mat-sys-primary));
     }
+  }
+
+  &-npub {
+    color: var(--mat-secondary-text-color);
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+  }
+}
+
+.user-profile-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  
+  .user-avatar {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  .default-user-avatar {
+    font-size: 40px;
+    width: 40px;
+    height: 40px;
+  }
+  
+  mat-spinner {
+    margin: 0;
+  }
+}
+
+.following-item-npub {
+  color: var(--mat-secondary-text-color);
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%; // Allow the npub to take full width
+  padding-right: 16px; // Add some padding on the right edge
+}
+
+::ng-deep .mat-mdc-list-item-content {
+  width: 100%;
 }

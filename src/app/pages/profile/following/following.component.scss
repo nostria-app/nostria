@@ -177,3 +177,12 @@
 ::ng-deep .mat-mdc-list {
   width: 100%;
 }
+
+.full-width-list {
+  width: 100%;
+  padding: 0;
+}
+
+::ng-deep .mat-mdc-list-item {
+  width: 100%;
+}
