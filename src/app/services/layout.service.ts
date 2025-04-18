@@ -20,6 +20,7 @@ export class LayoutService {
     private snackBar = inject(MatSnackBar);
     isHandset = signal(false);
     breakpointObserver = inject(BreakpointObserver);
+    optimalProfilePosition: number = 200;
 
     constructor() {
         // Monitor only mobile devices (not tablets)
@@ -67,7 +68,7 @@ export class LayoutService {
     navigateToProfile(npub: string): void {
         this.router.navigate(['/p', npub]);
         setTimeout(() => {
-            this.scrollToOptimalPosition();
+            this.scrollToOptimalProfilePosition();
         }, 300);
     }
 
@@ -102,19 +103,23 @@ export class LayoutService {
         }
     }
 
+    scrollToOptimalProfilePosition() {
+        this.scrollToOptimalPosition(this.optimalProfilePosition);
+    }
+
     /**
      * Scrolls the page to show half of the banner and the full profile picture
      */
-    scrollToOptimalPosition(): void {
+    scrollToOptimalPosition(scrollPosition: number): void {
         // We need the banner height to calculate the optimal scroll position
-        const bannerHeight = this.getBannerHeight();
+        // const bannerHeight = this.getBannerHeight();
 
-        // Calculate scroll position that shows half of the banner
-        // We divide banner height by 2 to show half of it
-        const scrollPosition = bannerHeight / 2;
+        // // Calculate scroll position that shows half of the banner
+        // // We divide banner height by 2 to show half of it
+        // const scrollPosition = bannerHeight / 2;
 
         // Find the content wrapper element
-        const contentWrapper = document.querySelector('.content-wrapper');
+        const contentWrapper = document.querySelector('.mat-drawer-content');
         if (contentWrapper) {
             // Scroll the content wrapper to the calculated position with smooth animation
             contentWrapper.scrollTo({
@@ -124,7 +129,7 @@ export class LayoutService {
 
             this.logger.debug('Scrolled content wrapper to optimal profile view position', scrollPosition);
         } else {
-            this.logger.error('Could not find content-wrapper element for scrolling');
+            this.logger.error('Could not find mat-drawer-content element for scrolling');
         }
     }
 

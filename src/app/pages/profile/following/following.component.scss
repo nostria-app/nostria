@@ -86,12 +86,10 @@
 
 .following-content {
   flex: 1;
-  min-height: 0; // This is crucial for flexbox to respect the container's boundaries
   padding: 0;
   display: flex;
-  overflow: hidden; // Prevent any potential overflow
+  overflow: hidden;
   height: 100%;
-  
 }
 
 .virtual-scroll-viewport {
@@ -101,10 +99,6 @@
   overflow-x: hidden;
   overflow-y: auto; // Allow vertical scrolling within the viewport
   min-height: 200px;
-}
-
-.following-content {
-  // padding: 16px;
 }
 
 .following-list {

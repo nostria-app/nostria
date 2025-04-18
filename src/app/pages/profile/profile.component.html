@@ -169,7 +169,7 @@
     }
   </div>
 
-  <div class="profile-outlet">
+  <div class="profile-outlet"  [class.mobile]="layoutService.isHandset()">
     <router-outlet></router-outlet>
   </div>
   } @else {

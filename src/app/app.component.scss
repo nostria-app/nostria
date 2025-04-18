@@ -20,7 +20,8 @@ nav {
   flex-direction: column;
   height: 100dvh;
   overflow: hidden;
-  width: 100%; /* Ensure it takes full width */
+  width: 100%;
+  /* Ensure it takes full width */
   position: relative;
 }
 
@@ -31,8 +32,9 @@ nav {
 .sidenav-container {
   flex: 1;
   overflow: auto;
-  overflow-x: hidden; /* Prevent horizontal scrolling */
-  
+  overflow-x: hidden;
+  /* Prevent horizontal scrolling */
+
   // Make space for mobile nav when on mobile
   @media (max-width: 599px) {
     height: calc(100% - 56px); // Reverted back to 56px
@@ -45,6 +47,7 @@ nav {
 
 .active-link {
   background-color: rgba(0, 0, 0, 0.04);
+
   &.mat-mdc-list-item {
     color: var(--mat-primary-500);
   }
@@ -78,9 +81,16 @@ nav {
   // height: 100%;
   // overflow-y: auto;
   // overflow-x: hidden;
-  border: 2px solid red;
   height: 100%;
   box-sizing: border-box;
+
+  &.mobile {
+    height: calc(100dvh - 200px) !important; // mobile-nav height.
+  }
+}
+
+mat-drawer-content mat-sidenav-content {
+  height: calc(100dvh - 56px); // Adjusted for mobile nav height
 }
 
 mat-nav-list .mat-icon {
@@ -100,8 +110,10 @@ mat-nav-list .mat-icon {
   display: flex;
   z-index: 2;
   box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
-  width: 100%; /* Ensure full width */
-  overflow-x: hidden; /* Prevent horizontal scrolling */
+  width: 100%;
+  /* Ensure full width */
+  overflow-x: hidden;
+  /* Prevent horizontal scrolling */
 }
 
 .mobile-nav-button {
@@ -137,7 +149,8 @@ mat-nav-list .mat-icon {
   max-width: 100%;
   display: block; // Make label a block element
   width: 100%; // Full width to ensure centering
-  padding: 0 2px; /* Add small padding to prevent text from touching edges */
+  padding: 0 2px;
+  /* Add small padding to prevent text from touching edges */
 }
 
 // Profile sidenav styles
