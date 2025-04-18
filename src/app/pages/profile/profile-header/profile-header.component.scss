@@ -170,7 +170,7 @@
     align-items: center;
     margin-bottom: 8px;
     color: var(--mat-hint-color, #757575);
-    width: 100%;
+    width: auto; /* Changed from 100% to auto to fit content */
     max-width: 100%;
     overflow: hidden;
 
@@ -188,18 +188,18 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-        max-width: calc(100% - 26px); /* Account for icon width + margin */
-        width: 100%;
+        max-width: 100%; /* Adjusted from calc(100% - 26px) */
+        display: inline-block; /* Added to ensure tooltip aligns properly */
     }
 
     a {
         color: var(--mat-primary-color, #1976d2);
         text-decoration: none;
-        display: block;
+        display: inline-block; /* Changed from block to inline-block */
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-        width: 100%;
+        max-width: 100%; /* Changed from width: 100% to max-width: 100% */
 
         &:hover {
             text-decoration: underline;
