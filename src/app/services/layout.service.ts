@@ -7,6 +7,7 @@ import { NostrEvent } from "../interfaces";
 import { ProfilePictureDialogComponent } from "../pages/profile/profile.component";
 import { MatDialog } from "@angular/material/dialog";
 import { MatSnackBar } from "@angular/material/snack-bar";
+import { BreakpointObserver } from "@angular/cdk/layout";
 
 @Injectable({
     providedIn: 'root'
@@ -17,6 +18,17 @@ export class LayoutService {
     private logger = inject(LoggerService);
     private dialog = inject(MatDialog);
     private snackBar = inject(MatSnackBar);
+    isHandset = signal(false);
+    breakpointObserver = inject(BreakpointObserver);
+
+    constructor() {
+        // Monitor only mobile devices (not tablets)
+        this.breakpointObserver.observe('(max-width: 599px)').subscribe(result => {
+            this.logger.debug('Breakpoint observer update', { isMobile: result.matches });
+            this.isHandset.set(result.matches);
+   
+        });
+    }
 
     toggleSearch() {
         this.search.set(!this.search());

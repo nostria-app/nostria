@@ -105,11 +105,11 @@
     <!-- Side navigation -->
     <mat-sidenav #sidenav class="sidenav"
       [ngClass]="{ 'sidenav-labels': displayLabels(), 'sidenav-small': !displayLabels()  }" [opened]="opened()"
-      [mode]="isHandset() ? 'over' : 'side'" [fixedInViewport]="false">
+      [mode]="layout.isHandset() ? 'over' : 'side'" [fixedInViewport]="false">
       <mat-nav-list>
         @for (item of navItems; track $index) {
         <a mat-list-item [routerLink]="item.action ? undefined : [item.path]" routerLinkActive="active-link"
-          (click)="item.action ? item.action() : (isHandset() ? toggleSidenav() : null)">
+          (click)="item.action ? item.action() : (layout.isHandset() ? toggleSidenav() : null)">
           <mat-icon matListItemIcon>{{item.icon}}</mat-icon>
           @if(displayLabels()) {
           <span class="nav-label">{{item.label}}</span>
@@ -168,11 +168,11 @@
 
         <mat-nav-list>
           <a mat-list-item [routerLink]="['/p', nostrService.activeAccount()?.pubkey]"
-            (click)="isHandset() ? toggleProfileSidenav() : null">
+            (click)="layout.isHandset() ? toggleProfileSidenav() : null">
             <mat-icon matListItemIcon>person</mat-icon>
             <span>My Profile</span>
           </a>
-          <a mat-list-item routerLink="/credentials" (click)="isHandset() ? toggleProfileSidenav() : null">
+          <a mat-list-item routerLink="/credentials" (click)="layout.isHandset() ? toggleProfileSidenav() : null">
             <mat-icon matListItemIcon>key</mat-icon>
             <span>Credentials</span>
           </a>
@@ -251,7 +251,7 @@
   </mat-sidenav-container>
 
   <!-- Mobile navigation footer - now outside of sidenav container -->
-  @if (isHandset()) {
+  @if (layout.isHandset()) {
   <div class="mobile-nav">
     @for (item of navItems; track $index) {
     @if (item.showInMobile) {
