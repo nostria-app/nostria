@@ -296,18 +296,14 @@
   // margin-top: 4rem;
   // padding: 0 1rem;
   clear: both; /* Ensure content stays below the profile section */
-  height: calc(100dvh - 240px);
+  height: calc(100vh - 240px);
   border: 1px solid blue;
 
 
   /* Adjust top margin when in compact mode */
-  .compact-header + & {
-    margin-top: 1rem;
-    
-    @media (max-width: 768px) {
-      margin-top: 0.5rem;
-    }
-  }
+  // .compact-header + & {
+  //   margin-top: 1rem;
+  // }
   
   /* Clean up tab header styling */
   // ::ng-deep .mat-mdc-tab-header {

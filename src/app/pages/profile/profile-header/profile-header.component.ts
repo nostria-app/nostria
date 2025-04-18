@@ -28,11 +28,11 @@ import { MatButtonModule } from '@angular/material/button';
 })
 export class ProfileHeaderComponent {
     profile = input<NostrEvent | undefined>(undefined);
-    isCompactHeader = signal<boolean>(false); // New signal to track compact header mode
     layout = inject(LayoutService);
     nostr = inject(NostrService);
     npub = signal<string | undefined>(undefined);
     logger = inject(LoggerService);
+    compact = input<boolean>(false);
 
     pubkey = computed(() => {
         return this.profile() ? this.profile()!.pubkey : undefined;
