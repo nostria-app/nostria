@@ -295,10 +295,10 @@
   // margin-top: 4rem;
   // padding: 0 1rem;
   clear: both; /* Ensure content stays below the profile section */
-  height: calc(100vh - 240px);
+  height: calc(100vh - 152px);
 
   &.mobile {
-    height: calc(100vh - 288px);
+    height: calc(100vh - 200px);
   }
 
   /* Adjust top margin when in compact mode */
