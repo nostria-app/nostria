@@ -17,8 +17,10 @@
       [style.background-image]="profile.content.banner ? 'url(' + profile.content.banner + ')' : getDefaultBanner()">
     </div>
     }
-    
-    <div class="profile-avatar-container" [class.compact]="isCompactHeader()">
+
+    <app-profile-header [profile]="profile"></app-profile-header>
+
+    <!-- <div class="profile-avatar-container" [class.compact]="isCompactHeader()">
       <div class="profile-avatar" [class.clickable]="profile.content.picture"
         (click)="profile.content.picture && openProfilePicture()">
         @if (profile.content.picture) {
@@ -27,9 +29,9 @@
         <mat-icon class="default-avatar">account_circle</mat-icon>
         }
       </div>
-    </div>
-    
-    <div class="profile-info" [class.compact]="isCompactHeader()">
+    </div> -->
+
+    <!-- <div class="profile-info" [class.compact]="isCompactHeader()">
       <h1 class="profile-name">{{ getFormattedName() }}</h1>
 
       <div class="profile-item" title="{{ getFormattedNpub() }}">
@@ -51,13 +53,12 @@
       </div>
       }
 
-      <!-- Hide lud16 in compact mode -->
       @if (profile.content.lud16 && !isCompactHeader()) {
       <div class="profile-item">
         <mat-icon class="profile-icon-custom">⚡️</mat-icon>
-        <span class="verified-name"  (mouseenter)="showLightningQR.set(true)" (mouseleave)="showLightningQR.set(false)" >{{ profile.content.lud16 }}</span>
+        <span class="verified-name" (mouseenter)="showLightningQR.set(true)"
+          (mouseleave)="showLightningQR.set(false)">{{ profile.content.lud16 }}</span>
 
-        <!-- QR Code Popover -->
         @if (showLightningQR() && lightningQrCode()) {
         <div class="qr-popover">
           <div class="qr-container">
@@ -71,27 +72,22 @@
       </div>
       }
 
-      <!-- Show bio only when not in compact mode -->
       @if (!isCompactHeader() && profile.content.about) {
       <div class="profile-bio">
         {{ profile.content.about }}
       </div>
       }
 
-      <!-- Show following count only when not in compact mode -->
       @if (!isCompactHeader()) {
       <a class="following-count" [routerLink]="'following'" [queryParamsHandling]="'preserve'">
         Following {{ profileState.followingList().length }}
       </a>
       }
 
-      <!-- Profile context menu button -->
-      <button mat-icon-button class="profile-menu-button" [matMenuTriggerFor]="profileMenu"
-        >
+      <button mat-icon-button class="profile-menu-button" [matMenuTriggerFor]="profileMenu">
         <mat-icon>more_vert</mat-icon>
       </button>
 
-      <!-- Profile context menu -->
       <mat-menu #profileMenu="matMenu">
         @if (!isOwnProfile()) {
         <button mat-menu-item (click)="followUser()">
@@ -104,13 +100,11 @@
         </button>
         }
 
-        <!-- Copy submenu -->
         <button mat-menu-item [matMenuTriggerFor]="copyMenu">
           <mat-icon>content_copy</mat-icon>
           <span>Copy</span>
         </button>
 
-        <!-- Share submenu -->
         <button mat-menu-item [matMenuTriggerFor]="shareMenu">
           <mat-icon>share</mat-icon>
           <span>Share</span>
@@ -129,7 +123,6 @@
         }
       </mat-menu>
 
-      <!-- Copy submenu -->
       <mat-menu #copyMenu="matMenu">
         <button mat-menu-item (click)="copyNpub()">
           <span>Identifier (npub)</span>
@@ -148,7 +141,6 @@
         </button>
       </mat-menu>
 
-      <!-- Share submenu -->
       <mat-menu #shareMenu="matMenu">
         <button mat-menu-item (click)="shareProfile()">
           <span>Profile</span>
@@ -157,15 +149,14 @@
           <span>Profile URL</span>
         </button>
       </mat-menu>
-    </div>
+    </div> -->
 
-    <!-- Show actions only when not in compact mode -->
     @if (!isCompactHeader()) {
     <div class="profile-actions">
       @if (isOwnProfile()) {
-      <!-- <button mat-flat-button color="primary">
+      <button mat-flat-button color="primary">
         <mat-icon>edit</mat-icon> Edit Profile
-      </button> -->
+      </button>
       } @else {
       <button mat-flat-button color="primary">
         <mat-icon>person_add</mat-icon> Follow

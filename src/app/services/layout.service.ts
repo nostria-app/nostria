@@ -3,6 +3,10 @@ import { NostrService } from "./nostr.service";
 import { StorageService } from "./storage.service";
 import { Router, RouterLink, RouterModule } from "@angular/router";
 import { LoggerService } from "./logger.service";
+import { NostrEvent } from "../interfaces";
+import { ProfilePictureDialogComponent } from "../pages/profile/profile.component";
+import { MatDialog } from "@angular/material/dialog";
+import { MatSnackBar } from "@angular/material/snack-bar";
 
 @Injectable({
     providedIn: 'root'
@@ -11,6 +15,8 @@ export class LayoutService {
     search = signal(false);
     router = inject(Router);
     private logger = inject(LoggerService);
+    private dialog = inject(MatDialog);
+    private snackBar = inject(MatSnackBar);
 
     toggleSearch() {
         this.search.set(!this.search());
@@ -19,6 +25,32 @@ export class LayoutService {
     searchInput: string = '';
 
     private debounceTimer: any;
+
+    copyToClipboard(text: string | undefined | null, type: string): void {
+        if (text === null || text === undefined) {
+            return;
+        }
+
+        navigator.clipboard.writeText(text)
+            .then(() => {
+                this.logger.debug(`Copied ${type} to clipboard:`, text);
+                this.snackBar.open(`${type.charAt(0).toUpperCase() + type.slice(1)} copied to clipboard`, 'Dismiss', {
+                    duration: 3000,
+                    horizontalPosition: 'center',
+                    verticalPosition: 'bottom',
+                    panelClass: 'copy-snackbar'
+                });
+            })
+            .catch(error => {
+                this.logger.error('Failed to copy to clipboard:', error);
+                this.snackBar.open('Failed to copy to clipboard', 'Dismiss', {
+                    duration: 3000,
+                    horizontalPosition: 'center',
+                    verticalPosition: 'bottom',
+                    panelClass: 'error-snackbar'
+                });
+            });
+    }
 
     navigateToProfile(npub: string): void {
         this.router.navigate(['/p', npub]);
@@ -179,6 +211,57 @@ export class LayoutService {
         });
 
         this.logger.debug(`Scrolled .content-wrapper to show element "${elementSelector}" at position ${relativeTop}`);
+    }
+
+    /**
+     * Opens the profile picture in a larger view dialog
+     */
+    openProfilePicture(profile: NostrEvent): void {
+        if (profile?.content.picture) {
+            const dialogRef = this.dialog.open(ProfilePictureDialogComponent, {
+                data: {
+                    imageUrl: profile.content.picture,
+                    userName: 'JOHN!' //this.getFormattedName()
+                },
+                maxWidth: '100vw',
+                maxHeight: '100vh',
+                panelClass: 'profile-picture-dialog'
+            });
+
+            this.logger.debug('Opened profile picture dialog');
+        }
+    }
+
+    shareProfile(npub?: string, name?: string): void {
+        if (!npub || !name) {
+            this.logger.error('Cannot share profile: npub or name is undefined');
+            return;
+        }
+
+        // Share profile action using the Web Share API if available
+        if (navigator.share) {
+            navigator.share({
+                title: `${name}'s Nostr Profile`,
+                text: `Check out ${npub} on Nostr`,
+                url: window.location.href
+            }).then(() => {
+                this.logger.debug('Profile shared successfully');
+            }).catch((error) => {
+                this.logger.error('Error sharing profile:', error);
+            });
+        } else {
+            // Fallback if Web Share API is not available
+            this.copyToClipboard(window.location.href, 'profile URL');
+        }
+    }
+
+    shareProfileUrl(npub: string | null | undefined): void {
+        if (!npub) {
+            return;
+        }
+
+        let url = 'https://nostria.app/p/' + npub;
+        this.copyToClipboard(url, 'profile URL');
     }
 }
 

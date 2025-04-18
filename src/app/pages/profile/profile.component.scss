@@ -1,280 +1,199 @@
-.profile-page {
-  // max-width: 1200px;
-  // margin: 0 auto;
-  // padding-bottom: 2rem;
-}
+// .profile-page {
+//   // max-width: 1200px;
+//   // margin: 0 auto;
+//   // padding-bottom: 2rem;
+// }
 
-.profile-header {
-  position: relative;
-  margin-bottom: 5rem; /* Increased from 3rem to 5rem for more space */
-  transition: all 0.3s ease-in-out; /* Animation for expanding/collapsing */
+// .profile-header {
+//   // position: relative;
+//   margin-bottom: 5rem; /* Increased from 3rem to 5rem for more space */
+//   transition: all 0.3s ease-in-out; /* Animation for expanding/collapsing */
   
-  /* Compact header styles */
-  &.compact-header {
-    margin-bottom: 1rem;
-    padding: 1em;
-    // padding-top: 1rem;
+//   /* Compact header styles */
+//   &.compact-header {
+//     margin-bottom: 1rem;
+//     padding: 1em;
+//     // padding-top: 1rem;
     
-    @media (max-width: 768px) {
-      // padding-top: 0.5rem;
-      margin-bottom: 0.5rem;
-    }
-  }
+//     @media (max-width: 768px) {
+//       // padding-top: 0.5rem;
+//       margin-bottom: 0.5rem;
+//     }
+//   }
   
-  @media (max-width: 768px) {
-    margin-bottom: 2rem; /* Reduce bottom margin on mobile to compensate for layout changes */
-    padding-top: 60px; /* Add some top padding to ensure avatar has room above the banner */
-  }
-}
+//   @media (max-width: 768px) {
+//     margin-bottom: 2rem; /* Reduce bottom margin on mobile to compensate for layout changes */
+//     padding-top: 60px; /* Add some top padding to ensure avatar has room above the banner */
+//   }
+// }
 
-.profile-banner {
-  height: 300px;
-  background-size: cover;
-  background-position: center;
-  border-radius: 0 0 8px 8px;
-  position: relative;
-  transition: height 0.3s ease-in-out, opacity 0.3s ease-in-out;
+// .profile-banner {
+//   height: 300px;
+//   background-size: cover;
+//   background-position: center;
+//   border-radius: 0 0 8px 8px;
+//   position: relative;
+//   transition: height 0.3s ease-in-out, opacity 0.3s ease-in-out;
   
-  @media (max-width: 768px) {
-    height: 200px;
-  }
+//   @media (max-width: 768px) {
+//     height: 200px;
+//   }
   
-  @media (max-width: 480px) {
-    height: 150px;
-  }
-}
+//   @media (max-width: 480px) {
+//     height: 150px;
+//   }
+// }
 
-.profile-avatar-container {
-  position: absolute;
-  bottom: 120px; /* Moved from 70px to 120px (50px more) */
-  left: 32px;
-  z-index: 10; /* Increased from 2 to 10 to ensure avatar appears in front of banner */
-  transition: all 0.3s ease-in-out;
-  
-  &.compact {
-    position: relative;
-    bottom: auto;
-    left: 0px;
-    margin-bottom: 0;
-    display: flex; /* Add flex to align with profile info */
-    align-items: center; /* Vertically center the avatar */
-    
-    /* Adjust for mobile */
-    @media (max-width: 768px) {
-      left: 20px;
-      transform: none;
-      margin-bottom: 0;
-    }
-    
-    @media (max-width: 480px) {
-      left: 15px;
-    }
-  }
-  
-  @media (max-width: 768px) {
-    left: 50%;
-    transform: translateX(-50%);
-    top: 180px;
-    
-    &.compact {
-      left: 20px;
-      transform: none;
-    }
-  }
-}
+// .avatar-image {
+//   width: 100%;
+//   height: 100%;
+//   object-fit: cover;
+// }
 
-.profile-avatar {
-  width: 160px;
-  height: 160px;
-  border-radius: 50%;
-  border: 4px solid var(--mat-card-container-color, white);
-  overflow: hidden;
-  background-color: var(--mat-card-container-color, white);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  transition: width 0.3s ease-in-out, height 0.3s ease-in-out;
+// .default-avatar {
+//   font-size: 100px;
+//   height: 100px;
+//   width: 100px;
+//   color: var(--mat-sys-primary, #673ab7);
+//   transition: font-size 0.3s ease-in-out, height 0.3s ease-in-out, width 0.3s ease-in-out;
   
-  /* Adjust size in compact mode through the parent class */
-  .compact & {
-    width: 80px;
-    height: 80px;
-    
-    @media (max-width: 480px) {
-      width: 60px;
-      height: 60px;
-    }
-  }
+//   .compact & {
+//     font-size: 50px;
+//     height: 50px;
+//     width: 50px;
+//   }
   
-  &.clickable {
-    cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease, width 0.3s ease-in-out, height 0.3s ease-in-out;
-    
-    &:hover {
-      transform: scale(1.05);
-      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-    }
-  }
+//   @media (max-width: 768px) {
+//     font-size: 80px;
+//     height: 80px;
+//     width: 80px;
+//   }
   
-  @media (max-width: 768px) {
-    width: 120px;
-    height: 120px;
-  }
-  
-  @media (max-width: 480px) {
-    width: 100px;
-    height: 100px;
-  }
-}
+//   @media (max-width: 480px) {
+//     font-size: 60px;
+//     height: 60px;
+//     width: 60px;
+//   }
+// }
 
-.avatar-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.default-avatar {
-  font-size: 100px;
-  height: 100px;
-  width: 100px;
-  color: var(--mat-sys-primary, #673ab7);
-  transition: font-size 0.3s ease-in-out, height 0.3s ease-in-out, width 0.3s ease-in-out;
+// .profile-info {
+//   margin-top: 20px; /* Increased from 10px to 20px to ensure content doesn't overlap */
+//   padding: 0 2rem 0 210px; /* Added left padding (160px avatar width + 50px gap) to make room for avatar */
+//   // position: relative; /* Add this to position the menu button */
+//   transition: all 0.3s ease-in-out;
+//   background-color: brown;
   
-  .compact & {
-    font-size: 50px;
-    height: 50px;
-    width: 50px;
-  }
-  
-  @media (max-width: 768px) {
-    font-size: 80px;
-    height: 80px;
-    width: 80px;
-  }
-  
-  @media (max-width: 480px) {
-    font-size: 60px;
-    height: 60px;
-    width: 60px;
-  }
-}
-
-.profile-info {
-  margin-top: 20px; /* Increased from 10px to 20px to ensure content doesn't overlap */
-  padding: 0 2rem 0 210px; /* Added left padding (160px avatar width + 50px gap) to make room for avatar */
-  position: relative; /* Add this to position the menu button */
-  transition: all 0.3s ease-in-out;
-  
-  &.compact {
-    margin-top: 10px;
-    padding: 0 2rem 0 0; /* Remove left padding since we'll control spacing with margins */
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
+//   &.compact {
+//     margin-top: 10px;
+//     padding: 0 2rem 0 0; /* Remove left padding since we'll control spacing with margins */
+//     display: flex;
+//     flex-direction: column;
+//     justify-content: center;
     
-    /* In compact mode, adjust the profile name and other elements */
-    .profile-name {
-      font-size: 1.5rem;
-      margin-bottom: 5px;
+//     /* In compact mode, adjust the profile name and other elements */
+//     .profile-name {
+//       font-size: 1.5rem;
+//       margin-bottom: 5px;
+//       background-color: green;
       
-      @media (max-width: 768px) {
-        font-size: 1.2rem;
-      }
-    }
+//       @media (max-width: 768px) {
+//         font-size: 1.2rem;
+//       }
+//     }
     
-    .profile-item {
-      margin-top: 0;
-    }
+//     .profile-item {
+//       margin-top: 0;
+//       background-color: pink;
+//     }
     
-    @media (max-width: 768px) {
-      padding: 0 1rem 0 0;
-      margin-top: 0;
-      margin-left: 0; /* Remove the large margin */
-    }
+//     @media (max-width: 768px) {
+//       padding: 0 1rem 0 0;
+//       margin-top: 0;
+//       margin-left: 0; /* Remove the large margin */
+//     }
     
-    @media (max-width: 480px) {
-      margin-left: 0; /* Remove the margin here as well */
-      padding: 0 1rem 0 0;
-    }
-  }
+//     @media (max-width: 480px) {
+//       margin-left: 0; /* Remove the margin here as well */
+//       padding: 0 1rem 0 0;
+//     }
+//   }
   
-  @media (max-width: 768px) {
-    margin-top: 80px; /* Reduced from 120px to 80px to adjust for new avatar position */
-    text-align: left; /* Changed from center to left */
-    padding: 0 1.5rem; /* Slightly increased from 1rem for better spacing */
+//   @media (max-width: 768px) {
+//     margin-top: 80px; /* Reduced from 120px to 80px to adjust for new avatar position */
+//     text-align: left; /* Changed from center to left */
+//     padding: 0 1.5rem; /* Slightly increased from 1rem for better spacing */
     
-    &.compact {
-      margin-top: 0; /* No top margin in compact mode on mobile */
-    }
-  }
-}
+//     &.compact {
+//       margin-top: 0; /* No top margin in compact mode on mobile */
+//     }
+//   }
+// }
 
 /* Add the profile menu button styling */
-.profile-menu-button {
-  position: absolute;
-  top: 0;
-  right: 1rem;
-  transition: top 0.3s ease-in-out;
+// .profile-menu-button {
+//   position: absolute;
+//   top: 0;
+//   right: 1rem;
+//   transition: top 0.3s ease-in-out;
   
-  .compact & {
-    top: -5px;
-  }
+//   .compact & {
+//     top: -5px;
+//   }
   
-  @media (max-width: 768px) {
-    top: -10px;
-    right: 0;
-  }
-}
+//   @media (max-width: 768px) {
+//     top: -10px;
+//     right: 0;
+//   }
+// }
 
-.profile-name {
-  margin: 0;
-  font-size: 2rem;
-  font-weight: 700;
-  transition: font-size 0.3s ease-in-out;
+// .profile-name {
+//   margin: 0;
+//   font-size: 2rem;
+//   font-weight: 700;
+//   transition: font-size 0.3s ease-in-out;
   
-  @media (max-width: 768px) {
-    font-size: 1.5rem;
-  }
-}
+//   @media (max-width: 768px) {
+//     font-size: 1.5rem;
+//   }
+// }
 
-.profile-item {
-  display: flex;
-  align-items: center;
-  margin-top: 0.2em;
-  gap: 0.4em;
-  cursor: pointer;
-  position: relative;
-  max-width: 100%;
+// .profile-item {
+//   display: flex;
+//   align-items: center;
+//   margin-top: 0.2em;
+//   gap: 0.4em;
+//   cursor: pointer;
+//   position: relative;
+//   max-width: 100%;
   
-  @media (max-width: 768px) {
-    /* Removed justify-content: center to keep left alignment */
-    padding-left: 0.5rem; /* Added slight padding for better visual spacing */
-  }
+//   @media (max-width: 768px) {
+//     /* Removed justify-content: center to keep left alignment */
+//     // padding-left: 0.5rem; /* Added slight padding for better visual spacing */
+//   }
   
-  &:hover {
-    .verified-name {
-      text-decoration: underline;
-    }
-  }
+//   &:hover {
+//     .verified-name {
+//       text-decoration: underline;
+//     }
+//   }
   
-  /* Add truncation for text content */
-  span {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: calc(100% - 40px); /* Leave space for the icon */
-  }
+//   /* Add truncation for text content */
+//   span {
+//     white-space: nowrap;
+//     overflow: hidden;
+//     text-overflow: ellipsis;
+//     max-width: calc(100% - 40px); /* Leave space for the icon */
+//   }
   
-  /* Handle links inside spans */
-  span a {
-    display: block;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    width: 100%;
-  }
-}
+//   /* Handle links inside spans */
+//   span a {
+//     display: block;
+//     overflow: hidden;
+//     text-overflow: ellipsis;
+//     white-space: nowrap;
+//     width: 100%;
+//   }
+// }
 
 .qr-popover {
   position: absolute;
@@ -357,7 +276,7 @@
 
 .profile-actions {
   margin: 1rem 2rem 3rem; /* Increased bottom margin from 2.5rem to 3rem */
-  padding-left: 210px; /* Added left padding to align with profile-info */
+  // padding-left: 210px; /* Added left padding to align with profile-info */
   display: flex;
   gap: 1rem;
   transition: opacity 0.3s ease-in-out, max-height 0.3s ease-in-out, margin 0.3s ease-in-out;
@@ -554,34 +473,4 @@
   }
 }
 
-/* Update the layout for compact mode to align avatar and profile info */
-.compact-header {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  padding: 0 1rem 0 0;
-  
-  .profile-avatar-container.compact {
-    flex: 0 0 auto; /* Don't grow or shrink */
-    margin-right: 15px; /* Add explicit spacing between avatar and content */
-    
-    @media (max-width: 768px) {
-      margin-right: 10px;
-    }
-    
-    @media (max-width: 480px) {
-      margin-right: 8px;
-    }
-  }
-  
-  .profile-info.compact {
-    flex: 1 1 auto; /* Allow growing and shrinking */
-    padding-left: 0; /* Remove left padding since we're using margin on the avatar */
-    margin-left: 0; /* Reset any margins */
-    
-    @media (max-width: 768px) {
-      padding-left: 0;
-      margin-left: 0;
-    }
-  }
-}
+
