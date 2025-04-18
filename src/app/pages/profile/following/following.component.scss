@@ -80,21 +80,32 @@
   ::ng-deep .mat-mdc-tab-body-wrapper {
     flex-grow: 1;
     overflow-y: auto;
+    margin: 0;
+    padding: 0;
   }
 }
 
 .following-content {
-  height: calc(100vh - 200px); // Adjust based on your header height
+  flex: 1;
+  min-height: 0; // This is crucial for flexbox to respect the container's boundaries
   padding: 0;
+  display: flex;
+  overflow: hidden; // Prevent any potential overflow
+  height: 100%;
+  
 }
 
 .virtual-scroll-viewport {
+  box-sizing: border-box;
   height: 100%;
   width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto; // Allow vertical scrolling within the viewport
+  min-height: 200px;
 }
 
 .following-content {
-  padding: 16px;
+  // padding: 16px;
 }
 
 .following-list {
