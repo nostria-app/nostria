@@ -26,6 +26,7 @@ import { kinds, SimplePool } from 'nostr-tools';
 import { StorageService } from '../../services/storage.service';
 import { ProfileStateService } from '../../services/profile-state.service';
 import { LayoutService } from '../../services/layout.service';
+import { ProfileHeaderComponent } from './profile-header/profile-header.component';
 
 @Component({
   selector: 'app-profile',
@@ -49,6 +50,7 @@ import { LayoutService } from '../../services/layout.service';
     MatMenuModule,
     FormsModule,
     MatFormFieldModule,
+    ProfileHeaderComponent
 
   ],
   templateUrl: './profile.component.html',
