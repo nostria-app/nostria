@@ -1,7 +1,7 @@
 .profile-page {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding-bottom: 2rem;
+  // max-width: 1200px;
+  // margin: 0 auto;
+  // padding-bottom: 2rem;
 }
 
 .profile-header {
@@ -376,11 +376,19 @@
   }
 }
 
+.profile-page {
+  // height: calc(100vh - 280px); /* Adjusted height to fit the new layout */
+  border: 1px solid green;
+}
+
 .profile-outlet {
-  margin-top: 4rem; /* Increased from 3rem to 4rem */
-  padding: 0 1rem;
+  // margin-top: 4rem;
+  // padding: 0 1rem;
   clear: both; /* Ensure content stays below the profile section */
-  
+  height: calc(100vh - 240px);
+  border: 1px solid blue;
+
+
   /* Adjust top margin when in compact mode */
   .compact-header + & {
     margin-top: 1rem;

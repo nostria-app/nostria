@@ -74,10 +74,13 @@ nav {
 
 .content-wrapper {
   // padding: 1rem;
-  box-sizing: border-box;
+  // box-sizing: border-box;
+  // height: 100%;
+  // overflow-y: auto;
+  // overflow-x: hidden;
+  border: 2px solid red;
   height: 100%;
-  overflow-y: auto;
-  overflow-x: hidden; /* Prevent horizontal scrolling */
+  box-sizing: border-box;
 }
 
 mat-nav-list .mat-icon {
