@@ -10,6 +10,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { NostrEvent } from '../../../interfaces';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatButtonModule } from '@angular/material/button';
+import { ProfileStateService } from '../../../services/profile-state.service';
 
 @Component({
     selector: 'app-profile-header',
@@ -33,6 +34,7 @@ export class ProfileHeaderComponent {
     npub = signal<string | undefined>(undefined);
     logger = inject(LoggerService);
     compact = input<boolean>(false);
+    profileState = inject(ProfileStateService);
 
     pubkey = computed(() => {
         return this.profile() ? this.profile()!.pubkey : undefined;
