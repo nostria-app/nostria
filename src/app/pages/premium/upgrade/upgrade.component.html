@@ -64,7 +64,7 @@
         
         <div class="step-actions">
           <button 
-            mat-raised-button 
+            mat-flat-button 
             color="primary" 
             [disabled]="!usernameFormGroup.valid || isUsernameAvailable() !== true"
             (click)="nextStep()"
@@ -82,40 +82,40 @@
         <p class="step-description">Choose a plan that works best for you.</p>
         
         <form [formGroup]="paymentFormGroup">
-          <div class="payment-options">
-            @for (option of paymentOptions(); track option.id) {
-              <mat-card 
-                class="payment-option-card"
-                [class.selected]="paymentFormGroup.get('paymentOption')?.value === option.id"
-                (click)="paymentFormGroup.get('paymentOption')?.setValue(option.id)"
-              >
-                <mat-card-content>
-                  <div class="payment-header">
-                    <mat-radio-button 
-                      [value]="option.id"
-                      [checked]="paymentFormGroup.get('paymentOption')?.value === option.id"
-                      formControlName="paymentOption"
-                      color="primary"
-                    >
-                      {{ option.name }}
-                    </mat-radio-button>
-                    @if (option.id === 'yearly') {
-                      <span class="best-value-tag">Best Value</span>
-                    }
-                  </div>
-                  
-                  <div class="payment-details">
-                    <div class="payment-price">
-                      <span class="price-amount">${{ option.pricePerMonth }}</span>/month
+          <mat-radio-group formControlName="paymentOption">
+            <div class="payment-options">
+              @for (option of paymentOptions(); track option.id) {
+                <mat-card 
+                  class="payment-option-card"
+                  [class.selected]="paymentFormGroup.get('paymentOption')?.value === option.id"
+                  (click)="paymentFormGroup.get('paymentOption')?.setValue(option.id)"
+                >
+                  <mat-card-content>
+                    <div class="payment-header">
+                      <mat-radio-button 
+                        [value]="option.id"
+                        color="primary"
+                      >
+                        {{ option.name }}
+                      </mat-radio-button>
+                      @if (option.id === 'yearly') {
+                        <span class="best-value-tag">Best Value</span>
+                      }
                     </div>
-                    <div class="payment-period">
-                      Billed as ${{ option.totalPrice }} every {{ option.billingPeriod }}
+                    
+                    <div class="payment-details">
+                      <div class="payment-price">
+                        <span class="price-amount">${{ option.pricePerMonth }}</span>/month
+                      </div>
+                      <div class="payment-period">
+                        Billed as ${{ option.totalPrice }} every {{ option.billingPeriod }}
+                      </div>
                     </div>
-                  </div>
-                </mat-card-content>
-              </mat-card>
-            }
-          </div>
+                  </mat-card-content>
+                </mat-card>
+              }
+            </div>
+          </mat-radio-group>
         </form>
         
         <div class="payment-summary" *ngIf="selectedPaymentOption()">
@@ -133,7 +133,7 @@
         
         <div class="step-actions">
           <button mat-button (click)="prevStep()">Back</button>
-          <button mat-raised-button color="primary" (click)="nextStep()">
+          <button mat-flat-button color="primary" (click)="nextStep()">
             Continue to Payment
           </button>
         </div>
@@ -143,7 +143,7 @@
     <!-- Step 3: Bitcoin Lightning Payment -->
     @if (currentStep() === 2) {
       <div class="step-content payment-step">
-        <h2>Complete Your Payment</h2>
+        <h2>Complete Your Payment (THIS IS NOT REAL, JUST DEMO!!)</h2>
         <p class="step-description">Pay using Bitcoin Lightning Network to activate your premium account.</p>
         
         @if (isGeneratingInvoice()) {
@@ -222,7 +222,7 @@
               <mat-icon>verified</mat-icon>
               <div>
                 <h4>Verified Username</h4>
-                <p>Your username <strong>{{ usernameFormGroup.get('username')?.value }}</strong> is now uniquely yours</p>
+                <p>Your username <strong>{{ usernameFormGroup.get('username')?.value }}&#64;nostria.app</strong> is now uniquely yours</p>
               </div>
             </div>
             
@@ -243,7 +243,7 @@
             </div>
           </div>
           
-          <button mat-raised-button color="primary" (click)="finishSetup()">
+          <button mat-flat-button color="primary" (click)="finishSetup()">
             Continue to Nostria
           </button>
         </div>
