@@ -61,7 +61,6 @@ interface NavItem {
 export class AppComponent implements OnInit {
   title = 'Nostria';
   themeService = inject(ThemeService);
-  breakpointObserver = inject(BreakpointObserver);
   pwaUpdateService = inject(PwaUpdateService);
   dialog = inject(MatDialog);
   nostrService = inject(NostrService);
@@ -75,7 +74,6 @@ export class AppComponent implements OnInit {
 
   @ViewChild('profileSidenav') profileSidenav!: MatSidenav;
 
-  isHandset = signal(false);
   opened = signal(true);
   displayLabels = signal(true);
 
@@ -101,12 +99,10 @@ export class AppComponent implements OnInit {
   constructor() {
     this.logger.debug('AppComponent constructor started');
 
-    // Monitor only mobile devices (not tablets)
-    this.breakpointObserver.observe('(max-width: 599px)').subscribe(result => {
-      this.logger.debug('Breakpoint observer update', { isMobile: result.matches });
-      this.isHandset.set(result.matches);
+    effect(() => {
+      const isHandset = this.layout.isHandset();
       // Close sidenav automatically on mobile screens only
-      if (result.matches) {
+      if (isHandset) {
         this.opened.set(false);
       } else {
         this.opened.set(true);
@@ -215,7 +211,7 @@ export class AppComponent implements OnInit {
   async switchAccount(pubkey: string): Promise<void> {
     if (this.nostrService.switchToUser(pubkey)) {
       // Close sidenav on mobile after switching
-      if (this.isHandset()) {
+      if (this.layout.isHandset()) {
         this.toggleSidenav();
       }
     }
