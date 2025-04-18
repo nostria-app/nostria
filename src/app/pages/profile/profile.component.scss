@@ -289,7 +289,6 @@
 
 .profile-page {
   // height: calc(100vh - 280px); /* Adjusted height to fit the new layout */
-  border: 1px solid green;
 }
 
 .profile-outlet {
@@ -297,8 +296,10 @@
   // padding: 0 1rem;
   clear: both; /* Ensure content stays below the profile section */
   height: calc(100vh - 240px);
-  border: 1px solid blue;
 
+  &.mobile {
+    height: calc(100vh - 288px);
+  }
 
   /* Adjust top margin when in compact mode */
   // .compact-header + & {

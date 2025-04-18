@@ -66,7 +66,7 @@ export class ProfileComponent {
   private logger = inject(LoggerService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
-  private layoutService = inject(LayoutService);
+  layoutService = inject(LayoutService);
   profileState = inject(ProfileStateService);
 
   pubkey = signal<string>('');
@@ -226,7 +226,7 @@ export class ProfileComponent {
         this.error.set('User profile not found');
       } else {
         // Only scroll if profile was successfully loaded
-        setTimeout(() => this.layoutService.scrollToOptimalPosition(), 100);
+        setTimeout(() => this.layoutService.scrollToOptimalProfilePosition(), 100);
 
         // After getting the metadata, get other data from this user.
         this.loadUserData(pubkey);
