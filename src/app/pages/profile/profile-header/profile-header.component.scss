@@ -140,6 +140,9 @@
 
 .profile-info {
     margin-top: 0.3em;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
 
     &.compact {
         margin-top: 0;
@@ -168,6 +171,9 @@
     align-items: center;
     margin-bottom: 8px;
     color: var(--mat-hint-color, #757575);
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
 
     mat-icon {
         margin-right: 8px;
@@ -175,6 +181,7 @@
         height: 18px;
         width: 18px;
         line-height: 18px;
+        flex-shrink: 0; /* Prevent icon from shrinking */
     }
 
     span {
@@ -182,11 +189,18 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+        max-width: calc(100% - 26px); /* Account for icon width + margin */
+        width: 100%;
     }
 
     a {
         color: var(--mat-primary-color, #1976d2);
         text-decoration: none;
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        width: 100%;
 
         &:hover {
             text-decoration: underline;
