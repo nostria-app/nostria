@@ -16,7 +16,6 @@
     display: flex;
     flex-direction: row;
     gap: 1.5rem; // Space between the two divs
-    border: 1px solid green;
 
     // First div should always be 168px width
     >div:first-child {
