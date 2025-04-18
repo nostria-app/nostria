@@ -11,6 +11,8 @@
 }
 
 .profile-info-container {
+    margin-left: 0.6rem;
+    margin-right: 0.6rem;
     display: flex;
     flex-direction: row;
     gap: 1.5rem; // Space between the two divs
@@ -30,10 +32,16 @@
     // Switch to vertical layout on smaller screens
     @media (max-width: 768px) {
         flex-direction: column;
+        position: relative;
+        top: -120px;
+        gap: 0;
 
         // First div still maintains 168px width even in vertical layout
         >div:first-child {
             width: 168px;
+            align-self: center; // Center align the div horizontally
+            margin: 0 auto; // Alternative centering approach
+            top: 0px;
         }
     }
 }
@@ -43,6 +51,20 @@
     height: 320px;
     background-size: cover;
     background-position: center;
+    position: relative; // Added to ensure proper positioning of child elements
+
+    &.clickable {
+        cursor: pointer;
+        transition: transform 0.1s ease;
+
+        &:hover {
+            filter: brightness(1.1);
+        }
+
+        &:active {
+            filter: brightness(0.9);
+        }
+    }
 
     .compact & {
         height: 120px;
@@ -51,14 +73,13 @@
 }
 
 .profile-avatar {
-    top: -50px;
+    top: -60px;
     position: relative;
     width: 168px;
     height: 168px;
     border-radius: 50%;
-    border: 4px solid var(--mat-card-container-color, white);
+    border: 4px solid var(--mat-sys-background);
     overflow: hidden;
-    background-color: var(--mat-card-container-color, white);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -70,7 +91,7 @@
 
         &:hover {
             transform: scale(1.05);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            box-shadow: var(--mat-sys-level5);
         }
     }
 
@@ -135,7 +156,6 @@
     margin-top: 0;
     margin-bottom: 8px;
     font-size: 24px;
-    font-weight: 700;
 
     .compact & {
         font-size: 18px;
@@ -197,4 +217,12 @@
         right: 0;
         background-color: transparent;
     }
+}
+
+.verified-icon {
+    color: var(--mat-sys-primary, #673ab7);
+    // font-size: 18px;
+    // height: 18px;
+    // width: 18px;
+    // margin-left: 4px;
 }

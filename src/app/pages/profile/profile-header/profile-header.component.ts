@@ -102,4 +102,15 @@ export class ProfileHeaderComponent {
         // Return a default gradient for users without a banner
         return 'linear-gradient(135deg, #8e44ad, #3498db)';
     }
+
+    getVerifiedIdentifier(): string | null {
+        // TODO: Perform actual fetch requests to validate the NIP5.
+        const metadata = this.profile();
+        if (!metadata || !metadata.content.nip05) return null;
+
+        // Format NIP-05 identifier for display
+        return metadata.content.nip05.startsWith('_@')
+            ? metadata.content.nip05.substring(1)
+            : metadata.content.nip05;
+    }
 }
