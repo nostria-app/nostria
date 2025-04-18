@@ -9,7 +9,9 @@
         }
     </div>
     <div matListItemTitle>
-        @if (error()) {
+        @if (isLoading()) {
+            Loading...
+        } @else if (error()) {
             <mat-icon>error</mat-icon> Error loading user profile
         } @else if (profile() && !profile().isEmpty && profile().content) {
             @if (profile().content.display_name) {{{ profile().content.display_name }}} @else if (profile().content.name)
