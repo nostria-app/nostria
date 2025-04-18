@@ -84,6 +84,16 @@
 }
 
 .following-content {
+  height: calc(100vh - 200px); // Adjust based on your header height
+  padding: 0;
+}
+
+.virtual-scroll-viewport {
+  height: 100%;
+  width: 100%;
+}
+
+.following-content {
   padding: 16px;
 }
 
@@ -142,9 +152,9 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px 0;
-  color: var(--mat-secondary-text-color);
+  height: 100%;
   text-align: center;
+  padding: 2rem;
 
   mat-icon {
     font-size: 48px;
@@ -156,4 +166,14 @@
   p {
     margin: 8px 0 0;
   }
+}
+
+// Make the components fill the entire virtual scroll item space
+::ng-deep .cdk-virtual-scroll-content-wrapper {
+  width: 100%;
+}
+
+// Make sure the mat-list items fill the width
+::ng-deep .mat-mdc-list {
+  width: 100%;
 }
