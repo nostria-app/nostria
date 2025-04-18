@@ -1,9 +1,12 @@
 <div class="profile-header-container" [class.compact]="compact()">
     @if (profile(); as profile) {
+
+    @if (!compact()) {
     <div class="profile-banner" [class.clickable]="profile.content.banner"
         [style.background-image]="profile.content.banner ? 'url(' + profile.content.banner + ')' : getDefaultBanner()"
         (click)="profile.content.banner && layout.openProfileBanner(profile)">
     </div>
+    }
     <div class="profile-info-container" [class.compact]="compact()">
         <div class="profile-avatar" [class.clickable]="profile.content.picture"
             (click)="profile.content.picture && layout.openProfilePicture(profile)">
@@ -47,7 +50,7 @@
 
             @if (!compact()) {
             <a class="following-count" [routerLink]="'following'" [queryParamsHandling]="'preserve'">
-                Following 50
+                Following {{ profileState.followingList().length }}
             </a>
             }
 
