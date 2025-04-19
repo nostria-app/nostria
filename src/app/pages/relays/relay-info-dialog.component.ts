@@ -95,6 +95,11 @@ interface RelayInfo {
               <strong>Contact:</strong>&nbsp;<a [href]="relayInfo()?.contact" target="_blank" rel="noopener noreferrer">{{relayInfo()?.contact}}</a>
             </div>
           }
+          @if (relayInfo()?.posting_policy) {
+            <div class="info-row">
+              <strong>Policy:</strong>&nbsp;<a [href]="relayInfo()?.posting_policy" target="_blank" rel="noopener noreferrer">{{relayInfo()?.posting_policy}}</a>
+            </div>
+          }
           <br>
           @if (relayInfo()?.software) {
             <div class="info-row">
@@ -126,11 +131,7 @@ interface RelayInfo {
           <div class="info-row">
             <strong>Authentication Required:</strong> {{relayInfo()?.limitation?.auth_required ? 'Yes' : 'No'}}
           </div>
-          @if (relayInfo()?.posting_policy) {
-            <div class="info-row">
-              <strong>Policy:</strong>&nbsp;<a [href]="relayInfo()?.posting_policy" target="_blank" rel="noopener noreferrer">{{relayInfo()?.posting_policy}}</a>
-            </div>
-          }
+
         </div>
 
         <div class="migration-container">
