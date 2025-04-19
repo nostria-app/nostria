@@ -98,7 +98,7 @@
 .media-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 6px; /* Reduced from 12px to 6px */
   justify-content: flex-start;
 }
 
