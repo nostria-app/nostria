@@ -8,16 +8,12 @@
             <mat-icon class="default-user-avatar">account_circle</mat-icon>
         }
     </div>
-    <div matListItemTitle>
-        @if (isLoading()) {
-            Loading...
-        } @else if (error()) {
+    <div matListItemTitle>@if (isLoading()) {Loading...} @else if (error()) {
             <mat-icon>error</mat-icon> Error loading user profile
         } @else if (profile() && !profile().isEmpty && profile().content) {
             @if (profile().content.display_name) {{{ profile().content.display_name }}} @else if (profile().content.name)
             {{{ profile().content.name }}} @else {[No name]}
-        } @else {
-            [Not found]
+        } @else {[Not found]
         }
     </div>
     <div matListItemLine class="following-item-npub">{{ npub() }}</div>
