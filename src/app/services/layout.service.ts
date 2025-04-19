@@ -21,6 +21,7 @@ export class LayoutService {
     isHandset = signal(false);
     breakpointObserver = inject(BreakpointObserver);
     optimalProfilePosition: number = 200;
+    premium = signal(false);
 
     constructor() {
         // Monitor only mobile devices (not tablets)
