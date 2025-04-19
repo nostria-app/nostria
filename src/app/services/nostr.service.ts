@@ -183,8 +183,6 @@ export class NostrService {
       return;
     }
 
-    debugger;
-
     this.appState.loadingMessage.set('Retrieving your relay list...');
     this.appState.isLoading.set(true);
     this.appState.showSuccess.set(false);
