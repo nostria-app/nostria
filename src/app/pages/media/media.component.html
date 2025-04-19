@@ -57,7 +57,7 @@
             @for (item of images(); track item.sha256) {
               <div class="media-card" [class.selected]="isSelected(item.sha256)" (click)="toggleItemSelection(item.sha256)">
                 <div class="media-thumbnail">
-                  <img [src]="item.url" [alt]="item.url || 'Image'">
+                  <img [src]="item.url" [alt]="item.url || 'Image'" (click)="openMediaPreview($event, item)">
                   <div class="selection-indicator">
                     <mat-icon>check_circle</mat-icon>
                   </div>
@@ -120,7 +120,7 @@
             @for (item of videos(); track item.sha256) {
               <div class="media-card" [class.selected]="isSelected(item.sha256)" (click)="toggleItemSelection(item.sha256)">
                 <div class="media-thumbnail">
-                  <img [src]="item.url || 'assets/video-placeholder.jpg'" [alt]="item.url || 'Video'">
+                  <img [src]="item.url || 'assets/video-placeholder.jpg'" [alt]="item.url || 'Video'" (click)="openMediaPreview($event, item)">
                   <mat-icon class="video-badge">play_circle_filled</mat-icon>
                   <div class="selection-indicator">
                     <mat-icon>check_circle</mat-icon>
@@ -187,7 +187,7 @@
             @for (item of images(); track item.sha256) {
               <div class="media-card" [class.selected]="isSelected(item.sha256)" (click)="toggleItemSelection(item.sha256)">
                 <div class="media-thumbnail">
-                  <img [src]="item.url" [alt]="item.url || 'Image'">
+                  <img [src]="item.url" [alt]="item.url || 'Image'" (click)="openMediaPreview($event, item)">
                   <div class="selection-indicator">
                     <mat-icon>check_circle</mat-icon>
                   </div>

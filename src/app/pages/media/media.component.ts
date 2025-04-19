@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect } from '@angular/core';
+import { Component, inject, signal, effect, Inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -7,7 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTabsModule } from '@angular/material/tabs';
-import { MatDialogModule, MatDialog } from '@angular/material/dialog';
+import { MatDialogModule, MatDialog, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -19,6 +19,7 @@ import { ApplicationStateService } from '../../services/application-state.servic
 import { NostrService } from '../../services/nostr.service';
 import { standardizedTag } from '../../standardized-tags';
 import { TimestampPipe } from '../../pipes/timestamp.pipe';
+import { ApplicationService } from '../../services/application.service';
 
 @Component({
   selector: 'app-media',
@@ -48,6 +49,7 @@ export class MediaComponent {
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
   appState = inject(ApplicationStateService);
+  app = inject(ApplicationService);
 
   // View state
   activeTab = signal<'images' | 'videos' | 'servers'>('images');
@@ -60,15 +62,13 @@ export class MediaComponent {
   constructor() {
     // Update filtered lists whenever media items change
     effect(() => {
-      debugger;
       const allMedia = this.mediaService.mediaItems();
       this.images.set(allMedia.filter(item => item.type.startsWith('image')));
       this.videos.set(allMedia.filter(item => item.type.startsWith('video')));
     });
 
     effect(async () => {
-      if (this.appState.initialized()) {
-        debugger;
+      if (this.app.initialized()) {
         const userServerList = await this.nostr.getMediaServers(this.nostr.pubkey());
         console.log('USER SERVER LIST', userServerList);
 
@@ -115,9 +115,7 @@ export class MediaComponent {
       if (!result) return;
 
       try {
-        debugger;
         if (server) {
-          debugger;
           // Update existing server
           // await this.mediaService.updateMediaServer(result);
           this.snackBar.open('Media server updated', 'Close', { duration: 3000 });
@@ -149,7 +147,6 @@ export class MediaComponent {
 
   async testServer(url: string): Promise<void> {
     try {
-      debugger;
       const result = await this.mediaService.testMediaServer(url);
       if (result.success) {
         this.snackBar.open(result.message, 'Close', { duration: 3000 });
@@ -169,6 +166,22 @@ export class MediaComponent {
     this.dialog.open(MediaDetailsDialogComponent, {
       width: '600px',
       data: item
+    });
+  }
+
+  openMediaPreview(event: Event, item: MediaItem): void {
+    // Stop event propagation to prevent toggling selection
+    event.stopPropagation();
+    
+    this.dialog.open(MediaPreviewDialogComponent, {
+      data: {
+        mediaUrl: item.url,
+        mediaType: item.type,
+        mediaTitle: item.url || 'Media'
+      },
+      maxWidth: '100vw',
+      maxHeight: '100vh',
+      panelClass: 'media-preview-dialog'
     });
   }
 
@@ -258,5 +271,93 @@ export class MediaComponent {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = Math.floor(seconds % 60);
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  }
+}
+
+@Component({
+  selector: 'app-media-preview-dialog',
+  standalone: true,
+  imports: [CommonModule, MatButtonModule, MatIconModule],
+  template: `
+    <div class="dialog-container">
+      <button mat-icon-button class="close-button" (click)="close()">
+        <mat-icon>close</mat-icon>
+      </button>
+      <img *ngIf="isImage()" [src]="data.mediaUrl" [alt]="data.mediaTitle" class="full-size-media">
+      <video *ngIf="isVideo()" controls class="full-size-media">
+        <source [src]="data.mediaUrl" [type]="data.mediaType">
+        Your browser does not support the video tag.
+      </video>
+      <div *ngIf="!isImage() && !isVideo()" class="unsupported-media">
+        <mat-icon>error</mat-icon>
+        <p>Unsupported media type</p>
+      </div>
+    </div>
+  `,
+  styles: [`
+    .dialog-container {
+      position: relative;
+      padding: 0;
+      overflow: hidden;
+      text-align: center;
+      background-color: rgba(0, 0, 0, 0.8);
+      border-radius: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 200px;
+    }
+    
+    .close-button {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      color: white;
+      z-index: 10;
+      background-color: rgba(0, 0, 0, 0.5);
+    }
+    
+    .full-size-media {
+      max-width: 90vw;
+      max-height: 90vh;
+      object-fit: contain;
+    }
+    
+    .unsupported-media {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+    }
+    
+    mat-icon {
+      font-size: 48px;
+      height: 48px;
+      width: 48px;
+      margin-bottom: 16px;
+    }
+    
+    p {
+      font-size: 18px;
+    }
+  `]
+})
+export class MediaPreviewDialogComponent {
+  constructor(
+    @Inject(MAT_DIALOG_DATA) public data: { mediaUrl: string, mediaType: string, mediaTitle: string },
+    private dialogRef: MatDialogRef<MediaPreviewDialogComponent>
+  ) { }
+
+  close(): void {
+    this.dialogRef.close();
+  }
+  
+  isImage(): boolean {
+    return this.data.mediaType?.startsWith('image') || false;
+  }
+  
+  isVideo(): boolean {
+    return this.data.mediaType?.startsWith('video') || false;
   }
 }

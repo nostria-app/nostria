@@ -138,7 +138,6 @@ export class MediaService {
 
       for (const server of servers) {
         try {
-          debugger;
           const url = server.endsWith('/') ? server : `${server}/`;
           const response = await fetch(`${url}list/${pubkey}`, {
             headers: await this.getAuthHeaders('List Files')
@@ -168,8 +167,6 @@ export class MediaService {
           // this.updateServerStatus(server, 'error', err instanceof Error ? err.message : 'Unknown error');
         }
       }
-
-      debugger;
 
       if (mediaItems.length > 0) {
         this._mediaItems.set(mediaItems);
@@ -309,8 +306,6 @@ export class MediaService {
       });
 
       const event = this.nostrService.createEvent(MEDIA_SERVERS_EVENT_KIND, '', tags);
-
-      debugger;
 
       // Sign and publish the event
       const signedEvent = await this.nostrService.signEvent(event);

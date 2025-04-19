@@ -27,6 +27,7 @@ import { StorageService } from '../../services/storage.service';
 import { ProfileStateService } from '../../services/profile-state.service';
 import { LayoutService } from '../../services/layout.service';
 import { ProfileHeaderComponent } from './profile-header/profile-header.component';
+import { ApplicationService } from '../../services/application.service';
 
 @Component({
   selector: 'app-profile',
@@ -63,6 +64,7 @@ export class ProfileComponent {
   private storage = inject(StorageService);
   private relayService = inject(RelayService);
   private appState = inject(ApplicationStateService);
+  private app = inject(ApplicationService);
   private logger = inject(LoggerService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
@@ -86,7 +88,7 @@ export class ProfileComponent {
     // React to changes in route parameters and app initialization
     effect(() => {
       // Only proceed if app is initialized and route params are available
-      if (this.appState.initialized() && this.routeParams()) {
+      if (this.app.initialized() && this.routeParams()) {
         let id = this.routeParams()?.get('id');
 
         if (id) {
