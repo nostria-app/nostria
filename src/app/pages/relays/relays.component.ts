@@ -8,10 +8,13 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTabsModule } from '@angular/material/tabs';
+import { MatDialog } from '@angular/material/dialog';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { RelayService, Relay } from '../../services/relay.service';
 import { LoggerService } from '../../services/logger.service';
+import { RelayInfoDialogComponent } from './relay-info-dialog.component';
+import { LayoutService } from '../../services/layout.service';
 
 @Component({
   selector: 'app-relays-page',
@@ -35,24 +38,30 @@ export class RelaysComponent {
   private relayService = inject(RelayService);
   private logger = inject(LoggerService);
   private snackBar = inject(MatSnackBar);
+  private dialog = inject(MatDialog);
+  private layout = inject(LayoutService);
   
   relays = this.relayService.userRelays;
   bootstrapRelays = this.relayService.bootStrapRelays;
   
   newRelayUrl = signal('');
   newBootstrapUrl = signal('');
+
+  // Simulate a premium user status - in a real app this would come from a user service
+  isPremiumUser = signal(false);
   
   addRelay(): void {
-    const url = this.newRelayUrl();
+    let url = this.newRelayUrl();
     
     if (!url || !url.trim()) {
       this.showMessage('Please enter a valid relay URL');
       return;
     }
     
+    // Automatically add wss:// prefix if missing
     if (!url.startsWith('wss://')) {
-      this.showMessage('Relay URL must start with wss://');
-      return;
+      url = `wss://${url.trim()}/`;
+      this.newRelayUrl.set(url);
     }
     
     // Check if relay already exists
@@ -61,10 +70,30 @@ export class RelaysComponent {
       return;
     }
     
-    this.logger.info('Adding new relay', { url });
-    this.relayService.addRelay(url);
-    this.newRelayUrl.set('');
-    this.showMessage('Relay added successfully');
+    // Open the relay info dialog
+    const dialogRef = this.dialog.open(RelayInfoDialogComponent, {
+      width: '500px',
+      data: {
+        relayUrl: url,
+        isPremiumUser: this.isPremiumUser()
+      }
+    });
+    
+    dialogRef.afterClosed().subscribe(result => {
+      if (result?.confirmed) {
+        this.logger.info('Adding new relay', { url, migrateData: result.migrateData });
+        this.relayService.addRelay(url);
+        
+        if (result.migrateData) {
+          // Handle data migration logic here
+          this.logger.info('Beginning data migration to relay', { url });
+          this.showMessage('Data migration to new relay has been scheduled');
+        }
+        
+        this.newRelayUrl.set('');
+        this.showMessage('Relay added successfully');
+      }
+    });
   }
   
   removeRelay(relay: Relay): void {
@@ -74,16 +103,17 @@ export class RelaysComponent {
   }
   
   addBootstrapRelay(): void {
-    const url = this.newBootstrapUrl();
+    let url = this.newBootstrapUrl();
     
     if (!url || !url.trim()) {
       this.showMessage('Please enter a valid relay URL');
       return;
     }
     
+    // Automatically add wss:// prefix if missing
     if (!url.startsWith('wss://')) {
-      this.showMessage('Relay URL must start with wss://');
-      return;
+      url = `wss://${url.trim()}`;
+      this.newBootstrapUrl.set(url);
     }
     
     // Check if relay already exists
