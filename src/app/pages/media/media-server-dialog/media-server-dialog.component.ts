@@ -38,7 +38,7 @@ export class MediaServerDialogComponent implements OnInit {
   
   serverForm!: FormGroup;
   isEdit = false;
-  testing = false;
+  testing = signal(false);
   testResult: { success: boolean, message: string } | null = null;
   
   suggestedServers = signal<string[]>([
@@ -69,7 +69,7 @@ export class MediaServerDialogComponent implements OnInit {
     const url = this.serverForm.get('url')?.value;
     if (!url) return;
     
-    this.testing = true;
+    this.testing.set(true);
     this.testResult = null;
     
     try {
@@ -78,12 +78,11 @@ export class MediaServerDialogComponent implements OnInit {
       
       // First try to fetch info endpoint
       const infoResponse = await fetch(`${normalizedUrl}`);
-      
+
       if (infoResponse.ok) {
-        const info = await infoResponse.json();
         this.testResult = {
           success: true,
-          message: `Connected successfully! Server type: ${info.name || 'Unknown'} ${info.version || ''}`
+          message: `Connected successfully!}`
         };
       } else {
         // Try a HEAD request to see if the server exists at all
@@ -107,7 +106,7 @@ export class MediaServerDialogComponent implements OnInit {
         message: `Connection error: ${error instanceof Error ? error.message : String(error)}`
       };
     } finally {
-      this.testing = false;
+      this.testing.set(false);
     }
   }
   
