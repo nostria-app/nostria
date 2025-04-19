@@ -64,7 +64,6 @@ export class MediaServerDialogComponent implements OnInit {
   }
   
   async testConnection(): Promise<void> {
-    debugger;
     const url = this.serverForm.get('url')?.value;
     if (!url) return;
     

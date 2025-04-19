@@ -193,7 +193,6 @@ export class StorageService {
       });
 
       this.logger.info('IndexedDB initialization completed');
-      debugger;
       // await this.updateStats();
 
       // Set initialized status to true

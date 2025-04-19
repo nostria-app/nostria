@@ -137,6 +137,7 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+    cursor: zoom-in; /* Add cursor to indicate image is clickable */
   }
   
   .video-badge {
@@ -335,4 +336,20 @@
   display: flex;
   justify-content: center;
   margin-top: 16px;
+}
+
+/* Add styles for the media preview dialog */
+::ng-deep .media-preview-dialog {
+  .mat-mdc-dialog-container {
+    padding: 0;
+    overflow: hidden;
+    border-radius: 0;
+    background-color: transparent;
+    box-shadow: none;
+    
+    .mdc-dialog__surface {
+      background-color: transparent;
+      box-shadow: none;
+    }
+  }
 }

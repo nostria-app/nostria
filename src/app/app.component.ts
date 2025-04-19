@@ -15,7 +15,6 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { LoginDialogComponent } from './components/login-dialog/login-dialog.component';
 import { NostrService } from './services/nostr.service';
 import { LoadingOverlayComponent } from './components/loading-overlay/loading-overlay.component';
-import { DataLoadingService } from './services/data-loading.service';
 import { LoggerService } from './services/logger.service';
 import { MatMenuModule } from '@angular/material/menu';
 import { FormGroup, FormsModule } from '@angular/forms';
@@ -25,6 +24,7 @@ import { LayoutService } from './services/layout.service';
 import { ApplicationStateService } from './services/application-state.service';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { QrcodeScanDialogComponent } from './components/qrcode-scan-dialog/qrcode-scan-dialog.component';
+import { ApplicationService } from './services/application.service';
 
 interface NavItem {
   path: string;
@@ -64,9 +64,9 @@ export class AppComponent implements OnInit {
   pwaUpdateService = inject(PwaUpdateService);
   dialog = inject(MatDialog);
   nostrService = inject(NostrService);
-  dataLoadingService = inject(DataLoadingService);
   storage = inject(StorageService);
   appState = inject(ApplicationStateService);
+  app = inject(ApplicationService);
   layout = inject(LayoutService);
   router = inject(Router);
 
@@ -114,7 +114,7 @@ export class AppComponent implements OnInit {
     // Show login dialog if user is not logged in - with debugging
     effect(() => {
       const isLoggedIn = this.nostrService.isLoggedIn();
-      const isInitialized = this.appState.initialized();
+      const isInitialized = this.app.initialized();
 
       if (isInitialized && !isLoggedIn) {
         this.logger.debug('Showing login dialog');
@@ -125,7 +125,9 @@ export class AppComponent implements OnInit {
         // Whenever the user changes, ensure that we have the correct relays
         if (user) {
           this.logger.debug('User changed, updating relays', { pubkey: user.pubkey });
-          this.dataLoadingService.loadData();
+          
+          // Data load will happen automatically in nostr service.
+          //this.dataLoadingService.loadData();
 
           // Also load the user metadata for the profile panel
           // this.nostrService.loadAllUsersMetadata().catch(err => 
@@ -138,7 +140,7 @@ export class AppComponent implements OnInit {
 
     // Effect to load metadata again after data loading completes
     effect(() => {
-      const showSuccess = this.dataLoadingService.showSuccess();
+      const showSuccess = this.appState.showSuccess();
       if (showSuccess) {
         this.logger.debug('Data loading completed, refreshing user metadata');
         // this.nostrService.loadUsersMetadata().catch(err =>
@@ -149,7 +151,7 @@ export class AppComponent implements OnInit {
     // Additional effect to make sure we have metadata for the current user
     effect(() => {
       const currentUser = this.nostrService.activeAccount();
-      const isInitialized = this.appState.initialized();
+      const isInitialized = this.app.initialized();
 
       if (currentUser && isInitialized && this.storage.initialized()) {
         // Ensure we have the latest metadata for the current user

@@ -20,6 +20,7 @@ import { ConfirmDialogComponent } from '../../components/confirm-dialog/confirm-
 import { Router } from '@angular/router';
 import { StorageService } from '../../services/storage.service';
 import { ApplicationStateService } from '../../services/application-state.service';
+import { ApplicationService } from '../../services/application.service';
 
 @Component({
   selector: 'app-settings',
@@ -48,6 +49,7 @@ export class SettingsComponent {
   nostrService = inject(NostrService);
   storage = inject(StorageService);
   appState = inject(ApplicationStateService);
+  app = inject(ApplicationService);
   dialog = inject(MatDialog);
   router = inject(Router);
 
@@ -90,7 +92,7 @@ export class SettingsComponent {
 
     dialogRef.afterClosed().subscribe(async confirmed => {
       if (confirmed) {
-        await this.appState.wipe();
+        await this.app.wipe();
       }
     });
   }
