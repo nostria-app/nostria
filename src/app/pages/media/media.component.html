@@ -28,7 +28,11 @@
   }
 
   <mat-tab-group (selectedIndexChange)="setActiveTab($event === 0 ? 'images' : ($event === 1 ? 'videos' : 'servers'))">
-    <mat-tab label="Images ({{ images().length }})">
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">image</mat-icon>
+        <span>Images ({{ images().length }})</span>
+      </ng-template>
       <div class="tab-content">
         @if (selectedItems().length > 0) {
           <div class="selection-actions">
@@ -87,7 +91,11 @@
         }
       </div>
     </mat-tab>
-    <mat-tab label="Videos ({{ videos().length }})">
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">videocam</mat-icon>
+        <span>Videos ({{ videos().length }})</span>
+      </ng-template>
       <div class="tab-content">
         @if (selectedItems().length > 0) {
           <div class="selection-actions">
@@ -150,7 +158,74 @@
         }
       </div>
     </mat-tab>
-    <mat-tab label="Media Servers">
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">folder</mat-icon>
+        <span>Files ({{ images().length }})</span>
+      </ng-template>
+      <div class="tab-content">
+        @if (selectedItems().length > 0) {
+          <div class="selection-actions">
+            <span>{{ selectedItems().length }} item(s) selected</span>
+            <button mat-button color="primary" (click)="clearSelection()">Clear Selection</button>
+            <button mat-button color="warn" (click)="deleteSelected()">Delete Selected</button>
+          </div>
+        } @else {
+          <div class="selection-actions">
+            <button mat-button color="primary" (click)="selectAll()" [disabled]="images().length === 0">Select All</button>
+          </div>
+        }
+
+        @if (images().length === 0) {
+          <div class="empty-state">
+            <mat-icon>insert_drive_file</mat-icon>
+            <p>No files found in your library</p>
+            <button mat-raised-button color="primary" (click)="openUploadDialog()">Upload Now</button>
+          </div>
+        } @else {
+          <div class="media-grid">
+            @for (item of images(); track item.id) {
+              <div class="media-card" [class.selected]="isSelected(item.id)" (click)="toggleItemSelection(item.id)">
+                <div class="media-thumbnail">
+                  <img [src]="item.thumbnailUrl || item.url" [alt]="item.title || 'Image'">
+                  <div class="selection-indicator">
+                    <mat-icon>check_circle</mat-icon>
+                  </div>
+                </div>
+                <div class="media-info">
+                  <h3>{{ item.title || 'Untitled' }}</h3>
+                  <p>{{ formatFileSize(item.size) }}</p>
+                </div>
+                <div class="media-actions">
+                  <button mat-icon-button [matMenuTriggerFor]="menu" (click)="$event.stopPropagation()">
+                    <mat-icon>more_vert</mat-icon>
+                  </button>
+                  <mat-menu #menu="matMenu">
+                    <button mat-menu-item (click)="openDetailsDialog(item); $event.stopPropagation()">
+                      <mat-icon>info</mat-icon>
+                      <span>View Details</span>
+                    </button>
+                    <button mat-menu-item (click)="mirrorItem(item.id); $event.stopPropagation()">
+                      <mat-icon>cloud_upload</mat-icon>
+                      <span>Mirror</span>
+                    </button>
+                    <button mat-menu-item color="warn" (click)="reportItem(item.id); $event.stopPropagation()">
+                      <mat-icon>flag</mat-icon>
+                      <span>Report</span>
+                    </button>
+                  </mat-menu>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </mat-tab>
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">storage</mat-icon>
+        <span>Media Servers</span>
+      </ng-template>
       <div class="tab-content">
         <div class="server-header">
           <h2>Your Nostr Media Servers</h2>

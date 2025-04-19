@@ -54,11 +54,12 @@
   </mat-dialog-content>
   
   <mat-dialog-actions align="end">
-    <button mat-button type="button" (click)="testConnection()" [disabled]="!serverForm.get('url')?.valid || testing()">
+    <button mat-stroked-button type="button" (click)="testConnection()" [disabled]="!serverForm.get('url')?.valid || testing()">
+      <mat-icon>link</mat-icon>
       Test Connection
     </button>
     <button mat-button mat-dialog-close>Cancel</button>
-    <button mat-raised-button color="primary" type="submit" [disabled]="!serverForm.valid">
+    <button mat-raised-button type="submit" [disabled]="!serverForm.valid">
       {{ isEdit ? 'Update' : 'Add' }}
     </button>
   </mat-dialog-actions>

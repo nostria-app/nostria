@@ -82,7 +82,7 @@ export class MediaServerDialogComponent implements OnInit {
       if (infoResponse.ok) {
         this.testResult = {
           success: true,
-          message: `Connected successfully!}`
+          message: `Connected successfully!`
         };
       } else {
         // Try a HEAD request to see if the server exists at all
