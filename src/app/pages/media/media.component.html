@@ -247,7 +247,7 @@
             <button mat-raised-button color="primary" (click)="openServerDialog()">Add Your First Server</button>
           </div>
         } @else {
-          <div class="server-list">
+          <div class="server-grid">
             @for (server of mediaService.mediaServers(); track server) {
               <mat-card class="server-card">
                 <mat-card-header>

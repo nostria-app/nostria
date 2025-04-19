@@ -211,10 +211,18 @@ export class NostrService {
     return signedEvent;
   }
 
+  currentDate() {
+    return Math.floor(Date.now() / 1000);
+  }
+
+  futureDate(minutes: number) {
+    return Math.floor((Date.now() + minutes * 60 * 1000) / 1000);
+  }
+
   createEvent(kind: number, content: string, tags: string[][]): UnsignedEvent {
     const event: UnsignedEvent = {
       kind: kind,
-      created_at: Math.floor(Date.now() / 1000),
+      created_at: this.currentDate(),
       tags,
       content,
       pubkey: this.pubkey(),

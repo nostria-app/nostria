@@ -233,8 +233,35 @@
   margin-bottom: 24px;
 }
 
+.server-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
 .server-card {
   box-shadow: var(--mat-sys-level1);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.server-card mat-card-header {
+  padding: 16px 16px 0 16px;
+}
+
+.server-card mat-card-content {
+  flex: 1;
+  padding: 16px;
+}
+
+.server-card mat-card-actions {
+  padding: 8px 8px 16px 8px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-around;
+  gap: 8px;
 }
 
 .server-status {
