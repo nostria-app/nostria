@@ -40,36 +40,41 @@ export class RelaysComponent {
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private layout = inject(LayoutService);
-  
+
   relays = this.relayService.userRelays;
   bootstrapRelays = this.relayService.bootStrapRelays;
-  
+
   newRelayUrl = signal('');
   newBootstrapUrl = signal('');
 
   // Simulate a premium user status - in a real app this would come from a user service
   isPremiumUser = signal(false);
-  
+
   addRelay(): void {
     let url = this.newRelayUrl();
-    
+
     if (!url || !url.trim()) {
       this.showMessage('Please enter a valid relay URL');
       return;
     }
-    
+
     // Automatically add wss:// prefix if missing
     if (!url.startsWith('wss://')) {
-      url = `wss://${url.trim()}/`;
+      url = `wss://${url.trim()}`;
+
+      if (!url.endsWith('/')) {
+        url += '/';
+      }
+
       this.newRelayUrl.set(url);
     }
-    
+
     // Check if relay already exists
     if (this.relays().some(relay => relay.url === url)) {
       this.showMessage('This relay is already in your list');
       return;
     }
-    
+
     // Open the relay info dialog
     const dialogRef = this.dialog.open(RelayInfoDialogComponent, {
       width: '500px',
@@ -78,62 +83,67 @@ export class RelaysComponent {
         isPremiumUser: this.isPremiumUser()
       }
     });
-    
+
     dialogRef.afterClosed().subscribe(result => {
       if (result?.confirmed) {
         this.logger.info('Adding new relay', { url, migrateData: result.migrateData });
         this.relayService.addRelay(url);
-        
+
         if (result.migrateData) {
           // Handle data migration logic here
           this.logger.info('Beginning data migration to relay', { url });
           this.showMessage('Data migration to new relay has been scheduled');
         }
-        
+
         this.newRelayUrl.set('');
         this.showMessage('Relay added successfully');
       }
     });
   }
-  
+
   removeRelay(relay: Relay): void {
     this.logger.info('Removing relay', { url: relay.url });
     this.relayService.removeRelay(relay.url);
     this.showMessage('Relay removed');
   }
-  
+
   addBootstrapRelay(): void {
     let url = this.newBootstrapUrl();
-    
+
     if (!url || !url.trim()) {
       this.showMessage('Please enter a valid relay URL');
       return;
     }
-    
+
     // Automatically add wss:// prefix if missing
     if (!url.startsWith('wss://')) {
       url = `wss://${url.trim()}`;
+
+      if (!url.endsWith('/')) {
+        url += '/';
+      }
+
       this.newBootstrapUrl.set(url);
     }
-    
+
     // Check if relay already exists
     if (this.bootstrapRelays().includes(url)) {
       this.showMessage('This bootstrap relay is already in your list');
       return;
     }
-    
+
     this.logger.info('Adding new bootstrap relay', { url });
     this.relayService.addBootstrapRelay(url);
     this.newBootstrapUrl.set('');
     this.showMessage('Bootstrap relay added successfully');
   }
-  
+
   removeBootstrapRelay(url: string): void {
     this.logger.info('Removing bootstrap relay', { url });
     this.relayService.removeBootstrapRelay(url);
     this.showMessage('Bootstrap relay removed');
   }
-  
+
   getStatusIcon(status: Relay['status'] | undefined): string {
     switch (status) {
       case 'connected': return 'check_circle';
@@ -143,7 +153,7 @@ export class RelaysComponent {
       default: return 'radio_button_unchecked';
     }
   }
-  
+
   getStatusColor(status: Relay['status'] | undefined): string {
     switch (status) {
       case 'connected': return 'text-green-500';
@@ -153,12 +163,12 @@ export class RelaysComponent {
       default: return 'text-gray-500';
     }
   }
-  
+
   formatRelayUrl(url: string): string {
     // Remove wss:// prefix for better UX
     return url.replace(/^wss:\/\//, '');
   }
-  
+
   private showMessage(message: string): void {
     this.snackBar.open(message, 'Close', {
       duration: 3000,
