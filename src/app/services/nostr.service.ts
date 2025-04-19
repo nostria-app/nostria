@@ -94,15 +94,22 @@ export class NostrService {
 
     effect(async () => {
       if (this.storage.initialized()) {
-        this.loadAccountsFromStorage();
-        this.loadActiveAccountFromStorage();
 
-        // We keep an in-memory copy of the user metadata and relay list for all accounts,
-        // they won't take up too much memory space.
-        await this.loadAccountsMetadata();
-        await this.loadAccountsRelays();
+        try {
+          this.loadAccountsFromStorage();
+          this.loadActiveAccountFromStorage();
 
-        this.initialized.set(true);
+          // We keep an in-memory copy of the user metadata and relay list for all accounts,
+          // they won't take up too much memory space.
+          await this.loadAccountsMetadata();
+          await this.loadAccountsRelays();
+
+          this.initialized.set(true);
+        } catch (err) {
+          console.log('FAILED TO LOAD DATA!!');
+          console.error(err);
+        }
+
       }
     });
 

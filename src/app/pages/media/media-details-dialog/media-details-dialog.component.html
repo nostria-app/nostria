@@ -2,7 +2,7 @@
 <mat-dialog-content>
   <div class="media-preview">
     @if (mediaItem.type === 'image') {
-      <img [src]="mediaItem.url" [alt]="mediaItem.title || 'Image'">
+      <img [src]="mediaItem.url" [alt]="mediaItem.url || 'Image'">
     } @else if (mediaItem.type === 'video') {
       <video [src]="mediaItem.url" controls></video>
     }
@@ -12,19 +12,19 @@
     <div class="details-container">
       <div class="detail-row">
         <span class="label">Title</span>
-        <span class="value">{{ mediaItem.title || 'Untitled' }}</span>
+        <span class="value">{{ mediaItem.url || 'Untitled' }}</span>
       </div>
-      
+<!--       
       @if (mediaItem.description) {
         <div class="detail-row">
           <span class="label">Description</span>
           <span class="value description">{{ mediaItem.description }}</span>
         </div>
-      }
+      } -->
       
       <div class="detail-row">
         <span class="label">File Type</span>
-        <span class="value">{{ mediaItem.mimetype }}</span>
+        <span class="value">{{ mediaItem.type }}</span>
       </div>
       
       <div class="detail-row">
@@ -32,7 +32,7 @@
         <span class="value">{{ formatFileSize(mediaItem.size) }}</span>
       </div>
       
-      @if (mediaItem.width && mediaItem.height) {
+      <!-- @if (mediaItem.width && mediaItem.height) {
         <div class="detail-row">
           <span class="label">Dimensions</span>
           <span class="value">{{ mediaItem.width }} × {{ mediaItem.height }}</span>
@@ -44,17 +44,17 @@
           <span class="label">Duration</span>
           <span class="value">{{ formatDuration(mediaItem.duration) }}</span>
         </div>
-      }
+      } -->
       
       <div class="detail-row">
         <span class="label">Upload Date</span>
-        <span class="value">{{ formatDate(mediaItem.uploadDate) }}</span>
+        <span class="value">{{ mediaItem.uploaded | timestamp:'shortDate' }}</span>
       </div>
       
-      @if (mediaItem.eventId) {
+      @if (mediaItem.sha256) {
         <div class="detail-row">
           <span class="label">Nostr Event ID</span>
-          <span class="value event-id">{{ mediaItem.eventId }}</span>
+          <span class="value event-id">{{ mediaItem.sha256 }}</span>
         </div>
       }
     </div>

@@ -12,20 +12,22 @@ import { NostrTagKey, standardizedTag, StandardizedTagType } from '../standardiz
 export interface MediaItem {
   id: string;
   sha256: string; // SHA-256 hash of file (NIP-94)
-  type: 'image' | 'video';
+  type: string;
   url: string;
-  thumbnailUrl?: string;
-  title?: string;
-  description?: string;
-  uploadDate: Date;
   size: number;
-  width?: number;
-  height?: number;
-  duration?: number; // For videos, in seconds
-  mimetype: string;
-  eventId?: string; // Reference to the Nostr event that contains this media
-  dim?: string; // Dimensions in NIP-94 format (e.g., "1200x800")
-  blurhash?: string; // BlurHash for image preview
+  uploaded: number;
+  // thumbnailUrl?: string;
+  // title?: string;
+  // description?: string;
+  // uploadDate: Date;
+  // size: number;
+  // width?: number;
+  // height?: number;
+  // duration?: number; // For videos, in seconds
+  // mimetype: string;
+  // eventId?: string; // Reference to the Nostr event that contains this media
+  // dim?: string; // Dimensions in NIP-94 format (e.g., "1200x800")
+  // blurhash?: string; // BlurHash for image preview
 }
 
 // export interface MediaServer {

@@ -193,7 +193,8 @@ export class StorageService {
       });
 
       this.logger.info('IndexedDB initialization completed');
-      await this.updateStats();
+      debugger;
+      // await this.updateStats();
 
       // Set initialized status to true
       this.initialized.set(true);
@@ -279,7 +280,7 @@ export class StorageService {
 
       await this.updateStats();
     } catch (error) {
-      this.logger.error(`Error saving event ${event.id}`, error);
+      this.logger.error(`Error saving event`, error);
     }
   }
 

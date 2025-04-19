@@ -54,17 +54,17 @@
           </div>
         } @else {
           <div class="media-grid">
-            @for (item of images(); track item.id) {
-              <div class="media-card" [class.selected]="isSelected(item.id)" (click)="toggleItemSelection(item.id)">
+            @for (item of images(); track item.sha256) {
+              <div class="media-card" [class.selected]="isSelected(item.sha256)" (click)="toggleItemSelection(item.sha256)">
                 <div class="media-thumbnail">
-                  <img [src]="item.thumbnailUrl || item.url" [alt]="item.title || 'Image'">
+                  <img [src]="item.url" [alt]="item.url || 'Image'">
                   <div class="selection-indicator">
                     <mat-icon>check_circle</mat-icon>
                   </div>
                 </div>
                 <div class="media-info">
-                  <h3>{{ item.title || 'Untitled' }}</h3>
-                  <p>{{ formatFileSize(item.size) }}</p>
+                  <h3>{{ item.url || 'Untitled' }}</h3>
+                  <p>{{ formatFileSize(item.size) }} | {{ item.uploaded | timestamp:'shortDate' }}</p>
                 </div>
                 <div class="media-actions">
                   <button mat-icon-button [matMenuTriggerFor]="menu" (click)="$event.stopPropagation()">
@@ -75,11 +75,11 @@
                       <mat-icon>info</mat-icon>
                       <span>View Details</span>
                     </button>
-                    <button mat-menu-item (click)="mirrorItem(item.id); $event.stopPropagation()">
+                    <button mat-menu-item (click)="mirrorItem(item.sha256); $event.stopPropagation()">
                       <mat-icon>cloud_upload</mat-icon>
                       <span>Mirror</span>
                     </button>
-                    <button mat-menu-item color="warn" (click)="reportItem(item.id); $event.stopPropagation()">
+                    <button mat-menu-item color="warn" (click)="reportItem(item.sha256); $event.stopPropagation()">
                       <mat-icon>flag</mat-icon>
                       <span>Report</span>
                     </button>
@@ -117,21 +117,21 @@
           </div>
         } @else {
           <div class="media-grid">
-            @for (item of videos(); track item.id) {
-              <div class="media-card" [class.selected]="isSelected(item.id)" (click)="toggleItemSelection(item.id)">
+            @for (item of videos(); track item.sha256) {
+              <div class="media-card" [class.selected]="isSelected(item.sha256)" (click)="toggleItemSelection(item.sha256)">
                 <div class="media-thumbnail">
-                  <img [src]="item.thumbnailUrl || 'assets/video-placeholder.jpg'" [alt]="item.title || 'Video'">
+                  <img [src]="item.url || 'assets/video-placeholder.jpg'" [alt]="item.url || 'Video'">
                   <mat-icon class="video-badge">play_circle_filled</mat-icon>
                   <div class="selection-indicator">
                     <mat-icon>check_circle</mat-icon>
                   </div>
                 </div>
                 <div class="media-info">
-                  <h3>{{ item.title || 'Untitled' }}</h3>
-                  <p>{{ formatFileSize(item.size) }}</p>
-                  @if (item.duration) {
+                  <h3>{{ item.url || 'Untitled' }}</h3>
+                  <p>{{ formatFileSize(item.size) }} | {{ item.uploaded | timestamp:'shortDate' }}</p>
+                  <!-- @if (item.duration) {
                     <p class="duration">{{ formatDuration(item.duration) }}</p>
-                  }
+                  } -->
                 </div>
                 <div class="media-actions">
                   <button mat-icon-button [matMenuTriggerFor]="menu" (click)="$event.stopPropagation()">
@@ -142,11 +142,11 @@
                       <mat-icon>info</mat-icon>
                       <span>View Details</span>
                     </button>
-                    <button mat-menu-item (click)="mirrorItem(item.id); $event.stopPropagation()">
+                    <button mat-menu-item (click)="mirrorItem(item.sha256); $event.stopPropagation()">
                       <mat-icon>cloud_upload</mat-icon>
                       <span>Mirror</span>
                     </button>
-                    <button mat-menu-item color="warn" (click)="reportItem(item.id); $event.stopPropagation()">
+                    <button mat-menu-item color="warn" (click)="reportItem(item.sha256); $event.stopPropagation()">
                       <mat-icon>flag</mat-icon>
                       <span>Report</span>
                     </button>
@@ -184,17 +184,17 @@
           </div>
         } @else {
           <div class="media-grid">
-            @for (item of images(); track item.id) {
-              <div class="media-card" [class.selected]="isSelected(item.id)" (click)="toggleItemSelection(item.id)">
+            @for (item of images(); track item.sha256) {
+              <div class="media-card" [class.selected]="isSelected(item.sha256)" (click)="toggleItemSelection(item.sha256)">
                 <div class="media-thumbnail">
-                  <img [src]="item.thumbnailUrl || item.url" [alt]="item.title || 'Image'">
+                  <img [src]="item.url" [alt]="item.url || 'Image'">
                   <div class="selection-indicator">
                     <mat-icon>check_circle</mat-icon>
                   </div>
                 </div>
                 <div class="media-info">
-                  <h3>{{ item.title || 'Untitled' }}</h3>
-                  <p>{{ formatFileSize(item.size) }}</p>
+                  <h3>{{ item.url || 'Untitled' }}</h3>
+                  <p>{{ formatFileSize(item.size) }} | {{ item.uploaded | timestamp:'shortDate' }}</p>
                 </div>
                 <div class="media-actions">
                   <button mat-icon-button [matMenuTriggerFor]="menu" (click)="$event.stopPropagation()">
@@ -205,11 +205,11 @@
                       <mat-icon>info</mat-icon>
                       <span>View Details</span>
                     </button>
-                    <button mat-menu-item (click)="mirrorItem(item.id); $event.stopPropagation()">
+                    <button mat-menu-item (click)="mirrorItem(item.sha256); $event.stopPropagation()">
                       <mat-icon>cloud_upload</mat-icon>
                       <span>Mirror</span>
                     </button>
-                    <button mat-menu-item color="warn" (click)="reportItem(item.id); $event.stopPropagation()">
+                    <button mat-menu-item color="warn" (click)="reportItem(item.sha256); $event.stopPropagation()">
                       <mat-icon>flag</mat-icon>
                       <span>Report</span>
                     </button>
