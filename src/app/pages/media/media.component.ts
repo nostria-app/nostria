@@ -11,6 +11,7 @@ import { MatDialogModule, MatDialog, MatDialogRef, MAT_DIALOG_DATA } from '@angu
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTableModule } from '@angular/material/table';
 import { Router } from '@angular/router';
 import { MediaService, MediaItem } from '../../services/media.service';
 import { MediaUploadDialogComponent } from './media-upload-dialog/media-upload-dialog.component';
@@ -39,7 +40,8 @@ import { MediaPreviewDialogComponent } from '../../components/media-preview-dial
     MatDialogModule,
     MatSnackBarModule,
     MatMenuModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
+    MatTableModule
   ],
   templateUrl: './media.component.html',
   styleUrls: ['./media.component.scss']
@@ -54,12 +56,16 @@ export class MediaComponent {
   app = inject(ApplicationService);
 
   // View state
-  activeTab = signal<'images' | 'videos' | 'servers'>('images');
+  activeTab = signal<'images' | 'videos' | 'files' | 'servers'>('images');
   selectedItems = signal<string[]>([]);
 
   // Computed media lists
   images = signal<MediaItem[]>([]);
   videos = signal<MediaItem[]>([]);
+  files = signal<MediaItem[]>([]);
+  
+  // Table columns for files display
+  displayedColumns: string[] = ['select', 'name', 'type', 'size', 'uploaded', 'actions'];
 
   constructor() {
     // Update filtered lists whenever media items change
@@ -67,6 +73,9 @@ export class MediaComponent {
       const allMedia = this.mediaService.mediaItems();
       this.images.set(allMedia.filter(item => item.type.startsWith('image')));
       this.videos.set(allMedia.filter(item => item.type.startsWith('video')));
+      this.files.set(allMedia.filter(item => 
+        !item.type.startsWith('image') && !item.type.startsWith('video')
+      ));
     });
 
     effect(async () => {
@@ -213,7 +222,7 @@ export class MediaComponent {
   }
 
   selectAll(): void {
-    const currentMedia = this.activeTab() === 'images' ? this.images() : this.videos();
+    const currentMedia = this.activeTab() === 'images' ? this.images() : this.activeTab() === 'videos' ? this.videos() : this.files();
     this.selectedItems.set(currentMedia.map(item => item.id));
   }
 
@@ -221,7 +230,7 @@ export class MediaComponent {
     this.selectedItems.set([]);
   }
 
-  async deleteSelected(): Promise<void> {
+  async deleteSelected(sha256?: string): Promise<void> {
     if (confirm(`Are you sure you want to delete ${this.selectedItems().length} items?`)) {
       try {
         for (const id of this.selectedItems()) {
@@ -266,7 +275,7 @@ export class MediaComponent {
     return this.selectedItems().includes(id);
   }
 
-  setActiveTab(tab: 'images' | 'videos' | 'servers'): void {
+  setActiveTab(tab: 'images' | 'videos' | 'files' | 'servers'): void {
     this.activeTab.set(tab);
     if (tab !== 'servers') {
       this.selectedItems.set([]);
@@ -274,7 +283,7 @@ export class MediaComponent {
   }
 
   getMediaTypeIcon(type: string): string {
-    return type === 'image' ? 'image' : 'videocam';
+    return type === 'image' ? 'image' : type === 'video' ? 'videocam' : 'insert_drive_file';
   }
 
   formatFileSize(bytes: number): string {
@@ -290,5 +299,12 @@ export class MediaComponent {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = Math.floor(seconds % 60);
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  }
+
+  // Helper to get filename from URL
+  getFileName(url: string): string {
+    if (!url) return 'Unknown';
+    const urlParts = url.split('/');
+    return urlParts[urlParts.length - 1];
   }
 }
