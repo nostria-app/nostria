@@ -11,13 +11,13 @@ import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-
-import { MediaService, MediaItem, MediaServer } from '../../services/media.service';
+import { MediaService, MediaItem } from '../../services/media.service';
 import { MediaUploadDialogComponent } from './media-upload-dialog/media-upload-dialog.component';
 import { MediaDetailsDialogComponent } from './media-details-dialog/media-details-dialog.component';
 import { MediaServerDialogComponent } from './media-server-dialog/media-server-dialog.component';
 import { ApplicationStateService } from '../../services/application-state.service';
 import { NostrService } from '../../services/nostr.service';
+import { standardizedTag } from '../../standardized-tags';
 
 @Component({
   selector: 'app-media',
@@ -65,8 +65,15 @@ export class MediaComponent {
 
     effect(async () => {
       if (this.appState.initialized()) {
+        debugger;
         const userServerList = await this.nostr.getMediaServers(this.nostr.pubkey());
         console.log('USER SERVER LIST', userServerList);
+
+        if (userServerList) {
+          const servers = this.nostr.getTags(userServerList, standardizedTag.server);
+          this.mediaService.setMediaServers(servers);
+        }
+
         // Fetch the media servers (from cache or relay).
         await this.mediaService.initialize();
       }
@@ -93,7 +100,7 @@ export class MediaComponent {
     });
   }
 
-  openServerDialog(server?: MediaServer): void {
+  openServerDialog(server?: string): void {
     const dialogRef = this.dialog.open(MediaServerDialogComponent, {
       width: '500px',
       data: server
@@ -103,9 +110,11 @@ export class MediaComponent {
       if (!result) return;
 
       try {
+        debugger;
         if (server) {
+          debugger;
           // Update existing server
-          await this.mediaService.updateMediaServer(result);
+          // await this.mediaService.updateMediaServer(result);
           this.snackBar.open('Media server updated', 'Close', { duration: 3000 });
         } else {
           // Add new server
@@ -135,6 +144,7 @@ export class MediaComponent {
 
   async testServer(url: string): Promise<void> {
     try {
+      debugger;
       const result = await this.mediaService.testMediaServer(url);
       if (result.success) {
         this.snackBar.open(result.message, 'Close', { duration: 3000 });
@@ -146,21 +156,8 @@ export class MediaComponent {
     }
   }
 
-  editServer(server: MediaServer): void {
+  editServer(server: string): void {
     this.openServerDialog(server);
-  }
-
-  async publishServers(): Promise<void> {
-    try {
-      await this.mediaService.publishMediaServers();
-      this.snackBar.open('Media servers published to Nostr', 'Close', { duration: 3000 });
-    } catch (error) {
-      this.snackBar.open(
-        error instanceof Error ? error.message : 'Failed to publish media servers',
-        'Close',
-        { duration: 3000 }
-      );
-    }
   }
 
   openDetailsDialog(item: MediaItem): void {

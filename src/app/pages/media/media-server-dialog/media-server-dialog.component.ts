@@ -10,8 +10,6 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatChipsModule } from '@angular/material/chips';
 
-import { MediaServer } from '../../../services/media.service';
-
 @Component({
   selector: 'app-media-server-dialog',
   standalone: true,
@@ -34,7 +32,7 @@ import { MediaServer } from '../../../services/media.service';
 export class MediaServerDialogComponent implements OnInit {
   private fb = inject(FormBuilder);
   private dialogRef = inject(MatDialogRef<MediaServerDialogComponent>);
-  private dialogData: MediaServer | undefined = inject(MAT_DIALOG_DATA, { optional: true });
+  private dialogData: string | undefined = inject(MAT_DIALOG_DATA, { optional: true });
   
   serverForm!: FormGroup;
   isEdit = false;
@@ -51,12 +49,12 @@ export class MediaServerDialogComponent implements OnInit {
     this.isEdit = !!this.dialogData;
     
     this.serverForm = this.fb.group({
-      url: [this.dialogData?.url || '', [
+      url: [this.dialogData || '', [
         Validators.required,
         Validators.pattern('^https://.+')
       ]],
-      name: [this.dialogData?.name || ''],
-      description: [this.dialogData?.description || '']
+      name: [this.dialogData || ''],
+      description: [this.dialogData || '']
     });
   }
   
@@ -66,6 +64,7 @@ export class MediaServerDialogComponent implements OnInit {
   }
   
   async testConnection(): Promise<void> {
+    debugger;
     const url = this.serverForm.get('url')?.value;
     if (!url) return;
     
@@ -112,14 +111,14 @@ export class MediaServerDialogComponent implements OnInit {
   
   onSubmit(): void {
     if (this.serverForm.valid) {
-      const serverData: MediaServer = {
-        url: this.serverForm.value.url,
-        name: this.serverForm.value.name,
-        description: this.serverForm.value.description,
-        status: 'unknown'
-      };
+      // const serverData: string = {
+      //   url: this.serverForm.value.url,
+      //   name: this.serverForm.value.name,
+      //   description: this.serverForm.value.description,
+      //   status: 'unknown'
+      // };
       
-      this.dialogRef.close(serverData);
+      this.dialogRef.close(this.serverForm.value.url);
     }
   }
 }

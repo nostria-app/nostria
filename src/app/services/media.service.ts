@@ -4,9 +4,10 @@ import { BehaviorSubject } from 'rxjs';
 import { NostrService } from './nostr.service';
 import { StorageService } from './storage.service';
 import { LoggerService } from './logger.service';
-import { EventTemplate } from 'nostr-tools';
+import { EventTemplate, finalizeEvent } from 'nostr-tools';
 import { RelayService } from './relay.service';
 import { MEDIA_SERVERS_EVENT_KIND } from '../interfaces';
+import { NostrTagKey, standardizedTag, StandardizedTagType } from '../standardized-tags';
 
 export interface MediaItem {
   id: string;
@@ -27,15 +28,15 @@ export interface MediaItem {
   blurhash?: string; // BlurHash for image preview
 }
 
-export interface MediaServer {
-  url: string;
-  name?: string;
-  description?: string;
-  status: 'active' | 'error' | 'unknown';
-  capabilities?: string[];
-  error?: string;
-  lastChecked?: number;
-}
+// export interface MediaServer {
+//   url: string;
+//   // name?: string;
+//   // description?: string;
+//   status: 'active' | 'error' | 'unknown';
+//   capabilities?: string[];
+//   error?: string;
+//   lastChecked?: number;
+// }
 
 export interface NostrEvent {
   id: string;
@@ -46,8 +47,6 @@ export interface NostrEvent {
   content: string;
   sig: string;
 }
-
-const SERVERS_STORAGE_KEY = 'nostria-media-servers';
 
 @Injectable({
   providedIn: 'root'
@@ -62,7 +61,7 @@ export class MediaService {
   private _mediaItems = signal<MediaItem[]>([]);
   private _loading = signal<boolean>(false);
   private _error = signal<string | null>(null);
-  private _mediaServers = signal<MediaServer[]>([]);
+  private _mediaServers = signal<string[]>([]);
 
   // Public signals
   readonly mediaItems = this._mediaItems.asReadonly();
@@ -94,54 +93,21 @@ export class MediaService {
     return response.json();
   }
 
+  setMediaServers(servers: string[]): void {
+    this._mediaServers.set(servers);
+  }
+
   private async loadMediaServers(): Promise<void> {
     // First try to load from localStorage for faster initial load
-    const savedServers = localStorage.getItem(SERVERS_STORAGE_KEY);
-    if (savedServers) {
-      try {
-        const servers = JSON.parse(savedServers) as MediaServer[];
-        this._mediaServers.set(servers);
-      } catch (error) {
-        this.logger.error('Failed to parse saved media servers', error);
-      }
+    let mediaServerEvent = await this.storage.getEventByPubkeyAndKind(this.nostrService.pubkey(), MEDIA_SERVERS_EVENT_KIND);
+
+    if (!mediaServerEvent) {
+      mediaServerEvent = await this.relay.getEventByPubkeyAndKind(this.nostrService.pubkey(), MEDIA_SERVERS_EVENT_KIND);
     }
 
-    // Then try to get from Nostr
-    try {
-      const currentUser = this.nostrService.activeAccount();
-      if (!currentUser) return;
-
-      const event = await this.storage.getEventByPubkeyAndKind(currentUser.pubkey, MEDIA_SERVERS_EVENT_KIND);
-      if (!event) return;
-
-      // Extract servers from tags
-      const servers: MediaServer[] = event.tags
-        .filter(tag => tag.length >= 2 && tag[0] === 'server')
-        .map(tag => {
-          const url = tag[1];
-
-          // Check if we have a name (optional 3rd element in tag)
-          const name = tag.length >= 3 ? tag[2] : undefined;
-
-          // Check if we already have this server in our current list
-          const existingServer = this._mediaServers().find(s => s.url === url);
-
-          return {
-            url,
-            name,
-            status: existingServer?.status || 'unknown',
-            capabilities: existingServer?.capabilities,
-            error: existingServer?.error,
-            lastChecked: existingServer?.lastChecked
-          };
-        });
-
+    if (mediaServerEvent) {
+      const servers = this.nostrService.getTags(mediaServerEvent, standardizedTag.server);
       this._mediaServers.set(servers);
-
-      // Also save to localStorage
-      localStorage.setItem(SERVERS_STORAGE_KEY, JSON.stringify(servers));
-    } catch (error) {
-      this.logger.error('Failed to load media servers from Nostr', error);
     }
   }
 
@@ -170,7 +136,7 @@ export class MediaService {
 
       for (const server of servers) {
         try {
-          const url = server.url.endsWith('/') ? server.url : `${server.url}/`;
+          const url = server.endsWith('/') ? server : `${server}/`;
           const response = await fetch(`${url}list/${pubkey}`, {
             headers: await this.getAuthHeaders()
           });
@@ -183,12 +149,12 @@ export class MediaService {
           mediaItems = data;
 
           // Update server status to active
-          this.updateServerStatus(server.url, 'active');
+          // this.updateServerStatus(server, 'active');
 
           // Successfully got media items, no need to try other servers
           break;
         } catch (err) {
-          this.logger.error(`Failed to fetch media from server ${server.url}:`, err);
+          this.logger.error(`Failed to fetch media from server ${server}:`, err);
 
           // Save the first error to display if all servers fail
           if (!firstError) {
@@ -196,7 +162,7 @@ export class MediaService {
           }
 
           // Update server status
-          this.updateServerStatus(server.url, 'error', err instanceof Error ? err.message : 'Unknown error');
+          // this.updateServerStatus(server, 'error', err instanceof Error ? err.message : 'Unknown error');
         }
       }
 
@@ -213,72 +179,29 @@ export class MediaService {
     }
   }
 
-  private updateServerStatus(url: string, status: MediaServer['status'], errorMessage?: string): void {
-    this._mediaServers.update(servers =>
-      servers.map(server =>
-        server.url === url
-          ? {
-            ...server,
-            status,
-            error: errorMessage,
-            lastChecked: Date.now()
-          }
-          : server
-      )
-    );
-
-    // Update localStorage
-    localStorage.setItem(SERVERS_STORAGE_KEY, JSON.stringify(this._mediaServers()));
-  }
-
-  async addMediaServer(server: MediaServer): Promise<void> {
+  async addMediaServer(server: string): Promise<void> {
     // Normalize URL
-    let normalizedUrl = server.url;
+    let normalizedUrl = server;
     if (!normalizedUrl.endsWith('/')) {
       normalizedUrl += '/';
     }
 
     // Check if server already exists
-    const exists = this._mediaServers().some(s => s.url === normalizedUrl);
+    const exists = this._mediaServers().some(s => s === normalizedUrl);
+
     if (exists) {
       throw new Error('Server with this URL already exists');
     }
 
     // Add the new server
-    this._mediaServers.update(servers => [...servers, {
-      ...server,
-      url: normalizedUrl,
-      lastChecked: Date.now()
-    }]);
-
-    // Save to localStorage
-    localStorage.setItem(SERVERS_STORAGE_KEY, JSON.stringify(this._mediaServers()));
-
-    // Publish to Nostr
-    await this.publishMediaServers();
-  }
-
-  async updateMediaServer(updatedServer: MediaServer): Promise<void> {
-    this._mediaServers.update(servers =>
-      servers.map(server =>
-        server.url === updatedServer.url
-          ? { ...updatedServer, lastChecked: Date.now() }
-          : server
-      )
-    );
-
-    // Save to localStorage
-    localStorage.setItem(SERVERS_STORAGE_KEY, JSON.stringify(this._mediaServers()));
+    this._mediaServers.update(servers => [...servers, normalizedUrl]);
 
     // Publish to Nostr
     await this.publishMediaServers();
   }
 
   async removeMediaServer(url: string): Promise<void> {
-    this._mediaServers.update(servers => servers.filter(server => server.url !== url));
-
-    // Save to localStorage
-    localStorage.setItem(SERVERS_STORAGE_KEY, JSON.stringify(this._mediaServers()));
+    this._mediaServers.update(servers => servers.filter(server => server !== url));
 
     // Publish to Nostr
     await this.publishMediaServers();
@@ -290,30 +213,30 @@ export class MediaService {
       const normalizedUrl = url.endsWith('/') ? url : `${url}/`;
 
       // Test connection by checking info endpoint
-      const response = await fetch(`${normalizedUrl}info`);
+      const response = await fetch(`${normalizedUrl}`);
 
       if (response.ok) {
         // Parse capabilities
-        const info = await response.json();
+        // const info = await response.json();
 
         // Update server with capabilities
-        this._mediaServers.update(servers =>
-          servers.map(server =>
-            server.url === normalizedUrl
-              ? {
-                ...server,
-                status: 'active',
-                capabilities: info.capabilities || [],
-                error: undefined,
-                lastChecked: Date.now()
-              }
-              : server
-          )
-        );
+        // this._mediaServers.update(servers =>
+        //   servers.map(server =>
+        //     server === normalizedUrl
+        //       ? {
+        //         ...server,
+        //         status: 'active',
+        //         capabilities: info.capabilities || [],
+        //         error: undefined,
+        //         lastChecked: Date.now()
+        //       }
+        //       : server
+        //   )
+        // );
 
         return {
           success: true,
-          message: `Connected successfully! Server: ${info.name || 'Unknown'} ${info.version || ''}`
+          message: `Connected successfully! Server: ${normalizedUrl}`
         };
       } else {
         // Try a simple HEAD request to check if server exists
@@ -321,18 +244,18 @@ export class MediaService {
 
         if (headResponse.ok) {
           // Update server status
-          this._mediaServers.update(servers =>
-            servers.map(server =>
-              server.url === normalizedUrl
-                ? {
-                  ...server,
-                  status: 'active',
-                  error: 'Info endpoint not available',
-                  lastChecked: Date.now()
-                }
-                : server
-            )
-          );
+          // this._mediaServers.update(servers =>
+          //   servers.map(server =>
+          //     server.url === normalizedUrl
+          //       ? {
+          //         ...server,
+          //         status: 'active',
+          //         error: 'Info endpoint not available',
+          //         lastChecked: Date.now()
+          //       }
+          //       : server
+          //   )
+          // );
 
           return {
             success: true,
@@ -341,7 +264,7 @@ export class MediaService {
         }
 
         // Update server status
-        this.updateServerStatus(normalizedUrl, 'error', `HTTP ${response.status}: ${response.statusText}`);
+        // this.updateServerStatus(normalizedUrl, 'error', `HTTP ${response.status}: ${response.statusText}`);
 
         return {
           success: false,
@@ -350,7 +273,7 @@ export class MediaService {
       }
     } catch (error) {
       // Update server status
-      this.updateServerStatus(url, 'error', error instanceof Error ? error.message : 'Unknown error');
+      // this.updateServerStatus(url, 'error', error instanceof Error ? error.message : 'Unknown error');
 
       return {
         success: false,
@@ -360,7 +283,7 @@ export class MediaService {
   }
 
   async initialize() {
-   
+
   }
 
   async publishMediaServers(): Promise<void> {
@@ -377,36 +300,23 @@ export class MediaService {
 
       // Create tags array from servers
       const tags: string[][] = servers.map(server => {
-        // Add name as optional 3rd element if available
-        return server.name
-          ? ['server', server.url, server.name]
-          : ['server', server.url];
+        return ['server', server];
       });
 
-      // Create the event
-      const event: Partial<NostrEvent> = {
-        kind: MEDIA_SERVERS_EVENT_KIND,
-        created_at: Math.floor(Date.now() / 1000),
-        tags,
-        content: '', // Content can be empty, as servers are in tags
-      };
+      const event = this.nostrService.createEvent(MEDIA_SERVERS_EVENT_KIND, '', tags);
+
+      debugger;
 
       // Sign and publish the event
-      const signedEvent = await this.signEvent(event);
+      const signedEvent = await this.nostrService.signEvent(event);
 
       // Save the event to our storage
       await this.storage.saveEvent(signedEvent);
 
+      const result = await this.relay.publish(signedEvent);
+
+      console.log('Result from publish:', result);
       this.logger.info('Media servers published to Nostr', { eventId: signedEvent.id });
-
-      // If we have an active Nostr pool, publish the event
-      // TODO: FIX PUBLISHING!
-      // const relayService = this.nostrService.getUserRelays();
-      // const pool = this.nostrService.getUserPool();
-
-      // if (relayService && pool) {
-      //   await pool.publish(relayService, signedEvent);
-      // }
     } catch (error) {
       this._error.set(error instanceof Error ? error.message : 'Failed to publish media servers');
       this.logger.error('Error publishing media servers:', error);
@@ -433,7 +343,7 @@ export class MediaService {
 
       for (const server of servers) {
         try {
-          const url = server.url.endsWith('/') ? server.url : `${server.url}/`;
+          const url = server.endsWith('/') ? server : `${server}/`;
 
           // First check if upload is allowed with HEAD request (BUD-06)
           const headResponse = await fetch(`${url}upload`, {
@@ -442,7 +352,7 @@ export class MediaService {
           });
 
           if (!headResponse.ok) {
-            throw new Error(`Upload not allowed on ${server.url}: ${headResponse.status}`);
+            throw new Error(`Upload not allowed on ${server}: ${headResponse.status}`);
           }
 
           const formData = new FormData();
@@ -463,18 +373,18 @@ export class MediaService {
           });
 
           if (!response.ok) {
-            throw new Error(`Failed to upload file to ${server.url}: ${response.status}`);
+            throw new Error(`Failed to upload file to ${server}: ${response.status}`);
           }
 
           uploadedMedia = await response.json();
 
           // Update server status to active
-          this.updateServerStatus(server.url, 'active');
+          // this.updateServerStatus(server.url, 'active');
 
           // Successfully uploaded, no need to try other servers
           break;
         } catch (err) {
-          this.logger.error(`Failed to upload to server ${server.url}:`, err);
+          // this.logger.error(`Failed to upload to server ${server.url}:`, err);
 
           // Save the first error to display if all servers fail
           if (!firstError) {
@@ -482,7 +392,7 @@ export class MediaService {
           }
 
           // Update server status
-          this.updateServerStatus(server.url, 'error', err instanceof Error ? err.message : 'Unknown error');
+          // this.updateServerStatus(server, 'error', err instanceof Error ? err.message : 'Unknown error');
         }
       }
 
@@ -521,7 +431,7 @@ export class MediaService {
 
       for (const server of servers) {
         try {
-          const url = server.url.endsWith('/') ? server.url : `${server.url}/`;
+          const url = server.endsWith('/') ? server : `${server}/`;
 
           const response = await fetch(`${url}${id}`, {
             method: 'DELETE',
@@ -529,23 +439,23 @@ export class MediaService {
           });
 
           if (!response.ok) {
-            throw new Error(`Failed to delete file from ${server.url}: ${response.status}`);
+            throw new Error(`Failed to delete file from ${server}: ${response.status}`);
           }
 
           // Update server status to active
-          this.updateServerStatus(server.url, 'active');
+          // this.updateServerStatus(server.url, 'active');
 
           deleteSuccessful = true;
           break;
         } catch (err) {
-          this.logger.error(`Failed to delete from server ${server.url}:`, err);
+          this.logger.error(`Failed to delete from server ${server}:`, err);
 
           if (!firstError) {
             firstError = err instanceof Error ? err : new Error('Unknown error occurred');
           }
 
           // Update server status
-          this.updateServerStatus(server.url, 'error', err instanceof Error ? err.message : 'Unknown error');
+          // this.updateServerStatus(server.url, 'error', err instanceof Error ? err.message : 'Unknown error');
         }
       }
 
@@ -583,7 +493,7 @@ export class MediaService {
 
       for (const server of servers) {
         try {
-          const url = server.url.endsWith('/') ? server.url : `${server.url}/`;
+          const url = server.endsWith('/') ? server : `${server}/`;
 
           // First check if mirroring is allowed with HEAD request
           const headResponse = await fetch(`${url}mirror`, {
@@ -592,7 +502,7 @@ export class MediaService {
           });
 
           if (!headResponse.ok) {
-            throw new Error(`Mirroring not allowed on ${server.url}: ${headResponse.status}`);
+            throw new Error(`Mirroring not allowed on ${server}: ${headResponse.status}`);
           }
 
           const response = await fetch(`${url}mirror`, {
@@ -605,7 +515,7 @@ export class MediaService {
           });
 
           if (!response.ok) {
-            throw new Error(`Failed to mirror file on ${server.url}: ${response.status}`);
+            throw new Error(`Failed to mirror file on ${server}: ${response.status}`);
           }
 
           // Get the updated media item
@@ -617,19 +527,19 @@ export class MediaService {
           );
 
           // Update server status to active
-          this.updateServerStatus(server.url, 'active');
+          // this.updateServerStatus(server.url, 'active');
 
           mirrorSuccessful = true;
           break;
         } catch (err) {
-          this.logger.error(`Failed to mirror on server ${server.url}:`, err);
+          this.logger.error(`Failed to mirror on server ${server}:`, err);
 
           if (!firstError) {
             firstError = err instanceof Error ? err : new Error('Unknown error occurred');
           }
 
           // Update server status
-          this.updateServerStatus(server.url, 'error', err instanceof Error ? err.message : 'Unknown error');
+          // this.updateServerStatus(server.url, 'error', err instanceof Error ? err.message : 'Unknown error');
         }
       }
 
@@ -664,7 +574,7 @@ export class MediaService {
 
       for (const server of servers) {
         try {
-          const url = server.url.endsWith('/') ? server.url : `${server.url}/`;
+          const url = server.endsWith('/') ? server : `${server}/`;
 
           // Create a signed report event
           const reportEvent = await this.createSignedEvent('report', { sha256: id, reason });
@@ -684,23 +594,23 @@ export class MediaService {
           });
 
           if (!response.ok) {
-            throw new Error(`Failed to report file on ${server.url}: ${response.status}`);
+            throw new Error(`Failed to report file on ${server}: ${response.status}`);
           }
 
           // Update server status to active
-          this.updateServerStatus(server.url, 'active');
+          // this.updateServerStatus(server, 'active');
 
           reportSuccessful = true;
           break;
         } catch (err) {
-          this.logger.error(`Failed to report on server ${server.url}:`, err);
+          this.logger.error(`Failed to report on server ${server}:`, err);
 
           if (!firstError) {
             firstError = err instanceof Error ? err : new Error('Unknown error occurred');
           }
 
           // Update server status
-          this.updateServerStatus(server.url, 'error', err instanceof Error ? err.message : 'Unknown error');
+          // this.updateServerStatus(server.url, 'error', err instanceof Error ? err.message : 'Unknown error');
         }
       }
 

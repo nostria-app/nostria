@@ -240,7 +240,47 @@ export class RelayService {
     }
   }
 
-  
+  /**
+ * Generic function to publish a Nostr event to specified relays
+ * @param event The Nostr event to publish
+ * @param relayUrls Optional specific relay URLs to use (defaults to user's relays)
+ * @param options Optional options for publishing
+ * @returns Promise that resolves to an object with status for each relay
+ */
+  async publish(
+    event: Event,
+    relayUrls?: string[]
+  ) {
+    this.logger.debug('Publishing event:', event);
+
+    if (!this.userPool) {
+      this.logger.error('Cannot publish event: user pool is not initialized');
+      return null;
+    }
+
+    // Use provided relay URLs or default to the user's relays
+    const urls = relayUrls || this.relays().map(relay => relay.url);
+
+    if (urls.length === 0) {
+      this.logger.warn('No relays available for publishing');
+      return null;
+    }
+
+    try {
+      // Publish the event
+      const publishResults = await this.userPool.publish(urls, event);
+
+      this.logger.debug('Publish results:', publishResults);
+
+      // Update lastUsed for all relays used in this publish operation
+      urls.forEach(url => this.updateRelayLastUsed(url));
+
+      return publishResults;
+    } catch (error) {
+      this.logger.error('Error publishing event', error);
+      return null;
+    }
+  }
 
   /**
    * Helper method to update the lastUsed timestamp for a relay
