@@ -40,7 +40,7 @@
             @if (!compact() && profile.content.website) {
             <div class="profile-item" title="{{ profile.content.website }}">
                 <mat-icon>link</mat-icon>
-                <span><a [href]="profile.content.website" target="_blank">{{ profile.content.website}}</a></span>
+                <span><a [href]="profile.content.website" target="_blank" rel="noopener noreferrer">{{ profile.content.website}}</a></span>
             </div>
             }
 

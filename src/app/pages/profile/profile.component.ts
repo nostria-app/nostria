@@ -175,6 +175,11 @@ export class ProfileComponent {
       authors: [pubkey],
       limit: 30
     },
+    {
+      kinds: [10063], // BUD-03: User Server List
+      authors: [pubkey],
+      limit: 1
+    },
     ], {
       onevent: (evt) => {
         console.log('Event received', evt);
