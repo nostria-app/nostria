@@ -248,37 +248,37 @@
           </div>
         } @else {
           <div class="server-list">
-            @for (server of mediaService.mediaServers(); track server.url) {
+            @for (server of mediaService.mediaServers(); track server) {
               <mat-card class="server-card">
                 <mat-card-header>
                   <mat-icon mat-card-avatar>storage</mat-icon>
-                  <mat-card-title>{{ server.name || server.url }}</mat-card-title>
-                  <mat-card-subtitle>{{ server.url }}</mat-card-subtitle>
+                  <mat-card-title>{{ server || server }}</mat-card-title>
+                  <mat-card-subtitle>{{ server }}</mat-card-subtitle>
                   
                   <div class="server-status">
-                    @if (server.status === 'active') {
+                    <!-- @if (server.status === 'active') { -->
                       <span class="status-badge active">Active</span>
-                    } @else if (server.status === 'error') {
-                      <span class="status-badge error">Error</span>
-                    } @else {
-                      <span class="status-badge unknown">Unknown</span>
-                    }
+                    <!-- } @else if (server.status === 'error') { -->
+                      <!-- <span class="status-badge error">Error</span> -->
+                    <!-- } @else { -->
+                      <!-- <span class="status-badge unknown">Unknown</span> -->
+                    <!-- } -->
                   </div>
                 </mat-card-header>
                 
                 <mat-card-content>
-                  @if (server.description) {
+                  <!-- @if (server.description) {
                     <p>{{ server.description }}</p>
-                  }
+                  } -->
                   
-                  @if (server.error) {
+                  <!-- @if (server.error) {
                     <div class="server-error">
                       <mat-icon color="warn">error</mat-icon>
                       <span>{{ server.error }}</span>
                     </div>
-                  }
+                  } -->
                   
-                  @if (server.capabilities && server.capabilities.length > 0) {
+                  <!-- @if (server.capabilities && server.capabilities.length > 0) {
                     <div class="server-capabilities">
                       <h4>Capabilities:</h4>
                       <div class="capability-tags">
@@ -287,28 +287,22 @@
                         }
                       </div>
                     </div>
-                  }
+                  } -->
                 </mat-card-content>
                 
                 <mat-card-actions>
-                  <button mat-button color="primary" (click)="testServer(server.url)">
+                  <button mat-button color="primary" (click)="testServer(server)">
                     <mat-icon>sync</mat-icon> Test Connection
                   </button>
                   <button mat-button color="primary" (click)="editServer(server)">
                     <mat-icon>edit</mat-icon> Edit
                   </button>
-                  <button mat-button color="warn" (click)="removeServer(server.url)">
+                  <button mat-button color="warn" (click)="removeServer(server)">
                     <mat-icon>delete</mat-icon> Remove
                   </button>
                 </mat-card-actions>
               </mat-card>
             }
-          </div>
-          
-          <div class="server-actions">
-            <button mat-raised-button color="primary" (click)="publishServers()">
-              <mat-icon>publish</mat-icon> Publish to Nostr
-            </button>
           </div>
         }
       </div>

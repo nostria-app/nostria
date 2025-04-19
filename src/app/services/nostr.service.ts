@@ -1,5 +1,5 @@
 import { Injectable, signal, computed, effect, inject, untracked } from '@angular/core';
-import { Event, generateSecretKey, getPublicKey } from 'nostr-tools/pure';
+import { Event, generateSecretKey, getPublicKey, UnsignedEvent, VerifiedEvent } from 'nostr-tools/pure';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
 import * as nip19 from 'nostr-tools/nip19';
 import { LoggerService } from './logger.service';
@@ -8,14 +8,16 @@ import { NostrEventData, StorageService, UserMetadata } from './storage.service'
 import { kinds, SimplePool } from 'nostr-tools';
 import { NostrEvent } from '../interfaces';
 import { finalizeEvent, verifyEvent } from 'nostr-tools/pure';
-import { BunkerSigner, parseBunkerInput } from 'nostr-tools/nip46';
+import { BunkerPointer, BunkerSigner, parseBunkerInput } from 'nostr-tools/nip46';
+import { NostrTagKey, StandardizedTagType } from '../standardized-tags';
 
 export interface NostrUser {
   pubkey: string;
   privkey?: string;
   name?: string;
-  source: 'generated' | 'extension' | 'nsec' | 'preview' | 'remote';
+  source: 'extension' | 'nsec' | 'preview' | 'remote';
   lastUsed?: number; // Timestamp when this account was last used
+  bunker?: BunkerPointer;
 }
 
 export interface UserMetadataWithPubkey extends NostrEventData<UserMetadata> {
@@ -160,6 +162,65 @@ export class NostrService {
     this.account.set(null);
     this.accountsMetadata.set([]);
     this.accountsRelays.set([]);
+  }
+
+  async signEvent(event: UnsignedEvent) {
+    return this.sign(event);
+  }
+
+  private async sign(event: UnsignedEvent): Promise<NostrEvent> {
+    const currentUser = this.account();
+
+    if (!currentUser) {
+      throw new Error('No user account found. Please log in or create an account first.');
+    }
+
+    let signedEvent: NostrEvent | null = null;
+
+    switch (currentUser?.source) {
+      case 'extension':
+        if (!window.nostr) {
+          throw new Error('Nostr extension not found. Please install Alby, nos2x, or another NIP-07 compatible extension.');
+        }
+
+        const extensionResult = await window.nostr.signEvent(event);
+
+        signedEvent = {
+          ...event,
+          id: extensionResult.id,
+          sig: extensionResult.sig,
+        };
+
+        break;
+      case 'remote':
+        debugger;
+        const pool = new SimplePool()
+        const bunker = new BunkerSigner(hexToBytes(currentUser.privkey!), this.account()!.bunker!, { pool });
+        signedEvent = await bunker.signEvent(event);
+        this.logger.info('Using remote signer account');
+        break;
+
+      case 'preview':
+        throw new Error('Preview accounts cannot sign events. Please use a different account type.');
+        break;
+      case 'nsec':
+        signedEvent = finalizeEvent(event, hexToBytes(currentUser.privkey!));
+        break;
+    }
+
+    return signedEvent;
+  }
+
+  createEvent(kind: number, content: string, tags: string[][]): UnsignedEvent {
+    const event: UnsignedEvent = {
+      kind: kind,
+      created_at: Math.floor(Date.now() / 1000),
+      tags,
+      content,
+      pubkey: this.pubkey(),
+    };
+
+    return event;
   }
 
   /**
@@ -467,6 +528,7 @@ export class NostrService {
         pubkey: remotePublicKey,
         name: 'Remote Signer',
         source: 'remote', // With 'remote' type, the actually stored pubkey is not connected with the prvkey.
+        bunker: bunkerParsed!,
         lastUsed: Date.now()
       };
 
@@ -700,6 +762,10 @@ export class NostrService {
     return event.tags.filter(tag => tag.length >= 2 && tag[0] === 'r').map(tag => tag[1]);
   }
 
+  getTags(event: Event, tagType: NostrTagKey): string[] {
+    return event.tags.filter(tag => tag.length >= 2 && tag[0] === tagType).map(tag => tag[1]);
+  }
+
   switchToUser(pubkey: string): boolean {
     this.logger.info(`Switching to user with pubkey: ${pubkey}`);
     const targetUser = this.accounts().find(u => u.pubkey === pubkey);
@@ -763,7 +829,7 @@ export class NostrService {
     const newUser: NostrUser = {
       pubkey,
       privkey: privkeyHex,
-      source: 'generated',
+      source: 'nsec',
       lastUsed: Date.now()
     };
 
