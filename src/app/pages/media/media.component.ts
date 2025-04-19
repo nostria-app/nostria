@@ -80,6 +80,7 @@ export class MediaComponent {
 
     effect(async () => {
       if (this.app.initialized()) {
+        console.log('APP INITIALIZED, FETCHING MEDIA SERVERS');
         const userServerList = await this.nostr.getMediaServers(this.nostr.pubkey());
         console.log('USER SERVER LIST', userServerList);
 
