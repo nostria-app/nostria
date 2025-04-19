@@ -51,6 +51,7 @@ export const routes: Routes = [
     title: 'Upgrade to Premium'
   },
   { path: 'backup', loadComponent: () => import('./pages/backup/backup.component').then(mod => mod.BackupComponent) },
+  { path: 'media', loadComponent: () => import('./pages/media/media.component').then(mod => mod.MediaComponent) },
   { path: 'profile', redirectTo: '/credentials' },
   { path: '**', redirectTo: '/home' }
 ];

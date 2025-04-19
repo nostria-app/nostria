@@ -1,0 +1,154 @@
+<div class="media-container">
+  <div class="media-header">
+    <h1>Media Library</h1>
+    <div class="media-actions">
+      <button mat-raised-button color="primary" (click)="openUploadDialog()">
+        <mat-icon>upload</mat-icon>
+        Upload Media
+      </button>
+      <button mat-icon-button (click)="refreshMedia()" [disabled]="mediaService.loading()">
+        <mat-icon>refresh</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  @if (mediaService.loading()) {
+    <div class="loading-container">
+      <mat-spinner diameter="40"></mat-spinner>
+      <span>Loading media...</span>
+    </div>
+  }
+
+  @if (mediaService.error()) {
+    <div class="error-container">
+      <mat-icon color="warn">error</mat-icon>
+      <p>{{ mediaService.error() }}</p>
+      <button mat-button color="primary" (click)="refreshMedia()">Try Again</button>
+    </div>
+  }
+
+  <mat-tab-group (selectedIndexChange)="setActiveTab($event === 0 ? 'images' : 'videos')">
+    <mat-tab label="Images ({{ images().length }})">
+      <div class="tab-content">
+        @if (selectedItems().length > 0) {
+          <div class="selection-actions">
+            <span>{{ selectedItems().length }} item(s) selected</span>
+            <button mat-button color="primary" (click)="clearSelection()">Clear Selection</button>
+            <button mat-button color="warn" (click)="deleteSelected()">Delete Selected</button>
+          </div>
+        } @else {
+          <div class="selection-actions">
+            <button mat-button color="primary" (click)="selectAll()" [disabled]="images().length === 0">Select All</button>
+          </div>
+        }
+
+        @if (images().length === 0) {
+          <div class="empty-state">
+            <mat-icon>image</mat-icon>
+            <p>No images found in your library</p>
+            <button mat-raised-button color="primary" (click)="openUploadDialog()">Upload Now</button>
+          </div>
+        } @else {
+          <div class="media-grid">
+            @for (item of images(); track item.id) {
+              <div class="media-card" [class.selected]="isSelected(item.id)" (click)="toggleItemSelection(item.id)">
+                <div class="media-thumbnail">
+                  <img [src]="item.thumbnailUrl || item.url" [alt]="item.title || 'Image'">
+                  <div class="selection-indicator">
+                    <mat-icon>check_circle</mat-icon>
+                  </div>
+                </div>
+                <div class="media-info">
+                  <h3>{{ item.title || 'Untitled' }}</h3>
+                  <p>{{ formatFileSize(item.size) }}</p>
+                </div>
+                <div class="media-actions">
+                  <button mat-icon-button [matMenuTriggerFor]="menu" (click)="$event.stopPropagation()">
+                    <mat-icon>more_vert</mat-icon>
+                  </button>
+                  <mat-menu #menu="matMenu">
+                    <button mat-menu-item (click)="openDetailsDialog(item); $event.stopPropagation()">
+                      <mat-icon>info</mat-icon>
+                      <span>View Details</span>
+                    </button>
+                    <button mat-menu-item (click)="mirrorItem(item.id); $event.stopPropagation()">
+                      <mat-icon>cloud_upload</mat-icon>
+                      <span>Mirror</span>
+                    </button>
+                    <button mat-menu-item color="warn" (click)="reportItem(item.id); $event.stopPropagation()">
+                      <mat-icon>flag</mat-icon>
+                      <span>Report</span>
+                    </button>
+                  </mat-menu>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </mat-tab>
+    <mat-tab label="Videos ({{ videos().length }})">
+      <div class="tab-content">
+        @if (selectedItems().length > 0) {
+          <div class="selection-actions">
+            <span>{{ selectedItems().length }} item(s) selected</span>
+            <button mat-button color="primary" (click)="clearSelection()">Clear Selection</button>
+            <button mat-button color="warn" (click)="deleteSelected()">Delete Selected</button>
+          </div>
+        } @else {
+          <div class="selection-actions">
+            <button mat-button color="primary" (click)="selectAll()" [disabled]="videos().length === 0">Select All</button>
+          </div>
+        }
+
+        @if (videos().length === 0) {
+          <div class="empty-state">
+            <mat-icon>videocam</mat-icon>
+            <p>No videos found in your library</p>
+            <button mat-raised-button color="primary" (click)="openUploadDialog()">Upload Now</button>
+          </div>
+        } @else {
+          <div class="media-grid">
+            @for (item of videos(); track item.id) {
+              <div class="media-card" [class.selected]="isSelected(item.id)" (click)="toggleItemSelection(item.id)">
+                <div class="media-thumbnail">
+                  <img [src]="item.thumbnailUrl || 'assets/video-placeholder.jpg'" [alt]="item.title || 'Video'">
+                  <mat-icon class="video-badge">play_circle_filled</mat-icon>
+                  <div class="selection-indicator">
+                    <mat-icon>check_circle</mat-icon>
+                  </div>
+                </div>
+                <div class="media-info">
+                  <h3>{{ item.title || 'Untitled' }}</h3>
+                  <p>{{ formatFileSize(item.size) }}</p>
+                  @if (item.duration) {
+                    <p class="duration">{{ formatDuration(item.duration) }}</p>
+                  }
+                </div>
+                <div class="media-actions">
+                  <button mat-icon-button [matMenuTriggerFor]="menu" (click)="$event.stopPropagation()">
+                    <mat-icon>more_vert</mat-icon>
+                  </button>
+                  <mat-menu #menu="matMenu">
+                    <button mat-menu-item (click)="openDetailsDialog(item); $event.stopPropagation()">
+                      <mat-icon>info</mat-icon>
+                      <span>View Details</span>
+                    </button>
+                    <button mat-menu-item (click)="mirrorItem(item.id); $event.stopPropagation()">
+                      <mat-icon>cloud_upload</mat-icon>
+                      <span>Mirror</span>
+                    </button>
+                    <button mat-menu-item color="warn" (click)="reportItem(item.id); $event.stopPropagation()">
+                      <mat-icon>flag</mat-icon>
+                      <span>Report</span>
+                    </button>
+                  </mat-menu>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+</div>

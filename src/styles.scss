@@ -434,3 +434,26 @@ mat-card-content li {
   position: relative;
   overflow: hidden;
 }
+
+// Media component styles
+.mat-tab-group.mat-tab-group {
+  height: 100%;
+}
+
+// Add consistent emphasis colors
+:root {
+  --mat-emphasis-color: rgba(0, 0, 0, 0.6);
+}
+
+.dark-theme {
+  --mat-emphasis-color: rgba(255, 255, 255, 0.6);
+}
+
+// Utility classes for consistent spacing
+.mt-16 {
+  margin-top: 16px;
+}
+
+.mb-16 {
+  margin-bottom: 16px;
+}
