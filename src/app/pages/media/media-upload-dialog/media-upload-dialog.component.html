@@ -1,0 +1,64 @@
+<h2 mat-dialog-title>Upload Media</h2>
+<mat-dialog-content>
+  <div class="upload-container">
+    @if (!selectedFile()) {
+      <div class="drop-zone" (click)="fileInput.click()">
+        <input 
+          #fileInput
+          type="file"
+          accept="image/*,video/*"
+          hidden
+          (change)="onFileSelected($event)"
+        >
+        <mat-icon>cloud_upload</mat-icon>
+        <p>Drag & drop a file here or click to browse</p>
+        <p class="file-types">Supports images and videos</p>
+      </div>
+    } @else {
+      <div class="file-preview">
+        @if (previewUrl()) {
+          <img [src]="previewUrl()" alt="Preview" class="image-preview">
+        } @else {
+          <div class="generic-preview">
+            <mat-icon>{{ getFileTypeIcon(selectedFile()!) }}</mat-icon>
+          </div>
+        }
+        <div class="file-info">
+          <p class="file-name">{{ selectedFile()!.name }}</p>
+          <p class="file-size">{{ formatFileSize(selectedFile()!.size) }}</p>
+          <button mat-icon-button color="warn" (click)="clearFile()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+      </div>
+      
+      <form [formGroup]="uploadForm" class="upload-form">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Title</mat-label>
+          <input matInput formControlName="title" placeholder="Add a title (optional)">
+        </mat-form-field>
+        
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Description</mat-label>
+          <textarea 
+            matInput 
+            formControlName="description" 
+            placeholder="Add a description (optional)"
+            rows="3"
+          ></textarea>
+        </mat-form-field>
+      </form>
+    }
+  </div>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()">Cancel</button>
+  <button 
+    mat-raised-button 
+    color="primary" 
+    [disabled]="!selectedFile()"
+    (click)="onSubmit()"
+  >
+    Upload
+  </button>
+</mat-dialog-actions>
