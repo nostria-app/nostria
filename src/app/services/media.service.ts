@@ -71,9 +71,9 @@ export class MediaService {
 
   constructor() {
     // Initial loading of media items
-    this.getFiles();
+    // this.getFiles();
     // Load saved media servers
-    this.loadMediaServers();
+    // this.loadMediaServers();
   }
 
   // Add implementation for the missing updateMetadata method
@@ -136,9 +136,10 @@ export class MediaService {
 
       for (const server of servers) {
         try {
+          debugger;
           const url = server.endsWith('/') ? server : `${server}/`;
           const response = await fetch(`${url}list/${pubkey}`, {
-            headers: await this.getAuthHeaders()
+            headers: await this.getAuthHeaders('List Files')
           });
 
           if (!response.ok) {
@@ -165,6 +166,8 @@ export class MediaService {
           // this.updateServerStatus(server, 'error', err instanceof Error ? err.message : 'Unknown error');
         }
       }
+
+      debugger;
 
       if (mediaItems.length > 0) {
         this._mediaItems.set(mediaItems);
@@ -348,7 +351,7 @@ export class MediaService {
           // First check if upload is allowed with HEAD request (BUD-06)
           const headResponse = await fetch(`${url}upload`, {
             method: 'HEAD',
-            headers: await this.getAuthHeaders()
+            headers: await this.getAuthHeaders('Upload File')
           });
 
           if (!headResponse.ok) {
@@ -368,7 +371,7 @@ export class MediaService {
 
           const response = await fetch(`${url}upload`, {
             method: 'PUT', // As per BUD-02 spec
-            headers: await this.getAuthHeaders(true), // Skip content-type as FormData sets it
+            headers: await this.getAuthHeaders('Upload File', true), // Skip content-type as FormData sets it
             body: formData
           });
 
@@ -435,7 +438,7 @@ export class MediaService {
 
           const response = await fetch(`${url}${id}`, {
             method: 'DELETE',
-            headers: await this.getAuthHeaders()
+            headers: await this.getAuthHeaders('Delete File')
           });
 
           if (!response.ok) {
@@ -498,7 +501,7 @@ export class MediaService {
           // First check if mirroring is allowed with HEAD request
           const headResponse = await fetch(`${url}mirror`, {
             method: 'HEAD',
-            headers: await this.getAuthHeaders()
+            headers: await this.getAuthHeaders('Mirror File')
           });
 
           if (!headResponse.ok) {
@@ -508,7 +511,7 @@ export class MediaService {
           const response = await fetch(`${url}mirror`, {
             method: 'PUT', // As per BUD-04 spec
             headers: {
-              ...await this.getAuthHeaders(),
+              ...await this.getAuthHeaders('Mirror File'),
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({ sha256: id })
@@ -582,7 +585,7 @@ export class MediaService {
           const response = await fetch(`${url}media`, {
             method: 'PUT', // Using media endpoint for reporting
             headers: {
-              ...await this.getAuthHeaders(),
+              ...await this.getAuthHeaders('Report File'),
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
@@ -692,26 +695,32 @@ export class MediaService {
     throw new Error('Cannot sign event: no private key available');
   }
 
-  private async getAuthHeaders(skipContentType = false): Promise<Record<string, string>> {
+  private async getAuthHeaders(reason: string, skipContentType = false): Promise<Record<string, string>> {
     try {
       const currentUser = this.nostrService.activeAccount();
       if (!currentUser) {
         throw new Error('User not logged in');
       }
-
-      // Create a signed auth event for the request
-      const authEvent = await this.createSignedEvent('auth', {
-        timestamp: Date.now()
-      });
-
+  
+      const tags = [
+        ['t', 'list'],
+        ["expiration", this.nostrService.futureDate(10).toString()]
+      ];
+  
+      const authEvent = this.nostrService.createEvent(24242, reason, tags);
+      const signedEvent = await this.nostrService.signEvent(authEvent);
+  
+      // Convert signed event to base64 string for Authorization header
+      const base64Event = btoa(JSON.stringify(signedEvent));
+      
       const headers: Record<string, string> = {
-        'X-Nostr-Auth': JSON.stringify(authEvent)
+        'Authorization': `Nostr ${base64Event}`
       };
-
+  
       if (!skipContentType) {
         headers['Content-Type'] = 'application/json';
       }
-
+  
       return headers;
     } catch (error) {
       this.logger.error('Error creating auth headers:', error);

@@ -58,9 +58,10 @@ export class MediaComponent {
   constructor() {
     // Update filtered lists whenever media items change
     effect(() => {
+      debugger;
       const allMedia = this.mediaService.mediaItems();
-      this.images.set(allMedia.filter(item => item.type === 'image'));
-      this.videos.set(allMedia.filter(item => item.type === 'video'));
+      this.images.set(allMedia.filter(item => item.type.startsWith('image')));
+      this.videos.set(allMedia.filter(item => item.type.startsWith('video')));
     });
 
     effect(async () => {
@@ -76,6 +77,8 @@ export class MediaComponent {
 
         // Fetch the media servers (from cache or relay).
         await this.mediaService.initialize();
+
+        await this.mediaService.getFiles();
       }
     });
   }
