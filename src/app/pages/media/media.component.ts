@@ -18,6 +18,7 @@ import { MediaServerDialogComponent } from './media-server-dialog/media-server-d
 import { ApplicationStateService } from '../../services/application-state.service';
 import { NostrService } from '../../services/nostr.service';
 import { standardizedTag } from '../../standardized-tags';
+import { TimestampPipe } from '../../pipes/timestamp.pipe';
 
 @Component({
   selector: 'app-media',
@@ -36,6 +37,7 @@ import { standardizedTag } from '../../standardized-tags';
     MatSnackBarModule,
     MatMenuModule,
     MatProgressSpinnerModule,
+    TimestampPipe
   ],
   templateUrl: './media.component.html',
   styleUrls: ['./media.component.scss']

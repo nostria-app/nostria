@@ -9,6 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
 import { MediaItem, MediaService } from '../../../services/media.service';
+import { TimestampPipe } from '../../../pipes/timestamp.pipe';
 
 @Component({
   selector: 'app-media-details-dialog',
@@ -22,6 +23,7 @@ import { MediaItem, MediaService } from '../../../services/media.service';
     MatInputModule,
     MatIconModule,
     MatSnackBarModule,
+    TimestampPipe
   ],
   templateUrl: './media-details-dialog.component.html',
   styleUrls: ['./media-details-dialog.component.scss']
@@ -38,8 +40,8 @@ export class MediaDetailsDialogComponent {
   
   constructor() {
     this.metadataForm = this.fb.group({
-      title: [this.mediaItem.title || '', Validators.maxLength(100)],
-      description: [this.mediaItem.description || '', Validators.maxLength(500)]
+      title: [this.mediaItem.url || '', Validators.maxLength(100)],
+      description: [this.mediaItem.url || '', Validators.maxLength(500)]
     });
   }
   
@@ -48,8 +50,8 @@ export class MediaDetailsDialogComponent {
     if (!this.isEditing()) {
       // Reset form when canceling edit
       this.metadataForm.setValue({
-        title: this.mediaItem.title || '',
-        description: this.mediaItem.description || ''
+        title: this.mediaItem.url || '',
+        description: this.mediaItem.url || ''
       });
     }
   }
@@ -63,8 +65,7 @@ export class MediaDetailsDialogComponent {
         );
         this.mediaItem = {
           ...this.mediaItem,
-          title: this.metadataForm.value.title,
-          description: this.metadataForm.value.description
+          url: this.metadataForm.value.title
         };
         this.isEditing.set(false);
         this.snackBar.open('Metadata updated successfully', 'Close', { duration: 3000 });
