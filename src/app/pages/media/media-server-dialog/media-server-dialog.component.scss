@@ -31,3 +31,20 @@
     background-color: rgba(244, 67, 54, 0.1);
   }
 }
+
+.suggested-servers {
+  margin-bottom: 20px;
+  
+  .suggested-title {
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 8px;
+    color: var(--mat-form-field-label-text-color);
+  }
+  
+  .server-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}

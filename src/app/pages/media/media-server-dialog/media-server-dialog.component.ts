@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -8,6 +8,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatChipsModule } from '@angular/material/chips';
 
 import { MediaServer } from '../../../services/media.service';
 
@@ -24,7 +25,8 @@ import { MediaServer } from '../../../services/media.service';
     MatInputModule,
     MatIconModule,
     MatProgressSpinnerModule,
-    MatCheckboxModule
+    MatCheckboxModule,
+    MatChipsModule
   ],
   templateUrl: './media-server-dialog.component.html',
   styleUrls: ['./media-server-dialog.component.scss']
@@ -39,6 +41,12 @@ export class MediaServerDialogComponent implements OnInit {
   testing = false;
   testResult: { success: boolean, message: string } | null = null;
   
+  suggestedServers = signal<string[]>([
+    'https://blossom.band/',
+    'https://blossom.primal.net/',
+    'https://blossom.f7z.io/'
+  ]);
+  
   ngOnInit(): void {
     this.isEdit = !!this.dialogData;
     
@@ -50,6 +58,11 @@ export class MediaServerDialogComponent implements OnInit {
       name: [this.dialogData?.name || ''],
       description: [this.dialogData?.description || '']
     });
+  }
+  
+  selectSuggestedServer(url: string): void {
+    this.serverForm.get('url')?.setValue(url);
+    this.serverForm.get('url')?.markAsDirty();
   }
   
   async testConnection(): Promise<void> {
