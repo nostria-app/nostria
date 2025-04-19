@@ -36,7 +36,7 @@
       <textarea matInput formControlName="description" rows="3"></textarea>
     </mat-form-field>
     
-    @if (testing) {
+    @if (testing()) {
       <div class="test-connection">
         <mat-spinner diameter="24"></mat-spinner>
         <span>Testing connection...</span>
@@ -54,7 +54,7 @@
   </mat-dialog-content>
   
   <mat-dialog-actions align="end">
-    <button mat-button type="button" (click)="testConnection()" [disabled]="!serverForm.get('url')?.valid || testing">
+    <button mat-button type="button" (click)="testConnection()" [disabled]="!serverForm.get('url')?.valid || testing()">
       Test Connection
     </button>
     <button mat-button mat-dialog-close>Cancel</button>
