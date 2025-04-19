@@ -90,6 +90,7 @@ export class AppComponent implements OnInit {
   navItems: NavItem[] = [
     { path: 'home', label: 'Home', icon: 'home', showInMobile: true },
     { path: 'relays', label: 'Relays', icon: 'dns', showInMobile: false },
+    { path: 'backup', label: 'Backup', icon: 'backup', showInMobile: false },
     { path: 'settings', label: 'Settings', icon: 'settings', showInMobile: true },
     { path: 'premium', label: 'Premium', icon: 'diamond', showInMobile: false },
     { path: 'about', label: 'About', icon: 'info', showInMobile: true },

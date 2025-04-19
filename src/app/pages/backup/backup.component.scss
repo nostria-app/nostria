@@ -1,0 +1,109 @@
+.subtitle {
+  margin-top: -16px;
+  margin-bottom: 24px;
+  opacity: 0.7;
+}
+
+.stats-container {
+  display: flex;
+  justify-content: space-around;
+  flex-wrap: wrap;
+  margin: 16px 0;
+}
+
+.stat-item {
+  text-align: center;
+  padding: 16px;
+  min-width: 100px;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 500;
+}
+
+.stat-label {
+  font-size: 14px;
+  opacity: 0.7;
+  margin-top: 4px;
+}
+
+.card-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin: 24px 0;
+}
+
+.action-card {
+  flex: 1 1 300px;
+  margin-bottom: 16px;
+}
+
+.card-icon {
+   font-size: 36px;
+//   height: 36px;
+//   width: 36px;
+//   margin-left: 16px;
+}
+
+// mat-card-header {
+//   display: flex;
+//   align-items: center;
+//   margin-bottom: 24px; /* Increased from 16px to 24px for more spacing */
+// }
+
+/* Added style for mat-card-title to add spacing and improve layout */
+// mat-card-header mat-card-title {
+//   margin-top: 8px;
+//   font-size: 20px;
+//   font-weight: 500;
+// }
+
+// mat-card-content p {
+//   margin-bottom: 16px;
+// }
+
+.progress-container {
+  margin: 16px 0;
+  position: relative;
+}
+
+.progress-text {
+  position: absolute;
+  right: 0;
+  top: -20px;
+  font-size: 12px;
+}
+
+mat-card-actions {
+  padding: 8px 16px 16px;
+  margin-top: 16px;
+}
+
+.info-section {
+  margin-top: 32px;
+  margin-bottom: 32px;
+}
+
+h2 {
+  margin-bottom: 16px;
+}
+
+h3 {
+  margin: 24px 0 16px;
+}
+
+ul {
+  padding-left: 16px;
+}
+
+li {
+  margin-bottom: 8px;
+}
+
+.button-spinner {
+  display: inline-block;
+  margin-right: 8px;
+  vertical-align: middle;
+}

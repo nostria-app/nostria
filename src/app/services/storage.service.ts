@@ -629,6 +629,22 @@ export class StorageService {
     }
   }
 
+  async getUserEvents(pubkey: string): Promise<NostrEvent[]> {
+    try {
+      if (!this.db) {
+        throw new Error('Database not initialized');
+      }
+      
+      // Get events by pubkey
+      const events = await this.db.getAllFromIndex('events', 'by-pubkey', pubkey);
+      
+      return events || [];
+    } catch (error) {
+      this.logger.error('Failed to get user events', error);
+      return [];
+    }
+  }
+
   async clearCache(currentUserPubkey: string): Promise<void> {
     try {
       this.logger.info('Clearing cache while preserving current user data');
