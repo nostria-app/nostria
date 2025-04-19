@@ -170,6 +170,37 @@
   }
 }
 
+/* Video thumbnail styling */
+.video-thumbnail {
+  background-color: var(--mat-card-background-color);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+
+.video-icon {
+  font-size: 64px;
+  height: 64px;
+  width: 64px;
+  color: var(--mat-primary-color);
+}
+
+.video-name {
+  position: absolute;
+  bottom: 8px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  padding: 4px 8px;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: white;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .tab-content {
   padding: 16px 0;
 }
