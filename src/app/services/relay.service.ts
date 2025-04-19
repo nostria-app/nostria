@@ -2,6 +2,7 @@ import { Injectable, inject, signal, computed, effect } from '@angular/core';
 import { LoggerService } from './logger.service';
 import { StorageService, Nip11Info, NostrEventData, UserMetadata } from './storage.service';
 import { Event, kinds, SimplePool } from 'nostr-tools';
+import { NostrEvent } from '../interfaces';
 
 export interface Relay {
   url: string;
@@ -14,17 +15,17 @@ export interface Relay {
 })
 export class RelayService {
   private readonly BOOTSTRAP_RELAYS_STORAGE_KEY = 'nostria-bootstrap-relays';
-  
+
   // Default bootstrap relays
   private readonly DEFAULT_BOOTSTRAP_RELAYS = ['wss://purplepag.es/'];
-  
+
   private readonly logger = inject(LoggerService);
   private readonly storage = inject(StorageService);
-  
+
   // Initialize signals with empty arrays first, then populate in constructor
   #bootStrapRelays: string[] = [];
   bootStrapRelays = signal<string[]>([]);
-  
+
   // TODO: Allow the user to set their own default relays in the settings?
   // TODO: Decided on a good default relay list.
   #defaultRelays = ['wss://relay.damus.io/', 'wss://relay.primal.net/'];
@@ -40,7 +41,7 @@ export class RelayService {
 
   constructor() {
     this.logger.info('Initializing RelayService');
-    
+
     // Move bootstrap relay initialization to constructor
     this.#bootStrapRelays = this.loadBootstrapRelaysFromStorage() || this.DEFAULT_BOOTSTRAP_RELAYS;
     this.bootStrapRelays.set(this.#bootStrapRelays);
@@ -55,17 +56,17 @@ export class RelayService {
         this.syncRelaysToStorage();
       }
     });
-    
+
     // When bootstrap relays change, save to local storage
     effect(() => {
       const currentBootstrapRelays = this.bootStrapRelays();
       this.logger.debug(`Bootstrap relays effect triggered with ${currentBootstrapRelays.length} relays`);
-      
+
       // Save to local storage
       localStorage.setItem(this.BOOTSTRAP_RELAYS_STORAGE_KEY, JSON.stringify(currentBootstrapRelays));
     });
   }
-  
+
   /**
    * Loads bootstrap relays from local storage
    */
@@ -84,21 +85,190 @@ export class RelayService {
     }
     return null;
   }
+
+  /**
+  * Generic function to subscribe to Nostr events
+  * @param filters Array of filter objects for the subscription
+  * @param onEvent Callback function that will be called for each event received
+  * @param onEose Callback function that will be called when EOSE (End Of Stored Events) is received
+  * @param relayUrls Optional specific relay URLs to use (defaults to user's relays)
+  * @returns Subscription object with unsubscribe method
+  */
+  subscribe<T extends Event = Event>(
+    filters: { kinds?: number[], authors?: string[], '#e'?: string[], '#p'?: string[], since?: number, until?: number, limit?: number }[],
+    onEvent: (event: T) => void,
+    onEose?: () => void,
+    relayUrls?: string[]
+  ) {
+    this.logger.debug('Creating subscription with filters:', filters);
+
+    if (!this.userPool) {
+      this.logger.error('Cannot subscribe: user pool is not initialized');
+      return {
+        unsubscribe: () => {
+          this.logger.debug('No subscription to unsubscribe from');
+        }
+      };
+    }
+
+    // Use provided relay URLs or default to the user's relays
+    const urls = relayUrls || this.relays().map(relay => relay.url);
+
+    if (urls.length === 0) {
+      this.logger.warn('No relays available for subscription');
+      return {
+        unsubscribe: () => {
+          this.logger.debug('No subscription to unsubscribe from (no relays)');
+        }
+      };
+    }
+
+    try {
+      // Create the subscription
+      const sub = this.userPool.subscribeMany(urls, filters, {
+        onevent: (evt) => {
+          this.logger.debug(`Received event of kind ${evt.kind}`);
+
+          // Update the lastUsed timestamp for this relay
+          // this.updateRelayLastUsed(relay);
+
+          // Call the provided event handler
+          onEvent(evt as T);
+
+          // console.log('Event received', evt);
+
+          // if (evt.kind === kinds.Contacts) {
+          //   const followingList = this.storage.getPTagsValues(evt);
+          //   console.log(followingList);
+          // this.followingList.set(followingList);
+          // this.profileState.followingList.set(followingList);
+
+          // this.storage.saveEvent(evt);
+
+          // Now you can use 'this' here
+          // For example: this.handleContacts(evt);
+          // }
+        },
+        onclose: (reasons) => {
+          console.log('Pool closed', reasons);
+          // Also changed this to an arrow function for consistency
+        },
+        oneose: () => {
+          if (onEose) {
+            this.logger.debug('End of stored events reached');
+            onEose();
+          }
+        },
+        // oneose: (eose) => {
+        //   if (onEose) {
+        //     this.logger.debug('End of stored events reached');
+        //     onEose();
+        //   }
+        // }
+      });
+
+      // Return an object with close method
+      return {
+        close: () => {
+          this.logger.debug('Close from events');
+          sub.close();
+        }
+      };
+    } catch (error) {
+      this.logger.error('Error creating subscription', error);
+      return {
+        close: () => {
+          this.logger.debug('Error subscription close called');
+        }
+      };
+    }
+  }
+
+  async getEventByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<NostrEvent | null> {
+    // Check if pubkey is already an array or a single string
+    const authors = Array.isArray(pubkey) ? pubkey : [pubkey];
+
+    return this.get({
+      authors,
+      kinds: [kind]
+    });
+  }
+
+  /**
+   * Generic function to fetch Nostr events (one-time query)
+   * @param filter Filter for the query
+   * @param relayUrls Optional specific relay URLs to use (defaults to user's relays)
+   * @param options Optional options for the query
+   * @returns Promise that resolves to an array of events
+   */
+  async get<T extends Event = Event>(
+    filter: { kinds?: number[], authors?: string[], '#e'?: string[], '#p'?: string[], since?: number, until?: number, limit?: number },
+    relayUrls?: string[],
+    options: { timeout?: number } = {}
+  ): Promise<T | null> {
+    this.logger.debug('Getting events with filters:', filter);
+
+    if (!this.userPool) {
+      this.logger.error('Cannot get events: user pool is not initialized');
+      return null;
+    }
+
+    // Use provided relay URLs or default to the user's relays
+    const urls = relayUrls || this.relays().map(relay => relay.url);
+
+    if (urls.length === 0) {
+      this.logger.warn('No relays available for query');
+      return null;
+    }
+
+    try {
+      // Default timeout is 5 seconds if not specified
+      const timeout = options.timeout || 5000;
+
+      // Execute the query
+      const event = await this.userPool.get(urls, filter, { maxWait: timeout }) as T;
+
+      this.logger.debug(`Received event from query`, event);
+
+      // Update lastUsed for all relays used in this query
+      urls.forEach(url => this.updateRelayLastUsed(url));
+
+      return event;
+    } catch (error) {
+      this.logger.error('Error fetching events', error);
+      return null;
+    }
+  }
+
   
+
+  /**
+   * Helper method to update the lastUsed timestamp for a relay
+   */
+  private updateRelayLastUsed(url: string): void {
+    this.relays.update(relays =>
+      relays.map(relay =>
+        relay.url === url
+          ? { ...relay, lastUsed: Date.now() }
+          : relay
+      )
+    );
+  }
+
   /**
    * Adds a bootstrap relay
    */
   addBootstrapRelay(url: string): void {
     this.logger.debug(`Adding bootstrap relay: ${url}`);
-    
+
     // Make sure URL ends with /
     if (!url.endsWith('/')) {
       url += '/';
     }
-    
+
     this.bootStrapRelays.update(relays => [...relays, url]);
   }
-  
+
   /**
    * Removes a bootstrap relay
    */
@@ -106,7 +276,7 @@ export class RelayService {
     this.logger.debug(`Removing bootstrap relay: ${url}`);
     this.bootStrapRelays.update(relays => relays.filter(relay => relay !== url));
   }
-  
+
   /**
    * Resets bootstrap relays to defaults
    */

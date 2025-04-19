@@ -5,6 +5,8 @@ import { NostrService } from './nostr.service';
 import { StorageService } from './storage.service';
 import { LoggerService } from './logger.service';
 import { EventTemplate } from 'nostr-tools';
+import { RelayService } from './relay.service';
+import { MEDIA_SERVERS_EVENT_KIND } from '../interfaces';
 
 export interface MediaItem {
   id: string;
@@ -45,7 +47,6 @@ export interface NostrEvent {
   sig: string;
 }
 
-const MEDIA_SERVERS_EVENT_KIND = 10063;
 const SERVERS_STORAGE_KEY = 'nostria-media-servers';
 
 @Injectable({
@@ -53,6 +54,7 @@ const SERVERS_STORAGE_KEY = 'nostria-media-servers';
 })
 export class MediaService {
   private readonly nostrService = inject(NostrService);
+  readonly relay = inject(RelayService);
   private readonly storage = inject(StorageService);
   private readonly logger = inject(LoggerService);
 
@@ -355,6 +357,10 @@ export class MediaService {
         message: `Connection error: ${error instanceof Error ? error.message : String(error)}`
       };
     }
+  }
+
+  async initialize() {
+   
   }
 
   async publishMediaServers(): Promise<void> {
