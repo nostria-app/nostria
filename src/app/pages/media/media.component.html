@@ -27,7 +27,7 @@
     </div>
   }
 
-  <mat-tab-group (selectedIndexChange)="setActiveTab($event === 0 ? 'images' : 'videos')">
+  <mat-tab-group (selectedIndexChange)="setActiveTab($event === 0 ? 'images' : ($event === 1 ? 'videos' : 'servers'))">
     <mat-tab label="Images ({{ images().length }})">
       <div class="tab-content">
         @if (selectedItems().length > 0) {
@@ -146,6 +146,94 @@
                 </div>
               </div>
             }
+          </div>
+        }
+      </div>
+    </mat-tab>
+    <mat-tab label="Media Servers">
+      <div class="tab-content">
+        <div class="server-header">
+          <h2>Your Nostr Media Servers</h2>
+          <button mat-raised-button color="primary" (click)="openServerDialog()">
+            <mat-icon>add</mat-icon>
+            Add Server
+          </button>
+        </div>
+        
+        <div class="server-description">
+          <p>Media servers are endpoints that can host your content following the Nostr BUD (Blossom - Blobs stored simply on mediaservers) protocol.</p>
+        </div>
+        
+        @if (mediaService.mediaServers().length === 0) {
+          <div class="empty-state">
+            <mat-icon>cloud_off</mat-icon>
+            <p>No media servers configured</p>
+            <p class="subtitle">Add servers to store and distribute your media</p>
+            <button mat-raised-button color="primary" (click)="openServerDialog()">Add Your First Server</button>
+          </div>
+        } @else {
+          <div class="server-list">
+            @for (server of mediaService.mediaServers(); track server.url) {
+              <mat-card class="server-card">
+                <mat-card-header>
+                  <mat-icon mat-card-avatar>storage</mat-icon>
+                  <mat-card-title>{{ server.name || server.url }}</mat-card-title>
+                  <mat-card-subtitle>{{ server.url }}</mat-card-subtitle>
+                  
+                  <div class="server-status">
+                    @if (server.status === 'active') {
+                      <span class="status-badge active">Active</span>
+                    } @else if (server.status === 'error') {
+                      <span class="status-badge error">Error</span>
+                    } @else {
+                      <span class="status-badge unknown">Unknown</span>
+                    }
+                  </div>
+                </mat-card-header>
+                
+                <mat-card-content>
+                  @if (server.description) {
+                    <p>{{ server.description }}</p>
+                  }
+                  
+                  @if (server.error) {
+                    <div class="server-error">
+                      <mat-icon color="warn">error</mat-icon>
+                      <span>{{ server.error }}</span>
+                    </div>
+                  }
+                  
+                  @if (server.capabilities && server.capabilities.length > 0) {
+                    <div class="server-capabilities">
+                      <h4>Capabilities:</h4>
+                      <div class="capability-tags">
+                        @for (capability of server.capabilities; track capability) {
+                          <span class="capability-tag">{{ capability }}</span>
+                        }
+                      </div>
+                    </div>
+                  }
+                </mat-card-content>
+                
+                <mat-card-actions>
+                  <button mat-button color="primary" (click)="testServer(server.url)">
+                    <mat-icon>sync</mat-icon> Test Connection
+                  </button>
+                  <button mat-button color="primary" (click)="editServer(server)">
+                    <mat-icon>edit</mat-icon> Edit
+                  </button>
+                  <button mat-button color="warn" (click)="removeServer(server.url)">
+                    <mat-icon>delete</mat-icon> Remove
+                  </button>
+                </mat-card-actions>
+              </mat-card>
+            }
+          </div>
+          
+          <div class="server-actions">
+            <button mat-raised-button color="primary" (click)="publishServers()">
+              <mat-icon>publish</mat-icon> Publish to Nostr
+            </button>
           </div>
         }
       </div>

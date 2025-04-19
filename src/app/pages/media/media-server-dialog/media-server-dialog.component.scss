@@ -1,0 +1,33 @@
+:host {
+  display: block;
+}
+
+.full-width {
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.test-connection {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.connection-result {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 0;
+  padding: 8px;
+  border-radius: 4px;
+  background-color: rgba(0,0,0,0.05);
+  
+  &.success {
+    background-color: rgba(76, 175, 80, 0.1);
+  }
+  
+  &.error {
+    background-color: rgba(244, 67, 54, 0.1);
+  }
+}
