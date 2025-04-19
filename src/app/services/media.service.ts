@@ -82,11 +82,11 @@ export class MediaService {
   async getFileById(id: string): Promise<MediaItem> {
     const media = this.mediaItems();
     const item = media.find(m => m.sha256 === id || m.id === id);
-    
+
     if (!item) {
       throw new Error('Media item not found');
     }
-    
+
     return item;
   }
 
@@ -713,26 +713,28 @@ export class MediaService {
       if (!currentUser) {
         throw new Error('User not logged in');
       }
-  
-      const tags = [
-        ['t', 'list'],
-        ["expiration", this.nostrService.futureDate(10).toString()]
-      ];
-  
-      const authEvent = this.nostrService.createEvent(24242, reason, tags);
-      const signedEvent = await this.nostrService.signEvent(authEvent);
-  
-      // Convert signed event to base64 string for Authorization header
-      const base64Event = btoa(JSON.stringify(signedEvent));
-      
-      const headers: Record<string, string> = {
-        'Authorization': `Nostr ${base64Event}`
-      };
-  
+
+      const headers: Record<string, string> = {};
+
+      // Don't attempt to add auth headers if the user is using the preview account
+      if (currentUser.source !== 'preview') {
+        const tags = [
+          ['t', 'list'],
+          ["expiration", this.nostrService.futureDate(10).toString()]
+        ];
+
+        const authEvent = this.nostrService.createEvent(24242, reason, tags);
+        const signedEvent = await this.nostrService.signEvent(authEvent);
+
+        // Convert signed event to base64 string for Authorization header
+        const base64Event = btoa(JSON.stringify(signedEvent));
+        headers['Authorization'] = `Nostr ${base64Event}`
+      }
+
       if (!skipContentType) {
         headers['Content-Type'] = 'application/json';
       }
-  
+
       return headers;
     } catch (error) {
       this.logger.error('Error creating auth headers:', error);

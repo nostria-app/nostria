@@ -39,8 +39,7 @@ import { MediaPreviewDialogComponent } from '../../components/media-preview-dial
     MatDialogModule,
     MatSnackBarModule,
     MatMenuModule,
-    MatProgressSpinnerModule,
-    TimestampPipe
+    MatProgressSpinnerModule
   ],
   templateUrl: './media.component.html',
   styleUrls: ['./media.component.scss']
@@ -87,7 +86,7 @@ export class MediaComponent {
         const tenMinutesInMs = 10 * 60 * 1000; // 10 minutes in milliseconds
         const currentTime = Date.now();
         const lastFetchTime = this.mediaService.getLastFetchTime();
-        
+
         if (currentTime - lastFetchTime > tenMinutesInMs) {
           await this.mediaService.getFiles();
         }
@@ -182,7 +181,7 @@ export class MediaComponent {
   openMediaPreview(event: Event, item: MediaItem): void {
     // Stop event propagation to prevent toggling selection
     event.stopPropagation();
-    
+
     this.dialog.open(MediaPreviewDialogComponent, {
       data: {
         mediaUrl: item.url,
@@ -198,7 +197,7 @@ export class MediaComponent {
   navigateToDetails(event: Event, item: MediaItem): void {
     // Stop event propagation to prevent toggling selection
     event.stopPropagation();
-    
+
     // Navigate to details page with the item ID
     this.router.navigate(['/media', 'details', item.sha256]);
   }
