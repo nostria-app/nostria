@@ -33,7 +33,47 @@ export class LayoutService {
     }
 
     toggleSearch() {
-        this.search.set(!this.search());
+        const newSearchState = !this.search();
+        this.search.set(newSearchState);
+        
+        if (newSearchState) {
+            // Add ESC key listener when search is opened
+            this.setupEscKeyListener();
+        } else {
+            // Remove ESC key listener when search is closed
+            this.removeEscKeyListener();
+            // Clear search input when closing
+            this.searchInput = '';
+        }
+    }
+
+    private escKeyListener: ((event: KeyboardEvent) => void) | null = null;
+
+    private setupEscKeyListener(): void {
+        // Remove any existing listener first to prevent duplicates
+        this.removeEscKeyListener();
+        
+        // Create and store the listener function
+        this.escKeyListener = (event: KeyboardEvent) => {
+            if (event.key === 'Escape' || event.key === 'Esc') {
+                this.logger.debug('ESC key pressed, canceling search');
+                this.toggleSearch();
+                // Prevent default behavior for the ESC key
+                event.preventDefault();
+            }
+        };
+        
+        // Add the listener to document
+        document.addEventListener('keydown', this.escKeyListener);
+        this.logger.debug('ESC key listener added for search');
+    }
+
+    private removeEscKeyListener(): void {
+        if (this.escKeyListener) {
+            document.removeEventListener('keydown', this.escKeyListener);
+            this.escKeyListener = null;
+            this.logger.debug('ESC key listener removed');
+        }
     }
 
     searchInput: string = '';
