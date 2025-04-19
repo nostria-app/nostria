@@ -47,9 +47,6 @@ export class RelaysComponent {
   newRelayUrl = signal('');
   newBootstrapUrl = signal('');
 
-  // Simulate a premium user status - in a real app this would come from a user service
-  isPremiumUser = signal(false);
-
   addRelay(): void {
     let url = this.newRelayUrl();
 
@@ -80,7 +77,7 @@ export class RelaysComponent {
       width: '500px',
       data: {
         relayUrl: url,
-        isPremiumUser: this.isPremiumUser()
+        adding: true,
       }
     });
 
