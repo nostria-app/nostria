@@ -327,3 +327,44 @@
     }
   }
 }
+
+/* Files table styles */
+.files-table-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.files-table {
+  width: 100%;
+  
+  .mat-mdc-row {
+    cursor: pointer;
+    transition: background-color 0.2s;
+    
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.04);
+    }
+    
+    &.selected {
+      background-color: rgba(var(--mat-primary-color-rgb), 0.1);
+    }
+  }
+
+  .mat-mdc-cell, .mat-mdc-header-cell {
+    padding: 0 16px;
+  }
+  
+  .file-name-cell {
+    display: flex;
+    align-items: center;
+    
+    mat-icon {
+      margin-right: 8px;
+      color: var(--mat-emphasis-color);
+    }
+  }
+  
+  .delete-text {
+    color: var(--mat-warn-color);
+  }
+}

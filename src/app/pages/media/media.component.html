@@ -112,7 +112,7 @@
     <mat-tab>
       <ng-template mat-tab-label>
         <mat-icon class="tab-icon">folder</mat-icon>
-        <span>Files ({{ images().length }})</span>
+        <span>Files ({{ files().length }})</span>
       </ng-template>
       <div class="tab-content">
         @if (selectedItems().length > 0) {
@@ -123,28 +123,94 @@
           </div>
         } @else {
           <div class="selection-actions">
-            <button mat-button color="primary" (click)="selectAll()" [disabled]="images().length === 0">Select All</button>
+            <button mat-button color="primary" (click)="selectAll()" [disabled]="files().length === 0">Select All</button>
           </div>
         }
 
-        @if (images().length === 0) {
+        @if (files().length === 0) {
           <div class="empty-state">
             <mat-icon>insert_drive_file</mat-icon>
             <p>No files found in your library</p>
             <button mat-raised-button color="primary" (click)="openUploadDialog()">Upload Now</button>
           </div>
         } @else {
-          <div class="media-grid">
-            @for (item of images(); track item.sha256) {
-              <div class="media-card" [class.selected]="isSelected(item.sha256)" (click)="toggleItemSelection(item.sha256)">
-                <div class="media-thumbnail">
-                  <img [src]="item.url" [alt]="item.url || 'File'" (click)="navigateToDetails($event, item)" loading="lazy">
-                  <div class="selection-indicator">
-                    <mat-icon>check_circle</mat-icon>
+          <div class="files-table-container">
+            <table mat-table [dataSource]="files()" class="files-table">
+              <!-- Selection Column -->
+              <ng-container matColumnDef="select">
+                <th mat-header-cell *matHeaderCellDef width="60px">
+                  <mat-icon>check_box_outline_blank</mat-icon>
+                </th>
+                <td mat-cell *matCellDef="let item">
+                  <mat-icon [color]="isSelected(item.sha256) ? 'primary' : ''" 
+                           (click)="toggleItemSelection(item.sha256)">
+                    {{isSelected(item.sha256) ? 'check_box' : 'check_box_outline_blank'}}
+                  </mat-icon>
+                </td>
+              </ng-container>
+
+              <!-- Name Column -->
+              <ng-container matColumnDef="name">
+                <th mat-header-cell *matHeaderCellDef>Name</th>
+                <td mat-cell *matCellDef="let item">
+                  <div class="file-name-cell">
+                    <mat-icon>insert_drive_file</mat-icon>
+                    <span>{{ getFileName(item.url) }}</span>
                   </div>
-                </div>
-              </div>
-            }
+                </td>
+              </ng-container>
+
+              <!-- Type Column -->
+              <ng-container matColumnDef="type">
+                <th mat-header-cell *matHeaderCellDef>Type</th>
+                <td mat-cell *matCellDef="let item">{{ item.type || 'Unknown' }}</td>
+              </ng-container>
+
+              <!-- Size Column -->
+              <ng-container matColumnDef="size">
+                <th mat-header-cell *matHeaderCellDef>Size</th>
+                <td mat-cell *matCellDef="let item">{{ formatFileSize(item.size || 0) }}</td>
+              </ng-container>
+
+              <!-- Uploaded Column -->
+              <ng-container matColumnDef="uploaded">
+                <th mat-header-cell *matHeaderCellDef>Uploaded</th>
+                <td mat-cell *matCellDef="let item">{{ item.created_at | date:'short' }}</td>
+              </ng-container>
+
+              <!-- Actions Column -->
+              <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef>Actions</th>
+                <td mat-cell *matCellDef="let item">
+                  <button mat-icon-button [matMenuTriggerFor]="menu" (click)="$event.stopPropagation()">
+                    <mat-icon>more_vert</mat-icon>
+                  </button>
+                  <mat-menu #menu="matMenu">
+                    <button mat-menu-item (click)="navigateToDetails($event, item)">
+                      <mat-icon>info</mat-icon>
+                      <span>Details</span>
+                    </button>
+                    <a mat-menu-item [href]="item.url" target="_blank" download>
+                      <mat-icon>download</mat-icon>
+                      <span>Download</span>
+                    </a>
+                    <button mat-menu-item (click)="mirrorItem(item.sha256)">
+                      <mat-icon>cloud_upload</mat-icon>
+                      <span>Mirror</span>
+                    </button>
+                    <button mat-menu-item color="warn" (click)="deleteSelected(item.sha256)">
+                      <mat-icon color="warn">delete</mat-icon>
+                      <span class="delete-text">Delete</span>
+                    </button>
+                  </mat-menu>
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: displayedColumns;"
+                  [class.selected]="isSelected(row.sha256)"
+                  (click)="toggleItemSelection(row.sha256)"></tr>
+            </table>
           </div>
         }
       </div>
