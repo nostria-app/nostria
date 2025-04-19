@@ -64,6 +64,7 @@ export class MediaService {
   private _loading = signal<boolean>(false);
   private _error = signal<string | null>(null);
   private _mediaServers = signal<string[]>([]);
+  private lastFetchTime = signal<number>(0);
 
   // Public signals
   readonly mediaItems = this._mediaItems.asReadonly();
@@ -76,6 +77,17 @@ export class MediaService {
     // this.getFiles();
     // Load saved media servers
     // this.loadMediaServers();
+  }
+
+  async getFileById(id: string): Promise<MediaItem> {
+    const media = this.mediaItems();
+    const item = media.find(m => m.sha256 === id || m.id === id);
+    
+    if (!item) {
+      throw new Error('Media item not found');
+    }
+    
+    return item;
   }
 
   // Add implementation for the missing updateMetadata method
@@ -173,6 +185,9 @@ export class MediaService {
       } else if (firstError) {
         throw firstError;
       }
+
+      // Update the last fetch timestamp after successful retrieval
+      this.lastFetchTime.set(Date.now());
     } catch (err) {
       this._error.set(err instanceof Error ? err.message : 'Unknown error occurred');
       this.logger.error('Error fetching media items:', err);
@@ -723,5 +738,10 @@ export class MediaService {
       this.logger.error('Error creating auth headers:', error);
       return {};
     }
+  }
+
+  // Add getter for last fetch time
+  getLastFetchTime(): number {
+    return this.lastFetchTime();
   }
 }
