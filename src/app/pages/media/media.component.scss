@@ -96,9 +96,10 @@
 }
 
 .media-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 12px;
+  justify-content: flex-start;
 }
 
 .media-card {
@@ -110,6 +111,8 @@
   cursor: pointer;
   width: 170px;
   height: 170px;
+  margin: 0;
+  flex: 0 0 auto;
   
   &:hover {
     box-shadow: var(--mat-sys-level3);
