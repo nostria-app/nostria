@@ -16,21 +16,17 @@
   text-align: center;
   
   &:hover {
-    border-color: var(--mat-primary-color);
-    background-color: rgba(0, 0, 0, 0.02);
   }
   
   mat-icon {
     font-size: 48px;
     height: 48px;
     width: 48px;
-    color: var(--mat-emphasis-color);
     margin-bottom: 16px;
   }
   
   p {
     margin: 0;
-    color: var(--mat-emphasis-color);
   }
   
   .file-types {
@@ -63,7 +59,6 @@
       font-size: 64px;
       height: 64px;
       width: 64px;
-      color: var(--mat-emphasis-color);
     }
   }
   
@@ -71,7 +66,6 @@
     display: flex;
     align-items: center;
     padding: 12px;
-    background-color: var(--mat-card-background-color);
     
     p {
       margin: 0;
@@ -87,7 +81,6 @@
     
     .file-size {
       margin-right: 16px;
-      color: var(--mat-emphasis-color);
       font-size: 14px;
     }
   }
