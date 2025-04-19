@@ -28,6 +28,7 @@ import { ProfileStateService } from '../../services/profile-state.service';
 import { LayoutService } from '../../services/layout.service';
 import { ProfileHeaderComponent } from './profile-header/profile-header.component';
 import { ApplicationService } from '../../services/application.service';
+import { MediaPreviewDialogComponent } from '../../components/media-preview-dialog/media-preview.component';
 
 @Component({
   selector: 'app-profile',
@@ -131,7 +132,7 @@ export class ProfileComponent {
         // Check if current route is one that should use compact header
         const currentUrl = event.urlAfterRedirects;
         const shouldBeCompact = this.shouldUseCompactHeader(currentUrl);
-        
+
         // Only update if the value changes to avoid unnecessary renders
         if (this.isCompactHeader() !== shouldBeCompact) {
           this.isCompactHeader.set(shouldBeCompact);
@@ -143,9 +144,9 @@ export class ProfileComponent {
   // Helper method to determine if the current route should use compact header
   private shouldUseCompactHeader(url: string): boolean {
     // Check if URL contains these paths that require compact header
-    return url.includes('/following') || 
-           url.includes('/about') || 
-           url.includes('/media');
+    return url.includes('/following') ||
+      url.includes('/about') ||
+      url.includes('/media');
   }
 
   private async loadUserData(pubkey: string, disconnect = true): Promise<void> {
@@ -185,20 +186,20 @@ export class ProfileComponent {
     ], {
       onevent: (evt) => {
         console.log('Event received', evt);
-    
+
         if (evt.kind === kinds.Contacts) {
           const followingList = this.storage.getPTagsValues(evt);
           console.log(followingList);
           // this.followingList.set(followingList);
           this.profileState.followingList.set(followingList);
 
-          
+
           this.storage.saveEvent(evt);
 
           // Now you can use 'this' here
           // For example: this.handleContacts(evt);
         }
-      }, 
+      },
       onclose: (reasons) => {
         console.log('Pool closed', reasons);
         // Also changed this to an arrow function for consistency
@@ -388,7 +389,7 @@ export class ProfileComponent {
   openProfilePicture(): void {
     const metadata = this.userMetadata();
     if (metadata?.content.picture) {
-      const dialogRef = this.dialog.open(ProfilePictureDialogComponent, {
+      const dialogRef = this.dialog.open(MediaPreviewDialogComponent, {
         data: {
           imageUrl: metadata.content.picture,
           userName: this.getFormattedName()
@@ -430,54 +431,5 @@ export class ProfileComponent {
       this.logger.error('Error generating QR code:', err);
       this.lightningQrCode.set('');
     }
-  }
-}
-
-@Component({
-  selector: 'app-profile-picture-dialog',
-  standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule],
-  template: `
-    <div class="dialog-container">
-      <button mat-icon-button class="close-button" (click)="close()">
-        <mat-icon>close</mat-icon>
-      </button>
-      <img [src]="data.imageUrl" [alt]="data.userName + ' profile picture'" class="full-size-image">
-    </div>
-  `,
-  styles: `
-    .dialog-container {
-      position: relative;
-      padding: 0;
-      overflow: hidden;
-      text-align: center;
-      background-color: rgba(0, 0, 0, 0.8);
-      border-radius: 0;
-    }
-    
-    .close-button {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      color: white;
-      z-index: 10;
-      background-color: rgba(0, 0, 0, 0.5);
-    }
-    
-    .full-size-image {
-      max-width: 90vw;
-      max-height: 90vh;
-      object-fit: contain;
-    }
-  `
-})
-export class ProfilePictureDialogComponent {
-  constructor(
-    @Inject(MAT_DIALOG_DATA) public data: { imageUrl: string, userName: string },
-    private dialogRef: MatDialogRef<ProfilePictureDialogComponent>
-  ) { }
-
-  close(): void {
-    this.dialogRef.close();
   }
 }

@@ -20,6 +20,7 @@ import { NostrService } from '../../services/nostr.service';
 import { standardizedTag } from '../../standardized-tags';
 import { TimestampPipe } from '../../pipes/timestamp.pipe';
 import { ApplicationService } from '../../services/application.service';
+import { MediaPreviewDialogComponent } from '../../components/media-preview-dialog/media-preview.component';
 
 @Component({
   selector: 'app-media',
@@ -271,93 +272,5 @@ export class MediaComponent {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = Math.floor(seconds % 60);
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-  }
-}
-
-@Component({
-  selector: 'app-media-preview-dialog',
-  standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule],
-  template: `
-    <div class="dialog-container">
-      <button mat-icon-button class="close-button" (click)="close()">
-        <mat-icon>close</mat-icon>
-      </button>
-      <img *ngIf="isImage()" [src]="data.mediaUrl" [alt]="data.mediaTitle" class="full-size-media">
-      <video *ngIf="isVideo()" controls class="full-size-media">
-        <source [src]="data.mediaUrl" [type]="data.mediaType">
-        Your browser does not support the video tag.
-      </video>
-      <div *ngIf="!isImage() && !isVideo()" class="unsupported-media">
-        <mat-icon>error</mat-icon>
-        <p>Unsupported media type</p>
-      </div>
-    </div>
-  `,
-  styles: [`
-    .dialog-container {
-      position: relative;
-      padding: 0;
-      overflow: hidden;
-      text-align: center;
-      background-color: rgba(0, 0, 0, 0.8);
-      border-radius: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 200px;
-    }
-    
-    .close-button {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      color: white;
-      z-index: 10;
-      background-color: rgba(0, 0, 0, 0.5);
-    }
-    
-    .full-size-media {
-      max-width: 90vw;
-      max-height: 90vh;
-      object-fit: contain;
-    }
-    
-    .unsupported-media {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      color: white;
-    }
-    
-    mat-icon {
-      font-size: 48px;
-      height: 48px;
-      width: 48px;
-      margin-bottom: 16px;
-    }
-    
-    p {
-      font-size: 18px;
-    }
-  `]
-})
-export class MediaPreviewDialogComponent {
-  constructor(
-    @Inject(MAT_DIALOG_DATA) public data: { mediaUrl: string, mediaType: string, mediaTitle: string },
-    private dialogRef: MatDialogRef<MediaPreviewDialogComponent>
-  ) { }
-
-  close(): void {
-    this.dialogRef.close();
-  }
-  
-  isImage(): boolean {
-    return this.data.mediaType?.startsWith('image') || false;
-  }
-  
-  isVideo(): boolean {
-    return this.data.mediaType?.startsWith('video') || false;
   }
 }

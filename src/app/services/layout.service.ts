@@ -4,10 +4,10 @@ import { StorageService } from "./storage.service";
 import { Router, RouterLink, RouterModule } from "@angular/router";
 import { LoggerService } from "./logger.service";
 import { NostrEvent } from "../interfaces";
-import { ProfilePictureDialogComponent } from "../pages/profile/profile.component";
 import { MatDialog } from "@angular/material/dialog";
 import { MatSnackBar } from "@angular/material/snack-bar";
 import { BreakpointObserver } from "@angular/cdk/layout";
+import { MediaPreviewDialogComponent } from "../components/media-preview-dialog/media-preview.component";
 
 @Injectable({
     providedIn: 'root'
@@ -28,14 +28,14 @@ export class LayoutService {
         this.breakpointObserver.observe('(max-width: 599px)').subscribe(result => {
             this.logger.debug('Breakpoint observer update', { isMobile: result.matches });
             this.isHandset.set(result.matches);
-   
+
         });
     }
 
     toggleSearch() {
         const newSearchState = !this.search();
         this.search.set(newSearchState);
-        
+
         if (newSearchState) {
             // Add ESC key listener when search is opened
             this.setupEscKeyListener();
@@ -52,7 +52,7 @@ export class LayoutService {
     private setupEscKeyListener(): void {
         // Remove any existing listener first to prevent duplicates
         this.removeEscKeyListener();
-        
+
         // Create and store the listener function
         this.escKeyListener = (event: KeyboardEvent) => {
             if (event.key === 'Escape' || event.key === 'Esc') {
@@ -62,7 +62,7 @@ export class LayoutService {
                 event.preventDefault();
             }
         };
-        
+
         // Add the listener to document
         document.addEventListener('keydown', this.escKeyListener);
         this.logger.debug('ESC key listener added for search');
@@ -276,9 +276,9 @@ export class LayoutService {
      */
     openProfilePicture(profile: NostrEvent): void {
         if (profile?.content.picture) {
-            const dialogRef = this.dialog.open(ProfilePictureDialogComponent, {
+            const dialogRef = this.dialog.open(MediaPreviewDialogComponent, {
                 data: {
-                    imageUrl: profile.content.picture,
+                    mediaUrl: profile.content.picture,
                 },
                 maxWidth: '100vw',
                 maxHeight: '100vh',
@@ -291,9 +291,9 @@ export class LayoutService {
 
     openProfileBanner(profile: NostrEvent): void {
         if (profile?.content.banner) {
-            const dialogRef = this.dialog.open(ProfilePictureDialogComponent, {
+            const dialogRef = this.dialog.open(MediaPreviewDialogComponent, {
                 data: {
-                    imageUrl: profile.content.banner,
+                    mediaUrl: profile.content.banner,
                 },
                 maxWidth: '100vw',
                 maxHeight: '100vh',
