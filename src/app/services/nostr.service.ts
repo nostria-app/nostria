@@ -98,19 +98,25 @@ export class NostrService {
       if (this.storage.initialized()) {
 
         try {
+          console.log('LOADING IN NOSTR SERVICE');
           untracked(async () => {
+            console.log('ASYNC UNTRACKED');
+
+            this.loadAccountsFromStorage();
+            this.loadActiveAccountFromStorage();
+
             await this.loadData();
+  
+            // We keep an in-memory copy of the user metadata and relay list for all accounts,
+            // they won't take up too much memory space.
+            await this.loadAccountsMetadata();
+            await this.loadAccountsRelays();
+
+            console.log('INITIALIZED NOSTR!');
+  
+            this.initialized.set(true);
           });
-
-          this.loadAccountsFromStorage();
-          this.loadActiveAccountFromStorage();
-
-          // We keep an in-memory copy of the user metadata and relay list for all accounts,
-          // they won't take up too much memory space.
-          await this.loadAccountsMetadata();
-          await this.loadAccountsRelays();
-
-          this.initialized.set(true);
+ 
         } catch (err) {
           console.log('FAILED TO LOAD DATA!!');
           console.error(err);
