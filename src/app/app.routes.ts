@@ -50,6 +50,7 @@ export const routes: Routes = [
     component: UpgradeComponent,
     title: 'Upgrade to Premium'
   },
+  { path: 'backup', loadComponent: () => import('./pages/backup/backup.component').then(mod => mod.BackupComponent) },
   { path: 'profile', redirectTo: '/credentials' },
   { path: '**', redirectTo: '/home' }
 ];
