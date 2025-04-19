@@ -54,6 +54,11 @@ export class NostrService {
     return result;
   });
 
+  pubkey = computed(() => {
+    const currentUser = this.account();
+    return currentUser!.pubkey;
+  });
+
   activeAccount = computed(() => {
     return this.account();
   });
@@ -244,6 +249,31 @@ export class NostrService {
 
       return metadata;
     }
+  }
+
+  /** Get the BUD-03: User Server List */
+  async getMediaServers(pubkey: string): Promise<NostrEvent | null> {
+    // Check cache first
+    // const cachedMetadata = this.usersMetadata().get(pubkey);
+    // if (cachedMetadata) {
+    //   // Move to end of LRU cache
+    //   this.updateMetadataCache(pubkey, cachedMetadata);
+    //   return cachedMetadata;
+    // }
+
+    // Get from storage
+    let event = await this.storage.getEventByPubkeyAndKind(pubkey, 10063); // BUD-03: User Server List
+
+    if (!event) {
+      event = await this.relayService.getEventByPubkeyAndKind(pubkey, 10063);
+    } else {
+      // Queue up refresh of this event in the background
+      this.relayService.getEventByPubkeyAndKind(pubkey, 10063).then((newEvent) => {
+        this.storage.saveEvent(newEvent as NostrEvent);
+      });
+    }
+
+    return event;
   }
 
   currentProfileUserPool: SimplePool | null = null;
