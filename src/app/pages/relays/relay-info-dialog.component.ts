@@ -92,7 +92,7 @@ interface RelayInfo {
           }
           @if (relayInfo()?.contact) {
             <div class="info-row">
-              <strong>Contact:</strong>&nbsp;<a [href]="relayInfo()?.contact">{{relayInfo()?.contact}}</a>
+              <strong>Contact:</strong>&nbsp;<a [href]="relayInfo()?.contact" target="_blank" rel="noopener noreferrer">{{relayInfo()?.contact}}</a>
             </div>
           }
           <br>
@@ -128,7 +128,7 @@ interface RelayInfo {
           </div>
           @if (relayInfo()?.posting_policy) {
             <div class="info-row">
-              <strong>Policy:</strong> {{relayInfo()?.posting_policy}}
+              <strong>Policy:</strong>&nbsp;<a [href]="relayInfo()?.posting_policy" target="_blank" rel="noopener noreferrer">{{relayInfo()?.posting_policy}}</a>
             </div>
           }
         </div>
