@@ -160,6 +160,7 @@ export class ProfileComponent {
     this.nostrService.currentProfileRelayUrls = relayUrls;
     const pool = this.nostrService.currentProfileUserPool;
 
+    // TODO: Move this logic into the relay or nostr service.
     pool?.subscribeMany(this.nostrService.currentProfileRelayUrls, [{
       kinds: [kinds.Contacts],
       authors: [pubkey],
@@ -183,6 +184,10 @@ export class ProfileComponent {
           console.log(followingList);
           // this.followingList.set(followingList);
           this.profileState.followingList.set(followingList);
+
+          
+          this.storage.saveEvent(evt);
+
           // Now you can use 'this' here
           // For example: this.handleContacts(evt);
         }
