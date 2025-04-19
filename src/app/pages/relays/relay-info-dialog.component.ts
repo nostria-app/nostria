@@ -47,7 +47,11 @@ interface RelayInfo {
     RouterModule
   ],
   template: `
+  @if(adding()) {
     <h2 mat-dialog-title>Adding Relay</h2>
+  } @else {
+    <h2 mat-dialog-title>Relay Details</h2>
+  }
     
     <mat-dialog-content>
       @if (loading()) {
@@ -278,7 +282,6 @@ export class RelayInfoDialogComponent {
 
       const data = await response.json();
       this.relayInfo.set(data);
-      console.log('Relay info:', data);
       this.logger.info('Relay info fetched', { info: data });
     } catch (err) {
       this.logger.error('Error fetching relay info', err);
