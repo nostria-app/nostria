@@ -11,6 +11,7 @@ import { MatDialogModule, MatDialog, MatDialogRef, MAT_DIALOG_DATA } from '@angu
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { Router } from '@angular/router';
 import { MediaService, MediaItem } from '../../services/media.service';
 import { MediaUploadDialogComponent } from './media-upload-dialog/media-upload-dialog.component';
 import { MediaDetailsDialogComponent } from './media-details-dialog/media-details-dialog.component';
@@ -49,6 +50,7 @@ export class MediaComponent {
   nostr = inject(NostrService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
+  private router = inject(Router);
   appState = inject(ApplicationStateService);
   app = inject(ApplicationService);
 
@@ -81,7 +83,14 @@ export class MediaComponent {
         // Fetch the media servers (from cache or relay).
         await this.mediaService.initialize();
 
-        await this.mediaService.getFiles();
+        // Only fetch files if it's been more than 10 minutes since last fetch
+        const tenMinutesInMs = 10 * 60 * 1000; // 10 minutes in milliseconds
+        const currentTime = Date.now();
+        const lastFetchTime = this.mediaService.getLastFetchTime();
+        
+        if (currentTime - lastFetchTime > tenMinutesInMs) {
+          await this.mediaService.getFiles();
+        }
       }
     });
   }
@@ -186,6 +195,14 @@ export class MediaComponent {
     });
   }
 
+  navigateToDetails(event: Event, item: MediaItem): void {
+    // Stop event propagation to prevent toggling selection
+    event.stopPropagation();
+    
+    // Navigate to details page with the item ID
+    this.router.navigate(['/media', 'details', item.sha256]);
+  }
+
   toggleItemSelection(id: string): void {
     this.selectedItems.update(items => {
       if (items.includes(id)) {
@@ -241,6 +258,8 @@ export class MediaComponent {
   }
 
   refreshMedia(): void {
+    // This method is called when the user clicks refresh
+    // No changes needed here as it should always fetch fresh data
     this.mediaService.getFiles();
   }
 

@@ -57,33 +57,10 @@
             @for (item of images(); track item.sha256) {
               <div class="media-card" [class.selected]="isSelected(item.sha256)" (click)="toggleItemSelection(item.sha256)">
                 <div class="media-thumbnail">
-                  <img [src]="item.url" [alt]="item.url || 'Image'" (click)="openMediaPreview($event, item)">
+                  <img [src]="item.url" [alt]="item.url || 'Image'" (click)="navigateToDetails($event, item)">
                   <div class="selection-indicator">
                     <mat-icon>check_circle</mat-icon>
                   </div>
-                </div>
-                <div class="media-info">
-                  <h3>{{ item.url || 'Untitled' }}</h3>
-                  <p>{{ formatFileSize(item.size) }} | {{ item.uploaded | timestamp:'shortDate' }}</p>
-                </div>
-                <div class="media-actions">
-                  <button mat-icon-button [matMenuTriggerFor]="menu" (click)="$event.stopPropagation()">
-                    <mat-icon>more_vert</mat-icon>
-                  </button>
-                  <mat-menu #menu="matMenu">
-                    <button mat-menu-item (click)="openDetailsDialog(item); $event.stopPropagation()">
-                      <mat-icon>info</mat-icon>
-                      <span>View Details</span>
-                    </button>
-                    <button mat-menu-item (click)="mirrorItem(item.sha256); $event.stopPropagation()">
-                      <mat-icon>cloud_upload</mat-icon>
-                      <span>Mirror</span>
-                    </button>
-                    <button mat-menu-item color="warn" (click)="reportItem(item.sha256); $event.stopPropagation()">
-                      <mat-icon>flag</mat-icon>
-                      <span>Report</span>
-                    </button>
-                  </mat-menu>
                 </div>
               </div>
             }
@@ -120,37 +97,11 @@
             @for (item of videos(); track item.sha256) {
               <div class="media-card" [class.selected]="isSelected(item.sha256)" (click)="toggleItemSelection(item.sha256)">
                 <div class="media-thumbnail">
-                  <img [src]="item.url || 'assets/video-placeholder.jpg'" [alt]="item.url || 'Video'" (click)="openMediaPreview($event, item)">
+                  <img [src]="item.url || 'assets/video-placeholder.jpg'" [alt]="item.url || 'Video'" (click)="navigateToDetails($event, item)">
                   <mat-icon class="video-badge">play_circle_filled</mat-icon>
                   <div class="selection-indicator">
                     <mat-icon>check_circle</mat-icon>
                   </div>
-                </div>
-                <div class="media-info">
-                  <h3>{{ item.url || 'Untitled' }}</h3>
-                  <p>{{ formatFileSize(item.size) }} | {{ item.uploaded | timestamp:'shortDate' }}</p>
-                  <!-- @if (item.duration) {
-                    <p class="duration">{{ formatDuration(item.duration) }}</p>
-                  } -->
-                </div>
-                <div class="media-actions">
-                  <button mat-icon-button [matMenuTriggerFor]="menu" (click)="$event.stopPropagation()">
-                    <mat-icon>more_vert</mat-icon>
-                  </button>
-                  <mat-menu #menu="matMenu">
-                    <button mat-menu-item (click)="openDetailsDialog(item); $event.stopPropagation()">
-                      <mat-icon>info</mat-icon>
-                      <span>View Details</span>
-                    </button>
-                    <button mat-menu-item (click)="mirrorItem(item.sha256); $event.stopPropagation()">
-                      <mat-icon>cloud_upload</mat-icon>
-                      <span>Mirror</span>
-                    </button>
-                    <button mat-menu-item color="warn" (click)="reportItem(item.sha256); $event.stopPropagation()">
-                      <mat-icon>flag</mat-icon>
-                      <span>Report</span>
-                    </button>
-                  </mat-menu>
                 </div>
               </div>
             }
@@ -187,33 +138,10 @@
             @for (item of images(); track item.sha256) {
               <div class="media-card" [class.selected]="isSelected(item.sha256)" (click)="toggleItemSelection(item.sha256)">
                 <div class="media-thumbnail">
-                  <img [src]="item.url" [alt]="item.url || 'Image'" (click)="openMediaPreview($event, item)">
+                  <img [src]="item.url" [alt]="item.url || 'File'" (click)="navigateToDetails($event, item)">
                   <div class="selection-indicator">
                     <mat-icon>check_circle</mat-icon>
                   </div>
-                </div>
-                <div class="media-info">
-                  <h3>{{ item.url || 'Untitled' }}</h3>
-                  <p>{{ formatFileSize(item.size) }} | {{ item.uploaded | timestamp:'shortDate' }}</p>
-                </div>
-                <div class="media-actions">
-                  <button mat-icon-button [matMenuTriggerFor]="menu" (click)="$event.stopPropagation()">
-                    <mat-icon>more_vert</mat-icon>
-                  </button>
-                  <mat-menu #menu="matMenu">
-                    <button mat-menu-item (click)="openDetailsDialog(item); $event.stopPropagation()">
-                      <mat-icon>info</mat-icon>
-                      <span>View Details</span>
-                    </button>
-                    <button mat-menu-item (click)="mirrorItem(item.sha256); $event.stopPropagation()">
-                      <mat-icon>cloud_upload</mat-icon>
-                      <span>Mirror</span>
-                    </button>
-                    <button mat-menu-item color="warn" (click)="reportItem(item.sha256); $event.stopPropagation()">
-                      <mat-icon>flag</mat-icon>
-                      <span>Report</span>
-                    </button>
-                  </mat-menu>
                 </div>
               </div>
             }

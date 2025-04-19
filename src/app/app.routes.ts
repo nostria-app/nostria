@@ -29,7 +29,6 @@ export const routes: Routes = [
     path: 'p/:id',
     component: ProfileComponent,
     children: [
-      // { path: '', redirectTo: 'notes', pathMatch: 'full' },
       { path: '', component: ProfileHomeComponent, pathMatch: 'full' },
       { path: 'replies', component: ProfileRepliesComponent },
       { path: 'reads', component: ProfileReadsComponent },
@@ -37,7 +36,6 @@ export const routes: Routes = [
       { path: 'about', component: ProfileAboutComponent },
       { path: 'connections', component: ProfileConnectionsComponent },
       { path: 'following', component: FollowingComponent }
-
     ]
   },
   {
@@ -51,7 +49,13 @@ export const routes: Routes = [
     title: 'Upgrade to Premium'
   },
   { path: 'backup', loadComponent: () => import('./pages/backup/backup.component').then(mod => mod.BackupComponent) },
-  { path: 'media', loadComponent: () => import('./pages/media/media.component').then(mod => mod.MediaComponent) },
+  { 
+    path: 'media', 
+    children: [
+      { path: '', loadComponent: () => import('./pages/media/media.component').then(mod => mod.MediaComponent) },
+      { path: 'details/:id', loadComponent: () => import('./pages/media/media-details/media-details.component').then(mod => mod.MediaDetailsComponent) }
+    ]
+  },
   { path: 'profile', redirectTo: '/credentials' },
   { path: '**', redirectTo: '/home' }
 ];
