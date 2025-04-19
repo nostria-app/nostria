@@ -12,9 +12,10 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
-import { MediaService, MediaItem } from '../../services/media.service';
+import { MediaService, MediaItem, MediaServer } from '../../services/media.service';
 import { MediaUploadDialogComponent } from './media-upload-dialog/media-upload-dialog.component';
 import { MediaDetailsDialogComponent } from './media-details-dialog/media-details-dialog.component';
+import { MediaServerDialogComponent } from './media-server-dialog/media-server-dialog.component';
 
 @Component({
   selector: 'app-media',
@@ -43,7 +44,7 @@ export class MediaComponent {
   private snackBar = inject(MatSnackBar);
 
   // View state
-  activeTab = signal<'images' | 'videos'>('images');
+  activeTab = signal<'images' | 'videos' | 'servers'>('images');
   selectedItems = signal<string[]>([]);
   
   // Computed media lists
@@ -77,6 +78,76 @@ export class MediaComponent {
         }
       }
     });
+  }
+  
+  openServerDialog(server?: MediaServer): void {
+    const dialogRef = this.dialog.open(MediaServerDialogComponent, {
+      width: '500px',
+      data: server
+    });
+    
+    dialogRef.afterClosed().subscribe(async (result) => {
+      if (!result) return;
+      
+      try {
+        if (server) {
+          // Update existing server
+          await this.mediaService.updateMediaServer(result);
+          this.snackBar.open('Media server updated', 'Close', { duration: 3000 });
+        } else {
+          // Add new server
+          await this.mediaService.addMediaServer(result);
+          this.snackBar.open('Media server added', 'Close', { duration: 3000 });
+        }
+      } catch (error) {
+        this.snackBar.open(
+          error instanceof Error ? error.message : 'Failed to save media server', 
+          'Close', 
+          { duration: 3000 }
+        );
+      }
+    });
+  }
+  
+  async removeServer(url: string): Promise<void> {
+    if (confirm('Are you sure you want to remove this media server?')) {
+      try {
+        await this.mediaService.removeMediaServer(url);
+        this.snackBar.open('Media server removed', 'Close', { duration: 3000 });
+      } catch (error) {
+        this.snackBar.open('Failed to remove media server', 'Close', { duration: 3000 });
+      }
+    }
+  }
+  
+  async testServer(url: string): Promise<void> {
+    try {
+      const result = await this.mediaService.testMediaServer(url);
+      if (result.success) {
+        this.snackBar.open(result.message, 'Close', { duration: 3000 });
+      } else {
+        this.snackBar.open(`Test failed: ${result.message}`, 'Close', { duration: 3000 });
+      }
+    } catch (error) {
+      this.snackBar.open('Failed to test media server', 'Close', { duration: 3000 });
+    }
+  }
+  
+  editServer(server: MediaServer): void {
+    this.openServerDialog(server);
+  }
+  
+  async publishServers(): Promise<void> {
+    try {
+      await this.mediaService.publishMediaServers();
+      this.snackBar.open('Media servers published to Nostr', 'Close', { duration: 3000 });
+    } catch (error) {
+      this.snackBar.open(
+        error instanceof Error ? error.message : 'Failed to publish media servers', 
+        'Close', 
+        { duration: 3000 }
+      );
+    }
   }
   
   openDetailsDialog(item: MediaItem): void {
@@ -148,9 +219,11 @@ export class MediaComponent {
     return this.selectedItems().includes(id);
   }
 
-  setActiveTab(tab: 'images' | 'videos'): void {
+  setActiveTab(tab: 'images' | 'videos' | 'servers'): void {
     this.activeTab.set(tab);
-    this.selectedItems.set([]);
+    if (tab !== 'servers') {
+      this.selectedItems.set([]);
+    }
   }
 
   getMediaTypeIcon(type: string): string {

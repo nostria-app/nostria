@@ -1,0 +1,54 @@
+<h2 mat-dialog-title>{{ isEdit ? 'Edit Media Server' : 'Add Media Server' }}</h2>
+
+<form [formGroup]="serverForm" (ngSubmit)="onSubmit()">
+  <mat-dialog-content>
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Server URL</mat-label>
+      <input matInput formControlName="url" placeholder="https://example.com/nostr-media">
+      <mat-hint>Must be a valid URL with HTTPS</mat-hint>
+      @if (serverForm.get('url')?.hasError('required') && serverForm.get('url')?.touched) {
+        <mat-error>Server URL is required</mat-error>
+      }
+      @if (serverForm.get('url')?.hasError('pattern') && serverForm.get('url')?.touched) {
+        <mat-error>Server URL must start with https://</mat-error>
+      }
+    </mat-form-field>
+    
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Name (Optional)</mat-label>
+      <input matInput formControlName="name" placeholder="My Media Server">
+      <mat-hint>A friendly name for this server</mat-hint>
+    </mat-form-field>
+    
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Description (Optional)</mat-label>
+      <textarea matInput formControlName="description" rows="3"></textarea>
+    </mat-form-field>
+    
+    @if (testing) {
+      <div class="test-connection">
+        <mat-spinner diameter="24"></mat-spinner>
+        <span>Testing connection...</span>
+      </div>
+    }
+    
+    @if (testResult) {
+      <div class="connection-result" [class.success]="testResult.success" [class.error]="!testResult.success">
+        <mat-icon [color]="testResult.success ? 'primary' : 'warn'">
+          {{ testResult.success ? 'check_circle' : 'error' }}
+        </mat-icon>
+        <span>{{ testResult.message }}</span>
+      </div>
+    }
+  </mat-dialog-content>
+  
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" (click)="testConnection()" [disabled]="!serverForm.get('url')?.valid || testing">
+      Test Connection
+    </button>
+    <button mat-button mat-dialog-close>Cancel</button>
+    <button mat-raised-button color="primary" type="submit" [disabled]="!serverForm.valid">
+      {{ isEdit ? 'Update' : 'Add' }}
+    </button>
+  </mat-dialog-actions>
+</form>
