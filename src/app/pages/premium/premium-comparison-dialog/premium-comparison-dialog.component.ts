@@ -66,6 +66,12 @@ export class PremiumComparisonDialogComponent {
             description: 'Automated daily backups of your data'
         },
         {
+            feature: 'Relay Migration',
+            free: false,
+            premium: true,
+            description: 'Automatic migration of your data'
+        },
+        {
             feature: 'Content Backup Access',
             free: false,
             premium: true,

@@ -56,6 +56,11 @@ export class PremiumComponent {
       icon: 'backup'
     },
     {
+      title: 'Relay Migration',
+      description: 'When you change your relay, all your data can be automatically migrated to the new one.',
+      icon: 'backup'
+    },
+    {
       title: 'Bitcoin Payment Address',
       description: 'Receive payments directly to your profile with a custom Bitcoin payment address.',
       icon: 'account_balance_wallet'
