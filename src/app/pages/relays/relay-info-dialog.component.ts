@@ -9,43 +9,44 @@ import { LayoutService } from '../../services/layout.service';
 import { RouterModule } from '@angular/router';
 
 export interface RelayDialogData {
-    relayUrl: string;
+  relayUrl: string;
+  adding: boolean;
 }
 
 interface RelayInfo {
-    name?: string;
-    description?: string;
-    pubkey?: string;
-    contact?: string;
-    software?: string;
-    version?: string;
-    banner?: string;
-    icon?: string;
-    posting_policy?: string;
-    payments_url?: string;
-    supported_nips?: number[];
-    limitation?: {
-        auth_required?: boolean;
-        max_message_length?: number;
-        payment_required?: boolean;
-        restricted_writes?: boolean;
-        [key: string]: any;
-    };
+  name?: string;
+  description?: string;
+  pubkey?: string;
+  contact?: string;
+  software?: string;
+  version?: string;
+  banner?: string;
+  icon?: string;
+  posting_policy?: string;
+  payments_url?: string;
+  supported_nips?: number[];
+  limitation?: {
+    auth_required?: boolean;
+    max_message_length?: number;
+    payment_required?: boolean;
+    restricted_writes?: boolean;
     [key: string]: any;
+  };
+  [key: string]: any;
 }
 
 @Component({
-    selector: 'app-relay-info-dialog',
-    standalone: true,
-    imports: [
-        CommonModule,
-        MatDialogModule,
-        MatButtonModule,
-        MatProgressSpinnerModule,
-        MatSlideToggleModule,
-        RouterModule
-    ],
-    template: `
+  selector: 'app-relay-info-dialog',
+  standalone: true,
+  imports: [
+    CommonModule,
+    MatDialogModule,
+    MatButtonModule,
+    MatProgressSpinnerModule,
+    MatSlideToggleModule,
+    RouterModule
+  ],
+  template: `
     <h2 mat-dialog-title>Adding Relay</h2>
     
     <mat-dialog-content>
@@ -146,13 +147,18 @@ interface RelayInfo {
     </mat-dialog-content>
     
     <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close>Cancel</button>
+      @if (adding()) {
+        <button mat-button mat-dialog-close>Cancel</button>
       <button mat-flat-button color="primary" [disabled]="loading()" (click)="confirmAdd()">
         Add Relay
       </button>
+      } @else {
+        <button mat-button mat-dialog-close>Close</button>
+      }
+
     </mat-dialog-actions>
   `,
-    styles: `
+  styles: `
     .loading-container, .error-container {
       display: flex;
       flex-direction: column;
@@ -212,99 +218,100 @@ interface RelayInfo {
   `
 })
 export class RelayInfoDialogComponent {
-    private logger = inject(LoggerService);
-    private dialogRef = inject(MatDialogRef<RelayInfoDialogComponent>);
-    layout = inject(LayoutService);
+  private logger = inject(LoggerService);
+  private dialogRef = inject(MatDialogRef<RelayInfoDialogComponent>);
+  layout = inject(LayoutService);
 
-    private data = inject<RelayDialogData>(MAT_DIALOG_DATA);
-    relayUrl = signal(this.data.relayUrl);
+  private data = inject<RelayDialogData>(MAT_DIALOG_DATA);
+  relayUrl = signal(this.data.relayUrl);
+  adding = signal(this.data.adding);
 
-    relayInfo = signal<RelayInfo | null>(null);
-    loading = signal<boolean>(true);
-    error = signal<string | null>(null);
-    migrateData = signal<boolean>(false);
-    iconUrl = signal<string | null>(null);
-    faviconUrl = signal<string | null>(null);
+  relayInfo = signal<RelayInfo | null>(null);
+  loading = signal<boolean>(true);
+  error = signal<string | null>(null);
+  migrateData = signal<boolean>(false);
+  iconUrl = signal<string | null>(null);
+  faviconUrl = signal<string | null>(null);
 
-    constructor() {
-        effect(() => {
-            if (this.relayUrl()) {
-                this.fetchRelayInfo(this.relayUrl());
-            }
-        });
+  constructor() {
+    effect(() => {
+      if (this.relayUrl()) {
+        this.fetchRelayInfo(this.relayUrl());
+      }
+    });
 
-        effect(() => {
-            // Set icon URL when relayInfo changes
-            const info = this.relayInfo();
-            if (info) {
-                if (info.icon) {
-                    this.iconUrl.set(info.icon);
-                } else {
-                    // Try to load favicon
-                    this.tryLoadFavicon();
-                }
-            }
-        });
-    }
-
-    async fetchRelayInfo(url: string): Promise<void> {
-        if (!url) return;
-
-        this.loading.set(true);
-        this.error.set(null);
-
-        try {
-            const httpUrl = url.replace('wss://', 'https://');
-
-            this.logger.info('Fetching relay info', { url: httpUrl });
-
-            const response = await fetch(httpUrl, {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/nostr+json'
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error ${response.status}`);
-            }
-
-            const data = await response.json();
-            this.relayInfo.set(data);
-            console.log('Relay info:', data);
-            this.logger.info('Relay info fetched', { info: data });
-        } catch (err) {
-            this.logger.error('Error fetching relay info', err);
-            this.error.set(err instanceof Error ? err.message : 'Unknown error');
-        } finally {
-            this.loading.set(false);
+    effect(() => {
+      // Set icon URL when relayInfo changes
+      const info = this.relayInfo();
+      if (info) {
+        if (info.icon) {
+          this.iconUrl.set(info.icon);
+        } else {
+          // Try to load favicon
+          this.tryLoadFavicon();
         }
-    }
+      }
+    });
+  }
 
-    async tryLoadFavicon(): Promise<void> {
-        try {
-            const baseUrl = this.relayUrl().replace('wss://', 'https://');
-            const faviconUrl = `${new URL(baseUrl).origin}/favicon.ico`;
+  async fetchRelayInfo(url: string): Promise<void> {
+    if (!url) return;
 
-            this.faviconUrl.set(faviconUrl);
-            this.iconUrl.set(faviconUrl);
+    this.loading.set(true);
+    this.error.set(null);
 
-            this.logger.info('Trying to load favicon', { url: faviconUrl });
-        } catch (err) {
-            this.logger.error('Error creating favicon URL', err);
+    try {
+      const httpUrl = url.replace('wss://', 'https://');
+
+      this.logger.info('Fetching relay info', { url: httpUrl });
+
+      const response = await fetch(httpUrl, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/nostr+json'
         }
-    }
+      });
 
-    handleIconError(): void {
-        // If icon fails to load, clear it
-        this.iconUrl.set(null);
-        this.logger.warn('Failed to load relay icon');
-    }
+      if (!response.ok) {
+        throw new Error(`HTTP error ${response.status}`);
+      }
 
-    confirmAdd(): void {
-        this.dialogRef.close({
-            confirmed: true,
-            migrateData: this.migrateData(),
-        });
+      const data = await response.json();
+      this.relayInfo.set(data);
+      console.log('Relay info:', data);
+      this.logger.info('Relay info fetched', { info: data });
+    } catch (err) {
+      this.logger.error('Error fetching relay info', err);
+      this.error.set(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      this.loading.set(false);
     }
+  }
+
+  async tryLoadFavicon(): Promise<void> {
+    try {
+      const baseUrl = this.relayUrl().replace('wss://', 'https://');
+      const faviconUrl = `${new URL(baseUrl).origin}/favicon.ico`;
+
+      this.faviconUrl.set(faviconUrl);
+      this.iconUrl.set(faviconUrl);
+
+      this.logger.info('Trying to load favicon', { url: faviconUrl });
+    } catch (err) {
+      this.logger.error('Error creating favicon URL', err);
+    }
+  }
+
+  handleIconError(): void {
+    // If icon fails to load, clear it
+    this.iconUrl.set(null);
+    this.logger.warn('Failed to load relay icon');
+  }
+
+  confirmAdd(): void {
+    this.dialogRef.close({
+      confirmed: true,
+      migrateData: this.migrateData(),
+    });
+  }
 }
