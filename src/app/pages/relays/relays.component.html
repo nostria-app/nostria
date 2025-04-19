@@ -41,7 +41,10 @@
                   <div class="relay-url">
                     {{formatRelayUrl(relay.url)}}
                   </div>
-                  <div class="delete-button">
+                  <div class="action-buttons">
+                    <button mat-icon-button color="primary" (click)="viewRelayInfo(relay.url)" aria-label="View relay info">
+                      <mat-icon>info</mat-icon>
+                    </button>
                     <button mat-icon-button color="warn" (click)="removeRelay(relay)" aria-label="Remove relay">
                       <mat-icon>delete</mat-icon>
                     </button>
@@ -121,7 +124,10 @@
                   <div class="relay-url">
                     {{formatRelayUrl(relay)}}
                   </div>
-                  <div class="delete-button">
+                  <div class="action-buttons">
+                    <button mat-icon-button color="primary" (click)="viewRelayInfo(relay)" aria-label="View relay info">
+                      <mat-icon>info</mat-icon>
+                    </button>
                     <button mat-icon-button color="warn" (click)="removeBootstrapRelay(relay)" aria-label="Remove bootstrap relay">
                       <mat-icon>delete</mat-icon>
                     </button>

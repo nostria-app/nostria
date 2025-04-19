@@ -98,6 +98,16 @@ export class RelaysComponent {
     });
   }
 
+  viewRelayInfo(relayUrl: string): void {
+    const dialogRef = this.dialog.open(RelayInfoDialogComponent, {
+      width: '500px',
+      data: {
+        relayUrl: relayUrl,
+        adding: false, // Set to false to indicate viewing only
+      }
+    });
+  }
+
   removeRelay(relay: Relay): void {
     this.logger.info('Removing relay', { url: relay.url });
     this.relayService.removeRelay(relay.url);
