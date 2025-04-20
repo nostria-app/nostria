@@ -63,10 +63,37 @@
             @for (item of images(); track item.url) {
               <div class="media-card" [class.selected]="isSelected(item.url)" (click)="toggleItemSelection(item.url)">
                 <div class="media-thumbnail">
-                  <img [src]="item.url" [alt]="item.url || 'Image'" (click)="navigateToDetails($event, item)" loading="lazy">
                   <div class="selection-indicator">
                     <mat-icon>check_circle</mat-icon>
                   </div>
+                  <img [src]="item.url" [alt]="item.url || 'Image'" (click)="navigateToDetails($event, item)" loading="lazy">
+                  <div class="video-actions">
+                    <button mat-icon-button [matMenuTriggerFor]="imageMenu" (click)="$event.stopPropagation()">
+                      <mat-icon>more_vert</mat-icon>
+                    </button>
+                    <mat-menu #imageMenu="matMenu">
+                      <button mat-menu-item (click)="openDetailsDialog(item)">
+                        <mat-icon>info</mat-icon>
+                        <span>Details</span>
+                      </button>
+                      <a mat-menu-item [href]="item.url" target="_blank" download>
+                        <mat-icon>download</mat-icon>
+                        <span>Download</span>
+                      </a>
+                      <button mat-menu-item (click)="mirrorItem(item.sha256)">
+                        <mat-icon>cloud_upload</mat-icon>
+                        <span>Mirror</span>
+                      </button>
+                      <button mat-menu-item color="warn" (click)="deleteSelected(item.sha256)">
+                        <mat-icon color="warn">delete</mat-icon>
+                        <span class="delete-text">Delete</span>
+                      </button>
+                    </mat-menu>
+                  </div>
+                </div>
+                <div class="video-info">
+                  <span class="video-name">{{ getFileName(item.url) }}</span>
+                  <span class="video-size">{{ formatFileSize(item.size) }}</span>
                 </div>
               </div>
             }
@@ -103,6 +130,9 @@
             @for (item of videos(); track item.url) {
               <div class="media-card" [class.selected]="isSelected(item.url)" (click)="toggleItemSelection(item.url)">
                 <div class="media-thumbnail video-thumbnail">
+                  <div class="selection-indicator">
+                    <mat-icon>check_circle</mat-icon>
+                  </div>
                   <div class="video-preview">
                     <video [src]="item.url" preload="metadata" (click)="navigateToDetails($event, item)"></video>
                     <button mat-icon-button class="play-button" (click)="navigateToDetails($event, item)">
@@ -135,9 +165,6 @@
                         <span class="delete-text">Delete</span>
                       </button>
                     </mat-menu>
-                  </div>
-                  <div class="selection-indicator">
-                    <mat-icon>check_circle</mat-icon>
                   </div>
                 </div>
               </div>
