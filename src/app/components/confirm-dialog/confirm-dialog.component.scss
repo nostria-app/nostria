@@ -1,0 +1,29 @@
+.confirm-dialog-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 0;
+  text-align: center;
+
+  .confirm-icon {
+    font-size: 36px;
+    height: 36px;
+    width: 36px;
+  }
+
+  p {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.5;
+  }
+}
+
+mat-dialog-content {
+  min-width: 300px;
+  padding: 20px 0;
+}
+
+p {
+  margin: 0;
+}

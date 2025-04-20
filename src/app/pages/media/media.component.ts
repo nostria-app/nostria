@@ -23,6 +23,7 @@ import { standardizedTag } from '../../standardized-tags';
 import { TimestampPipe } from '../../pipes/timestamp.pipe';
 import { ApplicationService } from '../../services/application.service';
 import { MediaPreviewDialogComponent } from '../../components/media-preview-dialog/media-preview.component';
+import { ConfirmDialogComponent } from '../../components/confirm-dialog/confirm-dialog.component';
 
 @Component({
   selector: 'app-media',
@@ -240,12 +241,28 @@ export class MediaComponent {
   }
 
   async deleteSelected(sha256?: string): Promise<void> {
-    if (confirm(`Are you sure you want to delete ${this.selectedItems().length} items?`)) {
+    const itemsToDelete = sha256 ? [sha256] : this.selectedItems();
+    const confirmMessage = itemsToDelete.length === 1 
+      ? 'Are you sure you want to delete this item?' 
+      : `Are you sure you want to delete ${itemsToDelete.length} items?`;
+    
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Confirm Delete',
+        message: confirmMessage,
+        confirmText: 'Delete',
+        cancelText: 'Cancel',
+        confirmColor: 'warn'
+      }
+    });
+
+    const result = await dialogRef.afterClosed().toPromise();
+    if (result) {
       try {
-        for (const id of this.selectedItems()) {
+        for (const id of itemsToDelete) {
           await this.mediaService.deleteFile(id);
         }
-        this.snackBar.open(`${this.selectedItems().length} items deleted`, 'Close', { duration: 3000 });
+        this.snackBar.open(`${itemsToDelete.length} ${itemsToDelete.length === 1 ? 'item' : 'items'} deleted`, 'Close', { duration: 3000 });
         this.selectedItems.set([]);
       } catch (error) {
         this.snackBar.open('Failed to delete some items', 'Close', { duration: 3000 });

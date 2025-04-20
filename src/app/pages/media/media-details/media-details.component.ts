@@ -116,7 +116,8 @@ export class MediaDetailsComponent {
         title: 'Delete Media',
         message: 'Are you sure you want to delete this media? This action cannot be undone.',
         confirmText: 'Delete',
-        cancelText: 'Cancel'
+        cancelText: 'Cancel',
+        confirmColor: 'warn'
       }
     });
 
