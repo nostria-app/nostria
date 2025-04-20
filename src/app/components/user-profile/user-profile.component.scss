@@ -49,6 +49,7 @@
     .user-avatar {
       width: 100%;
       height: 100%;
+      height: 420px;
       object-fit: cover;
       border-radius: 50%;
     }
@@ -220,6 +221,7 @@
       height: 100%;
       padding: 0;
       position: relative;
+      align-items: center;
     }
     
     .user-profile-banner {
@@ -229,14 +231,40 @@
     
     .user-profile-avatar {
       width: 60px;
-      height: 60px;
+      height: 60px; 
+      min-height: 60px;
       position: relative;
-      margin-top: -30px; // Pull avatar up over the banner
+      margin-top: -30px;
       border-width: 3px;
       z-index: 1;
       margin-bottom: 8px;
+      background-color: var(--mat-card-subtle-surface-color, #e0e0e0);
       
-      // Create a white background to simulate a border when overlapping the banner
+      /* Fix the flex display issue */
+      display: block;
+      overflow: hidden;
+      
+      /* Fix avatar rendering */
+      .user-avatar {
+        display: block;
+        width: 60px;
+        height: 60px;
+        object-fit: cover;
+      }
+      
+      .default-user-avatar {
+        font-size: 60px;
+        width: 60px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      mat-spinner {
+        margin: auto;
+      }
+      
       &::after {
         content: '';
         position: absolute;
@@ -250,7 +278,7 @@
     .user-profile-content {
       margin: 0 8px 12px;
       text-align: center;
-      margin-left: 0;
+      width: 100%;
     }
   }
 
