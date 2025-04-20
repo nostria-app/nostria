@@ -106,17 +106,17 @@ export class NostrService {
             this.loadActiveAccountFromStorage();
 
             await this.loadData();
-  
+
             // We keep an in-memory copy of the user metadata and relay list for all accounts,
             // they won't take up too much memory space.
             await this.loadAccountsMetadata();
             await this.loadAccountsRelays();
 
             console.log('INITIALIZED NOSTR!');
-  
+
             this.initialized.set(true);
           });
- 
+
         } catch (err) {
           console.log('FAILED TO LOAD DATA!!');
           console.error(err);
@@ -189,160 +189,166 @@ export class NostrService {
       return;
     }
 
-    this.appState.loadingMessage.set('Retrieving your relay list...');
-    this.appState.isLoading.set(true);
-    this.appState.showSuccess.set(false);
-    this.logger.info('Starting data loading process');
+    try {
 
-    const pubkey = this.pubkey();
-    this.logger.debug('Loading data for pubkey', { pubkey });
+      this.appState.loadingMessage.set('Retrieving your relay list...');
+      this.appState.isLoading.set(true);
+      this.appState.showSuccess.set(false);
+      this.logger.info('Starting data loading process');
 
-    let profile = null;
-    let metadata = null;
+      const pubkey = this.pubkey();
+      this.logger.debug('Loading data for pubkey', { pubkey });
 
-    // First check if we have metadata in storage
-    metadata = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Metadata);
+      let profile = null;
+      let metadata = null;
 
-    if (metadata) {
-      this.logger.info('Found user metadata in storage', { metadata });
-      this.appState.loadingMessage.set('Found your profile in local storage! 👍');
-
-      // Process and update metadata for UI refresh
-      this.updateAccountMetadata(metadata);
-
-      // Also store in userMetadata for legacy support
-      // try {
-      //   // Parse the content field which should be JSON
-      //   const metadataContent = typeof metadata.content === 'string' 
-      //     ? JSON.parse(metadata.content) 
-      //     : metadata.content;
-
-      //   // Create a NostrEventData object to store the full content and tags
-      //   const eventData: NostrEventData<UserMetadata> = {
-      //     pubkey: metadata.pubkey,
-      //     content: metadataContent,  // Store the parsed JSON object 
-      //     tags: metadata.tags,       // Store the original tags
-      //     updated: Date.now()
-      //   };
-
-      //   // Save to storage with all fields and the full event data
-      //   await this.storage.saveUserMetadata(pubkey, eventData);
-      // } catch (e) {
-      //   this.logger.error('Failed to parse metadata content', e);
-      // }
-    }
-
-    // Get existing Relay List in storage
-    let relays = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
-
-    if (relays) {
-      this.logger.info('Found user relays in storage', { relays });
-      this.appState.loadingMessage.set('Found your relays in local storage! ✔️');
-    }
-
-    let bootstrapPool: SimplePool | null = null;
-
-    if (!relays) {
-      // To properly scale Nostr, the first step is simply getting the user's relay list and nothing more.
-      bootstrapPool = new SimplePool();
-      this.logger.debug('Connecting to bootstrap relays', { relays: this.relayService.bootStrapRelays() });
-
-      this.logger.time('fetchRelayList');
-      relays = await bootstrapPool.get(this.relayService.bootStrapRelays(), {
-        kinds: [kinds.RelayList],
-        authors: [pubkey],
-      });
-      this.logger.timeEnd('fetchRelayList');
-
-      if (relays) {
-        this.logger.info('Found your relays on network', { relays });
-        this.appState.loadingMessage.set('Found your relays on the network! ✔️');
-        await this.storage.saveEvent(relays);
-      }
-    }
-
-    let relayUrls: string[] = [];
-
-    if (relays) {
-      relayUrls = this.getRelayUrls(relays);
-      this.logger.info(`Found ${relayUrls.length} relays for user`, { relayUrls });
-
-      // Store the relays in the relay service
-      this.relayService.setRelays(relayUrls);
-    }
-
-    // If there is no relayUrls (the kind:10002 might miss it), use default for fallback:
-    if (!relayUrls || relayUrls.length == 0) {
-      this.logger.warn('No relay list found for user');
-      // Set default bootstrap relays if no custom relays found
-      const defaultRelays = [...this.relayService.defaultRelays()];
-      this.relayService.setRelays(defaultRelays);
-      relayUrls = defaultRelays;
-    }
-
-    const userPool = new SimplePool();
-    this.logger.debug('Connecting to user relays to fetch metadata');
-
-    // Attempt to connect to the user's defined relays, to help Nostr with
-    // scaling, we don't use the default relays here.
-    if (metadata) {
-      this.appState.loadingMessage.set(`Found your ${relayUrls.length} relays, refreshing your metadata...`);
-    } else {
-      this.appState.loadingMessage.set(`Found your ${relayUrls.length} relays, retrieving your metadata...`);
-
-      this.logger.time('fetchMetadata');
-      metadata = await userPool.get(relayUrls, {
-        kinds: [kinds.Metadata],
-        authors: [pubkey],
-      });
-      this.logger.timeEnd('fetchMetadata');
+      // First check if we have metadata in storage
+      metadata = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Metadata);
 
       if (metadata) {
-        this.logger.info('Found user metadata', { metadata });
-        this.appState.loadingMessage.set('Found your profile! 👍');
-        await this.storage.saveEvent(metadata);
+        this.logger.info('Found user metadata in storage', { metadata });
+        this.appState.loadingMessage.set('Found your profile in local storage! 👍');
 
-        // Update the metadata in NostrService
+        // Process and update metadata for UI refresh
         this.updateAccountMetadata(metadata);
 
-        try {
-          // Parse the content field which should be JSON
-          const metadataContent = typeof metadata.content === 'string'
-            ? JSON.parse(metadata.content)
-            : metadata.content;
+        // Also store in userMetadata for legacy support
+        // try {
+        //   // Parse the content field which should be JSON
+        //   const metadataContent = typeof metadata.content === 'string' 
+        //     ? JSON.parse(metadata.content) 
+        //     : metadata.content;
 
-          // Create a NostrEventData object to store the full content and tags
-          const eventData: NostrEventData<UserMetadata> = {
-            pubkey: metadata.pubkey,
-            content: metadataContent,  // Store the parsed JSON object 
-            tags: metadata.tags,       // Store the original tags
-            updated: Date.now()
-          };
+        //   // Create a NostrEventData object to store the full content and tags
+        //   const eventData: NostrEventData<UserMetadata> = {
+        //     pubkey: metadata.pubkey,
+        //     content: metadataContent,  // Store the parsed JSON object 
+        //     tags: metadata.tags,       // Store the original tags
+        //     updated: Date.now()
+        //   };
 
-          // Save to storage with all fields and the full event data
-          await this.storage.saveUserMetadata(pubkey, eventData);
-        } catch (e) {
-          this.logger.error('Failed to parse metadata content', e);
-        }
-      } else {
-        this.logger.warn('No metadata found for user');
+        //   // Save to storage with all fields and the full event data
+        //   await this.storage.saveUserMetadata(pubkey, eventData);
+        // } catch (e) {
+        //   this.logger.error('Failed to parse metadata content', e);
+        // }
       }
+
+      // Get existing Relay List in storage
+      let relays = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
+
+      if (relays) {
+        this.logger.info('Found user relays in storage', { relays });
+        this.appState.loadingMessage.set('Found your relays in local storage! ✔️');
+      }
+
+      let bootstrapPool: SimplePool | null = null;
+
+      if (!relays) {
+        // To properly scale Nostr, the first step is simply getting the user's relay list and nothing more.
+        bootstrapPool = new SimplePool();
+        this.logger.debug('Connecting to bootstrap relays', { relays: this.relayService.bootStrapRelays() });
+
+        this.logger.time('fetchRelayList');
+        relays = await bootstrapPool.get(this.relayService.bootStrapRelays(), {
+          kinds: [kinds.RelayList],
+          authors: [pubkey],
+        });
+        this.logger.timeEnd('fetchRelayList');
+
+        if (relays) {
+          this.logger.info('Found your relays on network', { relays });
+          this.appState.loadingMessage.set('Found your relays on the network! ✔️');
+          await this.storage.saveEvent(relays);
+        }
+      }
+
+      let relayUrls: string[] = [];
+
+      if (relays) {
+        relayUrls = this.getRelayUrls(relays);
+        this.logger.info(`Found ${relayUrls.length} relays for user`, { relayUrls });
+
+        // Store the relays in the relay service
+        this.relayService.setRelays(relayUrls);
+      }
+
+      // If there is no relayUrls (the kind:10002 might miss it), use default for fallback:
+      if (!relayUrls || relayUrls.length == 0) {
+        this.logger.warn('No relay list found for user');
+        // Set default bootstrap relays if no custom relays found
+        const defaultRelays = [...this.relayService.defaultRelays()];
+        this.relayService.setRelays(defaultRelays);
+        relayUrls = defaultRelays;
+      }
+
+      const userPool = new SimplePool();
+      this.logger.debug('Connecting to user relays to fetch metadata');
+
+      // Attempt to connect to the user's defined relays, to help Nostr with
+      // scaling, we don't use the default relays here.
+      if (metadata) {
+        this.appState.loadingMessage.set(`Found your ${relayUrls.length} relays, refreshing your metadata...`);
+      } else {
+        this.appState.loadingMessage.set(`Found your ${relayUrls.length} relays, retrieving your metadata...`);
+
+        this.logger.time('fetchMetadata');
+        metadata = await userPool.get(relayUrls, {
+          kinds: [kinds.Metadata],
+          authors: [pubkey],
+        });
+        this.logger.timeEnd('fetchMetadata');
+
+        if (metadata) {
+          this.logger.info('Found user metadata', { metadata });
+          this.appState.loadingMessage.set('Found your profile! 👍');
+          await this.storage.saveEvent(metadata);
+
+          // Update the metadata in NostrService
+          this.updateAccountMetadata(metadata);
+
+          try {
+            // Parse the content field which should be JSON
+            const metadataContent = typeof metadata.content === 'string'
+              ? JSON.parse(metadata.content)
+              : metadata.content;
+
+            // Create a NostrEventData object to store the full content and tags
+            const eventData: NostrEventData<UserMetadata> = {
+              pubkey: metadata.pubkey,
+              content: metadataContent,  // Store the parsed JSON object 
+              tags: metadata.tags,       // Store the original tags
+              updated: Date.now()
+            };
+
+            // Save to storage with all fields and the full event data
+            await this.storage.saveUserMetadata(pubkey, eventData);
+          } catch (e) {
+            this.logger.error('Failed to parse metadata content', e);
+          }
+        } else {
+          this.logger.warn('No metadata found for user');
+        }
+      }
+
+      // Attach the userPool to the relay service for further use.
+      this.relayService.setUserPool(userPool);
+
+      if (bootstrapPool) {
+        this.logger.debug('Closing bootstrap relay pool connections');
+        bootstrapPool.close(this.relayService.bootStrapRelays());
+      }
+
+      this.appState.loadingMessage.set('Loading completed!');
+      this.logger.info('Data loading process completed');
+
+      // Show success animation instead of waiting
+      this.appState.isLoading.set(false);
+      this.appState.showSuccess.set(true);
+    } catch (err) {
+      console.log('FAILURE IN LOAD DATA!');
+      console.error(err);
     }
-
-    // Attach the userPool to the relay service for further use.
-    this.relayService.setUserPool(userPool);
-
-    if (bootstrapPool) {
-      this.logger.debug('Closing bootstrap relay pool connections');
-      bootstrapPool.close(this.relayService.bootStrapRelays());
-    }
-
-    this.appState.loadingMessage.set('Loading completed!');
-    this.logger.info('Data loading process completed');
-
-    // Show success animation instead of waiting
-    this.appState.isLoading.set(false);
-    this.appState.showSuccess.set(true);
 
     // Hide success animation after 1.5 seconds
     setTimeout(() => {

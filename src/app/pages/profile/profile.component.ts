@@ -29,6 +29,7 @@ import { LayoutService } from '../../services/layout.service';
 import { ProfileHeaderComponent } from './profile-header/profile-header.component';
 import { ApplicationService } from '../../services/application.service';
 import { MediaPreviewDialogComponent } from '../../components/media-preview-dialog/media-preview.component';
+import { AccountStateService } from '../../services/account-state.service';
 
 @Component({
   selector: 'app-profile',
@@ -71,6 +72,7 @@ export class ProfileComponent {
   private dialog = inject(MatDialog);
   layoutService = inject(LayoutService);
   profileState = inject(ProfileStateService);
+  accountState = inject(AccountStateService);
 
   pubkey = signal<string>('');
   userMetadata = signal<NostrEvent | undefined>(undefined);
@@ -193,6 +195,12 @@ export class ProfileComponent {
           // this.followingList.set(followingList);
           this.profileState.followingList.set(followingList);
 
+          debugger;
+
+          // If this is the logged on user, also set the account state.
+          if (this.nostrService.pubkey() === pubkey) {
+            this.accountState.followingList.set(followingList);
+          }
 
           this.storage.saveEvent(evt);
 

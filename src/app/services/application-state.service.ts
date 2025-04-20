@@ -1,7 +1,5 @@
-import { computed, inject, Injectable, signal } from "@angular/core";
-import { NostrService } from "./nostr.service";
-import { StorageService } from "./storage.service";
-import { Router, RouterLink, RouterModule } from "@angular/router";
+import { inject, Injectable, signal } from "@angular/core";
+import { Router } from "@angular/router";
 
 @Injectable({
     providedIn: 'root'

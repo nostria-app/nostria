@@ -12,7 +12,7 @@ import { ScrollingModule } from '@angular/cdk/scrolling';
 import { ProfileStateService } from '../../../services/profile-state.service';
 import { LayoutService } from '../../../services/layout.service';
 import { LoggerService } from '../../../services/logger.service';
-import { UserProfileComponent } from '../user-profile/user-profile.component';
+import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
 
 @Component({
   selector: 'app-following',
