@@ -31,16 +31,12 @@
       <!-- Search input -->
       <div class="search-container">
         <mat-icon>search</mat-icon>
-        <input 
-          type="text" 
-          placeholder="Search people..." 
-          [value]="searchTerm()" 
-          (input)="updateSearch(($any($event.target).value))"
-        >
+        <input type="text" placeholder="Search people..." [value]="searchTerm()"
+          (input)="updateSearch(($any($event.target).value))">
         @if (searchTerm()) {
-          <button mat-icon-button (click)="updateSearch('')">
-            <mat-icon>close</mat-icon>
-          </button>
+        <button mat-icon-button (click)="updateSearch('')">
+          <mat-icon>close</mat-icon>
+        </button>
         }
       </div>
     </div>
@@ -48,160 +44,38 @@
 
   <mat-divider></mat-divider>
 
-  {{ filteredPeople().length }}
-
   <!-- Content section -->
   <div class="people-content">
     @if (isLoading()) {
-      <div class="loading-container">
-        <mat-spinner diameter="40"></mat-spinner>
-        <p>Loading people...</p>
-      </div>
+    <div class="loading-container">
+      <mat-spinner diameter="40"></mat-spinner>
+      <p>Loading people...</p>
+    </div>
     } @else if (error()) {
-      <div class="error-container">
-        <mat-icon color="warn">error</mat-icon>
-        <p>{{ error() }}</p>
-      </div>
+    <div class="error-container">
+      <mat-icon color="warn">error</mat-icon>
+      <p>{{ error() }}</p>
+    </div>
     } @else if (filteredPeople().length === 0) {
-      <div class="empty-container">
-        @if (searchTerm()) {
-          <mat-icon>search_off</mat-icon>
-          <p>No results for "{{ searchTerm() }}"</p>
-          <button mat-button color="primary" (click)="updateSearch('')">Clear search</button>
-        } @else {
-          <mat-icon>people_outline</mat-icon>
-          <p>You aren't following anyone yet</p>
-          <button mat-flat-button color="primary" routerLink="/explore">Explore people to follow</button>
-        }
-      </div>
+    <div class="empty-container">
+      @if (searchTerm()) {
+      <mat-icon>search_off</mat-icon>
+      <p>No results for "{{ searchTerm() }}"</p>
+      <button mat-button color="primary" (click)="updateSearch('')">Clear search</button>
+      } @else {
+      <mat-icon>people_outline</mat-icon>
+      <p>You aren't following anyone yet</p>
+      <button mat-flat-button color="primary" routerLink="/explore">Explore people to follow</button>
+      }
+    </div>
     } @else {
+    <cdk-virtual-scroll-viewport class="virtual-scroll-viewport" [itemSize]="itemSize" [minBufferPx]="minBufferPx"
+      [maxBufferPx]="maxBufferPx">
 
       @for (pubkey of filteredPeople(); track pubkey) {
-        <app-user-profile [pubkey]="pubkey" [view]="viewMode()" (click)="viewProfile(pubkey)"></app-user-profile>
+      <app-user-profile [pubkey]="pubkey" [view]="viewMode()" (click)="viewProfile(pubkey)"></app-user-profile>
       }
- 
-      <!-- @if (viewMode() === 'large') {
-        <div class="large-grid">
-          @for (person of filteredPeople(); track person.pubkey) {
-            <mat-card class="person-card large" (click)="viewProfile(person)">
-              <div class="person-avatar large">
-                @if (person.picture) {
-                  <img [src]="person.picture" alt="{{ person.displayName || person.name || 'User' }}" class="avatar-image">
-                } @else {
-                  <mat-icon class="default-avatar">account_circle</mat-icon>
-                }
-              </div>
-              <div class="person-info">
-                <h2>{{ person.displayName || person.name || getTruncatedNpub(person.pubkey) }}</h2>
-                @if (person.nip05) {
-                  <div class="nip05">
-                    <mat-icon class="verified-icon">verified</mat-icon>
-                    <span>{{ person.nip05 }}</span>
-                  </div>
-                }
-                @if (person.about) {
-                  <p class="bio">{{ person.about }}</p>
-                }
-                <button mat-icon-button class="unfollow-btn" (click)="unfollowUser($event, person.pubkey)" matTooltip="Unfollow">
-                  <mat-icon>person_remove</mat-icon>
-                </button>
-              </div>
-            </mat-card>
-          }
-        </div>
-      }
-
-      @if (viewMode() === 'medium') {
-        <div class="medium-grid">
-          @for (person of filteredPeople(); track person.pubkey) {
-            <mat-card class="person-card medium" (click)="viewProfile(person)">
-              <div class="person-avatar medium">
-                @if (person.picture) {
-                  <img [src]="person.picture" alt="{{ person.displayName || person.name || 'User' }}" class="avatar-image">
-                } @else {
-                  <mat-icon class="default-avatar">account_circle</mat-icon>
-                }
-              </div>
-              <div class="person-info">
-                <h3>{{ person.displayName || person.name || getTruncatedNpub(person.pubkey) }}</h3>
-                @if (person.nip05) {
-                  <div class="nip05 small">
-                    <mat-icon class="verified-icon small">verified</mat-icon>
-                    <span>{{ person.nip05 }}</span>
-                  </div>
-                }
-                <button mat-icon-button class="unfollow-btn small" (click)="unfollowUser($event, person.pubkey)" matTooltip="Unfollow">
-                  <mat-icon>person_remove</mat-icon>
-                </button>
-              </div>
-            </mat-card>
-          }
-        </div>
-      }
-
-      @if (viewMode() === 'small') {
-        <div class="small-grid">
-          @for (person of filteredPeople(); track person.pubkey) {
-            <div class="person-item small" (click)="viewProfile(person)">
-              <div class="person-avatar small">
-                @if (person.picture) {
-                  <img [src]="person.picture" alt="{{ person.displayName || person.name || 'User' }}" class="avatar-image">
-                } @else {
-                  <mat-icon class="default-avatar small">account_circle</mat-icon>
-                }
-              </div>
-              <div class="person-name small">{{ person.displayName || person.name || getTruncatedNpub(person.pubkey) }}</div>
-              <button mat-icon-button class="unfollow-btn tiny" (click)="unfollowUser($event, person.pubkey)" matTooltip="Unfollow">
-                <mat-icon class="small">person_remove</mat-icon>
-              </button>
-            </div>
-          }
-        </div>
-      }
-
-      @if (viewMode() === 'details') {
-        <mat-nav-list class="details-list">
-          @for (person of filteredPeople(); track person.pubkey) {
-            <div class="person-listitem">
-              <app-user-profile [pubkey]="person.pubkey"></app-user-profile>
-            </div>
-          }
-        </mat-nav-list>
-      }
-
-      @if (viewMode() === 'tiles') {
-        <div class="tiles-container">
-          @for (person of filteredPeople(); track person.pubkey) {
-            <mat-card class="tile-card" (click)="viewProfile(person)">
-              <mat-card-header>
-                <div mat-card-avatar>
-                  @if (person.picture) {
-                    <img [src]="person.picture" alt="{{ person.displayName || person.name || 'User' }}" class="avatar-image">
-                  } @else {
-                    <mat-icon>account_circle</mat-icon>
-                  }
-                </div>
-                <mat-card-title>{{ person.displayName || person.name || getTruncatedNpub(person.pubkey) }}</mat-card-title>
-                @if (person.nip05) {
-                  <mat-card-subtitle>
-                    <mat-icon class="verified-icon tiny">verified</mat-icon>
-                    {{ person.nip05 }}
-                  </mat-card-subtitle>
-                }
-              </mat-card-header>
-              @if (person.about) {
-                <mat-card-content>
-                  <p class="truncate">{{ person.about }}</p>
-                </mat-card-content>
-              }
-              <mat-card-actions>
-                <button mat-button color="primary" (click)="viewProfile(person); $event.stopPropagation()">VIEW</button>
-                <button mat-button color="warn" (click)="unfollowUser($event, person.pubkey)">UNFOLLOW</button>
-              </mat-card-actions>
-            </mat-card>
-          }
-        </div>
-      } -->
+    </cdk-virtual-scroll-viewport>
     }
   </div>
 </div>

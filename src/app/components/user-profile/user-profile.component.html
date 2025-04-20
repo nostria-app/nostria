@@ -1,78 +1,24 @@
-@switch (view()) {
-  @case ('large') {
-    <div class="user-profile large" (click)="layout.navigateToProfile(pubkey())">
-      <div class="user-profile-avatar large-avatar">
-        @if (isLoading()) {
-          <mat-spinner diameter="64" color="primary"></mat-spinner>
-        } @else if (profile()?.content?.picture) {
-          <img [src]="profile().content.picture" onerror="this.onerror=null; this.src='images/picture-failure.png';" alt="User Avatar" class="user-avatar large-img" />
-        } @else {
-          <mat-icon class="default-user-avatar large-icon">account_circle</mat-icon>
-        }
-      </div>
-      <div class="large-content">
-        <h2 class="large-name">
-          @if (isLoading()) {
-            Loading...
-          } @else if (profile() && !profile().isEmpty && profile().content) {
-            @if (profile().content.display_name) {
-              {{ profile().content.display_name }}
-            } @else if (profile().content.name) {
-              {{ profile().content.name }}
-            } @else {
-              [No name]
-            }
-          } @else {
-            [Not found]
-          }
-        </h2>
-        <div class="large-npub">{{ npub() }}</div>
-      </div>
+<div [ngClass]="['user-profile', view()]" (click)="layout.navigateToProfile(pubkey())">
+  <div class="user-profile-container">
+    <!-- Avatar section - single image element -->
+    <div class="user-profile-avatar">
+      @if (isLoading()) {
+        <mat-spinner [diameter]="getSpinnerSize()" color="primary"></mat-spinner>
+      } @else if (profile()?.content?.picture) {
+        <img 
+          [src]="profile().content.picture" 
+          onerror="this.onerror=null; this.src='images/picture-failure.png';" 
+          alt="User Avatar" 
+          class="user-avatar" />
+      } @else {
+        <mat-icon class="default-user-avatar">account_circle</mat-icon>
+      }
     </div>
-  }
-  @case ('medium') {
-    <div class="user-profile medium" (click)="layout.navigateToProfile(pubkey())">
-      <div class="user-profile-avatar medium-avatar">
-        @if (isLoading()) {
-          <mat-spinner diameter="48" color="primary"></mat-spinner>
-        } @else if (profile()?.content?.picture) {
-          <img [src]="profile().content.picture" onerror="this.onerror=null; this.src='images/picture-failure.png';" alt="User Avatar" class="user-avatar medium-img" />
-        } @else {
-          <mat-icon class="default-user-avatar medium-icon">account_circle</mat-icon>
-        }
-      </div>
-      <div class="medium-info">
-        <div class="medium-name">
-          @if (isLoading()) {
-            Loading...
-          } @else if (profile() && !profile().isEmpty && profile().content) {
-            @if (profile().content.display_name) {
-              {{ profile().content.display_name }}
-            } @else if (profile().content.name) {
-              {{ profile().content.name }}
-            } @else {
-              [No name]
-            }
-          } @else {
-            [Not found]
-          }
-        </div>
-        <div class="medium-npub">{{ npub() }}</div>
-      </div>
-    </div>
-  }
-  @case ('small') {
-    <div class="user-profile small" (click)="layout.navigateToProfile(pubkey())">
-      <div class="user-profile-avatar small-avatar">
-        @if (isLoading()) {
-          <mat-spinner diameter="32" color="primary"></mat-spinner>
-        } @else if (profile()?.content?.picture) {
-          <img [src]="profile().content.picture" onerror="this.onerror=null; this.src='images/picture-failure.png';" alt="User Avatar" class="user-avatar small-img" />
-        } @else {
-          <mat-icon class="default-user-avatar small-icon">account_circle</mat-icon>
-        }
-      </div>
-      <span class="small-name">
+
+    <!-- Content section with conditional rendering based on view -->
+    <div class="user-profile-content">
+      <!-- Name section -->
+      <div class="user-profile-name">
         @if (isLoading()) {
           Loading...
         } @else if (profile() && !profile().isEmpty && profile().content) {
@@ -86,99 +32,17 @@
         } @else {
           [Not found]
         }
-      </span>
+      </div>
+
+      <!-- NPUB section - only shown in appropriate views -->
+      @if (view() === 'large' || view() === 'medium' || view() === 'list' || view() === 'details') {
+        <div class="user-profile-npub">{{ npub() }}</div>
+      }
+
+      <!-- About section - only shown in details view -->
+      @if (view() === 'details' && profile() && profile().content && profile().content.about) {
+        <p class="user-profile-about">{{ profile().content.about }}</p>
+      }
     </div>
-  }
-  @case ('details') {
-    <mat-card class="user-profile details-card" (click)="layout.navigateToProfile(pubkey())">
-      <mat-card-header>
-        <div mat-card-avatar>
-          @if (isLoading()) {
-            <mat-spinner diameter="40" color="primary"></mat-spinner>
-          } @else if (profile()?.content?.picture) {
-            <img [src]="profile().content.picture" onerror="this.onerror=null; this.src='images/picture-failure.png';" alt="User Avatar" class="user-avatar" />
-          } @else {
-            <mat-icon class="default-user-avatar">account_circle</mat-icon>
-          }
-        </div>
-        <mat-card-title>
-          @if (isLoading()) {Loading...} @else if (error()) {
-            <mat-icon>error</mat-icon> Error loading user profile
-          } @else if (profile() && !profile().isEmpty && profile().content) {
-            @if (profile().content.display_name) {{{ profile().content.display_name }}} @else if (profile().content.name)
-            {{{ profile().content.name }}} @else {[No name]}
-          } @else {[Not found]}
-        </mat-card-title>
-        <mat-card-subtitle>{{ npub() }}</mat-card-subtitle>
-      </mat-card-header>
-      <mat-card-content>
-        @if (profile() && profile().content && profile().content.about) {
-          <p>{{ profile().content.about }}</p>
-        }
-      </mat-card-content>
-    </mat-card>
-  }
-  @case ('tiles') {
-    <mat-card class="user-profile tile-card" (click)="layout.navigateToProfile(pubkey())">
-      <div class="tile-img-container">
-        @if (isLoading()) {
-          <mat-spinner diameter="40" color="primary"></mat-spinner>
-        } @else if (profile()?.content?.picture) {
-          <img [src]="profile().content.picture" onerror="this.onerror=null; this.src='images/picture-failure.png';" alt="User Avatar" class="tile-img" />
-        } @else {
-          <mat-icon class="default-user-avatar tile-icon">account_circle</mat-icon>
-        }
-      </div>
-      <mat-card-content class="tile-content">
-        <div class="tile-name">
-          @if (isLoading()) {Loading...} @else if (profile() && !profile().isEmpty && profile().content) {
-            @if (profile().content.display_name) {{{ profile().content.display_name }}} @else if (profile().content.name)
-            {{{ profile().content.name }}} @else {[No name]}
-          } @else {[Not found]}
-        </div>
-      </mat-card-content>
-    </mat-card>
-  }
-  @case ('grid') {
-    <div class="user-profile grid-item" (click)="layout.navigateToProfile(pubkey())">
-      <div class="grid-img-container">
-        @if (isLoading()) {
-          <mat-spinner diameter="36" color="primary"></mat-spinner>
-        } @else if (profile()?.content?.picture) {
-          <img [src]="profile().content.picture" onerror="this.onerror=null; this.src='images/picture-failure.png';" alt="User Avatar" class="grid-img" />
-        } @else {
-          <mat-icon class="default-user-avatar grid-icon">account_circle</mat-icon>
-        }
-      </div>
-      <div class="grid-name">
-        @if (isLoading()) {Loading...} @else if (profile() && !profile().isEmpty && profile().content) {
-          @if (profile().content.display_name) {{{ profile().content.display_name }}} @else if (profile().content.name)
-          {{{ profile().content.name }}} @else {[No name]}
-        } @else {[Not found]}
-      </div>
-    </div>
-  }
-  @default {
-    <!-- Default 'list' view -->
-    <mat-list-item class="user-profile" (click)="layout.navigateToProfile(pubkey())">
-      <div class="user-profile-avatar" matListItemAvatar>
-          @if (isLoading()) {
-              <mat-spinner diameter="40" color="primary"></mat-spinner>
-          } @else if (profile()?.content?.picture) {
-              <img [src]="profile().content.picture" onerror="this.onerror=null; this.src='images/picture-failure.png';" alt="User Avatar" class="user-avatar" />
-          } @else {
-              <mat-icon class="default-user-avatar">account_circle</mat-icon>
-          }
-      </div>
-      <div matListItemTitle>@if (isLoading()) {Loading...} @else if (error()) {
-              <mat-icon>error</mat-icon> Error loading user profile
-          } @else if (profile() && !profile().isEmpty && profile().content) {
-              @if (profile().content.display_name) {{{ profile().content.display_name }}} @else if (profile().content.name)
-              {{{ profile().content.name }}} @else {[No name]}
-          } @else {[Not found]
-          }
-      </div>
-      <div matListItemLine class="following-item-npub">{{ npub() }}</div>
-    </mat-list-item>
-  }
-}
+  </div>
+</div>

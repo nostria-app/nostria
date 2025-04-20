@@ -71,8 +71,19 @@
 
 .people-content {
   flex: 1;
-  overflow: auto;
+  overflow: hidden;  // Changed from auto to hidden to let virtual scroll handle it
   padding: 1rem;
+}
+
+// Add virtual scrolling styles
+.virtual-scroll-viewport {
+  height: 100%;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.full-width-list {
+  width: 100%;
 }
 
 .loading-container, .error-container, .empty-container {
@@ -98,6 +109,7 @@
 
 // Large icons view
 .large-grid {
+  width: 100%;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 1rem;
@@ -198,6 +210,7 @@
 
 // Medium icons view
 .medium-grid {
+  width: 100%;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 1rem;
@@ -288,6 +301,7 @@
 
 // Small icons view
 .small-grid {
+  width: 100%;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
   gap: 1rem;
@@ -378,6 +392,7 @@
 
 // Tiles view
 .tiles-container {
+  width: 100%;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1rem;
