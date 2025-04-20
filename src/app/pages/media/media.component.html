@@ -60,8 +60,8 @@
           </div>
         } @else {
           <div class="media-grid">
-            @for (item of images(); track item.url) {
-              <div class="media-card" [class.selected]="isSelected(item.url)" (click)="toggleItemSelection(item.url)">
+            @for (item of images(); track item.sha256) {
+              <div class="media-card" [class.selected]="isSelected(item.sha256)" (click)="toggleItemSelection(item.sha256)">
                 <div class="media-thumbnail">
                   <div class="selection-indicator">
                     <mat-icon>check_circle</mat-icon>
@@ -127,8 +127,8 @@
           </div>
         } @else {
           <div class="media-grid">
-            @for (item of videos(); track item.url) {
-              <div class="media-card" [class.selected]="isSelected(item.url)" (click)="toggleItemSelection(item.url)">
+            @for (item of videos(); track item.sha256) {
+              <div class="media-card" [class.selected]="isSelected(item.sha256)" (click)="toggleItemSelection(item.sha256)">
                 <div class="media-thumbnail video-thumbnail">
                   <div class="selection-indicator">
                     <mat-icon>check_circle</mat-icon>
