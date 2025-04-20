@@ -9,6 +9,7 @@ import { LayoutService } from '../../services/layout.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { ViewMode } from '../../interfaces';
 import { MatCardModule } from '@angular/material/card';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
     selector: 'app-user-profile',
@@ -18,7 +19,8 @@ import { MatCardModule } from '@angular/material/card';
         MatIconModule,
         MatListModule,
         MatProgressSpinnerModule,
-        MatCardModule
+        MatCardModule,
+        MatTooltipModule
     ],
     templateUrl: './user-profile.component.html',
     styleUrl: './user-profile.component.scss'
@@ -232,5 +234,33 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
             default: // 'list'
                 return 40;
         }
+    }
+
+    /**
+     * Gets the tooltip content for the profile avatar
+     */
+    getTooltipContent(): string {
+        if (!this.profile() || this.profile().isEmpty || !this.profile().content) {
+            return 'Profile not found';
+        }
+        
+        const content = this.profile().content;
+        let tooltipText = '';
+        
+        // Add display name or name
+        if (content.display_name) {
+            tooltipText += content.display_name;
+        } else if (content.name) {
+            tooltipText += content.name;
+        } else {
+            tooltipText += '[No name]';
+        }
+        
+        // Add about text if available
+        if (content.about) {
+            tooltipText += '\n\n' + content.about;
+        }
+        
+        return tooltipText;
     }
 }

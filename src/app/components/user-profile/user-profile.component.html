@@ -12,7 +12,10 @@
     }
     
     <!-- Avatar section - single image element -->
-    <div class="user-profile-avatar">
+    <div class="user-profile-avatar" 
+         [matTooltip]="view() === 'large' || view() === 'medium' || view() === 'small' ? getTooltipContent() : ''"
+         [matTooltipClass]="'user-profile-tooltip'"
+         matTooltipPosition="above">
       @if (isLoading()) {
         <mat-spinner [diameter]="getSpinnerSize()" color="primary"></mat-spinner>
       } @else if (profile()?.content?.picture) {

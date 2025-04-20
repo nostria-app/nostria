@@ -321,3 +321,11 @@
 ::ng-deep .mat-mdc-list-item-content {
   width: 100%;
 }
+
+// Custom tooltip styles
+::ng-deep .user-profile-tooltip {
+  white-space: pre-line; // Preserves line breaks in the tooltip
+  max-width: 250px;     // Limit tooltip width
+  font-size: 12px;
+  line-height: 1.4;
+}
