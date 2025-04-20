@@ -9,7 +9,7 @@
     <div class="controls-section">
       <!-- View options -->
       <div class="view-options">
-        <mat-button-toggle-group [value]="viewMode()">
+        <mat-button-toggle-group hideSingleSelectionIndicator="true" [value]="viewMode()">
           <mat-button-toggle value="large" (click)="changeViewMode('large')" matTooltip="Large icons">
             <mat-icon>view_module</mat-icon>
           </mat-button-toggle>
@@ -73,7 +73,7 @@
       [maxBufferPx]="maxBufferPx">
 
       <!-- Apply different container classes based on viewMode() -->
-      <div [ngClass]="{
+      <div class="people-container" [ngClass]="{
         'large-grid': viewMode() === 'large' || viewMode() === 'grid',
         'medium-grid': viewMode() === 'medium',
         'small-grid': viewMode() === 'small',

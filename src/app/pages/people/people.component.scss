@@ -71,15 +71,15 @@
 
 .people-content {
   flex: 1;
-  overflow: hidden;  // Changed from auto to hidden to let virtual scroll handle it
-  padding: 1rem;
+  overflow: auto;
+  padding: 0;
 }
 
 // Add virtual scrolling styles
 .virtual-scroll-viewport {
   height: 100%;
   width: 100%;
-  overflow-x: hidden;
+  overflow-x: hidden; // Changed back to hidden since we're wrapping items
 }
 
 .full-width-list {
@@ -109,16 +109,19 @@
 
 // Large icons view
 .large-grid {
-  width: 100%;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1rem;
+  width: 100%; // Changed back to 100% to fill container
+  display: flex;
+  flex-wrap: wrap; // Changed to wrap
+  gap: 0.5rem; // Added gap between items
+  justify-content: flex-start; // Added to ensure proper alignment
 
   .person-card.large {
+    width: auto; // Changed from 300px to auto to match avatar size
+    flex-shrink: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 1.5rem;
+    padding: 0.75rem; // Reduced from 1.5rem
     cursor: pointer;
     box-shadow: var(--mat-sys-level1);
     transition: box-shadow 0.3s ease;
@@ -210,16 +213,19 @@
 
 // Medium icons view
 .medium-grid {
-  width: 100%;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 1rem;
+  width: 100%; // Changed back to 100% to fill container
+  display: flex;
+  flex-wrap: wrap; // Changed to wrap
+  gap: 0.4rem; // Added gap between items
+  justify-content: flex-start; // Added to ensure proper alignment
 
   .person-card.medium {
+    width: auto; // Changed from 220px to auto to match avatar size
+    flex-shrink: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 1rem;
+    padding: 0.5rem; // Reduced from 1rem
     cursor: pointer;
     box-shadow: var(--mat-sys-level1);
     transition: box-shadow 0.3s ease;
@@ -301,18 +307,21 @@
 
 // Small icons view
 .small-grid {
-  width: 100%;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-  gap: 1rem;
+  width: 100%; // Changed back to 100% to fill container
+  display: flex;
+  flex-wrap: wrap; // Changed to wrap
+  gap: 0.3rem; // Added gap between items
+  justify-content: flex-start; // Added to ensure proper alignment
 
   .person-item.small {
+    width: auto; // Changed from 100px to auto to match avatar size
+    flex-shrink: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     cursor: pointer;
     position: relative;
-    padding: 0.5rem;
+    padding: 0.25rem; // Reduced from 0.5rem
     border-radius: 4px;
     transition: background-color 0.2s ease;
 
@@ -378,7 +387,6 @@
 
 // Details view
 .details-list {
-  padding: 0;
 
   .person-listitem {
     cursor: pointer;
@@ -392,12 +400,14 @@
 
 // Tiles view
 .tiles-container {
-  width: 100%;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1rem;
+  width: 100%; // Changed back to 100% to fill container
+  display: flex;
+  flex-wrap: wrap; // Changed to wrap
+  gap: 0.5rem; // Added gap between tile cards
 
   .tile-card {
+    width: 280px;
+    flex-shrink: 0;
     cursor: pointer;
     box-shadow: var(--mat-sys-level1);
     transition: box-shadow 0.3s ease;
@@ -452,21 +462,6 @@
   }
 }
 
-// Responsive adjustments
-@media (max-width: 480px) {
-  .large-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .medium-grid {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  }
-
-  .small-grid {
-    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-  }
-
-  .tiles-container {
-    grid-template-columns: 1fr;
-  }
+.people-container {
+  padding: 0.6rem;
 }
