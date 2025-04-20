@@ -36,6 +36,7 @@ export class MediaUploadDialogComponent {
   isImage = signal<boolean>(false);
   isVideo = signal<boolean>(false);
   showOriginalOption = signal<boolean>(false);
+  isDragging = signal<boolean>(false);
   
   constructor() {
     this.uploadForm = this.fb.group({
@@ -47,25 +48,29 @@ export class MediaUploadDialogComponent {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files[0]) {
       const file = input.files[0];
-      this.selectedFile.set(file);
-      
-      // Check if the file is an image or video
-      this.isImage.set(file.type.startsWith('image/'));
-      this.isVideo.set(file.type.startsWith('video/'));
-      
-      // Only show original option for images and videos
-      this.showOriginalOption.set(this.isImage() || this.isVideo());
-      
-      // Create a preview if it's an image
-      if (this.isImage()) {
-        const reader = new FileReader();
-        reader.onload = () => {
-          this.previewUrl.set(reader.result as string);
-        };
-        reader.readAsDataURL(file);
-      } else {
-        this.previewUrl.set(null);
-      }
+      this.processFile(file);
+    }
+  }
+  
+  processFile(file: File): void {
+    this.selectedFile.set(file);
+    
+    // Check if the file is an image or video
+    this.isImage.set(file.type.startsWith('image/'));
+    this.isVideo.set(file.type.startsWith('video/'));
+    
+    // Only show original option for images and videos
+    this.showOriginalOption.set(this.isImage() || this.isVideo());
+    
+    // Create a preview if it's an image
+    if (this.isImage()) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        this.previewUrl.set(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      this.previewUrl.set(null);
     }
   }
   
@@ -100,5 +105,30 @@ export class MediaUploadDialogComponent {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+
+  // Drag and drop handlers
+  onDragOver(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragging.set(true);
+  }
+
+  onDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragging.set(false);
+  }
+
+  onDrop(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragging.set(false);
+    
+    const files = event.dataTransfer?.files;
+    if (files && files.length > 0) {
+      // Take only the first file
+      this.processFile(files[0]);
+    }
   }
 }

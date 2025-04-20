@@ -54,8 +54,8 @@
           </div>
         } @else {
           <div class="media-grid">
-            @for (item of images(); track item.sha256) {
-              <div class="media-card" [class.selected]="isSelected(item.sha256)" (click)="toggleItemSelection(item.sha256)">
+            @for (item of images(); track item.url) {
+              <div class="media-card" [class.selected]="isSelected(item.url)" (click)="toggleItemSelection(item.url)">
                 <div class="media-thumbnail">
                   <img [src]="item.url" [alt]="item.url || 'Image'" (click)="navigateToDetails($event, item)" loading="lazy">
                   <div class="selection-indicator">
@@ -94,8 +94,8 @@
           </div>
         } @else {
           <div class="media-grid">
-            @for (item of videos(); track item.sha256) {
-              <div class="media-card" [class.selected]="isSelected(item.sha256)" (click)="toggleItemSelection(item.sha256)">
+            @for (item of videos(); track item.url) {
+              <div class="media-card" [class.selected]="isSelected(item.url)" (click)="toggleItemSelection(item.url)">
                 <div class="media-thumbnail video-thumbnail">
                   <div class="video-preview">
                     <video [src]="item.url" preload="metadata" (click)="navigateToDetails($event, item)"></video>
