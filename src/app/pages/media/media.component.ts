@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect, Inject } from '@angular/core';
+import { Component, inject, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -106,15 +106,26 @@ export class MediaComponent {
 
   openUploadDialog(): void {
     const dialogRef = this.dialog.open(MediaUploadDialogComponent, {
-      width: '500px'
+      width: '500px',
+      disableClose: true // Prevent dialog from closing while uploading
     });
 
     dialogRef.afterClosed().subscribe(async (result) => {
       if (result && result.file) {
         try {
+          // Set uploading state to true
+          this.mediaService.uploading.set(true);
+          
           await this.mediaService.uploadFile(result.file, result.uploadOriginal);
+          
+          // Set the uploading state to false
+          this.mediaService.uploading.set(false);
+          
           this.snackBar.open('Media uploaded successfully', 'Close', { duration: 3000 });
         } catch (error) {
+          // Set the uploading state to false on error
+          this.mediaService.uploading.set(false);
+          
           this.snackBar.open('Failed to upload media', 'Close', { duration: 3000 });
         }
       }

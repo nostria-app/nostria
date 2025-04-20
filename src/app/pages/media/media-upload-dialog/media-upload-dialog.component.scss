@@ -119,6 +119,38 @@
   border-radius: 8px;
 }
 
+.upload-progress {
+  margin-top: 16px;
+  padding: 16px;
+  background-color: var(--mat-sys-color-surface-container-lowest);
+  border-radius: 8px;
+  
+  p {
+    margin: 8px 0 0 0;
+    text-align: center;
+    color: var(--mat-sys-color-on-surface-variant);
+  }
+}
+
 .full-width {
   width: 100%;
+}
+
+.upload-button {
+  min-width: 100px;
+  position: relative;
+  
+  .spinner-container {
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 8px;
+    
+    mat-spinner {
+      display: inline-block;
+    }
+  }
+  
+  span {
+    vertical-align: middle;
+  }
 }

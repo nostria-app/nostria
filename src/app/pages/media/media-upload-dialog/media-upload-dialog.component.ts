@@ -8,6 +8,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 @Component({
   selector: 'app-media-upload-dialog',
@@ -22,6 +23,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
     MatInputModule,
     MatProgressBarModule,
     MatCheckboxModule,
+    MatProgressSpinnerModule
   ],
   templateUrl: './media-upload-dialog.component.html',
   styleUrls: ['./media-upload-dialog.component.scss']
@@ -37,6 +39,7 @@ export class MediaUploadDialogComponent {
   isVideo = signal<boolean>(false);
   showOriginalOption = signal<boolean>(false);
   isDragging = signal<boolean>(false);
+  isUploading = signal<boolean>(false); // Add loading state signal
   
   constructor() {
     this.uploadForm = this.fb.group({
@@ -82,9 +85,11 @@ export class MediaUploadDialogComponent {
   
   onSubmit(): void {
     if (this.uploadForm.valid && this.selectedFile()) {
+      this.isUploading.set(true); // Set uploading state to true when upload starts
       this.dialogRef.close({
         file: this.selectedFile(),
-        uploadOriginal: this.uploadForm.value.uploadOriginal
+        uploadOriginal: this.uploadForm.value.uploadOriginal,
+        isUploading: this.isUploading // Pass the signal to the parent component
       });
     }
   }
