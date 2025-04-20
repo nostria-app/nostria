@@ -112,10 +112,7 @@ export class MediaComponent {
     dialogRef.afterClosed().subscribe(async (result) => {
       if (result && result.file) {
         try {
-          await this.mediaService.uploadFile(result.file, {
-            title: result.title,
-            description: result.description
-          });
+          await this.mediaService.uploadFile(result.file, result.uploadOriginal);
           this.snackBar.open('Media uploaded successfully', 'Close', { duration: 3000 });
         } catch (error) {
           this.snackBar.open('Failed to upload media', 'Close', { duration: 3000 });
