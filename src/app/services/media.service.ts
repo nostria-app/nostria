@@ -12,7 +12,6 @@ import { sha256 } from '@noble/hashes/sha2';
 import { bytesToHex } from '@noble/hashes/utils';
 
 export interface MediaItem {
-  id: string;
   sha256: string; // SHA-256 hash of file (NIP-94)
   type: string;
   url: string;
@@ -83,7 +82,7 @@ export class MediaService {
 
   async getFileById(id: string): Promise<MediaItem> {
     const media = this.mediaItems();
-    const item = media.find(m => m.sha256 === id || m.id === id);
+    const item = media.find(m => m.sha256 === id);
 
     if (!item) {
       throw new Error('Media item not found');

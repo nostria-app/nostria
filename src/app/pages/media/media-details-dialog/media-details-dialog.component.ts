@@ -60,7 +60,7 @@ export class MediaDetailsDialogComponent {
     if (this.metadataForm.valid) {
       try {
         await this.mediaService.updateMetadata(
-          this.mediaItem.id, 
+          this.mediaItem.sha256, 
           this.metadataForm.value
         );
         this.mediaItem = {

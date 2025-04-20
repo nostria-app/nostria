@@ -221,19 +221,19 @@ export class MediaComponent {
     this.router.navigate(['/media', 'details', item.sha256]);
   }
 
-  toggleItemSelection(id: string): void {
+  toggleItemSelection(sha256: string): void {
     this.selectedItems.update(items => {
-      if (items.includes(id)) {
-        return items.filter(itemId => itemId !== id);
+      if (items.includes(sha256)) {
+        return items.filter(itemSha256 => itemSha256 !== sha256);
       } else {
-        return [...items, id];
+        return [...items, sha256];
       }
     });
   }
 
   selectAll(): void {
     const currentMedia = this.activeTab() === 'images' ? this.images() : this.activeTab() === 'videos' ? this.videos() : this.files();
-    this.selectedItems.set(currentMedia.map(item => item.id));
+    this.selectedItems.set(currentMedia.map(item => item.sha256));
   }
 
   clearSelection(): void {
@@ -241,6 +241,7 @@ export class MediaComponent {
   }
 
   async deleteSelected(sha256?: string): Promise<void> {
+    debugger;
     const itemsToDelete = sha256 ? [sha256] : this.selectedItems();
     const confirmMessage = itemsToDelete.length === 1 
       ? 'Are you sure you want to delete this item?' 
@@ -270,20 +271,20 @@ export class MediaComponent {
     }
   }
 
-  async mirrorItem(id: string): Promise<void> {
+  async mirrorItem(sha256: string): Promise<void> {
     try {
-      await this.mediaService.mirrorFile(id);
+      await this.mediaService.mirrorFile(sha256);
       this.snackBar.open('Media mirrored successfully', 'Close', { duration: 3000 });
     } catch (error) {
       this.snackBar.open('Failed to mirror media', 'Close', { duration: 3000 });
     }
   }
 
-  async reportItem(id: string): Promise<void> {
+  async reportItem(sha256: string): Promise<void> {
     const reason = prompt('Please provide a reason for reporting this media:');
     if (reason) {
       try {
-        await this.mediaService.reportFile(id, reason);
+        await this.mediaService.reportFile(sha256, reason);
         this.snackBar.open('Media reported successfully', 'Close', { duration: 3000 });
       } catch (error) {
         this.snackBar.open('Failed to report media', 'Close', { duration: 3000 });
@@ -297,8 +298,8 @@ export class MediaComponent {
     this.mediaService.getFiles();
   }
 
-  isSelected(id: string): boolean {
-    return this.selectedItems().includes(id);
+  isSelected(sha256: string): boolean {
+    return this.selectedItems().includes(sha256);
   }
 
   setActiveTab(tab: 'images' | 'videos' | 'files' | 'servers'): void {
