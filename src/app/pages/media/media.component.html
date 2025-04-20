@@ -97,8 +97,39 @@
             @for (item of videos(); track item.sha256) {
               <div class="media-card" [class.selected]="isSelected(item.sha256)" (click)="toggleItemSelection(item.sha256)">
                 <div class="media-thumbnail video-thumbnail">
-                  <mat-icon class="video-icon">play_circle_filled</mat-icon>
-                  <div class="video-name">{{ getFileName(item.url) }}</div>
+                  <div class="video-preview">
+                    <video [src]="item.url" preload="metadata" (click)="navigateToDetails($event, item)"></video>
+                    <button mat-icon-button class="play-button" (click)="navigateToDetails($event, item)">
+                      <mat-icon>play_circle_filled</mat-icon>
+                    </button>
+                  </div>
+                  <div class="video-info">
+                    <span class="video-name">{{ getFileName(item.url) }}</span>
+                    <span class="video-size">{{ formatFileSize(item.size) }}</span>
+                  </div>
+                  <div class="video-actions">
+                    <button mat-icon-button [matMenuTriggerFor]="videoMenu" (click)="$event.stopPropagation()">
+                      <mat-icon>more_vert</mat-icon>
+                    </button>
+                    <mat-menu #videoMenu="matMenu">
+                      <button mat-menu-item (click)="openDetailsDialog(item)">
+                        <mat-icon>info</mat-icon>
+                        <span>Details</span>
+                      </button>
+                      <a mat-menu-item [href]="item.url" target="_blank" download>
+                        <mat-icon>download</mat-icon>
+                        <span>Download</span>
+                      </a>
+                      <button mat-menu-item (click)="mirrorItem(item.sha256)">
+                        <mat-icon>cloud_upload</mat-icon>
+                        <span>Mirror</span>
+                      </button>
+                      <button mat-menu-item color="warn" (click)="deleteSelected(item.sha256)">
+                        <mat-icon color="warn">delete</mat-icon>
+                        <span class="delete-text">Delete</span>
+                      </button>
+                    </mat-menu>
+                  </div>
                   <div class="selection-indicator">
                     <mat-icon>check_circle</mat-icon>
                   </div>
