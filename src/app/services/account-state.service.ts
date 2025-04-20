@@ -4,7 +4,7 @@ import { NostrEvent } from '../interfaces';
 @Injectable({
   providedIn: 'root'
 })
-export class ProfileStateService {
+export class AccountStateService {
   // Signal to store the current profile's following list
   followingList = signal<string[]>([]);
   

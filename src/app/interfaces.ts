@@ -6,3 +6,5 @@ export const MEDIA_SERVERS_EVENT_KIND = 10063;
 export interface NostrEvent extends Event {
     content: any;
 }
+
+export type ViewMode = 'large' | 'medium' | 'small' | 'details' | 'tiles' | 'list' | 'grid';

@@ -56,6 +56,11 @@ export const routes: Routes = [
       { path: 'details/:id', loadComponent: () => import('./pages/media/media-details/media-details.component').then(mod => mod.MediaDetailsComponent) }
     ]
   },
+  { 
+    path: 'people', 
+    loadComponent: () => import('./pages/people/people.component').then(m => m.PeopleComponent), 
+    title: 'People' 
+  },
   { path: 'profile', redirectTo: '/credentials' },
   { path: '**', redirectTo: '/home' }
 ];

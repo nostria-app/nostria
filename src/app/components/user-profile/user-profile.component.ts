@@ -2,11 +2,13 @@ import { Component, effect, inject, input, output, signal, untracked, ElementRef
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute } from '@angular/router';
-import { NostrService } from '../../../services/nostr.service';
-import { LoggerService } from '../../../services/logger.service';
+import { NostrService } from '../../services/nostr.service';
+import { LoggerService } from '../../services/logger.service';
 import { MatListModule } from '@angular/material/list';
-import { LayoutService } from '../../../services/layout.service';
+import { LayoutService } from '../../services/layout.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { ViewMode } from '../../interfaces';
+import { MatCardModule } from '@angular/material/card';
 
 @Component({
     selector: 'app-user-profile',
@@ -15,7 +17,8 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
         CommonModule,
         MatIconModule,
         MatListModule,
-        MatProgressSpinnerModule
+        MatProgressSpinnerModule,
+        MatCardModule
     ],
     templateUrl: './user-profile.component.html',
     styleUrl: './user-profile.component.scss'
@@ -31,6 +34,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
     profile = signal<any>(null);
     isLoading = signal(false);
     error = signal<string>('');
+    view = input<ViewMode>('list');
     
     // Flag to track if component is visible
     private isVisible = signal(false);
