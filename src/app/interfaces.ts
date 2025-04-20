@@ -7,4 +7,4 @@ export interface NostrEvent extends Event {
     content: any;
 }
 
-export type ViewMode = 'large' | 'medium' | 'small' | 'details' | 'tiles' | 'list' | 'grid';
+export type ViewMode = 'large' | 'medium' | 'small' | 'details' | 'list' | 'tiles' | 'grid';

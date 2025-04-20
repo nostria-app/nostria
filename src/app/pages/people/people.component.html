@@ -3,7 +3,7 @@
   <div class="people-header">
     <div class="title-section">
       <h1>People</h1>
-      <p>Manage the people you follow</p>
+      <p>Explore the people you follow</p>
     </div>
 
     <div class="controls-section">
@@ -69,12 +69,22 @@
       }
     </div>
     } @else {
-    <cdk-virtual-scroll-viewport class="virtual-scroll-viewport" [itemSize]="itemSize" [minBufferPx]="minBufferPx"
+    <cdk-virtual-scroll-viewport class="virtual-scroll-viewport" [itemSize]="itemSize()" [minBufferPx]="minBufferPx"
       [maxBufferPx]="maxBufferPx">
 
-      @for (pubkey of filteredPeople(); track pubkey) {
-      <app-user-profile [pubkey]="pubkey" [view]="viewMode()" (click)="viewProfile(pubkey)"></app-user-profile>
-      }
+      <!-- Apply different container classes based on viewMode() -->
+      <div [ngClass]="{
+        'large-grid': viewMode() === 'large' || viewMode() === 'grid',
+        'medium-grid': viewMode() === 'medium',
+        'small-grid': viewMode() === 'small',
+        'details-list': viewMode() === 'details' || viewMode() === 'list',
+        'tiles-container': viewMode() === 'tiles'
+      }">
+        @for (pubkey of filteredPeople(); track pubkey) {
+        <app-user-profile [pubkey]="pubkey" [view]="viewMode()" (click)="viewProfile(pubkey)"></app-user-profile>
+        }
+      </div>
+
     </cdk-virtual-scroll-viewport>
     }
   </div>
