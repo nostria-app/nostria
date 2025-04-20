@@ -51,7 +51,7 @@ export class MediaServerDialogComponent implements OnInit {
     this.serverForm = this.fb.group({
       url: [this.dialogData || '', [
         Validators.required,
-        Validators.pattern('^https://.+')
+        Validators.pattern('^http://.+')
       ]],
       name: [this.dialogData || ''],
       description: [this.dialogData || '']

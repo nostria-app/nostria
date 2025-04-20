@@ -8,6 +8,8 @@ import { EventTemplate, finalizeEvent } from 'nostr-tools';
 import { RelayService } from './relay.service';
 import { MEDIA_SERVERS_EVENT_KIND } from '../interfaces';
 import { NostrTagKey, standardizedTag, StandardizedTagType } from '../standardized-tags';
+import { sha256 } from '@noble/hashes/sha2';
+import { bytesToHex } from '@noble/hashes/utils';
 
 export interface MediaItem {
   id: string;
@@ -150,9 +152,11 @@ export class MediaService {
 
       for (const server of servers) {
         try {
+          const headers = await this.getAuthHeaders('List Files', 'list');
+
           const url = server.endsWith('/') ? server : `${server}/`;
           const response = await fetch(`${url}list/${pubkey}`, {
-            headers: await this.getAuthHeaders('List Files')
+            headers: headers
           });
 
           if (!response.ok) {
@@ -341,7 +345,25 @@ export class MediaService {
     }
   }
 
-  async uploadFile(file: File, metadata: { title?: string, description?: string }): Promise<MediaItem> {
+  determineAction(file: File): string {
+    // Check if file type is picture
+    const isPicture = file.type.startsWith('image/');
+
+    // Check if file type is video
+    const isVideo = file.type.startsWith('video/');
+
+    // Set action to "media" for pictures and videos, otherwise "upload"
+    const action = (isPicture || isVideo) ? 'media' : 'upload';
+
+    return action;
+  }
+
+  async getFileBytes(file: File): Promise<Uint8Array> {
+    const arrayBuffer = await file.arrayBuffer();
+    return new Uint8Array(arrayBuffer);
+  }
+
+  async uploadFile(file: File, metadata: { title?: string, description?: string }): Promise<MediaItem | null> {
     this._loading.set(true);
     this._error.set(null);
 
@@ -358,40 +380,65 @@ export class MediaService {
 
       for (const server of servers) {
         try {
+          debugger;
           const url = server.endsWith('/') ? server : `${server}/`;
 
+          const fileBytes = await this.getFileBytes(file);
+          const hash = bytesToHex(sha256(fileBytes));
+
+          const action = this.determineAction(file);
+          const headers = await this.getAuthHeaders('Upload File', action, hash);
+
+          // const headers: Record<string, string> = {};
+
+          headers['X-SHA-256'] = hash;
+          headers['X-Content-Type'] = file.type;
+          headers['X-Content-Length'] = file.size.toString();
+
+          debugger;
+
+          const api = action === 'media' ? 'media' : 'upload';
+
           // First check if upload is allowed with HEAD request (BUD-06)
-          const headResponse = await fetch(`${url}upload`, {
+          const headResponse = await fetch(`${url}${api}`, {
             method: 'HEAD',
-            headers: await this.getAuthHeaders('Upload File')
+            headers: headers
           });
+          debugger;
 
           if (!headResponse.ok) {
-            throw new Error(`Upload not allowed on ${server}: ${headResponse.status}`);
+
+            const reason = headResponse.headers.get('x-reason');
+
+            const response = await headResponse.text();
+            console.log('Response:', response);
+
+            throw new Error(`Upload not allowed on ${server}: Reason: ${reason}, Status: ${headResponse.status}`);
           }
 
-          const formData = new FormData();
-          formData.append('file', file);
-
-          // Prepare NIP-94 metadata tags
-          if (metadata.title) formData.append('title', metadata.title);
-          if (metadata.description) formData.append('description', metadata.description);
-
-          // Add signed event for authentication
-          const signedEvent = await this.createSignedEvent('upload', file);
-          formData.append('event', JSON.stringify(signedEvent));
-
-          const response = await fetch(`${url}upload`, {
+          // Send the binary file directly
+          const response = await fetch(`${url}${api}`, {
             method: 'PUT', // As per BUD-02 spec
-            headers: await this.getAuthHeaders('Upload File', true), // Skip content-type as FormData sets it
-            body: formData
+            headers: {
+              ...headers,
+              'Content-Type': file.type,
+              'Content-Length': file.size.toString(),
+            },
+            body: file // Send the file directly as binary data
           });
+
+          // const response = await fetch(`${url}upload`, {
+          //   method: 'PUT', // As per BUD-02 spec
+          //   headers: await this.getAuthHeaders('Upload File', true), // Skip content-type as FormData sets it
+          //   body: formData
+          // });
 
           if (!response.ok) {
             throw new Error(`Failed to upload file to ${server}: ${response.status}`);
           }
 
           uploadedMedia = await response.json();
+          console.log('Uploaded media:', uploadedMedia);
 
           // Update server status to active
           // this.updateServerStatus(server.url, 'active');
@@ -450,7 +497,7 @@ export class MediaService {
 
           const response = await fetch(`${url}${id}`, {
             method: 'DELETE',
-            headers: await this.getAuthHeaders('Delete File')
+            headers: await this.getAuthHeaders('Delete File', 'delete')
           });
 
           if (!response.ok) {
@@ -513,7 +560,7 @@ export class MediaService {
           // First check if mirroring is allowed with HEAD request
           const headResponse = await fetch(`${url}mirror`, {
             method: 'HEAD',
-            headers: await this.getAuthHeaders('Mirror File')
+            headers: await this.getAuthHeaders('Mirror File', 'upload')
           });
 
           if (!headResponse.ok) {
@@ -523,7 +570,7 @@ export class MediaService {
           const response = await fetch(`${url}mirror`, {
             method: 'PUT', // As per BUD-04 spec
             headers: {
-              ...await this.getAuthHeaders('Mirror File'),
+              ...await this.getAuthHeaders('Mirror File', 'upload'),
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({ sha256: id })
@@ -573,74 +620,74 @@ export class MediaService {
   }
 
   async reportFile(id: string, reason: string): Promise<void> {
-    this._loading.set(true);
-    this._error.set(null);
+    // this._loading.set(true);
+    // this._error.set(null);
 
-    try {
-      // Check if we have any media servers configured
-      const servers = this._mediaServers();
-      if (servers.length === 0) {
-        throw new Error('No media servers configured');
-      }
+    // try {
+    //   // Check if we have any media servers configured
+    //   const servers = this._mediaServers();
+    //   if (servers.length === 0) {
+    //     throw new Error('No media servers configured');
+    //   }
 
-      // Try each server until report succeeds
-      let reportSuccessful = false;
-      let firstError: Error | null = null;
+    //   // Try each server until report succeeds
+    //   let reportSuccessful = false;
+    //   let firstError: Error | null = null;
 
-      for (const server of servers) {
-        try {
-          const url = server.endsWith('/') ? server : `${server}/`;
+    //   for (const server of servers) {
+    //     try {
+    //       const url = server.endsWith('/') ? server : `${server}/`;
 
-          // Create a signed report event
-          const reportEvent = await this.createSignedEvent('report', { sha256: id, reason });
+    //       // Create a signed report event
+    //       const reportEvent = await this.createSignedEvent('report', { sha256: id, reason });
 
-          const response = await fetch(`${url}media`, {
-            method: 'PUT', // Using media endpoint for reporting
-            headers: {
-              ...await this.getAuthHeaders('Report File'),
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              event: reportEvent,
-              action: 'report',
-              sha256: id,
-              reason
-            })
-          });
+    //       const response = await fetch(`${url}media`, {
+    //         method: 'PUT', // Using media endpoint for reporting
+    //         headers: {
+    //           ...await this.getAuthHeaders('Report File'),
+    //           'Content-Type': 'application/json'
+    //         },
+    //         body: JSON.stringify({
+    //           event: reportEvent,
+    //           action: 'report',
+    //           sha256: id,
+    //           reason
+    //         })
+    //       });
 
-          if (!response.ok) {
-            throw new Error(`Failed to report file on ${server}: ${response.status}`);
-          }
+    //       if (!response.ok) {
+    //         throw new Error(`Failed to report file on ${server}: ${response.status}`);
+    //       }
 
-          // Update server status to active
-          // this.updateServerStatus(server, 'active');
+    //       // Update server status to active
+    //       // this.updateServerStatus(server, 'active');
 
-          reportSuccessful = true;
-          break;
-        } catch (err) {
-          this.logger.error(`Failed to report on server ${server}:`, err);
+    //       reportSuccessful = true;
+    //       break;
+    //     } catch (err) {
+    //       this.logger.error(`Failed to report on server ${server}:`, err);
 
-          if (!firstError) {
-            firstError = err instanceof Error ? err : new Error('Unknown error occurred');
-          }
+    //       if (!firstError) {
+    //         firstError = err instanceof Error ? err : new Error('Unknown error occurred');
+    //       }
 
-          // Update server status
-          // this.updateServerStatus(server.url, 'error', err instanceof Error ? err.message : 'Unknown error');
-        }
-      }
+    //       // Update server status
+    //       // this.updateServerStatus(server.url, 'error', err instanceof Error ? err.message : 'Unknown error');
+    //     }
+    //   }
 
-      if (!reportSuccessful && firstError) {
-        throw firstError;
-      } else if (!reportSuccessful) {
-        throw new Error('Failed to report file on any server');
-      }
-    } catch (err) {
-      this._error.set(err instanceof Error ? err.message : 'Unknown error occurred');
-      this.logger.error('Error reporting file:', err);
-      throw err;
-    } finally {
-      this._loading.set(false);
-    }
+    //   if (!reportSuccessful && firstError) {
+    //     throw firstError;
+    //   } else if (!reportSuccessful) {
+    //     throw new Error('Failed to report file on any server');
+    //   }
+    // } catch (err) {
+    //   this._error.set(err instanceof Error ? err.message : 'Unknown error occurred');
+    //   this.logger.error('Error reporting file:', err);
+    //   throw err;
+    // } finally {
+    //   this._loading.set(false);
+    // }
   }
 
   private async createSignedEvent(type: string, data: any): Promise<NostrEvent> {
@@ -707,39 +754,42 @@ export class MediaService {
     throw new Error('Cannot sign event: no private key available');
   }
 
-  private async getAuthHeaders(reason: string, skipContentType = false): Promise<Record<string, string>> {
-    try {
-      const currentUser = this.nostrService.activeAccount();
-      if (!currentUser) {
-        throw new Error('User not logged in');
-      }
-
-      const headers: Record<string, string> = {};
-
-      // Don't attempt to add auth headers if the user is using the preview account
-      if (currentUser.source !== 'preview') {
-        const tags = [
-          ['t', 'list'],
-          ["expiration", this.nostrService.futureDate(10).toString()]
-        ];
-
-        const authEvent = this.nostrService.createEvent(24242, reason, tags);
-        const signedEvent = await this.nostrService.signEvent(authEvent);
-
-        // Convert signed event to base64 string for Authorization header
-        const base64Event = btoa(JSON.stringify(signedEvent));
-        headers['Authorization'] = `Nostr ${base64Event}`
-      }
-
-      if (!skipContentType) {
-        headers['Content-Type'] = 'application/json';
-      }
-
-      return headers;
-    } catch (error) {
-      this.logger.error('Error creating auth headers:', error);
-      return {};
+  private async getAuthHeaders(reason: string, action: string | 'list' | 'upload' | 'media' | 'delete' | 'get', sha256?: string, skipContentType = false): Promise<Record<string, string>> {
+    const currentUser = this.nostrService.activeAccount();
+    if (!currentUser) {
+      throw new Error('User not logged in');
     }
+
+    const headers: Record<string, string> = {};
+
+    // Don't attempt to add auth headers if the user is using the preview account
+    if (currentUser.source !== 'preview') {
+      const tags = [
+        ['t', action],
+        ["expiration", this.nostrService.futureDate(10).toString()]
+      ];
+
+      if (sha256) {
+        tags.push(['x', sha256]);
+      }
+
+      const authEvent = this.nostrService.createEvent(24242, reason, tags);
+      const signedEvent = await this.nostrService.signEvent(authEvent);
+
+      if (!signedEvent) {
+        throw new Error('Failed to sign event for authorization headers');
+      }
+
+      // Convert signed event to base64 string for Authorization header
+      const base64Event = btoa(JSON.stringify(signedEvent));
+      headers['Authorization'] = `Nostr ${base64Event}`
+    }
+
+    // if (!skipContentType) {
+    //   headers['Content-Type'] = 'application/json';
+    // }
+
+    return headers;
   }
 
   // Add getter for last fetch time
