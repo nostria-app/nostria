@@ -195,8 +195,6 @@ export class ProfileComponent {
           // this.followingList.set(followingList);
           this.profileState.followingList.set(followingList);
 
-          debugger;
-
           // If this is the logged on user, also set the account state.
           if (this.nostrService.pubkey() === pubkey) {
             this.accountState.followingList.set(followingList);

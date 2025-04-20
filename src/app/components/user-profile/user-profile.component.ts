@@ -212,4 +212,25 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
             this.isLoading.set(false);
         }
     }
+
+    /**
+     * Returns the appropriate spinner diameter based on the current view
+     */
+    getSpinnerSize(): number {
+        switch (this.view()) {
+            case 'large':
+                return 64;
+            case 'medium':
+                return 48;
+            case 'small':
+                return 32;
+            case 'details':
+            case 'tiles':
+                return 40;
+            case 'grid':
+                return 36;
+            default: // 'list'
+                return 40;
+        }
+    }
 }

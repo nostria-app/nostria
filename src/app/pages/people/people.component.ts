@@ -10,6 +10,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatMenuModule } from '@angular/material/menu';
 import { RouterLink } from '@angular/router';
+import { ScrollingModule } from '@angular/cdk/scrolling';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
 import { LayoutService } from '../../services/layout.service';
@@ -17,17 +18,6 @@ import { UserProfileComponent } from '../../components/user-profile/user-profile
 import { ProfileStateService } from '../../services/profile-state.service';
 import { NostrEvent, ViewMode } from '../../interfaces';
 import { AccountStateService } from '../../services/account-state.service';
-
-// interface Person {
-//   pubkey: string;
-//   displayName?: string;
-//   name?: string;
-//   picture?: string;
-//   about?: string;
-//   nip05?: string;
-//   following?: boolean;
-//   metadata?: any;
-// }
 
 @Component({
   selector: 'app-people',
@@ -44,7 +34,8 @@ import { AccountStateService } from '../../services/account-state.service';
     MatButtonToggleModule,
     MatMenuModule,
     RouterLink,
-    UserProfileComponent
+    UserProfileComponent,
+    ScrollingModule
   ],
   templateUrl: './people.component.html',
   styleUrl: './people.component.scss'
@@ -62,6 +53,11 @@ export class PeopleComponent implements OnInit {
   people = signal<string[]>([]);
   filteredPeople = signal<string[]>([]);
   searchTerm = signal<string>('');
+  
+  // Virtual scrolling properties
+  readonly itemSize = 72; // Default size for list view items
+  readonly minBufferPx = 200;
+  readonly maxBufferPx = 400;
 
   constructor() {
     // React to changes in the following list
@@ -128,7 +124,6 @@ export class PeopleComponent implements OnInit {
    */
   async loadPeople(pubkeys: string[]): Promise<void> {
     try {
-      debugger;
       this.isLoading.set(true);
       this.error.set(null);
 
