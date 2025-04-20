@@ -12,6 +12,7 @@ import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
 import { MatCardModule } from '@angular/material/card';
 import { QrcodeScanDialogComponent } from '../qrcode-scan-dialog/qrcode-scan-dialog.component';
+import { TermsOfUseDialogComponent } from '../terms-of-use-dialog/terms-of-use-dialog.component';
 
 type LoginView = 'main' | 'nsec' | 'extension-loading' | 'existing-accounts' | 'nostr-connect';
 
@@ -163,6 +164,14 @@ export class LoginDialogComponent implements OnInit {
     this.logger.debug('Selecting existing account', { pubkey });
     this.nostrService.switchToUser(pubkey);
     this.closeDialog();
+  }
+
+  openTermsOfUse(): void {
+    this.logger.debug('Opening Terms of Use dialog');
+    this.dialog.open(TermsOfUseDialogComponent, {
+      width: '600px',
+      maxWidth: '90vw',
+    });
   }
 
   removeAccount(event: Event, pubkey: string): void {

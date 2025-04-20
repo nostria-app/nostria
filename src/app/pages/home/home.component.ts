@@ -34,18 +34,18 @@ export class HomeComponent {
   features = signal<Feature[]>([
     {
       icon: 'lock',
-      title: 'Privacy-Focused',
-      description: 'Your data stays yours with no centralized servers.'
+      title: 'Freedom of expression',
+      description: 'Share your thoughts and interact with others in a fully transparent and open manner that is not restricted by any boundaries.'
     },
     {
       icon: 'bolt',
-      title: 'Lightning Fast',
-      description: 'Experience quick message delivery and seamless interactions across the network.'
+      title: 'Decentralized Social',
+      description: 'Connect with others on a truly decentralized platform resistant to censorship.'
     },
     {
       icon: 'people',
-      title: 'Decentralized Social',
-      description: 'Connect with others on a truly decentralized platform resistant to censorship.'
+      title: 'Global Scale',
+      description: 'Nostria is built to scale and implements the Nostr protocol in a way that helps improve decentralization.'
     },
     // {
     //   icon: 'extension',
