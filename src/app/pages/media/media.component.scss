@@ -21,6 +21,29 @@
   }
 }
 
+.spinner-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+  height: 36px;
+  border-radius: 4px;
+  
+  &.loading {
+    background-color: var(--mat-sys-color-surface-container-highest);
+  }
+  
+  &.uploading {
+    background-color: var(--mat-sys-color-secondary-container);
+    color: var(--mat-sys-color-on-secondary-container);
+  }
+  
+  span {
+    font-size: 13px;
+    white-space: nowrap;
+  }
+}
+
 .loading-container, .error-container {
   display: flex;
   flex-direction: column;

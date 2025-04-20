@@ -2,22 +2,28 @@
   <div class="media-header">
     <h1>Media Library</h1>
     <div class="media-actions">
-      <button mat-raised-button color="primary" (click)="openUploadDialog()">
+      @if (mediaService.uploading()) {
+        <div class="spinner-wrapper uploading">
+          <mat-spinner diameter="20"></mat-spinner>
+          <span>Uploading...</span>
+        </div>
+      }
+      <button mat-raised-button color="primary" (click)="openUploadDialog()" [disabled]="mediaService.uploading()">
         <mat-icon>upload</mat-icon>
         Upload Media
       </button>
-      <button mat-icon-button (click)="refreshMedia()" [disabled]="mediaService.loading()">
-        <mat-icon>refresh</mat-icon>
-      </button>
+      @if (mediaService.loading()) {
+        <div class="spinner-wrapper loading">
+          <mat-spinner diameter="20"></mat-spinner>
+          <span>Loading...</span>
+        </div>
+      } @else {
+        <button mat-icon-button (click)="refreshMedia()">
+          <mat-icon>refresh</mat-icon>
+        </button>
+      }
     </div>
   </div>
-
-  @if (mediaService.loading()) {
-    <div class="loading-container">
-      <mat-spinner diameter="40"></mat-spinner>
-      <span>Loading media...</span>
-    </div>
-  }
 
   @if (mediaService.error()) {
     <div class="error-container">

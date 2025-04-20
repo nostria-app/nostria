@@ -63,14 +63,14 @@ export class MediaService {
 
   // State management
   private _mediaItems = signal<MediaItem[]>([]);
-  private _loading = signal<boolean>(false);
+  loading = signal<boolean>(false);
+  uploading = signal<boolean>(false); // New signal for upload status
   private _error = signal<string | null>(null);
   private _mediaServers = signal<string[]>([]);
   private lastFetchTime = signal<number>(0);
 
   // Public signals
   readonly mediaItems = this._mediaItems.asReadonly();
-  readonly loading = this._loading.asReadonly();
   readonly error = this._error.asReadonly();
   readonly mediaServers = this._mediaServers.asReadonly();
 
@@ -128,7 +128,7 @@ export class MediaService {
   }
 
   async getFiles(): Promise<void> {
-    this._loading.set(true);
+    this.loading.set(true);
     this._error.set(null);
 
     try {
@@ -196,7 +196,7 @@ export class MediaService {
       this._error.set(err instanceof Error ? err.message : 'Unknown error occurred');
       this.logger.error('Error fetching media items:', err);
     } finally {
-      this._loading.set(false);
+      this.loading.set(false);
     }
   }
 
@@ -309,7 +309,7 @@ export class MediaService {
 
   async publishMediaServers(): Promise<void> {
     try {
-      this._loading.set(true);
+      this.loading.set(true);
       this._error.set(null);
 
       const currentUser = this.nostrService.activeAccount();
@@ -341,7 +341,7 @@ export class MediaService {
       this.logger.error('Error publishing media servers:', error);
       throw error;
     } finally {
-      this._loading.set(false);
+      this.loading.set(false);
     }
   }
 
@@ -364,7 +364,7 @@ export class MediaService {
   }
 
   async uploadFile(file: File, uploadOriginal: boolean): Promise<MediaItem | null> {
-    this._loading.set(true);
+    this.uploading.set(true);
     this._error.set(null);
 
     try {
@@ -464,12 +464,12 @@ export class MediaService {
       this.logger.error('Error uploading file:', err);
       throw err;
     } finally {
-      this._loading.set(false);
+      this.uploading.set(false);
     }
   }
 
   async deleteFile(id: string): Promise<void> {
-    this._loading.set(true);
+    this.loading.set(true);
     this._error.set(null);
 
     try {
@@ -526,12 +526,12 @@ export class MediaService {
       this.logger.error('Error deleting file:', err);
       throw err;
     } finally {
-      this._loading.set(false);
+      this.loading.set(false);
     }
   }
 
   async mirrorFile(id: string): Promise<void> {
-    this._loading.set(true);
+    this.loading.set(true);
     this._error.set(null);
 
     try {
@@ -607,7 +607,7 @@ export class MediaService {
       this.logger.error('Error mirroring file:', err);
       throw err;
     } finally {
-      this._loading.set(false);
+      this.loading.set(false);
     }
   }
 

@@ -32,7 +32,7 @@
         <div class="file-info">
           <p class="file-name">{{ selectedFile()!.name }}</p>
           <p class="file-size">{{ formatFileSize(selectedFile()!.size) }}</p>
-          <button mat-icon-button color="warn" (click)="clearFile()">
+          <button mat-icon-button color="warn" (click)="clearFile()" [disabled]="isUploading()">
             <mat-icon>close</mat-icon>
           </button>
         </div>
@@ -40,7 +40,7 @@
       
       <form [formGroup]="uploadForm" class="upload-form">
         @if (showOriginalOption()) {
-          <mat-checkbox formControlName="uploadOriginal">
+          <mat-checkbox formControlName="uploadOriginal" [disabled]="isUploading()">
             Upload original (no optimization)
           </mat-checkbox>
         }
@@ -49,13 +49,21 @@
   </div>
 </mat-dialog-content>
 <mat-dialog-actions align="end">
-  <button mat-button (click)="cancel()">Cancel</button>
+  <button mat-button (click)="cancel()" [disabled]="isUploading()">Cancel</button>
   <button 
     mat-raised-button 
     color="primary" 
-    [disabled]="!selectedFile()"
+    [disabled]="!selectedFile() || isUploading()"
     (click)="onSubmit()"
+    class="upload-button"
   >
-    Upload
+    @if (isUploading()) {
+      <div class="spinner-container">
+        <mat-spinner diameter="16"></mat-spinner>
+      </div>
+      <span>Uploading...</span>
+    } @else {
+      <span>Upload</span>
+    }
   </button>
 </mat-dialog-actions>
