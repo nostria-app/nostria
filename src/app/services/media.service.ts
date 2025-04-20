@@ -345,7 +345,7 @@ export class MediaService {
     }
   }
 
-  determineAction(file: File): string {
+  determineAction(file: File) {
     // Check if file type is picture
     const isPicture = file.type.startsWith('image/');
 
@@ -355,7 +355,7 @@ export class MediaService {
     // Set action to "media" for pictures and videos, otherwise "upload"
     const action = (isPicture || isVideo) ? 'media' : 'upload';
 
-    return action;
+    return { isPicture, isVideo, action };
   }
 
   async getFileBytes(file: File): Promise<Uint8Array> {
@@ -389,16 +389,16 @@ export class MediaService {
 
           // If the user chose to upload the original file, set the action to 'upload'
           if (uploadOriginal) {
-            action = 'upload';
+            action.action = 'upload';
           }
 
-          const headers = await this.getAuthHeaders('Upload File', action, hash);
+          const headers = await this.getAuthHeaders('Upload File', action.action, hash);
 
           headers['X-SHA-256'] = hash;
           headers['X-Content-Type'] = file.type;
           headers['X-Content-Length'] = file.size.toString();
 
-          const api = action === 'media' ? 'media' : 'upload';
+          const api = action.action === 'media' ? 'media' : 'upload';
 
           // First check if upload is allowed with HEAD request (BUD-06)
           const headResponse = await fetch(`${url}${api}`, {
@@ -426,7 +426,33 @@ export class MediaService {
           });
 
           if (!response.ok) {
-            throw new Error(`Failed to upload file to ${server}: ${response.status}`);
+
+            const reason = response.headers.get('x-reason');
+            // const response = await headResponse.text();
+            // console.log('Response:', response);
+
+            if (response.status == 500) {
+              const errorText = response.statusText;
+              const responseText = await response.text();
+
+              if (!uploadOriginal) {
+                if (action.isVideo) {
+                  this._error.set(`${reason}. This might happen because you upload a video file and the server cannot transcode it. Try uploading original instead.`);
+                } else if (action.isPicture) {
+                  this._error.set(`${reason}. This might happen because you upload a picture file and the server cannot optimize it. Try uploading original instead.`);
+                }
+              } else {
+                this._error.set(`${reason}.`);
+              }
+
+              return null;
+            }
+
+            if (!reason) {
+              throw new Error(`Failed to upload file on ${server}: ${response.status}`);
+            }
+
+            throw new Error(`Failed to upload file on ${server}: Reason: ${reason}, Status: ${headResponse.status}`);
           }
 
           uploadedMedia = await response.json();
@@ -485,7 +511,6 @@ export class MediaService {
 
       for (const server of servers) {
         try {
-          debugger;
           const url = server.endsWith('/') ? server : `${server}/`;
 
           const response = await fetch(`${url}${id}`, {
