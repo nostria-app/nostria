@@ -21,6 +21,20 @@
     width: 100%;
   }
 
+  // Banner styles
+  .user-profile-banner {
+    width: 100%;
+    height: 80px;
+    overflow: hidden;
+    position: relative;
+    
+    .user-banner {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+
   .user-profile-avatar {
     display: flex;
     align-items: center;
@@ -85,15 +99,16 @@
   &.large {
     .user-profile-container {
       padding: 12px;
+      justify-content: center; // Center the avatar
     }
     
     .user-profile-avatar {
-      width: 64px;
-      height: 64px;
+      width: 256px;
+      height: 256px;
     }
 
     .default-user-avatar {
-      font-size: 64px;
+      font-size: 256px;
     }
 
     .user-profile-name {
@@ -103,13 +118,17 @@
   }
 
   &.medium {
+    .user-profile-container {
+      justify-content: center; // Center the avatar
+    }
+
     .user-profile-avatar {
-      width: 48px;
-      height: 48px;
+      width: 128px;
+      height: 128px;
     }
 
     .default-user-avatar {
-      font-size: 48px;
+      font-size: 128px;
     }
 
     .user-profile-name {
@@ -118,13 +137,17 @@
   }
 
   &.small {
+    .user-profile-container {
+      justify-content: center; // Center the avatar
+    }
+
     .user-profile-avatar {
-      width: 32px;
-      height: 32px;
+      width: 48px;
+      height: 48px;
     }
 
     .default-user-avatar {
-      font-size: 32px;
+      font-size: 48px;
     }
 
     .user-profile-name {
@@ -155,7 +178,7 @@
     }
   }
 
-  &.tiles, &.grid {
+  &.tiles {
     box-shadow: var(--mat-sys-level1);
     border-radius: 8px;
     overflow: hidden;
@@ -179,6 +202,53 @@
     
     .user-profile-content {
       margin: 8px;
+      text-align: center;
+      margin-left: 0;
+    }
+  }
+
+  &.grid {
+    box-shadow: var(--mat-sys-level1);
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    
+    .user-profile-container {
+      flex-direction: column;
+      height: 100%;
+      padding: 0;
+      position: relative;
+    }
+    
+    .user-profile-banner {
+      width: 100%;
+      height: 80px;
+    }
+    
+    .user-profile-avatar {
+      width: 60px;
+      height: 60px;
+      position: relative;
+      margin-top: -30px; // Pull avatar up over the banner
+      border-width: 3px;
+      z-index: 1;
+      margin-bottom: 8px;
+      
+      // Create a white background to simulate a border when overlapping the banner
+      &::after {
+        content: '';
+        position: absolute;
+        inset: -3px;
+        background-color: white;
+        z-index: -1;
+        border-radius: 50%;
+      }
+    }
+    
+    .user-profile-content {
+      margin: 0 8px 12px;
       text-align: center;
       margin-left: 0;
     }

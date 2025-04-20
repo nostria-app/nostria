@@ -219,11 +219,11 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
     getSpinnerSize(): number {
         switch (this.view()) {
             case 'large':
-                return 64;
+                return 256;
             case 'medium':
-                return 48;
+                return 128;
             case 'small':
-                return 32;
+                return 48;
             case 'details':
             case 'tiles':
                 return 40;

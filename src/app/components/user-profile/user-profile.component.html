@@ -1,5 +1,16 @@
 <div [ngClass]="['user-profile', view()]" (click)="layout.navigateToProfile(pubkey())">
   <div class="user-profile-container">
+    <!-- Banner section for grid view -->
+    @if (view() === 'grid' && profile()?.content?.banner) {
+      <div class="user-profile-banner">
+        <img 
+          [src]="profile().content.banner" 
+          onerror="this.onerror=null; this.src='images/banner-failure.png';" 
+          alt="User Banner" 
+          class="user-banner" />
+      </div>
+    }
+    
     <!-- Avatar section - single image element -->
     <div class="user-profile-avatar">
       @if (isLoading()) {
@@ -16,33 +27,35 @@
     </div>
 
     <!-- Content section with conditional rendering based on view -->
-    <div class="user-profile-content">
-      <!-- Name section -->
-      <div class="user-profile-name">
-        @if (isLoading()) {
-          Loading...
-        } @else if (profile() && !profile().isEmpty && profile().content) {
-          @if (profile().content.display_name) {
-            {{ profile().content.display_name }}
-          } @else if (profile().content.name) {
-            {{ profile().content.name }}
+    @if (view() !== 'large' && view() !== 'medium' && view() !== 'small') {
+      <div class="user-profile-content">
+        <!-- Name section -->
+        <div class="user-profile-name">
+          @if (isLoading()) {
+            Loading...
+          } @else if (profile() && !profile().isEmpty && profile().content) {
+            @if (profile().content.display_name) {
+              {{ profile().content.display_name }}
+            } @else if (profile().content.name) {
+              {{ profile().content.name }}
+            } @else {
+              [No name]
+            }
           } @else {
-            [No name]
+            [Not found]
           }
-        } @else {
-          [Not found]
+        </div>
+
+        <!-- NPUB section - only shown in appropriate views -->
+        @if (view() === 'list' || view() === 'details') {
+          <div class="user-profile-npub">{{ npub() }}</div>
+        }
+
+        <!-- About section - only shown in details view -->
+        @if (view() === 'details' && profile() && profile().content && profile().content.about) {
+          <p class="user-profile-about">{{ profile().content.about }}</p>
         }
       </div>
-
-      <!-- NPUB section - only shown in appropriate views -->
-      @if (view() === 'large' || view() === 'medium' || view() === 'list' || view() === 'details') {
-        <div class="user-profile-npub">{{ npub() }}</div>
-      }
-
-      <!-- About section - only shown in details view -->
-      @if (view() === 'details' && profile() && profile().content && profile().content.about) {
-        <p class="user-profile-about">{{ profile().content.about }}</p>
-      }
-    </div>
+    }
   </div>
 </div>

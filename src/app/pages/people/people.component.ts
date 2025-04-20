@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect, OnInit, untracked } from '@angular/core';
+import { Component, inject, signal, effect, OnInit, untracked, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -55,7 +55,26 @@ export class PeopleComponent implements OnInit {
   searchTerm = signal<string>('');
   
   // Virtual scrolling properties
-  readonly itemSize = 72; // Default size for list view items
+  itemSize = computed(() => {
+    // Adjust item size based on view mode
+    switch (this.viewMode()) {
+      case 'large':
+      case 'grid':
+        return 320; // Height of large cards
+      case 'medium':
+        return 200; // Height of medium cards
+      case 'small':
+        return 120; // Height of small cards
+      case 'details':
+      case 'list':
+        return 72;  // Height of list items
+      case 'tiles':
+        return 180; // Height of tile cards
+      default:
+        return 72;
+    }
+  });
+  
   readonly minBufferPx = 200;
   readonly maxBufferPx = 400;
 
