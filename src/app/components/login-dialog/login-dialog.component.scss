@@ -209,3 +209,19 @@
     margin: 4px 0;
   }
 }
+
+.terms-of-use-notice {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 0.85rem;
+  
+  a {
+    color: var(--mat-primary-color);
+    text-decoration: none;
+    cursor: pointer;
+    
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
