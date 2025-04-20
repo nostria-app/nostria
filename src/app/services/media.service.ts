@@ -363,7 +363,7 @@ export class MediaService {
     return new Uint8Array(arrayBuffer);
   }
 
-  async uploadFile(file: File, metadata: { title?: string, description?: string }): Promise<MediaItem | null> {
+  async uploadFile(file: File, uploadOriginal: boolean): Promise<MediaItem | null> {
     this._loading.set(true);
     this._error.set(null);
 
@@ -380,22 +380,23 @@ export class MediaService {
 
       for (const server of servers) {
         try {
-          debugger;
           const url = server.endsWith('/') ? server : `${server}/`;
 
           const fileBytes = await this.getFileBytes(file);
           const hash = bytesToHex(sha256(fileBytes));
 
-          const action = this.determineAction(file);
-          const headers = await this.getAuthHeaders('Upload File', action, hash);
+          let action = this.determineAction(file);
 
-          // const headers: Record<string, string> = {};
+          // If the user chose to upload the original file, set the action to 'upload'
+          if (uploadOriginal) {
+            action = 'upload';
+          }
+
+          const headers = await this.getAuthHeaders('Upload File', action, hash);
 
           headers['X-SHA-256'] = hash;
           headers['X-Content-Type'] = file.type;
           headers['X-Content-Length'] = file.size.toString();
-
-          debugger;
 
           const api = action === 'media' ? 'media' : 'upload';
 
@@ -404,12 +405,9 @@ export class MediaService {
             method: 'HEAD',
             headers: headers
           });
-          debugger;
 
           if (!headResponse.ok) {
-
             const reason = headResponse.headers.get('x-reason');
-
             const response = await headResponse.text();
             console.log('Response:', response);
 
@@ -426,12 +424,6 @@ export class MediaService {
             },
             body: file // Send the file directly as binary data
           });
-
-          // const response = await fetch(`${url}upload`, {
-          //   method: 'PUT', // As per BUD-02 spec
-          //   headers: await this.getAuthHeaders('Upload File', true), // Skip content-type as FormData sets it
-          //   body: formData
-          // });
 
           if (!response.ok) {
             throw new Error(`Failed to upload file to ${server}: ${response.status}`);

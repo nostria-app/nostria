@@ -1,12 +1,13 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 
 @Component({
   selector: 'app-media-upload-dialog',
@@ -20,6 +21,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
     MatIconModule,
     MatInputModule,
     MatProgressBarModule,
+    MatCheckboxModule,
   ],
   templateUrl: './media-upload-dialog.component.html',
   styleUrls: ['./media-upload-dialog.component.scss']
@@ -32,11 +34,12 @@ export class MediaUploadDialogComponent {
   selectedFile = signal<File | null>(null);
   previewUrl = signal<string | null>(null);
   isImage = signal<boolean>(false);
+  isVideo = signal<boolean>(false);
+  showOriginalOption = signal<boolean>(false);
   
   constructor() {
     this.uploadForm = this.fb.group({
-      title: ['', Validators.maxLength(100)],
-      description: ['', Validators.maxLength(500)]
+      uploadOriginal: [false]
     });
   }
 
@@ -46,8 +49,12 @@ export class MediaUploadDialogComponent {
       const file = input.files[0];
       this.selectedFile.set(file);
       
-      // Check if the file is an image
+      // Check if the file is an image or video
       this.isImage.set(file.type.startsWith('image/'));
+      this.isVideo.set(file.type.startsWith('video/'));
+      
+      // Only show original option for images and videos
+      this.showOriginalOption.set(this.isImage() || this.isVideo());
       
       // Create a preview if it's an image
       if (this.isImage()) {
@@ -65,14 +72,14 @@ export class MediaUploadDialogComponent {
   clearFile(): void {
     this.selectedFile.set(null);
     this.previewUrl.set(null);
+    this.showOriginalOption.set(false);
   }
   
   onSubmit(): void {
     if (this.uploadForm.valid && this.selectedFile()) {
       this.dialogRef.close({
         file: this.selectedFile(),
-        title: this.uploadForm.value.title,
-        description: this.uploadForm.value.description
+        uploadOriginal: this.uploadForm.value.uploadOriginal
       });
     }
   }

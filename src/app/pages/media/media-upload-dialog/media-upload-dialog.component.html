@@ -32,20 +32,11 @@
       </div>
       
       <form [formGroup]="uploadForm" class="upload-form">
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Title</mat-label>
-          <input matInput formControlName="title" placeholder="Add a title (optional)">
-        </mat-form-field>
-        
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Description</mat-label>
-          <textarea 
-            matInput 
-            formControlName="description" 
-            placeholder="Add a description (optional)"
-            rows="3"
-          ></textarea>
-        </mat-form-field>
+        @if (showOriginalOption()) {
+          <mat-checkbox formControlName="uploadOriginal">
+            Upload original (no optimization)
+          </mat-checkbox>
+        }
       </form>
     }
   </div>
