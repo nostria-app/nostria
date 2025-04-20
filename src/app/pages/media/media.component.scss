@@ -170,7 +170,7 @@
 .selection-indicator {
   position: absolute;
   top: 8px;
-  right: 8px;
+  left: 8px;
   background-color: var(--mat-sys-color-primary);
   color: white;
   width: 24px;
@@ -188,10 +188,11 @@
   }
 }
 
-/* Video specific styles */
-.video-thumbnail {
+/* Video and image common styles */
+.video-thumbnail, 
+.media-thumbnail {
   background-color: var(--mat-sys-color-surface-container-lowest);
-  border-radius: 8px;
+  border-radius: 8px 8px 0 0;
   overflow: hidden;
 }
 
@@ -251,6 +252,7 @@
 .video-info {
   padding: 12px;
   background-color: var(--mat-sys-color-surface-container);
+  border-radius: 0 0 8px 8px;
 }
 
 .video-name {
