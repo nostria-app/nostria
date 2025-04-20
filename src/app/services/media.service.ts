@@ -485,11 +485,12 @@ export class MediaService {
 
       for (const server of servers) {
         try {
+          debugger;
           const url = server.endsWith('/') ? server : `${server}/`;
 
           const response = await fetch(`${url}${id}`, {
             method: 'DELETE',
-            headers: await this.getAuthHeaders('Delete File', 'delete')
+            headers: await this.getAuthHeaders('Delete File', 'delete', id)
           });
 
           if (!response.ok) {
