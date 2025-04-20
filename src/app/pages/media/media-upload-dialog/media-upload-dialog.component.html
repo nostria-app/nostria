@@ -2,7 +2,14 @@
 <mat-dialog-content>
   <div class="upload-container">
     @if (!selectedFile()) {
-      <div class="drop-zone" (click)="fileInput.click()">
+      <div 
+        class="drop-zone" 
+        [class.dragging]="isDragging()" 
+        (click)="fileInput.click()" 
+        (dragover)="onDragOver($event)" 
+        (dragleave)="onDragLeave($event)" 
+        (drop)="onDrop($event)"
+      >
         <input 
           #fileInput
           type="file"
