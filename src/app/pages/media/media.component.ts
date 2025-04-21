@@ -315,12 +315,26 @@ export class MediaComponent {
     const result = await dialogRef.afterClosed().toPromise();
     if (result) {
       try {
-        if (itemsToDelete.length > 1) {
-          // Use batch delete for multiple items to reduce signature requests
+        // Check if batch operations are disabled
+        if (itemsToDelete.length > 1 && !this.mediaService.batchOperationsTemporarilyDisabledDueToBug) {
+          // Use batch delete when feature is enabled
           await this.mediaService.deleteFiles(itemsToDelete);
-        } else if (itemsToDelete.length === 1) {
-          // For single item, use the existing method
-          await this.mediaService.deleteFile(itemsToDelete[0]);
+        } else {
+          // Fall back to individual deletes when disabled or for single items
+          let deletedCount = 0;
+          
+          for (const id of itemsToDelete) {
+            try {
+              await this.mediaService.deleteFile(id);
+              deletedCount++;
+            } catch (err) {
+              console.error(`Failed to delete item ${id}:`, err);
+            }
+          }
+          
+          if (deletedCount === 0 && itemsToDelete.length > 0) {
+            throw new Error('Failed to delete any items');
+          }
         }
         
         this.snackBar.open(`${itemsToDelete.length} ${itemsToDelete.length === 1 ? 'item' : 'items'} deleted`, 'Close', { duration: 3000 });
@@ -403,9 +417,28 @@ export class MediaComponent {
         }
       }
       
-      // If there are items to mirror, use the batch mirroring function
       if (toMirror.length > 0) {
-        await this.mediaService.mirrorFiles(toMirror);
+        // Check if batch operations are disabled
+        if (!this.mediaService.batchOperationsTemporarilyDisabledDueToBug) {
+          // Use batch mirroring when feature is enabled
+          await this.mediaService.mirrorFiles(toMirror);
+        } else {
+          // Fall back to individual mirrors when disabled
+          let mirroredCount = 0;
+          
+          for (const item of toMirror) {
+            try {
+              await this.mediaService.mirrorFile(item.sha256, item.url);
+              mirroredCount++;
+            } catch (err) {
+              console.error(`Failed to mirror item ${item.sha256}:`, err);
+            }
+          }
+          
+          if (mirroredCount === 0 && toMirror.length > 0) {
+            throw new Error('Failed to mirror any items');
+          }
+        }
       }
       
       // Show appropriate message based on results
