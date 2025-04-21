@@ -106,7 +106,7 @@
   <div mat-dialog-actions align="end">
     <button mat-button (click)="currentView.set('main')">Back</button>
     <button mat-raised-button color="primary" (click)="loginWithNsec()"
-      [disabled]="!nsecKey || !nsecKey.startsWith('nsec')">
+      [disabled]="!nsecKey">
       Login
     </button>
   </div>
