@@ -155,6 +155,7 @@ export class LayoutService {
         // We need the banner height to calculate the optimal scroll position
         // const bannerHeight = this.getBannerHeight();
 
+        console.log('Scrolling to optimal position:', scrollPosition);
         // // Calculate scroll position that shows half of the banner
         // // We divide banner height by 2 to show half of it
         // const scrollPosition = bannerHeight / 2;
