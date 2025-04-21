@@ -4,11 +4,7 @@
 </mat-dialog-content>
 <mat-dialog-actions align="end">
   <button mat-button (click)="cancel()">{{ data.cancelText || 'Cancel' }}</button>
-  <button 
-    mat-raised-button
-    [color]="data.confirmColor || 'primary'"
-    (click)="confirm()"
-  >
+  <button mat-raised-button [ngClass]="data.confirmColor" (click)="confirm()">
     {{ data.confirmText || 'Confirm' }}
   </button>
 </mat-dialog-actions>

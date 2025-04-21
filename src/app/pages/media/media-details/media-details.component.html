@@ -39,15 +39,20 @@
         </div>
 
         <div class="media-actions">
-          <button mat-raised-button color="primary" (click)="downloadMedia()">
+          <button mat-raised-button (click)="downloadMedia()">
             <mat-icon>download</mat-icon>
             Download
           </button>
-          <button mat-raised-button color="accent" (click)="mirrorMedia()">
+          <button 
+            mat-raised-button 
+            color="accent" 
+            (click)="mirrorMedia()" 
+            [disabled]="isFullyMirrored()"
+            [matTooltip]="isFullyMirrored() ? 'Already mirrored to all your servers' : 'Mirror to other servers'">
             <mat-icon>cloud_upload</mat-icon>
             Mirror
           </button>
-          <button mat-raised-button color="warn" (click)="deleteMedia()">
+          <button mat-raised-button (click)="deleteMedia()">
             <mat-icon>delete</mat-icon>
             Delete
           </button>
