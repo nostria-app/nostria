@@ -558,3 +558,20 @@ mat-card-content li {
   background-color: var(--mat-sys-color-surface-container);
   border-radius: 0 0 8px 8px;
 }
+
+/* Privacy Settings Styles */
+.settings-tab-container {
+  .mat-mdc-tab-body-content {
+    padding: 16px;
+  }
+}
+
+.settings-section-header {
+  font-size: 18px;
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+
+.settings-card {
+  border-radius: 8px;
+}

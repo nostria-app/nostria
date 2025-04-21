@@ -197,7 +197,10 @@ export const standardizedTag = {
     web: 'web',
     
     /** pubkey (hex), relay URL (weight) - NIP-57 */
-    zap: 'zap'
+    zap: 'zap',
+
+    /** https://github.com/nostr-protocol/nips/blob/master/51.md */
+    word: 'word'
   } as const;
   
   /**

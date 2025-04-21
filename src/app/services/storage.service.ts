@@ -254,6 +254,7 @@ export class StorageService {
         try {
           event.content = JSON.parse(event.content);
         } catch (e) {
+          debugger;
           this.logger.error('Failed to parse event content', e);
         }
       }
