@@ -82,10 +82,10 @@ export class MediaComponent {
     // Update filtered lists whenever media items change
     effect(() => {
       const allMedia = this.mediaService.mediaItems();
-      this.images.set(allMedia.filter(item => item.type.startsWith('image')));
-      this.videos.set(allMedia.filter(item => item.type.startsWith('video')));
-      this.files.set(allMedia.filter(item =>
-        !item.type.startsWith('image') && !item.type.startsWith('video')
+      this.images.set(allMedia.filter(item => item.type?.startsWith('image') || false));
+      this.videos.set(allMedia.filter(item => item.type?.startsWith('video') || false));
+      this.files.set(allMedia.filter(item => 
+        !item.type || (!item.type.startsWith('image') && !item.type.startsWith('video'))
       ));
     });
 
