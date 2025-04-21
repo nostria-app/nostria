@@ -11,7 +11,10 @@ export class ApplicationService {
     storage = inject(StorageService);
     router = inject(Router);
 
+    /** Check the status on fully initialized, which ensures Nostr, Storage and user is logged in. */
     initialized = computed(() => this.nostrService.initialized() && this.storage.initialized());
+    authenticated = computed(() => this.nostrService.isLoggedIn());
+
     loadingMessage = signal('Loading data...');
     showSuccess = signal(false);
     isLoading = signal(false);
