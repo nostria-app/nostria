@@ -1,5 +1,5 @@
 .privacy-settings-container {
-  padding: 16px;
+  padding: 0;
 }
 
 .settings-card {
@@ -11,12 +11,12 @@
   padding: 20px;
 }
 
-.muted-section {
-  margin-bottom: 24px;
+.mute-section {
+  margin-bottom: 32px;
 }
 
 h3 {
-  margin-top: 24px;
+  margin-top: 16px;
   margin-bottom: 12px;
   font-weight: 500;
 }
@@ -30,4 +30,6 @@ h3 {
 mat-list {
   max-height: 300px;
   overflow-y: auto;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 4px;
 }

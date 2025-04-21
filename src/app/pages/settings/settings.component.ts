@@ -11,6 +11,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { RouterModule } from '@angular/router';
 import { MatListModule } from '@angular/material/list';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatTabsModule } from '@angular/material/tabs';
 import { StorageStatsComponent } from '../../components/storage-stats/storage-stats.component';
 import { ThemeService } from '../../services/theme.service';
 import { NostrService } from '../../services/nostr.service';
@@ -21,6 +22,7 @@ import { Router } from '@angular/router';
 import { StorageService } from '../../services/storage.service';
 import { ApplicationStateService } from '../../services/application-state.service';
 import { ApplicationService } from '../../services/application.service';
+import { PrivacySettingsComponent } from '../../components/privacy-settings/privacy-settings.component';
 
 @Component({
   selector: 'app-settings',
@@ -37,7 +39,9 @@ import { ApplicationService } from '../../services/application.service';
     RouterModule,
     MatListModule,
     MatDividerModule,
-    StorageStatsComponent
+    MatTabsModule,
+    StorageStatsComponent,
+    PrivacySettingsComponent
   ],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.scss',
@@ -52,6 +56,9 @@ export class SettingsComponent {
   app = inject(ApplicationService);
   dialog = inject(MatDialog);
   router = inject(Router);
+
+  // Track active tab
+  activeTabIndex = signal(0);
 
   constructor() {
     // Keep the current log level in sync with the service
