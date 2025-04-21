@@ -315,9 +315,14 @@ export class MediaComponent {
     const result = await dialogRef.afterClosed().toPromise();
     if (result) {
       try {
-        for (const id of itemsToDelete) {
-          await this.mediaService.deleteFile(id);
+        if (itemsToDelete.length > 1) {
+          // Use batch delete for multiple items to reduce signature requests
+          await this.mediaService.deleteFiles(itemsToDelete);
+        } else if (itemsToDelete.length === 1) {
+          // For single item, use the existing method
+          await this.mediaService.deleteFile(itemsToDelete[0]);
         }
+        
         this.snackBar.open(`${itemsToDelete.length} ${itemsToDelete.length === 1 ? 'item' : 'items'} deleted`, 'Close', { duration: 3000 });
         this.selectedItems.set([]);
       } catch (error) {

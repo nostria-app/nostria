@@ -440,7 +440,6 @@ export class MediaService {
 
         this.logger.info('File uploaded successfully:', uploadedMedia);
 
-        debugger;
         // Ask other servers to mirror the file
         const otherServers = this.otherServers(uploadedMedia.url, servers);
         console.log('Asking to mirror on: ', otherServers);
@@ -541,6 +540,71 @@ export class MediaService {
     } catch (err) {
       this._error.set(err instanceof Error ? err.message : 'Unknown error occurred');
       this.logger.error('Error deleting file:', err);
+      throw err;
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  async deleteFiles(ids: string[]): Promise<void> {
+    this.loading.set(true);
+    this._error.set(null);
+
+    try {
+      // Check if we have any media servers configured
+      const servers = this._mediaServers();
+      if (servers.length === 0) {
+        throw new Error('No media servers configured');
+      }
+
+      // Generate a single auth header containing all file hashes
+      const headers = await this.getAuthHeaders('Delete Multiple Files', 'delete', ids.join(','));
+
+      let failedDeletes = 0;
+      
+      // Delete each file using the same auth headers
+      for (const id of ids) {
+        let deleteSuccessful = false;
+        
+        // Try each server for this file
+        for (const server of servers) {
+          try {
+            const url = server.endsWith('/') ? server : `${server}/`;
+            console.log('Deleting from server:', url, id);
+
+            const response = await fetch(`${url}${id}`, {
+              method: 'DELETE',
+              headers: headers // Reuse the same auth headers for all deletions
+            });
+
+            if (response.ok) {
+              deleteSuccessful = true;
+              break; // Move to next file after successful deletion
+            }
+          } catch (err) {
+            this.logger.error(`Failed to delete file ${id} from server ${server}:`, err);
+          }
+        }
+        
+        if (!deleteSuccessful) {
+          failedDeletes++;
+        }
+      }
+
+      // Update the local state by removing all successfully deleted items
+      if (failedDeletes < ids.length) {
+        this._mediaItems.update(items => items.filter(item => !ids.includes(item.sha256)));
+      }
+      
+      // If some or all deletions failed, throw an error
+      if (failedDeletes === ids.length) {
+        throw new Error('Failed to delete any files');
+      } else if (failedDeletes > 0) {
+        throw new Error(`Failed to delete ${failedDeletes} out of ${ids.length} files`);
+      }
+    } catch (err) {
+      this._error.set(err instanceof Error ? err.message : 'Unknown error occurred');
+      this.logger.error('Error deleting files:', err);
       throw err;
     } finally {
       this.loading.set(false);
@@ -791,7 +855,21 @@ export class MediaService {
       ];
 
       if (sha256) {
-        tags.push(['x', sha256]);
+        // If sha256 contains commas, it's a batch operation with multiple hashes
+        if (sha256.includes(',')) {
+          // Split the comma-separated string into individual hashes
+          const hashes = sha256.split(',');
+          
+          // Add each hash as an 'x' tag to include all files in the authorization
+          for (const hash of hashes) {
+            if (hash) {
+              tags.push(['x', hash]);
+            }
+          }
+        } else {
+          // Single file operation
+          tags.push(['x', sha256]);
+        }
       }
 
       const authEvent = this.nostrService.createEvent(24242, reason, tags);
