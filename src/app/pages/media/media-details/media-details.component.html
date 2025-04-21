@@ -47,8 +47,7 @@
             mat-raised-button 
             color="accent" 
             (click)="mirrorMedia()" 
-            [disabled]="isFullyMirrored()"
-            [matTooltip]="isFullyMirrored() ? 'Already mirrored to all your servers' : 'Mirror to other servers'">
+            [disabled]="isFullyMirrored()">
             <mat-icon>cloud_upload</mat-icon>
             Mirror
           </button>

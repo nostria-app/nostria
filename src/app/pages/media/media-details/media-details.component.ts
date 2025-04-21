@@ -59,7 +59,7 @@ export class MediaDetailsComponent {
     try {
       this.loading.set(true);
       this.error.set(null);
-      
+
       const item = await this.mediaService.getFileById(id);
       this.mediaItem.set(item);
     } catch (err) {
@@ -76,7 +76,7 @@ export class MediaDetailsComponent {
     try {
       const response = await fetch(item.url);
       const blob = await response.blob();
-      
+
       // Create a temporary link and trigger download
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -86,7 +86,7 @@ export class MediaDetailsComponent {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      
+
       this.snackBar.open('Download started', 'Close', { duration: 3000 });
     } catch (error) {
       this.snackBar.open('Failed to download media', 'Close', { duration: 3000 });
@@ -138,21 +138,44 @@ export class MediaDetailsComponent {
   isFullyMirrored(): boolean {
     const item = this.mediaItem();
     if (!item) return false;
-    
+
     // If there are no media servers configured, item can't be mirrored
-    if (this.mediaService.mediaServers().length === 0) {
+    const availableServers = this.mediaService.mediaServers();
+    if (availableServers.length === 0) {
       return false;
     }
-    
+
     // If the item doesn't have mirrors data, consider it not fully mirrored
-    if (!item.mirrors || !Array.isArray(item.mirrors)) {
+    if (!item.mirrors || !Array.isArray(item.mirrors) || item.mirrors.length === 0) {
       return false;
     }
-    
+
+    // Extract domain from mirror URLs for comparison
+    const extractDomain = (url: string): string => {
+      try {
+        const parsedUrl = new URL(url);
+        return `${parsedUrl.protocol}//${parsedUrl.host}`;
+      } catch {
+        return url; // Return as is if it's not a valid URL
+      }
+    };
+
+    // Normalize mirror URLs and server URLs for comparison
+    // Include the original URL as part of the mirrors list
+    const allMirrorUrls = [...(item.mirrors || [])];
+    if (item.url) {
+      allMirrorUrls.push(item.url);
+    }
+
+    const mirrorDomains = allMirrorUrls.map(mirror => extractDomain(mirror));
+    const serverDomains = availableServers.map(server => extractDomain(server));
+    debugger;
     // Check if all configured media servers are already in the item's mirrors
-    return this.mediaService.mediaServers().every(server => 
-      item.mirrors!.some(mirror => mirror === server || mirror.startsWith(server))
+    const isMirrored = serverDomains.every(serverDomain =>
+      mirrorDomains.some(mirrorDomain => mirrorDomain === serverDomain)
     );
+
+    return isMirrored;
   }
 
   async mirrorMedia(): Promise<void> {
@@ -164,7 +187,7 @@ export class MediaDetailsComponent {
       this.snackBar.open('Media is already mirrored to all your servers', 'Close', { duration: 3000 });
       return;
     }
-    
+
     try {
       await this.mediaService.mirrorFile(item.sha256, item.url);
       this.snackBar.open('Media mirrored successfully', 'Close', { duration: 3000 });
@@ -188,12 +211,12 @@ export class MediaDetailsComponent {
   getFileName(item: MediaItem): string {
     const extension = item.type.split('/')[1] || 'file';
     const baseFileName = item.url?.split('/').pop() || `nostr-media.${extension}`;
-    
+
     // If the URL already has a proper filename with extension, use it
     if (baseFileName.includes('.')) {
       return baseFileName;
     }
-    
+
     // Otherwise construct one using the sha256 and the MIME type
     return `nostr-media-${item.sha256.substring(0, 8)}.${extension}`;
   }
