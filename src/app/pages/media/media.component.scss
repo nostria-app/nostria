@@ -327,71 +327,117 @@
   flex-direction: column;
   gap: 16px;
   margin-bottom: 24px;
+  width: 100%;
+  max-width: 600px; /* Limit the width for better readability */
 }
 
 .server-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 24px;
+  display: none; /* Hide the grid layout */
 }
 
 .server-card {
+  position: relative;
+  padding: 16px;
   box-shadow: var(--mat-sys-level1);
-  transition: box-shadow 0.2s ease;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
+  transition: box-shadow 0.3s ease;
+  margin-bottom: 8px; /* Add space between cards */
+  width: 100%; /* Ensure cards take full width of container */
 
   &:hover {
-    box-shadow: var(--mat-sys-level3);
+    box-shadow: var(--mat-sys-level2);
+
+    .drag-handle {
+      opacity: 1;
+    }
   }
 
-  mat-card-header {
-    padding: 16px 16px 0 16px;
+  &.cdk-drag-preview {
+    box-shadow: var(--mat-sys-level4);
   }
 
-  mat-card-content {
-    flex: 1;
-    padding: 16px;
+  &.cdk-drag-placeholder {
+    opacity: 0.3;
   }
 
-  mat-card-actions {
-    padding: 8px 8px 16px 8px;
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-around;
-    gap: 8px;
+  &.cdk-drag-animating {
+    transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
   }
 }
 
-.server-status {
+.drag-handle {
   position: absolute;
-  right: 16px;
-  top: 16px;
+  top: 8px;
+  right: 8px;
+  cursor: move;
+  opacity: 0.3;
+  transition: opacity 0.2s ease;
 }
 
-.status-badge {
-  display: inline-block;
-  padding: 4px 8px;
-  border-radius: 12px;
+.primary-indicator {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: flex;
+  align-items: center;
+  background-color: #ffc107;
+  color: rgba(0, 0, 0, 0.87);
+  padding: 2px 8px;
+  border-radius: 16px;
   font-size: 12px;
-  font-weight: 500;
 
-  &.active {
-    background-color: var(--mat-sys-color-tertiary-container);
-    color: var(--mat-sys-color-on-tertiary-container);
-  }
-
-  &.error {
-    background-color: var(--mat-sys-color-error-container);
-    color: var(--mat-sys-color-on-error-container);
-  }
-
-  &.unknown {
-    background-color: var(--mat-sys-color-surface-container-highest);
-    color: var(--mat-sys-color-on-surface-variant);
+  mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+    margin-right: 4px;
   }
 }
+
+.primary-server-info {
+  margin-top: 16px;
+  padding: 8px 16px;
+  border-radius: 4px;
+
+  .primary-note {
+    display: block;
+    margin-top: 4px;
+    font-style: italic;
+  }
+}
+
+/* Makes the entire list draggable */
+.cdk-drop-list-dragging .server-card:not(.cdk-drag-placeholder) {
+  transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+// .server-status {
+//   position: absolute;
+//   right: 16px;
+//   top: 16px;
+// }
+
+// .status-badge {
+//   display: inline-block;
+//   padding: 4px 8px;
+//   border-radius: 12px;
+//   font-size: 12px;
+//   font-weight: 500;
+
+//   &.active {
+//     background-color: var(--mat-sys-color-tertiary-container);
+//     color: var(--mat-sys-color-on-tertiary-container);
+//   }
+
+//   &.error {
+//     background-color: var(--mat-sys-color-error-container);
+//     color: var(--mat-sys-color-on-error-container);
+//   }
+
+//   &.unknown {
+//     background-color: var(--mat-sys-color-surface-container-highest);
+//     color: var(--mat-sys-color-on-surface-variant);
+//   }
+// }
 
 .server-error {
   display: flex;

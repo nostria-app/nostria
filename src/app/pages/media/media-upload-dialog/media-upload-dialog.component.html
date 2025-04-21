@@ -49,13 +49,16 @@
           <div class="server-selection">
             <h3>Upload to servers:</h3>
             <div class="server-checkboxes">
-              @for (server of availableServers(); track server) {
+              @for (server of availableServers(); track server; let i = $index) {
                 <mat-checkbox 
                   [checked]="isServerSelected(server)" 
                   (change)="toggleServerSelection(server)" 
                   [disabled]="isUploading()"
                 >
                   {{ server.replace('https://', '') }}
+                  @if (i === 0) {
+                    <span class="primary-badge">Primary</span>
+                  }
                 </mat-checkbox>
               }
             </div>

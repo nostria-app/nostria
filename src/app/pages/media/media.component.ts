@@ -24,6 +24,7 @@ import { ApplicationService } from '../../services/application.service';
 import { MediaPreviewDialogComponent } from '../../components/media-preview-dialog/media-preview.component';
 import { ConfirmDialogComponent } from '../../components/confirm-dialog/confirm-dialog.component';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 
 @Component({
   selector: 'app-media',
@@ -44,7 +45,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     MatProgressSpinnerModule,
     MatTableModule,
     TimestampPipe,
-    MatTooltipModule
+    MatTooltipModule,
+    DragDropModule
   ],
   templateUrl: './media.component.html',
   styleUrls: ['./media.component.scss']
@@ -197,6 +199,37 @@ export class MediaComponent {
 
   editServer(server: string): void {
     this.openServerDialog(server);
+  }
+
+  async reorderServers(event: CdkDragDrop<string[]>): Promise<void> {
+    // Get current servers
+    const currentServers = this.mediaService.mediaServers();
+    
+    // Skip if index didn't change (item dropped in same position)
+    if (event.previousIndex === event.currentIndex) {
+      return;
+    }
+    
+    // Create a new array with the updated order
+    const newOrder = [...currentServers];
+    moveItemInArray(newOrder, event.previousIndex, event.currentIndex);
+    
+    // Check if the order actually changed by comparing arrays
+    const orderChanged = newOrder.some((server, index) => server !== currentServers[index]);
+    
+    if (orderChanged) {
+      try {
+        await this.mediaService.reorderMediaServers(newOrder);
+        this.snackBar.open('Server order updated', 'Close', { duration: 3000 });
+      } catch (error) {
+        this.snackBar.open('Failed to reorder servers', 'Close', { duration: 3000 });
+      }
+    }
+  }
+
+  getPrimaryServer(): string | undefined {
+    const servers = this.mediaService.mediaServers();
+    return servers.length > 0 ? servers[0] : undefined;
   }
 
   openDetailsDialog(item: MediaItem): void {
