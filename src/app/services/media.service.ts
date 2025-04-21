@@ -343,11 +343,13 @@ export class MediaService {
       const fileBytes = await this.getFileBytes(file);
       hash = bytesToHex(sha256(fileBytes));
       
-      // Check if file already exists before attempting upload
-      const existingFile = this.getFileByHash(hash);
-      if (existingFile) {
-        // File already exists, return it with duplicate status
-        return { item: existingFile, status: 'duplicate', message: 'File already exists in your media library' };
+      // Check if file already exists before attempting upload - but only if uploading original
+      if (uploadOriginal) {
+        const existingFile = this.getFileByHash(hash);
+        if (existingFile) {
+          // File already exists, return it with duplicate status
+          return { item: existingFile, status: 'duplicate', message: 'File already exists in your media library' };
+        }
       }
 
       for (const server of servers) {
