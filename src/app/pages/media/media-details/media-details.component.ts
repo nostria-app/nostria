@@ -80,22 +80,32 @@ export class MediaDetailsComponent {
     if (!item) return;
 
     try {
+      // Show loading message
+      this.snackBar.open('Preparing download...', '', { duration: 2000 });
+      
+      // Fetch the file
       const response = await fetch(item.url);
       const blob = await response.blob();
 
-      // Create a temporary link and trigger download
+      // Get proper filename based on URL or mime type
+      const filename = this.getFileName(item);
+      
+      // Create download link with proper download attribute
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = this.getFileName(item);
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      
+      // Append to document, click, then clean up
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
       this.snackBar.open('Download started', 'Close', { duration: 3000 });
     } catch (error) {
       this.snackBar.open('Failed to download media', 'Close', { duration: 3000 });
+      console.error('Download error:', error);
     }
   }
 

@@ -45,7 +45,24 @@
           <div class="selection-actions">
             <span>{{ selectedItems().length }} item(s) selected</span>
             <button mat-button color="primary" (click)="clearSelection()">Clear Selection</button>
-            <button mat-button color="warn" (click)="deleteSelected()">Delete Selected</button>
+            <button mat-button [matMenuTriggerFor]="selectedActionsMenu">
+              <mat-icon>more_vert</mat-icon>
+              Actions
+            </button>
+            <mat-menu #selectedActionsMenu="matMenu">
+              <button mat-menu-item (click)="downloadSelected()">
+                <mat-icon>download</mat-icon>
+                <span>Download</span>
+              </button>
+              <button mat-menu-item (click)="mirrorSelected()">
+                <mat-icon>cloud_upload</mat-icon>
+                <span>Mirror</span>
+              </button>
+              <button mat-menu-item color="warn" (click)="deleteSelected()">
+                <mat-icon color="warn">delete</mat-icon>
+                <span class="delete-text">Delete</span>
+              </button>
+            </mat-menu>
           </div>
         } @else {
           <div class="selection-actions">
@@ -83,10 +100,10 @@
                         <mat-icon>info</mat-icon>
                         <span>Details</span>
                       </button>
-                      <a mat-menu-item [href]="item.url" target="_blank" download>
+                      <button mat-menu-item (click)="downloadSelected(item.sha256)">
                         <mat-icon>download</mat-icon>
                         <span>Download</span>
-                      </a>
+                      </button>
                       <button mat-menu-item (click)="mirrorItem(item.sha256, item.url)" [disabled]="isFullyMirrored(item)">
                         <mat-icon>cloud_upload</mat-icon>
                         <span>Mirror</span>
@@ -118,7 +135,24 @@
           <div class="selection-actions">
             <span>{{ selectedItems().length }} item(s) selected</span>
             <button mat-button color="primary" (click)="clearSelection()">Clear Selection</button>
-            <button mat-button color="warn" (click)="deleteSelected()">Delete Selected</button>
+            <button mat-button [matMenuTriggerFor]="selectedActionsMenu">
+              <mat-icon>more_vert</mat-icon>
+              Actions
+            </button>
+            <mat-menu #selectedActionsMenu="matMenu">
+              <button mat-menu-item (click)="downloadSelected()">
+                <mat-icon>download</mat-icon>
+                <span>Download</span>
+              </button>
+              <button mat-menu-item (click)="mirrorSelected()">
+                <mat-icon>cloud_upload</mat-icon>
+                <span>Mirror</span>
+              </button>
+              <button mat-menu-item color="warn" (click)="deleteSelected()">
+                <mat-icon color="warn">delete</mat-icon>
+                <span class="delete-text">Delete</span>
+              </button>
+            </mat-menu>
           </div>
         } @else {
           <div class="selection-actions">
@@ -161,10 +195,10 @@
                         <mat-icon>info</mat-icon>
                         <span>Details</span>
                       </button>
-                      <a mat-menu-item [href]="item.url" target="_blank" download>
+                      <button mat-menu-item (click)="downloadSelected(item.sha256)">
                         <mat-icon>download</mat-icon>
                         <span>Download</span>
-                      </a>
+                      </button>
                       <button mat-menu-item (click)="mirrorItem(item.sha256, item.url)" [disabled]="isFullyMirrored(item)">
                         <mat-icon>cloud_upload</mat-icon>
                         <span>Mirror</span>
@@ -196,7 +230,24 @@
           <div class="selection-actions">
             <span>{{ selectedItems().length }} item(s) selected</span>
             <button mat-button color="primary" (click)="clearSelection()">Clear Selection</button>
-            <button mat-button color="warn" (click)="deleteSelected()">Delete Selected</button>
+            <button mat-button [matMenuTriggerFor]="selectedActionsMenu">
+              <mat-icon>more_vert</mat-icon>
+              Actions
+            </button>
+            <mat-menu #selectedActionsMenu="matMenu">
+              <button mat-menu-item (click)="downloadSelected()">
+                <mat-icon>download</mat-icon>
+                <span>Download</span>
+              </button>
+              <button mat-menu-item (click)="mirrorSelected()">
+                <mat-icon>cloud_upload</mat-icon>
+                <span>Mirror</span>
+              </button>
+              <button mat-menu-item color="warn" (click)="deleteSelected()">
+                <mat-icon color="warn">delete</mat-icon>
+                <span class="delete-text">Delete</span>
+              </button>
+            </mat-menu>
           </div>
         } @else {
           <div class="selection-actions">
@@ -284,10 +335,10 @@
                       <mat-icon>info</mat-icon>
                       <span>Details</span>
                     </button>
-                    <a mat-menu-item [href]="item.url" target="_blank" download>
+                    <button mat-menu-item (click)="downloadSelected(item.sha256)">
                       <mat-icon>download</mat-icon>
                       <span>Download</span>
-                    </a>
+                    </button>
                     <button mat-menu-item (click)="mirrorItem(item.sha256, item.url)" [disabled]="isFullyMirrored(item)">
                       <mat-icon>cloud_upload</mat-icon>
                       <span>Mirror</span>
