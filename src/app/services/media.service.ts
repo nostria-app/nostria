@@ -343,13 +343,25 @@ export class MediaService {
       const fileBytes = await this.getFileBytes(file);
       hash = bytesToHex(sha256(fileBytes));
       
-      // Check if file already exists before attempting upload - but only if uploading original
-      if (uploadOriginal) {
-        const existingFile = this.getFileByHash(hash);
-        if (existingFile) {
-          // File already exists, return it with duplicate status
-          return { item: existingFile, status: 'duplicate', message: 'File already exists in your media library' };
+      // Check if file already exists with the same upload mode
+      // This allows users to upload both original and optimized versions of the same file
+      const existingFile = this.getFileByHash(hash);
+      if (existingFile) {
+        // Check if the existing file was uploaded with the same mode (original or optimized)
+        const existingFileUrl = existingFile.url;
+        const isExistingOriginal = existingFileUrl.includes('/upload/') || !existingFileUrl.includes('/media/');
+        
+        // Only consider it a duplicate if both are original or both are optimized
+        if ((uploadOriginal && isExistingOriginal) || (!uploadOriginal && !isExistingOriginal)) {
+          return { 
+            item: existingFile, 
+            status: 'duplicate', 
+            message: uploadOriginal 
+              ? 'Original file already exists in your media library' 
+              : 'Optimized version of this file already exists in your library' 
+          };
         }
+        // Otherwise, allow upload of different version (original vs. optimized)
       }
 
       for (const server of servers) {
