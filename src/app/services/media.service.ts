@@ -151,6 +151,7 @@ export class MediaService {
 
       for (const server of servers) {
         try {
+          debugger;
           const headers = await this.getAuthHeaders('List Files', 'list');
 
           const url = server.endsWith('/') ? server : `${server}/`;
@@ -169,7 +170,7 @@ export class MediaService {
           // this.updateServerStatus(server, 'active');
 
           // Successfully got media items, no need to try other servers
-          break;
+          // break;
         } catch (err) {
           this.logger.error(`Failed to fetch media from server ${server}:`, err);
 
