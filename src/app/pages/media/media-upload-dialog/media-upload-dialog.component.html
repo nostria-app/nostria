@@ -44,6 +44,33 @@
             Upload original (no optimization)
           </mat-checkbox>
         }
+        
+        @if (showServerSelection() && availableServers().length > 0) {
+          <div class="server-selection">
+            <h3>Upload to servers:</h3>
+            <div class="server-checkboxes">
+              @for (server of availableServers(); track server) {
+                <mat-checkbox 
+                  [checked]="isServerSelected(server)" 
+                  (change)="toggleServerSelection(server)" 
+                  [disabled]="isUploading()"
+                >
+                  {{ server.replace('https://', '') }}
+                </mat-checkbox>
+              }
+            </div>
+            @if (selectedServers().length === 0) {
+              <div class="server-warning">
+                <mat-icon color="warn">warning</mat-icon>
+                <span>Please select at least one server</span>
+              </div>
+            }
+          </div>
+        } @else if (availableServers().length === 0) {
+          <div class="no-servers">
+            <p>No media servers configured. Upload will be skipped.</p>
+          </div>
+        }
       </form>
     }
   </div>
@@ -53,7 +80,7 @@
   <button 
     mat-raised-button 
     color="primary" 
-    [disabled]="!selectedFile() || isUploading()"
+    [disabled]="!selectedFile() || isUploading() || (showServerSelection() && selectedServers().length === 0)"
     (click)="onSubmit()"
     class="upload-button"
   >
