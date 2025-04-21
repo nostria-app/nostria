@@ -7,7 +7,6 @@ h2 {
     color: #f44336;
     margin-bottom: 8px;
   }
-
 }
 
 .setting-item {
@@ -21,7 +20,6 @@ h2 {
   }
 }
 
-
 .wipe-data-button {
   background-color: #f44336 !important;
   color: white !important;
@@ -29,4 +27,17 @@ h2 {
 
 .full-width {
   width: 100%;
+}
+
+.settings-card {
+  margin-bottom: 16px;
+  box-shadow: var(--mat-sys-level1);
+}
+
+.tab-content {
+  padding: 20px;
+}
+
+.settings-tabs {
+  min-height: 500px;
 }

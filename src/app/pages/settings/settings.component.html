@@ -1,61 +1,77 @@
 <div class="content-medium">
   <h1 class="page-title">Settings</h1>
 
-  <div class="setting-item">
-    <span>Dark Mode</span>
-    <mat-slide-toggle [checked]="themeService.darkMode()" (change)="toggleDarkMode()">
-    </mat-slide-toggle>
-  </div>
+  <mat-card class="settings-card">
+    <mat-card-content>
+      <mat-tab-group [selectedIndex]="activeTabIndex()" (selectedIndexChange)="activeTabIndex.set($event)" class="settings-tabs">
+        <!-- General Settings Tab -->
+        <mat-tab label="General">
+          <div class="tab-content">
+            <div class="setting-item">
+              <span>Dark Mode</span>
+              <mat-slide-toggle [checked]="themeService.darkMode()" (change)="toggleDarkMode()">
+              </mat-slide-toggle>
+            </div>
 
-  <!-- Storage Stats Component -->
-   <div class="setting-item">
-  <app-storage-stats class="mb-4"></app-storage-stats>
-  </div>
+            <!-- Storage Stats Component -->
+            <div class="setting-item">
+              <app-storage-stats class="mb-4"></app-storage-stats>
+            </div>
 
-  
-  <div>
-    <h2>Logging</h2>
-    <p>Configure application logging levels</p>
+            <div>
+              <h2>Logging</h2>
+              <p>Configure application logging levels</p>
 
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Log Level</mat-label>
-      <mat-select [ngModel]="currentLogLevel()" (selectionChange)="setLogLevel($event.value)">
-        <mat-option value="debug">Debug</mat-option>
-        <mat-option value="info">Info</mat-option>
-        <mat-option value="warn">Warning</mat-option>
-        <mat-option value="error">Error</mat-option>
-        <mat-option value="none">None</mat-option>
-      </mat-select>
-    </mat-form-field>
-    <p >
-      @switch (currentLogLevel()) {
-      @case ('debug') {
-      Shows all log messages including detailed debug information.
-      }
-      @case ('info') {
-      Shows informational messages, warnings and errors.
-      }
-      @case ('warn') {
-      Shows only warnings and errors.
-      }
-      @case ('error') {
-      Shows only error messages.
-      }
-      @case ('none') {
-      Disables all logging output.
-      }
-      }
-    </p>
-  </div>
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Log Level</mat-label>
+                <mat-select [ngModel]="currentLogLevel()" (selectionChange)="setLogLevel($event.value)">
+                  <mat-option value="debug">Debug</mat-option>
+                  <mat-option value="info">Info</mat-option>
+                  <mat-option value="warn">Warning</mat-option>
+                  <mat-option value="error">Error</mat-option>
+                  <mat-option value="none">None</mat-option>
+                </mat-select>
+              </mat-form-field>
+              <p>
+                @switch (currentLogLevel()) {
+                @case ('debug') {
+                Shows all log messages including detailed debug information.
+                }
+                @case ('info') {
+                Shows informational messages, warnings and errors.
+                }
+                @case ('warn') {
+                Shows only warnings and errors.
+                }
+                @case ('error') {
+                Shows only error messages.
+                }
+                @case ('none') {
+                Disables all logging output.
+                }
+                }
+              </p>
+            </div>
 
-  <div class="setting-item danger-zone">
-    <div>
-      <h2>Danger Zone</h2>
-      <p>This will delete all your local app data and reload the application.</p>
-    </div>
-    <button mat-flat-button class="wipe-data-button" (click)="wipeData()">
-      Wipe Data
-    </button>
-  </div>
+            <div class="setting-item danger-zone">
+              <div>
+                <h2>Danger Zone</h2>
+                <p>This will delete all your local app data and reload the application.</p>
+              </div>
+              <button mat-flat-button class="wipe-data-button" (click)="wipeData()">
+                Wipe Data
+              </button>
+            </div>
+          </div>
+        </mat-tab>
 
+        <!-- Privacy and Safety Tab -->
+        <mat-tab label="Privacy & Safety">
+          <div class="tab-content">
+            <app-privacy-settings></app-privacy-settings>
+          </div>
+        </mat-tab>
+      </mat-tab-group>
+    </mat-card-content>
+  </mat-card>
 </div>
