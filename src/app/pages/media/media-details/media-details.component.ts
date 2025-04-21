@@ -43,7 +43,10 @@ export class MediaDetailsComponent {
   mediaItem = signal<MediaItem | null>(null);
   
   // Add computed signal for memoized mirror status
-  isFullyMirroredStatus = computed(() => this.calculateFullyMirroredStatus());
+  isFullyMirroredStatus = computed(() => {
+    const item = this.mediaItem();
+    return item ? this.mediaService.isFullyMirrored(item) : false;
+  });
 
   constructor() {
     effect(() => {
@@ -143,57 +146,12 @@ export class MediaDetailsComponent {
     return this.isFullyMirroredStatus();
   }
 
-  // Move the calculation to a private method
-  private calculateFullyMirroredStatus(): boolean {
-    debugger;
-    const item = this.mediaItem();
-    if (!item) return false;
-
-    // If there are no media servers configured, item can't be mirrored
-    const availableServers = this.mediaService.mediaServers();
-    if (availableServers.length === 0) {
-      return false;
-    }
-
-    // If the item doesn't have mirrors data, consider it not fully mirrored
-    if (!item.mirrors || !Array.isArray(item.mirrors) || item.mirrors.length === 0) {
-      return false;
-    }
-
-    // Extract domain from mirror URLs for comparison
-    const extractDomain = (url: string): string => {
-      try {
-        const parsedUrl = new URL(url);
-        return `${parsedUrl.protocol}//${parsedUrl.host}`;
-      } catch {
-        return url; // Return as is if it's not a valid URL
-      }
-    };
-
-    // Normalize mirror URLs and server URLs for comparison
-    // Include the original URL as part of the mirrors list
-    const allMirrorUrls = [...(item.mirrors || [])];
-    if (item.url) {
-      allMirrorUrls.push(item.url);
-    }
-
-    const mirrorDomains = allMirrorUrls.map(mirror => extractDomain(mirror));
-    const serverDomains = availableServers.map(server => extractDomain(server));
-    
-    // Check if all configured media servers are already in the item's mirrors
-    const isMirrored = serverDomains.every(serverDomain =>
-      mirrorDomains.some(mirrorDomain => mirrorDomain === serverDomain)
-    );
-
-    return isMirrored;
-  }
-
   async mirrorMedia(): Promise<void> {
     const item = this.mediaItem();
     if (!item) return;
 
     // Don't attempt mirroring if already mirrored to all available servers
-    if (this.isFullyMirrored()) {
+    if (this.mediaService.isFullyMirrored(item)) {
       this.snackBar.open('Media is already mirrored to all your servers', 'Close', { duration: 3000 });
       return;
     }
