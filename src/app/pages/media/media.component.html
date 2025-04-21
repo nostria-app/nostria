@@ -136,7 +136,7 @@
           <div class="media-grid">
             @for (item of videos(); track item.sha256) {
               <div class="media-card" [class.selected]="isSelected(item.sha256)" (click)="toggleItemSelection(item.sha256)">
-                <div class="media-thumbnail video-thumbnail">
+                <div class="media-thumbnail">
                   <div class="selection-indicator">
                     <mat-icon>check_circle</mat-icon>
                   </div>
@@ -148,13 +148,9 @@
                   }
                   <div class="video-preview">
                     <video [src]="item.url" preload="metadata" (click)="navigateToDetails($event, item)"></video>
-                    <button mat-icon-button class="play-button" (click)="navigateToDetails($event, item)">
+                    <div class="play-button" (click)="navigateToDetails($event, item)">
                       <mat-icon>play_circle_filled</mat-icon>
-                    </button>
-                  </div>
-                  <div class="video-info">
-                    <span class="video-name">{{ getFileName(item.url) }}</span>
-                    <span class="video-size">{{ formatFileSize(item.size) }}</span>
+                    </div>
                   </div>
                   <div class="video-actions">
                     <button mat-icon-button [matMenuTriggerFor]="videoMenu" (click)="$event.stopPropagation()">
@@ -179,6 +175,10 @@
                       </button>
                     </mat-menu>
                   </div>
+                </div>
+                <div class="video-info">
+                  <span class="video-name">{{ getFileName(item.url) }}</span>
+                  <span class="video-size">{{ formatFileSize(item.size) }}</span>
                 </div>
               </div>
             }

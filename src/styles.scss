@@ -531,10 +531,25 @@ mat-card-content li {
 .video-thumbnail {
   position: relative;
   overflow: hidden;
-  
-  // Special positioning for mirror badge on videos
-  // to prevent overlap with video info at bottom
-  .mirror-badge {
-    bottom: 52px; // Move up higher than the default to avoid the video info overlay
-  }
+}
+
+// Ensure consistent positioning of mirror badge
+.mirror-badge {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  border-radius: 12px;
+  padding: 2px 8px;
+  display: flex;
+  align-items: center;
+  z-index: 2;
+}
+
+// Consistent styling for video info container
+.video-info {
+  padding: 12px;
+  background-color: var(--mat-sys-color-surface-container);
+  border-radius: 0 0 8px 8px;
 }
