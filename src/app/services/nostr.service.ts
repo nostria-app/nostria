@@ -339,6 +339,9 @@ export class NostrService {
         bootstrapPool.close(this.relayService.bootStrapRelays());
       }
 
+      // After loading the relays and setting them, we load the following list:
+      this.storage.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
+
       this.appState.loadingMessage.set('Loading completed!');
       this.logger.info('Data loading process completed');
 

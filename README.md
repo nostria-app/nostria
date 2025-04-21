@@ -52,6 +52,23 @@ Nostria implements the usage of the Nostr protocol to ensure maximum decentraliz
 - [x] [BUD-02: Blob upload and management](https://github.com/hzrd149/blossom/blob/master/buds/02.md)
 - [x] [BUD-03: User Server List](https://github.com/hzrd149/blossom/blob/master/buds/03.md)
 
+## Opininated Nostr Client
+
+Nostria has opinions, and decisions is being made regarding parts of the Nostr protocol. There are parts that are not implemented and ignored, simply because we disagree.
+
+Here is a list of opinions and decisions made in Nostria:
+
+- NIP-65: Relay List Metadata - We are ignoring the READ/WRITE flags for relays and all relays are both read and writes.
+- NIP-51: Lists - Follow sets (kind:30000) and Relay sets (kind:30002) will not be implemented. They are duplicate functionality and should be ignored.
+
+## Scaling Nostr
+
+Nostria is designed to help Nostr scale. It is implementing the protocol in a way that focuses on decentralization and scalability.
+
+Read more about the journey to scale Nostr globally:
+
+[Scaling Nostr](https://medium.com/@sondreb/scaling-nostr-e50276774367)   
+[Discover Relays](https://medium.com/@sondreb/discovery-relays-e2b0bd00feec)
 
 ## Recommended IDE Setup
 
