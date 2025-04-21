@@ -41,6 +41,8 @@ export class MediaDetailsComponent {
   loading = signal(true);
   error = signal<string | null>(null);
   mediaItem = signal<MediaItem | null>(null);
+  textContent = signal<string | null>(null);
+  textLoading = signal(false);
   
   // Add computed signal for memoized mirror status
   isFullyMirroredStatus = computed(() => {
@@ -68,11 +70,67 @@ export class MediaDetailsComponent {
 
       const item = await this.mediaService.getFileById(id);
       this.mediaItem.set(item);
+      
+      // If it's a text file, fetch its content
+      if (item && this.isTextFile(item.type)) {
+        await this.fetchTextContent(item.url);
+      }
     } catch (err) {
       this.error.set(err instanceof Error ? err.message : 'Failed to load media item');
     } finally {
       this.loading.set(false);
     }
+  }
+
+  async fetchTextContent(url: string): Promise<void> {
+    try {
+      this.textLoading.set(true);
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to load text content (${response.status})`);
+      }
+      
+      const text = await response.text();
+      this.textContent.set(text);
+    } catch (error) {
+      console.error('Error fetching text content:', error);
+      this.textContent.set('Error loading text content');
+    } finally {
+      this.textLoading.set(false);
+    }
+  }
+
+  isTextFile(mimeType: string): boolean {
+    // Check for common text MIME types
+    const textMimeTypes = [
+      'text/plain',
+      'text/html',
+      'text/css',
+      'text/javascript',
+      'application/json',
+      'application/xml',
+      'text/csv',
+      'text/markdown',
+      'application/x-sh'
+    ];
+    
+    return textMimeTypes.some(type => mimeType.startsWith(type)) ||
+           mimeType.includes('text/') ||
+           // Check extensions for common text file formats
+           this.hasTextFileExtension(mimeType);
+  }
+  
+  hasTextFileExtension(mimeType: string): boolean {
+    // For files where MIME type may not be correctly set,
+    // check URL for common text file extensions
+    const item = this.mediaItem();
+    if (!item || !item.url) return false;
+    
+    const url = item.url.toLowerCase();
+    const textExtensions = ['.txt', '.md', '.json', '.xml', '.csv', '.log', '.sh', '.js', '.ts', '.css', '.html', '.yml', '.yaml'];
+    
+    return textExtensions.some(ext => url.endsWith(ext));
   }
 
   async downloadMedia(): Promise<void> {
@@ -183,6 +241,7 @@ export class MediaDetailsComponent {
   getMediaIcon(type: string): string {
     if (type.startsWith('image')) return 'image';
     if (type.startsWith('video')) return 'videocam';
+    if (this.isTextFile(type)) return 'description';
     return 'insert_drive_file';
   }
 
