@@ -47,6 +47,9 @@ export class MediaService {
   private _mediaServers = signal<string[]>([]);
   private lastFetchTime = signal<number>(0);
 
+  // Temporary flag to disable batch operations due to server limitation
+  readonly batchOperationsTemporarilyDisabledDueToBug = true;
+
   // Public signals
   readonly mediaItems = this._mediaItems.asReadonly();
   readonly error = this._error.asReadonly();
