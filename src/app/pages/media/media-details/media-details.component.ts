@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect } from '@angular/core';
+import { Component, inject, signal, effect, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -41,6 +41,9 @@ export class MediaDetailsComponent {
   loading = signal(true);
   error = signal<string | null>(null);
   mediaItem = signal<MediaItem | null>(null);
+  
+  // Add computed signal for memoized mirror status
+  isFullyMirroredStatus = computed(() => this.calculateFullyMirroredStatus());
 
   constructor() {
     effect(() => {
@@ -135,7 +138,14 @@ export class MediaDetailsComponent {
     }
   }
 
+  // Change the function to return the computed value
   isFullyMirrored(): boolean {
+    return this.isFullyMirroredStatus();
+  }
+
+  // Move the calculation to a private method
+  private calculateFullyMirroredStatus(): boolean {
+    debugger;
     const item = this.mediaItem();
     if (!item) return false;
 
@@ -169,7 +179,7 @@ export class MediaDetailsComponent {
 
     const mirrorDomains = allMirrorUrls.map(mirror => extractDomain(mirror));
     const serverDomains = availableServers.map(server => extractDomain(server));
-    debugger;
+    
     // Check if all configured media servers are already in the item's mirrors
     const isMirrored = serverDomains.every(serverDomain =>
       mirrorDomains.some(mirrorDomain => mirrorDomain === serverDomain)
