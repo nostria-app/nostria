@@ -182,7 +182,7 @@ export class MediaDetailsComponent {
   getServerFromUrl(url: string): string {
     try {
       const parsedUrl = new URL(url);
-      return `${parsedUrl.protocol}//${parsedUrl.host}`;
+      return `${parsedUrl.protocol}//${parsedUrl.host}/`;
     } catch {
       return 'Unknown Server';
     }
