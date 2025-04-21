@@ -217,30 +217,30 @@
               <!-- Name Column -->
               <ng-container matColumnDef="name">
                 <th mat-header-cell *matHeaderCellDef>Name</th>
-                <td mat-cell *matCellDef="let item" class="clickable-cell" (click)="navigateToDetails($event, item)">
+                <td mat-cell *matCellDef="let item" class="clickable-cell file-name-column" (click)="navigateToDetails($event, item)">
                   <div class="file-name-cell">
                     <mat-icon>insert_drive_file</mat-icon>
-                    <span>{{ getFileName(item.url) }}</span>
+                    <span class="file-name-text">{{ getFileName(item.url) }}</span>
                   </div>
                 </td>
               </ng-container>
 
               <!-- Type Column -->
               <ng-container matColumnDef="type">
-                <th mat-header-cell *matHeaderCellDef>Type</th>
-                <td mat-cell *matCellDef="let item">{{ item.type || 'Unknown' }}</td>
+                <th mat-header-cell *matHeaderCellDef class="responsive-column">Type</th>
+                <td mat-cell *matCellDef="let item" class="responsive-column">{{ item.type || 'Unknown' }}</td>
               </ng-container>
 
               <!-- Size Column -->
               <ng-container matColumnDef="size">
-                <th mat-header-cell *matHeaderCellDef>Size</th>
-                <td mat-cell *matCellDef="let item">{{ formatFileSize(item.size || 0) }}</td>
+                <th mat-header-cell *matHeaderCellDef class="responsive-column">Size</th>
+                <td mat-cell *matCellDef="let item" class="responsive-column">{{ formatFileSize(item.size || 0) }}</td>
               </ng-container>
 
               <!-- Uploaded Column -->
               <ng-container matColumnDef="uploaded">
-                <th mat-header-cell *matHeaderCellDef>Uploaded</th>
-                <td mat-cell *matCellDef="let item">
+                <th mat-header-cell *matHeaderCellDef class="responsive-column">Uploaded</th>
+                <td mat-cell *matCellDef="let item" class="responsive-column">
                   {{ item.uploaded | timestamp:'medium' }}
                 </td>
               </ng-container>

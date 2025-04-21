@@ -468,13 +468,28 @@
     padding: 0 16px;
   }
 
+  .file-name-column {
+    max-width: 400px;
+    min-width: 50px;
+    width: 100%;
+  }
+
   .file-name-cell {
     display: flex;
     align-items: center;
     gap: 8px;
+    width: 100%;
 
     mat-icon {
       color: var(--mat-emphasis-color);
+      flex-shrink: 0; /* Prevent icon from shrinking */
+    }
+
+    .file-name-text {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
     }
   }
 
@@ -501,5 +516,19 @@
 
   .delete-text {
     color: var(--mat-sys-color-error);
+  }
+
+  /* Hide responsive columns based on screen size */
+  @media (max-width: 960px) {
+    .responsive-column {
+      display: none;
+    }
+  }
+
+  /* Make the name column more flexible on smaller screens */
+  @media (max-width: 600px) {
+    .file-name-column {
+      max-width: none;
+    }
   }
 }
