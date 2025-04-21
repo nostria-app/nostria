@@ -1,0 +1,33 @@
+.privacy-settings-container {
+  padding: 16px;
+}
+
+.settings-card {
+  margin-bottom: 16px;
+  box-shadow: var(--mat-sys-level1);
+}
+
+.tab-content {
+  padding: 20px;
+}
+
+.muted-section {
+  margin-bottom: 24px;
+}
+
+h3 {
+  margin-top: 24px;
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+
+.empty-state {
+  color: #757575;
+  font-style: italic;
+  padding: 12px 0;
+}
+
+mat-list {
+  max-height: 300px;
+  overflow-y: auto;
+}

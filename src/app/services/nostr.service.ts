@@ -367,6 +367,10 @@ export class NostrService {
 
     if (!followingEvent) {
       followingEvent = await this.relayService.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
+      
+      if (followingEvent) {
+        await this.storage.saveEvent(followingEvent);
+      }
     } else {
       // Queue up refresh of this event in the background
       this.relayService.getEventByPubkeyAndKind(pubkey, kinds.Contacts).then(async (evt) => {
@@ -381,7 +385,6 @@ export class NostrService {
     if (followingEvent) {
       const followingTags = this.getTags(followingEvent, 'p');
       this.accountState.followingList.set(followingTags);
-      await this.storage.saveEvent(followingEvent);
     }
   }
 
@@ -390,6 +393,10 @@ export class NostrService {
 
     if (!muteListEvent) {
       muteListEvent = await this.relayService.getEventByPubkeyAndKind(pubkey, kinds.Mutelist);
+
+      if (muteListEvent) {
+        await this.storage.saveEvent(muteListEvent);
+      }
     } else {
       // Queue up refresh of this event in the background
       this.relayService.getEventByPubkeyAndKind(pubkey, kinds.Mutelist).then(async (evt) => {
@@ -402,7 +409,7 @@ export class NostrService {
 
     if (muteListEvent) {
       this.accountState.muteList.set(muteListEvent);
-      await this.storage.saveEvent(muteListEvent);
+
     }
   }
 
