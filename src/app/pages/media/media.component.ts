@@ -317,6 +317,93 @@ export class MediaComponent {
     }
   }
 
+  async downloadSelected(sha256?: string): Promise<void> {
+    let itemsToDownload: string[];
+
+    if (sha256) {
+      itemsToDownload = this.selectedItems();
+    } else {
+      itemsToDownload = this.selectedItems();
+    }
+
+    if (itemsToDownload.length === 0) return;
+    
+    try {
+      // Set a status message during download
+      this.snackBar.open(`Starting download of ${itemsToDownload.length} file(s)...`, 'Close', { duration: 3000 });
+      
+      // For each selected item, fetch and download
+      for (const id of itemsToDownload) {
+        const item = await this.mediaService.getFileById(id);
+        if (item && item.url) {
+          try {
+            // Fetch the file content
+            const response = await fetch(item.url);
+            const blob = await response.blob();
+            
+            // Create a download link with proper filename
+            const filename = this.getFileName(item.url);
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            
+            // Trigger download and clean up
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+            
+            // Small delay between downloads to prevent browser issues
+            await new Promise(resolve => setTimeout(resolve, 300));
+          } catch (err) {
+            console.error(`Failed to download ${item.url}:`, err);
+          }
+        }
+      }
+      
+      this.snackBar.open(`Download of ${itemsToDownload.length} file(s) initiated`, 'Close', { duration: 3000 });
+    } catch (error) {
+      this.snackBar.open('Failed to download some items', 'Close', { duration: 3000 });
+    }
+  }
+  
+  async mirrorSelected(): Promise<void> {
+    const itemsToMirror = this.selectedItems();
+    if (itemsToMirror.length === 0) return;
+    
+    try {
+      const mirrored = [];
+      const skipped = [];
+      
+      // For each selected item, try to mirror it
+      for (const id of itemsToMirror) {
+        const item = await this.mediaService.getFileById(id);
+        if (item && item.url) {
+          // Skip if already mirrored to all servers
+          if (this.mediaService.isFullyMirrored(item)) {
+            skipped.push(item);
+            continue;
+          }
+          
+          await this.mediaService.mirrorFile(item.sha256, item.url);
+          mirrored.push(item);
+        }
+      }
+      
+      // Show appropriate message based on results
+      if (mirrored.length > 0 && skipped.length > 0) {
+        this.snackBar.open(`Mirrored ${mirrored.length} file(s), ${skipped.length} already fully mirrored`, 'Close', { duration: 3000 });
+      } else if (mirrored.length > 0) {
+        this.snackBar.open(`Mirrored ${mirrored.length} file(s) successfully`, 'Close', { duration: 3000 });
+      } else if (skipped.length > 0) {
+        this.snackBar.open(`All selected files are already fully mirrored`, 'Close', { duration: 3000 });
+      }
+    } catch (error) {
+      this.snackBar.open('Failed to mirror some items', 'Close', { duration: 3000 });
+    }
+  }
+
   isFullyMirrored(item: MediaItem): boolean {
     // Use the centralized method from MediaService
     return this.mediaService.isFullyMirrored(item);
