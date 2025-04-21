@@ -769,4 +769,47 @@ export class MediaService {
   getLastFetchTime(): number {
     return this.lastFetchTime();
   }
+
+  /**
+   * Checks if a media item is mirrored on all available media servers
+   * @param item The media item to check
+   * @returns True if the item is mirrored on all available servers, false otherwise
+   */
+  isFullyMirrored(item: MediaItem): boolean {
+    // If there are no media servers configured, item can't be mirrored
+    const availableServers = this.mediaServers();
+    if (availableServers.length === 0) {
+      return false;
+    }
+    
+    // If the item doesn't have mirrors data, consider it not fully mirrored
+    if (!item.mirrors || !Array.isArray(item.mirrors) || item.mirrors.length === 0) {
+      return false;
+    }
+
+    // Extract domain from mirror URLs for comparison
+    const extractDomain = (url: string): string => {
+      try {
+        const parsedUrl = new URL(url);
+        return `${parsedUrl.protocol}//${parsedUrl.host}`;
+      } catch {
+        return url; // Return as is if it's not a valid URL
+      }
+    };
+
+    // Normalize mirror URLs and server URLs for comparison
+    // Include the original URL as part of the mirrors list
+    const allMirrorUrls = [...item.mirrors];
+    if (item.url) {
+      allMirrorUrls.push(item.url);
+    }
+
+    const mirrorDomains = allMirrorUrls.map(mirror => extractDomain(mirror));
+    const serverDomains = availableServers.map(server => extractDomain(server));
+    
+    // Check if all configured media servers are already in the item's mirrors
+    return serverDomains.every(serverDomain =>
+      mirrorDomains.some(mirrorDomain => mirrorDomain === serverDomain)
+    );
+  }
 }
