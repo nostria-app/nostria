@@ -91,6 +91,29 @@
             <mat-divider></mat-divider>
 
             <div class="metadata-item">
+              <span class="label">Hosting Server</span>
+              <span class="value">{{ getServerFromUrl(mediaItem()!.url) }}</span>
+            </div>
+
+            @if (mediaItem()!.mirrors && mediaItem()!.mirrors!.length > 0) {
+              <mat-divider></mat-divider>
+              
+              <div class="metadata-item">
+                <span class="label">Mirror Servers</span>
+                <div class="mirror-servers-list">
+                  @for (mirror of mediaItem()!.mirrors; track mirror) {
+                    <div class="mirror-server">
+                      <mat-icon>cloud_done</mat-icon>
+                      <span>{{ mirror }}</span>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+
+            <mat-divider></mat-divider>
+
+            <div class="metadata-item">
               <span class="label">SHA-256 Hash</span>
               <span class="value code-value">{{ mediaItem()!.sha256 }}</span>
             </div>

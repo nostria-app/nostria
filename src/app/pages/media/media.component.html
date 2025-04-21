@@ -67,6 +67,12 @@
                   <div class="selection-indicator">
                     <mat-icon>check_circle</mat-icon>
                   </div>
+                  @if (item.mirrors && item.mirrors.length > 0) {
+                    <div class="mirror-badge" [matTooltip]="'Mirrored on ' + item.mirrors.length + ' server(s)'">
+                      <mat-icon>cloud_done</mat-icon>
+                      <span class="mirror-count">{{ item.mirrors.length }}</span>
+                    </div>
+                  }
                   <img [src]="item.url" [alt]="item.url || 'Image'" (click)="navigateToDetails($event, item)" loading="lazy">
                   <div class="video-actions">
                     <button mat-icon-button [matMenuTriggerFor]="imageMenu" (click)="$event.stopPropagation()">
@@ -134,6 +140,12 @@
                   <div class="selection-indicator">
                     <mat-icon>check_circle</mat-icon>
                   </div>
+                  @if (item.mirrors && item.mirrors.length > 0) {
+                    <div class="mirror-badge" [matTooltip]="'Mirrored on ' + item.mirrors.length + ' server(s)'">
+                      <mat-icon>cloud_done</mat-icon>
+                      <span class="mirror-count">{{ item.mirrors.length }}</span>
+                    </div>
+                  }
                   <div class="video-preview">
                     <video [src]="item.url" preload="metadata" (click)="navigateToDetails($event, item)"></video>
                     <button mat-icon-button class="play-button" (click)="navigateToDetails($event, item)">
@@ -222,6 +234,21 @@
                     <mat-icon>insert_drive_file</mat-icon>
                     <span class="file-name-text">{{ getFileName(item.url) }}</span>
                   </div>
+                </td>
+              </ng-container>
+
+              <!-- Mirrors Column -->
+              <ng-container matColumnDef="mirrors">
+                <th mat-header-cell *matHeaderCellDef class="mirrors-column">Mirrors</th>
+                <td mat-cell *matCellDef="let item" class="mirrors-column">
+                  @if (item.mirrors && item.mirrors.length > 0) {
+                    <div class="mirror-indicator" [matTooltip]="'Mirrored on ' + item.mirrors.length + ' server(s)'">
+                      <mat-icon>cloud_done</mat-icon>
+                      <span>{{ item.mirrors.length }}</span>
+                    </div>
+                  } @else {
+                    <span>-</span>
+                  }
                 </td>
               </ng-container>
 
