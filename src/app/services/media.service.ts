@@ -497,6 +497,9 @@ export class MediaService {
         throw new Error('No media servers configured');
       }
 
+      // Generate auth headers once for all servers
+      const headers = await this.getAuthHeaders('Delete File', 'delete', id);
+
       // Try each server until delete succeeds
       let deleteSuccessful = false;
       let firstError: Error | null = null;
@@ -509,7 +512,7 @@ export class MediaService {
 
           const response = await fetch(`${url}${id}`, {
             method: 'DELETE',
-            headers: await this.getAuthHeaders('Delete File', 'delete', id)
+            headers: headers // Reuse the same auth headers
           });
 
           if (!response.ok) {
