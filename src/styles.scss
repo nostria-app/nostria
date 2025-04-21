@@ -458,15 +458,10 @@ mat-card-content li {
   margin-bottom: 16px;
 }
 
-
-
-
-// Add to styles.scss or component.scss files
-
 // Mirror indicator styles
 .mirror-badge {
   position: absolute;
-  top: 8px;
+  bottom: 8px;  // Changed from top: 8px to bottom: 8px
   right: 8px;
   background-color: rgba(0, 0, 0, 0.7);
   color: white;
@@ -516,7 +511,7 @@ mat-card-content li {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-top: 8px;
+  margin-top: 0px;
   
   .mirror-server {
     display: flex;
@@ -529,5 +524,17 @@ mat-card-content li {
       height: 18px;
       width: 18px;
     }
+  }
+}
+
+// Video thumbnail styles to match image thumbnails
+.video-thumbnail {
+  position: relative;
+  overflow: hidden;
+  
+  // Special positioning for mirror badge on videos
+  // to prevent overlap with video info at bottom
+  .mirror-badge {
+    bottom: 52px; // Move up higher than the default to avoid the video info overlay
   }
 }
