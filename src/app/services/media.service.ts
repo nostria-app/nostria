@@ -130,7 +130,6 @@ export class MediaService {
 
       for (const server of servers) {
         try {
-          debugger;
           const headers = await this.getAuthHeaders('List Files', 'list');
 
           const url = server.endsWith('/') ? server : `${server}/`;
@@ -143,7 +142,7 @@ export class MediaService {
           }
 
           const data = await response.json();
-          
+
           // Process each item to handle mirroring
           for (const item of data) {
             if (itemsByHash[item.sha256]) {
@@ -172,7 +171,7 @@ export class MediaService {
       }
 
       const mediaItems = Object.values(itemsByHash);
-      
+
       if (mediaItems.length > 0) {
         this._mediaItems.set(mediaItems);
       } else if (firstError) {
@@ -326,7 +325,6 @@ export class MediaService {
   }
 
   async uploadFile(file: File, uploadOriginal: boolean, servers: string[]): Promise<MediaItem | null> {
-    debugger;
     this.uploading.set(true);
     this._error.set(null);
 
@@ -428,24 +426,24 @@ export class MediaService {
       }
 
       if (uploadedMedia) {
-        debugger;
-
         // Update the media items list with the new item
         this._mediaItems.update(items => [...items, uploadedMedia!]);
 
         this.logger.info('File uploaded successfully:', uploadedMedia);
 
+        debugger;
         // Ask other servers to mirror the file
-        const otherServers = this.otherServers(uploadedMedia.url);
-
+        const otherServers = this.otherServers(uploadedMedia.url, servers);
         console.log('Asking to mirror on: ', otherServers);
 
-        // If the uploaded file is not original, we need to generate an new auth header because the action is different.
-        if (!uploadOriginal) {
-          headers = await this.getAuthHeaders('Upload File', 'upload', uploadedMedia.sha256);
-        }
+        if (otherServers.length > 0) {
+          // If the uploaded file is not original, we need to generate an new auth header because the action is different.
+          if (!uploadOriginal) {
+            headers = await this.getAuthHeaders('Upload File', 'upload', uploadedMedia.sha256);
+          }
 
-        await this.mirrorFile(uploadedMedia.sha256, uploadedMedia.url, otherServers, headers);
+          await this.mirrorFile(uploadedMedia.sha256, uploadedMedia.url, otherServers, headers);
+        }
 
         return uploadedMedia;
       } else if (firstError) {
@@ -462,8 +460,12 @@ export class MediaService {
     }
   }
 
-  otherServers(url: string): string[] {
-    return this._mediaServers().filter(server => !url.startsWith(server));
+  otherServers(url: string, servers?: string[]): string[] {
+    if (servers && servers.length > 0) {
+      return servers.filter(server => !url.startsWith(server));
+    } else {
+      return this._mediaServers().filter(server => !url.startsWith(server));
+    }
   }
 
   async deleteFile(id: string): Promise<void> {
@@ -485,6 +487,8 @@ export class MediaService {
         try {
           const url = server.endsWith('/') ? server : `${server}/`;
 
+          console.log('Deleting from server:', url, id);
+
           const response = await fetch(`${url}${id}`, {
             method: 'DELETE',
             headers: await this.getAuthHeaders('Delete File', 'delete', id)
@@ -495,7 +499,6 @@ export class MediaService {
           }
 
           deleteSuccessful = true;
-          break;
         } catch (err) {
           this.logger.error(`Failed to delete from server ${server}:`, err);
 
@@ -569,13 +572,32 @@ export class MediaService {
             throw new Error(`Mirroring not allowed on ${server}: Reason: ${reason}, Status: ${response.status}`);
           }
 
-          // Get the updated media item
-          const updatedMedia = await response.json();
+          // Get the mirrored media item from the response
+          const mirroredMedia = await response.json();
 
-          // Update the specific media item in the list
-          this._mediaItems.update(items =>
-            items.map(item => item.sha256 === sha256 ? updatedMedia : item)
-          );
+          // Extract the server URL from the mirrored media's URL
+          const mirrorServerUrl = this.extractServerUrl(mirroredMedia.url);
+
+          // Update the media item by adding the mirror URL to its mirrors array
+          this._mediaItems.update(items => {
+            return items.map(item => {
+              if (item.sha256 === sha256) {
+                // Initialize mirrors array if it doesn't exist
+                if (!item.mirrors) {
+                  item.mirrors = [];
+                }
+
+                // Only add the mirror if it doesn't already exist in the mirrors array
+                if (!item.mirrors.includes(mirrorServerUrl)) {
+                  return {
+                    ...item,
+                    mirrors: [...item.mirrors, mirrorServerUrl]
+                  };
+                }
+              }
+              return item;
+            });
+          });
 
           mirrorSuccessful = true;
           break;
@@ -781,7 +803,7 @@ export class MediaService {
     if (availableServers.length === 0) {
       return false;
     }
-    
+
     // If the item doesn't have mirrors data, consider it not fully mirrored
     if (!item.mirrors || !Array.isArray(item.mirrors) || item.mirrors.length === 0) {
       return false;
@@ -806,7 +828,7 @@ export class MediaService {
 
     const mirrorDomains = allMirrorUrls.map(mirror => extractDomain(mirror));
     const serverDomains = availableServers.map(server => extractDomain(server));
-    
+
     // Check if all configured media servers are already in the item's mirrors
     return serverDomains.every(serverDomain =>
       mirrorDomains.some(mirrorDomain => mirrorDomain === serverDomain)
