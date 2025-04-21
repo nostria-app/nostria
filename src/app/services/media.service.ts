@@ -324,7 +324,7 @@ export class MediaService {
     return new Uint8Array(arrayBuffer);
   }
 
-  async uploadFile(file: File, uploadOriginal: boolean, servers: string[]): Promise<MediaItem | null> {
+  async uploadFile(file: File, uploadOriginal: boolean, servers: string[]): Promise<{ item: MediaItem | null; status: 'success' | 'duplicate' | 'error'; message?: string }> {
     this.uploading.set(true);
     this._error.set(null);
 
@@ -342,9 +342,8 @@ export class MediaService {
       // Check if file already exists before attempting upload
       const existingFile = this.getFileByHash(hash);
       if (existingFile) {
-        // File already exists, return it instead of uploading again
-        this._error.set('File already exists in your media library');
-        return existingFile;
+        // File already exists, return it with duplicate status
+        return { item: existingFile, status: 'duplicate', message: 'File already exists in your media library' };
       }
 
       for (const server of servers) {
@@ -409,7 +408,7 @@ export class MediaService {
                 this._error.set(`${reason}.`);
               }
 
-              return null;
+              return { item: null, status: 'error', message: `${reason}.` };
             }
 
             if (!reason) {
@@ -454,7 +453,7 @@ export class MediaService {
           await this.mirrorFile(uploadedMedia.sha256, uploadedMedia.url, otherServers, headers);
         }
 
-        return uploadedMedia;
+        return { item: uploadedMedia, status: 'success' };
       } else if (firstError) {
         throw firstError;
       } else {
@@ -463,7 +462,7 @@ export class MediaService {
     } catch (err) {
       this._error.set(err instanceof Error ? err.message : 'Unknown error occurred');
       this.logger.error('Error uploading file:', err);
-      throw err;
+      return { item: null, status: 'error', message: err instanceof Error ? err.message : 'Unknown error occurred' };
     } finally {
       this.uploading.set(false);
     }
@@ -881,5 +880,12 @@ export class MediaService {
       this.logger.error('Failed to save server order:', error);
       throw new Error('Failed to save server order');
     }
+  }
+
+  /**
+   * Clears the current error message
+   */
+  clearError(): void {
+    this._error.set(null);
   }
 }

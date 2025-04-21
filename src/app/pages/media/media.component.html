@@ -29,7 +29,10 @@
     <div class="error-container">
       <mat-icon color="warn">error</mat-icon>
       <p>{{ mediaService.error() }}</p>
-      <button mat-button color="primary" (click)="refreshMedia()">Try Again</button>
+      <div class="error-actions">
+        <button mat-button color="primary" (click)="refreshMedia()">Try Again</button>
+        <button mat-button (click)="dismissError()">Dismiss</button>
+      </div>
     </div>
   }
 
