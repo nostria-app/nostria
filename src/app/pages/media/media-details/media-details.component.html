@@ -31,7 +31,7 @@
             <img [src]="mediaItem()!.url" [alt]="mediaItem()!.url || 'Image'" (click)="openFullScreen()">
           } @else if (mediaItem()?.type?.startsWith('video')) {
             <video [src]="mediaItem()!.url" controls></video>
-          } @else if (isTextFile(mediaItem()!.type)) {
+          } @else if (mediaItem()?.type && isTextFile(mediaItem()!.type)) {
             @if (textLoading()) {
               <div class="text-loading">
                 <mat-spinner diameter="30"></mat-spinner>
@@ -42,7 +42,7 @@
             }
           } @else {
             <div class="generic-preview">
-              <mat-icon>{{ getMediaIcon(mediaItem()!.type) }}</mat-icon>
+              <mat-icon>{{ getMediaIcon(mediaItem()?.type) }}</mat-icon>
             </div>
           }
         </div>
@@ -69,7 +69,7 @@
 
       <mat-card class="metadata-card">
         <mat-card-header>
-          <mat-icon mat-card-avatar>{{ getMediaIcon(mediaItem()!.type) }}</mat-icon>
+          <mat-icon mat-card-avatar>{{ getMediaIcon(mediaItem()?.type) }}</mat-icon>
           <mat-card-title>File Information</mat-card-title>
         </mat-card-header>
 
@@ -84,7 +84,7 @@
 
             <div class="metadata-item">
               <span class="label">File Type</span>
-              <span class="value">{{ mediaItem()!.type }}</span>
+              <span class="value">{{ mediaItem()!.type || 'Unknown' }}</span>
             </div>
 
             <mat-divider></mat-divider>

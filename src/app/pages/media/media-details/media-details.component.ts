@@ -101,7 +101,10 @@ export class MediaDetailsComponent {
     }
   }
 
-  isTextFile(mimeType: string): boolean {
+  isTextFile(mimeType: string | null | undefined): boolean {
+    // Handle null/undefined type case
+    if (!mimeType) return false;
+    
     // Check for common text MIME types
     const textMimeTypes = [
       'text/plain',
@@ -238,7 +241,8 @@ export class MediaDetailsComponent {
     this.router.navigate(['/media']);
   }
 
-  getMediaIcon(type: string): string {
+  getMediaIcon(type: string | null | undefined): string {
+    if (!type) return 'insert_drive_file'; // Default icon for unknown types
     if (type.startsWith('image')) return 'image';
     if (type.startsWith('video')) return 'videocam';
     if (this.isTextFile(type)) return 'description';
@@ -246,7 +250,9 @@ export class MediaDetailsComponent {
   }
 
   getFileName(item: MediaItem): string {
-    const extension = item.type.split('/')[1] || 'file';
+    // Handle case where type might be null/undefined
+    const mimeType = item.type || 'application/octet-stream';
+    const extension = mimeType.split('/')[1] || 'file';
     const baseFileName = item.url?.split('/').pop() || `nostr-media.${extension}`;
 
     // If the URL already has a proper filename with extension, use it
