@@ -125,8 +125,6 @@ export class MediaComponent {
           // Set uploading state to true
           this.mediaService.uploading.set(true);
 
-          debugger;
-
           // Pass the selected servers to the uploadFile method
           await this.mediaService.uploadFile(result.file, result.uploadOriginal, result.servers);
 
