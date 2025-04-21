@@ -177,4 +177,14 @@ export class MediaDetailsComponent {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
+
+  // Helper method to extract server from URL
+  getServerFromUrl(url: string): string {
+    try {
+      const parsedUrl = new URL(url);
+      return `${parsedUrl.protocol}//${parsedUrl.host}`;
+    } catch {
+      return 'Unknown Server';
+    }
+  }
 }

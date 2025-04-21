@@ -17,29 +17,8 @@ export interface MediaItem {
   url: string;
   size: number;
   uploaded: number;
-  // thumbnailUrl?: string;
-  // title?: string;
-  // description?: string;
-  // uploadDate: Date;
-  // size: number;
-  // width?: number;
-  // height?: number;
-  // duration?: number; // For videos, in seconds
-  // mimetype: string;
-  // eventId?: string; // Reference to the Nostr event that contains this media
-  // dim?: string; // Dimensions in NIP-94 format (e.g., "1200x800")
-  // blurhash?: string; // BlurHash for image preview
+  mirrors?: string[]; // Array of server URLs where this file is mirrored
 }
-
-// export interface MediaServer {
-//   url: string;
-//   // name?: string;
-//   // description?: string;
-//   status: 'active' | 'error' | 'unknown';
-//   capabilities?: string[];
-//   error?: string;
-//   lastChecked?: number;
-// }
 
 export interface NostrEvent {
   id: string;
@@ -145,8 +124,8 @@ export class MediaService {
 
       const pubkey = currentUser.pubkey;
 
-      // Try each server until we get a response
-      let mediaItems: MediaItem[] = [];
+      // Keep track of all items by sha256 to detect duplicates
+      const itemsByHash: Record<string, MediaItem> = {};
       let firstError: Error | null = null;
 
       for (const server of servers) {
@@ -164,13 +143,24 @@ export class MediaService {
           }
 
           const data = await response.json();
-          mediaItems = data;
-
-          // Update server status to active
-          // this.updateServerStatus(server, 'active');
-
-          // Successfully got media items, no need to try other servers
-          // break;
+          
+          // Process each item to handle mirroring
+          for (const item of data) {
+            if (itemsByHash[item.sha256]) {
+              // This is a mirrored item, add the server URL to the mirrors array
+              const serverUrl = this.extractServerUrl(item.url);
+              if (!itemsByHash[item.sha256].mirrors) {
+                itemsByHash[item.sha256].mirrors = [this.extractServerUrl(itemsByHash[item.sha256].url)];
+              }
+              if (!itemsByHash[item.sha256].mirrors!.includes(serverUrl)) {
+                itemsByHash[item.sha256].mirrors!.push(serverUrl);
+              }
+            } else {
+              // This is a new item
+              item.mirrors = []; // Initialize mirrors array
+              itemsByHash[item.sha256] = item;
+            }
+          }
         } catch (err) {
           this.logger.error(`Failed to fetch media from server ${server}:`, err);
 
@@ -178,12 +168,11 @@ export class MediaService {
           if (!firstError) {
             firstError = err instanceof Error ? err : new Error('Unknown error occurred');
           }
-
-          // Update server status
-          // this.updateServerStatus(server, 'error', err instanceof Error ? err.message : 'Unknown error');
         }
       }
 
+      const mediaItems = Object.values(itemsByHash);
+      
       if (mediaItems.length > 0) {
         this._mediaItems.set(mediaItems);
       } else if (firstError) {
@@ -197,6 +186,17 @@ export class MediaService {
       this.logger.error('Error fetching media items:', err);
     } finally {
       this.loading.set(false);
+    }
+  }
+
+  // Helper method to extract server URL from a file URL
+  private extractServerUrl(url: string): string {
+    try {
+      const parsedUrl = new URL(url);
+      return `${parsedUrl.protocol}//${parsedUrl.host}/`;
+    } catch {
+      // Return the original URL if parsing fails
+      return url;
     }
   }
 
@@ -237,24 +237,6 @@ export class MediaService {
       const response = await fetch(`${normalizedUrl}`);
 
       if (response.ok) {
-        // Parse capabilities
-        // const info = await response.json();
-
-        // Update server with capabilities
-        // this._mediaServers.update(servers =>
-        //   servers.map(server =>
-        //     server === normalizedUrl
-        //       ? {
-        //         ...server,
-        //         status: 'active',
-        //         capabilities: info.capabilities || [],
-        //         error: undefined,
-        //         lastChecked: Date.now()
-        //       }
-        //       : server
-        //   )
-        // );
-
         return {
           success: true,
           message: `Connected successfully! Server: ${normalizedUrl}`
@@ -264,28 +246,11 @@ export class MediaService {
         const headResponse = await fetch(normalizedUrl, { method: 'HEAD' });
 
         if (headResponse.ok) {
-          // Update server status
-          // this._mediaServers.update(servers =>
-          //   servers.map(server =>
-          //     server.url === normalizedUrl
-          //       ? {
-          //         ...server,
-          //         status: 'active',
-          //         error: 'Info endpoint not available',
-          //         lastChecked: Date.now()
-          //       }
-          //       : server
-          //   )
-          // );
-
           return {
             success: true,
             message: 'Server exists but info endpoint not available. Limited functionality.'
           };
         }
-
-        // Update server status
-        // this.updateServerStatus(normalizedUrl, 'error', `HTTP ${response.status}: ${response.statusText}`);
 
         return {
           success: false,
@@ -293,9 +258,6 @@ export class MediaService {
         };
       }
     } catch (error) {
-      // Update server status
-      // this.updateServerStatus(url, 'error', error instanceof Error ? error.message : 'Unknown error');
-
       return {
         success: false,
         message: `Connection error: ${error instanceof Error ? error.message : String(error)}`
@@ -371,13 +333,6 @@ export class MediaService {
     let headers: Record<string, string> = {};
 
     try {
-      // Check if we have any media servers configured
-      // const servers = this._mediaServers();
-      // if (servers.length === 0) {
-      //   throw new Error('No media servers configured');
-      // }
-
-      // Try each server until upload succeeds
       let uploadedMedia: MediaItem | null = null;
       let firstError: Error | null = null;
       let hash = '';
@@ -432,8 +387,6 @@ export class MediaService {
           if (!response.ok) {
 
             const reason = response.headers.get('x-reason');
-            // const response = await headResponse.text();
-            // console.log('Response:', response);
 
             if (response.status == 500) {
               const errorText = response.statusText;
@@ -467,19 +420,10 @@ export class MediaService {
             break;
           }
 
-          // Update server status to active
-          // this.updateServerStatus(server.url, 'active');
-
         } catch (err) {
-          // this.logger.error(`Failed to upload to server ${server.url}:`, err);
-
-          // Save the first error to display if all servers fail
           if (!firstError) {
             firstError = err instanceof Error ? err : new Error('Unknown error occurred');
           }
-
-          // Update server status
-          // this.updateServerStatus(server, 'error', err instanceof Error ? err.message : 'Unknown error');
         }
       }
 
@@ -499,7 +443,6 @@ export class MediaService {
         // If the uploaded file is not original, we need to generate an new auth header because the action is different.
         if (!uploadOriginal) {
           headers = await this.getAuthHeaders('Upload File', 'upload', uploadedMedia.sha256);
-          // headers = await this.getAuthHeaders('Upload File', 'upload', uploadedMedia.sha256);
         }
 
         await this.mirrorFile(uploadedMedia.sha256, uploadedMedia.url, otherServers, headers);
@@ -551,9 +494,6 @@ export class MediaService {
             throw new Error(`Failed to delete file from ${server}: ${response.status}`);
           }
 
-          // Update server status to active
-          // this.updateServerStatus(server.url, 'active');
-
           deleteSuccessful = true;
           break;
         } catch (err) {
@@ -562,9 +502,6 @@ export class MediaService {
           if (!firstError) {
             firstError = err instanceof Error ? err : new Error('Unknown error occurred');
           }
-
-          // Update server status
-          // this.updateServerStatus(server.url, 'error', err instanceof Error ? err.message : 'Unknown error');
         }
       }
 
@@ -607,8 +544,6 @@ export class MediaService {
         try {
           const url = server.endsWith('/') ? server : `${server}/`;
 
-          // let action = this.determineAction(file);
-
           // First check if mirroring is allowed with HEAD request to UPLOAD endpoint
           const headResponse = await fetch(`${url}upload`, {
             method: 'HEAD',
@@ -642,9 +577,6 @@ export class MediaService {
             items.map(item => item.sha256 === sha256 ? updatedMedia : item)
           );
 
-          // Update server status to active
-          // this.updateServerStatus(server.url, 'active');
-
           mirrorSuccessful = true;
           break;
         } catch (err) {
@@ -653,9 +585,6 @@ export class MediaService {
           if (!firstError) {
             firstError = err instanceof Error ? err : new Error('Unknown error occurred');
           }
-
-          // Update server status
-          // this.updateServerStatus(server.url, 'error', err instanceof Error ? err.message : 'Unknown error');
         }
       }
 
@@ -713,9 +642,6 @@ export class MediaService {
     //         throw new Error(`Failed to report file on ${server}: ${response.status}`);
     //       }
 
-    //       // Update server status to active
-    //       // this.updateServerStatus(server, 'active');
-
     //       reportSuccessful = true;
     //       break;
     //     } catch (err) {
@@ -724,9 +650,6 @@ export class MediaService {
     //       if (!firstError) {
     //         firstError = err instanceof Error ? err : new Error('Unknown error occurred');
     //       }
-
-    //       // Update server status
-    //       // this.updateServerStatus(server.url, 'error', err instanceof Error ? err.message : 'Unknown error');
     //     }
     //   }
 
@@ -838,10 +761,6 @@ export class MediaService {
       const base64Event = btoa(JSON.stringify(signedEvent));
       headers['Authorization'] = `Nostr ${base64Event}`
     }
-
-    // if (!skipContentType) {
-    //   headers['Content-Type'] = 'application/json';
-    // }
 
     return headers;
   }

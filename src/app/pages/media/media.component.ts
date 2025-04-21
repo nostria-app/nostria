@@ -23,6 +23,7 @@ import { TimestampPipe } from '../../pipes/timestamp.pipe';
 import { ApplicationService } from '../../services/application.service';
 import { MediaPreviewDialogComponent } from '../../components/media-preview-dialog/media-preview.component';
 import { ConfirmDialogComponent } from '../../components/confirm-dialog/confirm-dialog.component';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-media',
@@ -42,7 +43,8 @@ import { ConfirmDialogComponent } from '../../components/confirm-dialog/confirm-
     MatMenuModule,
     MatProgressSpinnerModule,
     MatTableModule,
-    TimestampPipe
+    TimestampPipe,
+    MatTooltipModule
   ],
   templateUrl: './media.component.html',
   styleUrls: ['./media.component.scss']
@@ -66,7 +68,7 @@ export class MediaComponent {
   files = signal<MediaItem[]>([]);
 
   // Table columns for files display
-  displayedColumns: string[] = ['select', 'name', 'type', 'size', 'uploaded', 'actions'];
+  displayedColumns: string[] = ['select', 'name', 'mirrors', 'type', 'size', 'uploaded', 'actions'];
 
   constructor() {
     // Restore the active tab from localStorage if available

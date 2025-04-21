@@ -457,3 +457,77 @@ mat-card-content li {
 .mb-16 {
   margin-bottom: 16px;
 }
+
+
+
+
+// Add to styles.scss or component.scss files
+
+// Mirror indicator styles
+.mirror-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  border-radius: 12px;
+  padding: 2px 8px;
+  display: flex;
+  align-items: center;
+  z-index: 2;
+  
+  mat-icon {
+    font-size: 16px;
+    height: 16px;
+    width: 16px;
+    margin-right: 4px;
+  }
+  
+  .mirror-count {
+    font-size: 12px;
+    font-weight: 500;
+  }
+}
+
+.mirror-indicator {
+  display: flex;
+  align-items: center;
+  color: var(--mat-primary-color);
+  
+  mat-icon {
+    font-size: 18px;
+    height: 18px;
+    width: 18px;
+    margin-right: 4px;
+  }
+  
+  span {
+    font-size: 14px;
+  }
+}
+
+.mirrors-column {
+  width: 80px;
+  text-align: center;
+}
+
+// Mirror servers list on details page
+.mirror-servers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+  
+  .mirror-server {
+    display: flex;
+    align-items: center;
+    
+    mat-icon {
+      color: var(--mat-primary-color);
+      margin-right: 8px;
+      font-size: 18px;
+      height: 18px;
+      width: 18px;
+    }
+  }
+}
