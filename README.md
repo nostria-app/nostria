@@ -43,6 +43,7 @@ Nostria implements the usage of the Nostr protocol to ensure maximum decentraliz
 - [ ] [NIP-40: Expiration Timestamp](https://github.com/nostr-protocol/nips/blob/master/40.md)
 - [ ] [NIP-42: Authentication of clients to relays](https://github.com/nostr-protocol/nips/blob/master/42.md)
 - [ ] [NIP-50: Keywords filter](https://github.com/nostr-protocol/nips/blob/master/50.md)
+- [x] [NIP-51: Lists](https://github.com/nostr-protocol/nips/blob/master/51.md)
 - [ ] [NIP-56: Reporting](https://github.com/nostr-protocol/nips/blob/master/56.md)
 - [ ] [NIP-57: Lightning Zaps](https://github.com/nostr-protocol/nips/blob/master/57.md)
 - [ ] [NIP-58: Badges](https://github.com/nostr-protocol/nips/blob/master/58.md)
@@ -58,8 +59,10 @@ Nostria has opinions, and decisions is being made regarding parts of the Nostr p
 
 Here is a list of opinions and decisions made in Nostria:
 
-- NIP-65: Relay List Metadata - We are ignoring the READ/WRITE flags for relays and all relays are both read and writes.
-- NIP-51: Lists - Follow sets (kind:30000) and Relay sets (kind:30002) will not be implemented. They are duplicate functionality and should be ignored.
+- [NIP-65: Relay List Metadata](https://github.com/nostr-protocol/nips/blob/master/65.md) - We are ignoring the READ/WRITE flags for relays and all relays are both read and writes.
+- [NIP-51: Lists](https://github.com/nostr-protocol/nips/blob/master/51.md) - Follow sets (kind:30000) and Relay sets (kind:30002) will not be implemented. They are duplicate functionality and should be ignored.
+- [NIP-96: HTTP File Storage Integration](https://github.com/nostr-protocol/nips/blob/master/96.md) - This is a "duplicate" specification to Blossom, that has more features, but is additionally more complex. It allows metadata to be stored with the blob, but Nostria will not support this protocol. File storage server list (kind:10096) is therefore
+ignored.
 
 ## Scaling Nostr
 

@@ -11,6 +11,7 @@ import { finalizeEvent, verifyEvent } from 'nostr-tools/pure';
 import { BunkerPointer, BunkerSigner, parseBunkerInput } from 'nostr-tools/nip46';
 import { NostrTagKey, StandardizedTagType } from '../standardized-tags';
 import { ApplicationStateService } from './application-state.service';
+import { AccountStateService } from './account-state.service';
 
 export interface NostrUser {
   pubkey: string;
@@ -35,6 +36,7 @@ export class NostrService {
   private readonly relayService = inject(RelayService);
   private readonly storage = inject(StorageService);
   private readonly appState = inject(ApplicationStateService);
+  private readonly accountState = inject(AccountStateService);
 
   private account = signal<NostrUser | null>(null);
   private accounts = signal<NostrUser[]>([]);
@@ -340,7 +342,8 @@ export class NostrService {
       }
 
       // After loading the relays and setting them, we load the following list:
-      this.storage.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
+      await this.loadAccountFollowing(pubkey);
+      await this.loadAccountMuteList(pubkey);
 
       this.appState.loadingMessage.set('Loading completed!');
       this.logger.info('Data loading process completed');
@@ -357,6 +360,50 @@ export class NostrService {
     setTimeout(() => {
       this.appState.showSuccess.set(false);
     }, 1500);
+  }
+
+  private async loadAccountFollowing(pubkey: string) {
+    let followingEvent = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
+
+    if (!followingEvent) {
+      followingEvent = await this.relayService.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
+    } else {
+      // Queue up refresh of this event in the background
+      this.relayService.getEventByPubkeyAndKind(pubkey, kinds.Contacts).then(async (evt) => {
+        if (evt) {
+          const followingTags = this.getTags(evt, 'p');
+          this.accountState.followingList.set(followingTags);
+          await this.storage.saveEvent(evt);
+        }
+      });
+    }
+
+    if (followingEvent) {
+      const followingTags = this.getTags(followingEvent, 'p');
+      this.accountState.followingList.set(followingTags);
+      await this.storage.saveEvent(followingEvent);
+    }
+  }
+
+  private async loadAccountMuteList(pubkey: string) {
+    let muteListEvent = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Mutelist);
+
+    if (!muteListEvent) {
+      muteListEvent = await this.relayService.getEventByPubkeyAndKind(pubkey, kinds.Mutelist);
+    } else {
+      // Queue up refresh of this event in the background
+      this.relayService.getEventByPubkeyAndKind(pubkey, kinds.Mutelist).then(async (evt) => {
+        if (evt) {
+          this.accountState.muteList.set(evt);
+          await this.storage.saveEvent(evt);
+        }
+      });
+    }
+
+    if (muteListEvent) {
+      this.accountState.muteList.set(muteListEvent);
+      await this.storage.saveEvent(muteListEvent);
+    }
   }
 
   async signEvent(event: UnsignedEvent) {
