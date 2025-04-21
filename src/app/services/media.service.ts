@@ -367,6 +367,8 @@ export class MediaService {
     this.uploading.set(true);
     this._error.set(null);
 
+    let headers: Record<string, string> = {};
+
     try {
       // Check if we have any media servers configured
       // const servers = this._mediaServers();
@@ -377,13 +379,14 @@ export class MediaService {
       // Try each server until upload succeeds
       let uploadedMedia: MediaItem | null = null;
       let firstError: Error | null = null;
+      let hash = '';
 
       for (const server of servers) {
         try {
           const url = server.endsWith('/') ? server : `${server}/`;
 
           const fileBytes = await this.getFileBytes(file);
-          const hash = bytesToHex(sha256(fileBytes));
+          hash = bytesToHex(sha256(fileBytes));
 
           let action = this.determineAction(file);
 
@@ -392,7 +395,7 @@ export class MediaService {
             action.action = 'upload';
           }
 
-          const headers = await this.getAuthHeaders('Upload File', action.action, hash);
+          headers = await this.getAuthHeaders('Upload File', action.action, hash);
 
           headers['X-SHA-256'] = hash;
           headers['X-Content-Type'] = file.type;
@@ -458,11 +461,14 @@ export class MediaService {
           uploadedMedia = await response.json();
           console.log('Uploaded media:', uploadedMedia);
 
+          // After the first successful upload, we will simply call mirror on the other servers to ensure they do server-to-server transfer.
+          if (uploadedMedia) {
+            break;
+          }
+
           // Update server status to active
           // this.updateServerStatus(server.url, 'active');
 
-          // Successfully uploaded, no need to try other servers
-          break;
         } catch (err) {
           // this.logger.error(`Failed to upload to server ${server.url}:`, err);
 
@@ -477,8 +483,26 @@ export class MediaService {
       }
 
       if (uploadedMedia) {
+        debugger;
+
         // Update the media items list with the new item
         this._mediaItems.update(items => [...items, uploadedMedia!]);
+
+        this.logger.info('File uploaded successfully:', uploadedMedia);
+
+        // Ask other servers to mirror the file
+        const otherServers = this.otherServers(uploadedMedia.url);
+
+        console.log('Asking to mirror on: ', otherServers);
+
+        // If the uploaded file is not original, we need to generate an new auth header because the action is different.
+        if (!uploadOriginal) {
+          headers = await this.getAuthHeaders('Upload File', 'upload', hash);
+          // headers = await this.getAuthHeaders('Upload File', 'upload', uploadedMedia.sha256);
+        }
+
+        await this.mirrorFile(uploadedMedia.sha256, uploadedMedia.url, otherServers, headers);
+
         return uploadedMedia;
       } else if (firstError) {
         throw firstError;
@@ -492,6 +516,10 @@ export class MediaService {
     } finally {
       this.uploading.set(false);
     }
+  }
+
+  otherServers(url: string): string[] {
+    return this._mediaServers().filter(server => !url.startsWith(server));
   }
 
   async deleteFile(id: string): Promise<void> {
@@ -556,17 +584,20 @@ export class MediaService {
     }
   }
 
-  async mirrorFile(id: string): Promise<void> {
+  async mirrorFile(sha256: string, fileUrl: string, servers?: string[], headers?: Record<string, string>): Promise<void> {
     this.loading.set(true);
     this._error.set(null);
 
-    try {
-      // Check if we have any media servers configured
-      const servers = this._mediaServers();
-      if (servers.length === 0) {
-        throw new Error('No media servers configured');
-      }
+    // Check if we have any media servers configured
+    if (!servers || servers.length === 0) {
+      servers = this.otherServers(fileUrl);
+    }
 
+    if (!headers) {
+      headers = await this.getAuthHeaders('Upload File', 'upload', sha256);
+    }
+
+    try {
       // Try each server until mirror succeeds
       let mirrorSuccessful = false;
       let firstError: Error | null = null;
@@ -575,27 +606,31 @@ export class MediaService {
         try {
           const url = server.endsWith('/') ? server : `${server}/`;
 
-          // First check if mirroring is allowed with HEAD request
-          const headResponse = await fetch(`${url}mirror`, {
+          // let action = this.determineAction(file);
+
+          // First check if mirroring is allowed with HEAD request to UPLOAD endpoint
+          const headResponse = await fetch(`${url}upload`, {
             method: 'HEAD',
-            headers: await this.getAuthHeaders('Mirror File', 'upload')
+            headers: headers
           });
 
           if (!headResponse.ok) {
-            throw new Error(`Mirroring not allowed on ${server}: ${headResponse.status}`);
+            const reason = headResponse.headers.get('x-reason');
+            throw new Error(`Mirroring not allowed on ${server}: Reason: ${reason}, Status: ${headResponse.status}`);
           }
 
           const response = await fetch(`${url}mirror`, {
             method: 'PUT', // As per BUD-04 spec
             headers: {
-              ...await this.getAuthHeaders('Mirror File', 'upload'),
+              ...headers,
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ sha256: id })
+            body: JSON.stringify({ url: fileUrl })
           });
 
           if (!response.ok) {
-            throw new Error(`Failed to mirror file on ${server}: ${response.status}`);
+            const reason = response.headers.get('x-reason');
+            throw new Error(`Mirroring not allowed on ${server}: Reason: ${reason}, Status: ${response.status}`);
           }
 
           // Get the updated media item
@@ -603,7 +638,7 @@ export class MediaService {
 
           // Update the specific media item in the list
           this._mediaItems.update(items =>
-            items.map(item => item.sha256 === id ? updatedMedia : item)
+            items.map(item => item.sha256 === sha256 ? updatedMedia : item)
           );
 
           // Update server status to active

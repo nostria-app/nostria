@@ -64,7 +64,7 @@ export class MediaComponent {
   images = signal<MediaItem[]>([]);
   videos = signal<MediaItem[]>([]);
   files = signal<MediaItem[]>([]);
-  
+
   // Table columns for files display
   displayedColumns: string[] = ['select', 'name', 'type', 'size', 'uploaded', 'actions'];
 
@@ -74,13 +74,13 @@ export class MediaComponent {
     if (savedTab && ['images', 'videos', 'files', 'servers'].includes(savedTab)) {
       this.activeTab.set(savedTab as 'images' | 'videos' | 'files' | 'servers');
     }
-    
+
     // Update filtered lists whenever media items change
     effect(() => {
       const allMedia = this.mediaService.mediaItems();
       this.images.set(allMedia.filter(item => item.type.startsWith('image')));
       this.videos.set(allMedia.filter(item => item.type.startsWith('video')));
-      this.files.set(allMedia.filter(item => 
+      this.files.set(allMedia.filter(item =>
         !item.type.startsWith('image') && !item.type.startsWith('video')
       ));
     });
@@ -122,18 +122,20 @@ export class MediaComponent {
         try {
           // Set uploading state to true
           this.mediaService.uploading.set(true);
-          
+
+          debugger;
+
           // Pass the selected servers to the uploadFile method
           await this.mediaService.uploadFile(result.file, result.uploadOriginal, result.servers);
-          
+
           // Set the uploading state to false
           this.mediaService.uploading.set(false);
-          
+
           this.snackBar.open('Media uploaded successfully', 'Close', { duration: 3000 });
         } catch (error) {
           // Set the uploading state to false on error
           this.mediaService.uploading.set(false);
-          
+
           this.snackBar.open('Failed to upload media', 'Close', { duration: 3000 });
         }
       }
@@ -200,7 +202,7 @@ export class MediaComponent {
   openDetailsDialog(item: MediaItem): void {
     // Save the current active tab before navigating
     localStorage.setItem('mediaActiveTab', this.activeTab());
-    
+
     // Navigate to details page instead of opening dialog
     this.router.navigate(['/media', 'details', item.sha256]);
   }
@@ -228,7 +230,7 @@ export class MediaComponent {
 
     // Save the current active tab before navigating
     localStorage.setItem('mediaActiveTab', this.activeTab());
-    
+
     // Navigate to details page with the item ID
     this.router.navigate(['/media', 'details', item.sha256]);
   }
@@ -254,10 +256,10 @@ export class MediaComponent {
 
   async deleteSelected(sha256?: string): Promise<void> {
     const itemsToDelete = sha256 ? [sha256] : this.selectedItems();
-    const confirmMessage = itemsToDelete.length === 1 
-      ? 'Are you sure you want to delete this item?' 
+    const confirmMessage = itemsToDelete.length === 1
+      ? 'Are you sure you want to delete this item?'
       : `Are you sure you want to delete ${itemsToDelete.length} items?`;
-    
+
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       data: {
         title: 'Confirm Delete',
@@ -282,9 +284,9 @@ export class MediaComponent {
     }
   }
 
-  async mirrorItem(sha256: string): Promise<void> {
+  async mirrorItem(sha256: string, url: string, servers?: string[]): Promise<void> {
     try {
-      await this.mediaService.mirrorFile(sha256);
+      await this.mediaService.mirrorFile(sha256, url);
       this.snackBar.open('Media mirrored successfully', 'Close', { duration: 3000 });
     } catch (error) {
       this.snackBar.open('Failed to mirror media', 'Close', { duration: 3000 });
@@ -317,7 +319,7 @@ export class MediaComponent {
     this.activeTab.set(tab);
     // Store the selected tab in localStorage
     localStorage.setItem('mediaActiveTab', tab);
-    
+
     if (tab !== 'servers') {
       this.selectedItems.set([]);
     }

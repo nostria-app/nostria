@@ -73,7 +73,7 @@
                       <mat-icon>more_vert</mat-icon>
                     </button>
                     <mat-menu #imageMenu="matMenu">
-                      <button mat-menu-item (click)="openDetailsDialog(item)"> item)">
+                      <button mat-menu-item (click)="openDetailsDialog(item)">
                         <mat-icon>info</mat-icon>
                         <span>Details</span>
                       </button>
@@ -81,11 +81,11 @@
                         <mat-icon>download</mat-icon>
                         <span>Download</span>
                       </a>
-                      <button mat-menu-item (click)="mirrorItem(item.sha256)">
+                      <button mat-menu-item (click)="mirrorItem(item.sha256, item.url)">
                         <mat-icon>cloud_upload</mat-icon>
                         <span>Mirror</span>
                       </button>
-                      <button mat-menu-item color="warn" (click)="openDetailsDialog(item)">
+                      <button mat-menu-item color="warn" (click)="deleteSelected(item.sha256)">
                         <mat-icon color="warn">delete</mat-icon>
                         <span class="delete-text">Delete</span>
                       </button>
@@ -149,7 +149,7 @@
                       <mat-icon>more_vert</mat-icon>
                     </button>
                     <mat-menu #videoMenu="matMenu">
-                      <button mat-menu-item (click)="openDetailsDialog(item)"> item)">
+                      <button mat-menu-item (click)="openDetailsDialog(item)">
                         <mat-icon>info</mat-icon>
                         <span>Details</span>
                       </button>
@@ -157,11 +157,11 @@
                         <mat-icon>download</mat-icon>
                         <span>Download</span>
                       </a>
-                      <button mat-menu-item (click)="mirrorItem(item.sha256)">
+                      <button mat-menu-item (click)="mirrorItem(item.sha256, item.url)">
                         <mat-icon>cloud_upload</mat-icon>
                         <span>Mirror</span>
                       </button>
-                      <button mat-menu-item color="warn" (click)="openDetailsDialog(item)">
+                      <button mat-menu-item color="warn" (click)="deleteSelected(item.sha256)">
                         <mat-icon color="warn">delete</mat-icon>
                         <span class="delete-text">Delete</span>
                       </button>
@@ -261,11 +261,11 @@
                       <mat-icon>download</mat-icon>
                       <span>Download</span>
                     </a>
-                    <button mat-menu-item (click)="mirrorItem(item.sha256)">
+                    <button mat-menu-item (click)="mirrorItem(item.sha256, item.url)">
                       <mat-icon>cloud_upload</mat-icon>
                       <span>Mirror</span>
                     </button>
-                    <button mat-menu-item color="warn" (click)="openDetailsDialog(item)">
+                    <button mat-menu-item color="warn" (click)="deleteSelected(item.sha256)">
                       <mat-icon color="warn">delete</mat-icon>
                       <span class="delete-text">Delete</span>
                     </button>
