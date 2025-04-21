@@ -98,7 +98,7 @@ export class LoginDialogComponent implements OnInit {
   loginWithNsec(): void {
     this.logger.debug('Attempting login with nsec');
     try {
-      this.nostrService.loginWithNsec(this.nsecKey);
+      this.nostrService.loginWithNsec(this.nsecKey.trim());
       this.logger.debug('Login with nsec successful');
       this.closeDialog();
     } catch (err) {
