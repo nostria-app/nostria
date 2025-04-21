@@ -138,7 +138,7 @@ export class MediaDetailsComponent {
     if (!item) return;
 
     try {
-      await this.mediaService.mirrorFile(item.sha256);
+      await this.mediaService.mirrorFile(item.sha256, item.url);
       this.snackBar.open('Media mirrored successfully', 'Close', { duration: 3000 });
     } catch (error) {
       this.snackBar.open('Failed to mirror media', 'Close', { duration: 3000 });
