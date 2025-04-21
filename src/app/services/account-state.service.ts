@@ -1,5 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 import { NostrEvent } from '../interfaces';
+import { NostrEventData } from './storage.service';
 
 @Injectable({
   providedIn: 'root'
@@ -10,6 +11,8 @@ export class AccountStateService {
   
   // Current profile pubkey
   currentProfilePubkey = signal<string>('');
+
+  muteList = signal<NostrEvent | undefined>(undefined);
   
   constructor() { }
   
