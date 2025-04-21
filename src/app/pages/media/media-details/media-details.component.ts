@@ -146,6 +146,8 @@ export class MediaDetailsComponent {
   }
 
   goBack(): void {
+    // Simply navigate back to the media list
+    // The active tab will be restored from localStorage by the MediaComponent
     this.router.navigate(['/media']);
   }
 

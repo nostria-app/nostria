@@ -33,7 +33,8 @@
     </div>
   }
 
-  <mat-tab-group (selectedIndexChange)="setActiveTab($event === 0 ? 'images' : ($event === 1 ? 'videos' : 'servers'))">
+  <mat-tab-group [selectedIndex]="activeTab() === 'images' ? 0 : activeTab() === 'videos' ? 1 : activeTab() === 'files' ? 2 : 3" 
+                (selectedIndexChange)="setActiveTab($event === 0 ? 'images' : ($event === 1 ? 'videos' : $event === 2 ? 'files' : 'servers'))">
     <mat-tab>
       <ng-template mat-tab-label>
         <mat-icon class="tab-icon">image</mat-icon>
@@ -239,7 +240,7 @@
               <!-- Uploaded Column -->
               <ng-container matColumnDef="uploaded">
                 <th mat-header-cell *matHeaderCellDef>Uploaded</th>
-                <td mat-cell *matCellDef="let item" class="clickable-cell" (click)="navigateToDetails($event, item)">
+                <td mat-cell *matCellDef="let item">
                   {{ item.uploaded | timestamp:'medium' }}
                 </td>
               </ng-container>

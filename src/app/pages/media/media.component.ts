@@ -69,6 +69,12 @@ export class MediaComponent {
   displayedColumns: string[] = ['select', 'name', 'type', 'size', 'uploaded', 'actions'];
 
   constructor() {
+    // Restore the active tab from localStorage if available
+    const savedTab = localStorage.getItem('mediaActiveTab');
+    if (savedTab && ['images', 'videos', 'files', 'servers'].includes(savedTab)) {
+      this.activeTab.set(savedTab as 'images' | 'videos' | 'files' | 'servers');
+    }
+    
     // Update filtered lists whenever media items change
     effect(() => {
       const allMedia = this.mediaService.mediaItems();
@@ -192,6 +198,9 @@ export class MediaComponent {
   }
 
   openDetailsDialog(item: MediaItem): void {
+    // Save the current active tab before navigating
+    localStorage.setItem('mediaActiveTab', this.activeTab());
+    
     // Navigate to details page instead of opening dialog
     this.router.navigate(['/media', 'details', item.sha256]);
   }
@@ -217,6 +226,9 @@ export class MediaComponent {
     event.preventDefault();
     event.stopPropagation();
 
+    // Save the current active tab before navigating
+    localStorage.setItem('mediaActiveTab', this.activeTab());
+    
     // Navigate to details page with the item ID
     this.router.navigate(['/media', 'details', item.sha256]);
   }
@@ -303,6 +315,9 @@ export class MediaComponent {
 
   setActiveTab(tab: 'images' | 'videos' | 'files' | 'servers'): void {
     this.activeTab.set(tab);
+    // Store the selected tab in localStorage
+    localStorage.setItem('mediaActiveTab', tab);
+    
     if (tab !== 'servers') {
       this.selectedItems.set([]);
     }
