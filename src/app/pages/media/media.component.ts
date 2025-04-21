@@ -133,10 +133,10 @@ export class MediaComponent {
           // Set the uploading state to false
           this.mediaService.uploading.set(false);
 
-          // Check if there was an error message about duplicate file
-          if (this.mediaService.error() === 'File already exists in your media library') {
+          // Handle the result based on status
+          if (uploadResult.status === 'duplicate') {
             this.snackBar.open('This file already exists in your media library.', 'Close', { duration: 3000 });
-          } else if (uploadResult) {
+          } else if (uploadResult.status === 'success') {
             this.snackBar.open('Media uploaded successfully', 'Close', { duration: 3000 });
           }
         } catch (error) {
@@ -147,6 +147,10 @@ export class MediaComponent {
         }
       }
     });
+  }
+
+  dismissError(): void {
+    this.mediaService.clearError();
   }
 
   openServerDialog(server?: string): void {
