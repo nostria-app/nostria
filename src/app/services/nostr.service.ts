@@ -1093,27 +1093,40 @@ export class NostrService {
   loginWithNsec(nsec: string): void {
     try {
       this.logger.info('Attempting to login with nsec');
+
+      // Allow usage of hex and nsec.
       // Validate and decode the nsec
-      if (!nsec.startsWith('nsec')) {
-        const error = 'Invalid nsec format. Must start with "nsec"';
-        this.logger.error(error);
-        throw new Error(error);
+      // if (!nsec.startsWith('nsec')) {
+      //   const error = 'Invalid nsec format. Must start with "nsec"';
+      //   this.logger.error(error);
+      //   throw new Error(error);
+      // }
+
+      let privkeyHex = '';
+      let privkeyArray: Uint8Array;
+
+      debugger;
+
+      if (nsec.startsWith('nsec')) {
+        // Decode the nsec to get the private key bytes
+        const { type, data } = nip19.decode(nsec);
+        privkeyArray = data as Uint8Array;
+
+        if (type !== 'nsec') {
+          const error = `Expected nsec but got ${type}`;
+          this.logger.error(error);
+          throw new Error(error);
+        }
+
+        // Convert the private key bytes to hex string
+        privkeyHex = bytesToHex(data);
+      } else {
+        privkeyHex = nsec; // Assume it's already in hex format
+        privkeyArray = hexToBytes(privkeyHex);
       }
-
-      // Decode the nsec to get the private key bytes
-      const { type, data } = nip19.decode(nsec);
-
-      if (type !== 'nsec') {
-        const error = `Expected nsec but got ${type}`;
-        this.logger.error(error);
-        throw new Error(error);
-      }
-
-      // Convert the private key bytes to hex string
-      const privkeyHex = bytesToHex(data);
 
       // Generate the public key from the private key
-      const pubkey = getPublicKey(data);
+      const pubkey = getPublicKey(privkeyArray);
 
       // Store the user info
       const newUser: NostrUser = {
