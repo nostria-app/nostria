@@ -128,12 +128,17 @@ export class MediaComponent {
           this.mediaService.uploading.set(true);
 
           // Pass the selected servers to the uploadFile method
-          await this.mediaService.uploadFile(result.file, result.uploadOriginal, result.servers);
-
+          const uploadResult = await this.mediaService.uploadFile(result.file, result.uploadOriginal, result.servers);
+          
           // Set the uploading state to false
           this.mediaService.uploading.set(false);
 
-          this.snackBar.open('Media uploaded successfully', 'Close', { duration: 3000 });
+          // Check if there was an error message about duplicate file
+          if (this.mediaService.error() === 'File already exists in your media library') {
+            this.snackBar.open('This file already exists in your media library.', 'Close', { duration: 3000 });
+          } else if (uploadResult) {
+            this.snackBar.open('Media uploaded successfully', 'Close', { duration: 3000 });
+          }
         } catch (error) {
           // Set the uploading state to false on error
           this.mediaService.uploading.set(false);

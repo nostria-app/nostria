@@ -335,12 +335,21 @@ export class MediaService {
       let firstError: Error | null = null;
       let hash = '';
 
+      // Calculate file hash first to check for duplicates
+      const fileBytes = await this.getFileBytes(file);
+      hash = bytesToHex(sha256(fileBytes));
+      
+      // Check if file already exists before attempting upload
+      const existingFile = this.getFileByHash(hash);
+      if (existingFile) {
+        // File already exists, return it instead of uploading again
+        this._error.set('File already exists in your media library');
+        return existingFile;
+      }
+
       for (const server of servers) {
         try {
           const url = server.endsWith('/') ? server : `${server}/`;
-
-          const fileBytes = await this.getFileBytes(file);
-          hash = bytesToHex(sha256(fileBytes));
 
           let action = this.determineAction(file);
 
@@ -458,6 +467,16 @@ export class MediaService {
     } finally {
       this.uploading.set(false);
     }
+  }
+
+  /**
+   * Check if a file with the given hash exists in the media library
+   * @param hash The SHA-256 hash to check for
+   * @returns The media item if found, null otherwise
+   */
+  getFileByHash(hash: string): MediaItem | null {
+    const mediaItems = this._mediaItems();
+    return mediaItems.find(item => item.sha256 === hash) || null;
   }
 
   otherServers(url: string, servers?: string[]): string[] {
