@@ -123,6 +123,9 @@ export class MediaService {
       }
 
       const pubkey = currentUser.pubkey;
+      
+      // Generate auth headers once for all servers
+      const headers = await this.getAuthHeaders('List Files', 'list');
 
       // Keep track of all items by sha256 to detect duplicates
       const itemsByHash: Record<string, MediaItem> = {};
@@ -130,11 +133,9 @@ export class MediaService {
 
       for (const server of servers) {
         try {
-          const headers = await this.getAuthHeaders('List Files', 'list');
-
           const url = server.endsWith('/') ? server : `${server}/`;
           const response = await fetch(`${url}list/${pubkey}`, {
-            headers: headers
+            headers: headers // Reuse the same auth headers
           });
 
           if (!response.ok) {
