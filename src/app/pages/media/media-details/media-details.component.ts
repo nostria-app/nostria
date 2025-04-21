@@ -12,6 +12,7 @@ import { MediaService, MediaItem } from '../../../services/media.service';
 import { TimestampPipe } from '../../../pipes/timestamp.pipe';
 import { MediaPreviewDialogComponent } from '../../../components/media-preview-dialog/media-preview.component';
 import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-media-details',
@@ -24,7 +25,8 @@ import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confi
     MatDividerModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
-    TimestampPipe
+    TimestampPipe,
+    MatTooltipModule
   ],
   templateUrl: './media-details.component.html',
   styleUrls: ['./media-details.component.scss']
@@ -133,10 +135,36 @@ export class MediaDetailsComponent {
     }
   }
 
+  isFullyMirrored(): boolean {
+    const item = this.mediaItem();
+    if (!item) return false;
+    
+    // If there are no media servers configured, item can't be mirrored
+    if (this.mediaService.mediaServers().length === 0) {
+      return false;
+    }
+    
+    // If the item doesn't have mirrors data, consider it not fully mirrored
+    if (!item.mirrors || !Array.isArray(item.mirrors)) {
+      return false;
+    }
+    
+    // Check if all configured media servers are already in the item's mirrors
+    return this.mediaService.mediaServers().every(server => 
+      item.mirrors!.some(mirror => mirror === server || mirror.startsWith(server))
+    );
+  }
+
   async mirrorMedia(): Promise<void> {
     const item = this.mediaItem();
     if (!item) return;
 
+    // Don't attempt mirroring if already mirrored to all available servers
+    if (this.isFullyMirrored()) {
+      this.snackBar.open('Media is already mirrored to all your servers', 'Close', { duration: 3000 });
+      return;
+    }
+    
     try {
       await this.mediaService.mirrorFile(item.sha256, item.url);
       this.snackBar.open('Media mirrored successfully', 'Close', { duration: 3000 });

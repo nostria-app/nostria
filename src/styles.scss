@@ -458,6 +458,11 @@ mat-card-content li {
   margin-bottom: 16px;
 }
 
+.warn {
+  background-color: #f44336 !important;
+  color: white !important;
+}
+
 // Mirror indicator styles
 .mirror-badge {
   position: absolute;

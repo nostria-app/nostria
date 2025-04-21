@@ -87,7 +87,7 @@
                         <mat-icon>download</mat-icon>
                         <span>Download</span>
                       </a>
-                      <button mat-menu-item (click)="mirrorItem(item.sha256, item.url)">
+                      <button mat-menu-item (click)="mirrorItem(item.sha256, item.url)" [disabled]="isFullyMirrored(item)">
                         <mat-icon>cloud_upload</mat-icon>
                         <span>Mirror</span>
                       </button>
@@ -165,7 +165,7 @@
                         <mat-icon>download</mat-icon>
                         <span>Download</span>
                       </a>
-                      <button mat-menu-item (click)="mirrorItem(item.sha256, item.url)">
+                      <button mat-menu-item (click)="mirrorItem(item.sha256, item.url)" [disabled]="isFullyMirrored(item)">
                         <mat-icon>cloud_upload</mat-icon>
                         <span>Mirror</span>
                       </button>
@@ -288,7 +288,7 @@
                       <mat-icon>download</mat-icon>
                       <span>Download</span>
                     </a>
-                    <button mat-menu-item (click)="mirrorItem(item.sha256, item.url)">
+                    <button mat-menu-item (click)="mirrorItem(item.sha256, item.url)" [disabled]="isFullyMirrored(item)">
                       <mat-icon>cloud_upload</mat-icon>
                       <span>Mirror</span>
                     </button>

@@ -286,7 +286,31 @@ export class MediaComponent {
     }
   }
 
+  isFullyMirrored(item: MediaItem): boolean {
+    // If there are no media servers configured, item can't be mirrored
+    if (this.mediaService.mediaServers().length === 0) {
+      return false;
+    }
+    
+    // If the item doesn't have mirrors data, consider it not fully mirrored
+    if (!item.mirrors || !Array.isArray(item.mirrors)) {
+      return false;
+    }
+    
+    // Check if all configured media servers are already in the item's mirrors
+    return this.mediaService.mediaServers().every(server => 
+      item.mirrors!.some(mirror => mirror === server || mirror.startsWith(server))
+    );
+  }
+
   async mirrorItem(sha256: string, url: string, servers?: string[]): Promise<void> {
+    // Don't attempt mirroring if already mirrored to all available servers
+    const item = await this.mediaService.getFileById(sha256);
+    if (item && this.isFullyMirrored(item)) {
+      this.snackBar.open('Media is already mirrored to all your servers', 'Close', { duration: 3000 });
+      return;
+    }
+    
     try {
       await this.mediaService.mirrorFile(sha256, url);
       this.snackBar.open('Media mirrored successfully', 'Close', { duration: 3000 });
