@@ -498,7 +498,7 @@ export class MediaService {
 
         // If the uploaded file is not original, we need to generate an new auth header because the action is different.
         if (!uploadOriginal) {
-          headers = await this.getAuthHeaders('Upload File', 'upload', hash);
+          headers = await this.getAuthHeaders('Upload File', 'upload', uploadedMedia.sha256);
           // headers = await this.getAuthHeaders('Upload File', 'upload', uploadedMedia.sha256);
         }
 
