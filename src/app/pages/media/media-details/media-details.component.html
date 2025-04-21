@@ -31,6 +31,15 @@
             <img [src]="mediaItem()!.url" [alt]="mediaItem()!.url || 'Image'" (click)="openFullScreen()">
           } @else if (mediaItem()?.type?.startsWith('video')) {
             <video [src]="mediaItem()!.url" controls></video>
+          } @else if (isTextFile(mediaItem()!.type)) {
+            @if (textLoading()) {
+              <div class="text-loading">
+                <mat-spinner diameter="30"></mat-spinner>
+                <span>Loading text content...</span>
+              </div>
+            } @else {
+              <pre class="text-preview">{{ textContent() }}</pre>
+            }
           } @else {
             <div class="generic-preview">
               <mat-icon>{{ getMediaIcon(mediaItem()!.type) }}</mat-icon>
