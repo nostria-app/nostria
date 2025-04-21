@@ -324,6 +324,12 @@
         
         <div class="server-description">
           <p>Media servers are endpoints that can host your content following the Nostr BUD (Blossom - Blobs stored simply on mediaservers) protocol.</p>
+          @if (mediaService.mediaServers().length > 0) {
+            <div class="primary-server-info">
+              <strong>Primary server:</strong> The first server in the list is your primary upload server.
+              <span class="primary-note">Drag and drop to reorder servers and change your primary server.</span>
+            </div>
+          }
         </div>
         
         @if (mediaService.mediaServers().length === 0) {
@@ -334,47 +340,32 @@
             <button mat-raised-button color="primary" (click)="openServerDialog()">Add Your First Server</button>
           </div>
         } @else {
-          <div class="server-grid">
-            @for (server of mediaService.mediaServers(); track server) {
-              <mat-card class="server-card">
+          <div cdkDropList class="server-list" (cdkDropListDropped)="reorderServers($event)">
+            @for (server of mediaService.mediaServers(); track server; let i = $index) {
+              <mat-card class="server-card" cdkDrag>
+                <div class="drag-handle" cdkDragHandle>
+                  <mat-icon>drag_indicator</mat-icon>
+                </div>
+                
+                @if (i === 0) {
+                  <div class="primary-indicator">
+                    <mat-icon>star</mat-icon>
+                    <span>Primary</span>
+                  </div>
+                }
+                
                 <mat-card-header>
                   <mat-icon mat-card-avatar>storage</mat-icon>
                   <mat-card-title>{{ server || server }}</mat-card-title>
                   <mat-card-subtitle>{{ server }}</mat-card-subtitle>
                   
-                  <div class="server-status">
-                    <!-- @if (server.status === 'active') { -->
-                      <span class="status-badge active">Active</span>
-                    <!-- } @else if (server.status === 'error') { -->
-                      <!-- <span class="status-badge error">Error</span> -->
-                    <!-- } @else { -->
-                      <!-- <span class="status-badge unknown">Unknown</span> -->
-                    <!-- } -->
-                  </div>
+                  <!-- <div class="server-status">
+                    <span class="status-badge active">Active</span>
+                  </div> -->
                 </mat-card-header>
                 
                 <mat-card-content>
-                  <!-- @if (server.description) {
-                    <p>{{ server.description }}</p>
-                  } -->
-                  
-                  <!-- @if (server.error) {
-                    <div class="server-error">
-                      <mat-icon color="warn">error</mat-icon>
-                      <span>{{ server.error }}</span>
-                    </div>
-                  } -->
-                  
-                  <!-- @if (server.capabilities && server.capabilities.length > 0) {
-                    <div class="server-capabilities">
-                      <h4>Capabilities:</h4>
-                      <div class="capability-tags">
-                        @for (capability of server.capabilities; track capability) {
-                          <span class="capability-tag">{{ capability }}</span>
-                        }
-                      </div>
-                    </div>
-                  } -->
+                  <!-- ...existing code... -->
                 </mat-card-content>
                 
                 <mat-card-actions>

@@ -834,4 +834,33 @@ export class MediaService {
       mirrorDomains.some(mirrorDomain => mirrorDomain === serverDomain)
     );
   }
+
+  /**
+   * Reorders media servers and saves the new order
+   * @param newOrder The new order of media servers
+   */
+  async reorderMediaServers(newOrder: string[]): Promise<void> {
+    // Set the new order in the mediaServers signal
+    this._mediaServers.set(newOrder);
+
+    try {
+      // Create a new event with the updated server order
+      // This will create new tags with the reordered server URLs
+      const tags: string[][] = [];
+
+      // Add each server as a tag in the new order
+      for (const server of newOrder) {
+        tags.push([standardizedTag.server, server]);
+      }
+
+      // Save the reordered server list
+      const event = this.nostrService.createEvent(MEDIA_SERVERS_EVENT_KIND, '', tags);
+      const signedEvent = await this.nostrService.signEvent(event);
+      await this.storage.saveEvent(signedEvent);
+      await this.relay.publish(signedEvent);
+    } catch (error) {
+      this.logger.error('Failed to save server order:', error);
+      throw new Error('Failed to save server order');
+    }
+  }
 }

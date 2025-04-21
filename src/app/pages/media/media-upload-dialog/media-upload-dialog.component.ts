@@ -56,8 +56,9 @@ export class MediaUploadDialogComponent {
     // Initialize available servers from the media service
     this.availableServers.set(this.mediaService.mediaServers());
     
-    // Auto select first server if available
+    // Auto select primary server (first one) if available
     if (this.availableServers().length > 0) {
+      // Only select the first server as primary by default
       this.selectedServers.set([this.availableServers()[0]]);
       this.showServerSelection.set(true);
     }
