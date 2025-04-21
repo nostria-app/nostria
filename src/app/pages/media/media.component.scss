@@ -483,10 +483,19 @@
   }
 
   tr {
-    cursor: pointer;
+    cursor: default;
 
     &:hover {
       background-color: var(--mat-sys-color-surface-container-highest);
+    }
+  }
+
+  .clickable-cell {
+    cursor: pointer;
+    
+    &:hover {
+      color: var(--mat-sys-color-primary);
+      text-decoration: underline;
     }
   }
 

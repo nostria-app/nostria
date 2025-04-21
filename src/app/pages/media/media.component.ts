@@ -15,7 +15,6 @@ import { MatTableModule } from '@angular/material/table';
 import { Router } from '@angular/router';
 import { MediaService, MediaItem } from '../../services/media.service';
 import { MediaUploadDialogComponent } from './media-upload-dialog/media-upload-dialog.component';
-import { MediaDetailsDialogComponent } from './media-details-dialog/media-details-dialog.component';
 import { MediaServerDialogComponent } from './media-server-dialog/media-server-dialog.component';
 import { ApplicationStateService } from '../../services/application-state.service';
 import { NostrService } from '../../services/nostr.service';
@@ -42,7 +41,8 @@ import { ConfirmDialogComponent } from '../../components/confirm-dialog/confirm-
     MatSnackBarModule,
     MatMenuModule,
     MatProgressSpinnerModule,
-    MatTableModule
+    MatTableModule,
+    TimestampPipe
   ],
   templateUrl: './media.component.html',
   styleUrls: ['./media.component.scss']
@@ -117,7 +117,8 @@ export class MediaComponent {
           // Set uploading state to true
           this.mediaService.uploading.set(true);
           
-          await this.mediaService.uploadFile(result.file, result.uploadOriginal);
+          // Pass the selected servers to the uploadFile method
+          await this.mediaService.uploadFile(result.file, result.uploadOriginal, result.servers);
           
           // Set the uploading state to false
           this.mediaService.uploading.set(false);
@@ -191,10 +192,8 @@ export class MediaComponent {
   }
 
   openDetailsDialog(item: MediaItem): void {
-    this.dialog.open(MediaDetailsDialogComponent, {
-      width: '600px',
-      data: item
-    });
+    // Navigate to details page instead of opening dialog
+    this.router.navigate(['/media', 'details', item.sha256]);
   }
 
   openMediaPreview(event: Event, item: MediaItem): void {
@@ -214,7 +213,8 @@ export class MediaComponent {
   }
 
   navigateToDetails(event: Event, item: MediaItem): void {
-    // Stop event propagation to prevent toggling selection
+    // Ensure the event doesn't propagate to parent elements
+    event.preventDefault();
     event.stopPropagation();
 
     // Navigate to details page with the item ID
@@ -241,7 +241,6 @@ export class MediaComponent {
   }
 
   async deleteSelected(sha256?: string): Promise<void> {
-    debugger;
     const itemsToDelete = sha256 ? [sha256] : this.selectedItems();
     const confirmMessage = itemsToDelete.length === 1 
       ? 'Are you sure you want to delete this item?' 

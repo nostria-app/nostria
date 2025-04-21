@@ -9,6 +9,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MediaService } from '../../../services/media.service';
 
 @Component({
   selector: 'app-media-upload-dialog',
@@ -31,6 +32,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 export class MediaUploadDialogComponent {
   private dialogRef = inject(MatDialogRef<MediaUploadDialogComponent>);
   private fb = inject(FormBuilder);
+  private mediaService = inject(MediaService);
   
   uploadForm: FormGroup;
   selectedFile = signal<File | null>(null);
@@ -39,12 +41,26 @@ export class MediaUploadDialogComponent {
   isVideo = signal<boolean>(false);
   showOriginalOption = signal<boolean>(false);
   isDragging = signal<boolean>(false);
-  isUploading = signal<boolean>(false); // Add loading state signal
+  isUploading = signal<boolean>(false);
+  
+  // Add signals for servers
+  availableServers = signal<string[]>([]);
+  selectedServers = signal<string[]>([]);
+  showServerSelection = signal<boolean>(false);
   
   constructor() {
     this.uploadForm = this.fb.group({
       uploadOriginal: [false]
     });
+    
+    // Initialize available servers from the media service
+    this.availableServers.set(this.mediaService.mediaServers());
+    
+    // Auto select first server if available
+    if (this.availableServers().length > 0) {
+      this.selectedServers.set([this.availableServers()[0]]);
+      this.showServerSelection.set(true);
+    }
   }
 
   onFileSelected(event: Event): void {
@@ -83,12 +99,27 @@ export class MediaUploadDialogComponent {
     this.showOriginalOption.set(false);
   }
   
+  toggleServerSelection(server: string): void {
+    this.selectedServers.update(servers => {
+      if (servers.includes(server)) {
+        return servers.filter(s => s !== server);
+      } else {
+        return [...servers, server];
+      }
+    });
+  }
+  
+  isServerSelected(server: string): boolean {
+    return this.selectedServers().includes(server);
+  }
+  
   onSubmit(): void {
     if (this.uploadForm.valid && this.selectedFile()) {
       this.isUploading.set(true); // Set uploading state to true when upload starts
       this.dialogRef.close({
         file: this.selectedFile(),
         uploadOriginal: this.uploadForm.value.uploadOriginal,
+        servers: this.selectedServers(),
         isUploading: this.isUploading // Pass the signal to the parent component
       });
     }

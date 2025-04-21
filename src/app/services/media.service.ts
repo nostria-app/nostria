@@ -362,16 +362,17 @@ export class MediaService {
     return new Uint8Array(arrayBuffer);
   }
 
-  async uploadFile(file: File, uploadOriginal: boolean): Promise<MediaItem | null> {
+  async uploadFile(file: File, uploadOriginal: boolean, servers: string[]): Promise<MediaItem | null> {
+    debugger;
     this.uploading.set(true);
     this._error.set(null);
 
     try {
       // Check if we have any media servers configured
-      const servers = this._mediaServers();
-      if (servers.length === 0) {
-        throw new Error('No media servers configured');
-      }
+      // const servers = this._mediaServers();
+      // if (servers.length === 0) {
+      //   throw new Error('No media servers configured');
+      // }
 
       // Try each server until upload succeeds
       let uploadedMedia: MediaItem | null = null;
