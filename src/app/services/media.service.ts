@@ -710,6 +710,110 @@ export class MediaService {
     }
   }
 
+  async mirrorFiles(items: MediaItem[]): Promise<void> {
+    if (items.length === 0) return;
+    
+    this.loading.set(true);
+    this._error.set(null);
+    
+    try {
+      // Create a comma-separated string of all file hashes for the auth header
+      const fileHashes = items.map(item => item.sha256).join(',');
+      
+      // Generate a single auth header for all files
+      const headers = await this.getAuthHeaders('Mirror Multiple Files', 'upload', fileHashes);
+      
+      let mirrorFailures = 0;
+      
+      // Process each item
+      for (const item of items) {
+        // Get servers that don't already have this item
+        const serversForItem = this.otherServers(item.url);
+        if (serversForItem.length === 0) continue; // Already on all servers
+        
+        let mirrorSuccessful = false;
+        
+        // Try to mirror on each server that doesn't have the file
+        for (const server of serversForItem) {
+          try {
+            const url = server.endsWith('/') ? server : `${server}/`;
+            
+            // Check if mirroring is allowed
+            const headResponse = await fetch(`${url}upload`, {
+              method: 'HEAD',
+              headers: headers
+            });
+            
+            if (!headResponse.ok) {
+              continue; // Try next server
+            }
+            
+            // Perform the mirror request
+            const response = await fetch(`${url}mirror`, {
+              method: 'PUT',
+              headers: {
+                ...headers,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ url: item.url })
+            });
+            
+            if (!response.ok) {
+              continue; // Try next server
+            }
+            
+            // Update the media item with the new mirror
+            const mirroredMedia = await response.json();
+            const mirrorServerUrl = this.extractServerUrl(mirroredMedia.url);
+            
+            // Update the media item's mirrors array
+            this._mediaItems.update(mediaItems => {
+              return mediaItems.map(mediaItem => {
+                if (mediaItem.sha256 === item.sha256) {
+                  // Initialize mirrors array if needed
+                  if (!mediaItem.mirrors) {
+                    mediaItem.mirrors = [];
+                  }
+                  
+                  // Add new mirror if it doesn't exist
+                  if (!mediaItem.mirrors.includes(mirrorServerUrl)) {
+                    return {
+                      ...mediaItem,
+                      mirrors: [...mediaItem.mirrors, mirrorServerUrl]
+                    };
+                  }
+                }
+                return mediaItem;
+              });
+            });
+            
+            mirrorSuccessful = true;
+            break; // Move to next item after success
+          } catch (err) {
+            this.logger.error(`Failed to mirror ${item.sha256} on server ${server}:`, err);
+          }
+        }
+        
+        if (!mirrorSuccessful) {
+          mirrorFailures++;
+        }
+      }
+      
+      // Throw error if all mirrors failed
+      if (mirrorFailures === items.length) {
+        throw new Error('Failed to mirror any files');
+      } else if (mirrorFailures > 0) {
+        this._error.set(`Failed to mirror ${mirrorFailures} out of ${items.length} files`);
+      }
+    } catch (err) {
+      this._error.set(err instanceof Error ? err.message : 'Unknown error occurred');
+      this.logger.error('Error mirroring multiple files:', err);
+      throw err;
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
   async reportFile(id: string, reason: string): Promise<void> {
     // this._loading.set(true);
     // this._error.set(null);
