@@ -387,30 +387,33 @@ export class MediaComponent {
     if (itemsToMirror.length === 0) return;
     
     try {
-      const mirrored = [];
-      const skipped = [];
+      // Collect items to mirror and those already fully mirrored
+      const toMirror: MediaItem[] = [];
+      const alreadyMirrored: MediaItem[] = [];
       
-      // For each selected item, try to mirror it
+      // First collect the items and check mirroring status
       for (const id of itemsToMirror) {
         const item = await this.mediaService.getFileById(id);
         if (item && item.url) {
-          // Skip if already mirrored to all servers
           if (this.mediaService.isFullyMirrored(item)) {
-            skipped.push(item);
-            continue;
+            alreadyMirrored.push(item);
+          } else {
+            toMirror.push(item);
           }
-          
-          await this.mediaService.mirrorFile(item.sha256, item.url);
-          mirrored.push(item);
         }
       }
       
+      // If there are items to mirror, use the batch mirroring function
+      if (toMirror.length > 0) {
+        await this.mediaService.mirrorFiles(toMirror);
+      }
+      
       // Show appropriate message based on results
-      if (mirrored.length > 0 && skipped.length > 0) {
-        this.snackBar.open(`Mirrored ${mirrored.length} file(s), ${skipped.length} already fully mirrored`, 'Close', { duration: 3000 });
-      } else if (mirrored.length > 0) {
-        this.snackBar.open(`Mirrored ${mirrored.length} file(s) successfully`, 'Close', { duration: 3000 });
-      } else if (skipped.length > 0) {
+      if (toMirror.length > 0 && alreadyMirrored.length > 0) {
+        this.snackBar.open(`Mirrored ${toMirror.length} file(s), ${alreadyMirrored.length} already fully mirrored`, 'Close', { duration: 3000 });
+      } else if (toMirror.length > 0) {
+        this.snackBar.open(`Mirrored ${toMirror.length} file(s) successfully`, 'Close', { duration: 3000 });
+      } else if (alreadyMirrored.length > 0) {
         this.snackBar.open(`All selected files are already fully mirrored`, 'Close', { duration: 3000 });
       }
     } catch (error) {
