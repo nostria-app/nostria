@@ -8,19 +8,21 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
 import { AccountStateService } from '../../services/account-state.service';
 import { NostrService } from '../../services/nostr.service';
+import { UserProfileComponent } from "../user-profile/user-profile.component";
 
 @Component({
   selector: 'app-privacy-settings',
   standalone: true,
   imports: [
-    CommonModule, 
-    MatTabsModule, 
-    MatCardModule, 
-    MatListModule, 
-    MatIconModule, 
+    CommonModule,
+    MatTabsModule,
+    MatCardModule,
+    MatListModule,
+    MatIconModule,
     MatButtonModule,
-    MatDividerModule
-  ],
+    MatDividerModule,
+    UserProfileComponent
+],
   templateUrl: './privacy-settings.component.html',
   styleUrls: ['./privacy-settings.component.scss']
 })
