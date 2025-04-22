@@ -463,6 +463,15 @@ mat-card-content li {
   color: white !important;
 }
 
+.ellipsis {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  display: block; // Make label a block element
+  width: 100%; // Full width to ensure centering
+}
+
 // Mirror indicator styles
 .mirror-badge {
   position: absolute;
