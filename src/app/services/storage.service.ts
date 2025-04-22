@@ -79,6 +79,15 @@ export interface UserRelays {
   updated: number;
 }
 
+// Interface for the dynamic info records
+export interface InfoRecord {
+  key: string;      // URL or hex pubkey
+  type: string;     // 'user', 'relay', 'media', 'server', etc.
+  updated: number;  // Timestamp of last update
+  compositeKey?: string; // Composite key for storage (key + type)
+  [key: string]: any; // Dynamic entries
+}
+
 // Schema for the IndexedDB database
 interface NostriaDBSchema extends DBSchema {
   relays: {
@@ -107,6 +116,15 @@ interface NostriaDBSchema extends DBSchema {
       'by-pubkey-kind-d-tag': [string, number, string]; // For parameterized replaceable events
     };
   };
+  info: {
+    key: string; // composite key (key::type)
+    value: InfoRecord;
+    indexes: {
+      'by-type': string;
+      'by-key': string;
+      'by-updated': number;
+    };
+  };
 }
 
 @Injectable({
@@ -115,8 +133,9 @@ interface NostriaDBSchema extends DBSchema {
 export class StorageService {
   private readonly logger = inject(LoggerService);
   private db!: IDBPDatabase<NostriaDBSchema>;
-  private readonly DB_NAME = 'nostria-db';
-  private readonly DB_VERSION = 2; // Increase version to trigger upgrade
+  // TODO: Before public release, rename the database to "nostria", then reset the DB_VERSION.
+  private readonly DB_NAME = 'nostria-db-beta1';
+  private readonly DB_VERSION = 1; // Reset to 0 as the database has been renamed
 
   // Signal to track database initialization status
   initialized = signal(false);
@@ -127,12 +146,14 @@ export class StorageService {
     // userMetadataCount: number;
     userRelaysCount: number;
     eventsCount: number;
+    infoCount: number; // Added for info records
     estimatedSize: number;
   }>({
     relaysCount: 0,
     // userMetadataCount: 0,
     userRelaysCount: 0,
     eventsCount: 0,
+    infoCount: 0,
     estimatedSize: 0
   });
 
@@ -154,8 +175,8 @@ export class StorageService {
     try {
       this.logger.info('Initializing IndexedDB storage');
       this.db = await openDB<NostriaDBSchema>(this.DB_NAME, this.DB_VERSION, {
-        upgrade: (db, oldVersion, newVersion) => {
-          this.logger.info('Creating or upgrading database schema');
+        upgrade: async (db, oldVersion, newVersion) => {
+          this.logger.info('Creating database schema', { oldVersion, newVersion });
 
           // Create object stores if they don't exist
           if (!db.objectStoreNames.contains('relays')) {
@@ -176,24 +197,27 @@ export class StorageService {
             this.logger.debug('Created userRelays object store');
           }
 
-          // Add the new events store if it doesn't exist
           if (!db.objectStoreNames.contains('events')) {
             const eventsStore = db.createObjectStore('events', { keyPath: 'id' });
             eventsStore.createIndex('by-kind', 'kind');
             eventsStore.createIndex('by-pubkey', 'pubkey');
             eventsStore.createIndex('by-created', 'created_at');
             eventsStore.createIndex('by-pubkey-kind', ['pubkey', 'kind']);
-
-            // For parameterized replaceable events (d-tag)
             eventsStore.createIndex('by-pubkey-kind-d-tag', ['pubkey', 'kind', 'dTag']);
-
             this.logger.debug('Created events object store');
+          }
+
+          if (!db.objectStoreNames.contains('info')) {
+            const infoStore = db.createObjectStore('info', { keyPath: 'compositeKey' });
+            infoStore.createIndex('by-type', 'type');
+            infoStore.createIndex('by-key', 'key');
+            infoStore.createIndex('by-updated', 'updated');
+            this.logger.debug('Created info object store');
           }
         }
       });
 
       this.logger.info('IndexedDB initialization completed');
-      // await this.updateStats();
 
       // Set initialized status to true
       this.initialized.set(true);
@@ -202,6 +226,21 @@ export class StorageService {
       // Set initialized to false in case of error
       this.initialized.set(false);
     }
+  }
+
+  // Generate a composite key from key and type
+  private generateCompositeKey(key: string, type: string): string {
+    return `${key}::${type}`;
+  }
+
+  // Parse a composite key back into key and type
+  private parseCompositeKey(compositeKey: string): { key: string, type: string } {
+    const parts = compositeKey.split('::');
+    if (parts.length === 2) {
+      return { key: parts[0], type: parts[1] };
+    }
+    // Fallback in case of invalid format
+    return { key: compositeKey, type: 'unknown' };
   }
 
   // Event classification helper methods
@@ -635,16 +674,166 @@ export class StorageService {
       if (!this.db) {
         throw new Error('Database not initialized');
       }
-      
+
       // Get events by pubkey
       const events = await this.db.getAllFromIndex('events', 'by-pubkey', pubkey);
-      
+
       return events || [];
     } catch (error) {
       this.logger.error('Failed to get user events', error);
       return [];
     }
   }
+
+  /**
+   * Save info with unique key+type combination
+   * @param key The key of the info record
+   * @param type The type of the info record
+   * @param data Additional data to store
+   */
+  async saveInfo(key: string, type: 'user' | 'relay', data: Record<string, any>): Promise<void> {
+    try {
+      const compositeKey = this.generateCompositeKey(key, type);
+
+      // Check if record already exists to update it
+      const existingRecord = await this.db.get('info', compositeKey);
+
+      const infoRecord: InfoRecord = {
+        key,
+        type,
+        compositeKey,
+        updated: Date.now(),
+        ...(existingRecord || {}),  // Keep existing data if any
+        ...data  // Override with new data
+      };
+
+      await this.db.put('info', infoRecord);
+      this.logger.debug(`Saved info record to IndexedDB: ${key} (type: ${type})`);
+      await this.updateStats();
+    } catch (error) {
+      this.logger.error(`Error saving info record ${key} (type: ${type})`, error);
+    }
+  }
+
+  /**
+   * Get info record by key
+   */
+  async getInfo(key: string, type: 'user' | 'relay',) {
+    try {
+      const compositeKey = this.generateCompositeKey(key, type);
+
+      // Return all records with the specified key, regardless of type
+      return await this.db.get('info', compositeKey);
+    } catch (error) {
+      this.logger.error(`Error getting info records with key ${key}`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Get info records by type, optionally filtering by key pattern
+   */
+  // async getInfoByType(type: string, keyPattern?: string): Promise<InfoRecord[]> {
+  //   try {
+  //     const records = await this.db.getAllFromIndex('info', 'by-type', type);
+
+  //     // If keyPattern is provided, filter the results
+  //     if (keyPattern) {
+  //       return records.filter(record => record.key.includes(keyPattern));
+  //     }
+
+  //     return records;
+  //   } catch (error) {
+  //     this.logger.error(`Error getting info records by type ${type}`, error);
+  //     return [];
+  //   }
+  // }
+
+  /**
+   * Get a specific info record by both key and type
+   */
+  // async getInfoByKeyAndType(key: string, type: string): Promise<InfoRecord | undefined> {
+  //   try {
+  //     const compositeKey = this.generateCompositeKey(key, type);
+  //     return await this.db.get('info', compositeKey);
+  //   } catch (error) {
+  //     this.logger.error(`Error getting info record by key ${key} and type ${type}`, error);
+  //     return undefined;
+  //   }
+  // }
+
+  async getAllInfo(): Promise<InfoRecord[]> {
+    try {
+      return await this.db.getAll('info');
+    } catch (error) {
+      this.logger.error('Error getting all info records', error);
+      return [];
+    }
+  }
+
+  /**
+   * Delete a specific info record by key and type
+   */
+  async deleteInfoByKeyAndType(key: string, type: string): Promise<void> {
+    try {
+      const compositeKey = this.generateCompositeKey(key, type);
+      await this.db.delete('info', compositeKey);
+      this.logger.debug(`Deleted info record with key ${key} and type ${type}`);
+      await this.updateStats();
+    } catch (error) {
+      this.logger.error(`Error deleting info record with key ${key} and type ${type}`, error);
+    }
+  }
+
+  /**
+   * Delete all info records with the specified key, regardless of type
+   */
+  // async deleteInfoByKey(key: string): Promise<void> {
+  //   try {
+  //     // Get all records with this key
+  //     const records = await this.getInfo(key);
+
+  //     // Delete each record by its composite key
+  //     for (const record of records) {
+  //       const compositeKey = this.generateCompositeKey(record.key, record.type);
+  //       await this.db.delete('info', compositeKey);
+  //     }
+
+  //     this.logger.debug(`Deleted all info records with key: ${key}`);
+  //     await this.updateStats();
+  //   } catch (error) {
+  //     this.logger.error(`Error deleting info records with key ${key}`, error);
+  //   }
+  // }
+
+  /**
+   * Delete all info records with the specified type
+   */
+  // async deleteInfoByType(type: string): Promise<void> {
+  //   try {
+  //     // Get all records with this type
+  //     const records = await this.getInfoByType(type);
+
+  //     // Delete each record by its composite key
+  //     for (const record of records) {
+  //       const compositeKey = this.generateCompositeKey(record.key, record.type);
+  //       await this.db.delete('info', compositeKey);
+  //     }
+
+  //     this.logger.debug(`Deleted all info records with type: ${type}`);
+  //     await this.updateStats();
+  //   } catch (error) {
+  //     this.logger.error(`Error deleting info records with type ${type}`, error);
+  //   }
+  // }
+
+  /**
+   * Legacy method for backward compatibility
+   * Redirects to deleteInfoByKey
+   */
+  // async deleteInfo(key: string): Promise<void> {
+  //   await this.deleteInfoByKey(key);
+  // }
 
   async clearCache(currentUserPubkey: string): Promise<void> {
     try {
@@ -678,7 +867,14 @@ export class StorageService {
         }
       }
 
-      // For relays, we keep them all since they're used by all users
+      // For info records, we might want to keep some based on type
+      // For example, keep media info for better user experience
+      const infoRecords = await this.getAllInfo();
+      for (const record of infoRecords) {
+        if (record.type !== 'media' && !(record.type === 'user' && record.key === currentUserPubkey)) {
+          await this.deleteInfoByKeyAndType(record.key, record.type);
+        }
+      }
 
       this.logger.info('Cache cleared successfully');
       await this.updateStats();
@@ -692,6 +888,7 @@ export class StorageService {
       const relays = await this.getAllRelays();
       const userMetadata = await this.getAllUserMetadata();
       const userRelays = await this.getAllUserRelays();
+      const info = await this.getAllInfo();
 
       // Count events (may need optimization for large datasets)
       let eventsCount = 0;
@@ -707,14 +904,16 @@ export class StorageService {
       const relaysSize = JSON.stringify(relays).length;
       const userMetadataSize = JSON.stringify(userMetadata).length;
       const userRelaysSize = JSON.stringify(userRelays).length;
+      const infoSize = JSON.stringify(info).length;
       const eventsSize = eventsCount * 500; // Rough estimation of average event size
-      const totalSize = relaysSize + userMetadataSize + userRelaysSize + eventsSize;
+      const totalSize = relaysSize + userMetadataSize + userRelaysSize + eventsSize + infoSize;
 
       this.dbStats.set({
         relaysCount: relays.length,
         // userMetadataCount: userMetadata.length,
         userRelaysCount: userRelays.length,
         eventsCount,
+        infoCount: info.length,
         estimatedSize: totalSize
       });
 
@@ -755,6 +954,7 @@ export class StorageService {
         // userMetadataCount: 0,
         userRelaysCount: 0,
         eventsCount: 0,
+        infoCount: 0,
         estimatedSize: 0
       });
 

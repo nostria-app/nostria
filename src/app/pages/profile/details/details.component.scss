@@ -1,0 +1,192 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.following-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.following-header {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background-color: var(--mat-sidenav-content-background-color, var(--mat-sys-background));
+  margin-bottom: 0; /* Ensure no margin at bottom */
+}
+
+.back-button {
+  margin-right: 16px;
+}
+
+.profile-mini {
+  display: flex;
+  align-items: center;
+  flex: 1;
+
+  &-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    margin-right: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--mat-card-subtle-surface-color, #e0e0e0);
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    mat-icon {
+      font-size: 40px;
+      width: 40px;
+      height: 40px;
+      color: var(--mat-caption-text-color, #757575);
+    }
+  }
+
+  &-name {
+    margin: 0;
+    font-size: 18px;
+  }
+}
+
+// Tab styles - Fix for sticky tabs
+.following-tabs {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  margin-top: 0; /* Ensure no margin at top */
+  
+  ::ng-deep .mat-mdc-tab-header {
+    position: sticky;
+    top: 72px; /* Adjust to exactly match the header height */
+    z-index: 2;
+    background-color: var(--mat-sidenav-content-background-color, var(--mat-sys-background));
+    border-top: none; /* Remove any potential border */
+  }
+  
+  ::ng-deep .mat-mdc-tab-body-wrapper {
+    flex-grow: 1;
+    overflow-y: auto;
+    margin: 0;
+    padding: 0;
+  }
+}
+
+.following-content {
+  flex: 1;
+  padding: 0;
+  display: flex;
+  overflow: hidden;
+  height: 100%;
+}
+
+.virtual-scroll-viewport {
+  box-sizing: border-box;
+  height: 100%;
+  width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto; // Allow vertical scrolling within the viewport
+  min-height: 200px;
+}
+
+.following-list {
+  padding: 0;
+}
+
+.following-item {
+  cursor: pointer;
+  border-radius: 8px;
+  margin-bottom: 4px;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: var(--mat-surface-hover-state-layer-color, rgba(0, 0, 0, 0.04));
+  }
+
+  &-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--mat-card-subtle-surface-color, #e0e0e0);
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .default-user-avatar {
+      font-size: 48px;
+      width: 48px;
+      height: 48px;
+      color: var(--mat-caption-text-color, #757575);
+    }
+  }
+
+  &-npub {
+    color: var(--mat-secondary-text-color);
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+  }
+}
+
+.loading-container,
+.error-container,
+.empty-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  padding: 2rem;
+
+  mat-icon {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    margin-bottom: 16px;
+  }
+
+  p {
+    margin: 8px 0 0;
+  }
+}
+
+// Make the components fill the entire virtual scroll item space
+::ng-deep .cdk-virtual-scroll-content-wrapper {
+  width: 100%;
+}
+
+// Make sure the mat-list items fill the width
+::ng-deep .mat-mdc-list {
+  width: 100%;
+}
+
+.full-width-list {
+  width: 100%;
+  padding: 0;
+}
+
+::ng-deep .mat-mdc-list-item {
+  width: 100%;
+}

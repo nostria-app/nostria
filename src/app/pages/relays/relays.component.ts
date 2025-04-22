@@ -135,20 +135,20 @@ export class RelaysComponent {
 
     // Check if relay already exists
     if (this.bootstrapRelays().includes(url)) {
-      this.showMessage('This bootstrap relay is already in your list');
+      this.showMessage('This Discovery Relay is already in your list');
       return;
     }
 
-    this.logger.info('Adding new bootstrap relay', { url });
+    this.logger.info('Adding new Discovery Relay', { url });
     this.relayService.addBootstrapRelay(url);
     this.newBootstrapUrl.set('');
-    this.showMessage('Bootstrap relay added successfully');
+    this.showMessage('Discovery Relay added successfully');
   }
 
   removeBootstrapRelay(url: string): void {
-    this.logger.info('Removing bootstrap relay', { url });
+    this.logger.info('Removing Discovery Relay', { url });
     this.relayService.removeBootstrapRelay(url);
-    this.showMessage('Bootstrap relay removed');
+    this.showMessage('Discovery Relay removed');
   }
 
   getStatusIcon(status: Relay['status'] | undefined): string {

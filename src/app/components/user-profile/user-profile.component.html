@@ -25,7 +25,7 @@
           alt="User Avatar" 
           class="user-avatar" />
       } @else {
-        <mat-icon class="default-user-avatar">account_circle</mat-icon>
+        <mat-icon class="default-user-avatar" [style.font-size]="getDefaultAvatarSize()" [style.height]="getDefaultAvatarSize()" [style.width]="getDefaultAvatarSize()">account_circle</mat-icon>
       }
     </div>
 

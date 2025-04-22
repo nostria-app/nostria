@@ -1,4 +1,4 @@
-import { computed, inject, Injectable, signal } from "@angular/core";
+import { computed, effect, inject, Injectable, signal } from "@angular/core";
 import { NostrService } from "./nostr.service";
 import { StorageService } from "./storage.service";
 import { Router, RouterLink, RouterModule } from "@angular/router";
@@ -18,6 +18,22 @@ export class ApplicationService {
     loadingMessage = signal('Loading data...');
     showSuccess = signal(false);
     isLoading = signal(false);
+    isOnline = signal(navigator.onLine);
+
+    constructor() {
+        // Set up event listeners for online/offline status changes
+        this.setupConnectionListeners();
+    }
+
+    private setupConnectionListeners(): void {
+        window.addEventListener('online', () => this.isOnline.set(true));
+        window.addEventListener('offline', () => this.isOnline.set(false));
+
+        // Create an effect to log status changes (optional)
+        effect(() => {
+            console.log(`Connection status changed: ${this.isOnline() ? 'online' : 'offline'}`);
+        });
+    }
 
     async wipe() {
         this.nostrService.reset();

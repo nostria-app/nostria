@@ -148,6 +148,7 @@ export class ProfileComponent {
     // Check if URL contains these paths that require compact header
     return url.includes('/following') ||
       url.includes('/about') ||
+      url.includes('/details') ||
       url.includes('/media');
   }
 
