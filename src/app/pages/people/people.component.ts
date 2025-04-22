@@ -152,9 +152,7 @@ export class PeopleComponent implements OnInit {
         this.isLoading.set(false);
         return;
       }
-
-      console.log(this.accountState.followingList());
-
+      
       this.people.set(this.accountState.followingList());
       this.filteredPeople.set(this.accountState.followingList());
 

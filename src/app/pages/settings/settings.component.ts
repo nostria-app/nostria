@@ -23,6 +23,7 @@ import { StorageService } from '../../services/storage.service';
 import { ApplicationStateService } from '../../services/application-state.service';
 import { ApplicationService } from '../../services/application.service';
 import { PrivacySettingsComponent } from '../../components/privacy-settings/privacy-settings.component';
+import { LogsSettingsComponent } from '../../components/logs-settings/logs-settings.component';
 
 @Component({
   selector: 'app-settings',
@@ -41,7 +42,8 @@ import { PrivacySettingsComponent } from '../../components/privacy-settings/priv
     MatDividerModule,
     MatTabsModule,
     StorageStatsComponent,
-    PrivacySettingsComponent
+    PrivacySettingsComponent,
+    LogsSettingsComponent
   ],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.scss',
@@ -68,6 +70,7 @@ export class SettingsComponent {
   }
 
   setLogLevel(level: LogLevel): void {
+    debugger;
     this.logger.setLogLevel(level);
   }
 

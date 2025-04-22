@@ -8,6 +8,7 @@ export interface Relay {
   url: string;
   status?: 'connected' | 'disconnected' | 'connecting' | 'error';
   lastUsed?: number;
+  timeout?: number;
 }
 
 @Injectable({
@@ -15,6 +16,12 @@ export interface Relay {
 })
 export class RelayService {
   private readonly BOOTSTRAP_RELAYS_STORAGE_KEY = 'nostria-bootstrap-relays';
+  // Default relay timeout duration in milliseconds (10 minute)
+
+  readonly RELAY_TIMEOUT_DURATION_MINUTES = 10;
+  readonly RELAY_TIMEOUT_DURATION = 60000 * this.RELAY_TIMEOUT_DURATION_MINUTES;
+  // Cleanup interval for checking timeouts (every 10 seconds)
+  private readonly TIMEOUT_CLEANUP_INTERVAL = 10000;
 
   // Default bootstrap relays
   private readonly DEFAULT_BOOTSTRAP_RELAYS = ['wss://purplepag.es/'];
@@ -33,6 +40,9 @@ export class RelayService {
 
   // Signal to store the relays for the current user
   private relays = signal<Relay[]>([]);
+
+  /** Relays that have received a timeout and we won't connect to before timeout completes. */
+  timeouts = signal<Relay[]>([]);
 
   // Computed value for public access to relays
   userRelays = computed(() => this.relays());
@@ -65,6 +75,88 @@ export class RelayService {
       // Save to local storage
       localStorage.setItem(this.BOOTSTRAP_RELAYS_STORAGE_KEY, JSON.stringify(currentBootstrapRelays));
     });
+
+    // Set up interval to clean expired timeouts
+    setInterval(() => this.cleanupTimeouts(), this.TIMEOUT_CLEANUP_INTERVAL);
+  }
+
+  timeoutRelays(relayUrls: string[]) {
+    for (const relayUrl of relayUrls) {
+      this.timeoutRelay(relayUrl);
+    }
+  }
+
+  timeoutRelay(relayUrl: string) {
+    // Normalize URL: add trailing slash if it's a root URL without path
+    const normalizedUrl = this.normalizeRelayUrl(relayUrl);
+    this.logger.debug(`Timeout relay: ${normalizedUrl}`);
+
+    // Check if the relay is already in the timeouts array
+    const existingRelay = this.timeouts().find(relay => relay.url === normalizedUrl);
+    if (existingRelay) {
+      this.logger.debug(`Relay ${normalizedUrl} is already timed out`);
+      return;
+    }
+
+    const now = Date.now();
+
+    // Add the relay to the timeouts array with specific timeout duration
+    this.timeouts.update(timeouts => [
+      ...timeouts,
+      {
+        url: normalizedUrl,
+        status: 'disconnected',
+        lastUsed: now,
+        timeout: now + this.RELAY_TIMEOUT_DURATION
+      }
+    ]);
+
+    this.logger.debug(`Relay ${normalizedUrl} timed out until ${new Date(now + this.RELAY_TIMEOUT_DURATION).toISOString()}`);
+  }
+
+  /**
+   * Removes expired timeouts from the timeouts array
+   */
+  private cleanupTimeouts(): void {
+    const now = Date.now();
+    const initialCount = this.timeouts.length;
+
+    // Filter out expired timeouts
+    this.timeouts.set(this.timeouts().filter(relay => {
+      const isExpired = relay.timeout && relay.timeout < now;
+      if (isExpired) {
+        this.logger.debug(`Timeout expired for relay: ${relay.url}`);
+      }
+      return !isExpired;
+    }));
+
+    const removedCount = initialCount - this.timeouts.length;
+    if (removedCount > 0) {
+      this.logger.debug(`Cleaned up ${removedCount} expired relay timeouts`);
+    }
+  }
+
+  /**
+ * Normalizes relay URLs by ensuring root URLs have a trailing slash
+ * but leaves URLs with paths unchanged
+ */
+  normalizeRelayUrl(url: string): string {
+    try {
+      const parsedUrl = new URL(url);
+
+      // If the URL has no pathname (or just '/'), ensure it ends with a slash
+      if (parsedUrl.pathname === '' || parsedUrl.pathname === '/') {
+        // Add trailing slash if missing
+        return url.endsWith('/') ? url : `${url}/`;
+      }
+
+      // URL already has a path, return as is
+      return url;
+    } catch (error) {
+      // If URL parsing fails, return original URL
+      this.logger.warn(`Failed to parse URL: ${url}`, error);
+      return url;
+    }
   }
 
   /**

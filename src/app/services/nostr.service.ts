@@ -249,6 +249,7 @@ export class NostrService {
       if (!relays) {
         // To properly scale Nostr, the first step is simply getting the user's relay list and nothing more.
         bootstrapPool = new SimplePool();
+
         this.logger.debug('Connecting to bootstrap relays', { relays: this.relayService.bootStrapRelays() });
 
         this.logger.time('fetchRelayList');
@@ -367,7 +368,7 @@ export class NostrService {
 
     if (!followingEvent) {
       followingEvent = await this.relayService.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
-      
+
       if (followingEvent) {
         await this.storage.saveEvent(followingEvent);
       }
@@ -597,14 +598,55 @@ export class NostrService {
   currentProfileUserPool: SimplePool | null = null;
   currentProfileRelayUrls: string[] = [];
 
+  async retrieveMetadata(pubkey: string, relayUrls: string[]) {
+    let metadata: NostrEvent | null | undefined = null;
+    // Try each relay individually until we find metadata
+    for (const relayUrl of relayUrls) {
+      let userPool = new SimplePool();
+
+      try {
+        this.logger.debug('Attempting to fetch metadata from relay', { relay: relayUrl });
+        metadata = await userPool.get([relayUrl], {
+          kinds: [kinds.Metadata],
+          authors: [pubkey],
+        }, {
+          maxWait: 3000
+        });
+
+        if (metadata) {
+          this.logger.debug('Successfully retrieved metadata', { relay: relayUrl });
+          break; // Stop trying more relays once we've found metadata
+        }
+      } catch (error) {
+        this.logger.debug('Failed to fetch metadata from relay', { relay: relayUrl, error });
+        // Continue to the next relay on failure
+      }
+      finally {
+        userPool.close([relayUrl]); // Close the pool for this relay
+      }
+    }
+
+    if (metadata) {
+      await this.storage.saveEvent(metadata);
+    }
+
+    return metadata;
+  }
+
   async discoverMetadata(pubkey: string, disconnect = true): Promise<NostrEvent | undefined> {
+    let info: any = this.storage.getInfo(pubkey, 'user');
+
+    if (!info) {
+      info = {};
+    }
+
     // FLOW: Find the user's relays first. Save it.
     // Connect to their relays and get metadata. Save it.
     const event = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
 
     if (!event) {
-      // TODO: Duplicate code from data-loading service. Refactor and improve!!
       let bootstrapPool = new SimplePool();
+
       this.logger.debug('Connecting to bootstrap relays', { relays: this.relayService.bootStrapRelays() });
 
       const relays = await bootstrapPool.get(this.relayService.bootStrapRelays(), {
@@ -612,10 +654,12 @@ export class NostrService {
         authors: [pubkey],
       });
 
-      bootstrapPool.close(this.relayService.bootStrapRelays());
-
       if (relays) {
+        bootstrapPool.close(this.relayService.bootStrapRelays());
+
         await this.storage.saveEvent(relays);
+
+        info.hasRelayList = true;
 
         const relayUrls = this.getRelayUrls(relays);
 
@@ -623,34 +667,7 @@ export class NostrService {
 
         this.logger.debug('Trying to fetch metadata from individual relays', { relayCount: relayUrls.length });
 
-        // Try each relay individually until we find metadata
-        for (const relayUrl of relayUrls) {
-          let userPool = new SimplePool();
-
-          try {
-            this.logger.debug('Attempting to fetch metadata from relay', { relay: relayUrl });
-            metadata = await userPool.get([relayUrl], {
-              kinds: [kinds.Metadata],
-              authors: [pubkey],
-            }, {
-              maxWait: 3000
-            });
-
-            userPool.close([relayUrl]); // Close the pool for this relay
-
-            if (metadata) {
-              this.logger.debug('Successfully retrieved metadata', { relay: relayUrl });
-              break; // Stop trying more relays once we've found metadata
-            }
-          } catch (error) {
-            this.logger.debug('Failed to fetch metadata from relay', { relay: relayUrl, error });
-            // Continue to the next relay on failure
-          }
-        }
-
-        if (metadata) {
-          await this.storage.saveEvent(metadata);
-        }
+        metadata = await this.retrieveMetadata(pubkey, relayUrls);
 
         // this.currentProfileUserPool = userPool;
         // this.currentProfileRelayUrls = relayUrls;
@@ -659,7 +676,98 @@ export class NostrService {
         //   userPool.close(relayUrls);
         // }
 
+        await this.storage.saveInfo(pubkey, 'user', info);
+
         return metadata as NostrEvent;
+      } else {
+
+        const followingEvent = await bootstrapPool.get(this.relayService.bootStrapRelays(), {
+          kinds: [kinds.Contacts],
+          authors: [pubkey],
+        });
+
+        if (followingEvent) {
+          await this.storage.saveEvent(followingEvent);
+
+          // After saving, the .content should be parsed to JSON.
+          console.log('FOLLOWING:', followingEvent);
+
+          const followingRelayUrls = this.getRelayUrlsFromFollowing(followingEvent);
+          console.log('USER FOLLOWING RELAY URLS:', followingRelayUrls);
+
+          if (followingRelayUrls.length === 0) {
+            this.logger.warn('No relays found in following list. User does not have Relay List nor relays in following list.');
+            this.logger.warn('Getting metadata from Discovery Relays... not an ideal situation.');
+
+            info.hasRelayList = false;
+            info.hasFollowingListRelays = false;
+
+            const metadataFromDiscoveryRelays = await bootstrapPool.get(this.relayService.bootStrapRelays(), {
+              kinds: [kinds.Metadata],
+              authors: [pubkey],
+            });
+
+            if (metadataFromDiscoveryRelays) {
+              info.metadataFromDiscoveryRelays = true;
+              await this.storage.saveEvent(metadataFromDiscoveryRelays);
+              await this.storage.saveInfo(pubkey, 'user', info);
+              return metadataFromDiscoveryRelays as NostrEvent;
+            } else {
+              info.metadataFromDiscoveryRelays = false;
+              await this.storage.saveInfo(pubkey, 'user', info);
+              return undefined;
+            }
+          }
+
+          // After getting relays from the following list, we will do another attempt at getting the Relay List for the user.
+          // and if that fails, we will fall back to using this list.
+
+          const followingPool = new SimplePool();
+          const relayList = await followingPool.get(followingRelayUrls, {
+            kinds: [kinds.RelayList],
+            authors: [pubkey],
+          });
+
+          // A lot of user's have tens of relays, and many old ones. If we can't connect to them, put them into an 
+          const connectionStatuses = followingPool.listConnectionStatus();
+          const failedRelays = Array.from(connectionStatuses.entries())
+            .filter(([_, status]) => status === false)
+            .map(([url, _]) => url);
+          
+          this.relayService.timeoutRelays(failedRelays);
+
+          if (relayList) {
+            followingPool.close(followingRelayUrls);
+            await this.storage.saveEvent(relayList);
+            const relayListUrls = this.getRelayUrls(relayList);
+            console.log('WE FOUND RELAYS!!!!');
+
+            let metadata = null;
+            this.logger.debug('Trying to fetch metadata from individual relays', { relayCount: relayListUrls.length });
+
+            metadata = await this.retrieveMetadata(pubkey, relayListUrls)
+
+            // this.currentProfileUserPool = userPool;
+            // this.currentProfileRelayUrls = relayUrls;
+
+            // if (disconnect) {
+            //   userPool.close(relayUrls);
+            // }
+
+            return metadata as NostrEvent;
+
+          } else {
+            console.log('DID NOT Find relays...');
+            // Capitulate and get profile from the following list relays:
+            let metadata = await this.retrieveMetadata(pubkey, followingRelayUrls)
+
+            followingPool.close(followingRelayUrls);
+
+            return metadata as NostrEvent;
+          }
+        }
+
+        bootstrapPool.close(this.relayService.bootStrapRelays());
       }
     }
 
@@ -1015,12 +1123,54 @@ export class NostrService {
       : npub;
   }
 
-  getRelayUrls(event: Event): string[] {
-    return event.tags.filter(tag => tag.length >= 2 && tag[0] === 'r').map(tag => tag[1]);
+  /** Parses the URLs and cleans up, ensuring only wss:// instances are returned. */
+  getRelayUrlsFromFollowing(event: Event, timeouts: boolean = true): string[] {
+    let relayUrls = Object.keys(event.content).map(url => {
+      const wssIndex = url.indexOf('wss://');
+      return wssIndex >= 0 ? url.substring(wssIndex) : url;
+    });
+    
+    // Filter out timed out relays if timeouts parameter is true
+    if (timeouts) {
+      const timedOutRelays = this.relayService.timeouts().map(relay => relay.url);
+      relayUrls = relayUrls.filter(relay => !timedOutRelays.includes(this.relayService.normalizeRelayUrl(relay)));
+    }
+    
+    return relayUrls;
   }
-
-  getTags(event: Event, tagType: NostrTagKey): string[] {
-    return event.tags.filter(tag => tag.length >= 2 && tag[0] === tagType).map(tag => tag[1]);
+  
+  /** Parses the URLs and cleans up, ensuring only wss:// instances are returned. */
+  getRelayUrls(event: Event, timeouts: boolean = true): string[] {
+    let relayUrls = event.tags
+      .filter(tag => tag.length >= 2 && tag[0] === 'r')
+      .map(tag => {
+        const url = tag[1];
+        const wssIndex = url.indexOf('wss://');
+        return wssIndex >= 0 ? url.substring(wssIndex) : url;
+      });
+      
+    // Filter out timed out relays if timeouts parameter is true
+    if (timeouts) {
+      const timedOutRelays = this.relayService.timeouts().map(relay => relay.url);
+      relayUrls = relayUrls.filter(relay => !timedOutRelays.includes(this.relayService.normalizeRelayUrl(relay)));
+    }
+    
+    return relayUrls;
+  }
+  
+  getTags(event: Event, tagType: NostrTagKey, timeouts: boolean = false): string[] {
+    let tags = event.tags
+      .filter(tag => tag.length >= 2 && tag[0] === tagType)
+      .map(tag => tag[1]);
+    
+    // If this is filtering relay tags ('r') and timeouts is true, 
+    // filter out the timed out relays
+    if (tagType === 'r' && timeouts) {
+      const timedOutRelays = this.relayService.timeouts().map(relay => relay.url);
+      tags = tags.filter(url => !timedOutRelays.includes(url));
+    }
+      
+    return tags;
   }
 
   switchToUser(pubkey: string): boolean {

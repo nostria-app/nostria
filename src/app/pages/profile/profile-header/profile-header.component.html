@@ -76,6 +76,11 @@
                     <span>Share</span>
                 </button>
 
+                <button mat-menu-item [routerLink]="'details'" [queryParamsHandling]="'preserve'">
+                    <mat-icon>info</mat-icon>
+                    <span>Details</span>
+                </button>
+
                 @if (!isOwnProfile()) {
                 <mat-divider></mat-divider>
                 <button mat-menu-item (click)="muteUser()">

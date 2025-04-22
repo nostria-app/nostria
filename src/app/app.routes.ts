@@ -16,6 +16,7 @@ import { ProfileHomeComponent } from './pages/profile/profile-home/profile-home.
 import { LearnComponent } from './pages/learn/learn.component';
 import { PremiumComponent } from './pages/premium/premium.component';
 import { UpgradeComponent } from './pages/premium/upgrade/upgrade.component';
+import { DetailsComponent } from './pages/profile/details/details.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/home', pathMatch: 'full' },
@@ -35,7 +36,8 @@ export const routes: Routes = [
       { path: 'media', component: ProfileMediaComponent },
       { path: 'about', component: ProfileAboutComponent },
       { path: 'connections', component: ProfileConnectionsComponent },
-      { path: 'following', component: FollowingComponent }
+      { path: 'following', component: FollowingComponent },
+      { path: 'details', component: DetailsComponent }
     ]
   },
   {

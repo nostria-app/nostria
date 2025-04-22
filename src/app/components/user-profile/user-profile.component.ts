@@ -237,6 +237,27 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
     }
 
     /**
+     * Returns the appropriate default avatar icon size based on the current view
+     */
+    getDefaultAvatarSize(): string {
+        switch (this.view()) {
+            case 'large':
+                return '256px';
+            case 'medium':
+                return '128px';
+            case 'small':
+                return '48px';
+            case 'details':
+            case 'tiles':
+                return '40px';
+            case 'grid':
+                return '36px';
+            default: // 'list'
+                return '40px';
+        }
+    }
+
+    /**
      * Gets the tooltip content for the profile avatar
      */
     getTooltipContent(): string {
