@@ -730,7 +730,7 @@ export class NostrService {
   }
 
   async discoverMetadata(pubkey: string, disconnect = true): Promise<NostrEvent | undefined> {
-    let info: any = this.storage.getInfo(pubkey, 'user');
+    let info: any = await this.storage.getInfo(pubkey, 'user');
 
     if (!info) {
       info = {};
