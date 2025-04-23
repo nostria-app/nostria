@@ -10,7 +10,7 @@
 
         <mat-list-item>
           <span matListItemTitle>{{ relay.url }} - <a [href]="getWebUrl(relay.url)" target="_blank" rel="noopener noreferrer">View</a></span>
-          <span matListItemSubtitle>Timed out until {{ relay.timeout | date: 'short' }}</span><br>
+          <span matListItemSubtitle>Timeout until {{ relay.timeout | date: 'short' }}</span><br>
           <button mat-icon-button color="warn" matListItemMeta>
             <mat-icon>clear</mat-icon>
           </button>
@@ -37,12 +37,12 @@
     <div class="muted-section">
       @if (relay.timeouts()) {
       <mat-list>
-        @for (relay of disabledRelays(); track relay.url) {
+        @for (relay of disabledRelays(); track relay.key) {
 
         <mat-list-item>
-          <span matListItemTitle>{{ relay.url }} - <a [href]="getWebUrl(relay.url)" target="_blank" rel="noopener noreferrer">View</a></span>
-          <span matListItemSubtitle>Timed out until {{ relay.timeout | date: 'short' }}</span><br>
-          <button mat-icon-button color="warn" matListItemMeta>
+          <span matListItemTitle>{{ relay.key }} - <a [href]="getWebUrl(relay.key)" target="_blank" rel="noopener noreferrer">View</a></span>
+          <span matListItemSubtitle>Disabled {{ relay.updated | date: 'short' }}</span><br>
+          <button mat-icon-button color="warn" matListItemMeta (click)="removeDisabledRelay(relay)">
             <mat-icon>clear</mat-icon>
           </button>
         </mat-list-item>

@@ -617,22 +617,22 @@ export class RelayService {
   /**
    * Save user relays to storage
    */
-  async saveUserRelays(pubkey: string): Promise<void> {
-    try {
-      const currentRelays = this.relays();
-      const relayUrls = currentRelays.map(relay => relay.url);
+  // async saveUserRelays(pubkey: string): Promise<void> {
+  //   try {
+  //     const currentRelays = this.relays();
+  //     const relayUrls = currentRelays.map(relay => relay.url);
 
-      await this.storage.saveUserRelays({
-        pubkey,
-        relays: relayUrls,
-        updated: Date.now()
-      });
+  //     await this.storage.saveUserRelays({
+  //       pubkey,
+  //       relays: relayUrls,
+  //       updated: Date.now()
+  //     });
 
-      this.logger.debug(`Saved ${relayUrls.length} relays for user ${pubkey} to storage`);
-    } catch (error) {
-      this.logger.error(`Error saving relays for user ${pubkey}`, error);
-    }
-  }
+  //     this.logger.debug(`Saved ${relayUrls.length} relays for user ${pubkey} to storage`);
+  //   } catch (error) {
+  //     this.logger.error(`Error saving relays for user ${pubkey}`, error);
+  //   }
+  // }
 
   getRelaysFromRelayEvent(relayEvent: Event): string[] {
     return relayEvent.tags.filter(tag => tag.length >= 2 && tag[0] === 'r').map(tag => tag[1]);

@@ -35,7 +35,7 @@ export class StorageStatsComponent {
   stats = signal({
     relaysCount: 0,
     // userMetadataCount: 0,
-    userRelaysCount: 0,
+    // userRelaysCount: 0,
     estimatedSize: 0
   });
   formattedSize = signal('0 KB');
