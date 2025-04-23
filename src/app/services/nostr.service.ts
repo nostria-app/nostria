@@ -265,6 +265,12 @@ export class NostrService {
       return;
     }
 
+    let info: any = await this.storage.getInfo(account.pubkey, 'user');
+
+    if (!info) {
+      info = {};
+    }
+
     try {
       this.appState.loadingMessage.set('Retrieving your relay list...');
       this.appState.isLoading.set(true);
@@ -332,6 +338,7 @@ export class NostrService {
         this.logger.timeEnd('fetchRelayList');
 
         if (relays) {
+          info.hasRelayList = true;
           this.logger.info('Found your relays on network', { relays });
           this.appState.loadingMessage.set('Found your relays on the network! ✔️');
           await this.storage.saveEvent(relays);
@@ -385,20 +392,20 @@ export class NostrService {
 
           try {
             // Parse the content field which should be JSON
-            const metadataContent = typeof metadata.content === 'string'
-              ? JSON.parse(metadata.content)
-              : metadata.content;
+            // const metadataContent = typeof metadata.content === 'string'
+            //   ? JSON.parse(metadata.content)
+            //   : metadata.content;
 
             // Create a NostrEventData object to store the full content and tags
-            const eventData: NostrEventData<UserMetadata> = {
-              pubkey: metadata.pubkey,
-              content: metadataContent,  // Store the parsed JSON object 
-              tags: metadata.tags,       // Store the original tags
-              updated: Date.now()
-            };
+            // const eventData: NostrEventData<UserMetadata> = {
+            //   pubkey: metadata.pubkey,
+            //   content: metadataContent,  // Store the parsed JSON object 
+            //   tags: metadata.tags,       // Store the original tags
+            //   updated: Date.now()
+            // };
 
             // Save to storage with all fields and the full event data
-            await this.storage.saveUserMetadata(pubkey, eventData);
+            // await this.storage.saveUserMetadata(pubkey, eventData);
           } catch (e) {
             this.logger.error('Failed to parse metadata content', e);
           }
@@ -423,6 +430,8 @@ export class NostrService {
 
       this.appState.loadingMessage.set('Loading completed!');
       this.logger.info('Data loading process completed');
+
+      await this.storage.saveInfo(pubkey, 'user', info);
 
       // Show success animation instead of waiting
       this.appState.isLoading.set(false);
@@ -840,6 +849,9 @@ export class NostrService {
             const relayListUrls = this.getRelayUrls(relayList);
             console.log('WE FOUND RELAYS!!!!');
 
+            info.hasFollowingListRelays = true;
+            await this.storage.saveInfo(pubkey, 'user', info);
+
             let metadata = null;
             this.logger.debug('Trying to fetch metadata from individual relays', { relayCount: relayListUrls.length });
 
@@ -860,6 +872,10 @@ export class NostrService {
             let metadata = await this.retrieveMetadata(pubkey, followingRelayUrls)
 
             followingPool.close(followingRelayUrls);
+
+            info.hasFollowingListRelays = false;
+            info.hasRelayList = false;
+            await this.storage.saveInfo(pubkey, 'user', info);
 
             return metadata as NostrEvent;
           }

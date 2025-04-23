@@ -71,7 +71,7 @@ export class BackupComponent {
             if (!pubkey) return;
 
             const userEvents = await this.storage.getUserEvents(pubkey);
-            const userRelays = await this.storage.getUserRelays(pubkey);
+            // const userRelays = await this.storage.getUserRelays(pubkey);
 
             // Estimate size by converting events to JSON and measuring string length
             // This is just an approximation
@@ -106,8 +106,8 @@ export class BackupComponent {
 
             // Fetch all user data
             const userEvents = await this.storage.getUserEvents(pubkey);
-            const userRelays = await this.storage.getUserRelays(pubkey);
-            const userMetadata = await this.storage.getUserMetadata(pubkey);
+            // const userRelays = await this.storage.getUserRelays(pubkey);
+            // const userMetadata = await this.storage.getUserMetadata(pubkey);
 
             if (userEvents.length === 0) {
                 this.showMessage('No events found to back up');
@@ -120,8 +120,8 @@ export class BackupComponent {
                 version: '1.0',
                 timestamp: new Date().toISOString(),
                 pubkey: pubkey,
-                metadata: userMetadata,
-                relays: userRelays,
+                // metadata: userMetadata,
+                // relays: userRelays,
                 events: userEvents
             };
 
@@ -233,9 +233,9 @@ export class BackupComponent {
             }
 
             // Import relays if available
-            if (backupData.relays) {
-                await this.storage.saveUserRelays(backupData.relays);
-            }
+            // if (backupData.relays) {
+            //     await this.storage.saveUserRelays(backupData.relays);
+            // }
 
             // Refresh stats
             await this.loadBackupStats();
