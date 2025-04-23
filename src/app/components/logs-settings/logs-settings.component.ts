@@ -8,7 +8,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
 import { AccountStateService } from '../../services/account-state.service';
 import { NostrService } from '../../services/nostr.service';
-import { UserProfileComponent } from "../user-profile/user-profile.component";
 import { StorageService } from '../../services/storage.service';
 import { RelayService } from '../../services/relay.service';
 import { ApplicationService } from '../../services/application.service';
@@ -24,7 +23,6 @@ import { ApplicationService } from '../../services/application.service';
     MatIconModule,
     MatButtonModule,
     MatDividerModule,
-    UserProfileComponent
   ],
   templateUrl: './logs-settings.component.html',
   styleUrls: ['./logs-settings.component.scss']

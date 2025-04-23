@@ -1,0 +1,204 @@
+<div class="notifications-page">
+  <div class="page-header">
+    <h1>Notifications</h1>
+    <div class="header-actions">
+      <button mat-icon-button [matMenuTriggerFor]="optionsMenu" aria-label="Options">
+        <mat-icon>more_vert</mat-icon>
+      </button>
+      <mat-menu #optionsMenu="matMenu">
+        <button mat-menu-item (click)="markAllAsRead()">
+          <mat-icon>done_all</mat-icon>
+          <span>Mark all as read</span>
+        </button>
+        <mat-divider></mat-divider>
+        <button mat-menu-item>
+          <mat-icon>settings</mat-icon>
+          <span>Notification settings</span>
+        </button>
+      </mat-menu>
+    </div>
+  </div>
+
+  @if (isLoading()) {
+    <div class="loading-container">
+      <mat-spinner diameter="40"></mat-spinner>
+      <p>Loading notifications...</p>
+    </div>
+  } @else if (error()) {
+    <div class="error-container">
+      <mat-icon color="warn">error</mat-icon>
+      <p>{{ error() }}</p>
+      <button mat-flat-button color="primary" (click)="fetchNotifications()">
+        <mat-icon>refresh</mat-icon> Try Again
+      </button>
+    </div>
+  } @else if (notifications().length === 0) {
+    <div class="empty-container">
+      <mat-icon>notifications_off</mat-icon>
+      <p>No notifications yet</p>
+      <p class="empty-subtitle">When someone mentions, reacts, or follows you, you'll see it here.</p>
+    </div>
+  } @else {
+    <div class="notifications-container">
+      <mat-tab-group 
+        [selectedIndex]="activeTabIndex()" 
+        (selectedIndexChange)="onTabChange($event)" 
+        animationDuration="300ms" 
+        mat-stretch-tabs="false" 
+        mat-align-tabs="center">
+        
+        <!-- All Tab -->
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <div class="tab-label">
+              <span>All</span>
+              <mat-chip color="accent" selected>{{ notifications().length }}</mat-chip>
+            </div>
+          </ng-template>
+        </mat-tab>
+        
+        <!-- Mentions Tab -->
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <div class="tab-label">
+              <mat-icon>alternate_email</mat-icon>
+              <span>Mentions</span>
+              @if (mentionCount() > 0) {
+                <mat-chip color="accent" selected>{{ mentionCount() }}</mat-chip>
+              }
+            </div>
+          </ng-template>
+        </mat-tab>
+        
+        <!-- Reactions Tab -->
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <div class="tab-label">
+              <mat-icon>favorite</mat-icon>
+              <span>Reactions</span>
+              @if (reactionCount() > 0) {
+                <mat-chip color="accent" selected>{{ reactionCount() }}</mat-chip>
+              }
+            </div>
+          </ng-template>
+        </mat-tab>
+        
+        <!-- Reposts Tab -->
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <div class="tab-label">
+              <mat-icon>repeat</mat-icon>
+              <span>Reposts</span>
+              @if (repostCount() > 0) {
+                <mat-chip color="accent" selected>{{ repostCount() }}</mat-chip>
+              }
+            </div>
+          </ng-template>
+        </mat-tab>
+        
+        <!-- Follows Tab -->
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <div class="tab-label">
+              <mat-icon>person_add</mat-icon>
+              <span>Follows</span>
+              @if (followCount() > 0) {
+                <mat-chip color="accent" selected>{{ followCount() }}</mat-chip>
+              }
+            </div>
+          </ng-template>
+        </mat-tab>
+      </mat-tab-group>
+      
+      <cdk-virtual-scroll-viewport 
+        [itemSize]="itemSize" 
+        [minBufferPx]="minBufferPx" 
+        [maxBufferPx]="maxBufferPx" 
+        class="notifications-list">
+        
+        @for (notification of filteredNotifications(); track notification.id) {
+          <div class="notification-card" [class.unread]="!notification.read">
+            <div class="notification-type-icon" [ngClass]="notification.type">
+              <mat-icon>{{ getNotificationIcon(notification.type) }}</mat-icon>
+            </div>
+            
+            <div class="notification-avatar" (click)="viewProfile(notification.senderPubkey)">
+              <app-user-profile [pubkey]="notification.senderPubkey" view="small"></app-user-profile>
+            </div>
+            
+            <div class="notification-content">
+              <div class="notification-header">
+                <span class="username" (click)="viewProfile(notification.senderPubkey)">
+                  {{ notification.sender }}
+                </span>
+                <span class="notification-action">
+                  @switch (notification.type) {
+                    @case ('mention') {
+                      mentioned you
+                    }
+                    @case ('reaction') {
+                      reacted to your post
+                    }
+                    @case ('repost') {
+                      reposted your note
+                    }
+                    @case ('follow') {
+                      started following you
+                    }
+                    @default {
+                      interacted with you
+                    }
+                  }
+                </span>
+                <span class="notification-time">{{ getTimeAgo(notification.timestamp) }}</span>
+                
+                @if (!notification.read) {
+                  <div class="unread-indicator" (click)="markAsRead(notification.id)" title="Mark as read"></div>
+                }
+              </div>
+
+              @if (notification.content && notification.type !== 'reaction') {
+                <div class="notification-text" (click)="notification.noteId && viewNote(notification.noteId)">
+                  {{ notification.content }}
+                </div>
+              } @else if (notification.type === 'reaction') {
+                <div class="reaction-content">
+                  <span class="reaction-emoji">{{ notification.content }}</span>
+                </div>
+              }
+              
+              @if (notification.noteId && notification.type !== 'follow') {
+                <div class="notification-actions">
+                  <button mat-button color="primary" (click)="viewNote(notification.noteId!)">
+                    View Post
+                  </button>
+                  @if (notification.type === 'mention') {
+                    <button mat-button>
+                      <mat-icon>reply</mat-icon> Reply
+                    </button>
+                  }
+                </div>
+              } @else if (notification.type === 'follow') {
+                <div class="notification-actions">
+                  <button mat-button color="primary">Follow Back</button>
+                </div>
+              }
+            </div>
+          </div>
+        }
+        
+        @if (filteredNotifications().length === 0) {
+          <div class="empty-tab">
+            <mat-icon>{{getNotificationIcon(
+              activeTabIndex() === 1 ? 'mention' :
+              activeTabIndex() === 2 ? 'reaction' :
+              activeTabIndex() === 3 ? 'repost' :
+              activeTabIndex() === 4 ? 'follow' : 'mention'
+            )}}</mat-icon>
+            <p>No notifications in this category</p>
+          </div>
+        }
+      </cdk-virtual-scroll-viewport>
+    </div>
+  }
+</div>

@@ -13,7 +13,6 @@ import { LoggerService } from '../../services/logger.service';
 import { MatCardModule } from '@angular/material/card';
 import { QrcodeScanDialogComponent } from '../qrcode-scan-dialog/qrcode-scan-dialog.component';
 import { TermsOfUseDialogComponent } from '../terms-of-use-dialog/terms-of-use-dialog.component';
-import { NPubPipe } from '../../pipes/npub.pipe';
 
 type LoginView = 'main' | 'nsec' | 'extension-loading' | 'existing-accounts' | 'nostr-connect';
 
@@ -30,8 +29,7 @@ type LoginView = 'main' | 'nsec' | 'extension-loading' | 'existing-accounts' | '
     MatListModule,
     MatIconModule,
     MatProgressSpinnerModule,
-    FormsModule,
-    NPubPipe
+    FormsModule
   ],
   templateUrl: './login-dialog.component.html',
   styleUrls: ['./login-dialog.component.scss']
