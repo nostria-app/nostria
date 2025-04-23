@@ -440,11 +440,11 @@ export class RelayService {
   /**
    * Publish an event to a single relay
    */
-  async publishToRelay(relayUrl: string, event: NostrEvent): Promise<void> {
+  async publishToRelay(event: NostrEvent, relayUrl: string) {
     try {
       // Your relay publishing implementation
       this.logger.debug(`Successfully published to ${relayUrl}`);
-      return Promise.resolve();
+      return this.publish(event, [relayUrl]);
     } catch (error) {
       this.logger.error(`Failed to publish to ${relayUrl}:`, error);
       throw error; // Important to throw for notification tracking

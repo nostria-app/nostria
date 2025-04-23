@@ -9,6 +9,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { RelayPublishingNotification, RelayPublishPromise } from '../../services/notification.service';
 import { NostrService } from '../../services/nostr.service';
+import { RouterModule } from '@angular/router';
 
 @Component({
   selector: 'app-relay-publish-status',
@@ -21,7 +22,8 @@ import { NostrService } from '../../services/nostr.service';
     MatProgressBarModule,
     MatDividerModule,
     MatChipsModule,
-    MatTooltipModule
+    MatTooltipModule,
+    RouterModule
   ],
   templateUrl: './relay-publish-status.component.html',
   styleUrls: ['./relay-publish-status.component.scss']
