@@ -2,6 +2,9 @@ import { computed, effect, inject, Injectable, signal } from "@angular/core";
 import { NostrService } from "./nostr.service";
 import { StorageService } from "./storage.service";
 import { Router, RouterLink, RouterModule } from "@angular/router";
+import { LoggerService } from "./logger.service";
+import { ApplicationStateService } from "./application-state.service";
+import { ThemeService } from "./theme.service";
 
 @Injectable({
     providedIn: 'root'
@@ -10,6 +13,9 @@ export class ApplicationService {
     nostrService = inject(NostrService);
     storage = inject(StorageService);
     router = inject(Router);
+    logger = inject(LoggerService);
+    appState = inject(ApplicationStateService);
+    theme = inject(ThemeService);
 
     /** Check the status on fully initialized, which ensures Nostr, Storage and user is logged in. */
     initialized = computed(() => this.nostrService.initialized() && this.storage.initialized());
@@ -18,21 +24,10 @@ export class ApplicationService {
     loadingMessage = signal('Loading data...');
     showSuccess = signal(false);
     isLoading = signal(false);
-    isOnline = signal(navigator.onLine);
 
-    constructor() {
-        // Set up event listeners for online/offline status changes
-        this.setupConnectionListeners();
-    }
-
-    private setupConnectionListeners(): void {
-        window.addEventListener('online', () => this.isOnline.set(true));
-        window.addEventListener('offline', () => this.isOnline.set(false));
-
-        // Create an effect to log status changes (optional)
-        effect(() => {
-            console.log(`Connection status changed: ${this.isOnline() ? 'online' : 'offline'}`);
-        });
+    reload() {
+        // Reload the application
+        window.location.reload();
     }
 
     async wipe() {
@@ -40,10 +35,13 @@ export class ApplicationService {
 
         // Clear known localStorage keys related to the app
         const keysToRemove = [
-            'nostria-theme',
-            'nostria-accounts',
-            'nostria-account',
-            'nostria-log-level',
+            this.appState.ACCOUNT_STORAGE_KEY,
+            this.appState.ACCOUNTS_STORAGE_KEY,
+            this.appState.BOOTSTRAP_RELAYS_STORAGE_KEY,
+            this.appState.PEOPLE_VIEW_MODE,
+            this.appState.MEDIA_ACTIVE_TAB,
+            this.logger.LOG_LEVEL_KEY,
+            this.theme.THEME_KEY
         ];
 
         for (let i = 0; i < keysToRemove.length; i++) {

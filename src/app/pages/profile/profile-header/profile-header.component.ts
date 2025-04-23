@@ -59,6 +59,7 @@ export class ProfileHeaderComponent {
     constructor() {
         effect(() => {
             if (this.profile()) {
+                console.debug('LOCATION 4:');
                 this.npub.set(this.nostr.getNpubFromPubkey(this.profile()!.pubkey));
             }
         });

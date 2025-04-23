@@ -45,6 +45,7 @@ export class ProfileAboutComponent {
   // Get the formatted npub for display
   getFormattedNpub(): string {
     const pubkey = this.getPubkey();
+    console.debug('LOCATION 3:', pubkey);
     return pubkey ? this.nostrService.getNpubFromPubkey(pubkey) : '';
   }
   

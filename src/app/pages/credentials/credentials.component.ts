@@ -65,6 +65,8 @@ export class CredentialsComponent {
   getNpub(): string {
     const pubkey = this.nostrService.activeAccount()?.pubkey;
     if (!pubkey) return '';
+
+    console.debug('LOCATION 2:', pubkey);
     return this.nostrService.getNpubFromPubkey(pubkey);
   }
 

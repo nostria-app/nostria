@@ -726,28 +726,28 @@ export class StorageService {
       return await this.db.get('info', compositeKey);
     } catch (error) {
       this.logger.error(`Error getting info records with key ${key}`, error);
-      return [];
+      return undefined;
     }
   }
 
   /**
    * Get info records by type, optionally filtering by key pattern
    */
-  // async getInfoByType(type: string, keyPattern?: string): Promise<InfoRecord[]> {
-  //   try {
-  //     const records = await this.db.getAllFromIndex('info', 'by-type', type);
+  async getInfoByType(type: string, keyPattern?: string): Promise<InfoRecord[]> {
+    try {
+      const records = await this.db.getAllFromIndex('info', 'by-type', type);
 
-  //     // If keyPattern is provided, filter the results
-  //     if (keyPattern) {
-  //       return records.filter(record => record.key.includes(keyPattern));
-  //     }
+      // If keyPattern is provided, filter the results
+      if (keyPattern) {
+        return records.filter(record => record.key.includes(keyPattern));
+      }
 
-  //     return records;
-  //   } catch (error) {
-  //     this.logger.error(`Error getting info records by type ${type}`, error);
-  //     return [];
-  //   }
-  // }
+      return records;
+    } catch (error) {
+      this.logger.error(`Error getting info records by type ${type}`, error);
+      return [];
+    }
+  }
 
   /**
    * Get a specific info record by both key and type

@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, effect, inject, signal } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
@@ -15,6 +15,9 @@ import { RelayService, Relay } from '../../services/relay.service';
 import { LoggerService } from '../../services/logger.service';
 import { RelayInfoDialogComponent } from './relay-info-dialog.component';
 import { LayoutService } from '../../services/layout.service';
+import { NostrService } from '../../services/nostr.service';
+import { kinds } from 'nostr-tools';
+import { StorageService } from '../../services/storage.service';
 
 @Component({
   selector: 'app-relays-page',
@@ -35,19 +38,29 @@ import { LayoutService } from '../../services/layout.service';
   styleUrl: './relays.component.scss'
 })
 export class RelaysComponent {
-  private relayService = inject(RelayService);
+  private relay = inject(RelayService);
+  private nostr = inject(NostrService);
   private logger = inject(LoggerService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private layout = inject(LayoutService);
+  private storage = inject(StorageService);
 
-  relays = this.relayService.userRelays;
-  bootstrapRelays = this.relayService.bootStrapRelays;
+  relays = this.relay.userRelays;
+  bootstrapRelays = this.relay.bootStrapRelays;
 
   newRelayUrl = signal('');
   newBootstrapUrl = signal('');
 
-  addRelay(): void {
+  constructor() {
+    // effect(async () => {
+    //   if (this.relayService.userRelays()) {
+
+    //   }
+    // });
+  }
+
+  async addRelay() {
     let url = this.newRelayUrl();
 
     if (!url || !url.trim()) {
@@ -81,10 +94,12 @@ export class RelaysComponent {
       }
     });
 
-    dialogRef.afterClosed().subscribe(result => {
+    dialogRef.afterClosed().subscribe(async result => {
       if (result?.confirmed) {
         this.logger.info('Adding new relay', { url, migrateData: result.migrateData });
-        this.relayService.addRelay(url);
+        this.relay.addRelay(url);
+
+        await this.publish();
 
         if (result.migrateData) {
           // Handle data migration logic here
@@ -108,10 +123,31 @@ export class RelaysComponent {
     });
   }
 
-  removeRelay(relay: Relay): void {
+  async removeRelay(relay: Relay) {
     this.logger.info('Removing relay', { url: relay.url });
-    this.relayService.removeRelay(relay.url);
+    this.relay.removeRelay(relay.url);
+    await this.publish();
     this.showMessage('Relay removed');
+
+  }
+
+  async publish() {
+    debugger;
+    const relays = this.relay.userRelays();
+
+    const tags = this.nostr.createTags('r', relays.map(relay => relay.url));
+    const relayListEvent = this.nostr.createEvent(kinds.RelayList, '', tags);
+
+    console.log('relayListEvent', relayListEvent);
+    // this.nostr.setTags(relayListEvent, 'r', relays.map(relay => relay.url));
+
+    const signedEvent = await this.nostr.signEvent(relayListEvent);
+    
+    // Make sure the relay list is published both to the user's relays and discovery relays.
+    this.relay.publish(signedEvent);
+    this.relay.publish(signedEvent, this.relay.bootStrapRelays());
+
+    await this.storage.saveEvent(signedEvent);
   }
 
   addBootstrapRelay(): void {
@@ -140,14 +176,14 @@ export class RelaysComponent {
     }
 
     this.logger.info('Adding new Discovery Relay', { url });
-    this.relayService.addBootstrapRelay(url);
+    this.relay.addBootstrapRelay(url);
     this.newBootstrapUrl.set('');
     this.showMessage('Discovery Relay added successfully');
   }
 
   removeBootstrapRelay(url: string): void {
     this.logger.info('Removing Discovery Relay', { url });
-    this.relayService.removeBootstrapRelay(url);
+    this.relay.removeBootstrapRelay(url);
     this.showMessage('Discovery Relay removed');
   }
 

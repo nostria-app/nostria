@@ -2,7 +2,7 @@
   <h2>Logs and debugging</h2>
 
   <section class="mute-section">
-    <h3>Timed out relays ({{ relay.RELAY_TIMEOUT_DURATION_MINUTES }} minute timeouts)</h3>
+    <h3>Suspended relays ({{ relay.RELAY_TIMEOUT_DURATION_MINUTES }} minute timeouts)</h3>
     <div class="muted-section">
       @if (relay.timeouts()) {
       <mat-list>
@@ -27,7 +27,38 @@
         }
       </mat-list>
       } @else {
-      <p class="empty-state">No timed out relays.</p>
+      <p class="empty-state">No suspended relays.</p>
+      }
+    </div>
+  </section>
+
+  <section class="mute-section">
+    <h3>Disabled relays (Automatically after {{ relay.RELAY_TIMEOUT_COUNT }} suspensions)</h3>
+    <div class="muted-section">
+      @if (relay.timeouts()) {
+      <mat-list>
+        @for (relay of disabledRelays(); track relay.url) {
+
+        <mat-list-item>
+          <span matListItemTitle>{{ relay.url }} - <a [href]="getWebUrl(relay.url)" target="_blank" rel="noopener noreferrer">View</a></span>
+          <span matListItemSubtitle>Timed out until {{ relay.timeout | date: 'short' }}</span><br>
+          <button mat-icon-button color="warn" matListItemMeta>
+            <mat-icon>clear</mat-icon>
+          </button>
+        </mat-list-item>
+
+        <!-- <mat-list-item>
+          <span matListItemTitle>{{ pubkey }}</span>
+          <button mat-icon-button color="warn" (click)="removeMutedItem('account', pubkey)" matListItemMeta>
+            <mat-icon>clear</mat-icon>
+          </button>
+        </mat-list-item> -->
+        <!-- <mat-divider>
+        </mat-divider> -->
+        }
+      </mat-list>
+      } @else {
+      <p class="empty-state">No disabled relays.</p>
       }
     </div>
   </section>

@@ -7,19 +7,20 @@
     </button>
     <img src="icons/icon-128x128.png" class="app-icon hide-tiny" alt="Nostria icon">
     <span class="app-title title-font hide-small">
-        {{title}}
+      {{title}}
     </span>
 
     <span class="toolbar-spacer">
-        @if (layout.search()) {
-        <input type="search" class="search-input" [(ngModel)]="layout.searchInput" (input)="layout.onSearchInput($event)" />
-        }
+      @if (layout.search()) {
+      <input type="search" class="search-input" [(ngModel)]="layout.searchInput"
+        (input)="layout.onSearchInput($event)" />
+      }
 
-        <!-- <mat-form-field class="small-search-input" subscriptSizing="dynamic">
+      <!-- <mat-form-field class="small-search-input" subscriptSizing="dynamic">
           <input type="search" matInput placeholder="Search" />
           <mat-icon matSuffix>search</mat-icon>
         </mat-form-field> -->
-      </span>
+    </span>
 
 
     @if (layout.search()) {
@@ -101,6 +102,22 @@
     </button>
   </mat-toolbar>
 
+  <!-- Floating Offline Indicator -->
+  @if (appState.showOfflineWarning()) {
+  <div class="floating-offline-indicator">
+    <div class="offline-content">
+      <mat-icon class="offline-icon">wifi_off</mat-icon>
+      <span>You are currently offline</span>
+      <button mat-icon-button class="dismiss-button" (click)="app.reload()">
+        <mat-icon>refresh</mat-icon>
+      </button>
+      <button mat-icon-button class="dismiss-button" (click)="appState.dismissOffline()">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+  </div>
+  }
+
   <!-- Sidenav container now below the toolbar -->
   <mat-sidenav-container class="sidenav-container" autosize="true">
     <!-- Side navigation -->
@@ -149,7 +166,13 @@
             <mat-icon class="avatar-icon">account_circle</mat-icon>
           </div>
           }
-          <h2>{{ metadata.content.name || nostrService.getTruncatedNpub(metadata.pubkey || '') }}</h2>
+
+          @if(metadata.content.name) {
+          <h2>{{ metadata.content.name }}</h2>
+          } @else {
+          <h2>{{ metadata.pubkey | npub }}</h2>
+          }
+
           @if (metadata.content.nip05) {
           <span class="nip05-identifier">{{ metadata.content.nip05.startsWith('_@') ?
             metadata.content.nip05.substring(1) : metadata.content.nip05 }}</span>
@@ -161,8 +184,7 @@
           <div class="profile-avatar">
             <mat-icon class="avatar-icon">account_circle</mat-icon>
           </div>
-          <h2>{{ nostrService.activeAccount()?.name ||
-            nostrService.getTruncatedNpub(nostrService.activeAccount()?.pubkey || '') }}</h2>
+          <h2>{{ nostrService.activeAccount()?.name || (nostrService.activeAccount()?.pubkey | npub) }}</h2>
           }
         </div>
         <!-- <mat-divider></mat-divider> -->
@@ -200,7 +222,7 @@
             }
             <span matListItemTitle>
               {{ metadata.content?.display_name || metadata.content?.name ||
-              nostrService.getTruncatedNpub(account.pubkey) }}
+              (account.pubkey | npub) }}
             </span>
             <span matListItemLine class="account-source">
               {{ account.source }} - Last used: {{ account.lastUsed| date:'short' }}
@@ -210,7 +232,7 @@
           <a mat-list-item (click)="switchAccount(account.pubkey)" class="account-item">
             <mat-icon matListItemIcon>account_circle</mat-icon>
             <span matListItemTitle>
-              {{nostrService.getTruncatedNpub(account.pubkey) }}
+              {{account.pubkey | npub }}
             </span>
             <span matListItemLine class="account-source">
               {{ account.source }} - Last used: {{ account.lastUsed| date:'short' }}

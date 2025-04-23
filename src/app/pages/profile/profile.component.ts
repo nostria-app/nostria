@@ -91,7 +91,7 @@ export class ProfileComponent {
     // React to changes in route parameters and app initialization
     effect(() => {
       // Only proceed if app is initialized and route params are available
-      if (this.app.initialized() && this.routeParams()) {
+      if (this.app.authenticated() && this.routeParams()) {
         let id = this.routeParams()?.get('id');
 
         if (id) {
@@ -153,6 +153,8 @@ export class ProfileComponent {
   }
 
   private async loadUserData(pubkey: string, disconnect = true): Promise<void> {
+    debugger;
+    
     if (!this.nostrService.currentProfileUserPool) {
       this.nostrService.currentProfileUserPool = new SimplePool();
     }
@@ -286,6 +288,7 @@ export class ProfileComponent {
   }
 
   getFormattedNpub(): string {
+    console.debug('LOCATION 3:');
     return this.nostrService.getNpubFromPubkey(this.pubkey());
   }
 
