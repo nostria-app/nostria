@@ -26,6 +26,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { QrcodeScanDialogComponent } from './components/qrcode-scan-dialog/qrcode-scan-dialog.component';
 import { ApplicationService } from './services/application.service';
 import { NPubPipe } from './pipes/npub.pipe';
+import { NotificationService, NotificationType, RelayPublishingNotification } from './services/notification.service';
+import { MatBadgeModule } from '@angular/material/badge';
 
 interface NavItem {
   path: string;
@@ -55,7 +57,8 @@ interface NavItem {
     LoadingOverlayComponent,
     FormsModule,
     MatFormFieldModule,
-    NPubPipe
+    NPubPipe,
+    MatBadgeModule
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
@@ -71,6 +74,7 @@ export class AppComponent implements OnInit {
   app = inject(ApplicationService);
   layout = inject(LayoutService);
   router = inject(Router);
+  notificationService = inject(NotificationService);
 
   private logger = inject(LoggerService);
 
@@ -87,6 +91,24 @@ export class AppComponent implements OnInit {
     // First check from accountsMetadata (which should be synchronized)
     const metadata = this.nostrService.getMetadataForAccount(pubkey);
     return metadata;
+  });
+
+  // Computed signal to count unread notifications
+  unreadNotificationsCount = computed(() => {
+    return this.notificationService.notifications().filter(notification => !notification.read).length;
+  });
+
+  // Computed signal to check if there are any active pending notifications
+  hasActivePendingNotifications = computed(() => {
+    return this.notificationService.notifications().some(notification => {
+      // Check if it's a RelayPublishingNotification with pending promises
+      if (notification.type === NotificationType.RELAY_PUBLISHING) {
+        const relayNotification = notification as RelayPublishingNotification;
+        return !relayNotification.complete && 
+               relayNotification.relayPromises.some(relay => relay.status === 'pending');
+      }
+      return false;
+    });
   });
 
   navItems: NavItem[] = [
