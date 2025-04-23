@@ -36,7 +36,22 @@ export class NostrService {
   private readonly appState = inject(ApplicationStateService);
   private readonly accountState = inject(AccountStateService);
 
-  private account = signal<NostrUser | null>(null);
+  // Initialize account from localStorage if available.
+  private initializeAccount(): NostrUser | null {
+    try {
+      const userJson = localStorage.getItem(this.appState.ACCOUNT_STORAGE_KEY);
+      if (userJson) {
+        return JSON.parse(userJson) as NostrUser;
+      }
+    } catch (e) {
+      this.logger.error('Failed to parse user from localStorage during initialization', e);
+    }
+    return null;
+  }
+
+  account = signal<NostrUser | null>(this.initializeAccount());
+
+  // private account = signal<NostrUser | null>(null);
   private accounts = signal<NostrUser[]>([]);
 
   // Signal to store metadata for all users - using array instead of Map
@@ -52,11 +67,24 @@ export class NostrService {
   usersMetadata = signal<Map<string, NostrEvent>>(new Map());
   usersRelays = signal<Map<string, NostrEvent>>(new Map());
 
-  isLoggedIn = computed(() => {
-    const result = !!this.account();
-    this.logger.debug('isLoggedIn computed value calculated', { isLoggedIn: result });
-    return result;
-  });
+  // isLoggedIn = computed(() => {
+  //   const account = this.account();
+  //   // const accountLoaded = this.accountLoaded();
+
+  //   if (account && accountLoaded) {
+  //     return true;
+  //   } else {
+  //     return false;
+  //   }
+
+  //   // if (!this.beforeLoggedIn()) {
+  //   //   const result = !!this.account();
+  //   //   this.logger.debug('isLoggedIn computed value calculated', { isLoggedIn: result });
+  //   //   return result;
+  //   // }
+  // });
+
+  // private accountLoaded = signal(false);
 
   pubkey = computed(() => {
     const currentUser = this.account();
@@ -106,6 +134,9 @@ export class NostrService {
             this.loadAccountsFromStorage();
             this.loadActiveAccountFromStorage();
 
+            // Load data from the active account.
+            await this.loadData();
+
             // We keep an in-memory copy of the user metadata and relay list for all accounts,
             // they won't take up too much memory space.
             await this.loadAccountsMetadata();
@@ -125,30 +156,34 @@ export class NostrService {
     });
 
     // Save user to localStorage whenever it changes
-    effect(async () => {
-      if (this.storage.initialized()) {
+    // effect(async () => {
+    //   if (this.storage.initialized()) {
 
-        const currentUser = this.account();
-        this.logger.debug('User change effect triggered', {
-          hasUser: !!currentUser,
-          pubkey: currentUser?.pubkey
-        });
+    //     debugger;
 
-        if (currentUser) {
-          this.logger.debug('Saving current user to localStorage', { pubkey: currentUser.pubkey });
-          localStorage.setItem(this.appState.ACCOUNT_STORAGE_KEY, JSON.stringify(currentUser));
+    //     const currentUser = this.account();
+    //     this.logger.debug('User change effect triggered', {
+    //       hasUser: !!currentUser,
+    //       pubkey: currentUser?.pubkey
+    //     });
 
-          this.logger.debug('Load data for current user', { pubkey: currentUser.pubkey });
-          await this.loadData();
+    //     if (currentUser) {
+    //       this.logger.debug('Saving current user to localStorage', { pubkey: currentUser.pubkey });
+    //       localStorage.setItem(this.appState.ACCOUNT_STORAGE_KEY, JSON.stringify(currentUser));
 
-          // Load relays for this user from storage
-          // untracked(() => {
-          //   this.relayService.loadRelaysForUser(currentUser.pubkey)
-          //     .catch(err => this.logger.error('Failed to load relays for user', err));
-          // });
-        }
-      }
-    });
+    //       this.logger.debug('Load data for current user', { pubkey: currentUser.pubkey });
+    //       await this.loadData();
+
+    //       this.accountLoaded.set(true);
+
+    //       // Load relays for this user from storage
+    //       // untracked(() => {
+    //       //   this.relayService.loadRelaysForUser(currentUser.pubkey)
+    //       //     .catch(err => this.logger.error('Failed to load relays for user', err));
+    //       // });
+    //     }
+    //   }
+    // });
 
     // Save all users to localStorage whenever they change
     effect(() => {

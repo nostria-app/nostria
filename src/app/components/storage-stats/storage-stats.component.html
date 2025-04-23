@@ -40,7 +40,7 @@
             REFRESH
         </button>
         &nbsp;
-        <button mat-flat-button [disabled]="isClearing() || !nostr.isLoggedIn()" (click)="clearCache()">
+        <button mat-flat-button [disabled]="isClearing()" (click)="clearCache()">
             <mat-icon>delete_sweep</mat-icon>
             CLEAR CACHE
         </button>

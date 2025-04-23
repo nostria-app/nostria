@@ -11,6 +11,7 @@ import { StorageService } from '../../services/storage.service';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
 import JSZip from '@progress/jszip-esm';
+import { ApplicationService } from '../../services/application.service';
 
 interface BackupStats {
     eventsCount: number;
@@ -40,6 +41,7 @@ export class BackupComponent {
     private nostr = inject(NostrService);
     private snackBar = inject(MatSnackBar);
     private logger = inject(LoggerService);
+    private app = inject(ApplicationService);
 
     stats = signal<BackupStats>({
         eventsCount: 0,
@@ -57,7 +59,7 @@ export class BackupComponent {
 
     constructor() {
         effect(async () => {
-            if (this.storage.initialized() && this.nostr.isLoggedIn()) {
+            if (this.app.initializedAndAuthenticated()) {
                 await this.loadBackupStats();
             }
         });
