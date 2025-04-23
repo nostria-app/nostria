@@ -49,7 +49,7 @@
     }
 
     <button class="notification-toolbar" mat-icon-button [matMenuTriggerFor]="menuNotifications">
-      <mat-icon>notifications</mat-icon>
+      <mat-icon [class.pulsing-icon]="hasActivePendingNotifications()" [matBadge]="unreadNotificationsCount()">notifications</mat-icon>
     </button>
 
     <mat-menu #menuNotifications="matMenu">

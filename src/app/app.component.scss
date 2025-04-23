@@ -363,3 +363,20 @@ mat-nav-list .mat-icon {
 .dark-theme .floating-offline-indicator {
   background-color: #ef5350;
 }
+
+// Pulsing animation for active notifications
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.pulsing-icon {
+  animation: pulse 1.5s infinite ease-in-out;
+}
