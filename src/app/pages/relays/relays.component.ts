@@ -1,4 +1,4 @@
-import { Component, effect, inject, signal } from '@angular/core';
+import { Component, effect, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
@@ -38,7 +38,7 @@ import { NotificationService } from '../../services/notification.service';
   templateUrl: './relays.component.html',
   styleUrl: './relays.component.scss'
 })
-export class RelaysComponent {
+export class RelaysComponent implements OnInit, OnDestroy {
   private relay = inject(RelayService);
   private nostr = inject(NostrService);
   private logger = inject(LoggerService);
@@ -54,12 +54,70 @@ export class RelaysComponent {
   newRelayUrl = signal('');
   newBootstrapUrl = signal('');
 
-  constructor() {
-    // effect(async () => {
-    //   if (this.relayService.userRelays()) {
+  // Timer for connection status checking
+  private statusCheckTimer: any;
+  private readonly STATUS_CHECK_INTERVAL = 10000; // 10 seconds
 
-    //   }
-    // });
+  ngOnInit() {
+    // Start the connection status checking interval
+    this.startStatusChecking();
+  }
+
+  ngOnDestroy() {
+    // Clean up the interval when component is destroyed
+    this.stopStatusChecking();
+  }
+
+  private startStatusChecking() {
+    // Clear any existing timer first
+    this.stopStatusChecking();
+
+    // Create new timer that runs every 10 seconds
+    this.statusCheckTimer = setInterval(() => {
+      this.checkRelayConnectionStatus();
+    }, this.STATUS_CHECK_INTERVAL);
+
+    // Run an initial check immediately
+    this.checkRelayConnectionStatus();
+
+    this.logger.debug('Started relay connection status checking');
+  }
+
+  private stopStatusChecking() {
+    if (this.statusCheckTimer) {
+      clearInterval(this.statusCheckTimer);
+      this.statusCheckTimer = null;
+      this.logger.debug('Stopped relay connection status checking');
+    }
+  }
+
+  /**
+   * Check connection status of all relays using the pool's listConnectionStatus method
+   */
+  private checkRelayConnectionStatus() {
+    const userPool = this.relay.getUserPool();
+    if (!userPool) {
+      this.logger.warn('Cannot check relay status: user pool is not initialized');
+      return;
+    }
+
+    const connectionStatusMap = userPool.listConnectionStatus();
+    this.logger.debug('Retrieved relay connection statuses', connectionStatusMap);
+
+    // Update the status of each relay in our list
+    this.relay.userRelays().forEach(relay => {
+      // Check if this relay URL exists in the connection status map
+      if (connectionStatusMap.has(relay.url)) {
+        const isConnected = connectionStatusMap.get(relay.url);
+        const newStatus = isConnected ? 'connected' : 'disconnected';
+
+        // Only update if status has changed
+        if (relay.status !== newStatus) {
+          this.logger.debug(`Updating relay ${relay.url} status to ${newStatus}`);
+          this.relay.updateRelayStatus(relay.url, newStatus);
+        }
+      }
+    });
   }
 
   parseUrl(relayUrl: string) {
@@ -154,28 +212,28 @@ export class RelaysComponent {
 
   async publish() {
     this.logger.info('Starting relay list publication process');
-  
+
     const relays = this.relay.userRelays();
     this.logger.debug('User relays being published:', relays);
-  
+
     const tags = this.nostr.createTags('r', relays.map(relay => relay.url));
     const relayListEvent = this.nostr.createEvent(kinds.RelayList, '', tags);
-  
+
     this.logger.debug('Created relay list event', relayListEvent);
-  
+
     const signedEvent = await this.nostr.signEvent(relayListEvent);
     this.logger.debug('Signed relay list event', signedEvent);
-  
+
     // Make sure the relay list is published both to the user's relays and discovery relays.
     const callbacks1 = await this.relay.publish(signedEvent);
     const callbacks2 = await this.relay.publish(signedEvent, this.relay.bootStrapRelays());
-  
+
     // Combine all callbacks into a flat array for tracking
     const allCallbacks = [...(callbacks1 || []), ...(callbacks2 || [])].flat();
-    
+
     const relayUrls = [...this.relay.userRelays().map(relay => relay.url), ...this.relay.bootStrapRelays()];
     this.logger.debug('Publishing to relay URLs:', relayUrls);
-    
+
     // Create a mapping of callbacks to their respective relay URLs
     const callbackRelayMapping = new Map<Promise<string>, string>();
     callbacks1?.forEach((callback, i) => {
@@ -184,63 +242,19 @@ export class RelaysComponent {
         callbackRelayMapping.set(callback, this.relay.userRelays()[i].url);
       }
     });
-    
+
     callbacks2?.forEach((callback, i) => {
       // Map callbacks to bootstrap relay URLs (if they exist)
       if (i < this.relay.bootStrapRelays().length) {
         callbackRelayMapping.set(callback, this.relay.bootStrapRelays()[i]);
       }
     });
-    
-    // // Track publishing progress
-    // const results = { 
-    //   success: 0, 
-    //   failed: 0, 
-    //   total: allCallbacks.length, 
-    //   successfulRelayUrls: [] as string[] 
-    // };
-    
-    // // Process each callback promise individually to properly track success/failure
-    // for (const callback of allCallbacks) {
-    //   try {
-    //     const relayUrl = callbackRelayMapping.get(callback) || 'unknown relay';
-        
-    //     await callback.then(
-    //       () => {
-    //         results.success++;
-    //         results.successfulRelayUrls.push(relayUrl);
-    //         this.logger.debug(`Successfully published to relay ${relayUrl} with status: ${status}`);
-    //       },
-    //       (error: any) => {
-    //         results.failed++;
-    //         this.logger.warn(`Failed to publish to relay ${relayUrl}:`, error);
-    //       }
-    //     );
-    //   } catch (error) {
-    //     debugger;
-    //     results.failed++;
-    //     this.logger.error(`Exception while publishing to relay:`, error);
-    //   }
-    // }
-    
-    // this.logger.info('Relay list publication results:', {
-    //   success: results.success,
-    //   failed: results.failed,
-    //   total: results.total,
-    //   successfulRelays: results.successfulRelayUrls
-    // });
-    
-    // if (results.failed > 0) {
-    //   this.showMessage(`Published to ${results.success}/${results.total} relays (${results.failed} failed)`);
-    // } else if (results.success > 0) {
-    //   this.showMessage(`Successfully published to ${results.success} relays`);
-    // } else {
-    //   this.showMessage('Failed to publish to any relays');
-    // }
-  
+
     // Pass the original callback arrays to the notification service
     this.notifications.addRelayPublishingNotification(signedEvent, callbackRelayMapping);
-  
+
+    this.relay.getUserPool()
+
     await this.storage.saveEvent(signedEvent);
     this.logger.debug('Saved relay list event to storage');
   }

@@ -50,18 +50,35 @@
   display: flex;
   flex-direction: column;
   flex-grow: 1;
-  padding: 16px;
+  padding: 20px;
   max-width: 800px;
   margin: 0 auto;
 }
 
-// Virtual scrolling viewport
+.spacer {
+  flex: 1;
+}
+
+.notification-list {
+  padding: 10px 0;
+}
+
 .notifications-list {
   display: flex;
   flex-direction: column;
   gap: 12px;
   flex-grow: 1;
   height: calc(100vh - 200px);
+}
+
+.notification-item {
+  display: flex;
+  padding: 10px 0;
+  justify-content: space-between;
+
+  &.unread {
+    background-color: rgba(63, 81, 181, 0.05);
+  }
 }
 
 // Notification card styles
@@ -142,7 +159,8 @@
 
 // Content section
 .notification-content {
-  flex-grow: 1;
+  display: flex;
+  flex: 1;
 
   .notification-header {
     display: flex;
@@ -210,11 +228,25 @@
   }
 }
 
+.notification-details {
+  flex: 1;
+}
+
+.notification-time {
+  font-size: 12px;
+  color: #888;
+  margin-top: 4px;
+}
+
+.notification-actions {
+  display: flex;
+}
+
 // Notification icon
 .notification-icon {
+  margin-right: 15px;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: flex-start;
 }
 
 // Dismiss button
@@ -291,6 +323,14 @@
   }
 }
 
+.empty-notification {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100px;
+  color: #888;
+}
+
 // Empty tab state
 .empty-tab {
   display: flex;
@@ -334,6 +374,25 @@
   p {
     font-size: 1.1em;
     color: rgba(0, 0, 0, 0.6);
+  }
+}
+
+.new-notifications-separator {
+  display: flex;
+  align-items: center;
+  margin: 15px 0;
+  gap: 10px;
+
+  .separator-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--mat-primary);
+    white-space: nowrap;
+    padding: 0 10px;
+  }
+
+  mat-divider {
+    flex: 1;
   }
 }
 
