@@ -1,253 +1,301 @@
-import { Component, inject, signal, effect, OnInit, untracked, computed } from '@angular/core';
+import { Component, inject, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
+import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatListModule } from '@angular/material/list';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
-import { RouterLink } from '@angular/router';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { RouterModule } from '@angular/router';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
-import { LayoutService } from '../../services/layout.service';
+import { StorageService, InfoRecord } from '../../services/storage.service';
+import { debounceTime } from 'rxjs/operators';
+import { Subject } from 'rxjs';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
-import { ProfileStateService } from '../../services/profile-state.service';
-import { NostrEvent, ViewMode } from '../../interfaces';
+import { Router } from '@angular/router';
 import { AccountStateService } from '../../services/account-state.service';
-import { ApplicationStateService } from '../../services/application-state.service';
+
+// Define filter options interface
+interface FilterOptions {
+  hasRelayList: boolean;
+  hasFollowingList: boolean;
+  hasNip05: boolean;
+  hasPicture: boolean;
+  hasBio: boolean;
+}
 
 @Component({
   selector: 'app-people',
   standalone: true,
   imports: [
     CommonModule,
-    MatIconModule,
     MatButtonModule,
-    MatCardModule,
+    MatIconModule,
     MatDividerModule,
-    MatProgressSpinnerModule,
-    MatListModule,
-    MatTooltipModule,
     MatButtonToggleModule,
+    MatProgressSpinnerModule,
+    MatTooltipModule,
     MatMenuModule,
-    RouterLink,
+    MatCheckboxModule,
+    RouterModule,
+    ScrollingModule,
     UserProfileComponent,
-    ScrollingModule
+    MatMenuModule
   ],
   templateUrl: './people.component.html',
-  styleUrl: './people.component.scss'
+  styleUrls: ['./people.component.scss']
 })
-export class PeopleComponent implements OnInit {
-  private nostrService = inject(NostrService);
+export class PeopleComponent {
+  private router = inject(Router);
+  private nostr = inject(NostrService);
   private logger = inject(LoggerService);
-  layout = inject(LayoutService);
-  accountState = inject(AccountStateService);
-  appState = inject(ApplicationStateService)
+  private storage = inject(StorageService);
+  private accountState = inject(AccountStateService);
 
-  // View state
-  viewMode = signal<ViewMode>('medium');
+  // People data signals
+  people = signal<string[]>([]);
   isLoading = signal<boolean>(true);
   error = signal<string | null>(null);
-  people = signal<string[]>([]);
-  filteredPeople = signal<string[]>([]);
-  searchTerm = signal<string>('');
   
-  // Virtual scrolling properties
+  // Search functionality
+  searchTerm = signal<string>('');
+  private searchChanged = new Subject<string>();
+
+  // View mode
+  viewMode = signal<string | any>('medium');
+  
+  // Filter options
+  filters = signal<FilterOptions>({
+    hasRelayList: false,
+    hasFollowingList: false,
+    hasNip05: false,
+    hasPicture: false,
+    hasBio: false
+  });
+
+  // Cache for user info records
+  userInfoCache = signal<Map<string, InfoRecord>>(new Map());
+
+  // Computed signal for filtered people
+  filteredPeople = computed(() => {
+    const search = this.searchTerm().toLowerCase();
+    const activeFilters = this.filters();
+    
+    return this.people().filter(pubkey => {
+      // If there's a search term, filter by it first
+      if (search) {
+        const metadata = this.nostr.usersMetadata().get(pubkey);
+        if (!metadata) return false;
+        
+        const content = typeof metadata.content === 'string' 
+          ? JSON.parse(metadata.content) 
+          : metadata.content;
+          
+        const name = content?.name || '';
+        const displayName = content?.display_name || '';
+        const nip05 = content?.nip05 || '';
+        const about = content?.about || '';
+        
+        const searchTerms = `${name} ${displayName} ${nip05} ${about}`.toLowerCase();
+        if (!searchTerms.includes(search)) return false;
+      }
+      
+      // Apply advanced filters if any are active
+      if (this.hasActiveFilters()) {
+        // Get user info record
+        const userInfo = this.userInfoCache().get(pubkey);
+        
+        // Get user metadata
+        const metadata = this.nostr.usersMetadata().get(pubkey);
+        const content = metadata && metadata.content ? 
+          (typeof metadata.content === 'string' ? JSON.parse(metadata.content) : metadata.content) : 
+          null;
+        
+        // Apply filters
+        if (activeFilters.hasRelayList && 
+            (!userInfo || userInfo['hasRelayList'] !== true)) {
+          return false;
+        }
+        
+        if (activeFilters.hasFollowingList && 
+            (!userInfo || userInfo['hasFollowingListRelays'] !== true)) {
+          return false;
+        }
+        
+        if (activeFilters.hasNip05 && 
+            (!content || !content.nip05)) {
+          return false;
+        }
+        
+        if (activeFilters.hasPicture && 
+            (!content || !content.picture)) {
+          return false;
+        }
+        
+        if (activeFilters.hasBio && 
+            (!content || !content.about || content.about.trim() === '')) {
+          return false;
+        }
+      }
+      
+      return true;
+    });
+  });
+
+  // Virtual scrolling settings
+  minBufferPx = 800;
+  maxBufferPx = 1000;
+  
+  // Computed item size based on view mode
   itemSize = computed(() => {
-    // Adjust item size based on view mode
     switch (this.viewMode()) {
-      case 'large':
-      case 'grid':
-        return 320; // Height of large cards
-      case 'medium':
-        return 200; // Height of medium cards
-      case 'small':
-        return 120; // Height of small cards
-      case 'details':
-      case 'list':
-        return 72;  // Height of list items
-      case 'tiles':
-        return 180; // Height of tile cards
-      default:
-        return 72;
+      case 'large': return 200;
+      case 'medium': return 150;
+      case 'small': return 100;
+      case 'details': return 72;
+      case 'tiles': return 150;
+      default: return 150;
     }
   });
-  
-  readonly minBufferPx = 200;
-  readonly maxBufferPx = 400;
+
+  // Check if any filters are active
+  hasActiveFilters = computed(() => {
+    const activeFilters = this.filters();
+    return Object.values(activeFilters).some(val => val === true);
+  });
 
   constructor() {
-    // React to changes in the following list
-    effect(() => {
-      const followingList = this.accountState.followingList();
-      untracked(async () => {
-        await this.loadPeople(followingList);
-      });
+    // Initialize search debounce
+    this.searchChanged.pipe(
+      debounceTime(300)
+    ).subscribe(term => {
+      this.searchTerm.set(term);
     });
-
-    // Search filter effect
-    effect(() => {
-      const search = this.searchTerm().toLowerCase();
-      const allPeople = this.people();
-
-      if (!search) {
-        this.filteredPeople.set(allPeople);
-      } else {
-        // const filtered = allPeople.filter(person =>
-        //   (person.displayName && person.displayName.toLowerCase().includes(search)) ||
-        //   (person.name && person.name.toLowerCase().includes(search)) ||
-        //   (person.about && person.about.toLowerCase().includes(search)) ||
-        //   (person.nip05 && person.nip05.toLowerCase().includes(search)) ||
-        //   (this.nostrService.getNpubFromPubkey(person.pubkey).toLowerCase().includes(search))
-        // );
-        // this.filteredPeople.set(filtered);
-      }
-    });
-  }
-
-  async ngOnInit(): Promise<void> {
-    // Load the saved view mode preference if available
-    const savedViewMode = localStorage.getItem(this.appState.PEOPLE_VIEW_MODE);
+    
+    // Load people data on component init
+    this.loadPeople();
+    
+    // Load view mode from localStorage if available
+    const savedViewMode = localStorage.getItem('peopleViewMode');
     if (savedViewMode) {
-      this.viewMode.set(savedViewMode as ViewMode);
+      this.viewMode.set(savedViewMode);
     }
-
-    // If there's no following list yet, try to load it
-    // if (this.profileState.followingList().length === 0) {
-    //   await this.loadFollowingList();
-    // }
-  }
-
-  /**
-   * Load the following list for the current user
-   */
-  async loadFollowingList(): Promise<void> {
-    try {
-      const pubkey = this.nostrService.activeAccount()?.pubkey;
-      if (pubkey) {
-        // The contacts event will be loaded by the NostrService and the
-        // ProfileStateService will update the followingList signal
-        // This is handled by effects in those services
-        this.logger.debug('Requesting contacts load for pubkey:', pubkey);
+    
+    // Load filters from localStorage if available
+    const savedFilters = localStorage.getItem('peopleFilters');
+    if (savedFilters) {
+      try {
+        this.filters.set(JSON.parse(savedFilters));
+      } catch (e) {
+        this.logger.error('Failed to load saved filters', e);
       }
-    } catch (error) {
-      this.logger.error('Error loading following list:', error);
-      this.error.set('Failed to load following list');
     }
+    
+    // Save filters when they change
+    effect(() => {
+      localStorage.setItem('peopleFilters', JSON.stringify(this.filters()));
+    });
   }
 
-  /**
-   * Load people details from their pubkeys
-   */
-  async loadPeople(pubkeys: string[]): Promise<void> {
+  private async loadPeople() {
     try {
       this.isLoading.set(true);
       this.error.set(null);
-
-      if (!pubkeys || pubkeys.length === 0) {
+      
+      // Get following list from account state
+      const followingList = this.accountState.followingList();
+      
+      if (followingList.length === 0) {
         this.people.set([]);
-        this.filteredPeople.set([]);
         this.isLoading.set(false);
         return;
       }
       
-      this.people.set(this.accountState.followingList());
-      this.filteredPeople.set(this.accountState.followingList());
-
-      // const peopleList: Person[] = [];
-      // this.people.set([...peopleList]);
-      // this.filteredPeople.set([...peopleList]);
-
-      // Process in batches to avoid overwhelming the UI
-      // const batchSize = 10;
-      // for (let i = 0; i < pubkeys.length; i += batchSize) {
-      //   const batch = pubkeys.slice(i, i + batchSize);
-
-      //   // Load metadata for each person in parallel
-      //   const batchPromises = batch.map(async pubkey => {
-      //     try {
-      //       const metadata = await this.nostrService.getMetadataForUser(pubkey);
-
-      //       const person: Person = {
-      //         pubkey,
-      //         following: true
-      //       };
-
-      //       if (metadata?.content) {
-      //         person.displayName = metadata.content.display_name;
-      //         person.name = metadata.content.name;
-      //         person.picture = metadata.content.picture;
-      //         person.about = metadata.content.about;
-      //         person.nip05 = metadata.content.nip05;
-      //         person.metadata = metadata;
-      //       }
-
-      //       return person;
-      //     } catch (error) {
-      //       this.logger.warn(`Failed to load metadata for ${pubkey}`, error);
-      //       return { pubkey, following: true };
-      //     }
-      //   });
-
-      //   const batchResults = await Promise.all(batchPromises);
-      //   peopleList.push(...batchResults);
-
-      //   // Update the lists incrementally
-      //   this.people.set([...peopleList]);
-      //   this.filteredPeople.set([...peopleList]);
-      // }
-
-      // this.logger.debug(`Loaded ${peopleList.length} people`);
-
+      this.people.set(followingList);
+      
+      // Load user info records for filtering
+      await this.loadUserInfoRecords(followingList);
+      
+      // Preload metadata for all people
+      this.preloadMetadata(followingList);
+      
+      this.isLoading.set(false);
     } catch (err) {
-      this.logger.error('Error loading people:', err);
-      this.error.set('Failed to load people data');
-    } finally {
+      this.logger.error('Failed to load people', err);
+      this.error.set('Failed to load people. Please try again later.');
       this.isLoading.set(false);
     }
   }
+  
+  private async loadUserInfoRecords(pubkeys: string[]) {
+    try {
+      // Get user info records for filtering
+      const userInfoRecords = await this.storage.getInfoByType('user');
+      
+      // Build cache map
+      const cache = new Map<string, InfoRecord>();
+      for (const record of userInfoRecords) {
+        if (pubkeys.includes(record.key)) {
+          cache.set(record.key, record);
+        }
+      }
+      
+      this.userInfoCache.set(cache);
+    } catch (err) {
+      this.logger.error('Failed to load user info records', err);
+    }
+  }
 
-  /**
-   * Change the current view mode and save the preference
-   */
-  changeViewMode(mode: ViewMode): void {
+  private preloadMetadata(pubkeys: string[]) {
+    // Load metadata for the first 20 users to improve initial rendering
+    const initialBatch = pubkeys.slice(0, 20);
+    
+    for (const pubkey of initialBatch) {
+      this.nostr.getMetadataForUser(pubkey).catch(err => 
+        this.logger.error(`Failed to preload metadata for ${pubkey}`, err));
+    }
+    
+    // Load the rest in the background
+    setTimeout(() => {
+      const remainingBatch = pubkeys.slice(20);
+      for (const pubkey of remainingBatch) {
+        this.nostr.getMetadataForUser(pubkey).catch(err => 
+          this.logger.error(`Failed to preload metadata for ${pubkey}`, err));
+      }
+    }, 1000);
+  }
+
+  updateSearch(term: string) {
+    this.searchChanged.next(term);
+  }
+
+  changeViewMode(mode: string) {
     this.viewMode.set(mode);
-    localStorage.setItem(this.appState.PEOPLE_VIEW_MODE, mode);
+    localStorage.setItem('peopleViewMode', mode);
+  }
+  
+  toggleFilter(filterName: keyof FilterOptions) {
+    this.filters.update(current => ({
+      ...current,
+      [filterName]: !current[filterName]
+    }));
+  }
+  
+  resetFilters() {
+    this.filters.set({
+      hasRelayList: false,
+      hasFollowingList: false,
+      hasNip05: false,
+      hasPicture: false,
+      hasBio: false
+    });
   }
 
-  /**
-   * Update the search term
-   */
-  updateSearch(term: string): void {
-    this.searchTerm.set(term);
-  }
-
-  /**
-   * Navigate to a person's profile
-   */
-  viewProfile(pubkey: string): void {
-    this.layout.navigateToProfile(pubkey);
-  }
-
-  /**
-   * Follow a user
-   */
-  followUser(event: Event, pubkey: string): void {
-    event.stopPropagation();
-    this.logger.debug('Follow requested for:', pubkey);
-    // TODO: Implement actual follow functionality
-  }
-
-  /**
-   * Unfollow a user
-   */
-  unfollowUser(event: Event, pubkey: string): void {
-    event.stopPropagation();
-    this.logger.debug('Unfollow requested for:', pubkey);
-    // TODO: Implement actual unfollow functionality
+  viewProfile(pubkey: string) {
+    this.router.navigate(['/profile', pubkey]);
   }
 }

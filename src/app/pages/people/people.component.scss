@@ -38,7 +38,6 @@
     .search-container {
       display: flex;
       align-items: center;
-      background-color: rgba(var(--mat-sys-primary-text), 0.04);
       border-radius: 24px;
       padding: 0.25rem 0.75rem;
 
@@ -55,6 +54,10 @@
         padding: 0.5rem 0;
         color: var(--mat-sys-primary-text);
       }
+    }
+
+    .active-filters {
+      color: var(--mat-sys-primary);
     }
   }
 
@@ -126,9 +129,9 @@
     box-shadow: var(--mat-sys-level1);
     transition: box-shadow 0.3s ease;
 
-    &:hover {
-      box-shadow: var(--mat-sys-level2);
-    }
+    // &:hover {
+    //   box-shadow: var(--mat-sys-level2);
+    // }
 
     .person-avatar.large {
       width: 120px;
@@ -230,9 +233,9 @@
     box-shadow: var(--mat-sys-level1);
     transition: box-shadow 0.3s ease;
 
-    &:hover {
-      box-shadow: var(--mat-sys-level2);
-    }
+    // &:hover {
+    //   box-shadow: var(--mat-sys-level2);
+    // }
 
     .person-avatar.medium {
       width: 80px;
@@ -325,9 +328,9 @@
     border-radius: 4px;
     transition: background-color 0.2s ease;
 
-    &:hover {
-      background-color: rgba(var(--mat-sys-primary-rgb), 0.05);
-    }
+    // &:hover {
+    //   background-color: rgba(var(--mat-sys-primary-rgb), 0.05);
+    // }
 
     .person-avatar.small {
       width: 60px;
@@ -392,9 +395,9 @@
     cursor: pointer;
     border-bottom: 1px solid rgba(var(--mat-sys-primary-text), 0.08);
 
-    &:hover {
-      background-color: rgba(var(--mat-sys-primary-rgb), 0.04);
-    }
+    // &:hover {
+    //   background-color: rgba(var(--mat-sys-primary-rgb), 0.04);
+    // }
   }
 }
 
@@ -412,9 +415,9 @@
     box-shadow: var(--mat-sys-level1);
     transition: box-shadow 0.3s ease;
 
-    &:hover {
-      box-shadow: var(--mat-sys-level2);
-    }
+    // &:hover {
+    //   box-shadow: var(--mat-sys-level2);
+    // }
 
     .mat-mdc-card-avatar {
       width: 40px;
@@ -462,6 +465,35 @@
   }
 }
 
-// .people-container {
-//   padding: 0.6rem;
-// }
+// Filter menu styles
+.filter-menu {
+  min-width: 250px;
+}
+
+.filter-menu-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+}
+
+.filter-section {
+  padding: 0.5rem 1rem;
+
+  h3 {
+    margin: 0.5rem 0;
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+
+  mat-checkbox {
+    display: block;
+    margin: 0.5rem 0;
+  }
+}
+
+/* Fix for mat-menu inside virtual scrolling */
+::ng-deep .mat-mdc-menu-panel.filter-menu {
+  max-width: none !important;
+}
