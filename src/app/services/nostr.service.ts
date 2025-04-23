@@ -30,8 +30,6 @@ export interface UserMetadataWithPubkey extends NostrEventData<UserMetadata> {
   providedIn: 'root'
 })
 export class NostrService {
-  private readonly ACCOUNT_STORAGE_KEY = 'nostria-account';
-  private readonly ACCOUNTS_STORAGE_KEY = 'nostria-accounts';
   private readonly logger = inject(LoggerService);
   private readonly relayService = inject(RelayService);
   private readonly storage = inject(StorageService);
@@ -98,6 +96,7 @@ export class NostrService {
 
     effect(async () => {
       if (this.storage.initialized()) {
+        this.logger.info('Storage initialized, loading Nostr Service');
 
         try {
           console.log('LOADING IN NOSTR SERVICE');
@@ -106,8 +105,6 @@ export class NostrService {
 
             this.loadAccountsFromStorage();
             this.loadActiveAccountFromStorage();
-
-            await this.loadData();
 
             // We keep an in-memory copy of the user metadata and relay list for all accounts,
             // they won't take up too much memory space.
@@ -128,7 +125,7 @@ export class NostrService {
     });
 
     // Save user to localStorage whenever it changes
-    effect(() => {
+    effect(async () => {
       if (this.storage.initialized()) {
 
         const currentUser = this.account();
@@ -139,7 +136,10 @@ export class NostrService {
 
         if (currentUser) {
           this.logger.debug('Saving current user to localStorage', { pubkey: currentUser.pubkey });
-          localStorage.setItem(this.ACCOUNT_STORAGE_KEY, JSON.stringify(currentUser));
+          localStorage.setItem(this.appState.ACCOUNT_STORAGE_KEY, JSON.stringify(currentUser));
+
+          this.logger.debug('Load data for current user', { pubkey: currentUser.pubkey });
+          await this.loadData();
 
           // Load relays for this user from storage
           // untracked(() => {
@@ -162,7 +162,7 @@ export class NostrService {
       this.logger.debug('Users collection effect triggered', { count: allUsers.length });
 
       this.logger.debug(`Saving ${allUsers.length} users to localStorage`);
-      localStorage.setItem(this.ACCOUNTS_STORAGE_KEY, JSON.stringify(allUsers));
+      localStorage.setItem(this.appState.ACCOUNTS_STORAGE_KEY, JSON.stringify(allUsers));
 
       // When users change, ensure we have metadata for all of them
       // untracked(() => {
@@ -191,8 +191,9 @@ export class NostrService {
       return;
     }
 
-    try {
+    debugger;
 
+    try {
       this.appState.loadingMessage.set('Retrieving your relay list...');
       this.appState.isLoading.set(true);
       this.appState.showSuccess.set(false);
@@ -708,11 +709,13 @@ export class NostrService {
             });
 
             if (metadataFromDiscoveryRelays) {
+              this.logger.warn('Found metadata on discovery relays.');
               info.metadataFromDiscoveryRelays = true;
               await this.storage.saveEvent(metadataFromDiscoveryRelays);
               await this.storage.saveInfo(pubkey, 'user', info);
               return metadataFromDiscoveryRelays as NostrEvent;
             } else {
+              this.logger.error('Did not find metadata on discovery relays. Giving up.');
               info.metadataFromDiscoveryRelays = false;
               await this.storage.saveInfo(pubkey, 'user', info);
               return undefined;
@@ -733,7 +736,7 @@ export class NostrService {
           const failedRelays = Array.from(connectionStatuses.entries())
             .filter(([_, status]) => status === false)
             .map(([url, _]) => url);
-          
+
           this.relayService.timeoutRelays(failedRelays);
 
           if (relayList) {
@@ -993,6 +996,8 @@ export class NostrService {
    * Get relays from cache or load from storage
    */
   async getRelaysForUser(pubkey: string, disconnect = true): Promise<Event | undefined> {
+    debugger;
+
     // Check cache first
     const cachedRelays = this.usersRelays().get(pubkey);
     if (cachedRelays) {
@@ -1028,7 +1033,7 @@ export class NostrService {
   }
 
   private loadAccountsFromStorage(): void {
-    const usersJson = localStorage.getItem(this.ACCOUNTS_STORAGE_KEY);
+    const usersJson = localStorage.getItem(this.appState.ACCOUNTS_STORAGE_KEY);
     if (usersJson) {
       try {
         const parsedUsers = JSON.parse(usersJson);
@@ -1044,7 +1049,8 @@ export class NostrService {
   }
 
   private loadActiveAccountFromStorage(): void {
-    const userJson = localStorage.getItem(this.ACCOUNT_STORAGE_KEY);
+    const userJson = localStorage.getItem(this.appState.ACCOUNT_STORAGE_KEY);
+    this.logger.info('Loading active user from localStorage', userJson);
     if (userJson) {
       try {
         const parsedUser = JSON.parse(userJson);
@@ -1117,6 +1123,7 @@ export class NostrService {
   }
 
   getTruncatedNpub(pubkey: string): string {
+    console.debug('LOCATION 7:', pubkey);
     const npub = this.getNpubFromPubkey(pubkey);
     return npub.length > 12
       ? `${npub.substring(0, 6)}...${npub.substring(npub.length - 6)}`
@@ -1129,16 +1136,16 @@ export class NostrService {
       const wssIndex = url.indexOf('wss://');
       return wssIndex >= 0 ? url.substring(wssIndex) : url;
     });
-    
+
     // Filter out timed out relays if timeouts parameter is true
     if (timeouts) {
       const timedOutRelays = this.relayService.timeouts().map(relay => relay.url);
       relayUrls = relayUrls.filter(relay => !timedOutRelays.includes(this.relayService.normalizeRelayUrl(relay)));
     }
-    
+
     return relayUrls;
   }
-  
+
   /** Parses the URLs and cleans up, ensuring only wss:// instances are returned. */
   getRelayUrls(event: Event, timeouts: boolean = true): string[] {
     let relayUrls = event.tags
@@ -1148,28 +1155,54 @@ export class NostrService {
         const wssIndex = url.indexOf('wss://');
         return wssIndex >= 0 ? url.substring(wssIndex) : url;
       });
-      
+
     // Filter out timed out relays if timeouts parameter is true
     if (timeouts) {
       const timedOutRelays = this.relayService.timeouts().map(relay => relay.url);
       relayUrls = relayUrls.filter(relay => !timedOutRelays.includes(this.relayService.normalizeRelayUrl(relay)));
     }
-    
+
     return relayUrls;
   }
-  
-  getTags(event: Event, tagType: NostrTagKey, timeouts: boolean = false): string[] {
+
+  getTags(event: Event | UnsignedEvent, tagType: NostrTagKey, timeouts: boolean = false): string[] {
     let tags = event.tags
       .filter(tag => tag.length >= 2 && tag[0] === tagType)
       .map(tag => tag[1]);
-    
+
     // If this is filtering relay tags ('r') and timeouts is true, 
     // filter out the timed out relays
     if (tagType === 'r' && timeouts) {
       const timedOutRelays = this.relayService.timeouts().map(relay => relay.url);
       tags = tags.filter(url => !timedOutRelays.includes(url));
     }
-      
+
+    return tags;
+  }
+
+  setTags(event: Event | UnsignedEvent, tagType: NostrTagKey, values: string[]): Event | UnsignedEvent {
+    // Create a shallow copy of the event to avoid mutating the original
+    const updatedEvent: Event | UnsignedEvent = { ...event, tags: [...event.tags] };
+
+    // Filter out values that already exist in tags of this type to avoid duplicates
+    const existingValues = this.getTags(event, tagType);
+    const newValues = values.filter(value => !existingValues.includes(value));
+
+    // Add new tags for each unique value that doesn't already exist
+    for (const value of newValues) {
+      updatedEvent.tags.push([tagType, value]);
+    }
+
+    return updatedEvent;
+  }
+
+  createTags(tagType: NostrTagKey, values: string[]): string[][] {
+    const tags: string[][] = [];
+
+    for (const value of values) {
+      tags.push([tagType, value]);
+    }
+
     return tags;
   }
 
@@ -1267,22 +1300,22 @@ export class NostrService {
       this.logger.debug('Received public key from extension', { pubkey });
 
       // Get user metadata if available
-      let name: string | undefined = undefined;
-      try {
-        // Some extensions may provide user metadata like name
-        this.logger.debug('Requesting user metadata from extension');
-        const userInfo = await window.nostr.getUserMetadata();
-        name = userInfo?.name;
-        this.logger.debug('Received user metadata', { name });
-      } catch (error) {
-        // Ignore errors for metadata, it's optional
-        this.logger.warn('Could not get user metadata from extension', error);
-      }
+      // let name: string | undefined = undefined;
+      // try {
+      //   // Some extensions may provide user metadata like name
+      //   this.logger.debug('Requesting user metadata from extension');
+      //   const userInfo = await window.nostr.getUserMetadata();
+      //   name = userInfo?.name;
+      //   this.logger.debug('Received user metadata', { name });
+      // } catch (error) {
+      //   // Ignore errors for metadata, it's optional
+      //   this.logger.warn('Could not get user metadata from extension', error);
+      // }
 
       // Set the user with the public key from the extension
       const newUser: NostrUser = {
         pubkey,
-        name,
+        name: this.getTruncatedNpub(pubkey),
         source: 'extension',
         lastUsed: Date.now()
       };
@@ -1368,7 +1401,7 @@ export class NostrService {
 
   logout(): void {
     this.logger.info('Logging out current user');
-    localStorage.removeItem(this.ACCOUNT_STORAGE_KEY);
+    localStorage.removeItem(this.appState.ACCOUNT_STORAGE_KEY);
     this.account.set(null);
     this.logger.debug('User logged out successfully');
   }
@@ -1401,6 +1434,7 @@ export class NostrService {
   }
 
   getNpubFromPubkey(pubkey: string): string {
+    console.debug('LOCATION 6:', pubkey);
     this.logger.debug('Converting public key to npub');
     // Convert the hex public key to a Nostr public key (npub)
     const npub = nip19.npubEncode(pubkey);

@@ -1,4 +1,4 @@
-import { Component, inject, computed } from '@angular/core';
+import { Component, inject, computed, effect, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatCardModule } from '@angular/material/card';
@@ -11,6 +11,7 @@ import { NostrService } from '../../services/nostr.service';
 import { UserProfileComponent } from "../user-profile/user-profile.component";
 import { StorageService } from '../../services/storage.service';
 import { RelayService } from '../../services/relay.service';
+import { ApplicationService } from '../../services/application.service';
 
 @Component({
   selector: 'app-logs-settings',
@@ -33,6 +34,20 @@ export class LogsSettingsComponent {
   nostr = inject(NostrService);
   storage = inject(StorageService);
   relay = inject(RelayService);
+  app = inject(ApplicationService);
+
+  disabledRelays = signal<any>([]);
+
+  constructor() {
+    effect(async () => {
+      if (this.app.authenticated()) {
+        debugger;
+        const relaysInfo = await this.storage.getInfoByType('relay');
+        const disabledRelays = relaysInfo.filter((relay: any) => relay.disabled);
+        this.disabledRelays.set(disabledRelays);
+      }
+      });
+  }
 
   getWebUrl(relayUrl: string) {
     return relayUrl.replace('wss://', 'https://').replace('ws://', 'http://');

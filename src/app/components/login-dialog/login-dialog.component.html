@@ -18,7 +18,7 @@
     @if (nostrService.hasAccounts()) {
     <mat-card class="login-card use-existing" (click)="switchToExistingAccounts()">
       <mat-card-header>
-        <mat-card-title>Use Existing Account</mat-card-title>
+        <mat-card-title>Existing Account</mat-card-title>
       </mat-card-header>
       <mat-card-content>
         <p>Select from your previously used accounts</p>
@@ -29,7 +29,7 @@
     <div class="login-options">
       <mat-card class="login-card" (click)="generateNewKey()">
         <mat-card-header>
-          <mat-card-title>New Nostr account</mat-card-title>
+          <mat-card-title>New account</mat-card-title>
         </mat-card-header>
         <mat-card-content>
           <p>Generate a new Nostr private key</p>
@@ -38,7 +38,7 @@
 
       <mat-card class="login-card" (click)="loginWithExtension()">
         <mat-card-header>
-          <mat-card-title>Login with Extension</mat-card-title>
+          <mat-card-title>Extension</mat-card-title>
         </mat-card-header>
         <mat-card-content>
           <p>Use a browser extension like Alby or nos2x</p>
@@ -56,7 +56,7 @@
 
       <mat-card class="login-card" (click)="currentView.set('nsec')">
         <mat-card-header>
-          <mat-card-title>Login with nsec</mat-card-title>
+          <mat-card-title>nsec</mat-card-title>
         </mat-card-header>
         <mat-card-content>
           <p>Enter your Nostr private key</p>
@@ -65,7 +65,7 @@
 
       <mat-card class="login-card" (click)="usePreviewAccount()">
         <mat-card-header>
-          <mat-card-title>Preview Nostria</mat-card-title>
+          <mat-card-title>Preview</mat-card-title>
         </mat-card-header>
         <mat-card-content>
           <p>Try Nostria with a demo account</p>
@@ -127,8 +127,7 @@
         <mat-icon matListItemIcon>account_circle</mat-icon>
         }
         <span matListItemTitle>{{ getAccountMetadata(account)?.name || 'Unknown User' }}</span>
-        <span matListItemLine class="account-source">
-          {{ nostrService.getTruncatedNpub(account.pubkey) }}<br>
+        <span matListItemLine class="account-source">{{ account.name }}<br>
           Type: {{ account.source }} - 
           Last used:
           {{ account.lastUsed | date:'short' }}

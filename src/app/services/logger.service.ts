@@ -6,7 +6,7 @@ export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'none';
   providedIn: 'root'
 })
 export class LoggerService {
-  private readonly LOG_LEVEL_KEY = 'nostria-log-level';
+  readonly LOG_LEVEL_KEY = 'nostria-log-level';
   
   // Log level precedence: debug < info < warn < error < none
   private readonly levelPrecedence: Record<LogLevel, number> = {

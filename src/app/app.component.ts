@@ -25,6 +25,7 @@ import { ApplicationStateService } from './services/application-state.service';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { QrcodeScanDialogComponent } from './components/qrcode-scan-dialog/qrcode-scan-dialog.component';
 import { ApplicationService } from './services/application.service';
+import { NPubPipe } from './pipes/npub.pipe';
 
 interface NavItem {
   path: string;
@@ -54,6 +55,7 @@ interface NavItem {
     LoadingOverlayComponent,
     FormsModule,
     MatFormFieldModule,
+    NPubPipe
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
@@ -126,7 +128,7 @@ export class AppComponent implements OnInit {
         // Whenever the user changes, ensure that we have the correct relays
         if (user) {
           this.logger.debug('User changed, updating relays', { pubkey: user.pubkey });
-          
+
           // Data load will happen automatically in nostr service.
           //this.dataLoadingService.loadData();
 

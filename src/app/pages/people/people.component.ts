@@ -18,6 +18,7 @@ import { UserProfileComponent } from '../../components/user-profile/user-profile
 import { ProfileStateService } from '../../services/profile-state.service';
 import { NostrEvent, ViewMode } from '../../interfaces';
 import { AccountStateService } from '../../services/account-state.service';
+import { ApplicationStateService } from '../../services/application-state.service';
 
 @Component({
   selector: 'app-people',
@@ -45,6 +46,7 @@ export class PeopleComponent implements OnInit {
   private logger = inject(LoggerService);
   layout = inject(LayoutService);
   accountState = inject(AccountStateService);
+  appState = inject(ApplicationStateService)
 
   // View state
   viewMode = signal<ViewMode>('medium');
@@ -109,7 +111,7 @@ export class PeopleComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     // Load the saved view mode preference if available
-    const savedViewMode = localStorage.getItem('peopleViewMode');
+    const savedViewMode = localStorage.getItem(this.appState.PEOPLE_VIEW_MODE);
     if (savedViewMode) {
       this.viewMode.set(savedViewMode as ViewMode);
     }
@@ -214,7 +216,7 @@ export class PeopleComponent implements OnInit {
    */
   changeViewMode(mode: ViewMode): void {
     this.viewMode.set(mode);
-    localStorage.setItem('peopleViewMode', mode);
+    localStorage.setItem(this.appState.PEOPLE_VIEW_MODE, mode);
   }
 
   /**

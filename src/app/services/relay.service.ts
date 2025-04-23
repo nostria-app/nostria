@@ -3,6 +3,7 @@ import { LoggerService } from './logger.service';
 import { StorageService, Nip11Info, NostrEventData, UserMetadata } from './storage.service';
 import { Event, kinds, SimplePool } from 'nostr-tools';
 import { NostrEvent } from '../interfaces';
+import { ApplicationStateService } from './application-state.service';
 
 export interface Relay {
   url: string;
@@ -15,9 +16,9 @@ export interface Relay {
   providedIn: 'root'
 })
 export class RelayService {
-  private readonly BOOTSTRAP_RELAYS_STORAGE_KEY = 'nostria-bootstrap-relays';
   // Default relay timeout duration in milliseconds (10 minute)
 
+  readonly RELAY_TIMEOUT_COUNT = 2;
   readonly RELAY_TIMEOUT_DURATION_MINUTES = 10;
   readonly RELAY_TIMEOUT_DURATION = 60000 * this.RELAY_TIMEOUT_DURATION_MINUTES;
   // Cleanup interval for checking timeouts (every 10 seconds)
@@ -28,6 +29,7 @@ export class RelayService {
 
   private readonly logger = inject(LoggerService);
   private readonly storage = inject(StorageService);
+  private readonly appState = inject(ApplicationStateService);
 
   // Initialize signals with empty arrays first, then populate in constructor
   #bootStrapRelays: string[] = [];
@@ -43,6 +45,9 @@ export class RelayService {
 
   /** Relays that have received a timeout and we won't connect to before timeout completes. */
   timeouts = signal<Relay[]>([]);
+
+  /** As relays received multiple timeouts, they will eventually be disabled and ignored. */
+  disabled = signal<Relay[]>([]);
 
   // Computed value for public access to relays
   userRelays = computed(() => this.relays());
@@ -73,22 +78,58 @@ export class RelayService {
       this.logger.debug(`Bootstrap relays effect triggered with ${currentBootstrapRelays.length} relays`);
 
       // Save to local storage
-      localStorage.setItem(this.BOOTSTRAP_RELAYS_STORAGE_KEY, JSON.stringify(currentBootstrapRelays));
+      localStorage.setItem(this.appState.BOOTSTRAP_RELAYS_STORAGE_KEY, JSON.stringify(currentBootstrapRelays));
     });
 
     // Set up interval to clean expired timeouts
     setInterval(() => this.cleanupTimeouts(), this.TIMEOUT_CLEANUP_INTERVAL);
   }
 
-  timeoutRelays(relayUrls: string[]) {
+  async timeoutRelays(relayUrls: string[]) {
     for (const relayUrl of relayUrls) {
-      this.timeoutRelay(relayUrl);
+      await this.timeoutRelay(relayUrl);
     }
   }
 
-  timeoutRelay(relayUrl: string) {
+  async timeoutRelay(relayUrl: string) {
+    // Don't give timeouts if the app is offline.
+    if (!this.appState.isOnline()) {
+      this.logger.debug('The app is offline. Do not timeout the relay.');
+      return;
+    }
+
     // Normalize URL: add trailing slash if it's a root URL without path
     const normalizedUrl = this.normalizeRelayUrl(relayUrl);
+
+    // Some user's have "coracle" as their relay URL, which is not a valid relay URL. Disable the relay immediately.
+    if (!normalizedUrl) {
+      await this.storage.saveInfo(relayUrl, 'relay', { disabled: true, suspendedCount: 1 });
+      return;
+    }
+
+    let suspendedCount = 1;
+
+    const relayInfo = await this.storage.getInfo(normalizedUrl, 'relay');
+
+    if (relayInfo) {
+      if (relayInfo['disabled']) {
+        return;
+      }
+
+      suspendedCount = relayInfo['suspendedCount'] + 1 || 1;
+      relayInfo['suspendedCount'] = suspendedCount;
+
+      if (suspendedCount >= this.RELAY_TIMEOUT_COUNT) {
+        this.logger.info(`Relay ${normalizedUrl} timed out ${suspendedCount} times, disabling it.`);
+        await this.storage.saveInfo(normalizedUrl, 'relay', { disabled: true, suspendedCount: suspendedCount });
+        return;
+      }
+    } else {
+      await this.storage.saveInfo(normalizedUrl, 'relay', { disabled: false, suspendedCount: suspendedCount });
+    }
+
+    this.logger.info(`Relay ${normalizedUrl} timed out ${suspendedCount} times.`);
+
     this.logger.debug(`Timeout relay: ${normalizedUrl}`);
 
     // Check if the relay is already in the timeouts array
@@ -142,6 +183,10 @@ export class RelayService {
  */
   normalizeRelayUrl(url: string): string {
     try {
+      if (!url.startsWith('ws://') || !url.startsWith('wss://')) {
+        return '';
+      }
+
       const parsedUrl = new URL(url);
 
       // If the URL has no pathname (or just '/'), ensure it ends with a slash
@@ -153,6 +198,7 @@ export class RelayService {
       // URL already has a path, return as is
       return url;
     } catch (error) {
+      debugger;
       // If URL parsing fails, return original URL
       this.logger.warn(`Failed to parse URL: ${url}`, error);
       return url;
@@ -164,7 +210,7 @@ export class RelayService {
    */
   private loadBootstrapRelaysFromStorage(): string[] | null {
     try {
-      const storedRelays = localStorage.getItem(this.BOOTSTRAP_RELAYS_STORAGE_KEY);
+      const storedRelays = localStorage.getItem(this.appState.BOOTSTRAP_RELAYS_STORAGE_KEY);
       if (storedRelays) {
         const parsedRelays = JSON.parse(storedRelays);
         if (Array.isArray(parsedRelays)) {

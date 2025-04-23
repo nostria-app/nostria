@@ -58,6 +58,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
             const pubkey = this.pubkey();
 
             if (pubkey) {
+                console.debug('LOCATION 1:', pubkey);
                 const npub = this.nostrService.getNpubFromPubkey(pubkey);
                 this.npub.set(npub);
 
