@@ -22,12 +22,12 @@ export class NotificationService {
 
   constructor() {
     this.logger.info('NotificationService initialized');
-    
+
     // Set up effect to persist notifications when they change
     effect(() => {
       // Don't save until initial load is complete
       if (this._notificationsLoaded()) {
-        this.persistNotifications();
+        // this.persistNotifications();
       }
     });
   }
@@ -38,7 +38,7 @@ export class NotificationService {
   async loadNotifications(): Promise<void> {
     try {
       this.logger.info('Loading notifications from storage');
-      
+
       // Ensure storage is initialized
       if (!this.storage.initialized()) {
         this.logger.warn('Storage not initialized yet, delaying notification loading');
@@ -46,18 +46,18 @@ export class NotificationService {
       }
 
       const storedNotifications = await this.storage.getAllNotifications();
-      
+
       if (storedNotifications && storedNotifications.length > 0) {
         // Sort by timestamp (newest first)
         storedNotifications.sort((a, b) => b.timestamp - a.timestamp);
-        
+
         this.logger.info(`Loaded ${storedNotifications.length} notifications from storage`);
         this._notifications.set(storedNotifications);
       } else {
         this.logger.info('No notifications found in storage');
         this._notifications.set([]);
       }
-      
+
       this._notificationsLoaded.set(true);
     } catch (error) {
       this.logger.error('Failed to load notifications from storage', error);
@@ -69,21 +69,21 @@ export class NotificationService {
   /**
    * Persist all notifications to storage
    */
-  private async persistNotifications(): Promise<void> {
-    try {
-      const currentNotifications = this._notifications();
-      this.logger.debug(`Persisting ${currentNotifications.length} notifications to storage`);
-      
-      // Clear existing notifications and save all current ones
-      // await this.storage.clearAllNotifications();
-      
-      for (const notification of currentNotifications) {
-        await this.storage.saveNotification(notification);
-      }
-    } catch (error) {
-      this.logger.error('Failed to persist notifications to storage', error);
-    }
-  }
+  // private async persistNotifications(): Promise<void> {
+  //   try {
+  //     const currentNotifications = this._notifications();
+  //     this.logger.debug(`Persisting ${currentNotifications.length} notifications to storage`);
+
+  //     // Clear existing notifications and save all current ones
+  //     // await this.storage.clearAllNotifications();
+
+  //     for (const notification of currentNotifications) {
+  //       await this.storage.saveNotification(notification);
+  //     }
+  //   } catch (error) {
+  //     this.logger.error('Failed to persist notifications to storage', error);
+  //   }
+  // }
 
   /**
    * Add a new relay publishing notification
@@ -137,8 +137,20 @@ export class NotificationService {
       complete: false
     };
 
+    const notificationForStorage: RelayPublishingNotification = {
+      id: notificationId,
+      type: NotificationType.RELAY_PUBLISHING,
+      timestamp: Date.now(),
+      read: false,
+      title: 'Publishing to relays',
+      message: `Publishing event ${event.id.substring(0, 8)}... to ${relayPromises.size} relays`,
+      event,
+      complete: false
+    };
+
     this.addNotification(notification);
-    this.persistNotificationToStorage(notification);
+
+    this.persistNotificationToStorage(notificationForStorage);
     return notificationId;
   }
 
@@ -150,7 +162,7 @@ export class NotificationService {
       this.logger.warn('Storage not initialized, skipping notification persistence');
       return;
     }
-    
+
     try {
       await this.storage.saveNotification(notification);
     } catch (error) {
@@ -205,7 +217,7 @@ export class NotificationService {
         return notification;
       });
     });
-    
+
     // Storage will be updated via the effect
   }
 
@@ -216,9 +228,9 @@ export class NotificationService {
     this._notifications.update(notifications =>
       notifications.filter(notification => notification.id !== id)
     );
-    
+
     // Also remove from storage directly
-    this.storage.deleteNotification(id).catch(error => 
+    this.storage.deleteNotification(id).catch(error =>
       this.logger.error(`Failed to delete notification ${id} from storage`, error)
     );
   }
@@ -227,10 +239,11 @@ export class NotificationService {
    * Clear all notifications
    */
   clearNotifications(): void {
+    debugger;
     this._notifications.set([]);
-    
+
     // Clear from storage
-    this.storage.clearAllNotifications().catch(error => 
+    this.storage.clearAllNotifications().catch(error =>
       this.logger.error('Failed to clear notifications from storage', error)
     );
   }
@@ -249,9 +262,8 @@ export class NotificationService {
     }
 
     const relayNotification = notification as RelayPublishingNotification;
-    const failedRelays = relayNotification.relayPromises
-      .filter(rp => rp.status === 'failed')
-      .map(rp => rp.relayUrl);
+
+    const failedRelays = relayNotification.relayPromises?.filter(rp => rp.status === 'failed').map(rp => rp.relayUrl) || [];
 
     this.logger.debug(`Found ${failedRelays.length} failed relays to retry: ${failedRelays.join(', ')}`);
 
@@ -305,13 +317,13 @@ export class NotificationService {
           const relayNotification = notification as RelayPublishingNotification;
 
           // Update the specific relay's status
-          const updatedRelayPromises = relayNotification.relayPromises.map(rp => {
+          const updatedRelayPromises = relayNotification.relayPromises?.map(rp => {
             if (rp.relayUrl === relayUrl) {
               this.logger.debug(`Changed status for ${relayUrl} from ${rp.status} to ${status}`);
               return { ...rp, status, error };
             }
             return rp;
-          });
+          }) || [];
 
           // Check if all promises are resolved (success or failed)
           const allResolved = updatedRelayPromises.every(rp =>
@@ -337,7 +349,7 @@ export class NotificationService {
         return notification;
       });
     });
-    
+
     // Storage will be updated via the effect
   }
 }

@@ -98,7 +98,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
     setTimeout(() => {
       // Run an initial check immediately
       this.checkRelayConnectionStatus();
-    }, 1000);
+    }, 2000);
 
     this.logger.debug('Started relay connection status checking');
   }
