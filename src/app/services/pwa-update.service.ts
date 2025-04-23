@@ -2,6 +2,7 @@ import { Injectable, effect, inject, signal } from '@angular/core';
 import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
 import { filter } from 'rxjs/operators';
 import { LoggerService } from './logger.service';
+import { NotificationService, NotificationType } from './notification.service';
 
 @Injectable({
   providedIn: 'root'
@@ -9,6 +10,7 @@ import { LoggerService } from './logger.service';
 export class PwaUpdateService {
   private swUpdate = inject(SwUpdate);
   private logger = inject(LoggerService);
+  private notificationService = inject(NotificationService);
   
   // Signal to track if an update is available
   updateAvailable = signal(false);
@@ -26,6 +28,7 @@ export class PwaUpdateService {
       effect(() => {
         if (this.updateAvailable()) {
           this.logger.info('A new version is available');
+          this.notifyUpdateAvailable();
         }
       });
     } else {
@@ -77,6 +80,19 @@ export class PwaUpdateService {
   }
   
   /**
+   * Notifies the user that an update is available
+   */
+  private notifyUpdateAvailable(): void {
+    this.notificationService.notify(
+      'App Update Available',
+      'A new version of the application is available. Click to update now.',
+      NotificationType.SUCCESS,
+      'Update Now',
+      () => this.updateApplication()
+    );
+  }
+  
+  /**
    * Activates the update and reloads the app
    */
   async updateApplication(): Promise<void> {
@@ -88,6 +104,11 @@ export class PwaUpdateService {
         document.location.reload();
       } catch (err) {
         this.logger.error('Failed to activate update:', err);
+        this.notificationService.notify(
+          'Update Failed',
+          'Failed to activate the update. Please try again.',
+          NotificationType.ERROR
+        );
       }
     } else {
       this.logger.warn('Cannot update application: update not available or service worker not enabled');

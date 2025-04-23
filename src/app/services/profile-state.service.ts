@@ -1,5 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import { NostrEvent } from '../interfaces';
+import { inject } from '@angular/core';
+import { NotificationService, NotificationType } from './notification.service';
 
 @Injectable({
   providedIn: 'root'
@@ -11,6 +13,8 @@ export class ProfileStateService {
   // Current profile pubkey
   currentProfilePubkey = signal<string>('');
   
+  private notificationService = inject(NotificationService);
+  
   constructor() { }
   
   // setFollowingList(list: string[]): void {
@@ -19,5 +23,14 @@ export class ProfileStateService {
   
   setCurrentProfilePubkey(pubkey: string): void {
     this.currentProfilePubkey.set(pubkey);
+    
+    // Notify when a profile is loaded (example usage of notification service)
+    if (pubkey) {
+      this.notificationService.notify(
+        'Profile Loaded',
+        `Successfully loaded profile information for ${pubkey.substring(0, 8)}...`,
+        NotificationType.SUCCESS
+      );
+    }
   }
 }

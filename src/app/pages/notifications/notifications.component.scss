@@ -14,13 +14,13 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
-  
+
   h1 {
     margin: 0;
     font-size: 24px;
     font-weight: 500;
   }
-  
+
   .header-actions {
     display: flex;
     align-items: center;
@@ -33,11 +33,11 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  
+
   mat-icon {
     margin-right: 4px;
   }
-  
+
   mat-chip {
     font-size: 12px;
     height: 20px;
@@ -50,10 +50,16 @@
   display: flex;
   flex-direction: column;
   flex-grow: 1;
+  padding: 16px;
+  max-width: 800px;
+  margin: 0 auto;
 }
 
 // Virtual scrolling viewport
 .notifications-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   flex-grow: 1;
   height: calc(100vh - 200px);
 }
@@ -64,11 +70,12 @@
   padding: 16px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
   position: relative;
-  transition: background-color 0.2s ease;
-  
+  box-shadow: var(--mat-sys-level1);
+  transition: background-color 0.3s ease;
+
   &.unread {
     background-color: rgba(var(--mat-primary-rgb), 0.05);
-    
+
     &::after {
       content: "";
       position: absolute;
@@ -79,7 +86,11 @@
       background-color: var(--mat-sys-primary);
     }
   }
-  
+
+  &.read {
+    background-color: rgba(0, 0, 0, 0.03);
+  }
+
   &:hover {
     background-color: rgba(0, 0, 0, 0.02);
   }
@@ -95,28 +106,28 @@
   border-radius: 50%;
   margin-right: 12px;
   background-color: rgba(0, 0, 0, 0.06);
-  
+
   mat-icon {
     font-size: 20px;
     width: 20px;
     height: 20px;
   }
-  
+
   &.mention {
     background-color: rgba(25, 118, 210, 0.1);
     color: #1976d2;
   }
-  
+
   &.reaction {
     background-color: rgba(233, 30, 99, 0.1);
     color: #e91e63;
   }
-  
+
   &.repost {
     background-color: rgba(76, 175, 80, 0.1);
     color: #4caf50;
   }
-  
+
   &.follow {
     background-color: rgba(156, 39, 176, 0.1);
     color: #9c27b0;
@@ -132,35 +143,35 @@
 // Content section
 .notification-content {
   flex-grow: 1;
-  
+
   .notification-header {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     margin-bottom: 4px;
     position: relative;
-    
+
     .username {
       font-weight: 500;
       margin-right: 4px;
       color: var(--mat-sys-primary);
       cursor: pointer;
-      
+
       &:hover {
         text-decoration: underline;
       }
     }
-    
+
     .notification-action {
       color: rgba(0, 0, 0, 0.6);
     }
-    
+
     .notification-time {
       margin-left: 8px;
       font-size: 12px;
       color: rgba(0, 0, 0, 0.38);
     }
-    
+
     .unread-indicator {
       width: 8px;
       height: 8px;
@@ -170,33 +181,47 @@
       cursor: pointer;
     }
   }
-  
+
   .notification-text {
     margin-top: 8px;
     color: rgba(0, 0, 0, 0.87);
     cursor: pointer;
-    
+
     &:hover {
       text-decoration: underline;
     }
   }
-  
+
   .reaction-content {
     margin-top: 8px;
-    
+
     .reaction-emoji {
       font-size: 24px;
     }
   }
-  
+
   .notification-actions {
     display: flex;
     margin-top: 8px;
-    
+
     button {
       margin-right: 8px;
     }
   }
+}
+
+// Notification icon
+.notification-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+// Dismiss button
+.dismiss-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
 }
 
 // Loading state
@@ -206,7 +231,7 @@
   align-items: center;
   justify-content: center;
   height: 300px;
-  
+
   p {
     margin-top: 16px;
     color: rgba(0, 0, 0, 0.54);
@@ -222,14 +247,14 @@
   height: 300px;
   text-align: center;
   padding: 24px;
-  
+
   mat-icon {
     font-size: 48px;
     height: 48px;
     width: 48px;
     margin-bottom: 16px;
   }
-  
+
   p {
     margin-bottom: 24px;
     color: rgba(0, 0, 0, 0.6);
@@ -245,7 +270,7 @@
   height: 300px;
   text-align: center;
   padding: 24px;
-  
+
   mat-icon {
     font-size: 64px;
     height: 64px;
@@ -253,12 +278,12 @@
     margin-bottom: 16px;
     color: rgba(0, 0, 0, 0.26);
   }
-  
+
   p {
     margin: 0;
     color: rgba(0, 0, 0, 0.6);
     font-size: 18px;
-    
+
     &.empty-subtitle {
       font-size: 14px;
       margin-top: 8px;
@@ -275,7 +300,7 @@
   height: 200px;
   text-align: center;
   padding: 24px;
-  
+
   mat-icon {
     font-size: 48px;
     height: 48px;
@@ -283,9 +308,31 @@
     margin-bottom: 16px;
     color: rgba(0, 0, 0, 0.26);
   }
-  
+
   p {
     margin: 0;
+    color: rgba(0, 0, 0, 0.6);
+  }
+}
+
+// Empty state adjustments
+.empty-state {
+  text-align: center;
+  padding: 32px;
+
+  .empty-icon {
+    margin-bottom: 16px;
+
+    mat-icon {
+      font-size: 48px;
+      height: 48px;
+      width: 48px;
+      opacity: 0.5;
+    }
+  }
+
+  p {
+    font-size: 1.1em;
     color: rgba(0, 0, 0, 0.6);
   }
 }
@@ -295,25 +342,25 @@
   .notification-card.unread {
     background-color: rgba(var(--mat-primary-rgb), 0.15);
   }
-  
+
   .notification-type-icon {
     background-color: rgba(255, 255, 255, 0.06);
   }
-  
+
   .notification-content .notification-header {
     .notification-action {
       color: rgba(255, 255, 255, 0.7);
     }
-    
+
     .notification-time {
       color: rgba(255, 255, 255, 0.5);
     }
   }
-  
+
   .notification-content .notification-text {
     color: rgba(255, 255, 255, 0.87);
   }
-  
+
   .empty-container, .error-container, .empty-tab {
     mat-icon, p {
       color: rgba(255, 255, 255, 0.5);
@@ -326,17 +373,17 @@
   .notifications-page {
     padding: 8px;
   }
-  
+
   .notification-card {
     padding: 12px;
   }
-  
+
   .notification-type-icon {
     width: 32px;
     height: 32px;
     margin-right: 8px;
   }
-  
+
   .notification-avatar {
     margin-right: 8px;
   }
