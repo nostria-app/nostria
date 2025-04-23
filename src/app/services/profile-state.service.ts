@@ -1,7 +1,8 @@
 import { Injectable, signal } from '@angular/core';
 import { NostrEvent } from '../interfaces';
 import { inject } from '@angular/core';
-import { NotificationService, NotificationType } from './notification.service';
+import { NotificationService } from './notification.service';
+import { NotificationType } from './storage.service';
 
 @Injectable({
   providedIn: 'root'

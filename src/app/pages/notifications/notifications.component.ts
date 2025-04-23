@@ -5,17 +5,13 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTabsModule } from '@angular/material/tabs';
-import {
-  NotificationService,
-  NotificationType,
-  RelayPublishingNotification,
-  Notification
-} from '../../services/notification.service';
 import { RelayPublishStatusComponent } from '../../components/relay-publish-status/relay-publish-status.component';
 import { RelayService } from '../../services/relay.service';
 import { MatMenuModule } from '@angular/material/menu';
 import { NostrService } from '../../services/nostr.service';
 import { kinds } from 'nostr-tools';
+import { NotificationService } from '../../services/notification.service';
+import { NotificationType, Notification, RelayPublishingNotification } from '../../services/storage.service';
 
 @Component({
   selector: 'app-notifications',

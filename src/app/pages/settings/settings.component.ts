@@ -16,7 +16,6 @@ import { StorageStatsComponent } from '../../components/storage-stats/storage-st
 import { ThemeService } from '../../services/theme.service';
 import { NostrService } from '../../services/nostr.service';
 import { MatDialog } from '@angular/material/dialog';
-import { LoginDialogComponent } from '../../components/login-dialog/login-dialog.component';
 import { ConfirmDialogComponent } from '../../components/confirm-dialog/confirm-dialog.component';
 import { Router } from '@angular/router';
 import { StorageService } from '../../services/storage.service';
@@ -80,15 +79,14 @@ export class SettingsComponent {
   
   logout() {
     this.nostrService.logout();
-    this.showLoginDialog();
   }
   
-  showLoginDialog(): void {
-    this.dialog.open(LoginDialogComponent, {
-      width: '500px',
-      disableClose: true
-    });
-  }
+  // showLoginDialog(): void {
+  //   this.dialog.open(LoginDialogComponent, {
+  //     width: '500px',
+  //     disableClose: true
+  //   });
+  // }
   
   wipeData(): void {
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {

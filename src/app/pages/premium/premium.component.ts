@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -8,6 +8,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { RouterLink } from '@angular/router';
 import { PremiumComparisonDialogComponent } from './premium-comparison-dialog/premium-comparison-dialog.component';
+import { ApplicationService } from '../../services/application.service';
 
 interface PremiumFeature {
   title: string;
@@ -38,7 +39,8 @@ interface FaqItem {
 })
 export class PremiumComponent {
   dialog = inject(MatDialog);
-  
+  app = inject(ApplicationService);
+
   features = signal<PremiumFeature[]>([
     {
       title: 'Media Hosting',
@@ -98,6 +100,18 @@ export class PremiumComponent {
       answer: 'Once you subscribe to Nostria Premium, a new "Content Backup" section will appear in your sidebar menu, where you can manage all your backup settings, download backup locally, and restore previous content if needed.'
     }
   ]);
+
+  constructor() {
+    effect(() => {
+      if (this.app.authenticated()) {
+        debugger;
+        console.log('AUTHENTICATED, CHECK STATUS!!');
+        // Check relay status immediately when component initializes
+        // this.checkRelayConnectionStatus();
+
+      }
+    });
+  }
 
   openComparisonDialog(): void {
     this.dialog.open(PremiumComparisonDialogComponent, {

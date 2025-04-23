@@ -1,4 +1,4 @@
-import { Component, effect, inject, signal, OnInit, OnDestroy } from '@angular/core';
+import { Component, effect, inject, signal, OnInit, OnDestroy, untracked } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
@@ -58,17 +58,19 @@ export class RelaysComponent implements OnInit, OnDestroy {
 
   // Timer for connection status checking
   private statusCheckTimer: any;
-  private readonly STATUS_CHECK_INTERVAL = 10000; // 10 seconds
+  private readonly STATUS_CHECK_INTERVAL = 30000; // 30 seconds
 
   constructor() {
     effect(() => {
-      if (this.app.initializedAndAuthenticated()) {
-        console.log('AUTHENTICATED, CHECK STATUS!!');
-        // Check relay status immediately when component initializes
-        this.checkRelayConnectionStatus();
+      if (this.app.authenticated()) {
 
-        // Start the connection status checking interval
-        this.startStatusChecking();
+        console.log(this.relay.getUserPool());
+        console.log(this.relay.getUserPool()?.listConnectionStatus());
+
+        untracked(() => {
+          // Start the connection status checking interval
+          this.startStatusChecking();
+        });
       }
     });
   }
@@ -91,8 +93,12 @@ export class RelaysComponent implements OnInit, OnDestroy {
       this.checkRelayConnectionStatus();
     }, this.STATUS_CHECK_INTERVAL);
 
-    // Run an initial check immediately
-    this.checkRelayConnectionStatus();
+    // Make the initial check a little bit delayed, if user reloads on the relay page, they
+    // might return disconnected?
+    setTimeout(() => {
+      // Run an initial check immediately
+      this.checkRelayConnectionStatus();
+    }, 1000);
 
     this.logger.debug('Started relay connection status checking');
   }
@@ -117,6 +123,9 @@ export class RelaysComponent implements OnInit, OnDestroy {
 
     const connectionStatusMap = userPool.listConnectionStatus();
     this.logger.debug('Retrieved relay connection statuses', connectionStatusMap);
+
+    console.log('SEEN ON!!');
+    console.log(userPool.seenOn);
 
     // Update the status of each relay in our list
     this.relay.userRelays().forEach(relay => {

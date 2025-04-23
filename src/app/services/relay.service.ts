@@ -54,7 +54,7 @@ export class RelayService {
   // Computed value for public access to relays
   userRelays = computed(() => this.relays());
 
-  private userPool: SimplePool | null = null;
+  private accountPool: SimplePool | null = null;
 
   constructor() {
     this.logger.info('Initializing RelayService');
@@ -242,8 +242,8 @@ export class RelayService {
   ) {
     this.logger.debug('Creating subscription with filters:', filters);
 
-    if (!this.userPool) {
-      this.logger.error('Cannot subscribe: user pool is not initialized');
+    if (!this.accountPool) {
+      this.logger.error('Cannot subscribe: account pool is not initialized');
       return {
         unsubscribe: () => {
           this.logger.debug('No subscription to unsubscribe from');
@@ -265,7 +265,7 @@ export class RelayService {
 
     try {
       // Create the subscription
-      const sub = this.userPool.subscribeMany(urls, filters, {
+      const sub = this.accountPool.subscribeMany(urls, filters, {
         onevent: (evt) => {
           this.logger.debug(`Received event of kind ${evt.kind}`);
 
@@ -348,8 +348,8 @@ export class RelayService {
   ): Promise<T | null> {
     this.logger.debug('Getting events with filters:', filter);
 
-    if (!this.userPool) {
-      this.logger.error('Cannot get events: user pool is not initialized');
+    if (!this.accountPool) {
+      this.logger.error('Cannot get events: account pool is not initialized');
       return null;
     }
 
@@ -366,7 +366,7 @@ export class RelayService {
       const timeout = options.timeout || 5000;
 
       // Execute the query
-      const event = await this.userPool.get(urls, filter, { maxWait: timeout }) as T;
+      const event = await this.accountPool.get(urls, filter, { maxWait: timeout }) as T;
 
       this.logger.debug(`Received event from query`, event);
 
@@ -393,8 +393,8 @@ export class RelayService {
   ) {
     this.logger.debug('Publishing event:', event);
 
-    if (!this.userPool) {
-      this.logger.error('Cannot publish event: user pool is not initialized');
+    if (!this.accountPool) {
+      this.logger.error('Cannot publish event: account pool is not initialized');
       return null;
     }
 
@@ -408,7 +408,7 @@ export class RelayService {
 
     try {
       // Publish the event
-      const publishResults = this.userPool.publish(urls, event);
+      const publishResults = this.accountPool.publish(urls, event);
       this.logger.debug('Publish results:', publishResults);
 
       // Update lastUsed for all relays used in this publish operation
@@ -500,10 +500,12 @@ export class RelayService {
   setRelays(relayUrls: string[]): void {
     this.logger.debug(`Setting ${relayUrls.length} relays for current user`);
 
+    debugger;
+
     // Convert simple URLs to Relay objects with default properties
     const relayObjects = relayUrls.map(url => ({
       url,
-      status: 'disconnected' as const,
+      status: 'connecting' as const,
       lastUsed: Date.now()
     }));
 
@@ -522,13 +524,13 @@ export class RelayService {
   /**
    * Sets the user pool
    */
-  setUserPool(pool: SimplePool): void {
-    this.userPool = pool;
+  setAccountPool(pool: SimplePool): void {
+    this.accountPool = pool;
 
     // After setting the user pool, check the online status of the relays
     this.logger.debug('User pool set, checking relay status...');
 
-    const connectionStatuses = this.userPool.listConnectionStatus();
+    const connectionStatuses = this.accountPool.listConnectionStatus();
 
     // Update relay statuses using a for...of loop
     for (const [url, status] of connectionStatuses) {
@@ -547,7 +549,7 @@ export class RelayService {
    * Gets the user pool
    */
   getUserPool(): SimplePool | null {
-    return this.userPool;
+    return this.accountPool;
   }
 
   /**

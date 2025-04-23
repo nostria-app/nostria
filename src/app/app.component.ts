@@ -18,7 +18,7 @@ import { LoadingOverlayComponent } from './components/loading-overlay/loading-ov
 import { LoggerService } from './services/logger.service';
 import { MatMenuModule } from '@angular/material/menu';
 import { FormGroup, FormsModule } from '@angular/forms';
-import { StorageService } from './services/storage.service';
+import { NotificationType, RelayPublishingNotification, StorageService } from './services/storage.service';
 import { NostrEventData, UserMetadata } from './services/storage.service';
 import { LayoutService } from './services/layout.service';
 import { ApplicationStateService } from './services/application-state.service';
@@ -26,8 +26,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { QrcodeScanDialogComponent } from './components/qrcode-scan-dialog/qrcode-scan-dialog.component';
 import { ApplicationService } from './services/application.service';
 import { NPubPipe } from './pipes/npub.pipe';
-import { NotificationService, NotificationType, RelayPublishingNotification } from './services/notification.service';
 import { MatBadgeModule } from '@angular/material/badge';
+import { NotificationService } from './services/notification.service';
 
 interface NavItem {
   path: string;
@@ -139,7 +139,7 @@ export class AppComponent implements OnInit {
 
     // Show login dialog if user is not logged in - with debugging
     effect(() => {
-      if (!this.app.authenticated()) {
+      if (this.app.initialized() && !this.app.authenticated()) {
         this.showLoginDialog();
       }
 
@@ -245,11 +245,10 @@ export class AppComponent implements OnInit {
   }
 
   async switchAccount(pubkey: string): Promise<void> {
-    if (this.nostrService.switchToUser(pubkey)) {
-      // Close sidenav on mobile after switching
-      if (this.layout.isHandset()) {
-        this.toggleSidenav();
-      }
+    await this.nostrService.switchToUser(pubkey);
+    
+    if (this.layout.isHandset()) {
+      this.toggleSidenav();
     }
   }
 
