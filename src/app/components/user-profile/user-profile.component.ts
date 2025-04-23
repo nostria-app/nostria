@@ -150,7 +150,6 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
             if (isVisible && !this.isScrolling()) {
                 // Using the debounced load function to prevent rapid loading during scroll
                 if (!this.profile() && !this.isLoading()) {
-                    this.isLoading.set(true); // Set loading state immediately to show spinner
                     this.debouncedLoadProfileData(this.pubkey());
                 }
             }
@@ -196,6 +195,9 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
     private async loadProfileData(npubValue: string): Promise<void> {
         // Don't reload if we already have data
         if (this.profile()) return;
+        if (this.isLoading()) return;
+
+        this.isLoading.set(true);
         
         try {
             // Note: isLoading is now set earlier when visibility is detected

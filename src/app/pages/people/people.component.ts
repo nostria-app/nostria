@@ -18,6 +18,7 @@ import { Subject } from 'rxjs';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 import { Router } from '@angular/router';
 import { AccountStateService } from '../../services/account-state.service';
+import { ApplicationService } from '../../services/application.service';
 
 // Define filter options interface
 interface FilterOptions {
@@ -55,19 +56,20 @@ export class PeopleComponent {
   private logger = inject(LoggerService);
   private storage = inject(StorageService);
   private accountState = inject(AccountStateService);
+  private app = inject(ApplicationService);
 
   // People data signals
   people = signal<string[]>([]);
   isLoading = signal<boolean>(true);
   error = signal<string | null>(null);
-  
+
   // Search functionality
   searchTerm = signal<string>('');
   private searchChanged = new Subject<string>();
 
   // View mode
   viewMode = signal<string | any>('medium');
-  
+
   // Filter options
   filters = signal<FilterOptions>({
     hasRelayList: false,
@@ -84,64 +86,64 @@ export class PeopleComponent {
   filteredPeople = computed(() => {
     const search = this.searchTerm().toLowerCase();
     const activeFilters = this.filters();
-    
+
     return this.people().filter(pubkey => {
       // If there's a search term, filter by it first
       if (search) {
         const metadata = this.nostr.usersMetadata().get(pubkey);
         if (!metadata) return false;
-        
-        const content = typeof metadata.content === 'string' 
-          ? JSON.parse(metadata.content) 
+
+        const content = typeof metadata.content === 'string'
+          ? JSON.parse(metadata.content)
           : metadata.content;
-          
+
         const name = content?.name || '';
         const displayName = content?.display_name || '';
         const nip05 = content?.nip05 || '';
         const about = content?.about || '';
-        
+
         const searchTerms = `${name} ${displayName} ${nip05} ${about}`.toLowerCase();
         if (!searchTerms.includes(search)) return false;
       }
-      
+
       // Apply advanced filters if any are active
       if (this.hasActiveFilters()) {
         // Get user info record
         const userInfo = this.userInfoCache().get(pubkey);
-        
+
         // Get user metadata
         const metadata = this.nostr.usersMetadata().get(pubkey);
-        const content = metadata && metadata.content ? 
-          (typeof metadata.content === 'string' ? JSON.parse(metadata.content) : metadata.content) : 
+        const content = metadata && metadata.content ?
+          (typeof metadata.content === 'string' ? JSON.parse(metadata.content) : metadata.content) :
           null;
-        
+
         // Apply filters
-        if (activeFilters.hasRelayList && 
-            (!userInfo || userInfo['hasRelayList'] !== true)) {
+        if (activeFilters.hasRelayList &&
+          (!userInfo || userInfo['hasRelayList'] !== true)) {
           return false;
         }
-        
-        if (activeFilters.hasFollowingList && 
-            (!userInfo || userInfo['hasFollowingListRelays'] !== true)) {
+
+        if (activeFilters.hasFollowingList &&
+          (!userInfo || userInfo['hasFollowingListRelays'] !== true)) {
           return false;
         }
-        
-        if (activeFilters.hasNip05 && 
-            (!content || !content.nip05)) {
+
+        if (activeFilters.hasNip05 &&
+          (!content || !content.nip05)) {
           return false;
         }
-        
-        if (activeFilters.hasPicture && 
-            (!content || !content.picture)) {
+
+        if (activeFilters.hasPicture &&
+          (!content || !content.picture)) {
           return false;
         }
-        
-        if (activeFilters.hasBio && 
-            (!content || !content.about || content.about.trim() === '')) {
+
+        if (activeFilters.hasBio &&
+          (!content || !content.about || content.about.trim() === '')) {
           return false;
         }
       }
-      
+
       return true;
     });
   });
@@ -149,7 +151,7 @@ export class PeopleComponent {
   // Virtual scrolling settings
   minBufferPx = 800;
   maxBufferPx = 1000;
-  
+
   // Computed item size based on view mode
   itemSize = computed(() => {
     switch (this.viewMode()) {
@@ -175,16 +177,20 @@ export class PeopleComponent {
     ).subscribe(term => {
       this.searchTerm.set(term);
     });
-    
-    // Load people data on component init
-    this.loadPeople();
-    
+
+    effect(async () => {
+      if (this.app.initialized()) {
+        // Load people data on component init
+        this.loadPeople();
+      }
+    });
+
     // Load view mode from localStorage if available
     const savedViewMode = localStorage.getItem('peopleViewMode');
     if (savedViewMode) {
       this.viewMode.set(savedViewMode);
     }
-    
+
     // Load filters from localStorage if available
     const savedFilters = localStorage.getItem('peopleFilters');
     if (savedFilters) {
@@ -194,7 +200,7 @@ export class PeopleComponent {
         this.logger.error('Failed to load saved filters', e);
       }
     }
-    
+
     // Save filters when they change
     effect(() => {
       localStorage.setItem('peopleFilters', JSON.stringify(this.filters()));
@@ -205,24 +211,24 @@ export class PeopleComponent {
     try {
       this.isLoading.set(true);
       this.error.set(null);
-      
+
       // Get following list from account state
       const followingList = this.accountState.followingList();
-      
+
       if (followingList.length === 0) {
         this.people.set([]);
         this.isLoading.set(false);
         return;
       }
-      
+
       this.people.set(followingList);
-      
+
       // Load user info records for filtering
       await this.loadUserInfoRecords(followingList);
-      
+
       // Preload metadata for all people
-      this.preloadMetadata(followingList);
-      
+      // this.preloadMetadata(followingList);
+
       this.isLoading.set(false);
     } catch (err) {
       this.logger.error('Failed to load people', err);
@@ -230,12 +236,12 @@ export class PeopleComponent {
       this.isLoading.set(false);
     }
   }
-  
+
   private async loadUserInfoRecords(pubkeys: string[]) {
     try {
       // Get user info records for filtering
       const userInfoRecords = await this.storage.getInfoByType('user');
-      
+
       // Build cache map
       const cache = new Map<string, InfoRecord>();
       for (const record of userInfoRecords) {
@@ -243,7 +249,7 @@ export class PeopleComponent {
           cache.set(record.key, record);
         }
       }
-      
+
       this.userInfoCache.set(cache);
     } catch (err) {
       this.logger.error('Failed to load user info records', err);
@@ -253,17 +259,17 @@ export class PeopleComponent {
   private preloadMetadata(pubkeys: string[]) {
     // Load metadata for the first 20 users to improve initial rendering
     const initialBatch = pubkeys.slice(0, 20);
-    
+
     for (const pubkey of initialBatch) {
-      this.nostr.getMetadataForUser(pubkey).catch(err => 
+      this.nostr.getMetadataForUser(pubkey).catch(err =>
         this.logger.error(`Failed to preload metadata for ${pubkey}`, err));
     }
-    
+
     // Load the rest in the background
     setTimeout(() => {
       const remainingBatch = pubkeys.slice(20);
       for (const pubkey of remainingBatch) {
-        this.nostr.getMetadataForUser(pubkey).catch(err => 
+        this.nostr.getMetadataForUser(pubkey).catch(err =>
           this.logger.error(`Failed to preload metadata for ${pubkey}`, err));
       }
     }, 1000);
@@ -277,14 +283,14 @@ export class PeopleComponent {
     this.viewMode.set(mode);
     localStorage.setItem('peopleViewMode', mode);
   }
-  
+
   toggleFilter(filterName: keyof FilterOptions, event?: Event | any) {
     this.filters.update(current => ({
       ...current,
       [filterName]: !current[filterName]
     }));
   }
-  
+
   resetFilters() {
     this.filters.set({
       hasRelayList: false,
@@ -294,7 +300,7 @@ export class PeopleComponent {
       hasBio: false
     });
   }
-  
+
   preventPropagation(event: Event | any) {
     event.stopPropagation();
   }
