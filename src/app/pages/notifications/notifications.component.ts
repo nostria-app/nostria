@@ -40,7 +40,7 @@ export class NotificationsComponent {
   async onRetryPublish(notificationId: string): Promise<void> {
     await this.notificationService.retryFailedRelays(
       notificationId,
-      (relayUrl, event) => this.relayService.publishToRelay(relayUrl, event)
+      (event, relayUrl) => this.relayService.publishToRelay(event, relayUrl)
     );
   }
 
