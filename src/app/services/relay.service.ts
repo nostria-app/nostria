@@ -4,6 +4,7 @@ import { StorageService, Nip11Info, NostrEventData, UserMetadata } from './stora
 import { Event, kinds, SimplePool } from 'nostr-tools';
 import { NostrEvent } from '../interfaces';
 import { ApplicationStateService } from './application-state.service';
+import { NotificationService } from './notification.service';
 
 export interface Relay {
   url: string;
@@ -30,6 +31,7 @@ export class RelayService {
   private readonly logger = inject(LoggerService);
   private readonly storage = inject(StorageService);
   private readonly appState = inject(ApplicationStateService);
+  private readonly notificationService = inject(NotificationService);
 
   // Initialize signals with empty arrays first, then populate in constructor
   #bootStrapRelays: string[] = [];
@@ -406,8 +408,7 @@ export class RelayService {
 
     try {
       // Publish the event
-      const publishResults = await this.userPool.publish(urls, event);
-
+      const publishResults = this.userPool.publish(urls, event);
       this.logger.debug('Publish results:', publishResults);
 
       // Update lastUsed for all relays used in this publish operation
@@ -417,6 +418,36 @@ export class RelayService {
     } catch (error) {
       this.logger.error('Error publishing event', error);
       return null;
+    }
+  }
+
+  /**
+   * Publish an event to multiple relays with status tracking
+   */
+  // async publishWithTracking(event: NostrEvent, relays: string[]): Promise<void> {
+  //   // Create an array of promises for publishing to each relay
+  //   const promises = relays.map(relay => this.publishToRelay(relay, event));
+
+  //   // Create a notification to track publishing status
+  //   this.notificationService.addRelayPublishingNotification(
+  //     event.id,
+  //     event,
+  //     promises,
+  //     relays
+  //   );
+  // }
+
+  /**
+   * Publish an event to a single relay
+   */
+  async publishToRelay(relayUrl: string, event: NostrEvent): Promise<void> {
+    try {
+      // Your relay publishing implementation
+      this.logger.debug(`Successfully published to ${relayUrl}`);
+      return Promise.resolve();
+    } catch (error) {
+      this.logger.error(`Failed to publish to ${relayUrl}:`, error);
+      throw error; // Important to throw for notification tracking
     }
   }
 

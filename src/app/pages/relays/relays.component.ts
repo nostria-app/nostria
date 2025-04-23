@@ -18,6 +18,7 @@ import { LayoutService } from '../../services/layout.service';
 import { NostrService } from '../../services/nostr.service';
 import { kinds } from 'nostr-tools';
 import { StorageService } from '../../services/storage.service';
+import { NotificationService } from '../../services/notification.service';
 
 @Component({
   selector: 'app-relays-page',
@@ -45,6 +46,7 @@ export class RelaysComponent {
   private dialog = inject(MatDialog);
   private layout = inject(LayoutService);
   private storage = inject(StorageService);
+  private notifications = inject(NotificationService);
 
   relays = this.relay.userRelays;
   bootstrapRelays = this.relay.bootStrapRelays;
@@ -60,24 +62,43 @@ export class RelaysComponent {
     // });
   }
 
-  async addRelay() {
-    let url = this.newRelayUrl();
+  parseUrl(relayUrl: string) {
+    let url = relayUrl.trim();
 
-    if (!url || !url.trim()) {
+    if (!url) {
       this.showMessage('Please enter a valid relay URL');
       return;
     }
 
-    // Automatically add wss:// prefix if missing
-    if (!url.startsWith('wss://')) {
-      url = `wss://${url.trim()}`;
-
-      if (!url.endsWith('/')) {
-        url += '/';
-      }
-
-      this.newRelayUrl.set(url);
+    // Check if the URL has a valid protocol
+    if (!url.startsWith('wss://') && !url.startsWith('ws://')) {
+      // Default to wss:// if no protocol is specified
+      url = `wss://${url}`;
     }
+
+    // Only append trailing slash if there's no path component (just domain)
+    try {
+      const parsedUrl = new URL(url);
+      if (parsedUrl.pathname === '/') {
+        url = url.endsWith('/') ? url : `${url}/`;
+      }
+    } catch (e) {
+      this.logger.error('Invalid URL format', { url, error: e });
+      this.showMessage('Invalid URL format');
+      return;
+    }
+
+    return url;
+  }
+
+  async addRelay() {
+    let url = this.parseUrl(this.newRelayUrl());
+
+    if (!url) {
+      return;
+    }
+
+    this.newRelayUrl.set(url);
 
     // Check if relay already exists
     if (this.relays().some(relay => relay.url === url)) {
@@ -96,6 +117,7 @@ export class RelaysComponent {
 
     dialogRef.afterClosed().subscribe(async result => {
       if (result?.confirmed) {
+        debugger;
         this.logger.info('Adding new relay', { url, migrateData: result.migrateData });
         this.relay.addRelay(url);
 
@@ -132,42 +154,106 @@ export class RelaysComponent {
   }
 
   async publish() {
-    debugger;
+    this.logger.info('Starting relay list publication process');
+  
     const relays = this.relay.userRelays();
-
+    this.logger.debug('User relays being published:', relays);
+  
     const tags = this.nostr.createTags('r', relays.map(relay => relay.url));
     const relayListEvent = this.nostr.createEvent(kinds.RelayList, '', tags);
-
-    console.log('relayListEvent', relayListEvent);
-    // this.nostr.setTags(relayListEvent, 'r', relays.map(relay => relay.url));
-
+  
+    this.logger.debug('Created relay list event', relayListEvent);
+  
     const signedEvent = await this.nostr.signEvent(relayListEvent);
-    
+    this.logger.debug('Signed relay list event', signedEvent);
+  
     // Make sure the relay list is published both to the user's relays and discovery relays.
-    this.relay.publish(signedEvent);
-    this.relay.publish(signedEvent, this.relay.bootStrapRelays());
-
+    const callbacks1 = await this.relay.publish(signedEvent);
+    const callbacks2 = await this.relay.publish(signedEvent, this.relay.bootStrapRelays());
+  
+    // Combine all callbacks into a flat array for tracking
+    const allCallbacks = [...(callbacks1 || []), ...(callbacks2 || [])].flat();
+    
+    const relayUrls = [...this.relay.userRelays().map(relay => relay.url), ...this.relay.bootStrapRelays()];
+    this.logger.debug('Publishing to relay URLs:', relayUrls);
+    
+    // Create a mapping of callbacks to their respective relay URLs
+    const callbackRelayMapping = new Map<Promise<string>, string>();
+    callbacks1?.forEach((callback, i) => {
+      // Map callbacks to user relay URLs (if they exist)
+      if (i < this.relay.userRelays().length) {
+        callbackRelayMapping.set(callback, this.relay.userRelays()[i].url);
+      }
+    });
+    
+    callbacks2?.forEach((callback, i) => {
+      // Map callbacks to bootstrap relay URLs (if they exist)
+      if (i < this.relay.bootStrapRelays().length) {
+        callbackRelayMapping.set(callback, this.relay.bootStrapRelays()[i]);
+      }
+    });
+    
+    // Track publishing progress
+    const results = { 
+      success: 0, 
+      failed: 0, 
+      total: allCallbacks.length, 
+      successfulRelayUrls: [] as string[] 
+    };
+    
+    // Process each callback promise individually to properly track success/failure
+    for (const callback of allCallbacks) {
+      try {
+        const relayUrl = callbackRelayMapping.get(callback) || 'unknown relay';
+        
+        await callback.then(
+          () => {
+            results.success++;
+            results.successfulRelayUrls.push(relayUrl);
+            this.logger.debug(`Successfully published to relay ${relayUrl} with status: ${status}`);
+          },
+          (error: any) => {
+            results.failed++;
+            this.logger.warn(`Failed to publish to relay ${relayUrl}:`, error);
+          }
+        );
+      } catch (error) {
+        debugger;
+        results.failed++;
+        this.logger.error(`Exception while publishing to relay:`, error);
+      }
+    }
+    
+    this.logger.info('Relay list publication results:', {
+      success: results.success,
+      failed: results.failed,
+      total: results.total,
+      successfulRelays: results.successfulRelayUrls
+    });
+    
+    if (results.failed > 0) {
+      this.showMessage(`Published to ${results.success}/${results.total} relays (${results.failed} failed)`);
+    } else if (results.success > 0) {
+      this.showMessage(`Successfully published to ${results.success} relays`);
+    } else {
+      this.showMessage('Failed to publish to any relays');
+    }
+  
+    // Pass the original callback arrays to the notification service
+    // this.notifications.addRelayPublishingNotification(signedEvent, [callbacks1, callbacks2], relayUrls);
+  
     await this.storage.saveEvent(signedEvent);
+    this.logger.debug('Saved relay list event to storage');
   }
 
   addBootstrapRelay(): void {
-    let url = this.newBootstrapUrl();
+    let url = this.parseUrl(this.newBootstrapUrl());
 
-    if (!url || !url.trim()) {
-      this.showMessage('Please enter a valid relay URL');
+    if (!url) {
       return;
     }
 
-    // Automatically add wss:// prefix if missing
-    if (!url.startsWith('wss://')) {
-      url = `wss://${url.trim()}`;
-
-      if (!url.endsWith('/')) {
-        url += '/';
-      }
-
-      this.newBootstrapUrl.set(url);
-    }
+    this.newBootstrapUrl.set(url);
 
     // Check if relay already exists
     if (this.bootstrapRelays().includes(url)) {
