@@ -132,7 +132,6 @@ export class NostrService {
             console.log('ASYNC UNTRACKED');
 
             this.loadAccountsFromStorage();
-            this.loadActiveAccountFromStorage();
 
             // Load data from the active account.
             await this.loadData();
@@ -1081,21 +1080,21 @@ export class NostrService {
     }
   }
 
-  private loadActiveAccountFromStorage(): void {
-    const userJson = localStorage.getItem(this.appState.ACCOUNT_STORAGE_KEY);
-    this.logger.info('Loading active user from localStorage', userJson);
-    if (userJson) {
-      try {
-        const parsedUser = JSON.parse(userJson);
-        this.logger.debug('Loaded active user from localStorage', { pubkey: parsedUser.pubkey });
-        this.account.set(parsedUser);
-      } catch (e) {
-        this.logger.error('Failed to parse user from localStorage', e);
-      }
-    } else {
-      this.logger.debug('No active user found in localStorage');
-    }
-  }
+  // private loadActiveAccountFromStorage(): void {
+  //   const userJson = localStorage.getItem(this.appState.ACCOUNT_STORAGE_KEY);
+  //   this.logger.info('Loading active user from localStorage', userJson);
+  //   if (userJson) {
+  //     try {
+  //       const parsedUser = JSON.parse(userJson);
+  //       this.logger.debug('Loaded active user from localStorage', { pubkey: parsedUser.pubkey });
+  //       this.account.set(parsedUser);
+  //     } catch (e) {
+  //       this.logger.error('Failed to parse user from localStorage', e);
+  //     }
+  //   } else {
+  //     this.logger.debug('No active user found in localStorage');
+  //   }
+  // }
 
   async loadAccountsMetadata() {
     const pubkeys = this.accounts().map(user => user.pubkey);
@@ -1242,13 +1241,16 @@ export class NostrService {
   switchToUser(pubkey: string): boolean {
     this.logger.info(`Switching to user with pubkey: ${pubkey}`);
     const targetUser = this.accounts().find(u => u.pubkey === pubkey);
-
+    debugger;
     if (targetUser) {
       // Update lastUsed timestamp
       targetUser.lastUsed = Date.now();
 
       this.account.set(targetUser);
       this.logger.debug('Successfully switched user');
+
+      // Persist the account to local storage.
+      localStorage.setItem(this.appState.ACCOUNT_STORAGE_KEY, JSON.stringify(targetUser));
 
       // Make sure we have the latest metadata for this user
       // this.getUserMetadata(pubkey).catch(err =>
@@ -1262,6 +1264,7 @@ export class NostrService {
   }
 
   setAccount(user: NostrUser) {
+    debugger;
     this.logger.debug('Updating user in collection', { pubkey: user.pubkey });
 
     // Update lastUsed timestamp
@@ -1283,6 +1286,9 @@ export class NostrService {
 
     // Trigger the user signal which indicates user is logged on.
     this.account.set(user);
+
+    // Persist the account to local storage.
+    localStorage.setItem(this.appState.ACCOUNT_STORAGE_KEY, JSON.stringify(user));
 
     // Make sure we have the latest metadata for this user
     // this.getUserMetadata(user.pubkey).catch(err =>
