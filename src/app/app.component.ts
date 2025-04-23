@@ -75,6 +75,7 @@ export class AppComponent implements OnInit {
   layout = inject(LayoutService);
   router = inject(Router);
   notificationService = inject(NotificationService);
+  notificationType = NotificationType;
 
   private logger = inject(LoggerService);
 
