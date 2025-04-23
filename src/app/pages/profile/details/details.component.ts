@@ -88,7 +88,7 @@ export class DetailsComponent implements OnInit, AfterViewInit {
     });
 
     effect(async () => {
-      if (this.app.initializedAndAuthenticated()) {
+      if (this.app.authenticated()) {
 
         // TODO: make sure that the "npub" is hex.
         const info = await this.storage.getInfo(this.npub(), 'user');

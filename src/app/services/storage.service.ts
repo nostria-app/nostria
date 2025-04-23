@@ -88,6 +88,52 @@ export interface InfoRecord {
   [key: string]: any; // Dynamic entries
 }
 
+// Interface for notifications
+// export interface Notification {
+//   id: string;
+//   message: string;
+//   timestamp: number;
+// }
+
+export enum NotificationType {
+  RELAY_PUBLISHING = 'relay-publishing',
+  GENERAL = 'general',
+  ERROR = 'error',
+  SUCCESS = 'success',
+  WARNING = 'warning'
+}
+
+export interface Notification {
+  id: string;
+  type: NotificationType;
+  timestamp: number;
+  read: boolean;
+  title: string;
+  message?: string;
+}
+
+export interface RelayPublishingNotification extends Notification {
+  event: NostrEvent;
+  relayPromises: RelayPublishPromise[];
+  complete: boolean;
+}
+
+// Track status of publishing to an individual relay
+export interface RelayPublishPromise {
+  relayUrl: string;
+  status: 'pending' | 'success' | 'failed';
+  promise?: Promise<any>;
+  error?: any;
+}
+
+// General notification
+export interface GeneralNotification extends Notification {
+  action?: {
+    label: string;
+    callback: () => void;
+  };
+}
+
 // Schema for the IndexedDB database
 interface NostriaDBSchema extends DBSchema {
   relays: {
@@ -124,6 +170,11 @@ interface NostriaDBSchema extends DBSchema {
       'by-key': string;
       'by-updated': number;
     };
+  };
+  notifications: {
+    key: string; // notification id
+    value: Notification;
+    indexes: { 'by-timestamp': number };
   };
 }
 
@@ -213,6 +264,12 @@ export class StorageService {
             infoStore.createIndex('by-key', 'key');
             infoStore.createIndex('by-updated', 'updated');
             this.logger.debug('Created info object store');
+          }
+
+          if (!db.objectStoreNames.contains('notifications')) {
+            const notificationsStore = db.createObjectStore('notifications', { keyPath: 'id' });
+            notificationsStore.createIndex('by-timestamp', 'timestamp');
+            this.logger.debug('Created notifications object store');
           }
         }
       });
@@ -749,19 +806,6 @@ export class StorageService {
     }
   }
 
-  /**
-   * Get a specific info record by both key and type
-   */
-  // async getInfoByKeyAndType(key: string, type: string): Promise<InfoRecord | undefined> {
-  //   try {
-  //     const compositeKey = this.generateCompositeKey(key, type);
-  //     return await this.db.get('info', compositeKey);
-  //   } catch (error) {
-  //     this.logger.error(`Error getting info record by key ${key} and type ${type}`, error);
-  //     return undefined;
-  //   }
-  // }
-
   async getAllInfo(): Promise<InfoRecord[]> {
     try {
       return await this.db.getAll('info');
@@ -784,56 +828,6 @@ export class StorageService {
       this.logger.error(`Error deleting info record with key ${key} and type ${type}`, error);
     }
   }
-
-  /**
-   * Delete all info records with the specified key, regardless of type
-   */
-  // async deleteInfoByKey(key: string): Promise<void> {
-  //   try {
-  //     // Get all records with this key
-  //     const records = await this.getInfo(key);
-
-  //     // Delete each record by its composite key
-  //     for (const record of records) {
-  //       const compositeKey = this.generateCompositeKey(record.key, record.type);
-  //       await this.db.delete('info', compositeKey);
-  //     }
-
-  //     this.logger.debug(`Deleted all info records with key: ${key}`);
-  //     await this.updateStats();
-  //   } catch (error) {
-  //     this.logger.error(`Error deleting info records with key ${key}`, error);
-  //   }
-  // }
-
-  /**
-   * Delete all info records with the specified type
-   */
-  // async deleteInfoByType(type: string): Promise<void> {
-  //   try {
-  //     // Get all records with this type
-  //     const records = await this.getInfoByType(type);
-
-  //     // Delete each record by its composite key
-  //     for (const record of records) {
-  //       const compositeKey = this.generateCompositeKey(record.key, record.type);
-  //       await this.db.delete('info', compositeKey);
-  //     }
-
-  //     this.logger.debug(`Deleted all info records with type: ${type}`);
-  //     await this.updateStats();
-  //   } catch (error) {
-  //     this.logger.error(`Error deleting info records with type ${type}`, error);
-  //   }
-  // }
-
-  /**
-   * Legacy method for backward compatibility
-   * Redirects to deleteInfoByKey
-   */
-  // async deleteInfo(key: string): Promise<void> {
-  //   await this.deleteInfoByKey(key);
-  // }
 
   async clearCache(currentUserPubkey: string): Promise<void> {
     try {
@@ -889,6 +883,7 @@ export class StorageService {
       const userMetadata = await this.getAllUserMetadata();
       const userRelays = await this.getAllUserRelays();
       const info = await this.getAllInfo();
+      const notifications = await this.getAllNotifications();
 
       // Count events (may need optimization for large datasets)
       let eventsCount = 0;
@@ -905,8 +900,9 @@ export class StorageService {
       const userMetadataSize = JSON.stringify(userMetadata).length;
       const userRelaysSize = JSON.stringify(userRelays).length;
       const infoSize = JSON.stringify(info).length;
+      const notificationsSize = JSON.stringify(notifications).length;
       const eventsSize = eventsCount * 500; // Rough estimation of average event size
-      const totalSize = relaysSize + userMetadataSize + userRelaysSize + eventsSize + infoSize;
+      const totalSize = relaysSize + userMetadataSize + userRelaysSize + eventsSize + infoSize + notificationsSize;
 
       this.dbStats.set({
         relaysCount: relays.length,
@@ -966,6 +962,59 @@ export class StorageService {
       this.logger.error('Error wiping database', error);
       // Attempt to re-initialize in case of error
       this.initDatabase();
+    }
+  }
+
+  // Methods for notification storage
+  async saveNotification(notification: Notification): Promise<void> {
+    try {
+      await this.db.put('notifications', notification);
+      this.logger.debug(`Saved notification to IndexedDB: ${notification.id}`);
+      await this.updateStats();
+    } catch (error) {
+      this.logger.error(`Error saving notification ${notification.id}`, error);
+    }
+  }
+
+  async getNotification(id: string): Promise<Notification | undefined> {
+    try {
+      return await this.db.get('notifications', id);
+    } catch (error) {
+      this.logger.error(`Error getting notification ${id}`, error);
+      return undefined;
+    }
+  }
+
+  async getAllNotifications(): Promise<Notification[]> {
+    try {
+      // Get all notifications sorted by timestamp (newest first)
+      const tx = this.db.transaction('notifications', 'readonly');
+      const index = tx.store.index('by-timestamp');
+      return await index.getAll(undefined, 100); // Limit to 100 most recent notifications
+    } catch (error) {
+      this.logger.error('Error getting all notifications', error);
+      return [];
+    }
+  }
+
+  async deleteNotification(id: string): Promise<void> {
+    try {
+      await this.db.delete('notifications', id);
+      this.logger.debug(`Deleted notification from IndexedDB: ${id}`);
+      await this.updateStats();
+    } catch (error) {
+      this.logger.error(`Error deleting notification ${id}`, error);
+    }
+  }
+
+  async clearAllNotifications(): Promise<void> {
+    try {
+      const tx = this.db.transaction('notifications', 'readwrite');
+      await tx.store.clear();
+      this.logger.debug('Cleared all notifications from IndexedDB');
+      await this.updateStats();
+    } catch (error) {
+      this.logger.error('Error clearing all notifications', error);
     }
   }
 }

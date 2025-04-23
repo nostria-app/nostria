@@ -160,9 +160,9 @@ export class LoginDialogComponent implements OnInit {
     this.closeDialog();
   }
 
-  selectExistingAccount(pubkey: string): void {
+  async selectExistingAccount(pubkey: string) {
     this.logger.debug('Selecting existing account', { pubkey });
-    this.nostrService.switchToUser(pubkey);
+    await this.nostrService.switchToUser(pubkey);
     this.closeDialog();
   }
 

@@ -59,7 +59,7 @@ export class BackupComponent {
 
     constructor() {
         effect(async () => {
-            if (this.app.initializedAndAuthenticated()) {
+            if (this.app.authenticated()) {
                 await this.loadBackupStats();
             }
         });

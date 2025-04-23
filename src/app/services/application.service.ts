@@ -5,6 +5,7 @@ import { Router, RouterLink, RouterModule } from "@angular/router";
 import { LoggerService } from "./logger.service";
 import { ApplicationStateService } from "./application-state.service";
 import { ThemeService } from "./theme.service";
+import { NotificationService } from "./notification.service";
 
 @Injectable({
     providedIn: 'root'
@@ -16,6 +17,7 @@ export class ApplicationService {
     logger = inject(LoggerService);
     appState = inject(ApplicationStateService);
     theme = inject(ThemeService);
+    notificationService = inject(NotificationService);
 
     /** Check the status on fully initialized, which ensures Nostr, Storage and user is logged in. */
     initialized = computed(() => this.nostrService.initialized() && this.storage.initialized());
@@ -25,15 +27,35 @@ export class ApplicationService {
     authenticated = computed(() => this.nostrService.account());
 
     /** Used to check if both initialized and authenticated. Used to wait for both conditions. */
-    initializedAndAuthenticated = computed(() => this.initialized() && this.authenticated());
+    // initializedAndAuthenticated = computed(() => this.initialized() && this.authenticated());
 
     loadingMessage = signal('Loading data...');
     showSuccess = signal(false);
     isLoading = signal(false);
 
+    constructor() {
+        // Set up effect to load notifications when app is initialized and authenticated
+        effect(() => {
+            if (this.authenticated()) {
+                this.loadAppData();
+            }
+        });
+    }
+
     reload() {
         // Reload the application
         window.location.reload();
+    }
+
+    private async loadAppData(): Promise<void> {
+        this.logger.info('Application initialized and authenticated, loading app data');
+
+        // Load notifications from storage
+        if (!this.notificationService.notificationsLoaded()) {
+            await this.notificationService.loadNotifications();
+        }
+
+        // Add any other app data loading here in the future
     }
 
     async wipe() {
@@ -53,6 +75,9 @@ export class ApplicationService {
         for (let i = 0; i < keysToRemove.length; i++) {
             localStorage.removeItem(keysToRemove[i]);
         }
+
+        // Clear notifications from memory
+        this.notificationService.clearNotifications();
 
         await this.storage.wipe(); // Assuming this method clears all app data
 

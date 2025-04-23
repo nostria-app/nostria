@@ -2,7 +2,8 @@ import { Injectable, effect, inject, signal } from '@angular/core';
 import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
 import { filter } from 'rxjs/operators';
 import { LoggerService } from './logger.service';
-import { NotificationService, NotificationType } from './notification.service';
+import { NotificationService } from './notification.service';
+import { NotificationType } from './storage.service';
 
 @Injectable({
   providedIn: 'root'

@@ -7,9 +7,9 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { RelayPublishingNotification, RelayPublishPromise } from '../../services/notification.service';
 import { NostrService } from '../../services/nostr.service';
 import { RouterModule } from '@angular/router';
+import { RelayPublishingNotification, RelayPublishPromise } from '../../services/storage.service';
 
 @Component({
   selector: 'app-relay-publish-status',

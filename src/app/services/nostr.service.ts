@@ -36,20 +36,9 @@ export class NostrService {
   private readonly appState = inject(ApplicationStateService);
   private readonly accountState = inject(AccountStateService);
 
-  // Initialize account from localStorage if available.
-  private initializeAccount(): NostrUser | null {
-    try {
-      const userJson = localStorage.getItem(this.appState.ACCOUNT_STORAGE_KEY);
-      if (userJson) {
-        return JSON.parse(userJson) as NostrUser;
-      }
-    } catch (e) {
-      this.logger.error('Failed to parse user from localStorage during initialization', e);
-    }
-    return null;
-  }
+  account = signal<NostrUser | null>(null);
 
-  account = signal<NostrUser | null>(this.initializeAccount());
+  accountChanging = signal<NostrUser | null>(null);
 
   // private account = signal<NostrUser | null>(null);
   private accounts = signal<NostrUser[]>([]);
@@ -117,6 +106,19 @@ export class NostrService {
     return this.accountsMetadata().find(meta => meta.pubkey === pubkey);
   }
 
+  getAccountFromStorage() {
+    // Initialize account from localStorage if available.
+    try {
+      const userJson = localStorage.getItem(this.appState.ACCOUNT_STORAGE_KEY);
+      if (userJson) {
+        return JSON.parse(userJson) as NostrUser;
+      }
+    } catch (e) {
+      this.logger.error('Failed to parse user from localStorage during initialization', e);
+    }
+    return null;
+  }
+
   initialized = signal(false);
 
   constructor() {
@@ -133,26 +135,63 @@ export class NostrService {
 
             this.loadAccountsFromStorage();
 
-            // Load data from the active account.
-            await this.loadData();
-
             // We keep an in-memory copy of the user metadata and relay list for all accounts,
             // they won't take up too much memory space.
             await this.loadAccountsMetadata();
             await this.loadAccountsRelays();
 
-            console.log('INITIALIZED NOSTR!');
+            const account = this.getAccountFromStorage();
+
+            if (account) {
+              this.logger.info('Found account in localStorage, loading data.', { pubkey: account.pubkey });
+              // If there is an account, ensure we load data before initialized is set.
+              await this.loadData(account);
+            }
 
             this.initialized.set(true);
+
+            if (account) {
+              this.account.set(account);
+            }
           });
 
         } catch (err) {
-          console.log('FAILED TO LOAD DATA!!');
-          console.error(err);
+          this.logger.error('Failed to load data during initialization', err);
         }
-
       }
     });
+
+    effect(async () => {
+      const account = this.accountChanging();
+      // If the account is changing and it has a value (it will be empty on logout).
+      if (account) {
+        await this.loadData(account);
+      }
+    });
+
+    // effect(async () => {
+    //   // const accountChanging = this.accountChanging();
+    //   // const preInitialized = this.preInitialized();
+    //   // const account = this.account();
+
+    //   // if (preInitialized && account) {
+    //   //   await this.loadData(this.account()!);
+    //   //   this.initialized.set(true);
+    //   // } else if (preInitialized) {
+    //   //   this.initialized.set(true);
+    //   // } else if (accountChanging) {
+    //   // }
+
+    //   if (this.account() && this.preInitialized()) {
+    //     debugger;
+    //     // Load data from the active account.
+    //     // await this.loadData(this.account()!);
+    //     this.initialized.set(true);
+    //   } else if (!this.account() && this.preInitialized()) {
+    //     debugger;
+    //     this.initialized.set(true);
+    //   }
+    // });
 
     // Save user to localStorage whenever it changes
     // effect(async () => {
@@ -214,14 +253,15 @@ export class NostrService {
 
   reset() {
     this.accounts.set([]);
+    debugger;
     this.account.set(null);
     this.accountsMetadata.set([]);
     this.accountsRelays.set([]);
   }
 
-  async loadData(): Promise<void> {
-    if (!this.activeAccount()) {
-      this.logger.warn('Cannot load data: No user is logged in');
+  async loadData(account: NostrUser): Promise<void> {
+    if (!account) {
+      this.logger.warn('Cannot load data: No user account provided');
       return;
     }
 
@@ -230,9 +270,8 @@ export class NostrService {
       this.appState.isLoading.set(true);
       this.appState.showSuccess.set(false);
       this.logger.info('Starting data loading process');
-
-      const pubkey = this.pubkey();
-      this.logger.debug('Loading data for pubkey', { pubkey });
+      const pubkey = account.pubkey;
+      this.logger.info('Loading data for pubkey', { pubkey });
 
       let profile = null;
       let metadata = null;
@@ -319,6 +358,7 @@ export class NostrService {
       }
 
       const userPool = new SimplePool();
+      userPool.trackRelays = true;
       this.logger.debug('Connecting to user relays to fetch metadata');
 
       // Attempt to connect to the user's defined relays, to help Nostr with
@@ -368,7 +408,7 @@ export class NostrService {
       }
 
       // Attach the userPool to the relay service for further use.
-      this.relayService.setUserPool(userPool);
+      this.relayService.setAccountPool(userPool);
 
       if (bootstrapPool) {
         this.logger.debug('Closing bootstrap relay pool connections');
@@ -378,6 +418,8 @@ export class NostrService {
       // After loading the relays and setting them, we load the following list:
       await this.loadAccountFollowing(pubkey);
       await this.loadAccountMuteList(pubkey);
+
+      await this.subscribeToAccountMetadata(pubkey);
 
       this.appState.loadingMessage.set('Loading completed!');
       this.logger.info('Data loading process completed');
@@ -394,6 +436,27 @@ export class NostrService {
     setTimeout(() => {
       this.appState.showSuccess.set(false);
     }, 1500);
+  }
+
+  accountSubscription: any = null;
+
+  private async subscribeToAccountMetadata(pubkey: string) {
+    this.logger.info('subscribeToAccountMetadata', { pubkey });
+
+    const filters = [{
+      kinds: [kinds.Metadata, kinds.Contacts, kinds.RelayList],
+      authors: [pubkey],
+    }];
+
+    const onEvent = (event: NostrEvent) => {
+      console.log('Received event on the account subscription:', event);
+    }
+
+    const onEose = () => {
+      console.log('onEose on account subscription.');
+    }
+
+    this.accountSubscription = this.relayService.subscribe(filters, onEvent, onEose);
   }
 
   private async loadAccountFollowing(pubkey: string) {
@@ -898,21 +961,7 @@ export class NostrService {
         secret: `${secret?.substring(0, 4)}...` // Log only prefix for security
       });
 
-      // Create a connection pool for Nostr Connect
-      const connectPool = new SimplePool();
-
       let privateKey = generateSecretKey();
-      let publicKey = getPublicKey(privateKey);
-
-      // const connToken = "bunker://deadbeef...?relay=wss%3A%2F%2Frelay.nsecbunker.com&secret=..."
-      // const { signer, session } = await Nip46RemoteSigner.connectToRemote(remoteSigningUrl, { encryptionAlgorithm: 'nip44' });
-
-      // console.log('SESSION:', session);
-      // console.log('SIGNER:', signer);
-      // debugger;
-
-      // store session data to LocalStorage
-      // localStorage.setItem("nostr_connect_session", JSON.stringify(session));
 
       const pool = new SimplePool()
       const bunker = new BunkerSigner(privateKey, bunkerParsed!, { pool });
@@ -932,7 +981,7 @@ export class NostrService {
         lastUsed: Date.now()
       };
 
-      this.setAccount(newUser);
+      await this.setAccount(newUser);
       this.logger.debug('Remote signer account set successfully', { pubkey: remotePublicKey });
 
       // let event = finalizeEvent({
@@ -1238,7 +1287,7 @@ export class NostrService {
     return tags;
   }
 
-  switchToUser(pubkey: string): boolean {
+  async switchToUser(pubkey: string) {
     this.logger.info(`Switching to user with pubkey: ${pubkey}`);
     const targetUser = this.accounts().find(u => u.pubkey === pubkey);
     debugger;
@@ -1246,6 +1295,11 @@ export class NostrService {
       // Update lastUsed timestamp
       targetUser.lastUsed = Date.now();
 
+      debugger;
+
+      this.accountChanging.set(targetUser);
+
+      debugger;
       this.account.set(targetUser);
       this.logger.debug('Successfully switched user');
 
@@ -1263,7 +1317,7 @@ export class NostrService {
     return false;
   }
 
-  setAccount(user: NostrUser) {
+  async setAccount(user: NostrUser) {
     debugger;
     this.logger.debug('Updating user in collection', { pubkey: user.pubkey });
 
@@ -1284,6 +1338,9 @@ export class NostrService {
       this.accounts.update(u => [...u, user]);
     }
 
+    this.accountChanging.set(user);
+
+    debugger;
     // Trigger the user signal which indicates user is logged on.
     this.account.set(user);
 
@@ -1295,7 +1352,7 @@ export class NostrService {
     //   this.logger.error(`Failed to get metadata for new user ${user.pubkey}`, err));
   }
 
-  generateNewKey(): void {
+  async generateNewKey() {
     this.logger.info('Generating new Nostr keypair');
     // Generate a proper Nostr key pair using nostr-tools
     const secretKey = generateSecretKey(); // Returns a Uint8Array
@@ -1313,7 +1370,7 @@ export class NostrService {
     };
 
     this.logger.debug('New keypair generated successfully', { pubkey });
-    this.setAccount(newUser);
+    await this.setAccount(newUser);
   }
 
   async loginWithExtension(): Promise<void> {
@@ -1360,7 +1417,7 @@ export class NostrService {
       };
 
       this.logger.info('Login with extension successful', { pubkey });
-      this.setAccount(newUser);
+      await this.setAccount(newUser);
 
       return;
     } catch (error) {
@@ -1369,7 +1426,7 @@ export class NostrService {
     }
   }
 
-  loginWithNsec(nsec: string): void {
+  async loginWithNsec(nsec: string) {
     try {
       this.logger.info('Attempting to login with nsec');
 
@@ -1416,14 +1473,14 @@ export class NostrService {
       };
 
       this.logger.info('Login with nsec successful', { pubkey });
-      this.setAccount(newUser);
+      await this.setAccount(newUser);
     } catch (error) {
       this.logger.error('Error decoding nsec:', error);
       throw new Error('Invalid nsec key provided. Please check and try again.');
     }
   }
 
-  usePreviewAccount(): void {
+  async usePreviewAccount() {
     this.logger.info('Using preview account');
     // jack
     const previewPubkey = '82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbfbe6a2';
@@ -1434,13 +1491,14 @@ export class NostrService {
       lastUsed: Date.now()
     };
 
-    this.setAccount(newUser);
+    await this.setAccount(newUser);
     this.logger.debug('Preview account set successfully', { pubkey: previewPubkey });
   }
 
   logout(): void {
     this.logger.info('Logging out current user');
     localStorage.removeItem(this.appState.ACCOUNT_STORAGE_KEY);
+    debugger;
     this.account.set(null);
     this.logger.debug('User logged out successfully');
   }
@@ -1454,6 +1512,7 @@ export class NostrService {
     // If we're removing the active user, set active user to null
     if (this.account()?.pubkey === pubkey) {
       this.logger.debug('Removed account was the active user, logging out');
+      debugger;
       this.account.set(null);
     }
 
