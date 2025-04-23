@@ -106,7 +106,7 @@ export class AppComponent implements OnInit {
       if (notification.type === NotificationType.RELAY_PUBLISHING) {
         const relayNotification = notification as RelayPublishingNotification;
         return !relayNotification.complete &&
-          relayNotification.relayPromises.some(relay => relay.status === 'pending');
+          relayNotification.relayPromises?.some(relay => relay.status === 'pending');
       }
       return false;
     });

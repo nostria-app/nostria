@@ -35,19 +35,19 @@ export class RelayPublishStatusComponent {
   private nostrService = inject(NostrService);
 
   get successCount(): number {
-    return this.notification.relayPromises.filter(rp => rp.status === 'success').length;
+    return this.notification.relayPromises?.filter(rp => rp.status === 'success').length || 0;
   }
 
   get failedCount(): number {
-    return this.notification.relayPromises.filter(rp => rp.status === 'failed').length;
+    return this.notification.relayPromises?.filter(rp => rp.status === 'failed').length || 0;
   }
 
   get pendingCount(): number {
-    return this.notification.relayPromises.filter(rp => rp.status === 'pending').length;
+    return this.notification.relayPromises?.filter(rp => rp.status === 'pending').length || 0;
   }
 
   get progress(): number {
-    const total = this.notification.relayPromises.length;
+    const total = this.notification.relayPromises?.length || 0;
     const completed = this.successCount + this.failedCount;
     return total > 0 ? (completed / total) * 100 : 0;
   }
