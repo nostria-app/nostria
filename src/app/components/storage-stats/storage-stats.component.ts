@@ -67,7 +67,7 @@ export class StorageStatsComponent {
   }
 
   async clearCache(): Promise<void> {
-    if (this.isClearing() || !this.nostr.isLoggedIn()) {
+    if (this.isClearing()) {
       return;
     }
 

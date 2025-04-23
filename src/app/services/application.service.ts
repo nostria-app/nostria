@@ -19,7 +19,13 @@ export class ApplicationService {
 
     /** Check the status on fully initialized, which ensures Nostr, Storage and user is logged in. */
     initialized = computed(() => this.nostrService.initialized() && this.storage.initialized());
-    authenticated = computed(() => this.nostrService.isLoggedIn());
+
+    /** User is "authenticated" if there is any account set. This will read from local storage on start up,
+     so no need to wait to check it. */
+    authenticated = computed(() => this.nostrService.account());
+
+    /** Used to check if both initialized and authenticated. Used to wait for both conditions. */
+    initializedAndAuthenticated = computed(() => this.initialized() && this.authenticated());
 
     loadingMessage = signal('Loading data...');
     showSuccess = signal(false);

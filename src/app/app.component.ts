@@ -104,8 +104,8 @@ export class AppComponent implements OnInit {
       // Check if it's a RelayPublishingNotification with pending promises
       if (notification.type === NotificationType.RELAY_PUBLISHING) {
         const relayNotification = notification as RelayPublishingNotification;
-        return !relayNotification.complete && 
-               relayNotification.relayPromises.some(relay => relay.status === 'pending');
+        return !relayNotification.complete &&
+          relayNotification.relayPromises.some(relay => relay.status === 'pending');
       }
       return false;
     });
@@ -138,29 +138,35 @@ export class AppComponent implements OnInit {
 
     // Show login dialog if user is not logged in - with debugging
     effect(() => {
-      const isLoggedIn = this.nostrService.isLoggedIn();
-      const isInitialized = this.app.initialized();
-
-      if (isInitialized && !isLoggedIn) {
-        this.logger.debug('Showing login dialog');
+      if (!this.app.authenticated()) {
         this.showLoginDialog();
-      } else if (isInitialized && isLoggedIn) {
-        const user = this.nostrService.activeAccount();
-
-        // Whenever the user changes, ensure that we have the correct relays
-        if (user) {
-          this.logger.debug('User changed, updating relays', { pubkey: user.pubkey });
-
-          // Data load will happen automatically in nostr service.
-          //this.dataLoadingService.loadData();
-
-          // Also load the user metadata for the profile panel
-          // this.nostrService.loadAllUsersMetadata().catch(err => 
-          //   this.logger.error('Failed to load metadata after user change', err));
-        } else {
-          this.logger.debug('No user logged in, not updating relays');
-        }
       }
+
+      // const isLoggedIn = this.app.authenticated()
+      // const isInitialized = this.app.initialized();
+
+      // debugger;
+
+      // if (isInitialized && !isLoggedIn) {
+      //   this.logger.debug('Showing login dialog');
+      //   this.showLoginDialog();
+      // } else if (isInitialized && isLoggedIn) {
+      //   const user = this.nostrService.activeAccount();
+
+      //   // Whenever the user changes, ensure that we have the correct relays
+      //   if (user) {
+      //     this.logger.debug('User changed, updating relays', { pubkey: user.pubkey });
+
+      //     // Data load will happen automatically in nostr service.
+      //     //this.dataLoadingService.loadData();
+
+      //     // Also load the user metadata for the profile panel
+      //     // this.nostrService.loadAllUsersMetadata().catch(err => 
+      //     //   this.logger.error('Failed to load metadata after user change', err));
+      //   } else {
+      //     this.logger.debug('No user logged in, not updating relays');
+      //   }
+      // }
     });
 
     // Effect to load metadata again after data loading completes
@@ -264,11 +270,11 @@ export class AppComponent implements OnInit {
       document.body.classList.remove('blur-backdrop');
 
       // If user is logged in after dialog closes, simulate data loading
-      if (this.nostrService.isLoggedIn()) {
-        this.logger.debug('User logged in, loading data');
-      } else {
-        this.logger.debug('User not logged in after dialog closed');
-      }
+      // if (this.nostrService.isLoggedIn()) {
+      //   this.logger.debug('User logged in, loading data');
+      // } else {
+      //   this.logger.debug('User not logged in after dialog closed');
+      // }
     });
   }
 }

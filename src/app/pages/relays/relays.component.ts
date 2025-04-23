@@ -19,6 +19,7 @@ import { NostrService } from '../../services/nostr.service';
 import { kinds } from 'nostr-tools';
 import { StorageService } from '../../services/storage.service';
 import { NotificationService } from '../../services/notification.service';
+import { ApplicationService } from '../../services/application.service';
 
 @Component({
   selector: 'app-relays-page',
@@ -47,6 +48,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
   private layout = inject(LayoutService);
   private storage = inject(StorageService);
   private notifications = inject(NotificationService);
+  private app = inject(ApplicationService);
 
   relays = this.relay.userRelays;
   bootstrapRelays = this.relay.bootStrapRelays;
@@ -58,9 +60,21 @@ export class RelaysComponent implements OnInit, OnDestroy {
   private statusCheckTimer: any;
   private readonly STATUS_CHECK_INTERVAL = 10000; // 10 seconds
 
+  constructor() {
+    effect(() => {
+      if (this.app.initializedAndAuthenticated()) {
+        console.log('AUTHENTICATED, CHECK STATUS!!');
+        // Check relay status immediately when component initializes
+        this.checkRelayConnectionStatus();
+
+        // Start the connection status checking interval
+        this.startStatusChecking();
+      }
+    });
+  }
+
   ngOnInit() {
-    // Start the connection status checking interval
-    this.startStatusChecking();
+
   }
 
   ngOnDestroy() {
@@ -292,7 +306,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
       case 'connecting': return 'hourglass_empty';
       case 'error': return 'error';
       case 'disconnected':
-      default: return 'radio_button_unchecked';
+      default: return 'cancel'; // Changed from radio_button_unchecked to cancel for more serious look
     }
   }
 
@@ -302,7 +316,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
       case 'connecting': return 'text-yellow-500';
       case 'error': return 'text-red-500';
       case 'disconnected':
-      default: return 'text-gray-500';
+      default: return 'text-orange-500'; // Changed from text-gray-500 to text-orange-500 for more serious look
     }
   }
 
