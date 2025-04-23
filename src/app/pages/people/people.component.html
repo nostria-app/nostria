@@ -32,37 +32,42 @@
       <button mat-icon-button [matMenuTriggerFor]="filterMenu" matTooltip="Filter options">
         <mat-icon [class.active-filters]="hasActiveFilters()">filter_list</mat-icon>
       </button>
-      
-      <mat-menu #filterMenu="matMenu" class="filter-menu">
-        <div class="filter-menu-header">
+
+      <mat-menu #filterMenu="matMenu" class="filter-menu" [overlapTrigger]="false">
+        <div class="filter-menu-header" (click)="preventPropagation($event)">
           <span>Filter Options</span>
           @if (hasActiveFilters()) {
-            <button mat-button color="primary" (click)="resetFilters()">Reset all</button>
+          <button mat-button color="primary" (click)="resetFilters(); preventPropagation($event)">Reset all</button>
           }
         </div>
         <mat-divider></mat-divider>
-        
-        <div class="filter-section">
+
+        <div class="filter-section" (click)="preventPropagation($event)">
           <h3>User Properties</h3>
-          <mat-checkbox [checked]="filters().hasRelayList" (change)="toggleFilter('hasRelayList')">
+          <mat-checkbox [checked]="filters().hasRelayList" (change)="toggleFilter('hasRelayList', $event)"
+            (click)="preventPropagation($event)">
             Has Relay List
           </mat-checkbox>
-          <mat-checkbox [checked]="filters().hasFollowingList" (change)="toggleFilter('hasFollowingList')">
+          <mat-checkbox [checked]="filters().hasFollowingList" (change)="toggleFilter('hasFollowingList', $event)"
+            (click)="preventPropagation($event)">
             Has Following List
           </mat-checkbox>
-          <mat-checkbox [checked]="filters().hasNip05" (change)="toggleFilter('hasNip05')">
+          <mat-checkbox [checked]="filters().hasNip05" (change)="toggleFilter('hasNip05', $event)"
+            (click)="preventPropagation($event)">
             Has Verified NIP-05
           </mat-checkbox>
         </div>
-        
+
         <mat-divider></mat-divider>
-        
-        <div class="filter-section">
+
+        <div class="filter-section" (click)="preventPropagation($event)">
           <h3>Display</h3>
-          <mat-checkbox [checked]="filters().hasPicture" (change)="toggleFilter('hasPicture')">
+          <mat-checkbox [checked]="filters().hasPicture" (change)="toggleFilter('hasPicture', $event)"
+            (click)="preventPropagation($event)">
             Has Profile Picture
           </mat-checkbox>
-          <mat-checkbox [checked]="filters().hasBio" (change)="toggleFilter('hasBio')">
+          <mat-checkbox [checked]="filters().hasBio" (change)="toggleFilter('hasBio', $event)"
+            (click)="preventPropagation($event)">
             Has Bio
           </mat-checkbox>
         </div>
@@ -113,18 +118,18 @@
       [maxBufferPx]="maxBufferPx">
 
       <div class="margin">
-      <!-- Apply different container classes based on viewMode() -->
-      <div class="people-container" [ngClass]="{
+        <!-- Apply different container classes based on viewMode() -->
+        <div class="people-container" [ngClass]="{
         'large-grid': viewMode() === 'large' || viewMode() === 'grid',
         'medium-grid': viewMode() === 'medium',
         'small-grid': viewMode() === 'small',
         'details-list': viewMode() === 'details' || viewMode() === 'list',
         'tiles-container': viewMode() === 'tiles'
       }">
-        @for (pubkey of filteredPeople(); track pubkey) {
-        <app-user-profile [pubkey]="pubkey" [view]="viewMode()" (click)="viewProfile(pubkey)"></app-user-profile>
-        }
-      </div>
+          @for (pubkey of filteredPeople(); track pubkey) {
+          <app-user-profile [pubkey]="pubkey" [view]="viewMode()" (click)="viewProfile(pubkey)"></app-user-profile>
+          }
+        </div>
       </div>
 
     </cdk-virtual-scroll-viewport>

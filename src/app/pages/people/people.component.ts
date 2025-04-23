@@ -278,7 +278,7 @@ export class PeopleComponent {
     localStorage.setItem('peopleViewMode', mode);
   }
   
-  toggleFilter(filterName: keyof FilterOptions) {
+  toggleFilter(filterName: keyof FilterOptions, event?: Event | any) {
     this.filters.update(current => ({
       ...current,
       [filterName]: !current[filterName]
@@ -293,6 +293,10 @@ export class PeopleComponent {
       hasPicture: false,
       hasBio: false
     });
+  }
+  
+  preventPropagation(event: Event | any) {
+    event.stopPropagation();
   }
 
   viewProfile(pubkey: string) {
