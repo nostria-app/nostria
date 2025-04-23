@@ -498,9 +498,7 @@ export class RelayService {
    * Sets the list of relays for the current user
    */
   setRelays(relayUrls: string[]): void {
-    this.logger.debug(`Setting ${relayUrls.length} relays for current user`);
-
-    debugger;
+    this.logger.debug(`Setting ${relayUrls.length} relays for current account`);
 
     // Convert simple URLs to Relay objects with default properties
     const relayObjects = relayUrls.map(url => ({

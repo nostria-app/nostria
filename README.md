@@ -96,8 +96,9 @@ Alternative if you want to run the desktop app:
 
 ## Classifications
 
+* Accounts - List of accounts that the user has access to.
 * Account - This is accounts of the user within the app.
-* Users - This is Nostr users.
+* Users - This is Nostr users. "User" and "Users" refer to Nostr users, not the current user of the app.
 
 ## License
 
