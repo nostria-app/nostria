@@ -11,9 +11,9 @@
   width: 100%;
   flex-shrink: 0; // Prevent shrinking in flex layouts
 
-  &:hover {
-    background-color: rgba(0, 0, 0, 0.04);
-  }
+  // &:hover {
+  //   background-color: rgba(0, 0, 0, 0.04);
+  // }
 
   .user-profile-container {
     display: flex;
