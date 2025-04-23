@@ -12,7 +12,6 @@ import { ScrollingModule } from '@angular/cdk/scrolling';
 import { ProfileStateService } from '../../../services/profile-state.service';
 import { LayoutService } from '../../../services/layout.service';
 import { LoggerService } from '../../../services/logger.service';
-import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
 import { ApplicationStateService } from '../../../services/application-state.service';
 import { ApplicationService } from '../../../services/application.service';
 import { StorageService } from '../../../services/storage.service';
@@ -28,7 +27,6 @@ import { StorageService } from '../../../services/storage.service';
     MatProgressSpinnerModule,
     MatTabsModule,
     ScrollingModule,
-    UserProfileComponent
   ],
   templateUrl: './details.component.html',
   styleUrl: './details.component.scss',

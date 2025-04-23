@@ -17,6 +17,7 @@ import { LearnComponent } from './pages/learn/learn.component';
 import { PremiumComponent } from './pages/premium/premium.component';
 import { UpgradeComponent } from './pages/premium/upgrade/upgrade.component';
 import { DetailsComponent } from './pages/profile/details/details.component';
+import { NotificationsComponent } from './pages/notifications/notifications.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/home', pathMatch: 'full' },
@@ -24,6 +25,7 @@ export const routes: Routes = [
   { path: 'learn', component: LearnComponent },
   { path: 'relays', component: RelaysComponent },
   { path: 'settings', component: SettingsComponent },
+  { path: 'notifications', component: NotificationsComponent },
   { path: 'credentials', component: CredentialsComponent },
   { path: 'about', component: AboutComponent },
   {
