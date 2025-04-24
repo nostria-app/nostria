@@ -33,7 +33,7 @@
 
     @if (pwaUpdateService.updateAvailable()) {
     <button mat-icon-button class="update-button" (click)="pwaUpdateService.updateApplication()"
-      matTooltip="Update available! Click to update and reload." aria-label="Update application">
+      matTooltip="Update ready!" aria-label="Update application">
       <mat-icon class="update-icon">system_update</mat-icon>
     </button>
     }

@@ -23,6 +23,7 @@ interface RelayInfo {
   banner?: string;
   icon?: string;
   posting_policy?: string;
+  privacy_policy?: string;
   payments_url?: string;
   supported_nips?: number[];
   limitation?: {
@@ -97,7 +98,12 @@ interface RelayInfo {
           }
           @if (relayInfo()?.posting_policy) {
             <div class="info-row">
-              <strong>Policy:</strong>&nbsp;<a [href]="relayInfo()?.posting_policy" target="_blank" rel="noopener noreferrer">{{relayInfo()?.posting_policy}}</a>
+              <strong>Posting Policy:</strong>&nbsp;<a [href]="relayInfo()?.posting_policy" target="_blank" rel="noopener noreferrer">{{relayInfo()?.posting_policy}}</a>
+            </div>
+          }
+          @if (relayInfo()?.privacy_policy) {
+            <div class="info-row">
+              <strong>Privacy Policy:</strong>&nbsp;<a [href]="relayInfo()?.privacy_policy" target="_blank" rel="noopener noreferrer">{{relayInfo()?.privacy_policy}}</a>
             </div>
           }
           <br>
@@ -266,7 +272,7 @@ export class RelayInfoDialogComponent {
     this.error.set(null);
 
     try {
-      const httpUrl = url.replace('wss://', 'https://');
+      const httpUrl = url.replace('wss://', 'https://').replace('ws://', 'http://');
 
       this.logger.info('Fetching relay info', { url: httpUrl });
 
