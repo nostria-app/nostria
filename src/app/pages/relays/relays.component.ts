@@ -16,7 +16,7 @@ import { LoggerService } from '../../services/logger.service';
 import { RelayInfoDialogComponent } from './relay-info-dialog.component';
 import { LayoutService } from '../../services/layout.service';
 import { NostrService } from '../../services/nostr.service';
-import { kinds } from 'nostr-tools';
+import { kinds, SimplePool } from 'nostr-tools';
 import { StorageService } from '../../services/storage.service';
 import { NotificationService } from '../../services/notification.service';
 import { ApplicationService } from '../../services/application.service';
@@ -340,5 +340,87 @@ export class RelaysComponent implements OnInit, OnDestroy {
       horizontalPosition: 'center',
       verticalPosition: 'bottom'
     });
+  }
+
+  async discoveryRelayTest() {
+    const relaysUrls = ['ws://localhost:5210'];
+    const pubkey = '17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515';
+    const pool = new SimplePool();
+    const relayList = await pool.get(relaysUrls, {
+      kinds: [kinds.RelayList],
+      authors: [pubkey],
+    }, {
+      maxWait: 60000
+    });
+
+    console.log(relayList);
+
+    debugger;
+
+    const testEvent = {
+      kind: 10002,
+      created_at: 1745480732,
+      content: '',
+      tags: [
+        ['r', 'wss://relay.example.com'],
+        ['r', 'wss://another.relay.example.com']
+      ],
+      pubkey: 'eb67f0064b6217d47ae32bdd1286fb89ae6e942a1dcf09c1496febf9609c11e3',
+      id: 'b2413a4b148055115bd6a5a4272c69e3690b447e5bedd4c0ffcfdbe8bcd38100',
+      sig: 'e52e0fde8c64243d5a0b3013e0bc617037280f1f377c041b535799648a776430f3be13c79192fc0d7d9932deaeed05c35e61eecffc57beb355c6258716402afc',
+    };
+
+    const testResult = await pool.publish(relaysUrls, testEvent);
+    console.log(testResult);
+
+    const tags = this.nostr.createTags('r', ['wss://localhost:5210']);
+    const eventTempate = this.nostr.createEvent(kinds.RelayList, '', tags);
+    const signedEvent = await this.nostr.signEvent(eventTempate);
+    const publishPromises = await pool.publish(relaysUrls, signedEvent);
+
+    // Handle the promises returned from publish
+    if (publishPromises && publishPromises.length > 0) {
+      this.logger.info('Publish initiated to discovery relays', { count: publishPromises.length });
+
+      // Process each promise and map it to its corresponding relay
+      publishPromises.forEach((promise, index) => {
+        const relayUrl = relaysUrls[index] || 'unknown relay';
+
+        promise
+          .then(result => {
+            this.logger.info('Successfully published to discovery relay', {
+              relay: relayUrl,
+              result
+            });
+            this.showMessage(`Published to ${this.formatRelayUrl(relayUrl)}`);
+          })
+          .catch(error => {
+            this.logger.error('Failed to publish to discovery relay', {
+              relay: relayUrl,
+              error: error.message || error
+            });
+            this.showMessage(`Failed to publish to ${this.formatRelayUrl(relayUrl)}`);
+          });
+      });
+
+      // Wait for all promises to resolve or reject
+      try {
+        const results = await Promise.allSettled(publishPromises);
+
+        const successful = results.filter(r => r.status === 'fulfilled').length;
+        const failed = results.filter(r => r.status === 'rejected').length;
+
+        this.logger.info('Discovery relay test completed', {
+          total: publishPromises.length,
+          successful,
+          failed
+        });
+      } catch (error) {
+        this.logger.error('Error when waiting for publish promises', error);
+      }
+    } else {
+      this.logger.warn('No relay connections available for publishing');
+      this.showMessage('No relay connections available');
+    }
   }
 }
