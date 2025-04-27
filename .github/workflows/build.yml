@@ -35,7 +35,7 @@ jobs:
         shell: bash
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --force
 
       - name: Build
         run: npm run build
