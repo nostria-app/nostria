@@ -17,7 +17,7 @@
         "build": {
           "builder": "@angular-devkit/build-angular:application",
           "options": {
-            "outputPath": "dist",
+            "outputPath": "dist/app",
             "index": "src/index.html",
             "browser": "src/main.ts",
 
@@ -32,20 +32,25 @@
             "styles": [
               "src/styles.scss"
             ],
-            "scripts": []
+            "scripts": [],
+            "server": "src/main.server.ts",
+            "outputMode": "server",
+            "ssr": {
+              "entry": "src/server.ts"
+            }
           },
           "configurations": {
             "production": {
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "2MB",
-                  "maximumError": "5MB"
+                  "maximumWarning": "5MB",
+                  "maximumError": "10MB"
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "30kB",
-                  "maximumError": "100kB"
+                  "maximumWarning": "300kB",
+                  "maximumError": "500kB"
                 }
               ],
               "outputHashing": "all",

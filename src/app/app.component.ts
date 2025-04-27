@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect, ViewChild, OnInit, afterNextRender, computed } from '@angular/core';
+import { Component, inject, signal, effect, ViewChild, OnInit, afterNextRender, computed, PLATFORM_ID } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
@@ -9,7 +9,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { ThemeService } from './services/theme.service';
 import { PwaUpdateService } from './services/pwa-update.service';
-import { CommonModule } from '@angular/common';
+import { CommonModule, DOCUMENT, isPlatformBrowser, isPlatformServer } from '@angular/common';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { LoginDialogComponent } from './components/login-dialog/login-dialog.component';
@@ -79,6 +79,9 @@ export class AppComponent implements OnInit {
 
   private logger = inject(LoggerService);
 
+  private readonly platform = inject(PLATFORM_ID);
+  private readonly document = inject(DOCUMENT);
+
   @ViewChild('profileSidenav') profileSidenav!: MatSidenav;
 
   opened = signal(true);
@@ -126,6 +129,18 @@ export class AppComponent implements OnInit {
 
   constructor() {
     this.logger.debug('AppComponent constructor started');
+
+    if (isPlatformBrowser(this.platform)) {
+      console.warn("browser");
+      // Safe to use document, window, localStorage, etc. :-)
+      console.log(document);
+    }
+
+    if (isPlatformServer(this.platform)) {
+      console.warn("server");
+      // Not smart to use document here, however, we can inject it ;-)
+      console.log(this.document);
+    }
 
     effect(() => {
       const isHandset = this.layout.isHandset();
