@@ -20,8 +20,8 @@ import { DetailsComponent } from './pages/profile/details/details.component';
 import { NotificationsComponent } from './pages/notifications/notifications.component';
 
 export const routes: Routes = [
-  { path: '', redirectTo: '/home', pathMatch: 'full' },
-  { path: 'home', component: HomeComponent },
+  { path: '', component: HomeComponent, pathMatch: 'full' },
+  { path: 'home', component: HomeComponent }, // Keep for backward compatibility
   { path: 'learn', component: LearnComponent },
   { path: 'relays', component: RelaysComponent },
   { path: 'settings', component: SettingsComponent },
@@ -66,5 +66,5 @@ export const routes: Routes = [
     title: 'People' 
   },
   { path: 'profile', redirectTo: '/credentials' },
-  { path: '**', redirectTo: '/home' }
+  { path: '**', redirectTo: '/' } // Update to redirect to root instead of /home
 ];

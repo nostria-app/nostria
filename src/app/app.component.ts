@@ -116,7 +116,7 @@ export class AppComponent implements OnInit {
   });
 
   navItems: NavItem[] = [
-    { path: 'home', label: 'Home', icon: 'home', showInMobile: true },
+    { path: '', label: 'Home', icon: 'home', showInMobile: true },
     { path: 'people', label: 'People', icon: 'people', showInMobile: false },
     { path: 'media', label: 'Media', icon: 'photo_library', showInMobile: false },
     { path: 'relays', label: 'Relays', icon: 'dns', showInMobile: false },

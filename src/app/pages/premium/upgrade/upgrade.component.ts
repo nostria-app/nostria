@@ -290,7 +290,7 @@ export class UpgradeComponent {
   
   finishSetup() {
     // Navigate to the home page or another appropriate page
-    this.router.navigate(['/home']);
+    this.router.navigate(['/']);
     
     this.snackBar.open('Welcome to Nostria Premium! Enjoy your new features.', 'Thanks!', {
       duration: 5000
