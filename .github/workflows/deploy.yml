@@ -2,7 +2,7 @@ name: Build and Deploy to Azure Web Apps
 
 on:
   push:
-    branches: [ main ]
+    branches: [ $default-branch ]
   workflow_dispatch:
 
 env:
