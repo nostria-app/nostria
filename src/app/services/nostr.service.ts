@@ -1659,4 +1659,62 @@ export class NostrService {
       this.logger.error('Error clearing cache', error);
     }
   }
+
+  getIdFromNevent(nevent: string): string {
+    try {
+      if (nevent.startsWith('nevent')) {
+        const { type, data } = this.decode(nevent);
+        if (type === 'nevent') {
+          // Nevent data contains: id, relays, author
+          return data.id;
+        }
+      }
+      return nevent; // Return as is if not nevent format
+    } catch (error) {
+      this.logger.error('Error decoding nevent:', error);
+      return nevent; // Return the original value in case of error
+    }
+  }
+
+  async getEvent(id: string): Promise<NostrEvent | undefined> {
+    // First try to get from storage
+    let event = await this.storage.getEventById(id);
+
+    if (event) {
+      return event;
+    }
+
+    // If not in storage, try to fetch from relays
+    try {
+      await this.storage.clearCache(this.pubkey());
+      this.logger.info('Cache cleared successfully');
+
+      // TODO: Improve this to discover if needed.
+      const relayUrls = this.relayService.defaultRelays() // .activeRelays();
+
+      if (!relayUrls.length) {
+        return undefined;
+      }
+
+      const pool = new SimplePool();
+      event = await pool.get(relayUrls, {
+        ids: [id],
+      }, {
+        maxWait: 3000
+      });
+
+      pool.close(relayUrls);
+
+      if (event) {
+        // Save to storage for future use
+        await this.storage.saveEvent(event);
+        return event;
+      }
+    } catch (error) {
+      this.logger.error('Error clearing cache', error);
+      this.logger.error('Error fetching event:', error);
+    }
+
+    return undefined;
+  }
 }

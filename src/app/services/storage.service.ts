@@ -496,6 +496,16 @@ export class StorageService {
     }
   }
 
+  async getEventById(id: string): Promise<NostrEvent | null> {
+    try {
+      const event = await this.db.get('events', id);
+      return event || null;
+    } catch (error) {
+      this.logger.error(`Error getting event by ID ${id}`, error);
+      return null;
+    }
+  }
+
   async getEventByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<NostrEvent | null> {
     const events = await this.getEventsByPubkeyAndKind(pubkey, kind);
 
