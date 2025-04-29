@@ -13,7 +13,6 @@ import { ProfileAboutComponent } from './pages/profile/profile-about/profile-abo
 import { ProfileConnectionsComponent } from './pages/profile/profile-connections/profile-connections.component';
 import { FollowingComponent } from './pages/profile/following/following.component';
 import { ProfileHomeComponent } from './pages/profile/profile-home/profile-home.component';
-import { LearnComponent } from './pages/learn/learn.component';
 import { PremiumComponent } from './pages/premium/premium.component';
 import { UpgradeComponent } from './pages/premium/upgrade/upgrade.component';
 import { DetailsComponent } from './pages/profile/details/details.component';
@@ -22,7 +21,6 @@ import { NotificationsComponent } from './pages/notifications/notifications.comp
 export const routes: Routes = [
   { path: '', component: HomeComponent, pathMatch: 'full' },
   { path: 'home', component: HomeComponent }, // Keep for backward compatibility
-  { path: 'learn', component: LearnComponent },
   { path: 'relays', component: RelaysComponent },
   { path: 'settings', component: SettingsComponent },
   { path: 'notifications', component: NotificationsComponent },

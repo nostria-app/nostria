@@ -3,13 +3,13 @@
   <section class="hero-section">
     <div class="hero-content">
       <h1>Nostria</h1>
-      <h2>The Social Network That's Yours</h2>
+      <h2>Your Social Network</h2>
       <p>
         Making the Nostr protocol accessible to everyone, with a focus on user experience and performance for
         global scale.
       </p>
       <div class="action-buttons">
-        <button mat-flat-button [routerLink]="['/learn']">Learn more</button>
+        <a mat-flat-button href="https://www.nostria.app/">Learn more</a>
         <button mat-stroked-button [routerLink]="['/p', this.nostr.activeAccount()?.pubkey]">Your Profile</button>
       </div>
     </div>
