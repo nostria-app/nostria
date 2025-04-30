@@ -51,27 +51,24 @@ export class MetaService {
         url?: string;
         type?: string;
         author?: string;
-        twitterCard?: 'summary' | 'summary_large_image' | 'app' | 'player';
+        twitterCard?: 'summary' | 'summary_large_image' | 'app' | 'player' | any;
     }): void {
-        const { title, description, image, url, type = 'website', author, twitterCard = 'summary_large_image' } = config;
-
-        // Update basic meta if provided
-        if (title) this.setTitle(title);
-        if (description) this.setDescription(description);
+        if (config.title) this.setTitle(config.title);
+        if (config.description) this.setDescription(config.description);
 
         // Open Graph
-        if (title) this.updateMetaTag('og:title', title);
-        if (description) this.updateMetaTag('og:description', description);
-        if (image) this.updateMetaTag('og:image', image);
-        if (url) this.updateMetaTag('og:url', url);
-        if (type) this.updateMetaTag('og:type', type);
+        if (config.title) this.updateMetaTag('og:title', config.title);
+        if (config.description) this.updateMetaTag('og:description', config.description);
+        if (config.image) this.updateMetaTag('og:image', config.image);
+        if (config.url) this.updateMetaTag('og:url', config.url);
+        if (config.type) this.updateMetaTag('og:type', config.type);
 
         // Twitter Card
-        if (twitterCard) this.updateMetaTag('twitter:card', twitterCard);
-        if (title) this.updateMetaTag('twitter:title', title);
-        if (description) this.updateMetaTag('twitter:description', description);
-        if (image) this.updateMetaTag('twitter:image', image);
-        if (author) this.updateMetaTag('twitter:creator', author);
+        if (config.twitterCard) this.updateMetaTag('twitter:card', config.twitterCard);
+        if (config.title) this.updateMetaTag('twitter:title', config.title);
+        if (config.description) this.updateMetaTag('twitter:description', config.description);
+        if (config.image) this.updateMetaTag('twitter:image', config.image);
+        if (config.author) this.updateMetaTag('twitter:creator', config.author);
     }
 
     /**
@@ -81,24 +78,15 @@ export class MetaService {
      * @param isProperty Whether this is a property attribute (true) or name attribute (false)
      */
     private updateMetaTag(name: string, content: string) {
-        // console.log('Updating meta tag:', name, content);
+        // Determine if this tag uses property or name attribute
+        // Only OpenGraph (og:) tags use property attribute, Twitter cards use name
+        const attrType = name.startsWith('og:') ? 'property' : 'name';
 
-        let attrType = 'name';
-
-        if (name.startsWith('og:')) {
-            attrType = 'property';
-        }
-
-        // const attrType = name.startsWith('og:') || (name.startsWith('twitter:') || name !== '') ? 'property' : 'name';
-        const selector = `${attrType}='${name}'`;
-
-        // console.log('Selector:', selector);
-        const tag = this.meta.getTag(selector);
-        // console.log('Meta tag:', tag, selector);
-
-        if (tag) {
+        try {
+            // Try to update the tag if it exists, otherwise add it
             this.meta.updateTag({ [attrType]: name, content });
-        } else {
+        } catch (error) {
+            // If updateTag fails (which happens if the tag doesn't exist), add it
             this.meta.addTag({ [attrType]: name, content });
         }
     }
