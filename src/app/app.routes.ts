@@ -28,6 +28,7 @@ export const routes: Routes = [
   { path: 'notifications', component: NotificationsComponent },
   { path: 'credentials', component: CredentialsComponent },
   { path: 'about', component: AboutComponent },
+  { path: 'bookmarks', loadComponent: () => import('./pages/bookmarks/bookmarks.component').then(m => m.BookmarksComponent), title: 'Bookmarks' },
   {
     path: 'p/:id',
     component: ProfileComponent,

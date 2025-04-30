@@ -1,0 +1,97 @@
+<div class="bookmarks-container">
+  <div class="bookmarks-header">
+    <h1>Bookmarks</h1>
+    <div class="header-actions">
+      <button mat-flat-button color="primary" (click)="addBookmark()">
+        <mat-icon>add</mat-icon>
+        Add Bookmark
+      </button>
+    </div>
+  </div>
+
+  <div class="filters-container">
+    <mat-form-field appearance="outline" class="search-field">
+      <mat-label>Search Bookmarks</mat-label>
+      <input matInput type="text" [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event.target.value)" placeholder="Search by title, URL, or description" />
+      <button *ngIf="searchQuery()" matSuffix mat-icon-button aria-label="Clear" (click)="searchQuery.set('')">
+        <mat-icon>close</mat-icon>
+      </button>
+      <mat-icon matPrefix>search</mat-icon>
+    </mat-form-field>
+
+    <div class="categories-container">
+      <div class="categories-header">
+        <h3>Categories</h3>
+        <button mat-icon-button (click)="openManageCategories()" matTooltip="Manage Categories">
+          <mat-icon>settings</mat-icon>
+        </button>
+      </div>
+      <div class="categories-list">
+        @for (category of categories(); track category.id) {
+          <div class="category-chip" 
+               [class.selected]="selectedCategory() === category.id"
+               [style.background-color]="selectedCategory() === category.id ? category.color : 'transparent'"
+               [style.color]="selectedCategory() === category.id ? '#fff' : category.color"
+               [style.border-color]="category.color"
+               (click)="selectCategory(category.id)">
+            {{ category.name }}
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <div class="bookmarks-list">
+    @if (filteredBookmarks().length === 0) {
+      <div class="empty-state">
+        <mat-icon>bookmark_border</mat-icon>
+        <p>No bookmarks found</p>
+        @if (searchQuery()) {
+          <p>Try changing your search or category filter</p>
+        } @else if (selectedCategory() !== 'all') {
+          <p>Try selecting a different category</p>
+        } @else {
+          <p>Add some bookmarks to get started</p>
+        }
+        <button mat-stroked-button color="primary" (click)="addBookmark()">
+          <mat-icon>add</mat-icon>
+          Add Bookmark
+        </button>
+      </div>
+    } @else {
+      @for (bookmark of filteredBookmarks(); track bookmark.id) {
+        <mat-card class="bookmark-card" (click)="openBookmark(bookmark)">
+          <mat-card-header>
+            <mat-card-title>{{ bookmark.title }}</mat-card-title>
+            <mat-card-subtitle>{{ bookmark.url }}</mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            @if (bookmark.description) {
+              <p class="bookmark-description">{{ bookmark.description }}</p>
+            }
+            <div class="bookmark-categories">
+              @for (categoryId of bookmark.categories.slice(1); track categoryId) { <!-- Skip "all" -->
+                @if (getCategoryById(categoryId); as category) {
+                  <div class="category-tag" [style.background-color]="category.color">
+                    {{ category.name }}
+                  </div>
+                }
+              }
+            </div>
+            <div class="bookmark-info">
+              <span class="bookmark-date">Added: {{ getFormattedDate(bookmark.createdAt) }}</span>
+            </div>
+          </mat-card-content>
+          <div class="bookmark-actions">
+            <button mat-icon-button (click)="editBookmark(bookmark, $event)" matTooltip="Edit">
+              <mat-icon>edit</mat-icon>
+            </button>
+            <button mat-icon-button (click)="deleteBookmark(bookmark, $event)" matTooltip="Delete">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+        </mat-card>
+      }
+    }
+  </div>
+</div>
