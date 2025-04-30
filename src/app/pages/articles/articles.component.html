@@ -1,0 +1,116 @@
+<div class="articles-container">
+  <header class="articles-header">
+    <h1>Articles</h1>
+    <div class="actions">
+      <button mat-mini-fab color="primary" matTooltip="Refresh articles" (click)="refreshArticles()">
+        <mat-icon>refresh</mat-icon>
+      </button>
+    </div>
+  </header>
+
+  @if (isLoading()) {
+    <app-loading-overlay message="Loading articles..."></app-loading-overlay>
+  }
+
+  @if (error()) {
+    <div class="error-container">
+      <mat-icon>error_outline</mat-icon>
+      <p>{{ error() }}</p>
+      <button mat-raised-button color="primary" (click)="refreshArticles()">
+        <mat-icon>refresh</mat-icon> Try Again
+      </button>
+    </div>
+  }
+
+  @if (!isLoading() && !error() && articles().length === 0) {
+    <div class="empty-state">
+      <mat-icon>article</mat-icon>
+      <p>No articles found</p>
+      <p>Try refreshing or check your relays</p>
+      <button mat-raised-button color="primary" (click)="refreshArticles()">
+        <mat-icon>refresh</mat-icon> Refresh
+      </button>
+    </div>
+  }
+
+  @if (!isLoading() && !error() && articles().length > 0) {
+    <div class="tags-container">
+      <div class="tag-scroll">
+        <button 
+          mat-stroked-button 
+          [class.selected]="selectedTag() === null"
+          (click)="selectTag(null)">
+          All
+        </button>
+
+        @for (tag of availableTags(); track tag) {
+          <button 
+            mat-stroked-button 
+            [class.selected]="selectedTag() === tag" 
+            (click)="selectTag(tag)">
+            #{{ tag }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="articles-grid">
+      @for (article of filteredArticles(); track article.id) {
+        <mat-card class="article-card" (click)="viewArticle(article)">
+          @if (article.imageUrl) {
+            <img mat-card-image [src]="article.imageUrl" [alt]="article.title" class="article-image">
+          }
+          
+          <mat-card-header>
+            <div mat-card-avatar class="article-avatar" [style.background-image]="article.author.picture ? 'url(' + article.author.picture + ')' : ''">
+              @if (!article.author.picture) {
+                <mat-icon>person</mat-icon>
+              }
+            </div>
+            <mat-card-title>{{ article.title }}</mat-card-title>
+            <mat-card-subtitle>
+              {{ article.author.name || 'Anonymous' }}
+              <span class="date-separator">•</span>
+              {{ article.publishedAt | ago }}
+            </mat-card-subtitle>
+          </mat-card-header>
+          
+          <mat-card-content>
+            <p class="article-summary">{{ article.summary }}</p>
+            
+            <div class="article-meta">
+              <div class="read-time">
+                <mat-icon>schedule</mat-icon>
+                <span>{{ article.readTimeMinutes }} min read</span>
+              </div>
+              
+              <div class="article-tags">
+                @for (tag of article.tags.slice(0, 3); track tag) {
+                  <span class="article-tag">#{{ tag }}</span>
+                }
+                @if (article.tags.length > 3) {
+                  <span class="article-tag">+{{ article.tags.length - 3 }}</span>
+                }
+              </div>
+            </div>
+          </mat-card-content>
+          
+          <mat-card-actions align="end">
+            <button 
+              mat-icon-button 
+              matTooltip="Copy link" 
+              (click)="copyArticleLink(article, $event)">
+              <mat-icon>link</mat-icon>
+            </button>
+            <button 
+              mat-icon-button 
+              matTooltip="Share" 
+              (click)="shareArticle(article, $event)">
+              <mat-icon>share</mat-icon>
+            </button>
+          </mat-card-actions>
+        </mat-card>
+      }
+    </div>
+  }
+</div>
