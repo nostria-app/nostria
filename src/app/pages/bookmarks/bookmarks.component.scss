@@ -1,0 +1,199 @@
+.bookmarks-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 16px;
+
+  .bookmarks-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+
+    h1 {
+      font-size: 28px;
+      margin: 0;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 12px;
+    }
+  }
+
+  .filters-container {
+    margin-bottom: 24px;
+    
+    .search-field {
+      width: 100%;
+      margin-bottom: 16px;
+    }
+    
+    .categories-container {
+      .categories-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        
+        h3 {
+          font-size: 16px;
+          margin: 0;
+          font-weight: 500;
+        }
+      }
+      
+      .categories-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 16px;
+        
+        .category-chip {
+          padding: 6px 12px;
+          border-radius: 20px;
+          border: 2px solid;
+          font-size: 14px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          font-weight: 500;
+          
+          &:hover {
+            opacity: 0.8;
+          }
+          
+          &.selected {
+            box-shadow: var(--mat-sys-level1);
+          }
+        }
+      }
+    }
+  }
+
+  .bookmarks-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+    
+    .empty-state {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 40px 0;
+      
+      mat-icon {
+        font-size: 64px;
+        height: 64px;
+        width: 64px;
+        opacity: 0.5;
+        margin-bottom: 16px;
+      }
+      
+      p {
+        margin: 8px 0;
+        opacity: 0.7;
+      }
+      
+      button {
+        margin-top: 16px;
+      }
+    }
+    
+    .bookmark-card {
+      position: relative;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: var(--mat-sys-level0);
+      height: 100%;
+      
+      &:hover {
+        box-shadow: var(--mat-sys-level2);
+        transform: translateY(-2px);
+        
+        .bookmark-actions {
+          opacity: 1;
+        }
+      }
+      
+      mat-card-header {
+        padding-bottom: 0;
+        
+        mat-card-title {
+          font-size: 18px;
+          margin-bottom: 4px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        
+        mat-card-subtitle {
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          margin-bottom: 8px;
+        }
+      }
+      
+      mat-card-content {
+        .bookmark-description {
+          margin-top: 0;
+          margin-bottom: 12px;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+          font-size: 14px;
+        }
+        
+        .bookmark-categories {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+          margin-bottom: 16px;
+          
+          .category-tag {
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            color: white;
+            white-space: nowrap;
+          }
+        }
+        
+        .bookmark-info {
+          font-size: 12px;
+          color: rgba(0, 0, 0, 0.54);
+        }
+      }
+      
+      .bookmark-actions {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        display: flex;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        background-color: rgba(255, 255, 255, 0.9);
+        border-radius: 8px;
+        box-shadow: var(--mat-sys-level1);
+      }
+    }
+  }
+}
+
+// Dark theme adjustments
+:host-context(.dark-theme) {
+  .bookmarks-container {
+    .bookmarks-list {
+      .bookmark-card {
+        mat-card-content {
+          .bookmark-info {
+            color: rgba(255, 255, 255, 0.7);
+          }
+        }
+        
+        .bookmark-actions {
+          background-color: rgba(30, 30, 30, 0.9);
+        }
+      }
+    }
+  }
+}

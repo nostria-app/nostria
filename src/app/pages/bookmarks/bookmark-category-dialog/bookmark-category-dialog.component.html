@@ -1,0 +1,114 @@
+<div class="category-dialog-container">
+  <h2 mat-dialog-title>Manage Bookmark Categories</h2>
+  
+  <div mat-dialog-content>
+    <p class="dialog-subtitle">Add, edit, or remove categories to organize your bookmarks</p>
+    
+    <div class="add-category-form">
+      <mat-form-field appearance="outline">
+        <mat-label>New Category</mat-label>
+        <input matInput type="text" [(ngModel)]="newCategory.name" placeholder="Enter category name">
+      </mat-form-field>
+      
+      <div class="color-picker">
+        <span class="color-label">Color:</span>
+        <div class="color-options">
+          @for (color of availableColors; track color) {
+            <div 
+              class="color-option" 
+              [style.background-color]="color"
+              [class.selected]="newCategory.color === color"
+              (click)="newCategory.color = color"
+              matTooltip="Select color"
+            ></div>
+          }
+        </div>
+      </div>
+      
+      <button 
+        mat-flat-button 
+        color="primary" 
+        (click)="addCategory()" 
+        [disabled]="!newCategory.name.trim()"
+      >
+        <mat-icon>add</mat-icon>
+        Add Category
+      </button>
+    </div>
+    
+    <h3 class="categories-header">Your Categories</h3>
+    
+    <div class="categories-list">
+      @if (categories().length === 0) {
+        <div class="empty-message">
+          <p>You haven't created any custom categories yet.</p>
+        </div>
+      } @else {
+        @for (category of categories(); track category.id; let i = $index) {
+          <div class="category-item" [class.editing]="editingCategory?.index === i">
+            @if (editingCategory?.index === i) {
+              <!-- Editing mode -->
+              <div class="editing-form">
+                <mat-form-field appearance="outline">
+                  <mat-label>Category Name</mat-label>
+                  <input matInput type="text" [(ngModel)]="editingCategory!.name">
+                </mat-form-field>
+                
+                <div class="color-picker">
+                  <span class="color-label">Color:</span>
+                  <div class="color-options">
+                    @for (color of availableColors; track color) {
+                      <div 
+                        class="color-option" 
+                        [style.background-color]="color"
+                        [class.selected]="editingCategory!.color === color"
+                        (click)="editingCategory!.color = color"
+                      ></div>
+                    }
+                  </div>
+                </div>
+                
+                <div class="editing-actions">
+                  <button mat-button (click)="cancelEditing()">Cancel</button>
+                  <button 
+                    mat-flat-button 
+                    color="primary" 
+                    (click)="saveEditing()" 
+                    [disabled]="!editingCategory!.name.trim()"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            } @else {
+              <!-- View mode -->
+              <div class="category-info">
+                <div 
+                  class="category-color-indicator" 
+                  [style.background-color]="category.color"
+                ></div>
+                <span class="category-name">{{ category.name }}</span>
+              </div>
+              
+              <div class="category-actions">
+                <button mat-icon-button color="primary" (click)="startEditing(i)" matTooltip="Edit">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button mat-icon-button color="warn" (click)="deleteCategory(i)" matTooltip="Delete">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+            }
+          </div>
+        }
+      }
+    </div>
+  </div>
+  
+  <div mat-dialog-actions align="end">
+    <button mat-button mat-dialog-close>Cancel</button>
+    <button mat-flat-button color="primary" (click)="save()">
+      Save Changes
+    </button>
+  </div>
+</div>
