@@ -219,12 +219,12 @@ export class AppComponent {
     });
   }
 
-  // async ngOnInit() {
-  //   this.logger.debug('AppComponent ngOnInit');
+  async ngOnInit() {
+    this.logger.debug('AppComponent ngOnInit');
 
-  //   // Initialize storage, then nostr initialized and then app state.
-  //   await this.storage.init();
-  // }
+    // Initialize storage, then nostr initialized and then app state.
+    await this.storage.init();
+  }
 
   qrScan() {
     const dialogRef = this.dialog.open(QrcodeScanDialogComponent, {
