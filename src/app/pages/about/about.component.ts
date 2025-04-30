@@ -78,7 +78,7 @@ export class AboutComponent {
   private async loadSocialMetadata(): Promise<void> {
     try {
       // Get the current URL
-      const url = 'https://metadata.nostria.app/api/e/nevent1qqsy8pt6rh73a20dy04trvsnjy747lx289qwmkrhdmw3wyc0zzz72dg2tp2my';
+      const url = 'https://metadata.nostria.app/e/nevent1qqsy8pt6rh73a20dy04trvsnjy747lx289qwmkrhdmw3wyc0zzz72dg2tp2my';
       
       console.log('Fetching metadata on server...');
       const data = await firstValueFrom(this.http.get<MetadataResponse>(url));
