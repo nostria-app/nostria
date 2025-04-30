@@ -1,13 +1,21 @@
-import { Injectable, effect, inject, signal } from '@angular/core';
+import { Injectable, PLATFORM_ID, effect, inject, signal } from '@angular/core';
 import { LoggerService } from './logger.service';
+import { DOCUMENT, isPlatformBrowser } from '@angular/common';
+import { LocalStorageService } from './local-storage.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ThemeService {
   readonly THEME_KEY = 'nostria-theme';
-  private readonly darkThemeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+  private readonly platformId = inject(PLATFORM_ID);
+  private readonly document = inject(DOCUMENT);
+  private darkThemeMediaQuery: MediaQueryList | null = null;
+
+  // private readonly darkThemeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
   private readonly logger = inject(LoggerService);
+  private localStorage = inject(LocalStorageService);
 
   // Theme colors for PWA
   private readonly LIGHT_THEME_COLOR = '#FEF7FA'; // Light background color
@@ -25,60 +33,110 @@ export class ThemeService {
       this.applyTheme(isDark);
     });
 
+    // Initialize browser-specific features after Angular has finished SSR
+    if (isPlatformBrowser(this.platformId)) {
+      // Run on next tick to ensure we're fully in the browser context
+      setTimeout(() => this.initBrowserFeatures(), 0);
+    } else {
+      this.logger.debug('Running in SSR mode, skipping browser-specific initialization');
+    }
+
     // Listen for system preference changes
-    this.darkThemeMediaQuery.addEventListener('change', e => {
-      // Only update if user hasn't explicitly set a preference
-      if (!localStorage.getItem(this.THEME_KEY)) {
-        this.logger.info(`System color scheme changed to ${e.matches ? 'dark' : 'light'}`);
-        this.darkMode.set(e.matches);
-      }
-    });
+    // this.darkThemeMediaQuery.addEventListener('change', e => {
+    //   // Only update if user hasn't explicitly set a preference
+    //   if (!this.localStorage.getItem(this.THEME_KEY)) {
+    //     this.logger.info(`System color scheme changed to ${e.matches ? 'dark' : 'light'}`);
+    //     this.darkMode.set(e.matches);
+    //   }
+    // });
 
     this.logger.debug(`Initial theme set to: ${this.darkMode() ? 'dark' : 'light'}`);
   }
 
-  toggleDarkMode(): void {
+  private async initBrowserFeatures(): Promise<void> {
+    try {
+      // Initialize media query
+      this.darkThemeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      
+      // Set initial theme based on saved preference or system preference
+      this.darkMode.set(await this.getInitialThemePreference());
+      
+      // Listen for system preference changes
+      this.darkThemeMediaQuery.addEventListener('change', e => {
+        // Only update if user hasn't explicitly set a preference
+        if (!this.localStorage.getItem(this.THEME_KEY)) {
+          this.logger.info(`System color scheme changed to ${e.matches ? 'dark' : 'light'}`);
+          this.darkMode.set(e.matches);
+        }
+      });
+      
+      this.logger.debug(`Browser initialization complete. Theme: ${this.darkMode() ? 'dark' : 'light'}`);
+    } catch (error) {
+      this.logger.error('Error initializing browser features:', error);
+    }
+  }
+
+  toggleDarkMode() {
+    // Only allow toggling in browser context
+    if (!isPlatformBrowser(this.platformId)) {
+      this.logger.warn('Attempted to toggle theme in SSR context');
+      return;
+    }
+    
     const newValue = !this.darkMode();
     this.logger.info(`Toggling theme to: ${newValue ? 'dark' : 'light'}`);
     this.darkMode.set(newValue);
-    localStorage.setItem(this.THEME_KEY, newValue ? 'dark' : 'light');
+    this.localStorage.setItem(this.THEME_KEY, newValue ? 'dark' : 'light');
   }
 
-  private getInitialThemePreference(): boolean {
+  private getInitialThemePreference() {
+    if (!isPlatformBrowser(this.platformId)) {
+      return false; // Default to light theme in SSR
+    }
+    
     // Check for saved preference
-    const savedPreference = localStorage.getItem(this.THEME_KEY);
+    const savedPreference = this.localStorage.getItem(this.THEME_KEY);
     if (savedPreference) {
       this.logger.debug(`Using saved theme preference: ${savedPreference}`);
       return savedPreference === 'dark';
     }
 
     // Fall back to system preference
-    this.logger.debug(`No saved theme preference, using system preference: ${this.darkThemeMediaQuery.matches ? 'dark' : 'light'}`);
-    return this.darkThemeMediaQuery.matches;
+    const systemPrefersDark = this.darkThemeMediaQuery?.matches || false;
+    this.logger.debug(`No saved theme preference, using system preference: ${systemPrefersDark ? 'dark' : 'light'}`);
+    return systemPrefersDark;
   }
 
   private applyTheme(isDark: boolean): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      return; // Don't try to modify DOM during SSR
+    }
+    
     const themeColor = isDark ? this.DARK_THEME_COLOR : this.LIGHT_THEME_COLOR;
 
     if (isDark) {
-      document.documentElement.classList.add('dark');
+      this.document.documentElement.classList.add('dark');
     } else {
-      document.documentElement.classList.remove('dark');
+      this.document.documentElement.classList.remove('dark');
     }
 
     this.updateThemeMetaTag(themeColor);
   }
 
   private updateThemeMetaTag(color: string): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      return; // Don't try to modify DOM during SSR
+    }
+    
     // Find the theme-color meta tag
-    let metaThemeColor = document.querySelector('meta[name="theme-color"]');
+    let metaThemeColor = this.document.querySelector('meta[name="theme-color"]');
 
     // If it doesn't exist, create it
     if (!metaThemeColor) {
       this.logger.debug('Creating theme-color meta tag');
-      metaThemeColor = document.createElement('meta');
+      metaThemeColor = this.document.createElement('meta');
       metaThemeColor.setAttribute('name', 'theme-color');
-      document.head.appendChild(metaThemeColor);
+      this.document.head.appendChild(metaThemeColor);
     }
 
     // Set the color

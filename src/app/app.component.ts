@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect, ViewChild, OnInit, afterNextRender, computed, PLATFORM_ID } from '@angular/core';
+import { Component, inject, signal, effect, ViewChild, afterNextRender, computed, PLATFORM_ID } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
@@ -63,7 +63,7 @@ interface NavItem {
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })
-export class AppComponent implements OnInit {
+export class AppComponent {
   title = 'Nostria';
   themeService = inject(ThemeService);
   pwaUpdateService = inject(PwaUpdateService);
@@ -133,13 +133,13 @@ export class AppComponent implements OnInit {
     if (isPlatformBrowser(this.platform)) {
       console.warn("browser");
       // Safe to use document, window, localStorage, etc. :-)
-      console.log(document);
+      // console.log(document);
     }
 
     if (isPlatformServer(this.platform)) {
       console.warn("server");
       // Not smart to use document here, however, we can inject it ;-)
-      console.log(this.document);
+      // console.log(this.document);
     }
 
     effect(() => {
@@ -152,8 +152,10 @@ export class AppComponent implements OnInit {
       }
     });
 
+    if (this.app.isBrowser()) {
+
     // Show login dialog if user is not logged in - with debugging
-    effect(() => {
+    effect(() => {      
       if (this.app.initialized() && !this.app.authenticated()) {
         this.showLoginDialog();
       }
@@ -206,6 +208,8 @@ export class AppComponent implements OnInit {
         //   this.logger.error('Failed to load user metadata on user change', err));
       }
     });
+    }
+
 
     this.logger.debug('AppComponent constructor completed');
 
@@ -215,12 +219,12 @@ export class AppComponent implements OnInit {
     });
   }
 
-  async ngOnInit() {
-    this.logger.debug('AppComponent ngOnInit');
+  // async ngOnInit() {
+  //   this.logger.debug('AppComponent ngOnInit');
 
-    // Initialize storage, then nostr initialized and then app state.
-    await this.storage.init();
-  }
+  //   // Initialize storage, then nostr initialized and then app state.
+  //   await this.storage.init();
+  // }
 
   qrScan() {
     const dialogRef = this.dialog.open(QrcodeScanDialogComponent, {

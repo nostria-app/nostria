@@ -1,6 +1,7 @@
-import { computed, effect, inject, Injectable, signal } from "@angular/core";
+import { computed, effect, inject, Injectable, PLATFORM_ID, signal } from "@angular/core";
 import { Router } from "@angular/router";
 import { LoggerService } from "./logger.service";
+import { DOCUMENT, isPlatformBrowser } from "@angular/common";
 
 @Injectable({
     providedIn: 'root'
@@ -12,6 +13,8 @@ export class ApplicationStateService {
     showSuccess = signal(false);
     isLoading = signal(false);
     isOnline = signal(navigator.onLine);
+    private document = inject(DOCUMENT);
+    private platformId = inject(PLATFORM_ID);
 
     readonly BOOTSTRAP_RELAYS_STORAGE_KEY = 'nostria-bootstrap-relays';
     readonly ACCOUNT_STORAGE_KEY = 'nostria-account';
@@ -31,12 +34,20 @@ export class ApplicationStateService {
         this.offlineDismissed.set(true);
     }
 
+    getWindow(): Window | null {
+        return isPlatformBrowser(this.platformId) ? this.document.defaultView : null;
+    }
+
     private setupConnectionListeners(): void {
-        window.addEventListener('online', () => {
-            this.isOnline.set(true);
-            this.offlineDismissed.set(false); // Reset dismiss state when coming back online
-        });
-        window.addEventListener('offline', () => this.isOnline.set(false));
+        const window = this.getWindow();
+
+        if (window) {
+            window.addEventListener('online', () => {
+                this.isOnline.set(true);
+                this.offlineDismissed.set(false); // Reset dismiss state when coming back online
+            });
+            window.addEventListener('offline', () => this.isOnline.set(false));
+        }
 
         // Create an effect to log status changes (optional)
         effect(() => {

@@ -25,6 +25,7 @@ import { MediaPreviewDialogComponent } from '../../components/media-preview-dial
 import { ConfirmDialogComponent } from '../../components/confirm-dialog/confirm-dialog.component';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
+import { LocalStorageService } from '../../services/local-storage.service';
 
 @Component({
   selector: 'app-media',
@@ -59,6 +60,7 @@ export class MediaComponent {
   private router = inject(Router);
   appState = inject(ApplicationStateService);
   app = inject(ApplicationService);
+  private readonly localStorage = inject(LocalStorageService);
 
   // View state
   activeTab = signal<'images' | 'videos' | 'files' | 'servers'>('images');
@@ -74,7 +76,7 @@ export class MediaComponent {
 
   constructor() {
     // Restore the active tab from localStorage if available
-    const savedTab = localStorage.getItem(this.appState.MEDIA_ACTIVE_TAB);
+    const savedTab = this.localStorage.getItem(this.appState.MEDIA_ACTIVE_TAB);
     if (savedTab && ['images', 'videos', 'files', 'servers'].includes(savedTab)) {
       this.activeTab.set(savedTab as 'images' | 'videos' | 'files' | 'servers');
     }
@@ -243,7 +245,7 @@ export class MediaComponent {
 
   openDetailsDialog(item: MediaItem): void {
     // Save the current active tab before navigating
-    localStorage.setItem(this.appState.MEDIA_ACTIVE_TAB, this.activeTab());
+    this.localStorage.setItem(this.appState.MEDIA_ACTIVE_TAB, this.activeTab());
 
     // Navigate to details page instead of opening dialog
     this.router.navigate(['/media', 'details', item.sha256]);
@@ -271,7 +273,7 @@ export class MediaComponent {
     event.stopPropagation();
 
     // Save the current active tab before navigating
-    localStorage.setItem(this.appState.MEDIA_ACTIVE_TAB, this.activeTab());
+    this.localStorage.setItem(this.appState.MEDIA_ACTIVE_TAB, this.activeTab());
 
     // Navigate to details page with the item ID
     this.router.navigate(['/media', 'details', item.sha256]);
@@ -500,7 +502,7 @@ export class MediaComponent {
   setActiveTab(tab: 'images' | 'videos' | 'files' | 'servers'): void {
     this.activeTab.set(tab);
     // Store the selected tab in localStorage
-    localStorage.setItem(this.appState.MEDIA_ACTIVE_TAB, tab);
+    this.localStorage.setItem(this.appState.MEDIA_ACTIVE_TAB, tab);
 
     if (tab !== 'servers') {
       this.selectedItems.set([]);
