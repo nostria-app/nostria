@@ -677,6 +677,20 @@ export class NostrService {
     }
   }
 
+  async getMetadataForUsers(pubkey: string[], disconnect = true): Promise<NostrEvent[] | undefined> {
+    const metadataList: NostrEvent[] = [];
+
+    for (const p of pubkey) {
+      const metadata = await this.getMetadataForUser(p, disconnect);
+      if (metadata) {
+        metadataList.push(metadata);
+        // this.updateMetadataCache(p, metadata);
+      }
+    }
+
+    return metadataList;
+  }
+
   /** Get the BUD-03: User Server List */
   async getMediaServers(pubkey: string): Promise<NostrEvent | null> {
     // Check cache first

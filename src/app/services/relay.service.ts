@@ -89,6 +89,11 @@ export class RelayService {
     setInterval(() => this.cleanupTimeouts(), this.TIMEOUT_CLEANUP_INTERVAL);
   }
 
+  createPool() {
+    const pool = new SimplePool();
+    return pool;
+  }
+
   async timeoutRelays(relayUrls: string[]) {
     for (const relayUrl of relayUrls) {
       await this.timeoutRelay(relayUrl);

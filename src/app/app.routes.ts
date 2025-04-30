@@ -18,6 +18,7 @@ import { UpgradeComponent } from './pages/premium/upgrade/upgrade.component';
 import { DetailsComponent } from './pages/profile/details/details.component';
 import { NotificationsComponent } from './pages/notifications/notifications.component';
 import { MessagesComponent } from './pages/messages/messages.component';
+import { ArticlesComponent } from './pages/articles/articles.component';
 
 export const routes: Routes = [
   { path: '', component: HomeComponent, pathMatch: 'full' },
@@ -29,6 +30,7 @@ export const routes: Routes = [
   { path: 'credentials', component: CredentialsComponent },
   { path: 'about', component: AboutComponent },
   { path: 'bookmarks', loadComponent: () => import('./pages/bookmarks/bookmarks.component').then(m => m.BookmarksComponent), title: 'Bookmarks' },
+  { path: 'articles', component: ArticlesComponent, title: 'Articles' },
   {
     path: 'p/:id',
     component: ProfileComponent,
