@@ -12,6 +12,7 @@ import { BunkerPointer, BunkerSigner, parseBunkerInput } from 'nostr-tools/nip46
 import { NostrTagKey, StandardizedTagType } from '../standardized-tags';
 import { ApplicationStateService } from './application-state.service';
 import { AccountStateService } from './account-state.service';
+import { LocalStorageService } from './local-storage.service';
 
 export interface NostrUser {
   pubkey: string;
@@ -35,6 +36,7 @@ export class NostrService {
   private readonly storage = inject(StorageService);
   private readonly appState = inject(ApplicationStateService);
   private readonly accountState = inject(AccountStateService);
+  private readonly localStorage = inject(LocalStorageService);
 
   account = signal<NostrUser | null>(null);
 
@@ -109,7 +111,7 @@ export class NostrService {
   getAccountFromStorage() {
     // Initialize account from localStorage if available.
     try {
-      const userJson = localStorage.getItem(this.appState.ACCOUNT_STORAGE_KEY);
+      const userJson = this.localStorage.getItem(this.appState.ACCOUNT_STORAGE_KEY);
       if (userJson) {
         return JSON.parse(userJson) as NostrUser;
       }
@@ -207,7 +209,7 @@ export class NostrService {
 
     //     if (currentUser) {
     //       this.logger.debug('Saving current user to localStorage', { pubkey: currentUser.pubkey });
-    //       localStorage.setItem(this.appState.ACCOUNT_STORAGE_KEY, JSON.stringify(currentUser));
+    //       this.localStorage.setItem(this.appState.ACCOUNT_STORAGE_KEY, JSON.stringify(currentUser));
 
     //       this.logger.debug('Load data for current user', { pubkey: currentUser.pubkey });
     //       await this.loadData();
@@ -235,7 +237,7 @@ export class NostrService {
       this.logger.debug('Users collection effect triggered', { count: allUsers.length });
 
       this.logger.debug(`Saving ${allUsers.length} users to localStorage`);
-      localStorage.setItem(this.appState.ACCOUNTS_STORAGE_KEY, JSON.stringify(allUsers));
+      this.localStorage.setItem(this.appState.ACCOUNTS_STORAGE_KEY, JSON.stringify(allUsers));
 
       // When users change, ensure we have metadata for all of them
       // untracked(() => {
@@ -1130,7 +1132,7 @@ export class NostrService {
   }
 
   private loadAccountsFromStorage(): void {
-    const usersJson = localStorage.getItem(this.appState.ACCOUNTS_STORAGE_KEY);
+    const usersJson = this.localStorage.getItem(this.appState.ACCOUNTS_STORAGE_KEY);
     if (usersJson) {
       try {
         const parsedUsers = JSON.parse(usersJson);
@@ -1146,7 +1148,7 @@ export class NostrService {
   }
 
   // private loadActiveAccountFromStorage(): void {
-  //   const userJson = localStorage.getItem(this.appState.ACCOUNT_STORAGE_KEY);
+  //   const userJson = this.localStorage.getItem(this.appState.ACCOUNT_STORAGE_KEY);
   //   this.logger.info('Loading active user from localStorage', userJson);
   //   if (userJson) {
   //     try {
@@ -1320,7 +1322,7 @@ export class NostrService {
       this.logger.debug('Successfully switched user');
 
       // Persist the account to local storage.
-      localStorage.setItem(this.appState.ACCOUNT_STORAGE_KEY, JSON.stringify(targetUser));
+      this.localStorage.setItem(this.appState.ACCOUNT_STORAGE_KEY, JSON.stringify(targetUser));
 
       // Make sure we have the latest metadata for this user
       // this.getUserMetadata(pubkey).catch(err =>
@@ -1361,7 +1363,7 @@ export class NostrService {
     this.account.set(user);
 
     // Persist the account to local storage.
-    localStorage.setItem(this.appState.ACCOUNT_STORAGE_KEY, JSON.stringify(user));
+    this.localStorage.setItem(this.appState.ACCOUNT_STORAGE_KEY, JSON.stringify(user));
 
     // Make sure we have the latest metadata for this user
     // this.getUserMetadata(user.pubkey).catch(err =>
@@ -1513,7 +1515,7 @@ export class NostrService {
 
   logout(): void {
     this.logger.info('Logging out current user');
-    localStorage.removeItem(this.appState.ACCOUNT_STORAGE_KEY);
+    this.localStorage.removeItem(this.appState.ACCOUNT_STORAGE_KEY);
     debugger;
     this.account.set(null);
     this.logger.debug('User logged out successfully');

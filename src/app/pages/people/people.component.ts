@@ -19,6 +19,7 @@ import { UserProfileComponent } from '../../components/user-profile/user-profile
 import { Router } from '@angular/router';
 import { AccountStateService } from '../../services/account-state.service';
 import { ApplicationService } from '../../services/application.service';
+import { LocalStorageService } from '../../services/local-storage.service';
 
 // Define filter options interface
 interface FilterOptions {
@@ -57,6 +58,7 @@ export class PeopleComponent {
   private storage = inject(StorageService);
   private accountState = inject(AccountStateService);
   private app = inject(ApplicationService);
+  private readonly localStorage = inject(LocalStorageService);
 
   // People data signals
   people = signal<string[]>([]);
@@ -186,13 +188,13 @@ export class PeopleComponent {
     });
 
     // Load view mode from localStorage if available
-    const savedViewMode = localStorage.getItem('peopleViewMode');
+    const savedViewMode = this.localStorage.getItem('peopleViewMode');
     if (savedViewMode) {
       this.viewMode.set(savedViewMode);
     }
 
     // Load filters from localStorage if available
-    const savedFilters = localStorage.getItem('peopleFilters');
+    const savedFilters = this.localStorage.getItem('peopleFilters');
     if (savedFilters) {
       try {
         this.filters.set(JSON.parse(savedFilters));
@@ -203,7 +205,7 @@ export class PeopleComponent {
 
     // Save filters when they change
     effect(() => {
-      localStorage.setItem('peopleFilters', JSON.stringify(this.filters()));
+      this.localStorage.setItem('peopleFilters', JSON.stringify(this.filters()));
     });
   }
 
@@ -281,7 +283,7 @@ export class PeopleComponent {
 
   changeViewMode(mode: string) {
     this.viewMode.set(mode);
-    localStorage.setItem('peopleViewMode', mode);
+    this.localStorage.setItem('peopleViewMode', mode);
   }
 
   toggleFilter(filterName: keyof FilterOptions, event?: Event | any) {

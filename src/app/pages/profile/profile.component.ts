@@ -1,5 +1,5 @@
-import { Component, inject, signal, effect, untracked, Inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, inject, signal, effect, untracked, Inject, PLATFORM_ID } from '@angular/core';
+import { CommonModule, DOCUMENT, isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, ParamMap, RouterModule, RouterOutlet, Router, NavigationEnd } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -70,6 +70,8 @@ export class ProfileComponent {
   private logger = inject(LoggerService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
+  private document = inject(DOCUMENT);
+  private platformId = inject(PLATFORM_ID);
   layoutService = inject(LayoutService);
   profileState = inject(ProfileStateService);
   accountState = inject(AccountStateService);
@@ -152,6 +154,14 @@ export class ProfileComponent {
       url.includes('/media');
   }
 
+  /**
+   * Safely access window object in browser context
+   * @returns Window object or null if not in browser
+   */
+  private getWindow(): Window | null {
+    return isPlatformBrowser(this.platformId) ? this.document.defaultView : null;
+  }
+
   private async loadUserData(pubkey: string, disconnect = true): Promise<void> {
     debugger;
     
@@ -214,25 +224,6 @@ export class ProfileComponent {
         // Also changed this to an arrow function for consistency
       },
     });
-
-
-    // this.isLoading.set(true);
-    // this.error.set(null);
-
-    // try {
-    //   // Fetch user data from the relay service
-    //   const userData = await this.relayService.getUserData(pubkey);
-    //   if (userData) {
-    //     this.userMetadata.set(userData);
-    //   } else {
-    //     this.error.set('No user data found');
-    //   }
-    // } catch (err) {
-    //   this.logger.error('Error loading user data', err);
-    //   this.error.set('Error loading user data');
-    // } finally {
-    //   this.isLoading.set(false);
-    // }
   }
 
   private async loadUserProfile(pubkey: string): Promise<void> {
@@ -298,6 +289,17 @@ export class ProfileComponent {
   }
 
   copyToClipboard(text: string, type: string): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      this.logger.error('Cannot copy to clipboard in server environment');
+      return;
+    }
+    
+    const navigator = this.getWindow()?.navigator;
+    if (!navigator?.clipboard) {
+      this.logger.error('Clipboard API not available');
+      return;
+    }
+
     navigator.clipboard.writeText(text)
       .then(() => {
         this.logger.debug(`Copied ${type} to clipboard:`, text);
@@ -350,11 +352,13 @@ export class ProfileComponent {
 
   shareProfile(): void {
     // Share profile action using the Web Share API if available
-    if (navigator.share) {
-      navigator.share({
+    const window = this.getWindow();
+    
+    if (isPlatformBrowser(this.platformId) && window?.navigator?.share) {
+      window.navigator.share({
         title: `${this.getFormattedName()}'s Nostr Profile`,
         text: `Check out ${this.getFormattedName()} on Nostr`,
-        url: window.location.href
+        url: this.getCurrentUrl()
       }).then(() => {
         this.logger.debug('Profile shared successfully');
       }).catch((error) => {
@@ -362,12 +366,12 @@ export class ProfileComponent {
       });
     } else {
       // Fallback if Web Share API is not available
-      this.copyToClipboard(window.location.href, 'profile URL');
+      this.copyToClipboard(this.getCurrentUrl(), 'profile URL');
     }
   }
 
   shareProfileUrl(): void {
-    this.copyToClipboard(window.location.href, 'profile URL');
+    this.copyToClipboard(this.getCurrentUrl(), 'profile URL');
   }
 
   unfollowUser(): void {
@@ -417,6 +421,11 @@ export class ProfileComponent {
    * Generates a QR code for the user's lightning address and stores it in the lightningQrCode signal
    */
   async generateLightningQRCode(): Promise<void> {
+    if (!isPlatformBrowser(this.platformId)) {
+      this.logger.debug('Cannot generate QR code in server environment');
+      return;
+    }
+    
     const metadata = this.userMetadata();
     if (!metadata?.content?.lud16) {
       this.lightningQrCode.set('');
@@ -441,5 +450,28 @@ export class ProfileComponent {
       this.logger.error('Error generating QR code:', err);
       this.lightningQrCode.set('');
     }
+  }
+
+  /**
+   * Gets the current URL safely in both browser and server environments
+   */
+  private getCurrentUrl(): string {
+    if (isPlatformBrowser(this.platformId)) {
+      const window = this.getWindow();
+      return window?.location?.href || this.getServerSideUrl();
+    }
+    return this.getServerSideUrl();
+  }
+  
+  /**
+   * Creates a URL from router state for server-side rendering
+   */
+  private getServerSideUrl(): string {
+    const url = this.router.url;
+    // Use configured app URL or fallback
+    const baseUrl = isPlatformBrowser(this.platformId) 
+      ? this.document.location?.origin 
+      : 'https://nostria.app';
+    return `${baseUrl}${url}`;
   }
 }

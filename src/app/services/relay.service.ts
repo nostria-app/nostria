@@ -5,6 +5,7 @@ import { Event, kinds, SimplePool } from 'nostr-tools';
 import { NostrEvent } from '../interfaces';
 import { ApplicationStateService } from './application-state.service';
 import { NotificationService } from './notification.service';
+import { LocalStorageService } from './local-storage.service';
 
 export interface Relay {
   url: string;
@@ -32,6 +33,7 @@ export class RelayService {
   private readonly storage = inject(StorageService);
   private readonly appState = inject(ApplicationStateService);
   private readonly notificationService = inject(NotificationService);
+  private readonly localStorage = inject(LocalStorageService);
 
   // Initialize signals with empty arrays first, then populate in constructor
   #bootStrapRelays: string[] = [];
@@ -80,7 +82,7 @@ export class RelayService {
       this.logger.debug(`Bootstrap relays effect triggered with ${currentBootstrapRelays.length} relays`);
 
       // Save to local storage
-      localStorage.setItem(this.appState.BOOTSTRAP_RELAYS_STORAGE_KEY, JSON.stringify(currentBootstrapRelays));
+      this.localStorage.setItem(this.appState.BOOTSTRAP_RELAYS_STORAGE_KEY, JSON.stringify(currentBootstrapRelays));
     });
 
     // Set up interval to clean expired timeouts
@@ -212,7 +214,7 @@ export class RelayService {
    */
   private loadBootstrapRelaysFromStorage(): string[] | null {
     try {
-      const storedRelays = localStorage.getItem(this.appState.BOOTSTRAP_RELAYS_STORAGE_KEY);
+      const storedRelays = this.localStorage.getItem(this.appState.BOOTSTRAP_RELAYS_STORAGE_KEY);
       if (storedRelays) {
         const parsedRelays = JSON.parse(storedRelays);
         if (Array.isArray(parsedRelays)) {

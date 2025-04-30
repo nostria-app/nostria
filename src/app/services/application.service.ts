@@ -1,4 +1,4 @@
-import { computed, effect, inject, Injectable, signal } from "@angular/core";
+import { computed, effect, inject, Injectable, PLATFORM_ID, signal } from "@angular/core";
 import { NostrService } from "./nostr.service";
 import { StorageService } from "./storage.service";
 import { Router, RouterLink, RouterModule } from "@angular/router";
@@ -6,6 +6,8 @@ import { LoggerService } from "./logger.service";
 import { ApplicationStateService } from "./application-state.service";
 import { ThemeService } from "./theme.service";
 import { NotificationService } from "./notification.service";
+import { LocalStorageService } from "./local-storage.service";
+import { isPlatformBrowser } from "@angular/common";
 
 @Injectable({
     providedIn: 'root'
@@ -18,6 +20,9 @@ export class ApplicationService {
     appState = inject(ApplicationStateService);
     theme = inject(ThemeService);
     notificationService = inject(NotificationService);
+    private readonly localStorage = inject(LocalStorageService);
+    private readonly platformId = inject(PLATFORM_ID);
+    readonly isBrowser = signal(isPlatformBrowser(this.platformId));
 
     /** Check the status on fully initialized, which ensures Nostr, Storage and user is logged in. */
     initialized = computed(() => this.nostrService.initialized() && this.storage.initialized());
@@ -43,8 +48,12 @@ export class ApplicationService {
     }
 
     reload() {
-        // Reload the application
-        window.location.reload();
+        const window = this.appState.getWindow();
+
+        if (window) {
+            // Reload the application
+            window.location.reload();
+        }
     }
 
     private async loadAppData(): Promise<void> {
@@ -73,7 +82,7 @@ export class ApplicationService {
         ];
 
         for (let i = 0; i < keysToRemove.length; i++) {
-            localStorage.removeItem(keysToRemove[i]);
+            this.localStorage.removeItem(keysToRemove[i]);
         }
 
         // Clear notifications from memory
@@ -84,7 +93,11 @@ export class ApplicationService {
         // Navigate to home page before reloading
         await this.router.navigate(['/']);
 
-        // Reload the application
-        window.location.reload();
+        const window = this.appState.getWindow();
+
+        if (window) {
+            // Reload the application
+            window.location.reload();
+        }
     }
 }

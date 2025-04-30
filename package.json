@@ -9,7 +9,10 @@
     "test": "ng test",
     "tauri": "tauri",
     "get-version": "node -p \"require('./package.json').version\"",
-    "serve:ssr:app": "node dist/app/server/server.mjs"
+    "serve:ssr:app": "node dist/app/server/server.mjs",
+    "debug:ssr:build": "ng build && ng run app:serve",
+    "debug:ssr:serve": "node --inspect dist/app/server/server.mjs",
+    "debug:ssr": "npm run debug:ssr:build && npm run debug:ssr:serve"
   },
   "private": true,
   "dependencies": {
