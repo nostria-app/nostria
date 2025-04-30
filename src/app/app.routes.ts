@@ -17,11 +17,13 @@ import { PremiumComponent } from './pages/premium/premium.component';
 import { UpgradeComponent } from './pages/premium/upgrade/upgrade.component';
 import { DetailsComponent } from './pages/profile/details/details.component';
 import { NotificationsComponent } from './pages/notifications/notifications.component';
+import { MessagesComponent } from './pages/messages/messages.component';
 
 export const routes: Routes = [
   { path: '', component: HomeComponent, pathMatch: 'full' },
   { path: 'home', component: HomeComponent }, // Keep for backward compatibility
   { path: 'relays', component: RelaysComponent },
+  { path: 'messages', component: MessagesComponent },
   { path: 'settings', component: SettingsComponent },
   { path: 'notifications', component: NotificationsComponent },
   { path: 'credentials', component: CredentialsComponent },
