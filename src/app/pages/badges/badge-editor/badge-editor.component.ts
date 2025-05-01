@@ -9,6 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { Router } from '@angular/router';
 
 @Component({
@@ -25,7 +26,9 @@ import { Router } from '@angular/router';
     MatChipsModule,
     MatDividerModule,
     MatSnackBarModule,
-    FormsModule
+    MatSlideToggleModule,
+    FormsModule,
+    MatSlideToggleModule
   ],
   templateUrl: './badge-editor.component.html',
   styleUrl: './badge-editor.component.scss'
@@ -45,6 +48,10 @@ export class BadgeEditorComponent {
   // Badge preview
   previewImage = signal<string | null>(null);
   previewThumbnail = signal<string | null>(null);
+  
+  // Toggle between upload and URL input
+  useImageUrl = signal<boolean>(false);
+  useThumbnailUrl = signal<boolean>(false);
 
   constructor() {
     this.badgeForm = this.fb.group({
@@ -52,7 +59,9 @@ export class BadgeEditorComponent {
       slug: ['', [Validators.required]],
       description: ['', [Validators.required]],
       image: ['', [Validators.required]],
-      thumbnail: ['']
+      thumbnail: [''],
+      imageUrl: [''],
+      thumbnailUrl: ['']
     });
 
     // Update slug automatically from name
@@ -89,6 +98,50 @@ export class BadgeEditorComponent {
         }
       };
       reader.readAsDataURL(file);
+    }
+  }
+
+  // Handle URL input for images
+  onImageUrlChange(type: 'image' | 'thumbnail'): void {
+    const url = type === 'image' 
+      ? this.badgeForm.get('imageUrl')?.value
+      : this.badgeForm.get('thumbnailUrl')?.value;
+      
+    if (url && url.trim() !== '') {
+      // Update preview and form value
+      if (type === 'image') {
+        this.previewImage.set(url);
+        this.badgeForm.get('image')?.setValue(url);
+      } else {
+        this.previewThumbnail.set(url);
+        this.badgeForm.get('thumbnail')?.setValue(url);
+      }
+    } else {
+      // Clear preview if URL is empty
+      if (type === 'image') {
+        this.previewImage.set(null);
+        this.badgeForm.get('image')?.setValue('');
+      } else {
+        this.previewThumbnail.set(null);
+        this.badgeForm.get('thumbnail')?.setValue('');
+      }
+    }
+  }
+
+  // Toggle image input method
+  toggleImageInputMethod(type: 'image' | 'thumbnail'): void {
+    if (type === 'image') {
+      this.useImageUrl.update(current => !current);
+      // Clear form values when switching
+      this.badgeForm.get('image')?.setValue('');
+      this.badgeForm.get('imageUrl')?.setValue('');
+      this.previewImage.set(null);
+    } else {
+      this.useThumbnailUrl.update(current => !current);
+      // Clear form values when switching
+      this.badgeForm.get('thumbnail')?.setValue('');
+      this.badgeForm.get('thumbnailUrl')?.setValue('');
+      this.previewThumbnail.set(null);
     }
   }
 

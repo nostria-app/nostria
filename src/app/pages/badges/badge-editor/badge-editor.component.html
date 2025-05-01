@@ -29,30 +29,76 @@
                 </mat-form-field>
 
                 <div class="file-upload-section">
-                    <h3>Badge Graphics (1024x1024)</h3>
-                    <div class="file-upload">
-                        <button mat-stroked-button type="button" (click)="imageInput.click()">
-                            <mat-icon>upload</mat-icon>
-                            Upload Image
-                        </button>
-                        <input #imageInput type="file" hidden (change)="onImageSelected($event, 'image')" accept="image/*">
-                        <span *ngIf="previewImage()">File selected</span>
+                    <div class="section-header">
+                        <h3>Badge Graphics (1024x1024)</h3>
+                        <div class="toggle-container">
+                            <span>File</span>
+                            <mat-slide-toggle 
+                                [checked]="useImageUrl()" 
+                                (change)="toggleImageInputMethod('image')"
+                                color="primary">
+                            </mat-slide-toggle>
+                            <span>URL</span>
+                        </div>
                     </div>
+                    
+                    @if (!useImageUrl()) {
+                        <div class="file-upload">
+                            <button mat-stroked-button type="button" (click)="imageInput.click()">
+                                <mat-icon>upload</mat-icon>
+                                Upload Image
+                            </button>
+                            <input #imageInput type="file" hidden (change)="onImageSelected($event, 'image')" accept="image/*">
+                            @if (previewImage()) {
+                                <span >File selected</span>
+                            }
+                        </div>
+                    } @else {
+                        <mat-form-field class="full-width">
+                            <mat-label>Image URL</mat-label>
+                            <input matInput formControlName="imageUrl" placeholder="https://example.com/image.png"
+                                (blur)="onImageUrlChange('image')">
+                            <mat-icon matSuffix>link</mat-icon>
+                        </mat-form-field>
+                    }
                     <mat-error *ngIf="badgeForm.get('image')?.invalid && badgeForm.get('image')?.touched">
                         Badge image is required
                     </mat-error>
                 </div>
 
                 <div class="file-upload-section">
-                    <h3>Badge Thumbnail (Optional)</h3>
-                    <div class="file-upload">
-                        <button mat-stroked-button type="button" (click)="thumbnailInput.click()">
-                            <mat-icon>upload</mat-icon>
-                            Upload Thumbnail
-                        </button>
-                        <input #thumbnailInput type="file" hidden (change)="onImageSelected($event, 'thumbnail')" accept="image/*">
-                        <span *ngIf="previewThumbnail()">File selected</span>
+                    <div class="section-header">
+                        <h3>Badge Thumbnail (Optional)</h3>
+                        <div class="toggle-container">
+                            <span>File</span>
+                            <mat-slide-toggle 
+                                [checked]="useThumbnailUrl()" 
+                                (change)="toggleImageInputMethod('thumbnail')"
+                                color="primary">
+                            </mat-slide-toggle>
+                            <span>URL</span>
+                        </div>
                     </div>
+                    
+                    @if (!useThumbnailUrl()) {
+                        <div class="file-upload">
+                            <button mat-stroked-button type="button" (click)="thumbnailInput.click()">
+                                <mat-icon>upload</mat-icon>
+                                Upload Thumbnail
+                            </button>
+                            <input #thumbnailInput type="file" hidden (change)="onImageSelected($event, 'thumbnail')" accept="image/*">
+                            @if (previewThumbnail()) {
+                                <span >File selected</span>
+                            }
+                        </div>
+                    } @else {
+                        <mat-form-field class="full-width">
+                            <mat-label>Thumbnail URL</mat-label>
+                            <input matInput formControlName="thumbnailUrl" placeholder="https://example.com/thumbnail.png"
+                                (blur)="onImageUrlChange('thumbnail')">
+                            <mat-icon matSuffix>link</mat-icon>
+                        </mat-form-field>
+                    }
                 </div>
 
                 <div class="tags-section">
