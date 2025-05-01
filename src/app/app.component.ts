@@ -127,9 +127,9 @@ export class AppComponent {
     { path: 'badges', label: 'Badges', icon: 'badge', showInMobile: false },
     { path: 'relays', label: 'Relays', icon: 'dns', showInMobile: false },
     { path: 'backup', label: 'Backup', icon: 'archive', showInMobile: false },
-    { path: 'settings', label: 'Settings', icon: 'settings', showInMobile: true },
+    // { path: 'settings', label: 'Settings', icon: 'settings', showInMobile: true },
     { path: 'premium', label: 'Premium', icon: 'diamond', showInMobile: false },
-    { path: 'about', label: 'About', icon: 'info', showInMobile: true },
+    // { path: 'about', label: 'About', icon: 'info', showInMobile: true },
     // { path: '', label: 'Logout', icon: 'logout', action: () => this.logout(), showInMobile: false }
   ];
 
