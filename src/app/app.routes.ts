@@ -19,10 +19,12 @@ import { DetailsComponent } from './pages/profile/details/details.component';
 import { NotificationsComponent } from './pages/notifications/notifications.component';
 import { MessagesComponent } from './pages/messages/messages.component';
 import { ArticlesComponent } from './pages/articles/articles.component';
+import { WelcomeComponent } from './pages/welcome/welcomecomponent';
 
 export const routes: Routes = [
   { path: '', component: HomeComponent, pathMatch: 'full' },
-  { path: 'home', component: HomeComponent }, // Keep for backward compatibility
+  { path: 'home', component: HomeComponent },
+  { path: 'welcome', component: WelcomeComponent },
   { path: 'relays', component: RelaysComponent },
   { path: 'messages', component: MessagesComponent },
   { path: 'settings', component: SettingsComponent },
