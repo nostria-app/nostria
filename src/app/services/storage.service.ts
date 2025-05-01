@@ -580,15 +580,19 @@ export class StorageService {
 
   async saveRelay(relay: Relay, nip11Info?: Nip11Info): Promise<void> {
     try {
+      // Create a deep clone of the relay object to avoid modifying the original
+      // const relayClone = structuredClone(relay);
+      
+      // Create a new object with the clone as the base
       const enhancedRelay: any = { ...relay };
-
+  
       if (nip11Info) {
         enhancedRelay['nip11'] = {
           ...nip11Info,
           last_checked: Date.now()
         };
       }
-
+  
       await this.db.put('relays', enhancedRelay);
       this.logger.debug(`Saved relay to IndexedDB: ${relay.url}`);
       await this.updateStats();
@@ -596,6 +600,26 @@ export class StorageService {
       this.logger.error(`Error saving relay ${relay.url}`, error);
     }
   }
+
+  // async saveRelay(relay: Relay, nip11Info?: Nip11Info): Promise<void> {
+  //   try {
+  //     debugger;
+  //     const enhancedRelay: any = { ...relay };
+
+  //     if (nip11Info) {
+  //       enhancedRelay['nip11'] = {
+  //         ...nip11Info,
+  //         last_checked: Date.now()
+  //       };
+  //     }
+
+  //     await this.db.put('relays', enhancedRelay);
+  //     this.logger.debug(`Saved relay to IndexedDB: ${relay.url}`);
+  //     // await this.updateStats();
+  //   } catch (error) {
+  //     this.logger.error(`Error saving relay ${relay.url}`, error);
+  //   }
+  // }
 
   async getRelay(url: string): Promise<(Relay & { nip11?: Nip11Info }) | undefined> {
     try {
@@ -899,45 +923,46 @@ export class StorageService {
   }
 
   async updateStats(): Promise<void> {
-    try {
-      const relays = await this.getAllRelays();
-      // const userMetadata = await this.getAllUserMetadata();
-      // const userRelays = await this.getAllUserRelays();
-      const info = await this.getAllInfo();
-      const notifications = await this.getAllNotifications();
+    return; 
+    // try {
+    //   const relays = await this.getAllRelays();
+    //   // const userMetadata = await this.getAllUserMetadata();
+    //   // const userRelays = await this.getAllUserRelays();
+    //   const info = await this.getAllInfo();
+    //   const notifications = await this.getAllNotifications();
 
-      // Count events (may need optimization for large datasets)
-      let eventsCount = 0;
-      try {
-        // Just get the count without loading all events
-        const tx = this.db.transaction('events', 'readonly');
-        eventsCount = await tx.store.count();
-      } catch (error) {
-        this.logger.error('Error counting events', error);
-      }
+    //   // Count events (may need optimization for large datasets)
+    //   let eventsCount = 0;
+    //   try {
+    //     // Just get the count without loading all events
+    //     const tx = this.db.transaction('events', 'readonly');
+    //     eventsCount = await tx.store.count();
+    //   } catch (error) {
+    //     this.logger.error('Error counting events', error);
+    //   }
 
-      // Calculate approximate size
-      const relaysSize = JSON.stringify(relays).length;
-      // const userMetadataSize = JSON.stringify(userMetadata).length;
-      // const userRelaysSize = JSON.stringify(userRelays).length;
-      const infoSize = JSON.stringify(info).length;
-      const notificationsSize = JSON.stringify(notifications).length;
-      const eventsSize = eventsCount * 500; // Rough estimation of average event size
-      const totalSize = relaysSize + eventsSize + infoSize + notificationsSize;
+    //   // Calculate approximate size
+    //   const relaysSize = JSON.stringify(relays).length;
+    //   // const userMetadataSize = JSON.stringify(userMetadata).length;
+    //   // const userRelaysSize = JSON.stringify(userRelays).length;
+    //   const infoSize = JSON.stringify(info).length;
+    //   const notificationsSize = JSON.stringify(notifications).length;
+    //   const eventsSize = eventsCount * 500; // Rough estimation of average event size
+    //   const totalSize = relaysSize + eventsSize + infoSize + notificationsSize;
 
-      this.dbStats.set({
-        relaysCount: relays.length,
-        // userMetadataCount: userMetadata.length,
-        // userRelaysCount: userRelays.length,
-        eventsCount,
-        infoCount: info.length,
-        estimatedSize: totalSize
-      });
+    //   this.dbStats.set({
+    //     relaysCount: relays.length,
+    //     // userMetadataCount: userMetadata.length,
+    //     // userRelaysCount: userRelays.length,
+    //     eventsCount,
+    //     infoCount: info.length,
+    //     estimatedSize: totalSize
+    //   });
 
-      this.logger.debug('Database stats updated', this.dbStats());
-    } catch (error) {
-      this.logger.error('Error updating database stats', error);
-    }
+    //   this.logger.debug('Database stats updated', this.dbStats());
+    // } catch (error) {
+    //   this.logger.error('Error updating database stats', error);
+    // }
   }
 
   formatSize(bytes: number): string {

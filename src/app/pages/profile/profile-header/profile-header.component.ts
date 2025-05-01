@@ -53,7 +53,7 @@ export class ProfileHeaderComponent {
     });
 
     isOwnProfile = computed(() => {
-        return this.nostr.activeAccount()?.pubkey === this.profile()?.pubkey;
+        return this.nostr.pubkey() === this.profile()?.pubkey;
     });
 
     constructor() {

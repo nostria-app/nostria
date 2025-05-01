@@ -106,14 +106,14 @@
             <mat-card-subtitle>These relays are used for discovery of Relay Lists of users</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
-            @if (bootstrapRelays().length === 0) {
+            @if (relay.discoveryRelays.length === 0) {
             <div class="text-center py-8 text-gray-500">
               <p>You don't have any bootstrap relays configured.</p>
               <p>Add a bootstrap relay using the form above.</p>
             </div>
             } @else {
             <mat-list>
-              @for (relay of bootstrapRelays(); track relay) {
+              @for (relay of relay.discoveryRelays; track relay) {
               <mat-list-item>
                 <div class="relay-item-container">
                   <div class="status-icon">
@@ -128,7 +128,7 @@
                     <button mat-icon-button color="primary" (click)="viewRelayInfo(relay)" aria-label="View relay info">
                       <mat-icon>info</mat-icon>
                     </button>
-                    <button mat-icon-button color="warn" (click)="removeBootstrapRelay(relay)" aria-label="Remove bootstrap relay">
+                    <button mat-icon-button color="warn" (click)="removeDiscoveryRelay(relay)" aria-label="Remove bootstrap relay">
                       <mat-icon>delete</mat-icon>
                     </button>
                   </div>

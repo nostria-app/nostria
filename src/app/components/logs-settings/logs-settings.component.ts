@@ -40,7 +40,7 @@ export class LogsSettingsComponent {
 
   constructor() {
     effect(async () => {
-      if (this.app.authenticated()) {
+      if (this.app.initialized() && this.app.authenticated()) {
         const relaysInfo = await this.storage.getInfoByType('relay');
         const disabledRelays = relaysInfo.filter((relay: any) => relay.disabled);
         this.disabledRelays.set(disabledRelays);

@@ -164,7 +164,7 @@ export class ProfileComponent {
 
   private async loadUserData(pubkey: string, disconnect = true): Promise<void> {
     debugger;
-    
+
     if (!this.nostrService.currentProfileUserPool) {
       this.nostrService.currentProfileUserPool = new SimplePool();
     }
@@ -253,8 +253,7 @@ export class ProfileComponent {
   }
 
   private checkIfOwnProfile(pubkey: string): void {
-    const activeAccount = this.nostrService.activeAccount();
-    this.isOwnProfile.set(activeAccount?.pubkey === pubkey);
+    this.isOwnProfile.set(this.nostrService.pubkey() === pubkey);
   }
 
   getFormattedName(): string {
@@ -293,7 +292,7 @@ export class ProfileComponent {
       this.logger.error('Cannot copy to clipboard in server environment');
       return;
     }
-    
+
     const navigator = this.getWindow()?.navigator;
     if (!navigator?.clipboard) {
       this.logger.error('Clipboard API not available');
@@ -353,7 +352,7 @@ export class ProfileComponent {
   shareProfile(): void {
     // Share profile action using the Web Share API if available
     const window = this.getWindow();
-    
+
     if (isPlatformBrowser(this.platformId) && window?.navigator?.share) {
       window.navigator.share({
         title: `${this.getFormattedName()}'s Nostr Profile`,
@@ -425,7 +424,7 @@ export class ProfileComponent {
       this.logger.debug('Cannot generate QR code in server environment');
       return;
     }
-    
+
     const metadata = this.userMetadata();
     if (!metadata?.content?.lud16) {
       this.lightningQrCode.set('');
@@ -462,15 +461,15 @@ export class ProfileComponent {
     }
     return this.getServerSideUrl();
   }
-  
+
   /**
    * Creates a URL from router state for server-side rendering
    */
   private getServerSideUrl(): string {
     const url = this.router.url;
     // Use configured app URL or fallback
-    const baseUrl = isPlatformBrowser(this.platformId) 
-      ? this.document.location?.origin 
+    const baseUrl = isPlatformBrowser(this.platformId)
+      ? this.document.location?.origin
       : 'https://nostria.app';
     return `${baseUrl}${url}`;
   }

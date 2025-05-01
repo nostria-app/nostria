@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, computed, effect } from '@angular/core';
+import { Injectable, inject, signal, computed, effect, untracked } from '@angular/core';
 import { LoggerService } from './logger.service';
 import { StorageService, Nip11Info, NostrEventData, UserMetadata } from './storage.service';
 import { Event, kinds, SimplePool } from 'nostr-tools';
@@ -36,16 +36,19 @@ export class RelayService {
   private readonly localStorage = inject(LocalStorageService);
 
   // Initialize signals with empty arrays first, then populate in constructor
-  #bootStrapRelays: string[] = [];
-  bootStrapRelays = signal<string[]>([]);
+  discoveryRelays: string[] = [];
+  // discoveryRelays = signal<string[]>([]);
 
   // TODO: Allow the user to set their own default relays in the settings?
   // TODO: Decided on a good default relay list.
-  #defaultRelays = ['wss://relay.damus.io/', 'wss://relay.primal.net/'];
-  defaultRelays = signal(this.#defaultRelays);
+  defaultRelays = ['wss://relay.damus.io/', 'wss://relay.primal.net/'];
+  // defaultRelays = signal(this.#defaultRelays);
 
   // Signal to store the relays for the current user
-  private relays = signal<Relay[]>([]);
+  // private relays = signal<Relay[]>([]);
+  relays: Relay[] = [];
+
+  relaysChanged = signal<Relay[]>([]);
 
   /** Relays that have received a timeout and we won't connect to before timeout completes. */
   timeouts = signal<Relay[]>([]);
@@ -54,7 +57,7 @@ export class RelayService {
   disabled = signal<Relay[]>([]);
 
   // Computed value for public access to relays
-  userRelays = computed(() => this.relays());
+  // userRelays = computed(() => this.relays());
 
   private accountPool: SimplePool | null = null;
 
@@ -62,31 +65,30 @@ export class RelayService {
     this.logger.info('Initializing RelayService');
 
     // Move bootstrap relay initialization to constructor
-    this.#bootStrapRelays = this.loadBootstrapRelaysFromStorage() || this.DEFAULT_BOOTSTRAP_RELAYS;
-    this.bootStrapRelays.set(this.#bootStrapRelays);
+    this.discoveryRelays = this.loadDiscoveryRelaysFromStorage() || this.DEFAULT_BOOTSTRAP_RELAYS;
+    // this.discoveryRelays.set(this.#discoveryRelays);
 
     // When relays change, sync with storage
     effect(() => {
-      const currentRelays = this.relays();
-      this.logger.debug(`Relay effect triggered with ${currentRelays.length} relays`);
+      if (this.relaysChanged()) {
+        this.logger.debug(`Relay effect triggered with ${this.relays.length} relays`);
 
-      // Since this is an effect, we don't want to persist on initialization
-      if (currentRelays.length > 0) {
-        this.syncRelaysToStorage();
+        if (this.relays.length > 0) {
+          this.syncRelaysToStorage(this.relays);
+        }
       }
-    });
 
-    // When bootstrap relays change, save to local storage
-    effect(() => {
-      const currentBootstrapRelays = this.bootStrapRelays();
-      this.logger.debug(`Bootstrap relays effect triggered with ${currentBootstrapRelays.length} relays`);
-
-      // Save to local storage
-      this.localStorage.setItem(this.appState.BOOTSTRAP_RELAYS_STORAGE_KEY, JSON.stringify(currentBootstrapRelays));
     });
 
     // Set up interval to clean expired timeouts
     setInterval(() => this.cleanupTimeouts(), this.TIMEOUT_CLEANUP_INTERVAL);
+  }
+
+  saveDiscoveryRelays() {
+    this.logger.debug(`Saving Discovery Relays with ${this.discoveryRelays.length} relays`);
+
+    // Save to local storage
+    this.localStorage.setItem(this.appState.DISCOVERY_RELAYS_STORAGE_KEY, JSON.stringify(this.discoveryRelays));
   }
 
   createPool() {
@@ -217,18 +219,18 @@ export class RelayService {
   /**
    * Loads bootstrap relays from local storage
    */
-  private loadBootstrapRelaysFromStorage(): string[] | null {
+  private loadDiscoveryRelaysFromStorage(): string[] | null {
     try {
-      const storedRelays = this.localStorage.getItem(this.appState.BOOTSTRAP_RELAYS_STORAGE_KEY);
+      const storedRelays = this.localStorage.getItem(this.appState.DISCOVERY_RELAYS_STORAGE_KEY);
       if (storedRelays) {
         const parsedRelays = JSON.parse(storedRelays);
         if (Array.isArray(parsedRelays)) {
-          this.logger.debug(`Loaded ${parsedRelays.length} bootstrap relays from storage`);
+          this.logger.debug(`Loaded ${parsedRelays.length} discovery relays from storage`);
           return parsedRelays;
         }
       }
     } catch (error) {
-      this.logger.error('Error loading bootstrap relays from storage', error);
+      this.logger.error('Error loading discovery relays from storage', error);
     }
     return null;
   }
@@ -259,7 +261,7 @@ export class RelayService {
     }
 
     // Use provided relay URLs or default to the user's relays
-    const urls = relayUrls || this.relays().map(relay => relay.url);
+    const urls = relayUrls || this.relays.map(relay => relay.url);
 
     if (urls.length === 0) {
       this.logger.warn('No relays available for subscription');
@@ -361,7 +363,7 @@ export class RelayService {
     }
 
     // Use provided relay URLs or default to the user's relays
-    const urls = relayUrls || this.relays().map(relay => relay.url);
+    const urls = relayUrls || this.relays.map(relay => relay.url);
 
     if (urls.length === 0) {
       this.logger.warn('No relays available for query');
@@ -406,7 +408,7 @@ export class RelayService {
     }
 
     // Use provided relay URLs or default to the user's relays
-    const urls = relayUrls || this.relays().map(relay => relay.url);
+    const urls = relayUrls || this.relays.map(relay => relay.url);
 
     if (urls.length === 0) {
       this.logger.warn('No relays available for publishing');
@@ -459,46 +461,28 @@ export class RelayService {
   }
 
   /**
-   * Helper method to update the lastUsed timestamp for a relay
-   */
-  private updateRelayLastUsed(url: string): void {
-    this.relays.update(relays =>
-      relays.map(relay =>
-        relay.url === url
-          ? { ...relay, lastUsed: Date.now() }
-          : relay
-      )
-    );
-  }
-
-  /**
    * Adds a bootstrap relay
    */
-  addBootstrapRelay(url: string): void {
+  addDiscoveryRelay(url: string): void {
     this.logger.debug(`Adding bootstrap relay: ${url}`);
-
-    // Make sure URL ends with /
-    if (!url.endsWith('/')) {
-      url += '/';
-    }
-
-    this.bootStrapRelays.update(relays => [...relays, url]);
+    const normalizedUrl = this.normalizeRelayUrl(url);
+    this.discoveryRelays.push(normalizedUrl);
   }
 
   /**
    * Removes a bootstrap relay
    */
-  removeBootstrapRelay(url: string): void {
+  removeDiscoveryRelay(url: string): void {
     this.logger.debug(`Removing bootstrap relay: ${url}`);
-    this.bootStrapRelays.update(relays => relays.filter(relay => relay !== url));
+    this.discoveryRelays = this.discoveryRelays.filter(relay => relay !== url);
   }
 
   /**
    * Resets bootstrap relays to defaults
    */
-  resetBootstrapRelays(): void {
+  resetDiscoveryRelays(): void {
     this.logger.debug('Resetting bootstrap relays to defaults');
-    this.bootStrapRelays.set(this.DEFAULT_BOOTSTRAP_RELAYS);
+    this.discoveryRelays = this.DEFAULT_BOOTSTRAP_RELAYS;
   }
 
   /**
@@ -522,8 +506,9 @@ export class RelayService {
       }
     });
 
-    this.relays.set(relayObjects);
+    this.relays = relayObjects;
     this.logger.debug('Relays updated successfully');
+    this.relaysChanged.set(this.relays);
   }
 
   /**
@@ -539,7 +524,7 @@ export class RelayService {
 
     // Update relay statuses using a for...of loop
     for (const [url, status] of connectionStatuses) {
-      const userRelay = this.relays().find(r => r.url === url);
+      const userRelay = this.relays.find(r => r.url === url);
 
       if (!userRelay) {
         this.logger.warn(`Relay ${url} not found in user relays`);
@@ -563,14 +548,33 @@ export class RelayService {
   updateRelayStatus(url: string, status: Relay['status']): void {
     this.logger.debug(`Updating relay status for ${url} to ${status}`);
 
-    this.relays.update(relays =>
-      relays.map(relay =>
-        relay.url === url
-          ? { ...relay, status, lastUsed: Date.now() }
-          : relay
-      )
-    );
+    const relay = this.relays.find(relay => relay.url === url);
+    if (relay) {
+      relay.status = status;
+      relay.lastUsed = Date.now();
+    }
+
+    this.relaysChanged.set(this.relays);
   }
+
+  /**
+   * Helper method to update the lastUsed timestamp for a relay
+   */
+  private updateRelayLastUsed(url: string): void {
+    const relay = this.relays.find(relay => relay.url === url);
+    if (relay) {
+      relay.lastUsed = Date.now();
+    }
+
+    // this.relays.update(relays =>
+    //   relays.map(relay =>
+    //     relay.url === url
+    //       ? { ...relay, lastUsed: Date.now() }
+    //       : relay
+    //   )
+    // );
+  }
+
 
   /**
    * Adds a new relay to the list
@@ -584,7 +588,10 @@ export class RelayService {
       lastUsed: Date.now()
     };
 
-    this.relays.update(relays => [...relays, newRelay]);
+    this.relays.push(newRelay);
+    this.relaysChanged.set(this.relays);
+
+    // this.relays.update(relays => [...relays, newRelay]);
   }
 
   /**
@@ -592,7 +599,11 @@ export class RelayService {
    */
   removeRelay(url: string): void {
     this.logger.debug(`Removing relay: ${url}`);
-    this.relays.update(relays => relays.filter(relay => relay.url !== url));
+
+    this.relays = this.relays.filter(relay => relay.url !== url);
+    // this.relays.update(relays => relays.filter(relay => relay.url !== url));
+
+    this.relaysChanged.set(this.relays);
   }
 
   /**
@@ -600,22 +611,21 @@ export class RelayService {
    */
   clearRelays(): void {
     this.logger.debug('Clearing all relays');
-    this.relays.set([]);
+    this.relays = [];
+    this.relaysChanged.set(this.relays);
   }
 
   /**
    * Saves the current relays to storage for the current user
    */
-  private async syncRelaysToStorage(): Promise<void> {
+  private async syncRelaysToStorage(relays: Relay[]): Promise<void> {
     try {
-      const currentRelays = this.relays();
-
       // Save each relay to the storage
-      for (const relay of currentRelays) {
+      for (const relay of relays) {
         await this.storage.saveRelay(relay);
       }
 
-      this.logger.debug(`Synchronized ${currentRelays.length} relays to storage`);
+      this.logger.debug(`Synchronized ${relays.length} relays to storage`);
     } catch (error) {
       this.logger.error('Error syncing relays to storage', error);
     }

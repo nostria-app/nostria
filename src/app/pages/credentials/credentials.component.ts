@@ -63,7 +63,7 @@ export class CredentialsComponent {
   }
 
   getNpub(): string {
-    const pubkey = this.nostrService.activeAccount()?.pubkey;
+    const pubkey = this.nostrService.pubkey();
     if (!pubkey) return '';
 
     console.debug('LOCATION 2:', pubkey);
@@ -71,12 +71,12 @@ export class CredentialsComponent {
   }
 
   getNsec(): string {
-    const privkey = this.nostrService.activeAccount()?.privkey;
+    const privkey = this.nostrService.account()?.privkey;
     if (!privkey) return '';
     return this.nostrService.getNsecFromPrivkey(privkey);
   }
 
   isRemoteAccount(): boolean {
-    return this.nostrService.activeAccount()?.source === 'remote';
+    return this.nostrService.account()?.source === 'remote';
   }
 }

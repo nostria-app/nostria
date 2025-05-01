@@ -120,12 +120,7 @@ export class MediaService {
         return;
       }
 
-      const currentUser = this.nostrService.activeAccount();
-      if (!currentUser) {
-        throw new Error('User not logged in');
-      }
-
-      const pubkey = currentUser.pubkey;
+      const pubkey = this.nostrService.pubkey();
       
       // Generate auth headers once for all servers
       const headers = await this.getAuthHeaders('List Files', 'list');
@@ -276,11 +271,6 @@ export class MediaService {
     try {
       this.loading.set(true);
       this._error.set(null);
-
-      const currentUser = this.nostrService.activeAccount();
-      if (!currentUser) {
-        throw new Error('User not logged in');
-      }
 
       const servers = this._mediaServers();
 
@@ -897,11 +887,6 @@ export class MediaService {
   }
 
   private async createSignedEvent(type: string, data: any): Promise<NostrEvent> {
-    const currentUser = this.nostrService.activeAccount();
-    if (!currentUser) {
-      throw new Error('User not logged in');
-    }
-
     // Create event for signing
     const event: Partial<NostrEvent> = {
       kind: 27235, // NIP-94 kind for file metadata
@@ -926,7 +911,7 @@ export class MediaService {
   }
 
   private async signEvent(event: Partial<NostrEvent>): Promise<NostrEvent> {
-    const currentUser = this.nostrService.activeAccount();
+    const currentUser = this.nostrService.account();
     if (!currentUser) {
       throw new Error('User not logged in');
     }
@@ -961,7 +946,7 @@ export class MediaService {
   }
 
   private async getAuthHeaders(reason: string, action: string | 'list' | 'upload' | 'media' | 'delete' | 'get', sha256?: string, skipContentType = false): Promise<Record<string, string>> {
-    const currentUser = this.nostrService.activeAccount();
+    const currentUser = this.nostrService.account();
     if (!currentUser) {
       throw new Error('User not logged in');
     }

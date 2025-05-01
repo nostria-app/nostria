@@ -89,7 +89,7 @@ export class AppComponent {
 
   // We'll compute the current user metadata from the nostrService's metadata array
   accountMetadata = computed(() => {
-    const pubkey = this.nostrService.activeAccount()?.pubkey;
+    const pubkey = this.nostrService.pubkey();
     if (!pubkey) return undefined;
 
     // First check from accountsMetadata (which should be synchronized)
@@ -204,16 +204,16 @@ export class AppComponent {
     });
 
     // Additional effect to make sure we have metadata for the current user
-    effect(() => {
-      const currentUser = this.nostrService.activeAccount();
-      const isInitialized = this.app.initialized();
+    // effect(() => {
+    //   const currentUser = this.nostrService.activeAccount();
+    //   const isInitialized = this.app.initialized();
 
-      if (currentUser && isInitialized && this.storage.initialized()) {
-        // Ensure we have the latest metadata for the current user
-        // this.nostrService.loadUsersMetadata().catch(err =>
-        //   this.logger.error('Failed to load user metadata on user change', err));
-      }
-    });
+    //   if (currentUser && isInitialized && this.storage.initialized()) {
+    //     // Ensure we have the latest metadata for the current user
+    //     // this.nostrService.loadUsersMetadata().catch(err =>
+    //     //   this.logger.error('Failed to load user metadata on user change', err));
+    //   }
+    // });
     }
 
 

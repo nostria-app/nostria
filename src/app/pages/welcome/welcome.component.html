@@ -10,7 +10,7 @@
       </p>
       <div class="action-buttons">
         <a mat-flat-button href="https://www.nostria.app/">Learn more</a>
-        <button mat-stroked-button [routerLink]="['/p', this.nostr.activeAccount()?.pubkey]">Your Profile</button>
+        <button mat-stroked-button [routerLink]="['/p', this.nostr.pubkey()]">Your Profile</button>
       </div>
     </div>
     <div class="hero-image">

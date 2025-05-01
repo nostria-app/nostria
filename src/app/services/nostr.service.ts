@@ -38,15 +38,13 @@ export class NostrService {
   private readonly accountState = inject(AccountStateService);
   private readonly localStorage = inject(LocalStorageService);
 
+  initialized = signal(false);
+
   account = signal<NostrUser | null>(null);
+  accounts = signal<NostrUser[]>([]);
 
   accountChanging = signal<NostrUser | null>(null);
-
-  // private account = signal<NostrUser | null>(null);
-  private accounts = signal<NostrUser[]>([]);
-
-  // Signal to store metadata for all users - using array instead of Map
-  // private allUserMetadata = signal<UserMetadataWithPubkey[]>([]);
+  accountChanged = signal<NostrUser | null>(null);
 
   /** Holds the metadata event for all accounts in the app. */
   accountsMetadata = signal<NostrEvent[]>([]);
@@ -58,70 +56,17 @@ export class NostrService {
   usersMetadata = signal<Map<string, NostrEvent>>(new Map());
   usersRelays = signal<Map<string, NostrEvent>>(new Map());
 
-  // isLoggedIn = computed(() => {
-  //   const account = this.account();
-  //   // const accountLoaded = this.accountLoaded();
-
-  //   if (account && accountLoaded) {
-  //     return true;
-  //   } else {
-  //     return false;
-  //   }
-
-  //   // if (!this.beforeLoggedIn()) {
-  //   //   const result = !!this.account();
-  //   //   this.logger.debug('isLoggedIn computed value calculated', { isLoggedIn: result });
-  //   //   return result;
-  //   // }
-  // });
-
-  // private accountLoaded = signal(false);
-
   pubkey = computed(() => {
-    const currentUser = this.account();
-    return currentUser!.pubkey;
-  });
-
-  activeAccount = computed(() => {
-    return this.account();
-  });
-
-  allAccounts = computed(() => {
-    return this.accounts();
+    return this.account()!.pubkey;
   });
 
   hasAccounts = computed(() => {
-    return this.allAccounts().length > 0;
+    return this.accounts().length > 0;
   });
 
   discoveryQueue: any = [];
   activeDiscoveries: any = [];
   MAX_CONCURRENT_DISCOVERIES = 1;
-
-  // Expose the metadata as a computed property
-  // usersMetadata = computed(() => {
-  //   return this.allUserMetadata();
-  // });
-
-  // Method to easily find metadata by pubkey
-  getMetadataForAccount(pubkey: string): NostrEvent | undefined {
-    return this.accountsMetadata().find(meta => meta.pubkey === pubkey);
-  }
-
-  getAccountFromStorage() {
-    // Initialize account from localStorage if available.
-    try {
-      const userJson = this.localStorage.getItem(this.appState.ACCOUNT_STORAGE_KEY);
-      if (userJson) {
-        return JSON.parse(userJson) as NostrUser;
-      }
-    } catch (e) {
-      this.logger.error('Failed to parse user from localStorage during initialization', e);
-    }
-    return null;
-  }
-
-  initialized = signal(false);
 
   constructor() {
     this.logger.info('Initializing NostrService');
@@ -131,32 +76,33 @@ export class NostrService {
         this.logger.info('Storage initialized, loading Nostr Service');
 
         try {
-          console.log('LOADING IN NOSTR SERVICE');
-          untracked(async () => {
-            console.log('ASYNC UNTRACKED');
+          const accounts = await this.getAccountsFromStorage();
+          this.accounts.set(accounts);
 
-            this.loadAccountsFromStorage();
+          // We keep an in-memory copy of the user metadata and relay list for all accounts,
+          // they won't take up too much memory space.
+          const accountsMetadata = await this.getAccountsMetadata();
+          this.accountsMetadata.set(accountsMetadata);
 
-            // We keep an in-memory copy of the user metadata and relay list for all accounts,
-            // they won't take up too much memory space.
-            await this.loadAccountsMetadata();
-            await this.loadAccountsRelays();
+          const accountsRelays = await this.getAccountsRelays();
+          this.accountsRelays.set(accountsRelays);
 
-            const account = this.getAccountFromStorage();
+          const account = this.getAccountFromStorage();
+          this.accountChanging.set(account);
+          this.account.set(account);
+          this.accountChanged.set(account);
 
-            if (account) {
-              this.logger.info('Found account in localStorage, loading data.', { pubkey: account.pubkey });
-              // If there is an account, ensure we load data before initialized is set.
-              await this.loadData(account);
-            }
+          // if (account) {
+          //   this.logger.info('Found account in localStorage, loading data.', { pubkey: account.pubkey });
+          //   // If there is an account, ensure we load data before initialized is set.
+          //   await this.loadData();
+          // }
 
-            this.initialized.set(true);
+          // if (account) {
+          //   this.account.set(account);
+          // }
 
-            if (account) {
-              this.account.set(account);
-            }
-          });
-
+          this.initialized.set(true);
         } catch (err) {
           this.logger.error('Failed to load data during initialization', err);
         }
@@ -164,10 +110,99 @@ export class NostrService {
     });
 
     effect(async () => {
-      const account = this.accountChanging();
+      const account = this.accountChanged();
       // If the account is changing and it has a value (it will be empty on logout).
       if (account) {
-        await this.loadData(account);
+        const pubkey = account.pubkey;
+        // When the account changes, check what data we have and get if missing.
+        this.logger.info('Account changed, loading data for new account', { pubkey });
+
+        let info: any = await this.storage.getInfo(pubkey, 'user');
+
+        if (!info) {
+          info = {};
+        }
+
+        // Get the metadata from in-memory if exists.
+        let metadata: NostrEvent | null | undefined = this.getMetadataForAccount(pubkey);
+
+        // If there was metadata, also push it into the 
+        if (metadata) {
+          // Also update the cache for getMetadataForUser
+          if (this.usersMetadata().has(pubkey)) {
+            this.updateMetadataCache(pubkey, metadata);
+          }
+        }
+
+        // Get existing Relay List in storage
+        let relays = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
+        let relayUrls: string[] = [];
+
+        if (relays) {
+          relayUrls = this.getRelayUrls(relays, false); // Make sure to pass false to avoid ignoring automatic banned relays
+
+          this.logger.info('Found user relays in storage', { relays });
+          this.appState.loadingMessage.set('Found your relays in local storage! ✔️');
+        }
+
+        if (relayUrls.length === 0) {
+          // We need to discovery the relays of the user.
+          this.logger.info('No relays found in storage, performing discovery', { pubkey });
+          relayUrls = await this.findRelays(pubkey, info);
+        }
+
+        // Store the relays in the relay service
+        this.relayService.setRelays(relayUrls);
+
+        const userPool = new SimplePool();
+        userPool.trackRelays = true;
+
+        // Attach the userPool to the relay service for further use.
+        this.relayService.setAccountPool(userPool);
+
+        metadata = await this.relayService.getEventByPubkeyAndKind(pubkey, kinds.Metadata);
+
+        if (metadata) {
+          // Also update the cache for getMetadataForUser
+          // if (this.usersMetadata().has(pubkey)) {
+          //   this.updateMetadataCache(pubkey, metadata);
+          // }
+
+          this.logger.info('Found user metadata', { metadata });
+          this.appState.loadingMessage.set('Found your profile! 👍');
+          await this.storage.saveEvent(metadata);
+        } else {
+          this.logger.warn('No metadata found for user');
+        }
+
+        // After loading the relays and setting them, we load the following list:
+        await this.loadAccountFollowing(pubkey);
+        await this.loadAccountMuteList(pubkey);
+        await this.subscribeToAccountMetadata(pubkey);
+
+        this.appState.loadingMessage.set('Loading completed!');
+        this.logger.info('Data loading process completed');
+
+        await this.storage.saveInfo(pubkey, 'user', info);
+
+        // Show success animation instead of waiting
+        this.appState.isLoading.set(false);
+        this.appState.showSuccess.set(true);
+
+        // Schedule a refresh of the relays in the background. For now this won't be reflected until
+        // the user refreshes the app.
+        this.relayService.getEventByPubkeyAndKind(pubkey, kinds.RelayList).then(async (evt) => {
+          if (evt) {
+            this.storage.saveEvent(evt);
+          }
+        });
+
+        // Hide success animation after 1.5 seconds
+        setTimeout(() => {
+          this.appState.showSuccess.set(false);
+        }, 1500);
+
+        // await this.loadData();
       }
     });
 
@@ -255,199 +290,241 @@ export class NostrService {
 
   reset() {
     this.accounts.set([]);
-    debugger;
     this.account.set(null);
     this.accountsMetadata.set([]);
     this.accountsRelays.set([]);
   }
 
-  async loadData(account: NostrUser): Promise<void> {
-    if (!account) {
-      this.logger.warn('Cannot load data: No user account provided');
-      return;
-    }
-
-    let info: any = await this.storage.getInfo(account.pubkey, 'user');
-
-    if (!info) {
-      info = {};
-    }
-
-    try {
-      this.appState.loadingMessage.set('Retrieving your relay list...');
-      this.appState.isLoading.set(true);
-      this.appState.showSuccess.set(false);
-      this.logger.info('Starting data loading process');
-      const pubkey = account.pubkey;
-      this.logger.info('Loading data for pubkey', { pubkey });
-
-      let profile = null;
-      let metadata = null;
-
-      // First check if we have metadata in storage
-      metadata = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Metadata);
-
-      if (metadata) {
-        this.logger.info('Found user metadata in storage', { metadata });
-        this.appState.loadingMessage.set('Found your profile in local storage! 👍');
-
-        // Process and update metadata for UI refresh
-        this.updateAccountMetadata(metadata);
-
-        // Also store in userMetadata for legacy support
-        // try {
-        //   // Parse the content field which should be JSON
-        //   const metadataContent = typeof metadata.content === 'string' 
-        //     ? JSON.parse(metadata.content) 
-        //     : metadata.content;
-
-        //   // Create a NostrEventData object to store the full content and tags
-        //   const eventData: NostrEventData<UserMetadata> = {
-        //     pubkey: metadata.pubkey,
-        //     content: metadataContent,  // Store the parsed JSON object 
-        //     tags: metadata.tags,       // Store the original tags
-        //     updated: Date.now()
-        //   };
-
-        //   // Save to storage with all fields and the full event data
-        //   await this.storage.saveUserMetadata(pubkey, eventData);
-        // } catch (e) {
-        //   this.logger.error('Failed to parse metadata content', e);
-        // }
-      }
-
-      // Get existing Relay List in storage
-      let relays = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
-
-      if (relays) {
-        this.logger.info('Found user relays in storage', { relays });
-        this.appState.loadingMessage.set('Found your relays in local storage! ✔️');
-      }
-
-      let bootstrapPool: SimplePool | null = null;
-
-      if (!relays) {
-        // To properly scale Nostr, the first step is simply getting the user's relay list and nothing more.
-        bootstrapPool = new SimplePool();
-
-        this.logger.debug('Connecting to bootstrap relays', { relays: this.relayService.bootStrapRelays() });
-
-        this.logger.time('fetchRelayList');
-        relays = await bootstrapPool.get(this.relayService.bootStrapRelays(), {
-          kinds: [kinds.RelayList],
-          authors: [pubkey],
-        });
-        this.logger.timeEnd('fetchRelayList');
-
-        if (relays) {
-          info.hasRelayList = true;
-          this.logger.info('Found your relays on network', { relays });
-          this.appState.loadingMessage.set('Found your relays on the network! ✔️');
-          await this.storage.saveEvent(relays);
-        }
-      }
-
-      let relayUrls: string[] = [];
-
-      if (relays) {
-        relayUrls = this.getRelayUrls(relays);
-        this.logger.info(`Found ${relayUrls.length} relays for user`, { relayUrls });
-
-        // Store the relays in the relay service
-        this.relayService.setRelays(relayUrls);
-      }
-
-      // If there is no relayUrls (the kind:10002 might miss it), use default for fallback:
-      if (!relayUrls || relayUrls.length == 0) {
-        this.logger.warn('No relay list found for user');
-        // Set default bootstrap relays if no custom relays found
-        const defaultRelays = [...this.relayService.defaultRelays()];
-        this.relayService.setRelays(defaultRelays);
-        relayUrls = defaultRelays;
-      }
-
-      const userPool = new SimplePool();
-      userPool.trackRelays = true;
-      this.logger.debug('Connecting to user relays to fetch metadata');
-
-      // Attempt to connect to the user's defined relays, to help Nostr with
-      // scaling, we don't use the default relays here.
-      if (metadata) {
-        this.appState.loadingMessage.set(`Found your ${relayUrls.length} relays, refreshing your metadata...`);
-      } else {
-        this.appState.loadingMessage.set(`Found your ${relayUrls.length} relays, retrieving your metadata...`);
-
-        this.logger.time('fetchMetadata');
-        metadata = await userPool.get(relayUrls, {
-          kinds: [kinds.Metadata],
-          authors: [pubkey],
-        });
-        this.logger.timeEnd('fetchMetadata');
-
-        if (metadata) {
-          this.logger.info('Found user metadata', { metadata });
-          this.appState.loadingMessage.set('Found your profile! 👍');
-          await this.storage.saveEvent(metadata);
-
-          // Update the metadata in NostrService
-          this.updateAccountMetadata(metadata);
-
-          try {
-            // Parse the content field which should be JSON
-            // const metadataContent = typeof metadata.content === 'string'
-            //   ? JSON.parse(metadata.content)
-            //   : metadata.content;
-
-            // Create a NostrEventData object to store the full content and tags
-            // const eventData: NostrEventData<UserMetadata> = {
-            //   pubkey: metadata.pubkey,
-            //   content: metadataContent,  // Store the parsed JSON object 
-            //   tags: metadata.tags,       // Store the original tags
-            //   updated: Date.now()
-            // };
-
-            // Save to storage with all fields and the full event data
-            // await this.storage.saveUserMetadata(pubkey, eventData);
-          } catch (e) {
-            this.logger.error('Failed to parse metadata content', e);
-          }
-        } else {
-          this.logger.warn('No metadata found for user');
-        }
-      }
-
-      // Attach the userPool to the relay service for further use.
-      this.relayService.setAccountPool(userPool);
-
-      if (bootstrapPool) {
-        this.logger.debug('Closing bootstrap relay pool connections');
-        bootstrapPool.close(this.relayService.bootStrapRelays());
-      }
-
-      // After loading the relays and setting them, we load the following list:
-      await this.loadAccountFollowing(pubkey);
-      await this.loadAccountMuteList(pubkey);
-
-      await this.subscribeToAccountMetadata(pubkey);
-
-      this.appState.loadingMessage.set('Loading completed!');
-      this.logger.info('Data loading process completed');
-
-      await this.storage.saveInfo(pubkey, 'user', info);
-
-      // Show success animation instead of waiting
-      this.appState.isLoading.set(false);
-      this.appState.showSuccess.set(true);
-    } catch (err) {
-      console.log('FAILURE IN LOAD DATA!');
-      console.error(err);
-    }
-
-    // Hide success animation after 1.5 seconds
-    setTimeout(() => {
-      this.appState.showSuccess.set(false);
-    }, 1500);
+  // Method to easily find metadata by pubkey
+  getMetadataForAccount(pubkey: string): NostrEvent | undefined {
+    return this.accountsMetadata().find(meta => meta.pubkey === pubkey);
   }
+
+  getAccountFromStorage() {
+    // Initialize account from localStorage if available.
+    try {
+      const userJson = this.localStorage.getItem(this.appState.ACCOUNT_STORAGE_KEY);
+      if (userJson) {
+        return JSON.parse(userJson) as NostrUser;
+      }
+    } catch (e) {
+      this.logger.error('Failed to parse user from localStorage during initialization', e);
+    }
+    return null;
+  }
+
+  async findRelays(pubkey: string, info: any) {
+    // Perform relay discovery for the given pubkey
+    const discoveryPool = new SimplePool();
+    const discoveryRelays = this.relayService.discoveryRelays;
+
+    const relays = await discoveryPool.get(discoveryRelays, {
+      kinds: [kinds.RelayList],
+      authors: [pubkey],
+    });
+
+    if (relays) {
+      this.logger.info('Found your relays on network', { relays });
+      await this.storage.saveEvent(relays);
+      const relayUrls = this.getRelayUrls(relays, false); // Make sure to pass false to avoid ignoring automatic banned relays
+      this.logger.info(`Found ${relayUrls.length} relays for user`, { relayUrls });
+
+      if (relayUrls.length > 0) {
+        info.hasRelayList = true;
+        discoveryPool.close(discoveryRelays);
+        return relayUrls;
+      }
+    } else {
+      this.logger.warn('No relay list found on discovery relays.');
+
+      // Fallback to metadata discovery if no relay list found.
+      const contacts = await discoveryPool.get(this.relayService.discoveryRelays, {
+        kinds: [kinds.Contacts],
+        authors: [pubkey],
+      });
+
+      if (contacts) {
+        this.storage.saveEvent(contacts);
+        const relayUrls = this.getRelayUrlsFromFollowing(contacts, false);
+
+        if (relayUrls.length > 0) {
+          info.hasFollowingListRelays = true;
+          discoveryPool.close(discoveryRelays);
+          return relayUrls;
+        }
+      }
+    }
+
+    discoveryPool.close(discoveryRelays);
+
+    // If there is no relayUrls, set default relays.
+    const defaultRelays = [...this.relayService.defaultRelays];
+    return defaultRelays;
+  }
+
+
+  // async loadData(): Promise<void> {
+  //   // 1. Get the relays for current account. Perform discovery if needed.
+  //   // 2. Get the metadata for current account. Schedule update for new metadata.
+
+  //   const pubkey = this.pubkey();
+
+  //   let info: any = await this.storage.getInfo(pubkey, 'user');
+
+  //   if (!info) {
+  //     info = {};
+  //   }
+
+  //   try {
+  //     this.appState.loadingMessage.set('Retrieving your relay list...');
+  //     this.appState.isLoading.set(true);
+  //     this.appState.showSuccess.set(false);
+  //     this.logger.info('Starting data loading process for pubkey', { pubkey });
+
+  //     let profile = null;
+  //     let metadata = null;
+  //     let relayList = null;
+
+  //     // First check if we have metadata in storage
+  //     metadata = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Metadata);
+
+  //     if (metadata) {
+  //       this.logger.info('Found user metadata in storage', { metadata });
+  //       this.appState.loadingMessage.set('Found your profile in local storage! 👍');
+
+  //       // Process and update metadata for UI refresh
+  //       // this.updateAccountMetadata(metadata);
+
+  //       // Also store in userMetadata for legacy support
+  //       // try {
+  //       //   // Parse the content field which should be JSON
+  //       //   const metadataContent = typeof metadata.content === 'string' 
+  //       //     ? JSON.parse(metadata.content) 
+  //       //     : metadata.content;
+
+  //       //   // Create a NostrEventData object to store the full content and tags
+  //       //   const eventData: NostrEventData<UserMetadata> = {
+  //       //     pubkey: metadata.pubkey,
+  //       //     content: metadataContent,  // Store the parsed JSON object 
+  //       //     tags: metadata.tags,       // Store the original tags
+  //       //     updated: Date.now()
+  //       //   };
+
+  //       //   // Save to storage with all fields and the full event data
+  //       //   await this.storage.saveUserMetadata(pubkey, eventData);
+  //       // } catch (e) {
+  //       //   this.logger.error('Failed to parse metadata content', e);
+  //       // }
+  //     }
+
+  //     // Get existing Relay List in storage
+  //     let relays = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
+
+  //     if (relays) {
+  //       this.logger.info('Found user relays in storage', { relays });
+  //       this.appState.loadingMessage.set('Found your relays in local storage! ✔️');
+  //     }
+
+  //     let bootstrapPool: SimplePool | null = null;
+
+  //     if (!relays) {
+  //       // To properly scale Nostr, the first step is simply getting the user's relay list and nothing more.
+  //       bootstrapPool = new SimplePool();
+
+  //       this.logger.debug('Connecting to bootstrap relays', { relays: this.relayService.discoveryRelays() });
+
+  //       this.logger.time('fetchRelayList');
+  //       relays = await bootstrapPool.get(this.relayService.discoveryRelays(), {
+  //         kinds: [kinds.RelayList],
+  //         authors: [pubkey],
+  //       });
+  //       this.logger.timeEnd('fetchRelayList');
+
+  //       if (relays) {
+  //         info.hasRelayList = true;
+  //         this.logger.info('Found your relays on network', { relays });
+  //         this.appState.loadingMessage.set('Found your relays on the network! ✔️');
+  //         await this.storage.saveEvent(relays);
+  //       }
+  //     }
+
+  //     let relayUrls: string[] = [];
+
+  //     if (relays) {
+  //       relayUrls = this.getRelayUrls(relays);
+  //       this.logger.info(`Found ${relayUrls.length} relays for user`, { relayUrls });
+
+  //       // Store the relays in the relay service
+  //       this.relayService.setRelays(relayUrls);
+  //     }
+
+  //     // If there is no relayUrls (the kind:10002 might miss it), use default for fallback:
+  //     if (!relayUrls || relayUrls.length == 0) {
+  //       this.logger.warn('No relay list found for user');
+  //       // Set default bootstrap relays if no custom relays found
+  //       const defaultRelays = [...this.relayService.defaultRelays()];
+  //       this.relayService.setRelays(defaultRelays);
+  //       relayUrls = defaultRelays;
+  //     }
+
+  //     const userPool = new SimplePool();
+  //     userPool.trackRelays = true;
+  //     this.logger.debug('Connecting to user relays to fetch metadata');
+
+  //     // Attempt to connect to the user's defined relays, to help Nostr with
+  //     // scaling, we don't use the default relays here.
+  //     if (metadata) {
+  //       this.appState.loadingMessage.set(`Found your ${relayUrls.length} relays, refreshing your metadata...`);
+  //     } else {
+  //       this.appState.loadingMessage.set(`Found your ${relayUrls.length} relays, retrieving your metadata...`);
+
+  //       this.logger.time('fetchMetadata');
+  //       metadata = await userPool.get(relayUrls, {
+  //         kinds: [kinds.Metadata],
+  //         authors: [pubkey],
+  //       });
+  //       this.logger.timeEnd('fetchMetadata');
+
+  //       if (metadata) {
+  //         this.logger.info('Found user metadata', { metadata });
+  //         this.appState.loadingMessage.set('Found your profile! 👍');
+  //         await this.storage.saveEvent(metadata);
+
+  //         // Update the metadata in NostrService
+  //         this.updateAccountMetadata(metadata);
+
+  //         try {
+  //           // Parse the content field which should be JSON
+  //           // const metadataContent = typeof metadata.content === 'string'
+  //           //   ? JSON.parse(metadata.content)
+  //           //   : metadata.content;
+
+  //           // Create a NostrEventData object to store the full content and tags
+  //           // const eventData: NostrEventData<UserMetadata> = {
+  //           //   pubkey: metadata.pubkey,
+  //           //   content: metadataContent,  // Store the parsed JSON object 
+  //           //   tags: metadata.tags,       // Store the original tags
+  //           //   updated: Date.now()
+  //           // };
+
+  //           // Save to storage with all fields and the full event data
+  //           // await this.storage.saveUserMetadata(pubkey, eventData);
+  //         } catch (e) {
+  //           this.logger.error('Failed to parse metadata content', e);
+  //         }
+  //       } else {
+  //         this.logger.warn('No metadata found for user');
+  //       }
+  //     }
+
+
+  //   } catch (err) {
+  //     console.log('FAILURE IN LOAD DATA!');
+  //     console.error(err);
+  //   }
+
+
+  // }
 
   accountSubscription: any = null;
 
@@ -768,15 +845,15 @@ export class NostrService {
     if (!event) {
       let bootstrapPool = new SimplePool();
 
-      this.logger.debug('Connecting to bootstrap relays', { relays: this.relayService.bootStrapRelays() });
+      this.logger.debug('Connecting to bootstrap relays', { relays: this.relayService.discoveryRelays });
 
-      const relays = await bootstrapPool.get(this.relayService.bootStrapRelays(), {
+      const relays = await bootstrapPool.get(this.relayService.discoveryRelays, {
         kinds: [kinds.RelayList],
         authors: [pubkey],
       });
 
       if (relays) {
-        bootstrapPool.close(this.relayService.bootStrapRelays());
+        bootstrapPool.close(this.relayService.discoveryRelays);
 
         await this.storage.saveEvent(relays);
 
@@ -802,7 +879,7 @@ export class NostrService {
         return metadata as NostrEvent;
       } else {
 
-        const followingEvent = await bootstrapPool.get(this.relayService.bootStrapRelays(), {
+        const followingEvent = await bootstrapPool.get(this.relayService.discoveryRelays, {
           kinds: [kinds.Contacts],
           authors: [pubkey],
         });
@@ -823,7 +900,7 @@ export class NostrService {
             info.hasRelayList = false;
             info.hasFollowingListRelays = false;
 
-            const metadataFromDiscoveryRelays = await bootstrapPool.get(this.relayService.bootStrapRelays(), {
+            const metadataFromDiscoveryRelays = await bootstrapPool.get(this.relayService.discoveryRelays, {
               kinds: [kinds.Metadata],
               authors: [pubkey],
             });
@@ -897,7 +974,7 @@ export class NostrService {
           }
         }
 
-        bootstrapPool.close(this.relayService.bootStrapRelays());
+        bootstrapPool.close(this.relayService.discoveryRelays);
       }
     }
 
@@ -1109,8 +1186,6 @@ export class NostrService {
    * Get relays from cache or load from storage
    */
   async getRelaysForUser(pubkey: string, disconnect = true): Promise<Event | undefined> {
-    debugger;
-
     // Check cache first
     const cachedRelays = this.usersRelays().get(pubkey);
     if (cachedRelays) {
@@ -1145,20 +1220,21 @@ export class NostrService {
     return undefined;
   }
 
-  private loadAccountsFromStorage(): void {
+  private getAccountsFromStorage() {
     const usersJson = this.localStorage.getItem(this.appState.ACCOUNTS_STORAGE_KEY);
     if (usersJson) {
       try {
         const parsedUsers = JSON.parse(usersJson);
         this.logger.debug(`Loaded ${parsedUsers.length} users from localStorage`);
-        this.accounts.set(parsedUsers);
+        return parsedUsers;
       } catch (e) {
         this.logger.error('Failed to parse users from localStorage', e);
-        this.accounts.set([]);
       }
     } else {
       this.logger.debug('No users found in localStorage');
     }
+
+    return [];
   }
 
   // private loadActiveAccountFromStorage(): void {
@@ -1177,7 +1253,7 @@ export class NostrService {
   //   }
   // }
 
-  async loadAccountsMetadata() {
+  async getAccountsMetadata() {
     const pubkeys = this.accounts().map(user => user.pubkey);
     const events = await this.storage.getEventsByPubkeyAndKind(pubkeys, kinds.Metadata);
 
@@ -1195,45 +1271,44 @@ export class NostrService {
       return event;
     });
 
-    this.accountsMetadata.set(processedEvents);
     return processedEvents;
   }
 
-  async loadAccountsRelays() {
+  async getAccountsRelays() {
     const pubkeys = this.accounts().map(user => user.pubkey);
     const relays = await this.storage.getEventsByPubkeyAndKind(pubkeys, kinds.RelayList);
-    this.accountsRelays.set(relays);
+    return relays;
   }
 
-  async updateAccountMetadata(event: Event) {
-    const pubkey = event.pubkey;
+  // async updateAccountMetadata(event: Event) {
+  //   const pubkey = event.pubkey;
 
-    // Ensure content is properly parsed
-    if (event.content && typeof event.content === 'string') {
-      try {
-        event.content = JSON.parse(event.content);
-      } catch (e) {
-        this.logger.error('Failed to parse event content in updateAccountMetadata', e);
-      }
-    }
+  //   // Ensure content is properly parsed
+  //   if (event.content && typeof event.content === 'string') {
+  //     try {
+  //       event.content = JSON.parse(event.content);
+  //     } catch (e) {
+  //       this.logger.error('Failed to parse event content in updateAccountMetadata', e);
+  //     }
+  //   }
 
-    // Add to the metadata array
-    const existingMetadata = this.accountsMetadata().find(meta => meta.pubkey === pubkey);
+  //   // Add to the metadata array
+  //   const existingMetadata = this.accountsMetadata().find(meta => meta.pubkey === pubkey);
 
-    if (existingMetadata) {
-      this.logger.debug('Updating existing metadata', { pubkey });
-      this.accountsMetadata.update(array =>
-        array.map(meta => meta.pubkey === pubkey ? event : meta));
-    } else {
-      this.logger.debug('Adding new metadata', { pubkey });
-      this.accountsMetadata.update(array => [...array, event]);
-    }
+  //   if (existingMetadata) {
+  //     this.logger.debug('Updating existing metadata', { pubkey });
+  //     this.accountsMetadata.update(array =>
+  //       array.map(meta => meta.pubkey === pubkey ? event : meta));
+  //   } else {
+  //     this.logger.debug('Adding new metadata', { pubkey });
+  //     this.accountsMetadata.update(array => [...array, event]);
+  //   }
 
-    // Also update the cache for getMetadataForUser
-    if (this.usersMetadata().has(pubkey)) {
-      this.updateMetadataCache(pubkey, event);
-    }
-  }
+  //   // Also update the cache for getMetadataForUser
+  //   if (this.usersMetadata().has(pubkey)) {
+  //     this.updateMetadataCache(pubkey, event);
+  //   }
+  // }
 
   getTruncatedNpub(pubkey: string): string {
     console.debug('LOCATION 7:', pubkey);
@@ -1330,9 +1405,9 @@ export class NostrService {
       debugger;
 
       this.accountChanging.set(targetUser);
-
       debugger;
       this.account.set(targetUser);
+      this.accountChanged.set(targetUser);
       this.logger.debug('Successfully switched user');
 
       // Persist the account to local storage.
@@ -1706,7 +1781,7 @@ export class NostrService {
       this.logger.info('Cache cleared successfully');
 
       // TODO: Improve this to discover if needed.
-      const relayUrls = this.relayService.defaultRelays() // .activeRelays();
+      const relayUrls = this.relayService.defaultRelays; // .activeRelays();
 
       if (!relayUrls.length) {
         return undefined;
