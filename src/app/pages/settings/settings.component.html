@@ -1,83 +1,123 @@
-<div class="content-medium">
-  <h1 class="page-title">Settings</h1>
+<div class="settings-container">
+  <!-- Mobile back button (only shows on mobile when viewing details) -->
+  @if (isMobile() && showDetails()) {
+  <div class="mobile-header">
+    <button mat-icon-button (click)="goBack()" aria-label="Go back">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <h2>{{ getTitle() }}</h2>
+  </div>
+  }
 
-  <mat-card class="settings-card">
-    <mat-card-content>
-      <mat-tab-group [selectedIndex]="activeTabIndex()" (selectedIndexChange)="activeTabIndex.set($event)" class="settings-tabs">
-        <!-- General Settings Tab -->
-        <mat-tab label="General">
-          <div class="tab-content">
-            <div class="setting-item">
-              <span>Dark Mode</span>
-              <mat-slide-toggle [checked]="themeService.darkMode()" (change)="toggleDarkMode()">
-              </mat-slide-toggle>
-            </div>
+  <!-- Left sidebar with navigation options -->
+  @if (!isMobile() || !showDetails()) {
+  <div class="settings-sidebar">
+    <h1 class="page-title">Settings</h1>
+    <mat-nav-list>
+      @for (section of sections; track section.id) {
+      <a mat-list-item [class.active]="activeSection() === section.id" (click)="selectSection(section.id)">
+        <mat-icon matListItemIcon>{{ section.icon }}</mat-icon>
+        <span matListItemTitle>{{ section.title }}</span>
+      </a>
+      }
+    </mat-nav-list>
+  </div>
+  }
 
-            <!-- Storage Stats Component -->
-            <div class="setting-item">
-              <app-storage-stats class="mb-4"></app-storage-stats>
-            </div>
+  <!-- Right content area showing the selected section details -->
+  @if (!isMobile() || showDetails()) {
+  <div class="settings-content">
+    <mat-card class="settings-card">
+      @if (!isMobile()) {
+      <mat-card-header>
+        <mat-card-title>{{ getTitle() }}</mat-card-title>
+      </mat-card-header>
+      }
 
-            <div>
-              <h2>Logging</h2>
-              <p>Configure application logging levels</p>
+      <mat-card-content>
+        <!-- General Settings -->
+        @if (activeSection() === 'general') {
+        <div class="setting-item">
+          <span>Dark Mode</span>
+          <mat-slide-toggle [checked]="themeService.darkMode()" (change)="toggleDarkMode()">
+          </mat-slide-toggle>
+        </div>
 
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Log Level</mat-label>
-                <mat-select [ngModel]="currentLogLevel()" (selectionChange)="setLogLevel($event.value)">
-                  <mat-option value="debug">Debug</mat-option>
-                  <mat-option value="info">Info</mat-option>
-                  <mat-option value="warn">Warning</mat-option>
-                  <mat-option value="error">Error</mat-option>
-                  <mat-option value="none">None</mat-option>
-                </mat-select>
-              </mat-form-field>
-              <p>
-                @switch (currentLogLevel()) {
-                @case ('debug') {
-                Shows all log messages including detailed debug information.
-                }
-                @case ('info') {
-                Shows informational messages, warnings and errors.
-                }
-                @case ('warn') {
-                Shows only warnings and errors.
-                }
-                @case ('error') {
-                Shows only error messages.
-                }
-                @case ('none') {
-                Disables all logging output.
-                }
-                }
-              </p>
-            </div>
+        <!-- Storage Stats Component -->
+        <div class="setting-item">
+          <app-storage-stats class="mb-4"></app-storage-stats>
+        </div>
 
-            <div class="setting-item danger-zone">
-              <div>
-                <h2>Danger Zone</h2>
-                <p>This will delete all your local app data and reload the application.</p>
-              </div>
-              <button mat-flat-button class="wipe-data-button" (click)="wipeData()">
-                Wipe Data
-              </button>
-            </div>
+        <div>
+          <h2>Logging</h2>
+          <p>Configure application logging levels</p>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Log Level</mat-label>
+            <mat-select [ngModel]="currentLogLevel()" (selectionChange)="setLogLevel($event.value)">
+              <mat-option value="debug">Debug</mat-option>
+              <mat-option value="info">Info</mat-option>
+              <mat-option value="warn">Warning</mat-option>
+              <mat-option value="error">Error</mat-option>
+              <mat-option value="none">None</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <p>
+            @switch (currentLogLevel()) {
+            @case ('debug') {
+            Shows all log messages including detailed debug information.
+            }
+            @case ('info') {
+            Shows informational messages, warnings and errors.
+            }
+            @case ('warn') {
+            Shows only warnings and errors.
+            }
+            @case ('error') {
+            Shows only error messages.
+            }
+            @case ('none') {
+            Disables all logging output.
+            }
+            }
+          </p>
+        </div>
+
+        <div class="setting-item danger-zone">
+          <div>
+            <h2>Danger Zone</h2>
+            <p>This will delete all your local app data and reload the application.</p>
           </div>
-        </mat-tab>
+          <button mat-flat-button class="wipe-data-button" (click)="wipeData()">
+            Wipe Data
+          </button>
+        </div>
+        }
 
         <!-- Privacy and Safety Tab -->
-        <mat-tab label="Privacy & Safety">
-          <div class="tab-content">
-            <app-privacy-settings></app-privacy-settings>
-          </div>
-        </mat-tab>
+        @if (activeSection() === 'privacy') {
+        <app-privacy-settings></app-privacy-settings>
+        }
 
-        <mat-tab label="Logs">
-          <div class="tab-content">
-            <app-logs-settings></app-logs-settings>
-          </div>
-        </mat-tab>
-      </mat-tab-group>
-    </mat-card-content>
-  </mat-card>
+        <!-- Logs Tab -->
+        @if (activeSection() === 'logs') {
+        <app-logs-settings></app-logs-settings>
+        }
+
+        @if (activeSection() === 'about') {
+        <app-about></app-about>
+        }
+
+        @if (activeSection() === 'relays') {
+        <app-relays-page></app-relays-page>
+        }
+        
+        @if (activeSection() === 'backup') {
+          <app-backup></app-backup>
+          }
+
+      </mat-card-content>
+    </mat-card>
+  </div>
+  }
 </div>
