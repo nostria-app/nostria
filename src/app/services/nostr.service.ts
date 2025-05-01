@@ -111,6 +111,7 @@ export class NostrService {
 
     effect(async () => {
       const account = this.accountChanged();
+      debugger;
       // If the account is changing and it has a value (it will be empty on logout).
       if (account) {
         const pubkey = account.pubkey;
@@ -162,11 +163,15 @@ export class NostrService {
 
         metadata = await this.relayService.getEventByPubkeyAndKind(pubkey, kinds.Metadata);
 
+        debugger;
+
         if (metadata) {
+          this.updateAccountMetadata(metadata);
+
           // Also update the cache for getMetadataForUser
-          // if (this.usersMetadata().has(pubkey)) {
-          //   this.updateMetadataCache(pubkey, metadata);
-          // }
+          if (this.usersMetadata().has(pubkey)) {
+            this.updateMetadataCache(pubkey, metadata);
+          }
 
           this.logger.info('Found user metadata', { metadata });
           this.appState.loadingMessage.set('Found your profile! 👍');
@@ -203,6 +208,9 @@ export class NostrService {
         }, 1500);
 
         // await this.loadData();
+      } else {
+        // this.appState.isLoading.set(false);
+        // this.appState.showSuccess.set(false);
       }
     });
 
@@ -1310,6 +1318,17 @@ export class NostrService {
   //   }
   // }
 
+  updateAccountMetadata(event: Event) {
+    debugger;
+    const existingMetadata = this.accountsMetadata().find(meta => meta.pubkey === event.pubkey);
+
+    if (existingMetadata) {
+      this.accountsMetadata.update(array => array.map(meta => meta.pubkey === event.pubkey ? event : meta));
+    } else {
+      this.accountsMetadata.update(array => [...array, event]);
+    }
+  }
+
   getTruncatedNpub(pubkey: string): string {
     console.debug('LOCATION 7:', pubkey);
     const npub = this.getNpubFromPubkey(pubkey);
@@ -1447,12 +1466,13 @@ export class NostrService {
 
     this.accountChanging.set(user);
 
-    debugger;
     // Trigger the user signal which indicates user is logged on.
     this.account.set(user);
 
     // Persist the account to local storage.
     this.localStorage.setItem(this.appState.ACCOUNT_STORAGE_KEY, JSON.stringify(user));
+
+    this.accountChanged.set(user);
 
     // Make sure we have the latest metadata for this user
     // this.getUserMetadata(user.pubkey).catch(err =>
