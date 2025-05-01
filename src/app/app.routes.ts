@@ -27,7 +27,15 @@ export const routes: Routes = [
   { path: 'home', component: HomeComponent },
   { path: 'welcome', component: WelcomeComponent },
   { path: 'relays', component: RelaysComponent },
-  { path: 'badges', component: BadgesComponent },
+  { 
+    path: 'badges', 
+    children: [
+      { path: '', component: BadgesComponent },
+      { path: 'create', loadComponent: () => import('./pages/badges/badge-editor/badge-editor.component').then(m => m.BadgeEditorComponent) },
+      { path: 'details/:id', loadComponent: () => import('./pages/badges/badge-details/badge-details.component').then(m => m.BadgeDetailsComponent) },
+      { path: 'edit/:id', loadComponent: () => import('./pages/badges/badge-editor/badge-editor.component').then(m => m.BadgeEditorComponent) }
+    ]
+  },
   { path: 'messages', component: MessagesComponent },
   { path: 'settings', component: SettingsComponent },
   { path: 'notifications', component: NotificationsComponent },

@@ -1,0 +1,108 @@
+<div class="editor-container">
+    <div class="editor-header">
+        <h1>Badge Editor</h1>
+    </div>
+
+    <div class="editor-content">
+        <div class="editor-form">
+            <form [formGroup]="badgeForm">
+                <mat-form-field class="full-width">
+                    <mat-label>Badge Name</mat-label>
+                    <input matInput formControlName="name" placeholder="Enter badge name">
+                    <mat-error *ngIf="badgeForm.get('name')?.invalid && badgeForm.get('name')?.touched">
+                        Badge name is required
+                    </mat-error>
+                </mat-form-field>
+
+                <mat-form-field class="full-width">
+                    <mat-label>URL Slug</mat-label>
+                    <input matInput formControlName="slug" placeholder="badge-slug">
+                    <mat-hint>Auto-generated from badge name</mat-hint>
+                </mat-form-field>
+
+                <mat-form-field class="full-width">
+                    <mat-label>Description</mat-label>
+                    <textarea matInput formControlName="description" placeholder="Describe your badge" rows="3"></textarea>
+                    <mat-error *ngIf="badgeForm.get('description')?.invalid && badgeForm.get('description')?.touched">
+                        Description is required
+                    </mat-error>
+                </mat-form-field>
+
+                <div class="file-upload-section">
+                    <h3>Badge Graphics (1024x1024)</h3>
+                    <div class="file-upload">
+                        <button mat-stroked-button type="button" (click)="imageInput.click()">
+                            <mat-icon>upload</mat-icon>
+                            Upload Image
+                        </button>
+                        <input #imageInput type="file" hidden (change)="onImageSelected($event, 'image')" accept="image/*">
+                        <span *ngIf="previewImage()">File selected</span>
+                    </div>
+                    <mat-error *ngIf="badgeForm.get('image')?.invalid && badgeForm.get('image')?.touched">
+                        Badge image is required
+                    </mat-error>
+                </div>
+
+                <div class="file-upload-section">
+                    <h3>Badge Thumbnail (Optional)</h3>
+                    <div class="file-upload">
+                        <button mat-stroked-button type="button" (click)="thumbnailInput.click()">
+                            <mat-icon>upload</mat-icon>
+                            Upload Thumbnail
+                        </button>
+                        <input #thumbnailInput type="file" hidden (change)="onImageSelected($event, 'thumbnail')" accept="image/*">
+                        <span *ngIf="previewThumbnail()">File selected</span>
+                    </div>
+                </div>
+
+                <div class="tags-section">
+                    <h3>Tags (Optional)</h3>
+                    <div class="tag-input">
+                        <mat-form-field class="tag-field">
+                            <mat-label>Add a tag</mat-label>
+                            <input matInput [ngModel]="tagInput()" (ngModelChange)="tagInput.set($event)" [ngModelOptions]="{standalone: true}" (keydown.enter)="addTag($event)">
+                        </mat-form-field>
+                        <button mat-icon-button color="primary" (click)="addTag($event)">
+                            <mat-icon>add</mat-icon>
+                        </button>
+                    </div>
+                    <div class="tags-list">
+                        @for (tag of tags(); track tag) {
+                            <mat-chip (removed)="removeTag(tag)" [removable]="true">
+                                {{tag}}
+                                <mat-icon matChipRemove>cancel</mat-icon>
+                            </mat-chip>
+                        }
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button mat-button type="button" (click)="cancel()">Cancel</button>
+                    <button mat-flat-button color="primary" type="submit" (click)="publishBadge()">
+                        Publish Badge Design
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="badge-preview">
+            <h2>Preview</h2>
+            <div class="preview-card">
+                @if (previewImage()) {
+                    <div class="preview-image">
+                        <img [src]="previewImage()" alt="Badge Preview">
+                    </div>
+                } @else {
+                    <div class="placeholder-image">
+                        <mat-icon>image</mat-icon>
+                        <p>Upload an image</p>
+                    </div>
+                }
+                <div class="preview-info">
+                    <h3>{{badgeForm.get('name')?.value || 'Badge Name'}}</h3>
+                    <p>{{badgeForm.get('description')?.value || 'Badge description will appear here'}}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
