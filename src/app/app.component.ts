@@ -117,9 +117,9 @@ export class AppComponent {
 
   navItems: NavItem[] = [
     { path: '', label: 'Home', icon: 'home', showInMobile: true },
-    { path: 'feed', label: 'Feed', icon: 'notes', showInMobile: true },
+    // { path: 'feed', label: 'Feed', icon: 'notes', showInMobile: true },
     { path: 'articles', label: 'Articles', icon: 'article', showInMobile: false },
-    { path: 'podcasts', label: 'Podcasts', icon: 'podcasts', showInMobile: false },
+    // { path: 'podcasts', label: 'Podcasts', icon: 'podcasts', showInMobile: false },
     { path: 'people', label: 'People', icon: 'people', showInMobile: false },
     { path: 'messages', label: 'Messages', icon: 'mail', showInMobile: true },
     { path: 'media', label: 'Media', icon: 'photo_library', showInMobile: false },

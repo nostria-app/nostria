@@ -7,13 +7,13 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { NostrEvent } from '../../../types/nostr';
 import { NostrService } from '../../services/nostr.service';
 import { NotificationService } from '../../services/notification.service';
 import { LayoutService } from '../../services/layout.service';
 import { AgoPipe } from '../../pipes/ago.pipe';
-import { NpubPipe } from '../../pipes/npub.pipe';
+import { NPubPipe } from '../../pipes/npub.pipe';
 import { TimestampPipe } from '../../pipes/timestamp.pipe';
+import { NostrEvent } from '../../interfaces';
 
 @Component({
   selector: 'app-home',
@@ -28,7 +28,7 @@ import { TimestampPipe } from '../../pipes/timestamp.pipe';
     MatMenuModule,
     MatTooltipModule,
     AgoPipe,
-    NpubPipe,
+    NPubPipe,
     TimestampPipe
   ],
   templateUrl: './home.component.html',
