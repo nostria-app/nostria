@@ -1,5 +1,74 @@
 <div class="badges-container">
     <div class="badges-header">
-      <h1>Badges</h1>
+        <h1>Badges</h1>
+        <div class="badges-actions">
+            <button mat-raised-button color="primary" (click)="openBadgeEditor()">
+                <mat-icon>add</mat-icon>
+                Badge Editor
+            </button>
+        </div>
     </div>
+
+    <mat-tab-group animationDuration="0ms">
+        <mat-tab>
+            <ng-template mat-tab-label>
+                <mat-icon class="tab-icon">verified</mat-icon>
+                Accepted
+            </ng-template>
+            <div class="badges-grid">
+                @for (badge of acceptedBadges(); track badge.id) {
+                    <mat-card class="badge-card" (click)="viewBadgeDetails(badge)">
+                        <img mat-card-image [src]="badge.thumbnail || badge.image" alt="{{ badge.name }}">
+                        <mat-card-content>
+                            <h3>{{ badge.name }}</h3>
+                            <p>{{ badge.description }}</p>
+                        </mat-card-content>
+                    </mat-card>
+                }
+            </div>
+        </mat-tab>
+        <mat-tab>
+            <ng-template mat-tab-label>
+                <mat-icon class="tab-icon">military_tech</mat-icon>
+                Awarded
+            </ng-template>
+            <div class="badges-grid">
+                @for (badge of awardedBadges(); track badge.id) {
+                    <mat-card class="badge-card" (click)="viewBadgeDetails(badge)">
+                        <img mat-card-image [src]="badge.thumbnail || badge.image" alt="{{ badge.name }}">
+                        <mat-card-content>
+                            <h3>{{ badge.name }}</h3>
+                            <p>{{ badge.description }}</p>
+                        </mat-card-content>
+                    </mat-card>
+                }
+            </div>
+        </mat-tab>
+        <mat-tab>
+            <ng-template mat-tab-label>
+                <mat-icon class="tab-icon">create</mat-icon>
+                Created
+            </ng-template>
+            <div class="badges-grid">
+                @for (badge of createdBadges(); track badge.id) {
+                    <mat-card class="badge-card" (click)="viewBadgeDetails(badge)">
+                        <img mat-card-image [src]="badge.thumbnail || badge.image" alt="{{ badge.name }}">
+                        <mat-card-content>
+                            <h3>{{ badge.name }}</h3>
+                            <p>{{ badge.description }}</p>
+                        </mat-card-content>
+                    </mat-card>
+                }
+                @if (!createdBadges().length) {
+                    <div class="no-badges-message">
+                        <mat-icon>sentiment_very_dissatisfied</mat-icon>
+                        <p>You haven't created any badges yet</p>
+                        <button mat-raised-button color="accent" (click)="openBadgeEditor()">
+                            Create Your First Badge
+                        </button>
+                    </div>
+                }
+            </div>
+        </mat-tab>
+    </mat-tab-group>
 </div>

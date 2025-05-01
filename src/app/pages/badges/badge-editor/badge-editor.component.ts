@@ -1,0 +1,132 @@
+import { Component, inject, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { MatInputModule } from '@angular/material/input';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { Router } from '@angular/router';
+
+@Component({
+  selector: 'app-badge-editor',
+  standalone: true,
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    MatButtonModule,
+    MatCardModule,
+    MatInputModule,
+    MatFormFieldModule,
+    MatIconModule,
+    MatChipsModule,
+    MatDividerModule,
+    MatSnackBarModule,
+    FormsModule
+  ],
+  templateUrl: './badge-editor.component.html',
+  styleUrl: './badge-editor.component.scss'
+})
+export class BadgeEditorComponent {
+  private fb = inject(FormBuilder);
+  private snackBar = inject(MatSnackBar);
+  private router = inject(Router);
+
+  // Form for badge creation
+  badgeForm: FormGroup;
+  
+  // Tag management
+  tagInput = signal('');
+  tags = signal<string[]>([]);
+  
+  // Badge preview
+  previewImage = signal<string | null>(null);
+  previewThumbnail = signal<string | null>(null);
+
+  constructor() {
+    this.badgeForm = this.fb.group({
+      name: ['', [Validators.required]],
+      slug: ['', [Validators.required]],
+      description: ['', [Validators.required]],
+      image: ['', [Validators.required]],
+      thumbnail: ['']
+    });
+
+    // Update slug automatically from name
+    this.badgeForm.get('name')?.valueChanges.subscribe(name => {
+      if (name) {
+        const slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+        this.badgeForm.get('slug')?.setValue(slug);
+      }
+    });
+  }
+
+  // Handle image upload for badge graphics
+  onImageSelected(event: Event, type: 'image' | 'thumbnail'): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files[0]) {
+      const file = input.files[0];
+      
+      // Simple file type validation
+      if (!file.type.includes('image/')) {
+        this.snackBar.open('Please select a valid image file', 'Close', { duration: 3000 });
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        
+        if (type === 'image') {
+          this.previewImage.set(result);
+          this.badgeForm.get('image')?.setValue(file);
+        } else {
+          this.previewThumbnail.set(result);
+          this.badgeForm.get('thumbnail')?.setValue(file);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  // Tag management
+  addTag(event: Event): void {
+    event.preventDefault();
+    const value = this.tagInput();
+    if (value.trim() !== '') {
+      this.tags.update(currentTags => [...currentTags, value.trim()]);
+      this.tagInput.set('');
+    }
+  }
+
+  removeTag(tag: string): void {
+    this.tags.update(currentTags => currentTags.filter(t => t !== tag));
+  }
+
+  // Form submission
+  publishBadge(): void {
+    if (this.badgeForm.valid) {
+      // In a real implementation, this would send the badge data to a service
+      console.log('Badge form data:', this.badgeForm.value);
+      console.log('Tags:', this.tags());
+      
+      this.snackBar.open('Badge published successfully!', 'Close', { duration: 3000 });
+      this.router.navigate(['/badges']);
+    } else {
+      // Mark all fields as touched to show validation errors
+      Object.keys(this.badgeForm.controls).forEach(key => {
+        this.badgeForm.get(key)?.markAsTouched();
+      });
+      
+      this.snackBar.open('Please fill all required fields', 'Close', { duration: 3000 });
+    }
+  }
+
+  // Navigation
+  cancel(): void {
+    this.router.navigate(['/badges']);
+  }
+}
