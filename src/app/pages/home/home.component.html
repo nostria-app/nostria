@@ -1,52 +1,212 @@
-<div class="home-container">
-  <!-- Hero Section -->
-  <section class="hero-section">
-    <div class="hero-content">
-      <h1>Nostria</h1>
-      <h2>Your Social Network</h2>
-      <p>
-        Making the Nostr protocol accessible to everyone, with a focus on user experience and performance for
-        global scale.
-      </p>
-      <div class="action-buttons">
-        <a mat-flat-button href="https://www.nostria.app/">Learn more</a>
-        <button mat-stroked-button [routerLink]="['/p', this.nostr.activeAccount()?.pubkey]">Your Profile</button>
-      </div>
+<div class="home-container" [ngClass]="columnLayout()">
+  <!-- Header Section -->
+  <header class="header-section">
+    <h1 class="title">Discover</h1>
+    <div class="header-actions">
+      <button mat-icon-button (click)="refreshContent()" matTooltip="Refresh content">
+        <mat-icon>refresh</mat-icon>
+      </button>
+      <button mat-icon-button (click)="toggleAdvancedFilters()" matTooltip="Toggle filters">
+        <mat-icon>filter_list</mat-icon>
+      </button>
     </div>
-    <div class="hero-image">
-      <img src="icons/icon-3d-512x512.png" alt="Nostria logo" />
-    </div>
-  </section>
+  </header>
 
-  <!-- Features Section -->
-  <section class="features-section">
-    <h2 class="section-title">Key Features</h2>
-    <div class="features-grid">
-      @for (feature of features(); track feature.title) {
-      <mat-card class="feature-card" appearance="outlined">
-        <mat-card-header>
-          <mat-icon mat-card-avatar>{{feature.icon}}</mat-icon>
-          <mat-card-title>{{feature.title}}</mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          <p>{{feature.description}}</p>
-        </mat-card-content>
-      </mat-card>
+  <!-- Filters Section -->
+  <div class="filters-section" *ngIf="showAdvancedFilters()">
+    <h3>Filter by tags</h3>
+    <div class="tag-chips">
+      @for (tag of availableTags(); track tag) {
+        <mat-chip-option
+          [selected]="selectedTags().includes(tag)"
+          (click)="toggleTagFilter(tag)"
+          color="primary">
+          #{{ tag }}
+        </mat-chip-option>
       }
     </div>
-  </section>
+  </div>
 
-  <!-- Stats Section -->
-  <section class="stats-section">
-    <h2 class="section-title">Nostr Network Statistics</h2>
-    <div class="stats-container">
-      @for (stat of stats(); track stat.value) {
-      <div class="stat-item">
-        <div class="stat-value">{{stat.value}}</div>
-        <div class="stat-label">{{stat.label}}</div>
+  <!-- Navigation Tabs -->
+  <nav class="navigation-tabs">
+    <mat-tab-group
+      [selectedIndex]="activeSection() === 'discover' ? 0 : activeSection() === 'following' ? 1 : 2"
+      (selectedIndexChange)="setActiveSection($event === 0 ? 'discover' : $event === 1 ? 'following' : 'media')">
+      <mat-tab label="Discover">
+        <div class="tab-indicator"></div>
+      </mat-tab>
+      <mat-tab label="Following">
+        <div class="tab-indicator"></div>
+      </mat-tab>
+      <mat-tab label="Media">
+        <div class="tab-indicator"></div>
+      </mat-tab>
+    </mat-tab-group>
+  </nav>
+
+  <!-- Content Section -->
+  <div class="content-section">
+    <!-- Discover Section -->
+    @if (activeSection() === 'discover') {
+      <div class="discover-feed feed-container">
+        @for (event of filteredTrending(); track event.id) {
+          <mat-card class="content-card">
+            <mat-card-header>
+              <div mat-card-avatar class="avatar"></div>
+              <mat-card-title>User {{ event.pubkey.substring(0, 8) }}</mat-card-title>
+              <mat-card-subtitle>{{ event.created_at | date:'medium' }}</mat-card-subtitle>
+              <div class="card-actions">
+                <button mat-icon-button [matMenuTriggerFor]="menu">
+                  <mat-icon>more_vert</mat-icon>
+                </button>
+                <mat-menu #menu="matMenu">
+                  <button mat-menu-item (click)="shareContent(event)">
+                    <mat-icon>share</mat-icon>
+                    <span>Share</span>
+                  </button>
+                  <button mat-menu-item (click)="bookmarkContent(event)">
+                    <mat-icon>bookmark</mat-icon>
+                    <span>Bookmark</span>
+                  </button>
+                </mat-menu>
+              </div>
+            </mat-card-header>
+            <mat-card-content>
+              <p>{{ event.content }}</p>
+              <div class="tags">
+                @for (tag of event.tags; track tag) {
+                  @if (tag[0] === 't') {
+                    <span class="tag">#{{ tag[1] }}</span>
+                  }
+                }
+              </div>
+            </mat-card-content>
+            <mat-card-actions>
+              <button mat-icon-button>
+                <mat-icon>favorite_border</mat-icon>
+              </button>
+              <button mat-icon-button>
+                <mat-icon>comment</mat-icon>
+              </button>
+              <button mat-icon-button>
+                <mat-icon>repeat</mat-icon>
+              </button>
+            </mat-card-actions>
+          </mat-card>
+        }
       </div>
-      }
-    </div>
-  </section>
+    }
 
+    <!-- Following Section -->
+    @if (activeSection() === 'following') {
+      <div class="following-feed feed-container">
+        @for (event of filteredFollowing(); track event.id) {
+          <mat-card class="content-card">
+            <mat-card-header>
+              <div mat-card-avatar class="avatar"></div>
+              <mat-card-title>User {{ event.pubkey.substring(0, 8) }}</mat-card-title>
+              <mat-card-subtitle>{{ event.created_at | date:'medium' }}</mat-card-subtitle>
+              <div class="card-actions">
+                <button mat-icon-button [matMenuTriggerFor]="menu">
+                  <mat-icon>more_vert</mat-icon>
+                </button>
+                <mat-menu #menu="matMenu">
+                  <button mat-menu-item (click)="shareContent(event)">
+                    <mat-icon>share</mat-icon>
+                    <span>Share</span>
+                  </button>
+                  <button mat-menu-item (click)="bookmarkContent(event)">
+                    <mat-icon>bookmark</mat-icon>
+                    <span>Bookmark</span>
+                  </button>
+                </mat-menu>
+              </div>
+            </mat-card-header>
+            <mat-card-content>
+              <p>{{ event.content }}</p>
+              <div class="tags">
+                @for (tag of event.tags; track tag) {
+                  @if (tag[0] === 't') {
+                    <span class="tag">#{{ tag[1] }}</span>
+                  }
+                }
+              </div>
+            </mat-card-content>
+            <mat-card-actions>
+              <button mat-icon-button>
+                <mat-icon>favorite_border</mat-icon>
+              </button>
+              <button mat-icon-button>
+                <mat-icon>comment</mat-icon>
+              </button>
+              <button mat-icon-button>
+                <mat-icon>repeat</mat-icon>
+              </button>
+            </mat-card-actions>
+          </mat-card>
+        }
+      </div>
+    }
+
+    <!-- Media Section -->
+    @if (activeSection() === 'media') {
+      <div class="media-feed feed-container">
+        @for (event of filteredMedia(); track event.id) {
+          <mat-card class="content-card media-card">
+            <div class="media-placeholder">
+              <mat-icon>image</mat-icon>
+            </div>
+            <mat-card-header>
+              <div mat-card-avatar class="avatar"></div>
+              <mat-card-title>User {{ event.pubkey.substring(0, 8) }}</mat-card-title>
+              <mat-card-subtitle>{{ event.created_at | date:'medium' }}</mat-card-subtitle>
+              <div class="card-actions">
+                <button mat-icon-button [matMenuTriggerFor]="menu">
+                  <mat-icon>more_vert</mat-icon>
+                </button>
+                <mat-menu #menu="matMenu">
+                  <button mat-menu-item (click)="shareContent(event)">
+                    <mat-icon>share</mat-icon>
+                    <span>Share</span>
+                  </button>
+                  <button mat-menu-item (click)="bookmarkContent(event)">
+                    <mat-icon>bookmark</mat-icon>
+                    <span>Bookmark</span>
+                  </button>
+                </mat-menu>
+              </div>
+            </mat-card-header>
+            <mat-card-content>
+              <p>{{ event.content }}</p>
+              <div class="tags">
+                @for (tag of event.tags; track tag) {
+                  @if (tag[0] === 't') {
+                    <span class="tag">#{{ tag[1] }}</span>
+                  }
+                }
+              </div>
+            </mat-card-content>
+            <mat-card-actions>
+              <button mat-icon-button>
+                <mat-icon>favorite_border</mat-icon>
+              </button>
+              <button mat-icon-button>
+                <mat-icon>comment</mat-icon>
+              </button>
+              <button mat-icon-button>
+                <mat-icon>repeat</mat-icon>
+              </button>
+            </mat-card-actions>
+          </mat-card>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- Bottom Action Bar -->
+  <div class="bottom-action-bar">
+    <button mat-fab color="primary" matTooltip="Create new post">
+      <mat-icon>add</mat-icon>
+    </button>
+  </div>
 </div>
