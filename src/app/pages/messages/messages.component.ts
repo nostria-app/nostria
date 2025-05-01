@@ -204,7 +204,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
      * Load user's preferred relays for messaging
      */
     async loadPreferredRelays() {
-        this.preferredRelays.set(this.relay.userRelays().map(relay => relay.url));
+        this.preferredRelays.set(this.relay.relays.map(relay => relay.url));
 
         // try {
         //     const myPubkey = this.nostr.activeAccount()?.pubkey;
@@ -245,7 +245,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
      * Get currently connected relays
      */
     getConnectedRelays(): string[] {
-        return this.relay.userRelays()
+        return this.relay.relays
             .filter(relay => relay.status === 'connected')
             .map(relay => relay.url);
     }

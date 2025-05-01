@@ -17,6 +17,7 @@ import { LoggerService } from '../../services/logger.service';
 import { kinds, NostrEvent } from 'nostr-tools';
 import { RelayService } from '../../services/relay.service';
 import { standardizedTag } from '../../standardized-tags';
+import { ApplicationService } from '../../services/application.service';
 
 interface Article {
     id: string;
@@ -58,6 +59,7 @@ export class ArticlesComponent {
     private router = inject(Router);
     private nostrService = inject(NostrService);
     private relaysService = inject(RelayService);
+    private readonly app = inject(ApplicationService);
     private logger = inject(LoggerService);
     private snackBar = inject(MatSnackBar);
 
@@ -85,7 +87,7 @@ export class ArticlesComponent {
     constructor() {
         // Load articles when component is initialized
         effect(() => {
-            if (this.nostrService.initialized()) {
+            if (this.app.initialized()) {
                 this.loadArticles();
             }
         });
@@ -99,7 +101,7 @@ export class ArticlesComponent {
             this.error.set(null);
 
             // Get relay URLs from the nostr service
-            const relayUrls = this.relaysService.userRelays().map(relay => relay.url);
+            const relayUrls = this.relaysService.relays.map(relay => relay.url);
 
             if (!relayUrls || relayUrls.length === 0) {
                 this.error.set('No relays available to fetch articles');

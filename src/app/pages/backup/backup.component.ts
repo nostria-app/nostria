@@ -59,7 +59,7 @@ export class BackupComponent {
 
     constructor() {
         effect(async () => {
-            if (this.app.authenticated()) {
+            if (this.app.initialized() && this.app.authenticated()) {
                 await this.loadBackupStats();
             }
         });
@@ -67,7 +67,7 @@ export class BackupComponent {
 
     async loadBackupStats(): Promise<void> {
         try {
-            const pubkey = this.nostr.activeAccount()?.pubkey;
+            const pubkey = this.nostr.pubkey();
             if (!pubkey) return;
 
             const userEvents = await this.storage.getUserEvents(pubkey);
@@ -98,7 +98,7 @@ export class BackupComponent {
         this.progress.set(0);
 
         try {
-            const pubkey = this.nostr.activeAccount()?.pubkey;
+            const pubkey = this.nostr.pubkey();
             if (!pubkey) {
                 this.showMessage('No active user found');
                 return;
@@ -217,7 +217,7 @@ export class BackupComponent {
             }
 
             // Check if the backup is for the current user
-            const currentPubkey = this.nostr.activeAccount()?.pubkey;
+            const currentPubkey = this.nostr.pubkey();
             if (backupData.pubkey !== currentPubkey) {
                 this.showMessage('Warning: This backup is for a different user', 5000);
             }

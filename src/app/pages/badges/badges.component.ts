@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -7,6 +7,10 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { Router } from '@angular/router';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { ApplicationService } from '../../services/application.service';
+import { RelayService } from '../../services/relay.service';
+import { NostrService } from '../../services/nostr.service';
+import { kinds } from 'nostr-tools';
 
 interface Badge {
   id: string;
@@ -38,7 +42,10 @@ interface Badge {
 export class BadgesComponent {
   private dialog = inject(MatDialog);
   private router = inject(Router);
-  
+  private readonly app = inject(ApplicationService);
+  private readonly relay = inject(RelayService);
+  private readonly nostr = inject(NostrService);
+
   // Badge lists for each category
   acceptedBadges = signal<Badge[]>([]);
   awardedBadges = signal<Badge[]>([]);
@@ -47,6 +54,25 @@ export class BadgesComponent {
   constructor() {
     // Populate with mock data for now
     this.loadMockData();
+
+    console.log('Badges component initialized.');
+
+    effect(async () => {
+      const appInitialized = this.app.initialized();
+      const appAuthenticated = this.app.authenticated();
+
+      debugger;
+
+      if (appInitialized && appAuthenticated) {
+        console.log('appInitialized && appAuthenticated');
+        try {
+          const profileBagesEvent = await this.relay.getEventByPubkeyAndKind(this.nostr.pubkey(), kinds.ProfileBadges);
+          console.log('Profile Badges Event:', profileBagesEvent);
+        } catch (err) {
+          console.error('Error fetching profile badges:', err);
+        }
+      }
+    });
   }
 
   openBadgeEditor(): void {

@@ -81,7 +81,7 @@ interface Feature {
   styleUrl: './welcome.component.scss'
 })
 export class WelcomeComponent implements OnInit {
-  private nostr = inject(NostrService);
+  nostr = inject(NostrService);
   private logger = inject(LoggerService);
   private relayService = inject(RelayService);
   private layoutService = inject(LayoutService);
@@ -307,7 +307,7 @@ export class WelcomeComponent implements OnInit {
       // Generate random tags with higher probability of including popular ones
       const tagsCount = 1 + Math.floor(Math.random() * 4);
       const tags: string[] = [];
-      const popularTagsArr = this.popularTags()f;
+      const popularTagsArr = this.popularTags();
       
       for (let j = 0; j < tagsCount; j++) {
         if (Math.random() < 0.7 && popularTagsArr.length > 0) {

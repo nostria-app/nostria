@@ -183,7 +183,7 @@ export class LoginDialogComponent implements OnInit {
     this.nostrService.removeAccount(pubkey);
 
     // If no more accounts exist, go back to main view
-    if (this.nostrService.allAccounts().length === 0) {
+    if (!this.nostrService.hasAccounts()) {
       this.currentView.set('main');
     }
   }

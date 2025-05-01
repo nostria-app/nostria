@@ -31,7 +31,8 @@ Nostria implements the usage of the Nostr protocol to ensure maximum decentraliz
 - [ ] [NIP-09: Event Deletion](https://github.com/nostr-protocol/nips/blob/master/09.md)
 - [x] [NIP-10: Conventions for clients' use of `e` and `p` tags in text events](https://github.com/nostr-protocol/nips/blob/master/10.md)
 - [x] [NIP-11: Relay Information Document](https://github.com/nostr-protocol/nips/blob/master/11.md)
-- [ ] [NIP-14: Subject tag in text events.](https://github.com/nostr-protocol/nips/blob/master/14.md)
+- [ ] [NIP-14: Subject tag in text events](https://github.com/nostr-protocol/nips/blob/master/14.md)
+- [x] [NIP-17: Private Direct Messages](https://github.com/nostr-protocol/nips/blob/master/17.md)
 - [ ] [NIP-19: bech32-encoded entities](https://github.com/nostr-protocol/nips/blob/master/19.md)
 - [ ] [NIP-21: `nostr:` URL scheme](https://github.com/nostr-protocol/nips/blob/master/21.md)
 - [ ] [NIP-23: Long-form Content](https://github.com/nostr-protocol/nips/blob/master/23.md)
@@ -46,7 +47,7 @@ Nostria implements the usage of the Nostr protocol to ensure maximum decentraliz
 - [x] [NIP-51: Lists](https://github.com/nostr-protocol/nips/blob/master/51.md)
 - [ ] [NIP-56: Reporting](https://github.com/nostr-protocol/nips/blob/master/56.md)
 - [ ] [NIP-57: Lightning Zaps](https://github.com/nostr-protocol/nips/blob/master/57.md)
-- [ ] [NIP-58: Badges](https://github.com/nostr-protocol/nips/blob/master/58.md)
+- [x] [NIP-58: Badges](https://github.com/nostr-protocol/nips/blob/master/58.md)
 - [x] [NIP-65: Relay List Metadata](https://github.com/nostr-protocol/nips/blob/master/65.md)
 
 - [x] [BUD-01: Server requirements and blob retrieval](https://github.com/hzrd149/blossom/blob/master/buds/01.md)

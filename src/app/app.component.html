@@ -1,5 +1,6 @@
 <div class="app-container" [class.dark-theme]="themeService.darkMode()">
 
+  @if (app.initialized()) {
   <!-- Top toolbar - now outside and above the sidenav container -->
   <mat-toolbar color="primary" class="app-toolbar">
     <button mat-icon-button (click)="toggleSidenav()" aria-label="Toggle sidenav">
@@ -97,6 +98,7 @@
       }
     </button>
   </mat-toolbar>
+  }
 
   <!-- Floating Offline Indicator -->
   @if (appState.showOfflineWarning()) {
@@ -114,6 +116,7 @@
   </div>
   }
 
+  @if (app.initialized()) {
   <!-- Sidenav container now below the toolbar -->
   <mat-sidenav-container class="sidenav-container" autosize="true">
     <!-- Side navigation -->
@@ -180,12 +183,12 @@
           <div class="profile-avatar">
             <mat-icon class="avatar-icon">account_circle</mat-icon>
           </div>
-          <h2>{{ nostrService.activeAccount()?.name || (nostrService.activeAccount()?.pubkey | npub) }}</h2>
+          <h2>{{ nostrService.account()?.name || (nostrService.account()?.pubkey | npub) }}</h2>
           }
         </div>
 
         <mat-nav-list>
-          <a mat-list-item [routerLink]="['/p', nostrService.activeAccount()?.pubkey]"
+          <a mat-list-item [routerLink]="['/p', nostrService.account()?.pubkey]"
             (click)="layout.isHandset() ? toggleProfileSidenav() : null">
             <mat-icon matListItemIcon>person</mat-icon>
             <span>My Profile</span>
@@ -207,8 +210,8 @@
         <!-- Account selection menu -->
         @if (nostrService.hasAccounts()) {
         <mat-nav-list class="accounts-list">
-          @for (account of nostrService.allAccounts(); track account.pubkey) {
-          @if (account.pubkey !== nostrService.activeAccount()?.pubkey) {
+          @for (account of nostrService.accounts(); track account.pubkey) {
+          @if (account.pubkey !== nostrService.account()?.pubkey) {
 
           @if(nostrService.getMetadataForAccount(account.pubkey); as metadata) {
           <a mat-list-item (click)="switchAccount(account.pubkey)" class="account-item">
@@ -260,6 +263,7 @@
       </div>
     </mat-sidenav-content>
   </mat-sidenav-container>
+  }
 
   <!-- Mobile navigation footer - now outside of sidenav container -->
   @if (layout.isHandset()) {

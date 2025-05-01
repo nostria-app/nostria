@@ -29,7 +29,7 @@ export class ApplicationService {
 
     /** User is "authenticated" if there is any account set. This will read from local storage on start up,
      so no need to wait to check it. */
-    authenticated = computed(() => this.nostrService.account());
+    authenticated = computed(() => this.nostrService.account() != null);
 
     /** Used to check if both initialized and authenticated. Used to wait for both conditions. */
     // initializedAndAuthenticated = computed(() => this.initialized() && this.authenticated());
@@ -74,7 +74,7 @@ export class ApplicationService {
         const keysToRemove = [
             this.appState.ACCOUNT_STORAGE_KEY,
             this.appState.ACCOUNTS_STORAGE_KEY,
-            this.appState.BOOTSTRAP_RELAYS_STORAGE_KEY,
+            this.appState.DISCOVERY_RELAYS_STORAGE_KEY,
             this.appState.PEOPLE_VIEW_MODE,
             this.appState.MEDIA_ACTIVE_TAB,
             this.logger.LOG_LEVEL_KEY,

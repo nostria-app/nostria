@@ -42,12 +42,12 @@ export class StorageStatsComponent {
   // isLoggedIn = signal(false);
 
   constructor() {
-    effect(async () => {
-      if (this.storage.initialized()) {
-        // Initialize stats
-        await this.refreshStats();
-      }
-    });
+    // effect(async () => {
+    //   if (this.storage.initialized()) {
+    //     // Initialize stats
+    //     await this.refreshStats();
+    //   }
+    // });
 
     // Keep logged in status updated
     // effect(() => {

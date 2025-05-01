@@ -117,7 +117,7 @@
     <p class="dialog-subtitle">Select an account to continue:</p>
 
     <mat-nav-list class="accounts-list">
-      @for (account of nostrService.allAccounts(); track account.pubkey) {
+      @for (account of nostrService.accounts(); track account.pubkey) {
       <a mat-list-item (click)="selectExistingAccount(account.pubkey)" class="account-item">
         @if (getAccountMetadata(account)?.picture) {
         <div class="account-avatar" matListItemIcon>

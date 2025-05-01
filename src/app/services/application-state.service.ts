@@ -16,7 +16,7 @@ export class ApplicationStateService {
     private document = inject(DOCUMENT);
     private platformId = inject(PLATFORM_ID);
 
-    readonly BOOTSTRAP_RELAYS_STORAGE_KEY = 'nostria-bootstrap-relays';
+    readonly DISCOVERY_RELAYS_STORAGE_KEY = 'nostria-discovery-relays';
     readonly ACCOUNT_STORAGE_KEY = 'nostria-account';
     readonly ACCOUNTS_STORAGE_KEY = 'nostria-accounts';
     readonly PEOPLE_VIEW_MODE = 'nostria-peple-view-mode';

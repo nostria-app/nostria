@@ -19,6 +19,7 @@ export class LayoutService {
     private dialog = inject(MatDialog);
     private snackBar = inject(MatSnackBar);
     isHandset = signal(false);
+    isWideScreen = signal(false);
     breakpointObserver = inject(BreakpointObserver);
     optimalProfilePosition: number = 200;
     premium = signal(false);
@@ -29,6 +30,10 @@ export class LayoutService {
             this.logger.debug('Breakpoint observer update', { isMobile: result.matches });
             this.isHandset.set(result.matches);
 
+        });
+
+        this.breakpointObserver.observe('(min-width: 1200px)').subscribe(result => {
+            this.isWideScreen.set(result.matches);
         });
     }
 
