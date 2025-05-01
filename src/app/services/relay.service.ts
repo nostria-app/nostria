@@ -333,6 +333,16 @@ export class RelayService {
     }
   }
 
+  async getEventsByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<NostrEvent[]> {
+    // Check if pubkey is already an array or a single string
+    const authors = Array.isArray(pubkey) ? pubkey : [pubkey];
+
+    return this.getMany({
+      authors,
+      kinds: [kind]
+    });
+  }
+
   async getEventByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<NostrEvent | null> {
     // Check if pubkey is already an array or a single string
     const authors = Array.isArray(pubkey) ? pubkey : [pubkey];
@@ -386,6 +396,70 @@ export class RelayService {
     } catch (error) {
       this.logger.error('Error fetching events', error);
       return null;
+    }
+  }
+
+  /**
+  * Generic function to fetch Nostr events (one-time query)
+  * @param filter Filter for the query
+  * @param relayUrls Optional specific relay URLs to use (defaults to user's relays)
+  * @param options Optional options for the query
+  * @returns Promise that resolves to an array of events
+  */
+  async getMany<T extends Event = Event>(
+    filter: { kinds?: number[], authors?: string[], '#e'?: string[], '#p'?: string[], since?: number, until?: number, limit?: number },
+    relayUrls?: string[],
+    options: { timeout?: number } = {}
+  ): Promise<T[]> {
+    this.logger.debug('Getting events with filters:', filter);
+
+    if (!this.accountPool) {
+      this.logger.error('Cannot get events: account pool is not initialized');
+      return [];
+    }
+
+    // Use provided relay URLs or default to the user's relays
+    const urls = relayUrls || this.relays.map(relay => relay.url);
+
+    if (urls.length === 0) {
+      this.logger.warn('No relays available for query');
+      return [];
+    }
+
+    try {
+      // Default timeout is 5 seconds if not specified
+      const timeout = options.timeout || 5000;
+
+      // Execute the query
+      const events: T[] = [];
+      return new Promise<T[]>((resolve) => {
+        const sub = this.accountPool!.subscribeEose(urls, filter, {
+          maxWait: timeout,
+          onevent: (event) => {
+            // Add the received event to our collection
+            events.push(event as T);
+          },
+          onclose: (reasons) => {
+            console.log('Subscriptions closed', reasons);
+
+            // When subscription closes, resolve the promise with all collected events
+            // Update lastUsed for all relays used in this query
+            //urls.forEach(url => this.updateRelayLastUsed(url));
+
+            resolve(events);
+          },
+        });
+      });
+
+      // this.logger.debug(`Received event from query`, event);
+
+      // Update lastUsed for all relays used in this query
+      // urls.forEach(url => this.updateRelayLastUsed(url));
+
+      // return event;
+    } catch (error) {
+      this.logger.error('Error fetching events', error);
+      return [];
     }
   }
 

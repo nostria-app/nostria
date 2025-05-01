@@ -1,0 +1,23 @@
+@if (badge()) {
+<mat-card class="badge-card">
+    <mat-card-header>
+        @if (thumb()) {
+        <img [src]="thumb()" alt="Badge thumbnail" mat-card-avatar>
+        }
+        <mat-card-title>{{ name() }}</mat-card-title>
+        <mat-card-subtitle>
+            @for (type of tags(); track type) {
+            <span class="badge-type">{{ type }}</span>
+            }
+        </mat-card-subtitle>
+    </mat-card-header>
+
+    @if (image()) {
+    <img [src]="image()" alt="Badge image" mat-card-image>
+    }
+
+    <mat-card-content>
+        <p>{{ description() }}</p>
+    </mat-card-content>
+</mat-card>
+}
