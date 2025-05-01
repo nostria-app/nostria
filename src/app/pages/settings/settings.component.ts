@@ -23,6 +23,16 @@ import { ApplicationStateService } from '../../services/application-state.servic
 import { ApplicationService } from '../../services/application.service';
 import { PrivacySettingsComponent } from '../../components/privacy-settings/privacy-settings.component';
 import { LogsSettingsComponent } from '../../components/logs-settings/logs-settings.component';
+import { BreakpointObserver } from '@angular/cdk/layout';
+import { AboutComponent } from '../about/about.component';
+import { RelaysComponent } from '../relays/relays.component';
+import { BackupComponent } from '../backup/backup.component';
+
+interface SettingsSection {
+  id: string;
+  title: string;
+  icon: string;
+}
 
 @Component({
   selector: 'app-settings',
@@ -42,13 +52,18 @@ import { LogsSettingsComponent } from '../../components/logs-settings/logs-setti
     MatTabsModule,
     StorageStatsComponent,
     PrivacySettingsComponent,
-    LogsSettingsComponent
+    LogsSettingsComponent,
+    AboutComponent,
+    RelaysComponent,
+    BackupComponent
   ],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.scss',
 })
 export class SettingsComponent {
   private logger = inject(LoggerService);
+  private breakpointObserver = inject(BreakpointObserver);
+  
   currentLogLevel = signal<LogLevel>(this.logger.logLevel());
   themeService = inject(ThemeService);
   nostrService = inject(NostrService);
@@ -58,18 +73,49 @@ export class SettingsComponent {
   dialog = inject(MatDialog);
   router = inject(Router);
 
-  // Track active tab
-  activeTabIndex = signal(0);
+  // Track active section
+  activeSection = signal('general');
+  isMobile = signal(false);
+  showDetails = signal(false);
+
+  // Define settings sections
+  sections: SettingsSection[] = [
+    { id: 'general', title: 'General', icon: 'settings' },
+    { id: 'relays', title: 'Relays', icon: 'dns' },
+    { id: 'privacy', title: 'Privacy & Safety', icon: 'security' },
+    { id: 'backup', title: 'Backup', icon: 'archive' },
+    { id: 'logs', title: 'Logs', icon: 'article' },
+    { id: 'about', title: 'About', icon: 'info' }
+  ];
 
   constructor() {
     // Keep the current log level in sync with the service
     effect(() => {
       this.currentLogLevel.set(this.logger.logLevel());
     });
+
+    // Check if the screen is mobile-sized
+    this.breakpointObserver.observe(['(max-width: 768px)']).subscribe(result => {
+      this.isMobile.set(result.matches);
+      this.showDetails.set(!result.matches);
+    });
+  }
+
+  selectSection(sectionId: string): void {
+    this.activeSection.set(sectionId);
+    
+    if (this.isMobile()) {
+      this.showDetails.set(true);
+    }
+  }
+
+  goBack(): void {
+    if (this.isMobile()) {
+      this.showDetails.set(false);
+    }
   }
 
   setLogLevel(level: LogLevel): void {
-    debugger;
     this.logger.setLogLevel(level);
   }
 
@@ -80,13 +126,10 @@ export class SettingsComponent {
   logout() {
     this.nostrService.logout();
   }
-  
-  // showLoginDialog(): void {
-  //   this.dialog.open(LoginDialogComponent, {
-  //     width: '500px',
-  //     disableClose: true
-  //   });
-  // }
+
+  getTitle() {
+    return this.sections.find(section => section.id === this.activeSection())?.title || 'Settings';
+  }
   
   wipeData(): void {
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
