@@ -102,7 +102,7 @@ export class NostrService {
           //   this.account.set(account);
           // }
 
-          this.initialized.set(true);
+          
         } catch (err) {
           this.logger.error('Failed to load data during initialization', err);
         }
@@ -111,7 +111,6 @@ export class NostrService {
 
     effect(async () => {
       const account = this.accountChanged();
-      debugger;
       // If the account is changing and it has a value (it will be empty on logout).
       if (account) {
         const pubkey = account.pubkey;
@@ -163,8 +162,6 @@ export class NostrService {
 
         metadata = await this.relayService.getEventByPubkeyAndKind(pubkey, kinds.Metadata);
 
-        debugger;
-
         if (metadata) {
           this.updateAccountMetadata(metadata);
 
@@ -193,6 +190,7 @@ export class NostrService {
         // Show success animation instead of waiting
         this.appState.isLoading.set(false);
         this.appState.showSuccess.set(true);
+        this.initialized.set(true);
 
         // Schedule a refresh of the relays in the background. For now this won't be reflected until
         // the user refreshes the app.
@@ -1319,7 +1317,6 @@ export class NostrService {
   // }
 
   updateAccountMetadata(event: Event) {
-    debugger;
     const existingMetadata = this.accountsMetadata().find(meta => meta.pubkey === event.pubkey);
 
     if (existingMetadata) {

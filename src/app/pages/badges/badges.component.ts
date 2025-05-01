@@ -11,6 +11,7 @@ import { ApplicationService } from '../../services/application.service';
 import { RelayService } from '../../services/relay.service';
 import { NostrService } from '../../services/nostr.service';
 import { kinds } from 'nostr-tools';
+import { BadgeComponent } from './badge/badge.component';
 
 interface Badge {
   id: string;
@@ -34,7 +35,8 @@ interface Badge {
     MatIconModule,
     MatTabsModule,
     MatDialogModule,
-    MatTooltipModule
+    MatTooltipModule,
+    BadgeComponent
   ],
   templateUrl: './badges.component.html',
   styleUrl: './badges.component.scss'
@@ -51,6 +53,12 @@ export class BadgesComponent {
   awardedBadges = signal<Badge[]>([]);
   createdBadges = signal<Badge[]>([]);
 
+  profileBagesEvent = signal<any>(null);
+  badgePairs = signal<{ aTag: string[], eTag: string[] }[]>([]);
+
+  issuedAwardsEvent = signal<any[] | null>([]);
+  badgeDefinitionsEvent = signal<any[] | null>([]);
+
   constructor() {
     // Populate with mock data for now
     this.loadMockData();
@@ -61,18 +69,57 @@ export class BadgesComponent {
       const appInitialized = this.app.initialized();
       const appAuthenticated = this.app.authenticated();
 
-      debugger;
-
       if (appInitialized && appAuthenticated) {
         console.log('appInitialized && appAuthenticated');
         try {
-          const profileBagesEvent = await this.relay.getEventByPubkeyAndKind(this.nostr.pubkey(), kinds.ProfileBadges);
-          console.log('Profile Badges Event:', profileBagesEvent);
+          debugger;
+          const profileBadgesEvent = await this.relay.getEventByPubkeyAndKind(this.nostr.pubkey(), kinds.ProfileBadges);
+          console.log('Profile Badges Event:', profileBadgesEvent);
+          this.profileBagesEvent.set(profileBadgesEvent);
+
+          if (profileBadgesEvent && profileBadgesEvent.tags) {
+            this.parseBadgeTags(profileBadgesEvent.tags);
+          }
+
+          const badgeAwardsEvent = await this.relay.getEventsByPubkeyAndKind(this.nostr.pubkey(), kinds.BadgeAward);
+          console.log('badgeAwardsEvent:', badgeAwardsEvent);
+          this.issuedAwardsEvent.set(badgeAwardsEvent);
+
+          const badgeDefinitionsEvent = await this.relay.getEventsByPubkeyAndKind(this.nostr.pubkey(), kinds.BadgeDefinition);
+          console.log('badgeAwardsEvent:', badgeDefinitionsEvent);
+          this.badgeDefinitionsEvent.set(badgeDefinitionsEvent);
+
+          // if (profileBadgesEvent && profileBadgesEvent.tags) {
+          //   this.parseBadgeTags(profileBadgesEvent.tags);
+          // }
+
+
         } catch (err) {
           console.error('Error fetching profile badges:', err);
         }
       }
     });
+  }
+
+  private parseBadgeTags(tags: string[][]): void {
+    // Find the 'a' tags
+    const aTags = tags.filter(tag => tag[0] === 'a');
+    // Find the 'e' tags
+    const eTags = tags.filter(tag => tag[0] === 'e');
+
+    // Match them together based on their position
+    // Assuming 'a' and 'e' tags are in the same order
+    const pairs = aTags.map((aTag, index) => {
+      // If there's a corresponding eTag at the same index, pair them
+      const eTag = index < eTags.length ? eTags[index] : null;
+      return {
+        aTag,
+        eTag: eTag || []
+      };
+    });
+
+    console.log('Parsed badge pairs:', pairs);
+    this.badgePairs.set(pairs);
   }
 
   openBadgeEditor(): void {
