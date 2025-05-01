@@ -89,12 +89,13 @@ export class AppComponent {
 
   // We'll compute the current user metadata from the nostrService's metadata array
   accountMetadata = computed(() => {
-    const pubkey = this.nostrService.pubkey();
-    if (!pubkey) return undefined;
+    if (this.nostrService.account()) {
+      // First check from accountsMetadata (which should be synchronized)
+      const metadata = this.nostrService.getMetadataForAccount(this.nostrService.pubkey());
+      return metadata;
+    }
 
-    // First check from accountsMetadata (which should be synchronized)
-    const metadata = this.nostrService.getMetadataForAccount(pubkey);
-    return metadata;
+    return undefined;
   });
 
   // Computed signal to count unread notifications
@@ -160,60 +161,60 @@ export class AppComponent {
 
     if (this.app.isBrowser()) {
 
-    // Show login dialog if user is not logged in - with debugging
-    effect(() => {      
-      if (this.app.initialized() && !this.app.authenticated()) {
-        this.showLoginDialog();
-      }
+      // Show login dialog if user is not logged in - with debugging
+      effect(() => {
+        if (this.app.initialized() && !this.app.authenticated()) {
+          this.showLoginDialog();
+        }
 
-      // const isLoggedIn = this.app.authenticated()
-      // const isInitialized = this.app.initialized();
+        // const isLoggedIn = this.app.authenticated()
+        // const isInitialized = this.app.initialized();
 
-      // debugger;
+        // debugger;
 
-      // if (isInitialized && !isLoggedIn) {
-      //   this.logger.debug('Showing login dialog');
-      //   this.showLoginDialog();
-      // } else if (isInitialized && isLoggedIn) {
-      //   const user = this.nostrService.activeAccount();
+        // if (isInitialized && !isLoggedIn) {
+        //   this.logger.debug('Showing login dialog');
+        //   this.showLoginDialog();
+        // } else if (isInitialized && isLoggedIn) {
+        //   const user = this.nostrService.activeAccount();
 
-      //   // Whenever the user changes, ensure that we have the correct relays
-      //   if (user) {
-      //     this.logger.debug('User changed, updating relays', { pubkey: user.pubkey });
+        //   // Whenever the user changes, ensure that we have the correct relays
+        //   if (user) {
+        //     this.logger.debug('User changed, updating relays', { pubkey: user.pubkey });
 
-      //     // Data load will happen automatically in nostr service.
-      //     //this.dataLoadingService.loadData();
+        //     // Data load will happen automatically in nostr service.
+        //     //this.dataLoadingService.loadData();
 
-      //     // Also load the user metadata for the profile panel
-      //     // this.nostrService.loadAllUsersMetadata().catch(err => 
-      //     //   this.logger.error('Failed to load metadata after user change', err));
-      //   } else {
-      //     this.logger.debug('No user logged in, not updating relays');
+        //     // Also load the user metadata for the profile panel
+        //     // this.nostrService.loadAllUsersMetadata().catch(err => 
+        //     //   this.logger.error('Failed to load metadata after user change', err));
+        //   } else {
+        //     this.logger.debug('No user logged in, not updating relays');
+        //   }
+        // }
+      });
+
+      // Effect to load metadata again after data loading completes
+      effect(() => {
+        const showSuccess = this.appState.showSuccess();
+        if (showSuccess) {
+          this.logger.debug('Data loading completed, refreshing user metadata');
+          // this.nostrService.loadUsersMetadata().catch(err =>
+          //   this.logger.error('Failed to reload metadata after data loading', err));
+        }
+      });
+
+      // Additional effect to make sure we have metadata for the current user
+      // effect(() => {
+      //   const currentUser = this.nostrService.activeAccount();
+      //   const isInitialized = this.app.initialized();
+
+      //   if (currentUser && isInitialized && this.storage.initialized()) {
+      //     // Ensure we have the latest metadata for the current user
+      //     // this.nostrService.loadUsersMetadata().catch(err =>
+      //     //   this.logger.error('Failed to load user metadata on user change', err));
       //   }
-      // }
-    });
-
-    // Effect to load metadata again after data loading completes
-    effect(() => {
-      const showSuccess = this.appState.showSuccess();
-      if (showSuccess) {
-        this.logger.debug('Data loading completed, refreshing user metadata');
-        // this.nostrService.loadUsersMetadata().catch(err =>
-        //   this.logger.error('Failed to reload metadata after data loading', err));
-      }
-    });
-
-    // Additional effect to make sure we have metadata for the current user
-    // effect(() => {
-    //   const currentUser = this.nostrService.activeAccount();
-    //   const isInitialized = this.app.initialized();
-
-    //   if (currentUser && isInitialized && this.storage.initialized()) {
-    //     // Ensure we have the latest metadata for the current user
-    //     // this.nostrService.loadUsersMetadata().catch(err =>
-    //     //   this.logger.error('Failed to load user metadata on user change', err));
-    //   }
-    // });
+      // });
     }
 
 
@@ -271,7 +272,7 @@ export class AppComponent {
 
   async switchAccount(pubkey: string): Promise<void> {
     await this.nostrService.switchToUser(pubkey);
-    
+
     if (this.layout.isHandset()) {
       this.toggleSidenav();
     }
