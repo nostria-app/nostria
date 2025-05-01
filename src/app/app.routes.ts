@@ -20,12 +20,14 @@ import { NotificationsComponent } from './pages/notifications/notifications.comp
 import { MessagesComponent } from './pages/messages/messages.component';
 import { ArticlesComponent } from './pages/articles/articles.component';
 import { WelcomeComponent } from './pages/welcome/welcomecomponent';
+import { BadgesComponent } from './pages/badges/badges.component';
 
 export const routes: Routes = [
   { path: '', component: HomeComponent, pathMatch: 'full' },
   { path: 'home', component: HomeComponent },
   { path: 'welcome', component: WelcomeComponent },
   { path: 'relays', component: RelaysComponent },
+  { path: 'badges', component: BadgesComponent },
   { path: 'messages', component: MessagesComponent },
   { path: 'settings', component: SettingsComponent },
   { path: 'notifications', component: NotificationsComponent },

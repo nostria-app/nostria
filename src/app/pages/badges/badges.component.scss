@@ -1,0 +1,22 @@
+.badges-container {
+    padding: 24px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.badges-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+
+    h1 {
+        margin: 0;
+    }
+
+    .badges-actions {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+}
