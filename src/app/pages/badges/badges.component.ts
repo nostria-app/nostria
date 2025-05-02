@@ -4,7 +4,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ApplicationService } from '../../services/application.service';
@@ -44,6 +44,7 @@ interface Badge {
 export class BadgesComponent {
   private dialog = inject(MatDialog);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   private readonly app = inject(ApplicationService);
   private readonly relay = inject(RelayService);
   private readonly nostr = inject(NostrService);
@@ -59,11 +60,20 @@ export class BadgesComponent {
   issuedAwardsEvent = signal<any[] | null>([]);
   badgeDefinitionsEvent = signal<any[] | null>([]);
 
+  // Active tab index
+  activeTabIndex = signal<number>(0);
+
   constructor() {
     // Populate with mock data for now
     this.loadMockData();
 
     console.log('Badges component initialized.');
+
+    // Get the active tab from query params if available
+    const tabParam = this.route.snapshot.queryParamMap.get('tab');
+    if (tabParam) {
+      this.activeTabIndex.set(parseInt(tabParam, 10));
+    }
 
     effect(async () => {
       const appInitialized = this.app.initialized();
@@ -72,7 +82,6 @@ export class BadgesComponent {
       if (appInitialized && appAuthenticated) {
         console.log('appInitialized && appAuthenticated');
         try {
-          debugger;
           const profileBadgesEvent = await this.relay.getEventByPubkeyAndKind(this.nostr.pubkey(), kinds.ProfileBadges);
           console.log('Profile Badges Event:', profileBadgesEvent);
           this.profileBagesEvent.set(profileBadgesEvent);
@@ -88,11 +97,6 @@ export class BadgesComponent {
           const badgeDefinitionsEvent = await this.relay.getEventsByPubkeyAndKind(this.nostr.pubkey(), kinds.BadgeDefinition);
           console.log('badgeAwardsEvent:', badgeDefinitionsEvent);
           this.badgeDefinitionsEvent.set(badgeDefinitionsEvent);
-
-          // if (profileBadgesEvent && profileBadgesEvent.tags) {
-          //   this.parseBadgeTags(profileBadgesEvent.tags);
-          // }
-
 
         } catch (err) {
           console.error('Error fetching profile badges:', err);
@@ -127,7 +131,23 @@ export class BadgesComponent {
   }
 
   viewBadgeDetails(badge: Badge): void {
-    this.router.navigate(['/badges/details', badge.id]);
+    // Include the active tab index as a query parameter
+    this.router.navigate(['/badges/details', badge.id], {
+      queryParams: { tab: this.activeTabIndex() }
+    });
+  }
+
+  // Track tab changes and update URL
+  onTabChange(index: number): void {
+    this.activeTabIndex.set(index);
+    
+    // Update the URL with the new tab index without navigating
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { tab: index },
+      queryParamsHandling: 'merge', // keep any existing query params
+      replaceUrl: false // add to browser history stack
+    });
   }
 
   private loadMockData(): void {
