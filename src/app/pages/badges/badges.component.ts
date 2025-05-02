@@ -81,7 +81,6 @@ export class BadgesComponent {
         try {
           const profileBadgesEvent = await this.relay.getEventByPubkeyAndKind(this.nostr.pubkey(), kinds.ProfileBadges);
           console.log('Profile Badges Event:', profileBadgesEvent);
-          
 
           if (profileBadgesEvent && profileBadgesEvent.tags) {
             this.parseBadgeTags(profileBadgesEvent.tags);
