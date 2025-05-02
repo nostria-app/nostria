@@ -76,6 +76,7 @@ export class NostrService {
         this.logger.info('Storage initialized, loading Nostr Service');
 
         try {
+          debugger;
           const accounts = await this.getAccountsFromStorage();
           this.accounts.set(accounts);
 
@@ -111,6 +112,7 @@ export class NostrService {
 
     effect(async () => {
       const account = this.accountChanged();
+      debugger;
       // If the account is changing and it has a value (it will be empty on logout).
       if (account) {
         const pubkey = account.pubkey;
@@ -207,8 +209,9 @@ export class NostrService {
 
         // await this.loadData();
       } else {
-        // this.appState.isLoading.set(false);
-        // this.appState.showSuccess.set(false);
+        this.appState.isLoading.set(false);
+        this.appState.showSuccess.set(false);
+        this.initialized.set(true);
       }
     });
 
