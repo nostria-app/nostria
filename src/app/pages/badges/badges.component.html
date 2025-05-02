@@ -84,7 +84,7 @@
             </ng-template>
             <div class="badges-grid">
                 @for (badge of badgeDefinitionsEvent(); track badge.id) {
-                    <app-badge [badge]="badge"></app-badge>
+                    <app-badge [badge]="badge" (click)="viewBadgeDetails(badge)"></app-badge>
                 }
 
                 <!-- @for (badge of createdBadges(); track badge.id) {
