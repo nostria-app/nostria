@@ -6,6 +6,8 @@ import { kinds } from 'nostr-tools';
 import { StorageService } from '../../../services/storage.service';
 import { DataService } from '../../../services/data.service';
 import { BadgeService } from '../../../services/badge.service';
+import { RelayService } from '../../../services/relay.service';
+import { UserRelayFactoryService } from '../../../services/user-relay-factory.service';
 
 interface ParsedBadge {
   id: string;
@@ -35,11 +37,13 @@ interface ParsedReward {
   styleUrl: './badge.component.scss'
 })
 export class BadgeComponent {
-  badge = input<NostrEvent | undefined>(undefined);
+  badge = input<NostrEvent | any | undefined>(undefined);
   nostr = inject(NostrService);
   storage = inject(StorageService);
   data = inject(DataService);
   badgeService = inject(BadgeService);
+  relay = inject(RelayService);
+  userRelayFactory = inject(UserRelayFactoryService);
 
   // Parsed badge data as signals
   id = signal<string>('');
@@ -48,23 +52,61 @@ export class BadgeComponent {
   image = signal<string>('');
   thumb = signal<string>('');
   tags = signal<string[]>([]);
+  error = signal<string | null>(null);
 
   constructor() {
-    effect(() => {
+    effect(async () => {
       if (this.badge()) {
-        this.parseBadge(this.badge()!);
+        await this.parseBadge(this.badge()!);
       }
     });
   }
 
-  parseBadge(event: NostrEvent) {
-    if (event.kind === kinds.BadgeDefinition) {
+  async parseBadge(event: NostrEvent | any) {
+    if (event.slug) {
+      await this.loadBadgeDefinition(event.pubkey, event.slug);
+    }
+    else if (event.kind === kinds.BadgeDefinition) {
       this.parseBadgeDefinition(event);
     }
-
-    if (event.kind === kinds.BadgeAward) {
+    else if (event.kind === kinds.BadgeAward) {
       this.parseReward(event);
     }
+  }
+
+  async loadBadgeDefinition(pubkey: string, slug: string) {
+    let definition: NostrEvent | null | undefined = this.badgeService.getBadgeDefinition(pubkey, slug);
+
+    if (!definition) {
+      definition = await this.relay.getEventByPubkeyAndKindAndTag(pubkey, kinds.BadgeDefinition, { key: 'd', value: slug });
+      console.log('Badge definition not found in local storage, fetched from relay:', definition);
+      // const userRelay = this.userRelayFactory.createUserRelayService();
+
+      // If the definition is not found on the user's relays, try to fetch from author and then re-publish to user's relays.
+      if (!definition) {
+        try {
+          const userRelay = await this.userRelayFactory.create(pubkey);
+          definition = await userRelay.getEventByPubkeyAndKindAndTag(pubkey, kinds.BadgeDefinition, { key: 'd', value: slug });
+          console.log('Badge definition not found on user relays, fetched from author relays:', definition);
+
+          if (!definition) {
+            this.error.set('Badge definition not found on author relays.');
+          }
+
+        } catch (err: any) {
+          console.error(err);
+          this.error.set(err.message);
+        }
+      }
+    }
+
+    if (definition) {
+      this.badgeService.putBadgeDefinition(definition);
+      await this.storage.saveEvent(definition);
+      this.parseBadgeDefinition(definition);
+    }
+
+    return definition;
   }
 
   parseBadgeDefinition(badgeEvent: NostrEvent) {
@@ -116,7 +158,7 @@ export class BadgeComponent {
     this.tags.set(parsedBadge.tags || []);
   }
 
-  parseReward(rewardEvent: NostrEvent) {
+  async parseReward(rewardEvent: NostrEvent) {
     if (!rewardEvent || !rewardEvent.tags) {
       return;
     }
@@ -147,20 +189,6 @@ export class BadgeComponent {
     const pubkey = rewardEvent.pubkey;
     const slug = badgeTagArray[2];
 
-    const badgeDefinition = this.badgeService.getBadgeDefinition(pubkey, slug);
-
-    if (!badgeDefinition) {
-      return;
-    }
-
-    this.parseBadgeDefinition(badgeDefinition);
-
-    // Update the signals with the parsed values
-    // this.id.set(badgeDefinition.id || '');
-    // this.description.set(badgeDefinition.description || '');
-    // this.name.set(badgeDefinition.name || '');
-    // this.image.set(badgeDefinition.image || '');
-    // this.thumb.set(badgeDefinition.thumb || '');
-    // this.tags.set(badgeDefinition.tags || []);
+    await this.loadBadgeDefinition(pubkey, slug);
   }
 }

@@ -7,6 +7,8 @@ import { routes } from './app.routes';
 import { LoggerService } from './services/logger.service';
 import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
 import { provideHttpClient, withFetch } from '@angular/common/http';
+import { UserRelayFactoryService } from './services/user-relay-factory.service';
+import { UserRelayService } from './services/user-relay.service';
 
 // Create a logger for bootstrapping phase
 const bootstrapLogger = {
@@ -25,6 +27,8 @@ export const appConfig: ApplicationConfig = {
         return new LoggerService();
       }
     },
+    UserRelayFactoryService,
+    UserRelayService,
     provideExperimentalZonelessChangeDetection(),
     provideRouter(routes),
     provideAnimations(),

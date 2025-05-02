@@ -102,7 +102,7 @@ export class NostrService {
           //   this.account.set(account);
           // }
 
-          
+
         } catch (err) {
           this.logger.error('Failed to load data during initialization', err);
         }
@@ -317,6 +317,91 @@ export class NostrService {
       this.logger.error('Failed to parse user from localStorage during initialization', e);
     }
     return null;
+  }
+
+  /** Get relays for a user, will first read locally and then query the network if not found. */
+  async getRelays(pubkey: string) {
+    // First discovery the relays for the user.
+    let relayUrls: string[] = [];
+    const relayListEvent = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
+
+    if (relayListEvent) {
+      relayUrls = this.getRelayUrls(relayListEvent, true);
+    }
+
+    const followingEvent = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
+
+    if (followingEvent) {
+      relayUrls = this.getRelayUrlsFromFollowing(followingEvent, true);
+    }
+
+    if (relayUrls.length > 0) {
+      return relayUrls;
+    }
+
+    const result = await this.discoverRelays(pubkey);
+
+    if (result.relayUrls.length === 0) {
+      throw new Error('No relays found for user');
+    }
+
+    return result.relayUrls;
+  }
+
+  /** Will attempt to discover relays for a pubkey. Will persist the event to database. */
+  async discoverRelays(pubkey: string): Promise<{ relayUrls: string[], relayList: boolean, followingList: boolean }> {
+    // Perform relay discovery for the given pubkey
+    const discoveryPool = new SimplePool();
+    const discoveryRelays = this.relayService.discoveryRelays;
+
+    const result = {
+      relayUrls: [] as string[],
+      relayList: false,
+      followingList: false,
+    };
+
+    try {
+      const relays = await discoveryPool.get(discoveryRelays, {
+        kinds: [kinds.RelayList],
+        authors: [pubkey],
+      });
+
+      if (relays) {
+        this.logger.info('Found your relays on network', { relays });
+        await this.storage.saveEvent(relays);
+        const relayUrls = this.getRelayUrls(relays, false); // Make sure to pass false to avoid ignoring automatic banned relays
+        this.logger.info(`Found ${relayUrls.length} relays for user`, { relayUrls });
+
+        if (relayUrls.length > 0) {
+          result.relayUrls = relayUrls;
+          result.relayList = true;
+        }
+      } else {
+        this.logger.warn('No relay list found on discovery relays.');
+
+        // Fallback to metadata discovery if no relay list found.
+        const contacts = await discoveryPool.get(this.relayService.discoveryRelays, {
+          kinds: [kinds.Contacts],
+          authors: [pubkey],
+        });
+
+        if (contacts) {
+          this.storage.saveEvent(contacts);
+          const relayUrls = this.getRelayUrlsFromFollowing(contacts, false);
+
+          if (relayUrls.length > 0) {
+            result.relayUrls = relayUrls;
+            result.followingList = true;
+          }
+        }
+      }
+    } catch (err) {
+      this.logger.error('Error during relay discovery', err);
+    } finally {
+      discoveryPool.close(discoveryRelays);
+    }
+
+    return result;
   }
 
   async findRelays(pubkey: string, info: any) {
