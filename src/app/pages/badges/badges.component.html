@@ -17,9 +17,9 @@
             </ng-template>
             <div class="badges-grid">
 
-                ||{{ badgePairs().length }}||
+                <!-- ||{{ badgePairs().length }}|| -->
 
-                @for (badge of badgePairs(); track badge.aTag) {
+                @for (badge of accepted(); track badge.aTag) {
                 <!-- <mat-card class="badge-card" (click)="viewBadgeDetails(badge)"> -->
                 <mat-card class="badge-card">
                     <!-- <img mat-card-image [src]="badge.thumbnail || badge.image" alt="{{ badge.name }}"> -->
@@ -32,7 +32,7 @@
                 }
 
 
-                @for (badge of acceptedBadges(); track badge.id) {
+                <!-- @for (badge of acceptedBadges(); track badge.id) {
                 <mat-card class="badge-card" (click)="viewBadgeDetails(badge)">
                     <img mat-card-image [src]="badge.thumbnail || badge.image" alt="{{ badge.name }}">
                     <mat-card-content>
@@ -40,7 +40,7 @@
                         <p>{{ badge.description }}</p>
                     </mat-card-content>
                 </mat-card>
-                }
+                } -->
             </div>
         </mat-tab>
         <mat-tab>
@@ -49,7 +49,7 @@
                 Awarded
             </ng-template>
             <div class="badges-grid">
-                @for (badge of awardedBadges(); track badge.id) {
+                @for (badge of received(); track badge.id) {
                 <mat-card class="badge-card" (click)="viewBadgeDetails(badge)">
                     <img mat-card-image [src]="badge.thumbnail || badge.image" alt="{{ badge.name }}">
                     <mat-card-content>
@@ -66,14 +66,16 @@
                 Issued
             </ng-template>
             <div class="badges-grid">
-                @for (badge of issuedAwardsEvent(); track badge.id) {
-                <mat-card class="badge-card" (click)="viewBadgeDetails(badge)">
+                @for (badge of issued(); track badge.id) {
+                    <app-badge [badge]="badge" (click)="viewBadgeDetails(badge)"></app-badge>
+
+                <!-- <mat-card class="badge-card" (click)="viewBadgeDetails(badge)"> -->
                     <!-- <img mat-card-image [src]="badge.thumbnail || badge.image" alt="{{ badge.name }}"> -->
-                    <mat-card-content>
+                    <!-- <mat-card-content>
                         <h3>{{ badge.id }}</h3>
                         <p>{{ badge.tags | json }}</p>
                     </mat-card-content>
-                </mat-card>
+                </mat-card> -->
                 }
             </div>
         </mat-tab>
@@ -83,7 +85,7 @@
                 Created
             </ng-template>
             <div class="badges-grid">
-                @for (badge of badgeDefinitionsEvent(); track badge.id) {
+                @for (badge of definitions(); track badge.id) {
                     <app-badge [badge]="badge" (click)="viewBadgeDetails(badge)"></app-badge>
                 }
 
