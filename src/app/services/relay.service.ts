@@ -362,6 +362,16 @@ export class RelayService {
     });
   }
 
+  async getEventByPubkeyAndKindAndTag(pubkey: string, kind: number, tag: { key: string, value: string }): Promise<NostrEvent | null> {
+    const authors = Array.isArray(pubkey) ? pubkey : [pubkey];
+
+    return this.get({
+      authors,
+      [`#${tag.key}`]: [tag.value],
+      kinds: [kind]
+    });
+  }
+
   /**
    * Generic function to fetch Nostr events (one-time query)
    * @param filter Filter for the query

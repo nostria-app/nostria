@@ -9,38 +9,17 @@
         </div>
     </div>
 
-    <mat-tab-group animationDuration="0ms" [selectedIndex]="activeTabIndex()" (selectedIndexChange)="onTabChange($event)">
+    <mat-tab-group animationDuration="0ms" [selectedIndex]="activeTabIndex()"
+        (selectedIndexChange)="onTabChange($event)">
         <mat-tab>
             <ng-template mat-tab-label>
                 <mat-icon class="tab-icon">verified</mat-icon>
                 Accepted
             </ng-template>
             <div class="badges-grid">
-
-                <!-- ||{{ badgePairs().length }}|| -->
-
                 @for (badge of accepted(); track badge.aTag) {
-                <!-- <mat-card class="badge-card" (click)="viewBadgeDetails(badge)"> -->
-                <mat-card class="badge-card">
-                    <!-- <img mat-card-image [src]="badge.thumbnail || badge.image" alt="{{ badge.name }}"> -->
-                    <mat-card-content>
-                        {{ badge | json }}
-                        <!-- <h3>{{ badge.name }}</h3>
-                            <p>{{ badge.description }}</p> -->
-                    </mat-card-content>
-                </mat-card>
+                <app-badge [badge]="badge" (click)="viewBadgeDetailsById(badge.id, badge.slug)"></app-badge>
                 }
-
-
-                <!-- @for (badge of acceptedBadges(); track badge.id) {
-                <mat-card class="badge-card" (click)="viewBadgeDetails(badge)">
-                    <img mat-card-image [src]="badge.thumbnail || badge.image" alt="{{ badge.name }}">
-                    <mat-card-content>
-                        <h3>{{ badge.name }}</h3>
-                        <p>{{ badge.description }}</p>
-                    </mat-card-content>
-                </mat-card>
-                } -->
             </div>
         </mat-tab>
         <mat-tab>
@@ -50,13 +29,7 @@
             </ng-template>
             <div class="badges-grid">
                 @for (badge of received(); track badge.id) {
-                <mat-card class="badge-card" (click)="viewBadgeDetails(badge)">
-                    <img mat-card-image [src]="badge.thumbnail || badge.image" alt="{{ badge.name }}">
-                    <mat-card-content>
-                        <h3>{{ badge.name }}</h3>
-                        <p>{{ badge.description }}</p>
-                    </mat-card-content>
-                </mat-card>
+                <app-badge [badge]="badge" (click)="viewBadgeDetails(badge)"></app-badge>
                 }
             </div>
         </mat-tab>
@@ -67,15 +40,7 @@
             </ng-template>
             <div class="badges-grid">
                 @for (badge of issued(); track badge.id) {
-                    <app-badge [badge]="badge" (click)="viewBadgeDetails(badge)"></app-badge>
-
-                <!-- <mat-card class="badge-card" (click)="viewBadgeDetails(badge)"> -->
-                    <!-- <img mat-card-image [src]="badge.thumbnail || badge.image" alt="{{ badge.name }}"> -->
-                    <!-- <mat-card-content>
-                        <h3>{{ badge.id }}</h3>
-                        <p>{{ badge.tags | json }}</p>
-                    </mat-card-content>
-                </mat-card> -->
+                <app-badge [badge]="badge" (click)="viewBadgeDetails(badge)"></app-badge>
                 }
             </div>
         </mat-tab>
@@ -86,19 +51,10 @@
             </ng-template>
             <div class="badges-grid">
                 @for (badge of definitions(); track badge.id) {
-                    <app-badge [badge]="badge" (click)="viewBadgeDetails(badge)"></app-badge>
+                <app-badge [badge]="badge" (click)="viewBadgeDetails(badge)"></app-badge>
                 }
 
-                <!-- @for (badge of createdBadges(); track badge.id) {
-                <mat-card class="badge-card" (click)="viewBadgeDetails(badge)">
-                    <img mat-card-image [src]="badge.thumbnail || badge.image" alt="{{ badge.name }}">
-                    <mat-card-content>
-                        <h3>{{ badge.name }}</h3>
-                        <p>{{ badge.description }}</p>
-                    </mat-card-content>
-                </mat-card>
-                }
-                @if (!createdBadges().length) {
+                @if (definitions()?.length === 0) {
                 <div class="no-badges-message">
                     <mat-icon>sentiment_very_dissatisfied</mat-icon>
                     <p>You haven't created any badges yet</p>
@@ -106,7 +62,7 @@
                         Create Your First Badge
                     </button>
                 </div>
-                } -->
+                }
             </div>
         </mat-tab>
     </mat-tab-group>

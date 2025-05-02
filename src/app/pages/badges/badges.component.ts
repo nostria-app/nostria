@@ -57,7 +57,7 @@ export class BadgesComponent {
   private readonly badgeService = inject(BadgeService);
 
   profileBadgesEvent = signal<any>(null);
-  accepted = signal<{ aTag: string[], eTag: string[] }[]>([]);
+  accepted = signal<{ aTag: string[], eTag: string[], id: string, pubkey: string, slug: string }[]>([]);
   issued = signal<any[] | null>([]);
   definitions = signal<any[] | null>([]);
   received = signal<any[] | null>([]);
@@ -82,11 +82,7 @@ export class BadgesComponent {
           const profileBadgesEvent = await this.relay.getEventByPubkeyAndKind(this.nostr.pubkey(), kinds.ProfileBadges);
           console.log('Profile Badges Event:', profileBadgesEvent);
 
-          if (profileBadgesEvent && profileBadgesEvent.tags) {
-            this.parseBadgeTags(profileBadgesEvent.tags);
-
-            await this.storage.saveEvent(profileBadgesEvent);
-          }
+  
 
           const badgeAwardEvents = await this.relay.getEventsByPubkeyAndKind(this.nostr.pubkey(), kinds.BadgeAward);
           console.log('badgeAwardsEvent:', badgeAwardEvents);
@@ -108,6 +104,12 @@ export class BadgesComponent {
           console.log('receivedAwardsEvents:', receivedAwardsEvents);
 
           // Make sure we set these after we've loaded the definitions.
+          if (profileBadgesEvent && profileBadgesEvent.tags) {
+            this.parseBadgeTags(profileBadgesEvent.tags);
+
+            await this.storage.saveEvent(profileBadgesEvent);
+          }
+
           this.profileBadgesEvent.set(profileBadgesEvent);
           this.issued.set(badgeAwardEvents);
           this.received.set(receivedAwardsEvents);
@@ -130,13 +132,25 @@ export class BadgesComponent {
     const pairs = aTags.map((aTag, index) => {
       // If there's a corresponding eTag at the same index, pair them
       const eTag = index < eTags.length ? eTags[index] : null;
+
+      const values = aTag[1].split(':')
+      const kind = values[0];
+      const pubkey = values[1];
+      const slug = values[2];
+
       return {
+        pubkey,
+        slug,
+        kind,
+        id: aTag[1], // Assuming the first element is the ID
+        eventId: eTag![0],
         aTag,
         eTag: eTag || []
       };
     });
 
     console.log('Parsed badge pairs:', pairs);
+
     this.accepted.set(pairs);
   }
 
@@ -144,11 +158,17 @@ export class BadgesComponent {
     this.router.navigate(['/badges/create']);
   }
 
+  viewBadgeDetailsById(id: string, slug: string): void {
+    console.log('Viewing badge details:', id);
+
+    // Include the active tab index as a query parameter
+    this.router.navigate(['/badges/details', id], {
+      queryParams: { tab: this.activeTabIndex() }
+    });
+  }
+
   viewBadgeDetails(badge: NostrEvent): void {
     console.log('Viewing badge details:', badge);
-
-    if (badge.kind)
-
 
     // Include the active tab index as a query parameter
     this.router.navigate(['/badges/details', badge.id], {

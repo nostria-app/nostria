@@ -4,7 +4,13 @@
         @if (thumb()) {
         <img [src]="thumb()" alt="Badge thumbnail" mat-card-avatar>
         }
-        <mat-card-title>{{ name() }}</mat-card-title>
+        
+        @if (error()) {
+            <mat-card-title>{{ error() }}</mat-card-title>
+        } @else {
+            <mat-card-title>{{ name() }}</mat-card-title>
+        }
+
         <mat-card-subtitle>
             @for (type of tags(); track type) {
             <span class="badge-type">{{ type }}</span>
@@ -19,5 +25,7 @@
     <mat-card-content>
         <p>{{ description() }}</p>
     </mat-card-content>
+
+
 </mat-card>
 }
