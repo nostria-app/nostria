@@ -29,9 +29,7 @@ export class BadgeComponent {
   tags = signal<string[]>([]);
 
   constructor() {
-    debugger;
     effect(() => {
-      debugger;
       if (this.badge()) {
         this.parseBadge();
       }

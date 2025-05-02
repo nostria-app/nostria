@@ -60,7 +60,16 @@ export class BadgeDetailsComponent {
   issuingBadge = signal(false);
   recipientPubkeys = new FormControl('');
 
+  // Store the tab index from the query parameter
+  returnTabIndex = signal<number | null>(null);
+
   constructor() {
+    // Get the tab index from query parameters
+    const tabParam = this.route.snapshot.queryParamMap.get('tab');
+    if (tabParam) {
+      this.returnTabIndex.set(parseInt(tabParam, 10));
+    }
+
     effect(() => {
       const id = this.route.snapshot.paramMap.get('id');
       if (!id) {
@@ -127,6 +136,13 @@ export class BadgeDetailsComponent {
   }
   
   goBack(): void {
-    this.router.navigate(['/badges']);
+    // Return to the badges page with the stored tab index
+    if (this.returnTabIndex() !== null) {
+      this.router.navigate(['/badges'], {
+        queryParams: { tab: this.returnTabIndex() }
+      });
+    } else {
+      this.router.navigate(['/badges']);
+    }
   }
 }

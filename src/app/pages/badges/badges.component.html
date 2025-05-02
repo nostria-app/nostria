@@ -9,7 +9,7 @@
         </div>
     </div>
 
-    <mat-tab-group animationDuration="0ms">
+    <mat-tab-group animationDuration="0ms" [selectedIndex]="activeTabIndex()" (selectedIndexChange)="onTabChange($event)">
         <mat-tab>
             <ng-template mat-tab-label>
                 <mat-icon class="tab-icon">verified</mat-icon>
