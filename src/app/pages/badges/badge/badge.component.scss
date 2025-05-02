@@ -10,3 +10,14 @@
         font-size: 12px;
     }
 }
+
+.badge-card {
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: var(--mat-sys-level1);
+
+    &:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--mat-sys-level3);
+    }
+}
