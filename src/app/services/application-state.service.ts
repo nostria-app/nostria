@@ -16,6 +16,8 @@ export class ApplicationStateService {
     private document = inject(DOCUMENT);
     private platformId = inject(PLATFORM_ID);
 
+    pubkey = signal<string | null>(null);
+
     readonly DISCOVERY_RELAYS_STORAGE_KEY = 'nostria-discovery-relays';
     readonly ACCOUNT_STORAGE_KEY = 'nostria-account';
     readonly ACCOUNTS_STORAGE_KEY = 'nostria-accounts';

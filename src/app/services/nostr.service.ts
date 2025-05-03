@@ -13,6 +13,7 @@ import { NostrTagKey, StandardizedTagType } from '../standardized-tags';
 import { ApplicationStateService } from './application-state.service';
 import { AccountStateService } from './account-state.service';
 import { LocalStorageService } from './local-storage.service';
+import { BookmarkService } from './bookmark.service';
 
 export interface NostrUser {
   pubkey: string;
@@ -86,6 +87,9 @@ export class NostrService {
       if (account) {
         this.loadAccount(account);
       }
+
+      // Set the current user pubkey in the app state
+      this.appState.pubkey.set(account?.pubkey || null);
     });
 
     // Save all users to localStorage whenever they change
@@ -208,6 +212,7 @@ export class NostrService {
       await this.loadAccountFollowing(pubkey);
       await this.loadAccountMuteList(pubkey);
       await this.subscribeToAccountMetadata(pubkey);
+      // await this.bookmark.initialize();
 
       this.appState.loadingMessage.set('Loading completed!');
       this.logger.info('Data loading process completed');
