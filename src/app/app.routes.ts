@@ -27,8 +27,8 @@ export const routes: Routes = [
   { path: 'home', component: HomeComponent },
   { path: 'welcome', component: WelcomeComponent },
   { path: 'relays', component: RelaysComponent },
-  { 
-    path: 'badges', 
+  {
+    path: 'badges',
     children: [
       { path: '', component: BadgesComponent },
       { path: 'create', loadComponent: () => import('./pages/badges/badge-editor/badge-editor.component').then(m => m.BadgeEditorComponent) },
@@ -47,10 +47,17 @@ export const routes: Routes = [
     path: 'p/:id',
     component: ProfileComponent,
     children: [
-      { path: '', component: ProfileHomeComponent, pathMatch: 'full' },
-      { path: 'replies', component: ProfileRepliesComponent },
-      { path: 'reads', component: ProfileReadsComponent },
-      { path: 'media', component: ProfileMediaComponent },
+      { 
+        path: '', 
+        component: ProfileHomeComponent,
+        children: [
+          { path: '', redirectTo: 'notes', pathMatch: 'full' },
+          { path: 'notes', component: ProfileNotesComponent },
+          { path: 'replies', component: ProfileRepliesComponent },
+          { path: 'reads', component: ProfileReadsComponent },
+          { path: 'media', component: ProfileMediaComponent }
+        ] 
+      },
       { path: 'about', component: ProfileAboutComponent },
       { path: 'connections', component: ProfileConnectionsComponent },
       { path: 'following', component: FollowingComponent },
@@ -68,17 +75,17 @@ export const routes: Routes = [
     title: 'Upgrade to Premium'
   },
   { path: 'backup', loadComponent: () => import('./pages/backup/backup.component').then(mod => mod.BackupComponent) },
-  { 
-    path: 'media', 
+  {
+    path: 'media',
     children: [
       { path: '', loadComponent: () => import('./pages/media/media.component').then(mod => mod.MediaComponent) },
       { path: 'details/:id', loadComponent: () => import('./pages/media/media-details/media-details.component').then(mod => mod.MediaDetailsComponent) }
     ]
   },
-  { 
-    path: 'people', 
-    loadComponent: () => import('./pages/people/people.component').then(m => m.PeopleComponent), 
-    title: 'People' 
+  {
+    path: 'people',
+    loadComponent: () => import('./pages/people/people.component').then(m => m.PeopleComponent),
+    title: 'People'
   },
   { path: 'profile', redirectTo: '/credentials' },
   { path: '**', redirectTo: '/' } // Update to redirect to root instead of /home
