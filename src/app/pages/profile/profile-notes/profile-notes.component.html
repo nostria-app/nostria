@@ -45,8 +45,8 @@
           <mat-icon matTooltip="Reply" matTooltipPosition="below">reply</mat-icon>
         </button>
         <button mat-icon-button class="note-footer-right">
-          <mat-icon matTooltip="Reply" matTooltipPosition="below" (click)="bookmark.toggleBookmark(note.id)">
-            
+          <mat-icon [matTooltip]="bookmark.getBookmarkTooltip(note.id)" matTooltipPosition="below" (click)="bookmark.toggleBookmark(note.id)">
+            {{bookmark.getBookmarkIcon(note.id)}}
           </mat-icon>
         </button>
       </mat-card-footer>
