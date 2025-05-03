@@ -107,7 +107,6 @@ export class NostrService {
 
   async initialize() {
     try {
-      debugger;
       const accounts = await this.getAccountsFromStorage();
       this.accounts.set(accounts);
 
@@ -140,7 +139,6 @@ export class NostrService {
   }
 
   async loadAccount(account: NostrUser) {
-    debugger;
     if (account) {
       const pubkey = account.pubkey;
       // When the account changes, check what data we have and get if missing.
@@ -1442,12 +1440,10 @@ export class NostrService {
   async switchToUser(pubkey: string) {
     this.logger.info(`Switching to user with pubkey: ${pubkey}`);
     const targetUser = this.accounts().find(u => u.pubkey === pubkey);
-    debugger;
     if (targetUser) {
       // Update lastUsed timestamp
       targetUser.lastUsed = Date.now();
 
-      debugger;
       this.account.set(targetUser);
       this.logger.debug('Successfully switched user');
 
@@ -1466,7 +1462,6 @@ export class NostrService {
   }
 
   async setAccount(user: NostrUser) {
-    debugger;
     this.logger.debug('Updating user in collection', { pubkey: user.pubkey });
 
     // Update lastUsed timestamp

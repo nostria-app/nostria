@@ -1,64 +1,79 @@
-<div [ngClass]="['user-profile', view()]" (click)="layout.navigateToProfile(pubkey())">
+<!-- <div [ngClass]="['user-profile', view()]" (click)="layout.navigateToProfile(pubkey())"> -->
+<div [ngClass]="['user-profile', view()]">
+
   <div class="user-profile-container">
     <!-- Banner section for grid view -->
     @if (view() === 'grid' && profile()?.content?.banner) {
-      <div class="user-profile-banner">
-        <img 
-          [src]="profile().content.banner" 
-          onerror="this.onerror=null; this.src='images/banner-failure.png';" 
-          alt="User Banner" 
-          class="user-banner" />
-      </div>
-    }
-    
-    <!-- Avatar section - single image element -->
-    <div class="user-profile-avatar" 
-         [matTooltip]="view() === 'large' || view() === 'medium' || view() === 'small' ? getTooltipContent() : ''"
-         [matTooltipClass]="'user-profile-tooltip'"
-         matTooltipPosition="above">
-      @if (isLoading()) {
-        <mat-spinner [diameter]="getSpinnerSize()" color="primary"></mat-spinner>
-      } @else if (profile()?.content?.picture) {
-        <img 
-          [src]="profile().content.picture" 
-          onerror="this.onerror=null; this.src='images/picture-failure.png';" 
-          alt="User Avatar" 
-          class="user-avatar" />
-      } @else {
-        <mat-icon class="default-user-avatar" [style.font-size]="getDefaultAvatarSize()" [style.height]="getDefaultAvatarSize()" [style.width]="getDefaultAvatarSize()">account_circle</mat-icon>
-      }
+    <div class="user-profile-banner">
+      <img [src]="profile().content.banner" onerror="this.onerror=null; this.src='images/banner-failure.png';"
+        alt="User Banner" class="user-banner" />
     </div>
+    }
+
+    <!-- Avatar section - single image element -->
+    <a [routerLink]="['/p', pubkey()]" class="user-profile-avatar"
+      [matTooltip]="view() === 'large' || view() === 'medium' || view() === 'small' ? getTooltipContent() : ''"
+      [matTooltipClass]="'user-profile-tooltip'" matTooltipPosition="above">
+      @if (isLoading()) {
+      <mat-spinner [diameter]="getSpinnerSize()" color="primary"></mat-spinner>
+      } @else if (profile()?.content?.picture) {
+      <img [src]="profile().content.picture" onerror="this.onerror=null; this.src='images/picture-failure.png';"
+        alt="User Avatar" class="user-avatar" />
+      } @else {
+      <mat-icon class="default-user-avatar" [style.font-size]="getDefaultAvatarSize()"
+        [style.height]="getDefaultAvatarSize()" [style.width]="getDefaultAvatarSize()">account_circle</mat-icon>
+      }
+    </a>
 
     <!-- Content section with conditional rendering based on view -->
     @if (view() !== 'large' && view() !== 'medium' && view() !== 'small') {
-      <div class="user-profile-content">
-        <!-- Name section -->
-        <div class="user-profile-name">
-          @if (isLoading()) {
-            Loading...
-          } @else if (profile() && !profile().isEmpty && profile().content) {
-            @if (profile().content.display_name) {
-              {{ profile().content.display_name }}
-            } @else if (profile().content.name) {
-              {{ profile().content.name }}
-            } @else {
-              [No name]
-            }
-          } @else {
-            [Not found]
-          }
-        </div>
-
-        <!-- NPUB section - only shown in appropriate views -->
-        @if (view() === 'list' || view() === 'details') {
-          <div class="user-profile-npub">{{ npub() }}</div>
+    <div class="user-profile-content">
+      <!-- Name section -->
+      <a [routerLink]="['/p', pubkey()]" class="user-profile-name">
+        @if (isLoading()) {
+        Loading...
+        } @else if (profile() && !profile().isEmpty && profile().content) {
+        @if (profile().content.display_name) {
+        {{ profile().content.display_name }}
+        } @else if (profile().content.name) {
+        {{ profile().content.name }}
+        } @else {
+        [No name]
         }
-
-        <!-- About section - only shown in details view -->
-        @if (view() === 'details' && profile() && profile().content && profile().content.about) {
-          <p class="user-profile-about">{{ profile().content.about }}</p>
+        } @else {
+        [Not found]
         }
+      </a>
+
+      <!-- NPUB section - only shown in appropriate views -->
+      @if (view() === 'list' || view() === 'details') {
+      <div class="user-profile-npub">{{ npub() }}</div>
+      }
+
+      <!-- About section - only shown in details view -->
+      @if (view() === 'details' && profile() && profile().content && profile().content.about) {
+      <p class="user-profile-about">{{ profile().content.about }}</p>
+      }
+
+      <!-- Named content projection for thread view -->
+      <div class="user-profile-custom-content">
+        <ng-content></ng-content>
       </div>
+
+    </div>
+    }
+
+    @if (view() ==='thread') {
+    <div>
+      <button mat-icon-button [matMenuTriggerFor]="menu">
+        <mat-icon>more_vert</mat-icon>
+      </button>
+
+      <mat-menu #menu="matMenu">
+        <button mat-menu-item>Item 1</button>
+        <button mat-menu-item>Item 2</button>
+      </mat-menu>
+    </div>
     }
   </div>
 </div>

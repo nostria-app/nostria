@@ -1,10 +1,18 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterModule } from '@angular/router';
 import { NostrService } from '../../../services/nostr.service';
 import { LoggerService } from '../../../services/logger.service';
 import { LoadingOverlayComponent } from '../../../components/loading-overlay/loading-overlay.component';
+import { ProfileStateService } from '../../../services/profile-state.service';
+import { MatCardModule } from '@angular/material/card';
+import { MatChipsModule } from '@angular/material/chips';
+import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
+import { MatButtonModule } from '@angular/material/button';
+import { AgoPipe } from '../../../pipes/ago.pipe';
+import { DateToggleComponent } from '../../../components/date-toggle/date-toggle.component';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-profile-notes',
@@ -12,7 +20,15 @@ import { LoadingOverlayComponent } from '../../../components/loading-overlay/loa
   imports: [
     CommonModule,
     MatIconModule,
-    LoadingOverlayComponent
+    LoadingOverlayComponent,
+    MatCardModule,
+    MatChipsModule,
+    UserProfileComponent,
+    MatButtonModule,
+    DateToggleComponent,
+    RouterModule,
+    AgoPipe,
+    MatTooltipModule
   ],
   templateUrl: './profile-notes.component.html',
   styleUrl: './profile-notes.component.scss'
@@ -21,6 +37,7 @@ export class ProfileNotesComponent {
   private route = inject(ActivatedRoute);
   private nostrService = inject(NostrService);
   private logger = inject(LoggerService);
+  profileState = inject(ProfileStateService);
 
   isLoading = signal(true);
   notes = signal<any[]>([]);
