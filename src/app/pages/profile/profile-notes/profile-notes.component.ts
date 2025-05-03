@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, RouterModule } from '@angular/router';
@@ -43,6 +43,8 @@ export class ProfileNotesComponent {
   isLoading = signal(true);
   notes = signal<any[]>([]);
   error = signal<string | null>(null);
+
+  // Removed bookmark related computed signals as they're now in the BookmarkService
 
   constructor() {
     // Use effect to load notes when component is initialized
