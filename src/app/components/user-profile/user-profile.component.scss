@@ -4,7 +4,6 @@
 }
 
 .user-profile {
-  cursor: pointer;
   border-radius: 0; // Removed border radius
   margin-bottom: 0; // Removed margin
   transition: background-color 0.2s;
@@ -158,6 +157,36 @@
       justify-content: center; // Center the avatar
       padding: 0; // Removed padding
       width: auto; // Container should only be as wide as its content
+    }
+
+    .user-profile-avatar {
+      width: 48px;
+      height: 48px;
+      margin: 0; // Removed margin
+    }
+
+    .default-user-avatar {
+      font-size: 48px;
+    }
+
+    .user-profile-name {
+      font-size: 14px;
+      margin-top: 0; // Removed margin
+    }
+  }
+
+  &.thread {
+    width: auto; // Changed from 100px to auto
+    flex-shrink: 0;
+
+    .user-profile-container {
+      justify-content: center; // Center the avatar
+      padding: 0; // Removed padding
+      width: auto; // Container should only be as wide as its content
+    }
+
+    .user-profile-content {
+      margin-left: 0.4rem;
     }
 
     .user-profile-avatar {

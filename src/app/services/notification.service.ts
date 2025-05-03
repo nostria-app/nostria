@@ -239,7 +239,6 @@ export class NotificationService {
    * Clear all notifications
    */
   clearNotifications(): void {
-    debugger;
     this._notifications.set([]);
 
     // Clear from storage

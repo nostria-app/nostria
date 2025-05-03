@@ -1014,7 +1014,6 @@ export class StorageService {
   // Methods for notification storage
   async saveNotification(notification: Notification): Promise<void> {
     try {
-      debugger;
       await this.db.put('notifications', notification);
       this.logger.debug(`Saved notification to IndexedDB: ${notification.id}`);
       await this.updateStats();

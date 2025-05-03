@@ -1,0 +1,9 @@
+<span class="date-ago" (click)="onComponentClick($event)">
+    @if (date()) {
+    @if (showAgo()) {
+    {{ date() | ago }}
+    } @else {
+    {{ date() * 1000 | date: 'medium' }}
+    }
+    }
+</span>

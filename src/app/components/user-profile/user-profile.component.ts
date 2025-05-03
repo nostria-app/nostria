@@ -1,7 +1,7 @@
 import { Component, effect, inject, input, output, signal, untracked, ElementRef, OnDestroy, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterModule } from '@angular/router';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
 import { MatListModule } from '@angular/material/list';
@@ -10,6 +10,8 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { ViewMode } from '../../interfaces';
 import { MatCardModule } from '@angular/material/card';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatButtonModule } from '@angular/material/button';
 
 @Component({
     selector: 'app-user-profile',
@@ -20,7 +22,10 @@ import { MatTooltipModule } from '@angular/material/tooltip';
         MatListModule,
         MatProgressSpinnerModule,
         MatCardModule,
-        MatTooltipModule
+        MatTooltipModule,
+        MatMenuModule,
+        MatButtonModule,
+        RouterModule
     ],
     templateUrl: './user-profile.component.html',
     styleUrl: './user-profile.component.scss'
@@ -37,22 +42,22 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
     isLoading = signal(false);
     error = signal<string>('');
     view = input<ViewMode>('list');
-    
+
     // Flag to track if component is visible
     private isVisible = signal(false);
     private intersectionObserver?: IntersectionObserver;
-    
+
     // Debounce control variables
     private debouncedLoadTimer?: number;
     private isScrolling = signal(false);
     private readonly DEBOUNCE_TIME = 350; // milliseconds
     private readonly SCROLL_CHECK_INTERVAL = 100; // milliseconds
     private scrollCheckTimer?: number;
-    
+
     constructor() {
         // Set up scroll detection
         this.setupScrollDetection();
-        
+
         // Set up an effect to watch for changes to npub input
         effect(() => {
             const pubkey = this.pubkey();
@@ -70,7 +75,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
                 }
             }
         });
-        
+
         // Additional effect to watch for visibility changes and scrolling status
         effect(() => {
             if (this.isVisible() && !this.isScrolling() && this.pubkey() && !this.profile()) {
@@ -80,19 +85,19 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
             }
         });
     }
-    
+
     ngAfterViewInit(): void {
         // Set up intersection observer to detect when component is visible
         this.setupIntersectionObserver();
     }
-    
+
     ngOnDestroy(): void {
         // Clean up the observer and timers when component is destroyed
         this.disconnectObserver();
         this.clearDebounceTimer();
         this.clearScrollCheckTimer();
     }
-    
+
     /**
      * Sets up the scroll detection mechanism
      */
@@ -104,19 +109,19 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
                 x: window.scrollX,
                 y: window.scrollY
             };
-            
+
             this.scrollCheckTimer = window.setInterval(() => {
                 const currentPosition = {
                     x: window.scrollX,
                     y: window.scrollY
                 };
-                
+
                 // If position changed, user is scrolling
-                if (lastScrollPosition.x !== currentPosition.x || 
+                if (lastScrollPosition.x !== currentPosition.x ||
                     lastScrollPosition.y !== currentPosition.y) {
-                    
+
                     this.isScrolling.set(true);
-                    
+
                     // Update last position
                     lastScrollPosition.x = currentPosition.x;
                     lastScrollPosition.y = currentPosition.y;
@@ -126,27 +131,27 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
                 }
             }, this.SCROLL_CHECK_INTERVAL);
         };
-        
+
         // Start the scroll detection
         scrollDetector();
     }
-    
+
     private clearScrollCheckTimer(): void {
         if (this.scrollCheckTimer) {
             window.clearInterval(this.scrollCheckTimer);
             this.scrollCheckTimer = undefined;
         }
     }
-    
+
     private setupIntersectionObserver(): void {
         this.disconnectObserver(); // Ensure any existing observer is disconnected
-        
+
         // Create IntersectionObserver instance
         this.intersectionObserver = new IntersectionObserver((entries) => {
             // Update visibility state
             const isVisible = entries.some(entry => entry.isIntersecting);
             this.isVisible.set(isVisible);
-            
+
             if (isVisible && !this.isScrolling()) {
                 // Using the debounced load function to prevent rapid loading during scroll
                 if (!this.profile() && !this.isLoading()) {
@@ -157,25 +162,25 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
             threshold: 0.1, // Trigger when at least 10% is visible
             root: null     // Use viewport as root
         });
-        
+
         // Start observing this component
         this.intersectionObserver.observe(this.elementRef.nativeElement);
     }
-    
+
     private disconnectObserver(): void {
         if (this.intersectionObserver) {
             this.intersectionObserver.disconnect();
             this.intersectionObserver = undefined;
         }
     }
-    
+
     /**
      * Debounces the profile data loading to prevent excessive API calls during scrolling
      */
     private debouncedLoadProfileData(pubkeyValue: string): void {
         // Clear any existing timer
         this.clearDebounceTimer();
-        
+
         // Set a new timer
         this.debouncedLoadTimer = window.setTimeout(() => {
             // Only proceed if we're visible and not currently scrolling
@@ -184,7 +189,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
             }
         }, this.DEBOUNCE_TIME);
     }
-    
+
     private clearDebounceTimer(): void {
         if (this.debouncedLoadTimer) {
             window.clearTimeout(this.debouncedLoadTimer);
@@ -198,13 +203,13 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
         if (this.isLoading()) return;
 
         this.isLoading.set(true);
-        
+
         try {
             // Note: isLoading is now set earlier when visibility is detected
             this.logger.debug('Loading profile data for:', npubValue);
 
             const data = await this.nostrService.getMetadataForUser(npubValue);
-            
+
             // Set profile to an empty object if no data was found
             // This will distinguish between "not loaded yet" and "loaded but empty"
             this.profile.set(data || { isEmpty: true });
@@ -267,10 +272,10 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
         if (!this.profile() || this.profile().isEmpty || !this.profile().content) {
             return 'Profile not found';
         }
-        
+
         const content = this.profile().content;
         let tooltipText = '';
-        
+
         // Add display name or name
         if (content.display_name) {
             tooltipText += content.display_name;
@@ -279,12 +284,12 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
         } else {
             tooltipText += '[No name]';
         }
-        
+
         // Add about text if available
         if (content.about) {
             tooltipText += '\n\n' + content.about;
         }
-        
+
         return tooltipText;
     }
 }

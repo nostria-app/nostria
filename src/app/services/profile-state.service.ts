@@ -3,6 +3,7 @@ import { NostrEvent } from '../interfaces';
 import { inject } from '@angular/core';
 import { NotificationService } from './notification.service';
 import { NotificationType } from './storage.service';
+import { UserRelayService } from './user-relay.service';
 
 @Injectable({
   providedIn: 'root'
@@ -10,6 +11,14 @@ import { NotificationType } from './storage.service';
 export class ProfileStateService {
   // Signal to store the current profile's following list
   followingList = signal<string[]>([]);
+
+  notes = signal<NostrEvent[]>([]);
+
+  articles = signal<NostrEvent[]>([]);
+
+  media = signal<NostrEvent[]>([]);
+
+  relay: UserRelayService | null = null;
   
   // Current profile pubkey
   currentProfilePubkey = signal<string>('');

@@ -30,6 +30,8 @@ import { ProfileHeaderComponent } from './profile-header/profile-header.componen
 import { ApplicationService } from '../../services/application.service';
 import { MediaPreviewDialogComponent } from '../../components/media-preview-dialog/media-preview.component';
 import { AccountStateService } from '../../services/account-state.service';
+import { UserRelayFactoryService } from '../../services/user-relay-factory.service';
+import { UserRelayService } from '../../services/user-relay.service';
 
 @Component({
   selector: 'app-profile',
@@ -88,10 +90,12 @@ export class ProfileComponent {
 
   // Convert route params to a signal
   private routeParams = toSignal<ParamMap>(this.route.paramMap);
+  private userRelayFactory = inject(UserRelayFactoryService);
+  private userRelay: UserRelayService | undefined = undefined;
 
   constructor() {
     // React to changes in route parameters and app initialization
-    effect(() => {
+    effect(async () => {
       // Only proceed if app is initialized and route params are available
       if (this.app.authenticated() && this.routeParams()) {
         let id = this.routeParams()?.get('id');
@@ -103,7 +107,21 @@ export class ProfileComponent {
             id = this.nostrService.getPubkeyFromNpub(id);
           }
 
+          this.profileState.setCurrentProfilePubkey(id);
           this.pubkey.set(id);
+
+          this.userRelay = await this.userRelayFactory.create(id);
+          this.profileState.relay = this.userRelay;
+
+          this.userRelay.subscribe([{
+            kinds: [kinds.ShortTextNote],
+            authors: [id],
+            limit: 30
+          }], (event) => {
+            this.profileState.notes.update(events => [...events, event]);
+          }, () => {
+            console.log('FINISHED!!!');
+          });
 
           // Reset state when loading a new profile
           this.userMetadata.set(undefined);
@@ -163,8 +181,6 @@ export class ProfileComponent {
   }
 
   private async loadUserData(pubkey: string, disconnect = true): Promise<void> {
-    debugger;
-
     if (!this.nostrService.currentProfileUserPool) {
       this.nostrService.currentProfileUserPool = new SimplePool();
     }
