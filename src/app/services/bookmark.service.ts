@@ -4,6 +4,7 @@ import { NostrService } from './nostr.service';
 import { ApplicationService } from './application.service';
 import { ApplicationStateService } from './application-state.service';
 import { NostrEvent } from '../interfaces';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 // Define bookmark types
 export type BookmarkType = 'event' | 'article' | 'url';
@@ -16,6 +17,7 @@ export class BookmarkService {
   nostr = inject(NostrService);
   app = inject(ApplicationService);
   appState = inject(ApplicationStateService);
+  snackBar = inject(MatSnackBar);
 
   bookmarkEvents = signal<any[]>([]);
   bookmarkArticles = signal<any[]>([]);
@@ -212,14 +214,57 @@ export class BookmarkService {
       return;
     }
     
-    // Update the timestamp
-    this.bookmarkEvent.created_at = Math.floor(Date.now() / 1000);
+    // Clone the bookmark event and remove id and sig
+    const eventToSign = { ...this.bookmarkEvent };
+    eventToSign.id = '';
+    eventToSign.sig = '';
+    eventToSign.created_at = Math.floor(Date.now() / 1000);
     
-    // The actual signing and publishing of the event will be implemented later
-    console.log('Publishing bookmark event:', this.bookmarkEvent);
-
-    const signedEvent = await this.nostr.signEvent(this.bookmarkEvent);
+    // Sign the event
+    const signedEvent = await this.nostr.signEvent(eventToSign);
     
-    await this.relay.publish(signedEvent);
+    // Update the local bookmark event with the signed event
+    this.bookmarkEvent = signedEvent;
+    
+    // Publish to relays and get array of promises
+    const publishPromises = await this.relay.publish(signedEvent);
+    
+    try {
+      // Wait for all publishing results
+      const results = await Promise.all(publishPromises || []);
+      
+      // Count successes and failures
+      const successful = results.filter(result => result === '').length;
+      const failed = results.length - successful;
+      
+      // Display appropriate notification
+      if (failed === 0) {
+        this.snackBar.open(`Bookmarks saved successfully to ${successful} ${successful === 1 ? 'relay' : 'relays'}`, 'Close', {
+          duration: 3000,
+          horizontalPosition: 'center',
+          verticalPosition: 'bottom',
+          panelClass: 'success-snackbar'
+        });
+      } else {
+        this.snackBar.open(
+          `Bookmarks saved to ${successful} ${successful === 1 ? 'relay' : 'relays'}, failed on ${failed} ${failed === 1 ? 'relay' : 'relays'}`, 
+          'Close', 
+          {
+            duration: 5000,
+            horizontalPosition: 'center',
+            verticalPosition: 'bottom',
+            panelClass: failed > successful ? 'error-snackbar' : 'warning-snackbar'
+          }
+        );
+      }
+    } catch (error) {
+      console.error('Error publishing bookmarks:', error);
+      this.snackBar.open('Failed to save bookmarks', 'Close', {
+        duration: 5000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+        panelClass: 'error-snackbar'
+      });
+    }
   }
 }
