@@ -13,6 +13,7 @@ export type BookmarkType = 'event' | 'article' | 'url';
 })
 export class BookmarkService {
   relay = inject(RelayService);
+  nostr = inject(NostrService);
   app = inject(ApplicationService);
   appState = inject(ApplicationStateService);
 
@@ -113,19 +114,62 @@ export class BookmarkService {
     return iconMap;
   }
 
-  addBookmark(id: string, type: BookmarkType = 'event') {
+  async addBookmark(id: string, type: BookmarkType = 'event') {
     const signal = this.getBookmarkSignal(type);
     const existingBookmark = signal().find(b => b.id === id);
-
-    if (existingBookmark) {
-      signal.update(bookmarks => bookmarks.filter(b => b.id !== id));
-    } else {
-      signal.update(bookmarks => [...bookmarks, { id }]);
+    
+    if (!this.bookmarkEvent) {
+      // Create a new bookmark event if none exists
+      this.bookmarkEvent = {
+        kind: 10003,
+        pubkey: this.appState.pubkey()!,
+        created_at: Math.floor(Date.now() / 1000),
+        content: '',
+        tags: [],
+        id: '',
+        sig: ''
+      };
     }
+    
+    // Get the appropriate tag prefix based on type
+    const tagPrefix = this.getTagPrefix(type);
+    
+    if (existingBookmark) {
+      // Remove from signal
+      signal.update(bookmarks => bookmarks.filter(b => b.id !== id));
+      
+      // Remove from event tags
+      if (this.bookmarkEvent) {
+        this.bookmarkEvent.tags = this.bookmarkEvent.tags.filter(
+          tag => !(tag[0] === tagPrefix && tag[1] === id)
+        );
+      }
+    } else {
+      // Add to signal
+      signal.update(bookmarks => [...bookmarks, { id }]);
+      
+      // Add to event tags
+      if (this.bookmarkEvent) {
+        this.bookmarkEvent.tags.push([tagPrefix, id]);
+      }
+    }
+    
+    // Publish the updated event
+    await this.publish();
   }
 
   toggleBookmark(id: string, type: BookmarkType = 'event') {
     this.addBookmark(id, type); // Add and toggle are the same operation
+  }
+
+  // Helper to get tag prefix based on bookmark type
+  private getTagPrefix(type: BookmarkType): string {
+    switch (type) {
+      case 'event': return 'e';
+      case 'article': return 'a';
+      case 'url': return 'r';
+      default: return 'e';
+    }
   }
 
   isBookmarked(id: string, type: BookmarkType = 'event'): boolean {
@@ -163,7 +207,19 @@ export class BookmarkService {
     return this.getBookmarkIcon(id, 'event');
   }
 
-  publish() {
+  async publish() {
+    if (!this.bookmarkEvent) {
+      return;
+    }
     
+    // Update the timestamp
+    this.bookmarkEvent.created_at = Math.floor(Date.now() / 1000);
+    
+    // The actual signing and publishing of the event will be implemented later
+    console.log('Publishing bookmark event:', this.bookmarkEvent);
+
+    const signedEvent = await this.nostr.signEvent(this.bookmarkEvent);
+    
+    await this.relay.publish(signedEvent);
   }
 }
