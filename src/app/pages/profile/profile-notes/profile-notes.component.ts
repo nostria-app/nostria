@@ -13,6 +13,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { AgoPipe } from '../../../pipes/ago.pipe';
 import { DateToggleComponent } from '../../../components/date-toggle/date-toggle.component';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { BookmarkService } from '../../../services/bookmark.service';
 
 @Component({
   selector: 'app-profile-notes',
@@ -25,10 +26,9 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     MatChipsModule,
     UserProfileComponent,
     MatButtonModule,
-    DateToggleComponent,
     RouterModule,
     AgoPipe,
-    MatTooltipModule
+    MatTooltipModule,
   ],
   templateUrl: './profile-notes.component.html',
   styleUrl: './profile-notes.component.scss'
@@ -38,6 +38,7 @@ export class ProfileNotesComponent {
   private nostrService = inject(NostrService);
   private logger = inject(LoggerService);
   profileState = inject(ProfileStateService);
+  bookmark = inject(BookmarkService);
 
   isLoading = signal(true);
   notes = signal<any[]>([]);
