@@ -11,6 +11,9 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { Router } from '@angular/router';
+import { NostrService } from '../../../services/nostr.service';
+import { RelayService } from '../../../services/relay.service';
+import { kinds } from 'nostr-tools';
 
 @Component({
   selector: 'app-badge-editor',
@@ -37,6 +40,8 @@ export class BadgeEditorComponent {
   private fb = inject(FormBuilder);
   private snackBar = inject(MatSnackBar);
   private router = inject(Router);
+  nostr = inject(NostrService);
+  relay = inject(RelayService);
 
   // Form for badge creation
   badgeForm: FormGroup;
@@ -162,9 +167,32 @@ export class BadgeEditorComponent {
   // Form submission
   publishBadge(): void {
     if (this.badgeForm.valid) {
+
+      const slug = this.badgeForm.get('slug')?.value;
+
+      if (!slug) {
+        throw new Error('Slug is required');
+      }
+
       // In a real implementation, this would send the badge data to a service
       console.log('Badge form data:', this.badgeForm.value);
       console.log('Tags:', this.tags());
+
+      const tags: string[][] = [];
+
+      tags.push(['d', slug]);
+      tags.push(['name', this.badgeForm.get('name')?.value]);
+      tags.push(['description', this.badgeForm.get('description')?.value]);
+      tags.push(["image", "https://nostr.academy/awards/bravery.png", "1024x1024"]);
+      tags.push(["thumb", "https://nostr.academy/awards/bravery_256x256.png", "256x256"]);
+
+      for(const tag of this.tags()) {
+        tags.push(['t', tag]);
+      }
+
+      const definitionEvent = this.nostr.createEvent(kinds.BadgeDefinition, "", tags);
+
+      console.log('Badge definition event:', definitionEvent);
       
       this.snackBar.open('Badge published successfully!', 'Close', { duration: 3000 });
       this.router.navigate(['/badges']);
