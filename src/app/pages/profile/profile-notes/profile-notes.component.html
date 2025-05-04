@@ -1,65 +1,61 @@
 <div class="tab-content">
-  @if (isLoading()) {
-  <app-loading-overlay message="Loading notes..."></app-loading-overlay>
-  } @else if (error()) {
-  <div class="error-state">
-    <mat-icon>error</mat-icon>
-    <p>{{ error() }}</p>
-  </div>
-  } @else if (profileState.notes().length === 0) {
-  <div class="empty-state">
-    <mat-icon>chat</mat-icon>
-    <p>No notes to display yet</p>
-  </div>
-  } @else {
-  <div class="notes-list">
-
-    <!-- @for(note of profileState.notes(); track note.id) {
-    <mat-card class="note-card" appearance="outlined">
-      <mat-card-header>
-        <mat-card-title>Chihuahua</mat-card-title>
-      </mat-card-header>
-      <mat-card-content>
-        <p>{{note.content}}</p>
-      </mat-card-content>
-      <mat-card-footer class="example-card-footer">
-        <mat-chip-set aria-label="Chihuahua traits">
-          <mat-chip>charming</mat-chip>
-          <mat-chip>graceful</mat-chip>
-          <mat-chip>sassy</mat-chip>
-        </mat-chip-set>
-      </mat-card-footer>
-    </mat-card>
-    } -->
-
-    @for(note of profileState.notes(); track note.id) {
-    <mat-card class="note-card" appearance="outlined">
-      <app-user-profile class="user-profile-thread" view="thread" [pubkey]="profileState.currentProfilePubkey()">
-        <a class="date-link" [routerLink]="['/e', note.id]" [matTooltip]="note.created_at * 1000 | date:'medium'" matTooltipPosition="below">
-          {{ note.created_at | ago }}
-        </a>
-      </app-user-profile>
-      <mat-card-content>{{note.content}}</mat-card-content>
-      <mat-card-footer class="note-footer">
-        <button mat-icon-button>
-          <mat-icon matTooltip="Reply" matTooltipPosition="below">reply</mat-icon>
-        </button>
-        <button mat-icon-button class="note-footer-right">
-          <mat-icon [matTooltip]="bookmark.getBookmarkTooltip(note.id)" matTooltipPosition="below" (click)="bookmark.toggleBookmark(note.id)">
-            {{bookmark.getBookmarkIcon(note.id)}}
-          </mat-icon>
-        </button>
-      </mat-card-footer>
-    </mat-card> 
-    }
-
-    <!-- <div class="note-items">
-      @for(note of profileState.notes(); track note.id) {
-      <div class="note-item">
-        {{note.content}}
+  <div class="notes-container">
+    <div class="notes-list-container">
+      @if (isLoading()) {
+      <app-loading-overlay message="Loading notes..."></app-loading-overlay>
+      } @else if (error()) {
+      <div class="error-state">
+        <mat-icon>error</mat-icon>
+        <p>{{ error() }}</p>
+      </div>
+      } @else if (profileState.notes().length === 0) {
+      <div class="empty-state">
+        <mat-icon>chat</mat-icon>
+        <p>No notes to display yet</p>
+      </div>
+      } @else {
+      <div class="notes-list">
+        @for(note of profileState.notes(); track note.id) {
+        <mat-card class="note-card" appearance="outlined">
+          <app-user-profile class="user-profile-thread" view="thread" [pubkey]="profileState.currentProfilePubkey()">
+            <a class="date-link" [routerLink]="['/e', note.id]" [matTooltip]="note.created_at * 1000 | date:'medium'" matTooltipPosition="below">
+              {{ note.created_at | ago }}
+            </a>
+          </app-user-profile>
+          <mat-card-content>{{note.content}}</mat-card-content>
+          <mat-card-footer class="note-footer">
+            <button mat-icon-button>
+              <mat-icon matTooltip="Reply" matTooltipPosition="below">reply</mat-icon>
+            </button>
+            <button mat-icon-button class="note-footer-right">
+              <mat-icon [matTooltip]="bookmark.getBookmarkTooltip(note.id)" matTooltipPosition="below" (click)="bookmark.toggleBookmark(note.id)">
+                {{bookmark.getBookmarkIcon(note.id)}}
+              </mat-icon>
+            </button>
+          </mat-card-footer>
+        </mat-card> 
+        }
       </div>
       }
-    </div> -->
+    </div>
+
+    <div class="options-section">
+      <h3 class="options-title">Display Options</h3>
+      <div class="option-controls">
+        <mat-slide-toggle 
+          [checked]="showNewestFirst()" 
+          (change)="toggleSortOrder()"
+          color="primary">
+          Sort by Newest
+        </mat-slide-toggle>
+        <span class="option-description">
+          @if (showNewestFirst()) {
+            Showing newest notes first
+          } @else {
+            Showing oldest notes first
+          }
+        </span>
+      </div>
+    </div>
   </div>
-  }
 </div>
