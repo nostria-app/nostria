@@ -64,7 +64,7 @@ import { UserRelayService } from '../../services/user-relay.service';
 export class ProfileComponent {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
-  private nostrService = inject(NostrService);
+  nostrService = inject(NostrService);
   private storage = inject(StorageService);
   private relayService = inject(RelayService);
   private appState = inject(ApplicationStateService);
@@ -103,6 +103,11 @@ export class ProfileComponent {
         if (id) {
           this.logger.debug('Profile page opened with pubkey:', id);
 
+          // Reset state when loading a new profile
+          this.userMetadata.set(undefined);
+          this.lightningQrCode.set('');
+          this.error.set(null);
+
           if (id.startsWith('npub')) {
             id = this.nostrService.getPubkeyFromNpub(id);
           }
@@ -110,23 +115,36 @@ export class ProfileComponent {
           this.profileState.setCurrentProfilePubkey(id);
           this.pubkey.set(id);
 
-          this.userRelay = await this.userRelayFactory.create(id);
-          this.profileState.relay = this.userRelay;
+          try {
+            this.userRelay = await this.userRelayFactory.create(id);
+            this.profileState.relay = this.userRelay;
+            this.userRelay.subscribe([{
+              kinds: [kinds.ShortTextNote],
+              authors: [id],
+              limit: 30
+            }], (event) => {
 
-          this.userRelay.subscribe([{
-            kinds: [kinds.ShortTextNote],
-            authors: [id],
-            limit: 30
-          }], (event) => {
+              if (this.isRootPost(event)) {
+                this.profileState.notes.update(events => [...events, event]);
+              } else {
+                this.profileState.replies.update(events => [...events, event]);
+              }
+            }, () => {
+              console.log('FINISHED!!!');
+            });
 
-            if (this.isRootPost(event)) {
-              this.profileState.notes.update(events => [...events, event]);
-             } else {
-              this.profileState.replies.update(events => [...events, event]);
-            }
-          }, () => {
-            console.log('FINISHED!!!');
-          });
+            // Use untracked to avoid re-running this effect when these signals change
+            untracked(async () => {
+              await this.loadUserProfile(this.pubkey());
+              this.checkIfOwnProfile(this.pubkey());
+            });
+
+          } catch (err: any) {
+            console.error(err);
+            this.isLoading.set(false);
+            this.error.set(err.message);
+            return;
+          }
 
           // this.userRelay.subscribe([{
           //   kinds: [kinds.ShortTextNote],
@@ -138,16 +156,7 @@ export class ProfileComponent {
           //   console.log('FINISHED!!!');
           // });
 
-          // Reset state when loading a new profile
-          this.userMetadata.set(undefined);
-          this.lightningQrCode.set('');
-          this.error.set(null);
 
-          // Use untracked to avoid re-running this effect when these signals change
-          untracked(async () => {
-            await this.loadUserProfile(this.pubkey());
-            this.checkIfOwnProfile(this.pubkey());
-          });
         } else {
           this.error.set('No user ID provided');
           this.isLoading.set(false);
