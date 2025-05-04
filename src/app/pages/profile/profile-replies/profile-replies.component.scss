@@ -4,6 +4,34 @@
   position: relative;
 }
 
+.options-section {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background-color: var(--mat-sys-surface-container-lowest);
+  border-radius: 8px;
+  box-shadow: var(--mat-sys-level1);
+}
+
+.options-title {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+  color: var(--mat-sys-on-surface);
+}
+
+.option-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+}
+
+.option-description {
+  font-size: 0.9rem;
+  color: var(--mat-sys-on-surface-variant);
+  font-style: italic;
+}
+
 .empty-state,
 .error-state {
   display: flex;
@@ -32,7 +60,6 @@
 .replies-list {
   margin-top: 1rem;
 }
-
 
 .note-card {
   margin-bottom: 1rem;
