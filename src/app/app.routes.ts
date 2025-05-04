@@ -21,6 +21,7 @@ import { MessagesComponent } from './pages/messages/messages.component';
 import { ArticlesComponent } from './pages/articles/articles.component';
 import { WelcomeComponent } from './pages/welcome/welcomecomponent';
 import { BadgesComponent } from './pages/badges/badges.component';
+import { ProfileRelaysComponent } from './pages/profile/profile-relays/profile-relays.component';
 
 export const routes: Routes = [
   { path: '', component: HomeComponent, pathMatch: 'full' },
@@ -61,6 +62,7 @@ export const routes: Routes = [
       { path: 'about', component: ProfileAboutComponent },
       { path: 'connections', component: ProfileConnectionsComponent },
       { path: 'following', component: FollowingComponent },
+      { path: 'relays', component: ProfileRelaysComponent },
       { path: 'details', component: DetailsComponent }
     ]
   },
