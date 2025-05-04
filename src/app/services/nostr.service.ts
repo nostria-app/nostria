@@ -212,6 +212,8 @@ export class NostrService {
       await this.loadAccountFollowing(pubkey);
       await this.loadAccountMuteList(pubkey);
       await this.subscribeToAccountMetadata(pubkey);
+
+
       // await this.bookmark.initialize();
 
       this.appState.loadingMessage.set('Loading completed!');

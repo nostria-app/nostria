@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect } from '@angular/core';
+import { Component, inject, signal, effect, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -10,11 +10,13 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { Router } from '@angular/router';
 import { NostrService } from '../../../services/nostr.service';
 import { RelayService } from '../../../services/relay.service';
 import { kinds } from 'nostr-tools';
 import { MediaService } from '../../../services/media.service';
+import { LayoutService } from '../../../services/layout.service';
 
 @Component({
   selector: 'app-badge-editor',
@@ -32,7 +34,8 @@ import { MediaService } from '../../../services/media.service';
     MatSnackBarModule,
     MatSlideToggleModule,
     FormsModule,
-    MatSlideToggleModule
+    MatSlideToggleModule,
+    MatProgressBarModule
   ],
   templateUrl: './badge-editor.component.html',
   styleUrl: './badge-editor.component.scss'
@@ -44,6 +47,7 @@ export class BadgeEditorComponent {
   nostr = inject(NostrService);
   relay = inject(RelayService);
   media = inject(MediaService);
+  layout = inject(LayoutService);
 
   // Form for badge creation
   badgeForm: FormGroup;
@@ -59,6 +63,10 @@ export class BadgeEditorComponent {
   // Toggle between upload and URL input
   useImageUrl = signal<boolean>(false);
   useThumbnailUrl = signal<boolean>(false);
+
+  // Media server and upload status
+  hasMediaServers = computed(() => this.media.mediaServers().length > 0);
+  isUploading = signal<boolean>(false);
 
   constructor() {
     this.badgeForm = this.fb.group({
@@ -166,8 +174,13 @@ export class BadgeEditorComponent {
     this.tags.update(currentTags => currentTags.filter(t => t !== tag));
   }
 
-  // Form submission - updated to handle form submission without reload
-  publishBadge(): void {
+  // Navigate to media settings to add servers
+  navigateToMediaSettings(): void {
+    this.router.navigate(['/media']);
+  }
+
+  // Form submission with file upload handling
+  async publishBadge(): Promise<void> {
     if (this.badgeForm.invalid) {
       // Mark all fields as touched to show validation errors
       Object.keys(this.badgeForm.controls).forEach(key => {
@@ -179,38 +192,107 @@ export class BadgeEditorComponent {
     }
 
     const slug = this.badgeForm.get('slug')?.value;
-
     if (!slug) {
       throw new Error('Slug is required');
     }
 
-    // In a real implementation, this would send the badge data to a service
-    console.log('Badge form data:', this.badgeForm.value);
-    console.log('Tags:', this.tags());
-
-    const tags: string[][] = [];
-
-    tags.push(['d', slug]);
-    tags.push(['name', this.badgeForm.get('name')?.value]);
-    tags.push(['description', this.badgeForm.get('description')?.value]);
-    
-    // Use dynamic image URLs from the form if available
-    const imageUrl = this.useImageUrl() ? this.badgeForm.get('imageUrl')?.value : "https://nostr.academy/awards/bravery.png";
-    const thumbnailUrl = this.useThumbnailUrl() ? this.badgeForm.get('thumbnailUrl')?.value : "https://nostr.academy/awards/bravery_256x256.png";
-    
-    tags.push(["image", imageUrl, "1024x1024"]);
-    tags.push(["thumb", thumbnailUrl, "256x256"]);
-
-    for(const tag of this.tags()) {
-      tags.push(['t', tag]);
+    // Check if media servers are available when file uploads are needed
+    const needsFileUpload = (!this.useImageUrl() && this.badgeForm.get('image')?.value instanceof File) || 
+                           (!this.useThumbnailUrl() && this.badgeForm.get('thumbnail')?.value instanceof File);
+                           
+    if (needsFileUpload && !this.hasMediaServers()) {
+      this.snackBar.open('You need to configure media servers to upload images', 'Configure Now', { 
+        duration: 8000
+      }).onAction().subscribe(() => {
+        this.navigateToMediaSettings();
+      });
+      return;
     }
 
-    const definitionEvent = this.nostr.createEvent(kinds.BadgeDefinition, "", tags);
+    try {
+      this.isUploading.set(true);
+      
+      let imageUrl: string;
+      let thumbnailUrl: string | undefined;
+      
+      // Handle main image upload or URL
+      if (this.useImageUrl()) {
+        // Use provided URL
+        imageUrl = this.badgeForm.get('imageUrl')?.value;
+      } else {
+        // Need to upload file
+        const imageFile = this.badgeForm.get('image')?.value;
+        if (imageFile instanceof File) {
+          const mediaServers = this.media.mediaServers();
+          const uploadResult = await this.media.uploadFile(imageFile, true, mediaServers);
+          
+          if (!uploadResult.item) {
+            throw new Error(`Failed to upload image: ${uploadResult.message || 'Unknown error'}`);
+          }
+          
+          imageUrl = uploadResult.item.url;
+        } else {
+          throw new Error('Image file is required');
+        }
+      }
+      
+      // Handle thumbnail upload or URL if provided
+      if (this.badgeForm.get('thumbnail')?.value) {
+        if (this.useThumbnailUrl()) {
+          // Use provided thumbnail URL
+          thumbnailUrl = this.badgeForm.get('thumbnailUrl')?.value;
+        } else {
+          // Need to upload thumbnail file
+          const thumbnailFile = this.badgeForm.get('thumbnail')?.value;
+          if (thumbnailFile instanceof File) {
+            const mediaServers = this.media.mediaServers();
+            const uploadResult = await this.media.uploadFile(thumbnailFile, true, mediaServers);
+            
+            if (!uploadResult.item) {
+              throw new Error(`Failed to upload thumbnail: ${uploadResult.message || 'Unknown error'}`);
+            }
+            
+            thumbnailUrl = uploadResult.item.url;
+          }
+        }
+      }
+      
+      // Create tags for the badge definition
+      const tags: string[][] = [];
+      
+      tags.push(['d', slug]);
+      tags.push(['name', this.badgeForm.get('name')?.value]);
+      tags.push(['description', this.badgeForm.get('description')?.value]);
+      
+      tags.push(["image", imageUrl, "1024x1024"]);
+      
+      if (thumbnailUrl) {
+        tags.push(["thumb", thumbnailUrl, "256x256"]);
+      }
+      
+      for (const tag of this.tags()) {
+        tags.push(['t', tag]);
+      }
+      
+      const definitionEvent = this.nostr.createEvent(kinds.BadgeDefinition, "", tags);
+      console.log('Badge definition event:', definitionEvent);
+      
+      // Sign and publish the event
+      const signedEvent = await this.nostr.signEvent(definitionEvent);
+      const publishResult = await this.relay.publish(signedEvent);
 
-    console.log('Badge definition event:', definitionEvent);
-    
-    this.snackBar.open('Badge published successfully!', 'Close', { duration: 3000 });
-    this.router.navigate(['/badges']);
+      await this.layout.showPublishResults(publishResult);
+      
+      // this.snackBar.open('Badge published successfully!', 'Close', { duration: 3000 });
+      this.router.navigate(['/badges']);
+    } catch (error) {
+      console.error('Error publishing badge:', error);
+      this.snackBar.open(`Failed to publish badge: ${error instanceof Error ? error.message : 'Unknown error'}`, 'Close', { 
+        duration: 5000 
+      });
+    } finally {
+      this.isUploading.set(false);
+    }
   }
 
   // Navigation
