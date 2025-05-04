@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -14,6 +14,7 @@ import { Router } from '@angular/router';
 import { NostrService } from '../../../services/nostr.service';
 import { RelayService } from '../../../services/relay.service';
 import { kinds } from 'nostr-tools';
+import { MediaService } from '../../../services/media.service';
 
 @Component({
   selector: 'app-badge-editor',
@@ -42,6 +43,7 @@ export class BadgeEditorComponent {
   private router = inject(Router);
   nostr = inject(NostrService);
   relay = inject(RelayService);
+  media = inject(MediaService);
 
   // Form for badge creation
   badgeForm: FormGroup;
@@ -164,46 +166,51 @@ export class BadgeEditorComponent {
     this.tags.update(currentTags => currentTags.filter(t => t !== tag));
   }
 
-  // Form submission
+  // Form submission - updated to handle form submission without reload
   publishBadge(): void {
-    if (this.badgeForm.valid) {
-
-      const slug = this.badgeForm.get('slug')?.value;
-
-      if (!slug) {
-        throw new Error('Slug is required');
-      }
-
-      // In a real implementation, this would send the badge data to a service
-      console.log('Badge form data:', this.badgeForm.value);
-      console.log('Tags:', this.tags());
-
-      const tags: string[][] = [];
-
-      tags.push(['d', slug]);
-      tags.push(['name', this.badgeForm.get('name')?.value]);
-      tags.push(['description', this.badgeForm.get('description')?.value]);
-      tags.push(["image", "https://nostr.academy/awards/bravery.png", "1024x1024"]);
-      tags.push(["thumb", "https://nostr.academy/awards/bravery_256x256.png", "256x256"]);
-
-      for(const tag of this.tags()) {
-        tags.push(['t', tag]);
-      }
-
-      const definitionEvent = this.nostr.createEvent(kinds.BadgeDefinition, "", tags);
-
-      console.log('Badge definition event:', definitionEvent);
-      
-      this.snackBar.open('Badge published successfully!', 'Close', { duration: 3000 });
-      this.router.navigate(['/badges']);
-    } else {
+    if (this.badgeForm.invalid) {
       // Mark all fields as touched to show validation errors
       Object.keys(this.badgeForm.controls).forEach(key => {
         this.badgeForm.get(key)?.markAsTouched();
       });
       
       this.snackBar.open('Please fill all required fields', 'Close', { duration: 3000 });
+      return;
     }
+
+    const slug = this.badgeForm.get('slug')?.value;
+
+    if (!slug) {
+      throw new Error('Slug is required');
+    }
+
+    // In a real implementation, this would send the badge data to a service
+    console.log('Badge form data:', this.badgeForm.value);
+    console.log('Tags:', this.tags());
+
+    const tags: string[][] = [];
+
+    tags.push(['d', slug]);
+    tags.push(['name', this.badgeForm.get('name')?.value]);
+    tags.push(['description', this.badgeForm.get('description')?.value]);
+    
+    // Use dynamic image URLs from the form if available
+    const imageUrl = this.useImageUrl() ? this.badgeForm.get('imageUrl')?.value : "https://nostr.academy/awards/bravery.png";
+    const thumbnailUrl = this.useThumbnailUrl() ? this.badgeForm.get('thumbnailUrl')?.value : "https://nostr.academy/awards/bravery_256x256.png";
+    
+    tags.push(["image", imageUrl, "1024x1024"]);
+    tags.push(["thumb", thumbnailUrl, "256x256"]);
+
+    for(const tag of this.tags()) {
+      tags.push(['t', tag]);
+    }
+
+    const definitionEvent = this.nostr.createEvent(kinds.BadgeDefinition, "", tags);
+
+    console.log('Badge definition event:', definitionEvent);
+    
+    this.snackBar.open('Badge published successfully!', 'Close', { duration: 3000 });
+    this.router.navigate(['/badges']);
   }
 
   // Navigation
