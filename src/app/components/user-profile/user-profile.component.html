@@ -69,7 +69,23 @@
         <mat-icon>more_vert</mat-icon>
       </button>
 
+      <mat-menu #copyMenu="matMenu">
+        <button mat-menu-item (click)="layout.copyToClipboard(this.npub(), 'npub')">
+          <span>Event ID (note)</span>
+        </button>
+        <button mat-menu-item (click)="layout.copyToClipboard(this.pubkey(), 'nprofile')">
+          <span>Event ID (nevent)</span>
+        </button>
+        <!-- <button mat-menu-item (click)="copyProfileData()">
+          <span>Event Data</span>
+        </button> -->
+      </mat-menu>
+
       <mat-menu #menu="matMenu">
+        <button mat-menu-item [matMenuTriggerFor]="copyMenu">
+          <mat-icon>content_copy</mat-icon>
+          <span>Copy</span>
+        </button>
         <button mat-menu-item>Item 1</button>
         <button mat-menu-item>Item 2</button>
       </mat-menu>
