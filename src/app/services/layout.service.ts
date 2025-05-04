@@ -8,6 +8,9 @@ import { MatDialog } from "@angular/material/dialog";
 import { MatSnackBar } from "@angular/material/snack-bar";
 import { BreakpointObserver } from "@angular/cdk/layout";
 import { MediaPreviewDialogComponent } from "../components/media-preview-dialog/media-preview.component";
+import { nip19 } from "nostr-tools";
+import { ProfilePointer } from "nostr-tools/nip19";
+import { ProfileStateService } from "./profile-state.service";
 
 @Injectable({
     providedIn: 'root'
@@ -23,6 +26,7 @@ export class LayoutService {
     breakpointObserver = inject(BreakpointObserver);
     optimalProfilePosition: number = 200;
     premium = signal(false);
+    profileState = inject(ProfileStateService);
 
     constructor() {
         // Monitor only mobile devices (not tablets)
@@ -88,6 +92,11 @@ export class LayoutService {
     copyToClipboard(text: string | undefined | null, type: string): void {
         if (text === null || text === undefined) {
             return;
+        }
+
+        if (type === 'nprofile') {
+            const profile: ProfilePointer = { pubkey: text, relays: this.profileState.relay?.relayUrls };
+            text = nip19.nprofileEncode(profile);
         }
 
         navigator.clipboard.writeText(text)

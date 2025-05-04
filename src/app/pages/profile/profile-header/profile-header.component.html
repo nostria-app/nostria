@@ -98,7 +98,10 @@
                 <button mat-menu-item (click)="layout.copyToClipboard(this.npub(), 'npub')">
                     <span>Identifier (npub)</span>
                 </button>
-                <button mat-menu-item (click)="layout.copyToClipboard(this.npub(), 'nprofile')">
+                <button mat-menu-item (click)="layout.copyToClipboard(this.pubkey(), 'hex')">
+                    <span>Identifier (hex)</span>
+                </button>
+                <button mat-menu-item (click)="layout.copyToClipboard(this.pubkey(), 'nprofile')">
                     <span>Identifier (nprofile)</span>
                 </button>
                 <button mat-menu-item (click)="copyProfileData()">
