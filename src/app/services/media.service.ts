@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, effect, inject, signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { BehaviorSubject } from 'rxjs';
 import { NostrService } from './nostr.service';
@@ -10,6 +10,7 @@ import { MEDIA_SERVERS_EVENT_KIND } from '../interfaces';
 import { NostrTagKey, standardizedTag, StandardizedTagType } from '../standardized-tags';
 import { sha256 } from '@noble/hashes/sha2';
 import { bytesToHex } from '@noble/hashes/utils';
+import { ApplicationService } from './application.service';
 
 export interface MediaItem {
   sha256: string; // SHA-256 hash of file (NIP-94)
@@ -38,6 +39,7 @@ export class MediaService {
   readonly relay = inject(RelayService);
   private readonly storage = inject(StorageService);
   private readonly logger = inject(LoggerService);
+  private readonly app = inject(ApplicationService);
 
   // State management
   private _mediaItems = signal<MediaItem[]>([]);
@@ -60,6 +62,18 @@ export class MediaService {
     // this.getFiles();
     // Load saved media servers
     // this.loadMediaServers();
+    effect(async () => {
+      if (this.app.initialized() && this.app.authenticated()) {
+        console.log('APP INITIALIZED, FETCHING MEDIA SERVERS');
+        const userServerList = await this.nostrService.getMediaServers(this.nostrService.pubkey());
+        console.log('USER SERVER LIST', userServerList);
+
+        if (userServerList) {
+          const servers = this.nostrService.getTags(userServerList, standardizedTag.server);
+          this.setMediaServers(servers);
+        }
+      }
+    });
   }
 
   async getFileById(id: string): Promise<MediaItem> {
@@ -121,7 +135,7 @@ export class MediaService {
       }
 
       const pubkey = this.nostrService.pubkey();
-      
+
       // Generate auth headers once for all servers
       const headers = await this.getAuthHeaders('List Files', 'list');
 
@@ -332,7 +346,7 @@ export class MediaService {
       // Calculate file hash first to check for duplicates
       const fileBytes = await this.getFileBytes(file);
       hash = bytesToHex(sha256(fileBytes));
-      
+
       // Check if file already exists with the same upload mode
       // This allows users to upload both original and optimized versions of the same file
       const existingFile = this.getFileByHash(hash);
@@ -340,15 +354,15 @@ export class MediaService {
         // Check if the existing file was uploaded with the same mode (original or optimized)
         const existingFileUrl = existingFile.url;
         const isExistingOriginal = existingFileUrl.includes('/upload/') || !existingFileUrl.includes('/media/');
-        
+
         // Only consider it a duplicate if both are original or both are optimized
         if ((uploadOriginal && isExistingOriginal) || (!uploadOriginal && !isExistingOriginal)) {
-          return { 
-            item: existingFile, 
-            status: 'duplicate', 
-            message: uploadOriginal 
-              ? 'Original file already exists in your media library' 
-              : 'Optimized version of this file already exists in your library' 
+          return {
+            item: existingFile,
+            status: 'duplicate',
+            message: uploadOriginal
+              ? 'Original file already exists in your media library'
+              : 'Optimized version of this file already exists in your library'
           };
         }
         // Otherwise, allow upload of different version (original vs. optimized)
@@ -568,11 +582,11 @@ export class MediaService {
       const headers = await this.getAuthHeaders('Delete Multiple Files', 'delete', ids.join(','));
 
       let failedDeletes = 0;
-      
+
       // Delete each file using the same auth headers
       for (const id of ids) {
         let deleteSuccessful = false;
-        
+
         // Try each server for this file
         for (const server of servers) {
           try {
@@ -592,7 +606,7 @@ export class MediaService {
             this.logger.error(`Failed to delete file ${id} from server ${server}:`, err);
           }
         }
-        
+
         if (!deleteSuccessful) {
           failedDeletes++;
         }
@@ -602,7 +616,7 @@ export class MediaService {
       if (failedDeletes < ids.length) {
         this._mediaItems.update(items => items.filter(item => !ids.includes(item.sha256)));
       }
-      
+
       // If some or all deletions failed, throw an error
       if (failedDeletes === ids.length) {
         throw new Error('Failed to delete any files');
@@ -719,42 +733,42 @@ export class MediaService {
 
   async mirrorFiles(items: MediaItem[]): Promise<void> {
     if (items.length === 0) return;
-    
+
     this.loading.set(true);
     this._error.set(null);
-    
+
     try {
       // Create a comma-separated string of all file hashes for the auth header
       const fileHashes = items.map(item => item.sha256).join(',');
-      
+
       // Generate a single auth header for all files
       const headers = await this.getAuthHeaders('Mirror Multiple Files', 'upload', fileHashes);
-      
+
       let mirrorFailures = 0;
-      
+
       // Process each item
       for (const item of items) {
         // Get servers that don't already have this item
         const serversForItem = this.otherServers(item.url);
         if (serversForItem.length === 0) continue; // Already on all servers
-        
+
         let mirrorSuccessful = false;
-        
+
         // Try to mirror on each server that doesn't have the file
         for (const server of serversForItem) {
           try {
             const url = server.endsWith('/') ? server : `${server}/`;
-            
+
             // Check if mirroring is allowed
             const headResponse = await fetch(`${url}upload`, {
               method: 'HEAD',
               headers: headers
             });
-            
+
             if (!headResponse.ok) {
               continue; // Try next server
             }
-            
+
             // Perform the mirror request
             const response = await fetch(`${url}mirror`, {
               method: 'PUT',
@@ -764,15 +778,15 @@ export class MediaService {
               },
               body: JSON.stringify({ url: item.url })
             });
-            
+
             if (!response.ok) {
               continue; // Try next server
             }
-            
+
             // Update the media item with the new mirror
             const mirroredMedia = await response.json();
             const mirrorServerUrl = this.extractServerUrl(mirroredMedia.url);
-            
+
             // Update the media item's mirrors array
             this._mediaItems.update(mediaItems => {
               return mediaItems.map(mediaItem => {
@@ -781,7 +795,7 @@ export class MediaService {
                   if (!mediaItem.mirrors) {
                     mediaItem.mirrors = [];
                   }
-                  
+
                   // Add new mirror if it doesn't exist
                   if (!mediaItem.mirrors.includes(mirrorServerUrl)) {
                     return {
@@ -793,19 +807,19 @@ export class MediaService {
                 return mediaItem;
               });
             });
-            
+
             mirrorSuccessful = true;
             break; // Move to next item after success
           } catch (err) {
             this.logger.error(`Failed to mirror ${item.sha256} on server ${server}:`, err);
           }
         }
-        
+
         if (!mirrorSuccessful) {
           mirrorFailures++;
         }
       }
-      
+
       // Throw error if all mirrors failed
       if (mirrorFailures === items.length) {
         throw new Error('Failed to mirror any files');
@@ -965,7 +979,7 @@ export class MediaService {
         if (sha256.includes(',')) {
           // Split the comma-separated string into individual hashes
           const hashes = sha256.split(',');
-          
+
           // Add each hash as an 'x' tag to include all files in the authorization
           for (const hash of hashes) {
             if (hash) {

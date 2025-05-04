@@ -43,15 +43,26 @@
                         </div>
                     </div>
                     
+                    <!-- No media servers warning for file upload mode -->
+                    @if (!useImageUrl() && !hasMediaServers()) {
+                        <div class="media-server-warning">
+                            <mat-icon color="warn">warning</mat-icon>
+                            <span>You need to configure a media server to upload image files</span>
+                            <button mat-flat-button color="primary" type="button" (click)="navigateToMediaSettings()">
+                                Configure Media Server
+                            </button>
+                        </div>
+                    }
+                    
                     @if (!useImageUrl()) {
                         <div class="file-upload">
-                            <button mat-stroked-button type="button" (click)="imageInput.click()">
+                            <button mat-stroked-button type="button" (click)="imageInput.click()" [disabled]="!hasMediaServers()">
                                 <mat-icon>upload</mat-icon>
                                 Upload Image
                             </button>
                             <input #imageInput type="file" hidden (change)="onImageSelected($event, 'image')" accept="image/*">
                             @if (previewImage()) {
-                                <span >File selected</span>
+                                <span>File selected</span>
                             }
                         </div>
                     } @else {
@@ -81,15 +92,26 @@
                         </div>
                     </div>
                     
+                    <!-- No media servers warning for file upload mode -->
+                    @if (!useThumbnailUrl() && !hasMediaServers()) {
+                        <div class="media-server-warning">
+                            <mat-icon color="warn">warning</mat-icon>
+                            <span>You need to configure a media server to upload thumbnail files</span>
+                            <button mat-flat-button color="primary" type="button" (click)="navigateToMediaSettings()">
+                                Configure Media Server
+                            </button>
+                        </div>
+                    }
+                    
                     @if (!useThumbnailUrl()) {
                         <div class="file-upload">
-                            <button mat-stroked-button type="button" (click)="thumbnailInput.click()">
+                            <button mat-stroked-button type="button" (click)="thumbnailInput.click()" [disabled]="!hasMediaServers()">
                                 <mat-icon>upload</mat-icon>
                                 Upload Thumbnail
                             </button>
                             <input #thumbnailInput type="file" hidden (change)="onImageSelected($event, 'thumbnail')" accept="image/*">
                             @if (previewThumbnail()) {
-                                <span >File selected</span>
+                                <span>File selected</span>
                             }
                         </div>
                     } @else {
@@ -123,10 +145,18 @@
                     </div>
                 </div>
 
+                <!-- Upload progress indicator -->
+                @if (isUploading()) {
+                    <div class="upload-progress">
+                        <p>Uploading and publishing badge...</p>
+                        <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+                    </div>
+                }
+
                 <!-- Changed form action buttons to use type="button" and type="submit" appropriately -->
                 <div class="form-actions">
-                    <button mat-button type="button" (click)="cancel()">Cancel</button>
-                    <button mat-flat-button color="primary" type="submit">
+                    <button mat-button type="button" (click)="cancel()" [disabled]="isUploading()">Cancel</button>
+                    <button mat-flat-button color="primary" type="submit" [disabled]="isUploading()">
                         Publish Badge Design
                     </button>
                 </div>

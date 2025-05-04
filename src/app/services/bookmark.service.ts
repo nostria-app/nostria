@@ -5,6 +5,7 @@ import { ApplicationService } from './application.service';
 import { ApplicationStateService } from './application-state.service';
 import { NostrEvent } from '../interfaces';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { LayoutService } from './layout.service';
 
 // Define bookmark types
 export type BookmarkType = 'event' | 'article' | 'url';
@@ -18,6 +19,7 @@ export class BookmarkService {
   app = inject(ApplicationService);
   appState = inject(ApplicationStateService);
   snackBar = inject(MatSnackBar);
+  layout = inject(LayoutService);
 
   bookmarkEvents = signal<any[]>([]);
   bookmarkArticles = signal<any[]>([]);
@@ -228,6 +230,8 @@ export class BookmarkService {
     
     // Publish to relays and get array of promises
     const publishPromises = await this.relay.publish(signedEvent);
+
+    await this.layout.showPublishResults(publishPromises);
     
     try {
       // Wait for all publishing results

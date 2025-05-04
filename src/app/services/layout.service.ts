@@ -350,5 +350,45 @@ export class LayoutService {
         let url = 'https://nostria.app/p/' + npub;
         this.copyToClipboard(url, 'profile URL');
     }
+
+    async showPublishResults(publishPromises: Promise<string>[] | null) {
+        try {
+            // Wait for all publishing results
+            const results = await Promise.all(publishPromises || []);
+            
+            // Count successes and failures
+            const successful = results.filter(result => result === '').length;
+            const failed = results.length - successful;
+            
+            // Display appropriate notification
+            if (failed === 0) {
+              this.snackBar.open(`Bookmarks saved successfully to ${successful} ${successful === 1 ? 'relay' : 'relays'}`, 'Close', {
+                duration: 3000,
+                horizontalPosition: 'center',
+                verticalPosition: 'bottom',
+                panelClass: 'success-snackbar'
+              });
+            } else {
+              this.snackBar.open(
+                `Bookmarks saved to ${successful} ${successful === 1 ? 'relay' : 'relays'}, failed on ${failed} ${failed === 1 ? 'relay' : 'relays'}`, 
+                'Close', 
+                {
+                  duration: 5000,
+                  horizontalPosition: 'center',
+                  verticalPosition: 'bottom',
+                  panelClass: failed > successful ? 'error-snackbar' : 'warning-snackbar'
+                }
+              );
+            }
+          } catch (error) {
+            console.error('Error publishing bookmarks:', error);
+            this.snackBar.open('Failed to save bookmarks', 'Close', {
+              duration: 5000,
+              horizontalPosition: 'center',
+              verticalPosition: 'bottom',
+              panelClass: 'error-snackbar'
+            });
+          }
+    }
 }
 
