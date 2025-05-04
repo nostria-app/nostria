@@ -23,9 +23,9 @@
     </div>
   </div>
 
-  <mat-tab-group class="following-tabs" [selectedIndex]="selectedTabIndex()"
+  <!-- <mat-tab-group class="following-tabs" [selectedIndex]="selectedTabIndex()"
     (selectedIndexChange)="onTabChanged($event)" animationDuration="300ms">
-    <mat-tab class="following-tab" label="Connections">
+    <mat-tab class="following-tab" label="Relays"> -->
       <div class="following-content">
         @if (profileState.relay?.relayUrls?.length === 0) {
         <div class="empty-list">
@@ -44,6 +44,6 @@
         </cdk-virtual-scroll-viewport>
         }
       </div>
-    </mat-tab>
-  </mat-tab-group>
+    <!-- </mat-tab>
+  </mat-tab-group> -->
 </div>
