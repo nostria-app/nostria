@@ -52,6 +52,10 @@
             <a class="following-count" [routerLink]="'following'" [queryParamsHandling]="'preserve'">
                 Following {{ profileState.followingList().length }}
             </a>
+
+            <a class="following-count" [routerLink]="'relays'" [queryParamsHandling]="'preserve'">
+                Relays {{ profileState.relay?.relayUrls?.length }}
+            </a>
             }
 
             <mat-menu #profileMenu="matMenu">

@@ -198,6 +198,7 @@ export class ProfileComponent {
     return url.includes('/following') ||
       url.includes('/about') ||
       url.includes('/details') ||
+      url.includes('/relays') ||
       url.includes('/media');
   }
 
