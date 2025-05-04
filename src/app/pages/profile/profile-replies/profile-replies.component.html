@@ -1,4 +1,23 @@
 <div class="tab-content">
+  <div class="options-section">
+    <h3 class="options-title">Display Options</h3>
+    <div class="option-controls">
+      <mat-slide-toggle 
+        [checked]="showLegacyReplies()" 
+        (change)="toggleLegacyReplies()"
+        color="primary">
+        Legacy Replies
+      </mat-slide-toggle>
+      <span class="option-description">
+        @if (showLegacyReplies()) {
+          Showing oldest replies first
+        } @else {
+          Showing newest replies first
+        }
+      </span>
+    </div>
+  </div>
+
   @if (profileState.replies().length === 0) {
   <div class="empty-state">
     <mat-icon>reply_all</mat-icon>
@@ -6,7 +25,7 @@
   </div>
   } @else {
   <div class="replies-list">
-    @for(note of profileState.replies(); track note.id) {
+    @for(note of filteredReplies(); track note.id) {
     <mat-card class="note-card" appearance="outlined">
       <app-user-profile class="user-profile-thread" view="thread" [pubkey]="profileState.currentProfilePubkey()">
         <a class="date-link" [routerLink]="['/e', note.id]" [matTooltip]="note.created_at * 1000 | date:'medium'"
