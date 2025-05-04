@@ -118,10 +118,25 @@ export class ProfileComponent {
             authors: [id],
             limit: 30
           }], (event) => {
-            this.profileState.notes.update(events => [...events, event]);
+
+            if (this.isRootPost(event)) {
+              this.profileState.notes.update(events => [...events, event]);
+             } else {
+              this.profileState.replies.update(events => [...events, event]);
+            }
           }, () => {
             console.log('FINISHED!!!');
           });
+
+          // this.userRelay.subscribe([{
+          //   kinds: [kinds.ShortTextNote],
+          //   authors: [id],
+          //   limit: 30
+          // }], (event) => {
+          //   this.profileState.replies.update(events => [...events, event]);
+          // }, () => {
+          //   console.log('FINISHED!!!');
+          // });
 
           // Reset state when loading a new profile
           this.userMetadata.set(undefined);
@@ -162,6 +177,11 @@ export class ProfileComponent {
       }
     });
   }
+
+  isRootPost(event: NostrEvent) {
+    // A root post has no 'e' tag (no reply or root reference)
+    return !event.tags.some(tag => tag[0] === 'e');
+  };
 
   // Helper method to determine if the current route should use compact header
   private shouldUseCompactHeader(url: string): boolean {

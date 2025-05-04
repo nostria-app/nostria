@@ -14,6 +14,8 @@ export class ProfileStateService {
 
   notes = signal<NostrEvent[]>([]);
 
+  replies = signal<NostrEvent[]>([]);
+
   articles = signal<NostrEvent[]>([]);
 
   media = signal<NostrEvent[]>([]);
