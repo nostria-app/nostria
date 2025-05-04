@@ -593,7 +593,17 @@ mat-card-content li {
   margin: .6rem;
 }
 
-
 .note-card {
   max-width: 680px;
+}
+
+// Profile link wrapping styles
+.profile-link-container {
+  max-width: 100%;
+  overflow-wrap: break-word;
+}
+
+.wrap-link {
+  word-break: break-all;
+  overflow-wrap: break-word;
 }
