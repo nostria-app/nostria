@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, RouterModule } from '@angular/router';
@@ -7,13 +7,14 @@ import { LoggerService } from '../../../services/logger.service';
 import { LoadingOverlayComponent } from '../../../components/loading-overlay/loading-overlay.component';
 import { ProfileStateService } from '../../../services/profile-state.service';
 import { MatCardModule } from '@angular/material/card';
-import { MatChipsModule } from '@angular/material/chips';
 import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
-import { MatButtonModule } from '@angular/material/button';
-import { AgoPipe } from '../../../pipes/ago.pipe';
-import { DateToggleComponent } from '../../../components/date-toggle/date-toggle.component';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { BookmarkService } from '../../../services/bookmark.service';
+import { AgoPipe } from '../../../pipes/ago.pipe';
+import { MatButtonModule } from '@angular/material/button';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { FormsModule } from '@angular/forms';
+import { NostrEvent } from '../../../interfaces';
 
 @Component({
   selector: 'app-profile-notes',
@@ -23,12 +24,14 @@ import { BookmarkService } from '../../../services/bookmark.service';
     MatIconModule,
     LoadingOverlayComponent,
     MatCardModule,
-    MatChipsModule,
     UserProfileComponent,
-    MatButtonModule,
     RouterModule,
-    AgoPipe,
     MatTooltipModule,
+    AgoPipe,
+    MatIconModule,
+    MatButtonModule,
+    MatSlideToggleModule,
+    FormsModule
   ],
   templateUrl: './profile-notes.component.html',
   styleUrl: './profile-notes.component.scss'
@@ -39,16 +42,26 @@ export class ProfileNotesComponent {
   private logger = inject(LoggerService);
   profileState = inject(ProfileStateService);
   bookmark = inject(BookmarkService);
-
-  isLoading = signal(true);
-  notes = signal<any[]>([]);
+  isLoading = signal<boolean>(false);
   error = signal<string | null>(null);
-
-  // Removed bookmark related computed signals as they're now in the BookmarkService
+  
+  // Options
+  showNewestFirst = signal<boolean>(true);
+  sortedNotes = signal<NostrEvent[]>([]);
 
   constructor() {
-    // Use effect to load notes when component is initialized
-    this.loadNotes();
+    // Setup effect to sort notes when options or source data changes
+    effect(() => {
+      const notes = this.profileState.notes();
+      const newestFirst = this.showNewestFirst();
+      
+      // Apply sorting based on options
+      if (newestFirst) {
+        this.sortedNotes.set([...notes].sort((a, b) => b.created_at - a.created_at));
+      } else {
+        this.sortedNotes.set([...notes].sort((a, b) => a.created_at - b.created_at));
+      }
+    });
   }
 
   // Get the pubkey from the parent route
@@ -56,31 +69,7 @@ export class ProfileNotesComponent {
     return this.route.parent?.snapshot.paramMap.get('id') || '';
   }
 
-  async loadNotes(): Promise<void> {
-    const pubkey = this.getPubkey();
-    
-    if (!pubkey) {
-      this.error.set('No pubkey provided');
-      this.isLoading.set(false);
-      return;
-    }
-
-    try {
-      this.isLoading.set(true);
-      this.error.set(null);
-      
-      // Mock data for now - would be replaced with actual fetch from NostrService
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Set empty array for now
-      this.notes.set([]);
-      
-      this.logger.debug('Loaded notes for pubkey:', pubkey);
-    } catch (err) {
-      this.logger.error('Error loading notes:', err);
-      this.error.set('Failed to load notes');
-    } finally {
-      this.isLoading.set(false);
-    }
+  toggleSortOrder() {
+    this.showNewestFirst.set(!this.showNewestFirst());
   }
 }

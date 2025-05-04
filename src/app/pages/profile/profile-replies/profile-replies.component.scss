@@ -4,12 +4,61 @@
   position: relative;
 }
 
+.replies-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin: 0 auto;
+  max-width: 1200px; // Respect the overall max width
+
+  @media (min-width: 960px) and (max-width: 1199px) {
+    // Medium sized screens - keep stacked layout with options on top
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  @media (min-width: 1200px) {
+    // Only use row layout for larger screens where both elements fit side by side
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: center;
+  }
+}
+
+.replies-list-container {
+  width: 100%;
+  max-width: 680px; // Fixed width for the note container
+  order: 2; // Display replies below options on all screens except large
+
+  @media (min-width: 1200px) {
+    // Only change order on large screens
+    order: 1;
+    flex-shrink: 0;
+  }
+}
+
 .options-section {
-  margin-bottom: 1.5rem;
-  padding: 1rem;
   background-color: var(--mat-sys-surface-container-lowest);
   border-radius: 8px;
   box-shadow: var(--mat-sys-level1);
+  padding: 1rem;
+  width: 100%; // Full width on mobile
+  max-width: 680px; // Match the width of note-card for consistency
+  margin-bottom: 1.5rem; // Space between options and content
+  order: 1; // Always display options at the top except on large screens
+  
+  @media (min-width: 1200px) {
+    // Only use side-by-side layout on large screens
+    order: 2;
+    width: auto;
+    margin-left: 1.5rem;
+    margin-bottom: 0;
+    flex: 1;
+    max-width: calc(100% - 680px - 2rem);
+    position: sticky;
+    top: 1rem;
+    height: fit-content;
+  }
 }
 
 .options-title {
@@ -21,9 +70,8 @@
 
 .option-controls {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 1rem;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 .option-description {
@@ -58,11 +106,15 @@
 }
 
 .replies-list {
-  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .note-card {
-  margin-bottom: 1rem;
+  max-width: 680px;
+  width: 100%;
+  margin: 0;
 }
 
 .note-items {
