@@ -5,7 +5,8 @@
 
     <div class="editor-content">
         <div class="editor-form">
-            <form [formGroup]="badgeForm">
+            <!-- Changed to use ngSubmit and added novalidate attribute -->
+            <form [formGroup]="badgeForm" (ngSubmit)="publishBadge()" novalidate>
                 <mat-form-field class="full-width">
                     <mat-label>Badge Name</mat-label>
                     <input matInput formControlName="name" placeholder="Enter badge name">
@@ -122,9 +123,10 @@
                     </div>
                 </div>
 
+                <!-- Changed form action buttons to use type="button" and type="submit" appropriately -->
                 <div class="form-actions">
                     <button mat-button type="button" (click)="cancel()">Cancel</button>
-                    <button mat-flat-button color="primary" type="submit" (click)="publishBadge()">
+                    <button mat-flat-button color="primary" type="submit">
                         Publish Badge Design
                     </button>
                 </div>
