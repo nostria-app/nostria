@@ -6,6 +6,10 @@
     <mat-icon>error</mat-icon>
     <h2>{{ error() }}</h2>
     <p>The profile you're looking for couldn't be loaded or doesn't exist.</p>
+    <p>The user is likely not found on your Discovery Relays. You can add <a [routerLink]="['/settings']">additional ones</a> and try again.</p>
+    <p>
+      <a [href]="'https://nostr.at/' + nostrService.getNpubFromPubkey(pubkey())" target="_blank" rel="noopener noreferrer">https://nostr.at/{{ nostrService.getNpubFromPubkey(pubkey()) }}</a>
+    </p>
   </div>
   }
 
@@ -171,12 +175,6 @@
 
   <div class="profile-outlet"  [class.mobile]="layoutService.isHandset()">
     <router-outlet></router-outlet>
-  </div>
-  } @else {
-  <div class="empty-profile">
-    <mat-icon>person_outline</mat-icon>
-    <h2>Profile Not Found</h2>
-    <p>The user profile you're looking for doesn't exist or hasn't been loaded yet.</p>
   </div>
   }
 </div>
