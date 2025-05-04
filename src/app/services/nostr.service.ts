@@ -929,6 +929,11 @@ export class NostrService {
           console.log('FOLLOWING:', followingEvent);
 
           const followingRelayUrls = this.getRelayUrlsFromFollowing(followingEvent);
+
+          if (followingRelayUrls.length > 30) {
+            debugger;
+          }
+
           console.log('USER FOLLOWING RELAY URLS:', followingRelayUrls);
 
           if (followingRelayUrls.length === 0) {
@@ -1368,6 +1373,11 @@ export class NostrService {
 
   /** Parses the URLs and cleans up, ensuring only wss:// instances are returned. */
   getRelayUrlsFromFollowing(event: Event, timeouts: boolean = true): string[] {
+    // Check if event.content is a string, return empty array if it is
+    if (!event.content || typeof event.content === 'string') {
+      return [];
+    }
+
     let relayUrls = Object.keys(event.content).map(url => {
       const wssIndex = url.indexOf('wss://');
       return wssIndex >= 0 ? url.substring(wssIndex) : url;
