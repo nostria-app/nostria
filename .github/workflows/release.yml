@@ -59,6 +59,18 @@ jobs:
           releaseDraft: true
           prerelease: ${{ github.event.inputs.prerelease }}
 
+      # Upload APK as additional release artifact (only need to do this once, so use ubuntu runner)
+      - name: Upload APK as release asset
+        if: matrix.platform == 'ubuntu-latest'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.tauri_build.outputs.releaseUploadUrl }}
+          asset_path: packages/nostria.apk
+          asset_name: nostria.apk
+          asset_content_type: application/vnd.android.package-archive
+
       # - name: Upload artifacts
       #   uses: actions/upload-artifact@v4
       #   with:
