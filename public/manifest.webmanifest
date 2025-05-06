@@ -1,7 +1,10 @@
 {
   "name": "Nostria",
   "short_name": "Nostria",
+  "id": "app.nostria",
   "version": "0.1.2",
+  "dir": "auto",
+  "lang": "en",
   "theme_color": "#303030",
   "background_color": "#303030",
   "description": "Your Social Network",
@@ -23,7 +26,7 @@
     "Nostr",
     "Social Media"
   ],
-  "categories": ["music", "photo", "productivity", "social"],
+  "categories": ["entertainment", "music", "photo", "productivity", "social"],
   "shortcuts": [
     {
       "name": "Profile",
