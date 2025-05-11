@@ -7,7 +7,7 @@ import { SocialPreviewComponent } from '../social-preview/social-preview.compone
 
 interface ContentToken {
   id: number;
-  type: 'text' | 'url' | 'youtube' | 'image' | 'audio' | 'linebreak';
+  type: 'text' | 'url' | 'youtube' | 'image' | 'audio' | 'video' | 'linebreak';
   content: string;
 }
 
@@ -69,6 +69,7 @@ export class ContentComponent {
     const youtubeRegex = /(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/g;
     const imageRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp)(\?[^\s]*)?)/gi;
     const audioRegex = /(https?:\/\/[^\s]+\.(mp3|wav|ogg)(\?[^\s]*)?)/gi;
+    const videoRegex = /(https?:\/\/[^\s]+\.(mp4|webm|mov|avi|wmv|flv|mkv)(\?[^\s]*)?)/gi;
     
     // Replace line breaks with placeholders
     let processedContent = content.replace(/\n/g, '##LINEBREAK##');
@@ -114,12 +115,22 @@ export class ContentComponent {
       });
     }
     
+    // Find video URLs
+    videoRegex.lastIndex = 0;
+    while ((match = videoRegex.exec(processedContent)) !== null) {
+      matches.push({
+        start: match.index,
+        end: match.index + match[0].length,
+        content: match[0],
+        type: 'video'
+      });
+    }
+    
     // Find remaining URLs
     urlRegex.lastIndex = 0;
     while ((match = urlRegex.exec(processedContent)) !== null) {
       // Check if this URL was already matched as a special type
       const isSpecialType = matches.some(m => m.start === match.index && m.end === match.index + match[0].length);
-      
       if (!isSpecialType) {
         matches.push({
           start: match.index,
@@ -148,7 +159,6 @@ export class ContentComponent {
         type: match.type,
         content: match.content
       });
-      
       lastIndex = match.end;
     }
     
@@ -164,7 +174,6 @@ export class ContentComponent {
   private processTextSegment(segment: string, tokens: ContentToken[], startId: number): void {
     // Process line breaks in text segments
     const parts = segment.split('##LINEBREAK##');
-    
     for (let i = 0; i < parts.length; i++) {
       if (parts[i]) {
         tokens.push({
@@ -173,7 +182,6 @@ export class ContentComponent {
           content: parts[i]
         });
       }
-      
       // Add a line break token after each part except the last one
       if (i < parts.length - 1) {
         tokens.push({
@@ -184,16 +192,14 @@ export class ContentComponent {
       }
     }
   }
-  
+
   getYouTubeEmbedUrl(url: string): SafeResourceUrl {
     const regex = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
     const match = url.match(regex);
-    
     if (match && match[1]) {
       const embedUrl = `https://www.youtube.com/embed/${match[1]}`;
       return this.sanitizer.bypassSecurityTrustResourceUrl(embedUrl);
     }
-    
     return this.sanitizer.bypassSecurityTrustResourceUrl('');
   }
   
@@ -204,7 +210,6 @@ export class ContentComponent {
       loading: true,
       error: false
     }));
-    
     this.socialPreviews.set(initialPreviews);
     
     // Load previews for each URL
@@ -219,7 +224,6 @@ export class ContentComponent {
         
         // Mock preview data
         const preview = await this.mockFetchPreview(url);
-        
         return {
           ...preview,
           url,
@@ -265,6 +269,28 @@ export class ContentComponent {
         description: 'Website description would appear here',
         image: 'https://via.placeholder.com/300x200?text=Website+Preview'
       };
+    }
+  }
+
+  getVideoType(url: string): string {
+    const extension = url.split('.').pop()?.split('?')[0]?.toLowerCase();
+    switch (extension) {
+      case 'mp4':
+        return 'mp4';
+      case 'webm':
+        return 'webm';
+      case 'mov':
+        return 'quicktime';
+      case 'avi':
+        return 'x-msvideo';
+      case 'wmv':
+        return 'x-ms-wmv';
+      case 'flv':
+        return 'x-flv';
+      case 'mkv':
+        return 'x-matroska';
+      default:
+        return 'mp4';
     }
   }
 }

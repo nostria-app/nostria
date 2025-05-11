@@ -28,6 +28,13 @@
           Your browser does not support the audio element.
         </audio>
       </div>
+    } @else if (token.type === 'video') {
+      <div class="media-container">
+        <video controls>
+          <source [src]="token.content" type="video/{{getVideoType(token.content)}}">
+          Your browser does not support the video element.
+        </video>
+      </div>
     }
   }
 </div>
