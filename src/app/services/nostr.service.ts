@@ -14,6 +14,7 @@ import { ApplicationStateService } from './application-state.service';
 import { AccountStateService } from './account-state.service';
 import { LocalStorageService } from './local-storage.service';
 import { BookmarkService } from './bookmark.service';
+import { SettingsService } from './settings.service';
 
 export interface NostrUser {
   pubkey: string;
@@ -36,7 +37,7 @@ export class NostrService {
   private readonly relayService = inject(RelayService);
   private readonly storage = inject(StorageService);
   private readonly appState = inject(ApplicationStateService);
-  private readonly accountState = inject(AccountStateService);
+  private readonly accountState = inject(AccountStateService);  
   private readonly localStorage = inject(LocalStorageService);
 
   initialized = signal(false);
@@ -213,6 +214,8 @@ export class NostrService {
       await this.loadAccountMuteList(pubkey);
       await this.subscribeToAccountMetadata(pubkey);
 
+      // This will trigger other services to load data, including settings.
+      this.accountState.setCurrentProfilePubkey(pubkey);
 
       // await this.bookmark.initialize();
 

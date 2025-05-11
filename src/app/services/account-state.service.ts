@@ -6,6 +6,8 @@ import { NostrEventData } from './storage.service';
   providedIn: 'root'
 })
 export class AccountStateService {
+  accountChanging = signal<string>('');
+
   // Signal to store the current profile's following list
   followingList = signal<string[]>([]);
   
@@ -41,6 +43,7 @@ export class AccountStateService {
   
   setCurrentProfilePubkey(pubkey: string): void {
     this.currentProfilePubkey.set(pubkey);
+    this.accountChanging.set(pubkey);
   }
 
   // Method to update mute list

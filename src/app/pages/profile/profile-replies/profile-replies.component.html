@@ -16,7 +16,7 @@
               {{ note.created_at | ago }}
             </a>
           </app-user-profile>
-          <mat-card-content>{{note.content}}</mat-card-content>
+          <app-content [content]="note.content"></app-content>
           <mat-card-footer class="note-footer">
             <button mat-icon-button>
               <mat-icon matTooltip="Reply" matTooltipPosition="below">reply</mat-icon>
