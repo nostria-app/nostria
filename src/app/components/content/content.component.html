@@ -40,7 +40,7 @@
     }
     
     @for (preview of socialPreviews(); track preview.url) {
-      <app-social-preview [url]="preview.url"></app-social-preview>
+      <app-social-preview class="social-preview" [url]="preview.url"></app-social-preview>
     }
   } @loading {
     <div class="content-placeholder"></div>
