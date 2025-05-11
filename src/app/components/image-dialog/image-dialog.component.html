@@ -1,0 +1,29 @@
+<div class="image-dialog-container">
+  <div class="toolbar">
+    <button mat-icon-button (click)="zoomIn()" aria-label="Zoom in">
+      <mat-icon>zoom_in</mat-icon>
+    </button>
+    <button mat-icon-button (click)="zoomOut()" aria-label="Zoom out">
+      <mat-icon>zoom_out</mat-icon>
+    </button>
+    <button mat-icon-button (click)="resetView()" aria-label="Reset view">
+      <mat-icon>refresh</mat-icon>
+    </button>
+    <span class="zoom-level">{{scale() * 100}}%</span>
+    <button mat-icon-button class="close-button" (click)="close()" aria-label="Close dialog">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+  
+  <div class="image-container"
+       (mousedown)="onMouseDown($event)"
+       (mousemove)="onMouseMove($event)"
+       (mouseup)="onMouseUp()"
+       (mouseleave)="onMouseUp()">
+    <img 
+      [src]="dialogData.imageUrl" 
+      [style.transform]="getTransformStyle()"
+      [ngClass]="{'draggable': scale() > 1}"
+      alt="Full size image">
+  </div>
+</div>
