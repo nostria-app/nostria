@@ -30,6 +30,7 @@
   overflow: hidden;
   position: relative;
   background-color: rgba(0, 0, 0, 0.02);
+  user-select: none; /* Prevent text selection during drag */
   
   img {
     max-width: 100%;
@@ -37,7 +38,11 @@
     transition: transform 0.1s ease-out;
     
     &.draggable {
-      cursor: move;
+      cursor: grab;
+      
+      &:active {
+        cursor: grabbing;
+      }
     }
   }
 }

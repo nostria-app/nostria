@@ -70,19 +70,23 @@ export class ImageDialogComponent implements AfterViewInit {
    * Handle mouse or touch down event to start dragging
    */
   onPointerDown(event: MouseEvent | TouchEvent): void {
+    // Only allow dragging when zoomed in
     if (this.scale() <= 1) return;
 
     let clientX: number, clientY: number;
+    
     if (event instanceof TouchEvent) {
+      event.preventDefault(); // Prevent scrolling on touch devices
       if (event.touches.length !== 1) return;
       clientX = event.touches[0].clientX;
       clientY = event.touches[0].clientY;
     } else {
+      event.preventDefault(); // Prevent default browser dragging
       if (event.button !== 0) return; // Only left mouse button
       clientX = event.clientX;
       clientY = event.clientY;
     }
-    // Only set dragging to true on pointer down
+    
     this.isDragging.set(true);
     this.lastMouseX.set(clientX);
     this.lastMouseY.set(clientY);
@@ -92,15 +96,18 @@ export class ImageDialogComponent implements AfterViewInit {
    * Handle mouse or touch move event for dragging
    */
   onPointerMove(event: MouseEvent | TouchEvent): void {
-    // Only move if dragging is active
+    // Only process movement if we're currently dragging
     if (!this.isDragging()) return;
 
     let clientX: number, clientY: number;
+    
     if (event instanceof TouchEvent) {
+      event.preventDefault();
       if (event.touches.length !== 1) return;
       clientX = event.touches[0].clientX;
       clientY = event.touches[0].clientY;
     } else {
+      event.preventDefault();
       clientX = event.clientX;
       clientY = event.clientY;
     }
@@ -119,7 +126,6 @@ export class ImageDialogComponent implements AfterViewInit {
    * Handle mouse or touch up event to end dragging
    */
   onPointerUp(): void {
-    // Always stop dragging on pointer up/cancel/leave
     this.isDragging.set(false);
   }
 

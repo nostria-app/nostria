@@ -31,6 +31,8 @@
       [src]="dialogData.imageUrl" 
       [style.transform]="getTransformStyle()"
       [ngClass]="{'draggable': scale() > 1}"
-      alt="Full size image">
+      [style.cursor]="isDragging() ? 'grabbing' : (scale() > 1 ? 'grab' : 'default')"
+      alt="Full size image"
+      draggable="false">
   </div>
 </div>
