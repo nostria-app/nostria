@@ -1,6 +1,6 @@
 @if (preview(); as preview) {
-<div class="social-preview-card" [attr.data-url]="preview.url">
-    <mat-card appearance="outlined">
+<a class="social-preview-card" [href]="preview.url" [attr.data-url]="preview.url">
+    <mat-card>
         @if (preview.loading) {
         <mat-card-content>
             <mat-progress-spinner mode="indeterminate" diameter="40"></mat-progress-spinner>
@@ -22,5 +22,5 @@
         </mat-card-content>
         }
     </mat-card>
-</div>
+</a>
 }
