@@ -625,3 +625,32 @@ mat-card-content li {
   word-break: break-all;
   overflow-wrap: break-word;
 }
+
+/* Content component styles */
+app-content {
+  display: block;
+  
+  a {
+    color: var(--mat-primary-color);
+    text-decoration: none;
+    
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+  
+  .social-preview-card mat-card {
+    border-radius: 8px;
+    overflow: hidden;
+  }
+}
+
+/* Global media styles */
+audio, video, img, iframe {
+  max-width: 100%;
+  border-radius: 4px;
+}
+
+iframe {
+  border: 0;
+}

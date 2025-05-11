@@ -1,0 +1,26 @@
+@if (preview(); as preview) {
+<div class="social-preview-card" [attr.data-url]="preview.url">
+    <mat-card appearance="outlined">
+        @if (preview.loading) {
+        <mat-card-content>
+            <mat-progress-spinner mode="indeterminate" diameter="40"></mat-progress-spinner>
+        </mat-card-content>
+        } @else if (preview.error) {
+        <mat-card-content>
+            <p class="error-message">Could not load preview</p>
+        </mat-card-content>
+        } @else {
+        @if (preview.image) {
+        <img mat-card-image [src]="preview.image" [alt]="preview.title || 'Link preview image'">
+        }
+        <mat-card-header>
+            <mat-card-title>{{preview.title || 'No title available'}}</mat-card-title>
+            <mat-card-subtitle>{{preview.description || 'No description available'}}</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+            <p class="preview-url">{{preview.url}}</p>
+        </mat-card-content>
+        }
+    </mat-card>
+</div>
+}
