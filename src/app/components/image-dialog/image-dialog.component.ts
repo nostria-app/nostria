@@ -67,36 +67,59 @@ export class ImageDialogComponent implements AfterViewInit {
   }
   
   /**
-   * Handle mouse down event to start dragging
+   * Handle mouse or touch down event to start dragging
    */
-  onMouseDown(event: MouseEvent): void {
-    if (this.scale() > 1) {
-      this.isDragging.set(true);
-      this.lastMouseX.set(event.clientX);
-      this.lastMouseY.set(event.clientY);
+  onPointerDown(event: MouseEvent | TouchEvent): void {
+    if (this.scale() <= 1) return;
+
+    let clientX: number, clientY: number;
+    if (event instanceof TouchEvent) {
+      if (event.touches.length !== 1) return;
+      clientX = event.touches[0].clientX;
+      clientY = event.touches[0].clientY;
+    } else {
+      if (event.button !== 0) return; // Only left mouse button
+      clientX = event.clientX;
+      clientY = event.clientY;
     }
+    // Only set dragging to true on pointer down
+    this.isDragging.set(true);
+    this.lastMouseX.set(clientX);
+    this.lastMouseY.set(clientY);
   }
-  
+
   /**
-   * Handle mouse move event for dragging
+   * Handle mouse or touch move event for dragging
    */
-  onMouseMove(event: MouseEvent): void {
-    if (this.isDragging()) {
-      const deltaX = event.clientX - this.lastMouseX();
-      const deltaY = event.clientY - this.lastMouseY();
-      
-      this.translateX.update(x => x + deltaX);
-      this.translateY.update(y => y + deltaY);
-      
-      this.lastMouseX.set(event.clientX);
-      this.lastMouseY.set(event.clientY);
+  onPointerMove(event: MouseEvent | TouchEvent): void {
+    // Only move if dragging is active
+    if (!this.isDragging()) return;
+
+    let clientX: number, clientY: number;
+    if (event instanceof TouchEvent) {
+      if (event.touches.length !== 1) return;
+      clientX = event.touches[0].clientX;
+      clientY = event.touches[0].clientY;
+    } else {
+      clientX = event.clientX;
+      clientY = event.clientY;
     }
+
+    const deltaX = clientX - this.lastMouseX();
+    const deltaY = clientY - this.lastMouseY();
+
+    this.translateX.update(x => x + deltaX);
+    this.translateY.update(y => y + deltaY);
+
+    this.lastMouseX.set(clientX);
+    this.lastMouseY.set(clientY);
   }
-  
+
   /**
-   * Handle mouse up event to end dragging
+   * Handle mouse or touch up event to end dragging
    */
-  onMouseUp(): void {
+  onPointerUp(): void {
+    // Always stop dragging on pointer up/cancel/leave
     this.isDragging.set(false);
   }
 
