@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatDialogModule, MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -15,10 +15,13 @@ export interface ImageDialogData {
   templateUrl: './image-dialog.component.html',
   styleUrl: './image-dialog.component.scss'
 })
-export class ImageDialogComponent {
+export class ImageDialogComponent implements AfterViewInit {
   dialogData = inject<ImageDialogData>(MAT_DIALOG_DATA);
   dialogRef = inject(MatDialogRef<ImageDialogComponent>);
   
+  @ViewChild('imageElement') imageElement!: ElementRef<HTMLImageElement>;
+  @ViewChild('containerElement') containerElement!: ElementRef<HTMLDivElement>;
+
   // Zoom controls
   scale = signal(1);
   translateX = signal(0);
@@ -29,6 +32,10 @@ export class ImageDialogComponent {
   lastMouseX = signal(0);
   lastMouseY = signal(0);
   
+  ngAfterViewInit() {
+    // No-op, but needed for ViewChild
+  }
+
   /**
    * Zoom in the image
    */
@@ -91,6 +98,59 @@ export class ImageDialogComponent {
    */
   onMouseUp(): void {
     this.isDragging.set(false);
+  }
+
+  /**
+   * Handle mouse wheel event for zooming
+   */
+  onWheel(event: WheelEvent): void {
+    event.preventDefault();
+
+    // Only zoom if image is loaded and refs are available
+    if (!this.imageElement?.nativeElement || !this.containerElement?.nativeElement) return;
+
+    const img = this.imageElement.nativeElement;
+    const container = this.containerElement.nativeElement;
+
+    // Get bounding rects
+    const imgRect = img.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+
+    // Mouse position relative to image
+    const mouseX = event.clientX - imgRect.left;
+    const mouseY = event.clientY - imgRect.top;
+
+    // Current scale
+    const prevScale = this.scale();
+
+    // Zoom direction
+    const delta = event.deltaY < 0 ? 1 : -1;
+    let nextScale = prevScale + delta * 0.25;
+    nextScale = Math.max(0.5, Math.min(5, nextScale));
+
+    if (nextScale === prevScale) return;
+
+    // Calculate the new translation so that the zoom is centered at the mouse position
+    // (x, y) in image coordinates
+    const imgWidth = img.naturalWidth;
+    const imgHeight = img.naturalHeight;
+    const displayWidth = imgRect.width;
+    const displayHeight = imgRect.height;
+
+    // Ratio of mouse position in image
+    const relX = mouseX / displayWidth;
+    const relY = mouseY / displayHeight;
+
+    // Compute the offset in the transformed space
+    const offsetX = (relX * displayWidth - displayWidth / 2) / prevScale;
+    const offsetY = (relY * displayHeight - displayHeight / 2) / prevScale;
+
+    // Update scale
+    this.scale.set(nextScale);
+
+    // Adjust translation to keep the zoom centered at the mouse position
+    this.translateX.update(x => x - offsetX * (nextScale - prevScale));
+    this.translateY.update(y => y - offsetY * (nextScale - prevScale));
   }
   
   /**
