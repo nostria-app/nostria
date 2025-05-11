@@ -1,4 +1,4 @@
-import { Component, Input, computed, effect, inject, signal } from '@angular/core';
+import { Component, Input, ViewChild, ElementRef, AfterViewInit, OnDestroy, computed, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -27,14 +27,26 @@ interface SocialPreview {
   templateUrl: './content.component.html',
   styleUrl: './content.component.scss'
 })
-export class ContentComponent {
+export class ContentComponent implements AfterViewInit, OnDestroy {
   private sanitizer = inject(DomSanitizer);
+  
+  @ViewChild('contentContainer') contentContainer!: ElementRef;
   
   // Input for raw content
   private _content = signal<string>('');
   
+  // Track visibility of the component
+  private _isVisible = signal<boolean>(false);
+  isVisible = computed(() => this._isVisible());
+  
+  // Observer for intersection
+  private intersectionObserver: IntersectionObserver | null = null;
+  
   // Processed content tokens
-  contentTokens = computed<ContentToken[]>(() => this.parseContent(this._content()));
+  contentTokens = computed<ContentToken[]>(() => {
+    // Only parse content if component is visible
+    return this._isVisible() ? this.parseContent(this._content()) : [];
+  });
   
   // Social previews for URLs
   socialPreviews = signal<SocialPreview[]>([]);
@@ -48,8 +60,10 @@ export class ContentComponent {
   }
 
   constructor() {
-    // Use effect to load social previews when content changes
+    // Use effect to load social previews when content changes AND component is visible
     effect(() => {
+      if (!this._isVisible()) return;
+      
       const tokens = this.contentTokens();
       const urlTokens = tokens.filter(token => token.type === 'url');
       
@@ -59,6 +73,50 @@ export class ContentComponent {
         this.socialPreviews.set([]);
       }
     });
+  }
+
+  ngAfterViewInit() {
+    this.setupIntersectionObserver();
+  }
+
+  ngOnDestroy() {
+    if (this.intersectionObserver) {
+      this.intersectionObserver.disconnect();
+      this.intersectionObserver = null;
+    }
+  }
+
+  private setupIntersectionObserver() {
+    // Ensure the element reference exists before proceeding
+    if (!this.contentContainer?.nativeElement) {
+      // If element isn't available yet, set a default visible state to true
+      // and try again later with a slight delay
+      this._isVisible.set(true); // Make content visible by default
+      
+      setTimeout(() => {
+        if (this.contentContainer?.nativeElement) {
+          this.setupIntersectionObserver();
+        }
+      }, 100);
+      
+      return;
+    }
+
+    // Options for the observer (which part of item visible, etc)
+    const options = {
+      root: null, // Use viewport as root
+      rootMargin: '0px',
+      threshold: 0.1 // 10% of the item visible
+    };
+
+    this.intersectionObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        this._isVisible.set(entry.isIntersecting);
+      });
+    }, options);
+
+    // Start observing the element
+    this.intersectionObserver.observe(this.contentContainer.nativeElement);
   }
 
   private parseContent(content: string): ContentToken[] {
@@ -104,17 +162,6 @@ export class ContentComponent {
       });
     }
     
-    // Find audio URLs
-    audioRegex.lastIndex = 0;
-    while ((match = audioRegex.exec(processedContent)) !== null) {
-      matches.push({
-        start: match.index,
-        end: match.index + match[0].length,
-        content: match[0],
-        type: 'audio'
-      });
-    }
-    
     // Find video URLs
     videoRegex.lastIndex = 0;
     while ((match = videoRegex.exec(processedContent)) !== null) {
@@ -126,11 +173,23 @@ export class ContentComponent {
       });
     }
     
+    // Find audio URLs
+    audioRegex.lastIndex = 0;
+    while ((match = audioRegex.exec(processedContent)) !== null) {
+      matches.push({
+        start: match.index,
+        end: match.index + match[0].length,
+        content: match[0],
+        type: 'audio'
+      });
+    }
+    
     // Find remaining URLs
     urlRegex.lastIndex = 0;
     while ((match = urlRegex.exec(processedContent)) !== null) {
       // Check if this URL was already matched as a special type
       const isSpecialType = matches.some(m => m.start === match.index && m.end === match.index + match[0].length);
+      
       if (!isSpecialType) {
         matches.push({
           start: match.index,
@@ -159,6 +218,7 @@ export class ContentComponent {
         type: match.type,
         content: match.content
       });
+      
       lastIndex = match.end;
     }
     
@@ -174,6 +234,7 @@ export class ContentComponent {
   private processTextSegment(segment: string, tokens: ContentToken[], startId: number): void {
     // Process line breaks in text segments
     const parts = segment.split('##LINEBREAK##');
+    
     for (let i = 0; i < parts.length; i++) {
       if (parts[i]) {
         tokens.push({
@@ -182,6 +243,7 @@ export class ContentComponent {
           content: parts[i]
         });
       }
+      
       // Add a line break token after each part except the last one
       if (i < parts.length - 1) {
         tokens.push({
@@ -192,15 +254,39 @@ export class ContentComponent {
       }
     }
   }
-
+  
   getYouTubeEmbedUrl(url: string): SafeResourceUrl {
     const regex = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
     const match = url.match(regex);
+    
     if (match && match[1]) {
       const embedUrl = `https://www.youtube.com/embed/${match[1]}`;
       return this.sanitizer.bypassSecurityTrustResourceUrl(embedUrl);
     }
+    
     return this.sanitizer.bypassSecurityTrustResourceUrl('');
+  }
+  
+  getVideoType(url: string): string {
+    const extension = url.split('.').pop()?.split('?')[0]?.toLowerCase();
+    switch (extension) {
+      case 'mp4':
+        return 'mp4';
+      case 'webm':
+        return 'webm';
+      case 'mov':
+        return 'quicktime';
+      case 'avi':
+        return 'x-msvideo';
+      case 'wmv':
+        return 'x-ms-wmv';
+      case 'flv':
+        return 'x-flv';
+      case 'mkv':
+        return 'x-matroska';
+      default:
+        return 'mp4';
+    }
   }
   
   private async loadSocialPreviews(urls: string[]): Promise<void> {
@@ -210,6 +296,7 @@ export class ContentComponent {
       loading: true,
       error: false
     }));
+    
     this.socialPreviews.set(initialPreviews);
     
     // Load previews for each URL
@@ -217,13 +304,14 @@ export class ContentComponent {
       try {
         // In a real implementation, you would call an API to fetch the metadata
         // For example, using a service like Open Graph or your own backend API
-        const response = await fetch(`https://api.yourdomain.com/metadata?url=${encodeURIComponent(url)}`);
+        const response = await fetch(`https://metadata.nostria.app/og?url=${encodeURIComponent(url)}`);
         
         // This is a mock response - replace with actual API call
         // const preview = await response.json();
         
         // Mock preview data
         const preview = await this.mockFetchPreview(url);
+        
         return {
           ...preview,
           url,
@@ -269,28 +357,6 @@ export class ContentComponent {
         description: 'Website description would appear here',
         image: 'https://via.placeholder.com/300x200?text=Website+Preview'
       };
-    }
-  }
-
-  getVideoType(url: string): string {
-    const extension = url.split('.').pop()?.split('?')[0]?.toLowerCase();
-    switch (extension) {
-      case 'mp4':
-        return 'mp4';
-      case 'webm':
-        return 'webm';
-      case 'mov':
-        return 'quicktime';
-      case 'avi':
-        return 'x-msvideo';
-      case 'wmv':
-        return 'x-ms-wmv';
-      case 'flv':
-        return 'x-flv';
-      case 'mkv':
-        return 'x-matroska';
-      default:
-        return 'mp4';
     }
   }
 }

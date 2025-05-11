@@ -1,20 +1,36 @@
 .content-container {
-//   margin-bottom: 1rem;
+  //   margin-bottom: 1rem;
   margin: 1rem 1rem 1rem 1rem;
   line-height: 1.6;
   word-break: break-word;
+  min-height: 20px; // Ensure there's at least some space to detect visibility
+}
+
+.content-placeholder {
+  min-height: 20px;
+  background: linear-gradient(90deg, rgba(0,0,0,0.03) 0%, rgba(0,0,0,0.06) 50%, rgba(0,0,0,0.03) 100%);
+  background-size: 200% 100%;
+  animation: placeholderShimmer 1.5s infinite;
+  border-radius: 4px;
+}
+
+@keyframes placeholderShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 
 .media-container {
   margin: 1rem 0;
   max-width: 100%;
   
-  img, audio {
+  img, audio, video {
     max-width: 100%;
+    border-radius: 4px;
   }
   
   iframe {
     max-width: 100%;
+    border-radius: 4px;
     @media (max-width: 600px) {
       height: auto;
     }
