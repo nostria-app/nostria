@@ -16,11 +16,14 @@
   </div>
   
   <div class="image-container"
+       #containerElement
        (mousedown)="onMouseDown($event)"
        (mousemove)="onMouseMove($event)"
        (mouseup)="onMouseUp()"
-       (mouseleave)="onMouseUp()">
+       (mouseleave)="onMouseUp()"
+       (wheel)="onWheel($event)">
     <img 
+      #imageElement
       [src]="dialogData.imageUrl" 
       [style.transform]="getTransformStyle()"
       [ngClass]="{'draggable': scale() > 1}"
