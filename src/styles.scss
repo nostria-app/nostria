@@ -424,6 +424,24 @@ mat-card-content li {
   }
 }
 
+// Beta indicator global style
+.beta-badge {
+  font-size: 0.6em;
+  background-color: var(--mat-sys-primary);
+  color: white;
+  padding: 2px 5px;
+  border-radius: 4px;
+  margin-left: 5px;
+  vertical-align: top;
+  display: inline-block;
+  letter-spacing: 0.5px;
+}
+
+.dark-theme .beta-badge {
+  background-color: var(--mat-sys-tertiary);
+  color: black;
+}
+
 /* Animation related styles */
 .profile-page {
   position: relative;
