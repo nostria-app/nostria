@@ -7,6 +7,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { SocialPreviewComponent } from '../social-preview/social-preview.component';
 import { MatDialog } from '@angular/material/dialog';
 import { ImageDialogComponent } from '../image-dialog/image-dialog.component';
+import { SettingsService } from '../../services/settings.service';
 
 interface ContentToken {
   id: number;
@@ -33,6 +34,7 @@ interface SocialPreview {
 export class ContentComponent implements AfterViewInit, OnDestroy {
   private sanitizer = inject(DomSanitizer);
   private dialog = inject(MatDialog);
+  settings = inject(SettingsService);
   
   @ViewChild('contentContainer') contentContainer!: ElementRef;
   

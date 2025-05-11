@@ -1,6 +1,22 @@
 <div class="privacy-settings-container">
   <h2>Privacy and Safety Settings</h2>
 
+  <section class="sharing-section">
+    <h3>Social Sharing Options</h3>
+    <div class="settings-option">
+      <mat-checkbox 
+        [checked]="settingsService.settings().socialSharingPreview"
+        (change)="toggleSocialSharingPreview()">
+        Enable social sharing preview
+      </mat-checkbox>
+      <p class="option-description">
+        When enabled, content previews will be shown for external links shared in posts.
+      </p>
+    </div>
+  </section>
+
+  <mat-divider></mat-divider>
+
   <section class="mute-section">
     <h3>Muted Accounts</h3>
     <div class="muted-section">

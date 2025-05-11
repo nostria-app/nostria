@@ -14,6 +14,7 @@ import { AgoPipe } from '../../../pipes/ago.pipe';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { FormsModule } from '@angular/forms';
+import { ContentComponent } from '../../../components/content/content.component';
 
 @Component({
   selector: 'app-profile-replies',
@@ -30,7 +31,8 @@ import { FormsModule } from '@angular/forms';
     MatIconModule,
     MatButtonModule,
     MatSlideToggleModule,
-    FormsModule
+    FormsModule,
+    ContentComponent
   ],
   templateUrl: './profile-replies.component.html',
   styleUrl: './profile-replies.component.scss'

@@ -6,14 +6,16 @@ import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { FormsModule } from '@angular/forms';
 import { AccountStateService } from '../../services/account-state.service';
 import { NostrService } from '../../services/nostr.service';
 import { UserProfileComponent } from "../user-profile/user-profile.component";
+import { SettingsService } from '../../services/settings.service';
 
 @Component({
   selector: 'app-privacy-settings',
-  standalone: true,
-  imports: [
+  standalone: true,  imports: [
     CommonModule,
     MatTabsModule,
     MatCardModule,
@@ -21,6 +23,8 @@ import { UserProfileComponent } from "../user-profile/user-profile.component";
     MatIconModule,
     MatButtonModule,
     MatDividerModule,
+    MatCheckboxModule,
+    FormsModule,
     UserProfileComponent
 ],
   templateUrl: './privacy-settings.component.html',
@@ -29,6 +33,7 @@ import { UserProfileComponent } from "../user-profile/user-profile.component";
 export class PrivacySettingsComponent {
   accountState = inject(AccountStateService);
   nostrService = inject(NostrService);
+  settingsService = inject(SettingsService);
 
   // Compute muted lists using getTags utility function
   mutedAccounts = computed(() => {
@@ -54,10 +59,17 @@ export class PrivacySettingsComponent {
     if (!muteList) return [];
     return this.nostrService.getTags(muteList, 'e');
   });
-
   removeMutedItem(type: string, value: string): void {
     // This would need to be implemented to update the mute list
     console.log(`Remove ${type}: ${value}`);
     // Would create a new mute event with the item removed and update via accountState
+  }
+
+  async toggleSocialSharingPreview(): Promise<void> {
+    try {
+      await this.settingsService.toggleSocialSharingPreview();
+    } catch (error) {
+      console.error('Failed to toggle social sharing preview setting', error);
+    }
   }
 }
