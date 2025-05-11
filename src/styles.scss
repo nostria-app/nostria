@@ -654,3 +654,23 @@ audio, video, img, iframe {
 iframe {
   border: 0;
 }
+
+/* Clickable image styles */
+.clickable-image {
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  
+  &:hover {
+    transform: scale(1.02);
+    box-shadow: var(--mat-sys-level1);
+  }
+}
+
+/* Image dialog styles */
+.image-dialog {
+  .mat-mdc-dialog-container .mdc-dialog__surface {
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: white;
+  }
+}

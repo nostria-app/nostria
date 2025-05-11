@@ -20,7 +20,12 @@
         </div>
       } @else if (token.type === 'image') {
         <div class="media-container">
-          <img [src]="token.content" alt="Content image" loading="lazy">
+          <img 
+            [src]="token.content" 
+            alt="Content image" 
+            loading="lazy"
+            (click)="openImageDialog(token.content)" 
+            class="clickable-image">
         </div>
       } @else if (token.type === 'audio') {
         <div class="media-container">

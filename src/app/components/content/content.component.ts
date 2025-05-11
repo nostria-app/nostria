@@ -2,8 +2,11 @@ import { Component, Input, ViewChild, ElementRef, AfterViewInit, OnDestroy, comp
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatDialogModule } from '@angular/material/dialog';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { SocialPreviewComponent } from '../social-preview/social-preview.component';
+import { MatDialog } from '@angular/material/dialog';
+import { ImageDialogComponent } from '../image-dialog/image-dialog.component';
 
 interface ContentToken {
   id: number;
@@ -23,12 +26,13 @@ interface SocialPreview {
 @Component({
   selector: 'app-content',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatProgressSpinnerModule, SocialPreviewComponent],
+  imports: [CommonModule, MatCardModule, MatProgressSpinnerModule, SocialPreviewComponent, MatDialogModule],
   templateUrl: './content.component.html',
   styleUrl: './content.component.scss'
 })
 export class ContentComponent implements AfterViewInit, OnDestroy {
   private sanitizer = inject(DomSanitizer);
+  private dialog = inject(MatDialog);
   
   @ViewChild('contentContainer') contentContainer!: ElementRef;
   
@@ -358,5 +362,20 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
         image: 'https://via.placeholder.com/300x200?text=Website+Preview'
       };
     }
+  }
+  
+  /**
+   * Opens an image dialog to view the image with zoom capabilities
+   */
+  openImageDialog(imageUrl: string): void {
+    console.log('Opening image dialog for URL:', imageUrl);
+    this.dialog.open(ImageDialogComponent, {
+      data: { imageUrl },
+      maxWidth: '95vw',
+      maxHeight: '95vh',
+      width: '100%',
+      height: '100%',
+      panelClass: 'image-dialog'
+    });
   }
 }
