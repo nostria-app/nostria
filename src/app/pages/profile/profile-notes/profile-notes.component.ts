@@ -15,6 +15,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { FormsModule } from '@angular/forms';
 import { NostrEvent } from '../../../interfaces';
+import { ContentComponent } from '../../../components/content/content.component';
 
 @Component({
   selector: 'app-profile-notes',
@@ -31,7 +32,8 @@ import { NostrEvent } from '../../../interfaces';
     MatIconModule,
     MatButtonModule,
     MatSlideToggleModule,
-    FormsModule
+    FormsModule,
+    ContentComponent
   ],
   templateUrl: './profile-notes.component.html',
   styleUrl: './profile-notes.component.scss'
