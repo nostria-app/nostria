@@ -135,3 +135,30 @@
 .mat-mdc-card-content p:last-child {
   margin-bottom: 0;
 }
+
+.action-buttons-container {
+  margin-top: 24px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: center;
+  padding: 1rem 0 3rem 0;
+}
+
+.find-closest-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  height: 48px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.spinning-icon {
+  animation: spin 2s linear infinite;
+  margin-left: 8px;
+}
