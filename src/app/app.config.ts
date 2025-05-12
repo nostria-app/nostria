@@ -2,6 +2,8 @@ import { ApplicationConfig, isDevMode, provideExperimentalZonelessChangeDetectio
 import { provideRouter } from '@angular/router';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideServiceWorker } from '@angular/service-worker';
+import { importProvidersFrom } from '@angular/core';
+import { DragDropModule } from '@angular/cdk/drag-drop';
 
 import { routes } from './app.routes';
 import { LoggerService } from './services/logger.service';
@@ -37,7 +39,8 @@ export const appConfig: ApplicationConfig = {
     provideServiceWorker('ngsw-worker.js', {
       enabled: !isDevMode(),
       registrationStrategy: 'registerWhenStable:30000'
-    })
+    }),
+    importProvidersFrom(DragDropModule)
   ]
 };
 

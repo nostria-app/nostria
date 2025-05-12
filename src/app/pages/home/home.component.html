@@ -13,33 +13,170 @@
   </header>
 
   <!-- Filters Section -->
-  <div class="filters-section" *ngIf="showAdvancedFilters()">
+  @if (showAdvancedFilters()) {
+  <div class="filters-section">
     <h3>Filter by tags</h3>
     <div class="tag-chips">
       @for (tag of availableTags(); track tag) {
-        <mat-chip-option
-          [selected]="selectedTags().includes(tag)"
-          (click)="toggleTagFilter(tag)"
-          color="primary">
-          #{{ tag }}
-        </mat-chip-option>
+      <mat-chip-option [selected]="selectedTags().includes(tag)" (click)="toggleTagFilter(tag)" color="primary">
+        #{{ tag }}
+      </mat-chip-option>
       }
     </div>
   </div>
+  }
 
   <!-- Navigation Tabs -->
   <nav class="navigation-tabs">
-    <mat-tab-group
-      [selectedIndex]="activeSection() === 'discover' ? 0 : activeSection() === 'following' ? 1 : 2"
+      <mat-tab-group
+    [selectedIndex]="selectedTabIndex()"
+    (selectedIndexChange)="selectTab($event)">
+    
+    <!-- Draggable tabs -->
+    <div cdkDropList cdkDropListOrientation="horizontal" 
+         (cdkDropListDropped)="onTabDrop($event)"
+         class="tabs-list">
+      
+      @for (link of navLinks(); track link.id; let i = $index) {
+        <mat-tab cdkDrag [routerLink]="link.path">
+          <ng-template mat-tab-label>
+            <div class="tab-label">
+              <div cdkDragHandle class="drag-handle">
+                <mat-icon>drag_indicator</mat-icon>
+              </div>
+              <mat-icon>{{ link.icon }}</mat-icon>
+              <span>{{ link.label }}</span>
+              <button mat-icon-button 
+                      class="tab-menu-button"
+                      [matMenuTriggerFor]="tabMenu" 
+                      (click)="$event.stopPropagation()">
+                <mat-icon>more_vert</mat-icon>
+              </button>
+              <mat-menu #tabMenu="matMenu">
+                <button mat-menu-item (click)="editFeed(i)">
+                  <mat-icon>edit</mat-icon>
+                  <span>Edit</span>
+                </button>
+                <button mat-menu-item (click)="removeFeed(i)">
+                  <mat-icon>delete</mat-icon>
+                  <span>Remove</span>
+                </button>
+              </mat-menu>
+            </div>
+          </ng-template>
+          
+          <!-- Tab content will be router outlet -->
+        </mat-tab>
+      }
+    </div>
+    
+    <!-- "+" button as a tab -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <button mat-icon-button (click)="addNewFeed(); $event.stopPropagation()">
+          <mat-icon>add</mat-icon>
+        </button>
+      </ng-template>
+    </mat-tab>
+  </mat-tab-group>
+
+
+
+    <mat-tab-group [selectedIndex]="activeSection() === 'discover' ? 0 : activeSection() === 'following' ? 1 : 2"
       (selectedIndexChange)="setActiveSection($event === 0 ? 'discover' : $event === 1 ? 'following' : 'media')">
-      <mat-tab label="Discover">
-        <div class="tab-indicator"></div>
-      </mat-tab>
-      <mat-tab label="Following">
-        <div class="tab-indicator"></div>
-      </mat-tab>
-      <mat-tab label="Media">
-        <div class="tab-indicator"></div>
+
+      <!-- Draggable tabs -->
+      <div cdkDropList cdkDropListOrientation="horizontal" (cdkDropListDropped)="onTabDrop($event)" class="tabs-list">
+
+        <!-- Discover Tab -->
+        <mat-tab cdkDrag>
+          <ng-template mat-tab-label>
+            <div class="tab-label">
+              <div cdkDragHandle class="drag-handle">
+                <mat-icon>drag_indicator</mat-icon>
+              </div>
+              <mat-icon>explore</mat-icon>
+              <span>Discover</span>
+              <button mat-icon-button class="tab-menu-button" [matMenuTriggerFor]="discoverMenu"
+                (click)="$event.stopPropagation()">
+                <mat-icon>more_vert</mat-icon>
+              </button>
+              <mat-menu #discoverMenu="matMenu">
+                <button mat-menu-item>
+                  <mat-icon>edit</mat-icon>
+                  <span>Edit</span>
+                </button>
+                <button mat-menu-item (click)="refreshContent()">
+                  <mat-icon>refresh</mat-icon>
+                  <span>Refresh</span>
+                </button>
+              </mat-menu>
+            </div>
+          </ng-template>
+        </mat-tab>
+
+        <!-- Following Tab -->
+        <mat-tab cdkDrag>
+          <ng-template mat-tab-label>
+            <div class="tab-label">
+              <div cdkDragHandle class="drag-handle">
+                <mat-icon>drag_indicator</mat-icon>
+              </div>
+              <mat-icon>people</mat-icon>
+              <span>Following</span>
+              <button mat-icon-button class="tab-menu-button" [matMenuTriggerFor]="followingMenu"
+                (click)="$event.stopPropagation()">
+                <mat-icon>more_vert</mat-icon>
+              </button>
+              <mat-menu #followingMenu="matMenu">
+                <button mat-menu-item (click)="editSection('following')">
+                  <mat-icon>edit</mat-icon>
+                  <span>Edit</span>
+                </button>
+                <button mat-menu-item (click)="refreshContent()">
+                  <mat-icon>refresh</mat-icon>
+                  <span>Refresh</span>
+                </button>
+              </mat-menu>
+            </div>
+          </ng-template>
+        </mat-tab>
+
+        <!-- Media Tab -->
+        <mat-tab cdkDrag>
+          <ng-template mat-tab-label>
+            <div class="tab-label">
+              <div cdkDragHandle class="drag-handle">
+                <mat-icon>drag_indicator</mat-icon>
+              </div>
+              <mat-icon>perm_media</mat-icon>
+              <span>Media</span>
+              <button mat-icon-button class="tab-menu-button" [matMenuTriggerFor]="mediaMenu"
+                (click)="$event.stopPropagation()">
+                <mat-icon>more_vert</mat-icon>
+              </button>
+              <mat-menu #mediaMenu="matMenu">
+                <button mat-menu-item (click)="editSection('media')">
+                  <mat-icon>edit</mat-icon>
+                  <span>Edit</span>
+                </button>
+                <button mat-menu-item (click)="refreshContent()">
+                  <mat-icon>refresh</mat-icon>
+                  <span>Refresh</span>
+                </button>
+              </mat-menu>
+            </div>
+          </ng-template>
+        </mat-tab>
+      </div>
+
+      <!-- "+" button as a tab -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <button mat-icon-button (click)="addNewSection(); $event.stopPropagation()">
+            <mat-icon>add</mat-icon>
+          </button>
+        </ng-template>
       </mat-tab>
     </mat-tab-group>
   </nav>
@@ -48,158 +185,158 @@
   <div class="content-section">
     <!-- Discover Section -->
     @if (activeSection() === 'discover') {
-      <div class="discover-feed feed-container">
-        @for (event of filteredTrending(); track event.id) {
-          <mat-card class="content-card">
-            <mat-card-header>
-              <div mat-card-avatar class="avatar"></div>
-              <mat-card-title>User {{ event.pubkey.substring(0, 8) }}</mat-card-title>
-              <mat-card-subtitle>{{ event.created_at | date:'medium' }}</mat-card-subtitle>
-              <div class="card-actions">
-                <button mat-icon-button [matMenuTriggerFor]="menu">
-                  <mat-icon>more_vert</mat-icon>
-                </button>
-                <mat-menu #menu="matMenu">
-                  <button mat-menu-item (click)="shareContent(event)">
-                    <mat-icon>share</mat-icon>
-                    <span>Share</span>
-                  </button>
-                  <button mat-menu-item (click)="bookmarkContent(event)">
-                    <mat-icon>bookmark</mat-icon>
-                    <span>Bookmark</span>
-                  </button>
-                </mat-menu>
-              </div>
-            </mat-card-header>
-            <mat-card-content>
-              <p>{{ event.content }}</p>
-              <div class="tags">
-                @for (tag of event.tags; track tag) {
-                  @if (tag[0] === 't') {
-                    <span class="tag">#{{ tag[1] }}</span>
-                  }
-                }
-              </div>
-            </mat-card-content>
-            <mat-card-actions>
-              <button mat-icon-button>
-                <mat-icon>favorite_border</mat-icon>
+    <div class="discover-feed feed-container">
+      @for (event of filteredTrending(); track event.id) {
+      <mat-card class="content-card">
+        <mat-card-header>
+          <div mat-card-avatar class="avatar"></div>
+          <mat-card-title>User {{ event.pubkey.substring(0, 8) }}</mat-card-title>
+          <mat-card-subtitle>{{ event.created_at | date:'medium' }}</mat-card-subtitle>
+          <div class="card-actions">
+            <button mat-icon-button [matMenuTriggerFor]="menu">
+              <mat-icon>more_vert</mat-icon>
+            </button>
+            <mat-menu #menu="matMenu">
+              <button mat-menu-item (click)="shareContent(event)">
+                <mat-icon>share</mat-icon>
+                <span>Share</span>
               </button>
-              <button mat-icon-button>
-                <mat-icon>comment</mat-icon>
+              <button mat-menu-item (click)="bookmarkContent(event)">
+                <mat-icon>bookmark</mat-icon>
+                <span>Bookmark</span>
               </button>
-              <button mat-icon-button>
-                <mat-icon>repeat</mat-icon>
-              </button>
-            </mat-card-actions>
-          </mat-card>
-        }
-      </div>
+            </mat-menu>
+          </div>
+        </mat-card-header>
+        <mat-card-content>
+          <p>{{ event.content }}</p>
+          <div class="tags">
+            @for (tag of event.tags; track tag) {
+            @if (tag[0] === 't') {
+            <span class="tag">#{{ tag[1] }}</span>
+            }
+            }
+          </div>
+        </mat-card-content>
+        <mat-card-actions>
+          <button mat-icon-button>
+            <mat-icon>favorite_border</mat-icon>
+          </button>
+          <button mat-icon-button>
+            <mat-icon>comment</mat-icon>
+          </button>
+          <button mat-icon-button>
+            <mat-icon>repeat</mat-icon>
+          </button>
+        </mat-card-actions>
+      </mat-card>
+      }
+    </div>
     }
 
     <!-- Following Section -->
     @if (activeSection() === 'following') {
-      <div class="following-feed feed-container">
-        @for (event of filteredFollowing(); track event.id) {
-          <mat-card class="content-card">
-            <mat-card-header>
-              <div mat-card-avatar class="avatar"></div>
-              <mat-card-title>User {{ event.pubkey.substring(0, 8) }}</mat-card-title>
-              <mat-card-subtitle>{{ event.created_at | date:'medium' }}</mat-card-subtitle>
-              <div class="card-actions">
-                <button mat-icon-button [matMenuTriggerFor]="menu">
-                  <mat-icon>more_vert</mat-icon>
-                </button>
-                <mat-menu #menu="matMenu">
-                  <button mat-menu-item (click)="shareContent(event)">
-                    <mat-icon>share</mat-icon>
-                    <span>Share</span>
-                  </button>
-                  <button mat-menu-item (click)="bookmarkContent(event)">
-                    <mat-icon>bookmark</mat-icon>
-                    <span>Bookmark</span>
-                  </button>
-                </mat-menu>
-              </div>
-            </mat-card-header>
-            <mat-card-content>
-              <p>{{ event.content }}</p>
-              <div class="tags">
-                @for (tag of event.tags; track tag) {
-                  @if (tag[0] === 't') {
-                    <span class="tag">#{{ tag[1] }}</span>
-                  }
-                }
-              </div>
-            </mat-card-content>
-            <mat-card-actions>
-              <button mat-icon-button>
-                <mat-icon>favorite_border</mat-icon>
+    <div class="following-feed feed-container">
+      @for (event of filteredFollowing(); track event.id) {
+      <mat-card class="content-card">
+        <mat-card-header>
+          <div mat-card-avatar class="avatar"></div>
+          <mat-card-title>User {{ event.pubkey.substring(0, 8) }}</mat-card-title>
+          <mat-card-subtitle>{{ event.created_at | date:'medium' }}</mat-card-subtitle>
+          <div class="card-actions">
+            <button mat-icon-button [matMenuTriggerFor]="menu">
+              <mat-icon>more_vert</mat-icon>
+            </button>
+            <mat-menu #menu="matMenu">
+              <button mat-menu-item (click)="shareContent(event)">
+                <mat-icon>share</mat-icon>
+                <span>Share</span>
               </button>
-              <button mat-icon-button>
-                <mat-icon>comment</mat-icon>
+              <button mat-menu-item (click)="bookmarkContent(event)">
+                <mat-icon>bookmark</mat-icon>
+                <span>Bookmark</span>
               </button>
-              <button mat-icon-button>
-                <mat-icon>repeat</mat-icon>
-              </button>
-            </mat-card-actions>
-          </mat-card>
-        }
-      </div>
+            </mat-menu>
+          </div>
+        </mat-card-header>
+        <mat-card-content>
+          <p>{{ event.content }}</p>
+          <div class="tags">
+            @for (tag of event.tags; track tag) {
+            @if (tag[0] === 't') {
+            <span class="tag">#{{ tag[1] }}</span>
+            }
+            }
+          </div>
+        </mat-card-content>
+        <mat-card-actions>
+          <button mat-icon-button>
+            <mat-icon>favorite_border</mat-icon>
+          </button>
+          <button mat-icon-button>
+            <mat-icon>comment</mat-icon>
+          </button>
+          <button mat-icon-button>
+            <mat-icon>repeat</mat-icon>
+          </button>
+        </mat-card-actions>
+      </mat-card>
+      }
+    </div>
     }
 
     <!-- Media Section -->
     @if (activeSection() === 'media') {
-      <div class="media-feed feed-container">
-        @for (event of filteredMedia(); track event.id) {
-          <mat-card class="content-card media-card">
-            <div class="media-placeholder">
-              <mat-icon>image</mat-icon>
-            </div>
-            <mat-card-header>
-              <div mat-card-avatar class="avatar"></div>
-              <mat-card-title>User {{ event.pubkey.substring(0, 8) }}</mat-card-title>
-              <mat-card-subtitle>{{ event.created_at | date:'medium' }}</mat-card-subtitle>
-              <div class="card-actions">
-                <button mat-icon-button [matMenuTriggerFor]="menu">
-                  <mat-icon>more_vert</mat-icon>
-                </button>
-                <mat-menu #menu="matMenu">
-                  <button mat-menu-item (click)="shareContent(event)">
-                    <mat-icon>share</mat-icon>
-                    <span>Share</span>
-                  </button>
-                  <button mat-menu-item (click)="bookmarkContent(event)">
-                    <mat-icon>bookmark</mat-icon>
-                    <span>Bookmark</span>
-                  </button>
-                </mat-menu>
-              </div>
-            </mat-card-header>
-            <mat-card-content>
-              <p>{{ event.content }}</p>
-              <div class="tags">
-                @for (tag of event.tags; track tag) {
-                  @if (tag[0] === 't') {
-                    <span class="tag">#{{ tag[1] }}</span>
-                  }
-                }
-              </div>
-            </mat-card-content>
-            <mat-card-actions>
-              <button mat-icon-button>
-                <mat-icon>favorite_border</mat-icon>
+    <div class="media-feed feed-container">
+      @for (event of filteredMedia(); track event.id) {
+      <mat-card class="content-card media-card">
+        <div class="media-placeholder">
+          <mat-icon>image</mat-icon>
+        </div>
+        <mat-card-header>
+          <div mat-card-avatar class="avatar"></div>
+          <mat-card-title>User {{ event.pubkey.substring(0, 8) }}</mat-card-title>
+          <mat-card-subtitle>{{ event.created_at | date:'medium' }}</mat-card-subtitle>
+          <div class="card-actions">
+            <button mat-icon-button [matMenuTriggerFor]="menu">
+              <mat-icon>more_vert</mat-icon>
+            </button>
+            <mat-menu #menu="matMenu">
+              <button mat-menu-item (click)="shareContent(event)">
+                <mat-icon>share</mat-icon>
+                <span>Share</span>
               </button>
-              <button mat-icon-button>
-                <mat-icon>comment</mat-icon>
+              <button mat-menu-item (click)="bookmarkContent(event)">
+                <mat-icon>bookmark</mat-icon>
+                <span>Bookmark</span>
               </button>
-              <button mat-icon-button>
-                <mat-icon>repeat</mat-icon>
-              </button>
-            </mat-card-actions>
-          </mat-card>
-        }
-      </div>
+            </mat-menu>
+          </div>
+        </mat-card-header>
+        <mat-card-content>
+          <p>{{ event.content }}</p>
+          <div class="tags">
+            @for (tag of event.tags; track tag) {
+            @if (tag[0] === 't') {
+            <span class="tag">#{{ tag[1] }}</span>
+            }
+            }
+          </div>
+        </mat-card-content>
+        <mat-card-actions>
+          <button mat-icon-button>
+            <mat-icon>favorite_border</mat-icon>
+          </button>
+          <button mat-icon-button>
+            <mat-icon>comment</mat-icon>
+          </button>
+          <button mat-icon-button>
+            <mat-icon>repeat</mat-icon>
+          </button>
+        </mat-card-actions>
+      </mat-card>
+      }
+    </div>
     }
   </div>
 
