@@ -62,6 +62,15 @@ export class RelaysComponent implements OnInit, OnDestroy {
     return this.relay.relaysChanged();
   });
 
+  // For closest relay feature
+  isCheckingRelays = signal(false);
+  knownDiscoveryRelays = [
+    'wss://relay.angor.io',
+    'wss://discovery-eu.nostria.app',
+    'wss://discovery-af.nostria.app',
+    'wss://purplepag.es',
+  ];
+
   constructor() {
     effect(() => {
       if (this.app.authenticated()) {
@@ -425,5 +434,110 @@ export class RelaysComponent implements OnInit, OnDestroy {
       this.logger.warn('No relay connections available for publishing');
       this.showMessage('No relay connections available');
     }
+  }
+
+  async findClosestRelay(): Promise<void> {
+    this.isCheckingRelays.set(true);
+    this.logger.info('Starting ping check to find closest discovery relay');
+    
+    // Combine user's discovery relays with known ones, removing duplicates
+    const relaysToCheck = [...new Set([
+      ...this.relay.discoveryRelays,
+      ...this.knownDiscoveryRelays
+    ])];
+
+    this.logger.debug('Checking relays for ping times', { count: relaysToCheck.length });
+    this.showMessage(`Checking ${relaysToCheck.length} discovery relays for response time...`);
+
+    try {
+      // Check ping times for all relays
+      const pingResults = await Promise.allSettled(
+        relaysToCheck.map(url => this.checkRelayPing(url))
+      );
+
+      // Process results
+      const successfulPings = pingResults
+        .map((result, index) => ({
+          url: relaysToCheck[index],
+          pingTime: result.status === 'fulfilled' ? result.value : Infinity
+        }))
+        .filter(result => result.pingTime !== Infinity)
+        .sort((a, b) => a.pingTime - b.pingTime);
+
+      this.logger.debug('Ping results', { successfulPings });
+
+      if (successfulPings.length === 0) {
+        this.showMessage('No reachable discovery relays found');
+        this.isCheckingRelays.set(false);
+        return;
+      }
+
+      const fastest = successfulPings[0];
+      
+      // If this relay isn't in the user's list, ask if they want to add it
+      if (!this.relay.discoveryRelays.includes(fastest.url)) {
+        const message = `Found fastest relay: ${this.formatRelayUrl(fastest.url)} (${fastest.pingTime}ms). Add to your list?`;
+        
+        const snackBarRef = this.snackBar.open(message, 'Add', {
+          duration: 10000,
+          horizontalPosition: 'center',
+          verticalPosition: 'bottom'
+        });
+        
+        snackBarRef.onAction().subscribe(() => {
+          this.relay.addDiscoveryRelay(fastest.url);
+          this.relay.saveDiscoveryRelays();
+          this.showMessage(`Added ${this.formatRelayUrl(fastest.url)} to discovery relays`);
+        });
+      } else {
+        this.showMessage(`Fastest relay is already in your list: ${this.formatRelayUrl(fastest.url)} (${fastest.pingTime}ms)`);
+      }
+    } catch (error) {
+      this.logger.error('Error finding closest relay', error);
+      this.showMessage('Error finding closest relay');
+    } finally {
+      this.isCheckingRelays.set(false);
+    }
+  }
+
+  private async checkRelayPing(relayUrl: string): Promise<number> {
+    return new Promise<number>((resolve, reject) => {
+      let startTime: number;
+      
+      try {
+        // Use WebSocket for ping checking since we're testing relay connections
+        startTime = performance.now();
+        const ws = new WebSocket(relayUrl);
+        
+        const timeout = setTimeout(() => {
+          ws.close();
+          reject(new Error('Timeout'));
+        }, 5000); // 5 second timeout
+        
+        ws.onopen = () => {
+          // Connection established, calculate ping time
+          const pingTime = Math.round(performance.now() - startTime);
+          clearTimeout(timeout);
+          
+          // Send a simple ping message if possible
+          try {
+            ws.send(JSON.stringify(["REQ", "ping-check", {}]));
+          } catch (e) {
+            // Ignore errors when sending ping
+          }
+          
+          // Start closing the connection
+          ws.close();
+          resolve(pingTime);
+        };
+        
+        ws.onerror = (error) => {
+          clearTimeout(timeout);
+          reject(error);
+        };
+      } catch (error) {
+        reject(error);
+      }
+    });
   }
 }
