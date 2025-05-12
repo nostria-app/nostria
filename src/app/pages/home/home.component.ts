@@ -363,16 +363,16 @@ export class HomeComponent {
     }
   }
 
-  onColumnDrop(event: CdkDragDrop<any>): void {
-    // Get the index from the drag data
-    const previousIndex = event.item.data;
+  onColumnDrop(event: CdkDragDrop<NavLink[]>): void {
+    // Get the indices
+    const previousIndex = event.previousIndex;
     const currentIndex = event.currentIndex;
 
     if (previousIndex !== currentIndex) {
-      // Get a copy of the current columns
+      // Create a copy of the columns array
       const columnsArray = [...this.columns()];
 
-      // Use moveItemInArray helper from CDK
+      // Use moveItemInArray to reorder the array
       moveItemInArray(columnsArray, previousIndex, currentIndex);
 
       // Update the columns signal with the new order
@@ -381,28 +381,32 @@ export class HomeComponent {
       // Update the visible column index if in mobile view
       if (this.isMobileView()) {
         if (this.visibleColumnIndex() === previousIndex) {
+          // If the currently visible column was moved, update the index
           this.visibleColumnIndex.set(currentIndex);
         } else if (
-          previousIndex < this.visibleColumnIndex() && 
+          previousIndex < this.visibleColumnIndex() &&
           currentIndex >= this.visibleColumnIndex()
         ) {
+          // If a column was moved from before the visible one to after it, shift visibility back
           this.visibleColumnIndex.update(idx => idx - 1);
         } else if (
-          previousIndex > this.visibleColumnIndex() && 
+          previousIndex > this.visibleColumnIndex() &&
           currentIndex <= this.visibleColumnIndex()
         ) {
+          // If a column was moved from after the visible one to before it, shift visibility forward
           this.visibleColumnIndex.update(idx => idx + 1);
         }
       }
 
       this.notificationService.notify('Column order changed');
-    }
+      this.logger.debug('Column order changed', columnsArray);
 
-    // Let's scroll to ensure the dropped column is visible
-    if (!this.isMobileView()) {
-      setTimeout(() => {
-        this.scrollToColumn(currentIndex);
-      }, 50);
+      // Let's scroll to ensure the dropped column is visible
+      if (!this.isMobileView()) {
+        setTimeout(() => {
+          this.scrollToColumn(currentIndex);
+        }, 50);
+      }
     }
   }
 
@@ -650,6 +654,21 @@ export class HomeComponent {
         };
       });
     }
+
+    // Fix for CDK drag issues by applying appropriate CSS
+    setTimeout(() => {
+      // Make sure we have the proper CDK drag styles
+      const style = document.createElement('style');
+      style.innerHTML = `
+        .cdk-drag-preview.column-unit {
+          transform: none !important;
+        }
+        .columns-wrapper .column-unit.cdk-drag-placeholder {
+          visibility: visible !important;
+        }
+      `;
+      document.head.appendChild(style);
+    }, 0);
   }
 
   // Function to synchronize column header widths with column content

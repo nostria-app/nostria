@@ -61,14 +61,20 @@
       </div>
     }
     
-    <div class="columns-wrapper" #columnsWrapper>
+    <div 
+      class="columns-wrapper" 
+      #columnsWrapper
+      cdkDropList
+      cdkDropListOrientation="horizontal"
+      [cdkDropListData]="columns()"
+      (cdkDropListDropped)="onColumnDrop($event)"
+    >
       <!-- Columns with connected headers and content -->
       @for (column of columns(); track column.id; let i = $index) {
         <div 
           class="column-unit" 
           cdkDrag
           [cdkDragData]="i"
-          (cdkDragDropped)="onColumnDrop($event)"
           [class.visible]="i === visibleColumnIndex() || !isMobileView()"
           [attr.aria-hidden]="isMobileView() && i !== visibleColumnIndex()"
         >
