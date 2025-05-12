@@ -1,15 +1,16 @@
 .relay-results {
   max-height: 400px;
   overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
   padding: 8px 0;
 }
 
 .relay-card {
   cursor: pointer;
   transition: all 0.2s ease;
+  width: 100%;
   
   &:hover {
     box-shadow: var(--mat-sys-level2);
@@ -18,6 +19,20 @@
   
   &.fastest {
     border-left: 4px solid var(--mat-sys-primary);
+    background-color: rgba(var(--mat-sys-primary-rgb), 0.04);
+    
+    .fastest-label {
+      background-color: var(--mat-sys-primary);
+      color: var(--mat-sys-on-primary);
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: 8px;
+    }
   }
   
   &.already-added {
@@ -30,33 +45,74 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 8px 0;
 }
 
 .relay-info {
   display: flex;
   flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+  flex: 1;
 }
 
-.relay-url {
-  font-weight: 500;
+.relay-url-container {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.ping-time {
-  font-size: 0.9em;
-  color: var(--mat-sys-on-surface-variant);
+.relay-url {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.latency {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  margin-top: 4px;
+}
+
+.latency-value {
+  font-weight: 500;
+  color: var(--mat-sys-on-surface);
+}
+
+.latency-unit {
+  opacity: 0.8;
 }
 
 .fastest-icon {
   font-size: 18px;
   width: 18px;
   height: 18px;
+  flex-shrink: 0;
+  color: var(--mat-sys-primary);
+}
+
+.relay-action {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: 100px;
+  flex-shrink: 0;
 }
 
 .added-label {
   font-size: 0.9em;
   color: var(--mat-sys-on-surface-variant);
   font-style: italic;
+}
+
+.mat-mdc-dialog-content {
+  padding-bottom: 16px !important;
+}
+
+// Consistent sizing for cards
+::ng-deep .mat-mdc-card {
+  box-sizing: border-box;
+  width: 100%;
 }
