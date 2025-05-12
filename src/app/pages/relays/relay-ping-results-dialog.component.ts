@@ -43,6 +43,7 @@ export class RelayPingResultsDialogComponent {
       return; // Don't allow re-selecting already added relays
     }
     
+    // Close the dialog immediately to avoid expression changed errors
     this.dialogRef.close({ selected: result });
   }
 

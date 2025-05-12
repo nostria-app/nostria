@@ -37,7 +37,7 @@ export class RelayService {
 
   // Initialize signals with empty arrays first, then populate in constructor
   discoveryRelays: string[] = [];
-  // discoveryRelays = signal<string[]>([]);
+  private _discoveryRelaysChanged = signal<number>(0);
 
   // TODO: Allow the user to set their own default relays in the settings?
   // TODO: Decided on a good default relay list.
@@ -560,6 +560,7 @@ export class RelayService {
     this.logger.debug(`Adding bootstrap relay: ${url}`);
     const normalizedUrl = this.normalizeRelayUrl(url);
     this.discoveryRelays.push(normalizedUrl);
+    this._discoveryRelaysChanged.update(val => val + 1); // Trigger change detection
   }
 
   /**
@@ -568,6 +569,7 @@ export class RelayService {
   removeDiscoveryRelay(url: string): void {
     this.logger.debug(`Removing bootstrap relay: ${url}`);
     this.discoveryRelays = this.discoveryRelays.filter(relay => relay !== url);
+    this._discoveryRelaysChanged.update(val => val + 1); // Trigger change detection
   }
 
   /**
@@ -576,6 +578,7 @@ export class RelayService {
   resetDiscoveryRelays(): void {
     this.logger.debug('Resetting bootstrap relays to defaults');
     this.discoveryRelays = this.DEFAULT_BOOTSTRAP_RELAYS;
+    this._discoveryRelaysChanged.update(val => val + 1); // Trigger change detection
   }
 
   /**
@@ -796,5 +799,15 @@ export class RelayService {
       this.logger.error(`Error fetching NIP-11 info for ${relayUrl}`, error);
       return undefined;
     }
+  }
+
+  public discoveryRelaysChanged() {
+    // Return a copy of the array to ensure change detection works properly
+    return [...this.discoveryRelays];
+  }
+
+  async setDiscoveryRelays(relays: string[]): Promise<void> {
+    this.discoveryRelays = relays;
+    this._discoveryRelaysChanged.update(val => val + 1); // Trigger change detection
   }
 }

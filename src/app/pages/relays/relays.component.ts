@@ -63,6 +63,11 @@ export class RelaysComponent implements OnInit, OnDestroy {
     return this.relay.relaysChanged();
   });
 
+  // Update the discoveryRelays computed signal to run in a untracked context
+  // discoveryRelays = computed(() => {
+  //   return this.relay.discoveryRelays.discoveryRelaysChanged();
+  // });
+
   // For closest relay feature
   isCheckingRelays = signal(false);
   knownDiscoveryRelays = [
@@ -483,9 +488,13 @@ export class RelaysComponent implements OnInit, OnDestroy {
       dialogRef.afterClosed().subscribe(result => {
         if (result?.selected) {
           const selectedRelay = result.selected as PingResult;
-          this.relay.addDiscoveryRelay(selectedRelay.url);
-          this.relay.saveDiscoveryRelays();
-          this.showMessage(`Added ${this.formatRelayUrl(selectedRelay.url)} to discovery relays`);
+          
+          // Run in setTimeout to avoid the ExpressionChangedAfterItHasBeenCheckedError
+          setTimeout(() => {
+            this.relay.addDiscoveryRelay(selectedRelay.url);
+            this.relay.saveDiscoveryRelays();
+            this.showMessage(`Added ${this.formatRelayUrl(selectedRelay.url)} to discovery relays`);
+          }, 0);
         }
       });
     } catch (error) {
