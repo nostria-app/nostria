@@ -14,6 +14,27 @@ import { AgoPipe } from '../../pipes/ago.pipe';
 import { NPubPipe } from '../../pipes/npub.pipe';
 import { TimestampPipe } from '../../pipes/timestamp.pipe';
 import { NostrEvent } from '../../interfaces';
+import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
+import { NewFeedDialogComponent } from './new-feed-dialog/new-feed-dialog.component';
+import { RouterModule } from '@angular/router';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { LocalStorageService } from '../../services/local-storage.service';
+import { LoggerService } from '../../services/logger.service';
+
+interface NavLink {
+  id: string;
+  path: string;
+  label: string;
+  icon: string;
+  filters?: Record<string, any>;
+}
+
+const DEFAULT_TABS: NavLink[] = [
+  { id: 'notes', path: 'notes', label: 'Notes', icon: 'chat' },
+  { id: 'replies', path: 'replies', label: 'Replies', icon: 'reply_all' },
+  { id: 'reads', path: 'reads', label: 'Reads', icon: 'bookmark' },
+  { id: 'media', path: 'media', label: 'Media', icon: 'image' }
+];
 
 @Component({
   selector: 'app-home',
@@ -27,9 +48,12 @@ import { NostrEvent } from '../../interfaces';
     MatChipsModule,
     MatMenuModule,
     MatTooltipModule,
+    DragDropModule,
     AgoPipe,
     NPubPipe,
-    TimestampPipe
+    TimestampPipe,
+    RouterModule,
+    MatDialogModule
   ],
   templateUrl: './home.component.html',
   styleUrl: './home.component.scss'
@@ -39,6 +63,10 @@ export class HomeComponent {
   private nostrService = inject(NostrService);
   private notificationService = inject(NotificationService);
   private layoutService = inject(LayoutService);
+  private dialog = inject(MatDialog);
+  private localStorageService = inject(LocalStorageService);
+  private readonly STORAGE_KEY = 'profile-feeds';
+  private logger = inject(LoggerService);
 
   // UI State Signals
   activeSection = signal<'discover' | 'following' | 'media'>('discover');
@@ -69,7 +97,7 @@ export class HomeComponent {
     if (tags.length === 0) {
       return this.trendingEvents();
     } else {
-      return this.trendingEvents().filter(event => 
+      return this.trendingEvents().filter(event =>
         event.tags.some(tag => tag[0] === 't' && tags.includes(tag[1]))
       );
     }
@@ -80,7 +108,7 @@ export class HomeComponent {
     if (tags.length === 0) {
       return this.followingEvents();
     } else {
-      return this.followingEvents().filter(event => 
+      return this.followingEvents().filter(event =>
         event.tags.some(tag => tag[0] === 't' && tags.includes(tag[1]))
       );
     }
@@ -91,7 +119,7 @@ export class HomeComponent {
     if (tags.length === 0) {
       return this.mediaEvents();
     } else {
-      return this.mediaEvents().filter(event => 
+      return this.mediaEvents().filter(event =>
         event.tags.some(tag => tag[0] === 't' && tags.includes(tag[1]))
       );
     }
@@ -100,34 +128,40 @@ export class HomeComponent {
   constructor() {
     // Initialize data loading
     this.loadTrendingContent();
-    
+
     // Set up responsive layout
     effect(() => {
       const handleResize = () => {
         this.screenWidth.set(window.innerWidth);
       };
-      
+
       window.addEventListener('resize', handleResize);
       return () => {
         window.removeEventListener('resize', handleResize);
       };
     });
-    
+
     // Automatic refresh effect
     effect(() => {
       const interval = setInterval(() => {
         this.loadTrendingContent(true);
       }, 60000); // Refresh every minute
-      
+
       return () => {
         clearInterval(interval);
       };
     });
   }
 
+  // Handle tab selection
+  selectTab(index: number): void {
+    this.selectedTabIndex.set(index);
+  }
+
+
   setActiveSection(section: 'discover' | 'following' | 'media'): void {
     this.activeSection.set(section);
-    
+
     // Load section data if needed
     switch (section) {
       case 'following':
@@ -147,7 +181,7 @@ export class HomeComponent {
     if (!silent) {
       this.isLoading.set(true);
     }
-    
+
     try {
       const events = await this.fetchTrendingEvents();
       this.trendingEvents.set(events);
@@ -168,7 +202,7 @@ export class HomeComponent {
 
   async loadFollowingContent(): Promise<void> {
     this.isLoading.set(true);
-    
+
     try {
       const events = await this.fetchFollowingEvents();
       this.followingEvents.set(events);
@@ -182,7 +216,7 @@ export class HomeComponent {
 
   async loadMediaContent(): Promise<void> {
     this.isLoading.set(true);
-    
+
     try {
       const events = await this.fetchMediaEvents();
       this.mediaEvents.set(events);
@@ -200,7 +234,7 @@ export class HomeComponent {
     if (!response.ok) {
       throw new Error('Failed to fetch trending events');
     }
-    
+
     return await response.json() as NostrEvent[];
   }
 
@@ -210,7 +244,7 @@ export class HomeComponent {
     if (!response.ok) {
       throw new Error('Failed to fetch following events');
     }
-    
+
     return await response.json() as NostrEvent[];
   }
 
@@ -220,7 +254,7 @@ export class HomeComponent {
     if (!response.ok) {
       throw new Error('Failed to fetch media events');
     }
-    
+
     return await response.json() as NostrEvent[];
   }
 
@@ -260,5 +294,138 @@ export class HomeComponent {
   bookmarkContent(event: NostrEvent): void {
     // Implement bookmark functionality 
     this.notificationService.notify('Content bookmarked');
+  }
+
+  // New methods for tab management
+  onTabDrop(event: CdkDragDrop<string[]>): void {
+    // This method would handle reordering of tabs
+    // We'd need to reorder the sections in our application state
+    this.notificationService.notify('Tab order changed');
+    // In a real implementation, this would update the tab order in a persistent way
+  }
+
+  editSection(sectionType: 'discover' | 'following' | 'media'): void {
+    // This would open a dialog or navigate to a configuration page for the specific section
+    this.notificationService.notify(`Editing ${sectionType} section`);
+  }
+
+  addNewSection(): void {
+    // This would open a dialog to create a new section/tab
+    this.notificationService.notify('Adding new section');
+  }
+
+  // Add a new feed tab
+  addNewFeed(): void {
+    const dialogRef = this.dialog.open(NewFeedDialogComponent, {
+      width: '400px',
+      data: {
+        icons: ['chat', 'reply_all', 'bookmark', 'image', 'people', 'tag', 'filter_list']
+      }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        const newFeed: NavLink = {
+          id: `custom-${Date.now()}`,
+          path: result.path || `feed-${Date.now()}`,
+          label: result.label,
+          icon: result.icon,
+          filters: result.filters || {}
+        };
+
+        this.navLinks.update(links => [...links, newFeed]);
+        // Switch to the new tab
+        this.selectedTabIndex.set(this.navLinks().length - 1);
+      }
+    });
+  }
+
+  ngOnInit(): void {
+    this.loadFeedsFromStorage();
+
+    // Save feeds whenever they change
+    effect(() => {
+      const currentFeeds = this.navLinks();
+      if (currentFeeds.length > 0) {
+        this.saveFeedsToStorage(currentFeeds);
+      }
+    });
+  }
+
+  // Signals for state management
+  navLinks = signal<NavLink[]>([]);
+  selectedTabIndex = signal(0);
+
+  // Edit an existing feed
+  editFeed(index: number): void {
+    if (index < 0 || index >= this.navLinks().length) return;
+
+    const feed = this.navLinks()[index];
+
+    const dialogRef = this.dialog.open(NewFeedDialogComponent, {
+      width: '400px',
+      data: {
+        icons: ['chat', 'reply_all', 'bookmark', 'image', 'people', 'tag', 'filter_list'],
+        feed: { ...feed }  // Pass a copy of the feed for editing
+      }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        const updatedFeeds = [...this.navLinks()];
+        updatedFeeds[index] = {
+          ...feed,
+          label: result.label,
+          icon: result.icon,
+          path: result.path || feed.path,
+          filters: result.filters || feed.filters || {}
+        };
+
+        this.navLinks.set(updatedFeeds);
+      }
+    });
+  }
+
+  // Remove a feed tab
+  removeFeed(index: number): void {
+    if (index < 0 || index >= this.navLinks().length) return;
+
+    const currentLinks = [...this.navLinks()];
+    currentLinks.splice(index, 1);
+    this.navLinks.set(currentLinks);
+
+    // Update selected tab index if needed
+    if (this.selectedTabIndex() >= currentLinks.length) {
+      this.selectedTabIndex.set(Math.max(0, currentLinks.length - 1));
+    } else if (this.selectedTabIndex() > index) {
+      this.selectedTabIndex.update(idx => idx - 1);
+    }
+  }
+
+  // Load feeds from local storage
+  private loadFeedsFromStorage(): void {
+    try {
+      const storedFeeds = this.localStorageService.getObject<NavLink[]>(this.STORAGE_KEY);
+      if (storedFeeds && storedFeeds.length > 0) {
+        this.logger.debug('Loaded custom feeds from storage', storedFeeds);
+        this.navLinks.set(storedFeeds);
+      } else {
+        this.logger.debug('No custom feeds found in storage, using defaults');
+        this.navLinks.set(DEFAULT_TABS);
+      }
+    } catch (error) {
+      this.logger.error('Error loading feeds from storage:', error);
+      this.navLinks.set(DEFAULT_TABS);
+    }
+  }
+
+  // Save feeds to local storage
+  private saveFeedsToStorage(feeds: NavLink[]): void {
+    try {
+      this.localStorageService.setObject(this.STORAGE_KEY, feeds);
+      this.logger.debug('Saved custom feeds to storage', feeds);
+    } catch (error) {
+      this.logger.error('Error saving feeds to storage:', error);
+    }
   }
 }
