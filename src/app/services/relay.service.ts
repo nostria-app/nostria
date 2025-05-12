@@ -27,7 +27,7 @@ export class RelayService {
   private readonly TIMEOUT_CLEANUP_INTERVAL = 10000;
 
   // Default bootstrap relays
-  private readonly DEFAULT_BOOTSTRAP_RELAYS = ['wss://purplepag.es/'];
+  private readonly DEFAULT_BOOTSTRAP_RELAYS = ['wss://purplepag.es/', 'wss://discovery-eu.nostria.app/'];
 
   private readonly logger = inject(LoggerService);
   private readonly storage = inject(StorageService);

@@ -8,7 +8,7 @@
         <h2>Add New Relay</h2>
 
         <div class="flex-container add-relay-container">
-          <mat-form-field appearance="outline" class="relay-input">
+          <mat-form-field appearance="outline" class="relay-input" subscriptSizing="dynamic">
             <mat-label>Relay URL (wss://...)</mat-label>
             <input matInput placeholder="wss://relay.example.com" [value]="newRelayUrl()" (input)="newRelayUrl.set($any($event.target).value)" (keyup.enter)="addRelay()">
           </mat-form-field>
@@ -26,7 +26,7 @@
             @if (relays().length === 0) {
             <div class="text-center py-8 text-gray-500">
               <p>You don't have any relays configured yet.</p>
-              <p>Add a relay using the form above.</p>
+              <p>Add a relay using the input above.</p>
             </div>
             } @else {
             <mat-list>
@@ -91,7 +91,7 @@
         <h2>Add Discovery Relay</h2>
 
         <div class="flex-container add-relay-container">
-          <mat-form-field appearance="outline" class="relay-input">
+          <mat-form-field appearance="outline" class="relay-input" subscriptSizing="dynamic">
             <mat-label>Relay URL (wss://...)</mat-label>
             <input matInput placeholder="wss://relay.example.com" [value]="newBootstrapUrl()" (input)="newBootstrapUrl.set($any($event.target).value)" (keyup.enter)="addBootstrapRelay()">
           </mat-form-field>
@@ -109,7 +109,7 @@
             @if (relay.discoveryRelays.length === 0) {
             <div class="text-center py-8 text-gray-500">
               <p>You don't have any bootstrap relays configured.</p>
-              <p>Add a bootstrap relay using the form above.</p>
+              <p>Add a bootstrap relay using the input above.</p>
             </div>
             } @else {
             <mat-list>
