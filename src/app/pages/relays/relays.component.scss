@@ -64,7 +64,7 @@
 .add-button {
   height: 56px; // Match the height of mat-form-field
   align-self: flex-start;
-  margin-top: 4px; // Fine-tune vertical alignment
+  margin-top: 0px; // Fine-tune vertical alignment
 }
 
 @media (max-width: 599px) {
