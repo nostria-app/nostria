@@ -1,0 +1,47 @@
+<h2 mat-dialog-title>Discovery Relay Ping Results</h2>
+<mat-dialog-content>
+  @if (results.length === 0) {
+    <p>No reachable discovery relays found.</p>
+  } @else {
+    <p>Found {{results.length}} reachable discovery relays. Click on a relay to add it to your list.</p>
+    
+    <div class="relay-results">
+      @for (result of results; track result.url) {
+        <mat-card 
+          class="relay-card"
+          [class.fastest]="result === results[0]"
+          [class.already-added]="result.isAlreadyAdded"
+          (click)="selectRelay(result)">
+          <mat-card-content>
+            <div class="relay-card-content">
+              <div class="relay-info">
+                <div class="relay-url">
+                  {{formatRelayUrl(result.url)}}
+                  @if (result === results[0]) {
+                    <mat-icon color="primary" class="fastest-icon">speed</mat-icon>
+                  }
+                </div>
+                <div class="ping-time">
+                  {{result.pingTime}}ms
+                </div>
+              </div>
+              <div class="relay-action">
+                @if (result.isAlreadyAdded) {
+                  <span class="added-label">Already Added</span>
+                } @else {
+                  <button mat-button color="primary">
+                    <mat-icon>add</mat-icon>
+                    Add
+                  </button>
+                }
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      }
+    </div>
+  }
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close>Close</button>
+</mat-dialog-actions>

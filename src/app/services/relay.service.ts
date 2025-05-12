@@ -194,7 +194,7 @@ export class RelayService {
  */
   normalizeRelayUrl(url: string): string {
     try {
-      if (!url.startsWith('ws://') || !url.startsWith('wss://')) {
+      if (!url.startsWith('ws://') && !url.startsWith('wss://')) {
         return '';
       }
 

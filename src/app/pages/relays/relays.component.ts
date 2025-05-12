@@ -14,6 +14,7 @@ import { CommonModule } from '@angular/common';
 import { RelayService, Relay } from '../../services/relay.service';
 import { LoggerService } from '../../services/logger.service';
 import { RelayInfoDialogComponent } from './relay-info-dialog.component';
+import { RelayPingResultsDialogComponent, PingResult } from './relay-ping-results-dialog.component';
 import { LayoutService } from '../../services/layout.service';
 import { NostrService } from '../../services/nostr.service';
 import { kinds, SimplePool } from 'nostr-tools';
@@ -65,10 +66,8 @@ export class RelaysComponent implements OnInit, OnDestroy {
   // For closest relay feature
   isCheckingRelays = signal(false);
   knownDiscoveryRelays = [
-    'wss://relay.angor.io',
     'wss://discovery-eu.nostria.app',
     'wss://discovery-af.nostria.app',
-    'wss://purplepag.es',
   ];
 
   constructor() {
@@ -459,7 +458,8 @@ export class RelaysComponent implements OnInit, OnDestroy {
       const successfulPings = pingResults
         .map((result, index) => ({
           url: relaysToCheck[index],
-          pingTime: result.status === 'fulfilled' ? result.value : Infinity
+          pingTime: result.status === 'fulfilled' ? result.value : Infinity,
+          isAlreadyAdded: this.relay.discoveryRelays.includes(relaysToCheck[index])
         }))
         .filter(result => result.pingTime !== Infinity)
         .sort((a, b) => a.pingTime - b.pingTime);
@@ -472,26 +472,22 @@ export class RelaysComponent implements OnInit, OnDestroy {
         return;
       }
 
-      const fastest = successfulPings[0];
-      
-      // If this relay isn't in the user's list, ask if they want to add it
-      if (!this.relay.discoveryRelays.includes(fastest.url)) {
-        const message = `Found fastest relay: ${this.formatRelayUrl(fastest.url)} (${fastest.pingTime}ms). Add to your list?`;
-        
-        const snackBarRef = this.snackBar.open(message, 'Add', {
-          duration: 10000,
-          horizontalPosition: 'center',
-          verticalPosition: 'bottom'
-        });
-        
-        snackBarRef.onAction().subscribe(() => {
-          this.relay.addDiscoveryRelay(fastest.url);
+      // Show dialog with results instead of just a snackbar
+      const dialogRef = this.dialog.open(RelayPingResultsDialogComponent, {
+        width: '500px',
+        data: {
+          results: successfulPings
+        }
+      });
+
+      dialogRef.afterClosed().subscribe(result => {
+        if (result?.selected) {
+          const selectedRelay = result.selected as PingResult;
+          this.relay.addDiscoveryRelay(selectedRelay.url);
           this.relay.saveDiscoveryRelays();
-          this.showMessage(`Added ${this.formatRelayUrl(fastest.url)} to discovery relays`);
-        });
-      } else {
-        this.showMessage(`Fastest relay is already in your list: ${this.formatRelayUrl(fastest.url)} (${fastest.pingTime}ms)`);
-      }
+          this.showMessage(`Added ${this.formatRelayUrl(selectedRelay.url)} to discovery relays`);
+        }
+      });
     } catch (error) {
       this.logger.error('Error finding closest relay', error);
       this.showMessage('Error finding closest relay');

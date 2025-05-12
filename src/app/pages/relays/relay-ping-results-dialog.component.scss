@@ -1,0 +1,62 @@
+.relay-results {
+  max-height: 400px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.relay-card {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    box-shadow: var(--mat-sys-level2);
+    transform: translateY(-2px);
+  }
+  
+  &.fastest {
+    border-left: 4px solid var(--mat-sys-primary);
+  }
+  
+  &.already-added {
+    opacity: 0.7;
+    background-color: rgba(0,0,0,0.04);
+  }
+}
+
+.relay-card-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.relay-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.relay-url {
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ping-time {
+  font-size: 0.9em;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.fastest-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
+.added-label {
+  font-size: 0.9em;
+  color: var(--mat-sys-on-surface-variant);
+  font-style: italic;
+}
