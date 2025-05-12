@@ -48,16 +48,27 @@
   }
 
   <!-- Columns Container with Connected Headers and Content -->
-  <div class="columns-container" cdkDropListGroup>
-    <div class="columns-wrapper">
+  <div class="columns-container">
+    <!-- Scroll indicators -->
+    @if (!isMobileView() && canScrollLeft()) {
+      <div class="scroll-indicator left" (click)="scrollLeft()">
+        <mat-icon>chevron_left</mat-icon>
+      </div>
+    }
+    @if (!isMobileView() && canScrollRight()) {
+      <div class="scroll-indicator right" (click)="scrollRight()">
+        <mat-icon>chevron_right</mat-icon>
+      </div>
+    }
+    
+    <div class="columns-wrapper" #columnsWrapper>
       <!-- Columns with connected headers and content -->
       @for (column of columns(); track column.id; let i = $index) {
         <div 
           class="column-unit" 
           cdkDrag
-          cdkDropList
-          [cdkDropListData]="i"
-          (cdkDropListDropped)="onColumnDrop($event)"
+          [cdkDragData]="i"
+          (cdkDragDropped)="onColumnDrop($event)"
           [class.visible]="i === visibleColumnIndex() || !isMobileView()"
           [attr.aria-hidden]="isMobileView() && i !== visibleColumnIndex()"
         >

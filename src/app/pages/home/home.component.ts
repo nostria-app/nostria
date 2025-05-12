@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { Component, ViewChild, ElementRef, computed, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -14,7 +14,7 @@ import { AgoPipe } from '../../pipes/ago.pipe';
 import { NPubPipe } from '../../pipes/npub.pipe';
 import { TimestampPipe } from '../../pipes/timestamp.pipe';
 import { NostrEvent } from '../../interfaces';
-import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
+import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { NewFeedDialogComponent } from './new-feed-dialog/new-feed-dialog.component';
 import { RouterModule } from '@angular/router';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
@@ -135,6 +135,20 @@ export class HomeComponent {
   columns = signal<NavLink[]>([]);
   visibleColumnIndex = signal(0);
   columnContentLoaded = signal<Record<string, boolean>>({});
+
+  // Reference to columns wrapper for scrolling
+  @ViewChild('columnsWrapper') columnsWrapper!: ElementRef<HTMLDivElement>;
+
+  // Signals to track scroll position
+  private scrollPosition = signal(0);
+  private maxScroll = signal(0);
+
+  // Computed signals for scroll indicators
+  canScrollLeft = computed(() => this.scrollPosition() > 0);
+  canScrollRight = computed(() => {
+    const maxScroll = this.maxScroll();
+    return maxScroll > 0 && this.scrollPosition() < maxScroll;
+  });
 
   constructor() {
     // Initialize data loading
@@ -349,26 +363,22 @@ export class HomeComponent {
     }
   }
 
-  onColumnDrop(event: CdkDragDrop<number>): void {
-    // Get the previous and current index from the drop event
-    const previousIndex = event.previousContainer.data;
-    const currentIndex = event.container.data;
-    
+  onColumnDrop(event: CdkDragDrop<any>): void {
+    // Get the index from the drag data
+    const previousIndex = event.item.data;
+    const currentIndex = event.currentIndex;
+
     if (previousIndex !== currentIndex) {
-      // Create a copy of the columns array
-      const currentColumns = [...this.columns()];
-      
-      // Get the item being moved
-      const itemToMove = currentColumns[previousIndex];
-      
-      // Remove from previous position and insert at new position
-      currentColumns.splice(previousIndex, 1);
-      currentColumns.splice(currentIndex, 0, itemToMove);
-      
-      // Update the columns signal
-      this.columns.set(currentColumns);
-      
-      // Update visible column index if needed
+      // Get a copy of the current columns
+      const columnsArray = [...this.columns()];
+
+      // Use moveItemInArray helper from CDK
+      moveItemInArray(columnsArray, previousIndex, currentIndex);
+
+      // Update the columns signal with the new order
+      this.columns.set(columnsArray);
+
+      // Update the visible column index if in mobile view
       if (this.isMobileView()) {
         if (this.visibleColumnIndex() === previousIndex) {
           this.visibleColumnIndex.set(currentIndex);
@@ -384,8 +394,72 @@ export class HomeComponent {
           this.visibleColumnIndex.update(idx => idx + 1);
         }
       }
-      
+
       this.notificationService.notify('Column order changed');
+    }
+
+    // Let's scroll to ensure the dropped column is visible
+    if (!this.isMobileView()) {
+      setTimeout(() => {
+        this.scrollToColumn(currentIndex);
+      }, 50);
+    }
+  }
+
+  scrollLeft(): void {
+    if (!this.columnsWrapper) return;
+
+    const wrapper = this.columnsWrapper.nativeElement;
+    const newPosition = Math.max(0, this.scrollPosition() - 750); // Scroll approximately one column
+
+    wrapper.scrollTo({
+      left: newPosition,
+      behavior: 'smooth'
+    });
+  }
+
+  scrollRight(): void {
+    if (!this.columnsWrapper) return;
+
+    const wrapper = this.columnsWrapper.nativeElement;
+    const newPosition = Math.min(
+      this.maxScroll(),
+      this.scrollPosition() + 750  // Scroll approximately one column
+    );
+
+    wrapper.scrollTo({
+      left: newPosition,
+      behavior: 'smooth'
+    });
+  }
+
+  scrollToColumn(index: number): void {
+    if (this.isMobileView() || !this.columnsWrapper) return;
+
+    const wrapper = this.columnsWrapper.nativeElement;
+    const columnElements = wrapper.querySelectorAll<HTMLElement>('.column-unit');
+
+    if (index >= 0 && index < columnElements.length) {
+      const columnElement = columnElements[index];
+      const columnLeft = columnElement.offsetLeft;
+      const columnWidth = columnElement.offsetWidth;
+      const wrapperWidth = wrapper.offsetWidth;
+      const currentScroll = wrapper.scrollLeft;
+
+      // Check if column is not fully visible
+      if (columnLeft < currentScroll) {
+        // Column is to the left of the viewport
+        wrapper.scrollTo({
+          left: columnLeft - 12, // Account for padding
+          behavior: 'smooth'
+        });
+      } else if (columnLeft + columnWidth > currentScroll + wrapperWidth) {
+        // Column is to the right of the viewport
+        wrapper.scrollTo({
+          left: columnLeft + columnWidth - wrapperWidth + 12, // Account for padding
+          behavior: 'smooth'
+        });
+      }
     }
   }
 
@@ -409,8 +483,15 @@ export class HomeComponent {
 
         this.columns.update(columns => [...columns, newColumn]);
 
+        const newIndex = this.columns().length - 1;
+
         if (this.isMobileView()) {
-          this.visibleColumnIndex.set(this.columns().length - 1);
+          this.visibleColumnIndex.set(newIndex);
+        } else {
+          // Scroll to the new column after it's rendered
+          setTimeout(() => {
+            this.scrollToColumn(newIndex);
+          }, 100);
         }
 
         this.columnContentLoaded.update(loaded => ({
@@ -532,41 +613,72 @@ export class HomeComponent {
     setTimeout(() => {
       this.syncColumnHeaderWidths();
     });
-    
+
     // Also sync widths when the window resizes
     effect(() => {
       const width = this.screenWidth();
       this.syncColumnHeaderWidths();
     });
+
+    // Setup scroll tracking
+    if (this.columnsWrapper) {
+      const wrapper = this.columnsWrapper.nativeElement;
+
+      const updateScrollPosition = () => {
+        this.scrollPosition.set(wrapper.scrollLeft);
+        this.maxScroll.set(wrapper.scrollWidth - wrapper.clientWidth);
+      };
+
+      // Initial update
+      setTimeout(updateScrollPosition, 100);
+
+      // Listen for scroll events
+      wrapper.addEventListener('scroll', updateScrollPosition);
+
+      // Update on resize
+      const resizeObserver = new ResizeObserver(() => {
+        updateScrollPosition();
+      });
+
+      resizeObserver.observe(wrapper);
+
+      // Cleanup
+      effect(() => {
+        return () => {
+          wrapper.removeEventListener('scroll', updateScrollPosition);
+          resizeObserver.disconnect();
+        };
+      });
+    }
   }
 
   // Function to synchronize column header widths with column content
   private syncColumnHeaderWidths(): void {
     if (this.isMobileView()) return;
-    
+
     // We'll use a small timeout to ensure DOM is fully rendered
     setTimeout(() => {
       const columnHeaders = document.querySelectorAll('.column-header:not(.add-column)');
       const columns = document.querySelectorAll('.column');
-      
+
       // Reset any previously set widths
       columnHeaders.forEach(header => {
         (header as HTMLElement).style.width = '';
         (header as HTMLElement).style.minWidth = '';
       });
-      
+
       columns.forEach(column => {
         (column as HTMLElement).style.width = '';
         (column as HTMLElement).style.minWidth = '';
       });
-      
+
       // Let them naturally layout first
       requestAnimationFrame(() => {
         // Get the column widths
-        const columnWidths = Array.from(columns).map(col => 
+        const columnWidths = Array.from(columns).map(col =>
           (col as HTMLElement).getBoundingClientRect().width
         );
-        
+
         // Apply column widths to headers
         columnHeaders.forEach((header, index) => {
           if (index < columnWidths.length) {
