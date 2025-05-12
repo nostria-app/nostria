@@ -59,7 +59,7 @@ interface NavItem {
     MatFormFieldModule,
     NPubPipe,
     MatBadgeModule
-  ],  templateUrl: './app.component.html',
+  ], templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })
 export class AppComponent {
@@ -135,6 +135,15 @@ export class AppComponent {
 
   constructor() {
     this.logger.debug('AppComponent constructor started');
+
+    if ('launchQueue' in window) {
+      const launchQueue = (window as any).launchQueue;
+      launchQueue.setConsumer((launchParams: any) => {
+        if (launchParams.targetURL) {
+          console.log('launchParams.targetURL:', launchParams.targetURL);
+        }
+      });
+    }
 
     if (isPlatformBrowser(this.platform)) {
       console.warn("browser");
