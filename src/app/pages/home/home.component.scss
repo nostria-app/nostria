@@ -5,6 +5,7 @@
   flex-direction: column;
   height: 100%;
   overflow: hidden;
+  max-height: 100vh;
 
   .section-tabs {
     display: flex;
@@ -24,6 +25,312 @@
     flex: 1;
     overflow-y: auto;
     padding: 16px;
+  }
+
+  // Header styles
+  .header-section {
+    padding: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    z-index: 10;
+    background-color: var(--mat-app-background-color);
+    box-shadow: var(--mat-sys-level1);
+
+    .title {
+      margin: 0;
+      font-size: 1.75rem;
+    }
+  }
+
+  // Filters section
+  .filters-section {
+    padding: 0 1rem 1rem;
+
+    h3 {
+      margin-top: 0;
+    }
+
+    .tag-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+  }
+
+  // Column navigation for mobile
+  .column-navigation {
+    display: none;
+    padding: 8px;
+    background-color: var(--mat-app-surface-color);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+    box-shadow: var(--mat-sys-level1);
+    z-index: 5;
+
+    .column-selector {
+      display: flex;
+      overflow-x: auto;
+      gap: 8px;
+      scrollbar-width: thin;
+
+      &::-webkit-scrollbar {
+        height: 3px;
+      }
+
+      &::-webkit-scrollbar-thumb {
+        background-color: rgba(0, 0, 0, 0.2);
+      }
+
+      .column-selector-button {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        border: none;
+        border-radius: 20px;
+        background: transparent;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: background-color 0.2s ease, color 0.2s ease;
+
+        &.active {
+          background-color: var(--mat-primary-color);
+          color: white;
+
+          mat-icon {
+            color: white;
+          }
+        }
+
+        &:hover:not(.active) {
+          background-color: rgba(0, 0, 0, 0.04);
+        }
+
+        &.add-column {
+          min-width: 40px;
+          padding: 8px;
+        }
+      }
+    }
+  }
+
+  // Columns container - main content area
+  .columns-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+
+    // Column headers for desktop view
+    .column-headers {
+      display: flex;
+      gap: 8px;
+      padding: 12px;
+      background-color: var(--mat-app-surface-color);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+      box-shadow: var(--mat-sys-level1);
+      z-index: 5;
+
+      .column-header {
+        flex: 1;
+        min-width: 200px;
+        max-width: 400px;
+        padding: 8px 12px;
+        border-radius: 4px;
+        background-color: var(--mat-app-background-color);
+        cursor: move;
+
+        &.cdk-drag-placeholder {
+          opacity: 0.5;
+        }
+
+        &.add-column {
+          min-width: 50px;
+          flex: 0 0 auto;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+        }
+
+        .column-header-content {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+
+          .drag-handle {
+            cursor: move;
+            opacity: 0.5;
+            transition: opacity 0.2s ease;
+
+            &:hover {
+              opacity: 1;
+            }
+          }
+
+          .column-title {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          .column-header-actions {
+            margin-left: auto;
+          }
+        }
+      }
+
+      .column-drag-preview {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-radius: 4px;
+        background-color: var(--mat-app-surface-color);
+        box-shadow: var(--mat-sys-level3);
+      }
+    }
+
+    // Columns content area
+    .columns-content {
+      display: flex;
+      flex: 1;
+      gap: 12px;
+      padding: 12px;
+      overflow: hidden;
+
+      // Individual column
+      .column {
+        flex: 1;
+        min-width: 0; // Allow columns to shrink
+        display: flex;
+        flex-direction: column;
+        background-color: var(--mat-app-surface-color);
+        border-radius: 8px;
+        box-shadow: var(--mat-sys-level1);
+        overflow: hidden;
+
+        // Header for mobile view
+        .column-header-mobile {
+          padding: 12px 16px;
+          border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+          background-color: var(--mat-app-background-color);
+
+          .column-header-content {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+
+            .column-title {
+              flex: 1;
+              font-weight: 500;
+            }
+
+            .column-header-actions {
+              margin-left: auto;
+            }
+          }
+        }
+
+        // Scroll container for column content
+        .column-scroll-container {
+          flex: 1;
+          overflow-y: auto;
+          padding: 12px;
+
+          // Loading indicator
+          .column-loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 0;
+            gap: 16px;
+
+            p {
+              color: rgba(0, 0, 0, 0.6);
+              margin: 0;
+            }
+          }
+
+          // Column items container
+          .column-items {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+
+            // Each content card
+            .content-card {
+              box-shadow: var(--mat-sys-level1);
+
+              mat-card-content {
+                p {
+                  margin-bottom: 8px;
+                }
+
+                .tags {
+                  display: flex;
+                  flex-wrap: wrap;
+                  gap: 8px;
+
+                  .tag {
+                    padding: 4px 8px;
+                    background-color: rgba(0, 0, 0, 0.05);
+                    border-radius: 16px;
+                    font-size: 0.875rem;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Responsive styles
+  &.one-column-layout {
+    .column-navigation {
+      display: block;
+    }
+
+    .columns-container {
+      .column-headers {
+        display: none;
+      }
+
+      .columns-content {
+        .column {
+          display: none;
+
+          &.visible {
+            display: flex;
+            width: 100%;
+          }
+        }
+      }
+    }
+  }
+
+  &.two-columns-layout {
+    .columns-content {
+      .column {
+        min-width: 300px;
+        max-width: none;
+      }
+    }
+  }
+
+  &.three-columns-layout {
+    .columns-content {
+      .column {
+        min-width: 300px;
+        max-width: none;
+      }
+    }
   }
 
   // Discover section styles
@@ -67,6 +374,7 @@
 
       mat-card-content {
         flex: 1;
+
         p {
           overflow: hidden;
           display: -webkit-box;
@@ -361,14 +669,204 @@
   }
 
   .navigation-tabs {
-    .tabs-list {
+    position: relative;
+
+    .tabs-container {
+      position: relative;
+    }
+
+    .tabs-wrapper {
+      z-index: 2;
+    }
+
+    .draggable-tabs {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 48px; // Match the height of the mat-tab-label
       display: flex;
+      pointer-events: none; // Allow clicks to pass through to real tabs
+
+      .drag-tab-item {
+        flex: 1;
+        max-width: 160px;
+        pointer-events: all; // Restore pointer events for drag items
+        cursor: move;
+        opacity: 0; // Hidden by default, visible on hover
+        transition: opacity 0.2s;
+
+        &:hover {
+          opacity: 0.1; // Slightly visible on hover to show drag area
+          background-color: rgba(0, 0, 0, 0.05);
+        }
+
+        .tab-content-drag {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          height: 100%;
+          padding: 0 16px;
+        }
+
+        &.cdk-drag-placeholder {
+          opacity: 0.3;
+          background-color: rgba(0, 0, 0, 0.1);
+          border-radius: 4px;
+        }
+      }
+    }
+
+    .cdk-drag-preview {
+      box-sizing: border-box;
+      border-radius: 4px;
+      box-shadow: var(--mat-sys-level3);
+      background-color: var(--mat-app-surface-color);
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      mat-icon {
+        vertical-align: middle;
+      }
     }
 
     .tab-label {
       display: flex;
       align-items: center;
       gap: 8px;
+
+      .drag-handle {
+        opacity: 0.5;
+        transition: opacity 0.2s ease;
+
+        &:hover {
+          opacity: 1;
+        }
+      }
+
+      .tab-menu-button {
+        margin-left: auto;
+        opacity: 0.5;
+        transition: opacity 0.2s ease;
+        cursor: pointer;
+
+        &:hover {
+          opacity: 1;
+        }
+      }
+    }
+
+    // Fix for mat-tab-group internal styles
+    ::ng-deep .mat-mdc-tab-labels {
+      z-index: 2; // Ensure tab labels are above drag indicators
+    }
+
+    ::ng-deep .mat-mdc-tab {
+      position: relative; // Make sure tabs are positioned properly
+    }
+  }
+
+  .custom-tabs {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+
+    .tab-header {
+      border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+      background-color: var(--mat-app-surface-color);
+      box-shadow: var(--mat-sys-level1);
+      z-index: 10;
+      overflow: hidden;
+    }
+
+    .tab-list {
+      display: flex;
+      overflow-x: auto;
+      scrollbar-width: thin;
+      align-items: center;
+
+      &::-webkit-scrollbar {
+        height: 3px;
+      }
+
+      &::-webkit-scrollbar-thumb {
+        background-color: rgba(0, 0, 0, 0.2);
+      }
+
+      // Prevent reflow during drag
+      &.cdk-drop-list-dragging {
+        overflow: hidden; // Prevent scrolling during drag
+      }
+    }
+
+    .tab {
+      padding: 12px 16px;
+      min-width: 100px;
+      max-width: 200px;
+      cursor: pointer;
+      position: relative;
+      display: flex;
+      align-items: center;
+      white-space: nowrap;
+      box-sizing: border-box;
+      transition: background-color 0.2s ease, color 0.2s ease;
+
+      // Fix width during drag to prevent reflow
+      &.cdk-drag {
+        transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+
+        &.cdk-drag-dragging {
+          transition: none;
+          z-index: 1000;
+        }
+      }
+
+      &.active {
+        color: var(--mat-primary-color);
+        font-weight: 500;
+        background-color: rgba(var(--mat-primary-rgb), 0.04);
+
+        &:after {
+          content: '';
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          height: 2px;
+          background-color: var(--mat-primary-color);
+          animation: slideIn 0.2s ease;
+        }
+
+        mat-icon {
+          color: var(--mat-primary-color);
+        }
+      }
+
+      &:hover:not(.active):not(.add-tab) {
+        background-color: rgba(0, 0, 0, 0.04);
+      }
+
+      &.add-tab {
+        padding: 12px 8px;
+        min-width: auto;
+      }
+    }
+
+    .tab-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      overflow: hidden;
+
+      span {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex: 1;
+      }
 
       .drag-handle {
         cursor: move;
@@ -391,21 +889,109 @@
       }
     }
 
-    // Add drag preview styles
+    .tab-content-container {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .tab-content {
+      height: 100%;
+      overflow-y: auto;
+    }
+
+    // Enhanced drag preview styles
     .cdk-drag-preview {
+      display: flex;
+      align-items: center;
       box-sizing: border-box;
       border-radius: 4px;
       box-shadow: var(--mat-sys-level3);
+      padding: 12px 16px;
       background-color: var(--mat-app-surface-color);
-      padding: 8px;
+      min-width: 100px;
+      max-width: 200px;
+      width: auto !important;
+
+      .tab-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+
+        span {
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          flex: 1;
+        }
+      }
+
+      .drag-handle,
+      .tab-menu-button {
+        opacity: 0.5;
+      }
     }
 
     .cdk-drag-placeholder {
       opacity: 0.3;
+      background-color: rgba(0, 0, 0, 0.05);
+      border: 1px dashed rgba(0, 0, 0, 0.2);
+      box-sizing: border-box;
     }
 
     .cdk-drag-animating {
+      transition: transform 250ms cubic-bezier(0, 0, 0.2, 1) !important;
+    }
+
+    .tab-list.cdk-drop-list-dragging .tab:not(.cdk-drag-placeholder) {
       transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
     }
+
+    // Add animation for the tab indicator
+    @keyframes slideIn {
+      from {
+        transform: scaleX(0);
+      }
+      to {
+        transform: scaleX(1);
+      }
+    }
   }
+}
+
+// Animation for column transitions
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.column.visible {
+  animation: fadeIn 0.3s ease;
+}
+
+// Drag handle animation
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.drag-handle:active {
+  animation: pulse 0.3s ease infinite;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.75rem;
 }
