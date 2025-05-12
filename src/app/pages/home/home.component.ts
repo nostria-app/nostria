@@ -349,37 +349,43 @@ export class HomeComponent {
     }
   }
 
-  onColumnDrop(event: CdkDragDrop<NavLink[]>): void {
-    if (event.previousIndex !== event.currentIndex &&
-        event.currentIndex < this.columns().length) {
-
+  onColumnDrop(event: CdkDragDrop<number>): void {
+    // Get the previous and current index from the drop event
+    const previousIndex = event.previousContainer.data;
+    const currentIndex = event.container.data;
+    
+    if (previousIndex !== currentIndex) {
+      // Create a copy of the columns array
       const currentColumns = [...this.columns()];
-      const wasSelected = event.previousIndex === this.visibleColumnIndex();
-
-      const itemToMove = currentColumns[event.previousIndex];
-      currentColumns.splice(event.previousIndex, 1);
-      currentColumns.splice(event.currentIndex, 0, itemToMove);
-
+      
+      // Get the item being moved
+      const itemToMove = currentColumns[previousIndex];
+      
+      // Remove from previous position and insert at new position
+      currentColumns.splice(previousIndex, 1);
+      currentColumns.splice(currentIndex, 0, itemToMove);
+      
+      // Update the columns signal
       this.columns.set(currentColumns);
-
-      if (wasSelected) {
-        this.visibleColumnIndex.set(event.currentIndex);
-      } else if (this.visibleColumnIndex() === event.currentIndex) {
-        this.visibleColumnIndex.set(event.previousIndex);
-      } else if (
-        event.previousIndex < this.visibleColumnIndex() &&
-        event.currentIndex >= this.visibleColumnIndex()
-      ) {
-        this.visibleColumnIndex.update(idx => idx - 1);
-      } else if (
-        event.previousIndex > this.visibleColumnIndex() &&
-        event.currentIndex <= this.visibleColumnIndex()
-      ) {
-        this.visibleColumnIndex.update(idx => idx + 1);
+      
+      // Update visible column index if needed
+      if (this.isMobileView()) {
+        if (this.visibleColumnIndex() === previousIndex) {
+          this.visibleColumnIndex.set(currentIndex);
+        } else if (
+          previousIndex < this.visibleColumnIndex() && 
+          currentIndex >= this.visibleColumnIndex()
+        ) {
+          this.visibleColumnIndex.update(idx => idx - 1);
+        } else if (
+          previousIndex > this.visibleColumnIndex() && 
+          currentIndex <= this.visibleColumnIndex()
+        ) {
+          this.visibleColumnIndex.update(idx => idx + 1);
+        }
       }
-
+      
       this.notificationService.notify('Column order changed');
-      this.logger.debug('Column order changed', currentColumns);
     }
   }
 
@@ -518,5 +524,57 @@ export class HomeComponent {
         this.loadColumnContentIfNeeded(index);
       });
     }
+  }
+
+  // Add utility to ensure column headers match column widths
+  ngAfterViewInit(): void {
+    // Allow the DOM to render first
+    setTimeout(() => {
+      this.syncColumnHeaderWidths();
+    });
+    
+    // Also sync widths when the window resizes
+    effect(() => {
+      const width = this.screenWidth();
+      this.syncColumnHeaderWidths();
+    });
+  }
+
+  // Function to synchronize column header widths with column content
+  private syncColumnHeaderWidths(): void {
+    if (this.isMobileView()) return;
+    
+    // We'll use a small timeout to ensure DOM is fully rendered
+    setTimeout(() => {
+      const columnHeaders = document.querySelectorAll('.column-header:not(.add-column)');
+      const columns = document.querySelectorAll('.column');
+      
+      // Reset any previously set widths
+      columnHeaders.forEach(header => {
+        (header as HTMLElement).style.width = '';
+        (header as HTMLElement).style.minWidth = '';
+      });
+      
+      columns.forEach(column => {
+        (column as HTMLElement).style.width = '';
+        (column as HTMLElement).style.minWidth = '';
+      });
+      
+      // Let them naturally layout first
+      requestAnimationFrame(() => {
+        // Get the column widths
+        const columnWidths = Array.from(columns).map(col => 
+          (col as HTMLElement).getBoundingClientRect().width
+        );
+        
+        // Apply column widths to headers
+        columnHeaders.forEach((header, index) => {
+          if (index < columnWidths.length) {
+            (header as HTMLElement).style.width = `${columnWidths[index]}px`;
+            (header as HTMLElement).style.minWidth = `${columnWidths[index]}px`;
+          }
+        });
+      });
+    }, 100);
   }
 }

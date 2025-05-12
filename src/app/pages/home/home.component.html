@@ -1,12 +1,3 @@
-<!-- <div class="people-page">
-  <div class="people-header">
-    <div class="title-section">
-      <h1>People</h1>
-      <p>Explore the people you follow</p>
-    </div>
-  </div>
-</div> -->
-
 <div class="home-container" [ngClass]="columnLayout()">
   <!-- Header Section -->
   <header class="header-section">
@@ -56,17 +47,28 @@
     </div>
   }
 
-  <!-- Columns Container -->
-  <div class="columns-container">
-    <!-- Column Headers (Desktop Only) for Drag/Drop and Reordering -->
-    @if (!isMobileView()) {
-      <div class="column-headers" cdkDropList cdkDropListOrientation="horizontal" (cdkDropListDropped)="onColumnDrop($event)">
-        @for (column of columns(); track column.id; let i = $index) {
-          <div class="column-header" cdkDrag>
+  <!-- Columns Container with Connected Headers and Content -->
+  <div class="columns-container" cdkDropListGroup>
+    <div class="columns-wrapper">
+      <!-- Columns with connected headers and content -->
+      @for (column of columns(); track column.id; let i = $index) {
+        <div 
+          class="column-unit" 
+          cdkDrag
+          cdkDropList
+          [cdkDropListData]="i"
+          (cdkDropListDropped)="onColumnDrop($event)"
+          [class.visible]="i === visibleColumnIndex() || !isMobileView()"
+          [attr.aria-hidden]="isMobileView() && i !== visibleColumnIndex()"
+        >
+          <!-- Column Header (Connected to its content) -->
+          <div class="column-header">
             <div class="column-header-content">
-              <div class="drag-handle" cdkDragHandle>
-                <mat-icon>drag_indicator</mat-icon>
-              </div>
+              @if (!isMobileView()) {
+                <div class="drag-handle" cdkDragHandle>
+                  <mat-icon>drag_indicator</mat-icon>
+                </div>
+              }
               <mat-icon>{{ column.icon }}</mat-icon>
               <span class="column-title">{{ column.label }}</span>
               <div class="column-header-actions">
@@ -85,100 +87,70 @@
                 </mat-menu>
               </div>
             </div>
-            
-            <!-- Preview for drag operation -->
-            <ng-template cdkDragPreview>
-              <div class="column-drag-preview">
+          </div>
+          
+          <!-- Column Content with Individual Scrolling -->
+          <div class="column-content">
+            <div class="column-scroll-container">
+              @if (isLoading() && (!columnContentLoaded()[column.id])) {
+                <div class="column-loading">
+                  <mat-spinner diameter="40"></mat-spinner>
+                  <p>Loading content...</p>
+                </div>
+              } @else {
+                <!-- Default placeholder content - replace with actual content -->
+                <div class="column-items">
+                  <!-- Generate some mock items for each column -->
+                  @for (j of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; track j) {
+                    <mat-card class="content-card">
+                      <mat-card-header>
+                        <div mat-card-avatar class="avatar"></div>
+                        <mat-card-title>{{ column.label }} Item {{ j }}</mat-card-title>
+                        <mat-card-subtitle>User{{ j }} • 2h ago</mat-card-subtitle>
+                      </mat-card-header>
+                      <mat-card-content>
+                        <p>This is an example post in the {{ column.label }} column. It demonstrates how content will appear in each column.</p>
+                        <div class="tags">
+                          <span class="tag">#nostr</span>
+                          <span class="tag">#example</span>
+                        </div>
+                      </mat-card-content>
+                      <mat-card-actions>
+                        <button mat-icon-button>
+                          <mat-icon>favorite_border</mat-icon>
+                        </button>
+                        <button mat-icon-button>
+                          <mat-icon>comment</mat-icon>
+                        </button>
+                        <button mat-icon-button>
+                          <mat-icon>repeat</mat-icon>
+                        </button>
+                      </mat-card-actions>
+                    </mat-card>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+          
+          <!-- Preview for drag operation -->
+          <ng-template cdkDragPreview>
+            <div class="column-drag-preview">
+              <div class="preview-header">
                 <mat-icon>{{ column.icon }}</mat-icon>
                 <span>{{ column.label }}</span>
               </div>
-            </ng-template>
-          </div>
-        }
-        
-        <!-- Add column button -->
-        <div class="column-header add-column">
-          <button mat-icon-button (click)="addNewColumn()" matTooltip="Add new column">
+            </div>
+          </ng-template>
+        </div>
+      }
+      
+      <!-- Add column button -->
+      @if (!isMobileView()) {
+        <div class="add-column-button">
+          <button mat-mini-fab color="primary" (click)="addNewColumn()" matTooltip="Add new column">
             <mat-icon>add</mat-icon>
           </button>
-        </div>
-      </div>
-    }
-    
-    <!-- Columns Content -->
-    <div class="columns-content">
-      @for (column of columns(); track column.id; let i = $index) {
-        <div 
-          class="column" 
-          [class.visible]="i === visibleColumnIndex() || !isMobileView()"
-          [attr.aria-hidden]="isMobileView() && i !== visibleColumnIndex()"
-        >
-          <!-- Column Header (Mobile Only) -->
-          @if (isMobileView()) {
-            <div class="column-header-mobile">
-              <div class="column-header-content">
-                <mat-icon>{{ column.icon }}</mat-icon>
-                <span class="column-title">{{ column.label }}</span>
-                <div class="column-header-actions">
-                  <button mat-icon-button [matMenuTriggerFor]="columnMenuMobile" (click)="$event.stopPropagation()">
-                    <mat-icon>more_vert</mat-icon>
-                  </button>
-                  <mat-menu #columnMenuMobile="matMenu">
-                    <button mat-menu-item (click)="editColumn(i)">
-                      <mat-icon>edit</mat-icon>
-                      <span>Edit</span>
-                    </button>
-                    <button mat-menu-item (click)="removeColumn(i)">
-                      <mat-icon>delete</mat-icon>
-                      <span>Remove</span>
-                    </button>
-                  </mat-menu>
-                </div>
-              </div>
-            </div>
-          }
-          
-          <!-- Column Content with Individual Scrolling -->
-          <div class="column-scroll-container">
-            @if (isLoading() && (!columnContentLoaded()[column.id])) {
-              <div class="column-loading">
-                <mat-spinner diameter="40"></mat-spinner>
-                <p>Loading content...</p>
-              </div>
-            } @else {
-              <!-- Default placeholder content - replace with actual content -->
-              <div class="column-items">
-                <!-- Generate some mock items for each column -->
-                @for (j of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; track j) {
-                  <mat-card class="content-card">
-                    <mat-card-header>
-                      <div mat-card-avatar class="avatar"></div>
-                      <mat-card-title>{{ column.label }} Item {{ j }}</mat-card-title>
-                      <mat-card-subtitle>User{{ j }} • 2h ago</mat-card-subtitle>
-                    </mat-card-header>
-                    <mat-card-content>
-                      <p>This is an example post in the {{ column.label }} column. It demonstrates how content will appear in each column.</p>
-                      <div class="tags">
-                        <span class="tag">#nostr</span>
-                        <span class="tag">#example</span>
-                      </div>
-                    </mat-card-content>
-                    <mat-card-actions>
-                      <button mat-icon-button>
-                        <mat-icon>favorite_border</mat-icon>
-                      </button>
-                      <button mat-icon-button>
-                        <mat-icon>comment</mat-icon>
-                      </button>
-                      <button mat-icon-button>
-                        <mat-icon>repeat</mat-icon>
-                      </button>
-                    </mat-card-actions>
-                  </mat-card>
-                }
-              </div>
-            }
-          </div>
         </div>
       }
     </div>
