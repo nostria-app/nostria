@@ -22,11 +22,13 @@ import { ArticlesComponent } from './pages/articles/articles.component';
 import { WelcomeComponent } from './pages/welcome/welcomecomponent';
 import { BadgesComponent } from './pages/badges/badges.component';
 import { ProfileRelaysComponent } from './pages/profile/profile-relays/profile-relays.component';
+import { BetaComponent } from './pages/beta/beta.component';
 
 export const routes: Routes = [
   { path: '', component: HomeComponent, pathMatch: 'full' },
   { path: 'home', component: HomeComponent },
   { path: 'welcome', component: WelcomeComponent },
+  { path: 'beta', component: BetaComponent, title: 'Beta' },
   { path: 'relays', component: RelaysComponent },
   {
     path: 'badges',

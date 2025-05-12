@@ -5,11 +5,10 @@
   <mat-toolbar color="primary" class="app-toolbar">
     <button mat-icon-button (click)="toggleSidenav()" aria-label="Toggle sidenav">
       <mat-icon>menu</mat-icon>
-    </button>
-    <img src="icons/icon.svg" class="app-icon hide-tiny" alt="Nostria icon">
+    </button>    <img src="icons/icon.svg" class="app-icon hide-tiny" alt="Nostria icon">
     <span class="app-title title-font hide-small">
       {{title}}
-      <span class="beta-indicator">BETA</span>
+      <a [routerLink]="['/beta']" class="beta-indicator">BETA</a>
     </span>
 
     <span class="toolbar-spacer">

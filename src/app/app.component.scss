@@ -79,8 +79,17 @@ nav {
   border-radius: 4px;
   margin-left: 5px;
   transform: translateY(-8px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--mat-sys-level1);
   letter-spacing: 0.5px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background-color: var(--mat-sys-tertiary);
+    color: black;
+    box-shadow: var(--mat-sys-level2);
+  }
 }
 
 .dark-theme .beta-indicator {
