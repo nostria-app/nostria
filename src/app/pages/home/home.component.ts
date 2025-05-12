@@ -20,6 +20,7 @@ import { RouterModule } from '@angular/router';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { LocalStorageService } from '../../services/local-storage.service';
 import { LoggerService } from '../../services/logger.service';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 interface NavLink {
   id: string;
@@ -29,7 +30,7 @@ interface NavLink {
   filters?: Record<string, any>;
 }
 
-const DEFAULT_TABS: NavLink[] = [
+const DEFAULT_COLUMNS: NavLink[] = [
   { id: 'notes', path: 'notes', label: 'Notes', icon: 'chat' },
   { id: 'replies', path: 'replies', label: 'Replies', icon: 'reply_all' },
   { id: 'reads', path: 'reads', label: 'Reads', icon: 'bookmark' },
@@ -53,7 +54,8 @@ const DEFAULT_TABS: NavLink[] = [
     NPubPipe,
     TimestampPipe,
     RouterModule,
-    MatDialogModule
+    MatDialogModule,
+    MatProgressSpinnerModule
   ],
   templateUrl: './home.component.html',
   styleUrl: './home.component.scss'
@@ -77,12 +79,16 @@ export class HomeComponent {
   columnLayout = computed(() => {
     const width = this.screenWidth();
     if (width >= 1600) {
-      return 'three-columns';
-    } else if (width >= 1200) {
-      return 'two-columns';
+      return 'three-columns-layout';
+    } else if (width >= 1024) {
+      return 'two-columns-layout';
     } else {
-      return 'one-column';
+      return 'one-column-layout';
     }
+  });
+
+  isMobileView = computed(() => {
+    return this.screenWidth() < 1024;
   });
 
   // Content Signals
@@ -125,6 +131,11 @@ export class HomeComponent {
     }
   });
 
+  // Signals for state management
+  columns = signal<NavLink[]>([]);
+  visibleColumnIndex = signal(0);
+  columnContentLoaded = signal<Record<string, boolean>>({});
+
   constructor() {
     // Initialize data loading
     this.loadTrendingContent();
@@ -152,12 +163,6 @@ export class HomeComponent {
       };
     });
   }
-
-  // Handle tab selection
-  selectTab(index: number): void {
-    this.selectedTabIndex.set(index);
-  }
-
 
   setActiveSection(section: 'discover' | 'following' | 'media'): void {
     this.activeSection.set(section);
@@ -296,26 +301,89 @@ export class HomeComponent {
     this.notificationService.notify('Content bookmarked');
   }
 
-  // New methods for tab management
-  onTabDrop(event: CdkDragDrop<string[]>): void {
-    // This method would handle reordering of tabs
-    // We'd need to reorder the sections in our application state
-    this.notificationService.notify('Tab order changed');
-    // In a real implementation, this would update the tab order in a persistent way
+  selectColumn(index: number): void {
+    this.visibleColumnIndex.set(index);
+    this.loadColumnContentIfNeeded(index);
   }
 
-  editSection(sectionType: 'discover' | 'following' | 'media'): void {
-    // This would open a dialog or navigate to a configuration page for the specific section
-    this.notificationService.notify(`Editing ${sectionType} section`);
+  loadColumnContentIfNeeded(index: number): void {
+    const selectedColumn = this.columns()[index];
+    if (!selectedColumn) return;
+
+    const columnId = selectedColumn.id;
+
+    if (!this.columnContentLoaded()[columnId]) {
+      this.isLoading.set(true);
+
+      // Simulate loading content for this specific column
+      setTimeout(() => {
+        this.columnContentLoaded.update(loaded => ({
+          ...loaded,
+          [columnId]: true
+        }));
+        this.isLoading.set(false);
+      }, 1000);
+    }
   }
 
-  addNewSection(): void {
-    // This would open a dialog to create a new section/tab
-    this.notificationService.notify('Adding new section');
+  handleColumnKeydown(event: KeyboardEvent, index: number): void {
+    const columnCount = this.columns().length;
+
+    switch (event.key) {
+      case 'ArrowLeft':
+        event.preventDefault();
+        this.selectColumn(index > 0 ? index - 1 : columnCount - 1);
+        break;
+      case 'ArrowRight':
+        event.preventDefault();
+        this.selectColumn(index < columnCount - 1 ? index + 1 : 0);
+        break;
+      case 'Home':
+        event.preventDefault();
+        this.selectColumn(0);
+        break;
+      case 'End':
+        event.preventDefault();
+        this.selectColumn(columnCount - 1);
+        break;
+    }
   }
 
-  // Add a new feed tab
-  addNewFeed(): void {
+  onColumnDrop(event: CdkDragDrop<NavLink[]>): void {
+    if (event.previousIndex !== event.currentIndex &&
+        event.currentIndex < this.columns().length) {
+
+      const currentColumns = [...this.columns()];
+      const wasSelected = event.previousIndex === this.visibleColumnIndex();
+
+      const itemToMove = currentColumns[event.previousIndex];
+      currentColumns.splice(event.previousIndex, 1);
+      currentColumns.splice(event.currentIndex, 0, itemToMove);
+
+      this.columns.set(currentColumns);
+
+      if (wasSelected) {
+        this.visibleColumnIndex.set(event.currentIndex);
+      } else if (this.visibleColumnIndex() === event.currentIndex) {
+        this.visibleColumnIndex.set(event.previousIndex);
+      } else if (
+        event.previousIndex < this.visibleColumnIndex() &&
+        event.currentIndex >= this.visibleColumnIndex()
+      ) {
+        this.visibleColumnIndex.update(idx => idx - 1);
+      } else if (
+        event.previousIndex > this.visibleColumnIndex() &&
+        event.currentIndex <= this.visibleColumnIndex()
+      ) {
+        this.visibleColumnIndex.update(idx => idx + 1);
+      }
+
+      this.notificationService.notify('Column order changed');
+      this.logger.debug('Column order changed', currentColumns);
+    }
+  }
+
+  addNewColumn(): void {
     const dialogRef = this.dialog.open(NewFeedDialogComponent, {
       width: '400px',
       data: {
@@ -325,7 +393,7 @@ export class HomeComponent {
 
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
-        const newFeed: NavLink = {
+        const newColumn: NavLink = {
           id: `custom-${Date.now()}`,
           path: result.path || `feed-${Date.now()}`,
           label: result.label,
@@ -333,99 +401,122 @@ export class HomeComponent {
           filters: result.filters || {}
         };
 
-        this.navLinks.update(links => [...links, newFeed]);
-        // Switch to the new tab
-        this.selectedTabIndex.set(this.navLinks().length - 1);
+        this.columns.update(columns => [...columns, newColumn]);
+
+        if (this.isMobileView()) {
+          this.visibleColumnIndex.set(this.columns().length - 1);
+        }
+
+        this.columnContentLoaded.update(loaded => ({
+          ...loaded,
+          [newColumn.id]: false
+        }));
       }
     });
   }
 
-  ngOnInit(): void {
-    this.loadFeedsFromStorage();
+  editColumn(index: number): void {
+    if (index < 0 || index >= this.columns().length) return;
 
-    // Save feeds whenever they change
-    effect(() => {
-      const currentFeeds = this.navLinks();
-      if (currentFeeds.length > 0) {
-        this.saveFeedsToStorage(currentFeeds);
-      }
-    });
-  }
-
-  // Signals for state management
-  navLinks = signal<NavLink[]>([]);
-  selectedTabIndex = signal(0);
-
-  // Edit an existing feed
-  editFeed(index: number): void {
-    if (index < 0 || index >= this.navLinks().length) return;
-
-    const feed = this.navLinks()[index];
+    const column = this.columns()[index];
 
     const dialogRef = this.dialog.open(NewFeedDialogComponent, {
       width: '400px',
       data: {
         icons: ['chat', 'reply_all', 'bookmark', 'image', 'people', 'tag', 'filter_list'],
-        feed: { ...feed }  // Pass a copy of the feed for editing
+        feed: { ...column }
       }
     });
 
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
-        const updatedFeeds = [...this.navLinks()];
-        updatedFeeds[index] = {
-          ...feed,
+        const updatedColumns = [...this.columns()];
+        updatedColumns[index] = {
+          ...column,
           label: result.label,
           icon: result.icon,
-          path: result.path || feed.path,
-          filters: result.filters || feed.filters || {}
+          path: result.path || column.path,
+          filters: result.filters || column.filters || {}
         };
 
-        this.navLinks.set(updatedFeeds);
+        this.columns.set(updatedColumns);
       }
     });
   }
 
-  // Remove a feed tab
-  removeFeed(index: number): void {
-    if (index < 0 || index >= this.navLinks().length) return;
+  removeColumn(index: number): void {
+    if (index < 0 || index >= this.columns().length) return;
 
-    const currentLinks = [...this.navLinks()];
-    currentLinks.splice(index, 1);
-    this.navLinks.set(currentLinks);
+    const currentColumns = [...this.columns()];
+    currentColumns.splice(index, 1);
+    this.columns.set(currentColumns);
 
-    // Update selected tab index if needed
-    if (this.selectedTabIndex() >= currentLinks.length) {
-      this.selectedTabIndex.set(Math.max(0, currentLinks.length - 1));
-    } else if (this.selectedTabIndex() > index) {
-      this.selectedTabIndex.update(idx => idx - 1);
+    if (this.visibleColumnIndex() >= currentColumns.length) {
+      this.visibleColumnIndex.set(Math.max(0, currentColumns.length - 1));
+    } else if (this.visibleColumnIndex() > index) {
+      this.visibleColumnIndex.update(idx => idx - 1);
     }
   }
 
-  // Load feeds from local storage
   private loadFeedsFromStorage(): void {
     try {
-      const storedFeeds = this.localStorageService.getObject<NavLink[]>(this.STORAGE_KEY);
-      if (storedFeeds && storedFeeds.length > 0) {
-        this.logger.debug('Loaded custom feeds from storage', storedFeeds);
-        this.navLinks.set(storedFeeds);
+      const storedColumns = this.localStorageService.getObject<NavLink[]>(this.STORAGE_KEY);
+      if (storedColumns && storedColumns.length > 0) {
+        this.logger.debug('Loaded custom columns from storage', storedColumns);
+        this.columns.set(storedColumns);
+
+        const loadedState: Record<string, boolean> = {};
+        storedColumns.forEach(column => {
+          loadedState[column.id] = false;
+        });
+        this.columnContentLoaded.set(loadedState);
       } else {
-        this.logger.debug('No custom feeds found in storage, using defaults');
-        this.navLinks.set(DEFAULT_TABS);
+        this.logger.debug('No custom columns found in storage, using defaults');
+        this.columns.set(DEFAULT_COLUMNS);
+
+        const loadedState: Record<string, boolean> = {};
+        DEFAULT_COLUMNS.forEach(column => {
+          loadedState[column.id] = false;
+        });
+        this.columnContentLoaded.set(loadedState);
       }
     } catch (error) {
-      this.logger.error('Error loading feeds from storage:', error);
-      this.navLinks.set(DEFAULT_TABS);
+      this.logger.error('Error loading columns from storage:', error);
+      this.columns.set(DEFAULT_COLUMNS);
+
+      const loadedState: Record<string, boolean> = {};
+      DEFAULT_COLUMNS.forEach(column => {
+        loadedState[column.id] = false;
+      });
+      this.columnContentLoaded.set(loadedState);
     }
   }
 
-  // Save feeds to local storage
-  private saveFeedsToStorage(feeds: NavLink[]): void {
+  private saveFeedsToStorage(columns: NavLink[]): void {
     try {
-      this.localStorageService.setObject(this.STORAGE_KEY, feeds);
-      this.logger.debug('Saved custom feeds to storage', feeds);
+      this.localStorageService.setObject(this.STORAGE_KEY, columns);
+      this.logger.debug('Saved custom columns to storage', columns);
     } catch (error) {
-      this.logger.error('Error saving feeds to storage:', error);
+      this.logger.error('Error saving columns to storage:', error);
+    }
+  }
+
+  ngOnInit(): void {
+    this.loadFeedsFromStorage();
+
+    effect(() => {
+      const currentColumns = this.columns();
+      if (currentColumns.length > 0) {
+        this.saveFeedsToStorage(currentColumns);
+      }
+    });
+
+    this.loadColumnContentIfNeeded(this.visibleColumnIndex());
+
+    if (!this.isMobileView()) {
+      this.columns().forEach((_, index) => {
+        this.loadColumnContentIfNeeded(index);
+      });
     }
   }
 }
