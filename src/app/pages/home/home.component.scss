@@ -122,6 +122,7 @@
     flex-direction: column;
     flex: 1;
     overflow: hidden;
+    position: relative;
 
     .columns-wrapper {
       display: flex;
@@ -131,15 +132,28 @@
       padding: 12px;
       gap: 12px;
       height: 100%;
+      width: 100%;
+      min-width: 100%;
+      scrollbar-width: thin;
+      scroll-behavior: smooth;
+
+      &::-webkit-scrollbar {
+        height: 6px;
+      }
+
+      &::-webkit-scrollbar-thumb {
+        background-color: rgba(0, 0, 0, 0.2);
+        border-radius: 3px;
+      }
 
       // Column unit - contains both header and content
       .column-unit {
         display: flex;
         flex-direction: column;
+        min-width: 700px;
         max-width: 700px;
         width: 700px;
-        min-width: 300px;
-        flex: 1;
+        flex: 0 0 700px; // Fixed width, no growing or shrinking
         background-color: var(--mat-app-surface-color);
         border-radius: 8px;
         box-shadow: var(--mat-sys-level1);
@@ -256,10 +270,10 @@
       // Add column button
       .add-column-button {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         justify-content: center;
         padding: 1rem;
-        align-self: flex-start;
+        flex: 0 0 auto; // Prevent growing or shrinking
       }
 
       // Drag preview
@@ -299,8 +313,10 @@
     .columns-wrapper {
       .column-unit {
         display: none;
+        min-width: 100%;
         max-width: none;
         width: 100%;
+        flex: 1 1 auto;
 
         &.visible {
           display: flex;
@@ -998,6 +1014,50 @@
 
 .columns-wrapper.cdk-drop-list-dragging .column-unit:not(.cdk-drag-placeholder) {
   transition: transform 300ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+// Improve drag and drop styling
+.cdk-drag-preview.column-unit {
+  box-shadow: var(--mat-sys-level3);
+  border-radius: 8px;
+  opacity: 0.8;
+}
+
+.cdk-drag-placeholder.column-unit {
+  opacity: 0.4;
+  border: 2px dashed var(--mat-primary-color);
+  border-radius: 8px;
+  background-color: rgba(var(--mat-primary-rgb), 0.05);
+}
+
+.scroll-indicator {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(var(--mat-primary-rgb), 0.8);
+  color: white;
+  border-radius: 50%;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+  z-index: 10;
+
+  &:hover {
+    opacity: 1;
+  }
+
+  &.left {
+    left: 20px;
+  }
+
+  &.right {
+    right: 20px;
+  }
 }
 
 h1 {
