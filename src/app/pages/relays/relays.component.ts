@@ -437,7 +437,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
 
   async findClosestRelay(): Promise<void> {
     this.isCheckingRelays.set(true);
-    this.logger.info('Starting ping check to find closest discovery relay');
+    this.logger.info('Starting latency check to find closest discovery relay');
     
     // Combine user's discovery relays with known ones, removing duplicates
     const relaysToCheck = [...new Set([
@@ -445,11 +445,11 @@ export class RelaysComponent implements OnInit, OnDestroy {
       ...this.knownDiscoveryRelays
     ])];
 
-    this.logger.debug('Checking relays for ping times', { count: relaysToCheck.length });
-    this.showMessage(`Checking ${relaysToCheck.length} discovery relays for response time...`);
+    this.logger.debug('Checking relays for latency', { count: relaysToCheck.length });
+    this.showMessage(`Checking ${relaysToCheck.length} discovery relays for latency...`);
 
     try {
-      // Check ping times for all relays
+      // Check latency for all relays
       const pingResults = await Promise.allSettled(
         relaysToCheck.map(url => this.checkRelayPing(url))
       );
@@ -464,7 +464,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
         .filter(result => result.pingTime !== Infinity)
         .sort((a, b) => a.pingTime - b.pingTime);
 
-      this.logger.debug('Ping results', { successfulPings });
+      this.logger.debug('Latency results', { successfulPings });
 
       if (successfulPings.length === 0) {
         this.showMessage('No reachable discovery relays found');
@@ -472,7 +472,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
         return;
       }
 
-      // Show dialog with results instead of just a snackbar
+      // Show dialog with results
       const dialogRef = this.dialog.open(RelayPingResultsDialogComponent, {
         width: '500px',
         data: {

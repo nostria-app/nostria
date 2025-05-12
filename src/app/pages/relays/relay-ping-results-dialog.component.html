@@ -1,4 +1,4 @@
-<h2 mat-dialog-title>Discovery Relay Ping Results</h2>
+<h2 mat-dialog-title>Discovery Relay Latency Results</h2>
 <mat-dialog-content>
   @if (results.length === 0) {
     <p>No reachable discovery relays found.</p>
@@ -15,14 +15,20 @@
           <mat-card-content>
             <div class="relay-card-content">
               <div class="relay-info">
-                <div class="relay-url">
-                  {{formatRelayUrl(result.url)}}
+                <div class="relay-url-container">
+                  <div class="relay-url">
+                    {{formatRelayUrl(result.url)}}
+                  </div>
                   @if (result === results[0]) {
-                    <mat-icon color="primary" class="fastest-icon">speed</mat-icon>
+                    <div class="fastest-label">
+                      <mat-icon class="fastest-icon">speed</mat-icon>
+                      <span>Fastest</span>
+                    </div>
                   }
                 </div>
-                <div class="ping-time">
-                  {{result.pingTime}}ms
+                <div class="latency">
+                  <span class="latency-value">{{result.pingTime}}</span>
+                  <span class="latency-unit">ms latency</span>
                 </div>
               </div>
               <div class="relay-action">
