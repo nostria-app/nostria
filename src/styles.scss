@@ -397,18 +397,6 @@ mat-card-content li {
   max-width: 600px;
 }
 
-@media screen and (max-width: 600px) {
-  .hide-small {
-    display: none;
-  }
-}
-
-@media screen and (max-width: 420px) {
-  .hide-tiny {
-    display: none;
-  }
-}
-
 /* Following count styles */
 .following-count {
   display: inline-flex;
@@ -672,5 +660,19 @@ iframe {
     border-radius: 8px;
     overflow: hidden;
     background-color: white;
+  }
+}
+
+
+
+@media screen and (max-width: 600px) {
+  .hide-small {
+    display: none !important;
+  }
+}
+
+@media screen and (max-width: 420px) {
+  .hide-tiny {
+    display: none !important;
   }
 }
