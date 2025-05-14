@@ -1634,15 +1634,32 @@ export class NostrService {
       this.logger.error('Error decoding nsec:', error);
       throw new Error('Invalid nsec key provided. Please check and try again.');
     }
-  }
-
-  async usePreviewAccount() {
-    this.logger.info('Using preview account');
-    // jack
-    const previewPubkey = '82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbfbe6a2';
+  }  async usePreviewAccount(customPubkey?: string) {
+    this.logger.info('Using preview account', { customPubkey });
+    
+    // Default to Jack's pubkey if no custom pubkey is provided
+    let previewPubkey = '82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbfbe6a2';
+    
+    // If a custom pubkey is provided in npub format, convert it to hex
+    if (customPubkey && customPubkey.startsWith('npub')) {
+      try {
+        const decoded = nip19.decode(customPubkey);
+        if (decoded.type === 'npub') {
+          previewPubkey = decoded.data as string;
+          this.logger.debug('Converted npub to hex for preview', { npub: customPubkey, hex: previewPubkey });
+        }
+      } catch (e) {
+        this.logger.error('Failed to convert npub to hex', { error: e, npub: customPubkey });
+      }
+    } 
+    // If custom pubkey is provided in hex format, use it directly
+    else if (customPubkey && customPubkey.length === 64) {
+      previewPubkey = customPubkey;
+    }
+    
     const newUser: NostrUser = {
       pubkey: previewPubkey,
-      name: 'Preview User',
+      name: customPubkey ? 'Custom Preview' : 'Preview User',
       source: 'preview',
       lastUsed: Date.now()
     };
