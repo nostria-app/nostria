@@ -7,24 +7,89 @@
     <h2 mat-dialog-title>Sign in to Nostria</h2>
   </div>
 
-  <div class="dialog-tabs">
-    @if (nostrService.hasAccounts()) {
-    <button mat-button class="tab-button" [class.active]="currentView() === 'existing-accounts'" (click)="currentView.set('existing-accounts')">
-      Previous Accounts
-    </button>
-    }
-    <button mat-button class="tab-button" [class.active]="currentView() === 'nsec'" (click)="currentView.set('nsec')">
-      Private Key
-    </button>
-    <button mat-button class="tab-button" [class.active]="currentView() === 'extension-loading' || extensionError()" (click)="loginWithExtension()">
-      Extension
-    </button>
-    <button mat-button class="tab-button" [class.active]="currentView() === 'nostr-connect'" (click)="currentView.set('nostr-connect')">
-      Nostr Connect
-    </button>
-    <button mat-button class="tab-button" (click)="usePreviewAccount()">
-      Preview Mode
-    </button>
+  <!-- Previous Accounts Section (always shown if accounts exist) -->
+  @if (nostrService.hasAccounts()) {
+  <div class="accounts-section">
+    <h3 class="section-title">Previous Accounts</h3>
+    <div class="accounts-list-container">
+      @for (account of nostrService.accounts(); track account.pubkey) {
+      <mat-card class="account-card" (click)="selectExistingAccount(account.pubkey)">
+        <mat-card-content class="account-content">
+          <div class="account-avatar">
+            @if (getAccountMetadata(account)?.picture) {
+            <img [src]="getAccountMetadata(account)?.picture" alt="Profile picture" class="avatar-image">
+            } @else {
+            <mat-icon>account_circle</mat-icon>
+            }
+          </div>
+          <div class="account-details">
+            <div class="account-name">{{ getAccountMetadata(account)?.name || 'Unknown User' }}</div>
+            <div class="account-source">{{ account.name }} · {{ account.source }}</div>
+            <div class="last-used">Last used: {{ account.lastUsed | date:'short' }}</div>
+          </div>
+          <button mat-icon-button class="delete-button" (click)="removeAccount($event, account.pubkey)"
+            matTooltip="Remove account">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </mat-card-content>
+      </mat-card>
+      }
+    </div>
+  </div>
+  }
+
+  <div class="login-options-section">
+    <h3 class="section-title">Other Login Options</h3>
+
+    <div class="login-options">
+      <mat-card class="login-card private-key" (click)="currentView.set('nsec')">
+        <mat-card-content>
+          <div class="card-content">
+            <mat-icon>key</mat-icon>
+            <div class="card-text">
+              <h3>Private Key</h3>
+              <p>Sign in with your Nostr private key</p>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="login-card extension" (click)="loginWithExtension()">
+        <mat-card-content>
+          <div class="card-content">
+            <mat-icon>extension</mat-icon>
+            <div class="card-text">
+              <h3>Browser Extension</h3>
+              <p>Connect via Alby or nos2x</p>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="login-card connect" (click)="currentView.set('nostr-connect')">
+        <mat-card-content>
+          <div class="card-content">
+            <mat-icon>phone_iphone</mat-icon>
+            <div class="card-text">
+              <h3>Nostr Connect</h3>
+              <p>Sign in with Nostria Signer app</p>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="login-card preview" (click)="currentView.set('preview')">
+        <mat-card-content>
+          <div class="card-content">
+            <mat-icon>visibility</mat-icon>
+            <div class="card-text">
+              <h3>Preview Only</h3>
+              <p>Use any public key in read-only mode</p>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
   </div>
 
   @if (extensionError()) {
@@ -141,6 +206,31 @@
       } @else {
       Connect
       }
+    </button>
+  </div>
+  }
+  @if (currentView() === 'preview') {
+  <div mat-dialog-content>
+    <p class="dialog-subtitle">Enter a public key for preview only mode:</p>
+
+    <mat-form-field appearance="fill" class="full-width">
+      <mat-label>Public Key (npub...)</mat-label>
+      <input matInput [(ngModel)]="previewPubkey" type="text" placeholder="npub1..." autocomplete="off" autocorrect="off"
+        spellcheck="false">
+      <mat-hint>You will be able to view content but not interact</mat-hint>
+    </mat-form-field>
+    
+    <div class="preview-info">
+      <p>Preview mode allows you to browse Nostr content using any public key.</p>
+      <p>You will be able to view posts, profiles, and content but will not be able to interact or post.</p>
+    </div>
+  </div>
+
+  <div mat-dialog-actions align="end">
+    <button mat-button (click)="currentView.set('main')">Back</button>
+    <button mat-raised-button color="primary" (click)="usePreviewAccount(previewPubkey)"
+      [disabled]="!previewPubkey">
+      Preview Only
     </button>
   </div>
   }

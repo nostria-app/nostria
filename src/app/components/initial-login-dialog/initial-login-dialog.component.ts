@@ -35,16 +35,19 @@ export class InitialLoginDialogComponent {
     this.nostrService.generateNewKey();
     this.closeDialog();
   }
-
   openLoginDialog(): void {
     this.logger.debug('Opening full login dialog');
     this.closeDialog();
+    
+    // Keep the blur-backdrop class on the body when opening the login dialog
+    document.body.classList.add('blur-backdrop');
     
     // Open the existing detailed login dialog
     this.dialog.open(LoginDialogComponent, {
       width: '450px',
       maxWidth: '95vw',
-      disableClose: true
+      disableClose: true,
+      panelClass: 'welcome-dialog'
     });
   }
 

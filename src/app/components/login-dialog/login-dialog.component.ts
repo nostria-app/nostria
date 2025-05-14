@@ -15,7 +15,7 @@ import { QrcodeScanDialogComponent } from '../qrcode-scan-dialog/qrcode-scan-dia
 import { TermsOfUseDialogComponent } from '../terms-of-use-dialog/terms-of-use-dialog.component';
 import { InitialLoginDialogComponent } from '../initial-login-dialog/initial-login-dialog.component';
 
-type LoginView = 'main' | 'nsec' | 'extension-loading' | 'existing-accounts' | 'nostr-connect';
+type LoginView = 'main' | 'nsec' | 'extension-loading' | 'existing-accounts' | 'nostr-connect' | 'preview';
 
 @Component({
   selector: 'app-login-dialog',
@@ -40,10 +40,10 @@ export class LoginDialogComponent implements OnInit {
   private dialog = inject(MatDialog);
   nostrService = inject(NostrService);
   private logger = inject(LoggerService);
-
-  currentView = signal<LoginView>('nsec');
+  currentView = signal<LoginView>('main');
   extensionError = signal<string | null>(null);
   nsecKey = '';
+  previewPubkey = '';  // New property for preview mode
   nostrConnectUrl = signal('');
   nostrConnectError = signal<string | null>(null);
   nostrConnectLoading = signal<boolean>(false);
@@ -153,11 +153,16 @@ export class LoginDialogComponent implements OnInit {
         }
       }
     });
-  }
-
-  usePreviewAccount(): void {
-    this.logger.debug('Using preview account');
-    this.nostrService.usePreviewAccount();
+  }  usePreviewAccount(pubkey?: string): void {
+    this.logger.debug('Using preview account', { pubkey });
+    // If we're called from the button in the main view, just show the preview view
+    if (!pubkey && this.currentView() !== 'preview') {
+      this.currentView.set('preview');
+      return;
+    }
+    
+    // Otherwise proceed with login using the provided pubkey
+    this.nostrService.usePreviewAccount(pubkey);
     this.closeDialog();
   }
 
@@ -188,15 +193,20 @@ export class LoginDialogComponent implements OnInit {
       this.currentView.set('main');
     }
   }
-
   closeDialog(): void {
     this.logger.debug('Closing login dialog');
+    
+    // Don't remove the blur-backdrop class as it will be handled by the app component
+    // when all dialogs are closed, or maintained by the next dialog
     this.dialogRef.close();
   }
   
   backToInitialDialog(): void {
     this.logger.debug('Going back to initial login dialog');
     this.closeDialog();
+    
+    // Maintain the blur backdrop by not removing the class
+    document.body.classList.add('blur-backdrop');
     
     // Open the initial welcome dialog
     this.dialog.open(InitialLoginDialogComponent, {
