@@ -1,5 +1,18 @@
 .login-dialog {
   padding: 16px 0;
+  position: relative;
+}
+
+.back-button {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 10;
+  color: rgba(0, 0, 0, 0.6);
+  
+  &:hover {
+    color: var(--mat-primary-color);
+  }
 }
 
 .dialog-header {
@@ -15,10 +28,43 @@
   }
 }
 
+.dialog-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--mat-divider-color, rgba(0, 0, 0, 0.05));
+  
+  .tab-button {
+    margin: 0 4px;
+    padding: 8px 16px;
+    border-radius: 0;
+    position: relative;
+    
+    &.active {
+      color: var(--mat-primary-color);
+      font-weight: 500;
+      
+      &::after {
+        content: '';
+        position: absolute;
+        bottom: -1px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background-color: var(--mat-primary-color);
+      }
+    }
+    
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.04);
+    }
+  }
+}
+
 .dialog-subtitle {
   text-align: center;
   margin-bottom: 24px;
-  // color: var(--mat-subtitle-text-color, rgba(0, 0, 0, 0.7));
   font-size: 16px;
 }
 
@@ -34,7 +80,6 @@
   transition: all 0.3s ease;
   height: 130px;
   border-radius: 12px;
-  // background: var(--mat-card-container-color, white);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   border: 1px solid var(--mat-divider-color, rgba(0, 0, 0, 0.05));
   overflow: hidden;
@@ -67,12 +112,7 @@
   mat-card-title {
     font-weight: 500;
     font-size: 18px;
-    // color: var(--mat-card-title-text-color);
   }
-  
-  // mat-card-content {
-  //   color: var(--mat-card-subtitle-text-color, rgba(0, 0, 0, 0.6));
-  // }
 }
 
 .login-card.use-existing {
@@ -131,12 +171,7 @@
   object-fit: cover;
 }
 
-.dark .account-item:hover {
-  // background-color: rgba(255, 255, 255, 0.05);
-}
-
 .account-source {
-  // color: var(--mat-subtitle-text-color);
   font-size: 12px;
 }
 
@@ -172,7 +207,7 @@
 }
 
 .qr-scan-button {
-  margin-top: 10px; // Align with the input field
+  margin-top: 10px;
 }
 
 .button-spinner {

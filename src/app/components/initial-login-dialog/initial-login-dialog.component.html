@@ -1,0 +1,40 @@
+<div class="initial-login-dialog">
+  <div class="dialog-header">
+    <img src="icons/icon-128x128.png" alt="Nostria Logo" class="app-icon">
+    <h2 mat-dialog-title>Welcome to Nostria</h2>
+  </div>
+
+  <div mat-dialog-content>
+    <p class="dialog-subtitle">Your Social Network</p>
+
+    <div class="login-options">
+      <mat-card class="login-card new-user" (click)="generateNewKey()">
+        <mat-card-content>
+          <div class="card-content">
+            <mat-icon>person_add</mat-icon>
+            <div class="card-text">
+              <h3>New User</h3>
+              <p>Create a new account with one click</p>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="login-card existing-user" (click)="openLoginDialog()">
+        <mat-card-content>
+          <div class="card-content">
+            <mat-icon>login</mat-icon>
+            <div class="card-text">
+              <h3>Login</h3>
+              <p>Sign in with your existing account</p>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <div class="terms-of-use-notice">
+      <p>By using Nostria, you agree to our <a href="#" (click)="$event.preventDefault(); openTermsOfUse()">Terms of Use</a>.</p>
+    </div>
+  </div>
+</div>

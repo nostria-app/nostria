@@ -663,6 +663,14 @@ iframe {
   }
 }
 
+/* Welcome dialog styles */
+.welcome-dialog {
+  .mat-mdc-dialog-container .mdc-dialog__surface {
+    border-radius: 16px;
+    overflow: hidden;
+  }
+}
+
 
 
 @media screen and (max-width: 600px) {
