@@ -13,6 +13,7 @@ import { LoggerService } from '../../services/logger.service';
 import { MatCardModule } from '@angular/material/card';
 import { QrcodeScanDialogComponent } from '../qrcode-scan-dialog/qrcode-scan-dialog.component';
 import { TermsOfUseDialogComponent } from '../terms-of-use-dialog/terms-of-use-dialog.component';
+import { InitialLoginDialogComponent } from '../initial-login-dialog/initial-login-dialog.component';
 
 type LoginView = 'main' | 'nsec' | 'extension-loading' | 'existing-accounts' | 'nostr-connect';
 
@@ -40,7 +41,7 @@ export class LoginDialogComponent implements OnInit {
   nostrService = inject(NostrService);
   private logger = inject(LoggerService);
 
-  currentView = signal<LoginView>('main');
+  currentView = signal<LoginView>('nsec');
   extensionError = signal<string | null>(null);
   nsecKey = '';
   nostrConnectUrl = signal('');
@@ -191,5 +192,18 @@ export class LoginDialogComponent implements OnInit {
   closeDialog(): void {
     this.logger.debug('Closing login dialog');
     this.dialogRef.close();
+  }
+  
+  backToInitialDialog(): void {
+    this.logger.debug('Going back to initial login dialog');
+    this.closeDialog();
+    
+    // Open the initial welcome dialog
+    this.dialog.open(InitialLoginDialogComponent, {
+      width: '400px',
+      maxWidth: '95vw',
+      disableClose: true,
+      panelClass: 'welcome-dialog'
+    });
   }
 }

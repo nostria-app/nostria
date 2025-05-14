@@ -12,7 +12,7 @@ import { PwaUpdateService } from './services/pwa-update.service';
 import { CommonModule, DOCUMENT, isPlatformBrowser, isPlatformServer } from '@angular/common';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { LoginDialogComponent } from './components/login-dialog/login-dialog.component';
+import { InitialLoginDialogComponent } from './components/initial-login-dialog/initial-login-dialog.component';
 import { NostrService } from './services/nostr.service';
 import { LoadingOverlayComponent } from './components/loading-overlay/loading-overlay.component';
 import { LoggerService } from './services/logger.service';
@@ -284,19 +284,19 @@ export class AppComponent {
     if (this.layout.isHandset()) {
       this.toggleSidenav();
     }
-  }
-
-  async showLoginDialog(): Promise<void> {
+  }  async showLoginDialog(): Promise<void> {
     this.logger.debug('showLoginDialog called');
     // Apply the blur class to the document body before opening the dialog
     document.body.classList.add('blur-backdrop');
 
-    const dialogRef = this.dialog.open(LoginDialogComponent, {
-      width: '500px',
+    const dialogRef = this.dialog.open(InitialLoginDialogComponent, {
+      width: '400px',
+      maxWidth: '95vw',
       disableClose: true,
+      panelClass: 'welcome-dialog'
     });
 
-    this.logger.debug('Login dialog opened');
+    this.logger.debug('Initial login dialog opened');
 
     // Handle login completion and data loading
     dialogRef.afterClosed().subscribe(async () => {
