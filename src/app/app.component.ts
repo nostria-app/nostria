@@ -15,7 +15,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { InitialLoginDialogComponent } from './components/initial-login-dialog/initial-login-dialog.component';
 import { NostrService } from './services/nostr.service';
 import { LoadingOverlayComponent } from './components/loading-overlay/loading-overlay.component';
-import { LoggerService } from './services/logger.service';
+import { FeatureLevel, LoggerService } from './services/logger.service';
 import { MatMenuModule } from '@angular/material/menu';
 import { FormGroup, FormsModule } from '@angular/forms';
 import { NotificationType, RelayPublishingNotification, StorageService } from './services/storage.service';
@@ -35,6 +35,7 @@ interface NavItem {
   path: string;
   label: string;
   icon: string;
+  level?: FeatureLevel;
   action?: () => void;
 }
 
@@ -122,14 +123,14 @@ export class AppComponent {
     { path: 'articles', label: 'Articles', icon: 'article' },
     // { path: 'podcasts', label: 'Podcasts', icon: 'podcasts', showInMobile: false },
     { path: 'people', label: 'People', icon: 'people' },
-    { path: 'messages', label: 'Messages', icon: 'mail' },
+    { path: 'messages', label: 'Messages', icon: 'mail', level: 'beta' },
     { path: 'media', label: 'Media', icon: 'photo_library' },
-    { path: 'bookmarks', label: 'Bookmarks', icon: 'bookmarks' },
-    { path: 'badges', label: 'Badges', icon: 'badge' },
+    { path: 'bookmarks', label: 'Bookmarks', icon: 'bookmarks', level: 'preview' },
+    { path: 'badges', label: 'Badges', icon: 'badge', level: 'beta' },
     // { path: 'relays', label: 'Relays', icon: 'dns', showInMobile: false },
     // { path: 'backup', label: 'Backup', icon: 'archive', showInMobile: false },
     { path: 'settings', label: 'Settings', icon: 'settings' },
-    { path: 'premium', label: 'Premium', icon: 'diamond' },
+    { path: 'premium', label: 'Premium', icon: 'diamond', level: 'preview' },
     // { path: 'about', label: 'About', icon: 'info', showInMobile: true },
     // { path: '', label: 'Logout', icon: 'logout', action: () => this.logout(), showInMobile: false }
   ];

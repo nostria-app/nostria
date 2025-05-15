@@ -39,6 +39,12 @@ export class ApplicationService {
 
     featureLevel = signal<FeatureLevel>(this.getStoredFeatureLevel());
 
+    private readonly featurePrecedence: Record<FeatureLevel, number> = {
+        'stable': 0,
+        'beta': 1,
+        'preview': 2,
+    };
+
     constructor() {
         // Set up effect to load notifications when app is initialized and authenticated
         effect(() => {
@@ -53,6 +59,14 @@ export class ApplicationService {
 
         const storedLevel = localStorage.getItem(this.appState.FEATURE_LEVEL) as FeatureLevel | null;
         return storedLevel || 'stable';
+    }
+
+    enabledFeature(level?: FeatureLevel): boolean {
+        if (!level) {
+            return true;
+        }
+
+        return this.featurePrecedence[level] <= this.featurePrecedence[this.featureLevel()];
     }
 
     reload() {
