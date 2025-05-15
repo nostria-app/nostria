@@ -41,8 +41,7 @@ export class AccountsComponent {
    * Remove an account after confirmation
    * @param event The click event
    * @param pubkey The public key of the account to remove
-   */
-  removeAccount(event: Event, pubkey: string): void {
+   */  removeAccount(event: Event, pubkey: string): void {
     // Prevent click event from propagating
     event.stopPropagation();
     this.logger.debug('Attempting to remove account', { pubkey });
@@ -51,7 +50,7 @@ export class AccountsComponent {
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       data: {
         title: 'Remove Account',
-        message: 'If you do not have backup of your nsec for this account, your account will be permanetly deleted and lost. Only if you have a backup, will you be able to restore it again. Are you sure?',
+        message: 'If you do not have backup of your nsec for this account, your account will be permanently deleted and lost. Only if you have a backup, will you be able to restore it again. Are you sure?',
         confirmText: 'Remove Account',
         cancelText: 'Cancel',
         confirmColor: 'warn'
@@ -61,7 +60,27 @@ export class AccountsComponent {
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
         this.logger.debug('Removing account confirmed', { pubkey });
-        this.nostrService.removeAccount(pubkey);
+        
+        // Check if this is the current account
+        const isCurrentAccount = this.currentAccount()?.pubkey === pubkey;
+        
+        // Find another account to switch to if we're removing the current one
+        if (isCurrentAccount) {
+          const allAccounts = this.nostrService.accounts();
+          const nextAccount = allAccounts.find(acc => acc.pubkey !== pubkey);
+          
+          // Remove the account
+          this.nostrService.removeAccount(pubkey);
+          
+          // If there's another account available, switch to it
+          if (nextAccount) {
+            this.logger.debug('Switching to another account after removing current', { nextPubkey: nextAccount.pubkey });
+            this.nostrService.switchToUser(nextAccount.pubkey);
+          }
+        } else {
+          // Just remove the account if it's not the current one
+          this.nostrService.removeAccount(pubkey);
+        }
       }
     });
   }

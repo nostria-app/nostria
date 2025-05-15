@@ -10,7 +10,7 @@
 }
 
 .current-account,
-.other-accounts {
+.all-accounts {
   margin-bottom: 32px;
 
   h2 {
@@ -82,13 +82,21 @@
 .accounts-list {
   border-radius: 8px;
   box-shadow: var(--mat-sys-level1);
-  
-  .account-item {
+    .account-item {
     cursor: pointer;
     position: relative;
     
     &:hover {
       background-color: rgba(0, 0, 0, 0.04);
+    }
+    
+    &.current-account-item {
+      background-color: rgba(var(--mat-primary-rgb), 0.08);
+      border-left: 4px solid var(--mat-primary-color);
+      
+      &:hover {
+        background-color: rgba(var(--mat-primary-rgb), 0.12);
+      }
     }
     
     .delete-button {
@@ -110,7 +118,7 @@ mat-divider {
   margin-top: 24px;
 }
 
-.no-other-accounts {
+.no-accounts {
   margin: 24px 0;
   color: var(--mat-text-secondary-color);
   font-style: italic;
