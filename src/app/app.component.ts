@@ -137,7 +137,7 @@ export class AppComponent {
     { path: '', label: 'Home', icon: 'home' },
     { path: 'articles', label: 'Articles', icon: 'article' },
     // The middle position will be occupied by the FAB button
-    { path: 'people', label: 'People', icon: 'people' },
+    { path: 'messages', label: 'Messages', icon: 'mail' },
     { path: 'p', label: 'Profile', icon: 'account_circle' },
   ];
 
