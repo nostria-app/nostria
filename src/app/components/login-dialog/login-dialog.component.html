@@ -8,7 +8,7 @@
   </div>
 
   <!-- Previous Accounts Section (always shown if accounts exist) -->
-  @if (nostrService.hasAccounts()) {
+  <!-- @if (nostrService.hasAccounts()) {
   <div class="accounts-section">
     <h3 class="section-title">Previous Accounts</h3>
     <div class="accounts-list-container">
@@ -36,11 +36,9 @@
       }
     </div>
   </div>
-  }
+  } -->
 
   <div class="login-options-section">
-    <h3 class="section-title">Other Login Options</h3>
-
     <div class="login-options">
       <mat-card class="login-card private-key" (click)="currentView.set('nsec')">
         <mat-card-content>

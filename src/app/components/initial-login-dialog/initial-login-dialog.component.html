@@ -1,5 +1,8 @@
 <div class="initial-login-dialog">
   <div class="dialog-header">
+    <button mat-icon-button (click)="closeDialog()" class="close-button" aria-label="Close">
+      <mat-icon>close</mat-icon>
+    </button>
     <img src="icons/icon-128x128.png" alt="Nostria Logo" class="app-icon">
     <h2 mat-dialog-title>Welcome to Nostria</h2>
   </div>
@@ -34,7 +37,8 @@
     </div>
 
     <div class="terms-of-use-notice">
-      <p>By using Nostria, you agree to our <a href="#" (click)="$event.preventDefault(); openTermsOfUse()">Terms of Use</a>.</p>
+      <p>By using Nostria, you agree to our <a href="#" (click)="$event.preventDefault(); openTermsOfUse()">Terms of
+          Use</a>.</p>
     </div>
   </div>
 </div>
