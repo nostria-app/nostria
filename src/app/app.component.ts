@@ -28,6 +28,8 @@ import { ApplicationService } from './services/application.service';
 import { NPubPipe } from './pipes/npub.pipe';
 import { MatBadgeModule } from '@angular/material/badge';
 import { NotificationService } from './services/notification.service';
+import { MatBottomSheet, MatBottomSheetModule } from '@angular/material/bottom-sheet';
+import { CreateOptionsSheetComponent } from './components/create-options-sheet/create-options-sheet.component';
 
 interface NavItem {
   path: string;
@@ -38,8 +40,7 @@ interface NavItem {
 
 @Component({
   selector: 'app-root',
-  standalone: true,
-  imports: [
+  standalone: true,  imports: [
     RouterOutlet,
     RouterLink,
     RouterLinkActive,
@@ -57,7 +58,8 @@ interface NavItem {
     FormsModule,
     MatFormFieldModule,
     NPubPipe,
-    MatBadgeModule
+    MatBadgeModule,
+    MatBottomSheetModule
   ], templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })
@@ -69,11 +71,11 @@ export class AppComponent {
   nostrService = inject(NostrService);
   storage = inject(StorageService);
   appState = inject(ApplicationStateService);
-  app = inject(ApplicationService);
-  layout = inject(LayoutService);
+  app = inject(ApplicationService);  layout = inject(LayoutService);
   router = inject(Router);
   notificationService = inject(NotificationService);
   notificationType = NotificationType;
+  bottomSheet = inject(MatBottomSheet);
 
   private logger = inject(LoggerService);
 
@@ -131,10 +133,10 @@ export class AppComponent {
     // { path: 'about', label: 'About', icon: 'info', showInMobile: true },
     // { path: '', label: 'Logout', icon: 'logout', action: () => this.logout(), showInMobile: false }
   ];
-
   navItemsMobile: NavItem[] = [
     { path: '', label: 'Home', icon: 'home' },
     { path: 'articles', label: 'Articles', icon: 'article' },
+    // The middle position will be occupied by the FAB button
     { path: 'people', label: 'People', icon: 'people' },
     { path: 'p', label: 'Profile', icon: 'account_circle' },
   ];
@@ -283,14 +285,19 @@ export class AppComponent {
   async logout(): Promise<void> {
     this.nostrService.logout();
   }
-
   async switchAccount(pubkey: string): Promise<void> {
     await this.nostrService.switchToUser(pubkey);
 
     if (this.layout.isHandset()) {
       this.toggleSidenav();
     }
-  } async showLoginDialog(): Promise<void> {
+  }
+  
+  openCreateOptions(): void {
+    this.bottomSheet.open(CreateOptionsSheetComponent);
+  }
+  
+  async showLoginDialog(): Promise<void> {
     this.logger.debug('showLoginDialog called');
     // Apply the blur class to the document body before opening the dialog
     document.body.classList.add('blur-backdrop');
