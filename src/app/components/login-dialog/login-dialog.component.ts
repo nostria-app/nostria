@@ -43,7 +43,7 @@ export class LoginDialogComponent implements OnInit {
   currentView = signal<LoginView>('main');
   extensionError = signal<string | null>(null);
   nsecKey = '';
-  previewPubkey = '';  // New property for preview mode
+  previewPubkey = 'npub1sg6plzptd64u62a878hep2kev88swjh3tw00gjsfl8f237lmu63q0uf63m'; // jack
   nostrConnectUrl = signal('');
   nostrConnectError = signal<string | null>(null);
   nostrConnectLoading = signal<boolean>(false);

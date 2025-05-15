@@ -36,18 +36,15 @@
       }
     </mat-card>
   </div>
-
   <mat-divider></mat-divider>
 
-  @if (nostrService.accounts().length > 1) {
-    <div class="other-accounts">
-      <h2>Other Accounts</h2>
+  @if (nostrService.accounts().length > 0) {    <div class="all-accounts">
+      <h2>Account List</h2>
       
       <mat-list class="accounts-list">
-        @for (account of nostrService.accounts(); track account.pubkey) {
-          @if (account.pubkey !== currentAccount()?.pubkey) {
-            <mat-list-item class="account-item" (click)="switchAccount(account.pubkey)">
-              @if(nostrService.getMetadataForAccount(account.pubkey)?.content; as metadata) {
+        @for (account of nostrService.accounts(); track account.pubkey) {          <mat-list-item class="account-item" [class.current-account-item]="account.pubkey === currentAccount()?.pubkey" (click)="switchAccount(account.pubkey)">
+            @if(nostrService.getMetadataForAccount(account.pubkey)?.content; as metadata) {
+              <ng-container>
                 <div class="account-avatar" matListItemIcon>
                   @if (metadata.picture) {
                     <img [src]="metadata.picture" alt="Profile picture" class="avatar-image">
@@ -59,25 +56,26 @@
                 <div matListItemLine class="account-source">
                   Type: {{ account.source }} • Last used: {{ account.lastUsed | date:'medium' }}
                 </div>
-              } @else {
+              </ng-container>
+            } @else {
+              <ng-container>
                 <mat-icon matListItemIcon>account_circle</mat-icon>
                 <div matListItemTitle>{{ account.pubkey | npub }}</div>
                 <div matListItemLine class="account-source">
                   Type: {{ account.source }} • Last used: {{ account.lastUsed | date:'medium' }}
                 </div>
-              }
-              
-              <button mat-icon-button class="delete-button" (click)="removeAccount($event, account.pubkey)"
-                matTooltip="Remove account">
-                <mat-icon color="warn">delete</mat-icon>
-              </button>
-            </mat-list-item>
-          }
+              </ng-container>
+            }
+            
+            <button mat-icon-button class="delete-button" (click)="removeAccount($event, account.pubkey)"
+              matTooltip="Remove account">
+              <mat-icon color="warn">delete</mat-icon>
+            </button>
+          </mat-list-item>
         }
       </mat-list>
-    </div>
-  } @else {
-    <p class="no-other-accounts">No other accounts available</p>
+    </div>  } @else {
+    <p class="no-accounts">No accounts available</p>
   }
 
   <mat-divider></mat-divider>
