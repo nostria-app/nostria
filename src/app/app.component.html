@@ -273,11 +273,27 @@
     </mat-sidenav-content>
   </mat-sidenav-container>
   }
-
   <!-- Mobile navigation footer - now outside of sidenav container -->
   @if (layout.isHandset()) {
   <div class="mobile-nav">
-    @for (item of navItemsMobile; track $index) {
+    <!-- First two navigation items -->
+    @for (item of navItemsMobile.slice(0, 2); track $index) {
+    <a mat-button class="mobile-nav-button" [routerLink]="item.action ? undefined : [item.path]"
+      routerLinkActive="active-link" (click)="item.action ? item.action() : null">
+      <mat-icon>{{item.icon}}</mat-icon>
+      <div class="mobile-nav-label">{{item.label}}</div>
+    </a>
+    }
+    
+    <!-- FAB button in the middle with circular cut-out -->
+    <div class="fab-container">
+      <button mat-mini-fab color="primary" class="create-fab" aria-label="Create new content" (click)="openCreateOptions()">
+        <mat-icon>add</mat-icon>
+      </button>
+    </div>
+    
+    <!-- Last two navigation items -->
+    @for (item of navItemsMobile.slice(2); track $index) {
     <a mat-button class="mobile-nav-button" [routerLink]="item.action ? undefined : [item.path]"
       routerLinkActive="active-link" (click)="item.action ? item.action() : null">
       <mat-icon>{{item.icon}}</mat-icon>

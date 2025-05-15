@@ -195,6 +195,67 @@ mat-nav-list .mat-icon {
   /* Add small padding to prevent text from touching edges */
 }
 
+/* Mobile navigation styles */
+.mobile-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: var(--mat-sys-card-container-color);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  height: 56px;
+  z-index: 10;
+  box-shadow: var(--mat-sys-level3);
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.dark-theme .mobile-nav {
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.mobile-nav-button {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 0;
+  min-width: 0;
+  height: 100%;
+  border-radius: 0;
+}
+
+.mobile-nav-label {
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+/* FAB button container */
+.fab-container {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  justify-content: center;
+}
+
+/* The FAB button */
+.create-fab {
+  position: absolute;
+  bottom: 24px; /* Positioning the FAB button to be raised above the navigation */
+  z-index: 11;
+  box-shadow: var(--mat-sys-level4);
+}
+
+/* Adjust content wrapper to account for mobile navigation */
+@media (max-width: 599px) {
+  .content-wrapper {
+    padding-bottom: 56px;
+  }
+}
+
 // Profile sidenav styles
 .profile-sidenav {
   width: 300px;
