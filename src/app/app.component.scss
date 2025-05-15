@@ -36,10 +36,12 @@ nav {
   /* Prevent horizontal scrolling */
 
   // Make space for mobile nav when on mobile
-  @media (max-width: 599px) {
-    height: calc(100% - 56px); // Reverted back to 56px
-  }
+  @media (max-width: 599px) {}
 }
+
+// .mobile-view {
+//   height: calc(100vh - 56px); // Reverted back to 56px
+// }
 
 .sidenav {
   width: 250px;
@@ -126,14 +128,17 @@ nav {
   height: 100%;
   box-sizing: border-box;
 
-  &.mobile {
-    height: calc(100dvh - 200px) !important; // mobile-nav height.
-  }
+  // &.mobile {
+  //   height: calc(100dvh - 200px) !important; // mobile-nav height.
+  // }
 }
 
-mat-drawer-content mat-sidenav-content {
-  height: calc(100dvh - 56px); // Adjusted for mobile nav height
-}
+// mat-drawer-content mat-sidenav-content {
+//   height: calc(100dvh - 156px); // Adjusted for mobile nav height
+// }
+
+
+
 
 mat-nav-list .mat-icon {
   margin-right: 12px;
@@ -249,7 +254,10 @@ mat-nav-list .mat-icon {
 /* Adjust content wrapper to account for mobile navigation */
 @media (max-width: 599px) {
   .content-wrapper {
-    padding-bottom: 56px;
+  }
+
+  .mat-drawer-content {
+    height: calc(100% - 56px); // Adjusted for mobile nav height
   }
 }
 
