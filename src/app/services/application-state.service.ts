@@ -20,6 +20,7 @@ export class ApplicationStateService {
 
     readonly DISCOVERY_RELAYS_STORAGE_KEY = 'nostria-discovery-relays';
     readonly ACCOUNT_STORAGE_KEY = 'nostria-account';
+    readonly FEATURE_LEVEL = 'nostria-feature-level';
     readonly ACCOUNTS_STORAGE_KEY = 'nostria-accounts';
     readonly PEOPLE_VIEW_MODE = 'nostria-peple-view-mode';
     readonly MEDIA_ACTIVE_TAB = 'nostria-media-active-tab';

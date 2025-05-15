@@ -2,7 +2,7 @@ import { computed, effect, inject, Injectable, PLATFORM_ID, signal } from "@angu
 import { NostrService } from "./nostr.service";
 import { StorageService } from "./storage.service";
 import { Router, RouterLink, RouterModule } from "@angular/router";
-import { LoggerService } from "./logger.service";
+import { FeatureLevel, LoggerService } from "./logger.service";
 import { ApplicationStateService } from "./application-state.service";
 import { ThemeService } from "./theme.service";
 import { NotificationService } from "./notification.service";
@@ -37,6 +37,8 @@ export class ApplicationService {
     showSuccess = signal(false);
     isLoading = signal(false);
 
+    featureLevel = signal<FeatureLevel>(this.getStoredFeatureLevel());
+
     constructor() {
         // Set up effect to load notifications when app is initialized and authenticated
         effect(() => {
@@ -44,6 +46,13 @@ export class ApplicationService {
                 this.loadAppData();
             }
         });
+    }
+
+    private getStoredFeatureLevel(): FeatureLevel {
+        if (!this.isBrowser()) return 'stable';
+
+        const storedLevel = localStorage.getItem(this.appState.FEATURE_LEVEL) as FeatureLevel | null;
+        return storedLevel || 'stable';
     }
 
     reload() {
@@ -76,6 +85,7 @@ export class ApplicationService {
             this.appState.DISCOVERY_RELAYS_STORAGE_KEY,
             this.appState.PEOPLE_VIEW_MODE,
             this.appState.MEDIA_ACTIVE_TAB,
+            this.appState.FEATURE_LEVEL,
             this.logger.LOG_LEVEL_KEY,
             this.theme.THEME_KEY
         ];

@@ -3,6 +3,8 @@ import { LocalStorageService } from './local-storage.service';
 import { isPlatformBrowser } from '@angular/common';
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'none';
+export type FeatureLevel = 'stable' | 'beta' | 'preview';
+
 
 @Injectable({
   providedIn: 'root'

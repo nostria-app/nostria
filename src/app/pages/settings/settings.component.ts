@@ -6,7 +6,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
-import { LoggerService, LogLevel } from '../../services/logger.service';
+import { FeatureLevel, LoggerService, LogLevel } from '../../services/logger.service';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { RouterModule } from '@angular/router';
 import { MatListModule } from '@angular/material/list';
@@ -55,7 +55,7 @@ interface SettingsSection {
     LogsSettingsComponent,
     AboutComponent,
     RelaysComponent,
-    BackupComponent
+    BackupComponent,
   ],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.scss',
@@ -63,8 +63,9 @@ interface SettingsSection {
 export class SettingsComponent {
   private logger = inject(LoggerService);
   private breakpointObserver = inject(BreakpointObserver);
-  
+
   currentLogLevel = signal<LogLevel>(this.logger.logLevel());
+
   themeService = inject(ThemeService);
   nostrService = inject(NostrService);
   storage = inject(StorageService);
@@ -72,6 +73,8 @@ export class SettingsComponent {
   app = inject(ApplicationService);
   dialog = inject(MatDialog);
   router = inject(Router);
+
+  currentFeatureLevel = signal<FeatureLevel>(this.app.featureLevel());
 
   // Track active section
   activeSection = signal('general');
@@ -103,7 +106,7 @@ export class SettingsComponent {
 
   selectSection(sectionId: string): void {
     this.activeSection.set(sectionId);
-    
+
     if (this.isMobile()) {
       this.showDetails.set(true);
     }
@@ -115,6 +118,13 @@ export class SettingsComponent {
     }
   }
 
+  setFeatureLevel(level: FeatureLevel): void {
+    if (!this.app.isBrowser()) return; // Return if not in browser context
+
+    this.app.featureLevel.set(level);
+    localStorage.setItem(this.appState.FEATURE_LEVEL, level);
+  }
+
   setLogLevel(level: LogLevel): void {
     this.logger.setLogLevel(level);
   }
@@ -122,7 +132,7 @@ export class SettingsComponent {
   toggleDarkMode() {
     this.themeService.toggleDarkMode();
   }
-  
+
   logout() {
     this.nostrService.logout();
   }
@@ -130,7 +140,7 @@ export class SettingsComponent {
   getTitle() {
     return this.sections.find(section => section.id === this.activeSection())?.title || 'Settings';
   }
-  
+
   wipeData(): void {
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       width: '400px',
