@@ -70,12 +70,21 @@
     margin: 0 0 4px 0;
     color: var(--mat-text-secondary-color);
     font-size: 14px;
-  }
-  
-  .account-source {
+  }    .account-source {
     margin: 0;
     color: var(--mat-text-secondary-color);
     font-size: 14px;
+  }
+  
+  .account-npub {
+    margin: 0;
+    color: var(--mat-text-secondary-color);
+    font-size: 12px;
+    opacity: 0.8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 240px;
   }
 }
 
@@ -106,16 +115,6 @@
       transform: translateY(-50%);
     }
   }
-}
-
-mat-divider {
-  margin: 24px 0;
-}
-
-.actions {
-  display: flex;
-  justify-content: flex-start;
-  margin-top: 24px;
 }
 
 .no-accounts {
