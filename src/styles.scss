@@ -671,6 +671,16 @@ iframe {
   }
 }
 
+.minor-icon {
+  color: var(--mat-sys-on-surface-variant);
+  vertical-align: middle; // Aligns the icon with the middle of the text
+  display: inline-flex; // Better alignment with text
+  align-items: center; // Center icon content vertically
+  height: 1em; // Match text height
+  width: 1em; // Keep aspect ratio
+  margin-top: -0.15em; // Fine-tune vertical position
+  line-height: 1; // Prevent line height issues
+}
 
 
 @media screen and (max-width: 600px) {

@@ -49,6 +49,20 @@
         </div>
 
         <div>
+          <h2>Release Channel <mat-icon class="minor-icon">diamond</mat-icon></h2>
+          <p>Get early access to new features (Premium)</p>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Feature Level</mat-label>
+            <mat-select [ngModel]="currentFeatureLevel()" (selectionChange)="setFeatureLevel($event.value)">
+              <mat-option value="stable">Stable</mat-option>
+              <mat-option value="beta">Beta</mat-option>
+              <mat-option value="preview">Preview</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+
+        <div>
           <h2>Logging</h2>
           <p>Configure application logging levels</p>
 
@@ -111,10 +125,10 @@
         @if (activeSection() === 'relays') {
         <app-relays-page></app-relays-page>
         }
-        
+
         @if (activeSection() === 'backup') {
-          <app-backup></app-backup>
-          }
+        <app-backup></app-backup>
+        }
 
       </mat-card-content>
     </mat-card>
