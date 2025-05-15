@@ -192,11 +192,11 @@
 
         <mat-nav-list>
           <a mat-list-item [routerLink]="['/p', nostrService.account()?.pubkey]"
-            (click)="layout.isHandset() ? toggleProfileSidenav() : null">
+            (click)="toggleProfileSidenav()">
             <mat-icon matListItemIcon>person</mat-icon>
             <span>My Profile</span>
           </a>
-          <a mat-list-item routerLink="/credentials" (click)="layout.isHandset() ? toggleProfileSidenav() : null">
+          <a mat-list-item routerLink="/credentials" (click)="toggleProfileSidenav()">
             <mat-icon matListItemIcon>key</mat-icon>
             <span>Credentials</span>
           </a>
@@ -208,7 +208,7 @@
             <mat-icon matListItemIcon>person_add</mat-icon>
             <span>Add account</span>
           </a>
-          <a mat-list-item routerLink="/accounts" (click)="layout.isHandset() ? toggleProfileSidenav() : null">
+          <a mat-list-item routerLink="/accounts" (click)="toggleProfileSidenav()">
             <mat-icon matListItemIcon>manage_accounts</mat-icon>
             <span>Manage accounts</span>
           </a>
