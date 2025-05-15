@@ -88,7 +88,7 @@ nav {
   text-decoration: none;
   cursor: pointer;
   transition: all 0.2s ease;
-  
+
   &:hover {
     background-color: var(--mat-sys-tertiary);
     color: black;
@@ -144,6 +144,8 @@ mat-nav-list .mat-icon {
   position: fixed;
   bottom: 0;
   left: 0;
+  right: 0;
+
   width: 100%;
   // background-color: white;
   // border-top: 1px solid rgba(0, 0, 0, 0.12);
@@ -151,6 +153,16 @@ mat-nav-list .mat-icon {
   justify-content: space-around;
   z-index: 1000;
   height: 56px;
+
+  background-color: var(--mat-sys-background);
+  justify-content: space-around;
+  align-items: center;
+  box-shadow: var(--mat-sys-level3);
+  // border-top: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.mobile-nav a {
+  color: var(--mdc-list-list-item-label-text-color);
 }
 
 .dark-theme .mobile-nav {
@@ -195,22 +207,6 @@ mat-nav-list .mat-icon {
   /* Add small padding to prevent text from touching edges */
 }
 
-/* Mobile navigation styles */
-.mobile-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background-color: var(--mat-sys-background);
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  height: 56px;
-  z-index: 10;
-  box-shadow: var(--mat-sys-level3);
-  // border-top: 1px solid rgba(0, 0, 0, 0.12);
-}
-
 .dark-theme .mobile-nav {
   // border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
@@ -244,7 +240,8 @@ mat-nav-list .mat-icon {
 /* The FAB button */
 .create-fab {
   position: absolute;
-  bottom: 24px; /* Positioning the FAB button to be raised above the navigation */
+  bottom: 24px;
+  /* Positioning the FAB button to be raised above the navigation */
   z-index: 11;
   box-shadow: var(--mat-sys-level4);
 }
@@ -456,6 +453,7 @@ mat-nav-list .mat-icon {
     transform: translate(-50%, 100%);
     opacity: 0;
   }
+
   to {
     transform: translate(-50%, 0);
     opacity: 1;
@@ -472,9 +470,11 @@ mat-nav-list .mat-icon {
   0% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.5;
   }
+
   100% {
     opacity: 1;
   }
