@@ -122,12 +122,13 @@
         save, reject it.</p>
     </div>
   </div>
-
   <div mat-dialog-actions align="end">
-    <button mat-button (click)="currentView.set('main')">Back</button>
+    <button mat-button (click)="currentView.set('main')" aria-label="Back to login options">
+      <mat-icon>arrow_back</mat-icon> Back
+    </button>
     <button mat-raised-button color="primary" (click)="loginWithNsec()"
       [disabled]="!nsecKey">
-      Login
+      <mat-icon>login</mat-icon> Login
     </button>
   </div>
   }
@@ -160,9 +161,10 @@
       }
     </mat-nav-list>
   </div>
-
   <div mat-dialog-actions align="end">
-    <button mat-button (click)="currentView.set('main')">Back</button>
+    <button mat-button (click)="currentView.set('main')" aria-label="Back to login options">
+      <mat-icon>arrow_back</mat-icon> Back
+    </button>
   </div>
   }
 
@@ -195,16 +197,18 @@
       <p>Use the Nostria Signer app to approve signing requests without exposing your private key to this browser.</p>
     </div>
   </div>
-
   <div mat-dialog-actions align="end">
-    <button mat-button (click)="currentView.set('main')" [disabled]="nostrConnectLoading()">Back</button>
+    <button mat-button (click)="currentView.set('main')" [disabled]="nostrConnectLoading()" aria-label="Back to login options">
+      <mat-icon>arrow_back</mat-icon> Back
+    </button>
     <button mat-raised-button color="primary" (click)="loginWithNostrConnect()"
-      [disabled]="!nostrConnectUrl() || nostrConnectUrl().length < 10 || nostrConnectLoading()">
-      @if (nostrConnectLoading()) {
+      [disabled]="!nostrConnectUrl() || nostrConnectUrl().length < 10 || nostrConnectLoading()">      @if (nostrConnectLoading()) {
       <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
       Connecting...
       } @else {
-      Connect
+      <ng-container>
+        <mat-icon>phone_iphone</mat-icon> Connect
+      </ng-container>
       }
     </button>
   </div>
@@ -225,12 +229,13 @@
       <p>You will be able to view posts, profiles, and content but will not be able to interact or post.</p>
     </div>
   </div>
-
   <div mat-dialog-actions align="end">
-    <button mat-button (click)="currentView.set('main')">Back</button>
+    <button mat-button (click)="currentView.set('main')" aria-label="Back to login options">
+      <mat-icon>arrow_back</mat-icon> Back
+    </button>
     <button mat-raised-button color="primary" (click)="usePreviewAccount(previewPubkey)"
       [disabled]="!previewPubkey">
-      Preview Only
+      <mat-icon>visibility</mat-icon> Preview Only
     </button>
   </div>
   }
