@@ -82,6 +82,18 @@
   }
 }
 
+.close-button {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 10;
+  color: rgba(0, 0, 0, 0.6);
+  
+  &:hover {
+    color: var(--mat-primary-color);
+  }
+}
+
 .new-user {
   &::after {
     background: linear-gradient(90deg, #4caf50, #8bc34a);
