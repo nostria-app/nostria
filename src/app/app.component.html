@@ -5,7 +5,7 @@
   <mat-toolbar color="primary" class="app-toolbar">
     <button mat-icon-button (click)="toggleSidenav()" aria-label="Toggle sidenav">
       <mat-icon>menu</mat-icon>
-    </button>    <img src="icons/icon.svg" class="app-icon hide-tiny" alt="Nostria icon">
+    </button> <img src="icons/icon.svg" class="app-icon hide-tiny" alt="Nostria icon">
     <span class="app-title title-font hide-small">
       {{title}}
       <a [routerLink]="['/beta']" class="beta-indicator">BETA</a>
@@ -146,14 +146,15 @@
 
     <!-- Profile sidenav (right side) -->
     <mat-sidenav #profileSidenav position="end" class="profile-sidenav" mode="over">
-      <mat-toolbar>
+      <!-- <mat-toolbar>
         <span>Profile</span>
         <span class="toolbar-spacer"></span>
-        <button mat-icon-button (click)="toggleProfileSidenav()">
+        
+      </mat-toolbar> -->
+      <div class="profile-content">
+        <button class="close-button" mat-icon-button (click)="toggleProfileSidenav()">
           <mat-icon>close</mat-icon>
         </button>
-      </mat-toolbar>
-      <div class="profile-content">
         <div class="profile-header">
           @if (accountMetadata(); as metadata) {
           @if (metadata?.content?.picture) {
@@ -172,13 +173,13 @@
           <h2>{{ metadata.pubkey | npub }}</h2>
           }
 
-          @if (metadata.content.nip05) {
+          <!-- @if (metadata.content.nip05) {
           <span class="nip05-identifier">{{ metadata.content.nip05.startsWith('_@') ?
             metadata.content.nip05.substring(1) : metadata.content.nip05 }}</span>
-          }
-          @if (metadata.content.about) {
+          } -->
+          <!-- @if (metadata.content.about) {
           <p class="user-about">{{ metadata.content.about }}</p>
-          }
+          } -->
           } @else {
           <div class="profile-avatar">
             <mat-icon class="avatar-icon">account_circle</mat-icon>
@@ -202,8 +203,16 @@
             <span>Settings</span>
           </a> -->
           <a mat-list-item (click)="logout(); toggleProfileSidenav()">
+            <mat-icon matListItemIcon>person_add</mat-icon>
+            <span>Add account</span>
+          </a>
+          <a mat-list-item routerLink="/accounts" (click)="layout.isHandset() ? toggleProfileSidenav() : null">
+            <mat-icon matListItemIcon>manage_accounts</mat-icon>
+            <span>Manage accounts</span>
+          </a>
+          <a mat-list-item (click)="logout(); toggleProfileSidenav()">
             <mat-icon matListItemIcon>logout</mat-icon>
-            <span>Logout</span>
+            <span>Sign out</span>
           </a>
         </mat-nav-list>
         <mat-divider></mat-divider>

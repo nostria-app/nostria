@@ -23,6 +23,7 @@ import { WelcomeComponent } from './pages/welcome/welcomecomponent';
 import { BadgesComponent } from './pages/badges/badges.component';
 import { ProfileRelaysComponent } from './pages/profile/profile-relays/profile-relays.component';
 import { BetaComponent } from './pages/beta/beta.component';
+import { AccountsComponent } from './pages/accounts/accounts.component';
 
 export const routes: Routes = [
   { path: '', component: HomeComponent, pathMatch: 'full' },
@@ -43,6 +44,7 @@ export const routes: Routes = [
   { path: 'settings', component: SettingsComponent },
   { path: 'notifications', component: NotificationsComponent },
   { path: 'credentials', component: CredentialsComponent },
+  { path: 'accounts', component: AccountsComponent },
   { path: 'about', component: AboutComponent },
   { path: 'bookmarks', loadComponent: () => import('./pages/bookmarks/bookmarks.component').then(m => m.BookmarksComponent), title: 'Bookmarks' },
   { path: 'articles', component: ArticlesComponent, title: 'Articles' },
