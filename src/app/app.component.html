@@ -125,6 +125,7 @@
       [mode]="layout.isHandset() ? 'over' : 'side'" [fixedInViewport]="false">
       <mat-nav-list>
         @for (item of navItems; track $index) {
+        @if (this.app.enabledFeature(item.level)) {
         <a mat-list-item [routerLink]="item.action ? undefined : [item.path]" routerLinkActive="active-link"
           (click)="item.action ? item.action() : (layout.isHandset() ? toggleSidenav() : null)">
           <mat-icon matListItemIcon>{{item.icon}}</mat-icon>
@@ -132,6 +133,7 @@
           <span class="nav-label">{{item.label}}</span>
           }
         </a>
+        }
         }
 
         <a mat-list-item (click)="toggleMenuSize()">
