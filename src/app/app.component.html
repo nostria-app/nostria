@@ -273,6 +273,15 @@
     </mat-sidenav-content>
   </mat-sidenav-container>
   }
+
+  <!-- Desktop FAB button (only visible when not in handset mode) -->
+  @if (!layout.isHandset()) {
+  <button mat-mini-fab color="primary" class="desktop-create-fab" aria-label="Create new content"
+    (click)="openCreateOptions()">
+    <mat-icon>add</mat-icon>
+  </button>
+  }
+
   <!-- Mobile navigation footer - now outside of sidenav container -->
   @if (layout.isHandset()) {
   <div class="mobile-nav">
@@ -284,14 +293,15 @@
       <div class="mobile-nav-label">{{item.label}}</div>
     </a>
     }
-    
+
     <!-- FAB button in the middle with circular cut-out -->
     <div class="fab-container">
-      <button mat-mini-fab color="primary" class="create-fab" aria-label="Create new content" (click)="openCreateOptions()">
+      <button mat-mini-fab color="primary" class="create-fab" aria-label="Create new content"
+        (click)="openCreateOptions()">
         <mat-icon>add</mat-icon>
       </button>
     </div>
-    
+
     <!-- Last two navigation items -->
     @for (item of navItemsMobile.slice(2); track $index) {
     <a mat-button class="mobile-nav-button" [routerLink]="item.action ? undefined : [item.path]"
