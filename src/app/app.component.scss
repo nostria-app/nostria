@@ -145,8 +145,8 @@ mat-nav-list .mat-icon {
   bottom: 0;
   left: 0;
   width: 100%;
-  background-color: white;
-  border-top: 1px solid rgba(0, 0, 0, 0.12);
+  // background-color: white;
+  // border-top: 1px solid rgba(0, 0, 0, 0.12);
   display: flex;
   justify-content: space-around;
   z-index: 1000;
@@ -155,7 +155,7 @@ mat-nav-list .mat-icon {
 
 .dark-theme .mobile-nav {
   background-color: #424242;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  // border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .mobile-nav-button {
@@ -201,18 +201,18 @@ mat-nav-list .mat-icon {
   bottom: 0;
   left: 0;
   right: 0;
-  background-color: var(--mat-sys-card-container-color);
+  background-color: var(--mat-sys-background);
   display: flex;
   justify-content: space-around;
   align-items: center;
   height: 56px;
   z-index: 10;
   box-shadow: var(--mat-sys-level3);
-  border-top: 1px solid rgba(0, 0, 0, 0.12);
+  // border-top: 1px solid rgba(0, 0, 0, 0.12);
 }
 
 .dark-theme .mobile-nav {
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  // border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .mobile-nav-button {
@@ -482,4 +482,12 @@ mat-nav-list .mat-icon {
 
 .pulsing-icon {
   animation: pulse 1.5s infinite ease-in-out;
+}
+
+.desktop-create-fab {
+  position: fixed;
+  bottom: 0.4rem;
+  left: 0.4rem;
+  z-index: 11;
+  box-shadow: var(--mat-sys-level4);
 }
