@@ -1,4 +1,4 @@
-import { ApplicationConfig, isDevMode, provideExperimentalZonelessChangeDetection } from '@angular/core';
+import { ApplicationConfig, inject, isDevMode, provideAppInitializer, provideExperimentalZonelessChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideServiceWorker } from '@angular/service-worker';
@@ -11,6 +11,7 @@ import { provideClientHydration, withEventReplay } from '@angular/platform-brows
 import { provideHttpClient, withFetch } from '@angular/common/http';
 import { UserRelayFactoryService } from './services/user-relay-factory.service';
 import { UserRelayService } from './services/user-relay.service';
+import { MatIconRegistry } from '@angular/material/icon';
 
 // Create a logger for bootstrapping phase
 const bootstrapLogger = {
@@ -22,6 +23,16 @@ bootstrapLogger.log('Configuring application');
 
 export const appConfig: ApplicationConfig = {
   providers: [
+     provideAppInitializer(() => {
+      const initializerFn = ((iconRegistry: MatIconRegistry) => () => {
+        const defaultFontSetClasses = iconRegistry.getDefaultFontSetClass();
+        const outlinedFontSetClasses = defaultFontSetClasses
+          .filter((fontSetClass) => fontSetClass !== 'material-icons')
+          .concat(['material-symbols-outlined']);
+        iconRegistry.setDefaultFontSetClass(...outlinedFontSetClasses);
+      })(inject(MatIconRegistry));
+      return initializerFn();
+    }),
     {
       provide: LoggerService,
       useFactory: () => {
