@@ -63,8 +63,8 @@
   .column-navigation {
     display: none;
     padding: 8px;
-    background-color: var(--mat-app-surface-color);
-    box-shadow: var(--mat-sys-level1);
+    // background-color: var(--mat-app-surface-color);
+    // box-shadow: var(--mat-sys-level1);
     z-index: 5;
 
     .column-selector {
@@ -93,7 +93,7 @@
         transition: background-color 0.2s ease, color 0.2s ease;
 
         &.active {
-          background-color: var(--mat-primary-color);
+          // background-color: var(--mat-primary-color);
 
           mat-icon {
             
@@ -154,10 +154,23 @@
       .column-unit {
         display: flex;
         flex-direction: column;
-        min-width: 700px;
-        max-width: 700px;
         width: 700px;
-        flex: 0 0 700px; // Fixed width, no growing or shrinking
+        max-width: 700px;
+        min-width: 0; // Allow content to shrink below min-width
+        flex: 1 0 auto; // Allow growing (1), prevent shrinking (0), use auto basis
+        
+        // Set a preferred width but allow shrinking when necessary
+        @media (max-width: 1500px) {
+          width: min(700px, 100%);
+          flex: 1 1 min(700px, 100%); // Allow both growing and shrinking
+        }
+        
+        // When really constrained, adapt further
+        @media (max-width: 1100px) and (min-width: 1024px) {
+          width: min(600px, 100%);
+          flex: 1 1 min(600px, 50%);
+        }
+        
         background-color: var(--mat-app-surface-color);
         border-radius: 8px;
         box-shadow: var(--mat-sys-level1);
@@ -316,14 +329,14 @@
       justify-content: center; // Ensure center alignment in single column mode
 
       .column-unit {
-        display: none;
-        min-width: 100%;
-        max-width: none;
+        display: none !important; // Force hide all columns in mobile view
         width: 100%;
-        flex: 1 1 auto;
-
+        max-width: none;
+        flex: 1 1 100%; // Allow growing and shrinking
+        
+        // Only show the active column
         &.visible {
-          display: flex;
+          display: flex !important; // Force display for visible column
         }
       }
     }
@@ -332,8 +345,9 @@
   &.two-columns-layout {
     .columns-wrapper {
       .column-unit {
-        max-width: 700px;
-        // Let flex handle the width, up to max-width
+        width: min(700px, 50%);
+        max-width: min(700px, 100%);
+        flex: 1 1 min(700px, 50%); // Allow growing and shrinking to 50% of container
       }
     }
   }
@@ -341,8 +355,9 @@
   &.three-columns-layout {
     .columns-wrapper {
       .column-unit {
-        max-width: 700px;
-        // Let flex handle the width, up to max-width
+        width: min(700px, 33.333%);
+        max-width: min(700px, 100%);
+        flex: 1 1 min(700px, 33.333%); // Allow growing and shrinking to 33.333% of container
       }
     }
   }
