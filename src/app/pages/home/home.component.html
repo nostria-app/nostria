@@ -29,19 +29,7 @@
     </div>
   </header>
 
-  <!-- Filters Section -->
-  @if (showAdvancedFilters()) {
-  <div class="filters-section">
-    <h3>Filter by tags</h3>
-    <div class="tag-chips">
-      @for (tag of availableTags(); track tag) {
-      <mat-chip-option [selected]="selectedTags().includes(tag)" (click)="toggleTagFilter(tag)" color="primary">
-        #{{ tag }}
-      </mat-chip-option>
-      }
-    </div>
-  </div>
-  }
+
 
   <!-- Columns Container with Connected Headers and Content -->
   <div class="columns-container">
@@ -100,6 +88,20 @@
             </div>
           </div>
         </div>
+
+          <!-- Filters Section -->
+  @if (showAdvancedFilters()) {
+  <div class="filters-section">
+    <h3>Filter by tags</h3>
+    <div class="tag-chips">
+      @for (tag of availableTags(); track tag) {
+      <mat-chip-option [selected]="selectedTags().includes(tag)" (click)="toggleTagFilter(tag)" color="primary">
+        #{{ tag }}
+      </mat-chip-option>
+      }
+    </div>
+  </div>
+  }
 
         <!-- Column Content with Individual Scrolling -->
         <div class="column-content">
