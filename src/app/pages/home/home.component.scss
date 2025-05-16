@@ -11,7 +11,6 @@
     display: flex;
     align-items: center;
     padding: 0 16px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.12);
     background-color: var(--mat-app-background-color);
     box-shadow: var(--mat-sys-level1);
     z-index: 10;
@@ -65,7 +64,6 @@
     display: none;
     padding: 8px;
     background-color: var(--mat-app-surface-color);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.12);
     box-shadow: var(--mat-sys-level1);
     z-index: 5;
 
@@ -80,7 +78,6 @@
       }
 
       &::-webkit-scrollbar-thumb {
-        background-color: rgba(0, 0, 0, 0.2);
       }
 
       .column-selector-button {
@@ -97,15 +94,14 @@
 
         &.active {
           background-color: var(--mat-primary-color);
-          color: white;
 
           mat-icon {
-            color: white;
+            
           }
         }
 
         &:hover:not(.active) {
-          background-color: rgba(0, 0, 0, 0.04);
+          
         }
 
         &.add-column {
@@ -136,14 +132,22 @@
       min-width: 100%;
       scrollbar-width: thin;
       scroll-behavior: smooth;
+      justify-content: center; // Center columns horizontally
 
       &::-webkit-scrollbar {
         height: 6px;
       }
 
       &::-webkit-scrollbar-thumb {
-        background-color: rgba(0, 0, 0, 0.2);
         border-radius: 3px;
+      }
+
+      // For when there aren't enough columns to fill the width
+      &::after {
+        content: '';
+        flex: 0 0 1px; // Small flex item to help with centering
+        padding: 0;
+        margin: 0;
       }
 
       // Column unit - contains both header and content
@@ -241,7 +245,6 @@
 
                     .tag {
                       padding: 4px 8px;
-                      background-color: rgba(0, 0, 0, 0.05);
                       border-radius: 16px;
                       font-size: 0.875rem;
                     }
@@ -259,7 +262,6 @@
               gap: 16px;
 
               p {
-                color: rgba(0, 0, 0, 0.6);
                 margin: 0;
               }
             }
@@ -311,6 +313,8 @@
     }
 
     .columns-wrapper {
+      justify-content: center; // Ensure center alignment in single column mode
+
       .column-unit {
         display: none;
         min-width: 100%;
@@ -465,7 +469,6 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        background-color: rgba(0, 0, 0, 0.3);
         opacity: 0.7;
         transition: opacity 0.3s ease;
 
@@ -473,7 +476,6 @@
           font-size: 48px;
           height: 48px;
           width: 48px;
-          color: white;
         }
       }
 
@@ -482,7 +484,6 @@
         align-items: center;
         justify-content: space-between;
         padding: 8px;
-        background: rgba(255, 255, 255, 0.9);
 
         .media-author {
           display: flex;
@@ -585,12 +586,10 @@
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        background-color: rgba(0, 0, 0, 0.5);
         border-radius: 50%;
         padding: 8px;
 
         mat-icon {
-          color: white;
           font-size: 32px;
           height: 32px;
           width: 32px;
@@ -609,7 +608,6 @@
       align-items: center;
       gap: 12px;
       padding: 24px 0;
-      color: rgba(0, 0, 0, 0.54);
     }
 
     .load-more-button {
@@ -624,7 +622,6 @@
     padding: 8px 0;
     gap: 16px;
     background-color: var(--mat-app-surface-color);
-    border-top: 1px solid rgba(0, 0, 0, 0.12);
     box-shadow: var(--mat-sys-level1);
     position: sticky;
     bottom: 0;
@@ -654,11 +651,9 @@
 
         &.active {
           background-color: var(--mat-primary-color);
-          color: white;
         }
 
         &:hover:not(.active) {
-          background-color: rgba(0, 0, 0, 0.04);
         }
       }
     }
@@ -708,7 +703,6 @@
 
         &:hover {
           opacity: 0.1; // Slightly visible on hover to show drag area
-          background-color: rgba(0, 0, 0, 0.05);
         }
 
         .tab-content-drag {
@@ -721,7 +715,6 @@
 
         &.cdk-drag-placeholder {
           opacity: 0.3;
-          background-color: rgba(0, 0, 0, 0.1);
           border-radius: 4px;
         }
       }
@@ -784,7 +777,6 @@
     width: 100%;
 
     .tab-header {
-      border-bottom: 1px solid rgba(0, 0, 0, 0.12);
       background-color: var(--mat-app-surface-color);
       box-shadow: var(--mat-sys-level1);
       z-index: 10;
@@ -802,7 +794,6 @@
       }
 
       &::-webkit-scrollbar-thumb {
-        background-color: rgba(0, 0, 0, 0.2);
       }
 
       // Prevent reflow during drag
@@ -855,7 +846,6 @@
       }
 
       &:hover:not(.active):not(.add-tab) {
-        background-color: rgba(0, 0, 0, 0.04);
       }
 
       &.add-tab {
@@ -945,8 +935,6 @@
 
     .cdk-drag-placeholder {
       opacity: 0.3;
-      background-color: rgba(0, 0, 0, 0.05);
-      border: 1px dashed rgba(0, 0, 0, 0.2);
       box-sizing: border-box;
     }
 
