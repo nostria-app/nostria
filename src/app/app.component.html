@@ -5,11 +5,14 @@
   <mat-toolbar color="primary" class="app-toolbar">
     <button mat-icon-button (click)="toggleSidenav()" aria-label="Toggle sidenav">
       <mat-icon>menu</mat-icon>
-    </button> <img src="icons/icon.svg" class="app-icon hide-tiny" alt="Nostria icon">
+    </button>
+    @if (!layout.search()) {
+    <img src="icons/icon.svg" class="app-icon hide-tiny" alt="Nostria icon">
     <span class="app-title title-font hide-small">
       {{title}}
       <a [routerLink]="['/beta']" class="beta-indicator">BETA</a>
     </span>
+    }
 
     <span class="toolbar-spacer">
       @if (layout.search()) {
@@ -191,8 +194,7 @@
         </div>
 
         <mat-nav-list>
-          <a mat-list-item [routerLink]="['/p', nostrService.account()?.pubkey]"
-            (click)="toggleProfileSidenav()">
+          <a mat-list-item [routerLink]="['/p', nostrService.account()?.pubkey]" (click)="toggleProfileSidenav()">
             <mat-icon matListItemIcon>person</mat-icon>
             <span>My Profile</span>
           </a>
