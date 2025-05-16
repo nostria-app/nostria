@@ -1,0 +1,12 @@
+<div class="notifications-page">
+    <div class="page-header">
+        <h1>Notifications settings</h1>
+    </div>
+
+    @if(!notificationsSupported()) {
+    Push notifications are supported on your device.
+    } @else {
+    <button mat-button (click)="enableNotifications()">Enable notifications</button>
+    }
+
+</div>

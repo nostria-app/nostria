@@ -83,10 +83,16 @@
       </button>
       }
       <mat-divider></mat-divider>
-      <button mat-menu-item (click)="app.wipe()">
+
+        <button mat-menu-item routerLink="/notifications/settings">
+          <mat-icon>settings</mat-icon>
+          <span>Notification settings</span>
+        </button>
+
+      <!-- <button mat-menu-item (click)="app.wipe()">
         <mat-icon>delete</mat-icon>
         <span>Reset All Data (Wipe)</span>
-      </button>
+      </button> -->
       <!-- <button mat-menu-item routerLink="/notifications">
         <mat-icon>settings</mat-icon>
         <span>Notification Settings</span>
