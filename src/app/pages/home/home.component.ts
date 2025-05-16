@@ -32,9 +32,9 @@ interface NavLink {
 
 const DEFAULT_COLUMNS: NavLink[] = [
   { id: 'notes', path: 'notes', label: 'Notes', icon: 'chat' },
-  { id: 'replies', path: 'replies', label: 'Replies', icon: 'reply_all' },
-  { id: 'reads', path: 'reads', label: 'Reads', icon: 'bookmark' },
-  { id: 'media', path: 'media', label: 'Media', icon: 'image' }
+  // { id: 'replies', path: 'replies', label: 'Replies', icon: 'reply_all' },
+  // { id: 'reads', path: 'reads', label: 'Reads', icon: 'bookmark' },
+  // { id: 'media', path: 'media', label: 'Media', icon: 'image' }
 ];
 
 @Component({
