@@ -75,7 +75,7 @@
           class="column-unit" 
           cdkDrag
           [cdkDragData]="i"
-          [class.visible]="i === visibleColumnIndex() || !isMobileView()"
+          [class.visible]="!isMobileView() || (isMobileView() && i === visibleColumnIndex())"
           [attr.aria-hidden]="isMobileView() && i !== visibleColumnIndex()"
         >
           <!-- Column Header (Connected to its content) -->

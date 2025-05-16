@@ -88,7 +88,9 @@ export class HomeComponent {
   });
 
   isMobileView = computed(() => {
-    return this.screenWidth() < 1024;
+    const isMobile = this.screenWidth() < 1024;
+    console.log('isMobileView:', isMobile, 'screenWidth:', this.screenWidth());
+    return isMobile;
   });
 
   // Content Signals
@@ -316,6 +318,7 @@ export class HomeComponent {
   }
 
   selectColumn(index: number): void {
+    console.log(`Selecting column ${index}`);
     this.visibleColumnIndex.set(index);
     this.loadColumnContentIfNeeded(index);
   }
