@@ -323,7 +323,7 @@
   }
 
   <!-- Desktop FAB button (only visible when not in handset mode) -->
-  @if (!layout.isHandset()) {
+  @if (!layout.isHandset() && app.authenticated()) {
   <button mat-mini-fab color="primary" class="desktop-create-fab" aria-label="Create new content"
     (click)="openCreateOptions()">
     <mat-icon>add</mat-icon>
