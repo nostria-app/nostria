@@ -59,7 +59,6 @@ export class WebPushService {
 
   async devices(): Promise<Device[]> {
     try {
-
       try {
         const url = `${this.server}/api/subscription/devices/${this.nostr.pubkey()}`;
         const headers = await this.getAuthHeaders(url, 'GET');
@@ -79,11 +78,11 @@ export class WebPushService {
         const jsonResult = await response.json();
         return jsonResult.devices || [];
       } catch (error) {
-        console.error('Error receiving devices:', error);
+        this.logger.error('Error fetching devices:', error);
         return [];
       }
     } catch (error) {
-      console.error('Error receiving devices:', error);
+      this.logger.error('Error in devices():', error);
       return [];
     }
   }
@@ -109,25 +108,19 @@ export class WebPushService {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to register subscription: ${response.status}`);
+        throw new Error(`Failed to send notification: ${response.status}`);
       }
 
-      const responseJson = await response.json();
-      console.log('Result:', responseJson);
-      console.log('Push notification subscription successfully registered with server.');
-
-
     } catch (error) {
-      console.error('Error sending self notification:', error);
+      this.logger.error('Failed to send self notification:', error);
     }
   }
 
   async subscribe() {
-    debugger;
     const result = await fetch(`${this.server}/api/key`);
 
     if (!result.ok) {
-      console.error('Failed to fetch server status:', result.statusText);
+      this.logger.error('Failed to fetch server key:', result.statusText);
       return;
     }
 
@@ -135,14 +128,12 @@ export class WebPushService {
     const serverPublicKey = apiResult.key;
 
     if (!serverPublicKey) {
-      console.error('Server public key is not available');
+      this.logger.error('Server public key is not available');
       return;
     }
 
     try {
       const pushSubscription = await this.push.requestSubscription({ serverPublicKey });
-
-      // Convert subscription to JSON for sending to server
       const subscription = JSON.stringify(pushSubscription);
 
       try {
@@ -162,9 +153,8 @@ export class WebPushService {
           throw new Error(`Failed to register subscription: ${response.status}`);
         }
 
-        const responseJson = await response.json();
-        console.log('Result:', responseJson);
-        console.log('Push notification subscription successfully registered with server.');
+        // Only log success once
+        this.logger.info('Push subscription registered successfully');
 
         const subscriptionPayload = JSON.parse(subscription);
 
@@ -175,11 +165,10 @@ export class WebPushService {
           createdAt: new Date().toISOString()
         } as Device;
       } catch (error) {
-        console.error('Error registering push subscription:', error);
+        this.logger.error('Failed to register push subscription with server:', error);
       }
-
     } catch (error) {
-      console.error('Error during push subscription:', error);
+      this.logger.error('Failed to request push subscription:', error);
     }
 
     return null;
@@ -190,44 +179,36 @@ export class WebPushService {
     try {
       this.push.subscription.subscribe(s => {
         if (s && s.endpoint === endpoint) {
-          console.log('Unsubscribing from current push subscription:', s.endpoint);
+          // Removed excessive logging
           return this.push.unsubscribe();
         }
-
         return null;
       });
     } catch (error) {
-      debugger;
-      console.error('Error removing current push subscription. Will continue to delete on server:', error);
+      this.logger.error('Failed to unsubscribe from push:', error);
     }
 
     try {
-      try {
-        const url = `${this.server}/api/subscription/webpush/${this.nostr.pubkey()}/${deviceId}`;
-        const headers = await this.getAuthHeaders(url, 'DELETE');
+      const url = `${this.server}/api/subscription/webpush/${this.nostr.pubkey()}/${deviceId}`;
+      const headers = await this.getAuthHeaders(url, 'DELETE');
 
-        const response = await fetch(`${url}`, {
-          method: 'DELETE',
-          headers: {
-            ...headers,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error(`Failed to register subscription: ${response.status}`);
+      const response = await fetch(`${url}`, {
+        method: 'DELETE',
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json'
         }
+      });
 
-        console.log('Result:', await response.json());
-        console.log('Push notification subscription successfully registered with server.');
-        // Store subscription information locally if needed
-      } catch (error) {
-        console.error('Error registering push subscription:', error);
+      if (!response.ok) {
+        throw new Error(`Failed to unregister device: ${response.status}`);
       }
 
+      // Single log for successful operation
+      this.logger.info('Device unregistered successfully');
+      
     } catch (error) {
-      console.error('Error during push subscription:', error);
-      return;
+      this.logger.error('Failed to unregister device:', error);
     }
   }
 }

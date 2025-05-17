@@ -12,6 +12,7 @@ import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog } from '@angular/material/dialog';
 import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
+import { LoggerService } from '../../../services/logger.service';
 
 @Component({
   selector: 'app-settings',
@@ -26,7 +27,7 @@ export class NotificationSettingsComponent {
   push = inject(SwPush);
   snackBar = inject(MatSnackBar);
   dialog = inject(MatDialog);
-
+  logger = inject(LoggerService);
   devices = signal<Device[]>([]);
   currentDevice = signal<Device | null>(null);
 
@@ -34,23 +35,22 @@ export class NotificationSettingsComponent {
   pushSupported = computed(() => this.push.isEnabled);
 
   constructor() {
-    console.log('Enabled: ', this.push.isEnabled);
+    // Only log push status once
+    this.logger.debug('Push enabled status:', this.push.isEnabled);
 
     this.push.messages.subscribe((message) => {
-      console.log('Received push message:', message);
+      this.logger.info('Push message received:', message);
     });
 
     this.push.notificationClicks.subscribe((event) => {
-      console.log('Notification click:', event);
+      this.logger.info('Notification clicked:', event);
     });
 
     effect(async () => {
       if (this.app.initialized() && this.app.authenticated()) {
 
         this.push.subscription.subscribe((sub) => {
-
           if (!sub) {
-            console.warn('No push subscription found');
             this.currentDevice.set(null);
             return;
           }
@@ -63,8 +63,8 @@ export class NotificationSettingsComponent {
             lastUpdated: new Date().toISOString(),
             createdAt: new Date().toISOString()
           } as Device);
-
-          console.log('Push device:', this.currentDevice);
+          
+          // Removed excessive logging
         });
 
         const devices = await this.webPush.devices();
@@ -83,11 +83,13 @@ export class NotificationSettingsComponent {
   }
 
   async enableNotifications() {
-    console.log('Requesting enableNotifications...');
+    // Single log for important user action
+    this.logger.info('User requested to enable notifications');
+    
     try {
       await this.askPermission();
     } catch (e) {
-      console.error('Notification permission denied:', e);
+      this.logger.error('Notification permission denied:', e);
       return;
     }
 
@@ -99,7 +101,7 @@ export class NotificationSettingsComponent {
       });
 
     } catch (e) {
-      console.error('Failed to create subscription:', e);
+      this.logger.error('Failed to create subscription:', e);
       this.snackBar.open('Failed to enable notifications', 'Close', {
         duration: 3000,
       });
@@ -108,9 +110,10 @@ export class NotificationSettingsComponent {
   }
 
   async createLocalNotification() {
-    console.log('Requesting createLocalNotification...');
+    // Only log when notification is actually created
     if ("Notification" in window && Notification.permission === "granted") {
-
+      this.logger.debug('Creating local test notification');
+      
       new Notification("Local test notification",
         {
           body: "This is a local notification test!",
@@ -119,8 +122,8 @@ export class NotificationSettingsComponent {
     }
   }
 
-    async createRemoteNotification() {
-    console.log('Requesting createRemoteNotification...');
+  async createRemoteNotification() {
+    this.logger.debug('Creating remote test notification');
     this.webPush.self('Remote test notification', "This is a remote notification test!");
   }
 
@@ -155,13 +158,11 @@ export class NotificationSettingsComponent {
 
   async createSubscription() {
     if (!this.pushSupported()) {
-      console.error('Push notifications not supported in this browser');
+      this.logger.error('Push notifications not supported in this browser');
       return;
     }
 
     const sub = await this.webPush.subscribe();
-
-    debugger;
 
     if (sub) {
       this.devices.update(devices => [...devices, sub]);
@@ -169,7 +170,7 @@ export class NotificationSettingsComponent {
   }
 
   async askPermission() {
-    console.log('Ask permissions...');
+    // Removed redundant logging
     return new Promise(function (resolve, reject) {
       const permissionResult = Notification.requestPermission(function (result) {
         resolve(result);
@@ -186,6 +187,9 @@ export class NotificationSettingsComponent {
   }
 
   async deleteDevice(deviceId: string, endpoint: string) {
+    // Only log important user action
+    this.logger.info('User requested to delete a device');
+    
     // Show confirmation dialog before deleting
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       data: {
@@ -220,7 +224,7 @@ export class NotificationSettingsComponent {
       });
 
     } catch (error) {
-      console.error('Error deleting device:', error);
+      this.logger.error('Failed to delete device:', error);
       this.snackBar.open('Failed to unregister device', 'Close', {
         duration: 3000,
       });
