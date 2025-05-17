@@ -192,6 +192,13 @@
         <button class="close-button" mat-icon-button (click)="toggleProfileSidenav()">
           <mat-icon>close</mat-icon>
         </button>
+        <button class="theme-button" mat-icon-button (click)="themeService.toggleDarkMode()">
+          @if (themeService.darkMode()) {
+          <mat-icon>dark_mode</mat-icon>
+          } @else {
+          <mat-icon>light_mode</mat-icon>
+          }
+        </button>
         <div class="profile-header">
           @if (accountMetadata(); as metadata) {
           @if (metadata?.content?.picture) {
