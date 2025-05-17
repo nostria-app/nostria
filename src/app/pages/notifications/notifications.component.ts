@@ -12,6 +12,7 @@ import { NostrService } from '../../services/nostr.service';
 import { kinds } from 'nostr-tools';
 import { NotificationService } from '../../services/notification.service';
 import { NotificationType, Notification, RelayPublishingNotification } from '../../services/storage.service';
+import { RouterModule } from '@angular/router';
 
 @Component({
   selector: 'app-notifications',
@@ -24,7 +25,8 @@ import { NotificationType, Notification, RelayPublishingNotification } from '../
     MatDividerModule,
     MatTabsModule,
     RelayPublishStatusComponent,
-    MatMenuModule
+    MatMenuModule,
+    RouterModule
   ],
   templateUrl: './notifications.component.html',
   styleUrls: ['./notifications.component.scss']
