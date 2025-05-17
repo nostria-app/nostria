@@ -1,31 +1,116 @@
 @if (badge()) {
-<mat-card class="badge-card">
-    <mat-card-header>
-        @if (thumb()) {
-        <img [src]="thumb()" alt="Badge thumbnail" mat-card-avatar>
-        }
-        
-        @if (error()) {
-            <mat-card-title>{{ error() }}</mat-card-title>
-        } @else {
-            <mat-card-title>{{ name() }}</mat-card-title>
-        }
-
-        <mat-card-subtitle>
-            @for (type of tags(); track type) {
-            <span class="badge-type">{{ type }}</span>
+<mat-card [class]="'badge-card ' + layout()">
+    @if (layout() === 'vertical') {
+        <mat-card-header>
+            @if (thumb()) {
+            <img [src]="thumb()" alt="Badge thumbnail" mat-card-avatar>
             }
-        </mat-card-subtitle>
-    </mat-card-header>
+            
+            @if (error()) {
+                <mat-card-title>{{ error() }}</mat-card-title>
+            } @else {
+                <mat-card-title>{{ name() }}</mat-card-title>
+            }
 
-    @if (image()) {
-    <img [src]="image()" alt="Badge image" mat-card-image>
+            <mat-card-subtitle>
+                @for (type of tags(); track type) {
+                <span class="badge-type">{{ type }}</span>
+                }
+            </mat-card-subtitle>
+        </mat-card-header>
+
+        @if (image()) {
+        <img [src]="image()" alt="Badge image" mat-card-image>
+        }
+
+        <mat-card-content>
+            <p>{{ description() }}</p>
+            
+            @if (issuerName()) {
+            <div class="badge-metadata">
+                <mat-icon>person</mat-icon>
+                <span>Awarded by: {{ issuerName() }}</span>
+            </div>
+            }
+            
+            @if (awardDate()) {
+            <div class="badge-metadata">
+                <mat-icon>calendar_today</mat-icon>
+                <span>Awarded: {{ badge().created_at * 1000 | date:'medium' }}</span>
+            </div>
+            }
+        </mat-card-content>
+
+        @if (showActions()) {
+        <mat-card-actions align="end">
+            <button mat-button color="primary" (click)="onView($event)">
+                <mat-icon>visibility</mat-icon>
+                View
+            </button>
+            <button mat-raised-button color="accent" 
+                    [disabled]="isAccepted() || isUpdating()"
+                    (click)="onAccept($event)">
+                @if (isUpdating()) {
+                <mat-spinner diameter="20"></mat-spinner>
+                } @else {
+                <mat-icon>check_circle</mat-icon>
+                }
+                {{ isAccepted() ? 'Accepted' : 'Accept' }}
+            </button>
+        </mat-card-actions>
+        }
     }
-
-    <mat-card-content>
-        <p>{{ description() }}</p>
-    </mat-card-content>
-
-
+    
+    @if (layout() === 'horizontal') {
+        <mat-card-content class="badge-card-content">
+            <div class="badge-thumbnail">
+                @if (thumb()) {
+                <img [src]="thumb()" alt="Badge thumbnail">
+                } @else {
+                <div class="placeholder-thumbnail">
+                    <mat-icon>military_tech</mat-icon>
+                </div>
+                }
+            </div>
+            
+            <div class="badge-details">
+                <h3>{{ name() }}</h3>
+                <p>{{ description() }}</p>
+                
+                @if (issuerName()) {
+                <div class="badge-metadata">
+                    <mat-icon>person</mat-icon>
+                    <span>Awarded by: {{ issuerName() }}</span>
+                </div>
+                }
+                
+                @if (awardDate()) {
+                <div class="badge-metadata">
+                    <mat-icon>calendar_today</mat-icon>
+                    <span>Awarded: {{ badge().created_at * 1000 | date:'medium' }}</span>
+                </div>
+                }
+            </div>
+            
+            @if (showActions()) {
+            <div class="badge-actions">
+                <button mat-button color="primary" (click)="onView($event)">
+                    <mat-icon>visibility</mat-icon>
+                    View
+                </button>
+                <button mat-raised-button color="accent" 
+                        [disabled]="isAccepted() || isUpdating()"
+                        (click)="onAccept($event)">
+                    @if (isUpdating()) {
+                    <mat-spinner diameter="20"></mat-spinner>
+                    } @else {
+                    <mat-icon>check_circle</mat-icon>
+                    }
+                    {{ isAccepted() ? 'Accepted' : 'Accept' }}
+                </button>
+            </div>
+            }
+        </mat-card-content>
+    }
 </mat-card>
 }

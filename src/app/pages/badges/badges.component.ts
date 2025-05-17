@@ -90,8 +90,6 @@ export class BadgesComponent {
           const profileBadgesEvent = await this.relay.getEventByPubkeyAndKind(this.nostr.pubkey(), kinds.ProfileBadges);
           console.log('Profile Badges Event:', profileBadgesEvent);
 
-  
-
           const badgeAwardEvents = await this.relay.getEventsByPubkeyAndKind(this.nostr.pubkey(), kinds.BadgeAward);
           console.log('badgeAwardsEvent:', badgeAwardEvents);
 
@@ -279,7 +277,7 @@ export class BadgesComponent {
 
   async acceptBadge(badgeAward: NostrEvent) {
     if (this.isUpdating()) return;
-    
+
     try {
       this.isUpdating.set(true);
       
