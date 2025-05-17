@@ -36,8 +36,8 @@ h2 {
   }
   
   .active {
-    background-color: rgba(var(--mat-primary-rgb), 0.1);
-    color: var(--mat-primary-color);
+    background-color: rgba(var(--mat-sys-background), 0.1);
+    color: var(--mat-sys-primary);
   }
 }
 

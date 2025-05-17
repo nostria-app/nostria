@@ -507,7 +507,7 @@ mat-card-content li {
 .mirror-indicator {
   display: flex;
   align-items: center;
-  color: var(--mat-primary-color);
+  color: var(--mat-sys-primary);
   
   mat-icon {
     font-size: 18px;
@@ -538,7 +538,7 @@ mat-card-content li {
     align-items: center;
     
     mat-icon {
-      color: var(--mat-primary-color);
+      color: var(--mat-sys-primary);
       margin-right: 8px;
       font-size: 18px;
       height: 18px;
@@ -619,7 +619,7 @@ app-content {
   display: block;
   
   a {
-    color: var(--mat-primary-color);
+    color: var(--mat-sys-primary);
     text-decoration: none;
     
     &:hover {

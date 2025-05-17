@@ -13,10 +13,20 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDialog } from '@angular/material/dialog';
 import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
 import { LoggerService } from '../../../services/logger.service';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 @Component({
   selector: 'app-settings',
-  imports: [MatButtonModule, CommonModule, MatCardModule, MatDividerModule, MatListModule, MatIconModule, MatButtonModule],
+  imports: [
+    MatButtonModule,
+    CommonModule,
+    MatCardModule,
+    MatDividerModule,
+    MatListModule,
+    MatIconModule,
+    MatButtonModule,
+    MatProgressSpinnerModule
+  ],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.scss'
 })
@@ -30,6 +40,7 @@ export class NotificationSettingsComponent {
   logger = inject(LoggerService);
   devices = signal<Device[]>([]);
   currentDevice = signal<Device | null>(null);
+  isLoading = signal(true);
 
   // notificationsSupported = computed(() => 'PushManager' in window && 'serviceWorker' in navigator);
   pushSupported = computed(() => this.push.isEnabled);
@@ -48,27 +59,37 @@ export class NotificationSettingsComponent {
 
     effect(async () => {
       if (this.app.initialized() && this.app.authenticated()) {
+        this.isLoading.set(true);
 
-        this.push.subscription.subscribe((sub) => {
-          if (!sub) {
-            this.currentDevice.set(null);
-            return;
-          }
+        try {
+          // Set up subscription listener
+          this.push.subscription.subscribe((sub) => {
+            if (!sub) {
+              this.currentDevice.set(null);
+              return;
+            }
 
-          const subJson = JSON.parse(JSON.stringify(sub));
+            const subJson = JSON.parse(JSON.stringify(sub));
 
-          this.currentDevice.set({
-            deviceId: subJson.keys.p256dh,
-            endpoint: subJson.endpoint,
-            lastUpdated: new Date().toISOString(),
-            createdAt: new Date().toISOString()
-          } as Device);
-          
-          // Removed excessive logging
-        });
+            this.currentDevice.set({
+              deviceId: subJson.keys.p256dh,
+              endpoint: subJson.endpoint,
+              lastUpdated: new Date().toISOString(),
+              createdAt: new Date().toISOString()
+            } as Device);
+          });
 
-        const devices = await this.webPush.devices();
-        this.devices.set(devices);
+          // Fetch devices
+          const devices = await this.webPush.devices();
+          this.devices.set(devices);
+        } catch (error) {
+          this.logger.error('Error loading notification data:', error);
+          this.snackBar.open('Failed to load notification data', 'Close', {
+            duration: 3000,
+          });
+        } finally {
+          this.isLoading.set(false);
+        }
       }
     });
   }
@@ -83,13 +104,15 @@ export class NotificationSettingsComponent {
   }
 
   async enableNotifications() {
+    this.isLoading.set(true);
     // Single log for important user action
     this.logger.info('User requested to enable notifications');
-    
+
     try {
       await this.askPermission();
     } catch (e) {
       this.logger.error('Notification permission denied:', e);
+      this.isLoading.set(false);
       return;
     }
 
@@ -106,6 +129,8 @@ export class NotificationSettingsComponent {
         duration: 3000,
       });
       return;
+    } finally {
+      this.isLoading.set(false);
     }
   }
 
@@ -113,7 +138,7 @@ export class NotificationSettingsComponent {
     // Only log when notification is actually created
     if ("Notification" in window && Notification.permission === "granted") {
       this.logger.debug('Creating local test notification');
-      
+
       new Notification("Local test notification",
         {
           body: "This is a local notification test!",
@@ -189,7 +214,8 @@ export class NotificationSettingsComponent {
   async deleteDevice(deviceId: string, endpoint: string) {
     // Only log important user action
     this.logger.info('User requested to delete a device');
-    
+    this.isLoading.set(true);
+
     // Show confirmation dialog before deleting
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       data: {
@@ -203,7 +229,10 @@ export class NotificationSettingsComponent {
 
     // Wait for user confirmation
     const confirmed = await dialogRef.afterClosed().toPromise();
-    if (!confirmed) return;
+    if (!confirmed) {
+      this.isLoading.set(false);
+      return;
+    };
 
     try {
       await this.webPush.unsubscribe(deviceId, endpoint);
@@ -228,6 +257,8 @@ export class NotificationSettingsComponent {
       this.snackBar.open('Failed to unregister device', 'Close', {
         duration: 3000,
       });
+    } finally {
+      this.isLoading.set(false);
     }
   }
 }

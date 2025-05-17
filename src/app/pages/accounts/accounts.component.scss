@@ -118,13 +118,13 @@
     background-color: rgba(0, 0, 0, 0.04);
   }
     &.current-account-item {
-    background-color: rgba(var(--mat-primary-rgb), 0.08);
-    border-left: 4px solid var(--mat-primary-color);
+    background-color: rgba(var(--mat-sys-background), 0.08);
+    border-left: 4px solid var(--mat-sys-primary);
     padding-left: 14px; // Adjust for the border
     cursor: default;
     
     &:hover {
-      background-color: rgba(var(--mat-primary-rgb), 0.12);
+      background-color: rgba(var(--mat-sys-background), 0.12);
     }
   }
     .delete-button {

@@ -113,7 +113,7 @@ h2 {
   gap: 0.5rem;
   margin-top: 1rem;
   padding: 0.5rem;
-  background-color: rgba(var(--mat-primary-rgb), 0.05);
+  background-color: rgba(var(--mat-sys-background), 0.05);
   border-radius: 4px;
   
   p {
@@ -130,7 +130,7 @@ h2 {
   font-weight: 500;
   padding: 1rem;
   border-radius: 8px;
-  background-color: rgba(var(--mat-primary-rgb), 0.05);
+  background-color: rgba(var(--mat-sys-background), 0.05);
   
   .username-part {
     color: var(--mat-sys-primary);
@@ -161,7 +161,7 @@ h2 {
   
   &.selected {
     border: 2px solid var(--mat-sys-primary);
-    background-color: rgba(var(--mat-primary-rgb), 0.05);
+    background-color: rgba(var(--mat-sys-background), 0.05);
   }
 }
 
