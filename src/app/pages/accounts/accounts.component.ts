@@ -12,6 +12,7 @@ import { ConfirmDialogComponent, ConfirmDialogData } from '../../components/conf
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
 import { NPubPipe } from '../../pipes/npub.pipe';
+import { LayoutService } from '../../services/layout.service';
 
 @Component({
   selector: 'app-accounts',
@@ -32,6 +33,7 @@ import { NPubPipe } from '../../pipes/npub.pipe';
 })
 export class AccountsComponent {
   nostrService = inject(NostrService);
+  layout = inject(LayoutService);
   private dialog = inject(MatDialog);
   private logger = inject(LoggerService);
   
