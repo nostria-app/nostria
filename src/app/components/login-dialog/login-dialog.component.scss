@@ -28,7 +28,7 @@
   color: rgba(0, 0, 0, 0.6);
   
   &:hover {
-    color: var(--mat-primary-color);
+    color: var(--mat-sys-primary);
   }
 }
 
@@ -59,7 +59,7 @@
     position: relative;
     
     &.active {
-      color: var(--mat-primary-color);
+      color: var(--mat-sys-primary);
       font-weight: 500;
       
       &::after {
@@ -69,7 +69,7 @@
         left: 0;
         right: 0;
         height: 2px;
-        background-color: var(--mat-primary-color);
+        background-color: var(--mat-sys-primary);
       }
     }
     
@@ -311,7 +311,7 @@
   border-radius: 8px;
   padding: 12px 16px;
   margin-top: 8px;
-  border-left: 4px solid var(--mat-primary-color);
+  border-left: 4px solid var(--mat-sys-primary);
   
   p {
     margin: 8px 0;
@@ -326,7 +326,7 @@
   font-size: 0.85rem;
   
   a {
-    color: var(--mat-primary-color);
+    color: var(--mat-sys-primary);
     text-decoration: none;
     cursor: pointer;
     
@@ -420,7 +420,7 @@
     width: 32px;
     height: 32px;
     margin-right: 16px;
-    color: var(--mat-primary-color);
+    color: var(--mat-sys-primary);
   }
   
   .card-text {

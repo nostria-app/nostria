@@ -93,7 +93,7 @@
         transition: background-color 0.2s ease, color 0.2s ease;
 
         &.active {
-          // background-color: var(--mat-primary-color);
+          // background-color: var(--mat-sys-primary);
 
           mat-icon {
             
@@ -305,7 +305,7 @@
           gap: 8px;
 
           mat-icon {
-            color: var(--mat-primary-color);
+            color: var(--mat-sys-primary);
           }
 
           span {
@@ -665,7 +665,7 @@
         transition: all 0.2s ease;
 
         &.active {
-          background-color: var(--mat-primary-color);
+          background-color: var(--mat-sys-primary);
         }
 
         &:hover:not(.active) {
@@ -840,9 +840,9 @@
       }
 
       &.active {
-        color: var(--mat-primary-color);
+        color: var(--mat-sys-primary);
         font-weight: 500;
-        background-color: rgba(var(--mat-primary-rgb), 0.04);
+        background-color: rgba(var(--mat-sys-background), 0.04);
 
         &:after {
           content: '';
@@ -851,12 +851,12 @@
           left: 0;
           right: 0;
           height: 2px;
-          background-color: var(--mat-primary-color);
+          background-color: var(--mat-sys-primary);
           animation: slideIn 0.2s ease;
         }
 
         mat-icon {
-          color: var(--mat-primary-color);
+          color: var(--mat-sys-primary);
         }
       }
 
@@ -1007,7 +1007,7 @@
 // Drop placeholder styles
 .cdk-drag-placeholder {
   opacity: 0.4;
-  border: 2px dashed var(--mat-primary-color);
+  border: 2px dashed var(--mat-sys-primary);
   border-radius: 8px;
 }
 
@@ -1028,9 +1028,9 @@
 
 .cdk-drag-placeholder.column-unit {
   opacity: 0.4;
-  border: 2px dashed var(--mat-primary-color);
+  border: 2px dashed var(--mat-sys-primary);
   border-radius: 8px;
-  background-color: rgba(var(--mat-primary-rgb), 0.05);
+  background-color: rgba(var(--mat-sys-background), 0.05);
 }
 
 .scroll-indicator {

@@ -91,7 +91,7 @@
   transition: background-color 0.3s ease;
 
   &.unread {
-    background-color: rgba(var(--mat-primary-rgb), 0.05);
+    background-color: rgba(var(--mat-sys-background), 0.05);
 
     &::after {
       content: "";
@@ -399,7 +399,7 @@
 // Dark mode adjustments
 @media (prefers-color-scheme: dark) {
   .notification-card.unread {
-    background-color: rgba(var(--mat-primary-rgb), 0.15);
+    background-color: rgba(var(--mat-sys-background), 0.15);
   }
 
   .notification-type-icon {

@@ -90,7 +90,7 @@
   color: rgba(0, 0, 0, 0.6);
   
   &:hover {
-    color: var(--mat-primary-color);
+    color: var(--mat-sys-primary);
   }
 }
 
@@ -120,7 +120,7 @@
   font-size: 0.85rem;
   
   a {
-    color: var(--mat-primary-color);
+    color: var(--mat-sys-primary);
     text-decoration: none;
     cursor: pointer;
     

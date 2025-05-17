@@ -50,7 +50,7 @@
 
 // Current device highlighting
 .current-device {
-  background-color: rgba(var(--mat-primary-rgb), 0.05);
+  background-color: rgba(var(--mat-sys-background), 0.05);
   position: relative;
 
   &::before {
@@ -60,7 +60,7 @@
     top: 0;
     height: 100%;
     width: 4px;
-    background-color: var(--mat-primary-color);
+    background-color: var(--mat-sys-primary);
   }
 }
 
@@ -68,11 +68,23 @@
   margin-left: 8px;
   font-size: 12px;
   font-weight: 500;
-  color: var(--mat-primary-color);
-  background-color: rgba(var(--mat-primary-rgb), 0.1);
+  color: var(--mat-sys-primary);
+  background-color: rgba(var(--mat-sys-background), 0.1);
   padding: 2px 8px;
   border-radius: 12px;
   display: inline-block;
   vertical-align: middle;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  
+  p {
+    margin-top: 16px;
+  }
 }
 

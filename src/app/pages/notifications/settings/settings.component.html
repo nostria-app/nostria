@@ -3,6 +3,14 @@
         <h1>Notifications settings</h1>
     </div>
 
+    <!-- Loading indicator -->
+    @if(isLoading()) {
+    <div class="loading-container">
+        <mat-spinner diameter="40"></mat-spinner>
+        <p>Loading notification settings...</p>
+    </div>
+    } @else {
+
     <mat-card class="device-list-card" *ngIf="devices().length > 0">
         <!-- <mat-card-header>
             <mat-card-title>Your Registered Devices</mat-card-title>
@@ -43,14 +51,19 @@
         </mat-card-content>
     </mat-card>
 
+    @if (!isLoading()) {
     <div class="centered">
-        @if(!pushSupported()) {
-        Push notifications are supported on your device.
-        } @else {
-        @if (!currentDevice()) {
-        <button mat-flat-button (click)="enableNotifications()">Enable notifications</button>
+        @if (!pushSupported()) {
+        Push notifications are not supported on your device.
         } @else {
 
+        @if (!currentDevice()) {
+        <button mat-flat-button (click)="enableNotifications()">Enable notifications</button>
+
+        <p>
+            If you decide to block push notifications, you can always enable them later in the browser settings.
+        </p>
+        } @else {
         @if (isRemotelyEnabled(currentDevice()?.deviceId)) {
         Notifications are enabled on this device.
         } @else {
@@ -60,21 +73,34 @@
             <button mat-flat-button (click)="enableNotifications()">Enable notifications</button>
         </p>
         }
-
         }
         }
 
-        <p>
-            If you decide to block push notifications, you can always enable them later in the browser settings.
-        </p>
+        <!-- @if(pushSupported()) {
+        Push notifications are supported on your device.
+        } @else {
+
+        @if(pushVerified()) {
+        @if (!currentDevice()) {
+        <button mat-flat-button (click)="enableNotifications()">Enable notifications</button>
+        } @else {
+
+
+        }
+        }
+        } -->
+
+
 
         <br><br>
 
         <p>
             <button mat-button (click)="createLocalNotification()">Local test notifications</button>
         </p>
-                <p>
+        <p>
             <button mat-button (click)="createRemoteNotification()">Remote test notifications</button>
         </p>
     </div>
+    }
+    }
 </div>

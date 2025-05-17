@@ -116,7 +116,7 @@ export class UpgradeComponent {
     const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--mat-sys-primary').trim();
     if (primaryColor) {
       const rgb = this.hexToRgb(primaryColor) || '142, 68, 173'; // Fallback to default purple
-      document.documentElement.style.setProperty('--mat-primary-rgb', rgb);
+      document.documentElement.style.setProperty('--mat-sys-background', rgb);
     }
     
     // Get the background color for overlay calculations
