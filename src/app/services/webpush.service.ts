@@ -15,7 +15,7 @@ export interface Device {
   providedIn: 'root'
 })
 export class WebPushService {
-  private server: string = isDevMode() ? 'http://localhost:3000' : 'http://notification.nostria.app';
+  private server: string = isDevMode() ? 'http://localhost:3000' : 'https://notification.nostria.app';
   private nostr = inject(NostrService);
   push = inject(SwPush);
   logger = inject(LoggerService);
