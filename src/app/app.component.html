@@ -42,10 +42,12 @@
     </button>
     }
 
+    @if (app.authenticated()) {
     <button class="notification-toolbar" mat-icon-button [matMenuTriggerFor]="menuNotifications">
       <mat-icon [class.pulsing-icon]="hasActivePendingNotifications()"
         [matBadge]="unreadNotificationsCount()">notifications</mat-icon>
     </button>
+    }
 
     <mat-menu #menuNotifications="matMenu">
       @if (notificationService.notifications().length > 0) {
@@ -84,10 +86,10 @@
       }
       <mat-divider></mat-divider>
 
-        <button mat-menu-item routerLink="/notifications/settings">
-          <mat-icon>settings</mat-icon>
-          <span>Notification settings</span>
-        </button>
+      <button mat-menu-item routerLink="/notifications/settings">
+        <mat-icon>settings</mat-icon>
+        <span>Notification settings</span>
+      </button>
 
       <!-- <button mat-menu-item (click)="app.wipe()">
         <mat-icon>delete</mat-icon>
@@ -103,7 +105,13 @@
       @if (accountMetadata()?.content?.picture) {
       <img [src]="accountMetadata()?.content?.picture" class="profile-button-avatar" alt="Profile picture">
       } @else {
+
+      @if(app.authenticated()) {
       <mat-icon>account_circle</mat-icon>
+      } @else {
+      <mat-icon>account_circle_off</mat-icon>
+      }
+
       }
     </button>
   </mat-toolbar>
@@ -134,8 +142,11 @@
       [mode]="layout.isHandset() ? 'over' : 'side'" [fixedInViewport]="false">
       <mat-nav-list>
         @for (item of navItems; track $index) {
+
+        @if (item.authenticated && app.authenticated()) {
         @if (this.app.enabledFeature(item.level)) {
         <a mat-list-item [routerLink]="item.action ? undefined : [item.path]" routerLinkActive="active-link"
+          [routerLinkActiveOptions]="{exact: true}"
           (click)="item.action ? item.action() : (layout.isHandset() ? toggleSidenav() : null)">
           <mat-icon matListItemIcon>{{item.icon}}</mat-icon>
           @if(displayLabels()) {
@@ -143,6 +154,21 @@
           }
         </a>
         }
+        } @else if (!item.authenticated) {
+        @if (this.app.enabledFeature(item.level)) {
+        <a mat-list-item [routerLink]="item.action ? undefined : [item.path]" routerLinkActive="active-link"
+          [routerLinkActiveOptions]="{exact: true}"
+          (click)="item.action ? item.action() : (layout.isHandset() ? toggleSidenav() : null)">
+          <mat-icon matListItemIcon>{{item.icon}}</mat-icon>
+          @if(displayLabels()) {
+          <span class="nav-label">{{item.label}}</span>
+          }
+        </a>
+        }
+        }
+
+
+
         }
 
         <a mat-list-item (click)="toggleMenuSize()">
@@ -193,13 +219,24 @@
           } -->
           } @else {
           <div class="profile-avatar">
+
+            @if(app.authenticated()) {
             <mat-icon class="avatar-icon">account_circle</mat-icon>
+            } @else {
+            <mat-icon class="avatar-icon">account_circle_off</mat-icon>
+            }
           </div>
+
+          @if(app.authenticated()) {
           <h2>{{ nostrService.account()?.name || (nostrService.account()?.pubkey | npub) }}</h2>
+          } @else {
+          <h2>Not logged in</h2>
+          }
           }
         </div>
 
         <mat-nav-list>
+          @if(app.authenticated()) {
           <a mat-list-item [routerLink]="['/p', nostrService.account()?.pubkey]" (click)="toggleProfileSidenav()">
             <mat-icon matListItemIcon>person</mat-icon>
             <span>My Profile</span>
@@ -208,11 +245,12 @@
             <mat-icon matListItemIcon>key</mat-icon>
             <span>Credentials</span>
           </a>
+          }
           <!-- <a mat-list-item routerLink="/settings" (click)="layout.isHandset() ? toggleProfileSidenav() : null">
             <mat-icon matListItemIcon>settings</mat-icon>
             <span>Settings</span>
           </a> -->
-          <a mat-list-item (click)="logout(); toggleProfileSidenav()">
+          <a mat-list-item (click)="addAccount(); toggleProfileSidenav()">
             <mat-icon matListItemIcon>person_add</mat-icon>
             <span>Add account</span>
           </a>
@@ -317,12 +355,14 @@
     </a>
 
     <!-- FAB button in the middle with circular cut-out -->
+    @if (app.authenticated()) {
     <div class="fab-container">
       <button mat-mini-fab color="primary" class="create-fab" aria-label="Create new content"
         (click)="openCreateOptions()">
         <mat-icon>add</mat-icon>
       </button>
     </div>
+    }
 
     <!-- Last two navigation items -->
     <!-- @for (item of navItemsMobile.slice(2); track $index) {
@@ -333,6 +373,7 @@
     </a>
     } -->
 
+    @if (app.authenticated()) {
     <a mat-button class="mobile-nav-button" [routerLink]="['/messages']" routerLinkActive="active-link"
       [routerLinkActiveOptions]="{exact: true}">
       <mat-icon>mail</mat-icon>
@@ -344,6 +385,19 @@
       <mat-icon>account_circle</mat-icon>
       <div class="mobile-nav-label">Profile</div>
     </a>
+    } @else {
+    <a mat-button class="mobile-nav-button" [routerLink]="['/settings']" routerLinkActive="active-link"
+      [routerLinkActiveOptions]="{exact: true}">
+      <mat-icon>settings</mat-icon>
+      <div class="mobile-nav-label">Settings</div>
+    </a>
+
+    <a mat-button class="mobile-nav-button" (click)="addAccount()" routerLinkActive="active-link"
+      [routerLinkActiveOptions]="{exact: false}">
+      <mat-icon>person_add</mat-icon>
+      <div class="mobile-nav-label">Add account</div>
+    </a>
+    }
 
   </div>
   }

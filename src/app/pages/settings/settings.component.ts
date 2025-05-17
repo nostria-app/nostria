@@ -32,6 +32,7 @@ interface SettingsSection {
   id: string;
   title: string;
   icon: string;
+  authenticated?: boolean;
 }
 
 @Component({
@@ -84,10 +85,10 @@ export class SettingsComponent {
   // Define settings sections
   sections: SettingsSection[] = [
     { id: 'general', title: 'General', icon: 'settings' },
-    { id: 'relays', title: 'Relays', icon: 'dns' },
-    { id: 'privacy', title: 'Privacy & Safety', icon: 'security' },
-    { id: 'backup', title: 'Backup', icon: 'archive' },
-    { id: 'logs', title: 'Logs', icon: 'article' },
+    { id: 'relays', title: 'Relays', icon: 'dns', authenticated: true },
+    { id: 'privacy', title: 'Privacy & Safety', icon: 'security', authenticated: true },
+    { id: 'backup', title: 'Backup', icon: 'archive', authenticated: true },
+    { id: 'logs', title: 'Logs', icon: 'article', authenticated: true },
     { id: 'about', title: 'About', icon: 'info' }
   ];
 
