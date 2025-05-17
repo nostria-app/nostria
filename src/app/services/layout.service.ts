@@ -11,6 +11,7 @@ import { MediaPreviewDialogComponent } from "../components/media-preview-dialog/
 import { nip19 } from "nostr-tools";
 import { ProfilePointer } from "nostr-tools/nip19";
 import { ProfileStateService } from "./profile-state.service";
+import { InitialLoginDialogComponent } from "../components/initial-login-dialog/initial-login-dialog.component";
 
 @Injectable({
     providedIn: 'root'
@@ -118,6 +119,34 @@ export class LayoutService {
                     panelClass: 'error-snackbar'
                 });
             });
+    }
+
+    async showLoginDialog(): Promise<void> {
+        this.logger.debug('showLoginDialog called');
+        // Apply the blur class to the document body before opening the dialog
+        document.body.classList.add('blur-backdrop');
+
+        const dialogRef = this.dialog.open(InitialLoginDialogComponent, {
+            width: '400px',
+            maxWidth: '95vw',
+            disableClose: true,
+            panelClass: 'welcome-dialog'
+        });
+
+        this.logger.debug('Initial login dialog opened');
+
+        // Handle login completion and data loading
+        dialogRef.afterClosed().subscribe(async () => {
+            this.logger.debug('Login dialog closed');
+            document.body.classList.remove('blur-backdrop');
+
+            // If user is logged in after dialog closes, simulate data loading
+            // if (this.nostrService.isLoggedIn()) {
+            //   this.logger.debug('User logged in, loading data');
+            // } else {
+            //   this.logger.debug('User not logged in after dialog closed');
+            // }
+        });
     }
 
     navigateToProfile(npub: string): void {
@@ -355,40 +384,40 @@ export class LayoutService {
         try {
             // Wait for all publishing results
             const results = await Promise.all(publishPromises || []);
-            
+
             // Count successes and failures
             const successful = results.filter(result => result === '').length;
             const failed = results.length - successful;
-            
+
             // Display appropriate notification
             if (failed === 0) {
-              this.snackBar.open(`Bookmarks saved successfully to ${successful} ${successful === 1 ? 'relay' : 'relays'}`, 'Close', {
-                duration: 3000,
-                horizontalPosition: 'center',
-                verticalPosition: 'bottom',
-                panelClass: 'success-snackbar'
-              });
+                this.snackBar.open(`Bookmarks saved successfully to ${successful} ${successful === 1 ? 'relay' : 'relays'}`, 'Close', {
+                    duration: 3000,
+                    horizontalPosition: 'center',
+                    verticalPosition: 'bottom',
+                    panelClass: 'success-snackbar'
+                });
             } else {
-              this.snackBar.open(
-                `Bookmarks saved to ${successful} ${successful === 1 ? 'relay' : 'relays'}, failed on ${failed} ${failed === 1 ? 'relay' : 'relays'}`, 
-                'Close', 
-                {
-                  duration: 5000,
-                  horizontalPosition: 'center',
-                  verticalPosition: 'bottom',
-                  panelClass: failed > successful ? 'error-snackbar' : 'warning-snackbar'
-                }
-              );
+                this.snackBar.open(
+                    `Bookmarks saved to ${successful} ${successful === 1 ? 'relay' : 'relays'}, failed on ${failed} ${failed === 1 ? 'relay' : 'relays'}`,
+                    'Close',
+                    {
+                        duration: 5000,
+                        horizontalPosition: 'center',
+                        verticalPosition: 'bottom',
+                        panelClass: failed > successful ? 'error-snackbar' : 'warning-snackbar'
+                    }
+                );
             }
-          } catch (error) {
+        } catch (error) {
             console.error('Error publishing bookmarks:', error);
             this.snackBar.open('Failed to save bookmarks', 'Close', {
-              duration: 5000,
-              horizontalPosition: 'center',
-              verticalPosition: 'bottom',
-              panelClass: 'error-snackbar'
+                duration: 5000,
+                horizontalPosition: 'center',
+                verticalPosition: 'bottom',
+                panelClass: 'error-snackbar'
             });
-          }
+        }
     }
 }
 

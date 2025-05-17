@@ -1671,7 +1671,6 @@ export class NostrService {
   logout(): void {
     this.logger.info('Logging out current user');
     this.localStorage.removeItem(this.appState.ACCOUNT_STORAGE_KEY);
-    debugger;
     this.account.set(null);
     this.logger.debug('User logged out successfully');
   }

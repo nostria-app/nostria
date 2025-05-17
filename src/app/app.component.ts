@@ -278,8 +278,7 @@ export class AppComponent {
   }
 
   async addAccount() {
-    // this.nostrService.logout();
-    this.showLoginDialog();
+    this.layout.showLoginDialog();
   }
 
   async logout(): Promise<void> {
@@ -298,31 +297,5 @@ export class AppComponent {
     this.bottomSheet.open(CreateOptionsSheetComponent);
   }
   
-  async showLoginDialog(): Promise<void> {
-    this.logger.debug('showLoginDialog called');
-    // Apply the blur class to the document body before opening the dialog
-    document.body.classList.add('blur-backdrop');
 
-    const dialogRef = this.dialog.open(InitialLoginDialogComponent, {
-      width: '400px',
-      maxWidth: '95vw',
-      disableClose: true,
-      panelClass: 'welcome-dialog'
-    });
-
-    this.logger.debug('Initial login dialog opened');
-
-    // Handle login completion and data loading
-    dialogRef.afterClosed().subscribe(async () => {
-      this.logger.debug('Login dialog closed');
-      document.body.classList.remove('blur-backdrop');
-
-      // If user is logged in after dialog closes, simulate data loading
-      // if (this.nostrService.isLoggedIn()) {
-      //   this.logger.debug('User logged in, loading data');
-      // } else {
-      //   this.logger.debug('User not logged in after dialog closed');
-      // }
-    });
-  }
 }
