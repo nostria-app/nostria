@@ -36,6 +36,7 @@ interface NavItem {
   label: string;
   icon: string;
   level?: FeatureLevel;
+  authenticated?: boolean;
   action?: () => void;
 }
 
@@ -122,24 +123,17 @@ export class AppComponent {
     // { path: 'feed', label: 'Feed', icon: 'notes', showInMobile: true },
     { path: 'articles', label: 'Articles', icon: 'article' },
     // { path: 'podcasts', label: 'Podcasts', icon: 'podcasts', showInMobile: false },
-    { path: 'people', label: 'People', icon: 'people' },
-    { path: 'messages', label: 'Messages', icon: 'mail', level: 'beta' },
-    { path: 'media', label: 'Media', icon: 'photo_library' },
-    { path: 'bookmarks', label: 'Bookmarks', icon: 'bookmarks', level: 'preview' },
-    { path: 'badges', label: 'Badges', icon: 'badge', level: 'beta' },
+    { path: 'people', label: 'People', icon: 'people', authenticated: true },
+    { path: 'messages', label: 'Messages', icon: 'mail', level: 'beta', authenticated: true },
+    { path: 'media', label: 'Media', icon: 'photo_library', authenticated: true },
+    { path: 'bookmarks', label: 'Bookmarks', icon: 'bookmarks', level: 'preview', authenticated: true },
+    { path: 'badges', label: 'Badges', icon: 'badge', level: 'beta', authenticated: true },
     // { path: 'relays', label: 'Relays', icon: 'dns', showInMobile: false },
     // { path: 'backup', label: 'Backup', icon: 'archive', showInMobile: false },
     { path: 'settings', label: 'Settings', icon: 'settings' },
-    { path: 'premium', label: 'Premium', icon: 'diamond', level: 'preview' },
+    { path: 'premium', label: 'Premium', icon: 'diamond', level: 'preview', authenticated: true },
     // { path: 'about', label: 'About', icon: 'info', showInMobile: true },
     // { path: '', label: 'Logout', icon: 'logout', action: () => this.logout(), showInMobile: false }
-  ];
-  navItemsMobile: NavItem[] = [
-    { path: '', label: 'Home', icon: 'home' },
-    { path: 'articles', label: 'Articles', icon: 'article' },
-    // The middle position will be occupied by the FAB button
-    { path: 'messages', label: 'Messages', icon: 'mail' },
-    { path: 'p', label: 'Profile', icon: 'account_circle' },
   ];
 
   constructor() {
@@ -180,9 +174,9 @@ export class AppComponent {
 
       // Show login dialog if user is not logged in - with debugging
       effect(() => {
-        if (this.app.initialized() && !this.app.authenticated()) {
-          this.showLoginDialog();
-        }
+        // if (this.app.initialized() && !this.app.authenticated()) {
+        //   this.showLoginDialog();
+        // }
 
         // const isLoggedIn = this.app.authenticated()
         // const isInitialized = this.app.initialized();
@@ -283,9 +277,15 @@ export class AppComponent {
     this.displayLabels.set(!this.displayLabels());
   }
 
+  async addAccount() {
+    // this.nostrService.logout();
+    this.showLoginDialog();
+  }
+
   async logout(): Promise<void> {
     this.nostrService.logout();
   }
+
   async switchAccount(pubkey: string): Promise<void> {
     await this.nostrService.switchToUser(pubkey);
 

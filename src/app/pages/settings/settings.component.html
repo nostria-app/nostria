@@ -15,10 +15,19 @@
     <h1 class="page-title">Settings</h1>
     <mat-nav-list>
       @for (section of sections; track section.id) {
+
+      @if (section.authenticated && app.authenticated()) {
       <a mat-list-item [class.active]="activeSection() === section.id" (click)="selectSection(section.id)">
         <mat-icon matListItemIcon>{{ section.icon }}</mat-icon>
         <span matListItemTitle>{{ section.title }}</span>
       </a>
+      } @else if (!section.authenticated) {
+      <a mat-list-item [class.active]="activeSection() === section.id" (click)="selectSection(section.id)">
+        <mat-icon matListItemIcon>{{ section.icon }}</mat-icon>
+        <span matListItemTitle>{{ section.title }}</span>
+      </a>
+      }
+
       }
     </mat-nav-list>
   </div>
@@ -57,7 +66,7 @@
           </mat-form-field>
         </div>
 
-        
+
         <div>
           <h2>Logging</h2>
           <p>Configure application logging levels</p>
