@@ -27,9 +27,56 @@
                 <mat-icon class="tab-icon">military_tech</mat-icon>
                 Received
             </ng-template>
-            <div class="badges-grid">
+            <div class="badges-list">
                 @for (badge of received(); track badge.id) {
-                <app-badge [badge]="badge" (click)="viewBadgeDetails(badge)"></app-badge>
+                <mat-card class="badge-list-item">
+                    <div class="badge-list-content">
+                        <div class="badge-thumbnail">
+                            @if (getBadgeInfo(badge).thumbnail) {
+                            <img [src]="getBadgeInfo(badge).thumbnail" [alt]="getBadgeInfo(badge).name">
+                            } @else {
+                            <div class="placeholder-thumbnail">
+                                <mat-icon>military_tech</mat-icon>
+                            </div>
+                            }
+                        </div>
+                        <div class="badge-details">
+                            <h3>{{ getBadgeInfo(badge).name }}</h3>
+                            <p>{{ getBadgeInfo(badge).description }}</p>
+                            <div class="badge-issuer">
+                                <mat-icon>person</mat-icon>
+                                <span>Awarded by: {{ badgeIssuers()[badge.pubkey]?.name || badgeIssuers()[badge.pubkey]?.display_name || 'Unknown User' }}</span>
+                            </div>
+                            <div class="badge-date">
+                                <mat-icon>calendar_today</mat-icon>
+                                <span>Awarded: {{ badge.created_at * 1000 | date:'medium' }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="badge-actions">
+                        <button mat-button color="primary" (click)="viewBadgeDetails(badge)">
+                            <mat-icon>visibility</mat-icon>
+                            View
+                        </button>
+                        <button mat-raised-button color="accent" 
+                                [disabled]="isBadgeAccepted(badge) || isUpdating()"
+                                (click)="acceptBadge(badge); $event.stopPropagation()">
+                            @if (isUpdating()) {
+                            <mat-spinner diameter="20"></mat-spinner>
+                            } @else {
+                            <mat-icon>check_circle</mat-icon>
+                            }
+                            {{ isBadgeAccepted(badge) ? 'Accepted' : 'Accept' }}
+                        </button>
+                    </div>
+                </mat-card>
+                }
+
+                @if (received()?.length === 0) {
+                <div class="no-badges-message">
+                    <mat-icon>emoji_events</mat-icon>
+                    <p>You haven't received any badges yet</p>
+                </div>
                 }
             </div>
         </mat-tab>
