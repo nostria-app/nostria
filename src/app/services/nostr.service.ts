@@ -61,7 +61,7 @@ export class NostrService {
   usersRelays = signal<Map<string, NostrEvent>>(new Map());
 
   pubkey = computed(() => {
-    return this.account()!.pubkey;
+    return this.account()?.pubkey || '';
   });
 
   hasAccounts = computed(() => {

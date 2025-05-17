@@ -1,0 +1,78 @@
+.device-list-card, .no-devices-card {
+  margin-bottom: 20px;
+  box-shadow: var(--mat-sys-level1);
+}
+
+.device-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+}
+
+.device-info {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.device-date {
+  font-size: 12px;
+}
+
+.no-devices {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  
+  mat-icon {
+    font-size: 48px;
+    height: 48px;
+    width: 48px;
+    margin-bottom: 16px;
+  }
+  
+  p {
+  }
+}
+
+.delete-button {
+  margin-left: auto;  // This pushes the button to the right
+}
+
+// Ensure proper alignment within list items
+:host ::ng-deep {
+  .mdc-list-item__end {
+    margin-left: auto;
+  }
+}
+
+// Current device highlighting
+.current-device {
+  background-color: rgba(var(--mat-primary-rgb), 0.05);
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 4px;
+    background-color: var(--mat-primary-color);
+  }
+}
+
+.current-device-indicator {
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--mat-primary-color);
+  background-color: rgba(var(--mat-primary-rgb), 0.1);
+  padding: 2px 8px;
+  border-radius: 12px;
+  display: inline-block;
+  vertical-align: middle;
+}
+

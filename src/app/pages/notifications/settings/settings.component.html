@@ -1,12 +1,80 @@
-<div class="notifications-page">
+<div class="notifications-page content-small">
     <div class="page-header">
         <h1>Notifications settings</h1>
     </div>
 
-    @if(!notificationsSupported()) {
-    Push notifications are supported on your device.
-    } @else {
-    <button mat-button (click)="enableNotifications()">Enable notifications</button>
-    }
+    <mat-card class="device-list-card" *ngIf="devices().length > 0">
+        <!-- <mat-card-header>
+            <mat-card-title>Your Registered Devices</mat-card-title>
+        </mat-card-header> -->
+        <mat-card-content>
+            <mat-list role="list">
+                <div mat-subheader>Your Registered Devices</div>
+                @for(device of devices(); track device.deviceId) {
+                <mat-list-item [class.current-device]="device.deviceId === currentDevice()?.deviceId">
+                    <mat-icon matListItemIcon>smartphone</mat-icon>
+                    <div matListItemTitle>Device ID: {{device.deviceId | slice:0:8}}...
+                        @if(device.deviceId === currentDevice()?.deviceId) {
+                        <span class="current-device-indicator">(Current Device)</span>
+                        }
+                    </div>
+                    <div matListItemLine>Registered: {{device.createdAt | date:'medium'}}</div>
+                    <div matListItemMeta>
+                        <button mat-icon-button color="warn" class="delete-button"
+                            (click)="deleteDevice(device.deviceId, device.endpoint)" aria-label="Delete device">
+                            <mat-icon>delete</mat-icon>
+                        </button>
+                    </div>
+                </mat-list-item>
+                @if(!$last) {
+                <!-- <mat-divider></mat-divider> -->
+                }
+                }
+            </mat-list>
+        </mat-card-content>
+    </mat-card>
 
+    <mat-card *ngIf="devices().length === 0" class="no-devices-card">
+        <mat-card-content>
+            <div class="no-devices">
+                <mat-icon>devices_off</mat-icon>
+                <p>No devices registered for notifications</p>
+            </div>
+        </mat-card-content>
+    </mat-card>
+
+    <div class="centered">
+        @if(!pushSupported()) {
+        Push notifications are supported on your device.
+        } @else {
+        @if (!currentDevice()) {
+        <button mat-flat-button (click)="enableNotifications()">Enable notifications</button>
+        } @else {
+
+        @if (isRemotelyEnabled(currentDevice()?.deviceId)) {
+        Notifications are enabled on this device.
+        } @else {
+        Notifications are enabled on this device, but not remotely. You can enable them remotely by clicking the button
+        below.
+        <p>
+            <button mat-flat-button (click)="enableNotifications()">Enable notifications</button>
+        </p>
+        }
+
+        }
+        }
+
+        <p>
+            If you decide to block push notifications, you can always enable them later in the browser settings.
+        </p>
+
+        <br><br>
+
+        <p>
+            <button mat-button (click)="createLocalNotification()">Local test notifications</button>
+        </p>
+                <p>
+            <button mat-button (click)="createRemoteNotification()">Remote test notifications</button>
+        </p>
+    </div>
 </div>

@@ -682,6 +682,9 @@ iframe {
   line-height: 1; // Prevent line height issues
 }
 
+.centered {
+    text-align: center;
+}
 
 @media screen and (max-width: 600px) {
   .hide-small {

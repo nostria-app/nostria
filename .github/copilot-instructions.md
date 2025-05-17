@@ -20,3 +20,5 @@ box-shadow: var(--mat-sys-level2)
 box-shadow: var(--mat-sys-level3)
 box-shadow: var(--mat-sys-level4)
 box-shadow: var(--mat-sys-level5)
+
+Do not make any changes, until have you 95% confidence that you know what to build ask me follow up questions until you have that confidence

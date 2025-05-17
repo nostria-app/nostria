@@ -13,7 +13,7 @@
   "scope": "./",
   "start_url": "./",
   "launch_handler": {
-    "client_mode": "focus-existing"
+    "client_mode": ["focus-existing", "auto"]
   },
   "protocol_handlers": [
     {
