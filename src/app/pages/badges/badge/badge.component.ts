@@ -1,4 +1,4 @@
-import { Component, effect, inject, input, signal } from '@angular/core';
+import { Component, effect, inject, input, signal, Output, EventEmitter } from '@angular/core';
 import { NostrEvent } from '../../../interfaces';
 import { MatCardModule } from '@angular/material/card';
 import { NostrService } from '../../../services/nostr.service';
@@ -8,6 +8,10 @@ import { DataService } from '../../../services/data.service';
 import { BadgeService } from '../../../services/badge.service';
 import { RelayService } from '../../../services/relay.service';
 import { UserRelayFactoryService } from '../../../services/user-relay-factory.service';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { CommonModule, DatePipe } from '@angular/common';
 
 interface ParsedBadge {
   id: string;
@@ -30,14 +34,33 @@ interface ParsedReward {
   tags: string[];
 }
 
+export type BadgeLayout = 'vertical' | 'horizontal';
+
 @Component({
   selector: 'app-badge',
-  imports: [MatCardModule],
+  standalone: true,
+  imports: [
+    MatCardModule, 
+    MatButtonModule, 
+    MatIconModule, 
+    MatProgressSpinnerModule,
+    CommonModule,
+    DatePipe
+  ],
   templateUrl: './badge.component.html',
   styleUrl: './badge.component.scss'
 })
 export class BadgeComponent {
   badge = input<NostrEvent | any | undefined>(undefined);
+  layout = input<BadgeLayout>('vertical');
+  showActions = input<boolean>(false);
+  isAccepted = input<boolean>(false);
+  isUpdating = input<boolean>(false);
+  issuerName = input<string | null>(null);
+  
+  @Output() acceptClicked = new EventEmitter<void>();
+  @Output() viewClicked = new EventEmitter<void>();
+  
   nostr = inject(NostrService);
   storage = inject(StorageService);
   data = inject(DataService);
@@ -53,11 +76,15 @@ export class BadgeComponent {
   thumb = signal<string>('');
   tags = signal<string[]>([]);
   error = signal<string | null>(null);
+  awardDate = signal<number | null>(null);
 
   constructor() {
     effect(async () => {
       if (this.badge()) {
         await this.parseBadge(this.badge()!);
+        // if (this.badge().created_at) {
+        //   this.awardDate.set(this.badge().created_at);
+        // }
       }
     });
   }
@@ -72,6 +99,16 @@ export class BadgeComponent {
     else if (event.kind === kinds.BadgeAward) {
       this.parseReward(event);
     }
+  }
+
+  onAccept(event: Event): void {
+    event.stopPropagation();
+    this.acceptClicked.emit();
+  }
+
+  onView(event: Event): void {
+    event.stopPropagation();
+    this.viewClicked.emit();
   }
 
   async loadBadgeDefinition(pubkey: string, slug: string) {
