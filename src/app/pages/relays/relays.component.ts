@@ -71,8 +71,8 @@ export class RelaysComponent implements OnInit, OnDestroy {
   // For closest relay feature
   isCheckingRelays = signal(false);
   knownDiscoveryRelays = [
-    'wss://discovery-eu.nostria.app',
-    'wss://discovery-af.nostria.app',
+    'wss://discovery.eu.nostria.app',
+    'wss://discovery.af.nostria.app',
   ];
 
   constructor() {
