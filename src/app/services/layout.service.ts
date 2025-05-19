@@ -11,7 +11,7 @@ import { MediaPreviewDialogComponent } from "../components/media-preview-dialog/
 import { nip19 } from "nostr-tools";
 import { ProfilePointer } from "nostr-tools/nip19";
 import { ProfileStateService } from "./profile-state.service";
-import { InitialLoginDialogComponent } from "../components/initial-login-dialog/initial-login-dialog.component";
+import { UnifiedLoginDialogComponent } from "../components/unified-login-dialog/unified-login-dialog.component";
 
 @Injectable({
     providedIn: 'root'
@@ -126,7 +126,7 @@ export class LayoutService {
         // Apply the blur class to the document body before opening the dialog
         document.body.classList.add('blur-backdrop');
 
-        const dialogRef = this.dialog.open(InitialLoginDialogComponent, {
+        const dialogRef = this.dialog.open(UnifiedLoginDialogComponent, {
             width: '400px',
             maxWidth: '95vw',
             disableClose: true,

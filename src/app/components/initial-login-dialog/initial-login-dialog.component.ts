@@ -8,6 +8,7 @@ import { LoginDialogComponent } from '../login-dialog/login-dialog.component';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
 import { TermsOfUseDialogComponent } from '../terms-of-use-dialog/terms-of-use-dialog.component';
+import { LocationSelectionDialogComponent } from '../location-selection-dialog/location-selection-dialog.component';
 
 @Component({
   selector: 'app-initial-login-dialog',
@@ -30,10 +31,39 @@ export class InitialLoginDialogComponent {
   loading = signal(false);
 
   generateNewKey(): void {
-    this.logger.debug('Generating new key for new user');
+    this.logger.debug('Starting account creation flow with region selection');
     this.loading.set(true);
-    this.nostrService.generateNewKey();
+    
+    // Close the current dialog and open the location selection dialog
     this.closeDialog();
+    
+    // Keep the blur backdrop
+    document.body.classList.add('blur-backdrop');
+    
+    // Open the location selection dialog
+    const locationDialog = this.dialog.open(LocationSelectionDialogComponent, {
+      width: '450px',
+      maxWidth: '95vw',
+      disableClose: true,
+      panelClass: 'welcome-dialog'
+    });
+    
+    // Handle the selection result
+    locationDialog.afterClosed().subscribe(regionId => {
+      if (regionId) {
+        this.logger.debug('Region selected, generating key', { region: regionId });
+        this.nostrService.generateNewKey(regionId);
+      } else {
+        // If no region was selected (dialog dismissed), go back to initial dialog
+        this.logger.debug('No region selected, reopening initial dialog');
+        this.dialog.open(InitialLoginDialogComponent, {
+          width: '450px',
+          maxWidth: '95vw',
+          disableClose: true,
+          panelClass: 'welcome-dialog'
+        });
+      }
+    });
   }
   openLoginDialog(): void {
     this.logger.debug('Opening full login dialog');
