@@ -51,11 +51,11 @@ interface Region {
     MatTooltipModule,
     FormsModule
   ],
-  templateUrl: './unified-login-dialog.component.html',
-  styleUrl: './unified-login-dialog.component.scss'
+  templateUrl: './login-dialog.component.html',
+  styleUrl: './login-dialog.component.scss'
 })
-export class UnifiedLoginDialogComponent {
-  private dialogRef = inject(MatDialogRef<UnifiedLoginDialogComponent>);
+export class LoginDialogComponent {
+  private dialogRef = inject(MatDialogRef<LoginDialogComponent>);
   private dialog = inject(MatDialog);
   nostrService = inject(NostrService);
   private logger = inject(LoggerService);
