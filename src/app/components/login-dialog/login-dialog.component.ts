@@ -14,6 +14,7 @@ import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
 import { QrcodeScanDialogComponent } from '../qrcode-scan-dialog/qrcode-scan-dialog.component';
 import { TermsOfUseDialogComponent } from '../terms-of-use-dialog/terms-of-use-dialog.component';
+import { Region, RegionService } from '../../services/region.service';
 
 // Define the login steps
 enum LoginStep {
@@ -25,14 +26,6 @@ enum LoginStep {
   EXISTING_ACCOUNTS = 'existing-accounts',
   NOSTR_CONNECT = 'nostr-connect',
   PREVIEW = 'preview'
-}
-
-// Region interface from location selection dialog
-interface Region {
-  id: string;
-  name: string;
-  enabled: boolean;
-  icon: string;
 }
 
 @Component({
@@ -59,7 +52,8 @@ export class LoginDialogComponent {
   private dialog = inject(MatDialog);
   nostrService = inject(NostrService);
   private logger = inject(LoggerService);
-  
+  region = inject(RegionService);
+
   // Use signal for the current step
   currentStep = signal<LoginStep>(LoginStep.INITIAL);
   
@@ -78,15 +72,6 @@ export class LoginDialogComponent {
   nsecKey = '';
   previewPubkey = 'npub1sg6plzptd64u62a878hep2kev88swjh3tw00gjsfl8f237lmu63q0uf63m'; // jack
   
-  // Regions data (from location selection dialog)
-  regions: Region[] = [
-    { id: 'europe', name: 'Europe', enabled: true, icon: 'euro_symbol' },
-    { id: 'africa', name: 'Africa', enabled: true, icon: 'public' },
-    { id: 'north_america', name: 'North America', enabled: false, icon: 'north_america' },
-    { id: 'south_america', name: 'South America', enabled: false, icon: 'south_america' },
-    { id: 'asia', name: 'Asia', enabled: false, icon: 'asia' }
-  ];
-
   constructor() {
     this.logger.debug('UnifiedLoginDialogComponent initialized');
   }
@@ -116,10 +101,6 @@ export class LoginDialogComponent {
       this.selectedRegionId.set(region.id);
       this.generateNewKey();
     }
-  }
-  
-  isRegionEnabled(region: Region): boolean {
-    return region.enabled;
   }
   
   // Account generation

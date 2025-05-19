@@ -15,6 +15,7 @@ import { AccountStateService } from './account-state.service';
 import { LocalStorageService } from './local-storage.service';
 import { BookmarkService } from './bookmark.service';
 import { SettingsService } from './settings.service';
+import { RegionService } from './region.service';
 
 export interface NostrUser {
   pubkey: string;
@@ -24,6 +25,12 @@ export interface NostrUser {
   lastUsed?: number; // Timestamp when this account was last used
   bunker?: BunkerPointer;
   region?: string; // Add this new property
+
+  /** Indicates if this account has been "activated". This means the account has published it's relay list. For brand new accounts,
+   * we won't publish Relay List until the user has performed their first signing action. When that happens, we will set this to true,
+   * and publish Relay List + other events, like Profile Edit or publishing a post.
+   */
+  hasActivated: boolean
 }
 
 export interface UserMetadataWithPubkey extends NostrEventData<UserMetadata> {
@@ -38,8 +45,9 @@ export class NostrService {
   private readonly relayService = inject(RelayService);
   private readonly storage = inject(StorageService);
   private readonly appState = inject(ApplicationStateService);
-  private readonly accountState = inject(AccountStateService);  
+  private readonly accountState = inject(AccountStateService);
   private readonly localStorage = inject(LocalStorageService);
+  private readonly region = inject(RegionService);
 
   initialized = signal(false);
 
@@ -167,6 +175,14 @@ export class NostrService {
         }
       }
 
+      if (this.relayService.discoveryRelays.length === 0) {
+        // We need to ensure that we have Discovery Relay.
+        // If there are no Discovery in local storage, we'll pick it based on the region of the account.
+        const region = account.region || 'eu';
+        const discoveryRelay = this.region.getDiscoveryRelay(region);
+        this.relayService.setDiscoveryRelays([discoveryRelay]);
+      }
+
       // Get existing Relay List in storage
       let relays = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
       let relayUrls: string[] = [];
@@ -182,6 +198,12 @@ export class NostrService {
         // We need to discovery the relays of the user.
         this.logger.info('No relays found in storage, performing discovery', { pubkey });
         relayUrls = await this.findRelays(pubkey, info);
+      }
+
+      // This will happen if account is brand new. We make a selection based upon their region.
+      if (relayUrls.length === 0) {
+        const relayUrl = this.region.getRelayServer(account.region || 'eu', 0);
+        relayUrls.push(relayUrl!);
       }
 
       // Store the relays in the relay service
@@ -401,9 +423,11 @@ export class NostrService {
 
     discoveryPool.close(discoveryRelays);
 
+    return [];
+
     // If there is no relayUrls, set default relays.
-    const defaultRelays = [...this.relayService.defaultRelays];
-    return defaultRelays;
+    // const defaultRelays = [...this.relayService.defaultRelays];
+    // return defaultRelays;
   }
 
 
@@ -1136,7 +1160,8 @@ export class NostrService {
         name: 'Remote Signer',
         source: 'remote', // With 'remote' type, the actually stored pubkey is not connected with the prvkey.
         bunker: bunkerParsed!,
-        lastUsed: Date.now()
+        lastUsed: Date.now(),
+        hasActivated: true
       };
 
       await this.setAccount(newUser);
@@ -1524,10 +1549,15 @@ export class NostrService {
       privkey: privkeyHex,
       source: 'nsec',
       lastUsed: Date.now(),
-      region: region // Store the selected region
+      region: region,
+      hasActivated: false
     };
 
     this.logger.debug('New keypair generated successfully', { pubkey, region });
+
+    this.accountsRelays
+
+
     await this.setAccount(newUser);
   }
 
@@ -1571,7 +1601,8 @@ export class NostrService {
         pubkey,
         name: this.getTruncatedNpub(pubkey),
         source: 'extension',
-        lastUsed: Date.now()
+        lastUsed: Date.now(),
+        hasActivated: true // Assume activation is done via extension
       };
 
       this.logger.info('Login with extension successful', { pubkey });
@@ -1599,8 +1630,6 @@ export class NostrService {
       let privkeyHex = '';
       let privkeyArray: Uint8Array;
 
-      debugger;
-
       if (nsec.startsWith('nsec')) {
         // Decode the nsec to get the private key bytes
         const { type, data } = nip19.decode(nsec);
@@ -1627,7 +1656,8 @@ export class NostrService {
         pubkey,
         privkey: privkeyHex,
         source: 'nsec',
-        lastUsed: Date.now()
+        lastUsed: Date.now(),
+        hasActivated: true // Assume activation is done via nsec
       };
 
       this.logger.info('Login with nsec successful', { pubkey });
@@ -1636,12 +1666,12 @@ export class NostrService {
       this.logger.error('Error decoding nsec:', error);
       throw new Error('Invalid nsec key provided. Please check and try again.');
     }
-  }  async usePreviewAccount(customPubkey?: string) {
+  } async usePreviewAccount(customPubkey?: string) {
     this.logger.info('Using preview account', { customPubkey });
-    
+
     // Default to Jack's pubkey if no custom pubkey is provided
     let previewPubkey = '82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbfbe6a2';
-    
+
     // If a custom pubkey is provided in npub format, convert it to hex
     if (customPubkey && customPubkey.startsWith('npub')) {
       try {
@@ -1653,17 +1683,18 @@ export class NostrService {
       } catch (e) {
         this.logger.error('Failed to convert npub to hex', { error: e, npub: customPubkey });
       }
-    } 
+    }
     // If custom pubkey is provided in hex format, use it directly
     else if (customPubkey && customPubkey.length === 64) {
       previewPubkey = customPubkey;
     }
-    
+
     const newUser: NostrUser = {
       pubkey: previewPubkey,
       name: customPubkey ? 'Custom Preview' : 'Preview User',
       source: 'preview',
-      lastUsed: Date.now()
+      lastUsed: Date.now(),
+      hasActivated: true // Assume activation is done for preview accounts
     };
 
     await this.setAccount(newUser);

@@ -73,7 +73,7 @@
       <p class="dialog-subtitle">Choose the region closest to your location</p>
 
       <div class="region-grid">
-        @for (region of regions; track region.id) {
+        @for (region of region.regions; track region.id) {
           <mat-card class="region-card" [class.disabled]="!region.enabled" 
               [matTooltip]="region.enabled ? '' : 'Coming soon'"
               (click)="selectRegion(region)">

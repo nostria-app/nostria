@@ -11,6 +11,7 @@ import { NostrTagKey, standardizedTag, StandardizedTagType } from '../standardiz
 import { sha256 } from '@noble/hashes/sha2';
 import { bytesToHex } from '@noble/hashes/utils';
 import { ApplicationService } from './application.service';
+import { RegionService } from './region.service';
 
 export interface MediaItem {
   sha256: string; // SHA-256 hash of file (NIP-94)
@@ -40,6 +41,7 @@ export class MediaService {
   private readonly storage = inject(StorageService);
   private readonly logger = inject(LoggerService);
   private readonly app = inject(ApplicationService);
+  private readonly region = inject(RegionService);
 
   // State management
   private _mediaItems = signal<MediaItem[]>([]);
@@ -64,13 +66,23 @@ export class MediaService {
     // this.loadMediaServers();
     effect(async () => {
       if (this.app.initialized() && this.app.authenticated()) {
-        console.log('APP INITIALIZED, FETCHING MEDIA SERVERS');
+        this.logger.debug('APP INITIALIZED, FETCHING MEDIA SERVERS');
         const userServerList = await this.nostrService.getMediaServers(this.nostrService.pubkey());
-        console.log('USER SERVER LIST', userServerList);
+        this.logger.debug('USER SERVER LIST', userServerList);
 
         if (userServerList) {
           const servers = this.nostrService.getTags(userServerList, standardizedTag.server);
           this.setMediaServers(servers);
+        } else {
+          this.logger.debug('No media servers found for user. This user might be a Nostria account or any other Nostr user.');
+
+          if (!this.nostrService.account()?.hasActivated) {
+            this.logger.debug('User has not activated their account yet, so we will add regional media servers.');
+
+            const region = this.nostrService.account()?.region || 'eu';
+            const mediaServerUrl = this.region.getMediaServer(region, 0);
+            this.setMediaServers([mediaServerUrl!]);
+          }
         }
       }
     });

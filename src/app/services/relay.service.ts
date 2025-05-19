@@ -27,7 +27,7 @@ export class RelayService {
   private readonly TIMEOUT_CLEANUP_INTERVAL = 10000;
 
   // Default bootstrap relays
-  private readonly DEFAULT_BOOTSTRAP_RELAYS = ['wss://discovery.eu.nostria.app/'];
+  // private readonly DEFAULT_BOOTSTRAP_RELAYS = ['wss://discovery.eu.nostria.app/'];
 
   private readonly logger = inject(LoggerService);
   private readonly storage = inject(StorageService);
@@ -65,7 +65,7 @@ export class RelayService {
     this.logger.info('Initializing RelayService');
 
     // Move bootstrap relay initialization to constructor
-    this.discoveryRelays = this.loadDiscoveryRelaysFromStorage() || this.DEFAULT_BOOTSTRAP_RELAYS;
+    // this.discoveryRelays = this.loadDiscoveryRelaysFromStorage();
     // this.discoveryRelays.set(this.#discoveryRelays);
 
     // When relays change, sync with storage
@@ -77,7 +77,6 @@ export class RelayService {
           this.syncRelaysToStorage(this.relays);
         }
       }
-
     });
 
     // Set up interval to clean expired timeouts
@@ -577,7 +576,7 @@ export class RelayService {
    */
   resetDiscoveryRelays(): void {
     this.logger.debug('Resetting bootstrap relays to defaults');
-    this.discoveryRelays = this.DEFAULT_BOOTSTRAP_RELAYS;
+    // this.discoveryRelays = this.DEFAULT_BOOTSTRAP_RELAYS;
     this._discoveryRelaysChanged.update(val => val + 1); // Trigger change detection
   }
 
