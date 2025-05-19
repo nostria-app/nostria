@@ -23,6 +23,7 @@ export interface NostrUser {
   source: 'extension' | 'nsec' | 'preview' | 'remote';
   lastUsed?: number; // Timestamp when this account was last used
   bunker?: BunkerPointer;
+  region?: string; // Add this new property
 }
 
 export interface UserMetadataWithPubkey extends NostrEventData<UserMetadata> {
@@ -1508,7 +1509,7 @@ export class NostrService {
     this.localStorage.setItem(this.appState.ACCOUNT_STORAGE_KEY, JSON.stringify(user));
   }
 
-  async generateNewKey() {
+  async generateNewKey(region?: string) {
     this.logger.info('Generating new Nostr keypair');
     // Generate a proper Nostr key pair using nostr-tools
     const secretKey = generateSecretKey(); // Returns a Uint8Array
@@ -1522,10 +1523,11 @@ export class NostrService {
       pubkey,
       privkey: privkeyHex,
       source: 'nsec',
-      lastUsed: Date.now()
+      lastUsed: Date.now(),
+      region: region // Store the selected region
     };
 
-    this.logger.debug('New keypair generated successfully', { pubkey });
+    this.logger.debug('New keypair generated successfully', { pubkey, region });
     await this.setAccount(newUser);
   }
 

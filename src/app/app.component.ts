@@ -12,7 +12,6 @@ import { PwaUpdateService } from './services/pwa-update.service';
 import { CommonModule, DOCUMENT, isPlatformBrowser, isPlatformServer } from '@angular/common';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { InitialLoginDialogComponent } from './components/initial-login-dialog/initial-login-dialog.component';
 import { NostrService } from './services/nostr.service';
 import { LoadingOverlayComponent } from './components/loading-overlay/loading-overlay.component';
 import { FeatureLevel, LoggerService } from './services/logger.service';
@@ -30,6 +29,7 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { NotificationService } from './services/notification.service';
 import { MatBottomSheet, MatBottomSheetModule } from '@angular/material/bottom-sheet';
 import { CreateOptionsSheetComponent } from './components/create-options-sheet/create-options-sheet.component';
+import { UnifiedLoginDialogComponent } from './components/unified-login-dialog/unified-login-dialog.component';
 
 interface NavItem {
   path: string;
@@ -297,5 +297,13 @@ export class AppComponent {
     this.bottomSheet.open(CreateOptionsSheetComponent);
   }
   
+  showLoginDialog(): void {
+    this.dialog.open(UnifiedLoginDialogComponent, {
+      width: '450px',
+      maxWidth: '95vw',
+      disableClose: true,
+      panelClass: 'welcome-dialog'
+    });
+  }
 
 }
