@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
-import { UnifiedLoginDialogComponent } from '../components/unified-login-dialog/unified-login-dialog.component';
+import { LoginDialogComponent } from '../components/login-dialog/login-dialog.component';
 
 @Injectable({
   providedIn: 'root'
@@ -10,7 +10,7 @@ export class AuthService {
 
   // Update methods that show login dialogs
   showLoginDialog(): void {
-    this.dialog.open(UnifiedLoginDialogComponent, {
+    this.dialog.open(LoginDialogComponent, {
       width: '450px',
       maxWidth: '95vw',
       disableClose: true,

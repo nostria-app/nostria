@@ -25,7 +25,7 @@ import { ProfileRelaysComponent } from './pages/profile/profile-relays/profile-r
 import { BetaComponent } from './pages/beta/beta.component';
 import { AccountsComponent } from './pages/accounts/accounts.component';
 import { NotificationSettingsComponent } from './pages/notifications/settings/settings.component';
-import { UnifiedLoginDialogComponent } from './components/unified-login-dialog/unified-login-dialog.component';
+import { LoginDialogComponent } from './components/login-dialog/login-dialog.component';
 
 export const routes: Routes = [
   { path: '', component: HomeComponent, pathMatch: 'full' },
@@ -97,6 +97,6 @@ export const routes: Routes = [
     title: 'People'
   },
   { path: 'profile', redirectTo: '/credentials' },
-  { path: 'login', component: UnifiedLoginDialogComponent },
+  { path: 'login', component: LoginDialogComponent },
   { path: '**', redirectTo: '/' } // Update to redirect to root instead of /home
 ];

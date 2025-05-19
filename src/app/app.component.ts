@@ -29,7 +29,7 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { NotificationService } from './services/notification.service';
 import { MatBottomSheet, MatBottomSheetModule } from '@angular/material/bottom-sheet';
 import { CreateOptionsSheetComponent } from './components/create-options-sheet/create-options-sheet.component';
-import { UnifiedLoginDialogComponent } from './components/unified-login-dialog/unified-login-dialog.component';
+import { LoginDialogComponent } from './components/login-dialog/login-dialog.component';
 
 interface NavItem {
   path: string;
@@ -298,7 +298,7 @@ export class AppComponent {
   }
   
   showLoginDialog(): void {
-    this.dialog.open(UnifiedLoginDialogComponent, {
+    this.dialog.open(LoginDialogComponent, {
       width: '450px',
       maxWidth: '95vw',
       disableClose: true,
