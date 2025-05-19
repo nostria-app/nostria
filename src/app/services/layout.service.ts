@@ -127,10 +127,10 @@ export class LayoutService {
         document.body.classList.add('blur-backdrop');
 
         const dialogRef = this.dialog.open(LoginDialogComponent, {
-            width: '400px',
-            maxWidth: '95vw',
+            // width: '400px',
+            // maxWidth: '95vw',
             disableClose: true,
-            panelClass: 'welcome-dialog'
+            // panelClass: 'welcome-dialog'
         });
 
         this.logger.debug('Initial login dialog opened');
