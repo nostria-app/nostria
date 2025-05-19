@@ -102,7 +102,7 @@
 
   .card-content {
     display: flex;
-    align-items: center;
+    flex-direction: column;
     height: 100%;
     padding: 16px;
     box-sizing: border-box;
@@ -111,15 +111,15 @@
       font-size: 32px;
       width: 32px;
       height: 32px;
-      margin-right: 16px;
+      margin-right: 12px;
+      margin-bottom: 0;
       color: var(--mat-sys-primary);
-      display: flex;
-      align-items: center;
-      justify-content: center;
     }
     
     .card-text {
       h3 {
+        display: flex;
+        align-items: center;
         margin: 0 0 8px;
         font-size: 18px;
         font-weight: 500;
@@ -129,6 +129,9 @@
         margin: 0;
         font-size: 14px;
         color: var(--mat-text-secondary-color);
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        width: 100%;
       }
     }
   }

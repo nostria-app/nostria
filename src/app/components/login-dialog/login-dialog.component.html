@@ -42,9 +42,8 @@
         <mat-card class="login-card new-user" (click)="startNewAccountFlow()">
           <mat-card-content>
             <div class="card-content">
-              <mat-icon>person_add</mat-icon>
               <div class="card-text">
-                <h3>New User</h3>
+                <h3><mat-icon>person_add</mat-icon>New User</h3>
                 <p>Create a new account with two clicks</p>
               </div>
             </div>
@@ -54,9 +53,8 @@
         <mat-card class="login-card existing-user" (click)="goToStep(LoginStep.LOGIN_OPTIONS)">
           <mat-card-content>
             <div class="card-content">
-              <mat-icon>login</mat-icon>
               <div class="card-text">
-                <h3>Login</h3>
+                <h3><mat-icon>login</mat-icon>Login</h3>
                 <p>Sign in with your existing account</p>
               </div>
             </div>
@@ -135,9 +133,8 @@
           <mat-card class="login-card nsec" (click)="goToStep(LoginStep.NSEC_LOGIN)">
             <mat-card-content>
               <div class="card-content">
-                <mat-icon>key</mat-icon>
                 <div class="card-text">
-                  <h3>Private Key</h3>
+                  <h3><mat-icon>key</mat-icon>Private Key</h3>
                   <p>Sign in with your Nostr private key</p>
                 </div>
               </div>
@@ -147,9 +144,8 @@
           <mat-card class="login-card extension" (click)="loginWithExtension()">
             <mat-card-content>
               <div class="card-content">
-                <mat-icon>extension</mat-icon>
                 <div class="card-text">
-                  <h3>Browser Extension</h3>
+                  <h3><mat-icon>extension</mat-icon>Browser Extension</h3>
                   <p>Connect via Alby or nos2x</p>
                 </div>
               </div>
@@ -159,9 +155,8 @@
           <mat-card class="login-card connect" (click)="goToStep(LoginStep.NOSTR_CONNECT)">
             <mat-card-content>
               <div class="card-content">
-                <mat-icon>phone_iphone</mat-icon>
                 <div class="card-text">
-                  <h3>Nostr Connect</h3>
+                  <h3><mat-icon>phone_iphone</mat-icon>Nostr Connect</h3>
                   <p>Sign in with Nostria Signer app</p>
                 </div>
               </div>
@@ -171,9 +166,8 @@
           <mat-card class="login-card preview" (click)="goToStep(LoginStep.PREVIEW)">
             <mat-card-content>
               <div class="card-content">
-                <mat-icon>visibility</mat-icon>
                 <div class="card-text">
-                  <h3>Preview Only</h3>
+                  <h3><mat-icon>visibility</mat-icon>Preview Only</h3>
                   <p>Use any public key in read-only mode</p>
                 </div>
               </div>
