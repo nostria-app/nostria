@@ -77,7 +77,7 @@
   /* Include padding in width calculations */
 
   @media (min-width: 400px) {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, 1fr); /* Equal width columns */
   }
 }
 
@@ -90,6 +90,11 @@
   border: 1px solid var(--mat-divider-color, rgba(0, 0, 0, 0.05));
   overflow: hidden;
   position: relative;
+  /* Add these properties to ensure equal width */
+  display: flex;
+  flex: 1;
+  min-width: 0; /* Prevents overflow in flex containers */
+  width: 100%;
 
   &::after {
     content: "";
@@ -110,8 +115,25 @@
     }
   }
 
+  /* Update mat-card-content to take full width and height */
+  .mat-mdc-card-content {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    padding: 16px;
+    box-sizing: border-box;
+  }
+
   /* Fix for card content alignment */
   .card-content {
+    display: flex;
+    flex-direction: column;
+    width: 100%; /* Take full width of container */
+    height: 100%;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: center; /* Center content vertically */
+
     mat-icon {
       font-size: 32px;
       width: 32px;
@@ -124,43 +146,16 @@
     }
 
     .card-text {
+      width: 100%; /* Ensure text takes full width */
+      text-align: center; /* Center text horizontally */
+      
       h3 {
         margin: 0 0 8px;
         font-size: 18px;
         font-weight: 500;
-      }
-
-      p {
-        margin: 0;
-        font-size: 14px;
-        color: var(--mat-text-secondary-color);
-      }
-    }
-  }
-
-  .card-content {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    box-sizing: border-box;
-    align-items: center;
-
-    mat-icon {
-      font-size: 32px;
-      width: 32px;
-      height: 32px;
-      margin-right: 12px;
-      margin-bottom: 0;
-      color: var(--mat-sys-primary);
-    }
-
-    .card-text {
-      h3 {
         display: flex;
         align-items: center;
-        margin: 0 0 8px;
-        font-size: 18px;
-        font-weight: 500;
+        justify-content: center; /* Center icon and text */
       }
 
       p {
