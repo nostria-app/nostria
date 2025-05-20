@@ -7,7 +7,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: rgba(0, 0, 0, 0.7);
+  // background-color: rgba(0, 0, 0, 0.7);
   z-index: 1000;
   
   .loading-content {
@@ -16,7 +16,7 @@
     align-items: center;
     padding: 2rem;
     border-radius: 8px;
-    background-color: var(--mat-card-background-color, rgba(66, 66, 66, 0.9));
+    // background-color: var(--mat-card-background-color, rgba(66, 66, 66, 0.9));
     
     .loading-message {
       margin-top: 1rem;

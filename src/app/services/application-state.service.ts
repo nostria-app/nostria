@@ -11,7 +11,7 @@ export class ApplicationStateService {
     logger = inject(LoggerService);
     loadingMessage = signal('Loading data...');
     showSuccess = signal(false);
-    isLoading = signal(false);
+    isLoading = signal(true);
     isOnline = signal(navigator.onLine);
     private document = inject(DOCUMENT);
     private platformId = inject(PLATFORM_ID);
