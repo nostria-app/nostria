@@ -1,5 +1,5 @@
 <!-- <div [ngClass]="['user-profile', view()]" (click)="layout.navigateToProfile(pubkey())"> -->
-<div [ngClass]="['user-profile', view()]">
+<div [ngClass]="['user-profile', view()]" (touchstart)="handleTouchEvent($event)" (touchmove)="handleTouchEvent($event)" (touchend)="handleTouchEvent($event)">
 
   <div class="user-profile-container">
     <!-- Banner section for grid view -->
@@ -11,9 +11,9 @@
     }
 
     <!-- Avatar section - single image element -->
-    <a [routerLink]="['/p', pubkey()]" class="user-profile-avatar"
+    <a [routerLink]="passthrough() ? null : ['/p', pubkey()]" class="user-profile-avatar"
       [matTooltip]="view() === 'large' || view() === 'medium' || view() === 'small' ? getTooltipContent() : ''"
-      [matTooltipClass]="'user-profile-tooltip'" matTooltipPosition="above">      @if (isLoading()) {
+      [matTooltipClass]="'user-profile-tooltip'" matTooltipPosition="above" (touchstart)="handleTouchEvent($event)" (touchmove)="handleTouchEvent($event)" (touchend)="handleTouchEvent($event)">      @if (isLoading()) {
       <mat-spinner [diameter]="getSpinnerSize()" color="primary"></mat-spinner>
       } @else if (profile()?.content?.picture && !imageLoadError()) {
       <img [src]="profile().content.picture" (error)="onImageLoadError($event)" 

@@ -83,6 +83,8 @@
   height: 100%;
   width: 100%;
   overflow-x: hidden; // Changed back to hidden since we're wrapping items
+  touch-action: pan-y; // Enable vertical touch scrolling
+  -webkit-overflow-scrolling: touch; // For better iOS scroll performance
 }
 
 .full-width-list {

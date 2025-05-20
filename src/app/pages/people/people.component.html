@@ -124,10 +124,9 @@
         'medium-grid': viewMode() === 'medium',
         'small-grid': viewMode() === 'small',
         'details-list': viewMode() === 'details' || viewMode() === 'list',
-        'tiles-container': viewMode() === 'tiles'
-      }">
+        'tiles-container': viewMode() === 'tiles'      }">
           @for (pubkey of filteredPeople(); track pubkey) {
-          <app-user-profile [pubkey]="pubkey" [view]="viewMode()" (click)="viewProfile(pubkey)"></app-user-profile>
+          <app-user-profile [pubkey]="pubkey" [view]="viewMode()" [passthrough]="true" (click)="viewProfile(pubkey)"></app-user-profile>
           }
         </div>
       </div>
