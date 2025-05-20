@@ -1,5 +1,27 @@
 <div class="app-container" [class.dark-theme]="themeService.darkMode()">
 
+  <div class="welcome">
+    <div class="welcome-backdrop">
+
+      <button class="welcome-close-button" mat-icon-button (click)="toggleProfileSidenav()">
+        <mat-icon>close</mat-icon>
+      </button>
+
+      <div class="welcome-content">
+        <div>
+          <img src="icons/icon.svg" alt="Nostria logo" class="welcome-logo">
+        </div>
+        <div>
+          <h1>Welcome to Nostria</h1>
+          <p>
+            Nostria is a modern, open-source Nostr client designed for simplicity and ease of use.
+            It supports multiple accounts, relays, and provides a clean interface for exploring the Nostr network.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
   @if (app.initialized()) {
   <!-- Top toolbar - now outside and above the sidenav container -->
   <mat-toolbar color="primary" class="app-toolbar">
