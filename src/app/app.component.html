@@ -1,5 +1,19 @@
 <div class="app-container" [class.dark-theme]="themeService.darkMode()">
 
+  <!-- Loading overlay -->
+  @if (appState.isLoading()) {
+  <app-loading-overlay [message]="appState.loadingMessage()"></app-loading-overlay>
+  }
+
+  <!-- Success overlay with checkmark -->
+  @if (appState.showSuccess()) {
+  <div class="success-overlay">
+    <div class="success-checkmark">
+      <span class="success-icon">✓</span>
+    </div>
+  </div>
+  }
+
   @if (layout.showWelcomeScreen()) {
     <app-welcome></app-welcome>
   }
@@ -413,17 +427,4 @@
   </div>
   }
 
-  <!-- Loading overlay -->
-  @if (appState.isLoading()) {
-  <app-loading-overlay [message]="appState.loadingMessage()"></app-loading-overlay>
-  }
-
-  <!-- Success overlay with checkmark -->
-  @if (appState.showSuccess()) {
-  <div class="success-overlay">
-    <div class="success-checkmark">
-      <span class="success-icon">✓</span>
-    </div>
-  </div>
-  }
 </div>
