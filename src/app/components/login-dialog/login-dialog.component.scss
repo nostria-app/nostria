@@ -227,6 +227,14 @@
   text-align: center;
   padding: 10px;
   box-shadow: var(--mat-sys-level1);
+  
+  /* Fixed dimensions and flexbox for consistency */
+  height: 140px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 
   &:not(.disabled):hover {
     transform: translateY(-3px);
@@ -243,19 +251,29 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     position: relative;
+    width: 100%;
+    height: 100%;
+    padding: 0;
   }
 
   mat-icon {
-    font-size: 32px;
-    height: 32px;
-    width: 32px;
-    margin-bottom: 8px;
+    font-size: 36px;
+    height: 36px;
+    width: 36px;
+    margin-bottom: 16px;
   }
 
   h3 {
     margin: 0;
     font-weight: normal;
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    text-align: center;
   }
 
   .coming-soon-badge {
@@ -483,7 +501,6 @@
   margin: 0;
   padding-bottom: 24px;
   box-sizing: border-box;
-  width: 100%;
 }
 
 
