@@ -43,6 +43,9 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
     error = signal<string>('');
     view = input<ViewMode>('list');
     imageLoadError = signal(false);
+    
+    // Control whether touch events should pass through (true) for scrolling or be intercepted (false)
+    passthrough = input<boolean>(false);
 
     // Flag to track if component is visible
     private isVisible = signal(false);
@@ -304,5 +307,21 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
      */
     isProfileNotFound(): boolean {
         return this.profile() && (this.profile().isEmpty || !this.profile().content);
+    }
+    
+    /**
+     * Handles touch events to allow scrolling when passthrough is enabled
+     * @param event The touch event to handle
+     */
+    handleTouchEvent(event: TouchEvent): void {
+        // When passthrough is true, allow the event to bubble up for scrolling
+        // by not calling preventDefault() or stopPropagation()
+        if (this.passthrough()) {
+            // For navigating to the profile, we'll use a separate click handler
+            return;
+        }
+        
+        // Otherwise, prevent default behavior to allow normal component interaction
+        event.stopPropagation();
     }
 }

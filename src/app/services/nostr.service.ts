@@ -79,7 +79,7 @@ export class NostrService {
 
   discoveryQueue: any = [];
   activeDiscoveries: any = [];
-  MAX_CONCURRENT_DISCOVERIES = 1;
+  MAX_CONCURRENT_DISCOVERIES = 10;
 
   constructor() {
     this.logger.info('Initializing NostrService');
