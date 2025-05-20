@@ -42,6 +42,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
     isLoading = signal(false);
     error = signal<string>('');
     view = input<ViewMode>('list');
+    imageLoadError = signal(false);
 
     // Flag to track if component is visible
     private isVisible = signal(false);
@@ -263,6 +264,11 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
             default: // 'list'
                 return '40px';
         }
+    }    /**
+     * Handles image load errors by setting the imageLoadError signal to true
+     */
+    onImageLoadError(event: Event): void {
+        this.imageLoadError.set(true);
     }
 
     /**

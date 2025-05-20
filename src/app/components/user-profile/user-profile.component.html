@@ -15,11 +15,11 @@
       [matTooltip]="view() === 'large' || view() === 'medium' || view() === 'small' ? getTooltipContent() : ''"
       [matTooltipClass]="'user-profile-tooltip'" matTooltipPosition="above">      @if (isLoading()) {
       <mat-spinner [diameter]="getSpinnerSize()" color="primary"></mat-spinner>
-      } @else if (profile()?.content?.picture) {
-      <img [src]="profile().content.picture" onerror="this.onerror=null; this.src='images/picture-failure.png';"
+      } @else if (profile()?.content?.picture && !imageLoadError()) {
+      <img [src]="profile().content.picture" (error)="onImageLoadError($event)" 
         alt="User Avatar" class="user-avatar" />
       } @else {
-      <mat-icon [ngClass]="['default-user-avatar', isProfileNotFound() ? 'not-found-avatar' : '']" 
+      <mat-icon [ngClass]="['default-user-avatar', (isProfileNotFound() || imageLoadError()) ? 'error-avatar' : '']" 
         [style.font-size]="getDefaultAvatarSize()"
         [style.height]="getDefaultAvatarSize()" 
         [style.width]="getDefaultAvatarSize()">

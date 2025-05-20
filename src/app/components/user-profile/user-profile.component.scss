@@ -62,8 +62,9 @@
       color: var(--mat-caption-text-color, #757575);
       font-size: 100%;
       
-      &.not-found-avatar {
-        color: var(--mat-warn-color, #f44336); /* Use Material's warning color for not found profiles */
+      &.not-found-avatar,
+      &.error-avatar {
+        color: var(--mat-warn-color, #f44336); /* Use Material's warning color for not found or error profiles */
       }
     }
 

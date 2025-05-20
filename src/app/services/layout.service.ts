@@ -121,7 +121,14 @@ export class LayoutService {
             });
     }
 
-    showWelcomeScreen = signal(true);
+    showWelcomeScreen = signal<boolean>(localStorage.getItem('nostria-welcome') !== 'false');
+
+    // Method to update welcome screen preference
+    setWelcomeScreenPreference(show: boolean): void {
+        localStorage.setItem('nostria-welcome', show ? 'true' : 'false');
+        this.showWelcomeScreen.set(show);
+        this.logger.debug('Welcome screen preference updated', { show });
+    }
 
     async showLoginDialog(): Promise<void> {
         this.logger.debug('showLoginDialog called');

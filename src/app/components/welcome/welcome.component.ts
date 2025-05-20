@@ -22,7 +22,7 @@ export class WelcomeComponent {
       this.currentOnboardingPage.update(page => page + 1);
     } else {
       // On the last page, close the welcome screen
-      this.layout.showWelcomeScreen.set(false);
+      this.closeWelcomeScreen();
     }
   }
 
@@ -35,6 +35,7 @@ export class WelcomeComponent {
 
   // Method to close the welcome screen
   closeWelcomeScreen(): void {
+    localStorage.setItem('nostria-welcome', 'false');
     this.layout.showWelcomeScreen.set(false);
   }
 }
