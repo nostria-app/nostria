@@ -121,6 +121,8 @@ export class LayoutService {
             });
     }
 
+    showWelcomeScreen = signal(true);
+
     async showLoginDialog(): Promise<void> {
         this.logger.debug('showLoginDialog called');
         // Apply the blur class to the document body before opening the dialog

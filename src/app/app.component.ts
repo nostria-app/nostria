@@ -30,6 +30,7 @@ import { NotificationService } from './services/notification.service';
 import { MatBottomSheet, MatBottomSheetModule } from '@angular/material/bottom-sheet';
 import { CreateOptionsSheetComponent } from './components/create-options-sheet/create-options-sheet.component';
 import { LoginDialogComponent } from './components/login-dialog/login-dialog.component';
+import { WelcomeComponent } from './components/welcome/welcome.component';
 
 interface NavItem {
   path: string;
@@ -42,7 +43,7 @@ interface NavItem {
 
 @Component({
   selector: 'app-root',
-  standalone: true,  imports: [
+  standalone: true, imports: [
     RouterOutlet,
     RouterLink,
     RouterLinkActive,
@@ -61,7 +62,8 @@ interface NavItem {
     MatFormFieldModule,
     NPubPipe,
     MatBadgeModule,
-    MatBottomSheetModule
+    MatBottomSheetModule,
+    WelcomeComponent
   ], templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })
@@ -73,12 +75,13 @@ export class AppComponent {
   nostrService = inject(NostrService);
   storage = inject(StorageService);
   appState = inject(ApplicationStateService);
-  app = inject(ApplicationService);  layout = inject(LayoutService);
+  app = inject(ApplicationService); layout = inject(LayoutService);
   router = inject(Router);
   notificationService = inject(NotificationService);
   notificationType = NotificationType;
   bottomSheet = inject(MatBottomSheet);
 
+  
   private logger = inject(LoggerService);
 
   private readonly platform = inject(PLATFORM_ID);
@@ -244,6 +247,7 @@ export class AppComponent {
     await this.storage.init();
   }
 
+
   qrScan() {
     const dialogRef = this.dialog.open(QrcodeScanDialogComponent, {
       data: { did: '' },
@@ -292,11 +296,11 @@ export class AppComponent {
       this.toggleSidenav();
     }
   }
-  
+
   openCreateOptions(): void {
     this.bottomSheet.open(CreateOptionsSheetComponent);
   }
-  
+
   showLoginDialog(): void {
     this.dialog.open(LoginDialogComponent, {
       width: '450px',

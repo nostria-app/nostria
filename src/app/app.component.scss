@@ -142,9 +142,6 @@ nav {
 //   height: calc(100dvh - 156px); // Adjusted for mobile nav height
 // }
 
-
-
-
 mat-nav-list .mat-icon {
   margin-right: 12px;
 }
@@ -504,72 +501,3 @@ mat-nav-list .mat-icon {
   box-shadow: var(--mat-sys-level4);
 }
 
-
-.welcome {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  background-color: white;
-  z-index: 100000;
-}
-
-.welcome p {
-  font-size: 1.2rem;
-}
-
-.welcome-backdrop {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: linear-gradient(to bottom, rgba(218, 196, 255, 0.6), rgba(230, 230, 230, 0.8));
-}
-
-.dark-theme .welcome-backdrop {
-  background: linear-gradient(to bottom, rgba(126, 87, 194, 0.3), rgba(66, 66, 66, 0.5));
-
-}
-
-.dark-theme .welcome {}
-
-.welcome-content {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  max-width: 960px;
-  gap: 1rem;
-  padding: 1rem;
-
-  >div:first-child,
-  // Target first child div
-  > :first-child {
-    // Alternative selector for flexibility
-    width: 30%;
-    flex-shrink: 0; // Prevent shrinking below 30%
-  }
-
-  >div:last-child,
-  // Target second child div
-  > :last-child {
-    // Alternative selector for flexibility  
-    width: 70%;
-    flex-shrink: 0; // Prevent shrinking below 70%
-  }
-}
-
-.dark-theme .welcome-content {}
-
-.welcome-logo {
-  width: 100%;
-  height: 100%;
-  max-width: 256px;
-  max-height: 256px;
-}
-
-.welcome-close-button {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-}

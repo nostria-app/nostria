@@ -1,0 +1,124 @@
+
+.welcome {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background-color: white;
+  z-index: 100000;
+}
+
+.welcome p {
+  font-size: 1.2rem;
+}
+
+.welcome-backdrop {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column; // Stack children vertically
+  background: linear-gradient(to bottom, rgba(218, 196, 255, 0.6), rgba(230, 230, 230, 0.8));
+}
+
+.dark-theme .welcome-backdrop {
+  background: linear-gradient(to bottom, rgba(126, 87, 194, 0.3), rgba(66, 66, 66, 0.5));
+}
+
+.welcome-top {
+  height: 60px;
+  min-height: 60px; // Ensure it stays 60px
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  position: relative;
+
+}
+
+.welcome-logo-container {
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+.welcome-logo {
+  max-width: 256px;
+  width: 100%;
+}
+
+.welcome-content {
+  box-sizing: border-box;
+  flex: 1; // Take remaining space
+  overflow-y: auto; // Enable scrolling
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+  max-width: 960px;
+  margin: 0 auto;
+
+  // Maintain the existing layout properties for inner content
+  >div:first-child,
+  > :first-child {
+    width: 30%;
+    flex-shrink: 0;
+  }
+
+  >div:last-child,
+  > :last-child {
+    width: 70%;
+    flex-shrink: 0;
+  }
+}
+
+.welcome-footer {
+  box-sizing: border-box;
+  height: 60px;
+  min-height: 60px; // Ensure it stays 60px
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 1rem;
+  position: relative; // Changed from absolute to relative
+}
+
+.welcome-close-button {
+  // position: absolute;
+  // top: 1rem;
+  // right: 1rem;
+  margin-right: 1rem;
+}
+
+// Adjust mobile styles
+@media screen and (max-width: 599px) {
+  .welcome-content {
+    font-size: 0.8rem;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+
+    p {
+      font-size: 1rem;
+    }
+
+    >div:first-child,
+    > :first-child {
+      width: 100%;
+      max-width: 100%;
+      flex-shrink: 0;
+      text-align: center;
+    }
+
+    >div:last-child,
+    > :last-child {
+      width: 100%;
+      max-width: 100%;
+      flex-shrink: 0;
+    }
+  }
+}
+
+.page-indicator {
+  color: var(--mat-sys-on-surface-variant);
+}
