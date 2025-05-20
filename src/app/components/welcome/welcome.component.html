@@ -1,0 +1,36 @@
+<div class="welcome">
+    <div class="welcome-backdrop">
+
+        <div class="welcome-top">
+            <button class="welcome-close-button" mat-icon-button (click)="closeWelcomeScreen()">
+                <mat-icon>close</mat-icon>
+            </button>
+        </div>
+
+        <div class="welcome-content">
+            <div class="welcome-logo-container">
+                <img src="icons/icon.svg" alt="Nostria logo" class="welcome-logo">
+            </div>
+            <div>
+                <h1>Welcome to Nostria</h1>
+                <p>
+                    Discover the future of social media with Nostria - Your Social Media.
+                </p>
+                <p>Seamlessly manage multiple accounts, connect to any relay, and navigate a sleek, intuitive interface
+                    designed for
+                    effortless exploration, sharing, and connection. With global scaling, Nostria delivers a stellar
+                    experience
+                    to users everywhere, no matter your location. Amplify your voice, your way!
+                </p>
+            </div>
+        </div>
+
+        <div class="welcome-footer">
+            <div class="page-indicator">Page 1 of 3</div>
+            <div class="welcome-actions">
+                <button mat-button (click)="closeWelcomeScreen()">Close</button>&nbsp;
+                <button mat-flat-button color="primary" (click)="nextOnboardingPage()">Next</button>
+            </div>
+        </div>
+    </div>
+</div>
