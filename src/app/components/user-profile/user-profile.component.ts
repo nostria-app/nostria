@@ -112,8 +112,8 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
 
             this.scrollCheckTimer = window.setInterval(() => {
                 const currentPosition = {
-                    x: window.scrollX,
-                    y: window.scrollY
+                  x: window.scrollX,
+                  y: window.scrollY
                 };
 
                 // If position changed, user is scrolling
@@ -291,5 +291,12 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
         }
 
         return tooltipText;
+    }
+
+    /**
+     * Checks if the profile is not found (empty or missing)
+     */
+    isProfileNotFound(): boolean {
+        return this.profile() && (this.profile().isEmpty || !this.profile().content);
     }
 }

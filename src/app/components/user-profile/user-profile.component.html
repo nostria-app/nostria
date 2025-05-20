@@ -13,15 +13,18 @@
     <!-- Avatar section - single image element -->
     <a [routerLink]="['/p', pubkey()]" class="user-profile-avatar"
       [matTooltip]="view() === 'large' || view() === 'medium' || view() === 'small' ? getTooltipContent() : ''"
-      [matTooltipClass]="'user-profile-tooltip'" matTooltipPosition="above">
-      @if (isLoading()) {
+      [matTooltipClass]="'user-profile-tooltip'" matTooltipPosition="above">      @if (isLoading()) {
       <mat-spinner [diameter]="getSpinnerSize()" color="primary"></mat-spinner>
       } @else if (profile()?.content?.picture) {
       <img [src]="profile().content.picture" onerror="this.onerror=null; this.src='images/picture-failure.png';"
         alt="User Avatar" class="user-avatar" />
       } @else {
-      <mat-icon class="default-user-avatar" [style.font-size]="getDefaultAvatarSize()"
-        [style.height]="getDefaultAvatarSize()" [style.width]="getDefaultAvatarSize()">account_circle</mat-icon>
+      <mat-icon [ngClass]="['default-user-avatar', isProfileNotFound() ? 'not-found-avatar' : '']" 
+        [style.font-size]="getDefaultAvatarSize()"
+        [style.height]="getDefaultAvatarSize()" 
+        [style.width]="getDefaultAvatarSize()">
+        {{isProfileNotFound() ? 'no_accounts' : 'account_circle'}}
+      </mat-icon>
       }
     </a>
 
