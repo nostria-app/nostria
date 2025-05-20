@@ -52,7 +52,31 @@
 .welcome-content {
   box-sizing: border-box;
   flex: 1; // Take remaining space
-  overflow-y: auto; // Enable scrolling
+  overflow-y: auto;
+  // display: flex;
+  align-items: center;
+  margin: 0 auto;
+  align-content: center;
+  width: 100%;
+
+  // Maintain the existing layout properties for inner content
+  // >div:first-child,
+  // > :first-child {
+  //   width: 30%;
+  //   flex-shrink: 0;
+  // }
+
+  // >div:last-child,
+  // > :last-child {
+  //   width: 70%;
+  //   flex-shrink: 0;
+  // }
+}
+
+.welcome-content-container {
+  box-sizing: border-box;
+  flex: 1; // Take remaining space
+  // overflow-y: auto; // Enable scrolling
   display: flex;
   align-items: center;
   max-width: 960px;
@@ -86,6 +110,11 @@
 
 // Adjust mobile styles
 @media screen and (max-width: 599px) {
+  .welcome-content-container {
+    flex-direction: column;
+  }
+
+
   .welcome-content {
     font-size: 0.8rem;
     // flex-direction: column;
@@ -95,21 +124,6 @@
 
     p {
       font-size: 1rem;
-    }
-
-    >div:first-child,
-    > :first-child {
-      width: 100%;
-      max-width: 100%;
-      flex-shrink: 0;
-      text-align: center;
-    }
-
-    >div:last-child,
-    > :last-child {
-      width: 100%;
-      max-width: 100%;
-      flex-shrink: 0;
     }
   }
 }
