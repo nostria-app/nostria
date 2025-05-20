@@ -61,6 +61,10 @@
       justify-content: center;
       color: var(--mat-caption-text-color, #757575);
       font-size: 100%;
+      
+      &.not-found-avatar {
+        color: var(--mat-warn-color, #f44336); /* Use Material's warning color for not found profiles */
+      }
     }
 
     mat-spinner {
