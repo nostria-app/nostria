@@ -1,4 +1,3 @@
-
 .welcome {
   position: absolute;
   width: 100%;
@@ -26,13 +25,18 @@
 
 .welcome-top {
   height: 60px;
-  min-height: 60px; // Ensure it stays 60px
+  min-height: 60px;
   width: 100%;
   display: flex;
-  align-items: center;
   justify-content: flex-end;
-  position: relative;
+}
 
+.welcome-close-button {
+  // position: absolute;
+  // top: 1rem;
+  // right: 1rem;
+  margin-right: 1rem;
+  margin-top: 1rem;
 }
 
 .welcome-logo-container {
@@ -50,9 +54,7 @@
   flex: 1; // Take remaining space
   overflow-y: auto; // Enable scrolling
   display: flex;
-  justify-content: center;
   align-items: center;
-  padding: 1rem;
   max-width: 960px;
   margin: 0 auto;
 
@@ -73,7 +75,7 @@
 .welcome-footer {
   box-sizing: border-box;
   height: 60px;
-  min-height: 60px; // Ensure it stays 60px
+  min-height: 60px;
   width: 100%;
   display: flex;
   justify-content: space-between;
@@ -82,18 +84,11 @@
   position: relative; // Changed from absolute to relative
 }
 
-.welcome-close-button {
-  // position: absolute;
-  // top: 1rem;
-  // right: 1rem;
-  margin-right: 1rem;
-}
-
 // Adjust mobile styles
 @media screen and (max-width: 599px) {
   .welcome-content {
     font-size: 0.8rem;
-    flex-direction: column;
+    // flex-direction: column;
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem;
