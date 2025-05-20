@@ -282,7 +282,7 @@
           @if (account.pubkey !== nostrService.account()?.pubkey) {
 
           @if(nostrService.getMetadataForAccount(account.pubkey); as metadata) {
-          <a mat-list-item (click)="switchAccount(account.pubkey)" class="account-item">
+          <a mat-list-item (click)="switchAccount(account.pubkey); toggleProfileSidenav()" class="account-item">
             @if (metadata.content?.picture; as account) {
             <div class="account-avatar" matListItemIcon>
               <img [src]="metadata?.content?.picture" alt="Profile picture" class="avatar-image">
