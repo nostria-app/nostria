@@ -148,7 +148,7 @@ body {
   transition: background-color 0.3s ease;
 }
 
-.dark-theme {
+.dark {
   // --mat-toolbar-container-background-color: #424242;
   // --mat-toolbar-container-text-color: white;
 
@@ -425,7 +425,7 @@ mat-card-content li {
   letter-spacing: 0.5px;
 }
 
-.dark-theme .beta-badge {
+.dark .beta-badge {
   background-color: var(--mat-sys-tertiary);
   color: black;
 }
@@ -451,7 +451,7 @@ mat-card-content li {
   --mat-emphasis-color: rgba(0, 0, 0, 0.6);
 }
 
-.dark-theme {
+.dark {
   --mat-emphasis-color: rgba(255, 255, 255, 0.6);
 }
 

@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { LayoutService } from '../../services/layout.service';
+import { ThemeService } from '../../services/theme.service';
 
 @Component({
   selector: 'app-welcome',
@@ -10,6 +11,7 @@ import { LayoutService } from '../../services/layout.service';
   styleUrl: './welcome.component.scss'
 })
 export class WelcomeComponent {
+  themeService = inject(ThemeService);
   layout = inject(LayoutService)
   currentOnboardingPage = signal(1);
   totalOnboardingPages = signal(3);

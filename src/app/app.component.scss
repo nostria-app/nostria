@@ -55,7 +55,7 @@ nav {
   }
 }
 
-.dark-theme .active-link {
+.dark .active-link {
   background-color: rgba(255, 255, 255, 0.05);
 }
 
@@ -103,7 +103,7 @@ nav {
   }
 }
 
-.dark-theme .beta-indicator {
+.dark .beta-indicator {
   background-color: var(--mat-sys-tertiary);
   color: black;
 }
@@ -172,7 +172,7 @@ mat-nav-list .mat-icon {
   color: var(--mdc-list-list-item-label-text-color);
 }
 
-.dark-theme .mobile-nav {
+.dark .mobile-nav {
   background-color: #424242;
   // border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
@@ -214,7 +214,7 @@ mat-nav-list .mat-icon {
   /* Add small padding to prevent text from touching edges */
 }
 
-.dark-theme .mobile-nav {
+.dark .mobile-nav {
   // border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
 
@@ -364,7 +364,7 @@ mat-nav-list .mat-icon {
   background-color: rgba(0, 0, 0, 0.04);
 }
 
-.dark-theme .current-account {
+.dark .current-account {
   background-color: rgba(255, 255, 255, 0.05);
 }
 
@@ -470,7 +470,7 @@ mat-nav-list .mat-icon {
 }
 
 /* Dark theme adjustments */
-.dark-theme .floating-offline-indicator {
+.dark .floating-offline-indicator {
   background-color: #ef5350;
 }
 

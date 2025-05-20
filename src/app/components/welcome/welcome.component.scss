@@ -6,6 +6,11 @@
   z-index: 100000;
 }
 
+// Use :host-context() to detect the dark class on any ancestor
+:host-context(.dark) .welcome {
+  background-color: black;
+}
+
 .welcome p {
   font-size: 1.2rem;
 }
@@ -19,7 +24,7 @@
   background: linear-gradient(to bottom, rgba(218, 196, 255, 0.6), rgba(230, 230, 230, 0.8));
 }
 
-.dark-theme .welcome-backdrop {
+:host-context(.dark) .welcome-backdrop {
   background: linear-gradient(to bottom, rgba(126, 87, 194, 0.3), rgba(66, 66, 66, 0.5));
 }
 
@@ -29,6 +34,11 @@
   width: 100%;
   display: flex;
   justify-content: flex-end;
+}
+
+.welcome-theme-button {
+  margin-top: 1rem;
+  margin-right: 1rem;
 }
 
 .welcome-close-button {
@@ -81,6 +91,7 @@
   align-items: center;
   max-width: 960px;
   margin: 0 auto;
+  padding: 1rem;
 
   // Maintain the existing layout properties for inner content
   >div:first-child,
@@ -130,4 +141,34 @@
 
 .page-indicator {
   color: var(--mat-sys-on-surface-variant);
+}
+
+
+.feature-highlights {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.feature-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+
+  mat-icon {
+    color: var(--mat-primary-color);
+    margin-top: 2px;
+  }
+
+  .feature-text {
+    h3 {
+      margin: 0 0 8px 0;
+    }
+
+    p {
+      margin: 0;
+      color: var(--mat-text-secondary-color);
+    }
+  }
 }
