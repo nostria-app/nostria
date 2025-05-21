@@ -1197,9 +1197,9 @@ export class NostrService {
   }
 
   private async processDiscoveryQueue(): Promise<void> {
-    if (this.activeDiscoveries >= this.MAX_CONCURRENT_DISCOVERIES) {
-      return;
-    }
+    // if (this.activeDiscoveries >= this.MAX_CONCURRENT_DISCOVERIES) {
+    //   return;
+    // }
 
     const next = this.discoveryQueue.shift();
     if (!next) {

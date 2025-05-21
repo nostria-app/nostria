@@ -74,7 +74,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
                 this.npub.set(npub);
 
                 // Only load profile data when the component is visible and not scrolling
-                if (this.isVisible() && !this.isScrolling()) {
+                if (this.isVisible() && !this.isScrolling() && !this.profile()) {
                     untracked(() => {
                         this.debouncedLoadProfileData(pubkey);
                     });
@@ -83,13 +83,14 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
         });
 
         // Additional effect to watch for visibility changes and scrolling status
-        effect(() => {
-            if (this.isVisible() && !this.isScrolling() && this.pubkey() && !this.profile()) {
-                untracked(() => {
-                    this.debouncedLoadProfileData(this.pubkey());
-                });
-            }
-        });
+        // effect(() => {
+        //     debugger;
+        //     if (this.isVisible() && !this.isScrolling() && this.pubkey() && !this.profile()) {
+        //         untracked(() => {
+        //             this.debouncedLoadProfileData(this.pubkey());
+        //         });
+        //     }
+        // });
     }
 
     getInfoClass() {
