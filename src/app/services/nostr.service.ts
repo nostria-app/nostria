@@ -1850,7 +1850,6 @@ export class NostrService {
   }
 
   getNsecFromPrivkey(privkey: string): string {
-    this.logger.debug('Converting private key to nsec');
     // Convert the hex private key to a Nostr secret key (nsec)
     const bytes = hexToBytes(privkey);
     const nsec = nip19.nsecEncode(bytes);
@@ -1858,15 +1857,12 @@ export class NostrService {
   }
 
   getNpubFromPubkey(pubkey: string): string {
-    console.debug('LOCATION 6:', pubkey);
-    this.logger.debug('Converting public key to npub');
     // Convert the hex public key to a Nostr public key (npub)
     const npub = nip19.npubEncode(pubkey);
     return npub;
   }
 
   getPubkeyFromNpub(npub: string): string {
-    this.logger.debug('Converting npub to pub key');
     // Convert the hex public key to a Nostr public key (npub)
     const result = nip19.decode(npub).data;
     return result as string;

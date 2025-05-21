@@ -69,7 +69,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
             const pubkey = this.pubkey();
 
             if (pubkey) {
-                console.debug('LOCATION 1:', pubkey);
+                // console.debug('LOCATION 1:', pubkey);
                 const npub = this.nostrService.getNpubFromPubkey(pubkey);
                 this.npub.set(npub);
 
@@ -234,7 +234,9 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
             // Note: isLoading is now set earlier when visibility is detected
             this.logger.debug('Loading profile data for:', npubValue);
 
+            this.logger.time('Loading profile data in user profile' + npubValue);
             const data = await this.nostrService.getMetadataForUser(npubValue);
+            this.logger.timeEnd('Loading profile data in user profile' + npubValue);
 
             this.logger.debug('Profile data loaded:', data);
 
