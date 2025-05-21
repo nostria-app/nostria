@@ -1,5 +1,13 @@
 <!-- <div [ngClass]="['user-profile', view()]" (click)="layout.navigateToProfile(pubkey())"> -->
-<div [ngClass]="['user-profile', view()]" (touchstart)="handleTouchEvent($event)" (touchmove)="handleTouchEvent($event)" (touchend)="handleTouchEvent($event)">
+<div [ngClass]="['user-profile', view()]" (touchstart)="handleTouchEvent($event)" (touchmove)="handleTouchEvent($event)"
+  (touchend)="handleTouchEvent($event)">
+
+  @if (info()) {
+  <div class="user-info-status" [matTooltip]="getInfoTooltip()"
+    [matTooltipClass]="'user-profile-tooltip'">
+    <mat-icon class="user-info-icon" [class]="getInfoClass()">info</mat-icon>
+  </div>
+  }
 
   <div class="user-profile-container">
     <!-- Banner section for grid view -->
@@ -11,18 +19,18 @@
     }
 
     <!-- Avatar section - single image element -->
-    <a [routerLink]="passthrough() ? null : ['/p', pubkey()]" class="user-profile-avatar"
+    <a [routerLink]="['/p', pubkey()]" class="user-profile-avatar"
       [matTooltip]="view() === 'large' || view() === 'medium' || view() === 'small' ? getTooltipContent() : ''"
-      [matTooltipClass]="'user-profile-tooltip'" matTooltipPosition="above" (touchstart)="handleTouchEvent($event)" (touchmove)="handleTouchEvent($event)" (touchend)="handleTouchEvent($event)">      @if (isLoading()) {
+      [matTooltipClass]="'user-profile-tooltip'" matTooltipPosition="above" (touchstart)="handleTouchEvent($event)"
+      (touchmove)="handleTouchEvent($event)" (touchend)="handleTouchEvent($event)"> @if (isLoading()) {
       <mat-spinner [diameter]="getSpinnerSize()" color="primary"></mat-spinner>
       } @else if (profile()?.content?.picture && !imageLoadError()) {
-      <img [src]="profile().content.picture" (error)="onImageLoadError($event)" 
-        alt="User Avatar" class="user-avatar" />
+      <img [src]="profile().content.picture" (error)="onImageLoadError($event)" alt="User Avatar" class="user-avatar" />
       } @else {
-      <mat-icon [ngClass]="['default-user-avatar', (isProfileNotFound() || imageLoadError()) ? 'error-avatar' : '']" 
-        [style.font-size]="getDefaultAvatarSize()"
-        [style.height]="getDefaultAvatarSize()" 
-        [style.width]="getDefaultAvatarSize()">
+      <mat-icon [ngClass]="['default-user-avatar', 
+                     isProfileNotFound() ? 'not-found-avatar' : '',
+                     imageLoadError() ? 'error-avatar' : '']" [style.font-size]="getDefaultAvatarSize()"
+        [style.height]="getDefaultAvatarSize()" [style.width]="getDefaultAvatarSize()">
         {{isProfileNotFound() ? 'no_accounts' : 'account_circle'}}
       </mat-icon>
       }

@@ -62,7 +62,7 @@ interface SettingsSection {
   styleUrl: './settings.component.scss',
 })
 export class SettingsComponent {
-  private logger = inject(LoggerService);
+  logger = inject(LoggerService);
   private breakpointObserver = inject(BreakpointObserver);
 
   currentLogLevel = signal<LogLevel>(this.logger.logLevel());

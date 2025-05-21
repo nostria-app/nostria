@@ -211,7 +211,7 @@ export class RelayService {
       debugger;
       // If URL parsing fails, return original URL
       this.logger.warn(`Failed to parse URL: ${url}`, error);
-      return url;
+      return '';
     }
   }
 
@@ -558,8 +558,11 @@ export class RelayService {
   addDiscoveryRelay(url: string): void {
     this.logger.debug(`Adding bootstrap relay: ${url}`);
     const normalizedUrl = this.normalizeRelayUrl(url);
-    this.discoveryRelays.push(normalizedUrl);
-    this._discoveryRelaysChanged.update(val => val + 1); // Trigger change detection
+
+    if (normalizedUrl) {
+      this.discoveryRelays.push(normalizedUrl);
+      this._discoveryRelaysChanged.update(val => val + 1); // Trigger change detection
+    }
   }
 
   /**

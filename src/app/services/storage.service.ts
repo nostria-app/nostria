@@ -348,7 +348,19 @@ export class StorageService {
       // Always store the content serialized.
       if (event.content && event.content !== '') {
         try {
-          event.content = JSON.parse(event.content);
+
+          // First check if the content is already an object (not a string)
+          if (typeof event.content === 'string') {
+            // Check if it looks like JSON (starts with { or [)
+            const trimmedContent = event.content.trim();
+
+            if ((trimmedContent.startsWith('{') && trimmedContent.endsWith('}')) ||
+              (trimmedContent.startsWith('[') && trimmedContent.endsWith(']'))) {
+              // Try parsing it as JSON
+              event.content = JSON.parse(event.content);
+            }
+            // If it doesn't look like JSON or parsing fails, the catch block will keep it as a string
+          }
         } catch (e) {
           debugger;
           this.logger.error('Failed to parse event content', e);
@@ -582,17 +594,17 @@ export class StorageService {
     try {
       // Create a deep clone of the relay object to avoid modifying the original
       // const relayClone = structuredClone(relay);
-      
+
       // Create a new object with the clone as the base
       const enhancedRelay: any = { ...relay };
-  
+
       if (nip11Info) {
         enhancedRelay['nip11'] = {
           ...nip11Info,
           last_checked: Date.now()
         };
       }
-  
+
       await this.db.put('relays', enhancedRelay);
       this.logger.debug(`Saved relay to IndexedDB: ${relay.url}`);
       await this.updateStats();
@@ -923,7 +935,7 @@ export class StorageService {
   }
 
   async updateStats(): Promise<void> {
-    return; 
+    return;
     // try {
     //   const relays = await this.getAllRelays();
     //   // const userMetadata = await this.getAllUserMetadata();

@@ -12,6 +12,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatButtonModule } from '@angular/material/button';
+import { InfoRecord } from '../../services/storage.service';
 
 @Component({
     selector: 'app-user-profile',
@@ -37,13 +38,14 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
     private elementRef = inject(ElementRef);
     layout = inject(LayoutService);
     pubkey = input<string>('');
+    info = input<InfoRecord | undefined>(undefined);
     npub = signal<string | undefined>(undefined);
     profile = signal<any>(null);
     isLoading = signal(false);
     error = signal<string>('');
     view = input<ViewMode>('list');
     imageLoadError = signal(false);
-    
+
     // Control whether touch events should pass through (true) for scrolling or be intercepted (false)
     passthrough = input<boolean>(false);
 
@@ -90,6 +92,20 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
         });
     }
 
+    getInfoClass() {
+        if (this.info()) {
+            if (this.info()!['hasRelayList']) {
+                return 'user-info-status-good';
+            } else if (this.info()!['hasFollowingListRelays'])
+                return 'user-info-status-medium';
+            else {
+                return 'user-info-status-bad';
+            }
+        }
+
+        return '';
+    }
+
     ngAfterViewInit(): void {
         // Set up intersection observer to detect when component is visible
         this.setupIntersectionObserver();
@@ -116,8 +132,8 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
 
             this.scrollCheckTimer = window.setInterval(() => {
                 const currentPosition = {
-                  x: window.scrollX,
-                  y: window.scrollY
+                    x: window.scrollX,
+                    y: window.scrollY
                 };
 
                 // If position changed, user is scrolling
@@ -203,8 +219,14 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
 
     private async loadProfileData(npubValue: string): Promise<void> {
         // Don't reload if we already have data
-        if (this.profile()) return;
-        if (this.isLoading()) return;
+        if (this.profile()) {
+            this.logger.debug('Profile data already loaded, skipping reload');
+            return;
+        };
+        if (this.isLoading()) {
+            this.logger.debug('Profile data is already loading, skipping reload');
+            return;
+        };
 
         this.isLoading.set(true);
 
@@ -213,6 +235,8 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
             this.logger.debug('Loading profile data for:', npubValue);
 
             const data = await this.nostrService.getMetadataForUser(npubValue);
+
+            this.logger.debug('Profile data loaded:', data);
 
             // Set profile to an empty object if no data was found
             // This will distinguish between "not loaded yet" and "loaded but empty"
@@ -274,10 +298,39 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
         this.imageLoadError.set(true);
     }
 
+    getInfoTooltip() {
+        let tooltip = '';
+
+        const info = this.info();
+
+        if (info) {
+            if (info['hasRelayList']) {
+                tooltip = '+1: Has relay list';
+            } else if (info['hasFollowingListRelays'])
+                tooltip = '-1: Has following list relays';
+            else {
+                tooltip = 'No relay list';
+            }
+
+            if (info['foundOnDiscoveryRelays']) {
+                tooltip += '\r\n+1: Found on discovery relays';
+            }
+            else if (info['foundOnAccountRelays']) {
+                tooltip += '\r\n-1: Found on account relays';
+            }
+        }
+
+        return tooltip;
+    }
+
     /**
      * Gets the tooltip content for the profile avatar
      */
     getTooltipContent(): string {
+        if (this.isLoading()) {
+            return 'Loading...';
+        }
+
         if (!this.profile() || this.profile().isEmpty || !this.profile().content) {
             return 'Profile not found';
         }
@@ -299,6 +352,10 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
             tooltipText += '\n\n' + content.about;
         }
 
+        if (this.imageLoadError()) {
+            tooltipText += '\n\nFailed to load profile image';
+        }
+
         return tooltipText;
     }
 
@@ -308,7 +365,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
     isProfileNotFound(): boolean {
         return this.profile() && (this.profile().isEmpty || !this.profile().content);
     }
-    
+
     /**
      * Handles touch events to allow scrolling when passthrough is enabled
      * @param event The touch event to handle
@@ -320,7 +377,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
             // For navigating to the profile, we'll use a separate click handler
             return;
         }
-        
+
         // Otherwise, prevent default behavior to allow normal component interaction
         event.stopPropagation();
     }

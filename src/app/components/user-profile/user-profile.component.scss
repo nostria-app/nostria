@@ -64,9 +64,12 @@
       color: var(--mat-caption-text-color, #757575);
       font-size: 100%;
       
-      &.not-found-avatar,
-      &.error-avatar {
+      &.not-found-avatar {
         color: var(--mat-warn-color, #f44336); /* Use Material's warning color for not found or error profiles */
+      }
+
+      &.error-avatar {
+        color: var(--mat-warn-color, #be09af); /* Use Material's warning color for not found or error profiles */
       }
     }
 
@@ -364,4 +367,28 @@
   max-width: 250px;     // Limit tooltip width
   font-size: 12px;
   line-height: 1.4;
+}
+
+.user-info-status {
+  position: absolute;
+  margin-top: 0px;
+  z-index: 1000;
+}
+
+.user-info-status-good {
+  background-color: green;
+}
+
+.user-info-status-bad {
+   background-color: red;
+}
+
+.user-info-status-medium {
+  background-color: orange;
+}
+
+.user-info-icon {
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
 }

@@ -100,6 +100,12 @@
             }
             }
           </p>
+
+          <div class="setting-item">
+            <span>Show debug overlay</span>
+            <mat-slide-toggle [checked]="logger.logOverlay()" (change)="logger.setLogOverlay(!logger.logOverlay())">
+            </mat-slide-toggle>
+          </div>
         </div>
 
         <!-- Storage Stats Component -->
