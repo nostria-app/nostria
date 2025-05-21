@@ -1,10 +1,13 @@
 <!-- <div [ngClass]="['user-profile', view()]" (click)="layout.navigateToProfile(pubkey())"> -->
-<div [ngClass]="['user-profile', view()]" (touchstart)="handleTouchEvent($event)" (touchmove)="handleTouchEvent($event)"
-  (touchend)="handleTouchEvent($event)">
+<!-- <div [ngClass]="['user-profile', view()]" (touchstart)="handleTouchEvent($event)" (touchmove)="handleTouchEvent($event)"
+  (touchend)="handleTouchEvent($event)"> -->
+
+<div [ngClass]="['user-profile', view()]">
+
+  ||{{ isLoading()}}||
 
   @if (info()) {
-  <div class="user-info-status" [matTooltip]="getInfoTooltip()"
-    [matTooltipClass]="'user-profile-tooltip'">
+  <div class="user-info-status" [matTooltip]="getInfoTooltip()" [matTooltipClass]="'user-profile-tooltip'">
     <mat-icon class="user-info-icon" [class]="getInfoClass()">info</mat-icon>
   </div>
   }
@@ -21,8 +24,15 @@
     <!-- Avatar section - single image element -->
     <a [routerLink]="['/p', pubkey()]" class="user-profile-avatar"
       [matTooltip]="view() === 'large' || view() === 'medium' || view() === 'small' ? getTooltipContent() : ''"
+      [matTooltipClass]="'user-profile-tooltip'" matTooltipPosition="above">
+
+      <!-- <a [routerLink]="['/p', pubkey()]" class="user-profile-avatar"
+      [matTooltip]="view() === 'large' || view() === 'medium' || view() === 'small' ? getTooltipContent() : ''"
       [matTooltipClass]="'user-profile-tooltip'" matTooltipPosition="above" (touchstart)="handleTouchEvent($event)"
-      (touchmove)="handleTouchEvent($event)" (touchend)="handleTouchEvent($event)"> @if (isLoading()) {
+      (touchmove)="handleTouchEvent($event)" (touchend)="handleTouchEvent($event)"> -->
+
+
+      @if (isLoading()) {
       <mat-spinner [diameter]="getSpinnerSize()" color="primary"></mat-spinner>
       } @else if (profile()?.content?.picture && !imageLoadError()) {
       <img [src]="profile().content.picture" (error)="onImageLoadError($event)" alt="User Avatar" class="user-avatar" />

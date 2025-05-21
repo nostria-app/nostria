@@ -235,6 +235,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
             this.logger.debug('Loading profile data for:', npubValue);
 
             this.logger.time('Loading profile data in user profile' + npubValue);
+
             const data = await this.nostrService.getMetadataForUser(npubValue);
             this.logger.timeEnd('Loading profile data in user profile' + npubValue);
 
@@ -320,6 +321,14 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
             else if (info['foundOnAccountRelays']) {
                 tooltip += '\r\n-1: Found on account relays';
             }
+
+            if (info['foundZeroRelaysOnAccountRelays']) {
+                tooltip += '\r\n-1: Found zero relays on account relays';
+            }
+
+            if (info['foundMetadataOnAccountRelays']) {
+                tooltip += '\r\n-1: Found metadata on account relays';
+            }
         }
 
         return tooltip;
@@ -372,15 +381,15 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
      * Handles touch events to allow scrolling when passthrough is enabled
      * @param event The touch event to handle
      */
-    handleTouchEvent(event: TouchEvent): void {
-        // When passthrough is true, allow the event to bubble up for scrolling
-        // by not calling preventDefault() or stopPropagation()
-        if (this.passthrough()) {
-            // For navigating to the profile, we'll use a separate click handler
-            return;
-        }
+    // handleTouchEvent(event: TouchEvent): void {
+    //     // When passthrough is true, allow the event to bubble up for scrolling
+    //     // by not calling preventDefault() or stopPropagation()
+    //     if (this.passthrough()) {
+    //         // For navigating to the profile, we'll use a separate click handler
+    //         return;
+    //     }
 
-        // Otherwise, prevent default behavior to allow normal component interaction
-        event.stopPropagation();
-    }
+    //     // Otherwise, prevent default behavior to allow normal component interaction
+    //     event.stopPropagation();
+    // }
 }

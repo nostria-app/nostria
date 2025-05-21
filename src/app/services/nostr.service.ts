@@ -63,6 +63,14 @@ export class NostrService {
   accountsMetadata = signal<NostrEvent[]>([]);
   accountsRelays = signal<NostrEvent[]>([]);
 
+  accountRelays = computed(() => {
+    return this.relayService.relaysChanged();
+  });
+
+  accountRelayUrls = computed(() => {
+    return this.accountRelays().map((r) => r.url);
+  });
+
   // These are cache-lookups for the metadata and relays of all users,
   // to avoid query the database all the time.
   // These lists will grow
@@ -803,9 +811,9 @@ export class NostrService {
     const cachedMetadata = this.usersMetadata().get(pubkey);
     if (cachedMetadata) {
       // Move to end of LRU cache
-      this.logger.time('getMetadataForUser - cache hit');
+      this.logger.time('getMetadataForUser - cache hit' + pubkey);
       this.updateMetadataCache(pubkey, cachedMetadata);
-      this.logger.time('end');
+      this.logger.time('getMetadataForUser - cache hit' + pubkey);
       return cachedMetadata;
     }
 
@@ -885,6 +893,14 @@ export class NostrService {
       if (metadata) {
         this.logger.debug('Successfully retrieved metadata', { relayUrls });
       }
+
+      // A lot of user's have tens of relays, and many old ones. If we can't connect to them, give them a timeout.
+      const connectionStatuses = userPool.listConnectionStatus();
+      const failedRelays = Array.from(connectionStatuses.entries())
+        .filter(([_, status]) => status === false)
+        .map(([url, _]) => url);
+
+      this.relayService.timeoutRelays(failedRelays);
     } catch (error) {
       this.logger.debug('Failed to fetch metadata from relay', { error });
     }
@@ -900,7 +916,9 @@ export class NostrService {
   }
 
   async discoverMetadata(pubkey: string, disconnect = true): Promise<NostrEvent | undefined | null> {
+    this.logger.time('getinfo' + pubkey);
     let info: any = await this.storage.getInfo(pubkey, 'user');
+    this.logger.timeEnd('getinfo' + pubkey);
 
     if (!info) {
       info = {};
@@ -1138,6 +1156,13 @@ export class NostrService {
       const userPool = new SimplePool();
 
       try {
+        // If we have not found relays for this user, attempt to find his profile on account relays.
+        if (relayUrls.length === 0) {
+          relayUrls = this.accountRelayUrls();
+
+          info.foundZeroRelaysOnAccountRelays = true;
+        }
+
         let metadataEvent = await userPool.get(relayUrls, {
           authors: [pubkey],
           kinds: [kinds.Metadata],
@@ -1145,6 +1170,7 @@ export class NostrService {
 
         if (metadataEvent) {
           this.logger.debug('Found metadata event', { metadataEvent });
+          info.foundMetadataOnAccountRelays = true;
           await this.storage.saveEvent(metadataEvent);
           return metadataEvent;
         } else {
