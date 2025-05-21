@@ -18,3 +18,6 @@ The logic that attempts to discover a user is as follows:
 1. Get Relay List from Account Relays. Fallback to get Following List from Account Relays.
 2. Get metadata from User Relays (only 3 of them).
 
+If the Relay List/Following List is discovered elsewhere than Discovery Relay, Nostria will publish the Relay List/Following List to the User Relays.
+
+This ensures next user who tries to discover the account will get the Relay List/Following List from the Discovery Relays, and not from the User Relays.
