@@ -5,6 +5,10 @@
   <app-loading-overlay [message]="appState.loadingMessage()"></app-loading-overlay>
   }
 
+  @if (logger.logOverlay()) {
+  <app-debug-overlay></app-debug-overlay>
+  }
+
   <!-- Success overlay with checkmark -->
   @if (appState.showSuccess()) {
   <div class="success-overlay">
@@ -15,7 +19,7 @@
   }
 
   @if (layout.showWelcomeScreen()) {
-    <app-welcome></app-welcome>
+  <app-welcome></app-welcome>
   }
 
   @if (app.initialized()) {

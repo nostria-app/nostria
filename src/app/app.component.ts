@@ -31,6 +31,7 @@ import { MatBottomSheet, MatBottomSheetModule } from '@angular/material/bottom-s
 import { CreateOptionsSheetComponent } from './components/create-options-sheet/create-options-sheet.component';
 import { LoginDialogComponent } from './components/login-dialog/login-dialog.component';
 import { WelcomeComponent } from './components/welcome/welcome.component';
+import { DebugOverlayComponent } from './components/debug-overlay/debug-overlay.component';
 
 interface NavItem {
   path: string;
@@ -63,7 +64,8 @@ interface NavItem {
     NPubPipe,
     MatBadgeModule,
     MatBottomSheetModule,
-    WelcomeComponent
+    WelcomeComponent,
+    DebugOverlayComponent
   ], templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })
@@ -80,9 +82,7 @@ export class AppComponent {
   notificationService = inject(NotificationService);
   notificationType = NotificationType;
   bottomSheet = inject(MatBottomSheet);
-
-  
-  private logger = inject(LoggerService);
+  logger = inject(LoggerService);
 
   private readonly platform = inject(PLATFORM_ID);
   private readonly document = inject(DOCUMENT);

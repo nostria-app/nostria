@@ -8,3 +8,13 @@ This is because sometimes we want to use virtual scrolling and not load the data
 
 For example rendering a list of 1000 badges. We will bind to the <app-badge> component and pass the information we have, but the component will look up the badge definition by itself when it's visible/rendered.
 
+## Account Discovery Process
+
+The logic that attempts to discover a user is as follows:
+
+1. Get Relay List from Discovery Relays. Fallback to get Following List from Discovery Relays.
+2. Get metadata from User Relays (only 3 of them).
+
+1. Get Relay List from Account Relays. Fallback to get Following List from Account Relays.
+2. Get metadata from User Relays (only 3 of them).
+

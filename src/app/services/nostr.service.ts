@@ -50,7 +50,7 @@ export class NostrService {
   private readonly region = inject(RegionService);
 
   initialized = signal(false);
-
+  MAX_WAIT_TIME = 3000;
   dataLoaded = false;
 
   account = signal<NostrUser | null>(null);
@@ -795,11 +795,17 @@ export class NostrService {
    * Get metadata from cache or load it from storage
    */
   async getMetadataForUser(pubkey: string, disconnect = true): Promise<NostrEvent | undefined> {
+
+
+    console.log('There are X number in cache:', this.usersMetadata().size);
+
     // Check cache first
     const cachedMetadata = this.usersMetadata().get(pubkey);
     if (cachedMetadata) {
       // Move to end of LRU cache
+      this.logger.time('getMetadataForUser - cache hit');
       this.updateMetadataCache(pubkey, cachedMetadata);
+      this.logger.time('end');
       return cachedMetadata;
     }
 
@@ -866,30 +872,24 @@ export class NostrService {
 
   async retrieveMetadata(pubkey: string, relayUrls: string[]) {
     let metadata: NostrEvent | null | undefined = null;
-    // Try each relay individually until we find metadata
-    for (const relayUrl of relayUrls) {
-      let userPool = new SimplePool();
+    let userPool = new SimplePool();
 
-      try {
-        this.logger.debug('Attempting to fetch metadata from relay', { relay: relayUrl });
-        metadata = await userPool.get([relayUrl], {
-          kinds: [kinds.Metadata],
-          authors: [pubkey],
-        }, {
-          maxWait: 3000
-        });
+    try {
+      metadata = await userPool.get(relayUrls, {
+        kinds: [kinds.Metadata],
+        authors: [pubkey],
+      }, {
+        maxWait: this.MAX_WAIT_TIME
+      });
 
-        if (metadata) {
-          this.logger.debug('Successfully retrieved metadata', { relay: relayUrl });
-          break; // Stop trying more relays once we've found metadata
-        }
-      } catch (error) {
-        this.logger.debug('Failed to fetch metadata from relay', { relay: relayUrl, error });
-        // Continue to the next relay on failure
+      if (metadata) {
+        this.logger.debug('Successfully retrieved metadata', { relayUrls });
       }
-      finally {
-        userPool.close([relayUrl]); // Close the pool for this relay
-      }
+    } catch (error) {
+      this.logger.debug('Failed to fetch metadata from relay', { error });
+    }
+    finally {
+      userPool.close(relayUrls);
     }
 
     if (metadata) {
@@ -899,159 +899,266 @@ export class NostrService {
     return metadata;
   }
 
-  async discoverMetadata(pubkey: string, disconnect = true): Promise<NostrEvent | undefined> {
+  async discoverMetadata(pubkey: string, disconnect = true): Promise<NostrEvent | undefined | null> {
     let info: any = await this.storage.getInfo(pubkey, 'user');
 
     if (!info) {
       info = {};
     }
 
+    // if (info.lastDiscovery && info.lastDiscovery > this.currentDate() - 60) {
+    //   // Skip discovery if it happened in the last 60 seconds
+    //   this.logger.debug('Skipping discovery, last discovery was less than 60 seconds ago', {
+    //     pubkey,
+    //     lastDiscovery: info.lastDiscovery,
+    //     secondsAgo: this.currentDate() - info.lastDiscovery
+    //   });
+
+    //   // Return previously discovered metadata if available
+    //   const metadata = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Metadata);
+    //   return metadata;
+    // }
+
+    info.lastDiscovery = this.currentDate();
+
     // FLOW: Find the user's relays first. Save it.
     // Connect to their relays and get metadata. Save it.
     const event = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
 
     if (!event) {
+      // TODO: During loading of a lot of users, we should reuse the bootstrap pool.
       let bootstrapPool = new SimplePool();
-
       this.logger.debug('Connecting to bootstrap relays', { relays: this.relayService.discoveryRelays });
 
       const relays = await bootstrapPool.get(this.relayService.discoveryRelays, {
         kinds: [kinds.RelayList],
         authors: [pubkey],
-      });
+      }, { maxWait: this.MAX_WAIT_TIME });
 
-      if (relays) {
-        bootstrapPool.close(this.relayService.discoveryRelays);
+      try {
+        if (relays) {
+          await this.storage.saveEvent(relays);
 
-        await this.storage.saveEvent(relays);
+          info.hasRelayList = true;
+          info.foundOnDiscoveryRelays = true;
 
-        info.hasRelayList = true;
+          const relayUrls = this.getRelayUrls(relays);
 
-        const relayUrls = this.getRelayUrls(relays);
+          let metadata = null;
 
-        let metadata = null;
+          this.logger.debug('Trying to fetch metadata from individual relays', { relayCount: relayUrls.length });
 
-        this.logger.debug('Trying to fetch metadata from individual relays', { relayCount: relayUrls.length });
+          metadata = await this.retrieveMetadata(pubkey, relayUrls);
 
-        metadata = await this.retrieveMetadata(pubkey, relayUrls);
-
-        // this.currentProfileUserPool = userPool;
-        // this.currentProfileRelayUrls = relayUrls;
-
-        // if (disconnect) {
-        //   userPool.close(relayUrls);
-        // }
-
-        await this.storage.saveInfo(pubkey, 'user', info);
-
-        return metadata as NostrEvent;
-      } else {
-
-        const followingEvent = await bootstrapPool.get(this.relayService.discoveryRelays, {
-          kinds: [kinds.Contacts],
-          authors: [pubkey],
-        });
-
-        if (followingEvent) {
-          await this.storage.saveEvent(followingEvent);
-
-          // After saving, the .content should be parsed to JSON.
-          console.log('FOLLOWING:', followingEvent);
-
-          const followingRelayUrls = this.getRelayUrlsFromFollowing(followingEvent);
-
-          if (followingRelayUrls.length > 30) {
-            debugger;
+          if (!metadata) {
+            this.logger.warn('Failed to retrieve metadata from relay list. Unable to find user.');
+            return undefined;
           }
 
-          console.log('USER FOLLOWING RELAY URLS:', followingRelayUrls);
+          return metadata as NostrEvent;
+        } else {
+          info.hasRelayList = false;
 
-          if (followingRelayUrls.length === 0) {
-            this.logger.warn('No relays found in following list. User does not have Relay List nor relays in following list.');
-            this.logger.warn('Getting metadata from Discovery Relays... not an ideal situation.');
-
-            info.hasRelayList = false;
-            info.hasFollowingListRelays = false;
-
-            const metadataFromDiscoveryRelays = await bootstrapPool.get(this.relayService.discoveryRelays, {
-              kinds: [kinds.Metadata],
-              authors: [pubkey],
-            });
-
-            if (metadataFromDiscoveryRelays) {
-              this.logger.warn('Found metadata on discovery relays.');
-              info.metadataFromDiscoveryRelays = true;
-              await this.storage.saveEvent(metadataFromDiscoveryRelays);
-              await this.storage.saveInfo(pubkey, 'user', info);
-              return metadataFromDiscoveryRelays as NostrEvent;
-            } else {
-              this.logger.error('Did not find metadata on discovery relays. Giving up.');
-              info.metadataFromDiscoveryRelays = false;
-              await this.storage.saveInfo(pubkey, 'user', info);
-              return undefined;
-            }
-          }
-
-          // After getting relays from the following list, we will do another attempt at getting the Relay List for the user.
-          // and if that fails, we will fall back to using this list.
-
-          const followingPool = new SimplePool();
-          const relayList = await followingPool.get(followingRelayUrls, {
-            kinds: [kinds.RelayList],
+          const followingEvent = await bootstrapPool.get(this.relayService.discoveryRelays, {
+            kinds: [kinds.Contacts],
             authors: [pubkey],
+          }, {
+            maxWait: this.MAX_WAIT_TIME
           });
 
-          // A lot of user's have tens of relays, and many old ones. If we can't connect to them, put them into an 
-          const connectionStatuses = followingPool.listConnectionStatus();
-          const failedRelays = Array.from(connectionStatuses.entries())
-            .filter(([_, status]) => status === false)
-            .map(([url, _]) => url);
+          if (followingEvent) {
+            info.foundOnDiscoveryRelays = true;
+            await this.storage.saveEvent(followingEvent);
 
-          this.relayService.timeoutRelays(failedRelays);
+            // After saving, the .content should be parsed to JSON.
+            console.log('FOLLOWING:', followingEvent);
 
-          if (relayList) {
-            followingPool.close(followingRelayUrls);
-            await this.storage.saveEvent(relayList);
-            const relayListUrls = this.getRelayUrls(relayList);
-            console.log('WE FOUND RELAYS!!!!');
+            const followingRelayUrls = this.getRelayUrlsFromFollowing(followingEvent);
 
-            info.hasFollowingListRelays = true;
-            await this.storage.saveInfo(pubkey, 'user', info);
+            if (followingRelayUrls.length > 30) {
+              debugger;
+            }
 
-            let metadata = null;
-            this.logger.debug('Trying to fetch metadata from individual relays', { relayCount: relayListUrls.length });
+            console.log('USER FOLLOWING RELAY URLS:', followingRelayUrls);
 
-            metadata = await this.retrieveMetadata(pubkey, relayListUrls)
+            if (followingRelayUrls.length === 0) {
+              this.logger.warn('No relays found in following list. User does not have Relay List nor relays in following list.');
+              this.logger.warn('Getting metadata from Discovery Relays... not an ideal situation.');
 
-            // this.currentProfileUserPool = userPool;
-            // this.currentProfileRelayUrls = relayUrls;
+              info.hasFollowingListRelays = false;
 
-            // if (disconnect) {
-            //   userPool.close(relayUrls);
+              this.logger.warn('Failed to retrieve following list from discovery relay. Unable to find user.');
+              return undefined;
+
+              // const metadataFromDiscoveryRelays = await bootstrapPool.get(this.relayService.discoveryRelays, {
+              //   kinds: [kinds.Metadata],
+              //   authors: [pubkey],
+              // });
+
+              // if (metadataFromDiscoveryRelays) {
+              //   this.logger.warn('Found metadata on discovery relays.');
+              //   info.metadataFromDiscoveryRelays = true;
+              //   await this.storage.saveEvent(metadataFromDiscoveryRelays);
+              //   await this.storage.saveInfo(pubkey, 'user', info);
+              //   return metadataFromDiscoveryRelays as NostrEvent;
+              // } else {
+              //   this.logger.error('Did not find metadata on discovery relays. Giving up.');
+              //   info.metadataFromDiscoveryRelays = false;
+              //   await this.storage.saveInfo(pubkey, 'user', info);
+              //   return undefined;
+              // }
+            }
+
+            // Previously we attempted to get Relay List from the user's relays, but instead we require user's to publish their
+            // latest relay lists to the Discovery relays. This is a more optimal approach.
+
+            // Some user's have massive amount of relays, this is completely not needed. Let's grab maximum of 3 and attempt to 
+            // get their profile from them. If the profile is not accessible on 3 of them because the relays are dead, they will
+            // eventually be removed from the list returned and next round we will attempt another 3.
+
+            // After some testing, the performance between 1 and 3 seems similar. Using all relays adds a lot of extra time for loading.
+
+            // Filter out any relays that are not reachable
+            const filteredRelays = this.filterRelayUrls(followingRelayUrls);
+            const selectedRelayUrls = filteredRelays.slice(0, 3);
+            let metadata = await this.retrieveMetadata(pubkey, selectedRelayUrls);
+
+            return metadata as NostrEvent;
+            // const followingPool = new SimplePool();
+            // const relayList = await followingPool.get(selectedRelayUrls, {
+            //   kinds: [kinds.RelayList],
+            //   authors: [pubkey],
+            // });
+
+            // A lot of user's have tens of relays, and many old ones. If we can't connect to them, put them into an 
+            // const connectionStatuses = followingPool.listConnectionStatus();
+            // const failedRelays = Array.from(connectionStatuses.entries())
+            //   .filter(([_, status]) => status === false)
+            //   .map(([url, _]) => url);
+
+            // this.relayService.timeoutRelays(failedRelays);
+
+            // if (relayList) {
+            //   followingPool.close(followingRelayUrls);
+            //   await this.storage.saveEvent(relayList);
+            //   const relayListUrls = this.getRelayUrls(relayList);
+            //   console.log('WE FOUND RELAYS!!!!');
+
+            //   info.hasFollowingListRelays = true;
+            //   await this.storage.saveInfo(pubkey, 'user', info);
+
+            //   let metadata = null;
+            //   this.logger.debug('Trying to fetch metadata from individual relays', { relayCount: relayListUrls.length });
+
+            //   metadata = await this.retrieveMetadata(pubkey, relayListUrls)
+
+            //   // this.currentProfileUserPool = userPool;
+            //   // this.currentProfileRelayUrls = relayUrls;
+
+            //   // if (disconnect) {
+            //   //   userPool.close(relayUrls);
+            //   // }
+
+            //   return metadata as NostrEvent;
+
+            // } else {
+            //   console.log('DID NOT Find relays...');
+            //   // Capitulate and get profile from the following list relays:
+            //   let metadata = await this.retrieveMetadata(pubkey, followingRelayUrls)
+
+            //   followingPool.close(followingRelayUrls);
+
+            //   info.hasFollowingListRelays = false;
+            //   info.hasRelayList = false;
+            //   await this.storage.saveInfo(pubkey, 'user', info);
+
+            //   return metadata as NostrEvent;
             // }
-
-            return metadata as NostrEvent;
-
-          } else {
-            console.log('DID NOT Find relays...');
-            // Capitulate and get profile from the following list relays:
-            let metadata = await this.retrieveMetadata(pubkey, followingRelayUrls)
-
-            followingPool.close(followingRelayUrls);
-
-            info.hasFollowingListRelays = false;
-            info.hasRelayList = false;
-            await this.storage.saveInfo(pubkey, 'user', info);
-
-            return metadata as NostrEvent;
           }
         }
-
+      }
+      finally {
         bootstrapPool.close(this.relayService.discoveryRelays);
+        await this.storage.saveInfo(pubkey, 'user', info);
       }
     }
 
     return undefined;
+  }
+
+  /** Used to get Relay List, Following List and Metadata for a user from the account relays. This is a fallback if discovery fails. */
+  async discoverMetadataFromAccountRelays(pubkey: string) {
+    // First get the relay list if exists.
+    // Second get the following list if exists.
+    // Get the metadata from the user's relays, not from the account relays. We truly do not want to fall back to get metadata
+    // from the current account relays.
+
+    let info: any = await this.storage.getInfo(pubkey, 'user');
+
+    if (!info) {
+      info = {};
+    }
+
+    try {
+      let relayListEvent = await this.relayService.get({
+        authors: [pubkey],
+        kinds: [kinds.RelayList],
+      }, undefined, { timeout: this.MAX_WAIT_TIME });
+
+      let relayUrls: string[] = [];
+
+      if (relayListEvent) {
+        info.foundOnAccountRelays = true;
+        info.hasRelayList = true;
+        this.logger.debug('Found relay list event', { relayListEvent });
+        await this.storage.saveEvent(relayListEvent);
+        relayUrls = this.getRelayUrls(relayListEvent);
+      } else {
+        let followingEvent = await this.relayService.get({
+          authors: [pubkey],
+          kinds: [kinds.Contacts],
+        });
+
+        if (followingEvent) {
+          info.foundOnAccountRelays = true;
+          this.logger.debug('Found following event', { followingEvent });
+          await this.storage.saveEvent(followingEvent);
+          relayUrls = this.getRelayUrlsFromFollowing(followingEvent);
+
+          if (relayUrls.length > 0) {
+            info.hasFollowingListRelays = true;
+          }
+
+        } else {
+          this.logger.warn('No relay list or following event found for user', { pubkey });
+          return undefined;
+        }
+      }
+
+      const userPool = new SimplePool();
+
+      try {
+        let metadataEvent = await userPool.get(relayUrls, {
+          authors: [pubkey],
+          kinds: [kinds.Metadata],
+        }, { maxWait: this.MAX_WAIT_TIME });
+
+        if (metadataEvent) {
+          this.logger.debug('Found metadata event', { metadataEvent });
+          await this.storage.saveEvent(metadataEvent);
+          return metadataEvent;
+        } else {
+          this.logger.warn('No metadata event found for user', { pubkey });
+          return undefined;
+        }
+      }
+      finally {
+        userPool.close(relayUrls);
+      }
+
+    } finally {
+      await this.storage.saveInfo(pubkey, 'user', info);
+    }
   }
 
   private async queueMetadataDiscovery(pubkey: string, disconnect = true): Promise<NostrEvent | undefined> {
@@ -1081,7 +1188,13 @@ export class NostrService {
     });
 
     try {
-      const result = await this.discoverMetadata(next.pubkey, next.disconnect);
+      let result = await this.discoverMetadata(next.pubkey, next.disconnect);
+
+      if (!result) {
+        this.logger.warn('No metadata found during discovery, fallback to using current account relays.', { pubkey: next.pubkey });
+        result = await this.discoverMetadataFromAccountRelays(next.pubkey);
+      }
+
       next.resolve(result);
     } catch (error) {
       this.logger.error('Error discovering metadata', { pubkey: next.pubkey, error });
@@ -1097,6 +1210,7 @@ export class NostrService {
       this.processDiscoveryQueue();
     }
   }
+
 
   async loginWithNostrConnect(remoteSigningUrl: string) {
     this.logger.info('Attempting to login with Nostr Connect', { url: remoteSigningUrl });
@@ -1439,6 +1553,13 @@ export class NostrService {
       relayUrls = relayUrls.filter(relay => !timedOutRelays.includes(this.relayService.normalizeRelayUrl(relay)));
     }
 
+    return relayUrls;
+  }
+
+  /** Filters out timed out or banned relays. */
+  filterRelayUrls(relayUrls: string[]): string[] {
+    const timedOutRelays = this.relayService.timeouts().map(relay => relay.url);
+    relayUrls = relayUrls.filter(relay => !timedOutRelays.includes(this.relayService.normalizeRelayUrl(relay)));
     return relayUrls;
   }
 

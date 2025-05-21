@@ -1,0 +1,15 @@
+:host {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 500px;
+  height: 60px;
+  z-index: 1000; // High z-index to ensure the overlay appears above other elements
+  pointer-events: none; // Optional: allows clicks to pass through to elements below
+  background-color: silver;
+  margin-bottom: 1rem;
+  border-radius: 1rem;
+  padding: 1rem;
+}
