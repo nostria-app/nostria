@@ -4,8 +4,6 @@
 
 <div [ngClass]="['user-profile', view()]">
 
-  ||{{ isLoading()}}||
-
   @if (info()) {
   <div class="user-info-status" [matTooltip]="getInfoTooltip()" [matTooltipClass]="'user-profile-tooltip'">
     <mat-icon class="user-info-icon" [class]="getInfoClass()">info</mat-icon>

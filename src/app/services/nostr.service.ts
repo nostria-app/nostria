@@ -894,13 +894,14 @@ export class NostrService {
         this.logger.debug('Successfully retrieved metadata', { relayUrls });
       }
 
+      // TODO: Improve this a bit, we don't want to end up giving timeout to actually good relays.
       // A lot of user's have tens of relays, and many old ones. If we can't connect to them, give them a timeout.
-      const connectionStatuses = userPool.listConnectionStatus();
-      const failedRelays = Array.from(connectionStatuses.entries())
-        .filter(([_, status]) => status === false)
-        .map(([url, _]) => url);
+      // const connectionStatuses = userPool.listConnectionStatus();
+      // const failedRelays = Array.from(connectionStatuses.entries())
+      //   .filter(([_, status]) => status === false)
+      //   .map(([url, _]) => url);
 
-      this.relayService.timeoutRelays(failedRelays);
+      // this.relayService.timeoutRelays(failedRelays);
     } catch (error) {
       this.logger.debug('Failed to fetch metadata from relay', { error });
     }
@@ -1197,43 +1198,51 @@ export class NostrService {
   }
 
   private async processDiscoveryQueue(): Promise<void> {
-    // if (this.activeDiscoveries >= this.MAX_CONCURRENT_DISCOVERIES) {
-    //   return;
-    // }
-
-    const next = this.discoveryQueue.shift();
-    if (!next) {
+    // If there's nothing in the queue, return
+    if (this.discoveryQueue.length === 0) {
       return;
     }
-
-    this.activeDiscoveries++;
-    this.logger.debug('Starting metadata discovery', {
-      pubkey: next.pubkey,
+    
+    // Take up to 5 items from the queue
+    const batchSize = 2;
+    const batch = this.discoveryQueue.splice(0, batchSize);
+    
+    this.activeDiscoveries += batch.length;
+    this.logger.debug('Starting batch metadata discovery', {
+      batchSize: batch.length,
       activeDiscoveries: this.activeDiscoveries,
       queueRemaining: this.discoveryQueue.length
     });
 
     try {
-      let result = await this.discoverMetadata(next.pubkey, next.disconnect);
+      // Process all items in the batch concurrently
+      await Promise.all(batch.map(async (item: any) => {
+        try {
+          let result = await this.discoverMetadata(item.pubkey, item.disconnect);
 
-      if (!result) {
-        this.logger.warn('No metadata found during discovery, fallback to using current account relays.', { pubkey: next.pubkey });
-        result = await this.discoverMetadataFromAccountRelays(next.pubkey);
-      }
+          if (!result) {
+            this.logger.warn('No metadata found during discovery, fallback to using current account relays.', { pubkey: item.pubkey });
+            result = await this.discoverMetadataFromAccountRelays(item.pubkey);
+          }
 
-      next.resolve(result);
-    } catch (error) {
-      this.logger.error('Error discovering metadata', { pubkey: next.pubkey, error });
-      next.reject(error);
+          item.resolve(result);
+        } catch (error) {
+          this.logger.error('Error discovering metadata', { pubkey: item.pubkey, error });
+          item.reject(error);
+        }
+      }));
     } finally {
-      this.activeDiscoveries--;
-      this.logger.debug('Completed metadata discovery', {
-        pubkey: next.pubkey,
+      this.activeDiscoveries -= batch.length;
+      this.logger.debug('Completed batch metadata discovery', {
+        batchSize: batch.length,
         activeDiscoveries: this.activeDiscoveries,
         queueRemaining: this.discoveryQueue.length
       });
 
-      this.processDiscoveryQueue();
+      // Process the next batch if there are more items in the queue
+      if (this.discoveryQueue.length > 0) {
+        this.processDiscoveryQueue();
+      }
     }
   }
 
