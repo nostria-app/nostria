@@ -2,6 +2,7 @@ import { Injectable, signal, computed, effect, inject, untracked } from '@angula
 import { Event, generateSecretKey, getPublicKey, UnsignedEvent, VerifiedEvent } from 'nostr-tools/pure';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
 import * as nip19 from 'nostr-tools/nip19';
+import { makeAuthEvent } from 'nostr-tools/nip42';
 import { LoggerService } from './logger.service';
 import { RelayService } from './relay.service';
 import { NostrEventData, StorageService, UserMetadata } from './storage.service';
@@ -51,6 +52,8 @@ export class NostrService {
 
   initialized = signal(false);
   MAX_WAIT_TIME = 3000;
+  MAX_WAIT_TIME_METADATA = 5000;
+  MAX_RELAY_COUNT = 6;
   dataLoaded = false;
 
   account = signal<NostrUser | null>(null);
@@ -878,7 +881,7 @@ export class NostrService {
   currentProfileUserPool: SimplePool | null = null;
   currentProfileRelayUrls: string[] = [];
 
-  async retrieveMetadata(pubkey: string, relayUrls: string[]) {
+  async retrieveMetadata(pubkey: string, relayUrls: string[], info: any) {
     let metadata: NostrEvent | null | undefined = null;
     let userPool = new SimplePool();
 
@@ -887,11 +890,12 @@ export class NostrService {
         kinds: [kinds.Metadata],
         authors: [pubkey],
       }, {
-        maxWait: this.MAX_WAIT_TIME
+        maxWait: this.MAX_WAIT_TIME_METADATA
       });
 
       if (metadata) {
         this.logger.debug('Successfully retrieved metadata', { relayUrls });
+        info.foundMetadataOnUserRelays = true;
       }
 
       // TODO: Improve this a bit, we don't want to end up giving timeout to actually good relays.
@@ -944,7 +948,17 @@ export class NostrService {
     // Connect to their relays and get metadata. Save it.
     const event = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
 
-    if (!event) {
+    // If we already have a relay list, go grab the metadata from it.
+    if (event) {
+      const relayUrls = this.getRelayUrls(event);
+      const selectedRelayUrls = relayUrls.slice(0, this.MAX_RELAY_COUNT);
+      let metadata = await this.retrieveMetadata(pubkey, selectedRelayUrls, info);
+
+      // Since this is not inside the try/catch, we must save info explicitly here.
+      await this.storage.saveInfo(pubkey, 'user', info);
+      return metadata as NostrEvent;
+    }
+    else {
       // TODO: During loading of a lot of users, we should reuse the bootstrap pool.
       let bootstrapPool = new SimplePool();
       this.logger.debug('Connecting to bootstrap relays', { relays: this.relayService.discoveryRelays });
@@ -967,7 +981,8 @@ export class NostrService {
 
           this.logger.debug('Trying to fetch metadata from individual relays', { relayCount: relayUrls.length });
 
-          metadata = await this.retrieveMetadata(pubkey, relayUrls);
+          const selectedRelayUrls = relayUrls.slice(0, this.MAX_RELAY_COUNT);
+          metadata = await this.retrieveMetadata(pubkey, selectedRelayUrls, info);
 
           if (!metadata) {
             this.logger.warn('Failed to retrieve metadata from relay list. Unable to find user.');
@@ -1039,8 +1054,8 @@ export class NostrService {
 
             // Filter out any relays that are not reachable
             const filteredRelays = this.filterRelayUrls(followingRelayUrls);
-            const selectedRelayUrls = filteredRelays.slice(0, 3);
-            let metadata = await this.retrieveMetadata(pubkey, selectedRelayUrls);
+            const selectedRelayUrls = filteredRelays.slice(0, this.MAX_RELAY_COUNT);
+            let metadata = await this.retrieveMetadata(pubkey, selectedRelayUrls, info);
 
             return metadata as NostrEvent;
             // const followingPool = new SimplePool();
@@ -1105,6 +1120,8 @@ export class NostrService {
     return undefined;
   }
 
+  publishQueue: any[] = [];
+
   /** Used to get Relay List, Following List and Metadata for a user from the account relays. This is a fallback if discovery fails. */
   async discoverMetadataFromAccountRelays(pubkey: string) {
     // First get the relay list if exists.
@@ -1130,6 +1147,16 @@ export class NostrService {
         info.foundOnAccountRelays = true;
         info.hasRelayList = true;
         this.logger.debug('Found relay list event', { relayListEvent });
+
+        // Make sure we publish Relay List to Discovery Relays if discovered on Account Relays.
+        // We must do this before storage.saveEvent, which transforms the content to JSON.
+        try {
+          this.logger.info('Publishing relay list to discovery relays', { relayListEvent });
+          await this.relayService.publishToDiscoveryRelays(relayListEvent);
+        } catch (error) {
+          this.logger.error('Failed to publish relay list to discovery relays', { error });
+        }
+
         await this.storage.saveEvent(relayListEvent);
         relayUrls = this.getRelayUrls(relayListEvent);
       } else {
@@ -1141,13 +1168,22 @@ export class NostrService {
         if (followingEvent) {
           info.foundOnAccountRelays = true;
           this.logger.debug('Found following event', { followingEvent });
-          await this.storage.saveEvent(followingEvent);
-          relayUrls = this.getRelayUrlsFromFollowing(followingEvent);
 
           if (relayUrls.length > 0) {
             info.hasFollowingListRelays = true;
+
+            // Make sure we publish Relay List to Discovery Relays if discovered on Account Relays.
+            // We must do this before storage.saveEvent, which transforms the content to JSON.
+            try {
+              this.logger.info('Publishing following list to discovery relays', { followingEvent });
+              await this.relayService.publishToDiscoveryRelays(followingEvent);
+            } catch (error) {
+              this.logger.error('Failed to publish relay list to discovery relays', { error });
+            }
           }
 
+          await this.storage.saveEvent(followingEvent);
+          relayUrls = this.getRelayUrlsFromFollowing(followingEvent);
         } else {
           this.logger.warn('No relay list or following event found for user', { pubkey });
           return undefined;
@@ -1202,11 +1238,11 @@ export class NostrService {
     if (this.discoveryQueue.length === 0) {
       return;
     }
-    
+
     // Take up to 5 items from the queue
     const batchSize = 2;
     const batch = this.discoveryQueue.splice(0, batchSize);
-    
+
     this.activeDiscoveries += batch.length;
     this.logger.debug('Starting batch metadata discovery', {
       batchSize: batch.length,
