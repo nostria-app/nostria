@@ -313,7 +313,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
             } else if (info['hasFollowingListRelays'])
                 tooltip = '-1: Has following list relays';
             else {
-                tooltip = 'No relay list';
+                tooltip = '-1: No relay list';
             }
 
             if (info['foundOnDiscoveryRelays']) {
@@ -328,7 +328,11 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
             }
 
             if (info['foundMetadataOnAccountRelays']) {
-                tooltip += '\r\n-1: Found metadata on account relays';
+                tooltip += '\r\n-1: Found profile on account relays';
+            }
+
+            if (info['foundMetadataOnUserRelays']) {
+                tooltip += '\r\n+1: Found profile on user relays';
             }
         }
 
