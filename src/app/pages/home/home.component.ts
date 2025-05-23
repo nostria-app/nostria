@@ -89,7 +89,6 @@ export class HomeComponent {
 
   isMobileView = computed(() => {
     const isMobile = this.screenWidth() < 1024;
-    console.log('isMobileView:', isMobile, 'screenWidth:', this.screenWidth());
     return isMobile;
   });
 

@@ -95,9 +95,9 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
 
     getInfoClass() {
         if (this.info()) {
-            if (this.info()!['hasRelayList']) {
+            if (this.info()!['hasRelayList'] && this.info()!['foundOnDiscoveryRelays'] && this.info()!['foundMetadataOnUserRelays']) {
                 return 'user-info-status-good';
-            } else if (this.info()!['hasFollowingListRelays'])
+            } else if (this.info()!['foundMetadataOnAccountRelays'])
                 return 'user-info-status-medium';
             else {
                 return 'user-info-status-bad';

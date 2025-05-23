@@ -67,7 +67,7 @@ export class DetailsComponent implements OnInit, AfterViewInit {
 
   selectedTabIndex = signal(0);
 
-  npub = computed(() => this.route.snapshot.parent?.paramMap.get('npub') || '');
+  npub = computed(() => this.route.snapshot.parent?.paramMap.get('id') || '');
   userProfile = signal<any>(null);
 
   // Item size for virtual scrolling (approx. height of each item in pixels)
@@ -80,16 +80,15 @@ export class DetailsComponent implements OnInit, AfterViewInit {
   info = signal<any>(null);
 
   constructor() {
-    effect(async () => {
-      const list = this.profileState.followingList();
-      if (list && list.length > 0) {
-        await this.loadFollowingList(list);
-      }
-    });
+    // effect(async () => {
+    //   const list = this.profileState.followingList();
+    //   if (list && list.length > 0) {
+    //     await this.loadFollowingList(list);
+    //   }
+    // });
 
     effect(async () => {
       if (this.app.authenticated()) {
-
         // TODO: make sure that the "npub" is hex.
         const info = await this.storage.getInfo(this.npub(), 'user');
         this.info.set(info);
