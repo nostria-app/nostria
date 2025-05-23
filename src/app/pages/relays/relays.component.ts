@@ -21,6 +21,7 @@ import { kinds, SimplePool } from 'nostr-tools';
 import { StorageService } from '../../services/storage.service';
 import { NotificationService } from '../../services/notification.service';
 import { ApplicationService } from '../../services/application.service';
+import { ProfileStateService } from '../../services/profile-state.service';
 
 @Component({
   selector: 'app-relays-page',
@@ -50,6 +51,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
   private storage = inject(StorageService);
   private notifications = inject(NotificationService);
   private app = inject(ApplicationService);
+  private profileState = inject(ProfileStateService);
 
   newRelayUrl = signal('');
   newBootstrapUrl = signal('');
@@ -92,6 +94,10 @@ export class RelaysComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
 
+  }
+
+  cleanFollowingList() {
+    alert('Coming soon...');
   }
 
   ngOnDestroy() {

@@ -233,9 +233,13 @@
           </div>
           }
 
-          @if(metadata.content.name) {
+          @if(metadata.content.display_name) {
+          <h2>{{ metadata.content.display_name }}</h2>
+          }
+          @else if(metadata.content.name) {
           <h2>{{ metadata.content.name }}</h2>
-          } @else {
+          }
+          @else {
           <h2>{{ metadata.pubkey | npub }}</h2>
           }
 

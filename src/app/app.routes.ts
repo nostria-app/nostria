@@ -26,6 +26,7 @@ import { BetaComponent } from './pages/beta/beta.component';
 import { AccountsComponent } from './pages/accounts/accounts.component';
 import { NotificationSettingsComponent } from './pages/notifications/settings/settings.component';
 import { LoginDialogComponent } from './components/login-dialog/login-dialog.component';
+import { ProfileEditComponent } from './pages/profile/profile-edit/profile-edit.component';
 
 export const routes: Routes = [
   { path: '', component: HomeComponent, pathMatch: 'full' },
@@ -67,6 +68,7 @@ export const routes: Routes = [
         ] 
       },
       { path: 'about', component: ProfileAboutComponent },
+      { path: 'edit', component: ProfileEditComponent },
       { path: 'connections', component: ProfileConnectionsComponent },
       { path: 'following', component: FollowingComponent },
       { path: 'relays', component: ProfileRelaysComponent },
