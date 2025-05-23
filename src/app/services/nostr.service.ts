@@ -51,9 +51,9 @@ export class NostrService {
   private readonly region = inject(RegionService);
 
   initialized = signal(false);
-  MAX_WAIT_TIME = 3000;
-  MAX_WAIT_TIME_METADATA = 5000;
-  MAX_RELAY_COUNT = 6;
+  MAX_WAIT_TIME = 2000;
+  MAX_WAIT_TIME_METADATA = 4000;
+  MAX_RELAY_COUNT = 3;
   dataLoaded = false;
 
   account = signal<NostrUser | null>(null);
@@ -806,8 +806,6 @@ export class NostrService {
    * Get metadata from cache or load it from storage
    */
   async getMetadataForUser(pubkey: string, disconnect = true): Promise<NostrEvent | undefined> {
-
-
     console.log('There are X number in cache:', this.usersMetadata().size);
 
     // Check cache first
@@ -880,6 +878,7 @@ export class NostrService {
 
   currentProfileUserPool: SimplePool | null = null;
   currentProfileRelayUrls: string[] = [];
+  discoveryPool: SimplePool | null = null;
 
   async retrieveMetadata(pubkey: string, relayUrls: string[], info: any) {
     let metadata: NostrEvent | null | undefined = null;
@@ -920,6 +919,40 @@ export class NostrService {
     return metadata;
   }
 
+  preferredRelays: string[] = [
+    'wss://relay.damus.io/',
+    'wss://nos.lol/',
+    'wss://eden.nostr.land/',
+    'wss://relay.snort.social/',
+    'wss://nostr.wine/',
+    'wss://relay.nostr.band/',
+    'wss://nostr.oxtr.dev/',
+    'wss://nostr.mom/',
+  ];
+
+  /** Used to optimize the selection of a few relays from the user's relay list. */
+  pickOptimalRelays(relayUrls: string[], count: number): string[] {
+    const normalizedUrls = this.relayService.normalizeRelayUrls(relayUrls);
+
+    // Sort the relays based on their presence in the preferred list
+    const sortedRelays = normalizedUrls.sort((a, b) => {
+      const aIndex = this.preferredRelays.indexOf(a);
+      const bIndex = this.preferredRelays.indexOf(b);
+
+      if (aIndex === -1 && bIndex === -1) {
+        return 0; // Both not in preferred list
+      } else if (aIndex === -1) {
+        return 1; // a is not preferred, b is
+      } else if (bIndex === -1) {
+        return -1; // b is not preferred, a is
+      } else {
+        return aIndex - bIndex; // Both are in preferred list, sort by index
+      }
+    });
+
+    return sortedRelays.slice(0, count);
+  }
+
   async discoverMetadata(pubkey: string, disconnect = true): Promise<NostrEvent | undefined | null> {
     this.logger.time('getinfo' + pubkey);
     let info: any = await this.storage.getInfo(pubkey, 'user');
@@ -951,7 +984,7 @@ export class NostrService {
     // If we already have a relay list, go grab the metadata from it.
     if (event) {
       const relayUrls = this.getRelayUrls(event);
-      const selectedRelayUrls = relayUrls.slice(0, this.MAX_RELAY_COUNT);
+      const selectedRelayUrls = this.pickOptimalRelays(relayUrls, this.MAX_RELAY_COUNT);
       let metadata = await this.retrieveMetadata(pubkey, selectedRelayUrls, info);
 
       // Since this is not inside the try/catch, we must save info explicitly here.
@@ -960,10 +993,9 @@ export class NostrService {
     }
     else {
       // TODO: During loading of a lot of users, we should reuse the bootstrap pool.
-      let bootstrapPool = new SimplePool();
       this.logger.debug('Connecting to bootstrap relays', { relays: this.relayService.discoveryRelays });
 
-      const relays = await bootstrapPool.get(this.relayService.discoveryRelays, {
+      const relays = await this.discoveryPool!.get(this.relayService.discoveryRelays, {
         kinds: [kinds.RelayList],
         authors: [pubkey],
       }, { maxWait: this.MAX_WAIT_TIME });
@@ -972,8 +1004,8 @@ export class NostrService {
         if (relays) {
           await this.storage.saveEvent(relays);
 
-          info.hasRelayList = true;
           info.foundOnDiscoveryRelays = true;
+          info.hasRelayList = true;
 
           const relayUrls = this.getRelayUrls(relays);
 
@@ -981,7 +1013,7 @@ export class NostrService {
 
           this.logger.debug('Trying to fetch metadata from individual relays', { relayCount: relayUrls.length });
 
-          const selectedRelayUrls = relayUrls.slice(0, this.MAX_RELAY_COUNT);
+          const selectedRelayUrls = this.pickOptimalRelays(relayUrls, this.MAX_RELAY_COUNT)
           metadata = await this.retrieveMetadata(pubkey, selectedRelayUrls, info);
 
           if (!metadata) {
@@ -993,7 +1025,7 @@ export class NostrService {
         } else {
           info.hasRelayList = false;
 
-          const followingEvent = await bootstrapPool.get(this.relayService.discoveryRelays, {
+          const followingEvent = await this.discoveryPool!.get(this.relayService.discoveryRelays, {
             kinds: [kinds.Contacts],
             authors: [pubkey],
           }, {
@@ -1013,13 +1045,11 @@ export class NostrService {
               debugger;
             }
 
-            console.log('USER FOLLOWING RELAY URLS:', followingRelayUrls);
-
             if (followingRelayUrls.length === 0) {
               this.logger.warn('No relays found in following list. User does not have Relay List nor relays in following list.');
               this.logger.warn('Getting metadata from Discovery Relays... not an ideal situation.');
 
-              info.hasFollowingListRelays = false;
+              info.hasEmptyFollowingList = true;
 
               this.logger.warn('Failed to retrieve following list from discovery relay. Unable to find user.');
               return undefined;
@@ -1053,8 +1083,8 @@ export class NostrService {
             // After some testing, the performance between 1 and 3 seems similar. Using all relays adds a lot of extra time for loading.
 
             // Filter out any relays that are not reachable
-            const filteredRelays = this.filterRelayUrls(followingRelayUrls);
-            const selectedRelayUrls = filteredRelays.slice(0, this.MAX_RELAY_COUNT);
+            // const filteredRelays = this.filterRelayUrls(followingRelayUrls);
+            const selectedRelayUrls = this.pickOptimalRelays(followingRelayUrls, this.MAX_RELAY_COUNT)
             let metadata = await this.retrieveMetadata(pubkey, selectedRelayUrls, info);
 
             return metadata as NostrEvent;
@@ -1112,7 +1142,6 @@ export class NostrService {
         }
       }
       finally {
-        bootstrapPool.close(this.relayService.discoveryRelays);
         await this.storage.saveInfo(pubkey, 'user', info);
       }
     }
@@ -1170,7 +1199,7 @@ export class NostrService {
           this.logger.debug('Found following event', { followingEvent });
 
           if (relayUrls.length > 0) {
-            info.hasFollowingListRelays = true;
+            info.hasFollwingList = true;
 
             // Make sure we publish Relay List to Discovery Relays if discovered on Account Relays.
             // We must do this before storage.saveEvent, which transforms the content to JSON.
@@ -1236,11 +1265,21 @@ export class NostrService {
   private async processDiscoveryQueue(): Promise<void> {
     // If there's nothing in the queue, return
     if (this.discoveryQueue.length === 0) {
+      // if (this.discoveryPool) {
+      //   // When discovery process is done, close the bootstrap pool
+      //   this.discoveryPool.close(this.relayService.discoveryRelays);
+      //   this.discoveryPool = null;
+      // }
+
       return;
     }
 
+    if (!this.discoveryPool) {
+      this.discoveryPool = new SimplePool();
+    }
+
     // Take up to 5 items from the queue
-    const batchSize = 2;
+    const batchSize = 1;
     const batch = this.discoveryQueue.splice(0, batchSize);
 
     this.activeDiscoveries += batch.length;
@@ -1278,6 +1317,13 @@ export class NostrService {
       // Process the next batch if there are more items in the queue
       if (this.discoveryQueue.length > 0) {
         this.processDiscoveryQueue();
+      } else {
+        // We can't disconnect here, it is still processing...
+        // if (this.discoveryPool) {
+        //   // When discovery process is done, close the bootstrap pool
+        //   this.discoveryPool.close(this.relayService.discoveryRelays);
+        //   this.discoveryPool = null;
+        // }
       }
     }
   }

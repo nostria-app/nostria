@@ -26,6 +26,18 @@
   <div class="info-container">
     @if (info()) {
 
+    @if (info()['hasRelayList']) {
+    <div>
+      <mat-icon>thumb_up</mat-icon> Has Relay List
+    </div>
+    }
+
+    @if (info()['hasFollwingList']) {
+    <div>
+      <mat-icon>thumb_down</mat-icon> Has Following List
+    </div>
+    }
+
     @if (info()['foundOnDiscoveryRelays']) {
     <div>
       <mat-icon>thumb_up</mat-icon> Found on Discovery Relays
@@ -38,35 +50,35 @@
     </div>
     }
 
-    @if (info()['hasRelayList']) {
-    <div>
-      <mat-icon>thumb_up</mat-icon> Has Relay List
-    </div>
-    }
-
-    @if (info()['hasRelayList'] == false) {
-    <div>
-      <mat-icon>thumb_down</mat-icon> Does not have Relay List
-    </div>
-    }
-
     @if (info()['foundMetadataOnUserRelays']) {
     <div>
-      <mat-icon>thumb_up</mat-icon> Found Metadata on User Relays
+      <mat-icon>thumb_up</mat-icon> Found Profile on User Relays
     </div>
     }
 
     @if (info()['foundMetadataOnAccountRelays']) {
     <div>
-      <mat-icon>thumb_down</mat-icon> Found Metadata on Account Relays
+      <mat-icon>thumb_down</mat-icon> Found Profile on Account Relays
+    </div>
+    }
+
+    @if (info()['hasEmptyFollowingList']) {
+    <div>
+      <mat-icon>thumb_down</mat-icon> Has empty following list and no relay list. Impossible to find profile.
+    </div>
+    }
+
+    @if (info()['foundZeroRelaysOnAccountRelays']) {
+    <div>
+      <mat-icon>thumb_down</mat-icon> Unable to find user relays.
     </div>
     }
 
     }
 
-<br><br><br><br>
+    <!-- <br><br><br><br>
 
-    {{ info() | json }}
+    {{ info() | json }} -->
   </div>
 
 

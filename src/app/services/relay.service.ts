@@ -187,6 +187,10 @@ export class RelayService {
     }
   }
 
+  normalizeRelayUrls(urls: string[]): string[] {
+    return urls.map(url => this.normalizeRelayUrl(url)).filter(url => url !== '');
+  }
+
   /**
  * Normalizes relay URLs by ensuring root URLs have a trailing slash
  * but leaves URLs with paths unchanged
