@@ -94,6 +94,13 @@ export class ProfileComponent {
   private userRelay: UserRelayService | undefined = undefined;
 
   constructor() {
+    // When accounts metadata changes, update the current metadata.
+    effect(() => {
+      let accounts = this.nostrService.accountsMetadata();
+      let metadata = this.nostrService.getMetadataForAccount(this.nostrService.pubkey());
+      this.userMetadata.set(metadata);
+    });
+
     // React to changes in route parameters and app initialization
     effect(async () => {
       // Only proceed if app is initialized and route params are available

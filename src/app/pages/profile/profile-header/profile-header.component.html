@@ -40,7 +40,8 @@
             @if (!compact() && profile.content.website) {
             <div class="profile-item" title="{{ profile.content.website }}">
                 <mat-icon>link</mat-icon>
-                <span><a [href]="profile.content.website" target="_blank" rel="noopener noreferrer">{{ profile.content.website}}</a></span>
+                <span><a [href]="profile.content.website" target="_blank" rel="noopener noreferrer">{{
+                        profile.content.website}}</a></span>
             </div>
             }
 
@@ -70,6 +71,13 @@
                 </button>
                 }
 
+                @if (isOwnProfile()) {
+                <button mat-menu-item routerLink="edit" [queryParamsHandling]="'preserve'">
+                    <mat-icon>edit</mat-icon>
+                    <span>Edit Profile</span>
+                </button>
+                }
+
                 <button mat-menu-item [matMenuTriggerFor]="copyMenu">
                     <mat-icon>content_copy</mat-icon>
                     <span>Copy</span>
@@ -80,7 +88,7 @@
                     <span>Share</span>
                 </button>
 
-                <button mat-menu-item [routerLink]="'details'" [queryParamsHandling]="'preserve'">
+                <button mat-menu-item routerLink="details" [queryParamsHandling]="'preserve'">
                     <mat-icon>info</mat-icon>
                     <span>Details</span>
                 </button>
