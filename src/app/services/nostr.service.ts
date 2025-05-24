@@ -925,12 +925,17 @@ export class NostrService {
     return metadata;
   }
 
+  /** This is an optimization we had to do to ensure that we have more success finding
+   * the profile of users. Many users have a lot of relays, many which are long dead and gone.
+   * Some have malformed URLs, private relays (required auth), etc.
+   */
   preferredRelays: string[] = [
     'wss://relay.damus.io/',
     'wss://nos.lol/',
+    'wss://relay.primal.net/',
+    'wss://nostr.wine/',
     'wss://eden.nostr.land/',
     'wss://relay.snort.social/',
-    'wss://nostr.wine/',
     'wss://relay.nostr.band/',
     'wss://nostr.oxtr.dev/',
     'wss://nostr.mom/',
@@ -939,23 +944,21 @@ export class NostrService {
   /** Used to optimize the selection of a few relays from the user's relay list. */
   pickOptimalRelays(relayUrls: string[], count: number): string[] {
     const normalizedUrls = this.relayService.normalizeRelayUrls(relayUrls);
-
-    // Sort the relays based on their presence in the preferred list
-    const sortedRelays = normalizedUrls.sort((a, b) => {
-      const aIndex = this.preferredRelays.indexOf(a);
-      const bIndex = this.preferredRelays.indexOf(b);
-
-      if (aIndex === -1 && bIndex === -1) {
-        return 0; // Both not in preferred list
-      } else if (aIndex === -1) {
-        return 1; // a is not preferred, b is
-      } else if (bIndex === -1) {
-        return -1; // b is not preferred, a is
-      } else {
-        return aIndex - bIndex; // Both are in preferred list, sort by index
-      }
-    });
-
+    
+    // First, collect all preferred relays that are in the input list
+    const preferredRelays = normalizedUrls.filter(url => 
+      this.preferredRelays.includes(url)
+    );
+    
+    // Then, add any remaining non-preferred relays
+    const nonPreferredRelays = normalizedUrls.filter(url => 
+      !this.preferredRelays.includes(url)
+    );
+    
+    // Combine the arrays with preferred relays first
+    const sortedRelays = [...preferredRelays, ...nonPreferredRelays];
+    
+    // Return only up to the requested count
     return sortedRelays.slice(0, count);
   }
 
@@ -1000,6 +1003,10 @@ export class NostrService {
     else {
       // TODO: During loading of a lot of users, we should reuse the bootstrap pool.
       this.logger.debug('Connecting to bootstrap relays', { relays: this.relayService.discoveryRelays });
+
+      if (pubkey === '82002872d9e3dd1236a172ef15b1c562a0bf1031a5eece770ca829c9298b162e') {
+        debugger;
+      }
 
       const relays = await this.discoveryPool!.get(this.relayService.discoveryRelays, {
         kinds: [kinds.RelayList],
@@ -2000,6 +2007,7 @@ export class NostrService {
   //     // Update the metadata in our signal
   //     this.updateUserMetadataInSignal(pubkey, updatedData);
 
+ 
   //     // If this is the current user, trigger a metadata refresh
   //     if (this.currentUser()?.pubkey === pubkey) {
   //       this.logger.debug('Current user metadata updated');

@@ -347,11 +347,11 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
             return 'Loading...';
         }
 
-        if (!this.profile() || this.profile().isEmpty || !this.profile().content) {
+        if (!this.profile() || this.profile().isEmpty || !this.profile().data) {
             return 'Profile not found';
         }
 
-        const content = this.profile().content;
+        const content = this.profile().data;
         let tooltipText = '';
 
         // Add display name or name
@@ -379,7 +379,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
      * Checks if the profile is not found (empty or missing)
      */
     isProfileNotFound(): boolean {
-        return this.profile() && (this.profile().isEmpty || !this.profile().content);
+        return this.profile() && (this.profile().isEmpty || !this.profile().data);
     }
 
     /**
