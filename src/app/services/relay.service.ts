@@ -537,9 +537,9 @@ export class RelayService {
 * @returns Promise that resolves to an object with status for each relay
 */
   async publishToDiscoveryRelays(event: Event) {
-    for (const relay of this.discoveryRelays) {
-      await this.discoveryPool.ensureRelay(relay);
-    }
+    // for (const relay of this.discoveryRelays) {
+    //   await this.discoveryPool.ensureRelay(relay);
+    // }
 
     this.logger.debug('Publishing event to Discovery Relays:', event);
 

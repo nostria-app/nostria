@@ -53,7 +53,7 @@ export class NostrService {
   private readonly data = inject(DataService);
 
   initialized = signal(false);
-  MAX_WAIT_TIME = 2000;
+  MAX_WAIT_TIME = 4000;
   MAX_WAIT_TIME_METADATA = 4000;
   MAX_RELAY_COUNT = 3;
   dataLoaded = false;
@@ -943,21 +943,54 @@ export class NostrService {
 
   /** Used to optimize the selection of a few relays from the user's relay list. */
   pickOptimalRelays(relayUrls: string[], count: number): string[] {
-    const normalizedUrls = this.relayService.normalizeRelayUrls(relayUrls);
-    
-    // First, collect all preferred relays that are in the input list
-    const preferredRelays = normalizedUrls.filter(url => 
-      this.preferredRelays.includes(url)
+    // Filter out malformed URLs first
+    const validUrls = relayUrls.filter(url => {
+      // Must start with wss:// and have something after it
+      if (!url.startsWith('wss://') || url === 'wss://') {
+        return false;
+      }
+
+      // Attempt to parse the URL to ensure it's valid
+      try {
+        new URL(url);
+        return true;
+      } catch (e) {
+        return false;
+      }
+    });
+
+    const normalizedUrls = this.relayService.normalizeRelayUrls(validUrls);
+
+    // Helper function to check if a URL is IP-based or localhost
+    const isIpOrLocalhost = (url: string): boolean => {
+      try {
+        const hostname = new URL(url).hostname;
+        const isIp = /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname);
+        const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+        return isIp || isLocalhost;
+      } catch {
+        return false;
+      }
+    };
+
+    // 1. First tier: Preferred relays
+    const preferredRelays = normalizedUrls.filter(url =>
+      this.preferredRelays.includes(url) && !isIpOrLocalhost(url)
     );
-    
-    // Then, add any remaining non-preferred relays
-    const nonPreferredRelays = normalizedUrls.filter(url => 
-      !this.preferredRelays.includes(url)
+
+    // 2. Second tier: Normal domain relays (not IP or localhost)
+    const normalDomainRelays = normalizedUrls.filter(url =>
+      !this.preferredRelays.includes(url) && !isIpOrLocalhost(url)
     );
-    
-    // Combine the arrays with preferred relays first
-    const sortedRelays = [...preferredRelays, ...nonPreferredRelays];
-    
+
+    // 3. Third tier: IP-based and localhost relays
+    const ipAndLocalhostRelays = normalizedUrls.filter(url =>
+      isIpOrLocalhost(url)
+    );
+
+    // Combine all three tiers with preferred relays first, then normal domains, then IPs/localhost
+    const sortedRelays = [...preferredRelays, ...normalDomainRelays, ...ipAndLocalhostRelays];
+
     // Return only up to the requested count
     return sortedRelays.slice(0, count);
   }
@@ -1005,6 +1038,34 @@ export class NostrService {
       this.logger.debug('Connecting to bootstrap relays', { relays: this.relayService.discoveryRelays });
 
       if (pubkey === '82002872d9e3dd1236a172ef15b1c562a0bf1031a5eece770ca829c9298b162e') {
+        debugger;
+      }
+
+      if (pubkey === 'd28b7e2cb0ac0b06529ca6566fd141e4a5a5808592d7d78e57e55204ee3afba0') {
+        debugger;
+      }
+
+      if (pubkey === '90fb6b9607bba40686fe70aad74a07e5af96d152778f3a09fcda5967dcb0daba') {
+        debugger;
+      }
+
+      if (pubkey === '5a8197dc9affba7aa876ef46fe59e17bc8091cd0d674df4908e9497c9d149433') {
+        debugger;
+      }
+
+      if (pubkey === 'b9003833fabff271d0782e030be61b7ec38ce7d45a1b9a869fbdb34b9e2d2000') {
+        debugger;
+      }
+
+      if (pubkey === '340e4aef86cd5240aaf5fc550fa3f4291e6a03281a469b6ef34f060f6944033f') {
+        debugger;
+      }
+
+      if (pubkey === 'ab0de973129903e8078f01c4234bff6e81b47fdd928693d7849cf11bf8256dd7') {
+        debugger;
+      }
+
+      if (pubkey === '094ed88c9671bf1e8dd26501bf8a12ed013ad34c0deb35f0e607a89eff43e366') {
         debugger;
       }
 
@@ -1196,6 +1257,7 @@ export class NostrService {
           this.logger.info('Publishing relay list to discovery relays', { relayListEvent });
           await this.relayService.publishToDiscoveryRelays(relayListEvent);
         } catch (error) {
+          debugger;
           this.logger.error('Failed to publish relay list to discovery relays', { error });
         }
 
@@ -1218,8 +1280,10 @@ export class NostrService {
             // We must do this before storage.saveEvent, which transforms the content to JSON.
             try {
               this.logger.info('Publishing following list to discovery relays', { followingEvent });
+              debugger;
               await this.relayService.publishToDiscoveryRelays(followingEvent);
             } catch (error) {
+              debugger;
               this.logger.error('Failed to publish relay list to discovery relays', { error });
             }
           }
@@ -2007,7 +2071,7 @@ export class NostrService {
   //     // Update the metadata in our signal
   //     this.updateUserMetadataInSignal(pubkey, updatedData);
 
- 
+
   //     // If this is the current user, trigger a metadata refresh
   //     if (this.currentUser()?.pubkey === pubkey) {
   //       this.logger.debug('Current user metadata updated');
