@@ -230,7 +230,7 @@ export class PeopleComponent {
       this.people.set(followingList);
 
       // Load user info records for filtering
-      await this.loadUserInfoRecords(followingList);
+      // await this.loadUserInfoRecords(followingList);
 
       // Preload metadata for all people
       // this.preloadMetadata(followingList);
@@ -243,24 +243,24 @@ export class PeopleComponent {
     }
   }
 
-  private async loadUserInfoRecords(pubkeys: string[]) {
-    try {
-      // Get user info records for filtering
-      const userInfoRecords = await this.storage.getInfoByType('user');
+  // private async loadUserInfoRecords(pubkeys: string[]) {
+  //   try {
+  //     // Get user info records for filtering
+  //     const userInfoRecords = await this.storage.getInfoByType('user');
 
-      // Build cache map
-      const cache = new Map<string, InfoRecord>();
-      for (const record of userInfoRecords) {
-        if (pubkeys.includes(record.key)) {
-          cache.set(record.key, record);
-        }
-      }
+  //     // Build cache map
+  //     const cache = new Map<string, InfoRecord>();
+  //     for (const record of userInfoRecords) {
+  //       if (pubkeys.includes(record.key)) {
+  //         cache.set(record.key, record);
+  //       }
+  //     }
 
-      this.userInfoCache.set(cache);
-    } catch (err) {
-      this.logger.error('Failed to load user info records', err);
-    }
-  }
+  //     this.userInfoCache.set(cache);
+  //   } catch (err) {
+  //     this.logger.error('Failed to load user info records', err);
+  //   }
+  // }
 
   private preloadMetadata(pubkeys: string[]) {
     // Load metadata for the first 20 users to improve initial rendering
