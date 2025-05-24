@@ -66,9 +66,9 @@ export class BadgesComponent {
   issued = signal<any[] | null>([]);
   definitions = signal<any[] | null>([]);
   received = signal<any[] | null>([]);
-  
+
   isUpdating = signal<boolean>(false);
-  badgeIssuers = signal<{[key: string]: any}>({});
+  badgeIssuers = signal<{ [key: string]: any }>({});
 
   // Active tab index
   activeTabIndex = signal<number>(0);
@@ -131,21 +131,18 @@ export class BadgesComponent {
   }
 
   private async fetchBadgeIssuers(receivedBadges: NostrEvent[]) {
-    const issuers: {[key: string]: any} = {};
-    
+    const issuers: { [key: string]: any } = {};
+
     // Get unique issuer pubkeys
     const issuerPubkeys = [...new Set(receivedBadges.map(badge => badge.pubkey))];
-    
+
     // Fetch metadata for each issuer
     for (const pubkey of issuerPubkeys) {
       try {
         const metadata = await this.nostr.getMetadataForUser(pubkey);
-        if (metadata && metadata.content) {
-          let content = metadata.content;
-          if (typeof content === 'string') {
-            content = JSON.parse(content);
-          }
-          issuers[pubkey] = content;
+
+        if (metadata) {
+          issuers[pubkey] = metadata.data;
         } else {
           issuers[pubkey] = { name: this.nostr.getTruncatedNpub(pubkey) };
         }
@@ -154,7 +151,7 @@ export class BadgesComponent {
         issuers[pubkey] = { name: this.nostr.getTruncatedNpub(pubkey) };
       }
     }
-    
+
     this.badgeIssuers.set(issuers);
   }
 
@@ -238,21 +235,21 @@ export class BadgesComponent {
 
   getBadgeDefinition(aTag: string): NostrEvent | undefined {
     if (!aTag) return undefined;
-    
+
     const parts = aTag.split(':');
     if (parts.length < 3) return undefined;
-    
+
     const kind = parts[0];
     const pubkey = parts[1];
     const slug = parts[2];
-    
+
     return this.badgeService.getBadgeDefinition(pubkey, slug);
   }
 
-  getBadgeInfo(badgeAward: NostrEvent): {name: string, description: string, image: string, thumbnail: string} {
+  getBadgeInfo(badgeAward: NostrEvent): { name: string, description: string, image: string, thumbnail: string } {
     const aTag = this.getBadgeATag(badgeAward);
     const badgeDefinition = this.getBadgeDefinition(aTag);
-    
+
     if (!badgeDefinition) {
       return {
         name: 'Unknown Badge',
@@ -261,12 +258,12 @@ export class BadgesComponent {
         thumbnail: ''
       };
     }
-    
+
     const nameTag = badgeDefinition.tags.find(tag => tag[0] === 'name');
     const descTag = badgeDefinition.tags.find(tag => tag[0] === 'description');
     const imageTag = badgeDefinition.tags.find(tag => tag[0] === 'image');
     const thumbTag = badgeDefinition.tags.find(tag => tag[0] === 'thumb');
-    
+
     return {
       name: nameTag ? nameTag[1] : 'Unnamed Badge',
       description: descTag ? descTag[1] : 'No description',
@@ -280,17 +277,17 @@ export class BadgesComponent {
 
     try {
       this.isUpdating.set(true);
-      
+
       const aTag = this.getBadgeATag(badgeAward);
       if (!aTag) {
         console.error('Badge has no a-tag reference');
         return;
       }
-      
+
       // Get current profile badges event or create new one
       let currentEvent = this.profileBadgesEvent();
       let tags: string[][] = [];
-      
+
       if (currentEvent) {
         // Copy existing tags
         tags = [...currentEvent.tags];
@@ -298,20 +295,20 @@ export class BadgesComponent {
         // Create with d tag for profile_badges
         tags = [['d', 'profile_badges']];
       }
-      
+
       // Ensure we're not adding duplicate
       const existingIndex = tags.findIndex(tag => tag[0] === 'a' && tag[1] === aTag);
       if (existingIndex !== -1) {
         // Badge already accepted
         return;
       }
-      
+
       // Add the a-tag for the badge definition
       tags.push(['a', aTag]);
-      
+
       // Add the e-tag for the badge award event
       tags.push(['e', badgeAward.id, '']);  // third parameter can be relay URL if known
-      
+
       // Create the event
       const unsignedEvent: UnsignedEvent = {
         kind: kinds.ProfileBadges,
@@ -320,21 +317,21 @@ export class BadgesComponent {
         content: '',
         pubkey: this.nostr.pubkey()
       };
-      
+
       // Sign and publish the event
       const signedEvent = await this.nostr.signEvent(unsignedEvent);
-      
+
       await this.relay.publish(signedEvent);
       await this.storage.saveEvent(signedEvent);
-      
+
       // Update the component state
       this.profileBadgesEvent.set(signedEvent);
-      
+
       // Update the accepted badges
       if (signedEvent.tags) {
         this.parseBadgeTags(signedEvent.tags);
       }
-      
+
     } catch (err) {
       console.error('Error accepting badge:', err);
     } finally {

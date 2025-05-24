@@ -13,7 +13,6 @@ import { LayoutService } from '../../services/layout.service';
 import { AgoPipe } from '../../pipes/ago.pipe';
 import { NPubPipe } from '../../pipes/npub.pipe';
 import { TimestampPipe } from '../../pipes/timestamp.pipe';
-import { NostrEvent } from '../../interfaces';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { NewFeedDialogComponent } from './new-feed-dialog/new-feed-dialog.component';
 import { RouterModule } from '@angular/router';
@@ -21,6 +20,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { LocalStorageService } from '../../services/local-storage.service';
 import { LoggerService } from '../../services/logger.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { NostrRecord } from '../../interfaces';
 
 interface NavLink {
   id: string;
@@ -93,9 +93,9 @@ export class HomeComponent {
   });
 
   // Content Signals
-  trendingEvents = signal<NostrEvent[]>([]);
-  followingEvents = signal<NostrEvent[]>([]);
-  mediaEvents = signal<NostrEvent[]>([]);
+  trendingEvents = signal<NostrRecord[]>([]);
+  followingEvents = signal<NostrRecord[]>([]);
+  mediaEvents = signal<NostrRecord[]>([]);
   availableTags = signal<string[]>(['nostr', 'bitcoin', 'programming', 'art', 'music', 'photography', 'news', 'sports']);
 
   // Computed Signals for Filtered Content
@@ -105,7 +105,7 @@ export class HomeComponent {
       return this.trendingEvents();
     } else {
       return this.trendingEvents().filter(event =>
-        event.tags.some(tag => tag[0] === 't' && tags.includes(tag[1]))
+        event.event.tags.some(tag => tag[0] === 't' && tags.includes(tag[1]))
       );
     }
   });
@@ -116,7 +116,7 @@ export class HomeComponent {
       return this.followingEvents();
     } else {
       return this.followingEvents().filter(event =>
-        event.tags.some(tag => tag[0] === 't' && tags.includes(tag[1]))
+        event.event.tags.some(tag => tag[0] === 't' && tags.includes(tag[1]))
       );
     }
   });
@@ -127,7 +127,7 @@ export class HomeComponent {
       return this.mediaEvents();
     } else {
       return this.mediaEvents().filter(event =>
-        event.tags.some(tag => tag[0] === 't' && tags.includes(tag[1]))
+        event.event.tags.some(tag => tag[0] === 't' && tags.includes(tag[1]))
       );
     }
   });
@@ -248,34 +248,34 @@ export class HomeComponent {
     }
   }
 
-  async fetchTrendingEvents(): Promise<NostrEvent[]> {
+  async fetchTrendingEvents(): Promise<NostrRecord[]> {
     // Example implementation - would be replaced with actual fetch from nostrService
     const response = await fetch('/api/trending');
     if (!response.ok) {
       throw new Error('Failed to fetch trending events');
     }
 
-    return await response.json() as NostrEvent[];
+    return await response.json() as NostrRecord[];
   }
 
-  async fetchFollowingEvents(): Promise<NostrEvent[]> {
+  async fetchFollowingEvents(): Promise<NostrRecord[]> {
     // Example implementation - would be replaced with actual fetch from nostrService
     const response = await fetch('/api/following');
     if (!response.ok) {
       throw new Error('Failed to fetch following events');
     }
 
-    return await response.json() as NostrEvent[];
+    return await response.json() as NostrRecord[];
   }
 
-  async fetchMediaEvents(): Promise<NostrEvent[]> {
+  async fetchMediaEvents(): Promise<NostrRecord[]> {
     // Example implementation - would be replaced with actual fetch from nostrService
     const response = await fetch('/api/media');
     if (!response.ok) {
       throw new Error('Failed to fetch media events');
     }
 
-    return await response.json() as NostrEvent[];
+    return await response.json() as NostrRecord[];
   }
 
   toggleAdvancedFilters(): void {
@@ -306,12 +306,12 @@ export class HomeComponent {
     }
   }
 
-  shareContent(event: NostrEvent): void {
+  shareContent(event: NostrRecord): void {
     // Implement share functionality
     this.notificationService.notify('Content shared');
   }
 
-  bookmarkContent(event: NostrEvent): void {
+  bookmarkContent(event: NostrRecord): void {
     // Implement bookmark functionality 
     this.notificationService.notify('Content bookmarked');
   }

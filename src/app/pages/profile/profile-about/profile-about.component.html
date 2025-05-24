@@ -2,20 +2,21 @@
   <mat-card>
     <mat-card-content>
       <h2>Profile Info</h2>
+      @if (userMetadata(); as metadata) {
 
-      @if (userMetadata()?.content.website) {
+      @if (metadata.data.website) {
       <div class="info-item">
         <mat-icon>link</mat-icon>
-        <a [href]="userMetadata()?.content.website" target="_blank" rel="noopener noreferrer">
-          {{ userMetadata()?.content.website }}
+        <a [href]="metadata.data.website" target="_blank" rel="noopener noreferrer">
+          {{ metadata.data.website }}
         </a>
       </div>
       }
 
-      @if (userMetadata()?.content.lud16) {
+      @if (metadata.data.lud16) {
       <div class="info-item">
         <mat-icon>bolt</mat-icon>
-        <span>{{ userMetadata()?.content.lud16 }}</span>
+        <span>{{ metadata.data.lud16 }}</span>
       </div>
       }
 
@@ -29,11 +30,12 @@
         </div>
       </div>
 
-      @if (userMetadata()?.content.last_updated) {
+      @if (metadata.event.created_at) {
       <div class="info-item">
         <mat-icon>update</mat-icon>
-        <span>Updated: {{ userMetadata()?.content.last_updated | date:'mediumDate' }}</span>
+        <span>Updated: {{ metadata.event.created_at | date:'mediumDate' }}</span>
       </div>
+      }
       }
     </mat-card-content>
   </mat-card>

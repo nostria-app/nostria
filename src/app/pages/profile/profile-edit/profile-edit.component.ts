@@ -13,6 +13,8 @@ import { RelayService } from '../../../services/relay.service';
 import { Router } from '@angular/router';
 import { StorageService } from '../../../services/storage.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { DataService } from '../../../services/data.service';
+import { NostrRecord } from '../../../interfaces';
 
 @Component({
   selector: 'app-profile-edit',
@@ -23,10 +25,11 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 export class ProfileEditComponent {
   nostr = inject(NostrService);
   storage = inject(StorageService);
+  data = inject(DataService);
   relay = inject(RelayService);
   router = inject(Router);
   profile = signal<any>(null);
-  metadata = signal<NostrEvent | undefined>(undefined);
+  metadata = signal<NostrRecord | undefined>(undefined);
   loading = signal<boolean>(false);
 
   constructor() {
@@ -36,7 +39,7 @@ export class ProfileEditComponent {
   ngOnInit() {
     const metadata = this.nostr.getMetadataForAccount(this.nostr.pubkey());
     this.metadata.set(metadata);
-    const profileClone = structuredClone(metadata?.content);
+    const profileClone = structuredClone(metadata?.data);
     this.profile.set(profileClone);
   }
 
@@ -55,7 +58,7 @@ export class ProfileEditComponent {
 
     // this.metadata()!.content = JSON.stringify(profile);
 
-    const unsignedEvent = this.nostr.createEvent(this.metadata()!.kind, JSON.stringify(profile), this.metadata()!.tags);
+    const unsignedEvent = this.nostr.createEvent(this.metadata()!.event.kind, JSON.stringify(profile), this.metadata()!.event.tags);
     const signedEvent = await this.nostr.signEvent(unsignedEvent);
 
     await this.relay.publish(signedEvent);
@@ -63,9 +66,11 @@ export class ProfileEditComponent {
     // Saving the event will parse the content back to JSON, the publish above might not be completed yet,
     // and will fail if we save. So we clone it and save it instead.
 
-    const clonedEvent = structuredClone(signedEvent);
-    await this.storage.saveEvent(clonedEvent);
-    this.nostr.updateAccountMetadata(clonedEvent);
+    // const clonedEvent = structuredClone(signedEvent);
+    await this.storage.saveEvent(signedEvent);
+
+    const record = this.data.getRecord(signedEvent);
+    this.nostr.updateAccountMetadata(record);
 
     // Update the local account profile
     this.nostr.account()!.name = profile.display_name;

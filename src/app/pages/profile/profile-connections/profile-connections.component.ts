@@ -11,7 +11,6 @@ import { NostrService } from '../../../services/nostr.service';
 import { LoggerService } from '../../../services/logger.service';
 import { LoadingOverlayComponent } from '../../../components/loading-overlay/loading-overlay.component';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { NostrEvent } from '../../../interfaces';
 import { ProfileStateService } from '../../../services/profile-state.service';
 
 interface Connection {

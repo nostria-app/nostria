@@ -93,7 +93,7 @@ export class AccountsComponent {
    */
   getMetadataForAccount(pubkey: string) {
     const metadata = this.nostrService.getMetadataForAccount(pubkey);
-    return metadata?.content;
+    return metadata?.data;
   }
 
   /**

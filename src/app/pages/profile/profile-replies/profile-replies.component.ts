@@ -58,10 +58,10 @@ export class ProfileRepliesComponent {
       // Apply filtering based on options
       if (showLegacy) {
         // Show older replies first or apply other legacy filtering logic
-        this.filteredReplies.set([...replies].sort((a, b) => a.created_at - b.created_at));
+        this.filteredReplies.set([...replies].sort((a, b) => a.event.created_at - b.event.created_at));
       } else {
         // Default sorting (newest first)
-        this.filteredReplies.set([...replies].sort((a, b) => b.created_at - a.created_at));
+        this.filteredReplies.set([...replies].sort((a, b) => b.event.created_at - a.event.created_at));
       }
     });
   }

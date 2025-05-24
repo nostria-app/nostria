@@ -6,7 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { ActivatedRoute } from '@angular/router';
 import { NostrService } from '../../../services/nostr.service';
 import { LoggerService } from '../../../services/logger.service';
-import { NostrEvent } from '../../../interfaces';
+import { NostrRecord } from '../../../interfaces';
 
 @Component({
   selector: 'app-profile-about',
@@ -25,7 +25,7 @@ export class ProfileAboutComponent {
   private nostrService = inject(NostrService);
   private logger = inject(LoggerService);
 
-  userMetadata = signal<NostrEvent | undefined>(undefined);
+  userMetadata = signal<NostrRecord | undefined>(undefined);
   
   constructor() {
     effect(() => {

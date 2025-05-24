@@ -16,9 +16,9 @@
 
   <div class="user-profile-container">
     <!-- Banner section for grid view -->
-    @if (view() === 'grid' && profile()?.content?.banner) {
+    @if (view() === 'grid' && profile()?.data?.banner) {
     <div class="user-profile-banner">
-      <img [src]="profile().content.banner" onerror="this.onerror=null; this.src='images/banner-failure.png';"
+      <img [src]="profile().data.banner" onerror="this.onerror=null; this.src='images/banner-failure.png';"
         alt="User Banner" class="user-banner" />
     </div>
     }
@@ -36,8 +36,8 @@
 
       @if (isLoading()) {
       <mat-spinner [diameter]="getSpinnerSize()" color="primary"></mat-spinner>
-      } @else if (profile()?.content?.picture && !imageLoadError()) {
-      <img [src]="profile().content.picture" (error)="onImageLoadError($event)" alt="User Avatar" class="user-avatar" />
+      } @else if (profile()?.data?.picture && !imageLoadError()) {
+      <img [src]="profile().data.picture" (error)="onImageLoadError($event)" alt="User Avatar" class="user-avatar" />
       } @else {
       <mat-icon [ngClass]="['default-user-avatar', 
                      isProfileNotFound() ? 'not-found-avatar' : '',
@@ -55,11 +55,11 @@
       <a [routerLink]="['/p', pubkey()]" class="user-profile-name">
         @if (isLoading()) {
         Loading...
-        } @else if (profile() && !profile().isEmpty && profile().content) {
-        @if (profile().content.display_name) {
-        {{ profile().content.display_name }}
-        } @else if (profile().content.name) {
-        {{ profile().content.name }}
+        } @else if (profile() && !profile().isEmpty && profile().data) {
+        @if (profile().data.display_name) {
+        {{ profile().data.display_name }}
+        } @else if (profile().data.name) {
+        {{ profile().data.name }}
         } @else {
         [No name]
         }
@@ -74,8 +74,8 @@
       }
 
       <!-- About section - only shown in details view -->
-      @if (view() === 'details' && profile() && profile().content && profile().content.about) {
-      <p class="user-profile-about">{{ profile().content.about }}</p>
+      @if (view() === 'details' && profile() && profile().data && profile().data.about) {
+      <p class="user-profile-about">{{ profile().data.about }}</p>
       }
 
       <!-- Named content projection for thread view -->

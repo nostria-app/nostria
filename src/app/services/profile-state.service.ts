@@ -1,5 +1,5 @@
 import { Injectable, signal } from '@angular/core';
-import { NostrEvent } from '../interfaces';
+import { NostrRecord } from '../interfaces';
 import { inject } from '@angular/core';
 import { NotificationService } from './notification.service';
 import { NotificationType } from './storage.service';
@@ -12,13 +12,13 @@ export class ProfileStateService {
   // Signal to store the current profile's following list
   followingList = signal<string[]>([]);
 
-  notes = signal<NostrEvent[]>([]);
+  notes = signal<NostrRecord[]>([]);
 
-  replies = signal<NostrEvent[]>([]);
+  replies = signal<NostrRecord[]>([]);
 
-  articles = signal<NostrEvent[]>([]);
+  articles = signal<NostrRecord[]>([]);
 
-  media = signal<NostrEvent[]>([]);
+  media = signal<NostrRecord[]>([]);
 
   relay: UserRelayService | null = null;
   

@@ -1,9 +1,8 @@
-import { Injectable, inject, signal, effect } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { LoggerService } from './logger.service';
 import { Relay } from './relay.service';
 import { openDB, IDBPDatabase, DBSchema, deleteDB } from 'idb';
 import { Event } from 'nostr-tools';
-import { NostrEvent } from '../interfaces';
 
 // Interface for NIP-11 relay information
 export interface Nip11Info {
@@ -52,7 +51,7 @@ export interface NostrEventData<T = any> {
   pubkey?: string; // Public key of the user
   content: Partial<T>;        // Parsed JSON content
   tags: string[][];    // Original tags array
-  raw?: string;        // Optional original JSON string
+  // raw?: string;        // Optional original JSON string
   updated?: number; // Timestamp of the last update
 }
 
@@ -113,7 +112,7 @@ export interface Notification {
 }
 
 export interface RelayPublishingNotification extends Notification {
-  event: NostrEvent;
+  event: Event;
   relayPromises?: RelayPublishPromise[];
   complete: boolean;
 }
@@ -153,7 +152,7 @@ interface NostriaDBSchema extends DBSchema {
   };
   events: {
     key: string; // event id
-    value: NostrEvent;
+    value: Event;
     indexes: {
       'by-kind': number;
       'by-pubkey': string;
@@ -185,7 +184,7 @@ export class StorageService {
   private readonly logger = inject(LoggerService);
   private db!: IDBPDatabase<NostriaDBSchema>;
   // TODO: Before public release, rename the database to "nostria", then reset the DB_VERSION.
-  private readonly DB_NAME = 'nostria-db-beta1';
+  private readonly DB_NAME = 'nostria-db-beta2';
   private readonly DB_VERSION = 1; // Reset to 0 as the database has been renamed
 
   // Signal to track database initialization status
@@ -318,7 +317,7 @@ export class StorageService {
   }
 
   // Get d-tag value from an event
-  getDTagValue(event: NostrEvent): string | undefined {
+  getDTagValue(event: Event): string | undefined {
     for (const tag of event.tags) {
       if (tag.length >= 2 && tag[0] === 'd') {
         return tag[1];
@@ -328,7 +327,7 @@ export class StorageService {
   }
 
   // Get all p-tag values from an event
-  getPTagsValues(event: NostrEvent): string[] {
+  getPTagsValues(event: Event): string[] {
     const pTagValues: string[] = [];
 
     for (const tag of event.tags) {
@@ -341,31 +340,32 @@ export class StorageService {
   }
 
   // Generic event storage methods
-  async saveEvent(event: NostrEvent): Promise<void> {
+  async saveEvent(event: Event): Promise<void> {
     try {
       const { kind } = event;
+      
 
       // Always store the content serialized.
-      if (event.content && event.content !== '') {
-        try {
+      // if (event.content && event.content !== '') {
+      //   try {
 
-          // First check if the content is already an object (not a string)
-          if (typeof event.content === 'string') {
-            // Check if it looks like JSON (starts with { or [)
-            const trimmedContent = event.content.trim();
+      //     // First check if the content is already an object (not a string)
+      //     if (typeof event.content === 'string') {
+      //       // Check if it looks like JSON (starts with { or [)
+      //       const trimmedContent = event.content.trim();
 
-            if ((trimmedContent.startsWith('{') && trimmedContent.endsWith('}')) ||
-              (trimmedContent.startsWith('[') && trimmedContent.endsWith(']'))) {
-              // Try parsing it as JSON
-              event.content = JSON.parse(event.content);
-            }
-            // If it doesn't look like JSON or parsing fails, the catch block will keep it as a string
-          }
-        } catch (e) {
-          debugger;
-          this.logger.error('Failed to parse event content', e);
-        }
-      }
+      //       if ((trimmedContent.startsWith('{') && trimmedContent.endsWith('}')) ||
+      //         (trimmedContent.startsWith('[') && trimmedContent.endsWith(']'))) {
+      //         // Try parsing it as JSON
+      //         event.content = JSON.parse(event.content);
+      //       }
+      //       // If it doesn't look like JSON or parsing fails, the catch block will keep it as a string
+      //     }
+      //   } catch (e) {
+      //     debugger;
+      //     this.logger.error('Failed to parse event content', e);
+      //   }
+      // }
 
       // Handle according to event classification
       if (this.isReplaceableEvent(kind)) {
@@ -392,7 +392,7 @@ export class StorageService {
     }
   }
 
-  private async saveReplaceableEvent(event: NostrEvent): Promise<void> {
+  private async saveReplaceableEvent(event: Event): Promise<void> {
     // For replaceable events, find any existing events from the same pubkey and kind
     const index = this.db.transaction('events', 'readonly')
       .store.index('by-pubkey-kind');
@@ -425,7 +425,7 @@ export class StorageService {
     }
   }
 
-  private async saveParameterizedReplaceableEvent(event: NostrEvent): Promise<void> {
+  private async saveParameterizedReplaceableEvent(event: Event): Promise<void> {
     const dTagValue = this.getDTagValue(event);
 
     if (!dTagValue) {
@@ -469,7 +469,7 @@ export class StorageService {
     }
   }
 
-  async getEvent(id: string): Promise<NostrEvent | undefined> {
+  async getEvent(id: string): Promise<Event | undefined> {
     try {
       return await this.db.get('events', id);
     } catch (error) {
@@ -478,7 +478,7 @@ export class StorageService {
     }
   }
 
-  async getEventsByKind(kind: number): Promise<NostrEvent[]> {
+  async getEventsByKind(kind: number): Promise<Event[]> {
     try {
       return await this.db.getAllFromIndex('events', 'by-kind', kind);
     } catch (error) {
@@ -487,7 +487,7 @@ export class StorageService {
     }
   }
 
-  async getEventsByPubkey(pubkey: string | string[]): Promise<NostrEvent[]> {
+  async getEventsByPubkey(pubkey: string | string[]): Promise<Event[]> {
     try {
       if (Array.isArray(pubkey)) {
         // Handle array of pubkeys
@@ -508,7 +508,7 @@ export class StorageService {
     }
   }
 
-  async getEventById(id: string): Promise<NostrEvent | null> {
+  async getEventById(id: string): Promise<Event | null> {
     try {
       const event = await this.db.get('events', id);
       return event || null;
@@ -518,7 +518,7 @@ export class StorageService {
     }
   }
 
-  async getEventByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<NostrEvent | null> {
+  async getEventByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<Event | null> {
     const events = await this.getEventsByPubkeyAndKind(pubkey, kind);
 
     if (events && events.length > 0) {
@@ -528,11 +528,11 @@ export class StorageService {
     }
   }
 
-  async getEventsByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<NostrEvent[]> {
+  async getEventsByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<Event[]> {
     try {
       if (Array.isArray(pubkey)) {
         // Handle array of pubkeys
-        const allEvents: NostrEvent[] = [];
+        const allEvents: Event[] = [];
         for (const pk of pubkey) {
           const events = await this.db.getAllFromIndex('events', 'by-pubkey-kind', [pk, kind]);
           allEvents.push(...events);
@@ -549,11 +549,11 @@ export class StorageService {
     }
   }
 
-  async getParameterizedReplaceableEvent(pubkey: string | string[], kind: number, dTagValue: string): Promise<NostrEvent | undefined> {
+  async getParameterizedReplaceableEvent(pubkey: string | string[], kind: number, dTagValue: string): Promise<Event | undefined> {
     try {
       if (Array.isArray(pubkey)) {
         // For arrays, get events from all pubkeys and return the most recent one
-        const allEvents: NostrEvent[] = [];
+        const allEvents: Event[] = [];
         for (const pk of pubkey) {
           const events = await this.db.getAllFromIndex('events', 'by-pubkey-kind-d-tag', [pk, kind, dTagValue]);
           allEvents.push(...events);
@@ -772,7 +772,7 @@ export class StorageService {
   //   }
   // }
 
-  async getUserEvents(pubkey: string): Promise<NostrEvent[]> {
+  async getUserEvents(pubkey: string): Promise<Event[]> {
     try {
       if (!this.db) {
         throw new Error('Database not initialized');

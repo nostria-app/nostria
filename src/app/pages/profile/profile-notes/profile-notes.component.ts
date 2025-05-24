@@ -14,8 +14,8 @@ import { AgoPipe } from '../../../pipes/ago.pipe';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { FormsModule } from '@angular/forms';
-import { NostrEvent } from '../../../interfaces';
 import { ContentComponent } from '../../../components/content/content.component';
+import { NostrRecord } from '../../../interfaces';
 
 @Component({
   selector: 'app-profile-notes',
@@ -49,7 +49,7 @@ export class ProfileNotesComponent {
   
   // Options
   showNewestFirst = signal<boolean>(true);
-  sortedNotes = signal<NostrEvent[]>([]);
+  sortedNotes = signal<NostrRecord[]>([]);
 
   constructor() {
     // Setup effect to sort notes when options or source data changes
@@ -59,9 +59,9 @@ export class ProfileNotesComponent {
       
       // Apply sorting based on options
       if (newestFirst) {
-        this.sortedNotes.set([...notes].sort((a, b) => b.created_at - a.created_at));
+        this.sortedNotes.set([...notes].sort((a, b) => b.event.created_at - a.event.created_at));
       } else {
-        this.sortedNotes.set([...notes].sort((a, b) => a.created_at - b.created_at));
+        this.sortedNotes.set([...notes].sort((a, b) => a.event.created_at - b.event.created_at));
       }
     });
   }

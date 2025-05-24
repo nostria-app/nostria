@@ -2,10 +2,10 @@ import { Injectable, inject, signal, computed, effect, untracked } from '@angula
 import { LoggerService } from './logger.service';
 import { StorageService, Nip11Info, NostrEventData, UserMetadata } from './storage.service';
 import { Event, kinds, SimplePool } from 'nostr-tools';
-import { NostrEvent } from '../interfaces';
 import { ApplicationStateService } from './application-state.service';
 import { NotificationService } from './notification.service';
 import { LocalStorageService } from './local-storage.service';
+import { LayoutService } from './layout.service';
 
 export interface Relay {
   url: string;
@@ -27,13 +27,14 @@ export class RelayService {
   private readonly TIMEOUT_CLEANUP_INTERVAL = 10000;
 
   // Default bootstrap relays
-  // private readonly DEFAULT_BOOTSTRAP_RELAYS = ['wss://discovery.eu.nostria.app/'];
+  private readonly DEFAULT_BOOTSTRAP_RELAYS = ['wss://discovery.eu.nostria.app/'];
 
   private readonly logger = inject(LoggerService);
   private readonly storage = inject(StorageService);
   private readonly appState = inject(ApplicationStateService);
   private readonly notificationService = inject(NotificationService);
   private readonly localStorage = inject(LocalStorageService);
+  private readonly layout = inject(LayoutService);
 
   // Initialize signals with empty arrays first, then populate in constructor
   discoveryRelays: string[] = [];
@@ -65,7 +66,7 @@ export class RelayService {
     this.logger.info('Initializing RelayService');
 
     // Move bootstrap relay initialization to constructor
-    // this.discoveryRelays = this.loadDiscoveryRelaysFromStorage();
+    this.discoveryRelays = this.loadDiscoveryRelaysFromStorage();
     // this.discoveryRelays.set(this.#discoveryRelays);
 
     // When relays change, sync with storage
@@ -222,7 +223,7 @@ export class RelayService {
   /**
    * Loads bootstrap relays from local storage
    */
-  private loadDiscoveryRelaysFromStorage(): string[] | null {
+  private loadDiscoveryRelaysFromStorage(): string[] {
     try {
       const storedRelays = this.localStorage.getItem(this.appState.DISCOVERY_RELAYS_STORAGE_KEY);
       if (storedRelays) {
@@ -235,7 +236,7 @@ export class RelayService {
     } catch (error) {
       this.logger.error('Error loading discovery relays from storage', error);
     }
-    return null;
+    return this.DEFAULT_BOOTSTRAP_RELAYS;
   }
 
   /**
@@ -336,7 +337,7 @@ export class RelayService {
     }
   }
 
-  async getEventsByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<NostrEvent[]> {
+  async getEventsByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<Event[]> {
     // Check if pubkey is already an array or a single string
     const authors = Array.isArray(pubkey) ? pubkey : [pubkey];
 
@@ -346,7 +347,7 @@ export class RelayService {
     });
   }
 
-  async getEventByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<NostrEvent | null> {
+  async getEventByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<Event | null> {
     // Check if pubkey is already an array or a single string
     const authors = Array.isArray(pubkey) ? pubkey : [pubkey];
 
@@ -356,7 +357,7 @@ export class RelayService {
     });
   }
 
-  async getEventsByKindAndPubKeyTag(pubkey: string | string[], kind: number): Promise<NostrEvent[]> {
+  async getEventsByKindAndPubKeyTag(pubkey: string | string[], kind: number): Promise<Event[]> {
     const authors = Array.isArray(pubkey) ? pubkey : [pubkey];
 
     return this.getMany({
@@ -365,7 +366,7 @@ export class RelayService {
     });
   }
 
-  async getEventByPubkeyAndKindAndTag(pubkey: string, kind: number, tag: { key: string, value: string }): Promise<NostrEvent | null> {
+  async getEventByPubkeyAndKindAndTag(pubkey: string, kind: number, tag: { key: string, value: string }): Promise<Event | null> {
     const authors = Array.isArray(pubkey) ? pubkey : [pubkey];
 
     return this.get({
@@ -526,6 +527,8 @@ export class RelayService {
     }
   }
 
+  discoveryPool = new SimplePool();
+
   /**
 * Generic function to publish a Nostr event to specified relays
 * @param event The Nostr event to publish
@@ -534,6 +537,10 @@ export class RelayService {
 * @returns Promise that resolves to an object with status for each relay
 */
   async publishToDiscoveryRelays(event: Event) {
+    for (const relay of this.discoveryRelays) {
+      await this.discoveryPool.ensureRelay(relay);
+    }
+
     this.logger.debug('Publishing event to Discovery Relays:', event);
 
     if (this.discoveryRelays.length === 0) {
@@ -541,12 +548,11 @@ export class RelayService {
       return null;
     }
 
-    const discoveryPool = new SimplePool();
-
     try {
       // Publish the event
-      const publishResults = discoveryPool.publish(this.discoveryRelays, event);
+      const publishResults = await this.discoveryPool.publish(this.discoveryRelays, event);
       this.logger.debug('Publish results:', publishResults);
+      await this.layout.showPublishResults(publishResults, 'Relay List');
 
       // Update lastUsed for all relays used in this publish operation
       // urls.forEach(url => this.updateRelayLastUsed(url));
@@ -556,11 +562,7 @@ export class RelayService {
       this.logger.error('Error publishing event', error);
       return null;
     }
-    finally {
-      discoveryPool.close(this.discoveryRelays);
-    }
   }
-
 
   /**
    * Publish an event to multiple relays with status tracking
@@ -581,7 +583,7 @@ export class RelayService {
   /**
    * Publish an event to a single relay
    */
-  async publishToRelay(event: NostrEvent, relayUrl: string) {
+  async publishToRelay(event: Event, relayUrl: string) {
     try {
       // Your relay publishing implementation
       this.logger.debug(`Successfully published to ${relayUrl}`);

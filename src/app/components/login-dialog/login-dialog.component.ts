@@ -85,7 +85,7 @@ export class LoginDialogComponent {
   // Method to get account metadata (from login dialog)
   getAccountMetadata(account: any) {
     const metadata = this.nostrService.getMetadataForAccount(account.pubkey);
-    return metadata ? metadata.content : {};
+    return metadata ? metadata.data : {};
   }
   
   // Initial dialog methods
