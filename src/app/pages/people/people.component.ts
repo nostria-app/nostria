@@ -95,14 +95,14 @@ export class PeopleComponent {
         const metadata = this.nostr.usersMetadata().get(pubkey);
         if (!metadata) return false;
 
-        const content = typeof metadata.content === 'string'
-          ? JSON.parse(metadata.content)
-          : metadata.content;
+        // const content = typeof metadata.content === 'string'
+        //   ? JSON.parse(metadata.content)
+        //   : metadata.content;
 
-        const name = content?.name || '';
-        const displayName = content?.display_name || '';
-        const nip05 = content?.nip05 || '';
-        const about = content?.about || '';
+        const name = metadata.data?.name || '';
+        const displayName = metadata.data?.display_name || '';
+        const nip05 = metadata.data?.nip05 || '';
+        const about = metadata.data?.about || '';
 
         const searchTerms = `${name} ${displayName} ${nip05} ${about}`.toLowerCase();
         if (!searchTerms.includes(search)) return false;
@@ -115,9 +115,13 @@ export class PeopleComponent {
 
         // Get user metadata
         const metadata = this.nostr.usersMetadata().get(pubkey);
-        const content = metadata && metadata.content ?
-          (typeof metadata.content === 'string' ? JSON.parse(metadata.content) : metadata.content) :
-          null;
+        // const content = metadata && metadata.content ?
+        //   (typeof metadata.content === 'string' ? JSON.parse(metadata.content) : metadata.content) :
+        //   null;
+
+        if (!metadata) {
+          return false;
+        }
 
         // Apply filters
         if (activeFilters.hasRelayList &&
@@ -131,17 +135,17 @@ export class PeopleComponent {
         }
 
         if (activeFilters.hasNip05 &&
-          (!content || !content.nip05)) {
+          (metadata!.data.nip05)) {
           return false;
         }
 
         if (activeFilters.hasPicture &&
-          (!content || !content.picture)) {
+          (metadata.data.picture)) {
           return false;
         }
 
         if (activeFilters.hasBio &&
-          (!content || !content.about || content.about.trim() === '')) {
+          (!metadata.data.about || metadata.data.about.trim() === '')) {
           return false;
         }
       }

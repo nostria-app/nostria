@@ -1,7 +1,7 @@
 import { Injectable, effect, inject, signal } from '@angular/core';
 import { LoggerService } from './logger.service';
-import { NostrEvent } from '../interfaces';
 import { GeneralNotification, Notification, NotificationType, RelayPublishingNotification, RelayPublishPromise, StorageService } from './storage.service';
+import { Event } from 'nostr-tools';
 
 @Injectable({
   providedIn: 'root'
@@ -89,7 +89,7 @@ export class NotificationService {
    * Add a new relay publishing notification
    */
   addRelayPublishingNotification(
-    event: NostrEvent,
+    event: Event,
     relayPromises: Map<Promise<string>, string>
   ): string {
     const notificationId = `publish-${event.id}-${Date.now()}`;
@@ -250,7 +250,7 @@ export class NotificationService {
   /**
    * Retry publishing to failed relays
    */
-  async retryFailedRelays(notificationId: string, retryFunction: (event: NostrEvent, relayUrl: string) => Promise<any>): Promise<void> {
+  async retryFailedRelays(notificationId: string, retryFunction: (event: Event, relayUrl: string) => Promise<any>): Promise<void> {
     this.logger.info(`Attempting to retry failed relays for notification ${notificationId}`);
 
     const notification = this._notifications().find(n => n.id === notificationId);

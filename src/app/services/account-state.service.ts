@@ -1,6 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { NostrEvent } from '../interfaces';
-import { NostrEventData } from './storage.service';
+import { Event } from 'nostr-tools';
 
 @Injectable({
   providedIn: 'root'
@@ -14,7 +13,7 @@ export class AccountStateService {
   // Current profile pubkey
   currentProfilePubkey = signal<string>('');
 
-  muteList = signal<NostrEvent | undefined>(undefined);
+  muteList = signal<Event | undefined>(undefined);
   
   // Computed signals for different types of mutes
   mutedAccounts = computed(() => {
@@ -47,7 +46,7 @@ export class AccountStateService {
   }
 
   // Method to update mute list
-  updateMuteList(muteEvent: NostrEvent): void {
+  updateMuteList(muteEvent: Event): void {
     this.muteList.set(muteEvent);
   }
 }

@@ -6,23 +6,23 @@
   </div>
   } @else {
   <div class="reads-list">
-    @for(note of profileState.articles(); track note.id) {
+    @for(note of profileState.articles(); track note.event.id) {
     <mat-card class="note-card" appearance="outlined">
       <app-user-profile class="user-profile-thread" view="thread" [pubkey]="profileState.currentProfilePubkey()">
-        <a class="date-link" [routerLink]="['/e', note.id]" [matTooltip]="note.created_at * 1000 | date:'medium'"
+        <a class="date-link" [routerLink]="['/e', note.event.id]" [matTooltip]="note.data.created_at * 1000 | date:'medium'"
           matTooltipPosition="below">
-          {{ note.created_at | ago }}
+          {{ note.data.created_at | ago }}
         </a>
       </app-user-profile>
-      <mat-card-content>{{note.content}}</mat-card-content>
+      <mat-card-content>{{note.data}}</mat-card-content>
       <mat-card-footer class="note-footer">
         <button mat-icon-button>
           <mat-icon matTooltip="Reply" matTooltipPosition="below">reply</mat-icon>
         </button>
         <button mat-icon-button class="note-footer-right">
-          <mat-icon [matTooltip]="bookmark.getBookmarkTooltip(note.id)" matTooltipPosition="below"
-            (click)="bookmark.toggleBookmark(note.id)">
-            {{bookmark.getBookmarkIcon(note.id)}}
+          <mat-icon [matTooltip]="bookmark.getBookmarkTooltip(note.event.id)" matTooltipPosition="below"
+            (click)="bookmark.toggleBookmark(note.event.id)">
+            {{bookmark.getBookmarkIcon(note.event.id)}}
           </mat-icon>
         </button>
       </mat-card-footer>

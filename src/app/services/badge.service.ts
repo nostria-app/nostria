@@ -2,8 +2,7 @@ import { inject, Injectable, signal } from "@angular/core";
 import { StorageService } from "./storage.service";
 import { NostrService } from "./nostr.service";
 import { RelayService } from "./relay.service";
-import { NostrEvent } from "../interfaces";
-import { kinds } from "nostr-tools";
+import { Event, kinds } from "nostr-tools";
 
 @Injectable({
     providedIn: 'root'
@@ -14,9 +13,9 @@ export class BadgeService {
     private readonly relay = inject(RelayService);
 
     // Signal to store the list of badges
-    badgeDefinitions = signal<NostrEvent[]>([]);
+    badgeDefinitions = signal<Event[]>([]);
 
-    getBadgeDefinition(pubkey: string, slug: string): NostrEvent | undefined {
+    getBadgeDefinition(pubkey: string, slug: string): Event | undefined {
         const badge = this.badgeDefinitions().find(badge => {
             const tags = badge.tags || [];
             return tags.some(tag => badge.pubkey === pubkey && tag[0] === 'd' && tag[1] === slug);
@@ -25,7 +24,7 @@ export class BadgeService {
         return badge;
     }
 
-    putBadgeDefinition(badge: NostrEvent): void {
+    putBadgeDefinition(badge: Event): void {
         if (badge.kind === kinds.BadgeDefinition) {
             this.badgeDefinitions.update(badges => {
                 const index = badges.findIndex(b => b.id === badge.id);

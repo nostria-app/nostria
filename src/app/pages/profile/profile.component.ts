@@ -15,14 +15,13 @@ import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
 import { LoadingOverlayComponent } from '../../components/loading-overlay/loading-overlay.component';
 import { RelayService } from '../../services/relay.service';
-import { NostrEvent } from '../../interfaces';
 import { ApplicationStateService } from '../../services/application-state.service';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatListModule } from '@angular/material/list';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import QRCode from 'qrcode';
-import { kinds, SimplePool } from 'nostr-tools';
+import { Event, kinds, SimplePool } from 'nostr-tools';
 import { StorageService } from '../../services/storage.service';
 import { ProfileStateService } from '../../services/profile-state.service';
 import { LayoutService } from '../../services/layout.service';
@@ -32,6 +31,8 @@ import { MediaPreviewDialogComponent } from '../../components/media-preview-dial
 import { AccountStateService } from '../../services/account-state.service';
 import { UserRelayFactoryService } from '../../services/user-relay-factory.service';
 import { UserRelayService } from '../../services/user-relay.service';
+import { NostrRecord } from '../../interfaces';
+import { DataService } from '../../services/data.service';
 
 @Component({
   selector: 'app-profile',
@@ -62,6 +63,7 @@ import { UserRelayService } from '../../services/user-relay.service';
   styleUrl: './profile.component.scss'
 })
 export class ProfileComponent {
+  private data = inject(DataService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   nostrService = inject(NostrService);
@@ -79,7 +81,7 @@ export class ProfileComponent {
   accountState = inject(AccountStateService);
 
   pubkey = signal<string>('');
-  userMetadata = signal<NostrEvent | undefined>(undefined);
+  userMetadata = signal<NostrRecord | undefined>(undefined);
   isLoading = signal<boolean>(true);
   error = signal<string | null>(null);
   isOwnProfile = signal<boolean>(false);
@@ -131,10 +133,12 @@ export class ProfileComponent {
               limit: 30
             }], (event) => {
 
+              const record = this.data.getRecord(event);
+
               if (this.isRootPost(event)) {
-                this.profileState.notes.update(events => [...events, event]);
+                this.profileState.notes.update(events => [...events, record]);
               } else {
-                this.profileState.replies.update(events => [...events, event]);
+                this.profileState.replies.update(events => [...events, record]);
               }
             }, () => {
               console.log('FINISHED!!!');
@@ -174,7 +178,7 @@ export class ProfileComponent {
     // Add an effect to generate QR code when showing it and the profile changes
     effect(() => {
       // Only generate QR code if the lightning address exists and the QR popover is shown
-      if (this.showLightningQR() && this.userMetadata()?.content?.lud16) {
+      if (this.showLightningQR() && this.userMetadata()?.data?.lud16) {
         this.generateLightningQRCode();
       }
     });
@@ -194,7 +198,7 @@ export class ProfileComponent {
     });
   }
 
-  isRootPost(event: NostrEvent) {
+  isRootPost(event: Event) {
     // A root post has no 'e' tag (no reply or root reference)
     return !event.tags.some(tag => tag[0] === 'e');
   };
@@ -313,17 +317,17 @@ export class ProfileComponent {
     const metadata = this.userMetadata();
     if (!metadata) return this.getTruncatedPubkey();
 
-    return metadata.content.name || this.getTruncatedPubkey();
+    return metadata.data.name || this.getTruncatedPubkey();
   }
 
   getVerifiedIdentifier(): string | null {
     const metadata = this.userMetadata();
-    if (!metadata || !metadata.content.nip05) return null;
+    if (!metadata || !metadata.data.nip05) return null;
 
     // Format NIP-05 identifier for display
-    return metadata.content.nip05.startsWith('_@')
-      ? metadata.content.nip05.substring(1)
-      : metadata.content.nip05;
+    return metadata.data.nip05.startsWith('_@')
+      ? metadata.data.nip05.substring(1)
+      : metadata.data.nip05;
   }
 
   getTruncatedPubkey(): string {
@@ -386,7 +390,7 @@ export class ProfileComponent {
   copyProfileData(): void {
     const metadata = this.userMetadata();
     if (metadata) {
-      this.copyToClipboard(JSON.stringify(metadata.content, null, 2), 'profile data');
+      this.copyToClipboard(metadata.event.content, 'profile data');
     }
   }
 
@@ -454,10 +458,10 @@ export class ProfileComponent {
    */
   openProfilePicture(): void {
     const metadata = this.userMetadata();
-    if (metadata?.content.picture) {
+    if (metadata?.data.picture) {
       const dialogRef = this.dialog.open(MediaPreviewDialogComponent, {
         data: {
-          imageUrl: metadata.content.picture,
+          imageUrl: metadata.data.picture,
           userName: this.getFormattedName()
         },
         maxWidth: '100vw',
@@ -479,14 +483,14 @@ export class ProfileComponent {
     }
 
     const metadata = this.userMetadata();
-    if (!metadata?.content?.lud16) {
+    if (!metadata?.data?.lud16) {
       this.lightningQrCode.set('');
       return;
     }
 
     try {
       // Format lightning address for QR code
-      const lightning = metadata.content.lud16;
+      const lightning = metadata.data.lud16;
 
       const dataUrl = await QRCode.toDataURL(`lightning:${lightning}`, {
         margin: 1,

@@ -76,6 +76,20 @@
 
     }
 
+
+    @if (info()['foundMetadataOnAccountRelays']) {
+    <div>
+      <button mat-flat-button (click)="broadcastProfile()">Broadcast this profile to the user's relays</button>
+    </div>
+    }
+
+    @if (info()['hasRelayList'] && !info()['foundOnDiscoveryRelays']) {
+    <div>
+      <button mat-flat-button (click)="broadcastRelayList()">Broadcast this profile's Relay List to the Discovery Relays</button>
+    </div>
+    }
+
+
     <!-- <br><br><br><br>
 
     {{ info() | json }} -->

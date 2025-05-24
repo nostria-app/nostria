@@ -281,7 +281,7 @@ export class BadgeEditorComponent {
       const signedEvent = await this.nostr.signEvent(definitionEvent);
       const publishResult = await this.relay.publish(signedEvent);
 
-      await this.layout.showPublishResults(publishResult);
+      await this.layout.showPublishResults(publishResult, 'Badge');
       
       // this.snackBar.open('Badge published successfully!', 'Close', { duration: 3000 });
       this.router.navigate(['/badges']);

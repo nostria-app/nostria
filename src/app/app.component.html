@@ -124,8 +124,8 @@
     </mat-menu>
 
     <button mat-icon-button (click)="toggleProfileSidenav()" aria-label="Toggle profile" class="profile-button">
-      @if (accountMetadata()?.content?.picture) {
-      <img [src]="accountMetadata()?.content?.picture" class="profile-button-avatar" alt="Profile picture">
+      @if (accountMetadata()?.data?.picture) {
+      <img [src]="accountMetadata()?.data?.picture" class="profile-button-avatar" alt="Profile picture">
       } @else {
 
       @if(app.authenticated()) {
@@ -223,9 +223,9 @@
         </button>
         <div class="profile-header">
           @if (accountMetadata(); as metadata) {
-          @if (metadata?.content?.picture) {
+          @if (metadata?.data?.picture) {
           <div class="profile-avatar">
-            <img [src]="metadata.content.picture" alt="Profile picture" class="avatar-image">
+            <img [src]="metadata.data.picture" alt="Profile picture" class="avatar-image">
           </div>
           } @else {
           <div class="profile-avatar">
@@ -233,14 +233,14 @@
           </div>
           }
 
-          @if(metadata.content.display_name) {
-          <h2>{{ metadata.content.display_name }}</h2>
+          @if(metadata.data.display_name) {
+          <h2>{{ metadata.data.display_name }}</h2>
           }
-          @else if(metadata.content.name) {
-          <h2>{{ metadata.content.name }}</h2>
+          @else if(metadata.data.name) {
+          <h2>{{ metadata.data.name }}</h2>
           }
           @else {
-          <h2>{{ metadata.pubkey | npub }}</h2>
+          <h2>{{ metadata.event.pubkey | npub }}</h2>
           }
 
           <!-- @if (metadata.content.nip05) {
@@ -305,15 +305,15 @@
 
           @if(nostrService.getMetadataForAccount(account.pubkey); as metadata) {
           <a mat-list-item (click)="switchAccount(account.pubkey); toggleProfileSidenav()" class="account-item">
-            @if (metadata.content?.picture; as account) {
+            @if (metadata.data?.picture; as account) {
             <div class="account-avatar" matListItemIcon>
-              <img [src]="metadata?.content?.picture" alt="Profile picture" class="avatar-image">
+              <img [src]="metadata?.data?.picture" alt="Profile picture" class="avatar-image">
             </div>
             } @else {
             <mat-icon matListItemIcon>account_circle</mat-icon>
             }
             <span matListItemTitle>
-              {{ metadata.content?.display_name || metadata.content?.name ||
+              {{ metadata.data?.display_name || metadata.data?.name ||
               (account.pubkey | npub) }}
             </span>
             <span matListItemLine class="account-source">

@@ -18,7 +18,7 @@
     <!-- Show banner only when not in compact mode -->
     @if (!isCompactHeader()) {
     <div class="profile-banner"
-      [style.background-image]="profile.content.banner ? 'url(' + profile.content.banner + ')' : getDefaultBanner()">
+      [style.background-image]="profile.data.banner ? 'url(' + profile.data.banner + ')' : getDefaultBanner()">
     </div>
     }
 

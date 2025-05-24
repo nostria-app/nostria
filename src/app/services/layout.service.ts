@@ -3,7 +3,6 @@ import { NostrService } from "./nostr.service";
 import { StorageService } from "./storage.service";
 import { Router, RouterLink, RouterModule } from "@angular/router";
 import { LoggerService } from "./logger.service";
-import { NostrEvent } from "../interfaces";
 import { MatDialog } from "@angular/material/dialog";
 import { MatSnackBar } from "@angular/material/snack-bar";
 import { BreakpointObserver } from "@angular/cdk/layout";
@@ -12,6 +11,7 @@ import { nip19 } from "nostr-tools";
 import { ProfilePointer } from "nostr-tools/nip19";
 import { ProfileStateService } from "./profile-state.service";
 import { LoginDialogComponent } from "../components/login-dialog/login-dialog.component";
+import { NostrRecord } from "../interfaces";
 
 @Injectable({
     providedIn: 'root'
@@ -327,11 +327,11 @@ export class LayoutService {
     /**
      * Opens the profile picture in a larger view dialog
      */
-    openProfilePicture(profile: NostrEvent): void {
-        if (profile?.content.picture) {
+    openProfilePicture(profile: NostrRecord): void {
+        if (profile?.data.picture) {
             const dialogRef = this.dialog.open(MediaPreviewDialogComponent, {
                 data: {
-                    mediaUrl: profile.content.picture,
+                    mediaUrl: profile.data.picture,
                 },
                 maxWidth: '100vw',
                 maxHeight: '100vh',
@@ -342,11 +342,11 @@ export class LayoutService {
         }
     }
 
-    openProfileBanner(profile: NostrEvent): void {
-        if (profile?.content.banner) {
+    openProfileBanner(profile: NostrRecord): void {
+        if (profile?.data.banner) {
             const dialogRef = this.dialog.open(MediaPreviewDialogComponent, {
                 data: {
-                    mediaUrl: profile.content.banner,
+                    mediaUrl: profile.data.banner,
                 },
                 maxWidth: '100vw',
                 maxHeight: '100vh',
@@ -389,7 +389,7 @@ export class LayoutService {
         this.copyToClipboard(url, 'profile URL');
     }
 
-    async showPublishResults(publishPromises: Promise<string>[] | null) {
+    async showPublishResults(publishPromises: Promise<string>[] | null, itemName: string) {
         try {
             // Wait for all publishing results
             const results = await Promise.all(publishPromises || []);
@@ -400,7 +400,7 @@ export class LayoutService {
 
             // Display appropriate notification
             if (failed === 0) {
-                this.snackBar.open(`Bookmarks saved successfully to ${successful} ${successful === 1 ? 'relay' : 'relays'}`, 'Close', {
+                this.snackBar.open(`${itemName} saved successfully to ${successful} ${successful === 1 ? 'relay' : 'relays'}`, 'Close', {
                     duration: 3000,
                     horizontalPosition: 'center',
                     verticalPosition: 'bottom',
@@ -408,7 +408,7 @@ export class LayoutService {
                 });
             } else {
                 this.snackBar.open(
-                    `Bookmarks saved to ${successful} ${successful === 1 ? 'relay' : 'relays'}, failed on ${failed} ${failed === 1 ? 'relay' : 'relays'}`,
+                    `${itemName} saved to ${successful} ${successful === 1 ? 'relay' : 'relays'}, failed on ${failed} ${failed === 1 ? 'relay' : 'relays'}`,
                     'Close',
                     {
                         duration: 5000,
@@ -419,8 +419,8 @@ export class LayoutService {
                 );
             }
         } catch (error) {
-            console.error('Error publishing bookmarks:', error);
-            this.snackBar.open('Failed to save bookmarks', 'Close', {
+            console.error('Error publishing:', error);
+            this.snackBar.open(`Failed to save ${itemName}`, 'Close', {
                 duration: 5000,
                 horizontalPosition: 'center',
                 verticalPosition: 'bottom',

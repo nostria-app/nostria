@@ -2,7 +2,6 @@ import { Injectable, inject, signal, computed, effect, untracked } from '@angula
 import { LoggerService } from './logger.service';
 import { StorageService, Nip11Info, NostrEventData, UserMetadata } from './storage.service';
 import { Event, kinds, SimplePool } from 'nostr-tools';
-import { NostrEvent } from '../interfaces';
 import { ApplicationStateService } from './application-state.service';
 import { NotificationService } from './notification.service';
 import { LocalStorageService } from './local-storage.service';
@@ -39,7 +38,7 @@ export class UserRelayService {
         this.relayUrls = await this.nostr.getRelays(pubkey);
     }
 
-    async getEventByPubkeyAndKindAndTag(pubkey: string, kind: number, tag: { key: string, value: string }): Promise<NostrEvent | null> {
+    async getEventByPubkeyAndKindAndTag(pubkey: string, kind: number, tag: { key: string, value: string }): Promise<Event | null> {
         const authors = Array.isArray(pubkey) ? pubkey : [pubkey];
 
         return this.get({

@@ -1,8 +1,7 @@
 import { Component, effect, inject, input, signal, Output, EventEmitter } from '@angular/core';
-import { NostrEvent } from '../../../interfaces';
 import { MatCardModule } from '@angular/material/card';
 import { NostrService } from '../../../services/nostr.service';
-import { kinds } from 'nostr-tools';
+import { kinds, NostrEvent } from 'nostr-tools';
 import { StorageService } from '../../../services/storage.service';
 import { DataService } from '../../../services/data.service';
 import { BadgeService } from '../../../services/badge.service';

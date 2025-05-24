@@ -7,7 +7,6 @@ import { LoggerService } from './logger.service';
 import { RelayService } from './relay.service';
 import { NostrEventData, StorageService, UserMetadata } from './storage.service';
 import { kinds, SimplePool } from 'nostr-tools';
-import { NostrEvent } from '../interfaces';
 import { finalizeEvent, verifyEvent } from 'nostr-tools/pure';
 import { BunkerPointer, BunkerSigner, parseBunkerInput } from 'nostr-tools/nip46';
 import { NostrTagKey, StandardizedTagType } from '../standardized-tags';
@@ -17,6 +16,8 @@ import { LocalStorageService } from './local-storage.service';
 import { BookmarkService } from './bookmark.service';
 import { SettingsService } from './settings.service';
 import { RegionService } from './region.service';
+import { NostrRecord } from '../interfaces';
+import { DataService } from './data.service';
 
 export interface NostrUser {
   pubkey: string;
@@ -49,6 +50,7 @@ export class NostrService {
   private readonly accountState = inject(AccountStateService);
   private readonly localStorage = inject(LocalStorageService);
   private readonly region = inject(RegionService);
+  private readonly data = inject(DataService);
 
   initialized = signal(false);
   MAX_WAIT_TIME = 2000;
@@ -63,8 +65,8 @@ export class NostrService {
   // accountChanged = signal<NostrUser | null>(null);
 
   /** Holds the metadata event for all accounts in the app. */
-  accountsMetadata = signal<NostrEvent[]>([]);
-  accountsRelays = signal<NostrEvent[]>([]);
+  accountsMetadata = signal<NostrRecord[]>([]);
+  accountsRelays = signal<Event[]>([]);
 
   accountRelays = computed(() => {
     return this.relayService.relaysChanged();
@@ -77,8 +79,8 @@ export class NostrService {
   // These are cache-lookups for the metadata and relays of all users,
   // to avoid query the database all the time.
   // These lists will grow
-  usersMetadata = signal<Map<string, NostrEvent>>(new Map());
-  usersRelays = signal<Map<string, NostrEvent>>(new Map());
+  usersMetadata = signal<Map<string, NostrRecord>>(new Map());
+  usersRelays = signal<Map<string, Event>>(new Map());
 
   pubkey = computed(() => {
     return this.account()?.pubkey || '';
@@ -176,7 +178,7 @@ export class NostrService {
       }
 
       // Get the metadata from in-memory if exists.
-      let metadata: NostrEvent | null | undefined = this.getMetadataForAccount(pubkey);
+      let metadata: NostrRecord | null | undefined = this.getMetadataForAccount(pubkey);
 
       // If there was metadata, also push it into the 
       if (metadata) {
@@ -226,9 +228,10 @@ export class NostrService {
       // Attach the userPool to the relay service for further use.
       this.relayService.setAccountPool(userPool);
 
-      metadata = await this.relayService.getEventByPubkeyAndKind(pubkey, kinds.Metadata);
+      const metadataEvent = await this.relayService.getEventByPubkeyAndKind(pubkey, kinds.Metadata);
 
-      if (metadata) {
+      if (metadataEvent) {
+        metadata = this.data.getRecord(metadataEvent);
         this.updateAccountMetadata(metadata);
 
         // Also update the cache for getMetadataForUser
@@ -238,7 +241,7 @@ export class NostrService {
 
         this.logger.info('Found user metadata', { metadata });
         this.appState.loadingMessage.set('Found your profile! 👍');
-        await this.storage.saveEvent(metadata);
+        await this.storage.saveEvent(metadata.event);
       } else {
         this.logger.warn('No metadata found for user');
       }
@@ -288,8 +291,8 @@ export class NostrService {
   }
 
   // Method to easily find metadata by pubkey
-  getMetadataForAccount(pubkey: string): NostrEvent | undefined {
-    return this.accountsMetadata().find(meta => meta.pubkey === pubkey);
+  getMetadataForAccount(pubkey: string): NostrRecord | undefined {
+    return this.accountsMetadata().find(meta => meta.event.pubkey === pubkey);
   }
 
   getAccountFromStorage() {
@@ -615,7 +618,7 @@ export class NostrService {
       authors: [pubkey],
     }];
 
-    const onEvent = (event: NostrEvent) => {
+    const onEvent = (event: Event) => {
       console.log('Received event on the account subscription:', event);
     }
 
@@ -681,14 +684,14 @@ export class NostrService {
     return this.sign(event);
   }
 
-  private async sign(event: UnsignedEvent): Promise<NostrEvent> {
+  private async sign(event: UnsignedEvent): Promise<Event> {
     const currentUser = this.account();
 
     if (!currentUser) {
       throw new Error('No user account found. Please log in or create an account first.');
     }
 
-    let signedEvent: NostrEvent | null = null;
+    let signedEvent: Event | null = null;
 
     switch (currentUser?.source) {
       case 'extension':
@@ -747,7 +750,7 @@ export class NostrService {
   /**
  * Adds or updates an entry in the metadata cache with LRU behavior
  */
-  private updateMetadataCache(pubkey: string, event: NostrEvent): void {
+  private updateMetadataCache(pubkey: string, record: NostrRecord): void {
     // Get the current cache
     const cache = this.usersMetadata();
 
@@ -757,7 +760,7 @@ export class NostrService {
     }
 
     // Add to the end (newest position)
-    cache.set(pubkey, event);
+    cache.set(pubkey, record);
 
     // Enforce size limit (100 items)
     if (cache.size > 100) {
@@ -776,7 +779,7 @@ export class NostrService {
   /**
    * Adds or updates an entry in the relays cache with LRU behavior
    */
-  private updateRelaysCache(pubkey: string, event: NostrEvent): void {
+  private updateRelaysCache(pubkey: string, event: Event): void {
     // Get the current cache
     const cache = this.usersRelays();
 
@@ -805,7 +808,7 @@ export class NostrService {
   /**
    * Get metadata from cache or load it from storage
    */
-  async getMetadataForUser(pubkey: string, disconnect = true): Promise<NostrEvent | undefined> {
+  async getMetadataForUser(pubkey: string, disconnect = true): Promise<NostrRecord | undefined> {
     console.log('There are X number in cache:', this.usersMetadata().size);
 
     // Check cache first
@@ -820,25 +823,28 @@ export class NostrService {
 
     // Not in cache, get from storage
     const events = await this.storage.getEventsByPubkeyAndKind(pubkey, kinds.Metadata);
+    const records = this.data.getRecords(events);
 
-    if (events.length > 0) {
+    if (records.length > 0) {
       // Add to cache
-      this.updateMetadataCache(pubkey, events[0]);
-      return events[0];
+      this.updateMetadataCache(pubkey, records[0]);
+      return records[0];
     } else {
       // const metadata = await this.discoverMetadata(pubkey, disconnect);
       const metadata = await this.queueMetadataDiscovery(pubkey, disconnect);
 
       if (metadata) {
-        this.updateMetadataCache(pubkey, metadata);
+        const record = this.data.getRecord(metadata);
+        this.updateMetadataCache(pubkey, record);
+        return record;
       }
 
-      return metadata;
+      return undefined;
     }
   }
 
-  async getMetadataForUsers(pubkey: string[], disconnect = true): Promise<NostrEvent[] | undefined> {
-    const metadataList: NostrEvent[] = [];
+  async getMetadataForUsers(pubkey: string[], disconnect = true): Promise<NostrRecord[] | undefined> {
+    const metadataList: NostrRecord[] = [];
 
     for (const p of pubkey) {
       const metadata = await this.getMetadataForUser(p, disconnect);
@@ -852,7 +858,7 @@ export class NostrService {
   }
 
   /** Get the BUD-03: User Server List */
-  async getMediaServers(pubkey: string): Promise<NostrEvent | null> {
+  async getMediaServers(pubkey: string): Promise<Event | null> {
     // Check cache first
     // const cachedMetadata = this.usersMetadata().get(pubkey);
     // if (cachedMetadata) {
@@ -869,7 +875,7 @@ export class NostrService {
     } else {
       // Queue up refresh of this event in the background
       this.relayService.getEventByPubkeyAndKind(pubkey, 10063).then((newEvent) => {
-        this.storage.saveEvent(newEvent as NostrEvent);
+        this.storage.saveEvent(newEvent as Event);
       });
     }
 
@@ -881,7 +887,7 @@ export class NostrService {
   discoveryPool: SimplePool | null = null;
 
   async retrieveMetadata(pubkey: string, relayUrls: string[], info: any) {
-    let metadata: NostrEvent | null | undefined = null;
+    let metadata: Event | null | undefined = null;
     let userPool = new SimplePool();
 
     try {
@@ -953,7 +959,7 @@ export class NostrService {
     return sortedRelays.slice(0, count);
   }
 
-  async discoverMetadata(pubkey: string, disconnect = true): Promise<NostrEvent | undefined | null> {
+  async discoverMetadata(pubkey: string, disconnect = true): Promise<Event | undefined | null> {
     this.logger.time('getinfo' + pubkey);
     let info: any = await this.storage.getInfo(pubkey, 'user');
     this.logger.timeEnd('getinfo' + pubkey);
@@ -989,7 +995,7 @@ export class NostrService {
 
       // Since this is not inside the try/catch, we must save info explicitly here.
       await this.storage.saveInfo(pubkey, 'user', info);
-      return metadata as NostrEvent;
+      return metadata as Event;
     }
     else {
       // TODO: During loading of a lot of users, we should reuse the bootstrap pool.
@@ -1021,7 +1027,7 @@ export class NostrService {
             return undefined;
           }
 
-          return metadata as NostrEvent;
+          return metadata as Event;
         } else {
           info.hasRelayList = false;
 
@@ -1087,7 +1093,7 @@ export class NostrService {
             const selectedRelayUrls = this.pickOptimalRelays(followingRelayUrls, this.MAX_RELAY_COUNT)
             let metadata = await this.retrieveMetadata(pubkey, selectedRelayUrls, info);
 
-            return metadata as NostrEvent;
+            return metadata as Event;
             // const followingPool = new SimplePool();
             // const relayList = await followingPool.get(selectedRelayUrls, {
             //   kinds: [kinds.RelayList],
@@ -1253,7 +1259,7 @@ export class NostrService {
     }
   }
 
-  private async queueMetadataDiscovery(pubkey: string, disconnect = true): Promise<NostrEvent | undefined> {
+  private async queueMetadataDiscovery(pubkey: string, disconnect = true): Promise<Event | undefined> {
     return new Promise((resolve, reject) => {
       this.discoveryQueue.push({ pubkey, disconnect, resolve, reject });
       this.logger.debug('Queued metadata discovery', { pubkey, queueLength: this.discoveryQueue.length });
@@ -1560,23 +1566,8 @@ export class NostrService {
 
   async getAccountsMetadata() {
     const pubkeys = this.accounts().map(user => user.pubkey);
-    const events = await this.storage.getEventsByPubkeyAndKind(pubkeys, kinds.Metadata);
-
-    // Process each event to ensure content is parsed
-    const processedEvents = events.map(event => {
-      if (event.content && typeof event.content === 'string') {
-        try {
-          const parsedEvent = { ...event };
-          parsedEvent.content = JSON.parse(event.content);
-          return parsedEvent;
-        } catch (e) {
-          this.logger.error('Failed to parse event content in loadUsersMetadata', e);
-        }
-      }
-      return event;
-    });
-
-    return processedEvents;
+    const events = await this.data.getEventsByPubkeyAndKind(pubkeys, kinds.Metadata);
+    return events;
   }
 
   async getAccountsRelays() {
@@ -1615,13 +1606,13 @@ export class NostrService {
   //   }
   // }
 
-  updateAccountMetadata(event: Event) {
-    const existingMetadata = this.accountsMetadata().find(meta => meta.pubkey === event.pubkey);
+  updateAccountMetadata(record: NostrRecord) {
+    const existingMetadata = this.accountsMetadata().find(meta => meta.event.pubkey === record.event.pubkey);
 
     if (existingMetadata) {
-      this.accountsMetadata.update(array => array.map(meta => meta.pubkey === event.pubkey ? event : meta));
+      this.accountsMetadata.update(array => array.map(meta => meta.event.pubkey === record.event.pubkey ? record : meta));
     } else {
-      this.accountsMetadata.update(array => [...array, event]);
+      this.accountsMetadata.update(array => [...array, record]);
     }
   }
 
@@ -1962,7 +1953,7 @@ export class NostrService {
     // Remove the user's metadata from the metadata array
     // this.accountsMetadata().update(array => array.filter(m => m.pubkey !== pubkey));
     // this.accountsMetadata()
-    this.accountsMetadata.update(array => array.filter(m => m.pubkey !== pubkey));
+    this.accountsMetadata.update(array => array.filter(m => m.event.pubkey !== pubkey));
     this.logger.debug('Account removed successfully');
   }
 
@@ -2099,7 +2090,7 @@ export class NostrService {
     }
   }
 
-  async getEvent(id: string): Promise<NostrEvent | undefined> {
+  async getEvent(id: string): Promise<Event | undefined> {
     // First try to get from storage
     let event = await this.storage.getEventById(id);
 

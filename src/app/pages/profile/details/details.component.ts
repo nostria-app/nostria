@@ -15,6 +15,7 @@ import { LoggerService } from '../../../services/logger.service';
 import { ApplicationStateService } from '../../../services/application-state.service';
 import { ApplicationService } from '../../../services/application.service';
 import { StorageService } from '../../../services/storage.service';
+import { RelayService } from '../../../services/relay.service';
 
 @Component({
   selector: 'app-following',
@@ -50,6 +51,7 @@ import { StorageService } from '../../../services/storage.service';
 })
 export class DetailsComponent implements OnInit, AfterViewInit {
   private router = inject(Router);
+  private relay = inject(RelayService);
   private route = inject(ActivatedRoute);
   private location = inject(Location);
   layout = inject(LayoutService);
@@ -104,6 +106,26 @@ export class DetailsComponent implements OnInit, AfterViewInit {
   ngAfterViewInit(): void {
     // Ensure component is scrolled into view after view initialization
     // setTimeout(() => this.scrollToTop(), 350);
+  }
+
+  async broadcastProfile() {
+    const event = await this.storage.getEventByPubkeyAndKind(this.npub(), 0);
+
+    if (event) {
+      console.log('Broadcasting metadata event:', event);
+      console.log('Relay URLs:', this.profileState.relay?.relayUrls);
+      await this.relay.publish(event, this.profileState.relay?.relayUrls);
+    }
+  }
+
+  async broadcastRelayList() {
+    const event = await this.storage.getEventByPubkeyAndKind(this.npub(), 10002);
+
+    if (event) {
+      console.log('Broadcasting Relay List event:', event);
+      console.log('Relay URLs:', this.relay.discoveryRelays);
+      await this.relay.publishToDiscoveryRelays(event);
+    }
   }
 
   /**

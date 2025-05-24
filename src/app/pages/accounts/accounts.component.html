@@ -4,7 +4,7 @@
   <div class="current-account">
     <h2>Current Account</h2>
     <mat-card class="account-card">
-      @if (currentAccount() && nostrService.getMetadataForAccount(currentAccount()!.pubkey)?.content; as metadata) {
+      @if (currentAccount() && nostrService.getMetadataForAccount(currentAccount()!.pubkey)?.data; as metadata) {
       <div class="account-content">
         <div class="account-avatar">
           @if (metadata.picture) {
@@ -46,7 +46,7 @@
         class="account-item" [class.current-account-item]="account.pubkey === currentAccount()?.pubkey"
         (click)="account.pubkey !== currentAccount()?.pubkey ? switchAccount(account.pubkey) : null">
         <div class="account-avatar list-avatar">
-          @if (nostrService.getMetadataForAccount(account.pubkey)?.content?.picture; as picture) {
+          @if (nostrService.getMetadataForAccount(account.pubkey)?.data?.picture; as picture) {
           <img [src]="picture" alt="Profile picture" class="avatar-image">
           } @else {
           <mat-icon>account_circle</mat-icon>
@@ -54,7 +54,7 @@
         </div>
         <div class="account-list-content">
           <div class="account-name">
-            @if (nostrService.getMetadataForAccount(account.pubkey)?.content; as metadata) {
+            @if (nostrService.getMetadataForAccount(account.pubkey)?.data; as metadata) {
             {{ metadata.display_name || metadata.name || 'Unnamed Account' }}
             } @else {
             Unnamed Account

@@ -214,16 +214,16 @@ export class ArticlesComponent {
             // Update articles with author information
             this.articles.update(articles => {
                 return articles.map(article => {
-                    const authorMetadata = metadata?.find(author => author.pubkey === article.author.pubkey);
+                    const authorMetadata = metadata?.find(author => author.event.pubkey === article.author.pubkey);
                     if (authorMetadata) {
                         try {
-                            const parsed = JSON.parse(authorMetadata.content);
+                            // const parsed = JSON.parse(authorMetadata.content);
                             return {
                                 ...article,
                                 author: {
                                     ...article.author,
-                                    name: parsed.name || parsed.display_name,
-                                    picture: parsed.picture
+                                    name: authorMetadata.data.name || authorMetadata.data.display_name,
+                                    picture: authorMetadata.data.picture
                                 }
                             };
                         } catch (e) {
