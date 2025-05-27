@@ -110,6 +110,7 @@ export class MediaServerDialogComponent implements OnInit {
   }
   
   onSubmit(): void {
+    debugger;
     if (this.serverForm.valid) {
       // const serverData: string = {
       //   url: this.serverForm.value.url,

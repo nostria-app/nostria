@@ -167,7 +167,7 @@ export class MediaComponent {
       try {
         if (server) {
           // Update existing server
-          // await this.mediaService.updateMediaServer(result);
+          await this.mediaService.updateMediaServer(server, result);
           this.snackBar.open('Media server updated', 'Close', { duration: 3000 });
         } else {
           // Add new server

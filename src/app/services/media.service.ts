@@ -245,6 +245,37 @@ export class MediaService {
     await this.publishMediaServers();
   }
 
+  async updateMediaServer(original: string, server: string): Promise<void> {
+    // Normalize URL
+    let normalizedUrl = server;
+    if (!normalizedUrl.endsWith('/')) {
+      normalizedUrl += '/';
+    }
+
+    // Check if the new normalized URL already exists (excluding the original)
+    const existingServers = this._mediaServers();
+    const duplicateExists = existingServers.some(s => s === normalizedUrl && s !== original);
+    
+    if (duplicateExists) {
+      throw new Error('Server with this URL already exists');
+    }
+
+    // Find and replace the original server
+    const serverIndex = existingServers.findIndex(s => s === original);
+    
+    if (serverIndex !== -1) {
+      // Replace the server at the found index
+      this._mediaServers.update(servers => 
+        servers.map((server, index) => index === serverIndex ? normalizedUrl : server)
+      );
+
+      // Publish to Nostr
+      await this.publishMediaServers();
+    } else {
+      throw new Error('Original server not found');
+    }
+  }
+
   async removeMediaServer(url: string): Promise<void> {
     this._mediaServers.update(servers => servers.filter(server => server !== url));
 
