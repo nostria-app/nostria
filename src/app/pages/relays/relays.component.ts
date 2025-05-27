@@ -74,6 +74,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
   isCheckingRelays = signal(false);
   knownDiscoveryRelays = [
     'wss://discovery.eu.nostria.app',
+    'wss://discovery.us.nostria.app',
     'wss://discovery.af.nostria.app',
   ];
 
