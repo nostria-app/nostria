@@ -131,17 +131,28 @@ export class FeedService {
 
     this.subscribe();
   }
-
+  // Use a signal to track feed data for reactivity
+  private readonly _feedData = signal(new Map<string, FeedData>());
   readonly data = new Map<string, FeedData>();
-  // readonly events = new Map<string, Event[]>();
+
+  // Computed signal that provides reactive access to feed data
+  readonly feedDataMap = computed(() => {
+    const dataMap = this._feedData();
+    const eventsMap = new Map<string, Signal<Event[]>>();
+    dataMap.forEach((feedData, feedId) => {
+      eventsMap.set(feedId, feedData.events);
+    });
+    return eventsMap;
+  });
+
   async subscribe() {
     this.data.clear();
+    this._feedData.set(new Map());
     this._feeds().forEach(feed => {
       this.subscribeToFeed(feed);
     });
     console.log('Subscribed to feeds:', Array.from(this.data.keys()));
   }
-
   /**
    * Subscribe to a single feed
    */
@@ -184,9 +195,15 @@ export class FeedService {
     item.subscription = sub as any;
     this.data.set(feed.id, item);
     
+    // Update the reactive signal
+    this._feedData.update(map => {
+      const newMap = new Map(map);
+      newMap.set(feed.id, item);
+      return newMap;
+    });
+    
     this.logger.debug(`Subscribed to feed: ${feed.id}`);
   }
-
   /**
    * Unsubscribe from a single feed
    */
@@ -205,27 +222,26 @@ export class FeedService {
       // Remove from data map
       this.data.delete(feedId);
       
+      // Update the reactive signal
+      this._feedData.update(map => {
+        const newMap = new Map(map);
+        newMap.delete(feedId);
+        return newMap;
+      });
+      
       this.logger.debug(`Unsubscribed from feed: ${feedId}`);
     }
   }
 
-  // Add computed signal for easier template access
-  readonly feedDataMap = computed(() => {
-    const map = new Map<string, Signal<Event[]>>();
-    this.data.forEach((feedData, feedId) => {
-      map.set(feedId, feedData.events);
-    });
-    return map;
-  });
 
   // Helper method to get events for a specific feed
   getEventsForFeed(feedId: string): Signal<Event[]> | undefined {
     return this.data.get(feedId)?.events;
   }
-
   unsubscribe() {
     this.data.forEach(item => item.subscription?.close());
     this.data.clear();
+    this._feedData.set(new Map());
     this.logger.debug('Unsubscribed from all feed subscriptions');
   }
 
