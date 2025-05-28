@@ -30,10 +30,17 @@
                 <span>{{ npub() }}</span>
             </div>
 
-            @if (!compact() && getVerifiedIdentifier()) {
-            <div class="profile-item" title="{{ getVerifiedIdentifier() }}">
-                <mat-icon class="verified-icon">verified</mat-icon>
-                <span>{{ getVerifiedIdentifier() }}</span>
+            @if (!compact()) {
+
+            @let verifiedId = verifiedIdentifier();
+
+            <div class="profile-item" title="{{ verifiedId.status }}">
+                @if (verifiedId.valid) {
+                    <mat-icon class="verified-icon">verified</mat-icon>
+                } @else if (verifiedId.value) {
+                    <mat-icon class="verified-icon verified-icon-error">verified_off</mat-icon>
+                }
+                <span [class.strikethrough]="!verifiedId.valid">{{ verifiedId.value }}</span>
             </div>
             }
 

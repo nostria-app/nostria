@@ -465,8 +465,12 @@ mat-card-content li {
 }
 
 .warn {
-  background-color: #f44336 !important;
+  background-color: var(--mat-sys-error) !important;
   color: white !important;
+}
+
+.strikethrough {
+  text-decoration: line-through;
 }
 
 .ellipsis {

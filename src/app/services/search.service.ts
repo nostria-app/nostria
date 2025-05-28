@@ -1,6 +1,6 @@
 import { effect, inject, Injectable } from '@angular/core';
 import { LayoutService } from './layout.service';
-import { nip05 } from 'nostr-tools';
+import { isNip05, queryProfile } from 'nostr-tools/nip05';
 
 @Injectable({
   providedIn: 'root'
@@ -20,8 +20,8 @@ export class SearchService {
             searchValue = '_' + searchValue;
           }
 
-          if (nip05.isNip05(searchValue)) {
-            const profile = await nip05.queryProfile(searchValue);
+          if (isNip05(searchValue)) {
+            const profile = await queryProfile(searchValue);
             console.log('Profile:', profile);
 
             if (profile?.pubkey) {
