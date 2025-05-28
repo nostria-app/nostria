@@ -134,48 +134,79 @@ export class FeedService {
 
   readonly data = new Map<string, FeedData>();
   // readonly events = new Map<string, Event[]>();
-
   async subscribe() {
     this.data.clear();
-
     this._feeds().forEach(feed => {
-      const item: FeedData = {
-        feed,
-        filter: null as any,
-        events: signal<Event[]>([]),
-        subscription: null as SubCloser | null
+      this.subscribeToFeed(feed);
+    });
+    console.log('Subscribed to feeds:', Array.from(this.data.keys()));
+  }
+
+  /**
+   * Subscribe to a single feed
+   */
+  private subscribeToFeed(feed: FeedConfig): void {
+    // Don't subscribe if already subscribed
+    if (this.data.has(feed.id)) {
+      this.logger.warn(`Feed ${feed.id} is already subscribed`);
+      return;
+    }
+
+    const item: FeedData = {
+      feed,
+      filter: null as any,
+      events: signal<Event[]>([]),
+      subscription: null as SubCloser | null
+    };
+
+    // Build filter based on feed configuration
+    if (feed.filters) {
+      item.filter = {
+        limit: 6,
+        kinds: feed.kinds,
+        // authors: feed.relayConfig === 'user' ? this._userRelays().map(r => r.url) : this._discoveryRelays().map(r => r.url),
+        ...feed.filters
       };
+    } else {
+      item.filter = {
+        limit: 6,
+        kinds: feed.kinds,
+        // authors: feed.relayConfig === 'user' ? this._userRelays().map(r => r.url) : this._discoveryRelays().map(r => r.url)
+      };
+    }
 
-      if (feed.filters) {
-        item.filter = {
-          limit: 10,
-          kinds: feed.kinds,
-          // authors: feed.relayConfig === 'user' ? this._userRelays().map(r => r.url) : this._discoveryRelays().map(r => r.url),
-          ...feed.filters
-        };
-      } else {
-        item.filter = {
-          limit: 10,
-          kinds: feed.kinds,
-          // authors: feed.relayConfig === 'user' ? this._userRelays().map(r => r.url) : this._discoveryRelays().map(r => r.url)
-        };
-      }
-
-      const sub = this.relay.subscribe([item.filter], (event) => {
-        // if (!this.events.has(feed.id)) {
-        //   this.events.set(feed.id, []);
-        // }
-
-        item.events.update(events => [...events, event]);
-        console.log('Feed event received:', event);
-      });
-
-      item.subscription = sub as any;
-
-      this.data.set(feed.id, item);
+    // Subscribe to relay events
+    const sub = this.relay.subscribe([item.filter], (event) => {
+      item.events.update(events => [...events, event]);
+      this.logger.debug(`Feed event received for ${feed.id}:`, event);
     });
 
-    console.log('Subscribed to feeds:', Array.from(this.data.keys()));
+    item.subscription = sub as any;
+    this.data.set(feed.id, item);
+    
+    this.logger.debug(`Subscribed to feed: ${feed.id}`);
+  }
+
+  /**
+   * Unsubscribe from a single feed
+   */
+  private unsubscribeFromFeed(feedId: string): void {
+    const feedData = this.data.get(feedId);
+    if (feedData) {
+      // Close the subscription
+      if (feedData.subscription) {
+        feedData.subscription.close();
+        this.logger.debug(`Closed subscription for feed: ${feedId}`);
+      }
+      
+      // Clear events
+      feedData.events.set([]);
+      
+      // Remove from data map
+      this.data.delete(feedId);
+      
+      this.logger.debug(`Unsubscribed from feed: ${feedId}`);
+    }
   }
 
   // Add computed signal for easier template access
@@ -267,7 +298,6 @@ export class FeedService {
       this.logger.error('Error saving relays to storage:', error);
     }
   }
-
   /**
    * Add a new feed
    */
@@ -281,11 +311,13 @@ export class FeedService {
 
     this._feeds.update(feeds => [...feeds, newFeed]);
     this.saveFeeds();
+    
+    // Subscribe to the new feed immediately
+    this.subscribeToFeed(newFeed);
 
-    this.logger.debug('Added new feed', newFeed);
+    this.logger.debug('Added new feed and subscribed', newFeed);
     return newFeed;
   }
-
   /**
    * Update an existing feed
    */
@@ -296,6 +328,20 @@ export class FeedService {
       return false;
     }
 
+    // Check if we need to resubscribe (if kinds, filters, or relay config changed)
+    const currentFeed = this._feeds()[feedIndex];
+    const needsResubscription = 
+      updates.kinds !== undefined || 
+      updates.filters !== undefined || 
+      updates.relayConfig !== undefined ||
+      updates.customRelays !== undefined;
+
+    if (needsResubscription) {
+      // Unsubscribe from current feed
+      this.unsubscribeFromFeed(id);
+    }
+
+    // Update the feed configuration
     this._feeds.update(feeds => {
       const updatedFeeds = [...feeds];
       updatedFeeds[feedIndex] = {
@@ -306,21 +352,31 @@ export class FeedService {
       return updatedFeeds;
     });
 
+    if (needsResubscription) {
+      // Resubscribe with new configuration
+      const updatedFeed = this._feeds()[feedIndex];
+      this.subscribeToFeed(updatedFeed);
+    }
+
     this.saveFeeds();
     this.logger.debug(`Updated feed ${id}`, updates);
     return true;
   }
-
   /**
    * Remove a feed
    */
   removeFeed(id: string): boolean {
     const initialLength = this._feeds().length;
+    
+    // Unsubscribe from the feed before removing it
+    this.unsubscribeFromFeed(id);
+    
+    // Remove the feed from the list
     this._feeds.update(feeds => feeds.filter(feed => feed.id !== id));
 
     if (this._feeds().length < initialLength) {
       this.saveFeeds();
-      this.logger.debug(`Removed feed ${id}`);
+      this.logger.debug(`Removed feed ${id} and unsubscribed`);
       return true;
     }
 
