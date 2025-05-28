@@ -46,11 +46,17 @@ const FEED_TYPES = {
     kinds: [30023], // Long-form content
     description: 'Long-form articles and blog posts'
   },
-  media: {
-    label: 'Media',
+  photos: {
+    label: 'Photos',
     icon: 'image',
-    kinds: [1063], // File metadata
-    description: 'Images, videos, and other media'
+    kinds: [20],
+    description: 'Images'
+  },
+  videos: {
+    label: 'Videos',
+    icon: 'movie',
+    kinds: [21],
+    description: 'Videos'
   },
   custom: {
     label: 'Custom',

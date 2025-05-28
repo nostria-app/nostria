@@ -34,6 +34,8 @@ const NOSTR_KINDS = [
   { value: 7, label: 'Reaction (7)' },
   { value: 8, label: 'Badge Award (8)' },
   { value: 16, label: 'Generic Repost (16)' },
+  { value: 20, label: 'Picture (20)' },
+  { value: 21, label: 'Video Event (21)' },
   { value: 40, label: 'Channel Creation (40)' },
   { value: 41, label: 'Channel Metadata (41)' },
   { value: 42, label: 'Channel Message (42)' },
@@ -359,14 +361,19 @@ const NOSTR_KINDS = [
 
     .feed-type-cards {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
       gap: 12px;
+      align-items: stretch;
     }
 
     .feed-type-card {
       cursor: pointer;
       transition: all 0.2s ease;
       border: 2px solid transparent;
+      height: 110px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
 
       &:hover {
         transform: translateY(-2px);
@@ -379,35 +386,53 @@ const NOSTR_KINDS = [
       }
 
       mat-card-content {
-        padding: 16px;
+        padding: 12px;
         text-align: center;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        flex: 1;
+        height: 100%;
+        box-sizing: border-box;
       }
 
       .type-header {
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 8px;
-        margin-bottom: 8px;
+        gap: 6px;
+        flex-shrink: 0;
 
         mat-icon {
-          font-size: 2rem;
-          width: 2rem;
-          height: 2rem;
+          font-size: 1.5rem;
+          width: 1.5rem;
+          height: 1.5rem;
         }
 
         h4 {
           margin: 0;
-          font-size: 0.95rem;
+          font-size: 0.9rem;
           font-weight: 500;
+          height: 1.2em;
+          line-height: 1.2;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
       }
 
       .type-description {
         margin: 0;
-        font-size: 0.8rem;
+        font-size: 0.75rem;
         opacity: 0.7;
-        line-height: 1.3;
+        line-height: 1.2;
+        height: 2.4em;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        overflow: hidden;
+        flex: 1;
       }
     }
 
