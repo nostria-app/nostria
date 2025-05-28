@@ -20,6 +20,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { LocalStorageService } from '../../services/local-storage.service';
 import { LoggerService } from '../../services/logger.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { FeedService, FeedConfig } from '../../services/feed.service';
 import { NostrRecord } from '../../interfaces';
 
 interface NavLink {
@@ -66,8 +67,7 @@ export class HomeComponent {
   private notificationService = inject(NotificationService);
   private layoutService = inject(LayoutService);
   private dialog = inject(MatDialog);
-  private localStorageService = inject(LocalStorageService);
-  private readonly STORAGE_KEY = 'profile-feeds';
+  private feedService = inject(FeedService);
   private logger = inject(LoggerService);
 
   // UI State Signals
@@ -132,8 +132,21 @@ export class HomeComponent {
     }
   });
 
+  // Replace the old columns signal with feeds from FeedService
+  feeds = computed(() => this.feedService.feeds());
+  
+  // Update columns computed to map from feeds
+  columns = computed(() => {
+    return this.feeds().map(feed => ({
+      id: feed.id,
+      path: feed.path || feed.id,
+      label: feed.label,
+      icon: feed.icon,
+      filters: feed.filters
+    } as NavLink));
+  });
+
   // Signals for state management
-  columns = signal<NavLink[]>([]);
   visibleColumnIndex = signal(0);
   columnContentLoaded = signal<Record<string, boolean>>({});
 
@@ -366,19 +379,15 @@ export class HomeComponent {
   }
 
   onColumnDrop(event: CdkDragDrop<NavLink[]>): void {
-    // Get the indices
     const previousIndex = event.previousIndex;
     const currentIndex = event.currentIndex;
 
     if (previousIndex !== currentIndex) {
-      // Create a copy of the columns array
-      const columnsArray = [...this.columns()];
-
-      // Use moveItemInArray to reorder the array
-      moveItemInArray(columnsArray, previousIndex, currentIndex);
-
-      // Update the columns signal with the new order
-      this.columns.set(columnsArray);
+      const feedIds = this.feeds().map(feed => feed.id);
+      moveItemInArray(feedIds, previousIndex, currentIndex);
+      
+      // Update feed order using FeedService
+      this.feedService.reorderFeeds(feedIds);
 
       // Update the visible column index if in mobile view
       if (this.isMobileView()) {
@@ -400,8 +409,8 @@ export class HomeComponent {
         }
       }
 
-      this.notificationService.notify('Column order changed');
-      this.logger.debug('Column order changed', columnsArray);
+      this.notificationService.notify('Feed order changed');
+      this.logger.debug('Feed order changed', feedIds);
 
       // Let's scroll to ensure the dropped column is visible
       if (!this.isMobileView()) {
@@ -471,30 +480,23 @@ export class HomeComponent {
 
   addNewColumn(): void {
     const dialogRef = this.dialog.open(NewFeedDialogComponent, {
-      width: '400px',
+      width: '600px',
+      maxWidth: '90vw',
+      maxHeight: '90vh',
       data: {
-        icons: ['chat', 'reply_all', 'bookmark', 'image', 'people', 'tag', 'filter_list']
+        icons: ['chat', 'reply_all', 'bookmark', 'image', 'people', 'tag', 'filter_list', 'article', 'video_library', 'music_note', 'photo', 'explore', 'trending_up', 'group', 'public']
       }
     });
 
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
-        const newColumn: NavLink = {
-          id: `custom-${Date.now()}`,
-          path: result.path || `feed-${Date.now()}`,
-          label: result.label,
-          icon: result.icon,
-          filters: result.filters || {}
-        };
-
-        this.columns.update(columns => [...columns, newColumn]);
-
-        const newIndex = this.columns().length - 1;
+        const newFeed = this.feedService.addFeed(result);
+        
+        const newIndex = this.feeds().length - 1;
 
         if (this.isMobileView()) {
           this.visibleColumnIndex.set(newIndex);
         } else {
-          // Scroll to the new column after it's rendered
           setTimeout(() => {
             this.scrollToColumn(newIndex);
           }, 100);
@@ -502,112 +504,71 @@ export class HomeComponent {
 
         this.columnContentLoaded.update(loaded => ({
           ...loaded,
-          [newColumn.id]: false
+          [newFeed.id]: false
         }));
+
+        this.notificationService.notify(`Feed "${newFeed.label}" created`);
       }
     });
   }
 
   editColumn(index: number): void {
-    if (index < 0 || index >= this.columns().length) return;
+    const feeds = this.feeds();
+    if (index < 0 || index >= feeds.length) return;
 
-    const column = this.columns()[index];
+    const feed = feeds[index];
 
     const dialogRef = this.dialog.open(NewFeedDialogComponent, {
-      width: '400px',
+      width: '600px',
+      maxWidth: '90vw',
+      maxHeight: '90vh',
       data: {
-        icons: ['chat', 'reply_all', 'bookmark', 'image', 'people', 'tag', 'filter_list'],
-        feed: { ...column }
+        icons: ['chat', 'reply_all', 'bookmark', 'image', 'people', 'tag', 'filter_list', 'article', 'video_library', 'music_note', 'photo', 'explore', 'trending_up', 'group', 'public'],
+        feed: feed
       }
     });
 
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
-        const updatedColumns = [...this.columns()];
-        updatedColumns[index] = {
-          ...column,
-          label: result.label,
-          icon: result.icon,
-          path: result.path || column.path,
-          filters: result.filters || column.filters || {}
-        };
-
-        this.columns.set(updatedColumns);
+        this.feedService.updateFeed(feed.id, result);
+        this.notificationService.notify(`Feed "${result.label}" updated`);
       }
     });
   }
 
   removeColumn(index: number): void {
-    if (index < 0 || index >= this.columns().length) return;
+    const feeds = this.feeds();
+    if (index < 0 || index >= feeds.length) return;
 
-    const currentColumns = [...this.columns()];
-    currentColumns.splice(index, 1);
-    this.columns.set(currentColumns);
+    const feed = feeds[index];
+    this.feedService.removeFeed(feed.id);
 
-    if (this.visibleColumnIndex() >= currentColumns.length) {
-      this.visibleColumnIndex.set(Math.max(0, currentColumns.length - 1));
+    if (this.visibleColumnIndex() >= feeds.length - 1) {
+      this.visibleColumnIndex.set(Math.max(0, feeds.length - 2));
     } else if (this.visibleColumnIndex() > index) {
       this.visibleColumnIndex.update(idx => idx - 1);
     }
-  }
 
-  private loadFeedsFromStorage(): void {
-    try {
-      const storedColumns = this.localStorageService.getObject<NavLink[]>(this.STORAGE_KEY);
-      if (storedColumns && storedColumns.length > 0) {
-        this.logger.debug('Loaded custom columns from storage', storedColumns);
-        this.columns.set(storedColumns);
-
-        const loadedState: Record<string, boolean> = {};
-        storedColumns.forEach(column => {
-          loadedState[column.id] = false;
-        });
-        this.columnContentLoaded.set(loadedState);
-      } else {
-        this.logger.debug('No custom columns found in storage, using defaults');
-        this.columns.set(DEFAULT_COLUMNS);
-
-        const loadedState: Record<string, boolean> = {};
-        DEFAULT_COLUMNS.forEach(column => {
-          loadedState[column.id] = false;
-        });
-        this.columnContentLoaded.set(loadedState);
-      }
-    } catch (error) {
-      this.logger.error('Error loading columns from storage:', error);
-      this.columns.set(DEFAULT_COLUMNS);
-
-      const loadedState: Record<string, boolean> = {};
-      DEFAULT_COLUMNS.forEach(column => {
-        loadedState[column.id] = false;
-      });
-      this.columnContentLoaded.set(loadedState);
-    }
-  }
-
-  private saveFeedsToStorage(columns: NavLink[]): void {
-    try {
-      this.localStorageService.setObject(this.STORAGE_KEY, columns);
-      this.logger.debug('Saved custom columns to storage', columns);
-    } catch (error) {
-      this.logger.error('Error saving columns to storage:', error);
-    }
+    this.notificationService.notify(`Feed "${feed.label}" removed`);
   }
 
   ngOnInit(): void {
-    this.loadFeedsFromStorage();
-
     effect(() => {
-      const currentColumns = this.columns();
-      if (currentColumns.length > 0) {
-        this.saveFeedsToStorage(currentColumns);
+      const currentFeeds = this.feeds();
+      if (currentFeeds.length > 0) {
+        // Initialize column content loaded state
+        const loadedState: Record<string, boolean> = {};
+        currentFeeds.forEach(feed => {
+          loadedState[feed.id] = this.columnContentLoaded()[feed.id] || false;
+        });
+        this.columnContentLoaded.set(loadedState);
       }
     });
 
     this.loadColumnContentIfNeeded(this.visibleColumnIndex());
 
     if (!this.isMobileView()) {
-      this.columns().forEach((_, index) => {
+      this.feeds().forEach((feed, index) => {
         this.loadColumnContentIfNeeded(index);
       });
     }
