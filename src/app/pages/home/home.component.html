@@ -114,7 +114,8 @@
             } @else {
             <!-- Default placeholder content - replace with actual content -->
             <div class="column-items">
-              @if (feedService.data.has(column.id)) {
+              @let columnData = feedService.data.get(column.id);
+              @if (columnData) {
               @for(event of columnEvents().get(column.id) || []; track event.id) {
               <mat-card class="content-card">
                 <mat-card-header>
@@ -123,6 +124,14 @@
                   <mat-card-subtitle>{{ event.created_at * 1000 | date:'short' }}</mat-card-subtitle>
                 </mat-card-header>
                 <mat-card-content>
+                  @if (columnData.feed.type === 'media') {
+                    
+                  }
+
+
+                  {{ columnData.feed | json }}
+                  {{ event | json }}
+
                   <p>{{ event.content }}</p>
                   <div class="tags">
                     @for (tag of event.tags; track $index) {
