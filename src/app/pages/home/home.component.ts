@@ -22,6 +22,7 @@ import { LoggerService } from '../../services/logger.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FeedService, FeedConfig } from '../../services/feed.service';
 import { NostrRecord } from '../../interfaces';
+import { Event } from 'nostr-tools';
 
 interface NavLink {
   id: string;
@@ -131,6 +132,22 @@ export class HomeComponent {
       );
     }
   });
+
+  // Replace getEventsForColumn method with computed signal
+  columnEvents = computed(() => {
+    const eventsMap = new Map<string, Event[]>();
+    this.feedService.data.forEach((feedData, feedId) => {
+      eventsMap.set(feedId, feedData.events());
+    });
+    return eventsMap;
+  });
+
+  // Remove the old getEventsForColumn method
+  // getEventsForColumn(columnId: string): Event[] {
+  //   console.log(`Fetching events for column: ${columnId}`);
+  //   console.log('Available feeds:', this.feedService.data.keys());
+  //   return this.feedService.data.get(columnId)?.events() || [];
+  // }
 
   // Replace the old columns signal with feeds from FeedService
   feeds = computed(() => this.feedService.feeds());
