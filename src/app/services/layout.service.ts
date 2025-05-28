@@ -17,6 +17,8 @@ import { NostrRecord } from "../interfaces";
     providedIn: 'root'
 })
 export class LayoutService {
+    /** Used to perform queries or search when input has been parsed to be NIP-5 or similar. */
+    query = signal<string | null>(null);
     search = signal(false);
     router = inject(Router);
     private logger = inject(LoggerService);
@@ -187,13 +189,20 @@ export class LayoutService {
         if (value.startsWith('npub')) {
             this.toggleSearch();
             this.searchInput = '';
-            this.router.navigate(['/p', value]);
+            this.openProfile(value);
+        }
+        else if (value.includes('@')) {
+            this.query.set(value);
         }
         else if (value.includes(':')) {
-            this.router.navigate(['/p', value]);
+            this.openProfile(value);
         } else {
             this.router.navigate(['/search'], { queryParams: { query: value } });
         }
+    }
+
+    openProfile(pubkey: string): void {
+        this.router.navigate(['/p', pubkey]);
     }
 
     scrollToOptimalProfilePosition() {
@@ -387,6 +396,15 @@ export class LayoutService {
 
         let url = 'https://nostria.app/p/' + npub;
         this.copyToClipboard(url, 'profile URL');
+    }
+
+    toast(message: string, duration: number = 3000, panelClass: string = 'success-snackbar') {
+        this.snackBar.open(message, 'Close', {
+            duration,
+            horizontalPosition: 'center',
+            verticalPosition: 'bottom',
+            panelClass
+        });
     }
 
     async showPublishResults(publishPromises: Promise<string>[] | null, itemName: string) {

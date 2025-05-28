@@ -32,6 +32,7 @@ import { CreateOptionsSheetComponent } from './components/create-options-sheet/c
 import { LoginDialogComponent } from './components/login-dialog/login-dialog.component';
 import { WelcomeComponent } from './components/welcome/welcome.component';
 import { DebugOverlayComponent } from './components/debug-overlay/debug-overlay.component';
+import { SearchService } from './services/search.service';
 
 interface NavItem {
   path: string;
@@ -83,6 +84,7 @@ export class AppComponent {
   notificationType = NotificationType;
   bottomSheet = inject(MatBottomSheet);
   logger = inject(LoggerService);
+  search = inject(SearchService);
 
   private readonly platform = inject(PLATFORM_ID);
   private readonly document = inject(DOCUMENT);
