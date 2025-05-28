@@ -1,6 +1,9 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { LocalStorageService } from './local-storage.service';
 import { LoggerService } from './logger.service';
+import { NostrService } from './nostr.service';
+import { RelayService } from './relay.service';
+import { Event } from 'nostr-tools';
 
 export interface FeedConfig {
   id: string;
@@ -68,28 +71,30 @@ const DEFAULT_FEEDS: FeedConfig[] = [
 export class FeedService {
   private readonly localStorageService = inject(LocalStorageService);
   private readonly logger = inject(LoggerService);
-  
+  private readonly nostr = inject(NostrService);
+  private readonly relay = inject(RelayService);
+
   private readonly FEEDS_STORAGE_KEY = 'nostria-feeds';
   private readonly RELAYS_STORAGE_KEY = 'nostria-relays';
-  
+
   // Signals for feeds and relays
   private readonly _feeds = signal<FeedConfig[]>([]);
   private readonly _userRelays = signal<RelayConfig[]>([]);
   private readonly _discoveryRelays = signal<RelayConfig[]>([]);
-  
+
   // Public computed signals
   readonly feeds = computed(() => this._feeds());
   readonly userRelays = computed(() => this._userRelays());
   readonly discoveryRelays = computed(() => this._discoveryRelays());
-  
+
   // Feed type definitions
   readonly feedTypes = FEED_TYPES;
-  
+
   constructor() {
     this.loadFeeds();
     this.loadRelays();
   }
-  
+
   /**
    * Load feeds from local storage
    */
@@ -109,8 +114,54 @@ export class FeedService {
       this._feeds.set(DEFAULT_FEEDS);
       this.saveFeeds();
     }
+
+    this.subscribe();
   }
-  
+
+  subs: any[] = [];
+
+  readonly events = new Map<string, Event[]>();
+
+  async subscribe() {
+    const filters: any[] = [];
+
+    this._feeds().forEach(feed => {
+      if (feed.filters) {
+        filters.push({
+          limit: 10,
+          kinds: feed.kinds,
+          // authors: feed.relayConfig === 'user' ? this._userRelays().map(r => r.url) : this._discoveryRelays().map(r => r.url),
+          ...feed.filters
+        });
+      } else {
+        filters.push({
+          limit: 10,
+          kinds: feed.kinds,
+          // authors: feed.relayConfig === 'user' ? this._userRelays().map(r => r.url) : this._discoveryRelays().map(r => r.url)
+        });
+      }
+    });
+
+    const closer = this.relay.subscribe(filters, (event) => {
+      if (!this.events.has(event.id)) {
+        this.events.set(event.id, []);
+      }
+
+      this.events.get(event.id)?.push(event);
+      console.log('Feed event received:', event);
+    });
+
+    if (closer) {
+      this.subs.push(closer);
+    }
+  }
+
+  unsubscribe() {
+    this.subs.forEach(sub => sub.close());
+    this.subs = [];
+    this.logger.debug('Unsubscribed from all feed subscriptions');
+  }
+
   /**
    * Save feeds to local storage
    */
@@ -122,7 +173,7 @@ export class FeedService {
       this.logger.error('Error saving feeds to storage:', error);
     }
   }
-  
+
   /**
    * Load relay configurations from local storage
    */
@@ -132,7 +183,7 @@ export class FeedService {
         user: RelayConfig[];
         discovery: RelayConfig[];
       }>(this.RELAYS_STORAGE_KEY);
-      
+
       if (relayData) {
         this._userRelays.set(relayData.user || []);
         this._discoveryRelays.set(relayData.discovery || []);
@@ -145,7 +196,7 @@ export class FeedService {
       this.setDefaultRelays();
     }
   }
-  
+
   /**
    * Set default relay configurations
    */
@@ -155,18 +206,16 @@ export class FeedService {
       { url: 'wss://nos.lol', read: true, write: true },
       { url: 'wss://relay.snort.social', read: true, write: true }
     ];
-    
+
     const defaultDiscoveryRelays: RelayConfig[] = [
-      { url: 'wss://purplepag.es', read: true, write: false },
-      { url: 'wss://relay.nostr.band', read: true, write: false },
-      { url: 'wss://search.nos.today', read: true, write: false }
+      { url: 'wss://discovery.eu.nostria.app', read: true, write: false },
     ];
-    
+
     this._userRelays.set(defaultUserRelays);
     this._discoveryRelays.set(defaultDiscoveryRelays);
     this.saveRelays();
   }
-  
+
   /**
    * Save relay configurations to local storage
    */
@@ -182,7 +231,7 @@ export class FeedService {
       this.logger.error('Error saving relays to storage:', error);
     }
   }
-  
+
   /**
    * Add a new feed
    */
@@ -193,14 +242,14 @@ export class FeedService {
       createdAt: Date.now(),
       updatedAt: Date.now()
     };
-    
+
     this._feeds.update(feeds => [...feeds, newFeed]);
     this.saveFeeds();
-    
+
     this.logger.debug('Added new feed', newFeed);
     return newFeed;
   }
-  
+
   /**
    * Update an existing feed
    */
@@ -210,7 +259,7 @@ export class FeedService {
       this.logger.warn(`Feed with id ${id} not found`);
       return false;
     }
-    
+
     this._feeds.update(feeds => {
       const updatedFeeds = [...feeds];
       updatedFeeds[feedIndex] = {
@@ -220,36 +269,36 @@ export class FeedService {
       };
       return updatedFeeds;
     });
-    
+
     this.saveFeeds();
     this.logger.debug(`Updated feed ${id}`, updates);
     return true;
   }
-  
+
   /**
    * Remove a feed
    */
   removeFeed(id: string): boolean {
     const initialLength = this._feeds().length;
     this._feeds.update(feeds => feeds.filter(feed => feed.id !== id));
-    
+
     if (this._feeds().length < initialLength) {
       this.saveFeeds();
       this.logger.debug(`Removed feed ${id}`);
       return true;
     }
-    
+
     this.logger.warn(`Feed with id ${id} not found`);
     return false;
   }
-  
+
   /**
    * Get a feed by ID
    */
   getFeedById(id: string): FeedConfig | undefined {
     return this._feeds().find(feed => feed.id === id);
   }
-  
+
   /**
    * Reorder feeds
    */
@@ -258,22 +307,22 @@ export class FeedService {
     const reorderedFeeds = newOrder
       .map(id => currentFeeds.find(feed => feed.id === id))
       .filter((feed): feed is FeedConfig => feed !== undefined);
-    
+
     // Add any feeds that weren't in the newOrder array
     const missingFeeds = currentFeeds.filter(feed => !newOrder.includes(feed.id));
-    
+
     this._feeds.set([...reorderedFeeds, ...missingFeeds]);
     this.saveFeeds();
     this.logger.debug('Reordered feeds', newOrder);
   }
-  
+
   /**
    * Get feed type configuration
    */
   getFeedType(type: keyof typeof FEED_TYPES) {
     return FEED_TYPES[type];
   }
-  
+
   /**
    * Get all available feed types
    */
@@ -283,7 +332,7 @@ export class FeedService {
       ...value
     }));
   }
-  
+
   /**
    * Update user relays
    */
@@ -292,7 +341,7 @@ export class FeedService {
     this.saveRelays();
     this.logger.debug('Updated user relays', relays);
   }
-  
+
   /**
    * Update discovery relays
    */
@@ -301,7 +350,7 @@ export class FeedService {
     this.saveRelays();
     this.logger.debug('Updated discovery relays', relays);
   }
-  
+
   /**
    * Add a custom relay to a feed
    */
@@ -314,7 +363,7 @@ export class FeedService {
       return false;
     }
   }
-  
+
   /**
    * Validate relay URL
    */

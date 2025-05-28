@@ -67,7 +67,7 @@ export class HomeComponent {
   private notificationService = inject(NotificationService);
   private layoutService = inject(LayoutService);
   private dialog = inject(MatDialog);
-  private feedService = inject(FeedService);
+  feedService = inject(FeedService);
   private logger = inject(LoggerService);
 
   // UI State Signals
@@ -134,17 +134,19 @@ export class HomeComponent {
 
   // Replace the old columns signal with feeds from FeedService
   feeds = computed(() => this.feedService.feeds());
-  
+
+  columns = computed<NavLink[]>(() => this.feeds() as NavLink[]);
+
   // Update columns computed to map from feeds
-  columns = computed(() => {
-    return this.feeds().map(feed => ({
-      id: feed.id,
-      path: feed.path || feed.id,
-      label: feed.label,
-      icon: feed.icon,
-      filters: feed.filters
-    } as NavLink));
-  });
+  // columns = computed(() => {
+  //   return this.feeds().map(feed => ({
+  //     id: feed.id,
+  //     path: feed.path || feed.id,
+  //     label: feed.label,
+  //     icon: feed.icon,
+  //     filters: feed.filters
+  //   } as NavLink));
+  // });
 
   // Signals for state management
   visibleColumnIndex = signal(0);
@@ -385,7 +387,7 @@ export class HomeComponent {
     if (previousIndex !== currentIndex) {
       const feedIds = this.feeds().map(feed => feed.id);
       moveItemInArray(feedIds, previousIndex, currentIndex);
-      
+
       // Update feed order using FeedService
       this.feedService.reorderFeeds(feedIds);
 
@@ -491,7 +493,7 @@ export class HomeComponent {
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
         const newFeed = this.feedService.addFeed(result);
-        
+
         const newIndex = this.feeds().length - 1;
 
         if (this.isMobileView()) {
@@ -550,6 +552,10 @@ export class HomeComponent {
     }
 
     this.notificationService.notify(`Feed "${feed.label}" removed`);
+  }
+
+  ngOnDestroy() {
+    this.feedService.unsubscribe();
   }
 
   ngOnInit(): void {

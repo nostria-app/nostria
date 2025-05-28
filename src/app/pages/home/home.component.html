@@ -89,19 +89,19 @@
           </div>
         </div>
 
-          <!-- Filters Section -->
-  @if (showAdvancedFilters()) {
-  <div class="filters-section">
-    <h3>Filter by tags</h3>
-    <div class="tag-chips">
-      @for (tag of availableTags(); track tag) {
-      <mat-chip-option [selected]="selectedTags().includes(tag)" (click)="toggleTagFilter(tag)" color="primary">
-        #{{ tag }}
-      </mat-chip-option>
-      }
-    </div>
-  </div>
-  }
+        <!-- Filters Section -->
+        @if (showAdvancedFilters()) {
+        <div class="filters-section">
+          <h3>Filter by tags</h3>
+          <div class="tag-chips">
+            @for (tag of availableTags(); track tag) {
+            <mat-chip-option [selected]="selectedTags().includes(tag)" (click)="toggleTagFilter(tag)" color="primary">
+              #{{ tag }}
+            </mat-chip-option>
+            }
+          </div>
+        </div>
+        }
 
         <!-- Column Content with Individual Scrolling -->
         <div class="column-content">
@@ -114,8 +114,37 @@
             } @else {
             <!-- Default placeholder content - replace with actual content -->
             <div class="column-items">
+              @for(event of feedService.events.get(column.id); track event.id) {
+              <mat-card class="content-card">
+                <mat-card-header>
+                  <div mat-card-avatar class="avatar"></div>
+                  <mat-card-title>{{ column.label }} </mat-card-title>
+                  <mat-card-subtitle>User • 2h ago</mat-card-subtitle>
+                </mat-card-header>
+                <mat-card-content>
+                  <p>This is an example post in the {{ column | json }} column. It demonstrates how content will appear
+                    in each column.</p>
+                  <div class="tags">
+                    <span class="tag">#nostr</span>
+                    <span class="tag">#example</span>
+                  </div>
+                </mat-card-content>
+                <mat-card-actions>
+                  <button mat-icon-button>
+                    <mat-icon>favorite_border</mat-icon>
+                  </button>
+                  <button mat-icon-button>
+                    <mat-icon>comment</mat-icon>
+                  </button>
+                  <button mat-icon-button>
+                    <mat-icon>repeat</mat-icon>
+                  </button>
+                </mat-card-actions>
+              </mat-card>
+              }
+
               <!-- Generate some mock items for each column -->
-              @for (j of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; track j) {
+              <!-- @for (j of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; track j) {
               <mat-card class="content-card">
                 <mat-card-header>
                   <div mat-card-avatar class="avatar"></div>
@@ -142,7 +171,7 @@
                   </button>
                 </mat-card-actions>
               </mat-card>
-              }
+              } -->
             </div>
             }
           </div>
