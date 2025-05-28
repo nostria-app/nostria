@@ -18,7 +18,7 @@ export interface FeedConfig {
   label: string;
   icon: string;
   path?: string;
-  type: 'notes' | 'articles' | 'media' | 'custom';
+  type: 'notes' | 'articles' | 'photos' | 'videos' | 'custom';
   kinds: number[];
   relayConfig: 'user' | 'discovery' | 'custom';
   customRelays?: string[];
