@@ -11,6 +11,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatButtonModule } from '@angular/material/button';
 import { ProfileStateService } from '../../../services/profile-state.service';
 import { NostrRecord } from '../../../interfaces';
+import { isNip05, queryProfile } from 'nostr-tools/nip05';
 
 @Component({
     selector: 'app-profile-header',
@@ -35,6 +36,9 @@ export class ProfileHeaderComponent {
     logger = inject(LoggerService);
     compact = input<boolean>(false);
     profileState = inject(ProfileStateService);
+
+    // Add signal for verified identifier
+    verifiedIdentifier = signal<{ value: string, valid: boolean, status: string }>({ value: '', valid: false, status: '' });
 
     pubkey = computed(() => {
         return this.profile() ? this.profile()!.event.pubkey : undefined;
@@ -61,6 +65,21 @@ export class ProfileHeaderComponent {
             if (this.profile()) {
                 console.debug('LOCATION 4:');
                 this.npub.set(this.nostr.getNpubFromPubkey(this.profile()!.event.pubkey));
+            }
+        });
+
+        // Add effect to verify identifier when profile changes
+        effect(async () => {
+            const currentProfile = this.profile();
+            if (currentProfile?.data.nip05) {
+                const result = await this.getVerifiedIdentifier();
+                untracked(() => {
+                    this.verifiedIdentifier.set(result);
+                });
+            } else {
+                untracked(() => {
+                    this.verifiedIdentifier.set({ value: '', valid: false, status: 'No NIP-05 value' });
+                });
             }
         });
     }
@@ -106,14 +125,26 @@ export class ProfileHeaderComponent {
         return 'linear-gradient(135deg, #8e44ad, #3498db)';
     }
 
-    getVerifiedIdentifier(): string | null {
-        // TODO: Perform actual fetch requests to validate the NIP5.
+    private async getVerifiedIdentifier(): Promise<{ value: string, valid: boolean, status: string }> {
         const metadata = this.profile();
-        if (!metadata || !metadata.data.nip05) return null;
+        if (!metadata || !metadata.data.nip05) return { value: '', valid: false, status: 'No NIP-05 value' };
 
-        // Format NIP-05 identifier for display
-        return metadata.data.nip05.startsWith('_@')
+        const value = metadata.data.nip05.startsWith('_@')
             ? metadata.data.nip05.substring(1)
-            : metadata.data.nip05;
+            : metadata.data.nip05
+
+        if (isNip05(metadata.data.nip05)) {
+            const profile = await queryProfile(metadata.data.nip05);
+
+            if (profile) {
+                if (profile.pubkey === metadata.event.pubkey) {
+                    return { value, valid: true, status: 'Verified valid' };
+                } else {
+                    this.logger.warn('NIP-05 profile pubkey mismatch:', profile.pubkey, metadata.event.pubkey);
+                }
+            }
+        }
+
+        return { value, valid: false, status: 'Invalid NIP-05' };
     }
 }

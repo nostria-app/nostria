@@ -264,7 +264,15 @@
 }
 
 .verified-icon {
-    color: var(--mat-sys-primary, #673ab7);
+    color: var(--mat-sys-primary);
+    // font-size: 18px;
+    // height: 18px;
+    // width: 18px;
+    // margin-left: 4px;
+}
+
+.verified-icon-error {
+    color: var(--mat-sys-error);
     // font-size: 18px;
     // height: 18px;
     // width: 18px;
