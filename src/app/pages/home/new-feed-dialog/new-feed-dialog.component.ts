@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -6,18 +6,53 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { MatStepperModule } from '@angular/material/stepper';
+import { MatCardModule } from '@angular/material/card';
+import { MatDividerModule } from '@angular/material/divider';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormControl } from '@angular/forms';
+import { COMMA, ENTER } from '@angular/cdk/keycodes';
+import { MatChipInputEvent } from '@angular/material/chips';
+import { MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
+import { FeedService, FeedConfig } from '../../../services/feed.service';
 
 interface DialogData {
   icons: string[];
-  feed?: {
-    id?: string;
-    label: string;
-    icon: string;
-    path?: string;
-    filters?: Record<string, any>;
-  };
+  feed?: FeedConfig;
 }
+
+// Common Nostr event kinds
+const NOSTR_KINDS = [
+  { value: 0, label: 'Metadata (0)' },
+  { value: 1, label: 'Text Note (1)' },
+  { value: 2, label: 'Recommend Relay (2)' },
+  { value: 3, label: 'Contacts (3)' },
+  { value: 4, label: 'Encrypted Direct Messages (4)' },
+  { value: 5, label: 'Event Deletion (5)' },
+  { value: 6, label: 'Repost (6)' },
+  { value: 7, label: 'Reaction (7)' },
+  { value: 8, label: 'Badge Award (8)' },
+  { value: 16, label: 'Generic Repost (16)' },
+  { value: 40, label: 'Channel Creation (40)' },
+  { value: 41, label: 'Channel Metadata (41)' },
+  { value: 42, label: 'Channel Message (42)' },
+  { value: 43, label: 'Channel Hide Message (43)' },
+  { value: 44, label: 'Channel Mute User (44)' },
+  { value: 1063, label: 'File Metadata (1063)' },
+  { value: 1311, label: 'Live Chat Message (1311)' },
+  { value: 1984, label: 'Reporting (1984)' },
+  { value: 9734, label: 'Zap Request (9734)' },
+  { value: 9735, label: 'Zap (9735)' },
+  { value: 10000, label: 'Mute List (10000)' },
+  { value: 10001, label: 'Pin List (10001)' },
+  { value: 10002, label: 'Relay List Metadata (10002)' },
+  { value: 30000, label: 'Categorized People List (30000)' },
+  { value: 30001, label: 'Categorized Bookmark List (30001)' },
+  { value: 30023, label: 'Long-form Content (30023)' },
+  { value: 30024, label: 'Draft Long-form Content (30024)' },
+  { value: 30078, label: 'Application-specific Data (30078)' }
+];
 
 @Component({
   selector: 'app-new-feed-dialog',
@@ -30,79 +65,676 @@ interface DialogData {
     MatInputModule,
     MatIconModule,
     MatSelectModule,
+    MatChipsModule,
+    MatAutocompleteModule,
+    MatStepperModule,
+    MatCardModule,
+    MatDividerModule,
     ReactiveFormsModule
   ],
   template: `
-    <h2 mat-dialog-title>{{ isEditMode() ? 'Edit Feed' : 'Add New Feed' }}</h2>
-    <form [formGroup]="feedForm" (ngSubmit)="onSubmit()">
-      <div mat-dialog-content>
-        <mat-form-field appearance="fill" class="full-width">
-          <mat-label>Feed Name</mat-label>
-          <input matInput formControlName="label" placeholder="My Custom Feed">
-          <mat-error *ngIf="feedForm.get('label')?.hasError('required')">
-            Feed name is required
-          </mat-error>
-        </mat-form-field>
-        
-        <mat-form-field appearance="fill" class="full-width">
-          <mat-label>Icon</mat-label>
-          <mat-select formControlName="icon">
-            @for (icon of data.icons; track icon) {
-              <mat-option [value]="icon">
-                <div class="icon-option">
-                  <mat-icon>{{ icon }}</mat-icon>
-                  <span>{{ icon }}</span>
+    <div class="dialog-container">
+      <div class="dialog-header">
+        <h2 mat-dialog-title>
+          <mat-icon>{{ isEditMode() ? 'edit' : 'add' }}</mat-icon>
+          {{ isEditMode() ? 'Edit Feed' : 'Create New Feed' }}
+        </h2>
+        <p class="dialog-subtitle">Configure your custom Nostr feed</p>
+      </div>
+
+      <form [formGroup]="feedForm" (ngSubmit)="onSubmit()">
+        <mat-stepper #stepper linear="false" class="feed-stepper">
+          <!-- Step 1: Basic Information -->
+          <mat-step [stepControl]="basicInfoGroup">
+            <ng-template matStepLabel>Basic Information</ng-template>
+            <div class="step-content">
+              <!-- Feed Type Selection -->
+              <div class="feed-type-section">
+                <h3>Feed Type</h3>
+                <div class="feed-type-cards">
+                  @for (type of feedTypes(); track type.key) {
+                    <mat-card 
+                      class="feed-type-card" 
+                      [class.selected]="selectedFeedType() === type.key"
+                      (click)="selectFeedType(type.key)">
+                      <mat-card-content>
+                        <div class="type-header">
+                          <mat-icon>{{ type.icon }}</mat-icon>
+                          <h4>{{ type.label }}</h4>
+                        </div>
+                        <p class="type-description">{{ type.description }}</p>
+                      </mat-card-content>
+                    </mat-card>
+                  }
                 </div>
-              </mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
+              </div>
+
+              <mat-divider></mat-divider>
+
+              <!-- Basic Form Fields -->
+              <div class="basic-fields">
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Feed Name</mat-label>
+                  <input matInput formControlName="label" placeholder="My Custom Feed">
+                  <mat-icon matSuffix>label</mat-icon>
+                  @if (feedForm.get('label')?.hasError('required')) {
+                    <mat-error>Feed name is required</mat-error>
+                  }
+                </mat-form-field>
+                
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Icon</mat-label>
+                  <mat-select formControlName="icon">
+                    @for (icon of data.icons; track icon) {
+                      <mat-option [value]="icon">
+                        <div class="icon-option">
+                          <mat-icon>{{ icon }}</mat-icon>
+                          <span>{{ icon }}</span>
+                        </div>
+                      </mat-option>
+                    }
+                  </mat-select>
+                  <mat-icon matSuffix>{{ feedForm.get('icon')?.value || 'widgets' }}</mat-icon>
+                </mat-form-field>
+                
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>URL Path (Optional)</mat-label>
+                  <input matInput formControlName="path" placeholder="custom-feed">
+                  <mat-hint>URL identifier for this feed</mat-hint>
+                  <mat-icon matSuffix>link</mat-icon>
+                </mat-form-field>
+              </div>
+            </div>
+          </mat-step>
+
+          <!-- Step 2: Content Configuration -->
+          <mat-step [stepControl]="contentConfigGroup">
+            <ng-template matStepLabel>Content Configuration</ng-template>
+            <div class="step-content">
+              <!-- Event Kinds Selection -->
+              <div class="kinds-section">
+                <h3>Event Kinds</h3>
+                <p class="section-description">Select which types of Nostr events to include in this feed</p>
+                
+                <mat-form-field class="full-width" appearance="outline">
+                  <mat-label>Event Kinds</mat-label>
+                  <mat-chip-grid #chipGrid aria-label="Event kinds selection">
+                    @for (kind of selectedKinds(); track kind) {
+                      <mat-chip-row (removed)="removeKind(kind)">
+                        {{ getKindLabel(kind) }}
+                        <button matChipRemove>
+                          <mat-icon>cancel</mat-icon>
+                        </button>
+                      </mat-chip-row>
+                    }
+                  </mat-chip-grid>
+                  <input
+                    placeholder="Add event kind..."
+                    #kindInput
+                    [formControl]="kindInputControl"
+                    [matChipInputFor]="chipGrid"
+                    [matAutocomplete]="kindAutocomplete"
+                    [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
+                    (matChipInputTokenEnd)="addKind($event)"
+                  />
+                  <mat-autocomplete #kindAutocomplete="matAutocomplete" (optionSelected)="kindSelected($event)">
+                    @for (kind of filteredKinds(); track kind.value) {
+                      <mat-option [value]="kind.value">
+                        <strong>{{ kind.value }}</strong> - {{ kind.label }}
+                      </mat-option>
+                    }
+                  </mat-autocomplete>
+                  <mat-icon matSuffix>category</mat-icon>
+                </mat-form-field>
+              </div>
+            </div>
+          </mat-step>
+
+          <!-- Step 3: Relay Configuration -->
+          <mat-step [stepControl]="relayConfigGroup">
+            <ng-template matStepLabel>Relay Configuration</ng-template>
+            <div class="step-content">
+              <div class="relay-section">
+                <h3>Relay Source</h3>
+                <p class="section-description">Choose which relays to use for this feed</p>
+                
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Relay Configuration</mat-label>
+                  <mat-select formControlName="relayConfig" (selectionChange)="onRelayConfigChange($event.value)">
+                    <mat-option value="user">
+                      <div class="relay-option">
+                        <mat-icon>person</mat-icon>
+                        <div>
+                          <div class="option-title">User Relays</div>
+                          <div class="option-description">Use your configured relays</div>
+                        </div>
+                      </div>
+                    </mat-option>
+                    <mat-option value="discovery">
+                      <div class="relay-option">
+                        <mat-icon>explore</mat-icon>
+                        <div>
+                          <div class="option-title">Discovery Relays</div>
+                          <div class="option-description">Use discovery and search relays</div>
+                        </div>
+                      </div>
+                    </mat-option>
+                    <mat-option value="custom">
+                      <div class="relay-option">
+                        <mat-icon>settings</mat-icon>
+                        <div>
+                          <div class="option-title">Custom Relays</div>
+                          <div class="option-description">Specify custom relay URLs</div>
+                        </div>
+                      </div>
+                    </mat-option>
+                  </mat-select>
+                  <mat-icon matSuffix>dns</mat-icon>
+                </mat-form-field>
+
+                @if (showCustomRelays()) {
+                  <div class="custom-relays-section">
+                    <h4>Custom Relay URLs</h4>
+                    <mat-form-field class="full-width" appearance="outline">
+                      <mat-label>Custom Relays</mat-label>
+                      <mat-chip-grid #relayChipGrid aria-label="Custom relays">
+                        @for (relay of customRelays(); track relay) {
+                          <mat-chip-row (removed)="removeCustomRelay(relay)">
+                            {{ relay }}
+                            <button matChipRemove>
+                              <mat-icon>cancel</mat-icon>
+                            </button>
+                          </mat-chip-row>
+                        }
+                      </mat-chip-grid>
+                      <input
+                        placeholder="wss://relay.example.com"
+                        #relayInput
+                        [formControl]="relayInputControl"
+                        [matChipInputFor]="relayChipGrid"
+                        [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
+                        (matChipInputTokenEnd)="addCustomRelay($event)"
+                      />
+                      <mat-icon matSuffix>add_link</mat-icon>
+                      <mat-hint>Enter WebSocket URLs (wss:// or ws://)</mat-hint>
+                    </mat-form-field>
+                  </div>
+                }
+
+                <!-- Relay Preview -->
+                <div class="relay-preview">
+                  <h4>Active Relays Preview</h4>
+                  <div class="relay-list">
+                    @for (relay of getActiveRelays(); track relay) {
+                      <div class="relay-item">
+                        <mat-icon class="relay-status">wifi</mat-icon>
+                        <span class="relay-url">{{ relay }}</span>
+                      </div>
+                    }
+                    @if (getActiveRelays().length === 0) {
+                      <div class="no-relays">
+                        <mat-icon>warning</mat-icon>
+                        <span>No relays configured</span>
+                      </div>
+                    }
+                  </div>
+                </div>
+              </div>
+            </div>
+          </mat-step>
+        </mat-stepper>
         
-        <mat-form-field appearance="fill" class="full-width">
-          <mat-label>Path (Optional)</mat-label>
-          <input matInput formControlName="path" placeholder="custom-feed">
-          <mat-hint>URL path for this feed tab</mat-hint>
-        </mat-form-field>
-      </div>
-      
-      <div mat-dialog-actions align="end">
-        <button mat-button mat-dialog-close>Cancel</button>
-        <button mat-raised-button color="primary" type="submit" [disabled]="!feedForm.valid">
-          {{ isEditMode() ? 'Save' : 'Add' }}
-        </button>
-      </div>
-    </form>
+        <div class="dialog-actions" mat-dialog-actions>
+          <button mat-button mat-dialog-close type="button">Cancel</button>
+          <button mat-flat-button color="primary" type="submit" [disabled]="!feedForm.valid">
+            <mat-icon>{{ isEditMode() ? 'save' : 'add' }}</mat-icon>
+            {{ isEditMode() ? 'Save Changes' : 'Create Feed' }}
+          </button>
+        </div>
+      </form>
+    </div>
   `,
   styles: [`
+    .dialog-container {
+      width: 600px;
+      max-width: 90vw;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .dialog-header {
+      padding: 24px 24px 16px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+
+      h2 {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 0 0 8px 0;
+        font-size: 1.5rem;
+        font-weight: 500;
+      }
+
+      .dialog-subtitle {
+        margin: 0;
+        opacity: 0.7;
+        font-size: 0.875rem;
+      }
+    }
+
+    .feed-stepper {
+      flex: 1;
+      overflow: hidden;
+
+      ::ng-deep .mat-stepper-header-position-bottom {
+        order: 2;
+      }
+
+      ::ng-deep .mat-step-text-label {
+        font-weight: 500;
+      }
+    }
+
+    .step-content {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      min-height: 400px;
+      overflow-y: auto;
+    }
+
     .full-width {
       width: 100%;
-      margin-bottom: 16px;
     }
-    
+
+    .feed-type-section {
+      h3 {
+        margin: 0 0 16px 0;
+        font-size: 1.1rem;
+        font-weight: 500;
+      }
+    }
+
+    .feed-type-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+    }
+
+    .feed-type-card {
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: 2px solid transparent;
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--mat-sys-level2);
+      }
+
+      &.selected {
+        border-color: var(--mat-sys-primary);
+        background-color: rgba(var(--mat-sys-primary-rgb), 0.04);
+      }
+
+      mat-card-content {
+        padding: 16px;
+        text-align: center;
+      }
+
+      .type-header {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+
+        mat-icon {
+          font-size: 2rem;
+          width: 2rem;
+          height: 2rem;
+        }
+
+        h4 {
+          margin: 0;
+          font-size: 0.95rem;
+          font-weight: 500;
+        }
+      }
+
+      .type-description {
+        margin: 0;
+        font-size: 0.8rem;
+        opacity: 0.7;
+        line-height: 1.3;
+      }
+    }
+
+    .basic-fields {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
     .icon-option {
       display: flex;
       align-items: center;
+      gap: 12px;
+
+      mat-icon {
+        color: var(--mat-sys-primary);
+      }
+
+      span {
+        font-weight: 500;
+      }
+    }
+
+    .kinds-section,
+    .relay-section {
+      h3, h4 {
+        margin: 0 0 8px 0;
+        font-size: 1.1rem;
+        font-weight: 500;
+      }
+
+      .section-description {
+        margin: 0 0 16px 0;
+        opacity: 0.7;
+        font-size: 0.875rem;
+      }
+    }
+
+    .custom-relays-section {
+      margin-top: 16px;
+      padding: 16px;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      border-radius: 8px;
+      background-color: rgba(0, 0, 0, 0.02);
+    }
+
+    .relay-option {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
+      mat-icon {
+        color: var(--mat-sys-primary);
+      }
+
+      .option-title {
+        font-weight: 500;
+        font-size: 0.95rem;
+      }
+
+      .option-description {
+        font-size: 0.8rem;
+        opacity: 0.7;
+      }
+    }
+
+    .relay-preview {
+      margin-top: 16px;
+
+      h4 {
+        margin: 0 0 12px 0;
+        font-size: 0.95rem;
+        font-weight: 500;
+      }
+    }
+
+    .relay-list {
+      max-height: 120px;
+      overflow-y: auto;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      border-radius: 4px;
+      background-color: rgba(0, 0, 0, 0.02);
+    }
+
+    .relay-item {
+      display: flex;
+      align-items: center;
       gap: 8px;
+      padding: 8px 12px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      .relay-status {
+        font-size: 1rem;
+        width: 1rem;
+        height: 1rem;
+        color: #4caf50;
+      }
+
+      .relay-url {
+        font-family: monospace;
+        font-size: 0.85rem;
+      }
+    }
+
+    .no-relays {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 16px;
+      justify-content: center;
+      opacity: 0.5;
+
+      mat-icon {
+        color: #ff9800;
+      }
+    }
+
+    .dialog-actions {
+      padding: 16px 24px;
+      border-top: 1px solid rgba(0, 0, 0, 0.12);
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+
+      button {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+    }
+
+    mat-divider {
+      margin: 16px 0;
+    }
+
+    // Improve chip appearance
+    mat-chip-row {
+      font-size: 0.875rem;
+    }
+
+    // Stepper improvements
+    ::ng-deep .mat-stepper-horizontal {
+      .mat-step-header {
+        padding: 8px 24px;
+      }
     }
   `]
 })
 export class NewFeedDialogComponent {
   private fb = inject(FormBuilder);
   private dialogRef = inject(MatDialogRef<NewFeedDialogComponent>);
+  private feedService = inject(FeedService);
   readonly data: DialogData = inject(MAT_DIALOG_DATA);
   
-  isEditMode = signal(!!this.data.feed);
-  
-  feedForm: FormGroup = this.fb.group({
+  // Form controls
+  basicInfoGroup = this.fb.group({
     label: [this.data.feed?.label || '', Validators.required],
-    icon: [this.data.feed?.icon || this.data.icons[0]],
-    path: [this.data.feed?.path || ''],
-    filters: [this.data.feed?.filters || {}]
+    icon: [this.data.feed?.icon || 'chat'],
+    path: [this.data.feed?.path || '']
   });
+
+  contentConfigGroup = this.fb.group({
+    kinds: [this.data.feed?.kinds || []]
+  });
+
+  relayConfigGroup = this.fb.group({
+    relayConfig: [this.data.feed?.relayConfig || 'user'],
+    customRelays: [this.data.feed?.customRelays || []]
+  });
+
+  feedForm = this.fb.group({
+    ...this.basicInfoGroup.controls,
+    ...this.contentConfigGroup.controls,
+    ...this.relayConfigGroup.controls,
+    type: [this.data.feed?.type || 'custom']
+  });
+
+  // Signals and state
+  isEditMode = signal(!!this.data.feed);
+  selectedFeedType = signal<string>(this.data.feed?.type || 'custom');
+  selectedKinds = signal<number[]>(this.data.feed?.kinds || []);
+  customRelays = signal<string[]>(this.data.feed?.customRelays || []);
+  showCustomRelays = computed(() => this.feedForm.get('relayConfig')?.value === 'custom');
+  
+  // Form controls for chips
+  kindInputControl = new FormControl('');
+  relayInputControl = new FormControl('');
+  
+  // Chip separator keys
+  readonly separatorKeysCodes = [ENTER, COMMA] as const;
+  
+  // Available options
+  feedTypes = signal(this.feedService.getFeedTypes());
+  nostrKinds = signal(NOSTR_KINDS);
+  
+  // Filtered options for autocomplete
+  filteredKinds = computed(() => {
+    const input = this.kindInputControl.value?.toString().toLowerCase() || '';
+    const selected = this.selectedKinds();
+    
+    return this.nostrKinds().filter(kind => {
+      const matchesInput = kind.label.toLowerCase().includes(input) || 
+                          kind.value.toString().includes(input);
+      const notSelected = !selected.includes(kind.value);
+      return matchesInput && notSelected;
+    });
+  });
+
+  selectFeedType(typeKey: string): void {
+    this.selectedFeedType.set(typeKey);
+    this.feedForm.patchValue({ type: typeKey as 'media' | 'notes' | 'articles' | 'custom' });
+    
+    // Auto-fill based on feed type
+    const feedType = this.feedService.getFeedType(typeKey as any);
+    if (feedType && feedType.kinds.length > 0) {
+      this.selectedKinds.set(feedType.kinds);
+      this.feedForm.patchValue({ kinds: feedType.kinds });
+    }
+    
+    // Update icon and label if not in edit mode
+    if (!this.isEditMode()) {
+      this.feedForm.patchValue({ 
+        icon: feedType.icon,
+        label: feedType.label 
+      });
+    }
+  }
+
+  getKindLabel(kind: number): string {
+    const kindInfo = this.nostrKinds().find(k => k.value === kind);
+    return kindInfo ? kindInfo.label : `Kind ${kind}`;
+  }
+
+  addKind(event: MatChipInputEvent): void {
+    const value = event.value.trim();
+    if (value) {
+      const kindNumber = parseInt(value, 10);
+      if (!isNaN(kindNumber) && !this.selectedKinds().includes(kindNumber)) {
+        this.selectedKinds.update(kinds => [...kinds, kindNumber]);
+        this.updateKindsForm();
+      }
+    }
+    event.chipInput!.clear();
+    this.kindInputControl.setValue('');
+  }
+
+  removeKind(kind: number): void {
+    this.selectedKinds.update(kinds => kinds.filter(k => k !== kind));
+    this.updateKindsForm();
+  }
+
+  kindSelected(event: MatAutocompleteSelectedEvent): void {
+    const kindValue = event.option.value;
+    if (!this.selectedKinds().includes(kindValue)) {
+      this.selectedKinds.update(kinds => [...kinds, kindValue]);
+      this.updateKindsForm();
+    }
+    this.kindInputControl.setValue('');
+  }
+
+  private updateKindsForm(): void {
+    this.feedForm.patchValue({ kinds: this.selectedKinds() });
+  }
+
+  onRelayConfigChange(value: string): void {
+    if (value !== 'custom') {
+      this.customRelays.set([]);
+      this.feedForm.patchValue({ customRelays: [] });
+    }
+  }
+
+  addCustomRelay(event: MatChipInputEvent): void {
+    const value = event.value.trim();
+    if (value && this.feedService.validateRelayUrl(value)) {
+      if (!this.customRelays().includes(value)) {
+        this.customRelays.update(relays => [...relays, value]);
+        this.updateCustomRelaysForm();
+      }
+    }
+    event.chipInput!.clear();
+    this.relayInputControl.setValue('');
+  }
+
+  removeCustomRelay(relay: string): void {
+    this.customRelays.update(relays => relays.filter(r => r !== relay));
+    this.updateCustomRelaysForm();
+  }
+
+  private updateCustomRelaysForm(): void {
+    this.feedForm.patchValue({ customRelays: this.customRelays() });
+  }
+
+  getActiveRelays(): string[] {
+    const relayConfig = this.feedForm.get('relayConfig')?.value;
+    
+    switch (relayConfig) {
+      case 'user':
+        return this.feedService.userRelays().map(r => r.url);
+      case 'discovery':
+        return this.feedService.discoveryRelays().map(r => r.url);
+      case 'custom':
+        return this.customRelays();
+      default:
+        return [];
+    }
+  }
 
   onSubmit(): void {
     if (this.feedForm.valid) {
-      this.dialogRef.close(this.feedForm.value);
+      const formValue = this.feedForm.value;
+      
+      const feedData = {
+        label: formValue.label!,
+        icon: formValue.icon!,
+        path: formValue.path,
+        type: formValue.type as any,
+        kinds: this.selectedKinds(),
+        relayConfig: formValue.relayConfig as any,
+        customRelays: formValue.relayConfig === 'custom' ? this.customRelays() : undefined,
+        filters: {}
+      };
+
+      this.dialogRef.close(feedData);
     }
   }
 }
