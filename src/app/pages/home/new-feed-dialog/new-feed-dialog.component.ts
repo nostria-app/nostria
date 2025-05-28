@@ -647,7 +647,7 @@ export class NewFeedDialogComponent {
 
   selectFeedType(typeKey: string): void {
     this.selectedFeedType.set(typeKey);
-    this.feedForm.patchValue({ type: typeKey as 'media' | 'notes' | 'articles' | 'custom' });
+    this.feedForm.patchValue({ type: typeKey as 'photos' | 'videos' | 'notes' | 'articles' | 'custom' });
     
     // Auto-fill based on feed type
     const feedType = this.feedService.getFeedType(typeKey as any);

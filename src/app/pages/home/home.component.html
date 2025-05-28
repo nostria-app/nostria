@@ -122,22 +122,102 @@
                   <div mat-card-avatar class="avatar"></div>
                   <mat-card-title>{{ event.pubkey | slice:0:8 }}...</mat-card-title>
                   <mat-card-subtitle>{{ event.created_at * 1000 | date:'short' }}</mat-card-subtitle>
-                </mat-card-header>
-                <mat-card-content>
-                  @if (columnData.feed.type === 'media') {
-                    
+                </mat-card-header>                <mat-card-content>
+                  <!-- Photos (NIP-68, kind 20) -->
+                  @if (event.kind === 20 || columnData.feed.type === 'photos') {
+                    @if (hasContentWarning(event)) {
+                      <div class="content-warning">
+                        <mat-icon>warning</mat-icon>
+                        <span>{{ getContentWarning(event) }}</span>
+                      </div>
+                    }
+                    @let title = getEventTitle(event);
+                    @if (title) {
+                      <h3 class="media-title">{{ title }}</h3>
+                    }                    <div class="photo-gallery">
+                      @for (imageUrl of getImageUrls(event); track $index) {
+                        @let blurhash = getBlurhash(event, $index);
+                        <div class="photo-container">
+                          @if (blurhash) {
+                            <img [src]="generateBlurhashDataUrl(blurhash)" 
+                                 class="photo-item blurhash-placeholder" 
+                                 [alt]="getEventAlt(event)">
+                          }
+                          <img [src]="imageUrl" 
+                               [alt]="getEventAlt(event)" 
+                               class="photo-item main-image" 
+                               loading="lazy"
+                               (load)="onImageLoad($event)"
+                               (click)="openImageDialog(imageUrl, getEventAlt(event))">
+                        </div>
+                      }
+                    </div>
+                    @if (event.content) {
+                      <p class="photo-description">{{ event.content }}</p>
+                    }
                   }
-
-
-                  {{ columnData.feed | json }}
-                  {{ event | json }}
-
-                  <p>{{ event.content }}</p>
+                  
+                  <!-- Videos (NIP-71, kind 21/22) -->
+                  @else if (event.kind === 21 || event.kind === 22 || columnData.feed.type === 'videos') {
+                    @if (hasContentWarning(event)) {
+                      <div class="content-warning">
+                        <mat-icon>warning</mat-icon>
+                        <span>{{ getContentWarning(event) }}</span>
+                      </div>
+                    }
+                    @let title = getEventTitle(event);
+                    @if (title) {
+                      <h3 class="media-title">{{ title }}</h3>
+                    }                    @let videoData = getVideoData(event);
+                    @if (videoData) {
+                      <div class="video-container">
+                        @if (videoData.blurhash && !videoData.thumbnail) {
+                          <img [src]="generateBlurhashDataUrl(videoData.blurhash, 400, 225)" 
+                               class="video-placeholder" 
+                               [alt]="getEventAlt(event)">
+                        }
+                        <video controls class="video-player" 
+                               [poster]="videoData.thumbnail || (videoData.blurhash ? generateBlurhashDataUrl(videoData.blurhash, 400, 225) : undefined)">
+                          <source [src]="videoData.url" type="video/mp4">
+                          Your browser does not support the video tag.
+                        </video>
+                        @if (videoData.duration) {
+                          <div class="video-duration">{{ formatDuration(videoData.duration) }}</div>
+                        }
+                      </div>
+                    }
+                    @if (event.content) {
+                      <p class="video-description">{{ event.content }}</p>
+                    }
+                  }
+                  
+                  <!-- Articles (kind 30023) -->
+                  @else if (event.kind === 30023 || columnData.feed.type === 'articles') {
+                    @let title = getEventTitle(event);
+                    @if (title) {
+                      <h3 class="article-title">{{ title }}</h3>
+                    }
+                    <div class="article-content">
+                      <p>{{ event.content | slice:0:300 }}@if (event.content.length > 300) {...}</p>
+                    </div>
+                    @if (event.content.length > 300) {
+                      <button mat-button color="primary" class="read-more">Read More</button>
+                    }
+                  }
+                  
+                  <!-- Notes (kind 1) and Custom -->
+                  @else {
+                    @if (event.content) {
+                      <p class="note-content">{{ event.content }}</p>
+                    }
+                  }
+                  
+                  <!-- Common tags section -->
                   <div class="tags">
                     @for (tag of event.tags; track $index) {
-                    @if (tag[0] === 't') {
-                    <span class="tag">#{{ tag[1] }}</span>
-                    }
+                      @if (tag[0] === 't') {
+                        <mat-chip class="tag-chip">#{{ tag[1] }}</mat-chip>
+                      }
                     }
                   </div>
                 </mat-card-content>

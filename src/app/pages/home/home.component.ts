@@ -23,6 +23,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FeedService, FeedConfig } from '../../services/feed.service';
 import { NostrRecord } from '../../interfaces';
 import { Event } from 'nostr-tools';
+import { decode } from 'blurhash';
 
 interface NavLink {
   id: string;
@@ -570,128 +571,113 @@ export class HomeComponent {
 
     this.notificationService.notify(`Feed "${feed.label}" removed`);
   }
-
   ngOnDestroy() {
-    this.feedService.unsubscribe();
+    // Cleanup subscriptions if needed
+  }
+  // Helper methods for content rendering
+  getImageUrls(event: any): string[] {
+    const imetas = event.tags?.filter((tag: any[]) => tag[0] === 'imeta') || [];
+    return imetas
+      .map((imeta: string[]) => {
+        const urlIndex = imeta.findIndex(item => item.startsWith('url '));
+        return urlIndex > 0 ? imeta[urlIndex].substring(4) : null;
+      })
+      .filter(Boolean);
   }
 
-  ngOnInit(): void {
-    effect(() => {
-      const currentFeeds = this.feeds();
-      if (currentFeeds.length > 0) {
-        // Initialize column content loaded state
-        const loadedState: Record<string, boolean> = {};
-        currentFeeds.forEach(feed => {
-          loadedState[feed.id] = this.columnContentLoaded()[feed.id] || false;
-        });
-        this.columnContentLoaded.set(loadedState);
+  getBlurhash(event: any, imageIndex: number = 0): string | null {
+    const imetas = event.tags?.filter((tag: any[]) => tag[0] === 'imeta') || [];
+    if (imetas.length <= imageIndex) return null;
+    
+    const imeta = imetas[imageIndex];
+    const blurhashIndex = imeta.findIndex((item: string) => item.startsWith('blurhash '));
+    return blurhashIndex > 0 ? imeta[blurhashIndex].substring(9) : null;
+  }
+
+  generateBlurhashDataUrl(blurhash: string, width: number = 32, height: number = 32): string {
+    try {
+      const pixels = decode(blurhash, width, height);
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return '';
+      
+      const imageData = ctx.createImageData(width, height);
+      imageData.data.set(pixels);
+      ctx.putImageData(imageData, 0, 0);
+      
+      return canvas.toDataURL();
+    } catch (error) {
+      console.warn('Failed to decode blurhash:', error);
+      return '';
+    }
+  }
+
+  getVideoData(event: any): { url: string; thumbnail?: string; duration?: string; blurhash?: string } | null {
+    const imetas = event.tags?.filter((tag: any[]) => tag[0] === 'imeta') || [];
+    if (imetas.length === 0) return null;
+
+    const firstImeta = imetas[0];
+    const urlIndex = firstImeta.findIndex((item: string) => item.startsWith('url '));
+    const imageIndex = firstImeta.findIndex((item: string) => item.startsWith('image '));
+    const blurhashIndex = firstImeta.findIndex((item: string) => item.startsWith('blurhash '));
+    
+    const durationTag = event.tags?.find((tag: any[]) => tag[0] === 'duration');
+    
+    return {
+      url: urlIndex > 0 ? firstImeta[urlIndex].substring(4) : '',
+      thumbnail: imageIndex > 0 ? firstImeta[imageIndex].substring(6) : undefined,
+      duration: durationTag ? durationTag[1] : undefined,
+      blurhash: blurhashIndex > 0 ? firstImeta[blurhashIndex].substring(9) : undefined
+    };
+  }
+
+  getEventTitle(event: any): string {
+    const titleTag = event.tags?.find((tag: any[]) => tag[0] === 'title');
+    return titleTag ? titleTag[1] : '';
+  }
+
+  getEventAlt(event: any): string {
+    const altTag = event.tags?.find((tag: any[]) => tag[0] === 'alt');
+    return altTag ? altTag[1] : '';
+  }
+
+  hasContentWarning(event: any): boolean {
+    return event.tags?.some((tag: any[]) => tag[0] === 'content-warning') || false;
+  }
+
+  getContentWarning(event: any): string {
+    const warningTag = event.tags?.find((tag: any[]) => tag[0] === 'content-warning');
+    return warningTag ? warningTag[1] : '';
+  }
+
+  formatDuration(seconds: string): string {
+    const num = parseInt(seconds);
+    const hours = Math.floor(num / 3600);
+    const minutes = Math.floor((num % 3600) / 60);
+    const secs = num % 60;
+    
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+  }
+  openImageDialog(imageUrl: string, altText: string): void {
+    // TODO: Implement image dialog
+    console.log('Opening image dialog for:', imageUrl, altText);
+  }
+  onImageLoad(event: globalThis.Event): void {
+    const img = event.target as HTMLImageElement;
+    const container = img.parentElement;
+    if (container) {
+      const placeholder = container.querySelector('.blurhash-placeholder') as HTMLImageElement;
+      if (placeholder) {
+        placeholder.style.opacity = '0';
+        setTimeout(() => {
+          placeholder.style.display = 'none';
+        }, 300);
       }
-    });
-
-    this.loadColumnContentIfNeeded(this.visibleColumnIndex());
-
-    if (!this.isMobileView()) {
-      this.feeds().forEach((feed, index) => {
-        this.loadColumnContentIfNeeded(index);
-      });
     }
-  }
-
-  // Add utility to ensure column headers match column widths
-  ngAfterViewInit(): void {
-    // Allow the DOM to render first
-    setTimeout(() => {
-      this.syncColumnHeaderWidths();
-    });
-
-    // Also sync widths when the window resizes
-    effect(() => {
-      const width = this.screenWidth();
-      this.syncColumnHeaderWidths();
-    });
-
-    // Setup scroll tracking
-    if (this.columnsWrapper) {
-      const wrapper = this.columnsWrapper.nativeElement;
-
-      const updateScrollPosition = () => {
-        this.scrollPosition.set(wrapper.scrollLeft);
-        this.maxScroll.set(wrapper.scrollWidth - wrapper.clientWidth);
-      };
-
-      // Initial update
-      setTimeout(updateScrollPosition, 100);
-
-      // Listen for scroll events
-      wrapper.addEventListener('scroll', updateScrollPosition);
-
-      // Update on resize
-      const resizeObserver = new ResizeObserver(() => {
-        updateScrollPosition();
-      });
-
-      resizeObserver.observe(wrapper);
-
-      // Cleanup
-      effect(() => {
-        return () => {
-          wrapper.removeEventListener('scroll', updateScrollPosition);
-          resizeObserver.disconnect();
-        };
-      });
-    }
-
-    // Fix for CDK drag issues by applying appropriate CSS
-    setTimeout(() => {
-      // Make sure we have the proper CDK drag styles
-      const style = document.createElement('style');
-      style.innerHTML = `
-        .cdk-drag-preview.column-unit {
-          transform: none !important;
-        }
-        .columns-wrapper .column-unit.cdk-drag-placeholder {
-          visibility: visible !important;
-        }
-      `;
-      document.head.appendChild(style);
-    }, 0);
-  }
-
-  // Function to synchronize column header widths with column content
-  private syncColumnHeaderWidths(): void {
-    if (this.isMobileView()) return;
-
-    // We'll use a small timeout to ensure DOM is fully rendered
-    setTimeout(() => {
-      const columnHeaders = document.querySelectorAll('.column-header:not(.add-column)');
-      const columns = document.querySelectorAll('.column');
-
-      // Reset any previously set widths
-      columnHeaders.forEach(header => {
-        (header as HTMLElement).style.width = '';
-        (header as HTMLElement).style.minWidth = '';
-      });
-
-      columns.forEach(column => {
-        (column as HTMLElement).style.width = '';
-        (column as HTMLElement).style.minWidth = '';
-      });
-
-      // Let them naturally layout first
-      requestAnimationFrame(() => {
-        // Get the column widths
-        const columnWidths = Array.from(columns).map(col =>
-          (col as HTMLElement).getBoundingClientRect().width
-        );
-
-        // Apply column widths to headers
-        columnHeaders.forEach((header, index) => {
-          if (index < columnWidths.length) {
-            (header as HTMLElement).style.width = `${columnWidths[index]}px`;
-            (header as HTMLElement).style.minWidth = `${columnWidths[index]}px`;
-          }
-        });
-      });
-    }, 100);
   }
 }
