@@ -10,9 +10,6 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { NostrService } from '../../services/nostr.service';
 import { NotificationService } from '../../services/notification.service';
 import { LayoutService } from '../../services/layout.service';
-import { AgoPipe } from '../../pipes/ago.pipe';
-import { NPubPipe } from '../../pipes/npub.pipe';
-import { TimestampPipe } from '../../pipes/timestamp.pipe';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { NewFeedDialogComponent } from './new-feed-dialog/new-feed-dialog.component';
 import { RouterModule } from '@angular/router';
@@ -42,8 +39,7 @@ const DEFAULT_COLUMNS: NavLink[] = [
 
 @Component({
   selector: 'app-home',
-  standalone: true,
-  imports: [
+  standalone: true,  imports: [
     CommonModule,
     MatCardModule,
     MatButtonModule,
@@ -53,9 +49,6 @@ const DEFAULT_COLUMNS: NavLink[] = [
     MatMenuModule,
     MatTooltipModule,
     DragDropModule,
-    AgoPipe,
-    NPubPipe,
-    TimestampPipe,
     RouterModule,
     MatDialogModule,
     MatProgressSpinnerModule
@@ -132,13 +125,13 @@ export class HomeComponent {
         event.event.tags.some(tag => tag[0] === 't' && tags.includes(tag[1]))
       );
     }
-  });
-
-  // Replace getEventsForColumn method with computed signal
+  });  // Replace getEventsForColumn method with computed signal that uses feedService's reactive data
   columnEvents = computed(() => {
     const eventsMap = new Map<string, Event[]>();
-    this.feedService.data.forEach((feedData, feedId) => {
-      eventsMap.set(feedId, feedData.events());
+    // Access the feedDataMap from feedService which is properly reactive
+    const feedDataMap = this.feedService.feedDataMap();
+    feedDataMap.forEach((eventsSignal, feedId) => {
+      eventsMap.set(feedId, eventsSignal());
     });
     return eventsMap;
   });
