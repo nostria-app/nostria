@@ -1,9 +1,17 @@
-import { Injectable, inject, signal, computed } from '@angular/core';
+import { Injectable, inject, signal, computed, Signal, WritableSignal } from '@angular/core';
 import { LocalStorageService } from './local-storage.service';
 import { LoggerService } from './logger.service';
 import { NostrService } from './nostr.service';
 import { RelayService } from './relay.service';
 import { Event } from 'nostr-tools';
+import { SubCloser } from 'nostr-tools/abstract-pool';
+
+export interface FeedData {
+  feed: FeedConfig,
+  filter: any,
+  events: WritableSignal<Event[]>,
+  subscription: SubCloser | null
+}
 
 export interface FeedConfig {
   id: string;
@@ -118,47 +126,69 @@ export class FeedService {
     this.subscribe();
   }
 
-  subs: any[] = [];
-
-  readonly events = new Map<string, Event[]>();
+  readonly data = new Map<string, FeedData>();
+  // readonly events = new Map<string, Event[]>();
 
   async subscribe() {
-    const filters: any[] = [];
+    this.data.clear();
 
     this._feeds().forEach(feed => {
+      const item: FeedData = {
+        feed,
+        filter: null as any,
+        events: signal<Event[]>([]),
+        subscription: null as SubCloser | null
+      };
+
       if (feed.filters) {
-        filters.push({
+        item.filter = {
           limit: 10,
           kinds: feed.kinds,
           // authors: feed.relayConfig === 'user' ? this._userRelays().map(r => r.url) : this._discoveryRelays().map(r => r.url),
           ...feed.filters
-        });
+        };
       } else {
-        filters.push({
+        item.filter = {
           limit: 10,
           kinds: feed.kinds,
           // authors: feed.relayConfig === 'user' ? this._userRelays().map(r => r.url) : this._discoveryRelays().map(r => r.url)
-        });
-      }
-    });
-
-    const closer = this.relay.subscribe(filters, (event) => {
-      if (!this.events.has(event.id)) {
-        this.events.set(event.id, []);
+        };
       }
 
-      this.events.get(event.id)?.push(event);
-      console.log('Feed event received:', event);
+      const sub = this.relay.subscribe([item.filter], (event) => {
+        // if (!this.events.has(feed.id)) {
+        //   this.events.set(feed.id, []);
+        // }
+
+        item.events.update(events => [...events, event]);
+        console.log('Feed event received:', event);
+      });
+
+      item.subscription = sub as any;
+
+      this.data.set(feed.id, item);
     });
 
-    if (closer) {
-      this.subs.push(closer);
-    }
+    console.log('Subscribed to feeds:', Array.from(this.data.keys()));
+  }
+
+  // Add computed signal for easier template access
+  readonly feedDataMap = computed(() => {
+    const map = new Map<string, Signal<Event[]>>();
+    this.data.forEach((feedData, feedId) => {
+      map.set(feedId, feedData.events);
+    });
+    return map;
+  });
+
+  // Helper method to get events for a specific feed
+  getEventsForFeed(feedId: string): Signal<Event[]> | undefined {
+    return this.data.get(feedId)?.events;
   }
 
   unsubscribe() {
-    this.subs.forEach(sub => sub.close());
-    this.subs = [];
+    this.data.forEach(item => item.subscription?.close());
+    this.data.clear();
     this.logger.debug('Unsubscribed from all feed subscriptions');
   }
 

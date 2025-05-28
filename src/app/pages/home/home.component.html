@@ -114,19 +114,22 @@
             } @else {
             <!-- Default placeholder content - replace with actual content -->
             <div class="column-items">
-              @for(event of feedService.events.get(column.id); track event.id) {
+              @if (feedService.data.has(column.id)) {
+              @for(event of columnEvents().get(column.id) || []; track event.id) {
               <mat-card class="content-card">
                 <mat-card-header>
                   <div mat-card-avatar class="avatar"></div>
-                  <mat-card-title>{{ column.label }} </mat-card-title>
-                  <mat-card-subtitle>User • 2h ago</mat-card-subtitle>
+                  <mat-card-title>{{ event.pubkey | slice:0:8 }}...</mat-card-title>
+                  <mat-card-subtitle>{{ event.created_at * 1000 | date:'short' }}</mat-card-subtitle>
                 </mat-card-header>
                 <mat-card-content>
-                  <p>This is an example post in the {{ column | json }} column. It demonstrates how content will appear
-                    in each column.</p>
+                  <p>{{ event.content }}</p>
                   <div class="tags">
-                    <span class="tag">#nostr</span>
-                    <span class="tag">#example</span>
+                    @for (tag of event.tags; track $index) {
+                    @if (tag[0] === 't') {
+                    <span class="tag">#{{ tag[1] }}</span>
+                    }
+                    }
                   </div>
                 </mat-card-content>
                 <mat-card-actions>
@@ -142,36 +145,11 @@
                 </mat-card-actions>
               </mat-card>
               }
-
-              <!-- Generate some mock items for each column -->
-              <!-- @for (j of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; track j) {
-              <mat-card class="content-card">
-                <mat-card-header>
-                  <div mat-card-avatar class="avatar"></div>
-                  <mat-card-title>{{ column.label }} Item {{ j }}</mat-card-title>
-                  <mat-card-subtitle>User{{ j }} • 2h ago</mat-card-subtitle>
-                </mat-card-header>
-                <mat-card-content>
-                  <p>This is an example post in the {{ column.label }} column. It demonstrates how content will appear
-                    in each column.</p>
-                  <div class="tags">
-                    <span class="tag">#nostr</span>
-                    <span class="tag">#example</span>
-                  </div>
-                </mat-card-content>
-                <mat-card-actions>
-                  <button mat-icon-button>
-                    <mat-icon>favorite_border</mat-icon>
-                  </button>
-                  <button mat-icon-button>
-                    <mat-icon>comment</mat-icon>
-                  </button>
-                  <button mat-icon-button>
-                    <mat-icon>repeat</mat-icon>
-                  </button>
-                </mat-card-actions>
-              </mat-card>
-              } -->
+              } @else {
+              <div class="no-events">
+                <p>No events available for this feed</p>
+              </div>
+              }
             </div>
             }
           </div>
