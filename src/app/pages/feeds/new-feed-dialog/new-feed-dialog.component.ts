@@ -75,14 +75,14 @@ const FEED_TEMPLATES = [
         label: 'Photos',
         icon: 'photo',
         type: 'photos',
-        kinds: [1, 20], // Text notes with images, picture events
+        kinds: [20],
         relayConfig: 'discovery'
       },
       {
         label: 'Videos',
         icon: 'video_library',
         type: 'videos',
-        kinds: [1, 21], // Text notes with videos, video events
+        kinds: [21, 22],
         relayConfig: 'discovery'
       }
     ]
