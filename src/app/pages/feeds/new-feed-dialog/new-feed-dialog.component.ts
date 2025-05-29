@@ -22,6 +22,7 @@ const FEED_TEMPLATES = [
     key: 'news',
     label: 'News',
     icon: 'newspaper',
+    path: 'news',
     description: 'Stay updated with the latest news and articles',
     defaultColumns: [
       {
@@ -44,6 +45,7 @@ const FEED_TEMPLATES = [
     key: 'following',
     label: 'Following',
     icon: 'people',
+    path: 'following',
     description: 'Content from people you follow',
     defaultColumns: [
       {
@@ -66,6 +68,7 @@ const FEED_TEMPLATES = [
     key: 'media',
     label: 'Media',
     icon: 'perm_media',
+    path: 'media',
     description: 'Photos, videos, and multimedia content',
     defaultColumns: [
       {
@@ -181,6 +184,13 @@ const FEED_TEMPLATES = [
                 }
               </mat-select>
               <mat-icon matSuffix>{{ feedForm.get('icon')?.value || 'dynamic_feed' }}</mat-icon>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width">
+                <mat-label>URL Path (Optional)</mat-label>
+                <input matInput formControlName="path" placeholder="custom-column">
+                <mat-hint>URL identifier for this column</mat-hint>
+                <mat-icon matSuffix>link</mat-icon>
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="full-width">
@@ -452,12 +462,13 @@ export class NewFeedDialogComponent {
   private dialogRef = inject(MatDialogRef<NewFeedDialogComponent>);
   private feedService = inject(FeedService);
   readonly data: DialogData = inject(MAT_DIALOG_DATA);
-  
+
   // Form controls
   feedForm = this.fb.group({
     label: [this.data.feed?.label || '', Validators.required],
     icon: [this.data.feed?.icon || 'dynamic_feed'],
-    description: [this.data.feed?.description || '']
+    description: [this.data.feed?.description || ''],
+    path: [this.data.feed?.path || '']
   });
 
   // Signals and state
@@ -467,13 +478,14 @@ export class NewFeedDialogComponent {
 
   selectTemplate(templateKey: string): void {
     this.selectedTemplate.set(templateKey);
-    
+
     const template = this.getSelectedTemplateConfig();
     if (template && !this.isEditMode()) {
       // Auto-fill form with template data
       this.feedForm.patchValue({
         label: template.label,
         icon: template.icon,
+        path: template.path,
         description: template.description
       });
     }
@@ -498,7 +510,7 @@ export class NewFeedDialogComponent {
     if (this.feedForm.valid) {
       const formValue = this.feedForm.value;
       const template = this.getSelectedTemplateConfig();
-      
+
       // Create default columns based on template
       const defaultColumns: ColumnConfig[] = template?.defaultColumns.map(col => ({
         id: crypto.randomUUID(),
@@ -517,6 +529,7 @@ export class NewFeedDialogComponent {
         id: this.data.feed?.id || crypto.randomUUID(),
         label: formValue.label!,
         icon: formValue.icon!,
+        path: formValue.path || undefined,
         description: formValue.description || `${formValue.label} feed`,
         columns: defaultColumns,
         createdAt: this.data.feed?.createdAt || Date.now(),

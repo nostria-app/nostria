@@ -21,6 +21,7 @@ export interface FeedDefinition {
   id: string;
   label: string;
   icon: string;
+  path?: string;
   description?: string;
   columns: ColumnDefinition[];
   createdAt: number;
@@ -85,7 +86,6 @@ export class FeedsCollectionService {
       }
     });
   }
-
   /**
    * Convert FeedConfig to FeedDefinition for UI compatibility
    */
@@ -94,6 +94,7 @@ export class FeedsCollectionService {
       id: config.id,
       label: config.label,
       icon: config.icon,
+      path: config.path,
       description: config.description,
       columns: config.columns as ColumnDefinition[],
       createdAt: config.createdAt,
@@ -109,6 +110,7 @@ export class FeedsCollectionService {
       id: definition.id,
       label: definition.label,
       icon: definition.icon,
+      path: definition.path,
       description: definition.description,
       columns: definition.columns as ColumnConfig[],
       createdAt: definition.createdAt,
