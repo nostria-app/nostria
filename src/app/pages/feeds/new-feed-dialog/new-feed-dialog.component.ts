@@ -473,7 +473,7 @@ export class NewFeedDialogComponent {
 
   // Signals and state
   isEditMode = signal(!!this.data.feed);
-  selectedTemplate = signal<string>('news');
+  selectedTemplate = signal<string>('empty');
   feedTemplates = signal(FEED_TEMPLATES);
 
   selectTemplate(templateKey: string): void {
@@ -510,8 +510,6 @@ export class NewFeedDialogComponent {
     if (this.feedForm.valid) {
       const formValue = this.feedForm.value;
       const template = this.getSelectedTemplateConfig();
-
-      debugger;
 
       // Create default columns based on template
       const defaultColumns: ColumnConfig[] = template?.defaultColumns.map(col => ({
