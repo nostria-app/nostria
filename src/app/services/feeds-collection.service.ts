@@ -71,7 +71,6 @@ export class FeedsCollectionService {
     const feedId = this._activeFeedId();
     return feedId ? this.feeds().find(f => f.id === feedId) : null;
   });
-
   constructor() {
     this.loadActiveFeed();
     
@@ -83,6 +82,11 @@ export class FeedsCollectionService {
       if (feeds.length > 0 && !activeFeedId) {
         this._activeFeedId.set(feeds[0].id);
         this.saveActiveFeed();
+        // Also set in FeedService
+        this.feedService.setActiveFeed(feeds[0].id);
+      } else if (activeFeedId && feeds.length > 0) {
+        // Ensure FeedService is in sync with loaded active feed
+        this.feedService.setActiveFeed(activeFeedId);
       }
     });
   }
@@ -200,7 +204,6 @@ export class FeedsCollectionService {
   getFeedById(id: string): FeedDefinition | undefined {
     return this.feeds().find(feed => feed.id === id);
   }
-
   /**
    * Set the active feed
    */
@@ -209,6 +212,10 @@ export class FeedsCollectionService {
     if (feed) {
       this._activeFeedId.set(feedId);
       this.saveActiveFeed();
+      
+      // Delegate subscription management to FeedService
+      this.feedService.setActiveFeed(feedId);
+      
       this.logger.debug(`Set active feed to ${feedId}`);
       return true;
     }
