@@ -7,13 +7,13 @@ import { Event } from 'nostr-tools';
 import { SubCloser } from 'nostr-tools/abstract-pool';
 
 export interface FeedData {
-  feed: FeedConfig,
+  column: ColumnConfig,
   filter: any,
   events: WritableSignal<Event[]>,
   subscription: SubCloser | null
 }
 
-export interface FeedConfig {
+export interface ColumnConfig {
   id: string;
   label: string;
   icon: string;
@@ -23,6 +23,16 @@ export interface FeedConfig {
   relayConfig: 'user' | 'discovery' | 'custom';
   customRelays?: string[];
   filters?: Record<string, any>;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface FeedConfig {
+  id: string;
+  label: string;
+  icon: string;
+  description?: string;
+  columns: ColumnConfig[];
   createdAt: number;
   updatedAt: number;
 }
@@ -68,12 +78,22 @@ const FEED_TYPES = {
 
 const DEFAULT_FEEDS: FeedConfig[] = [
   {
-    id: 'notes',
-    label: 'Notes',
-    icon: 'chat',
-    type: 'notes',
-    kinds: [1],
-    relayConfig: 'user',
+    id: 'default-feed',
+    label: 'My Feed',
+    icon: 'dynamic_feed',
+    description: 'Default feed with notes',
+    columns: [
+      {
+        id: 'notes',
+        label: 'Notes',
+        icon: 'chat',
+        type: 'notes',
+        kinds: [1],
+        relayConfig: 'user',
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      }
+    ],
     createdAt: Date.now(),
     updatedAt: Date.now()
   }
@@ -152,91 +172,134 @@ export class FeedService {
       this.subscribeToFeed(feed);
     });
     console.log('Subscribed to feeds:', Array.from(this.data.keys()));
-  }
-  /**
-   * Subscribe to a single feed
+  }  /**
+   * Subscribe to a single feed and all its columns
    */
   private subscribeToFeed(feed: FeedConfig): void {
+    // Subscribe to each column in the feed
+    feed.columns.forEach(column => {
+      this.subscribeToColumn(column);
+    });
+  }
+
+  /**
+   * Subscribe to a single column
+   */
+  private subscribeToColumn(column: ColumnConfig): void {
     // Don't subscribe if already subscribed
-    if (this.data.has(feed.id)) {
-      this.logger.warn(`Feed ${feed.id} is already subscribed`);
+    if (this.data.has(column.id)) {
+      this.logger.warn(`Column ${column.id} is already subscribed`);
       return;
     }
 
     const item: FeedData = {
-      feed,
+      column,
       filter: null as any,
       events: signal<Event[]>([]),
       subscription: null as SubCloser | null
     };
 
-    // Build filter based on feed configuration
-    if (feed.filters) {
+    // Build filter based on column configuration
+    if (column.filters) {
       item.filter = {
         limit: 6,
-        kinds: feed.kinds,
-        // authors: feed.relayConfig === 'user' ? this._userRelays().map(r => r.url) : this._discoveryRelays().map(r => r.url),
-        ...feed.filters
+        kinds: column.kinds,
+        // authors: column.relayConfig === 'user' ? this._userRelays().map(r => r.url) : this._discoveryRelays().map(r => r.url),
+        ...column.filters
       };
     } else {
       item.filter = {
         limit: 6,
-        kinds: feed.kinds,
-        // authors: feed.relayConfig === 'user' ? this._userRelays().map(r => r.url) : this._discoveryRelays().map(r => r.url)
+        kinds: column.kinds,
+        // authors: column.relayConfig === 'user' ? this._userRelays().map(r => r.url) : this._discoveryRelays().map(r => r.url)
       };
     }
 
     // Subscribe to relay events
     const sub = this.relay.subscribe([item.filter], (event) => {
       item.events.update(events => [...events, event]);
-      this.logger.debug(`Feed event received for ${feed.id}:`, event);
+      this.logger.debug(`Column event received for ${column.id}:`, event);
     });
 
     item.subscription = sub as any;
-    this.data.set(feed.id, item);
+    this.data.set(column.id, item);
     
     // Update the reactive signal
     this._feedData.update(map => {
       const newMap = new Map(map);
-      newMap.set(feed.id, item);
+      newMap.set(column.id, item);
       return newMap;
     });
     
-    this.logger.debug(`Subscribed to feed: ${feed.id}`);
-  }
-  /**
-   * Unsubscribe from a single feed
+    this.logger.debug(`Subscribed to column: ${column.id}`);
+  }  /**
+   * Unsubscribe from a single feed (unsubscribes from all its columns)
    */
   private unsubscribeFromFeed(feedId: string): void {
-    const feedData = this.data.get(feedId);
-    if (feedData) {
+    const feed = this.getFeedById(feedId);
+    if (feed) {
+      // Unsubscribe from each column in the feed
+      feed.columns.forEach(column => {
+        this.unsubscribeFromColumn(column.id);
+      });
+      this.logger.debug(`Unsubscribed from all columns in feed: ${feedId}`);
+    }
+  }
+
+  /**
+   * Unsubscribe from a single column
+   */
+  private unsubscribeFromColumn(columnId: string): void {
+    const columnData = this.data.get(columnId);
+    if (columnData) {
       // Close the subscription
-      if (feedData.subscription) {
-        feedData.subscription.close();
-        this.logger.debug(`Closed subscription for feed: ${feedId}`);
+      if (columnData.subscription) {
+        columnData.subscription.close();
+        this.logger.debug(`Closed subscription for column: ${columnId}`);
       }
       
       // Clear events
-      feedData.events.set([]);
+      columnData.events.set([]);
       
       // Remove from data map
-      this.data.delete(feedId);
+      this.data.delete(columnId);
       
       // Update the reactive signal
       this._feedData.update(map => {
         const newMap = new Map(map);
-        newMap.delete(feedId);
+        newMap.delete(columnId);
         return newMap;
       });
       
-      this.logger.debug(`Unsubscribed from feed: ${feedId}`);
+      this.logger.debug(`Unsubscribed from column: ${columnId}`);
     }
   }
 
+  // Helper method to get events for a specific feed (aggregates all column events)
+  getEventsForFeed(feedId: string): Signal<Event[]> {
+    const feed = this.getFeedById(feedId);
+    if (!feed) {
+      return signal<Event[]>([]);
+    }
 
-  // Helper method to get events for a specific feed
-  getEventsForFeed(feedId: string): Signal<Event[]> | undefined {
-    return this.data.get(feedId)?.events;
+    // Create a computed signal that aggregates events from all columns in the feed
+    return computed(() => {
+      const allEvents: Event[] = [];
+      feed.columns.forEach(column => {
+        const columnData = this.data.get(column.id);
+        if (columnData) {
+          allEvents.push(...columnData.events());
+        }
+      });
+      
+      // Sort events by timestamp (newest first)
+      return allEvents.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+    });
+  }
+
+  // Helper method to get events for a specific column
+  getEventsForColumn(columnId: string): Signal<Event[]> | undefined {
+    return this.data.get(columnId)?.events;
   }
   unsubscribe() {
     this.data.forEach(item => item.subscription?.close());
@@ -333,8 +396,7 @@ export class FeedService {
 
     this.logger.debug('Added new feed and subscribed', newFeed);
     return newFeed;
-  }
-  /**
+  }  /**
    * Update an existing feed
    */
   updateFeed(id: string, updates: Partial<Omit<FeedConfig, 'id' | 'createdAt'>>): boolean {
@@ -344,16 +406,12 @@ export class FeedService {
       return false;
     }
 
-    // Check if we need to resubscribe (if kinds, filters, or relay config changed)
+    // Check if we need to resubscribe (if columns changed)
     const currentFeed = this._feeds()[feedIndex];
-    const needsResubscription = 
-      updates.kinds !== undefined || 
-      updates.filters !== undefined || 
-      updates.relayConfig !== undefined ||
-      updates.customRelays !== undefined;
+    const needsResubscription = updates.columns !== undefined;
 
     if (needsResubscription) {
-      // Unsubscribe from current feed
+      // Unsubscribe from current feed columns
       this.unsubscribeFromFeed(id);
     }
 

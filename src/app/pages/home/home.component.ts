@@ -12,12 +12,14 @@ import { NotificationService } from '../../services/notification.service';
 import { LayoutService } from '../../services/layout.service';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { NewFeedDialogComponent } from './new-feed-dialog/new-feed-dialog.component';
+import { NewColumnDialogComponent } from './new-column-dialog/new-column-dialog.component';
 import { RouterModule } from '@angular/router';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { LocalStorageService } from '../../services/local-storage.service';
 import { LoggerService } from '../../services/logger.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FeedService, FeedConfig } from '../../services/feed.service';
+import { FeedsCollectionService, FeedDefinition, ColumnDefinition } from '../../services/feeds-collection.service';
 import { NostrRecord } from '../../interfaces';
 import { Event } from 'nostr-tools';
 import { decode } from 'blurhash';
@@ -53,18 +55,18 @@ const DEFAULT_COLUMNS: NavLink[] = [
     RouterModule,
     MatDialogModule,
     MatProgressSpinnerModule,
-    UserProfileComponent
+    UserProfileComponent,
   ],
   templateUrl: './home.component.html',
   styleUrl: './home.component.scss'
 })
-export class HomeComponent {
-  // Services
+export class HomeComponent {  // Services
   private nostrService = inject(NostrService);
   private notificationService = inject(NotificationService);
   private layoutService = inject(LayoutService);
   private dialog = inject(MatDialog);
   feedService = inject(FeedService);
+  feedsCollectionService = inject(FeedsCollectionService);
   private logger = inject(LoggerService);
 
   // UI State Signals
@@ -144,11 +146,10 @@ export class HomeComponent {
   //   console.log('Available feeds:', this.feedService.data.keys());
   //   return this.feedService.data.get(columnId)?.events() || [];
   // }
-
-  // Replace the old columns signal with feeds from FeedService
-  feeds = computed(() => this.feedService.feeds());
-
-  columns = computed<NavLink[]>(() => this.feeds() as NavLink[]);
+  // Replace the old columns signal with columns from active feed
+  feeds = computed(() => this.feedsCollectionService.feeds());
+  activeFeed = computed(() => this.feedsCollectionService.activeFeed());
+  columns = computed<ColumnDefinition[]>(() => this.feedsCollectionService.getActiveColumns());
 
   // Update columns computed to map from feeds
   // columns = computed(() => {
@@ -393,7 +394,7 @@ export class HomeComponent {
     }
   }
 
-  onColumnDrop(event: CdkDragDrop<NavLink[]>): void {
+  onColumnDrop(event: CdkDragDrop<ColumnDefinition[]>): void {
     const previousIndex = event.previousIndex;
     const currentIndex = event.currentIndex;
 
@@ -492,9 +493,14 @@ export class HomeComponent {
       }
     }
   }
-
   addNewColumn(): void {
-    const dialogRef = this.dialog.open(NewFeedDialogComponent, {
+    const activeFeed = this.activeFeed();
+    if (!activeFeed) {
+      this.notificationService.notify('Please select a feed first');
+      return;
+    }
+
+    const dialogRef = this.dialog.open(NewColumnDialogComponent, {
       width: '600px',
       maxWidth: '90vw',
       maxHeight: '90vh',
@@ -504,67 +510,105 @@ export class HomeComponent {
     });
 
     dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        const newFeed = this.feedService.addFeed(result);
+      if (result && activeFeed) {
+        // Add the new column to the current feed
+        const updatedFeed = {
+          ...activeFeed,
+          columns: [...activeFeed.columns, result],
+          updatedAt: Date.now()
+        };
 
-        const newIndex = this.feeds().length - 1;
+        this.feedsCollectionService.updateFeed(activeFeed.id, updatedFeed);
+
+        const newColumnIndex = updatedFeed.columns.length - 1;
 
         if (this.isMobileView()) {
-          this.visibleColumnIndex.set(newIndex);
+          this.visibleColumnIndex.set(newColumnIndex);
         } else {
           setTimeout(() => {
-            this.scrollToColumn(newIndex);
+            this.scrollToColumn(newColumnIndex);
           }, 100);
         }
 
         this.columnContentLoaded.update(loaded => ({
           ...loaded,
-          [newFeed.id]: false
+          [result.id]: false
         }));
 
-        this.notificationService.notify(`Feed "${newFeed.label}" created`);
+        this.notificationService.notify(`Column "${result.label}" added to "${activeFeed.label}"`);
       }
     });
   }
-
   editColumn(index: number): void {
-    const feeds = this.feeds();
-    if (index < 0 || index >= feeds.length) return;
+    const activeFeed = this.activeFeed();
+    const columns = this.columns();
+    
+    if (!activeFeed || index < 0 || index >= columns.length) return;
 
-    const feed = feeds[index];
+    const column = columns[index];
 
-    const dialogRef = this.dialog.open(NewFeedDialogComponent, {
+    const dialogRef = this.dialog.open(NewColumnDialogComponent, {
       width: '600px',
       maxWidth: '90vw',
       maxHeight: '90vh',
       data: {
-        icons: ['chat', 'reply_all', 'bookmark', 'image', 'people', 'tag', 'filter_list', 'article', 'video_library', 'music_note', 'photo', 'explore', 'trending_up', 'group', 'public'],
-        feed: feed
+        column: column,
+        icons: ['chat', 'reply_all', 'bookmark', 'image', 'people', 'tag', 'filter_list', 'article', 'video_library', 'music_note', 'photo', 'explore', 'trending_up', 'group', 'public']
       }
     });
 
     dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        this.feedService.updateFeed(feed.id, result);
-        this.notificationService.notify(`Feed "${result.label}" updated`);
+      if (result && activeFeed) {
+        // Update the specific column in the feed
+        const updatedColumns = [...activeFeed.columns];
+        updatedColumns[index] = result;
+        
+        const updatedFeed = {
+          ...activeFeed,
+          columns: updatedColumns,
+          updatedAt: Date.now()
+        };
+
+        this.feedsCollectionService.updateFeed(activeFeed.id, updatedFeed);
+        this.notificationService.notify(`Column "${result.label}" updated`);
       }
     });
   }
-
   removeColumn(index: number): void {
-    const feeds = this.feeds();
-    if (index < 0 || index >= feeds.length) return;
+    const activeFeed = this.activeFeed();
+    const columns = this.columns();
+    
+    if (!activeFeed || index < 0 || index >= columns.length) return;
 
-    const feed = feeds[index];
-    this.feedService.removeFeed(feed.id);
-
-    if (this.visibleColumnIndex() >= feeds.length - 1) {
-      this.visibleColumnIndex.set(Math.max(0, feeds.length - 2));
-    } else if (this.visibleColumnIndex() > index) {
-      this.visibleColumnIndex.update(idx => idx - 1);
+    const column = columns[index];
+    
+    // Prevent removing the last column - feed must have at least one column
+    if (columns.length <= 1) {
+      this.notificationService.notify('Cannot remove the last column from a feed');
+      return;
     }
 
-    this.notificationService.notify(`Feed "${feed.label}" removed`);
+    // Update the feed by removing the column at the specified index
+    const updatedColumns = activeFeed.columns.filter((_, i) => i !== index);
+    
+    const updatedFeed = {
+      ...activeFeed,
+      columns: updatedColumns,
+      updatedAt: Date.now()
+    };
+
+    this.feedsCollectionService.updateFeed(activeFeed.id, updatedFeed);
+
+    // Adjust visible column index if needed for mobile view
+    if (this.isMobileView()) {
+      if (this.visibleColumnIndex() >= updatedColumns.length) {
+        this.visibleColumnIndex.set(Math.max(0, updatedColumns.length - 1));
+      } else if (this.visibleColumnIndex() > index) {
+        this.visibleColumnIndex.update(idx => idx - 1);
+      }
+    }
+
+    this.notificationService.notify(`Column "${column.label}" removed`);
   }
   ngOnDestroy() {
     // Cleanup subscriptions if needed
@@ -673,6 +717,76 @@ export class HomeComponent {
           placeholder.style.display = 'none';
         }, 300);
       }
+    }
+  }
+
+  /**
+   * Select a feed
+   */
+  selectFeed(feedId: string): void {
+    this.feedsCollectionService.setActiveFeed(feedId);
+  }
+
+  /**
+   * Add a new feed
+   */
+  addNewFeed(): void {
+    const dialogRef = this.dialog.open(NewFeedDialogComponent, {
+      data: {
+        icons: ['dynamic_feed', 'bookmark', 'explore', 'trending_up', 'star', 'favorite', 'rss_feed']
+      }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        // Convert the result to a FeedDefinition
+        const newFeed = this.feedsCollectionService.addFeed({
+          label: result.label || 'New Feed',
+          icon: result.icon || 'dynamic_feed',
+          description: result.description || '',
+          columns: []
+        });
+
+        // Set as active feed
+        this.feedsCollectionService.setActiveFeed(newFeed.id);
+      }
+    });
+  }
+
+  /**
+   * Edit the current feed
+   */
+  editCurrentFeed(): void {
+    const activeFeed = this.activeFeed();
+    if (!activeFeed) return;
+
+    const dialogRef = this.dialog.open(NewFeedDialogComponent, {
+      data: {
+        icons: ['dynamic_feed', 'bookmark', 'explore', 'trending_up', 'star', 'favorite', 'rss_feed'],
+        feed: activeFeed
+      }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result && activeFeed) {
+        this.feedsCollectionService.updateFeed(activeFeed.id, {
+          label: result.label,
+          icon: result.icon,
+          description: result.description
+        });
+      }
+    });
+  }
+
+  /**
+   * Delete the current feed
+   */
+  deleteCurrentFeed(): void {
+    const activeFeed = this.activeFeed();
+    if (!activeFeed || this.feeds().length <= 1) return;
+
+    if (confirm(`Are you sure you want to delete the feed "${activeFeed.label}"?`)) {
+      this.feedsCollectionService.removeFeed(activeFeed.id);
     }
   }
 }
