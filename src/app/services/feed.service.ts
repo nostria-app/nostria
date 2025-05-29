@@ -5,6 +5,7 @@ import { NostrService } from './nostr.service';
 import { RelayService } from './relay.service';
 import { Event } from 'nostr-tools';
 import { SubCloser } from 'nostr-tools/abstract-pool';
+import { ApplicationStateService } from './application-state.service';
 
 export interface FeedData {
   column: ColumnConfig,
@@ -108,9 +109,7 @@ export class FeedService {
   private readonly logger = inject(LoggerService);
   private readonly nostr = inject(NostrService);
   private readonly relay = inject(RelayService);
-
-  private readonly FEEDS_STORAGE_KEY = 'nostria-feeds';
-  private readonly RELAYS_STORAGE_KEY = 'nostria-relays';
+  private readonly appState = inject(ApplicationStateService);
 
   // Signals for feeds and relays
   private readonly _feeds = signal<FeedConfig[]>([]);
@@ -135,7 +134,7 @@ export class FeedService {
    */
   private loadFeeds(): void {
     try {
-      const storedFeeds = this.localStorageService.getObject<FeedConfig[]>(this.FEEDS_STORAGE_KEY);
+      const storedFeeds = this.localStorageService.getObject<FeedConfig[]>(this.appState.FEEDS_STORAGE_KEY);
       if (storedFeeds && Array.isArray(storedFeeds) && storedFeeds.length > 0) {
         this._feeds.set(storedFeeds);
         this.logger.debug('Loaded feeds from storage', storedFeeds);
@@ -316,7 +315,7 @@ export class FeedService {
    */
   private saveFeeds(): void {
     try {
-      this.localStorageService.setObject(this.FEEDS_STORAGE_KEY, this._feeds());
+      this.localStorageService.setObject(this.appState.FEEDS_STORAGE_KEY, this._feeds());
       this.logger.debug('Saved feeds to storage', this._feeds());
     } catch (error) {
       this.logger.error('Error saving feeds to storage:', error);
@@ -331,7 +330,7 @@ export class FeedService {
       const relayData = this.localStorageService.getObject<{
         user: RelayConfig[];
         discovery: RelayConfig[];
-      }>(this.RELAYS_STORAGE_KEY);
+      }>(this.appState.RELAYS_STORAGE_KEY);
 
       if (relayData) {
         this._userRelays.set(relayData.user || []);
@@ -374,7 +373,7 @@ export class FeedService {
         user: this._userRelays(),
         discovery: this._discoveryRelays()
       };
-      this.localStorageService.setObject(this.RELAYS_STORAGE_KEY, relayData);
+      this.localStorageService.setObject(this.appState.RELAYS_STORAGE_KEY, relayData);
       this.logger.debug('Saved relays to storage', relayData);
     } catch (error) {
       this.logger.error('Error saving relays to storage:', error);
