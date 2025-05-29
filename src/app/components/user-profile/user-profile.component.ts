@@ -13,6 +13,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatButtonModule } from '@angular/material/button';
 import { InfoRecord } from '../../services/storage.service';
+import { Event } from 'nostr-tools';
 
 @Component({
     selector: 'app-user-profile',
@@ -38,8 +39,9 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
     private elementRef = inject(ElementRef);
     layout = inject(LayoutService);
     pubkey = input<string>('');
-    info = input<InfoRecord | undefined>(undefined);
     npub = signal<string | undefined>(undefined);
+    event = input<Event | undefined>(undefined);
+    info = input<InfoRecord | undefined>(undefined);
     profile = signal<any>(null);
     isLoading = signal(false);
     error = signal<string>('');
@@ -81,6 +83,18 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
                 }
             }
         });
+
+        effect(() => {
+            const event = this.event();
+
+            if (event) {
+                this.profile.set({
+                    data: JSON.parse(event.content),
+                    event
+                });
+            }
+        });
+
 
         // Additional effect to watch for visibility changes and scrolling status
         // effect(() => {
@@ -298,7 +312,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
     }    /**
      * Handles image load errors by setting the imageLoadError signal to true
      */
-    onImageLoadError(event: Event): void {
+    onImageLoadError(event: globalThis.Event): void {
         this.imageLoadError.set(true);
     }
 

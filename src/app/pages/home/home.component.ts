@@ -21,6 +21,7 @@ import { FeedService, FeedConfig } from '../../services/feed.service';
 import { NostrRecord } from '../../interfaces';
 import { Event } from 'nostr-tools';
 import { decode } from 'blurhash';
+import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 
 interface NavLink {
   id: string;
@@ -51,7 +52,8 @@ const DEFAULT_COLUMNS: NavLink[] = [
     DragDropModule,
     RouterModule,
     MatDialogModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
+    UserProfileComponent
   ],
   templateUrl: './home.component.html',
   styleUrl: './home.component.scss'
