@@ -116,10 +116,15 @@ export class FeedService {
   private readonly _userRelays = signal<RelayConfig[]>([]);
   private readonly _discoveryRelays = signal<RelayConfig[]>([]);
 
+  // Active feed subscription management
+  private readonly _activeFeedId = signal<string | null>(null);
+  private activeFeedSubscriptions = new Set<string>(); // Track column IDs with active subscriptions
+
   // Public computed signals
   readonly feeds = computed(() => this._feeds());
   readonly userRelays = computed(() => this._userRelays());
   readonly discoveryRelays = computed(() => this._discoveryRelays());
+  readonly activeFeedId = computed(() => this._activeFeedId());
 
   // Feed type definitions
   readonly feedTypes = FEED_TYPES;
