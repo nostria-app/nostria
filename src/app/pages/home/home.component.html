@@ -1,22 +1,23 @@
-<div class="home-container" [ngClass]="columnLayout()">  <!-- Header Section -->
+<div class="home-container" [ngClass]="columnLayout()"> <!-- Header Section -->
   <header class="header-section">
     <div class="title-section">
       <!-- Feed Selector -->
       <div class="feed-selector">
         <div class="feed-tabs">
+
+          <button mat-icon-button (click)="addNewFeed()" matTooltip="Add feed">
+            <mat-icon>add</mat-icon>
+          </button>
+
           @for (feed of feeds(); track feed.id) {
-          <button 
-            class="feed-tab" 
-            mat-button
-            [class.active]="feed.id === feedsCollectionService.activeFeedId()"
-            (click)="selectFeed(feed.id)"
-            [matTooltip]="feed.description || feed.label">
+          <button class="feed-tab" mat-button [class.active]="feed.id === feedsCollectionService.activeFeedId()"
+            (click)="selectFeed(feed.id)" [matTooltip]="feed.description || feed.label">
             <mat-icon>{{ feed.icon }}</mat-icon>
             <span>{{ feed.label }}</span>
           </button>
           }
         </div>
-        
+
         <!-- Feed Management Actions -->
         <div class="feed-actions">
           <button mat-icon-button [matMenuTriggerFor]="feedMenu" matTooltip="Manage feeds">
@@ -61,7 +62,7 @@
         <mat-icon>filter_list</mat-icon>
       </button> -->
       <button mat-icon-button (click)="addNewColumn()" matTooltip="Add column">
-        <mat-icon>add</mat-icon>
+        <mat-icon>add_column_right</mat-icon>
       </button>
     </div>
   </header>
@@ -238,8 +239,8 @@
 
                   <!-- Articles (kind 0) -->
                   @else if (event.kind === 0) {
-                    <!-- <app-user-profile [event]="event" [pubkey]="event.pubkey"></app-user-profile> -->
-                     <app-user-profile [view]="'details'" [event]="event"></app-user-profile>
+                  <!-- <app-user-profile [event]="event" [pubkey]="event.pubkey"></app-user-profile> -->
+                  <app-user-profile [view]="'details'" [event]="event"></app-user-profile>
                   }
 
                   <!-- Notes (kind 1) and Custom -->
