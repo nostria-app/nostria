@@ -218,7 +218,7 @@ export class FeedService {
 
     // Subscribe to relay events
     const sub = this.relay.subscribe([item.filter], (event) => {
-      item.events.update(events => [...events, event]);
+      item.events.update(events => [event, ...events]);
       this.logger.debug(`Column event received for ${column.id}:`, event);
     });
 

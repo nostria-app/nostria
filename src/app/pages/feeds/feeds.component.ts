@@ -642,8 +642,10 @@ export class FeedsComponent {  // Services
 
     this.notificationService.notify(`Column "${column.label}" removed`);
   }
+
   ngOnDestroy() {
-    // Cleanup subscriptions if needed
+    this.logger.debug('Cleaning up resources...');
+    this.feedService.unsubscribe();
   }
   // Helper methods for content rendering
   getImageUrls(event: any): string[] {
