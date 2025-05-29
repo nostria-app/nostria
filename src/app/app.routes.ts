@@ -1,5 +1,4 @@
 import { Routes } from '@angular/router';
-import { HomeComponent } from './pages/home/home.component';
 import { RelaysComponent } from './pages/relays/relays.component';
 import { SettingsComponent } from './pages/settings/settings.component';
 import { AboutComponent } from './pages/about/about.component';
@@ -27,10 +26,11 @@ import { AccountsComponent } from './pages/accounts/accounts.component';
 import { NotificationSettingsComponent } from './pages/notifications/settings/settings.component';
 import { LoginDialogComponent } from './components/login-dialog/login-dialog.component';
 import { ProfileEditComponent } from './pages/profile/profile-edit/profile-edit.component';
+import { FeedsComponent } from './pages/feeds/feeds.component';
 
 export const routes: Routes = [
-  { path: '', component: HomeComponent, pathMatch: 'full' },
-  { path: 'home', component: HomeComponent },
+  { path: '', component: FeedsComponent, pathMatch: 'full' },
+  { path: 'f', component: FeedsComponent },
   { path: 'welcome', component: WelcomeComponent },
   { path: 'beta', component: BetaComponent, title: 'Beta' },
   { path: 'relays', component: RelaysComponent },
