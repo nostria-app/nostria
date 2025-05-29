@@ -394,17 +394,23 @@ export class HomeComponent {  // Services
         break;
     }
   }
-
   onColumnDrop(event: CdkDragDrop<ColumnDefinition[]>): void {
     const previousIndex = event.previousIndex;
     const currentIndex = event.currentIndex;
 
     if (previousIndex !== currentIndex) {
-      const feedIds = this.feeds().map(feed => feed.id);
-      moveItemInArray(feedIds, previousIndex, currentIndex);
+      const activeFeed = this.activeFeed();
+      if (!activeFeed) return;
 
-      // Update feed order using FeedService
-      this.feedService.reorderFeeds(feedIds);
+      // Get the current columns and reorder them
+      const columns = [...activeFeed.columns];
+      moveItemInArray(columns, previousIndex, currentIndex);
+
+      // Update the feed with the new column order
+      this.feedsCollectionService.updateFeed(activeFeed.id, { 
+        columns: columns, 
+        updatedAt: Date.now() 
+      });
 
       // Update the visible column index if in mobile view
       if (this.isMobileView()) {
@@ -426,8 +432,8 @@ export class HomeComponent {  // Services
         }
       }
 
-      this.notificationService.notify('Feed order changed');
-      this.logger.debug('Feed order changed', feedIds);
+      this.notificationService.notify('Column order changed');
+      this.logger.debug('Column order changed', columns.map(col => col.id));
 
       // Let's scroll to ensure the dropped column is visible
       if (!this.isMobileView()) {
