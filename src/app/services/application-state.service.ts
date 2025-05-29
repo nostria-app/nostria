@@ -25,6 +25,8 @@ export class ApplicationStateService {
     readonly PEOPLE_VIEW_MODE = 'nostria-peple-view-mode';
     readonly MEDIA_ACTIVE_TAB = 'nostria-media-active-tab';
     readonly WELCOME = 'nostria-welcome';
+    readonly FEEDS_STORAGE_KEY = 'nostria-feeds';
+    readonly RELAYS_STORAGE_KEY = 'nostria-relays';
 
     showOfflineWarning = computed(() => !this.isOnline() && !this.offlineDismissed());
     // showOfflineWarning = signal(true);
