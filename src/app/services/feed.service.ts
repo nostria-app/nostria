@@ -237,12 +237,14 @@ export class FeedService {
    */
   private unsubscribeFromFeed(feedId: string): void {
     const feed = this.getFeedById(feedId);
-    if (feed) {
+    if (feed && feed.columns) {
       // Unsubscribe from each column in the feed
       feed.columns.forEach(column => {
         this.unsubscribeFromColumn(column.id);
       });
       this.logger.debug(`Unsubscribed from all columns in feed: ${feedId}`);
+    } else {
+      this.logger.warn(`Cannot unsubscribe from feed ${feedId}: feed not found or has no columns`);
     }
   }
 

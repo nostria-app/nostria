@@ -31,7 +31,7 @@
               <mat-icon>edit</mat-icon>
               <span>Edit Feed</span>
             </button>
-            <button mat-menu-item (click)="deleteCurrentFeed()" [disabled]="!activeFeed() || feeds().length <= 1">
+            <button mat-menu-item (click)="deleteCurrentFeed()" [disabled]="!activeFeed()">
               <mat-icon>delete</mat-icon>
               <span>Delete Feed</span>
             </button>

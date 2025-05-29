@@ -15,6 +15,7 @@ import { NewFeedDialogComponent } from './new-feed-dialog/new-feed-dialog.compon
 import { NewColumnDialogComponent } from './new-column-dialog/new-column-dialog.component';
 import { RouterModule } from '@angular/router';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { ConfirmDialogComponent, ConfirmDialogData } from '../../components/confirm-dialog/confirm-dialog.component';
 import { LocalStorageService } from '../../services/local-storage.service';
 import { LoggerService } from '../../services/logger.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -777,16 +778,26 @@ export class HomeComponent {  // Services
       }
     });
   }
-
   /**
    * Delete the current feed
    */
   deleteCurrentFeed(): void {
     const activeFeed = this.activeFeed();
-    if (!activeFeed || this.feeds().length <= 1) return;
+    if (!activeFeed) return;
 
-    if (confirm(`Are you sure you want to delete the feed "${activeFeed.label}"?`)) {
-      this.feedsCollectionService.removeFeed(activeFeed.id);
-    }
+    // Show confirmation dialog
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Delete Feed',
+        message: `Are you sure you want to delete the feed "${activeFeed.label}"?`,
+        confirmText: 'Delete Feed',
+        cancelText: 'Cancel',
+        confirmColor: 'warn'
+      } as ConfirmDialogData
+    });    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.feedsCollectionService.removeFeed(activeFeed.id);
+      }
+    });
   }
 }
