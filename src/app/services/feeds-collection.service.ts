@@ -161,19 +161,19 @@ export class FeedsCollectionService {
     
     return this.convertFeedConfigsToDefinitions([feedConfig])[0];
   }
-
   /**
    * Update a feed (delegates to FeedService)
    */
   updateFeed(id: string, updates: Partial<Omit<FeedDefinition, 'id' | 'createdAt'>>): boolean {
-    const feedConfig: Partial<Omit<FeedConfig, 'id' | 'createdAt'>> = {
-      label: updates.label,
-      icon: updates.icon,
-      description: updates.description,
-      path: updates.path,
-      columns: updates.columns as ColumnConfig[],
-      updatedAt: updates.updatedAt
-    };
+    // Only include properties that are actually being updated to avoid overwriting with undefined
+    const feedConfig: Partial<Omit<FeedConfig, 'id' | 'createdAt'>> = {};
+    
+    if (updates.label !== undefined) feedConfig.label = updates.label;
+    if (updates.icon !== undefined) feedConfig.icon = updates.icon;
+    if (updates.description !== undefined) feedConfig.description = updates.description;
+    if (updates.path !== undefined) feedConfig.path = updates.path;
+    if (updates.columns !== undefined) feedConfig.columns = updates.columns as ColumnConfig[];
+    if (updates.updatedAt !== undefined) feedConfig.updatedAt = updates.updatedAt;
     
     return this.feedService.updateFeed(id, feedConfig);
   }
