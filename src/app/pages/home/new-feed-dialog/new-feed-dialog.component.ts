@@ -221,10 +221,9 @@ const FEED_TEMPLATES = [
       </form>
     </div>
   `,
-  styles: [`
-    .dialog-container {
-      width: 700px;
-      max-width: 90vw;
+  styles: [`    .dialog-container {
+      width: 100%;
+      max-width: 100%;
       max-height: 90vh;
       display: flex;
       flex-direction: column;
