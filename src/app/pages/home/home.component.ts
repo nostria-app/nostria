@@ -730,9 +730,10 @@ export class HomeComponent {  // Services
 
   /**
    * Add a new feed
-   */
-  addNewFeed(): void {
+   */  addNewFeed(): void {
     const dialogRef = this.dialog.open(NewFeedDialogComponent, {
+      width: '900px',
+      maxWidth: '90vw',
       data: {
         icons: ['dynamic_feed', 'bookmark', 'explore', 'trending_up', 'star', 'favorite', 'rss_feed']
       }
@@ -756,12 +757,13 @@ export class HomeComponent {  // Services
 
   /**
    * Edit the current feed
-   */
-  editCurrentFeed(): void {
+   */  editCurrentFeed(): void {
     const activeFeed = this.activeFeed();
     if (!activeFeed) return;
 
     const dialogRef = this.dialog.open(NewFeedDialogComponent, {
+      width: '900px',
+      maxWidth: '90vw',
       data: {
         icons: ['dynamic_feed', 'bookmark', 'explore', 'trending_up', 'star', 'favorite', 'rss_feed'],
         feed: activeFeed

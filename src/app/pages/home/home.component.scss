@@ -91,15 +91,15 @@
 
             &:hover:not(.active) {
               background-color: var(--mat-sys-surface-container-high);
-              transform: translateY(-1px);
-              box-shadow: var(--mat-sys-level1);
+              // transform: translateY(-1px);
+              // box-shadow: var(--mat-sys-level1);
             }
 
             &.active {
               background-color: var(--mat-sys-primary-container);
               color: var(--mat-sys-on-primary-container);
-              border-color: var(--mat-sys-primary);
-              box-shadow: var(--mat-sys-level2);
+              // border-color: var(--mat-sys-primary);
+              // box-shadow: var(--mat-sys-level2);
               
               mat-icon {
                 color: var(--mat-sys-primary);
