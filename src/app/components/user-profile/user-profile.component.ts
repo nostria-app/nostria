@@ -38,6 +38,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
     private logger = inject(LoggerService);
     private elementRef = inject(ElementRef);
     layout = inject(LayoutService);
+    publicKey = '';
     pubkey = input<string>('');
     npub = signal<string | undefined>(undefined);
     event = input<Event | undefined>(undefined);
@@ -71,6 +72,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
             const pubkey = this.pubkey();
 
             if (pubkey) {
+                this.publicKey = this.pubkey();
                 // console.debug('LOCATION 1:', pubkey);
                 const npub = this.nostrService.getNpubFromPubkey(pubkey);
                 this.npub.set(npub);
@@ -92,6 +94,11 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
                     data: JSON.parse(event.content),
                     event
                 });
+
+                this.publicKey = event.pubkey;
+
+                const npub = this.nostrService.getNpubFromPubkey(event.pubkey);
+                this.npub.set(npub);
             }
         });
 
