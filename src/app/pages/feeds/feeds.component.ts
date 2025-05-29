@@ -42,7 +42,7 @@ const DEFAULT_COLUMNS: NavLink[] = [
 ];
 
 @Component({
-  selector: 'app-home',
+  selector: 'app-feeds',
   standalone: true,  imports: [
     CommonModule,
     MatCardModule,
@@ -58,10 +58,10 @@ const DEFAULT_COLUMNS: NavLink[] = [
     MatProgressSpinnerModule,
     UserProfileComponent,
   ],
-  templateUrl: './home.component.html',
-  styleUrl: './home.component.scss'
+  templateUrl: './feeds.component.html',
+  styleUrl: './feeds.component.scss'
 })
-export class HomeComponent {  // Services
+export class FeedsComponent {  // Services
   private nostrService = inject(NostrService);
   private notificationService = inject(NotificationService);
   private layoutService = inject(LayoutService);
