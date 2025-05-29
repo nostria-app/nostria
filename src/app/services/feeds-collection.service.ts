@@ -155,6 +155,7 @@ export class FeedsCollectionService {
       label: feedData.label,
       icon: feedData.icon,
       description: feedData.description,
+      path: feedData.path,
       columns: feedData.columns as ColumnConfig[]
     });
     
@@ -169,6 +170,7 @@ export class FeedsCollectionService {
       label: updates.label,
       icon: updates.icon,
       description: updates.description,
+      path: updates.path,
       columns: updates.columns as ColumnConfig[],
       updatedAt: updates.updatedAt
     };

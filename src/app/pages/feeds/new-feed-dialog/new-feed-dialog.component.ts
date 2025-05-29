@@ -511,6 +511,8 @@ export class NewFeedDialogComponent {
       const formValue = this.feedForm.value;
       const template = this.getSelectedTemplateConfig();
 
+      debugger;
+
       // Create default columns based on template
       const defaultColumns: ColumnConfig[] = template?.defaultColumns.map(col => ({
         id: crypto.randomUUID(),
