@@ -173,11 +173,55 @@ export class FeedService {
   async subscribe() {
     this.data.clear();
     this._feedData.set(new Map());
-    this._feeds().forEach(feed => {
-      this.subscribeToFeed(feed);
-    });
+    
+    // Only subscribe to active feed if one is set
+    const activeFeedId = this._activeFeedId();
+    if (activeFeedId) {
+      const activeFeed = this.getFeedById(activeFeedId);
+      if (activeFeed) {
+        this.subscribeToFeed(activeFeed);
+        this.logger.debug('Subscribed to active feed:', activeFeedId);
+      }
+    }
+    
     console.log('Subscribed to feeds:', Array.from(this.data.keys()));
-  }  /**
+  }
+
+  /**
+   * Set the active feed and manage subscriptions
+   */
+  setActiveFeed(feedId: string | null): void {
+    const previousActiveFeedId = this._activeFeedId();
+    
+    // Unsubscribe from previous active feed
+    if (previousActiveFeedId) {
+      this.unsubscribeFromFeed(previousActiveFeedId);
+      this.logger.debug(`Unsubscribed from previous active feed: ${previousActiveFeedId}`);
+    }
+    
+    // Set new active feed
+    this._activeFeedId.set(feedId);
+    
+    // Subscribe to new active feed
+    if (feedId) {
+      const activeFeed = this.getFeedById(feedId);
+      if (activeFeed) {
+        this.subscribeToFeed(activeFeed);
+        this.logger.debug(`Subscribed to new active feed: ${feedId}`);
+      } else {
+        this.logger.warn(`Active feed with id ${feedId} not found`);
+      }
+    }
+  }
+
+  /**
+   * Get the current active feed ID
+   */
+  getActiveFeedId(): string | null {
+    return this._activeFeedId();
+  }
+
+  /**
    * Subscribe to a single feed and all its columns
    */
   private subscribeToFeed(feed: FeedConfig): void {
