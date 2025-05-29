@@ -31,6 +31,7 @@ export interface FeedConfig {
   id: string;
   label: string;
   icon: string;
+  path?: string;
   description?: string;
   columns: ColumnConfig[];
   createdAt: number;

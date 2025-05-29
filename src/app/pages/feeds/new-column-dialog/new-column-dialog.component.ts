@@ -139,12 +139,7 @@ const NOSTR_KINDS = [
                   <mat-icon matSuffix>{{ columnForm.get('icon')?.value || 'widgets' }}</mat-icon>
                 </mat-form-field>
                 
-                <mat-form-field appearance="outline" class="full-width">
-                  <mat-label>URL Path (Optional)</mat-label>
-                  <input matInput formControlName="path" placeholder="custom-column">
-                  <mat-hint>URL identifier for this column</mat-hint>
-                  <mat-icon matSuffix>link</mat-icon>
-                </mat-form-field>
+              
               </div>
             </div>
           </mat-step>
@@ -595,7 +590,6 @@ export class NewColumnDialogComponent {
   basicInfoGroup = this.fb.group({
     label: [this.data.column?.label || '', Validators.required],
     icon: [this.data.column?.icon || 'chat'],
-    path: [this.data.column?.path || '']
   });
 
   contentConfigGroup = this.fb.group({
@@ -752,7 +746,6 @@ export class NewColumnDialogComponent {
         id: this.data.column?.id || crypto.randomUUID(),
         label: formValue.label!,
         icon: formValue.icon!,
-        path: formValue.path || undefined,
         type: formValue.type as any,
         kinds: this.selectedKinds(),
         relayConfig: formValue.relayConfig as any,
