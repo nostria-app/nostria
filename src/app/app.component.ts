@@ -124,7 +124,7 @@ export class AppComponent {
   });
 
   navItems: NavItem[] = [
-    { path: '', label: 'Home', icon: 'home' },
+    { path: '', label: 'Feeds', icon: 'stacks' },
     // { path: 'feed', label: 'Feed', icon: 'notes', showInMobile: true },
     { path: 'articles', label: 'Articles', icon: 'article' },
     // { path: 'podcasts', label: 'Podcasts', icon: 'podcasts', showInMobile: false },
