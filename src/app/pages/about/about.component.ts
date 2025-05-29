@@ -6,6 +6,9 @@ import { ApplicationService } from '../../services/application.service';
 import { MetaService } from '../../services/meta.service';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
+import { Router } from '@angular/router';
+import { LayoutService } from '../../services/layout.service';
+import { MatButtonModule } from '@angular/material/button';
 
 interface WebManifest {
   version?: string;
@@ -28,7 +31,7 @@ interface MetadataResponse {
 @Component({
   selector: 'app-about',
   standalone: true,
-  imports: [MatCardModule, MatListModule, MatIconModule],
+  imports: [MatCardModule, MatListModule, MatIconModule, MatButtonModule],
   templateUrl: './about.component.html',
   styleUrl: './about.component.scss'
 })
@@ -36,12 +39,19 @@ export class AboutComponent {
   private readonly app = inject(ApplicationService);
   private readonly meta = inject(MetaService);
   private readonly http = inject(HttpClient);
+  private readonly router = inject(Router);
+  private readonly layout = inject(LayoutService);
   version = signal('Loading...');
 
   constructor() {
     effect(() => {
       this.fetchManifestVersion();
     });
+  }
+
+  resetIntroduction() {
+    localStorage.setItem('nostria-welcome', 'true');
+    this.layout.showWelcomeScreen.set(true);
   }
 
   private extractImageUrlFromImeta(tags: any[]): string | null {
