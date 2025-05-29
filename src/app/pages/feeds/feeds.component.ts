@@ -1,5 +1,6 @@
 import { Component, ViewChild, ElementRef, computed, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Location } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -13,7 +14,7 @@ import { LayoutService } from '../../services/layout.service';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { NewFeedDialogComponent } from './new-feed-dialog/new-feed-dialog.component';
 import { NewColumnDialogComponent } from './new-column-dialog/new-column-dialog.component';
-import { RouterModule } from '@angular/router';
+import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../../components/confirm-dialog/confirm-dialog.component';
 import { LocalStorageService } from '../../services/local-storage.service';
@@ -25,6 +26,7 @@ import { NostrRecord } from '../../interfaces';
 import { Event } from 'nostr-tools';
 import { decode } from 'blurhash';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
+import { UrlUpdateService } from '../../services/url-update.service';
 
 interface NavLink {
   id: string;
@@ -66,9 +68,13 @@ export class FeedsComponent {  // Services
   private notificationService = inject(NotificationService);
   private layoutService = inject(LayoutService);
   private dialog = inject(MatDialog);
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
+  private location = inject(Location);
   feedService = inject(FeedService);
   feedsCollectionService = inject(FeedsCollectionService);
   private logger = inject(LoggerService);
+  private url = inject(UrlUpdateService);
 
   // UI State Signals
   activeSection = signal<'discover' | 'following' | 'media'>('discover');
@@ -180,10 +186,29 @@ export class FeedsComponent {  // Services
     const maxScroll = this.maxScroll();
     return maxScroll > 0 && this.scrollPosition() < maxScroll;
   });
-
   constructor() {
     // Initialize data loading
     this.loadTrendingContent();
+
+    // Handle route parameters for feed navigation
+    effect(() => {
+      this.route.params.subscribe(params => {
+        const pathParam = params['path'];
+        if (pathParam) {
+          // Find feed by path
+          const feeds = this.feedsCollectionService.feeds();
+          const targetFeed = feeds.find(feed => feed.path === pathParam);
+          
+          if (targetFeed) {
+            this.feedsCollectionService.setActiveFeed(targetFeed.id);
+          } else {
+            // If no feed with this path is found, redirect to default feed
+            console.warn(`No feed found with path: ${pathParam}`);
+            this.router.navigate(['/f'], { replaceUrl: true });
+          }
+        }
+      });
+    });
 
     // Set up responsive layout
     effect(() => {
@@ -726,12 +751,22 @@ export class FeedsComponent {  // Services
       }
     }
   }
-
   /**
    * Select a feed
    */
   selectFeed(feedId: string): void {
+    const feeds = this.feedsCollectionService.feeds();
+    const selectedFeed = feeds.find(feed => feed.id === feedId);
+    
+    // Set the active feed
     this.feedsCollectionService.setActiveFeed(feedId);
+    // Navigate to the appropriate URL
+    if (selectedFeed?.path) {
+      this.router.navigate(['/f', selectedFeed.path]);
+    } else {
+      // For feeds without a path, navigate to the base feeds route
+      this.router.navigate(['/f']);
+    }
   }
 
   /**
@@ -750,8 +785,13 @@ export class FeedsComponent {  // Services
           label: result.label,
           icon: result.icon,
           description: result.description,
-          columns: result.columns
+          columns: result.columns,
+          path: result.path
         });
+
+        if (newFeed.path) {
+          this.url.updatePathSilently(['/f', newFeed.path]);
+        }
 
         // Set as active feed
         this.feedsCollectionService.setActiveFeed(newFeed.id);
@@ -779,7 +819,8 @@ export class FeedsComponent {  // Services
         this.feedsCollectionService.updateFeed(activeFeed.id, {
           label: result.label,
           icon: result.icon,
-          description: result.description
+          description: result.description,
+          path: result.path
         });
       }
     });

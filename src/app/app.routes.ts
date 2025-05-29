@@ -31,6 +31,7 @@ import { FeedsComponent } from './pages/feeds/feeds.component';
 export const routes: Routes = [
   { path: '', component: FeedsComponent, pathMatch: 'full' },
   { path: 'f', component: FeedsComponent },
+  { path: 'f/:path', component: FeedsComponent },
   { path: 'welcome', component: WelcomeComponent },
   { path: 'beta', component: BetaComponent, title: 'Beta' },
   { path: 'relays', component: RelaysComponent },
