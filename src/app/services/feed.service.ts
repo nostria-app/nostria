@@ -247,11 +247,10 @@ export class FeedService {
       this.logger.warn(`Cannot unsubscribe from feed ${feedId}: feed not found or has no columns`);
     }
   }
-
   /**
    * Unsubscribe from a single column
    */
-  private unsubscribeFromColumn(columnId: string): void {
+  unsubscribeFromColumn(columnId: string): void {
     const columnData = this.data.get(columnId);
     if (columnData) {
       // Close the subscription
@@ -408,30 +407,54 @@ export class FeedService {
       return false;
     }
 
-    // Check if we need to resubscribe (if columns changed)
     const currentFeed = this._feeds()[feedIndex];
-    const needsResubscription = updates.columns !== undefined;
-
-    if (needsResubscription) {
-      // Unsubscribe from current feed columns
-      this.unsubscribeFromFeed(id);
-    }
-
-    // Update the feed configuration
-    this._feeds.update(feeds => {
-      const updatedFeeds = [...feeds];
-      updatedFeeds[feedIndex] = {
-        ...updatedFeeds[feedIndex],
-        ...updates,
-        updatedAt: Date.now()
-      };
-      return updatedFeeds;
-    });
-
-    if (needsResubscription) {
-      // Resubscribe with new configuration
-      const updatedFeed = this._feeds()[feedIndex];
-      this.subscribeToFeed(updatedFeed);
+    
+    // Handle column changes with targeted subscription management
+    if (updates.columns !== undefined) {
+      const currentColumns = currentFeed.columns;
+      const newColumns = updates.columns;
+      
+      // Find columns that were removed
+      const removedColumns = currentColumns.filter(currentCol => 
+        !newColumns.some(newCol => newCol.id === currentCol.id)
+      );
+      
+      // Find columns that were added
+      const addedColumns = newColumns.filter(newCol => 
+        !currentColumns.some(currentCol => currentCol.id === newCol.id)
+      );
+      
+      // Unsubscribe only from removed columns
+      removedColumns.forEach(column => {
+        this.unsubscribeFromColumn(column.id);
+      });
+      
+      // Update the feed configuration first
+      this._feeds.update(feeds => {
+        const updatedFeeds = [...feeds];
+        updatedFeeds[feedIndex] = {
+          ...updatedFeeds[feedIndex],
+          ...updates,
+          updatedAt: Date.now()
+        };
+        return updatedFeeds;
+      });
+      
+      // Subscribe to new columns
+      addedColumns.forEach(column => {
+        this.subscribeToColumn(column);
+      });
+    } else {
+      // For non-column updates, just update the configuration
+      this._feeds.update(feeds => {
+        const updatedFeeds = [...feeds];
+        updatedFeeds[feedIndex] = {
+          ...updatedFeeds[feedIndex],
+          ...updates,
+          updatedAt: Date.now()
+        };
+        return updatedFeeds;
+      });
     }
 
     this.saveFeeds();
