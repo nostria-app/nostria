@@ -737,16 +737,14 @@ export class HomeComponent {  // Services
       data: {
         icons: ['dynamic_feed', 'bookmark', 'explore', 'trending_up', 'star', 'favorite', 'rss_feed']
       }
-    });
-
-    dialogRef.afterClosed().subscribe(result => {
+    });    dialogRef.afterClosed().subscribe(result => {
       if (result) {
-        // Convert the result to a FeedDefinition
+        // The dialog returns a FeedConfig, but FeedsCollectionService.addFeed expects FeedDefinition data
         const newFeed = this.feedsCollectionService.addFeed({
-          label: result.label || 'New Feed',
-          icon: result.icon || 'dynamic_feed',
-          description: result.description || '',
-          columns: []
+          label: result.label,
+          icon: result.icon,
+          description: result.description,
+          columns: result.columns
         });
 
         // Set as active feed
