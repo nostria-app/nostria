@@ -24,7 +24,7 @@
     }
 
     <!-- Avatar section - single image element -->
-    <a [routerLink]="['/p', pubkey()]" class="user-profile-avatar"
+    <a [routerLink]="['/p', publicKey]" class="user-profile-avatar"
       [matTooltip]="view() === 'large' || view() === 'medium' || view() === 'small' ? getTooltipContent() : ''"
       [matTooltipClass]="'user-profile-tooltip'" matTooltipPosition="above">
 
@@ -52,7 +52,7 @@
     @if (view() !== 'large' && view() !== 'medium' && view() !== 'small') {
     <div class="user-profile-content">
       <!-- Name section -->
-      <a [routerLink]="['/p', pubkey()]" class="user-profile-name">
+      <a [routerLink]="['/p', publicKey]" class="user-profile-name">
         @if (isLoading()) {
         Loading...
         } @else if (profile() && !profile().isEmpty && profile().data) {
@@ -93,10 +93,10 @@
       </button>
 
       <mat-menu #copyMenu="matMenu">
-        <button mat-menu-item (click)="layout.copyToClipboard(this.npub(), 'npub')">
+        <button mat-menu-item (click)="layout.copyToClipboard(npub(), 'npub')">
           <span>Event ID (note)</span>
         </button>
-        <button mat-menu-item (click)="layout.copyToClipboard(this.pubkey(), 'nprofile')">
+        <button mat-menu-item (click)="layout.copyToClipboard(publicKey, 'nprofile')">
           <span>Event ID (nevent)</span>
         </button>
         <!-- <button mat-menu-item (click)="copyProfileData()">
