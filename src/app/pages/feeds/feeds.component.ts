@@ -1,4 +1,4 @@
-import { Component, ViewChild, ElementRef, computed, effect, inject, signal } from '@angular/core';
+import { Component, ViewChild, ElementRef, computed, effect, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Location } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
@@ -63,7 +63,7 @@ const DEFAULT_COLUMNS: NavLink[] = [
   templateUrl: './feeds.component.html',
   styleUrl: './feeds.component.scss'
 })
-export class FeedsComponent {  // Services
+export class FeedsComponent implements OnInit, OnDestroy {  // Services
   private nostrService = inject(NostrService);
   private notificationService = inject(NotificationService);
   private layoutService = inject(LayoutService);
@@ -638,9 +638,13 @@ export class FeedsComponent {  // Services
       } else if (this.visibleColumnIndex() > index) {
         this.visibleColumnIndex.update(idx => idx - 1);
       }
-    }
+    }    this.notificationService.notify(`Column "${column.label}" removed`);
+  }
 
-    this.notificationService.notify(`Column "${column.label}" removed`);
+  ngOnInit() {
+    this.logger.debug('FeedsComponent initializing...');
+    // Re-establish subscriptions when component loads
+    this.feedService.subscribe();
   }
 
   ngOnDestroy() {
