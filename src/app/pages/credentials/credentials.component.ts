@@ -53,13 +53,11 @@ export class CredentialsComponent {
       });
     }
   }
-  
-  getMaskedNsec(nsec: string): string {
+    getMaskedNsec(nsec: string): string {
     if (!nsec) return '';
-    // Show first 4 and last 4 characters, mask the rest
+    // Show only first 4 characters, mask the rest
     const prefix = nsec.substring(0, 4);
-    const suffix = nsec.substring(nsec.length - 4);
-    return `${prefix}${'•'.repeat(Math.min(20, nsec.length - 8))}${suffix}`;
+    return `${prefix}${'•'.repeat(Math.min(20, nsec.length - 4))}`;
   }
 
   getNpub(): string {
