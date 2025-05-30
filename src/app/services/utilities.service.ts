@@ -18,7 +18,7 @@ export class UtilitiesService {
     return this.getPTagsValuesFromTags(event.tags);
   }
 
-    // Get d-tag value
+  // Get d-tag value
   getDTagValueFromTags(tags: string[][]): string | undefined {
     for (const tag of tags) {
       if (tag.length >= 2 && tag[0] === 'd') {
@@ -34,6 +34,18 @@ export class UtilitiesService {
 
     for (const tag of tags) {
       if (tag.length >= 2 && tag[0] === 'p') {
+        pTagValues.push(tag[1]);
+      }
+    }
+
+    return pTagValues;
+  }
+
+  getTagValues(tagName: string, tags: string[][]): string[] {
+    const pTagValues: string[] = [];
+
+    for (const tag of tags) {
+      if (tag.length >= 2 && tag[0] === tagName) {
         pTagValues.push(tag[1]);
       }
     }
