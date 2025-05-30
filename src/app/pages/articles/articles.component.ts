@@ -281,9 +281,7 @@ export class ArticlesComponent {
         const encodedUri = nip19.naddrEncode(pointer);
 
         console.log('Encoded Nostr Address:', encodedUri);
-        this.router.navigate(['/a', encodedUri]);
-
-
+        this.router.navigate(['/a', encodedUri], { state: { event: article.event } });
     }
 
     copyArticleLink(article: Article, event: globalThis.Event): void {

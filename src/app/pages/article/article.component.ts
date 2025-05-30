@@ -56,6 +56,16 @@ export class ArticleComponent {
   }
 
   async loadArticle(naddr: string): Promise<void> {
+
+    const receivedData = history.state.event as Event | undefined;
+
+    if (receivedData) {
+      this.logger.debug('Received event from navigation state:', receivedData);
+      this.event.set(receivedData);
+      this.isLoading.set(false);
+      return;
+    }
+
     try {
       this.isLoading.set(true);
       this.error.set(null);
@@ -272,7 +282,7 @@ The future of social networking isn't about finding the next big platform - it's
   parsedContent = computed<SafeHtml>(() => {
     const content = this.content();
     if (!content) return '';
-    
+
     try {
       // Configure marked for security and features
       marked.setOptions({
@@ -282,7 +292,7 @@ The future of social networking isn't about finding the next big platform - it's
 
       // Parse markdown to HTML (marked.parse returns string)
       const htmlContent = marked.parse(content) as string;
-      
+
       // Sanitize and return safe HTML
       return this.sanitizer.bypassSecurityTrustHtml(htmlContent);
     } catch (error) {
