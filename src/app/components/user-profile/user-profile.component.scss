@@ -21,6 +21,7 @@
     align-items: center;
     padding: 0; // Removed padding
     width: 100%;
+    gap: 0.4rem;
   }
 
   // Banner styles
@@ -111,6 +112,7 @@
     flex-shrink: 0;
 
     .user-profile-container {
+      
       padding: 0; // Removed padding
       justify-content: center; // Center the avatar
       width: auto; // Container should only be as wide as its content

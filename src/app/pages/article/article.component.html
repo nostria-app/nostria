@@ -55,7 +55,7 @@
               <mat-chip-set>
                 @for (hashtag of hashtags(); track hashtag) {
                   <mat-chip highlighted>
-                    <mat-icon matChipAvatar>tag</mat-icon>
+                    <!-- <mat-icon matChipAvatar>tag</mat-icon> -->
                     {{ hashtag }}
                   </mat-chip>
                 }
@@ -68,7 +68,7 @@
 
     <!-- Author Section -->
     <section class="article-author">
-      <app-user-profile [pubkey]="authorPubkey()" mode="expanded"></app-user-profile>
+      <app-user-profile [pubkey]="authorPubkey()" mode="tiles"></app-user-profile>
     </section>
 
     <main class="article-content">
@@ -82,8 +82,7 @@
           <mat-icon>bookmark_border</mat-icon>
           Bookmark
         </button>
-        
-        <button mat-button color="primary">
+          <button mat-button color="primary" (click)="shareArticle()">
           <mat-icon>share</mat-icon>
           Share
         </button>

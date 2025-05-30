@@ -331,11 +331,49 @@ The future of social networking isn't about finding the next big platform - it's
       minute: '2-digit'
     });
   }
-
   retryLoad(): void {
     const addrParam = this.route.snapshot.paramMap.get('id');
     if (addrParam) {
       this.loadArticle(addrParam);
+    }
+  }
+  async shareArticle() {
+    const event = this.event();
+    if (!event) return;
+
+    // Parse title and summary from the Nostr event tags
+    const title = this.title();
+    const summary = this.summary();
+
+    const shareData: ShareData = {
+      title: title || 'Nostr Article',
+      text: summary || `Check out this article: ${title || 'Nostr Article'}`,
+      url: window.location.href,
+    };
+
+    try {
+      if (navigator.share && navigator.canShare(shareData)) {
+        await navigator.share(shareData);
+      } else {
+        // Fallback to clipboard
+        const textToShare = `${title || 'Nostr Article'}\n\n${summary || ''}\n\n${window.location.href}`;
+        await navigator.clipboard.writeText(textToShare);
+        
+        // You might want to show a toast/snackbar here indicating the content was copied
+        console.log('Article details copied to clipboard');
+      }
+    } catch (error) {
+      if ((error as Error).name !== 'AbortError') {
+        console.error('Error sharing article:', error);
+        // Fallback to clipboard if sharing fails
+        try {
+          const textToShare = `${title || 'Nostr Article'}\n\n${summary || ''}\n\n${window.location.href}`;
+          await navigator.clipboard.writeText(textToShare);
+          console.log('Article details copied to clipboard');
+        } catch (clipboardError) {
+          console.error('Failed to copy to clipboard:', clipboardError);
+        }
+      }
     }
   }
 }
