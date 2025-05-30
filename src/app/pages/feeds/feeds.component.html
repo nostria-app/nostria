@@ -83,10 +83,11 @@
 
     <div class="columns-wrapper" #columnsWrapper cdkDropList cdkDropListOrientation="horizontal"
       [cdkDropListData]="columns()" (cdkDropListDropped)="onColumnDrop($event)">
-      <!-- Columns with connected headers and content -->      @for (column of columns(); track column.id; let i = $index) {
-      <div class="column-unit" cdkDrag [cdkDragData]="i" [cdkDragDisabled]="columns().length <= 1"
+      <!-- Columns with connected headers and content -->      @for (column of columns(); track column.id; let i = $index) {      <div class="column-unit" cdkDrag [cdkDragData]="i" [cdkDragDisabled]="columns().length <= 1"
         [class.visible]="!isMobileView() || (isMobileView() && i === visibleColumnIndex())"
-        [attr.aria-hidden]="isMobileView() && i !== visibleColumnIndex()">
+        [attr.aria-hidden]="isMobileView() && i !== visibleColumnIndex()"
+        (cdkDragStarted)="onDragStarted()"
+        (cdkDragEnded)="onDragEnded()">
         <!-- Column Header (Connected to its content) -->
         <div class="column-header">
           <div class="column-header-content">
@@ -145,12 +146,11 @@
               <mat-spinner diameter="40"></mat-spinner>
               <p>Loading content...</p>
             </div>
-            } @else {
-            <!-- Default placeholder content - replace with actual content -->
-            <div class="column-items">
+            } @else {            <!-- Default placeholder content - replace with actual content -->            <div class="column-items">
               @let columnData = feedService.data.get(column.id);
-              @if (columnData) {
-              @for(event of columnEvents().get(column.id) || []; track event.id) {
+              @let columnEventsData = columnEvents().get(column.id);
+              @if (columnData && columnEventsData) {
+              @for(event of columnEventsData; track event.id) {
               <mat-card class="content-card">
                 <mat-card-header>
                   <div mat-card-avatar class="avatar"></div>

@@ -1,4 +1,4 @@
-import { Component, ViewChild, ElementRef, computed, effect, inject, signal, OnInit, OnDestroy } from '@angular/core';
+import { Component, ViewChild, ElementRef, computed, effect, inject, signal, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Location } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
@@ -75,6 +75,7 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
   feedsCollectionService = inject(FeedsCollectionService);
   private logger = inject(LoggerService);
   private url = inject(UrlUpdateService);
+  private cdr = inject(ChangeDetectorRef);
 
   // UI State Signals
   activeSection = signal<'discover' | 'following' | 'media'>('discover');
@@ -136,16 +137,40 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
         event.event.tags.some(tag => tag[0] === 't' && tags.includes(tag[1]))
       );
     }
-  });  // Replace getEventsForColumn method with computed signal that uses feedService's reactive data
+  });  // Drag state to prevent unnecessary re-renders during column reordering
+  private isDragging = signal(false);
+  
+  // Cache to store events during drag operations
+  private _eventCache = new Map<string, Event[]>();
+
+  // Computed signal for column events that respects drag state
   columnEvents = computed(() => {
+    const columns = this.columns();
+    const isDragging = this.isDragging();
     const eventsMap = new Map<string, Event[]>();
-    // Access the feedDataMap from feedService which is properly reactive
-    const feedDataMap = this.feedService.feedDataMap();
-    feedDataMap.forEach((eventsSignal, feedId) => {
-      eventsMap.set(feedId, eventsSignal());
+    
+    columns.forEach(column => {
+      if (isDragging) {
+        // During drag operations, use cached events to prevent DOM updates
+        eventsMap.set(column.id, this._eventCache.get(column.id) || []);
+      } else {
+        // Normal operation: get fresh events from service
+        const columnData = this.feedService.data.get(column.id);
+        const events = columnData?.events() || [];
+        
+        // Update cache for potential drag operations
+        this._eventCache.set(column.id, events);
+        eventsMap.set(column.id, events);
+      }
     });
+    
     return eventsMap;
   });
+  
+  // Helper method to get events for a specific column from the computed signal
+  getEventsForColumn(columnId: string): Event[] {
+    return this.columnEvents().get(columnId) || [];
+  }
 
   // Remove the old getEventsForColumn method
   // getEventsForColumn(columnId: string): Event[] {
@@ -414,7 +439,9 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
 
     if (previousIndex !== currentIndex) {
       const activeFeed = this.activeFeed();
-      if (!activeFeed) return;
+      if (!activeFeed) {
+        return;
+      }
 
       // Get the current columns and reorder them
       const columns = [...activeFeed.columns];
@@ -456,6 +483,35 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
         }, 50);
       }
     }
+    
+    // Change detection will be reattached in onDragEnded()
+  }
+  // Drag event handlers to manage state with CHANGE DETECTION CONTROL
+  onDragStarted(): void {
+    console.log('🚀 Drag started - DETACHING CHANGE DETECTION');
+    this.isDragging.set(true);
+    
+    // **RADICAL APPROACH**: Detach change detection completely during drag
+    this.cdr.detach();
+    
+    // Pre-cache all column events to prevent DOM updates during drag
+    const columns = this.columns();
+    columns.forEach(column => {
+      const columnData = this.feedService.data.get(column.id);
+      const events = columnData?.events() || [];
+      this._eventCache.set(column.id, events);
+    });
+  }
+
+  onDragEnded(): void {
+    console.log('🏁 Drag ended - REATTACHING CHANGE DETECTION');
+    
+    // **RADICAL APPROACH**: Reattach change detection and force update
+    this.cdr.reattach();
+    this.cdr.detectChanges();
+    
+    // Clear drag state
+    this.isDragging.set(false);
   }
 
   scrollLeft(): void {
@@ -484,7 +540,6 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
       behavior: 'smooth'
     });
   }
-
   scrollToColumn(index: number): void {
     if (this.isMobileView() || !this.columnsWrapper) return;
 
