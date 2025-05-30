@@ -209,9 +209,7 @@
         flex: 0 0 1px; // Small flex item to help with centering
         padding: 0;
         margin: 0;
-      }
-
-      // Column unit - contains both header and content
+      }      // Column unit - contains both header and content
       .column-unit {
         display: flex;
         flex-direction: column;
@@ -219,6 +217,11 @@
         max-width: 700px;
         min-width: 0; // Allow content to shrink below min-width
         flex: 1 0 auto; // Allow growing (1), prevent shrinking (0), use auto basis
+        background-color: var(--mat-app-surface-color);
+        border-radius: 8px;
+        box-shadow: var(--mat-sys-level1);
+        overflow: hidden;
+        position: relative;
         
         // Set a preferred width but allow shrinking when necessary
         @media (max-width: 1500px) {
@@ -231,12 +234,6 @@
           width: min(600px, 100%);
           flex: 1 1 min(600px, 50%);
         }
-        
-        background-color: var(--mat-app-surface-color);
-        border-radius: 8px;
-        box-shadow: var(--mat-sys-level1);
-        overflow: hidden;
-        position: relative;
 
         &.cdk-drag {
           z-index: 2;
@@ -1160,15 +1157,18 @@ h1 {
 
   &:has(.photo-container:nth-child(1):nth-last-child(1)) {
     grid-template-columns: 1fr;
+    max-width: 500px;
   }
 
   &:has(.photo-container:nth-child(2):nth-last-child(1)) {
     grid-template-columns: 1fr 1fr;
+    max-width: 600px;
   }
 
   &:has(.photo-container:nth-child(3):nth-last-child(1)) {
-    grid-template-columns: 2fr 1fr;
+    grid-template-columns: 1fr 1fr;
     grid-template-rows: 1fr 1fr;
+    max-width: 600px;
 
     .photo-container:first-child {
       grid-row: 1 / 3;
@@ -1178,6 +1178,7 @@ h1 {
   &:has(.photo-container:nth-child(4):nth-last-child(1)) {
     grid-template-columns: 1fr 1fr;
     grid-template-rows: 1fr 1fr;
+    max-width: 600px;
   }
 }
 
@@ -1185,8 +1186,9 @@ h1 {
   position: relative;
   overflow: hidden;
   border-radius: 8px;
-  min-height: 120px;
+  min-height: 300px;
   max-height: 300px;
+  aspect-ratio: 1;
 }
 
 .photo-item {
