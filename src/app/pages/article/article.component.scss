@@ -85,12 +85,44 @@
       font-size: 2rem;
     }
   }
-
   .article-summary {
-    font-size: 1.125rem;
+    font-size: 1.25rem;
     line-height: 1.6;
-    color: var(--mat-sys-on-surface-variant);
+    color: var(--mat-sys-on-surface);
     margin-bottom: 24px;
+    padding: 20px 24px;
+    background: linear-gradient(
+      135deg,
+      var(--mat-sys-surface-container) 0%,
+      var(--mat-sys-surface-container-high) 100%
+    );
+    border-radius: 12px;
+    border-left: 4px solid var(--mat-sys-primary);
+    box-shadow: var(--mat-sys-level1);
+    position: relative;
+    overflow: hidden;
+    
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        var(--mat-sys-primary) 50%,
+        transparent 100%
+      );
+      opacity: 0.6;
+    }
+    
+    @media (max-width: 768px) {
+      padding: 16px 20px;
+      font-size: 1.125rem;
+      border-radius: 8px;
+    }
   }
 
   .article-meta {
