@@ -53,9 +53,9 @@ export class NostrService {
   private readonly data = inject(DataService);
 
   initialized = signal(false);
-  MAX_WAIT_TIME = 4000;
-  MAX_WAIT_TIME_METADATA = 4000;
-  MAX_RELAY_COUNT = 3;
+  MAX_WAIT_TIME = 2000;
+  MAX_WAIT_TIME_METADATA = 2500;
+  MAX_RELAY_COUNT = 2;
   dataLoaded = false;
 
   account = signal<NostrUser | null>(null);
