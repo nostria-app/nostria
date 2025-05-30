@@ -448,8 +448,7 @@ export class FeedService {
     return newFeed;
   }  /**
    * Update an existing feed
-   */
-  updateFeed(id: string, updates: Partial<Omit<FeedConfig, 'id' | 'createdAt'>>): boolean {
+   */  updateFeed(id: string, updates: Partial<Omit<FeedConfig, 'id' | 'createdAt'>>): boolean {
     const feedIndex = this._feeds().findIndex(feed => feed.id === id);
     if (feedIndex === -1) {
       this.logger.warn(`Feed with id ${id} not found`);
@@ -463,36 +462,59 @@ export class FeedService {
       const currentColumns = currentFeed.columns;
       const newColumns = updates.columns;
       
-      // Find columns that were removed
-      const removedColumns = currentColumns.filter(currentCol => 
-        !newColumns.some(newCol => newCol.id === currentCol.id)
-      );
+      // Check if this is just a column reorder (same column IDs, different positions)
+      const currentColumnIds = new Set(currentColumns.map(col => col.id));
+      const newColumnIds = new Set(newColumns.map(col => col.id));
+      const isOnlyReorder = currentColumnIds.size === newColumnIds.size && 
+        [...currentColumnIds].every(id => newColumnIds.has(id));
       
-      // Find columns that were added
-      const addedColumns = newColumns.filter(newCol => 
-        !currentColumns.some(currentCol => currentCol.id === newCol.id)
-      );
-      
-      // Unsubscribe only from removed columns
-      removedColumns.forEach(column => {
-        this.unsubscribeFromColumn(column.id);
-      });
-      
-      // Update the feed configuration first
-      this._feeds.update(feeds => {
-        const updatedFeeds = [...feeds];
-        updatedFeeds[feedIndex] = {
-          ...updatedFeeds[feedIndex],
-          ...updates,
-          updatedAt: Date.now()
-        };
-        return updatedFeeds;
-      });
-      
-      // Subscribe to new columns
-      addedColumns.forEach(column => {
-        this.subscribeToColumn(column);
-      });
+      if (isOnlyReorder) {
+        // This is just a reorder - update columns without touching subscriptions
+        console.log(`🔄 FeedService: Detected column reorder for feed ${id} - preserving subscriptions`);
+        this._feeds.update(feeds => {
+          const updatedFeeds = [...feeds];
+          updatedFeeds[feedIndex] = {
+            ...updatedFeeds[feedIndex],
+            ...updates,
+            updatedAt: Date.now()
+          };
+          return updatedFeeds;
+        });
+      } else {
+        // This is actual column addition/removal - manage subscriptions
+        console.log(`🔄 FeedService: Detected column changes for feed ${id} - managing subscriptions`);
+        
+        // Find columns that were removed
+        const removedColumns = currentColumns.filter(currentCol => 
+          !newColumns.some(newCol => newCol.id === currentCol.id)
+        );
+        
+        // Find columns that were added
+        const addedColumns = newColumns.filter(newCol => 
+          !currentColumns.some(currentCol => currentCol.id === newCol.id)
+        );
+        
+        // Unsubscribe only from removed columns
+        removedColumns.forEach(column => {
+          this.unsubscribeFromColumn(column.id);
+        });
+        
+        // Update the feed configuration first
+        this._feeds.update(feeds => {
+          const updatedFeeds = [...feeds];
+          updatedFeeds[feedIndex] = {
+            ...updatedFeeds[feedIndex],
+            ...updates,
+            updatedAt: Date.now()
+          };
+          return updatedFeeds;
+        });
+        
+        // Subscribe to new columns
+        addedColumns.forEach(column => {
+          this.subscribeToColumn(column);
+        });
+      }
     } else {
       // For non-column updates, just update the configuration
       this._feeds.update(feeds => {
@@ -504,7 +526,7 @@ export class FeedService {
         };
         return updatedFeeds;
       });
-    }    this.saveFeeds();
+    }this.saveFeeds();
     this.logger.debug(`Updated feed ${id}`, updates);
     return true;
   }
