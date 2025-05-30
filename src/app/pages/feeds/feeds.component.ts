@@ -17,6 +17,7 @@ import { NewColumnDialogComponent } from './new-column-dialog/new-column-dialog.
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../../components/confirm-dialog/confirm-dialog.component';
+import { ImageDialogComponent } from '../../components/image-dialog/image-dialog.component';
 import { LocalStorageService } from '../../services/local-storage.service';
 import { LoggerService } from '../../services/logger.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -771,6 +772,16 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
     return altTag ? altTag[1] : '';
   }
 
+  /**
+   * Remove hashtags from content since they're already displayed as chips
+   */
+  removeHashtagsFromContent(content: string): string {
+    if (!content) return '';
+    
+    // Remove hashtags using regex - matches #word patterns
+    return content.replace(/#[a-zA-Z0-9_]+/g, '').replace(/\s+/g, ' ').trim();
+  }
+
   hasContentWarning(event: any): boolean {
     return event.tags?.some((tag: any[]) => tag[0] === 'content-warning') || false;
   }
@@ -790,10 +801,15 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
       return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     }
     return `${minutes}:${secs.toString().padStart(2, '0')}`;
-  }
-  openImageDialog(imageUrl: string, altText: string): void {
-    // TODO: Implement image dialog
-    console.log('Opening image dialog for:', imageUrl, altText);
+  }  openImageDialog(imageUrl: string, altText: string): void {
+    this.dialog.open(ImageDialogComponent, {
+      data: { imageUrl },
+      maxWidth: '95vw',
+      maxHeight: '95vh',
+      width: '100%',
+      height: '100%',
+      panelClass: 'image-dialog'
+    });
   }
   onImageLoad(event: globalThis.Event): void {
     const img = event.target as HTMLImageElement;

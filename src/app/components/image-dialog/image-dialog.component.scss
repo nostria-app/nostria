@@ -9,12 +9,13 @@
   display: flex;
   align-items: center;
   padding: 8px;
-  background-color: rgba(0, 0, 0, 0.04);
+  background-color: var(--mat-sys-color-surface-container-highest);
+  border-bottom: 1px solid var(--mat-sys-color-outline-variant);
   
   .zoom-level {
     margin: 0 10px;
     font-size: 14px;
-    color: rgba(0, 0, 0, 0.6);
+    color: var(--mat-sys-color-on-surface-variant);
   }
   
   .close-button {
@@ -29,7 +30,7 @@
   justify-content: center;
   overflow: hidden;
   position: relative;
-  background-color: rgba(0, 0, 0, 0.02);
+  background-color: var(--mat-sys-color-surface-container-lowest);
   user-select: none; /* Prevent text selection during drag */
   
   img {

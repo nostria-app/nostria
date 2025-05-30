@@ -179,10 +179,9 @@
                       <img [src]="imageUrl" [alt]="getEventAlt(event)" class="photo-item main-image" loading="lazy"
                         (load)="onImageLoad($event)" (click)="openImageDialog(imageUrl, getEventAlt(event))">
                     </div>
-                    }
-                  </div>
+                    }                  </div>
                   @if (event.content) {
-                  <p class="photo-description">{{ event.content }}</p>
+                  <p class="photo-description">{{ removeHashtagsFromContent(event.content) }}</p>
                   }
                   }
 
@@ -212,10 +211,9 @@
                     @if (videoData.duration) {
                     <div class="video-duration">{{ formatDuration(videoData.duration) }}</div>
                     }
-                  </div>
-                  }
+                  </div>                  }
                   @if (event.content) {
-                  <p class="video-description">{{ event.content }}</p>
+                  <p class="video-description">{{ removeHashtagsFromContent(event.content) }}</p>
                   }
                   }
 
@@ -237,12 +235,10 @@
                   @else if (event.kind === 0) {
                   <!-- <app-user-profile [event]="event" [pubkey]="event.pubkey"></app-user-profile> -->
                   <app-user-profile [view]="'details'" [event]="event"></app-user-profile>
-                  }
-
-                  <!-- Notes (kind 1) and Custom -->
+                  }                  <!-- Notes (kind 1) and Custom -->
                   @else {
                   @if (event.content) {
-                  <p class="note-content">{{ event.content }}</p>
+                  <p class="note-content">{{ removeHashtagsFromContent(event.content) }}</p>
                   }
                   }
 
