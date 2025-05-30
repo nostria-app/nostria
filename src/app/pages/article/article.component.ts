@@ -1,5 +1,5 @@
 import { Component, inject, computed, signal, effect } from '@angular/core';
-import { Event } from 'nostr-tools';
+import { Event, kinds } from 'nostr-tools';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -16,6 +16,8 @@ import { UserProfileComponent } from '../../components/user-profile/user-profile
 import { DateToggleComponent } from '../../components/date-toggle/date-toggle.component';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { marked } from 'marked';
+import { DataService } from '../../services/data.service';
+import { UserRelayFactoryService } from '../../services/user-relay-factory.service';
 
 @Component({
   selector: 'app-article',
@@ -41,6 +43,8 @@ export class ArticleComponent {
   private storageService = inject(StorageService);
   private logger = inject(LoggerService);
   private sanitizer = inject(DomSanitizer);
+  private data = inject(DataService);
+  
 
   event = signal<Event | undefined>(undefined);
   isLoading = signal(false);
@@ -56,7 +60,6 @@ export class ArticleComponent {
   }
 
   async loadArticle(naddr: string): Promise<void> {
-
     const receivedData = history.state.event as Event | undefined;
 
     if (receivedData) {
@@ -79,6 +82,15 @@ export class ArticleComponent {
 
       const addrData = decoded.data as any;
       this.logger.debug('Decoded naddr:', addrData);
+
+      let event = await this.data.getEventByPubkeyAndKindAndReplaceableEvent(addrData.pubkey, kinds.LongFormArticle, decoded.data.identifier, true);
+
+      if (event) {
+        this.logger.debug('Loaded article event from storage or relays:', event);
+        this.event.set(event.event);
+        this.isLoading.set(false);
+        return;
+      }
 
       // Try to load the article from storage first, then from relays if needed
       // For now, we'll set a placeholder event structure

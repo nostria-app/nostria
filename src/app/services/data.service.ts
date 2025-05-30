@@ -5,6 +5,7 @@ import { RelayService } from "./relay.service";
 import { NostrRecord } from "../interfaces";
 import { LoggerService } from "./logger.service";
 import { Event } from "nostr-tools";
+import { UserRelayFactoryService } from "./user-relay-factory.service";
 
 @Injectable({
     providedIn: 'root'
@@ -13,6 +14,7 @@ export class DataService {
     private readonly storage = inject(StorageService);
     private readonly relay = inject(RelayService);
     private readonly logger = inject(LoggerService);
+    private readonly userRelayFactory = inject(UserRelayFactoryService);
 
     getRecord(event: Event) {
         return {
@@ -23,6 +25,36 @@ export class DataService {
 
     getRecords(events: Event[]) {
         return events.map(event => this.getRecord(event));
+    }
+
+    /** Will read event from local database, if available, or get from relay, and then save to database. */
+    async getEventByPubkeyAndKindAndReplaceableEvent(pubkey: string, kind: number, dTagValue: string, userRelays: boolean): Promise<NostrRecord | null> {
+        let event: Event | null | undefined = await this.storage.getParameterizedReplaceableEvent(pubkey, kind, dTagValue);
+
+        if (event) {
+            return this.getRecord(event);
+        }
+
+        if (userRelays) {
+            // If userRelays is true, we will try to get the event from user relays.
+            const userRelayService = await this.userRelayFactory.create(pubkey);
+            event = await userRelayService.getEventByPubkeyAndKindAndTag(pubkey, kind, { key: 'd', value: dTagValue });
+
+            if (event) {
+                this.storage.saveEvent(event);
+                return this.getRecord(event);
+            }
+        }
+
+        // If not found in user relays, we will try to get the event from the main relay.
+        event = await this.relay.getEventByPubkeyAndKindAndTag(pubkey, kind, { key: 'd', value: dTagValue });
+
+        if (event) {
+            this.storage.saveEvent(event);
+            return this.getRecord(event);
+        }
+
+        return null;
     }
 
     /** Will read event from local database, if available, or get from relay, and then save to database. */

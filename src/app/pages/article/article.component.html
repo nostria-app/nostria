@@ -66,14 +66,11 @@
       </div>
     </header>
 
-    <mat-divider></mat-divider>
-
     <!-- Author Section -->
     <section class="article-author">
       <app-user-profile [pubkey]="authorPubkey()" mode="expanded"></app-user-profile>
     </section>
 
-    <mat-divider></mat-divider>    <!-- Content Section -->
     <main class="article-content">
       <div class="markdown-content" [innerHTML]="parsedContent()"></div>
     </main>
