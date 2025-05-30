@@ -111,8 +111,7 @@
   position: relative;
   padding: 8px 16px;
   height: auto;
-  display: flex;
-  align-items: center;
+  min-height: 64px;
     
   &:hover {
     background-color: rgba(0, 0, 0, 0.04);
@@ -127,16 +126,13 @@
       background-color: rgba(var(--mat-sys-background), 0.12);
     }
   }
-    .delete-button {
-    position: absolute;
-    right: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    padding: 0;
-    height: 32px;
-    width: 32px;
-    line-height: 32px;
-  }
+}
+
+.account-item-content {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  position: relative;
 }
 
 .account-list-content {
@@ -144,18 +140,20 @@
   padding-left: 12px;
   margin-top: 0;
   display: flex;
-  align-items: center;
-  flex-wrap: wrap;
+  flex-direction: column;
+  justify-content: center;
   
   .account-name {
     font-weight: 500;
     margin: 0;
     padding-right: 80px;
     font-size: 16px;
+    margin-bottom: 4px;
   }  
   .account-details-container {
-    flex-basis: 100%;
-    padding-top: 2px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
   }
   
   .account-npub, .account-source {
@@ -163,9 +161,19 @@
     color: var(--mat-text-secondary-color);
     font-size: 12px;
     opacity: 0.8;
-    margin-bottom: 2px;
     line-height: 1.2;
   }
+}
+
+.delete-button {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 0;
+  height: 32px;
+  width: 32px;
+  line-height: 32px;
 }
 
 .no-accounts {
