@@ -27,6 +27,7 @@ import { NotificationSettingsComponent } from './pages/notifications/settings/se
 import { LoginDialogComponent } from './components/login-dialog/login-dialog.component';
 import { ProfileEditComponent } from './pages/profile/profile-edit/profile-edit.component';
 import { FeedsComponent } from './pages/feeds/feeds.component';
+import { ArticleComponent } from './pages/article/article.component';
 
 export const routes: Routes = [
   { path: '', component: FeedsComponent, pathMatch: 'full' },
@@ -53,6 +54,7 @@ export const routes: Routes = [
   { path: 'about', component: AboutComponent },
   { path: 'bookmarks', loadComponent: () => import('./pages/bookmarks/bookmarks.component').then(m => m.BookmarksComponent), title: 'Bookmarks' },
   { path: 'articles', component: ArticlesComponent, title: 'Articles' },
+  { path: 'a/:id', component: ArticleComponent, title: 'Article' },
   {
     path: 'p/:id',
     component: ProfileComponent,

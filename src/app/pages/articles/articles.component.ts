@@ -14,10 +14,11 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AgoPipe } from '../../pipes/ago.pipe';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
-import { kinds, NostrEvent } from 'nostr-tools';
+import { Event, kinds, nip19, NostrEvent } from 'nostr-tools';
 import { RelayService } from '../../services/relay.service';
 import { standardizedTag } from '../../standardized-tags';
 import { ApplicationService } from '../../services/application.service';
+import { UtilitiesService } from '../../services/utilities.service';
 
 interface Article {
     id: string;
@@ -33,6 +34,7 @@ interface Article {
     tags: string[];
     readTimeMinutes: number;
     imageUrl?: string;
+    event: Event;
 }
 
 @Component({
@@ -62,6 +64,7 @@ export class ArticlesComponent {
     private readonly app = inject(ApplicationService);
     private logger = inject(LoggerService);
     private snackBar = inject(MatSnackBar);
+    private readonly utilities = inject(UtilitiesService);
 
     isLoading = signal(true);
     articles = signal<Article[]>([]);
@@ -92,8 +95,6 @@ export class ArticlesComponent {
             }
         });
     }
-
-
 
     async loadArticles(): Promise<void> {
         try {
@@ -143,6 +144,7 @@ export class ArticlesComponent {
                     const published_atTag = this.nostrService.getTags(event, standardizedTag.published_at);
 
                     const article = {
+                        event: event,
                         id: event.id,
                         title: titleTag[0],
                         summary: summaryTag[0] || this.generateSummary(content),
@@ -252,13 +254,39 @@ export class ArticlesComponent {
     viewArticle(article: Article): void {
         // In a real implementation, navigate to article detail view
         this.logger.debug('Viewing article:', article);
-        // For now, we'll show a message since we don't have an article detail page yet
-        this.snackBar.open('Article view coming soon!', 'Close', {
-            duration: 3000
-        });
+
+        debugger;
+
+        const decoded = nip19.decode('naddr1qvzqqqr4gupzq9lz3z0m5qgzr5zg5ylapwss3tf3cwpjv225vrppu6wy8750heg4qqx8vmmvw4h8gctj095hxmgngvafv');
+        console.log('Decoded Nostr Address:', decoded);
+
+        const dTag = this.utilities.getDTagValueFromTags(article.event.tags);
+
+        if (!dTag) {
+            // For now, we'll show a message since we don't have an article detail page yet
+            this.snackBar.open('No article slug found. Cannot open.', 'Close', {
+                duration: 3000
+            });
+            return;
+        }
+
+        // const tag = article.tags.find(tag => tag[0] == 'd')[1];
+
+        const pointer: nip19.AddressPointer = {
+            identifier: dTag,
+            pubkey: article.author.pubkey,
+            kind: kinds.LongFormArticle,
+        };
+
+        const encodedUri = nip19.naddrEncode(pointer);
+
+        console.log('Encoded Nostr Address:', encodedUri);
+        this.router.navigate(['/a', encodedUri]);
+
+
     }
 
-    copyArticleLink(article: Article, event: Event): void {
+    copyArticleLink(article: Article, event: globalThis.Event): void {
         event.stopPropagation();
         // In a real implementation, create and copy a shareable link
         const link = `https://nostria.app/a/${article.id}`;
@@ -276,7 +304,7 @@ export class ArticlesComponent {
             });
     }
 
-    shareArticle(article: Article, event: Event): void {
+    shareArticle(article: Article, event: globalThis.Event): void {
         event.stopPropagation();
         // In a real implementation, open native share dialog if available
         if (navigator.share) {

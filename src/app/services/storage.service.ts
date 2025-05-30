@@ -3,6 +3,7 @@ import { LoggerService } from './logger.service';
 import { Relay } from './relay.service';
 import { openDB, IDBPDatabase, DBSchema, deleteDB } from 'idb';
 import { Event } from 'nostr-tools';
+import { UtilitiesService } from './utilities.service';
 
 // Interface for NIP-11 relay information
 export interface Nip11Info {
@@ -182,6 +183,7 @@ interface NostriaDBSchema extends DBSchema {
 })
 export class StorageService {
   private readonly logger = inject(LoggerService);
+  private readonly utilities = inject(UtilitiesService);
   private db!: IDBPDatabase<NostriaDBSchema>;
   // TODO: Before public release, rename the database to "nostria", then reset the DB_VERSION.
   private readonly DB_NAME = 'nostria-db-beta2';
@@ -316,29 +318,6 @@ export class StorageService {
     return (kind >= 30000 && kind < 40000);
   }
 
-  // Get d-tag value from an event
-  getDTagValue(event: Event): string | undefined {
-    for (const tag of event.tags) {
-      if (tag.length >= 2 && tag[0] === 'd') {
-        return tag[1];
-      }
-    }
-    return undefined;
-  }
-
-  // Get all p-tag values from an event
-  getPTagsValues(event: Event): string[] {
-    const pTagValues: string[] = [];
-
-    for (const tag of event.tags) {
-      if (tag.length >= 2 && tag[0] === 'p') {
-        pTagValues.push(tag[1]);
-      }
-    }
-
-    return pTagValues;
-  }
-
   // Generic event storage methods
   async saveEvent(event: Event): Promise<void> {
     try {
@@ -379,7 +358,7 @@ export class StorageService {
 
         // Add dTag field for indexing if it's a parameterized replaceable event
         if (this.isParameterizedReplaceableEvent(kind)) {
-          eventToStore.dTag = this.getDTagValue(event) || '';
+          eventToStore.dTag = this.utilities.getDTagValueFromEvent(event) || '';
         }
 
         await this.db.put('events', eventToStore);
@@ -426,7 +405,7 @@ export class StorageService {
   }
 
   private async saveParameterizedReplaceableEvent(event: Event): Promise<void> {
-    const dTagValue = this.getDTagValue(event);
+    const dTagValue = this.utilities.getDTagValueFromEvent(event);
 
     if (!dTagValue) {
       this.logger.debug(`Parameterized replaceable event ${event.id} has no d tag, storing as regular event`);

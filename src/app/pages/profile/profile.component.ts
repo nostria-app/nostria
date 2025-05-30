@@ -33,6 +33,7 @@ import { UserRelayFactoryService } from '../../services/user-relay-factory.servi
 import { UserRelayService } from '../../services/user-relay.service';
 import { NostrRecord } from '../../interfaces';
 import { DataService } from '../../services/data.service';
+import { UtilitiesService } from '../../services/utilities.service';
 
 @Component({
   selector: 'app-profile',
@@ -79,6 +80,7 @@ export class ProfileComponent {
   layoutService = inject(LayoutService);
   profileState = inject(ProfileStateService);
   accountState = inject(AccountStateService);
+  private readonly utilities = inject(UtilitiesService);
 
   pubkey = signal<string>('');
   userMetadata = signal<NostrRecord | undefined>(undefined);
@@ -260,7 +262,7 @@ export class ProfileComponent {
         console.log('Event received', evt);
 
         if (evt.kind === kinds.Contacts) {
-          const followingList = this.storage.getPTagsValues(evt);
+          const followingList = this.utilities.getPTagsValuesFromEvent(evt);
           console.log(followingList);
           // this.followingList.set(followingList);
           this.profileState.followingList.set(followingList);
