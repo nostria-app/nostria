@@ -152,22 +152,10 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
   //   console.log(`Fetching events for column: ${columnId}`);
   //   console.log('Available feeds:', this.feedService.data.keys());
   //   return this.feedService.data.get(columnId)?.events() || [];
-  // }
-  // Replace the old columns signal with columns from active feed
+  // }  // Replace the old columns signal with columns from active feed
   feeds = computed(() => this.feedsCollectionService.feeds());
   activeFeed = computed(() => this.feedsCollectionService.activeFeed());
-  columns = computed<ColumnDefinition[]>(() => this.feedsCollectionService.getActiveColumns());
-
-  // Update columns computed to map from feeds
-  // columns = computed(() => {
-  //   return this.feeds().map(feed => ({
-  //     id: feed.id,
-  //     path: feed.path || feed.id,
-  //     label: feed.label,
-  //     icon: feed.icon,
-  //     filters: feed.filters
-  //   } as NavLink));
-  // });
+  columns = computed(() => this.feedsCollectionService.getActiveColumns());
 
   // Signals for state management
   visibleColumnIndex = signal(0);
@@ -418,10 +406,11 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
         this.selectColumn(columnCount - 1);
         break;
     }
-  }
-  onColumnDrop(event: CdkDragDrop<ColumnDefinition[]>): void {
+  }  onColumnDrop(event: CdkDragDrop<ColumnDefinition[]>): void {
     const previousIndex = event.previousIndex;
     const currentIndex = event.currentIndex;
+
+    console.log('🔄 Column drop event:', { previousIndex, currentIndex });
 
     if (previousIndex !== currentIndex) {
       const activeFeed = this.activeFeed();
@@ -431,11 +420,11 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
       const columns = [...activeFeed.columns];
       moveItemInArray(columns, previousIndex, currentIndex);
 
-      // Update the feed with the new column order
-      this.feedsCollectionService.updateFeed(activeFeed.id, { 
-        columns: columns, 
-        updatedAt: Date.now() 
-      });
+      console.log('📋 Columns reordered:', columns.map(col => `${col.label} (${col.id})`));
+
+      // Update the actual feed data using the optimized method
+      console.log('⚡ Using optimized updateColumnOrder method');
+      this.feedsCollectionService.updateColumnOrder(activeFeed.id, columns);
 
       // Update the visible column index if in mobile view
       if (this.isMobileView()) {
@@ -605,8 +594,7 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
         this.notificationService.notify(`Column "${result.label}" updated`);
       }
     });
-  }
-  removeColumn(index: number): void {
+  }  removeColumn(index: number): void {
     const activeFeed = this.activeFeed();
     const columns = this.columns();
     
@@ -638,7 +626,15 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
       } else if (this.visibleColumnIndex() > index) {
         this.visibleColumnIndex.update(idx => idx - 1);
       }
-    }    this.notificationService.notify(`Column "${column.label}" removed`);
+    }
+
+    this.notificationService.notify(`Column "${column.label}" removed`);
+  }
+
+  refreshColumn(column: ColumnDefinition): void {
+    console.log('🔄 Refreshing column:', column.label, `(${column.id})`);
+    this.feedsCollectionService.refreshColumn(column.id);
+    this.notificationService.notify(`Column "${column.label}" refreshed`);
   }
 
   ngOnInit() {
@@ -850,7 +846,6 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
     });    dialogRef.afterClosed().subscribe(result => {
       if (result) {
         this.feedsCollectionService.removeFeed(activeFeed.id);
-      }
-    });
+      }    });
   }
 }
