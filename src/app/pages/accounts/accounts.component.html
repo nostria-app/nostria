@@ -40,39 +40,39 @@
   </div>
 
   @if (nostrService.accounts().length > 0) { <div class="all-accounts">
-    <h2>Account List</h2>
-
-    <mat-list class="accounts-list"> @for (account of nostrService.accounts(); track account.pubkey) { <mat-list-item
+    <h2>Account List</h2>    <mat-list class="accounts-list"> @for (account of nostrService.accounts(); track account.pubkey) { <mat-list-item
         class="account-item" [class.current-account-item]="account.pubkey === currentAccount()?.pubkey"
         (click)="account.pubkey !== currentAccount()?.pubkey ? switchAccount(account.pubkey) : null">
-        <div class="account-avatar list-avatar">
-          @if (nostrService.getMetadataForAccount(account.pubkey)?.data?.picture; as picture) {
-          <img [src]="picture" alt="Profile picture" class="avatar-image">
-          } @else {
-          <mat-icon>account_circle</mat-icon>
-          }
-        </div>
-        <div class="account-list-content">
-          <div class="account-name">
-            @if (nostrService.getMetadataForAccount(account.pubkey)?.data; as metadata) {
-            {{ metadata.display_name || metadata.name || 'Unnamed Account' }}
+        <div class="account-item-content">
+          <div class="account-avatar list-avatar">
+            @if (nostrService.getMetadataForAccount(account.pubkey)?.data?.picture; as picture) {
+            <img [src]="picture" alt="Profile picture" class="avatar-image">
             } @else {
-            Unnamed Account
+            <mat-icon>account_circle</mat-icon>
             }
           </div>
+          <div class="account-list-content">
+            <div class="account-name">
+              @if (nostrService.getMetadataForAccount(account.pubkey)?.data; as metadata) {
+              {{ metadata.display_name || metadata.name || 'Unnamed Account' }}
+              } @else {
+              Unnamed Account
+              }
+            </div>
 
-          <div class="account-details-container">
-            <div class="account-npub">{{ account.pubkey | npub }}</div>
-            <div class="account-source">
-              Type: {{ account.source }} • Last used: {{ account.lastUsed | date:'medium' }}
+            <div class="account-details-container">
+              <div class="account-npub">{{ account.pubkey | npub }}</div>
+              <div class="account-source">
+                Type: {{ account.source }} • Last used: {{ account.lastUsed | date:'medium' }}
+              </div>
             </div>
           </div>
-        </div>
 
-        <button mat-icon-button class="delete-button" (click)="removeAccount($event, account.pubkey)"
-          matTooltip="Remove account">
-          <mat-icon color="warn">delete</mat-icon>
-        </button>
+          <button mat-icon-button class="delete-button" (click)="removeAccount($event, account.pubkey)"
+            matTooltip="Remove account">
+            <mat-icon color="warn">delete</mat-icon>
+          </button>
+        </div>
       </mat-list-item>
       }
     </mat-list>
