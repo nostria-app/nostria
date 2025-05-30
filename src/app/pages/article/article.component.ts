@@ -13,8 +13,9 @@ import { NostrService } from '../../services/nostr.service';
 import { StorageService } from '../../services/storage.service';
 import { LoggerService } from '../../services/logger.service';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
-import { ContentComponent } from '../../components/content/content.component';
 import { DateToggleComponent } from '../../components/date-toggle/date-toggle.component';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { marked } from 'marked';
 
 @Component({
   selector: 'app-article',
@@ -28,7 +29,6 @@ import { DateToggleComponent } from '../../components/date-toggle/date-toggle.co
     MatDividerModule,
     MatProgressSpinnerModule,
     UserProfileComponent,
-    ContentComponent,
     DateToggleComponent
   ],
   templateUrl: './article.component.html',
@@ -40,6 +40,7 @@ export class ArticleComponent {
   private nostrService = inject(NostrService);
   private storageService = inject(StorageService);
   private logger = inject(LoggerService);
+  private sanitizer = inject(DomSanitizer);
 
   event = signal<Event | undefined>(undefined);
   isLoading = signal(false);
@@ -257,7 +258,6 @@ The future of social networking isn't about finding the next big platform - it's
     if (!ev) return [];
     return this.utilities.getTagValues('t', ev.tags);
   });
-
   content = computed(() => {
     const ev = this.event();
     if (!ev) return '';
@@ -267,6 +267,30 @@ The future of social networking isn't about finding the next big platform - it's
       return typeof parsed === 'string' ? parsed : ev.content;
     } catch {
       return ev.content;
+    }
+  });  // New computed property for parsed markdown content
+  parsedContent = computed<SafeHtml>(() => {
+    const content = this.content();
+    if (!content) return '';
+    
+    try {
+      // Configure marked for security and features
+      marked.setOptions({
+        gfm: true,
+        breaks: true
+      });
+
+      // Parse markdown to HTML (marked.parse returns string)
+      const htmlContent = marked.parse(content) as string;
+      
+      // Sanitize and return safe HTML
+      return this.sanitizer.bypassSecurityTrustHtml(htmlContent);
+    } catch (error) {
+      this.logger.error('Error parsing markdown:', error);
+      // Fallback to plain text
+      return this.sanitizer.bypassSecurityTrustHtml(
+        content.replace(/\n/g, '<br>')
+      );
     }
   });
 
