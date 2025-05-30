@@ -164,8 +164,7 @@ export class FeedsCollectionService {
     });
     
     return this.convertFeedConfigsToDefinitions([feedConfig])[0];
-  }
-  /**
+  }  /**
    * Update a feed (delegates to FeedService)
    */
   updateFeed(id: string, updates: Partial<Omit<FeedDefinition, 'id' | 'createdAt'>>): boolean {
@@ -180,6 +179,15 @@ export class FeedsCollectionService {
     if (updates.updatedAt !== undefined) feedConfig.updatedAt = updates.updatedAt;
     
     return this.feedService.updateFeed(id, feedConfig);
+  }
+  /**
+   * Update only the column order without triggering subscription changes
+   * This is optimized for drag and drop operations to preserve DOM state
+   */
+  updateColumnOrder(id: string, columns: ColumnDefinition[]): boolean {
+    console.log(`⚡ FeedsCollectionService: Updating column order for feed ${id}`);
+    console.log(`📋 New column order:`, columns.map(col => `${col.label} (${col.id})`));
+    return this.feedService.updateColumnOrder(id, columns as ColumnConfig[]);
   }
 
   /**
@@ -299,5 +307,12 @@ export class FeedsCollectionService {
   reorderFeeds(newOrder: string[]): void {
     this.feedService.reorderFeeds(newOrder);
     this.logger.debug('Reordered feeds', newOrder);
+  }
+
+  /**
+   * Refresh a specific column (delegates to FeedService)
+   */
+  refreshColumn(columnId: string): void {
+    this.feedService.refreshColumn(columnId);
   }
 }

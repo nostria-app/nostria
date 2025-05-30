@@ -504,12 +504,42 @@ export class FeedService {
         };
         return updatedFeeds;
       });
-    }
-
-    this.saveFeeds();
+    }    this.saveFeeds();
     this.logger.debug(`Updated feed ${id}`, updates);
     return true;
   }
+  /**
+   * Update only the column order without triggering subscription changes
+   * This is optimized for drag and drop operations to preserve DOM state
+   */
+  updateColumnOrder(id: string, columns: ColumnConfig[]): boolean {
+    console.log(`🔄 FeedService: Updating column order for feed ${id}`);
+    console.log('📋 New column order:', columns.map(col => `${col.label} (${col.id})`));
+    
+    const feedIndex = this._feeds().findIndex(feed => feed.id === id);
+    if (feedIndex === -1) {
+      this.logger.warn(`Feed with id ${id} not found`);
+      console.warn(`❌ Feed ${id} not found`);
+      return false;
+    }
+
+    // Update only the column order directly without triggering subscription logic
+    this._feeds.update(feeds => {
+      const updatedFeeds = [...feeds];
+      updatedFeeds[feedIndex] = {
+        ...updatedFeeds[feedIndex],
+        columns: columns,
+        updatedAt: Date.now()
+      };
+      return updatedFeeds;
+    });
+
+    this.saveFeeds();
+    this.logger.debug(`Updated column order for feed ${id}`, columns.map(col => col.id));
+    console.log(`✅ FeedService: Column order updated successfully without subscription changes`);
+    return true;
+  }
+
   /**
    * Remove a feed
    */
@@ -614,5 +644,29 @@ export class FeedService {
     } catch {
       return false;
     }
+  }
+  /**
+   * Refresh a specific column by unsubscribing and resubscribing
+   */
+  refreshColumn(columnId: string): void {
+    console.log(`🔄 FeedService: Refreshing column ${columnId}`);
+    const columnData = this.data.get(columnId);
+    if (!columnData) {
+      this.logger.warn(`Cannot refresh column ${columnId}: column not found`);
+      console.warn(`❌ Column ${columnId} not found in data map`);
+      return;
+    }
+
+    const column = columnData.column;
+    console.log(`📊 Column found: ${column.label}, unsubscribing and resubscribing...`);
+    
+    // Unsubscribe from the column
+    this.unsubscribeFromColumn(columnId);
+    
+    // Resubscribe to the column
+    this.subscribeToColumn(column);
+    
+    this.logger.debug(`Refreshed column: ${columnId}`);
+    console.log(`✅ FeedService: Column ${columnId} refreshed successfully`);
   }
 }

@@ -96,11 +96,10 @@
             </div>
             }
             <mat-icon>{{ column.icon }}</mat-icon>
-            <span class="column-title">{{ column.label }}</span>
-            <div class="column-header-actions">
+            <span class="column-title">{{ column.label }}</span>            <div class="column-header-actions">
 
 
-              <button mat-icon-button (click)="refreshContent()" matTooltip="Refresh content">
+              <button mat-icon-button (click)="refreshColumn(column)" matTooltip="Refresh content">
                 <mat-icon>refresh</mat-icon>
               </button>
               <button mat-icon-button (click)="toggleAdvancedFilters()" matTooltip="Toggle filters">
