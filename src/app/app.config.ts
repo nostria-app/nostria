@@ -1,4 +1,4 @@
-import { ApplicationConfig, inject, isDevMode, provideAppInitializer, provideExperimentalZonelessChangeDetection } from '@angular/core';
+import { ApplicationConfig, inject, isDevMode, provideAppInitializer, provideBrowserGlobalErrorListeners, provideZonelessChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideServiceWorker } from '@angular/service-worker';
@@ -42,7 +42,8 @@ export const appConfig: ApplicationConfig = {
     },
     UserRelayFactoryService,
     UserRelayService,
-    provideExperimentalZonelessChangeDetection(),
+    provideBrowserGlobalErrorListeners(),
+    provideZonelessChangeDetection(),
     provideRouter(routes),
     provideAnimations(),
     provideHttpClient(withFetch()),

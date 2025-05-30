@@ -18,6 +18,7 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { marked } from 'marked';
 import { DataService } from '../../services/data.service';
 import { UserRelayFactoryService } from '../../services/user-relay-factory.service';
+import { LayoutService } from '../../services/layout.service';
 
 @Component({
   selector: 'app-article',
@@ -40,32 +41,33 @@ export class ArticleComponent {
   private route = inject(ActivatedRoute);
   private utilities = inject(UtilitiesService);
   private nostrService = inject(NostrService);
-  private storageService = inject(StorageService);
-  private logger = inject(LoggerService);
+  private storageService = inject(StorageService);  private logger = inject(LoggerService);
   private sanitizer = inject(DomSanitizer);
   private data = inject(DataService);
+  private layout = inject(LayoutService);
   
 
   event = signal<Event | undefined>(undefined);
   isLoading = signal(false);
-  error = signal<string | null>(null);
-  constructor() {
+  error = signal<string | null>(null);  constructor() {
     // Effect to load article when route parameter changes
     effect(() => {
       const addrParam = this.route.snapshot.paramMap.get('id');
       if (addrParam) {
         this.loadArticle(addrParam);
+        // Scroll to top when navigating to a new article
+        setTimeout(() => this.layout.scrollMainContentToTop(), 100);
       }
     });
   }
 
   async loadArticle(naddr: string): Promise<void> {
-    const receivedData = history.state.event as Event | undefined;
-
-    if (receivedData) {
+    const receivedData = history.state.event as Event | undefined;    if (receivedData) {
       this.logger.debug('Received event from navigation state:', receivedData);
       this.event.set(receivedData);
       this.isLoading.set(false);
+      // Scroll to top when article is received from navigation state
+      setTimeout(() => this.layout.scrollMainContentToTop(), 50);
       return;
     }
 
@@ -229,12 +231,13 @@ The future of social networking isn't about finding the next big platform - it's
         sig: 'sample_signature_would_go_here'
       };
 
-      this.event.set(articleEvent);
-    } catch (error) {
+      this.event.set(articleEvent);    } catch (error) {
       this.logger.error('Error loading article:', error);
       this.error.set('Failed to load article');
     } finally {
       this.isLoading.set(false);
+      // Scroll to top after article loads (whether successful or not)
+      setTimeout(() => this.layout.scrollMainContentToTop(), 100);
     }
   }
   // Computed properties for parsed event data

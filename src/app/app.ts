@@ -67,10 +67,10 @@ interface NavItem {
     MatBottomSheetModule,
     WelcomeComponent,
     DebugOverlayComponent
-  ], templateUrl: './app.component.html',
-  styleUrl: './app.component.scss'
+  ], templateUrl: './app.html',
+  styleUrl: './app.scss'
 })
-export class AppComponent {
+export class App {
   title = 'Nostria';
   themeService = inject(ThemeService);
   pwaUpdateService = inject(PwaUpdateService);

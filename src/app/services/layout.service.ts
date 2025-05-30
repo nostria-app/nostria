@@ -272,6 +272,41 @@ export class LayoutService {
     }
 
     /**
+     * Scrolls the main content area to the top - specifically for page navigation
+     * Uses the mat-drawer-content element which is the main scrollable container
+     */
+    scrollMainContentToTop(): void {
+        // Try the mat-drawer-content first (main layout container)
+        const matDrawerContent = document.querySelector('.mat-drawer-content');
+        if (matDrawerContent) {
+            matDrawerContent.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+            this.logger.debug('Scrolled mat-drawer-content to top');
+            return;
+        }
+
+        // Fallback to content-wrapper
+        const contentWrapper = document.querySelector('.content-wrapper');
+        if (contentWrapper) {
+            contentWrapper.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+            this.logger.debug('Fallback: scrolled content-wrapper to top');
+            return;
+        }
+
+        // Final fallback to window scroll
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+        this.logger.debug('Final fallback: scrolled window to top');
+    }
+
+    /**
      * Scrolls an element into view
      * @param elementSelector CSS selector for the element to scroll into view
      * @param block Position of the element relative to the viewport after scrolling
