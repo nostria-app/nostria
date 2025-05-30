@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 
 import { NameService } from './name.service';
-import { provideExperimentalZonelessChangeDetection } from '@angular/core';
+import { provideZonelessChangeDetection } from '@angular/core';
 
 describe('NameService', () => {
   let service: NameService;
@@ -9,7 +9,7 @@ describe('NameService', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [
-        provideExperimentalZonelessChangeDetection()
+        provideZonelessChangeDetection()
       ]
     });
     service = TestBed.inject(NameService);
