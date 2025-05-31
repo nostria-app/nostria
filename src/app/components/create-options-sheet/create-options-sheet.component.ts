@@ -2,7 +2,9 @@ import { Component, inject } from '@angular/core';
 import { MatBottomSheetRef } from '@angular/material/bottom-sheet';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
+import { MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
+import { NoteEditorDialogComponent } from '../note-editor-dialog/note-editor-dialog.component';
 
 @Component({
   selector: 'app-create-options-sheet',
@@ -17,6 +19,7 @@ import { Router } from '@angular/router';
 export class CreateOptionsSheetComponent {
   private bottomSheetRef = inject(MatBottomSheetRef<CreateOptionsSheetComponent>);
   private router = inject(Router);
+  private dialog = inject(MatDialog);
 
   // Creation options
   createOptions = [
@@ -30,12 +33,20 @@ export class CreateOptionsSheetComponent {
     this.bottomSheetRef.dismiss();
     action();
   }
-
   // Handler methods for different creation types
   private createNote(): void {
-    // Navigate to note creation or implement note creation logic
-    console.log('Create note');
-    // Example: this.router.navigate(['/create/note']);
+    // Open note editor dialog
+    const dialogRef = this.dialog.open(NoteEditorDialogComponent, {
+      width: '600px',
+      maxWidth: '90vw',
+      data: {} // No reply/quote data for new notes
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result?.published) {
+        console.log('Note published successfully:', result.event);
+      }
+    });
   }
   private createArticle(): void {
     // Navigate to article creation

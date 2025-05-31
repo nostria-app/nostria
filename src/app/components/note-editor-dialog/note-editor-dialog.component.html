@@ -1,1 +1,96 @@
-<p>note-editor-dialog works!</p>
+<p><div class="note-editor-dialog">
+  <div mat-dialog-title class="dialog-header">
+    <span>
+      @if (isReply()) {
+        Reply to Note
+      } @else if (isQuote()) {
+        Quote Note
+      } @else {
+        Create Note
+      }
+    </span>
+    <button mat-icon-button (click)="cancel()" class="close-button">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <div mat-dialog-content class="dialog-content">
+    <!-- Reply context -->
+    @if (isReply()) {
+      <div class="reply-context">
+        <mat-icon class="reply-icon">reply</mat-icon>
+        <span class="reply-text">Replying to note</span>
+      </div>
+    }
+
+    <!-- Quote context -->    @if (isQuote()) {
+      <div class="quote-context">
+        <mat-icon class="quote-icon">format_quote</mat-icon>
+        <span class="quote-text">Quoting: "{{ (data.quote?.content || '').slice(0, 100) }}{{ (data.quote?.content || '').length > 100 ? '...' : '' }}"</span>
+      </div>
+    }
+
+    <!-- Content editor -->
+    <mat-form-field appearance="outline" class="content-field">
+      <mat-label>What's on your mind?</mat-label>
+      <textarea
+        matInput
+        [(ngModel)]="content"
+        placeholder="Write your note..."
+        rows="4"
+        maxlength="280"
+        class="content-textarea"
+        [class.over-limit]="isOverLimit()"
+        #contentTextarea>
+      </textarea>      <mat-hint align="end" [ngClass]="getCharacterCountColor()">
+        {{ characterCount() }}/280
+      </mat-hint>
+    </mat-form-field>
+
+    <!-- Mentions -->
+    @if (mentions().length > 0) {
+      <div class="mentions-section">
+        <label class="mentions-label">Mentioning:</label>
+        <mat-chip-set class="mentions-chips">
+          @for (mention of mentions(); track mention) {
+            <mat-chip removable (removed)="removeMention(mention)">
+              {{ mention.slice(0, 16) }}...
+              <mat-icon matChipRemove>cancel</mat-icon>
+            </mat-chip>
+          }
+        </mat-chip-set>
+      </div>
+    }
+
+    <!-- Character limit warning -->
+    @if (isOverLimit()) {
+      <div class="warning-message">
+        <mat-icon color="warn">warning</mat-icon>
+        <span>Note exceeds 280 character limit</span>
+      </div>
+    }
+  </div>
+
+  <div mat-dialog-actions class="dialog-actions">
+    <button mat-button (click)="cancel()" [disabled]="isPublishing()">
+      Cancel
+    </button>    <button 
+      mat-raised-button 
+      color="primary" 
+      (click)="publishNote()" 
+      [disabled]="!canPublish()"
+      class="publish-button">
+      @if (isPublishing()) {
+        <ng-container>
+          <mat-icon class="spinning">hourglass_empty</mat-icon>
+          Publishing...
+        </ng-container>
+      } @else {
+        <ng-container>
+          <mat-icon>send</mat-icon>
+          Publish Note
+        </ng-container>
+      }
+    </button>
+  </div>
+</div>
