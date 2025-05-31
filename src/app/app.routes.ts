@@ -30,7 +30,6 @@ import { ArticleComponent } from './pages/article/article.component';
 
 export const routes: Routes = [
   { path: '', component: FeedsComponent, pathMatch: 'full' },
-  { path: 'f', component: FeedsComponent },
   { path: 'f/:path', component: FeedsComponent },
   { path: 'beta', component: BetaComponent, title: 'Beta' },
   { path: 'relays', component: RelaysComponent },
