@@ -1,6 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -18,7 +17,6 @@ import { LayoutService } from '../../services/layout.service';
   selector: 'app-accounts',
   standalone: true,  imports: [
     CommonModule,
-    RouterLink,
     MatButtonModule,
     MatCardModule,
     MatIconModule,

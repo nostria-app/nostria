@@ -4,7 +4,6 @@ import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { NostrService } from '../../../services/nostr.service';
 import { LoggerService } from '../../../services/logger.service';
-import { LoadingOverlayComponent } from '../../../components/loading-overlay/loading-overlay.component';
 import { ProfileStateService } from '../../../services/profile-state.service';
 import { MatCardModule } from '@angular/material/card';
 import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
@@ -18,7 +17,6 @@ import { AgoPipe } from '../../../pipes/ago.pipe';
   imports: [
     CommonModule,
     MatIconModule,
-    LoadingOverlayComponent,
     MatCardModule,
     UserProfileComponent,
     RouterModule,
