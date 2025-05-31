@@ -42,11 +42,8 @@ export class CreateOptionsSheetComponent {
     // Navigate to article creation
     console.log('Create article');
     // Example: this.router.navigate(['/create/article']);
-  }
-
-  private uploadMedia(): void {
-    // Navigate to upload page or open upload dialog
-    console.log('Upload media');
-    // Example: this.router.navigate(['/create/upload']);
+  }  private async uploadMedia(): Promise<void> {
+    // Navigate to media page with upload parameter
+    await this.router.navigate(['/media'], { queryParams: { upload: 'true' } });
   }
 }

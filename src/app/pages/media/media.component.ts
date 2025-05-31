@@ -12,7 +12,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTableModule } from '@angular/material/table';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { MediaService, MediaItem } from '../../services/media.service';
 import { MediaUploadDialogComponent } from './media-upload-dialog/media-upload-dialog.component';
 import { MediaServerDialogComponent } from './media-server-dialog/media-server-dialog.component';
@@ -58,6 +58,7 @@ export class MediaComponent {
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   appState = inject(ApplicationStateService);
   app = inject(ApplicationService);
   private readonly localStorage = inject(LocalStorageService);
@@ -108,11 +109,25 @@ export class MediaComponent {
         // Only fetch files if it's been more than 10 minutes since last fetch
         const tenMinutesInMs = 10 * 60 * 1000; // 10 minutes in milliseconds
         const currentTime = Date.now();
-        const lastFetchTime = this.mediaService.getLastFetchTime();
-
-        if (currentTime - lastFetchTime > tenMinutesInMs) {
+        const lastFetchTime = this.mediaService.getLastFetchTime();        if (currentTime - lastFetchTime > tenMinutesInMs) {
           await this.mediaService.getFiles();
         }
+      }
+    });    // Check for upload query parameter and trigger upload dialog
+    this.route.queryParamMap.subscribe(params => {
+      const uploadParam = params.get('upload');
+      if (uploadParam === 'true') {
+        // Remove the query parameter from URL without navigation
+        this.router.navigate([], {
+          relativeTo: this.route,
+          queryParams: {},
+          replaceUrl: true
+        });
+        
+        // Open upload dialog after a small delay to ensure navigation is complete
+        setTimeout(() => {
+          this.openUploadDialog();
+        }, 100);
       }
     });
   }
