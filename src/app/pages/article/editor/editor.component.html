@@ -1,0 +1,165 @@
+<mat-toolbar class="editor-toolbar">
+  <span>{{ isEditMode() ? 'Edit Article' : 'New Article' }}</span>
+  <span class="spacer"></span>
+  
+  @if (isPublishing()) {
+    <mat-progress-bar mode="indeterminate" class="publish-progress"></mat-progress-bar>
+  }
+  
+  <button mat-button (click)="cancel()" [disabled]="isPublishing()">
+    <mat-icon>close</mat-icon>
+    Cancel
+  </button>
+  
+  <button mat-button (click)="saveDraft()" [disabled]="!isValid() || isPublishing()">
+    <mat-icon>save</mat-icon>
+    Save Draft
+  </button>
+  
+  <button mat-raised-button 
+          color="primary" 
+          (click)="publish()" 
+          [disabled]="!isValid() || isPublishing()">
+    <mat-icon>publish</mat-icon>
+    Publish
+  </button>
+</mat-toolbar>
+
+@if (isLoading()) {
+  <div class="loading-container">
+    <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+    <p>Loading article...</p>
+  </div>
+} @else {
+  <div class="editor-container">
+    <!-- Article Metadata -->
+    <mat-card class="metadata-card">
+      <mat-card-header>
+        <mat-card-title>Article Information</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="metadata-form">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Title *</mat-label>
+            <input matInput 
+                   [value]="article().title"
+                   (input)="updateTitle($any($event.target).value)"
+                   placeholder="Enter article title"
+                   required>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Summary</mat-label>
+            <textarea matInput 
+                      [value]="article().summary"
+                      (input)="updateSummary($any($event.target).value)"
+                      placeholder="Brief description of your article"
+                      rows="3">
+            </textarea>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Image URL</mat-label>
+            <input matInput 
+                   [value]="article().image"
+                   (input)="updateImage($any($event.target).value)"
+                   placeholder="https://example.com/image.jpg">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Article ID (d tag) *</mat-label>
+            <input matInput 
+                   [value]="article().dTag"
+                   (input)="updateDTag($any($event.target).value)"
+                   placeholder="unique-article-identifier"
+                   required>
+            <mat-hint>Unique identifier for your article. Used in URLs.</mat-hint>
+          </mat-form-field>
+
+          <!-- Tags Section -->
+          <div class="tags-section">
+            <h3>Tags</h3>
+            <div class="tag-input-container">
+              <mat-form-field appearance="outline" class="tag-input">
+                <mat-label>Add tag</mat-label>
+                <input matInput 
+                       [value]="newTag()"
+                       (input)="newTag.set($any($event.target).value)"
+                       (keypress)="onTagKeyPress($event)"
+                       placeholder="Enter a tag">
+              </mat-form-field>
+              <button mat-icon-button 
+                      (click)="addTag()" 
+                      [disabled]="!newTag().trim()">
+                <mat-icon>add</mat-icon>
+              </button>
+            </div>
+            
+            @if (article().tags.length > 0) {
+              <div class="tags-container">
+                @for (tag of article().tags; track tag) {
+                  <mat-chip class="tag-chip" [removable]="true" (removed)="removeTag(tag)">
+                    {{ tag }}
+                    <mat-icon matChipRemove>cancel</mat-icon>
+                  </mat-chip>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Content Editor -->
+    <mat-card class="content-card">
+      <mat-card-header>
+        <mat-card-title>Content</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <mat-tab-group [(selectedIndex)]="selectedTabIndex" class="content-tabs">
+          <mat-tab label="Write">
+            <div class="write-tab">
+              <mat-form-field appearance="outline" class="full-width content-editor">
+                <mat-label>Article Content *</mat-label>
+                <textarea matInput 
+                          [value]="article().content"
+                          (input)="updateContent($any($event.target).value)"
+                          placeholder="Write your article content in Markdown..."
+                          rows="20"
+                          required>
+                </textarea>
+                <mat-hint>You can use Markdown formatting</mat-hint>
+              </mat-form-field>
+            </div>
+          </mat-tab>
+          
+          <mat-tab label="Preview">
+            <div class="preview-tab">
+              @if (article().content.trim()) {
+                <div class="preview-content">
+                  <h1 class="preview-title">{{ article().title || 'Untitled' }}</h1>
+                  @if (article().summary) {
+                    <p class="preview-summary">{{ article().summary }}</p>
+                  }
+                  @if (article().image) {
+                    <img [src]="article().image" 
+                         [alt]="article().title" 
+                         class="preview-image"
+                         loading="lazy">
+                  }                  <div class="preview-markdown">
+                    <div [innerHTML]="markdownHtml()"></div>
+                  </div>
+                </div>
+              } @else {
+                <div class="empty-preview">
+                  <mat-icon>preview</mat-icon>
+                  <p>Write some content to see the preview</p>
+                </div>
+              }
+            </div>
+          </mat-tab>
+        </mat-tab-group>
+      </mat-card-content>
+    </mat-card>
+  </div>
+}

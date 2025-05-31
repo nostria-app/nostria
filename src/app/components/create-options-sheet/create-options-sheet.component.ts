@@ -37,12 +37,10 @@ export class CreateOptionsSheetComponent {
     console.log('Create note');
     // Example: this.router.navigate(['/create/note']);
   }
-
   private createArticle(): void {
     // Navigate to article creation
-    console.log('Create article');
-    // Example: this.router.navigate(['/create/article']);
-  }  private async uploadMedia(): Promise<void> {
+    this.router.navigate(['/article/create']);
+  }private async uploadMedia(): Promise<void> {
     // Navigate to media page with upload parameter
     await this.router.navigate(['/media'], { queryParams: { upload: 'true' } });
   }

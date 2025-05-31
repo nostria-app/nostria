@@ -27,6 +27,7 @@ import { LoginDialogComponent } from './components/login-dialog/login-dialog.com
 import { ProfileEditComponent } from './pages/profile/profile-edit/profile-edit.component';
 import { FeedsComponent } from './pages/feeds/feeds.component';
 import { ArticleComponent } from './pages/article/article.component';
+import { EditorComponent } from './pages/article/editor/editor.component';
 
 export const routes: Routes = [
   { path: '', component: FeedsComponent, pathMatch: 'full' },
@@ -48,9 +49,10 @@ export const routes: Routes = [
   { path: 'notifications/settings', component: NotificationSettingsComponent },
   { path: 'credentials', component: CredentialsComponent },
   { path: 'accounts', component: AccountsComponent },
-  { path: 'about', component: AboutComponent },
-  { path: 'bookmarks', loadComponent: () => import('./pages/bookmarks/bookmarks.component').then(m => m.BookmarksComponent), title: 'Bookmarks' },
+  { path: 'about', component: AboutComponent },  { path: 'bookmarks', loadComponent: () => import('./pages/bookmarks/bookmarks.component').then(m => m.BookmarksComponent), title: 'Bookmarks' },
   { path: 'articles', component: ArticlesComponent, title: 'Articles' },
+  { path: 'article/create', component: EditorComponent, title: 'New Article' },
+  { path: 'article/edit/:id', component: EditorComponent, title: 'Edit Article' },
   { path: 'a/:id', component: ArticleComponent, title: 'Article' },
   {
     path: 'p/:id',
