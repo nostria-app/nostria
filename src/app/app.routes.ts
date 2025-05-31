@@ -18,7 +18,6 @@ import { DetailsComponent } from './pages/profile/details/details.component';
 import { NotificationsComponent } from './pages/notifications/notifications.component';
 import { MessagesComponent } from './pages/messages/messages.component';
 import { ArticlesComponent } from './pages/articles/articles.component';
-import { WelcomeComponent } from './pages/welcome/welcomecomponent';
 import { BadgesComponent } from './pages/badges/badges.component';
 import { ProfileRelaysComponent } from './pages/profile/profile-relays/profile-relays.component';
 import { BetaComponent } from './pages/beta/beta.component';
@@ -33,7 +32,6 @@ export const routes: Routes = [
   { path: '', component: FeedsComponent, pathMatch: 'full' },
   { path: 'f', component: FeedsComponent },
   { path: 'f/:path', component: FeedsComponent },
-  { path: 'welcome', component: WelcomeComponent },
   { path: 'beta', component: BetaComponent, title: 'Beta' },
   { path: 'relays', component: RelaysComponent },
   {
