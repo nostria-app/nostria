@@ -19,6 +19,7 @@ import { NostrService } from '../../../services/nostr.service';
 import { DataService } from '../../../services/data.service';
 import { RelayService } from '../../../services/relay.service';
 import { MatCardModule } from '@angular/material/card';
+import { LayoutService } from '../../../services/layout.service';
 
 interface ArticleDraft {
   title: string;
@@ -58,6 +59,7 @@ export class EditorComponent {
   private relayService = inject(RelayService);  private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private sanitizer = inject(DomSanitizer);
+  private layout = inject(LayoutService);
 
   // Editor state
   isLoading = signal(false);
@@ -106,6 +108,10 @@ export class EditorComponent {
         this.loadArticle(articleId);
       }
     });
+  }
+
+  ngOnInit() {
+    setTimeout(() => this.layout.scrollMainContentToTop(), 100);
   }
 
   private generateUniqueId(): string {
