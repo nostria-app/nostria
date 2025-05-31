@@ -8,7 +8,7 @@ import { MatSnackBar } from "@angular/material/snack-bar";
 import { BreakpointObserver } from "@angular/cdk/layout";
 import { MediaPreviewDialogComponent } from "../components/media-preview-dialog/media-preview.component";
 import { nip19 } from "nostr-tools";
-import { ProfilePointer } from "nostr-tools/nip19";
+import { AddressPointer, EventPointer, ProfilePointer } from "nostr-tools/nip19";
 import { ProfileStateService } from "./profile-state.service";
 import { LoginDialogComponent } from "../components/login-dialog/login-dialog.component";
 import { NostrRecord } from "../interfaces";
@@ -191,8 +191,34 @@ export class LayoutService {
             this.searchInput = '';
             this.openProfile(value);
         }
+        else if (value.startsWith('nprofile')) {
+            this.toggleSearch();
+            const decoded = nip19.decode(value).data as ProfilePointer;
+            this.openProfile(decoded.pubkey);
+        }
+        else if (value.startsWith('nevent')) {
+            this.toggleSearch();
+            const decoded = nip19.decode(value).data as EventPointer;
+            this.openEvent(value);
+        }
         else if (value.includes('@')) {
             this.query.set(value);
+        }
+        else if (value.startsWith('nsec')) {
+            this.toggleSearch();
+            this.toast('WARNING: You pasted your nsec key. This is a security risk! Please remove it from your clipboard.', 5000, 'error-snackbar');
+            return;
+        }
+        else if (value.startsWith('naddr')) {
+            this.toggleSearch();
+            const decoded = nip19.decode(value).data as AddressPointer;
+
+            // If the naddr has a pubkey, we can discover them if not found locally.
+            if (decoded.pubkey) {
+
+            }
+
+            this.openArticle(value);
         }
         else if (value.includes(':')) {
             this.openProfile(value);
@@ -203,6 +229,14 @@ export class LayoutService {
 
     openProfile(pubkey: string): void {
         this.router.navigate(['/p', pubkey]);
+    }
+
+    openEvent(naddr: string): void {
+        this.router.navigate(['/e', naddr]);
+    }
+
+    openArticle(naddr: string): void {
+        this.router.navigate(['/a', naddr]);
     }
 
     scrollToOptimalProfilePosition() {
