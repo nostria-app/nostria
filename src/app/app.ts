@@ -33,6 +33,8 @@ import { LoginDialogComponent } from './components/login-dialog/login-dialog.com
 import { WelcomeComponent } from './components/welcome/welcome.component';
 import { DebugOverlayComponent } from './components/debug-overlay/debug-overlay.component';
 import { SearchService } from './services/search.service';
+import { MediaPlayerComponent } from './components/media-player/media-player.component';
+import { VideoPlayerComponent } from './components/video-player/video-player.component';
 
 interface NavItem {
   path: string;
@@ -66,7 +68,9 @@ interface NavItem {
     MatBadgeModule,
     MatBottomSheetModule,
     WelcomeComponent,
-    DebugOverlayComponent
+    DebugOverlayComponent,
+    MediaPlayerComponent,
+    VideoPlayerComponent
   ], templateUrl: './app.html',
   styleUrl: './app.scss'
 })

@@ -28,6 +28,7 @@ import { ProfileEditComponent } from './pages/profile/profile-edit/profile-edit.
 import { FeedsComponent } from './pages/feeds/feeds.component';
 import { ArticleComponent } from './pages/article/article.component';
 import { EditorComponent } from './pages/article/editor/editor.component';
+import { MediaQueueComponent } from './pages/media-queue/media-queue.component';
 
 export const routes: Routes = [
   { path: '', component: FeedsComponent, pathMatch: 'full' },
@@ -45,6 +46,7 @@ export const routes: Routes = [
   },
   { path: 'messages', component: MessagesComponent },
   { path: 'settings', component: SettingsComponent },
+  { path: 'media-queue', component: MediaQueueComponent },
   { path: 'notifications', component: NotificationsComponent },
   { path: 'notifications/settings', component: NotificationSettingsComponent },
   { path: 'credentials', component: CredentialsComponent },

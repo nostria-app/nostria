@@ -48,8 +48,8 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withFetch()),
     provideClientHydration(withEventReplay()),
     provideServiceWorker('ngsw-worker.js', {
-      enabled: !isDevMode(),
-      // enabled: true, // For development, set to true to test service worker. Also add "serviceWorker" in angular.json.
+      // enabled: !isDevMode(),
+      enabled: true, // For development, set to true to test service worker. Also add "serviceWorker" in angular.json.
       registrationStrategy: 'registerWhenStable:30000'
     }),
     importProvidersFrom(DragDropModule)

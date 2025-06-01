@@ -1,0 +1,70 @@
+:host {
+    /* Make sure the `div` stays there, even when scrolling. */
+    position: fixed;
+    /**
+   * Use theme color from meta tag, with fallback to Material toolbar background
+   */
+    background: var(--theme-background-color, var(--mat-toolbar-container-background-color, var(--mat-sys-surface)));
+    /* Use the environment variable for the left anchoring with a fallback. */
+    left: env(titlebar-area-x, 0);
+    /* Use the environment variable for the top anchoring with a fallback. */
+    top: env(titlebar-area-y, 0);
+    /* Use the environment variable for setting the width with a fallback. */
+    width: env(titlebar-area-width, 100%);
+    /* Use the environment variable for setting the height with a fallback. */
+    height: env(titlebar-area-height, 33px);
+
+    -webkit-app-region: drag;
+    app-region: drag;
+}
+
+.media-player {
+    display: flex;
+}
+
+.media-player-icon {
+    margin-top: 8px;
+    margin-left: 4px;
+    margin-right: 8px;
+}
+
+.media-player-controls {
+    margin-top: -4px;
+}
+
+.nodrag {
+    -webkit-app-region: no-drag;
+    app-region: no-drag;
+}
+
+/* …except for the `input`. */
+input {
+    -webkit-app-region: no-drag;
+    app-region: no-drag;
+}
+
+/* For macOS: */
+.search-controls-left {
+    /* Remove hardcoded gradient, let theme color take precedence */
+    background: var(--theme-background-color, var(--mat-toolbar-container-background-color, var(--mat-sys-surface)));
+}
+
+/* For Windows: */
+.search-controls-right {
+    /* Remove hardcoded gradient, let theme color take precedence */
+    background: var(--theme-background-color, var(--mat-toolbar-container-background-color, var(--mat-sys-surface)));
+}
+
+// @media (display-mode: window-controls-overlay) {
+//     :host {
+//         display: none;
+//         background-color: green;
+//     }
+// }
+
+// @media (display-mode: not(window-controls-overlay)) {
+//     :host {
+//         background-color: red;
+//         display: none;
+//     }
+// }

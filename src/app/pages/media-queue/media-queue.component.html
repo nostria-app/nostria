@@ -1,0 +1,18 @@
+<div class="page">
+    <div class="media-list">
+        <mat-list>
+            @for(item of media.media(); track item; ) {
+            <mat-list-item>
+                <img matListItemAvatar class="queue-artwork" [src]="utilities.sanitizeImageUrl(item.artwork)" />
+                <span matListItemTitle>{{$index+1}}. {{item.title}}</span>
+                <span matListItemLine>{{item.artist}}</span>
+                <span matListItemMeta class="delete-button">
+                    <button (click)="remove(item)" mat-icon-button matTooltip="Remove from queue" color="grey">
+                        <mat-icon>delete</mat-icon>
+                    </button>
+                </span>
+            </mat-list-item>
+            }
+        </mat-list>
+    </div>
+</div>

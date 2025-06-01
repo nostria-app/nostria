@@ -18,11 +18,19 @@ nav {
 .app-container {
   display: flex;
   flex-direction: column;
-  height: 100dvh;
+  margin-top: 0;
+  height: calc(100dvh);
   overflow: hidden;
   width: 100%;
-  /* Ensure it takes full width */
   position: relative;
+}
+
+@media (display-mode: window-controls-overlay) {
+  /** This is for when the app is running in a window with custom title bar controls. */
+  .app-container {
+    padding-top: env(titlebar-area-height, 33px);
+    height: calc(100dvh - env(titlebar-area-height, 33px));
+  }
 }
 
 .app-toolbar {
@@ -500,4 +508,3 @@ mat-nav-list .mat-icon {
   z-index: 11;
   box-shadow: var(--mat-sys-level4);
 }
-

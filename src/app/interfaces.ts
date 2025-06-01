@@ -8,6 +8,18 @@ export interface NostrRecord {
     data: any;
 }
 
+export interface MediaItem {
+    artwork: string;
+    title: string;
+    artist: string;
+    source: string;
+    type: 'Music' | 'Podcast' | 'YouTube' | 'Video';
+}
+
+export declare interface OnInitialized {
+    initialize(): void;
+}
+
 // Interface for Nostr events
 // export interface NostrEvent extends Event {
 //     /** Data is the parsed content. */
