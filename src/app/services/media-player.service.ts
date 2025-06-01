@@ -6,6 +6,15 @@ import { ApplicationService } from './application.service';
 import { LocalStorageService } from './local-storage.service';
 import { LayoutService } from './layout.service';
 
+export interface VideoWindowState {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  isMinimized: boolean;
+  isMaximized: boolean;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -13,12 +22,22 @@ export class MediaPlayerService implements OnInitialized {
   utilities = inject(UtilitiesService);
   localStorage = inject(LocalStorageService);
   layout = inject(LayoutService);
-  app = inject(ApplicationService);
-  media = signal<MediaItem[]>([]);
+  app = inject(ApplicationService);  media = signal<MediaItem[]>([]);
   audio?: HTMLAudioElement;
   current?: MediaItem;
   index = 0;
   readonly MEDIA_STORAGE_KEY = 'nostria-media-queue';
+  readonly WINDOW_STATE_STORAGE_KEY = 'nostria-video-window-state';
+
+  // Video window state
+  videoWindowState = signal<VideoWindowState>({
+    x: 100,
+    y: 100,
+    width: 560,
+    height: 315,
+    isMinimized: false,
+    isMaximized: false
+  });
 
   // minimized = false;
   // previousWidth = 800;
@@ -78,7 +97,6 @@ export class MediaPlayerService implements OnInitialized {
       }
     });
   }
-
   initialize(): void {
     let mediaQueue = this.localStorage.getItem(this.MEDIA_STORAGE_KEY);
 
@@ -87,6 +105,12 @@ export class MediaPlayerService implements OnInitialized {
     }
 
     this.media.set(JSON.parse(mediaQueue) as MediaItem[]);
+
+    // Load video window state
+    const windowState = this.localStorage.getItem(this.WINDOW_STATE_STORAGE_KEY);
+    if (windowState && windowState !== 'undefined') {
+      this.videoWindowState.set(JSON.parse(windowState) as VideoWindowState);
+    }
   }
 
   exit() {
@@ -134,7 +158,6 @@ export class MediaPlayerService implements OnInitialized {
     });
     this.save();
   }
-
   async save() {
     if (this.media().length === 0) {
       this.localStorage.removeItem(this.MEDIA_STORAGE_KEY);
@@ -142,6 +165,38 @@ export class MediaPlayerService implements OnInitialized {
     }
 
     this.localStorage.setItem(this.MEDIA_STORAGE_KEY, JSON.stringify(this.media()));
+  }
+
+  saveWindowState() {
+    this.localStorage.setItem(this.WINDOW_STATE_STORAGE_KEY, JSON.stringify(this.videoWindowState()));
+  }
+
+  updateWindowPosition(x: number, y: number) {
+    this.videoWindowState.update(state => ({ ...state, x, y }));
+    this.saveWindowState();
+  }
+
+  updateWindowSize(width: number, height: number) {
+    this.videoWindowState.update(state => ({ ...state, width, height }));
+    this.saveWindowState();
+  }
+
+  minimizeWindow() {
+    this.videoWindowState.update(state => ({ ...state, isMinimized: !state.isMinimized }));
+    this.saveWindowState();
+  }
+
+  maximizeWindow() {
+    this.videoWindowState.update(state => ({ 
+      ...state, 
+      isMaximized: !state.isMaximized,
+      isMinimized: false 
+    }));
+    this.saveWindowState();
+  }
+
+  closeVideoWindow() {
+    this.exit();
   }
 
   youtubeUrl?: SafeResourceUrl;
