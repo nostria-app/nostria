@@ -1,0 +1,48 @@
+<div class="media-player">
+    <img class="media-player-icon" src="icons/icon.svg" width="16" height="16" />
+    <div class="nodrag media-player-controls">
+        <button matTooltip="Add to playlist" (click)="addTestSong()" mat-icon-button>
+            <mat-icon>playlist_add</mat-icon>
+        </button>
+
+        <button (click)="media.rate()" *ngIf="media.current?.type === 'Podcast'" mat-icon-button>
+            <mat-icon>speed</mat-icon>
+        </button>
+        <button (click)="media.rewind(10)" *ngIf="media.current?.type === 'Podcast'" mat-icon-button>
+            <mat-icon>replay_10</mat-icon>
+        </button>
+
+        <button [disabled]="!media.canPrevious" (click)="media.previous()" mat-icon-button>
+            <mat-icon>skip_previous</mat-icon>
+        </button>
+
+        @if(media.paused) {
+        <button (click)="media.resume()" mat-icon-button>
+            <mat-icon>play_arrow</mat-icon>
+        </button>
+        }
+        @else {
+        <button (click)="media.pause()" mat-icon-button>
+            <mat-icon>pause</mat-icon>
+        </button>
+        }
+
+        <button [disabled]="!media.canNext" (click)="media.next()" mat-icon-button>
+            <mat-icon>skip_next</mat-icon>
+        </button>
+        <button (click)="media.forward(10)" *ngIf="media.current?.type === 'Podcast'" mat-icon-button>
+            <mat-icon>forward_10</mat-icon>
+        </button>
+        <button *ngIf="!media.videoMode && media.muted" mat-icon-button (click)="media.mute()">
+            <mat-icon>volume_off</mat-icon>
+        </button>
+        <button *ngIf="!media.videoMode && !media.muted" mat-icon-button (click)="media.mute()">
+            <mat-icon>volume_up</mat-icon>
+        </button>
+
+        <button (click)="media.pause()" routerLink="/media-queue" mat-icon-button>
+            <mat-icon>queue_music</mat-icon>
+        </button>
+
+    </div>
+</div>

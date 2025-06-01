@@ -9,6 +9,7 @@
   "background_color": "#303030",
   "description": "Your Social Network",
   "orientation": "any",
+  "display_override": ["window-controls-overlay"],
   "display": "standalone",
   "scope": "./",
   "start_url": "./",

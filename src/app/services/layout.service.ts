@@ -30,6 +30,8 @@ export class LayoutService {
     optimalProfilePosition: number = 200;
     premium = signal(false);
     profileState = inject(ProfileStateService);
+    overlayMode = signal(false);
+    showMediaPlayer = signal(false);
 
     constructor() {
         // Monitor only mobile devices (not tablets)
