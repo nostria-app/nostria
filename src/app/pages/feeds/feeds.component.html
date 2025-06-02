@@ -269,7 +269,8 @@
                       <button mat-button (click)="addPlaylistToQueue(playlistData)">
                         <mat-icon>playlist_add</mat-icon>
                         Add to Queue
-                      </button>                      @if (playlistData.url) {
+                      </button>
+                      @if (playlistData.url) {
                       <a mat-icon-button [href]="playlistData.url" target="_blank" rel="noopener noreferrer">
                         <mat-icon>download</mat-icon>
                       </a>
