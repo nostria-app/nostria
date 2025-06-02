@@ -68,4 +68,17 @@ export class MediaQueueComponent {
   remove(item: MediaItem) {
     this.media.dequeue(item);
   }
+
+  clearQueue() {
+    this.media.clearQueue();
+  }
+
+  isCurrentPlaying(item: MediaItem, index: number): boolean {
+    return this.media.current === item && this.media.index === index;
+  }
+
+  playItem(index: number) {
+    this.media.index = index;
+    this.media.start();
+  }
 }

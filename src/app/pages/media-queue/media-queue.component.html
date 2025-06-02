@@ -1,13 +1,43 @@
 <div class="page">
+    <div class="queue-header">
+        <h2>Media Queue</h2>
+        @if (media.media().length > 0) {
+        <button mat-raised-button color="warn" (click)="clearQueue()" matTooltip="Clear entire queue">
+            <mat-icon>clear_all</mat-icon>
+            Clear Queue
+        </button>
+        }
+    </div>
+
+    @if (media.media().length === 0) {
+    <div class="empty-queue">
+        <mat-icon class="empty-icon">queue_music</mat-icon>
+        <p>No media in queue</p>
+        <button mat-raised-button color="primary" (click)="addQueue()">
+            <mat-icon>add</mat-icon>
+            Add Media
+        </button>
+    </div>
+    } @else {
     <div class="media-list">
         <mat-list>
-            @for(item of media.media(); track item; ) {
-            <mat-list-item>
+            @for(item of media.media(); track item; let i = $index) {
+            <mat-list-item [class.current-playing]="isCurrentPlaying(item, i)">
                 <img matListItemAvatar class="queue-artwork" [src]="utilities.sanitizeImageUrl(item.artwork)" />
-                <span matListItemTitle>{{$index+1}}. {{item.title}}</span>
+                <span matListItemTitle>
+                    @if (isCurrentPlaying(item, i)) {
+                    <mat-icon class="playing-icon">play_circle</mat-icon>
+                    }
+                    {{i+1}}. {{item.title}}
+                </span>
                 <span matListItemLine>{{item.artist}}</span>
-                <span matListItemMeta class="delete-button">
-                    <button (click)="remove(item)" mat-icon-button matTooltip="Remove from queue" color="grey">
+                <span matListItemMeta class="queue-actions">
+                    @if (!isCurrentPlaying(item, i)) {
+                    <button (click)="playItem(i)" mat-icon-button matTooltip="Play this item" color="primary">
+                        <mat-icon>play_arrow</mat-icon>
+                    </button>
+                    }
+                    <button (click)="remove(item)" mat-icon-button matTooltip="Remove from queue" color="warn">
                         <mat-icon>delete</mat-icon>
                     </button>
                 </span>
@@ -15,4 +45,5 @@
             }
         </mat-list>
     </div>
+    }
 </div>
