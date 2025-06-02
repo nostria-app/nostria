@@ -102,6 +102,7 @@
                    preload="metadata"
                    (loadeddata)="registerVideoElement()"
                    (canplay)="registerVideoElement()"
+                   (ended)="onVideoEnded()"
                    (error)="onVideoError($event)">
             </video>
             }
