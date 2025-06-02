@@ -123,18 +123,47 @@ export class MediaPlayerService implements OnInitialized {
   }
 
   exit() {
+    console.log('Exiting media player and hiding footer');
+    
     // Use the centralized cleanup method
     this.cleanupCurrentMedia();
 
+    // Clean up audio completely
     if (this.audio) {
+      this.audio.removeEventListener('ended', this.handleMediaEnded);
+      this.audio.pause();
+      this.audio.src = '';
       this.audio = undefined;
     }
 
+    // Clean up video element
+    if (this.videoElement) {
+      this.videoElement.removeEventListener('ended', this.handleMediaEnded);
+      this.setVideoElement(undefined);
+    }
+
+    // Reset all state
     this.index = -1;
     this.current = undefined;
-    this.layout.showMediaPlayer.set(false);
-    this.media.set([]);
     this.videoMode.set(false);
+    this.youtubeUrl.set(undefined);
+    this.videoUrl.set(undefined);
+    this.pausedYouTubeUrl.set(undefined);
+    this._isFullscreen.set(false);
+    
+    // Clear media queue
+    this.media.set([]);
+    
+    // Hide the media player footer
+    this.layout.showMediaPlayer.set(false);
+    
+    // Clear saved queue from localStorage
+    this.localStorage.removeItem(this.MEDIA_STORAGE_KEY);
+    
+    // Update media session
+    navigator.mediaSession.playbackState = 'none';
+    
+    console.log('Media player completely exited and hidden');
   }
 
   play(file: MediaItem) {
