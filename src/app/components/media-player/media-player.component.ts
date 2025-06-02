@@ -136,6 +136,12 @@ export class MediaPlayerComponent implements AfterViewInit {
     }
   }
 
+  onVideoEnded() {
+    console.log('Video ended event received in component');
+    // The service will handle this through its own event listener
+    // This is just for additional logging/debugging if needed
+  }
+
   private updateBackgroundFromThemeColor(): void {
     const metaThemeColor = this.document.querySelector('meta[name="theme-color"]');
     if (metaThemeColor) {

@@ -212,13 +212,31 @@ export class MediaPlayerService implements OnInitialized {
 
   setVideoElement(videoElement: HTMLVideoElement | undefined) {
     console.log('setVideoElement called with:', videoElement);
+    
+    // Remove event listeners from previous video element
+    if (this.videoElement) {
+      this.videoElement.removeEventListener('ended', this.handleMediaEnded);
+    }
+    
     this.videoElement = videoElement;
     
-    // Don't auto-play here, let the start() method handle it
-    if (videoElement && this.videoMode() && this.current?.type === 'Video') {
+    // Add event listeners to new video element
+    if (videoElement) {
+      videoElement.addEventListener('ended', this.handleMediaEnded);
       console.log('Video element registered for current video');
     }
   }
+
+  private handleMediaEnded = () => {
+    console.log('Media ended, checking for next item');
+    if (this.canNext()) {
+      console.log('Auto-advancing to next media item');
+      this.next();
+    } else {
+      console.log('No next media item available, stopping playback');
+      navigator.mediaSession.playbackState = 'none';
+    }
+  };
 
   async start() {
     if (this.index === -1) {
@@ -254,8 +272,8 @@ export class MediaPlayerService implements OnInitialized {
       // If video element is available, handle playback
       if (this.videoElement) {
         try {
-          // The video element will automatically load the new src from template binding
-          console.log('Video element src will be updated by template binding');
+          // Add ended event listener
+          this.videoElement.addEventListener('ended', this.handleMediaEnded);
           
           // Add event listeners for when video is ready
           const handleCanPlay = async () => {
@@ -283,11 +301,19 @@ export class MediaPlayerService implements OnInitialized {
       this.youtubeUrl.set(undefined);
       this.videoUrl.set(undefined);
 
+      // Remove event listeners from previous audio element
+      if (this.audio) {
+        this.audio.removeEventListener('ended', this.handleMediaEnded);
+      }
+
       if (!this.audio) {
         this.audio = new Audio(file.source);
       } else {
         this.audio.src = file.source;
       }
+
+      // Add ended event listener to audio
+      this.audio.addEventListener('ended', this.handleMediaEnded);
 
       await this.audio.play();
     }
@@ -307,13 +333,18 @@ export class MediaPlayerService implements OnInitialized {
     if (this.audio) {
       this.audio.pause();
       this.audio.currentTime = 0;
+      // Remove event listeners
+      this.audio.removeEventListener('ended', this.handleMediaEnded);
+      this.audio.removeEventListener('canplay', () => {});
+      this.audio.removeEventListener('loadeddata', () => {});
     }
 
     // Stop and cleanup video
     if (this.videoElement) {
       this.videoElement.pause();
       this.videoElement.currentTime = 0;
-      // Remove any event listeners that might be attached
+      // Remove event listeners
+      this.videoElement.removeEventListener('ended', this.handleMediaEnded);
       this.videoElement.removeEventListener('canplay', () => {});
       this.videoElement.removeEventListener('loadeddata', () => {});
     }
@@ -445,7 +476,6 @@ export class MediaPlayerService implements OnInitialized {
   }
 
   next() {
-    debugger;
     this.index++;
     this.start();
   }
