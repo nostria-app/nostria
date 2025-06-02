@@ -1,4 +1,4 @@
-<div class="media-player">
+<div [class]="footer() ? 'media-player-footer' : 'media-player'">
     @if (!footer()) {
     <img class="media-player-icon" src="icons/icon.svg" width="16" height="16" />
 
@@ -58,11 +58,9 @@
 
         <button (click)="media.pause()" routerLink="/media-queue" mat-icon-button>
             <mat-icon>queue_music</mat-icon>
-        </button>
-
-    </div>
+        </button>    </div>
     } @else {
-    <div class="media-player-controls">
+    <div class="media-player-controls-footer">
 
         @if (!media.videoMode) {
         <div class="media-info">
