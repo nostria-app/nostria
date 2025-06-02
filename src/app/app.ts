@@ -35,6 +35,7 @@ import { DebugOverlayComponent } from './components/debug-overlay/debug-overlay.
 import { SearchService } from './services/search.service';
 import { MediaPlayerComponent } from './components/media-player/media-player.component';
 import { VideoPlayerComponent } from './components/video-player/video-player.component';
+import { MediaPlayerService } from './services/media-player.service';
 
 interface NavItem {
   path: string;
@@ -89,6 +90,7 @@ export class App {
   bottomSheet = inject(MatBottomSheet);
   logger = inject(LoggerService);
   search = inject(SearchService);
+  media = inject(MediaPlayerService);
 
   private readonly platform = inject(PLATFORM_ID);
   private readonly document = inject(DOCUMENT);
@@ -314,6 +316,10 @@ export class App {
       disableClose: true,
       panelClass: 'welcome-dialog'
     });
+  }
+
+  exitFullscreen(): void {
+    this.media.exitFullscreen();
   }
 
 }

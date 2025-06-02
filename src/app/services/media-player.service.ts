@@ -56,6 +56,10 @@ export class MediaPlayerService implements OnInitialized {
   // Video element reference
   private videoElement?: HTMLVideoElement;
 
+  private _isFullscreen = signal(false);
+
+  isFullscreen = this._isFullscreen.asReadonly();
+
   constructor() {
     effect(() => {
       if (this.app.initialized()) {
@@ -377,55 +381,12 @@ export class MediaPlayerService implements OnInitialized {
     }
   }
 
-  isFullscreen = signal(false);
-
-  async fullscreen() {
-    this.isFullscreen.set(true);
+  fullscreen(): void {
+    this._isFullscreen.set(true);
   }
 
-  async fullscreen2(): Promise<void> {
-    // try {
-    //   // For video content, we'll use the video window approach
-    //   if (this.current?.type === 'Video' || this.current?.type === 'YouTube') {
-    //     // Open video in window mode and maximize it
-    //     // this.openVideoWindow();
-
-    //     // Wait a frame for the window to be created
-    //     await new Promise(resolve => requestAnimationFrame(resolve));
-
-    //     // Maximize the video window
-    //     this.maximizeWindow();
-    //     console.debug('Video opened in fullscreen window mode');
-    //     return;
-    //   }
-
-    //   // Fallback: try to find and fullscreen the video element directly
-    //   const videoElement = this.getCurrentVideoElement();
-
-    //   if (!videoElement) {
-    //     console.warn('No video element found for fullscreen');
-    //     return;
-    //   }
-
-    //   // Check if fullscreen is supported
-    //   if (!document.fullscreenEnabled) {
-    //     console.warn('Fullscreen is not supported in this browser');
-    //     return;
-    //   }
-
-    //   // Toggle fullscreen mode
-    //   if (document.fullscreenElement) {
-    //     // Exit fullscreen if currently active
-    //     await document.exitFullscreen();
-    //     console.debug('Exited fullscreen mode');
-    //   } else {
-    //     // Enter fullscreen mode
-    //     await videoElement.requestFullscreen();
-    //     console.debug('Entered fullscreen mode');
-    //   }
-    // } catch (error) {
-    //   console.error('Fullscreen error:', error);
-    // }
+  exitFullscreen(): void {
+    this._isFullscreen.set(false);
   }
 
   private getCurrentVideoElement(): HTMLVideoElement | null {

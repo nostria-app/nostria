@@ -1,4 +1,4 @@
-import { Component, ElementRef, inject, signal, effect, input } from '@angular/core';
+import { Component, ElementRef, inject, signal, effect, input, ViewChild, Renderer2 } from '@angular/core';
 import { LayoutService } from '../../services/layout.service';
 import { ThemeService } from '../../services/theme.service';
 import { CommonModule, DOCUMENT } from '@angular/common';
@@ -42,6 +42,11 @@ export class MediaPlayerComponent {
   footer = input<boolean>(false);
   expanded = false;
   // maximized = false;
+  private readonly renderer = inject(Renderer2);
+  @ViewChild('videoElement', { static: false }) videoElement?: ElementRef<HTMLVideoElement>;
+
+  private originalVideoParent?: HTMLElement;
+  private originalVideoNextSibling?: Node | null;
 
   formatLabel(value: number): string {
     return TimePipe.time(value);
@@ -90,6 +95,17 @@ export class MediaPlayerComponent {
       const isDark = this.theme.darkMode();
       this.updateBackgroundFromThemeColor();
     });
+
+    // Effect to handle fullscreen video mode
+    effect(() => {
+      const isFullscreen = this.media.isFullscreen();
+
+      if (isFullscreen && this.videoElement) {
+        this.moveVideoToGlobalContainer();
+      } else if (!isFullscreen && this.originalVideoParent) {
+        this.moveVideoBackToOriginal();
+      }
+    });
   }
 
   private updateBackgroundFromThemeColor(): void {
@@ -137,10 +153,76 @@ export class MediaPlayerComponent {
     }
   }
 
+  private moveVideoToGlobalContainer(): void {
+    if (!this.videoElement?.nativeElement) return;
+
+    const video = this.videoElement.nativeElement;
+    const globalContainer = this.document.getElementById('global-fullscreen-container');
+
+    if (!globalContainer) return;
+
+    // Store original position
+    this.originalVideoParent = video.parentElement as HTMLElement;
+    this.originalVideoNextSibling = video.nextSibling;
+
+    // Move video to global container
+    this.renderer.appendChild(globalContainer, video);
+
+    // Show global container
+    this.renderer.setStyle(globalContainer, 'display', 'flex');
+
+    // Add escape key listener
+    this.addEscapeListener();
+  }
+
+  private moveVideoBackToOriginal(): void {
+    if (!this.videoElement?.nativeElement || !this.originalVideoParent) return;
+
+    const video = this.videoElement.nativeElement;
+    const globalContainer = this.document.getElementById('global-fullscreen-container');
+
+    // Hide global container
+    if (globalContainer) {
+      this.renderer.setStyle(globalContainer, 'display', 'none');
+    }
+
+    // Move video back to original position
+    if (this.originalVideoNextSibling) {
+      this.renderer.insertBefore(this.originalVideoParent, video, this.originalVideoNextSibling);
+    } else {
+      this.renderer.appendChild(this.originalVideoParent, video);
+    }
+
+    // Clean up
+    this.originalVideoParent = undefined;
+    this.originalVideoNextSibling = undefined;
+    this.removeEscapeListener();
+  }
+
+  private escapeListener = (event: KeyboardEvent) => {
+    if (event.key === 'Escape' && this.media.isFullscreen()) {
+      this.media.exitFullscreen();
+    }
+  };
+
+  private addEscapeListener(): void {
+    this.document.addEventListener('keydown', this.escapeListener);
+  }
+
+  private removeEscapeListener(): void {
+    this.document.removeEventListener('keydown', this.escapeListener);
+  }
+
   ngOnDestroy() {
     // Clean up media query listener
     if (this.mediaQueryList) {
       this.mediaQueryList.removeEventListener('change', () => { });
+    }
+    this.removeEscapeListener();
+
+    // Clean up if component is destroyed while in fullscreen
+    if (this.media.isFullscreen() && this.originalVideoParent) {
+      this.moveVideoBackToOriginal();
     }
   }
 
