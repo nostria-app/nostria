@@ -23,11 +23,12 @@ import { LoggerService } from '../../services/logger.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FeedService, FeedConfig } from '../../services/feed.service';
 import { FeedsCollectionService, FeedDefinition, ColumnDefinition } from '../../services/feeds-collection.service';
-import { NostrRecord } from '../../interfaces';
+import { MediaItem, NostrRecord } from '../../interfaces';
 import { Event } from 'nostr-tools';
 import { decode } from 'blurhash';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 import { UrlUpdateService } from '../../services/url-update.service';
+import { MediaPlayerService } from '../../services/media-player.service';
 
 interface NavLink {
   id: string;
@@ -77,6 +78,7 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
   private logger = inject(LoggerService);
   private url = inject(UrlUpdateService);
   private cdr = inject(ChangeDetectorRef);
+  private mediaPlayerService = inject(MediaPlayerService);
 
   // UI State Signals
   activeSection = signal<'discover' | 'following' | 'media'>('discover');
@@ -958,6 +960,168 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
       if (result) {
         this.feedsCollectionService.removeFeed(activeFeed.id);
       }
+    });
+  }
+
+  
+  /**
+   * Get M3U playlist data from event
+   */
+  getPlaylistData(event: any): { 
+    title?: string; 
+    alt?: string; 
+    tracks: { url: string; title?: string; artist?: string }[]; 
+    url?: string;
+    totalDuration?: string;
+  } | null {
+    // Get M3U content from event content or URL tag
+    const urlTag = event.tags?.find((tag: any[]) => tag[0] === 'u');
+    const playlistUrl = urlTag ? urlTag[1] : null;
+    const m3uContent = event.content || '';
+    
+    if (!m3uContent && !playlistUrl) return null;
+
+    const title = this.getEventTitle(event) || 'M3U Playlist';
+    const alt = this.getEventAlt(event);
+    
+    let tracks: { url: string; title?: string; artist?: string }[] = [];
+    let totalDuration = 0;
+
+    if (m3uContent) {
+      tracks = this.parseM3UContent(m3uContent);
+      
+      // Calculate total duration if available
+      tracks.forEach(track => {
+        if (track.url) {
+          // Try to extract duration from M3U metadata if available
+          const durationMatch = m3uContent.match(/#EXTINF:(\d+)/);
+          if (durationMatch) {
+            totalDuration += parseInt(durationMatch[1]);
+          }
+        }
+      });
+    }
+
+    return {
+      title,
+      alt,
+      tracks,
+      url: playlistUrl,
+      totalDuration: totalDuration > 0 ? this.formatDuration(totalDuration.toString()) : undefined
+    };
+  }
+
+  /**
+   * Parse M3U content and extract tracks
+   */
+  private parseM3UContent(content: string): { url: string; title?: string; artist?: string }[] {
+    const lines = content.split('\n').map(line => line.trim()).filter(line => line);
+    const tracks: { url: string; title?: string; artist?: string }[] = [];
+    
+    let currentTrack: { url?: string; title?: string; artist?: string } = {};
+    
+    for (const line of lines) {
+      if (line.startsWith('#EXTINF:')) {
+        // Parse track info: #EXTINF:duration,artist - title
+        const match = line.match(/#EXTINF:[^,]*,(.+)/);
+        if (match) {
+          const trackInfo = match[1];
+          if (trackInfo.includes(' - ')) {
+            const [artist, title] = trackInfo.split(' - ', 2);
+            currentTrack.artist = artist.trim();
+            currentTrack.title = title.trim();
+          } else {
+            currentTrack.title = trackInfo.trim();
+          }
+        }
+      } else if (line.startsWith('http') || line.startsWith('https') || line.endsWith('.mp3') || line.endsWith('.m4a') || line.endsWith('.wav') || line.endsWith('.flac')) {
+        // This is a track URL
+        currentTrack.url = line;
+        
+        if (currentTrack.url) {
+          tracks.push({
+            url: currentTrack.url,
+            title: currentTrack.title || this.extractFilenameFromUrl(currentTrack.url),
+            artist: currentTrack.artist
+          });
+        }
+        
+        // Reset for next track
+        currentTrack = {};
+      } else if (!line.startsWith('#')) {
+        // Non-comment line that might be a relative URL or filename
+        currentTrack.url = line;
+        
+        if (currentTrack.url) {
+          tracks.push({
+            url: currentTrack.url,
+            title: currentTrack.title || this.extractFilenameFromUrl(currentTrack.url),
+            artist: currentTrack.artist
+          });
+        }
+        
+        currentTrack = {};
+      }
+    }
+    
+    return tracks;
+  }
+
+  /**
+   * Extract filename from URL for track title
+   */
+  private extractFilenameFromUrl(url: string): string {
+    try {
+      const urlObj = new URL(url);
+      const pathname = urlObj.pathname;
+      const filename = pathname.split('/').pop() || url;
+      return filename.replace(/\.[^/.]+$/, ''); // Remove file extension
+    } catch {
+      // If URL parsing fails, just use the last part after '/'
+      const parts = url.split('/');
+      const filename = parts[parts.length - 1] || url;
+      return filename.replace(/\.[^/.]+$/, '');
+    }
+  }
+
+  /**
+   * Play entire M3U playlist
+   */
+  playPlaylist(playlistData: { title?: string; tracks: { url: string; title?: string; artist?: string }[] }): void {
+    if (!playlistData.tracks || playlistData.tracks.length === 0) return;
+
+    // Clear current media queue and add all tracks
+    this.mediaPlayerService.media.set([]);
+      playlistData.tracks.forEach((track, index) => {
+      const mediaItem: MediaItem = {
+        title: track.title || `Track ${index + 1}`,
+        artist: track.artist || 'Unknown Artist',
+        source: track.url,
+        artwork: '', // Could be enhanced to extract album art
+        type: 'Music'
+      };
+      
+      this.mediaPlayerService.enque(mediaItem);
+    });
+
+    // Start playing the first track
+    this.mediaPlayerService.start();
+  }
+
+  /**
+   * Add playlist to queue
+   */
+  addPlaylistToQueue(playlistData: { title?: string; tracks: { url: string; title?: string; artist?: string }[] }): void {
+    if (!playlistData.tracks || playlistData.tracks.length === 0) return;    playlistData.tracks.forEach((track, index) => {
+      const mediaItem: MediaItem = {
+        title: track.title || `Track ${index + 1}`,
+        artist: track.artist || 'Unknown Artist',
+        source: track.url,
+        artwork: '',
+        type: 'Music'
+      };
+      
+      this.mediaPlayerService.enque(mediaItem);
     });
   }
 }
