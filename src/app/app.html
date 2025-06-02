@@ -346,15 +346,14 @@
         </mat-nav-list> -->
         }
       </div>
-    </mat-sidenav>
-
-    <!-- Main content container -->
+    </mat-sidenav>    <!-- Main content container -->
     <mat-sidenav-content>
       <!-- Page content -->
       <div class="content-wrapper">
         <router-outlet></router-outlet>
-        <app-media-player [footer]="true"></app-media-player>
       </div>
+      <!-- Footer media player outside scrollable content -->
+      <app-media-player [footer]="true"></app-media-player>
     </mat-sidenav-content>
   </mat-sidenav-container>
   }

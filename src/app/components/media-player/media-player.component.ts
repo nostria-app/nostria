@@ -1,7 +1,7 @@
 import { Component, ElementRef, inject, signal, effect, input } from '@angular/core';
 import { LayoutService } from '../../services/layout.service';
 import { ThemeService } from '../../services/theme.service';
-import { DOCUMENT } from '@angular/common';
+import { CommonModule, DOCUMENT } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MediaPlayerService } from '../../services/media-player.service';
@@ -10,6 +10,9 @@ import { RouterModule } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { AddMediaDialog, AddMediaDialogData } from '../../pages/media-queue/add-media-dialog/add-media-dialog';
 import { UtilitiesService } from '../../services/utilities.service';
+import { MatSliderModule } from '@angular/material/slider';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { TimePipe } from '../../pipes/time.pipe';
 
 interface WindowControlsOverlay {
   getTitlebarAreaRect(): DOMRect;
@@ -24,7 +27,7 @@ declare global {
 
 @Component({
   selector: 'app-media-player',
-  imports: [MatButtonModule, MatIconModule, RouterModule],
+  imports: [MatButtonModule, MatIconModule, RouterModule, MatSliderModule, ReactiveFormsModule, FormsModule, TimePipe, CommonModule],
   templateUrl: './media-player.component.html',
   styleUrl: './media-player.component.scss'
 })
@@ -37,6 +40,12 @@ export class MediaPlayerComponent {
   media = inject(MediaPlayerService);
   dialog = inject(MatDialog);
   footer = input<boolean>(false);
+  expanded = false;
+  // maximized = false;
+
+  formatLabel(value: number): string {
+    return TimePipe.time(value);
+  }
 
   // Signals to track display mode state
 
@@ -46,7 +55,7 @@ export class MediaPlayerComponent {
     effect(() => {
       const div = this.elementRef.nativeElement;
       const isFooterMode = this.footer();
-      
+
       if (isFooterMode) {
         div.classList.add('footer-mode');
       } else {
@@ -92,7 +101,7 @@ export class MediaPlayerComponent {
         div.style.setProperty('--theme-background-color', themeColor);
       }
     }
-  }  ngOnInit() {
+  } ngOnInit() {
     const div = this.elementRef.nativeElement;
 
     // Only apply window controls overlay logic for toolbar mode (not footer mode)
