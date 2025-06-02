@@ -1,3 +1,93 @@
 .queue-artwork {
     border-radius: 0 !important;
 }
+
+.queue-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding: 0 16px;
+
+    h2 {
+        margin: 0;
+    }
+}
+
+.empty-queue {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 16px;
+    text-align: center;
+
+    .empty-icon {
+        font-size: 64px;
+        height: 64px;
+        width: 64px;
+        color: var(--mat-sys-on-surface-variant);
+        margin-bottom: 16px;
+    }
+
+    p {
+        color: var(--mat-sys-on-surface-variant);
+        margin-bottom: 24px;
+        font-size: 16px;
+    }
+}
+
+.current-playing {
+    background-color: var(--mat-sys-primary-container) !important;
+    border-left: 4px solid var(--mat-sys-primary) !important;
+
+    .mat-mdc-list-item-title {
+        color: var(--mat-sys-on-primary-container) !important;
+    }
+
+    .mat-mdc-list-item-line {
+        color: var(--mat-sys-on-primary-container) !important;
+        opacity: 0.8;
+    }
+}
+
+.playing-icon {
+    color: var(--mat-sys-primary);
+    font-size: 16px;
+    height: 16px;
+    width: 16px;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+.queue-actions {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.page {
+    padding: 16px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Prevent double scrollbars */
+}
+
+.media-list {
+    flex: 1;
+    /* Remove overflow-y: auto to prevent double scrollbars */
+    min-height: 0; /* Allow flex item to shrink below content size */
+}
+
+@media screen and (max-width: 600px) {
+    .queue-header {
+        flex-direction: column;
+        gap: 16px;
+        align-items: stretch;
+
+        button {
+            width: 100%;
+        }
+    }
+}

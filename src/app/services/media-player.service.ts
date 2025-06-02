@@ -152,7 +152,7 @@ export class MediaPlayerService implements OnInitialized {
     this._isFullscreen.set(false);
     
     // Clear media queue
-    this.media.set([]);
+    // this.media.set([]);
     
     // Hide the media player footer
     this.layout.showMediaPlayer.set(false);
@@ -178,7 +178,7 @@ export class MediaPlayerService implements OnInitialized {
 
   enque(file: MediaItem) {
     // TODO: Clean the file.source URL!
-    this.layout.showMediaPlayer.set(true);
+    // this.layout.showMediaPlayer.set(true);
     this.media.update(files => [...files, file]);
     // this.snackBar.open('Added to media queue', 'Hide', {
     //   duration: 1500,
@@ -602,5 +602,49 @@ export class MediaPlayerService implements OnInitialized {
     } else {
       this.audio.playbackRate = 2.0;
     }
+  }
+
+  clearQueue() {
+    console.log('Clearing entire media queue');
+    
+    // Stop current playback
+    this.cleanupCurrentMedia();
+    
+    // Reset audio
+    if (this.audio) {
+      this.audio.removeEventListener('ended', this.handleMediaEnded);
+      this.audio.pause();
+      this.audio.src = '';
+      this.audio = undefined;
+    }
+
+    // Reset video element
+    if (this.videoElement) {
+      this.videoElement.removeEventListener('ended', this.handleMediaEnded);
+      this.setVideoElement(undefined);
+    }
+
+    // Reset all state
+    this.index = -1;
+    this.current = undefined;
+    this.videoMode.set(false);
+    this.youtubeUrl.set(undefined);
+    this.videoUrl.set(undefined);
+    this.pausedYouTubeUrl.set(undefined);
+    this._isFullscreen.set(false);
+    
+    // Clear media queue
+    this.media.set([]);
+    
+    // Hide the media player
+    this.layout.showMediaPlayer.set(false);
+    
+    // Clear saved queue from localStorage
+    this.localStorage.removeItem(this.MEDIA_STORAGE_KEY);
+    
+    // Update media session
+    navigator.mediaSession.playbackState = 'none';
+    
+    console.log('Media queue completely cleared');
   }
 }

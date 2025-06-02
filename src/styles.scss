@@ -749,3 +749,21 @@ iframe {
     }
   }
 }
+
+/* Media queue specific styles to prevent double scrollbars */
+app-media-queue {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+app-media-queue .page {
+  height: 100%;
+  overflow: hidden;
+}
+
+app-media-queue .media-list mat-list {
+  height: 100%;
+  overflow-y: auto;
+}
