@@ -73,12 +73,12 @@ export class FeedsCollectionService {
   });
   constructor() {
     this.loadActiveFeed();
-    
+
     // Sync with FeedService - if FeedService has feeds but we don't have an active feed, set one
     effect(() => {
       const feeds = this.feeds();
       const activeFeedId = this._activeFeedId();
-      
+
       if (feeds.length > 0 && !activeFeedId) {
         this._activeFeedId.set(feeds[0].id);
         this.saveActiveFeed();
@@ -162,7 +162,7 @@ export class FeedsCollectionService {
       path: feedData.path,
       columns: feedData.columns as ColumnConfig[]
     });
-    
+
     return this.convertFeedConfigsToDefinitions([feedConfig])[0];
   }  /**
    * Update a feed (delegates to FeedService)
@@ -170,14 +170,14 @@ export class FeedsCollectionService {
   updateFeed(id: string, updates: Partial<Omit<FeedDefinition, 'id' | 'createdAt'>>): boolean {
     // Only include properties that are actually being updated to avoid overwriting with undefined
     const feedConfig: Partial<Omit<FeedConfig, 'id' | 'createdAt'>> = {};
-    
+
     if (updates.label !== undefined) feedConfig.label = updates.label;
     if (updates.icon !== undefined) feedConfig.icon = updates.icon;
     if (updates.description !== undefined) feedConfig.description = updates.description;
     if (updates.path !== undefined) feedConfig.path = updates.path;
     if (updates.columns !== undefined) feedConfig.columns = updates.columns as ColumnConfig[];
     if (updates.updatedAt !== undefined) feedConfig.updatedAt = updates.updatedAt;
-    
+
     return this.feedService.updateFeed(id, feedConfig);
   }
   /**
@@ -195,14 +195,14 @@ export class FeedsCollectionService {
    */
   removeFeed(id: string): boolean {
     const removed = this.feedService.removeFeed(id);
-    
+
     // If the removed feed was active, clear or set a new active feed
     if (removed && this._activeFeedId() === id) {
       const remainingFeeds = this.feeds();
       this._activeFeedId.set(remainingFeeds.length > 0 ? remainingFeeds[0].id : null);
       this.saveActiveFeed();
     }
-    
+
     return removed;
   }
 
@@ -220,14 +220,14 @@ export class FeedsCollectionService {
     if (feed) {
       this._activeFeedId.set(feedId);
       this.saveActiveFeed();
-      
+
       // Delegate subscription management to FeedService
       this.feedService.setActiveFeed(feedId);
-      
+
       this.logger.debug(`Set active feed to ${feedId}`);
       return true;
     }
-    
+
     this.logger.warn(`Feed with id ${feedId} not found`);
     return false;
   }
@@ -308,11 +308,26 @@ export class FeedsCollectionService {
     this.feedService.reorderFeeds(newOrder);
     this.logger.debug('Reordered feeds', newOrder);
   }
-
   /**
    * Refresh a specific column (delegates to FeedService)
    */
   refreshColumn(columnId: string): void {
     this.feedService.refreshColumn(columnId);
+  }
+
+  /**
+   * Pause a specific column (delegates to FeedService)
+   */
+  pauseColumn(columnId: string): void {
+    this.feedService.pauseColumn(columnId);
+    this.logger.debug(`Paused column: ${columnId}`);
+  }
+
+  /**
+   * Continue a specific column (delegates to FeedService)
+   */
+  continueColumn(columnId: string): void {
+    this.feedService.continueColumn(columnId);
+    this.logger.debug(`Continued column: ${columnId}`);
   }
 }

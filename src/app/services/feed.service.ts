@@ -45,7 +45,7 @@ export interface RelayConfig {
   write: boolean;
 }
 
-const FEED_TYPES = {
+const COLUMN_TYPES = {
   notes: {
     label: 'Notes',
     icon: 'chat',
@@ -69,6 +69,12 @@ const FEED_TYPES = {
     icon: 'movie',
     kinds: [21],
     description: 'Videos'
+  },
+  music: {
+    label: 'Music',
+    icon: 'music_note',
+    kinds: [32100],
+    description: 'Music playlists (.m3u)'
   },
   custom: {
     label: 'Custom',
@@ -127,7 +133,7 @@ export class FeedService {
   readonly activeFeedId = computed(() => this._activeFeedId());
 
   // Feed type definitions
-  readonly feedTypes = FEED_TYPES;
+  readonly feedTypes = COLUMN_TYPES;
 
   constructor() {
     this.loadFeeds();
@@ -160,6 +166,11 @@ export class FeedService {
   private readonly _feedData = signal(new Map<string, FeedData>());
   readonly data = new Map<string, FeedData>();
 
+  // Public getter to expose reactive feed data map for components
+  get feedDataReactive(): Signal<Map<string, FeedData>> {
+    return this._feedData.asReadonly();
+  }
+
   // Computed signal that provides reactive access to feed data
   readonly feedDataMap = computed(() => {
     const dataMap = this._feedData();
@@ -173,7 +184,7 @@ export class FeedService {
   async subscribe() {
     this.data.clear();
     this._feedData.set(new Map());
-    
+
     // Only subscribe to active feed if one is set
     const activeFeedId = this._activeFeedId();
     if (activeFeedId) {
@@ -183,7 +194,7 @@ export class FeedService {
         this.logger.debug('Subscribed to active feed:', activeFeedId);
       }
     }
-    
+
     console.log('Subscribed to feeds:', Array.from(this.data.keys()));
   }
 
@@ -192,16 +203,16 @@ export class FeedService {
    */
   setActiveFeed(feedId: string | null): void {
     const previousActiveFeedId = this._activeFeedId();
-    
+
     // Unsubscribe from previous active feed
     if (previousActiveFeedId) {
       this.unsubscribeFromFeed(previousActiveFeedId);
       this.logger.debug(`Unsubscribed from previous active feed: ${previousActiveFeedId}`);
     }
-    
+
     // Set new active feed
     this._activeFeedId.set(feedId);
-    
+
     // Subscribe to new active feed
     if (feedId) {
       const activeFeed = this.getFeedById(feedId);
@@ -272,14 +283,14 @@ export class FeedService {
 
     item.subscription = sub as any;
     this.data.set(column.id, item);
-    
+
     // Update the reactive signal
     this._feedData.update(map => {
       const newMap = new Map(map);
       newMap.set(column.id, item);
       return newMap;
     });
-    
+
     this.logger.debug(`Subscribed to column: ${column.id}`);
   }  /**
    * Unsubscribe from a single feed (unsubscribes from all its columns)
@@ -307,20 +318,20 @@ export class FeedService {
         columnData.subscription.close();
         this.logger.debug(`Closed subscription for column: ${columnId}`);
       }
-      
+
       // Clear events
       columnData.events.set([]);
-      
+
       // Remove from data map
       this.data.delete(columnId);
-      
+
       // Update the reactive signal
       this._feedData.update(map => {
         const newMap = new Map(map);
         newMap.delete(columnId);
         return newMap;
       });
-      
+
       this.logger.debug(`Unsubscribed from column: ${columnId}`);
     }
   }
@@ -341,7 +352,7 @@ export class FeedService {
           allEvents.push(...columnData.events());
         }
       });
-      
+
       // Sort events by timestamp (newest first)
       return allEvents.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
     });
@@ -440,7 +451,7 @@ export class FeedService {
 
     this._feeds.update(feeds => [...feeds, newFeed]);
     this.saveFeeds();
-    
+
     // Subscribe to the new feed immediately
     this.subscribeToFeed(newFeed);
 
@@ -456,18 +467,18 @@ export class FeedService {
     }
 
     const currentFeed = this._feeds()[feedIndex];
-    
+
     // Handle column changes with targeted subscription management
     if (updates.columns !== undefined) {
       const currentColumns = currentFeed.columns;
       const newColumns = updates.columns;
-      
+
       // Check if this is just a column reorder (same column IDs, different positions)
       const currentColumnIds = new Set(currentColumns.map(col => col.id));
       const newColumnIds = new Set(newColumns.map(col => col.id));
-      const isOnlyReorder = currentColumnIds.size === newColumnIds.size && 
+      const isOnlyReorder = currentColumnIds.size === newColumnIds.size &&
         [...currentColumnIds].every(id => newColumnIds.has(id));
-      
+
       if (isOnlyReorder) {
         // This is just a reorder - update columns without touching subscriptions
         console.log(`🔄 FeedService: Detected column reorder for feed ${id} - preserving subscriptions`);
@@ -483,22 +494,22 @@ export class FeedService {
       } else {
         // This is actual column addition/removal - manage subscriptions
         console.log(`🔄 FeedService: Detected column changes for feed ${id} - managing subscriptions`);
-        
+
         // Find columns that were removed
-        const removedColumns = currentColumns.filter(currentCol => 
+        const removedColumns = currentColumns.filter(currentCol =>
           !newColumns.some(newCol => newCol.id === currentCol.id)
         );
-        
+
         // Find columns that were added
-        const addedColumns = newColumns.filter(newCol => 
+        const addedColumns = newColumns.filter(newCol =>
           !currentColumns.some(currentCol => currentCol.id === newCol.id)
         );
-        
+
         // Unsubscribe only from removed columns
         removedColumns.forEach(column => {
           this.unsubscribeFromColumn(column.id);
         });
-        
+
         // Update the feed configuration first
         this._feeds.update(feeds => {
           const updatedFeeds = [...feeds];
@@ -509,7 +520,7 @@ export class FeedService {
           };
           return updatedFeeds;
         });
-        
+
         // Subscribe to new columns
         addedColumns.forEach(column => {
           this.subscribeToColumn(column);
@@ -526,7 +537,7 @@ export class FeedService {
         };
         return updatedFeeds;
       });
-    }this.saveFeeds();
+    } this.saveFeeds();
     this.logger.debug(`Updated feed ${id}`, updates);
     return true;
   }
@@ -537,7 +548,6 @@ export class FeedService {
   updateColumnOrder(id: string, columns: ColumnConfig[]): boolean {
     console.log(`🔄 FeedService: Updating column order for feed ${id}`);
     console.log('📋 New column order:', columns.map(col => `${col.label} (${col.id})`));
-    
     const feedIndex = this._feeds().findIndex(feed => feed.id === id);
     if (feedIndex === -1) {
       this.logger.warn(`Feed with id ${id} not found`);
@@ -567,10 +577,10 @@ export class FeedService {
    */
   removeFeed(id: string): boolean {
     const initialLength = this._feeds().length;
-    
+
     // Unsubscribe from the feed before removing it
     this.unsubscribeFromFeed(id);
-    
+
     // Remove the feed from the list
     this._feeds.update(feeds => feeds.filter(feed => feed.id !== id));
 
@@ -611,16 +621,16 @@ export class FeedService {
   /**
    * Get feed type configuration
    */
-  getFeedType(type: keyof typeof FEED_TYPES) {
-    return FEED_TYPES[type];
+  getFeedType(type: keyof typeof COLUMN_TYPES) {
+    return COLUMN_TYPES[type];
   }
 
   /**
    * Get all available feed types
    */
   getFeedTypes() {
-    return Object.entries(FEED_TYPES).map(([key, value]) => ({
-      key: key as keyof typeof FEED_TYPES,
+    return Object.entries(COLUMN_TYPES).map(([key, value]) => ({
+      key: key as keyof typeof COLUMN_TYPES,
       ...value
     }));
   }
@@ -666,8 +676,7 @@ export class FeedService {
     } catch {
       return false;
     }
-  }
-  /**
+  }  /**
    * Refresh a specific column by unsubscribing and resubscribing
    */
   refreshColumn(columnId: string): void {
@@ -681,14 +690,85 @@ export class FeedService {
 
     const column = columnData.column;
     console.log(`📊 Column found: ${column.label}, unsubscribing and resubscribing...`);
-    
+
     // Unsubscribe from the column
     this.unsubscribeFromColumn(columnId);
-    
+
     // Resubscribe to the column
     this.subscribeToColumn(column);
-    
+
     this.logger.debug(`Refreshed column: ${columnId}`);
     console.log(`✅ FeedService: Column ${columnId} refreshed successfully`);
+  }
+  /**
+   * Pause a specific column by closing subscription while preserving events
+   */
+  pauseColumn(columnId: string): void {
+    console.log(`⏸️ FeedService: Pausing column ${columnId}`);
+    const columnData = this.data.get(columnId);
+    if (!columnData) {
+      this.logger.warn(`Cannot pause column ${columnId}: column not found`);
+      console.warn(`❌ Column ${columnId} not found in data map`);
+      return;
+    }
+
+    // Close the subscription if it exists
+    if (columnData.subscription) {
+      columnData.subscription.close();
+      columnData.subscription = null;
+      this.logger.debug(`Closed subscription for paused column: ${columnId}`);
+      console.log(`⏸️ Subscription closed for column: ${columnData.column.label}`);
+
+      // Update the reactive signal to trigger UI updates
+      this._feedData.update(map => {
+        const newMap = new Map(map);
+        newMap.set(columnId, columnData);
+        return newMap;
+      });
+    }
+
+    // Note: Events are preserved in columnData.events signal
+    this.logger.debug(`Paused column: ${columnId} (events preserved)`);
+    console.log(`✅ FeedService: Column ${columnId} paused successfully`);
+  }
+  /**
+   * Continue a specific column by restarting subscription
+   */
+  continueColumn(columnId: string): void {
+    console.log(`▶️ FeedService: Continuing column ${columnId}`);
+    const columnData = this.data.get(columnId);
+    if (!columnData) {
+      this.logger.warn(`Cannot continue column ${columnId}: column not found`);
+      console.warn(`❌ Column ${columnId} not found in data map`);
+      return;
+    }
+
+    // Check if already subscribed
+    if (columnData.subscription) {
+      this.logger.warn(`Column ${columnId} is already subscribed`);
+      console.warn(`⚠️ Column ${columnData.column.label} is already active`);
+      return;
+    }
+
+    const column = columnData.column;
+    console.log(`📊 Restarting subscription for column: ${column.label}`);
+
+    // Subscribe to relay events again
+    const sub = this.relay.subscribe([columnData.filter], (event) => {
+      columnData.events.update(events => [event, ...events]);
+      this.logger.debug(`Column event received for ${columnId}:`, event);
+    });
+
+    columnData.subscription = sub as any;
+
+    // Update the reactive signal to trigger UI updates
+    this._feedData.update(map => {
+      const newMap = new Map(map);
+      newMap.set(columnId, columnData);
+      return newMap;
+    });
+
+    this.logger.debug(`Continued column: ${columnId}`);
+    console.log(`✅ FeedService: Column ${columnId} continued successfully`);
   }
 }
