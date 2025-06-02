@@ -1,4 +1,4 @@
-import { Component, ElementRef, inject, signal, effect, input, ViewChild, Renderer2 } from '@angular/core';
+import { Component, ElementRef, inject, signal, effect, input, ViewChild, Renderer2, afterNextRender, AfterViewInit } from '@angular/core';
 import { LayoutService } from '../../services/layout.service';
 import { ThemeService } from '../../services/theme.service';
 import { CommonModule, DOCUMENT } from '@angular/common';
@@ -31,7 +31,7 @@ declare global {
   templateUrl: './media-player.component.html',
   styleUrl: './media-player.component.scss'
 })
-export class MediaPlayerComponent {
+export class MediaPlayerComponent implements AfterViewInit {
   private readonly layout = inject(LayoutService);
   private readonly theme = inject(ThemeService);
   private readonly utilities = inject(UtilitiesService);
@@ -106,6 +106,34 @@ export class MediaPlayerComponent {
         this.moveVideoBackToOriginal();
       }
     });
+
+    // Use afterNextRender to ensure ViewChild is available
+    afterNextRender(() => {
+      this.registerVideoElement();
+    });
+  }
+
+  ngAfterViewInit() {
+    // Register video element when view is initialized
+    this.registerVideoElement();
+  }
+
+  registerVideoElement() {
+    if (this.videoElement?.nativeElement) {
+      console.log('Registering video element with service:', this.videoElement.nativeElement);
+      this.media.setVideoElement(this.videoElement.nativeElement);
+    } else {
+      console.log('Video element not available yet');
+    }
+  }
+
+  onVideoError(event: Event) {
+    const video = event.target as HTMLVideoElement;
+    console.error('Video error:', video.error);
+    if (video.error) {
+      console.error('Video error code:', video.error.code);
+      console.error('Video error message:', video.error.message);
+    }
   }
 
   private updateBackgroundFromThemeColor(): void {
@@ -219,6 +247,9 @@ export class MediaPlayerComponent {
       this.mediaQueryList.removeEventListener('change', () => { });
     }
     this.removeEscapeListener();
+
+    // Clean up video element reference in service
+    this.media.setVideoElement(undefined);
 
     // Clean up if component is destroyed while in fullscreen
     if (this.media.isFullscreen() && this.originalVideoParent) {

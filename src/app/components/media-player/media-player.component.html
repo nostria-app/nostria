@@ -91,13 +91,20 @@
                 <button matTooltip="Open in fullscreen" (click)="media.fullscreen()" mat-icon-button>
                     <mat-icon>tv</mat-icon>
                 </button>
-                <!-- <button matTooltip="Play" (click)="media.resume()" mat-icon-button>
-                    <mat-icon>picture_in_picture</mat-icon>
-                </button> -->
             </div>
-            <video #videoElement class="event-video" [class.fullscreen]="media.isFullscreen()" controls autoplay="true" preload="none">
-                <source [src]="media.videoUrl()" type="video/mp4" />
+            @if(media.videoUrl()) {
+            <video #videoElement 
+                   class="event-video" 
+                   [class.fullscreen]="media.isFullscreen()" 
+                   [src]="media.videoUrl()" 
+                   controls 
+                   autoplay 
+                   preload="metadata"
+                   (loadeddata)="registerVideoElement()"
+                   (canplay)="registerVideoElement()"
+                   (error)="onVideoError($event)">
             </video>
+            }
         </div>
         }
 
