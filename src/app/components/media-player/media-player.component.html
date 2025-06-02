@@ -58,7 +58,8 @@
 
         <button (click)="media.pause()" routerLink="/media-queue" mat-icon-button>
             <mat-icon>queue_music</mat-icon>
-        </button>    </div>
+        </button>
+    </div>
     } @else {
     <div class="media-player-controls-footer">
 
@@ -83,7 +84,18 @@
 
         @if(media.current?.type === 'Video') {
         <div class="media-info">
-            <video class="event-video" controls autoplay="true" preload="none">
+            <div class="video-controls">
+                <button matTooltip="Open video in window" (click)="media.pictureInPicture()" mat-icon-button>
+                    <mat-icon>picture_in_picture_alt</mat-icon>
+                </button>
+                <button matTooltip="Open in fullscreen" (click)="media.fullscreen()" mat-icon-button>
+                    <mat-icon>tv</mat-icon>
+                </button>
+                <!-- <button matTooltip="Play" (click)="media.resume()" mat-icon-button>
+                    <mat-icon>picture_in_picture</mat-icon>
+                </button> -->
+            </div>
+            <video #videoElement class="event-video" [class.fullscreen]="media.isFullscreen()" controls autoplay="true" preload="none">
                 <source [src]="media.videoUrl()" type="video/mp4" />
             </video>
         </div>
@@ -148,7 +160,7 @@
         @if (media.videoMode()) {
         <div class="media-audio">
             <div class="media-audio-container">
-                @if(!expanded) {
+                <!-- @if(!expanded) {
                 <button (click)="expanded = true" class="hide-small" mat-icon-button>
                     <mat-icon>expand_less</mat-icon>
                 </button>
@@ -158,7 +170,7 @@
                 <button (click)="expanded = false" class="hide-small" mat-icon-button>
                     <mat-icon>expand_more</mat-icon>
                 </button>
-                }
+                } -->
 
                 <!-- @if (!maximized) {
                 <button (click)="maximized = true" class="hide-small" mat-icon-button>

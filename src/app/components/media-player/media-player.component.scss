@@ -139,6 +139,24 @@ input {
     max-height: 80px;
 }
 
+.video-controls {
+    display: flex;
+    flex-direction: column;
+}
+
+.event-video.fullscreen {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    // display: block;
+    // object-fit: contain;
+    z-index: 5000;
+}
+
 .media-controls {
     flex: 2 2 auto;
     width: 360px;
@@ -253,3 +271,5 @@ input {
         display: none;
     }
 }
+
+/* Component-specific styles go here */
