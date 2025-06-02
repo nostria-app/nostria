@@ -211,7 +211,13 @@ export class MediaPlayerService implements OnInitialized {
   }
 
   setVideoElement(videoElement: HTMLVideoElement | undefined) {
+    console.log('setVideoElement called with:', videoElement);
     this.videoElement = videoElement;
+    
+    // Don't auto-play here, let the start() method handle it
+    if (videoElement && this.videoMode() && this.current?.type === 'Video') {
+      console.log('Video element registered for current video');
+    }
   }
 
   async start() {
@@ -234,25 +240,46 @@ export class MediaPlayerService implements OnInitialized {
 
     if (file.type === 'YouTube') {
       this.videoMode.set(true);
-      this.videoUrl.set(undefined); // Clear any previous video URL
+      this.videoUrl.set(undefined);
       this.youtubeUrl.set(this.utilities.sanitizeUrlAndBypassFrame(file.source + '?autoplay=1'));
     } else if (file.type === 'Video') {
       this.videoMode.set(true);
-
-      if (this.videoElement) {
-        this.videoElement.pause(); // Stop the current video
-      }
-
-      this.youtubeUrl.set(undefined); // Clear any previous YouTube URL
+      this.youtubeUrl.set(undefined);
+      
+      console.log('Starting video, videoElement available:', !!this.videoElement);
+      
+      // Set the new video URL first
       this.videoUrl.set(this.utilities.sanitizeUrlAndBypassFrame(file.source));
 
+      // If video element is available, handle playback
       if (this.videoElement) {
-        this.videoElement.load(); // Reload the video
-        this.videoElement.play(); // Start playing the new video
+        try {
+          // The video element will automatically load the new src from template binding
+          console.log('Video element src will be updated by template binding');
+          
+          // Add event listeners for when video is ready
+          const handleCanPlay = async () => {
+            if (this.videoElement) {
+              try {
+                await this.videoElement.play();
+                console.log('Video started playing');
+              } catch (error) {
+                console.error('Error playing video:', error);
+              }
+            }
+            this.videoElement?.removeEventListener('canplay', handleCanPlay);
+          };
+
+          this.videoElement.addEventListener('canplay', handleCanPlay, { once: true });
+          
+        } catch (error) {
+          console.error('Error setting up video:', error);
+        }
+      } else {
+        console.warn('Video element not available for video playback');
       }
     } else {
       this.videoMode.set(false);
-      // Clear video URLs when switching to audio
       this.youtubeUrl.set(undefined);
       this.videoUrl.set(undefined);
 
@@ -286,12 +313,13 @@ export class MediaPlayerService implements OnInitialized {
     if (this.videoElement) {
       this.videoElement.pause();
       this.videoElement.currentTime = 0;
+      // Remove any event listeners that might be attached
+      this.videoElement.removeEventListener('canplay', () => {});
+      this.videoElement.removeEventListener('loadeddata', () => {});
     }
 
     // Clear video URLs to stop any playing videos
     if (this.videoMode()) {
-      this.youtubeUrl.set(undefined);
-      this.videoUrl.set(undefined);
       this.pausedYouTubeUrl.set(undefined);
     }
   }
@@ -302,7 +330,7 @@ export class MediaPlayerService implements OnInitialized {
         try {
           await this.videoElement.play();
         } catch (err) {
-          console.error(err);
+          console.error('Error resuming video:', err);
         }
       } else {
         this.youtubeUrl.set(this.pausedYouTubeUrl());
@@ -433,7 +461,11 @@ export class MediaPlayerService implements OnInitialized {
 
   get paused() {
     if (this.videoMode()) {
-      return this.youtubeUrl() == null;
+      if (this.current?.type === 'Video' && this.videoElement) {
+        return this.videoElement.paused;
+      } else {
+        return this.youtubeUrl() == null;
+      }
     } else {
       if (!this.audio) {
         return true;
