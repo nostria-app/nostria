@@ -1,4 +1,4 @@
-import { effect, inject, Injectable, signal } from '@angular/core';
+import { effect, inject, Injectable, signal, computed } from '@angular/core';
 import { SafeResourceUrl } from '@angular/platform-browser';
 import { MediaItem, OnInitialized } from '../interfaces';
 import { UtilitiesService } from './utilities.service';
@@ -43,13 +43,15 @@ export class MediaPlayerService implements OnInitialized {
   // previousWidth = 800;
   // previousHeight = 600;
 
-  get canPrevious() {
-    return this.index > 0;
-  }
+  // Convert to computed signals
+  canPrevious = computed(() => this.index > 0);
+  canNext = computed(() => this.index < this.media().length - 1);
 
-  get canNext() {
-    return this.index < this.media.length - 1;
-  }
+  // Convert to signals
+  youtubeUrl = signal<SafeResourceUrl | undefined>(undefined);
+  videoUrl = signal<SafeResourceUrl | undefined>(undefined);
+  videoMode = signal(false);
+  pausedYouTubeUrl = signal<SafeResourceUrl | undefined>(undefined);
 
   constructor() {
     effect(() => {
@@ -87,12 +89,12 @@ export class MediaPlayerService implements OnInitialized {
       this.forward(10);
     });
     navigator.mediaSession.setActionHandler('previoustrack', () => {
-      if (this.canPrevious) {
+      if (this.canPrevious()) {
         this.previous();
       }
     });
     navigator.mediaSession.setActionHandler('nexttrack', () => {
-      if (this.canNext) {
+      if (this.canNext()) {
         this.next();
       }
     });
@@ -199,10 +201,6 @@ export class MediaPlayerService implements OnInitialized {
     this.exit();
   }
 
-  youtubeUrl?: SafeResourceUrl;
-  videoUrl?: SafeResourceUrl;
-  videoMode = false;
-
   async start() {
     if (this.index === -1) {
       this.index = 0;
@@ -219,13 +217,13 @@ export class MediaPlayerService implements OnInitialized {
     this.layout.showMediaPlayer.set(true);
 
     if (file.type === 'YouTube') {
-      this.videoMode = true;
-      this.youtubeUrl = this.utilities.sanitizeUrlAndBypassFrame(file.source + '?autoplay=1');
+      this.videoMode.set(true);
+      this.youtubeUrl.set(this.utilities.sanitizeUrlAndBypassFrame(file.source + '?autoplay=1'));
     } else if (file.type === 'Video') {
-      this.videoMode = true;
-      this.videoUrl = this.utilities.sanitizeUrlAndBypassFrame(file.source);
+      this.videoMode.set(true);
+      this.videoUrl.set(this.utilities.sanitizeUrlAndBypassFrame(file.source));
     } else {
-      this.videoMode = false;
+      this.videoMode.set(false);
       if (!this.audio) {
         this.audio = new Audio(file.source);
       } else {
@@ -238,7 +236,7 @@ export class MediaPlayerService implements OnInitialized {
     navigator.mediaSession.metadata = new MediaMetadata({
       title: file.title,
       artist: file.artist,
-      album: 'Blockcore Notes',
+      album: 'Nostria',
       artwork: [{ src: file.artwork }],
     });
 
@@ -246,9 +244,9 @@ export class MediaPlayerService implements OnInitialized {
   }
 
   async resume() {
-    if (this.videoMode) {
-      this.youtubeUrl = this.pausedYouTubeUrl;
-      this.pausedYouTubeUrl = undefined;
+    if (this.videoMode()) {
+      this.youtubeUrl.set(this.pausedYouTubeUrl());
+      this.pausedYouTubeUrl.set(undefined);
     } else {
       if (!this.audio) {
         this.start();
@@ -266,12 +264,10 @@ export class MediaPlayerService implements OnInitialized {
     navigator.mediaSession.playbackState = 'playing';
   }
 
-  pausedYouTubeUrl?: SafeResourceUrl;
-
   pause() {
-    if (this.videoMode) {
-      this.pausedYouTubeUrl = this.youtubeUrl;
-      this.youtubeUrl = undefined;
+    if (this.videoMode()) {
+      this.pausedYouTubeUrl.set(this.youtubeUrl());
+      this.youtubeUrl.set(undefined);
     } else {
       if (!this.audio) {
         return;
@@ -284,6 +280,7 @@ export class MediaPlayerService implements OnInitialized {
   }
 
   next() {
+    debugger;
     this.index++;
     this.start();
   }
@@ -298,8 +295,8 @@ export class MediaPlayerService implements OnInitialized {
   }
 
   get paused() {
-    if (this.videoMode) {
-      return this.youtubeUrl == null;
+    if (this.videoMode()) {
+      return this.youtubeUrl() == null;
     } else {
       if (!this.audio) {
         return true;

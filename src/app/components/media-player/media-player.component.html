@@ -19,7 +19,7 @@
         </button>
         }
 
-        <button [disabled]="!media.canPrevious" (click)="media.previous()" mat-icon-button>
+        <button [disabled]="!media.canPrevious()" (click)="media.previous()" mat-icon-button>
             <mat-icon>skip_previous</mat-icon>
         </button>
 
@@ -34,7 +34,7 @@
         </button>
         }
 
-        <button [disabled]="!media.canNext" (click)="media.next()" mat-icon-button>
+        <button [disabled]="!media.canNext()" (click)="media.next()" mat-icon-button>
             <mat-icon>skip_next</mat-icon>
         </button>
 
@@ -44,13 +44,13 @@
         </button>
         }
 
-        @if (!media.videoMode && media.muted) {
+        @if (!media.videoMode() && media.muted) {
         <button mat-icon-button (click)="media.mute()">
             <mat-icon>volume_off</mat-icon>
         </button>
         }
 
-        @if(!media.videoMode && !media.muted) {
+        @if(!media.videoMode() && !media.muted) {
         <button mat-icon-button (click)="media.mute()">
             <mat-icon>volume_up</mat-icon>
         </button>
@@ -62,7 +62,7 @@
     } @else {
     <div class="media-player-controls-footer">
 
-        @if (!media.videoMode) {
+        @if (!media.videoMode()) {
         <div class="media-info">
             <img class="music-album" [src]="media.current?.artwork" />
             <div class="media-info-text hide-small">
@@ -74,9 +74,9 @@
 
         @if (media.current?.type === 'YouTube') {
         <div class="media-info">
-            @if(media.youtubeUrl) {
+            @if(media.youtubeUrl()) {
             <iframe sandbox="allow-scripts allow-same-origin allow-presentation" id="ytplayer" class="youtube-video"
-                type="text/html" [src]="media.youtubeUrl" frameborder="0" allowfullscreen allow="autoplay"></iframe>
+                type="text/html" [src]="media.youtubeUrl()" frameborder="0" allowfullscreen allow="autoplay"></iframe>
             }
         </div>
         }
@@ -84,7 +84,7 @@
         @if(media.current?.type === 'Video') {
         <div class="media-info">
             <video class="event-video" controls autoplay="true" preload="none">
-                <source [src]="media.videoUrl" type="video/mp4" />
+                <source [src]="media.videoUrl()" type="video/mp4" />
             </video>
         </div>
         }
@@ -103,7 +103,7 @@
                 </button>
                 }
 
-                <button matTooltip="Previous" [disabled]="!media.canPrevious" (click)="media.previous()"
+                <button matTooltip="Previous" [disabled]="!media.canPrevious()" (click)="media.previous()"
                     mat-icon-button>
                     <mat-icon>skip_previous</mat-icon>
                 </button>
@@ -120,7 +120,7 @@
                 </button>
                 }
 
-                <button matTooltip="Next" [disabled]="!media.canNext" (click)="media.next()" mat-icon-button>
+                <button matTooltip="Next" [disabled]="!media.canNext()" (click)="media.next()" mat-icon-button>
                     <mat-icon>skip_next</mat-icon>
                 </button>
 
@@ -131,7 +131,7 @@
                 </button>
                 }
             </div>
-            @if(!media.videoMode) {
+            @if(!media.videoMode()) {
             <div class="media-timeline">
                 <div class="media-timeline-1 hide-small">{{media.time | time}}</div>
                 <div class="media-timeline-2">
@@ -145,7 +145,7 @@
             }
         </div>
 
-        @if (media.videoMode) {
+        @if (media.videoMode()) {
         <div class="media-audio">
             <div class="media-audio-container">
                 @if(!expanded) {
@@ -172,7 +172,7 @@
                 </button>
                 } -->
 
-                <button matTooltip="Queue" routerLink="/queue" class="hide-small" mat-icon-button>
+                <button matTooltip="Queue" routerLink="/media-queue" class="hide-small" mat-icon-button>
                     <mat-icon>queue_music</mat-icon>
                 </button>
                 <button matTooltip="Exit Media Player" (click)="media.exit()" mat-icon-button>
@@ -182,7 +182,7 @@
         </div>
         }
 
-        @if(!media.videoMode) {
+        @if(!media.videoMode()) {
         <div class="media-audio">
             <div class="media-audio-container">
                 @if (media.muted) {
