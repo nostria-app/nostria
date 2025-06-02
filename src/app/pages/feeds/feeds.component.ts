@@ -46,7 +46,7 @@ const DEFAULT_COLUMNS: NavLink[] = [
 
 @Component({
   selector: 'app-feeds',
-  standalone: true,  imports: [
+  standalone: true, imports: [
     CommonModule,
     MatCardModule,
     MatButtonModule,
@@ -140,7 +140,7 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
     }
   });  // Drag state to prevent unnecessary re-renders during column reordering
   private isDragging = signal(false);
-  
+
   // Cache to store events during drag operations
   private _eventCache = new Map<string, Event[]>();
 
@@ -149,7 +149,7 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
     const columns = this.columns();
     const isDragging = this.isDragging();
     const eventsMap = new Map<string, Event[]>();
-    
+
     columns.forEach(column => {
       if (isDragging) {
         // During drag operations, use cached events to prevent DOM updates
@@ -158,16 +158,16 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
         // Normal operation: get fresh events from service
         const columnData = this.feedService.data.get(column.id);
         const events = columnData?.events() || [];
-        
+
         // Update cache for potential drag operations
         this._eventCache.set(column.id, events);
         eventsMap.set(column.id, events);
       }
     });
-    
+
     return eventsMap;
   });
-  
+
   // Helper method to get events for a specific column from the computed signal
   getEventsForColumn(columnId: string): Event[] {
     return this.columnEvents().get(columnId) || [];
@@ -199,7 +199,33 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
   canScrollRight = computed(() => {
     const maxScroll = this.maxScroll();
     return maxScroll > 0 && this.scrollPosition() < maxScroll;
+  });  // Computed signal to track which columns are paused (no active subscription)
+  pausedColumns = computed(() => {
+    const columns = this.columns();
+    const feedDataMap = this.feedService.feedDataReactive(); // Use reactive signal instead of regular Map
+    const pausedSet = new Set<string>();
+    
+    columns.forEach(column => {
+      const columnData = feedDataMap.get(column.id);
+      if (columnData && !columnData.subscription) {
+        pausedSet.add(column.id);
+      }
+    });
+    
+    return pausedSet;
   });
+
+  // Helper method to check if a specific column is paused
+  isColumnPaused(columnId: string): boolean {
+    return this.pausedColumns().has(columnId);
+  }
+
+  // Helper method to get pause status for debugging
+  getColumnStatus(columnId: string): string {
+    const columnData = this.feedService.data.get(columnId);
+    if (!columnData) return 'not found';
+    return columnData.subscription ? 'active' : 'paused';
+  }
   constructor() {
     // Initialize data loading
     this.loadTrendingContent();
@@ -212,7 +238,7 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
           // Find feed by path
           const feeds = this.feedsCollectionService.feeds();
           const targetFeed = feeds.find(feed => feed.path === pathParam);
-          
+
           if (targetFeed) {
             this.feedsCollectionService.setActiveFeed(targetFeed.id);
           } else {
@@ -432,7 +458,7 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
         this.selectColumn(columnCount - 1);
         break;
     }
-  }  onColumnDrop(event: CdkDragDrop<ColumnDefinition[]>): void {
+  } onColumnDrop(event: CdkDragDrop<ColumnDefinition[]>): void {
     const previousIndex = event.previousIndex;
     const currentIndex = event.currentIndex;
 
@@ -484,17 +510,17 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
         }, 50);
       }
     }
-    
+
     // Change detection will be reattached in onDragEnded()
   }
   // Drag event handlers to manage state with CHANGE DETECTION CONTROL
   onDragStarted(): void {
     console.log('🚀 Drag started - DETACHING CHANGE DETECTION');
     this.isDragging.set(true);
-    
+
     // **RADICAL APPROACH**: Detach change detection completely during drag
     this.cdr.detach();
-    
+
     // Pre-cache all column events to prevent DOM updates during drag
     const columns = this.columns();
     columns.forEach(column => {
@@ -506,11 +532,11 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
 
   onDragEnded(): void {
     console.log('🏁 Drag ended - REATTACHING CHANGE DETECTION');
-    
+
     // **RADICAL APPROACH**: Reattach change detection and force update
     this.cdr.reattach();
     this.cdr.detectChanges();
-    
+
     // Clear drag state
     this.isDragging.set(false);
   }
@@ -619,7 +645,7 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
   editColumn(index: number): void {
     const activeFeed = this.activeFeed();
     const columns = this.columns();
-    
+
     if (!activeFeed || index < 0 || index >= columns.length) return;
 
     const column = columns[index];
@@ -639,7 +665,7 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
         // Update the specific column in the feed
         const updatedColumns = [...activeFeed.columns];
         updatedColumns[index] = result;
-        
+
         const updatedFeed = {
           ...activeFeed,
           columns: updatedColumns,
@@ -650,14 +676,14 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
         this.notificationService.notify(`Column "${result.label}" updated`);
       }
     });
-  }  removeColumn(index: number): void {
+  } removeColumn(index: number): void {
     const activeFeed = this.activeFeed();
     const columns = this.columns();
-    
+
     if (!activeFeed || index < 0 || index >= columns.length) return;
 
     const column = columns[index];
-    
+
     // Prevent removing the last column - feed must have at least one column
     if (columns.length <= 1) {
       this.notificationService.notify('Cannot remove the last column from a feed');
@@ -666,7 +692,7 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
 
     // Update the feed by removing the column at the specified index
     const updatedColumns = activeFeed.columns.filter((_, i) => i !== index);
-    
+
     const updatedFeed = {
       ...activeFeed,
       columns: updatedColumns,
@@ -691,6 +717,20 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
     console.log('🔄 Refreshing column:', column.label, `(${column.id})`);
     this.feedsCollectionService.refreshColumn(column.id);
     this.notificationService.notify(`Column "${column.label}" refreshed`);
+  }
+  pauseColumn(column: ColumnDefinition): void {
+    console.log('⏸️ Pausing column:', column.label, `(${column.id})`);
+    console.log('📊 Column status before pause:', this.getColumnStatus(column.id));
+    this.feedsCollectionService.pauseColumn(column.id);
+    this.notificationService.notify(`Column "${column.label}" paused`);
+    console.log('📊 Column status after pause:', this.getColumnStatus(column.id));
+  }
+  continueColumn(column: ColumnDefinition): void {
+    console.log('▶️ Continue column:', column.label, `(${column.id})`);
+    console.log('📊 Column status before continue:', this.getColumnStatus(column.id));
+    this.feedsCollectionService.continueColumn(column.id);
+    this.notificationService.notify(`Column "${column.label}" continued`);
+    console.log('📊 Column status after continue:', this.getColumnStatus(column.id));
   }
 
   ngOnInit() {
@@ -717,7 +757,7 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
   getBlurhash(event: any, imageIndex: number = 0): string | null {
     const imetas = event.tags?.filter((tag: any[]) => tag[0] === 'imeta') || [];
     if (imetas.length <= imageIndex) return null;
-    
+
     const imeta = imetas[imageIndex];
     const blurhashIndex = imeta.findIndex((item: string) => item.startsWith('blurhash '));
     return blurhashIndex > 0 ? imeta[blurhashIndex].substring(9) : null;
@@ -731,11 +771,11 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
       canvas.height = height;
       const ctx = canvas.getContext('2d');
       if (!ctx) return '';
-      
+
       const imageData = ctx.createImageData(width, height);
       imageData.data.set(pixels);
       ctx.putImageData(imageData, 0, 0);
-      
+
       return canvas.toDataURL();
     } catch (error) {
       console.warn('Failed to decode blurhash:', error);
@@ -751,9 +791,9 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
     const urlIndex = firstImeta.findIndex((item: string) => item.startsWith('url '));
     const imageIndex = firstImeta.findIndex((item: string) => item.startsWith('image '));
     const blurhashIndex = firstImeta.findIndex((item: string) => item.startsWith('blurhash '));
-    
+
     const durationTag = event.tags?.find((tag: any[]) => tag[0] === 'duration');
-    
+
     return {
       url: urlIndex > 0 ? firstImeta[urlIndex].substring(4) : '',
       thumbnail: imageIndex > 0 ? firstImeta[imageIndex].substring(6) : undefined,
@@ -777,7 +817,7 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
    */
   removeHashtagsFromContent(content: string): string {
     if (!content) return '';
-    
+
     // Remove hashtags using regex - matches #word patterns
     return content.replace(/#[a-zA-Z0-9_]+/g, '').replace(/\s+/g, ' ').trim();
   }
@@ -796,12 +836,12 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
     const hours = Math.floor(num / 3600);
     const minutes = Math.floor((num % 3600) / 60);
     const secs = num % 60;
-    
+
     if (hours > 0) {
       return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     }
     return `${minutes}:${secs.toString().padStart(2, '0')}`;
-  }  openImageDialog(imageUrl: string, altText: string): void {
+  } openImageDialog(imageUrl: string, altText: string): void {
     this.dialog.open(ImageDialogComponent, {
       data: { imageUrl },
       maxWidth: '95vw',
@@ -830,7 +870,7 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
   selectFeed(feedId: string): void {
     const feeds = this.feedsCollectionService.feeds();
     const selectedFeed = feeds.find(feed => feed.id === feedId);
-    
+
     // Set the active feed
     this.feedsCollectionService.setActiveFeed(feedId);
     // Navigate to the appropriate URL
@@ -851,7 +891,7 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
       data: {
         icons: ['dynamic_feed', 'bookmark', 'explore', 'trending_up', 'star', 'favorite', 'rss_feed']
       }
-    });    dialogRef.afterClosed().subscribe(result => {
+    }); dialogRef.afterClosed().subscribe(result => {
       if (result) {
         // The dialog returns a FeedConfig, but FeedsCollectionService.addFeed expects FeedDefinition data
         const newFeed = this.feedsCollectionService.addFeed({
@@ -914,9 +954,10 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
         cancelText: 'Cancel',
         confirmColor: 'warn'
       } as ConfirmDialogData
-    });    dialogRef.afterClosed().subscribe(result => {
+    }); dialogRef.afterClosed().subscribe(result => {
       if (result) {
         this.feedsCollectionService.removeFeed(activeFeed.id);
-      }    });
+      }
+    });
   }
 }
