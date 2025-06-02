@@ -1318,3 +1318,188 @@ h1 {
     font-size: 0.8rem;
   }
 }
+
+
+
+  // Playlist styles (M3U kind 32100)
+  .playlist-container {
+    margin: 16px 0;
+    padding: 16px;
+    border-radius: 12px;
+    background-color: var(--mat-sys-surface-container-low);
+    border: 1px solid var(--mat-sys-outline-variant);
+    box-shadow: var(--mat-sys-level1);
+
+    .playlist-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 16px;
+
+      .playlist-icon {
+        font-size: 32px;
+        width: 32px;
+        height: 32px;
+        color: var(--mat-sys-primary);
+        margin-top: 4px;
+      }
+
+      .playlist-info {
+        flex: 1;
+
+        .playlist-title {
+          margin: 0 0 8px 0;
+          font-size: 1.2rem;
+          color: var(--mat-sys-on-surface);
+          line-height: 1.3;
+        }
+
+        .playlist-description {
+          margin: 0 0 8px 0;
+          color: var(--mat-sys-on-surface-variant);
+          font-size: 0.9rem;
+          line-height: 1.4;
+        }
+
+        .playlist-meta {
+          display: flex;
+          gap: 16px;
+          font-size: 0.85rem;
+          color: var(--mat-sys-on-surface-variant);
+
+          .track-count {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+
+            &::before {
+              content: '🎵';
+              font-size: 0.8rem;
+            }
+          }
+
+          .playlist-duration {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+
+            &::before {
+              content: '⏱️';
+              font-size: 0.8rem;
+            }
+          }
+        }
+      }
+    }
+
+    .playlist-actions {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+
+      button {
+        .mat-icon {
+          margin-right: 4px;
+        }
+      }
+    }
+
+    .playlist-tracks {
+      .tracks-header {
+        margin: 0 0 12px 0;
+        font-size: 1rem;
+        color: var(--mat-sys-on-surface);
+      }
+
+      .track-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+
+        .track-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 8px 12px;
+          border-radius: 8px;
+          background-color: var(--mat-sys-surface-container-highest);
+          transition: background-color 0.2s ease;
+
+          &:hover {
+            background-color: var(--mat-sys-surface-container);
+          }
+
+          &.more-tracks {
+            justify-content: center;
+            font-style: italic;
+            color: var(--mat-sys-on-surface-variant);
+            background-color: transparent;
+            border: 1px dashed var(--mat-sys-outline-variant);
+
+            &:hover {
+              background-color: var(--mat-sys-surface-container-lowest);
+            }
+
+            .more-indicator {
+              font-size: 0.9rem;
+            }
+          }
+
+          .track-number {
+            font-size: 0.85rem;
+            color: var(--mat-sys-on-surface-variant);
+            width: 20px;
+            text-align: center;
+          }
+
+          .track-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+
+            .track-title {
+              font-size: 0.9rem;
+              color: var(--mat-sys-on-surface);
+              line-height: 1.3;
+            }
+
+            .track-artist {
+              font-size: 0.8rem;
+              color: var(--mat-sys-on-surface-variant);
+              line-height: 1.2;
+            }
+          }
+        }
+      }
+    }
+
+    // Responsive adjustments
+    @media (max-width: 600px) {
+      padding: 12px;
+
+      .playlist-header {
+        .playlist-icon {
+          font-size: 28px;
+          width: 28px;
+          height: 28px;
+        }
+
+        .playlist-info {
+          .playlist-title {
+            font-size: 1.1rem;
+          }
+        }
+      }
+
+      .playlist-actions {
+        flex-direction: column;
+
+        button {
+          width: 100%;
+          justify-content: center;
+        }
+      }
+    }
+  }
