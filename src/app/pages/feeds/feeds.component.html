@@ -240,6 +240,69 @@
                   }
                   }
 
+                  <!-- M3U Playlists (kind 32100) -->
+                  @else if (event.kind === 32100) {
+                  @let playlistData = getPlaylistData(event);
+                  @if (playlistData) {
+                  <div class="playlist-container">
+                    <div class="playlist-header">
+                      <mat-icon class="playlist-icon">playlist_play</mat-icon>
+                      <div class="playlist-info">
+                        <h3 class="playlist-title">{{ playlistData.title }}</h3>
+                        @if (playlistData.alt) {
+                        <p class="playlist-description">{{ playlistData.alt }}</p>
+                        }
+                        <div class="playlist-meta">
+                          <span class="track-count">{{ playlistData.tracks.length }} tracks</span>
+                          @if (playlistData.totalDuration) {
+                          <span class="playlist-duration">{{ playlistData.totalDuration }}</span>
+                          }
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div class="playlist-actions">
+                      <button mat-raised-button color="primary" (click)="playPlaylist(playlistData)">
+                        <mat-icon>play_arrow</mat-icon>
+                        Play Playlist
+                      </button>
+                      <button mat-button (click)="addPlaylistToQueue(playlistData)">
+                        <mat-icon>playlist_add</mat-icon>
+                        Add to Queue
+                      </button>                      @if (playlistData.url) {
+                      <a mat-icon-button [href]="playlistData.url" target="_blank" rel="noopener noreferrer">
+                        <mat-icon>download</mat-icon>
+                      </a>
+                      }
+                    </div>
+
+                    @if (playlistData.tracks.length > 0) {
+                    <div class="playlist-tracks">
+                      <h4 class="tracks-header">Tracks</h4>
+                      <div class="track-list">
+                        @for (track of playlistData.tracks.slice(0, 5); track track.url; let i = $index) {
+                        <div class="track-item">
+                          <span class="track-number">{{ i + 1 }}</span>
+                          <div class="track-info">
+                            <span class="track-title">{{ track.title || 'Unknown Track' }}</span>
+                            @if (track.artist) {
+                            <span class="track-artist">{{ track.artist }}</span>
+                            }
+                          </div>
+                        </div>
+                        }
+                        @if (playlistData.tracks.length > 5) {
+                        <div class="track-item more-tracks">
+                          <span class="more-indicator">+{{ playlistData.tracks.length - 5 }} more tracks</span>
+                        </div>
+                        }
+                      </div>
+                    </div>
+                    }
+                  </div>
+                  }
+                  }
+
                   <!-- Articles (kind 0) -->
                   @else if (event.kind === 0) {
                   <!-- <app-user-profile [event]="event" [pubkey]="event.pubkey"></app-user-profile> -->
