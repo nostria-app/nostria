@@ -1098,7 +1098,7 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
         artist: track.artist || 'Unknown Artist',
         source: track.url,
         artwork: '', // Could be enhanced to extract album art
-        type: 'Music'
+        type: 'Video',
       };
       
       this.mediaPlayerService.enque(mediaItem);
