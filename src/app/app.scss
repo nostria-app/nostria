@@ -141,6 +141,8 @@ nav {
   height: 100%;
   box-sizing: border-box;
 
+  height: calc(100dvh - 64px); // Adjusted for app toolbar height
+
   // &.mobile {
   //   height: calc(100dvh - 200px) !important; // mobile-nav height.
   // }

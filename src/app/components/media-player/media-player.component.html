@@ -1,5 +1,7 @@
 <div class="media-player">
+    @if (!footer()) {
     <img class="media-player-icon" src="icons/icon.svg" width="16" height="16" />
+    }
     <div class="nodrag media-player-controls">
         <button matTooltip="Add to playlist" (click)="addTestSong()" mat-icon-button>
             <mat-icon>playlist_add</mat-icon>

@@ -1,25 +1,46 @@
 :host {
-    /* Make sure the `div` stays there, even when scrolling. */
-    position: fixed;
-    /**
-   * Use theme color from meta tag, with fallback to Material toolbar background
-   */
     background: var(--theme-background-color, var(--mat-toolbar-container-background-color, var(--mat-sys-surface)));
-    /* Use the environment variable for the left anchoring with a fallback. */
-    left: env(titlebar-area-x, 0);
-    /* Use the environment variable for the top anchoring with a fallback. */
-    top: env(titlebar-area-y, 0);
-    /* Use the environment variable for setting the width with a fallback. */
-    width: env(titlebar-area-width, 100%);
-    /* Use the environment variable for setting the height with a fallback. */
-    height: env(titlebar-area-height, 33px);
-
-    -webkit-app-region: drag;
-    app-region: drag;
+    height: 33px;
+    
+    &:not(.footer-mode) {
+        /* Toolbar mode - fixed position with window controls overlay support */
+        position: fixed;
+        /* Use the environment variable for the left anchoring with a fallback. */
+        left: env(titlebar-area-x, 0);
+        /* Use the environment variable for the top anchoring with a fallback. */
+        top: env(titlebar-area-y, 0);
+        /* Use the environment variable for setting the width with a fallback. */
+        width: env(titlebar-area-width, 100%);
+        /* Use the environment variable for setting the height with a fallback. */
+        height: env(titlebar-area-height, 33px);
+        
+        -webkit-app-region: drag;
+        app-region: drag;
+    }
+      &.footer-mode {
+        /* Footer mode - sticky position at bottom of content */
+        position: sticky;
+        bottom: 0;
+        width: 100%;
+        height: 80px;
+        border-top: 1px solid var(--mat-sys-outline-variant);
+        z-index: 100;
+        
+        /* Remove drag behavior for footer mode */
+        -webkit-app-region: none;
+        app-region: none;
+    }
 }
 
 .media-player {
     display: flex;
+    height: 100%;
+    align-items: center;
+    
+    .footer-mode & {
+        justify-content: center;
+        padding: 12px 0;
+    }
 }
 
 .media-player-icon {
@@ -30,6 +51,14 @@
 
 .media-player-controls {
     margin-top: -4px;
+    
+    .footer-mode & {
+        margin-top: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
 }
 
 .nodrag {

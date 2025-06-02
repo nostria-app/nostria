@@ -1,4 +1,4 @@
-import { Component, ElementRef, inject, signal, effect } from '@angular/core';
+import { Component, ElementRef, inject, signal, effect, input } from '@angular/core';
 import { LayoutService } from '../../services/layout.service';
 import { ThemeService } from '../../services/theme.service';
 import { DOCUMENT } from '@angular/common';
@@ -36,23 +36,43 @@ export class MediaPlayerComponent {
   private elementRef = inject(ElementRef);
   media = inject(MediaPlayerService);
   dialog = inject(MatDialog);
+  footer = input<boolean>(false);
 
   // Signals to track display mode state
 
   private mediaQueryList?: MediaQueryList;
-
   constructor() {
-    // Effect to handle display mode changes
+    // Effect to handle footer mode class
+    effect(() => {
+      const div = this.elementRef.nativeElement;
+      const isFooterMode = this.footer();
+      
+      if (isFooterMode) {
+        div.classList.add('footer-mode');
+      } else {
+        div.classList.remove('footer-mode');
+      }
+    });
+
+    // Effect to handle display mode changes (only for toolbar mode)
     effect(() => {
       const div = this.elementRef.nativeElement;
       const isOverlayMode = this.layout.overlayMode();
+      const isFooterMode = this.footer();
 
-      if (isOverlayMode) {
-        div.classList.add('window-controls-overlay');
-        div.style.display = 'block';
+      // Only apply overlay mode logic if not in footer mode
+      if (!isFooterMode) {
+        if (isOverlayMode) {
+          div.classList.add('window-controls-overlay');
+          div.style.display = 'block';
+        } else {
+          div.classList.remove('window-controls-overlay');
+          div.style.display = 'none';
+        }
       } else {
+        // Footer mode should always be visible
+        div.style.display = 'block';
         div.classList.remove('window-controls-overlay');
-        div.style.display = 'none';
       }
     });
 
@@ -72,39 +92,40 @@ export class MediaPlayerComponent {
         div.style.setProperty('--theme-background-color', themeColor);
       }
     }
-  }
-
-  ngOnInit() {
+  }  ngOnInit() {
     const div = this.elementRef.nativeElement;
 
-    if ('windowControlsOverlay' in navigator) {
-      const { x } = navigator.windowControlsOverlay.getTitlebarAreaRect();
-      if (x === 0) {
-        div.classList.add('search-controls-right');
+    // Only apply window controls overlay logic for toolbar mode (not footer mode)
+    if (!this.footer()) {
+      if ('windowControlsOverlay' in navigator) {
+        const { x } = navigator.windowControlsOverlay.getTitlebarAreaRect();
+        if (x === 0) {
+          div.classList.add('search-controls-right');
+        } else {
+          div.classList.add('search-controls-left');
+        }
+
+        // if (navigator.windowControlsOverlay.visible) {
+        //   // The window controls overlay is visible in the title bar area.
+        // }
       } else {
-        div.classList.add('search-controls-left');
+        div.classList.add('search-controls-right');
       }
 
-      // if (navigator.windowControlsOverlay.visible) {
-      //   // The window controls overlay is visible in the title bar area.
-      // }
-    } else {
-      div.classList.add('search-controls-right');
+      // Create and setup the media query list
+      this.mediaQueryList = window.matchMedia('(display-mode: window-controls-overlay)');
+
+      // Set initial state
+      this.layout.overlayMode.set(this.mediaQueryList.matches);
+
+      // Define callback for media query changes
+      const handleDisplayModeChange = (event: MediaQueryListEvent) => {
+        this.layout.overlayMode.set(event.matches);
+      };
+
+      // Add event listener
+      this.mediaQueryList.addEventListener('change', handleDisplayModeChange);
     }
-
-    // Create and setup the media query list
-    this.mediaQueryList = window.matchMedia('(display-mode: window-controls-overlay)');
-
-    // Set initial state
-    this.layout.overlayMode.set(this.mediaQueryList.matches);
-
-    // Define callback for media query changes
-    const handleDisplayModeChange = (event: MediaQueryListEvent) => {
-      this.layout.overlayMode.set(event.matches);
-    };
-
-    // Add event listener
-    this.mediaQueryList.addEventListener('change', handleDisplayModeChange);
   }
 
   ngOnDestroy() {
