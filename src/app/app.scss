@@ -47,6 +47,18 @@ nav {
   @media (max-width: 599px) {}
 }
 
+// Configure mat-sidenav-content to be a flex container
+mat-sidenav-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  
+  // Adjust for mobile navigation
+  @media (max-width: 599px) {
+    padding-bottom: 56px; // Height of mobile nav
+  }
+}
+
 // .mobile-view {
 //   height: calc(100vh - 56px); // Reverted back to 56px
 // }
@@ -133,19 +145,11 @@ nav {
 }
 
 .content-wrapper {
-  // padding: 1rem;
-  // box-sizing: border-box;
-  // height: 100%;
-  // overflow-y: auto;
-  // overflow-x: hidden;
-  height: 100%;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
   box-sizing: border-box;
-
-  height: calc(100dvh - 64px); // Adjusted for app toolbar height
-
-  // &.mobile {
-  //   height: calc(100dvh - 200px) !important; // mobile-nav height.
-  // }
+  // Remove fixed height since we're using flexbox now
 }
 
 // mat-drawer-content mat-sidenav-content {
