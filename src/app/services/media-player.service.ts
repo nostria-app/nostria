@@ -22,7 +22,7 @@ export class MediaPlayerService implements OnInitialized {
   utilities = inject(UtilitiesService);
   localStorage = inject(LocalStorageService);
   layout = inject(LayoutService);
-  app = inject(ApplicationService);  media = signal<MediaItem[]>([]);
+  app = inject(ApplicationService); media = signal<MediaItem[]>([]);
   audio?: HTMLAudioElement;
   current?: MediaItem;
   index = 0;
@@ -52,6 +52,9 @@ export class MediaPlayerService implements OnInitialized {
   videoUrl = signal<SafeResourceUrl | undefined>(undefined);
   videoMode = signal(false);
   pausedYouTubeUrl = signal<SafeResourceUrl | undefined>(undefined);
+
+  // Video element reference
+  private videoElement?: HTMLVideoElement;
 
   constructor() {
     effect(() => {
@@ -116,9 +119,10 @@ export class MediaPlayerService implements OnInitialized {
   }
 
   exit() {
+    // Use the centralized cleanup method
+    this.cleanupCurrentMedia();
+
     if (this.audio) {
-      this.audio.pause();
-      this.audio.currentTime = 0;
       this.audio = undefined;
     }
 
@@ -126,6 +130,7 @@ export class MediaPlayerService implements OnInitialized {
     this.current = undefined;
     this.layout.showMediaPlayer.set(false);
     this.media.set([]);
+    this.videoMode.set(false);
   }
 
   play(file: MediaItem) {
@@ -189,16 +194,20 @@ export class MediaPlayerService implements OnInitialized {
   }
 
   maximizeWindow() {
-    this.videoWindowState.update(state => ({ 
-      ...state, 
+    this.videoWindowState.update(state => ({
+      ...state,
       isMaximized: !state.isMaximized,
-      isMinimized: false 
+      isMinimized: false
     }));
     this.saveWindowState();
   }
 
   closeVideoWindow() {
     this.exit();
+  }
+
+  setVideoElement(videoElement: HTMLVideoElement | undefined) {
+    this.videoElement = videoElement;
   }
 
   async start() {
@@ -212,18 +221,37 @@ export class MediaPlayerService implements OnInitialized {
       return;
     }
 
+    // Clean up previous media before starting new one
+    this.cleanupCurrentMedia();
+
     this.current = file;
 
     this.layout.showMediaPlayer.set(true);
 
     if (file.type === 'YouTube') {
       this.videoMode.set(true);
+      this.videoUrl.set(undefined); // Clear any previous video URL
       this.youtubeUrl.set(this.utilities.sanitizeUrlAndBypassFrame(file.source + '?autoplay=1'));
     } else if (file.type === 'Video') {
       this.videoMode.set(true);
+
+      if (this.videoElement) {
+        this.videoElement.pause(); // Stop the current video
+      }
+
+      this.youtubeUrl.set(undefined); // Clear any previous YouTube URL
       this.videoUrl.set(this.utilities.sanitizeUrlAndBypassFrame(file.source));
+
+      if (this.videoElement) {
+        this.videoElement.load(); // Reload the video
+        this.videoElement.play(); // Start playing the new video
+      }
     } else {
       this.videoMode.set(false);
+      // Clear video URLs when switching to audio
+      this.youtubeUrl.set(undefined);
+      this.videoUrl.set(undefined);
+
       if (!this.audio) {
         this.audio = new Audio(file.source);
       } else {
@@ -243,10 +271,39 @@ export class MediaPlayerService implements OnInitialized {
     navigator.mediaSession.playbackState = 'playing';
   }
 
+  private cleanupCurrentMedia() {
+    // Stop and cleanup audio
+    if (this.audio) {
+      this.audio.pause();
+      this.audio.currentTime = 0;
+    }
+
+    // Stop and cleanup video
+    if (this.videoElement) {
+      this.videoElement.pause();
+      this.videoElement.currentTime = 0;
+    }
+
+    // Clear video URLs to stop any playing videos
+    if (this.videoMode()) {
+      this.youtubeUrl.set(undefined);
+      this.videoUrl.set(undefined);
+      this.pausedYouTubeUrl.set(undefined);
+    }
+  }
+
   async resume() {
     if (this.videoMode()) {
-      this.youtubeUrl.set(this.pausedYouTubeUrl());
-      this.pausedYouTubeUrl.set(undefined);
+      if (this.current?.type === 'Video' && this.videoElement) {
+        try {
+          await this.videoElement.play();
+        } catch (err) {
+          console.error(err);
+        }
+      } else {
+        this.youtubeUrl.set(this.pausedYouTubeUrl());
+        this.pausedYouTubeUrl.set(undefined);
+      }
     } else {
       if (!this.audio) {
         this.start();
@@ -266,8 +323,12 @@ export class MediaPlayerService implements OnInitialized {
 
   pause() {
     if (this.videoMode()) {
-      this.pausedYouTubeUrl.set(this.youtubeUrl());
-      this.youtubeUrl.set(undefined);
+      if (this.current?.type === 'Video' && this.videoElement) {
+        this.videoElement.pause();
+      } else {
+        this.pausedYouTubeUrl.set(this.youtubeUrl());
+        this.youtubeUrl.set(undefined);
+      }
     } else {
       if (!this.audio) {
         return;
@@ -277,6 +338,121 @@ export class MediaPlayerService implements OnInitialized {
     }
 
     navigator.mediaSession.playbackState = 'paused';
+  }
+
+  async pictureInPicture(): Promise<void> {
+    try {
+      // Find the current video element
+      const videoElement = this.getCurrentVideoElement();
+
+      if (!videoElement) {
+        console.warn('No video element found for Picture-in-Picture');
+        return;
+      }
+
+      // Check if Picture-in-Picture is supported
+      if (!document.pictureInPictureEnabled) {
+        console.warn('Picture-in-Picture is not supported in this browser');
+        return;
+      }
+
+      // Check if video supports Picture-in-Picture
+      if (videoElement.disablePictureInPicture) {
+        console.warn('Picture-in-Picture is disabled for this video');
+        return;
+      }
+
+      // Toggle Picture-in-Picture mode
+      if (document.pictureInPictureElement) {
+        // Exit Picture-in-Picture if currently active
+        await document.exitPictureInPicture();
+        console.debug('Exited Picture-in-Picture mode');
+      } else {
+        // Enter Picture-in-Picture mode
+        await videoElement.requestPictureInPicture();
+        console.debug('Entered Picture-in-Picture mode');
+      }
+    } catch (error) {
+      console.error('Picture-in-Picture error:', error);
+    }
+  }
+
+  isFullscreen = signal(false);
+
+  async fullscreen() {
+    this.isFullscreen.set(true);
+  }
+
+  async fullscreen2(): Promise<void> {
+    // try {
+    //   // For video content, we'll use the video window approach
+    //   if (this.current?.type === 'Video' || this.current?.type === 'YouTube') {
+    //     // Open video in window mode and maximize it
+    //     // this.openVideoWindow();
+
+    //     // Wait a frame for the window to be created
+    //     await new Promise(resolve => requestAnimationFrame(resolve));
+
+    //     // Maximize the video window
+    //     this.maximizeWindow();
+    //     console.debug('Video opened in fullscreen window mode');
+    //     return;
+    //   }
+
+    //   // Fallback: try to find and fullscreen the video element directly
+    //   const videoElement = this.getCurrentVideoElement();
+
+    //   if (!videoElement) {
+    //     console.warn('No video element found for fullscreen');
+    //     return;
+    //   }
+
+    //   // Check if fullscreen is supported
+    //   if (!document.fullscreenEnabled) {
+    //     console.warn('Fullscreen is not supported in this browser');
+    //     return;
+    //   }
+
+    //   // Toggle fullscreen mode
+    //   if (document.fullscreenElement) {
+    //     // Exit fullscreen if currently active
+    //     await document.exitFullscreen();
+    //     console.debug('Exited fullscreen mode');
+    //   } else {
+    //     // Enter fullscreen mode
+    //     await videoElement.requestFullscreen();
+    //     console.debug('Entered fullscreen mode');
+    //   }
+    // } catch (error) {
+    //   console.error('Fullscreen error:', error);
+    // }
+  }
+
+  private getCurrentVideoElement(): HTMLVideoElement | null {
+    // Return the video element reference if available
+    if (this.videoElement) {
+      return this.videoElement;
+    }
+
+    // Try to find video element in the footer media player
+    const footerVideo = document.querySelector('.media-player-footer video') as HTMLVideoElement;
+    if (footerVideo) {
+      return footerVideo;
+    }
+
+    // Try to find video element in the video window
+    const windowVideo = document.querySelector('.video-window video') as HTMLVideoElement;
+    if (windowVideo) {
+      return windowVideo;
+    }
+
+    // Try to find any video element on the page
+    const anyVideo = document.querySelector('video') as HTMLVideoElement;
+    if (anyVideo) {
+      return anyVideo;
+    }
+
+    return null;
   }
 
   next() {
