@@ -36,9 +36,9 @@
 
             <div class="profile-item" title="{{ verifiedId.status }}">
                 @if (verifiedId.valid) {
-                    <mat-icon class="verified-icon">verified</mat-icon>
+                <mat-icon class="verified-icon">verified</mat-icon>
                 } @else if (verifiedId.value) {
-                    <mat-icon class="verified-icon verified-icon-error">verified_off</mat-icon>
+                <mat-icon class="verified-icon verified-icon-error">verified_off</mat-icon>
                 }
                 <span [class.strikethrough]="!verifiedId.valid">{{ verifiedId.value }}</span>
             </div>
@@ -56,15 +56,26 @@
             <div class="profile-bio">{{ profile.data.about }}</div>
             }
 
-            @if (!compact()) {
-            <a class="following-count" [routerLink]="'following'" [queryParamsHandling]="'preserve'">
-                Following {{ profileState.followingList().length }}
-            </a>
+            <div class="profile-extra-info">
 
-            <a class="following-count" [routerLink]="'relays'" [queryParamsHandling]="'preserve'">
-                Relays {{ profileState.relay?.relayUrls?.length }}
-            </a>
-            }
+                @if (!compact()) {
+                <a class="following-count" [routerLink]="'following'" [queryParamsHandling]="'preserve'">
+                    Following {{ profileState.followingList().length }}
+                </a>
+
+                @if (profileState.relay?.userRelaysFound()) {
+                <a class="following-count" [routerLink]="'relays'" [queryParamsHandling]="'preserve'">
+                    Relays {{ profileState.relay?.relayUrls?.length }}
+                </a>
+                } @else {
+                <span class="inline-error">
+                    <mat-icon>error</mat-icon>&nbsp;
+                    No relays found!
+                </span>
+                }
+                }
+
+            </div>
 
             <mat-menu #profileMenu="matMenu">
                 @if (!isOwnProfile()) {

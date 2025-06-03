@@ -38,6 +38,8 @@ export class UserRelayService {
     async initialize(pubkey: string, config?: { customConfig?: any, customRelays?: string[] }) {
         let relayUrls = await this.nostr.getRelays(pubkey);
 
+        // If no relays were found, we will fall back to using the account relays. This is not ideal, but
+        // perhaps the profile will load. We should show a warning to the user that no relays were found.
         if (relayUrls.length === 0) {
             relayUrls = this.nostr.accountRelayUrls();
             this.userRelaysFound.set(false);

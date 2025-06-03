@@ -171,13 +171,13 @@
     margin-top: 1rem;
     white-space: pre-line;
     max-width: 700px;
-    
+
     // @media (max-width: 768px) {
     //   /* Remove auto margins that were centering the bio */
     //   margin-left: 0.5rem;
     //   margin-right: 0;
     // }
-  }
+}
 
 .profile-name {
     margin-top: 0.4rem;
@@ -277,4 +277,15 @@
     // height: 18px;
     // width: 18px;
     // margin-left: 4px;
+}
+
+.profile-extra-info {
+    display: flex;
+    align-items: center;
+}
+
+.inline-error {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
 }
