@@ -41,7 +41,8 @@
       </div>
     </div>
 
-    @if (isMobileView()) {
+    <!-- Replace with menu below -->
+    <!-- @if (isMobileView()) {
     <div class="column-navigation">
       <div class="column-selector">
         @for (column of columns(); track column.id; let i = $index) {
@@ -52,7 +53,7 @@
         }
       </div>
     </div>
-    }
+    } -->
 
     <div class="header-actions">
       <!-- <button mat-icon-button (click)="refreshContent()" matTooltip="Refresh content">
@@ -95,23 +96,38 @@
             <div class="drag-handle" cdkDragHandle>
               <mat-icon>drag_indicator</mat-icon>
             </div>
-            }            <mat-icon>{{ column.icon }}</mat-icon>
+
+            <mat-icon>{{ column.icon }}</mat-icon>
             <span class="column-title">{{ column.label }}</span>
-  
-            <div class="column-header-actions"><button mat-icon-button (click)="refreshColumn(column)" matTooltip="Refresh content">
+            } @else {
+            <button mat-stroked-button [matMenuTriggerFor]="menu">
+              <mat-icon>{{ column.icon }}</mat-icon>
+              {{ column.label }}</button>
+            <mat-menu #menu="matMenu">
+              @for (column of columns(); track column.id; let i = $index) {
+              <button mat-menu-item (click)="selectColumn(i)">
+                <mat-icon>{{ column.icon }}</mat-icon>
+                <span>{{ column.label }}</span>
+              </button>
+              }
+            </mat-menu>
+            }
+
+            <div class="column-header-actions"><button mat-icon-button (click)="refreshColumn(column)"
+                matTooltip="Refresh content">
                 <mat-icon>refresh</mat-icon>
               </button>
               <!-- <button mat-icon-button (click)="toggleAdvancedFilters()" matTooltip="Toggle filters">
                 <mat-icon>filter_list</mat-icon>
               </button> -->
               @if (isColumnPaused(column.id)) {
-                <button mat-icon-button (click)="continueColumn(column)" matTooltip="Resume live feed">
-                  <mat-icon>play_circle</mat-icon>
-                </button>
+              <button mat-icon-button (click)="continueColumn(column)" matTooltip="Resume live feed">
+                <mat-icon>play_circle</mat-icon>
+              </button>
               } @else {
-                <button mat-icon-button (click)="pauseColumn(column)" matTooltip="Pause the feed">
-                  <mat-icon>pause_circle</mat-icon>
-                </button>
+              <button mat-icon-button (click)="pauseColumn(column)" matTooltip="Pause the feed">
+                <mat-icon>pause_circle</mat-icon>
+              </button>
               }
 
               <button mat-icon-button [matMenuTriggerFor]="columnMenu" (click)="$event.stopPropagation()">
@@ -260,7 +276,7 @@
                         </div>
                       </div>
                     </div>
-                    
+
                     <div class="playlist-actions">
                       <button mat-raised-button color="primary" (click)="playPlaylist(playlistData)">
                         <mat-icon>play_arrow</mat-icon>
