@@ -134,7 +134,6 @@ export class ProfileComponent {
               authors: [id],
               limit: 30
             }], (event) => {
-
               const record = this.data.getRecord(event);
 
               if (this.isRootPost(event)) {
