@@ -23,8 +23,9 @@ export class UserRelayService {
     private appState = inject(ApplicationStateService);
     private notification = inject(NotificationService);
     private localStorage = inject(LocalStorageService);
-    private pool = new SimplePool();
     private relay = inject(RelayService);
+    userRelaysFound = signal<boolean>(true);
+    pool = new SimplePool();
 
     constructor() {
 
@@ -35,7 +36,14 @@ export class UserRelayService {
 
     /** Initialize is called to discover the user's relay list. */
     async initialize(pubkey: string, config?: { customConfig?: any, customRelays?: string[] }) {
-        this.relayUrls = await this.nostr.getRelays(pubkey);
+        let relayUrls = await this.nostr.getRelays(pubkey);
+
+        if (relayUrls.length === 0) {
+            relayUrls = this.nostr.accountRelayUrls();
+            this.userRelaysFound.set(false);
+        }
+
+        this.relayUrls = relayUrls;
     }
 
     async getEventByPubkeyAndKindAndTag(pubkey: string, kind: number, tag: { key: string, value: string }): Promise<Event | null> {

@@ -95,13 +95,27 @@ export class DataService {
         return [];
     }
 
+    sanitizeJsonString(json: string): string {
+        return json
+            // Remove control characters but preserve spaces and handle newlines in JSON values
+            .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '')
+            // Specifically handle newlines that appear before closing quotes in JSON values
+            .replace(/\n+"/g, '"')
+            // Clean up any double spaces that might result from the replacements
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
     /** Attempts to parse the content if it is a JSON string. */
     parseContent(content: string): any {
         if (content && content !== '') {
             try {
-
                 // First check if the content is already an object (not a string)
                 if (typeof content === 'string') {
+                    // Sanitize the JSON string to remove problematic characters
+                    // Example npub that is problematic: npub1xdn5apqgt2fyuace95cv7lvx344wdw5ppac7kvwycdqzlg7zdnds2ly4d0
+                    content = this.sanitizeJsonString(content);
+
                     // Check if it looks like JSON (starts with { or [)
                     const trimmedContent = content.trim();
 
