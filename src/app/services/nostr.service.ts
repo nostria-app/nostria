@@ -1037,6 +1037,16 @@ export class NostrService {
     if (event) {
       const relayUrls = this.getRelayUrls(event);
       const selectedRelayUrls = this.pickOptimalRelays(relayUrls, this.MAX_RELAY_COUNT);
+
+      // It can happen that accounts does not have any valid relays, return undefined
+      // and then attempt to look up profile using account relays.
+      if (selectedRelayUrls.length === 0) {
+        this.logger.warn('No valid relays found in relay list. Unable to find user.');
+        info.hasNoValidRelays = true
+        await this.storage.saveInfo(pubkey, 'user', info);
+        return undefined;
+      }
+
       let metadata = await this.retrieveMetadata(pubkey, selectedRelayUrls, info);
 
       // Since this is not inside the try/catch, we must save info explicitly here.
@@ -1062,7 +1072,15 @@ export class NostrService {
 
           this.logger.debug('Trying to fetch metadata from individual relays', { relayCount: relayUrls.length });
 
-          const selectedRelayUrls = this.pickOptimalRelays(relayUrls, this.MAX_RELAY_COUNT)
+          const selectedRelayUrls = this.pickOptimalRelays(relayUrls, this.MAX_RELAY_COUNT);
+
+          if (selectedRelayUrls.length === 0) {
+            this.logger.warn('No valid relays found in relay list. Unable to find user.');
+            info.hasNoValidRelays = true
+            await this.storage.saveInfo(pubkey, 'user', info);
+            return undefined;
+          }
+
           metadata = await this.retrieveMetadata(pubkey, selectedRelayUrls, info);
 
           if (!metadata) {
@@ -1237,7 +1255,7 @@ export class NostrService {
         }
 
         await this.storage.saveEvent(relayListEvent);
-        relayUrls = this.getRelayUrls(relayListEvent);
+        relayUrls = this.pickOptimalRelays(this.getRelayUrls(relayListEvent), this.MAX_RELAY_COUNT);
       } else {
         let followingEvent = await this.relayService.get({
           authors: [pubkey],
@@ -1267,20 +1285,25 @@ export class NostrService {
           relayUrls = this.getRelayUrlsFromFollowing(followingEvent);
         } else {
           this.logger.warn('No relay list or following event found for user', { pubkey });
-          return undefined;
+          // We will make a last attempt at getting the metadata from the account relays.
         }
       }
 
-      const userPool = new SimplePool();
+      let userPool: SimplePool | null = null;
+
+      let usingAccountPool = false;
+
+      // No still no relay urls has been discovered, fall back to account pool.
+      if (relayUrls.length === 0) {
+        usingAccountPool = true;
+        info.foundZeroRelaysOnAccountRelays = true;
+        userPool = this.relayService.getAccountPool();
+        relayUrls = this.relayService.getAccountRelayUrls();
+      } else {
+        userPool = new SimplePool();
+      }
 
       try {
-        // If we have not found relays for this user, attempt to find his profile on account relays.
-        if (relayUrls.length === 0) {
-          relayUrls = this.accountRelayUrls();
-
-          info.foundZeroRelaysOnAccountRelays = true;
-        }
-
         let metadataEvent = await userPool.get(relayUrls, {
           authors: [pubkey],
           kinds: [kinds.Metadata],
@@ -1288,7 +1311,13 @@ export class NostrService {
 
         if (metadataEvent) {
           this.logger.debug('Found metadata event', { metadataEvent });
-          info.foundMetadataOnAccountRelays = true;
+
+          if (usingAccountPool) {
+            info.foundMetadataOnAccountRelays = true;
+          } else {
+            info.foundMetadataOnUserRelays = true;
+          }
+
           await this.storage.saveEvent(metadataEvent);
           return metadataEvent;
         } else {
@@ -1297,7 +1326,10 @@ export class NostrService {
         }
       }
       finally {
-        userPool.close(relayUrls);
+        // Only destroy if we created it here.
+        if (!usingAccountPool) {
+          userPool.destroy();
+        }
       }
 
     } finally {
@@ -1314,33 +1346,39 @@ export class NostrService {
     });
   }
 
+  private isProcessingQueue = false;
+
   private async processDiscoveryQueue(): Promise<void> {
-
-    console.log('Processing discovery queue', this.discoveryQueue.length);
-
-
-    if (!this.discoveryPool) {
-      this.discoveryPool = new SimplePool();
+    // Prevent multiple queue processing instances
+    if (this.isProcessingQueue) {
+      return;
     }
 
-    if (!this.discoveryUserPool) {
-      this.discoveryUserPool = new SimplePool();
-    }
-
-    // Take up to 5 items from the queue
-    const batchSize = 1;
-    const batch = this.discoveryQueue.splice(0, batchSize);
-
-    this.activeDiscoveries += batch.length;
-    this.logger.debug('Starting batch metadata discovery', {
-      batchSize: batch.length,
-      activeDiscoveries: this.activeDiscoveries,
-      queueRemaining: this.discoveryQueue.length
-    });
+    this.isProcessingQueue = true;
 
     try {
-      // Process all items in the batch concurrently
-      await Promise.all(batch.map(async (item: any) => {
+      if (!this.discoveryPool) {
+        this.discoveryPool = new SimplePool();
+      }
+
+      if (!this.discoveryUserPool) {
+        this.discoveryUserPool = new SimplePool();
+      }
+
+      // Process all items in the queue
+      // while (this.discoveryQueue.length > 0) {
+      //   debugger;
+      // Take all items from the queue
+      // const items = this.discoveryQueue.splice(0, this.discoveryQueue.length);
+
+      // this.activeDiscoveries += items.length;
+      // this.logger.debug('Starting metadata discovery', {
+      //   itemCount: items.length,
+      //   activeDiscoveries: this.activeDiscoveries
+      // });
+
+      // Process all items sequentially
+      for (const item of this.discoveryQueue) {
         try {
           let result = await this.discoverMetadata(item.pubkey, item.disconnect);
 
@@ -1353,29 +1391,30 @@ export class NostrService {
         } catch (error) {
           this.logger.error('Error discovering metadata', { pubkey: item.pubkey, error });
           item.reject(error);
-        }
-      }));
-    } finally {
-      this.activeDiscoveries -= batch.length;
-      this.logger.debug('Completed batch metadata discovery', {
-        batchSize: batch.length,
-        activeDiscoveries: this.activeDiscoveries,
-        queueRemaining: this.discoveryQueue.length
-      });
-
-      // Process the next batch if there are more items in the queue
-      if (this.discoveryQueue.length > 0) {
-        this.processDiscoveryQueue();
-      } else {
-        debugger;
-        // If there's nothing more in queue, we can close the user discovery pool.
-        if (this.discoveryUserPool) {
-          this.discoveryUserPool.destroy();
-          this.discoveryUserPool = null;
-
-          return;
+        } finally {
+          // this.activeDiscoveries--;
+          // this.logger.debug('Completed metadata discovery', {
+          //   pubkey: item.pubkey,
+          //   activeDiscoveries: this.activeDiscoveries
+          // });
         }
       }
+
+      // Check if all discoveries are complete
+      // if (this.activeDiscoveries === 0) {
+      // All discoveries complete and queue is empty
+      if (this.discoveryUserPool) {
+        this.discoveryUserPool.destroy();
+        this.discoveryUserPool = null;
+      }
+      // }
+      // }
+    }
+    catch (err) {
+      this.logger.error('Error processing discovery queue', { error: err });
+    }
+    finally {
+      this.isProcessingQueue = false;
     }
   }
 
@@ -1625,7 +1664,7 @@ export class NostrService {
   //   const pubkey = event.pubkey;
 
   //   // Ensure content is properly parsed
-  //   if (event.content && typeof event.content === 'string') {
+  //   if (event.content && event.content !== 'null' && typeof event.content === 'string') {
   //     try {
   //       event.content = JSON.parse(event.content);
   //     } catch (e) {
