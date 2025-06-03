@@ -45,7 +45,7 @@ export class RelayService {
   defaultRelays = ['wss://relay.damus.io/', 'wss://relay.primal.net/'];
   // defaultRelays = signal(this.#defaultRelays);
 
-  // Signal to store the relays for the current user
+  // Signal to store the relays for the current user (account relays)
   // private relays = signal<Relay[]>([]);
   relays: Relay[] = [];
 
@@ -82,6 +82,10 @@ export class RelayService {
 
     // Set up interval to clean expired timeouts
     setInterval(() => this.cleanupTimeouts(), this.TIMEOUT_CLEANUP_INTERVAL);
+  }
+
+  getAccountPool(): SimplePool {
+    return this.accountPool!;
   }
 
   saveDiscoveryRelays() {
@@ -239,6 +243,10 @@ export class RelayService {
     return this.DEFAULT_BOOTSTRAP_RELAYS;
   }
 
+  getAccountRelayUrls(): string[] {
+    return this.relays.map(relay => relay.url);
+  }
+
   /**
   * Generic function to subscribe to Nostr events
   * @param filters Array of filter objects for the subscription
@@ -265,7 +273,7 @@ export class RelayService {
     }
 
     // Use provided relay URLs or default to the user's relays
-    const urls = relayUrls || this.relays.map(relay => relay.url);
+    const urls = relayUrls || this.getAccountRelayUrls();
 
     if (urls.length === 0) {
       this.logger.warn('No relays available for subscription');
@@ -396,7 +404,7 @@ export class RelayService {
     }
 
     // Use provided relay URLs or default to the user's relays
-    const urls = relayUrls || this.relays.map(relay => relay.url);
+    const urls = relayUrls || this.getAccountRelayUrls();
 
     if (urls.length === 0) {
       this.logger.warn('No relays available for query');
@@ -442,7 +450,7 @@ export class RelayService {
     }
 
     // Use provided relay URLs or default to the user's relays
-    const urls = relayUrls || this.relays.map(relay => relay.url);
+    const urls = relayUrls || this.getAccountRelayUrls();
 
     if (urls.length === 0) {
       this.logger.warn('No relays available for query');
@@ -505,7 +513,7 @@ export class RelayService {
     }
 
     // Use provided relay URLs or default to the user's relays
-    const urls = relayUrls || this.relays.map(relay => relay.url);
+    const urls = relayUrls || this.getAccountRelayUrls();
 
     if (urls.length === 0) {
       this.logger.warn('No relays available for publishing');
