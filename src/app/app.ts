@@ -96,6 +96,7 @@ export class App {
   private readonly document = inject(DOCUMENT);
 
   @ViewChild('profileSidenav') profileSidenav!: MatSidenav;
+  @ViewChild('appsSidenav') appsSidenav!: MatSidenav;
 
   opened = signal(true);
   displayLabels = signal(true);
@@ -283,6 +284,14 @@ export class App {
 
   toggleProfileSidenav() {
     this.profileSidenav.toggle();
+  }
+
+  toggleAppsSidenav() {
+    this.appsSidenav.toggle();
+  }
+
+  toggleMediaPlayer() {
+    this.layout.showMediaPlayer.set(!this.layout.showMediaPlayer());
   }
 
   toggleMenuSize() {
