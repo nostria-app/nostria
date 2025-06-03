@@ -767,3 +767,9 @@ app-media-queue .media-list mat-list {
   height: 100%;
   overflow-y: auto;
 }
+
+
+.time-label {
+  font-size: 0.8rem;
+  color: var(--mat-sys-on-surface-variant);
+}

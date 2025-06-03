@@ -304,6 +304,10 @@
                 margin: 0 auto;
                 box-shadow: var(--mat-sys-level1);
 
+                mat-card-header {
+                  margin-bottom: 1rem;
+                }
+
                 mat-card-content {
                   p {
                     margin-bottom: 8px;

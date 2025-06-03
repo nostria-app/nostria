@@ -176,11 +176,14 @@
               @if (columnData && columnEventsData) {
               @for(event of columnEventsData; track event.id) {
               <mat-card class="content-card">
+                
                 <mat-card-header>
-                  <div mat-card-avatar class="avatar"></div>
+                  <app-user-profile [pubkey]="event.pubkey"><span class="time-label">{{ event.created_at * 1000 | date:'short' }}</span></app-user-profile>
+                  <!-- <div mat-card-avatar class="avatar"></div>
                   <mat-card-title>{{ event.pubkey | slice:0:8 }}...</mat-card-title>
-                  <mat-card-subtitle>{{ event.created_at * 1000 | date:'short' }}</mat-card-subtitle>
-                </mat-card-header> <mat-card-content>
+                  <mat-card-subtitle>{{ event.created_at * 1000 | date:'short' }}</mat-card-subtitle> -->
+                </mat-card-header>
+                <mat-card-content>
                   <!-- Photos (NIP-68, kind 20) -->
                   @if (event.kind === 20 || columnData.column.type === 'photos') {
                   @if (hasContentWarning(event)) {
