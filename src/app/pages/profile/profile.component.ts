@@ -224,21 +224,24 @@ export class ProfileComponent {
   }
 
   private async loadUserData(pubkey: string, disconnect = true): Promise<void> {
-    if (!this.nostrService.currentProfileUserPool) {
-      this.nostrService.currentProfileUserPool = new SimplePool();
+    if (!this.userRelay) {
+      return;
     }
+    // if (!this.nostrService.currentProfileUserPool) {
+    //   this.nostrService.currentProfileUserPool = new SimplePool();
+    // }
 
-    let relays = await this.nostrService.getRelaysForUser(pubkey, disconnect);
-    if (!relays) {
-      return this.error.set('No relays found for this user');
-    }
+    // let relays = await this.nostrService.getRelaysForUser(pubkey, disconnect);
+    // if (!relays) {
+    //   return this.error.set('No relays found for this user');
+    // }
 
-    let relayUrls = this.nostrService.getRelayUrls(relays);
-    this.nostrService.currentProfileRelayUrls = relayUrls;
-    const pool = this.nostrService.currentProfileUserPool;
+    // let relayUrls = this.nostrService.getRelayUrls(relays);
+    // this.nostrService.currentProfileRelayUrls = relayUrls;
+    // const pool = this.nostrService.currentProfileUserPool;
 
     // TODO: Move this logic into the relay or nostr service.
-    pool?.subscribeMany(this.nostrService.currentProfileRelayUrls, [{
+    this.userRelay.pool.subscribeMany(this.userRelay.relayUrls, [{
       kinds: [kinds.Contacts],
       authors: [pubkey],
     },

@@ -331,6 +331,9 @@ export class NostrService {
     const result = await this.discoverRelays(pubkey);
 
     if (result.relayUrls.length === 0) {
+      // If no relays were found, we will fall back to using the account relays. This is not ideal, but
+      // perhaps the profile will load. We should show a warning to the user that no relays were found.
+      return this.accountRelayUrls();
       throw new Error('No relays found for user');
     }
 
@@ -882,8 +885,8 @@ export class NostrService {
     return event;
   }
 
-  currentProfileUserPool: SimplePool | null = null;
-  currentProfileRelayUrls: string[] = [];
+  // currentProfileUserPool: SimplePool | null = null;
+  // currentProfileRelayUrls: string[] = [];
   discoveryPool: SimplePool | null = null;
 
   async retrieveMetadata(pubkey: string, relayUrls: string[], info: any) {
