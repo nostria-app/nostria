@@ -882,9 +882,18 @@ export class NostrService {
   // currentProfileRelayUrls: string[] = [];
   discoveryPool: SimplePool | null = null;
 
+  /** Used during discovery to reuse a single pool across many requests. This will eventually have many connections. */
+  discoveryUserPool: SimplePool | null = null;
+
   async retrieveMetadata(pubkey: string, relayUrls: string[], info: any) {
     let metadata: Event | null | undefined = null;
-    let userPool = new SimplePool();
+
+    // Reuse a reference to the discovery user pool if it exists.
+    let userPool = this.discoveryUserPool;
+
+    if (!userPool) {
+      userPool = new SimplePool();
+    }
 
     try {
       metadata = await userPool.get(relayUrls, {
@@ -911,7 +920,12 @@ export class NostrService {
       this.logger.debug('Failed to fetch metadata from relay', { error });
     }
     finally {
-      userPool.close(relayUrls);
+      // Only close the pool if we created it here.
+      if (!this.discoveryUserPool) {
+        userPool.destroy();
+        userPool = null;
+      }
+      // userPool.close(relayUrls);
     }
 
     if (metadata) {
@@ -1030,41 +1044,6 @@ export class NostrService {
       return metadata as Event;
     }
     else {
-      // TODO: During loading of a lot of users, we should reuse the bootstrap pool.
-      this.logger.debug('Connecting to bootstrap relays', { relays: this.relayService.discoveryRelays });
-
-      if (pubkey === '82002872d9e3dd1236a172ef15b1c562a0bf1031a5eece770ca829c9298b162e') {
-        debugger;
-      }
-
-      if (pubkey === 'd28b7e2cb0ac0b06529ca6566fd141e4a5a5808592d7d78e57e55204ee3afba0') {
-        debugger;
-      }
-
-      if (pubkey === '90fb6b9607bba40686fe70aad74a07e5af96d152778f3a09fcda5967dcb0daba') {
-        debugger;
-      }
-
-      if (pubkey === '5a8197dc9affba7aa876ef46fe59e17bc8091cd0d674df4908e9497c9d149433') {
-        debugger;
-      }
-
-      if (pubkey === 'b9003833fabff271d0782e030be61b7ec38ce7d45a1b9a869fbdb34b9e2d2000') {
-        debugger;
-      }
-
-      if (pubkey === '340e4aef86cd5240aaf5fc550fa3f4291e6a03281a469b6ef34f060f6944033f') {
-        debugger;
-      }
-
-      if (pubkey === 'ab0de973129903e8078f01c4234bff6e81b47fdd928693d7849cf11bf8256dd7') {
-        debugger;
-      }
-
-      if (pubkey === '094ed88c9671bf1e8dd26501bf8a12ed013ad34c0deb35f0e607a89eff43e366') {
-        debugger;
-      }
-
       const relays = await this.discoveryPool!.get(this.relayService.discoveryRelays, {
         kinds: [kinds.RelayList],
         authors: [pubkey],
@@ -1336,19 +1315,16 @@ export class NostrService {
   }
 
   private async processDiscoveryQueue(): Promise<void> {
-    // If there's nothing in the queue, return
-    if (this.discoveryQueue.length === 0) {
-      // if (this.discoveryPool) {
-      //   // When discovery process is done, close the bootstrap pool
-      //   this.discoveryPool.close(this.relayService.discoveryRelays);
-      //   this.discoveryPool = null;
-      // }
 
-      return;
-    }
+    console.log('Processing discovery queue', this.discoveryQueue.length);
+
 
     if (!this.discoveryPool) {
       this.discoveryPool = new SimplePool();
+    }
+
+    if (!this.discoveryUserPool) {
+      this.discoveryUserPool = new SimplePool();
     }
 
     // Take up to 5 items from the queue
@@ -1391,12 +1367,14 @@ export class NostrService {
       if (this.discoveryQueue.length > 0) {
         this.processDiscoveryQueue();
       } else {
-        // We can't disconnect here, it is still processing...
-        // if (this.discoveryPool) {
-        //   // When discovery process is done, close the bootstrap pool
-        //   this.discoveryPool.close(this.relayService.discoveryRelays);
-        //   this.discoveryPool = null;
-        // }
+        debugger;
+        // If there's nothing more in queue, we can close the user discovery pool.
+        if (this.discoveryUserPool) {
+          this.discoveryUserPool.destroy();
+          this.discoveryUserPool = null;
+
+          return;
+        }
       }
     }
   }
