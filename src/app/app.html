@@ -126,6 +126,10 @@
       </button> -->
     </mat-menu>
 
+    <button mat-icon-button (click)="toggleAppsSidenav()">
+      <mat-icon>apps</mat-icon>
+    </button>
+
     <button mat-icon-button (click)="toggleProfileSidenav()" aria-label="Toggle profile" class="profile-button">
       @if (accountMetadata()?.data?.picture) {
       <img [src]="accountMetadata()?.data?.picture" class="profile-button-avatar" alt="Profile picture">
@@ -347,6 +351,32 @@
         }
       </div>
     </mat-sidenav> <!-- Main content container -->
+
+    <mat-sidenav #appsSidenav position="end" class="profile-sidenav" mode="over">
+      <!-- <mat-toolbar>
+        <span>Profile</span>
+        <span class="toolbar-spacer"></span>
+        
+      </mat-toolbar> -->
+      <div class="profile-content">
+        <button class="close-button" mat-icon-button (click)="toggleAppsSidenav()">
+          <mat-icon>close</mat-icon>
+        </button>
+
+        <mat-nav-list class="apps-list">
+          <a mat-list-item routerLink="/media-queue" routerLink="/media-queue" (click)="toggleAppsSidenav()">
+            <mat-icon matListItemIcon>queue_music</mat-icon>
+            <span>Media Queue</span>
+          </a>
+            <a mat-list-item routerLink="/media-queue" (click)="toggleMediaPlayer();toggleAppsSidenav()">
+            <mat-icon matListItemIcon>dock_to_bottom</mat-icon>
+            <span>Media Player</span>
+          </a>
+        </mat-nav-list>
+        <mat-divider></mat-divider>
+      </div>
+    </mat-sidenav>
+
     <mat-sidenav-content>
       <!-- Page content -->
       <div class="content-wrapper">

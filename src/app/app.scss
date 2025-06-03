@@ -277,9 +277,29 @@ mat-nav-list .mat-icon {
 }
 
 // Profile sidenav styles
+.apps-sidenav {
+  width: 300px;
+  max-width: 90vw;
+}
+
+// Animation for the profile sidenav
+.apps-sidenav.mat-drawer {
+  transition: transform 0.3s ease-in-out;
+}
+
+.apps-list {
+  margin-top: 2.4rem;
+}
+
+// Profile sidenav styles
 .profile-sidenav {
   width: 300px;
   max-width: 90vw;
+}
+
+// Animation for the profile sidenav
+.profile-sidenav.mat-drawer {
+  transition: transform 0.3s ease-in-out;
 }
 
 .profile-button {
@@ -362,11 +382,6 @@ mat-nav-list .mat-icon {
 
 .sidenav-small .logo-icon {
   width: 56px !important;
-}
-
-// Animation for the profile sidenav
-.profile-sidenav.mat-drawer {
-  transition: transform 0.3s ease-in-out;
 }
 
 .current-account {
