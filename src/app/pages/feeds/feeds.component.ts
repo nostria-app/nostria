@@ -606,8 +606,8 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
     }
 
     const dialogRef = this.dialog.open(NewColumnDialogComponent, {
-      width: '600px',
-      maxWidth: '90vw',
+      width: '900px',
+      maxWidth: '95vw',
       maxHeight: '90vh',
       data: {
         icons: ['chat', 'reply_all', 'bookmark', 'image', 'people', 'tag', 'filter_list', 'article', 'video_library', 'music_note', 'photo', 'explore', 'trending_up', 'group', 'public']
@@ -653,8 +653,8 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
     const column = columns[index];
 
     const dialogRef = this.dialog.open(NewColumnDialogComponent, {
-      width: '600px',
-      maxWidth: '90vw',
+      width: '900px',
+      maxWidth: '95vw',
       maxHeight: '90vh',
       data: {
         column: column,
