@@ -84,225 +84,229 @@ const NOSTR_KINDS = [
         <p class="dialog-subtitle">Configure your custom Nostr column</p>
       </div>
 
-      <form [formGroup]="columnForm" (ngSubmit)="onSubmit()">
-        <mat-stepper #stepper linear="false" class="column-stepper">
-          <!-- Step 1: Basic Information -->
-          <mat-step [stepControl]="basicInfoGroup">
-            <ng-template matStepLabel>Basic Information</ng-template>
-            <div class="step-content">
-              <!-- Column Type Selection -->
-              <div class="column-type-section">
-                <h3>Column Type</h3>
-                <div class="column-type-cards">
-                  @for (type of columnTypes(); track type.key) {
-                    <mat-card 
-                      class="column-type-card" 
-                      [class.selected]="selectedColumnType() === type.key"
-                      (click)="selectColumnType(type.key)">
-                      <mat-card-content>
-                        <div class="type-header">
-                          <mat-icon>{{ type.icon }}</mat-icon>
-                          <h4>{{ type.label }}</h4>
-                        </div>
-                        <p class="type-description">{{ type.description }}</p>
-                      </mat-card-content>
-                    </mat-card>
-                  }
-                </div>
-              </div>
-
-              <mat-divider></mat-divider>
-
-              <!-- Basic Form Fields -->
-              <div class="basic-fields">
-                <mat-form-field appearance="outline" class="full-width">
-                  <mat-label>Column Name</mat-label>
-                  <input matInput formControlName="label" placeholder="My Custom Column">
-                  <mat-icon matSuffix>label</mat-icon>
-                  @if (columnForm.get('label')?.hasError('required')) {
-                    <mat-error>Column name is required</mat-error>
-                  }
-                </mat-form-field>
-                
-                <mat-form-field appearance="outline" class="full-width">
-                  <mat-label>Icon</mat-label>
-                  <mat-select formControlName="icon">
-                    @for (icon of data.icons; track icon) {
-                      <mat-option [value]="icon">
-                        <div class="icon-option">
-                          <mat-icon>{{ icon }}</mat-icon>
-                          <span>{{ icon }}</span>
-                        </div>
-                      </mat-option>
-                    }
-                  </mat-select>
-                  <mat-icon matSuffix>{{ columnForm.get('icon')?.value || 'widgets' }}</mat-icon>
-                </mat-form-field>
-                
-              
-              </div>
-            </div>
-          </mat-step>
-
-          <!-- Step 2: Content Configuration -->
-          <mat-step [stepControl]="contentConfigGroup">
-            <ng-template matStepLabel>Content Configuration</ng-template>
-            <div class="step-content">
-              <!-- Event Kinds Selection -->
-              <div class="kinds-section">
-                <h3>Event Kinds</h3>
-                <p class="section-description">Select which types of Nostr events to include in this column</p>
-                
-                <mat-form-field class="full-width" appearance="outline">
-                  <mat-label>Event Kinds</mat-label>
-                  <mat-chip-grid #chipGrid aria-label="Event kinds selection">
-                    @for (kind of selectedKinds(); track kind) {
-                      <mat-chip-row (removed)="removeKind(kind)">
-                        {{ getKindLabel(kind) }}
-                        <button matChipRemove>
-                          <mat-icon>cancel</mat-icon>
-                        </button>
-                      </mat-chip-row>
-                    }
-                  </mat-chip-grid>
-                  <input
-                    placeholder="Add event kind..."
-                    #kindInput
-                    [formControl]="kindInputControl"
-                    [matChipInputFor]="chipGrid"
-                    [matAutocomplete]="kindAutocomplete"
-                    [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
-                    (matChipInputTokenEnd)="addKind($event)"
-                  />
-                  <mat-autocomplete #kindAutocomplete="matAutocomplete" (optionSelected)="kindSelected($event)">
-                    @for (kind of filteredKinds(); track kind.value) {
-                      <mat-option [value]="kind.value">
-                        <strong>{{ kind.value }}</strong> - {{ kind.label }}
-                      </mat-option>
-                    }
-                  </mat-autocomplete>
-                  <mat-icon matSuffix>category</mat-icon>
-                </mat-form-field>
-              </div>
-            </div>
-          </mat-step>
-
-          <!-- Step 3: Relay Configuration -->
-          <mat-step [stepControl]="relayConfigGroup">
-            <ng-template matStepLabel>Relay Configuration</ng-template>
-            <div class="step-content">
-              <div class="relay-section">
-                <h3>Relay Source</h3>
-                <p class="section-description">Choose which relays to use for this column</p>
-                
-                <mat-form-field appearance="outline" class="full-width">
-                  <mat-label>Relay Configuration</mat-label>
-                  <mat-select formControlName="relayConfig" (selectionChange)="onRelayConfigChange($event.value)">
-                    <mat-option value="user">
-                      <div class="relay-option">
-                        <mat-icon>person</mat-icon>
-                        <div>
-                          <div class="option-title">User Relays</div>
-                          <div class="option-description">Use your configured relays</div>
-                        </div>
-                      </div>
-                    </mat-option>
-                    <mat-option value="discovery">
-                      <div class="relay-option">
-                        <mat-icon>explore</mat-icon>
-                        <div>
-                          <div class="option-title">Discovery Relays</div>
-                          <div class="option-description">Use discovery and search relays</div>
-                        </div>
-                      </div>
-                    </mat-option>
-                    <mat-option value="custom">
-                      <div class="relay-option">
-                        <mat-icon>settings</mat-icon>
-                        <div>
-                          <div class="option-title">Custom Relays</div>
-                          <div class="option-description">Specify custom relay URLs</div>
-                        </div>
-                      </div>
-                    </mat-option>
-                  </mat-select>
-                  <mat-icon matSuffix>dns</mat-icon>
-                </mat-form-field>
-
-                @if (showCustomRelays()) {
-                  <div class="custom-relays-section">
-                    <h4>Custom Relay URLs</h4>
-                    <mat-form-field class="full-width" appearance="outline">
-                      <mat-label>Custom Relays</mat-label>
-                      <mat-chip-grid #relayChipGrid aria-label="Custom relays">
-                        @for (relay of customRelays(); track relay) {
-                          <mat-chip-row (removed)="removeCustomRelay(relay)">
-                            {{ relay }}
-                            <button matChipRemove>
-                              <mat-icon>cancel</mat-icon>
-                            </button>
-                          </mat-chip-row>
-                        }
-                      </mat-chip-grid>
-                      <input
-                        placeholder="wss://relay.example.com"
-                        #relayInput
-                        [formControl]="relayInputControl"
-                        [matChipInputFor]="relayChipGrid"
-                        [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
-                        (matChipInputTokenEnd)="addCustomRelay($event)"
-                      />
-                      <mat-icon matSuffix>add_link</mat-icon>
-                      <mat-hint>Enter WebSocket URLs (wss:// or ws://)</mat-hint>
-                    </mat-form-field>
-                  </div>
-                }
-
-                <!-- Relay Preview -->
-                <div class="relay-preview">
-                  <h4>Active Relays Preview</h4>
-                  <div class="relay-list">
-                    @for (relay of getActiveRelays(); track relay) {
-                      <div class="relay-item">
-                        <mat-icon class="relay-status">wifi</mat-icon>
-                        <span class="relay-url">{{ relay }}</span>
-                      </div>
-                    }
-                    @if (getActiveRelays().length === 0) {
-                      <div class="no-relays">
-                        <mat-icon>warning</mat-icon>
-                        <span>No relays configured</span>
-                      </div>
+      <div class="dialog-content">
+        <form [formGroup]="columnForm" (ngSubmit)="onSubmit()">
+          <mat-stepper #stepper linear="false" class="column-stepper">
+            <!-- Step 1: Basic Information -->
+            <mat-step [stepControl]="basicInfoGroup">
+              <ng-template matStepLabel>Basic Information</ng-template>
+              <div class="step-content">
+                <!-- Column Type Selection -->
+                <div class="column-type-section">
+                  <h3>Column Type</h3>
+                  <div class="column-type-cards">
+                    @for (type of columnTypes(); track type.key) {
+                      <mat-card 
+                        class="column-type-card" 
+                        [class.selected]="selectedColumnType() === type.key"
+                        (click)="selectColumnType(type.key)">
+                        <mat-card-content>
+                          <div class="type-header">
+                            <mat-icon>{{ type.icon }}</mat-icon>
+                            <h4>{{ type.label }}</h4>
+                          </div>
+                          <p class="type-description">{{ type.description }}</p>
+                        </mat-card-content>
+                      </mat-card>
                     }
                   </div>
                 </div>
+
+                <mat-divider></mat-divider>
+
+                <!-- Basic Form Fields -->
+                <div class="basic-fields">
+                  <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>Column Name</mat-label>
+                    <input matInput formControlName="label" placeholder="My Custom Column">
+                    <mat-icon matSuffix>label</mat-icon>
+                    @if (columnForm.get('label')?.hasError('required')) {
+                      <mat-error>Column name is required</mat-error>
+                    }
+                  </mat-form-field>
+                  
+                  <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>Icon</mat-label>
+                    <mat-select formControlName="icon">
+                      @for (icon of data.icons; track icon) {
+                        <mat-option [value]="icon">
+                          <div class="icon-option">
+                            <mat-icon>{{ icon }}</mat-icon>
+                            <span>{{ icon }}</span>
+                          </div>
+                        </mat-option>
+                      }
+                    </mat-select>
+                    <mat-icon matSuffix>{{ columnForm.get('icon')?.value || 'widgets' }}</mat-icon>
+                  </mat-form-field>
+                  
+                
+                </div>
               </div>
-            </div>
-          </mat-step>
-        </mat-stepper>
-        
-        <div class="dialog-actions" mat-dialog-actions>
-          <button mat-button mat-dialog-close type="button">Cancel</button>
-          <button mat-flat-button color="primary" type="submit" [disabled]="!columnForm.valid">
-            <mat-icon>{{ isEditMode() ? 'save' : 'add' }}</mat-icon>
-            {{ isEditMode() ? 'Save Changes' : 'Create Column' }}
-          </button>
-        </div>
-      </form>
+            </mat-step>
+
+            <!-- Step 2: Content Configuration -->
+            <mat-step [stepControl]="contentConfigGroup">
+              <ng-template matStepLabel>Content Configuration</ng-template>
+              <div class="step-content">
+                <!-- Event Kinds Selection -->
+                <div class="kinds-section">
+                  <h3>Event Kinds</h3>
+                  <p class="section-description">Select which types of Nostr events to include in this column</p>
+                  
+                  <mat-form-field class="full-width" appearance="outline">
+                    <mat-label>Event Kinds</mat-label>
+                    <mat-chip-grid #chipGrid aria-label="Event kinds selection">
+                      @for (kind of selectedKinds(); track kind) {
+                        <mat-chip-row (removed)="removeKind(kind)">
+                          {{ getKindLabel(kind) }}
+                          <button matChipRemove>
+                            <mat-icon>cancel</mat-icon>
+                          </button>
+                        </mat-chip-row>
+                      }
+                    </mat-chip-grid>
+                    <input
+                      placeholder="Add event kind..."
+                      #kindInput
+                      [formControl]="kindInputControl"
+                      [matChipInputFor]="chipGrid"
+                      [matAutocomplete]="kindAutocomplete"
+                      [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
+                      (matChipInputTokenEnd)="addKind($event)"
+                    />
+                    <mat-autocomplete #kindAutocomplete="matAutocomplete" (optionSelected)="kindSelected($event)">
+                      @for (kind of filteredKinds(); track kind.value) {
+                        <mat-option [value]="kind.value">
+                          <strong>{{ kind.value }}</strong> - {{ kind.label }}
+                        </mat-option>
+                      }
+                    </mat-autocomplete>
+                    <mat-icon matSuffix>category</mat-icon>
+                  </mat-form-field>
+                </div>
+              </div>
+            </mat-step>
+
+            <!-- Step 3: Relay Configuration -->
+            <mat-step [stepControl]="relayConfigGroup">
+              <ng-template matStepLabel>Relay Configuration</ng-template>
+              <div class="step-content">
+                <div class="relay-section">
+                  <h3>Relay Source</h3>
+                  <p class="section-description">Choose which relays to use for this column</p>
+                  
+                  <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>Relay Configuration</mat-label>
+                    <mat-select formControlName="relayConfig" (selectionChange)="onRelayConfigChange($event.value)">
+                      <mat-option value="user">
+                        <div class="relay-option">
+                          <mat-icon>person</mat-icon>
+                          <div>
+                            <div class="option-title">User Relays</div>
+                            <div class="option-description">Use your configured relays</div>
+                          </div>
+                        </div>
+                      </mat-option>
+                      <mat-option value="discovery">
+                        <div class="relay-option">
+                          <mat-icon>explore</mat-icon>
+                          <div>
+                            <div class="option-title">Discovery Relays</div>
+                            <div class="option-description">Use discovery and search relays</div>
+                          </div>
+                        </div>
+                      </mat-option>
+                      <mat-option value="custom">
+                        <div class="relay-option">
+                          <mat-icon>settings</mat-icon>
+                          <div>
+                            <div class="option-title">Custom Relays</div>
+                            <div class="option-description">Specify custom relay URLs</div>
+                          </div>
+                        </div>
+                      </mat-option>
+                    </mat-select>
+                    <mat-icon matSuffix>dns</mat-icon>
+                  </mat-form-field>
+
+                  @if (showCustomRelays()) {
+                    <div class="custom-relays-section">
+                      <h4>Custom Relay URLs</h4>
+                      <mat-form-field class="full-width" appearance="outline">
+                        <mat-label>Custom Relays</mat-label>
+                        <mat-chip-grid #relayChipGrid aria-label="Custom relays">
+                          @for (relay of customRelays(); track relay) {
+                            <mat-chip-row (removed)="removeCustomRelay(relay)">
+                              {{ relay }}
+                              <button matChipRemove>
+                                <mat-icon>cancel</mat-icon>
+                              </button>
+                            </mat-chip-row>
+                          }
+                        </mat-chip-grid>
+                        <input
+                          placeholder="wss://relay.example.com"
+                          #relayInput
+                          [formControl]="relayInputControl"
+                          [matChipInputFor]="relayChipGrid"
+                          [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
+                          (matChipInputTokenEnd)="addCustomRelay($event)"
+                        />
+                        <mat-icon matSuffix>add_link</mat-icon>
+                        <mat-hint>Enter WebSocket URLs (wss:// or ws://)</mat-hint>
+                      </mat-form-field>
+                    </div>
+                  }
+
+                  <!-- Relay Preview -->
+                  <div class="relay-preview">
+                    <h4>Active Relays Preview</h4>
+                    <div class="relay-list">
+                      @for (relay of getActiveRelays(); track relay) {
+                        <div class="relay-item">
+                          <mat-icon class="relay-status">wifi</mat-icon>
+                          <span class="relay-url">{{ relay }}</span>
+                        </div>
+                      }
+                      @if (getActiveRelays().length === 0) {
+                        <div class="no-relays">
+                          <mat-icon>warning</mat-icon>
+                          <span>No relays configured</span>
+                        </div>
+                      }
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </mat-step>
+          </mat-stepper>
+        </form>
+      </div>
+      
+      <div class="dialog-actions" mat-dialog-actions>
+        <button mat-button mat-dialog-close type="button">Cancel</button>
+        <button mat-flat-button color="primary" (click)="onSubmit()" [disabled]="!columnForm.valid">
+          <mat-icon>{{ isEditMode() ? 'save' : 'add' }}</mat-icon>
+          {{ isEditMode() ? 'Save Changes' : 'Create Column' }}
+        </button>
+      </div>
     </div>
   `,
   styles: [`
     .dialog-container {
-      width: 600px;
-      max-width: 90vw;
+      width: 800px;
+      max-width: 95vw;
       max-height: 90vh;
       display: flex;
       flex-direction: column;
+      overflow: hidden;
     }
 
     .dialog-header {
       padding: 24px 24px 16px;
       border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+      flex-shrink: 0;
 
       h2 {
         display: flex;
@@ -320,6 +324,19 @@ const NOSTR_KINDS = [
       }
     }
 
+    .dialog-content {
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+
+      form {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+    }
+
     .column-stepper {
       flex: 1;
       overflow: hidden;
@@ -331,6 +348,10 @@ const NOSTR_KINDS = [
       ::ng-deep .mat-step-text-label {
         font-weight: 500;
       }
+
+      ::ng-deep .mat-horizontal-stepper-content {
+        overflow: hidden;
+      }
     }
 
     .step-content {
@@ -338,8 +359,24 @@ const NOSTR_KINDS = [
       display: flex;
       flex-direction: column;
       gap: 24px;
-      min-height: 400px;
       overflow-y: auto;
+      max-height: 50vh;
+    }
+
+    .dialog-actions {
+      padding: 16px 24px;
+      border-top: 1px solid rgba(0, 0, 0, 0.12);
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      flex-shrink: 0;
+      background-color: var(--mat-app-background-color);
+
+      button {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
     }
 
     .full-width {
@@ -555,6 +592,8 @@ const NOSTR_KINDS = [
       display: flex;
       gap: 12px;
       justify-content: flex-end;
+      flex-shrink: 0;
+      background-color: var(--mat-app-background-color);
 
       button {
         display: flex;
