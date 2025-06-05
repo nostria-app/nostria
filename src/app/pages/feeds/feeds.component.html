@@ -96,10 +96,18 @@
             <div class="drag-handle" cdkDragHandle>
               <mat-icon>drag_indicator</mat-icon>
             </div>
+            }
 
+            @if (!isMobileView()) {
             <mat-icon>{{ column.icon }}</mat-icon>
             <span class="column-title">{{ column.label }}</span>
-            } @else {
+            }
+            @else {
+            @if (columns().length === 1) {
+            <mat-icon>{{ column.icon }}</mat-icon>
+            <span class="column-title">{{ column.label }}</span>
+            }
+            @else {
             <button mat-stroked-button [matMenuTriggerFor]="menu">
               <mat-icon>{{ column.icon }}</mat-icon>
               {{ column.label }}</button>
@@ -111,6 +119,7 @@
               </button>
               }
             </mat-menu>
+            }
             }
 
             <div class="column-header-actions"><button mat-icon-button (click)="refreshColumn(column)"
@@ -176,9 +185,10 @@
               @if (columnData && columnEventsData) {
               @for(event of columnEventsData; track event.id) {
               <mat-card class="content-card">
-                
+
                 <mat-card-header>
-                  <app-user-profile [pubkey]="event.pubkey"><span class="time-label">{{ event.created_at * 1000 | date:'short' }}</span></app-user-profile>
+                  <app-user-profile [pubkey]="event.pubkey"><span class="time-label">{{ event.created_at * 1000 |
+                      date:'short' }}</span></app-user-profile>
                   <!-- <div mat-card-avatar class="avatar"></div>
                   <mat-card-title>{{ event.pubkey | slice:0:8 }}...</mat-card-title>
                   <mat-card-subtitle>{{ event.created_at * 1000 | date:'short' }}</mat-card-subtitle> -->

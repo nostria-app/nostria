@@ -78,10 +78,10 @@ const NOSTR_KINDS = [
     <div class="dialog-container">
       <div class="dialog-header">
         <h2 mat-dialog-title>
-          <mat-icon>{{ isEditMode() ? 'edit' : 'add' }}</mat-icon>
+          <mat-icon>{{ isEditMode() ? 'edit' : 'add_column_right' }}</mat-icon>
           {{ isEditMode() ? 'Edit Column' : 'Create New Column' }}
         </h2>
-        <p class="dialog-subtitle">Configure your custom Nostr column</p>
+        <!-- <p class="dialog-subtitle">Configure your custom Nostr column</p> -->
       </div>
 
       <div class="dialog-content">
@@ -295,8 +295,10 @@ const NOSTR_KINDS = [
   `,
   styles: [`
     .dialog-container {
-      width: 800px;
-      max-width: 95vw;
+      // width: 800px;
+      width: 100%;
+
+      // max-width: 95vw;
       max-height: 90vh;
       display: flex;
       flex-direction: column;
