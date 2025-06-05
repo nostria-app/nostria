@@ -27,7 +27,7 @@
 
   @if (app.initialized()) {
   <!-- Top toolbar - now outside and above the sidenav container -->
-  <mat-toolbar color="primary" class="app-toolbar">
+  <mat-toolbar color="primary" class="app-toolbar no-print">
     <button mat-icon-button (click)="toggleSidenav()" aria-label="Toggle sidenav">
       <mat-icon>menu</mat-icon>
     </button>
@@ -177,7 +177,7 @@
   <!-- Sidenav container now below the toolbar -->
   <mat-sidenav-container class="sidenav-container" autosize="true">
     <!-- Side navigation -->
-    <mat-sidenav #sidenav class="sidenav"
+    <mat-sidenav #sidenav class="sidenav no-print"
       [ngClass]="{ 'sidenav-labels': displayLabels(), 'sidenav-small': !displayLabels()  }" [opened]="opened()"
       [mode]="layout.isHandset() ? 'over' : 'side'" [fixedInViewport]="false">
       <mat-nav-list>
@@ -378,7 +378,7 @@
 
   <!-- Desktop FAB button (only visible when not in handset mode) -->
   @if (!layout.isHandset() && app.authenticated()) {
-  <button mat-mini-fab color="primary" class="desktop-create-fab" aria-label="Create new content"
+  <button mat-mini-fab color="primary" class="desktop-create-fab no-print" aria-label="Create new content"
     (click)="openCreateOptions()">
     <mat-icon>add</mat-icon>
   </button>
@@ -386,7 +386,7 @@
 
   <!-- Mobile navigation footer - now outside of sidenav container -->
   @if (layout.isHandset()) {
-  <div class="mobile-nav">
+  <div class="mobile-nav no-print">
     <!-- First two navigation items -->
     <!-- @for (item of navItemsMobile.slice(0, 2); track $index) {
     <a mat-button class="mobile-nav-button" [routerLink]="item.action ? undefined : [item.path]"
