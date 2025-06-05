@@ -20,9 +20,9 @@
           <mat-icon matTooltip="Reply" matTooltipPosition="below">reply</mat-icon>
         </button>
         <button mat-icon-button class="note-footer-right">
-          <mat-icon [matTooltip]="bookmark.getBookmarkTooltip(note.event.id)" matTooltipPosition="below"
+          <mat-icon [matTooltip]="bookmark.getBookmarkTooltip(note.event.id, 'a')" matTooltipPosition="below"
             (click)="bookmark.toggleBookmark(note.event.id)">
-            {{bookmark.getBookmarkIcon(note.event.id)}}
+            {{bookmark.getBookmarkIcon(note.event.id, 'a')}}
           </mat-icon>
         </button>
       </mat-card-footer>

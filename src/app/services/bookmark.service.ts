@@ -131,7 +131,7 @@ export class BookmarkService {
   async addBookmark(id: string, type: BookmarkType = 'e') {
     const signal = this.getBookmarkSignal(type);
     const existingBookmark = signal().find(b => b.id === id);
-    
+
     if (!this.bookmarkEvent) {
       // Create a new bookmark event if none exists
       this.bookmarkEvent = {
@@ -144,14 +144,14 @@ export class BookmarkService {
         sig: ''
       };
     }
-    
+
     // Get the appropriate tag prefix based on type
     // const tagPrefix = this.getTagPrefix(type);
-    
+
     if (existingBookmark) {
       // Remove from signal
       signal.update(bookmarks => bookmarks.filter(b => b.id !== id));
-      
+
       // Remove from event tags
       if (this.bookmarkEvent) {
         this.bookmarkEvent.tags = this.bookmarkEvent.tags.filter(
@@ -161,13 +161,13 @@ export class BookmarkService {
     } else {
       // Add to signal
       signal.update(bookmarks => [...bookmarks, { id }]);
-      
+
       // Add to event tags
       if (this.bookmarkEvent) {
         this.bookmarkEvent.tags.push([type, id]);
       }
     }
-    
+
     // Publish the updated event
     await this.publish();
   }
@@ -191,14 +191,30 @@ export class BookmarkService {
   }
 
   // Helper method to get tooltip text based on bookmark status
-  // getBookmarkTooltip(id: string, type: BookmarkType = 'e'): string {
-  //   return this.bookmarkStatus()[type][id] ? 'Remove bookmark' : 'Add bookmark';
-  // }
+  getBookmarkTooltip(id: string, type: BookmarkType = 'e'): string {
+    if (type === 'a') {
+      return '';
+    }
+
+    if (type === 'e') {
+      return this.bookmarkEvents().find(b => b.id === id) ? 'Remove bookmark' : 'Add bookmark';
+    }
+
+    return '';
+  }
 
   // Helper method to get icon based on bookmark status
-  // getBookmarkIcon(id: string, type: BookmarkType = 'e'): string {
-  //   return this.bookmarkStatus()[type][id] ? 'bookmark' : 'bookmark_border';
-  // }
+  getBookmarkIcon(id: string, type: BookmarkType = 'e'): string {
+    if (type === 'a') {
+      return '';
+    }
+
+    if (type === 'e') {
+      return this.bookmarkEvents().find(b => b.id === id) ? 'bookmark' : 'bookmark_border';
+    }
+
+    return 'bookmark_border';
+  }
 
   // Legacy methods for backward compatibility
   addBookmarkEvent(id: string) {
@@ -225,32 +241,32 @@ export class BookmarkService {
     if (!this.bookmarkEvent) {
       return;
     }
-    
+
     // Clone the bookmark event and remove id and sig
     const eventToSign = { ...this.bookmarkEvent };
     eventToSign.id = '';
     eventToSign.sig = '';
     eventToSign.created_at = Math.floor(Date.now() / 1000);
-    
+
     // Sign the event
     const signedEvent = await this.nostr.signEvent(eventToSign);
-    
+
     // Update the local bookmark event with the signed event
     this.bookmarkEvent = signedEvent;
-    
+
     // Publish to relays and get array of promises
     const publishPromises = await this.relay.publish(signedEvent);
 
     await this.layout.showPublishResults(publishPromises, 'Bookmark');
-    
+
     try {
       // Wait for all publishing results
       const results = await Promise.all(publishPromises || []);
-      
+
       // Count successes and failures
       const successful = results.filter(result => result === '').length;
       const failed = results.length - successful;
-      
+
       // Display appropriate notification
       if (failed === 0) {
         this.snackBar.open(`Bookmarks saved successfully to ${successful} ${successful === 1 ? 'relay' : 'relays'}`, 'Close', {
@@ -261,8 +277,8 @@ export class BookmarkService {
         });
       } else {
         this.snackBar.open(
-          `Bookmarks saved to ${successful} ${successful === 1 ? 'relay' : 'relays'}, failed on ${failed} ${failed === 1 ? 'relay' : 'relays'}`, 
-          'Close', 
+          `Bookmarks saved to ${successful} ${successful === 1 ? 'relay' : 'relays'}, failed on ${failed} ${failed === 1 ? 'relay' : 'relays'}`,
+          'Close',
           {
             duration: 5000,
             horizontalPosition: 'center',
