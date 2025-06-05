@@ -388,6 +388,21 @@
       </div>
       }
 
+      <!-- Zero state when no columns are available -->
+      @if (columns().length === 0) {
+      <div class="empty-columns-state">
+        <div class="empty-state-content">
+          <mat-icon class="empty-state-icon">view_column</mat-icon>
+          <h2>No columns in this feed</h2>
+          <p>Get started by adding your first column to organize and view content.</p>
+          <button mat-raised-button color="primary" (click)="addNewColumn()" class="add-first-column-btn">
+            <mat-icon>add</mat-icon>
+            Add Your First Column
+          </button>
+        </div>
+      </div>
+      }
+
       <!-- Add column button -->
       <!-- @if (!isMobileView()) {
       <div class="add-column-button">
