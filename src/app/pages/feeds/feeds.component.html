@@ -62,7 +62,7 @@
       <button mat-icon-button (click)="toggleAdvancedFilters()" matTooltip="Toggle filters">
         <mat-icon>filter_list</mat-icon>
       </button> -->
-      <button mat-icon-button (click)="addNewColumn()" matTooltip="Add column">
+      <button mat-icon-button (click)="addNewColumn()" matTooltip="Add column" [disabled]="feeds().length === 0">
         <mat-icon>add_column_right</mat-icon>
       </button>
     </div>
@@ -388,8 +388,23 @@
       </div>
       }
 
-      <!-- Zero state when no columns are available -->
-      @if (columns().length === 0) {
+      <!-- Zero state when no feeds are available -->
+      @if (feeds().length === 0) {
+      <div class="empty-columns-state">
+        <div class="empty-state-content">
+          <mat-icon class="empty-state-icon">dynamic_feed</mat-icon>
+          <h2>No feeds added</h2>
+          <p>Create your first feed to start organizing and viewing content from various sources.</p>
+          <button mat-raised-button color="primary" (click)="addNewFeed()" class="add-first-column-btn">
+            <mat-icon>add</mat-icon>
+            Add Your First Feed
+          </button>
+        </div>
+      </div>
+      }
+      
+      <!-- Zero state when no columns are available but feeds exist -->
+      @else if (columns().length === 0) {
       <div class="empty-columns-state">
         <div class="empty-state-content">
           <mat-icon class="empty-state-icon">view_column</mat-icon>
