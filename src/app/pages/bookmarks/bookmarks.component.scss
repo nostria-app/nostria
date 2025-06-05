@@ -17,6 +17,27 @@
     .header-actions {
       display: flex;
       gap: 12px;
+      align-items: center;
+
+      .login-message {
+        margin: 0;
+        font-size: 14px;
+        color: rgba(0, 0, 0, 0.6);
+      }
+    }
+  }
+
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 0;
+    gap: 16px;
+
+    p {
+      margin: 0;
+      color: rgba(0, 0, 0, 0.6);
     }
   }
 
@@ -38,7 +59,6 @@
         h3 {
           font-size: 16px;
           margin: 0;
-          font-weight: 500;
         }
       }
       
@@ -55,7 +75,6 @@
           font-size: 14px;
           cursor: pointer;
           transition: all 0.2s ease;
-          font-weight: 500;
           
           &:hover {
             opacity: 0.8;
@@ -115,6 +134,20 @@
       
       mat-card-header {
         padding-bottom: 0;
+
+        .bookmark-type-icon {
+          background-color: rgba(0, 0, 0, 0.1);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 50%;
+          
+          mat-icon {
+            font-size: 20px;
+            width: 20px;
+            height: 20px;
+          }
+        }
         
         mat-card-title {
           font-size: 18px;
@@ -156,6 +189,15 @@
             color: white;
             white-space: nowrap;
           }
+
+          .bookmark-type-tag {
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            background-color: rgba(0, 0, 0, 0.1);
+            color: rgba(0, 0, 0, 0.7);
+            white-space: nowrap;
+          }
         }
         
         .bookmark-info {
@@ -182,11 +224,38 @@
 // Dark theme adjustments
 :host-context(.dark) {
   .bookmarks-container {
+    .bookmarks-header {
+      .header-actions {
+        .login-message {
+          color: rgba(255, 255, 255, 0.7);
+        }
+      }
+    }
+
+    .loading-container {
+      p {
+        color: rgba(255, 255, 255, 0.7);
+      }
+    }
+
     .bookmarks-list {
       .bookmark-card {
+        mat-card-header {
+          .bookmark-type-icon {
+            background-color: rgba(255, 255, 255, 0.1);
+          }
+        }
+
         mat-card-content {
           .bookmark-info {
             color: rgba(255, 255, 255, 0.7);
+          }
+
+          .bookmark-categories {
+            .bookmark-type-tag {
+              background-color: rgba(255, 255, 255, 0.1);
+              color: rgba(255, 255, 255, 0.7);
+            }
           }
         }
         

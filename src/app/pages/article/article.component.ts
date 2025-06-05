@@ -41,15 +41,17 @@ export class ArticleComponent {
   private route = inject(ActivatedRoute);
   private utilities = inject(UtilitiesService);
   private nostrService = inject(NostrService);
-  private storageService = inject(StorageService);  private logger = inject(LoggerService);
+  private storageService = inject(StorageService); private logger = inject(LoggerService);
   private sanitizer = inject(DomSanitizer);
   private data = inject(DataService);
   private layout = inject(LayoutService);
-  
+
 
   event = signal<Event | undefined>(undefined);
   isLoading = signal(false);
-  error = signal<string | null>(null);  constructor() {
+  error = signal<string | null>(null);
+
+  constructor() {
     // Effect to load article when route parameter changes
     effect(() => {
       const addrParam = this.route.snapshot.paramMap.get('id');
@@ -62,7 +64,9 @@ export class ArticleComponent {
   }
 
   async loadArticle(naddr: string): Promise<void> {
-    const receivedData = history.state.event as Event | undefined;    if (receivedData) {
+    const receivedData = history.state.event as Event | undefined;
+
+    if (receivedData) {
       this.logger.debug('Received event from navigation state:', receivedData);
       this.event.set(receivedData);
       this.isLoading.set(false);
@@ -231,7 +235,8 @@ The future of social networking isn't about finding the next big platform - it's
         sig: 'sample_signature_would_go_here'
       };
 
-      this.event.set(articleEvent);    } catch (error) {
+      this.event.set(articleEvent);
+    } catch (error) {
       this.logger.error('Error loading article:', error);
       this.error.set('Failed to load article');
     } finally {
@@ -240,6 +245,7 @@ The future of social networking isn't about finding the next big platform - it's
       setTimeout(() => this.layout.scrollMainContentToTop(), 100);
     }
   }
+
   // Computed properties for parsed event data
   title = computed(() => {
     const ev = this.event();
@@ -258,6 +264,7 @@ The future of social networking isn't about finding the next big platform - it's
     if (!ev) return '';
     return this.utilities.getTagValues('summary', ev.tags)[0] || '';
   });
+
   publishedAt = computed(() => {
     const ev = this.event();
     if (!ev) return null;
@@ -283,6 +290,7 @@ The future of social networking isn't about finding the next big platform - it's
     if (!ev) return [];
     return this.utilities.getTagValues('t', ev.tags);
   });
+
   content = computed(() => {
     const ev = this.event();
     if (!ev) return '';
@@ -293,7 +301,9 @@ The future of social networking isn't about finding the next big platform - it's
     } catch {
       return ev.content;
     }
-  });  // New computed property for parsed markdown content
+  });
+
+  // New computed property for parsed markdown content
   parsedContent = computed<SafeHtml>(() => {
     const content = this.content();
     if (!content) return '';
@@ -334,12 +344,14 @@ The future of social networking isn't about finding the next big platform - it's
       minute: '2-digit'
     });
   }
+
   retryLoad(): void {
     const addrParam = this.route.snapshot.paramMap.get('id');
     if (addrParam) {
       this.loadArticle(addrParam);
     }
   }
+
   async shareArticle() {
     const event = this.event();
     if (!event) return;
@@ -361,7 +373,7 @@ The future of social networking isn't about finding the next big platform - it's
         // Fallback to clipboard
         const textToShare = `${title || 'Nostr Article'}\n\n${summary || ''}\n\n${window.location.href}`;
         await navigator.clipboard.writeText(textToShare);
-        
+
         // You might want to show a toast/snackbar here indicating the content was copied
         console.log('Article details copied to clipboard');
       }

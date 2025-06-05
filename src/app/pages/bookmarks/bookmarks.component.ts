@@ -11,10 +11,14 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { LoggerService } from '../../services/logger.service';
 import { BookmarkCategoryDialogComponent } from './bookmark-category-dialog/bookmark-category-dialog.component';
-import { StorageService } from '../../services/storage.service';
+import { BookmarkService, BookmarkType } from '../../services/bookmark.service';
 import { LocalStorageService } from '../../services/local-storage.service';
+import { ApplicationStateService } from '../../services/application-state.service';
+import { Router } from '@angular/router';
+import { LayoutService } from '../../services/layout.service';
 
 export interface Bookmark {
   id: string;
@@ -22,6 +26,7 @@ export interface Bookmark {
   url: string;
   description?: string;
   categories: string[];
+  type: BookmarkType;
   createdAt: number;
   updatedAt: number;
 }
@@ -47,7 +52,8 @@ interface BookmarkCategory {
     MatMenuModule,
     MatTooltipModule,
     MatDialogModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    MatProgressSpinnerModule
   ],
   templateUrl: './bookmarks.component.html',
   styleUrl: './bookmarks.component.scss'
@@ -57,78 +63,61 @@ export class BookmarksComponent {
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
   private localStorage = inject(LocalStorageService);
-  private storageService = inject(StorageService);
+  private bookmarkService = inject(BookmarkService);
+  private appState = inject(ApplicationStateService);
+  private router = inject(Router);
+  layout = inject(LayoutService);
 
-  // Mock data
-  bookmarks = signal<Bookmark[]>([
-    {
-      id: '1',
-      title: 'Nostr Protocol',
-      url: 'https://nostr.com/',
-      description: 'Official site for the Nostr protocol, a simple open protocol that enables truly censorship-resistant and global social network.',
-      categories: ['all', 'nostr', 'dev'],
-      createdAt: Date.now() - 30 * 24 * 60 * 60 * 1000, // 30 days ago
-      updatedAt: Date.now() - 30 * 24 * 60 * 60 * 1000
-    },
-    {
-      id: '2',
-      title: 'GitHub: Nostr Implementation',
-      url: 'https://github.com/nostr-protocol/nostr',
-      description: 'Implementation of the Nostr protocol.',
-      categories: ['all', 'nostr', 'dev', 'github'],
-      createdAt: Date.now() - 25 * 24 * 60 * 60 * 1000,
-      updatedAt: Date.now() - 25 * 24 * 60 * 60 * 1000
-    },
-    {
-      id: '3',
-      title: 'Nostria Documentation',
-      url: 'https://docs.nostria.com',
-      description: 'Comprehensive documentation for the Nostria application.',
-      categories: ['all', 'nostria', 'documentation'],
-      createdAt: Date.now() - 20 * 24 * 60 * 60 * 1000,
-      updatedAt: Date.now() - 18 * 24 * 60 * 60 * 1000
-    },
-    {
-      id: '4',
-      title: 'Angular Documentation',
-      url: 'https://angular.io/docs',
-      description: 'Official documentation for Angular framework.',
-      categories: ['all', 'dev', 'frontend'],
-      createdAt: Date.now() - 15 * 24 * 60 * 60 * 1000,
-      updatedAt: Date.now() - 15 * 24 * 60 * 60 * 1000
-    },
-    {
-      id: '5',
-      title: 'Nostr Resources',
-      url: 'https://nostr-resources.com',
-      description: 'Collection of resources for learning about and developing with Nostr.',
-      categories: ['all', 'nostr', 'resources'],
-      createdAt: Date.now() - 10 * 24 * 60 * 60 * 1000,
-      updatedAt: Date.now() - 10 * 24 * 60 * 60 * 1000
-    },
-    {
-      id: '6',
-      title: 'Lightning Network',
-      url: 'https://lightning.network',
-      description: 'Learn about the Lightning Network for Bitcoin.',
-      categories: ['all', 'crypto', 'bitcoin'],
-      createdAt: Date.now() - 5 * 24 * 60 * 60 * 1000,
-      updatedAt: Date.now() - 5 * 24 * 60 * 60 * 1000
-    }
-  ]);
+  // Loading states
+  loading = signal(false);
+  isLoggedIn = computed(() => !!this.appState.pubkey());
 
-  // Default categories with "All" as the first option
+  // Bookmark data from service
+  bookmarks = computed(() => {
+    const events = this.bookmarkService.bookmarkEvents().map(b => ({
+      id: b.id,
+      title: `Event ${b.id.substring(0, 8)}...`,
+      url: `/e/${b.id}`,
+      description: 'Nostr event bookmark',
+      categories: ['all', 'events'],
+      type: 'event' as BookmarkType,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    }));
+
+    const articles = this.bookmarkService.bookmarkArticles().map(b => ({
+      id: b.id,
+      title: `Article ${b.id.substring(0, 8)}...`,
+      url: `/a/${b.id}`,
+      description: 'Nostr article bookmark',
+      categories: ['all', 'articles'],
+      type: 'article' as BookmarkType,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    }));
+
+    const urls = this.bookmarkService.bookmarkUrls().map(b => ({
+      id: b.id,
+      title: this.extractTitleFromUrl(b.id),
+      url: b.id,
+      description: 'Website bookmark',
+      categories: ['all', 'websites'],
+      type: 'url' as BookmarkType,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    }));
+
+    return [...events, ...articles, ...urls];
+  });
+
+  // Default categories with types
   categories = signal<BookmarkCategory[]>([
     { id: 'all', name: 'All', color: '#9c27b0' },
-    { id: 'nostr', name: 'Nostr', color: '#2196f3' },
-    { id: 'dev', name: 'Development', color: '#4caf50' },
-    { id: 'github', name: 'GitHub', color: '#607d8b' },
-    { id: 'nostria', name: 'Nostria', color: '#ff9800' },
-    { id: 'documentation', name: 'Documentation', color: '#795548' },
-    { id: 'frontend', name: 'Frontend', color: '#e91e63' },
-    { id: 'resources', name: 'Resources', color: '#00bcd4' },
-    { id: 'crypto', name: 'Crypto', color: '#673ab7' },
-    { id: 'bitcoin', name: 'Bitcoin', color: '#ff5722' }
+    { id: 'events', name: 'Events', color: '#2196f3' },
+    { id: 'articles', name: 'Articles', color: '#4caf50' },
+    { id: 'websites', name: 'Websites', color: '#ff9800' },
+    { id: 'nostr', name: 'Nostr', color: '#673ab7' },
+    { id: 'dev', name: 'Development', color: '#607d8b' }
   ]);
   
   // Current state
@@ -160,7 +149,7 @@ export class BookmarksComponent {
   });
 
   constructor() {
-    // Load bookmarks and categories from storage
+    // Load categories from storage
     this.loadFromStorage();
 
     effect(() => {
@@ -170,14 +159,32 @@ export class BookmarksComponent {
     effect(() => {
       this.logger.debug('Search query changed:', this.searchQuery());
     });
+
+    // Log bookmark changes
+    effect(() => {
+      this.logger.debug('Bookmarks updated:', this.bookmarks());
+    });
+  }
+  
+  private extractTitleFromUrl(url: string): string {
+    try {
+      const urlObj = new URL(url);
+      const hostname = urlObj.hostname.replace('www.', '');
+      const pathSegments = urlObj.pathname.split('/').filter(segment => segment);
+      
+      if (pathSegments.length > 0) {
+        return `${hostname}/${pathSegments[0]}`;
+      }
+      
+      return hostname;
+    } catch {
+      return url.length > 30 ? url.substring(0, 30) + '...' : url;
+    }
   }
   
   private loadFromStorage(): void {
-    // In a real implementation, this would load from persistent storage
-    // For now, we're just using the mock data
-    this.logger.debug('Loading bookmarks from storage');
+    this.logger.debug('Loading categories from storage');
     
-    // Try to load categories from local storage
     const savedCategories = this.localStorage.getItem('bookmark_categories');
     if (savedCategories) {
       try {
@@ -193,11 +200,8 @@ export class BookmarksComponent {
   }
   
   private saveToStorage(): void {
-    // Save categories to local storage
     this.localStorage.setItem('bookmark_categories', JSON.stringify(this.categories()));
     this.logger.debug('Categories saved to storage');
-    
-    // In a real implementation, this would save bookmarks to persistent storage as well
   }
   
   // Actions
@@ -220,24 +224,69 @@ export class BookmarksComponent {
     });
   }
   
-  addBookmark(): void {
-    // This would open a dialog to add a new bookmark
-    // For now, just show a message
-    this.snackBar.open('Add bookmark functionality would open a dialog', 'Close', { duration: 3000 });
+  async addBookmark(): Promise<void> {
+    if (!this.isLoggedIn()) {
+      this.snackBar.open('Please log in to add bookmarks', 'Close', { duration: 3000 });
+      return;
+    }
+
+    // Simple prompt for now - in a full implementation this would be a dialog
+    const url = prompt('Enter URL to bookmark:');
+    if (!url?.trim()) {
+      return;
+    }
+
+    this.loading.set(true);
+    try {
+      await this.bookmarkService.addBookmark(url.trim(), 'url');
+      this.snackBar.open('Bookmark added successfully', 'Close', { duration: 3000 });
+    } catch (error) {
+      this.logger.error('Error adding bookmark:', error);
+      this.snackBar.open('Failed to add bookmark', 'Close', { duration: 3000 });
+    } finally {
+      this.loading.set(false);
+    }
   }
   
   editBookmark(bookmark: Bookmark, event: Event): void {
     event.stopPropagation();
-    this.snackBar.open('Edit bookmark functionality would open a dialog', 'Close', { duration: 3000 });
+    // For now, just show a message - in a full implementation this would open a dialog
+    this.snackBar.open('Edit bookmark functionality - coming soon', 'Close', { duration: 3000 });
   }
   
-  deleteBookmark(bookmark: Bookmark, event: Event): void {
+  async deleteBookmark(bookmark: Bookmark, event: Event): Promise<void> {
     event.stopPropagation();
-    this.snackBar.open('Delete bookmark functionality would show a confirmation', 'Close', { duration: 3000 });
+    
+    if (!this.isLoggedIn()) {
+      this.snackBar.open('Please log in to delete bookmarks', 'Close', { duration: 3000 });
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to delete this bookmark?\n${bookmark.title}`)) {
+      return;
+    }
+
+    this.loading.set(true);
+    try {
+      await this.bookmarkService.addBookmark(bookmark.id, bookmark.type); // Toggle removes it
+      this.snackBar.open('Bookmark deleted successfully', 'Close', { duration: 3000 });
+    } catch (error) {
+      this.logger.error('Error deleting bookmark:', error);
+      this.snackBar.open('Failed to delete bookmark', 'Close', { duration: 3000 });
+    } finally {
+      this.loading.set(false);
+    }
   }
   
   openBookmark(bookmark: Bookmark): void {
-    window.open(bookmark.url, '_blank');
+    if (bookmark.type === 'url') {
+      window.open(bookmark.url, '_blank');
+    } else {
+      this.layout
+      // For events and articles, navigate within the app
+      // this.router.navigate([bookmark.url]);
+      this.layout.openEvent(bookmark.id);
+    }
     this.logger.debug('Opening bookmark:', bookmark.url);
   }
   
@@ -247,5 +296,23 @@ export class BookmarksComponent {
   
   getFormattedDate(timestamp: number): string {
     return new Date(timestamp).toLocaleDateString();
+  }
+
+  getBookmarkTypeIcon(type: BookmarkType): string {
+    switch (type) {
+      case 'event': return 'event';
+      case 'article': return 'article';
+      case 'url': return 'link';
+      default: return 'bookmark';
+    }
+  }
+
+  getBookmarkTypeLabel(type: BookmarkType): string {
+    switch (type) {
+      case 'event': return 'Event';
+      case 'article': return 'Article';
+      case 'url': return 'Website';
+      default: return 'Bookmark';
+    }
   }
 }

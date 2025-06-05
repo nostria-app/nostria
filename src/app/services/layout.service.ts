@@ -7,7 +7,7 @@ import { MatDialog } from "@angular/material/dialog";
 import { MatSnackBar } from "@angular/material/snack-bar";
 import { BreakpointObserver } from "@angular/cdk/layout";
 import { MediaPreviewDialogComponent } from "../components/media-preview-dialog/media-preview.component";
-import { nip19 } from "nostr-tools";
+import { Event, nip19 } from "nostr-tools";
 import { AddressPointer, EventPointer, ProfilePointer } from "nostr-tools/nip19";
 import { ProfileStateService } from "./profile-state.service";
 import { LoginDialogComponent } from "../components/login-dialog/login-dialog.component";
@@ -233,12 +233,12 @@ export class LayoutService {
         this.router.navigate(['/p', pubkey]);
     }
 
-    openEvent(naddr: string): void {
-        this.router.navigate(['/e', naddr]);
+    openEvent(naddr: string, event?: Event): void {
+        this.router.navigate(['/e', naddr], { state: { event } });
     }
 
-    openArticle(naddr: string): void {
-        this.router.navigate(['/a', naddr]);
+    openArticle(naddr: string, event?: Event): void {
+        this.router.navigate(['/a', naddr], { state: { event } });
     }
 
     scrollToOptimalProfilePosition() {

@@ -27,6 +27,23 @@ export class DataService {
         return events.map(event => this.getRecord(event));
     }
 
+    async getEventById(id: string): Promise<NostrRecord | null> {
+        let event = await this.storage.getEventById(id);
+
+        if (event) {
+            return this.getRecord(event);
+        }
+
+        event = await this.relay.getEventById(id);
+
+        if (event) {
+            this.storage.saveEvent(event);
+            return this.getRecord(event);
+        }
+
+        return null;
+    }
+
     /** Will read event from local database, if available, or get from relay, and then save to database. */
     async getEventByPubkeyAndKindAndReplaceableEvent(pubkey: string, kind: number, dTagValue: string, userRelays: boolean): Promise<NostrRecord | null> {
         let event: Event | null | undefined = await this.storage.getParameterizedReplaceableEvent(pubkey, kind, dTagValue);

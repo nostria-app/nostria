@@ -16,6 +16,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { FormsModule } from '@angular/forms';
 import { ContentComponent } from '../../../components/content/content.component';
 import { NostrRecord } from '../../../interfaces';
+import { LayoutService } from '../../../services/layout.service';
 
 @Component({
   selector: 'app-profile-notes',
@@ -46,6 +47,7 @@ export class ProfileNotesComponent {
   bookmark = inject(BookmarkService);
   isLoading = signal<boolean>(false);
   error = signal<string | null>(null);
+  layout = inject(LayoutService);
   
   // Options
   showNewestFirst = signal<boolean>(true);
