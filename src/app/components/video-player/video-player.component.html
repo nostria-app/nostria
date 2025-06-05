@@ -54,7 +54,7 @@
     @if(media.current?.type === 'Video') {
     <div class="media-info">
         <video class="event-video" controls autoplay="true" preload="none">
-            <source [src]="media.videoUrl" type="video/mp4" />
+            <source [src]="media.videoUrl()" type="video/mp4" />
         </video>
     </div>
     }
