@@ -121,8 +121,8 @@ const FEED_TEMPLATES = [
         <p class="dialog-subtitle">Choose a feed template or create a custom feed</p>
       </div>
 
-      <form [formGroup]="feedForm" (ngSubmit)="onSubmit()">
-        <div class="dialog-content">
+      <div class="dialog-content">
+        <form [formGroup]="feedForm" (ngSubmit)="onSubmit()">
           @if (!isEditMode()) {
             <!-- Feed Template Selection -->
             <div class="template-selection">
@@ -198,7 +198,9 @@ const FEED_TEMPLATES = [
               <input matInput formControlName="description" placeholder="Brief description of this feed">
               <mat-icon matSuffix>description</mat-icon>
             </mat-form-field>
-          </div>          @if (selectedTemplate() && getSelectedTemplateConfig()?.defaultColumns && getSelectedTemplateConfig()!.defaultColumns.length > 0) {
+          </div>
+
+          @if (selectedTemplate() && getSelectedTemplateConfig()?.defaultColumns && getSelectedTemplateConfig()!.defaultColumns.length > 0) {
             <mat-divider></mat-divider>
             
             <!-- Template Preview -->
@@ -219,28 +221,32 @@ const FEED_TEMPLATES = [
               </div>
             </div>
           }
-        </div>
-        
-        <div class="dialog-actions" mat-dialog-actions>
-          <button mat-button mat-dialog-close type="button">Cancel</button>
-          <button mat-flat-button color="primary" type="submit" [disabled]="!feedForm.valid">
-            {{ isEditMode() ? 'Save Changes' : 'Create Feed' }}
-          </button>
-        </div>
-      </form>
+        </form>
+      </div>
+      
+      <div class="dialog-actions" mat-dialog-actions>
+        <button mat-button mat-dialog-close type="button">Cancel</button>
+        <button mat-flat-button color="primary" (click)="onSubmit()" [disabled]="!feedForm.valid">
+          <mat-icon>{{ isEditMode() ? 'save' : 'add' }}</mat-icon>
+          {{ isEditMode() ? 'Save Changes' : 'Create Feed' }}
+        </button>
+      </div>
     </div>
   `,
-  styles: [`    .dialog-container {
+  styles: [`
+    .dialog-container {
       width: 100%;
       max-width: 100%;
       max-height: 90vh;
       display: flex;
       flex-direction: column;
+      overflow: hidden;
     }
 
     .dialog-header {
       padding: 24px 24px 16px;
       border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+      flex-shrink: 0;
 
       h2 {
         display: flex;
@@ -259,12 +265,28 @@ const FEED_TEMPLATES = [
     }
 
     .dialog-content {
-      padding: 24px;
       flex: 1;
       overflow-y: auto;
+      padding: 24px;
       display: flex;
       flex-direction: column;
       gap: 24px;
+    }
+
+    .dialog-actions {
+      padding: 16px 24px;
+      border-top: 1px solid rgba(0, 0, 0, 0.12);
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      flex-shrink: 0;
+      background-color: var(--mat-app-background-color);
+
+      button {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
     }
 
     .full-width {
@@ -435,20 +457,6 @@ const FEED_TEMPLATES = [
           font-size: 0.8rem;
           opacity: 0.7;
         }
-      }
-    }
-
-    .dialog-actions {
-      padding: 16px 24px;
-      border-top: 1px solid rgba(0, 0, 0, 0.12);
-      display: flex;
-      gap: 12px;
-      justify-content: flex-end;
-
-      button {
-        display: flex;
-        align-items: center;
-        gap: 8px;
       }
     }
 
