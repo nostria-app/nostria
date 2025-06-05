@@ -1,0 +1,19 @@
+@let item = record();
+
+@if (item) {
+<app-user-profile [pubkey]="item.event.pubkey"></app-user-profile>
+<div class="article-content" (click)="openArticle()">
+    <!-- {{ item.event.pubkey}}<br> -->
+    {{ item.data }}
+</div>
+} @else {
+@if (loading()) {
+<div class="event-content">
+    <p>Loading...</p>
+</div>
+} @else {
+<div class="event-content">
+    <p>Article not found</p>
+</div>
+}
+}

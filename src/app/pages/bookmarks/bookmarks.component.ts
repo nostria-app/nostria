@@ -19,6 +19,8 @@ import { LocalStorageService } from '../../services/local-storage.service';
 import { ApplicationStateService } from '../../services/application-state.service';
 import { Router } from '@angular/router';
 import { LayoutService } from '../../services/layout.service';
+import { EventComponent } from '../../components/event/event.component';
+import { ArticleComponent } from '../../components/article/article.component';
 
 export interface Bookmark {
   id: string;
@@ -53,7 +55,9 @@ interface BookmarkCategory {
     MatTooltipModule,
     MatDialogModule,
     MatSnackBarModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
+    EventComponent,
+    ArticleComponent
   ],
   templateUrl: './bookmarks.component.html',
   styleUrl: './bookmarks.component.scss'
@@ -63,7 +67,7 @@ export class BookmarksComponent {
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
   private localStorage = inject(LocalStorageService);
-  private bookmarkService = inject(BookmarkService);
+  bookmarkService = inject(BookmarkService);
   private appState = inject(ApplicationStateService);
   private router = inject(Router);
   layout = inject(LayoutService);
@@ -73,80 +77,77 @@ export class BookmarksComponent {
   isLoggedIn = computed(() => !!this.appState.pubkey());
 
   // Bookmark data from service
-  bookmarks = computed(() => {
-    const events = this.bookmarkService.bookmarkEvents().map(b => ({
-      id: b.id,
-      title: `Event ${b.id.substring(0, 8)}...`,
-      url: `/e/${b.id}`,
-      description: 'Nostr event bookmark',
-      categories: ['all', 'events'],
-      type: 'event' as BookmarkType,
-      createdAt: Date.now(),
-      updatedAt: Date.now()
-    }));
+  // bookmarks = computed(() => {
+  //   const events = this.bookmarkService.bookmarkEvents().map(b => ({
+  //     id: b.id,
+  //     title: `Event ${b.id.substring(0, 8)}...`,
+  //     url: `/e/${b.id}`,
+  //     description: 'Nostr event bookmark',
+  //     categories: ['all', 'events'],
+  //     type: 'e' as BookmarkType,
+  //     createdAt: Date.now(),
+  //     updatedAt: Date.now()
+  //   }));
 
-    const articles = this.bookmarkService.bookmarkArticles().map(b => ({
-      id: b.id,
-      title: `Article ${b.id.substring(0, 8)}...`,
-      url: `/a/${b.id}`,
-      description: 'Nostr article bookmark',
-      categories: ['all', 'articles'],
-      type: 'article' as BookmarkType,
-      createdAt: Date.now(),
-      updatedAt: Date.now()
-    }));
+  //   const articles = this.bookmarkService.bookmarkArticles().map(b => ({
+  //     id: b.id,
+  //     title: `Article ${b.id.substring(0, 8)}...`,
+  //     url: `/a/${b.id}`,
+  //     description: 'Nostr article bookmark',
+  //     categories: ['all', 'articles'],
+  //     type: 'a' as BookmarkType,
+  //     createdAt: Date.now(),
+  //     updatedAt: Date.now()
+  //   }));
 
-    const urls = this.bookmarkService.bookmarkUrls().map(b => ({
-      id: b.id,
-      title: this.extractTitleFromUrl(b.id),
-      url: b.id,
-      description: 'Website bookmark',
-      categories: ['all', 'websites'],
-      type: 'url' as BookmarkType,
-      createdAt: Date.now(),
-      updatedAt: Date.now()
-    }));
+  //   const urls = this.bookmarkService.bookmarkUrls().map(b => ({
+  //     id: b.id,
+  //     title: this.extractTitleFromUrl(b.id),
+  //     url: b.id,
+  //     description: 'Website bookmark',
+  //     categories: ['all', 'websites'],
+  //     type: 'r' as BookmarkType,
+  //     createdAt: Date.now(),
+  //     updatedAt: Date.now()
+  //   }));
 
-    return [...events, ...articles, ...urls];
-  });
+  //   return [...events, ...articles, ...urls];
+  // });
 
   // Default categories with types
   categories = signal<BookmarkCategory[]>([
-    { id: 'all', name: 'All', color: '#9c27b0' },
     { id: 'events', name: 'Events', color: '#2196f3' },
     { id: 'articles', name: 'Articles', color: '#4caf50' },
-    { id: 'websites', name: 'Websites', color: '#ff9800' },
-    { id: 'nostr', name: 'Nostr', color: '#673ab7' },
-    { id: 'dev', name: 'Development', color: '#607d8b' }
+    { id: 'websites', name: 'Websites', color: '#ff9800' }
   ]);
-  
+
   // Current state
   searchQuery = signal('');
-  selectedCategory = signal('all');
-  
+  selectedCategory = signal('events');
+
   // Computed state for filtered bookmarks
-  filteredBookmarks = computed(() => {
-    const search = this.searchQuery().toLowerCase().trim();
-    const category = this.selectedCategory();
-    
-    return this.bookmarks().filter(bookmark => {
-      // First filter by category
-      if (category !== 'all' && !bookmark.categories.includes(category)) {
-        return false;
-      }
-      
-      // Then filter by search query if present
-      if (search) {
-        return (
-          bookmark.title.toLowerCase().includes(search) ||
-          bookmark.url.toLowerCase().includes(search) ||
-          (bookmark.description?.toLowerCase().includes(search) ?? false)
-        );
-      }
-      
-      return true;
-    });
-  });
+  // filteredBookmarks = computed(() => {
+  //   const search = this.searchQuery().toLowerCase().trim();
+  //   const category = this.selectedCategory();
+
+  //   return this.bookmarks().filter(bookmark => {
+  //     // First filter by category
+  //     if (category !== 'all' && !bookmark.categories.includes(category)) {
+  //       return false;
+  //     }
+
+  //     // Then filter by search query if present
+  //     if (search) {
+  //       return (
+  //         bookmark.title.toLowerCase().includes(search) ||
+  //         bookmark.url.toLowerCase().includes(search) ||
+  //         (bookmark.description?.toLowerCase().includes(search) ?? false)
+  //       );
+  //     }
+
+  //     return true;
+  //   });
+  // });
 
   constructor() {
     // Load categories from storage
@@ -155,36 +156,36 @@ export class BookmarksComponent {
     effect(() => {
       this.logger.debug('Selected category changed:', this.selectedCategory());
     });
-    
+
     effect(() => {
       this.logger.debug('Search query changed:', this.searchQuery());
     });
 
     // Log bookmark changes
-    effect(() => {
-      this.logger.debug('Bookmarks updated:', this.bookmarks());
-    });
+    // effect(() => {
+    //   this.logger.debug('Bookmarks updated:', this.bookmarks());
+    // });
   }
-  
-  private extractTitleFromUrl(url: string): string {
-    try {
-      const urlObj = new URL(url);
-      const hostname = urlObj.hostname.replace('www.', '');
-      const pathSegments = urlObj.pathname.split('/').filter(segment => segment);
-      
-      if (pathSegments.length > 0) {
-        return `${hostname}/${pathSegments[0]}`;
-      }
-      
-      return hostname;
-    } catch {
-      return url.length > 30 ? url.substring(0, 30) + '...' : url;
-    }
-  }
-  
+
+  // private extractTitleFromUrl(url: string): string {
+  //   try {
+  //     const urlObj = new URL(url);
+  //     const hostname = urlObj.hostname.replace('www.', '');
+  //     const pathSegments = urlObj.pathname.split('/').filter(segment => segment);
+
+  //     if (pathSegments.length > 0) {
+  //       return `${hostname}/${pathSegments[0]}`;
+  //     }
+
+  //     return hostname;
+  //   } catch {
+  //     return url.length > 30 ? url.substring(0, 30) + '...' : url;
+  //   }
+  // }
+
   private loadFromStorage(): void {
     this.logger.debug('Loading categories from storage');
-    
+
     const savedCategories = this.localStorage.getItem('bookmark_categories');
     if (savedCategories) {
       try {
@@ -198,23 +199,23 @@ export class BookmarksComponent {
       }
     }
   }
-  
+
   private saveToStorage(): void {
     this.localStorage.setItem('bookmark_categories', JSON.stringify(this.categories()));
     this.logger.debug('Categories saved to storage');
   }
-  
+
   // Actions
   selectCategory(categoryId: string): void {
     this.selectedCategory.set(categoryId);
   }
-  
+
   openManageCategories(): void {
     const dialogRef = this.dialog.open(BookmarkCategoryDialogComponent, {
       data: { categories: this.categories() },
       width: '500px'
     });
-    
+
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
         this.categories.set(result);
@@ -223,7 +224,7 @@ export class BookmarksComponent {
       }
     });
   }
-  
+
   async addBookmark(): Promise<void> {
     if (!this.isLoggedIn()) {
       this.snackBar.open('Please log in to add bookmarks', 'Close', { duration: 3000 });
@@ -238,7 +239,7 @@ export class BookmarksComponent {
 
     this.loading.set(true);
     try {
-      await this.bookmarkService.addBookmark(url.trim(), 'url');
+      await this.bookmarkService.addBookmark(url.trim(), 'r');
       this.snackBar.open('Bookmark added successfully', 'Close', { duration: 3000 });
     } catch (error) {
       this.logger.error('Error adding bookmark:', error);
@@ -247,16 +248,16 @@ export class BookmarksComponent {
       this.loading.set(false);
     }
   }
-  
+
   editBookmark(bookmark: Bookmark, event: Event): void {
     event.stopPropagation();
     // For now, just show a message - in a full implementation this would open a dialog
     this.snackBar.open('Edit bookmark functionality - coming soon', 'Close', { duration: 3000 });
   }
-  
+
   async deleteBookmark(bookmark: Bookmark, event: Event): Promise<void> {
     event.stopPropagation();
-    
+
     if (!this.isLoggedIn()) {
       this.snackBar.open('Please log in to delete bookmarks', 'Close', { duration: 3000 });
       return;
@@ -277,41 +278,40 @@ export class BookmarksComponent {
       this.loading.set(false);
     }
   }
-  
+
   openBookmark(bookmark: Bookmark): void {
-    if (bookmark.type === 'url') {
+    if (bookmark.type === 'r') {
       window.open(bookmark.url, '_blank');
     } else {
-      this.layout
       // For events and articles, navigate within the app
       // this.router.navigate([bookmark.url]);
       this.layout.openEvent(bookmark.id);
     }
     this.logger.debug('Opening bookmark:', bookmark.url);
   }
-  
+
   getCategoryById(id: string): BookmarkCategory | undefined {
     return this.categories().find(category => category.id === id);
   }
-  
+
   getFormattedDate(timestamp: number): string {
     return new Date(timestamp).toLocaleDateString();
   }
 
   getBookmarkTypeIcon(type: BookmarkType): string {
     switch (type) {
-      case 'event': return 'event';
-      case 'article': return 'article';
-      case 'url': return 'link';
+      case 'e': return 'event';
+      case 'a': return 'article';
+      case 'r': return 'link';
       default: return 'bookmark';
     }
   }
 
   getBookmarkTypeLabel(type: BookmarkType): string {
     switch (type) {
-      case 'event': return 'Event';
-      case 'article': return 'Article';
-      case 'url': return 'Website';
+      case 'e': return 'Event';
+      case 'a': return 'Article';
+      case 'r': return 'Website';
       default: return 'Bookmark';
     }
   }

@@ -5,10 +5,16 @@ import { ApplicationService } from './application.service';
 import { ApplicationStateService } from './application-state.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { LayoutService } from './layout.service';
-import { Event } from 'nostr-tools';
+import { Event, kinds } from 'nostr-tools';
 
 // Define bookmark types
-export type BookmarkType = 'event' | 'article' | 'url';
+export type BookmarkType = 'e' | 'a' | 'r' | 't';
+
+export interface ArticleBookmark {
+  kind: number;
+  id: string;
+  slug: string;
+}
 
 @Injectable({
   providedIn: 'root'
@@ -50,14 +56,18 @@ export class BookmarkService {
       return;
     }
 
-    const bookmarksEvent = await this.relay.get({ authors: [this.appState.pubkey()!], kinds: [10003] });
+    const bookmarksEvent = await this.relay.get({ authors: [this.appState.pubkey()!], kinds: [kinds.BookmarkList] });
     if (bookmarksEvent) {
       this.bookmarkEvent = bookmarksEvent;
 
       const bookmarksEvents = bookmarksEvent.tags.filter(tag => tag[0] === 'e').map(tag => ({ id: tag[1] }));
       this.bookmarkEvents.set(bookmarksEvents);
 
-      const bookmarksArticles = bookmarksEvent.tags.filter(tag => tag[0] === 'a').map(tag => ({ id: tag[1] }));
+      const bookmarksArticles = bookmarksEvent.tags.filter(tag => tag[0] === 'a').map(tag => {
+        const values = tag[1].split(':');
+        return { id: values[1], kind: parseInt(values[0]), slug: values[2] };
+      });
+
       this.bookmarkArticles.set(bookmarksArticles);
 
       const bookmarkUrls = bookmarksEvent.tags.filter(tag => tag[0] === 'r').map(tag => ({ id: tag[1] }));
@@ -68,9 +78,9 @@ export class BookmarkService {
   // Helper to get the appropriate signal based on bookmark type
   private getBookmarkSignal(type: BookmarkType) {
     switch (type) {
-      case 'event': return this.bookmarkEvents;
-      case 'article': return this.bookmarkArticles;
-      case 'url': return this.bookmarkUrls;
+      case 'e': return this.bookmarkEvents;
+      case 'a': return this.bookmarkArticles;
+      case 'r': return this.bookmarkUrls;
       default: return this.bookmarkEvents; // Default to events
     }
   }
@@ -118,7 +128,7 @@ export class BookmarkService {
     return iconMap;
   }
 
-  async addBookmark(id: string, type: BookmarkType = 'event') {
+  async addBookmark(id: string, type: BookmarkType = 'e') {
     const signal = this.getBookmarkSignal(type);
     const existingBookmark = signal().find(b => b.id === id);
     
@@ -136,7 +146,7 @@ export class BookmarkService {
     }
     
     // Get the appropriate tag prefix based on type
-    const tagPrefix = this.getTagPrefix(type);
+    // const tagPrefix = this.getTagPrefix(type);
     
     if (existingBookmark) {
       // Remove from signal
@@ -145,7 +155,7 @@ export class BookmarkService {
       // Remove from event tags
       if (this.bookmarkEvent) {
         this.bookmarkEvent.tags = this.bookmarkEvent.tags.filter(
-          tag => !(tag[0] === tagPrefix && tag[1] === id)
+          tag => !(tag[0] === type && tag[1] === id)
         );
       }
     } else {
@@ -154,7 +164,7 @@ export class BookmarkService {
       
       // Add to event tags
       if (this.bookmarkEvent) {
-        this.bookmarkEvent.tags.push([tagPrefix, id]);
+        this.bookmarkEvent.tags.push([type, id]);
       }
     }
     
@@ -162,54 +172,54 @@ export class BookmarkService {
     await this.publish();
   }
 
-  toggleBookmark(id: string, type: BookmarkType = 'event') {
+  toggleBookmark(id: string, type: BookmarkType = 'e') {
     this.addBookmark(id, type); // Add and toggle are the same operation
   }
 
   // Helper to get tag prefix based on bookmark type
-  private getTagPrefix(type: BookmarkType): string {
-    switch (type) {
-      case 'event': return 'e';
-      case 'article': return 'a';
-      case 'url': return 'r';
-      default: return 'e';
-    }
-  }
+  // private getTagPrefix(type: BookmarkType): string {
+  //   switch (type) {
+  //     case 'event': return 'e';
+  //     case 'article': return 'a';
+  //     case 'url': return 'r';
+  //     default: return 'e';
+  //   }
+  // }
 
-  isBookmarked(id: string, type: BookmarkType = 'event'): boolean {
+  isBookmarked(id: string, type: BookmarkType = 'e'): boolean {
     return !!this.getBookmarkSignal(type)().find(b => b.id === id);
   }
 
   // Helper method to get tooltip text based on bookmark status
-  getBookmarkTooltip(id: string, type: BookmarkType = 'event'): string {
-    return this.bookmarkStatus()[type][id] ? 'Remove bookmark' : 'Add bookmark';
-  }
+  // getBookmarkTooltip(id: string, type: BookmarkType = 'e'): string {
+  //   return this.bookmarkStatus()[type][id] ? 'Remove bookmark' : 'Add bookmark';
+  // }
 
   // Helper method to get icon based on bookmark status
-  getBookmarkIcon(id: string, type: BookmarkType = 'event'): string {
-    return this.bookmarkStatus()[type][id] ? 'bookmark' : 'bookmark_border';
-  }
+  // getBookmarkIcon(id: string, type: BookmarkType = 'e'): string {
+  //   return this.bookmarkStatus()[type][id] ? 'bookmark' : 'bookmark_border';
+  // }
 
   // Legacy methods for backward compatibility
   addBookmarkEvent(id: string) {
-    this.addBookmark(id, 'event');
+    this.addBookmark(id, 'e');
   }
 
   toggleBookmarkEvent(id: string) {
-    this.toggleBookmark(id, 'event');
+    this.toggleBookmark(id, 'e');
   }
 
   isBookmarkedEvent(id: string): boolean {
-    return this.isBookmarked(id, 'event');
+    return this.isBookmarked(id, 'e');
   }
 
-  getBookmarkEventTooltip(id: string): string {
-    return this.getBookmarkTooltip(id, 'event');
-  }
+  // getBookmarkEventTooltip(id: string): string {
+  //   return this.getBookmarkTooltip(id, 'e');
+  // }
 
-  getBookmarkEventIcon(id: string): string {
-    return this.getBookmarkIcon(id, 'event');
-  }
+  // getBookmarkEventIcon(id: string): string {
+  //   return this.getBookmarkIcon(id, 'e');
+  // }
 
   async publish() {
     if (!this.bookmarkEvent) {
