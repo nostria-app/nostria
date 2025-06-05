@@ -682,15 +682,9 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
     const activeFeed = this.activeFeed();
     const columns = this.columns();
 
-    if (!activeFeed || index < 0 || index >= columns.length) return;
+    if (!activeFeed) return;
 
     const column = columns[index];
-
-    // Prevent removing the last column - feed must have at least one column
-    if (columns.length <= 1) {
-      this.notificationService.notify('Cannot remove the last column from a feed');
-      return;
-    }
 
     // Update the feed by removing the column at the specified index
     const updatedColumns = activeFeed.columns.filter((_, i) => i !== index);
