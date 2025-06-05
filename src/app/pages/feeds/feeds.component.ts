@@ -601,7 +601,7 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
   addNewColumn(): void {
     const activeFeed = this.activeFeed();
     if (!activeFeed) {
-      this.notificationService.notify('Please select a feed first');
+      this.notificationService.notify('Please add a feed first');
       return;
     }
 
