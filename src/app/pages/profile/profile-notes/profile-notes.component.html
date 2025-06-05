@@ -18,7 +18,7 @@
         @for(note of profileState.notes(); track note.event) {
         <mat-card class="note-card" appearance="outlined">
           <app-user-profile class="user-profile-thread" view="thread" [pubkey]="profileState.currentProfilePubkey()">
-            <a class="date-link" [routerLink]="['/e', note.event.id]" [matTooltip]="note.event.created_at * 1000 | date:'medium'" matTooltipPosition="below">
+            <a class="date-link" (click)="layout.openEvent(note.event.id, note.event)" [matTooltip]="note.event.created_at * 1000 | date:'medium'" matTooltipPosition="below">
               {{ note.event.created_at | ago }}
             </a>
           </app-user-profile>

@@ -365,6 +365,12 @@ export class RelayService {
     });
   }
 
+  async getEventById(id: string): Promise<Event | null> {
+    return this.get({
+      ids: [id]
+    });
+  }
+
   async getEventsByKindAndPubKeyTag(pubkey: string | string[], kind: number): Promise<Event[]> {
     const authors = Array.isArray(pubkey) ? pubkey : [pubkey];
 
@@ -392,7 +398,7 @@ export class RelayService {
    * @returns Promise that resolves to an array of events
    */
   async get<T extends Event = Event>(
-    filter: { kinds?: number[], authors?: string[], '#e'?: string[], '#p'?: string[], since?: number, until?: number, limit?: number },
+    filter: { ids?: string[], kinds?: number[], authors?: string[], '#e'?: string[], '#p'?: string[], since?: number, until?: number, limit?: number },
     relayUrls?: string[],
     options: { timeout?: number } = {}
   ): Promise<T | null> {

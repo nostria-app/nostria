@@ -2060,6 +2060,26 @@ export class NostrService {
     return result as string;
   }
 
+  isHex(value: string) {
+    const isEncoded = value.startsWith('nprofile') ||
+      value.startsWith('nevent') ||
+      value.startsWith('naddr') ||
+      value.startsWith('nsec') ||
+      value.startsWith('npub') ||
+      value.startsWith('note');
+
+    return !isEncoded;
+  }
+
+  getHex(value: string) {
+    if (this.isHex(value)) {
+      return value;
+    }
+
+    const decoded = this.decode(value) as any;
+    return decoded.data.id;
+  }
+
   decode(value: string) {
     return nip19.decode(value);
   }
