@@ -75,6 +75,9 @@ export class AccountStateService {
         if (!this.hasProfileDiscoveryBeenDone(currentPubkey)) {
           this.startProfileProcessing(followingList);
           this.markProfileDiscoveryDone(currentPubkey);
+        } else {
+          // Profile discovery has been done, load profiles from storage into cache
+          this.loadProfilesFromStorageToCache(currentPubkey);
         }
       }
     });
@@ -84,12 +87,11 @@ export class AccountStateService {
   private getProcessingTracking(): ProcessingTracking {
     return this.localStorage.getObject<ProcessingTracking>(this.appState.PROCESSING_STORAGE_KEY) || {};
   }
-
   private saveProcessingTracking(tracking: ProcessingTracking): void {
     this.localStorage.setObject(this.appState.PROCESSING_STORAGE_KEY, tracking);
   }
 
-  private hasProfileDiscoveryBeenDone(pubkey: string): boolean {
+  hasProfileDiscoveryBeenDone(pubkey: string): boolean {
     const tracking = this.getProcessingTracking();
     return tracking[pubkey]?.profileDiscovery === true;
   }
@@ -290,10 +292,49 @@ export class AccountStateService {
     
     return undefined;
   }
-
   // Method to clear cache
   clearProfileCache(): void {
     this.profileCache.set(new Map());
+  }
+
+  // Method to load profiles from storage into cache when profile discovery has been done
+  async loadProfilesFromStorageToCache(pubkey: string): Promise<void> {
+    if (!this.hasProfileDiscoveryBeenDone(pubkey)) {
+      return; // Don't load if discovery hasn't been done
+    }
+
+    try {
+      const followingList = this.followingList();
+      if (followingList.length === 0) {
+        return; // No following list to load profiles for
+      }
+
+      // Get NostrService from the injector to avoid circular dependency
+      const { NostrService } = await import('./nostr.service');
+      const nostrService = this.injector.get(NostrService);
+      const { DataService } = await import('./data.service');
+      const dataService = this.injector.get(DataService);
+      const { StorageService } = await import('./storage.service');
+      const storageService = this.injector.get(StorageService);
+
+      console.log('Loading profiles from storage to cache for account:', pubkey);
+      console.log('Following list size:', followingList.length);
+
+      // Load metadata events from storage for all following users
+      const events = await storageService.getEventsByPubkeyAndKind(followingList, 0); // kind 0 is metadata
+      const records = dataService.getRecords(events);
+
+      console.log('Found metadata records in storage:', records.length);
+
+      // Add all found profiles to cache
+      for (const record of records) {
+        this.addToCache(record.event.pubkey, record);
+      }
+
+      console.log('Profile cache populated with', records.length, 'profiles from storage');
+    } catch (error) {
+      console.error('Failed to load profiles from storage to cache:', error);
+    }
   }
 
   // Method to get cache stats
