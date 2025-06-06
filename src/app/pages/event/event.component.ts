@@ -10,6 +10,7 @@ import { DecodedNaddr, DecodedNevent, EventPointer } from 'nostr-tools/nip19';
 import { UrlUpdateService } from '../../services/url-update.service';
 import { EventComponent } from '../../components/event/event.component';
 import { UtilitiesService } from '../../services/utilities.service';
+import { MatIconModule } from '@angular/material/icon';
 
 /** Description of the EventPageComponent
  * 
@@ -22,9 +23,13 @@ export interface Reaction {
   count: number;
 }
 
+export interface Reposts {
+  pubkey: string;
+}
+
 @Component({
   selector: 'app-event-page',
-  imports: [CommonModule, EventComponent],
+  imports: [CommonModule, EventComponent, MatIconModule],
   templateUrl: './event.component.html',
   styleUrl: './event.component.scss'
 })
@@ -67,6 +72,7 @@ export class EventPageComponent {
   }
 
   reactions = signal<Reaction[]>([]);
+  reposts = signal<Reposts[]>([]);
 
   async loadReactions(eventId: string, pubkey: string) {
     if (this.userRelays.length === 0) {
@@ -103,6 +109,16 @@ export class EventPageComponent {
           
           this.reactions.set(reactionsArray);
         }
+        else if (event.kind === kinds.Repost) {
+          // Handle reposts if needed, currently we just log them
+          console.log('Repost event:', event);
+
+          this.reposts.update(currentReposts => [...currentReposts, { pubkey: event.pubkey }]);
+
+        }
+
+
+
       },
       onclose(reasons) {
         console.log('CLOSED!!!', reasons);
