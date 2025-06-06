@@ -6,6 +6,7 @@ import { RelayService } from './relay.service';
 import { Event } from 'nostr-tools';
 import { SubCloser } from 'nostr-tools/abstract-pool';
 import { ApplicationStateService } from './application-state.service';
+import { AccountStateService } from './account-state.service';
 
 export interface FeedData {
   column: ColumnConfig,
@@ -116,6 +117,7 @@ export class FeedService {
   private readonly nostr = inject(NostrService);
   private readonly relay = inject(RelayService);
   private readonly appState = inject(ApplicationStateService);
+  private readonly accountState = inject(AccountStateService);
 
   // Signals for feeds and relays
   private readonly _feeds = signal<FeedConfig[]>([]);
@@ -277,6 +279,12 @@ export class FeedService {
 
     // Subscribe to relay events
     const sub = this.relay.subscribe([item.filter], (event) => {
+
+      // Filter out live events that are muted.
+      if (this.accountState.muted(event)) {
+        return;
+      }
+
       item.events.update(events => [event, ...events]);
       this.logger.debug(`Column event received for ${column.id}:`, event);
     });

@@ -98,6 +98,14 @@ export class NostrService {
     this.logger.info('Initializing NostrService');
 
     effect(async () => {
+      const event = this.accountState.publish();
+
+      if (event) {
+        await this.publish(event);
+      }
+    });
+
+    effect(async () => {
       if (this.storage.initialized()) {
         this.logger.info('Storage initialized, loading Nostr Service');
         await this.initialize();
@@ -2235,5 +2243,21 @@ export class NostrService {
     }
 
     return undefined;
+  }
+
+  async publish(event: Event) {
+    // Clone the bookmark event and remove id and sig
+    const eventToSign = { ...event };
+    eventToSign.id = '';
+    eventToSign.sig = '';
+    eventToSign.created_at = Math.floor(Date.now() / 1000);
+
+    // Sign the event
+    const signedEvent = await this.signEvent(eventToSign);
+
+    // Publish to relays and get array of promises
+    const publishPromises = await this.relayService.publish(signedEvent);
+
+    return signedEvent;
   }
 }
