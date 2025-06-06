@@ -132,9 +132,7 @@ export class ProfileHeaderComponent {
         const metadata = this.profile();
         if (!metadata || !metadata.data.nip05) return { value: '', valid: false, status: 'No NIP-05 value' };
 
-        const value = metadata.data.nip05.startsWith('_@')
-            ? metadata.data.nip05.substring(1)
-            : metadata.data.nip05
+        const value = this.utilities.parseNip05(metadata.data.nip05);
 
         if (isNip05(metadata.data.nip05)) {
             const profile = await queryProfile(metadata.data.nip05);

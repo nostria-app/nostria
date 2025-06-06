@@ -370,7 +370,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
         }
 
         // Ensure nip05 is a string
-        return profile.data.nip05;
+        return this.utilities.parseNip05(profile.data.nip05);
     });
 
     /**

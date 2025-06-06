@@ -267,6 +267,12 @@ export class UtilitiesService {
     return nip19.decode(value);
   }
 
+  parseNip05(nip05: string) {
+    return nip05.startsWith('_@')
+      ? nip05.substring(1)
+      : nip05;
+  }
+
   /** Used to optimize the selection of a few relays from the user's relay list. */
   pickOptimalRelays(relayUrls: string[], count: number): string[] {
     // Filter out malformed URLs first
