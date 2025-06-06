@@ -36,9 +36,11 @@ export class DataService {
             relayUrls = this.utilities.getRelayUrls(relayListEvent);
         }
 
-        const followingEvent = await this.storage.getEventByPubkeyAndKind(pubkey, 3);
-        if (followingEvent) {
-            relayUrls = this.utilities.getRelayUrlsFromFollowing(followingEvent);
+        if (!relayUrls || relayUrls.length === 0) {
+            const followingEvent = await this.storage.getEventByPubkeyAndKind(pubkey, 3);
+            if (followingEvent) {
+                relayUrls = this.utilities.getRelayUrlsFromFollowing(followingEvent);
+            }
         }
 
         return relayUrls;
