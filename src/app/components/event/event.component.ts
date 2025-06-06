@@ -19,11 +19,24 @@ export class EventComponent {
   id = input<string | null | undefined>();
   type = input<'e' | 'a' | 'r' | 't'>('e');
 
+  event = input<Event | null>(null);
+
   data = inject(DataService);
   record = signal<NostrRecord | null>(null);
   layout = inject(LayoutService);
 
   constructor() {
+    effect(() => {
+      const event = this.event();
+
+      if (!event) {
+        return;
+      }
+
+      const record = this.data.getRecord(event);
+      this.record.set(record);
+    });
+
     effect(async () => {
       const eventId = this.id();
       const type = this.type();
