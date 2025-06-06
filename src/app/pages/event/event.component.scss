@@ -1,3 +1,10 @@
+:host {
+  max-width: 680px;
+  display: block;
+  margin: 0 auto;
+}
+
+
 .reactions {
     display: flex;
     gap: 1rem;

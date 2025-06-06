@@ -1,7 +1,12 @@
 @let item = record();
 
 @if (item) {
-<app-user-profile [pubkey]="item.event.pubkey"></app-user-profile>
+<app-user-profile [pubkey]="item.event.pubkey">
+    <a class="date-link" [matTooltip]="item.event.created_at| date:'medium'"
+              matTooltipPosition="below">
+              {{ item.event.created_at| ago }}
+            </a>
+</app-user-profile>
 <div class="event-content" (click)="openEvent()">
     <!-- {{ item.event.pubkey}}<br> -->
       <app-content [content]="item.data"></app-content>
