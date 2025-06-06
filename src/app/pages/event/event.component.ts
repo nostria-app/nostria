@@ -48,6 +48,7 @@ export class EventPageComponent {
   pool: SimplePool | undefined = undefined;
   userRelays: string[] = [];
 
+  replies = signal<Event[]>([]);
 
   constructor() {
     // Effect to load article when route parameter changes
@@ -67,14 +68,10 @@ export class EventPageComponent {
     this.pool?.destroy();
   }
 
-  createUserPool() {
-
-  }
-
   reactions = signal<Reaction[]>([]);
   reposts = signal<Reposts[]>([]);
 
-  async loadReactions(eventId: string, pubkey: string) {
+  async loadReplies(eventId: string, pubkey: string) {
     if (this.userRelays.length === 0) {
       // We need to discover the event from user's relays.
       const userRelays = await this.data.getUserRelays(pubkey);
@@ -90,41 +87,95 @@ export class EventPageComponent {
     const reactionCounts = new Map<string, number>();
 
     this.pool?.subscribeEose(this.userRelays, {
-      kinds: [kinds.Reaction, kinds.Repost],
+      kinds: [kinds.ShortTextNote, kinds.Reaction, kinds.Repost],
       ['#e']: [eventId],
     }, {
       onevent: (event) => {
         console.log('Received event:', event);
-        
-        if (event.kind === kinds.Reaction && event.content) {
+        if (event.kind === kinds.ShortTextNote && event.content) {
+          // Handle text replies
+          console.log('Text reply:', event);
+
+          // Ensure that we don't have duplicate replies
+          const existingReply = this.replies().find(reply => reply.id === event.id);
+          if (!existingReply) {
+            this.replies.update(currentReplies => [...currentReplies, event]);
+          }
+
+        } else if (event.kind === kinds.Reaction && event.content) {
           // Count each unique reaction emoji
           const emoji = event.content;
           reactionCounts.set(emoji, (reactionCounts.get(emoji) || 0) + 1);
-          
+
           // Convert map to Reaction array and update signal
           const reactionsArray: Reaction[] = Array.from(reactionCounts.entries()).map(([emoji, count]) => ({
             emoji,
             count
           }));
-          
-          this.reactions.set(reactionsArray);
-        }
-        else if (event.kind === kinds.Repost) {
-          // Handle reposts if needed, currently we just log them
-          console.log('Repost event:', event);
 
+          this.reactions.set(reactionsArray);
+        } else if (event.kind === kinds.Repost) {
           this.reposts.update(currentReposts => [...currentReposts, { pubkey: event.pubkey }]);
 
         }
-
-
-
       },
       onclose(reasons) {
         console.log('CLOSED!!!', reasons);
       }
-    })
+    });
   }
+
+  // async loadReactions(eventId: string, pubkey: string) {
+  //   if (this.userRelays.length === 0) {
+  //     // We need to discover the event from user's relays.
+  //     const userRelays = await this.data.getUserRelays(pubkey);
+  //     this.userRelays = userRelays;
+  //   }
+
+  //   if (!this.userRelays || this.userRelays.length === 0) {
+  //     this.error.set('No user relays found for the author.');
+  //     return;
+  //   }
+
+  //   // Track reactions by emoji
+  //   const reactionCounts = new Map<string, number>();
+
+  //   this.pool?.subscribeEose(this.userRelays, {
+  //     kinds: [kinds.Reaction, kinds.Repost],
+  //     ['#e']: [eventId],
+  //   }, {
+  //     onevent: (event) => {
+  //       console.log('Received event:', event);
+
+  //       if (event.kind === kinds.Reaction && event.content) {
+  //         // Count each unique reaction emoji
+  //         const emoji = event.content;
+  //         reactionCounts.set(emoji, (reactionCounts.get(emoji) || 0) + 1);
+
+  //         // Convert map to Reaction array and update signal
+  //         const reactionsArray: Reaction[] = Array.from(reactionCounts.entries()).map(([emoji, count]) => ({
+  //           emoji,
+  //           count
+  //         }));
+
+  //         this.reactions.set(reactionsArray);
+  //       }
+  //       else if (event.kind === kinds.Repost) {
+  //         // Handle reposts if needed, currently we just log them
+  //         console.log('Repost event:', event);
+
+  //         this.reposts.update(currentReposts => [...currentReposts, { pubkey: event.pubkey }]);
+
+  //       }
+
+
+
+  //     },
+  //     onclose(reasons) {
+  //       console.log('CLOSED!!!', reasons);
+  //     }
+  //   })
+  // }
 
   async loadEvent(nevent: string) {
     if (this.utilities.isHex(nevent)) {
@@ -149,7 +200,7 @@ export class EventPageComponent {
       // Scroll to top when article is received from navigation state
       setTimeout(() => this.layout.scrollMainContentToTop(), 50);
 
-      await this.loadReactions(receivedData.id, receivedData.pubkey);
+      await this.loadReplies(receivedData.id, receivedData.pubkey);
     } else {
 
       try {
@@ -166,7 +217,7 @@ export class EventPageComponent {
           this.url.updatePathSilently(['/e', encoded]);
 
           this.isLoading.set(false);
-          await this.loadReactions(event.event.id, event.event.pubkey);
+          await this.loadReplies(event.event.id, event.event.pubkey);
         } else {
 
           if (!decoded.data.author) {
@@ -198,7 +249,7 @@ export class EventPageComponent {
           // We found the event, now we'll discover reactions and replies.
           this.logger.debug('Loaded article event from user relays:', event);
 
-          await this.loadReactions(event.id, decoded.data.author);
+          await this.loadReplies(event.id, decoded.data.author);
         }
       } catch (error) {
         this.logger.error('Error loading article:', error);
