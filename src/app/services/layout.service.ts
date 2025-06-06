@@ -44,13 +44,22 @@ export class LayoutService {
         this.breakpointObserver.observe('(min-width: 1200px)').subscribe(result => {
             this.isWideScreen.set(result.matches);
         });
-    }
-
-    toggleSearch() {
+    }    toggleSearch() {
         const newSearchState = !this.search();
         this.search.set(newSearchState);        if (newSearchState) {
             // Add ESC key listener when search is opened
             this.setupEscKeyListener();
+            
+            // Focus on search input after DOM update
+            setTimeout(() => {
+                const searchInput = document.querySelector('.search-input') as HTMLInputElement;
+                if (searchInput) {
+                    searchInput.focus();
+                    this.logger.debug('Search input focused');
+                } else {
+                    this.logger.error('Search input element not found for focusing');
+                }
+            }, 100);
         } else {
             // Remove ESC key listener when search is closed
             this.removeEscKeyListener();
