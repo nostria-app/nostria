@@ -9,6 +9,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { ImageDialogComponent } from '../image-dialog/image-dialog.component';
 import { SettingsService } from '../../services/settings.service';
 import { UtilitiesService } from '../../services/utilities.service';
+import { Router } from '@angular/router';
 
 interface ContentToken {
   id: number;
@@ -38,6 +39,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
   private dialog = inject(MatDialog);
   settings = inject(SettingsService);
   private utilities = inject(UtilitiesService);
+  private router = inject(Router);
   
   @ViewChild('contentContainer') contentContainer!: ElementRef;
   
@@ -416,18 +418,18 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
       case 'nprofile':
         // Navigate to profile page
         const pubkey = type === 'npub' ? data : data.pubkey;
-        window.location.href = `/p/${this.utilities.getNpubFromPubkey(pubkey)}`;
+        this.router.navigate(['/p', this.utilities.getNpubFromPubkey(pubkey)]);
         break;
       case 'note':
       case 'nevent':
         // Navigate to event page  
         const eventId = type === 'note' ? data : data.id;
-        window.location.href = `/e/${eventId}`;
+        this.router.navigate(['/e', eventId]);
         break;
       case 'naddr':
         // Navigate to address-based event
         const encoded = this.utilities.extractNostrUriIdentifier(token.content);
-        window.location.href = `/a/${encoded}`;
+        this.router.navigate(['/a', encoded]);
         break;
       default:
         console.warn('Unsupported nostr URI type:', type);

@@ -35,5 +35,17 @@
         @for(childReply of threadedEvent.replies; track childReply.event.id) {
             <ng-container [ngTemplateOutlet]="replyTemplate" [ngTemplateOutletContext]="{ threadedEvent: childReply }"></ng-container>
         }
+        
+        @if (threadedEvent.hasMoreReplies && threadedEvent.deepestReplyId) {
+            <div class="view-more-replies" [style.margin-left.px]="(threadedEvent.level + 1) * 24">
+                <button 
+                    mat-stroked-button 
+                    class="view-more-button"
+                    (click)="onViewMoreReplies(threadedEvent.deepestReplyId!)">
+                    <mat-icon>expand_more</mat-icon>
+                    View more replies
+                </button>
+            </div>
+        }
     </div>
 </ng-template>
