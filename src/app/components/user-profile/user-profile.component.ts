@@ -364,7 +364,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
 
     aliasOrNpub = computed(() => {
         const profile = this.profile();
-        debugger;
+        
         if (!profile || !profile.data || !profile.data.nip05) {
             return this.npub();
         }

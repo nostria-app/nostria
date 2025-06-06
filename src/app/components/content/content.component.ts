@@ -128,15 +128,17 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
   private parseContent(content: string): ContentToken[] {
     if (!content) return [];
     
-    // Regex for different types of content
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    const youtubeRegex = /(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/g;
-    const imageRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp)(\?[^\s]*)?)/gi;
-    const audioRegex = /(https?:\/\/[^\s]+\.(mp3|wav|ogg)(\?[^\s]*)?)/gi;
-    const videoRegex = /(https?:\/\/[^\s]+\.(mp4|webm|mov|avi|wmv|flv|mkv)(\?[^\s]*)?)/gi;
-    
     // Replace line breaks with placeholders
     let processedContent = content.replace(/\n/g, '##LINEBREAK##');
+    
+    // Regex for different types of content - updated to avoid capturing trailing LINEBREAK placeholders
+    const urlRegex = /(https?:\/\/[^\s##]+)(?=\s|##LINEBREAK##|$)/g;
+    const youtubeRegex = /(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})(?=\s|##LINEBREAK##|$)/g;
+    const imageRegex = /(https?:\/\/[^\s##]+\.(jpg|jpeg|png|gif|webp)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
+    const audioRegex = /(https?:\/\/[^\s##]+\.(mp3|wav|ogg)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
+    const videoRegex = /(https?:\/\/[^\s##]+\.(mp4|webm|mov|avi|wmv|flv|mkv)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
+    
+    // Remove debugger statement
     
     // Split content and generate tokens
     let tokens: ContentToken[] = [];
@@ -146,6 +148,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     // Find all matches and their positions
     const matches: {start: number, end: number, content: string, type: ContentToken['type']}[] = [];
     
+    // Find matches using updated regex patterns
     // Find YouTube URLs
     let match: any;
     while ((match = youtubeRegex.exec(processedContent)) !== null) {
@@ -240,13 +243,14 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
   private processTextSegment(segment: string, tokens: ContentToken[], startId: number): void {
     // Process line breaks in text segments
     const parts = segment.split('##LINEBREAK##');
-    
+
     for (let i = 0; i < parts.length; i++) {
-      if (parts[i]) {
+      // Only add text token if there's actual content (not empty string)
+      if (parts[i].trim()) {
         tokens.push({
           id: startId++,
           type: 'text',
-          content: parts[i]
+          content: parts[i].trim()
         });
       }
       
