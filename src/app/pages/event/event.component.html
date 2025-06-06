@@ -22,6 +22,11 @@
 </div>
 }
 
+
+@for(event of replies(); track event.id) {
+    <app-event [id]="event.id"></app-event>
+}
+
 <!-- @let item = event();
 
 @if (item) {
