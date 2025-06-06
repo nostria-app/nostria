@@ -5,6 +5,8 @@
         <span>{{token.content}}</span>
       } @else if (token.type === 'linebreak') {
         <br>
+      } @else if (token.type === 'emoji') {
+        <span class="emoji-token" [title]="token.content">{{token.emoji}}</span>
       } @else if (token.type === 'nostr-mention') {
         <span class="nostr-mention" (click)="onNostrMentionClick(token)">
           &#64;{{token.nostrData?.displayName}}
