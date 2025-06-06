@@ -328,10 +328,7 @@ export class ProfileComponent {
     const metadata = this.userMetadata();
     if (!metadata || !metadata.data.nip05) return null;
 
-    // Format NIP-05 identifier for display
-    return metadata.data.nip05.startsWith('_@')
-      ? metadata.data.nip05.substring(1)
-      : metadata.data.nip05;
+    return this.utilities.parseNip05(metadata.data.nip05);
   }
 
   getTruncatedPubkey(): string {
