@@ -442,13 +442,30 @@ mat-nav-list .mat-icon {
   object-fit: cover;
 }
 
-.search-input {
-  // background-color: var(--mat-app-background-color);
-  // color: var(--mat-app-text-color);
-  // border: 1px solid var(--mat-app-text-color);
-  border-radius: 20px;
-  padding: 0.8em 1.2em;
+.search-container {
+  position: relative;
   width: 100%;
+  max-width: 400px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 20px;
+  background: var(--mat-sys-surface-container);
+  color: var(--mat-sys-on-surface);
+  font-size: 14px;
+
+  &:focus {
+    outline: none;
+    border-color: var(--mat-sys-primary);
+    box-shadow: 0 0 0 2px rgba(var(--mat-sys-primary-rgb), 0.1);
+  }
+
+  &::placeholder {
+    color: var(--mat-sys-on-surface-variant);
+  }
 }
 
 /* Floating offline indicator styles */
@@ -528,4 +545,34 @@ mat-nav-list .mat-icon {
   left: 0.4rem;
   z-index: 11;
   box-shadow: var(--mat-sys-level4);
+}
+
+// Profile cache button styles
+.profile-cache-button {
+  position: relative;
+  
+  .spinning-icon {
+    animation: spin 2s linear infinite;
+  }
+  
+  .progress-badge {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    background: var(--mat-sys-primary);
+    color: var(--mat-sys-on-primary);
+    font-size: 10px;
+    font-weight: 500;
+    padding: 1px 4px;
+    border-radius: 8px;
+    min-width: 16px;
+    text-align: center;
+    line-height: 1.2;
+    box-shadow: var(--mat-sys-level2);
+  }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }

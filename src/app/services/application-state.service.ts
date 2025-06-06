@@ -16,9 +16,7 @@ export class ApplicationStateService {
     private document = inject(DOCUMENT);
     private platformId = inject(PLATFORM_ID);
 
-    pubkey = signal<string | null>(null);
-
-    readonly DISCOVERY_RELAYS_STORAGE_KEY = 'nostria-discovery-relays';
+    pubkey = signal<string | null>(null);    readonly DISCOVERY_RELAYS_STORAGE_KEY = 'nostria-discovery-relays';
     readonly ACCOUNT_STORAGE_KEY = 'nostria-account';
     readonly FEATURE_LEVEL = 'nostria-feature-level';
     readonly ACCOUNTS_STORAGE_KEY = 'nostria-accounts';
@@ -27,6 +25,8 @@ export class ApplicationStateService {
     readonly WELCOME = 'nostria-welcome';
     readonly FEEDS_STORAGE_KEY = 'nostria-feeds';
     readonly RELAYS_STORAGE_KEY = 'nostria-relays';
+    readonly PROCESSING_STORAGE_KEY = 'nostria-processing';
+    readonly SETTINGS_KEY = 'nostria-settings';
 
     showOfflineWarning = computed(() => !this.isOnline() && !this.offlineDismissed());
     // showOfflineWarning = signal(true);

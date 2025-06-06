@@ -36,6 +36,8 @@ import { SearchService } from './services/search.service';
 import { MediaPlayerComponent } from './components/media-player/media-player.component';
 import { MediaPlayerService } from './services/media-player.service';
 import { LocalSettingsService } from './services/local-settings.service';
+import { AccountStateService } from './services/account-state.service';
+import { SearchResultsComponent } from './components/search-results/search-results.component';
 
 interface NavItem {
   path: string;
@@ -65,11 +67,11 @@ interface NavItem {
     LoadingOverlayComponent,
     FormsModule,
     MatFormFieldModule,
-    NPubPipe,
-    MatBadgeModule,    MatBottomSheetModule,
+    NPubPipe,    MatBadgeModule,    MatBottomSheetModule,
     WelcomeComponent,
     DebugOverlayComponent,
-    MediaPlayerComponent
+    MediaPlayerComponent,
+    SearchResultsComponent
   ], templateUrl: './app.html',
   styleUrl: './app.scss'
 })
@@ -85,11 +87,11 @@ export class App {
   router = inject(Router);
   notificationService = inject(NotificationService);
   notificationType = NotificationType;
-  bottomSheet = inject(MatBottomSheet);
-  logger = inject(LoggerService);
+  bottomSheet = inject(MatBottomSheet);  logger = inject(LoggerService);
   search = inject(SearchService);
   media = inject(MediaPlayerService);
   localSettings = inject(LocalSettingsService);
+  accountState = inject(AccountStateService);
   private readonly platform = inject(PLATFORM_ID);
   private readonly document = inject(DOCUMENT);
   
