@@ -27,8 +27,15 @@ export interface Reposts {
   pubkey: string;
 }
 
+export interface ThreadedEvent {
+  event: Event;
+  replies: ThreadedEvent[];
+  level: number;
+}
+
 @Component({
   selector: 'app-event-page',
+  standalone: true,
   imports: [CommonModule, EventComponent, MatIconModule],
   templateUrl: './event.component.html',
   styleUrl: './event.component.scss'
@@ -49,6 +56,7 @@ export class EventPageComponent {
   userRelays: string[] = [];
 
   replies = signal<Event[]>([]);
+  threadedReplies = signal<ThreadedEvent[]>([]);
 
   constructor() {
     // Effect to load article when route parameter changes
@@ -71,6 +79,64 @@ export class EventPageComponent {
   reactions = signal<Reaction[]>([]);
   reposts = signal<Reposts[]>([]);
 
+  private getEventTags(event: Event): { rootId: string | null; replyId: string | null; pTags: string[] } {
+    const eTags = event.tags.filter(tag => tag[0] === 'e');
+    const pTags = event.tags.filter(tag => tag[0] === 'p').map(tag => tag[1]);
+    
+    let rootId: string | null = null;
+    let replyId: string | null = null;
+    
+    // Find root tag
+    const rootTag = eTags.find(tag => tag[3] === 'root');
+    if (rootTag) {
+      rootId = rootTag[1];
+    }
+    
+    // Find reply tag
+    const replyTag = eTags.find(tag => tag[3] === 'reply');
+    if (replyTag) {
+      replyId = replyTag[1];
+    } else if (eTags.length > 0 && !rootTag) {
+      // If no explicit reply tag but has e tags, assume replying to the last e tag
+      replyId = eTags[eTags.length - 1][1];
+    }
+    
+    return { rootId, replyId, pTags };
+  }
+
+  private buildThreadTree(events: Event[], rootEventId: string): ThreadedEvent[] {
+    const eventMap = new Map<string, Event>();
+    const childrenMap = new Map<string, Event[]>();
+    
+    // Build maps
+    events.forEach(event => {
+      eventMap.set(event.id, event);
+      
+      const { replyId } = this.getEventTags(event);
+      const parentId = replyId || rootEventId;
+      
+      if (!childrenMap.has(parentId)) {
+        childrenMap.set(parentId, []);
+      }
+      childrenMap.get(parentId)!.push(event);
+    });
+    
+    // Build tree recursively
+    const buildNode = (eventId: string, level: number = 0): ThreadedEvent[] => {
+      const children = childrenMap.get(eventId) || [];
+      
+      return children
+        .sort((a, b) => a.created_at - b.created_at) // Sort by creation time
+        .map(child => ({
+          event: child,
+          replies: buildNode(child.id, level + 1),
+          level
+        }));
+    };
+    
+    return buildNode(rootEventId);
+  }
+
   async loadReplies(eventId: string, pubkey: string) {
     if (this.userRelays.length === 0) {
       // We need to discover the event from user's relays.
@@ -85,6 +151,7 @@ export class EventPageComponent {
 
     // Track reactions by emoji
     const reactionCounts = new Map<string, number>();
+    const allReplies: Event[] = [];
 
     this.pool?.subscribeEose(this.userRelays, {
       kinds: [kinds.ShortTextNote, kinds.Reaction, kinds.Repost],
@@ -92,31 +159,35 @@ export class EventPageComponent {
     }, {
       onevent: (event) => {
         console.log('Received event:', event);
+        
         if (event.kind === kinds.ShortTextNote && event.content) {
           // Handle text replies
           console.log('Text reply:', event);
-
-          // Ensure that we don't have duplicate replies
-          const existingReply = this.replies().find(reply => reply.id === event.id);
+          
+          const existingReply = allReplies.find(reply => reply.id === event.id);
           if (!existingReply) {
-            this.replies.update(currentReplies => [...currentReplies, event]);
+            allReplies.push(event);
+            this.replies.set([...allReplies]);
+            
+            // Build threaded structure
+            const threaded = this.buildThreadTree(allReplies, eventId);
+            this.threadedReplies.set(threaded);
           }
-
+          
         } else if (event.kind === kinds.Reaction && event.content) {
           // Count each unique reaction emoji
           const emoji = event.content;
           reactionCounts.set(emoji, (reactionCounts.get(emoji) || 0) + 1);
-
+          
           // Convert map to Reaction array and update signal
           const reactionsArray: Reaction[] = Array.from(reactionCounts.entries()).map(([emoji, count]) => ({
             emoji,
             count
           }));
-
+          
           this.reactions.set(reactionsArray);
         } else if (event.kind === kinds.Repost) {
           this.reposts.update(currentReposts => [...currentReposts, { pubkey: event.pubkey }]);
-
         }
       },
       onclose(reasons) {
@@ -124,58 +195,6 @@ export class EventPageComponent {
       }
     });
   }
-
-  // async loadReactions(eventId: string, pubkey: string) {
-  //   if (this.userRelays.length === 0) {
-  //     // We need to discover the event from user's relays.
-  //     const userRelays = await this.data.getUserRelays(pubkey);
-  //     this.userRelays = userRelays;
-  //   }
-
-  //   if (!this.userRelays || this.userRelays.length === 0) {
-  //     this.error.set('No user relays found for the author.');
-  //     return;
-  //   }
-
-  //   // Track reactions by emoji
-  //   const reactionCounts = new Map<string, number>();
-
-  //   this.pool?.subscribeEose(this.userRelays, {
-  //     kinds: [kinds.Reaction, kinds.Repost],
-  //     ['#e']: [eventId],
-  //   }, {
-  //     onevent: (event) => {
-  //       console.log('Received event:', event);
-
-  //       if (event.kind === kinds.Reaction && event.content) {
-  //         // Count each unique reaction emoji
-  //         const emoji = event.content;
-  //         reactionCounts.set(emoji, (reactionCounts.get(emoji) || 0) + 1);
-
-  //         // Convert map to Reaction array and update signal
-  //         const reactionsArray: Reaction[] = Array.from(reactionCounts.entries()).map(([emoji, count]) => ({
-  //           emoji,
-  //           count
-  //         }));
-
-  //         this.reactions.set(reactionsArray);
-  //       }
-  //       else if (event.kind === kinds.Repost) {
-  //         // Handle reposts if needed, currently we just log them
-  //         console.log('Repost event:', event);
-
-  //         this.reposts.update(currentReposts => [...currentReposts, { pubkey: event.pubkey }]);
-
-  //       }
-
-
-
-  //     },
-  //     onclose(reasons) {
-  //       console.log('CLOSED!!!', reasons);
-  //     }
-  //   })
-  // }
 
   async loadEvent(nevent: string) {
     if (this.utilities.isHex(nevent)) {

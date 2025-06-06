@@ -14,3 +14,24 @@
 .reaction {
 
 }
+
+.replies-section {
+    margin-top: 2rem;
+}
+
+.threaded-reply {
+    border-left: 2px solid var(--mat-sys-outline-variant);
+    padding-left: 12px;
+    margin-bottom: 1rem;
+    
+    &:last-child {
+        margin-bottom: 0;
+    }
+}
+
+.nested-reply {
+    border-left: 1px solid var(--mat-sys-outline-variant);
+    padding-left: 8px;
+    margin-top: 0.5rem;
+    opacity: 0.9;
+}

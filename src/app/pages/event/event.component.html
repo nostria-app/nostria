@@ -16,21 +16,24 @@
     {{ reposts().length }}
 }
 
+@if (error() ) { 
+    <div class="warn">
+        {{ error() }}
+    </div>
+}
 
-@if (error() ) { <div class="warn">
-{{ error() }}
+<div class="replies-section">
+    @for(threadedEvent of threadedReplies(); track threadedEvent.event.id) {
+        <ng-container [ngTemplateOutlet]="replyTemplate" [ngTemplateOutletContext]="{ threadedEvent: threadedEvent }"></ng-container>
+    }
 </div>
-}
 
-
-@for(event of replies(); track event.id) {
-    <app-event [id]="event.id"></app-event>
-}
-
-<!-- @let item = event();
-
-@if (item) {
-
-    {{ item.content}}
-
-} -->
+<ng-template #replyTemplate let-threadedEvent="threadedEvent">
+    <div class="threaded-reply" [style.margin-left.px]="threadedEvent.level * 24">
+        <app-event [event]="threadedEvent.event"></app-event>
+        
+        @for(childReply of threadedEvent.replies; track childReply.event.id) {
+            <ng-container [ngTemplateOutlet]="replyTemplate" [ngTemplateOutletContext]="{ threadedEvent: childReply }"></ng-container>
+        }
+    </div>
+</ng-template>
