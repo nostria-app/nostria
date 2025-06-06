@@ -29,12 +29,12 @@ import { FeedsComponent } from './pages/feeds/feeds.component';
 import { ArticleComponent } from './pages/article/article.component';
 import { EditorComponent } from './pages/article/editor/editor.component';
 import { MediaQueueComponent } from './pages/media-queue/media-queue.component';
-import { EventComponent } from './pages/event/event.component';
+import { EventPageComponent } from './pages/event/event.component';
 
 export const routes: Routes = [
   { path: '', component: FeedsComponent, pathMatch: 'full' },
   { path: 'f/:path', component: FeedsComponent },
-  { path: 'e/:id', component: EventComponent },
+  { path: 'e/:id', component: EventPageComponent },
   { path: 'beta', component: BetaComponent, title: 'Beta' },
   { path: 'relays', component: RelaysComponent },
   {

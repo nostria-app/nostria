@@ -8,7 +8,7 @@
     <p>The profile you're looking for couldn't be loaded or doesn't exist.</p>
     <p>The user is likely not found on your Discovery Relays. You can add <a [routerLink]="['/settings']">additional ones</a> and try again.</p>
     <p class="profile-link-container">
-      <a class="wrap-link" [href]="'https://nostr.at/' + nostrService.getNpubFromPubkey(pubkey())" target="_blank" rel="noopener noreferrer">https://nostr.at/{{ nostrService.getNpubFromPubkey(pubkey()) }}</a>
+      <a class="wrap-link" [href]="'https://nostr.at/' + utilities.getNpubFromPubkey(pubkey())" target="_blank" rel="noopener noreferrer">https://nostr.at/{{ utilities.getNpubFromPubkey(pubkey()) }}</a>
     </p>
   </div>
   }

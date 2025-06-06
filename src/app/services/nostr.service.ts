@@ -1640,14 +1640,6 @@ export class NostrService {
     }
   }
 
-  getTruncatedNpub(pubkey: string): string {
-    console.debug('LOCATION 7:', pubkey);
-    const npub = this.getNpubFromPubkey(pubkey);
-    return npub.length > 12
-      ? `${npub.substring(0, 6)}...${npub.substring(npub.length - 6)}`
-      : npub;
-  }
-
   /** Parses the URLs and cleans up, ensuring only wss:// instances are returned. */
   getRelayUrlsFromFollowing(event: Event, timeouts: boolean = true): string[] {
     let relayUrls = this.utilities.getRelayUrlsFromFollowing(event);
@@ -1751,7 +1743,7 @@ export class NostrService {
 
     // Update lastUsed timestamp
     user.lastUsed = Date.now();
-    user.name ??= this.getTruncatedNpub(user.pubkey);
+    user.name ??= this.utilities.getTruncatedNpub(user.pubkey);
 
     const allUsers = this.accounts();
     const existingUserIndex = allUsers.findIndex(u => u.pubkey === user.pubkey);
@@ -1838,7 +1830,7 @@ export class NostrService {
       // Set the user with the public key from the extension
       const newUser: NostrUser = {
         pubkey,
-        name: this.getTruncatedNpub(pubkey),
+        name: this.utilities.getTruncatedNpub(pubkey),
         source: 'extension',
         lastUsed: Date.now(),
         hasActivated: true // Assume activation is done via extension
@@ -1967,49 +1959,6 @@ export class NostrService {
     this.logger.debug('Account removed successfully');
   }
 
-  getNsecFromPrivkey(privkey: string): string {
-    // Convert the hex private key to a Nostr secret key (nsec)
-    const bytes = hexToBytes(privkey);
-    const nsec = nip19.nsecEncode(bytes);
-    return nsec;
-  }
-
-  getNpubFromPubkey(pubkey: string): string {
-    // Convert the hex public key to a Nostr public key (npub)
-    const npub = nip19.npubEncode(pubkey);
-    return npub;
-  }
-
-  getPubkeyFromNpub(npub: string): string {
-    // Convert the hex public key to a Nostr public key (npub)
-    const result = nip19.decode(npub).data;
-    return result as string;
-  }
-
-  isHex(value: string) {
-    const isEncoded = value.startsWith('nprofile') ||
-      value.startsWith('nevent') ||
-      value.startsWith('naddr') ||
-      value.startsWith('nsec') ||
-      value.startsWith('npub') ||
-      value.startsWith('note');
-
-    return !isEncoded;
-  }
-
-  getHex(value: string) {
-    if (this.isHex(value)) {
-      return value;
-    }
-
-    const decoded = this.decode(value) as any;
-    return decoded.data.id;
-  }
-
-  decode(value: string) {
-    return nip19.decode(value);
-  }
-
   /**
    * Save user metadata to storage
    */
@@ -2108,7 +2057,7 @@ export class NostrService {
   getIdFromNevent(nevent: string): string {
     try {
       if (nevent.startsWith('nevent')) {
-        const { type, data } = this.decode(nevent);
+        const { type, data } = this.utilities.decode(nevent);
         if (type === 'nevent') {
           // Nevent data contains: id, relays, author
           return data.id;

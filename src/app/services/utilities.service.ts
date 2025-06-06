@@ -1,7 +1,8 @@
 import { inject, Injectable } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
-import { Event } from 'nostr-tools';
+import { Event, nip19 } from 'nostr-tools';
 import { LoggerService } from './logger.service';
+import { hexToBytes } from 'nostr-tools/utils';
 
 @Injectable({
   providedIn: 'root'
@@ -216,6 +217,55 @@ export class UtilitiesService {
     }
   }
 
+  getTruncatedNpub(pubkey: string): string {
+    const npub = this.getNpubFromPubkey(pubkey);
+    return npub.length > 12
+      ? `${npub.substring(0, 6)}...${npub.substring(npub.length - 6)}`
+      : npub;
+  }
+
+  getNsecFromPrivkey(privkey: string): string {
+    // Convert the hex private key to a Nostr secret key (nsec)
+    const bytes = hexToBytes(privkey);
+    const nsec = nip19.nsecEncode(bytes);
+    return nsec;
+  }
+
+  getNpubFromPubkey(pubkey: string): string {
+    // Convert the hex public key to a Nostr public key (npub)
+    const npub = nip19.npubEncode(pubkey);
+    return npub;
+  }
+
+  getPubkeyFromNpub(npub: string): string {
+    // Convert the hex public key to a Nostr public key (npub)
+    const result = nip19.decode(npub).data;
+    return result as string;
+  }
+
+  isHex(value: string) {
+    const isEncoded = value.startsWith('nprofile') ||
+      value.startsWith('nevent') ||
+      value.startsWith('naddr') ||
+      value.startsWith('nsec') ||
+      value.startsWith('npub') ||
+      value.startsWith('note');
+
+    return !isEncoded;
+  }
+
+  getHex(value: string) {
+    if (this.isHex(value)) {
+      return value;
+    }
+
+    const decoded = this.decode(value) as any;
+    return decoded.data.id;
+  }
+
+  decode(value: string) {
+    return nip19.decode(value);
+  }
 
   /** Used to optimize the selection of a few relays from the user's relay list. */
   pickOptimalRelays(relayUrls: string[], count: number): string[] {

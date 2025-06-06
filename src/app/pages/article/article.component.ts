@@ -46,7 +46,6 @@ export class ArticleComponent {
   private data = inject(DataService);
   private layout = inject(LayoutService);
 
-
   event = signal<Event | undefined>(undefined);
   isLoading = signal(false);
   error = signal<string | null>(null);
@@ -80,7 +79,7 @@ export class ArticleComponent {
       this.error.set(null);
 
       // Decode the naddr1 parameter using nip19.decode()
-      const decoded = this.nostrService.decode(naddr);
+      const decoded = this.utilities.decode(naddr);
 
       if (decoded.type !== 'naddr') {
         throw new Error('Invalid article address format');

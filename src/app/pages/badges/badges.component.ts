@@ -18,6 +18,7 @@ import { BadgeService } from '../../services/badge.service';
 import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { UnsignedEvent } from 'nostr-tools/pure';
+import { UtilitiesService } from '../../services/utilities.service';
 
 // interface Badge {
 //   id: string;
@@ -60,6 +61,7 @@ export class BadgesComponent {
   private readonly storage = inject(StorageService);
   private readonly data = inject(DataService);
   private readonly badgeService = inject(BadgeService);
+  readonly utilities = inject(UtilitiesService);
 
   profileBadgesEvent = signal<any>(null);
   accepted = signal<{ aTag: string[], eTag: string[], id: string, pubkey: string, slug: string }[]>([]);
@@ -144,11 +146,11 @@ export class BadgesComponent {
         if (metadata) {
           issuers[pubkey] = metadata.data;
         } else {
-          issuers[pubkey] = { name: this.nostr.getTruncatedNpub(pubkey) };
+          issuers[pubkey] = { name: this.utilities.getTruncatedNpub(pubkey) };
         }
       } catch (err) {
         console.error(`Error fetching metadata for ${pubkey}:`, err);
-        issuers[pubkey] = { name: this.nostr.getTruncatedNpub(pubkey) };
+        issuers[pubkey] = { name: this.utilities.getTruncatedNpub(pubkey) };
       }
     }
 

@@ -11,6 +11,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { CommonModule, DatePipe } from '@angular/common';
+import { UtilitiesService } from '../../../services/utilities.service';
 
 interface ParsedBadge {
   id: string;
@@ -56,6 +57,7 @@ export class BadgeComponent {
   isAccepted = input<boolean>(false);
   isUpdating = input<boolean>(false);
   issuerName = input<string | null>(null);
+  utilities = inject(UtilitiesService);
   
   @Output() acceptClicked = new EventEmitter<void>();
   @Output() viewClicked = new EventEmitter<void>();
