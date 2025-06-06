@@ -34,8 +34,8 @@ import { WelcomeComponent } from './components/welcome/welcome.component';
 import { DebugOverlayComponent } from './components/debug-overlay/debug-overlay.component';
 import { SearchService } from './services/search.service';
 import { MediaPlayerComponent } from './components/media-player/media-player.component';
-import { VideoPlayerComponent } from './components/video-player/video-player.component';
 import { MediaPlayerService } from './services/media-player.service';
+import { LocalSettingsService } from './services/local-settings.service';
 
 interface NavItem {
   path: string;
@@ -66,12 +66,10 @@ interface NavItem {
     FormsModule,
     MatFormFieldModule,
     NPubPipe,
-    MatBadgeModule,
-    MatBottomSheetModule,
+    MatBadgeModule,    MatBottomSheetModule,
     WelcomeComponent,
     DebugOverlayComponent,
-    MediaPlayerComponent,
-    VideoPlayerComponent
+    MediaPlayerComponent
   ], templateUrl: './app.html',
   styleUrl: './app.scss'
 })
@@ -91,15 +89,17 @@ export class App {
   logger = inject(LoggerService);
   search = inject(SearchService);
   media = inject(MediaPlayerService);
-
+  localSettings = inject(LocalSettingsService);
   private readonly platform = inject(PLATFORM_ID);
   private readonly document = inject(DOCUMENT);
-
+  
+  @ViewChild('sidenav') sidenav!: MatSidenav;
   @ViewChild('profileSidenav') profileSidenav!: MatSidenav;
   @ViewChild('appsSidenav') appsSidenav!: MatSidenav;
 
-  opened = signal(true);
-  displayLabels = signal(true);
+  // Use local settings for sidenav state
+  opened = computed(() => this.localSettings.menuOpen());
+  displayLabels = computed(() => this.localSettings.menuExpanded());
 
   // We'll compute the current user metadata from the nostrService's metadata array
   accountMetadata = computed(() => {
@@ -170,15 +170,25 @@ export class App {
       console.warn("server");
       // Not smart to use document here, however, we can inject it ;-)
       // console.log(this.document);
-    }
-
+    }    // Single effect to handle responsive behavior and sidenav sync
     effect(() => {
       const isHandset = this.layout.isHandset();
-      // Close sidenav automatically on mobile screens only
+      
+      // On mobile screens, always close sidenav when switching to mobile
       if (isHandset) {
-        this.opened.set(false);
-      } else {
-        this.opened.set(true);
+        this.localSettings.setMenuOpen(false);
+      }
+      
+      // Sync sidenav state with local settings (only after view is initialized)
+      if (this.sidenav) {
+        const shouldBeOpen = this.localSettings.menuOpen();
+        if (shouldBeOpen !== this.sidenav.opened) {
+          if (shouldBeOpen) {
+            this.sidenav.open();
+          } else {
+            this.sidenav.close();
+          }
+        }
       }
     });
 
@@ -241,19 +251,33 @@ export class App {
     }
 
 
-    this.logger.debug('AppComponent constructor completed');
-
-    // Register a one-time callback after the first render
+    this.logger.debug('AppComponent constructor completed');    // Register a one-time callback after the first render
     afterNextRender(() => {
       this.logger.debug('AppComponent first render completed');
+      
+      // Initialize sidenav state after view is ready
+      this.initializeSidenavState();
     });
   }
-
   async ngOnInit() {
     this.logger.debug('AppComponent ngOnInit');
 
     // Initialize storage, then nostr initialized and then app state.
     await this.storage.init();
+  }
+
+  /**
+   * Initialize sidenav state after the view is ready
+   */
+  private initializeSidenavState(): void {
+    if (this.sidenav) {
+      const shouldBeOpen = this.localSettings.menuOpen();
+      if (shouldBeOpen) {
+        this.sidenav.open();
+      } else {
+        this.sidenav.close();
+      }
+    }
   }
 
 
@@ -276,10 +300,18 @@ export class App {
         }
       }
     });
-  }
-
-  toggleSidenav() {
-    this.opened.update(value => !value);
+  }  toggleSidenav() {
+    const newState = !this.localSettings.menuOpen();
+    this.localSettings.setMenuOpen(newState);
+    
+    // Immediately sync with the sidenav component
+    if (this.sidenav) {
+      if (newState) {
+        this.sidenav.open();
+      } else {
+        this.sidenav.close();
+      }
+    }
   }
 
   toggleProfileSidenav() {
@@ -293,9 +325,8 @@ export class App {
   toggleMediaPlayer() {
     this.layout.showMediaPlayer.set(!this.layout.showMediaPlayer());
   }
-
   toggleMenuSize() {
-    this.displayLabels.set(!this.displayLabels());
+    this.localSettings.toggleMenuExpanded();
   }
 
   async addAccount() {

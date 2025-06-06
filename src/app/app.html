@@ -175,8 +175,7 @@
 
   @if (app.initialized()) {
   <!-- Sidenav container now below the toolbar -->
-  <mat-sidenav-container class="sidenav-container" autosize="true">
-    <!-- Side navigation -->
+  <mat-sidenav-container class="sidenav-container" autosize="true">    <!-- Side navigation -->
     <mat-sidenav #sidenav class="sidenav no-print"
       [ngClass]="{ 'sidenav-labels': displayLabels(), 'sidenav-small': !displayLabels()  }" [opened]="opened()"
       [mode]="layout.isHandset() ? 'over' : 'side'" [fixedInViewport]="false">
