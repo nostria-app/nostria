@@ -813,8 +813,7 @@ export class NostrService {
 
   /**
    * Get metadata from cache or load it from storage
-   */
-  async getMetadataForUser(pubkey: string, disconnect = true): Promise<NostrRecord | undefined> {
+   */  async getMetadataForUser(pubkey: string, disconnect = true): Promise<NostrRecord | undefined> {
     console.log('There are X number in cache:', this.usersMetadata().size);
 
     // Check cache first
@@ -836,7 +835,16 @@ export class NostrService {
       this.updateMetadataCache(pubkey, records[0]);
       return records[0];
     } else {
-      // const metadata = await this.discoverMetadata(pubkey, disconnect);
+      // Check if profile discovery has been completed for the current account
+      const currentAccount = this.account();
+      if (currentAccount && this.accountState.hasProfileDiscoveryBeenDone(currentAccount.pubkey)) {
+        // Profile discovery has been done, but no metadata found in storage
+        // Don't attempt network discovery, return undefined
+        this.logger.debug('Profile discovery completed but no metadata in storage', { pubkey });
+        return undefined;
+      }
+
+      // Profile discovery not done yet, proceed with network discovery
       const metadata = await this.queueMetadataDiscovery(pubkey, disconnect);
 
       if (metadata) {

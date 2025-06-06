@@ -37,7 +37,7 @@
       {{title}}
       <a [routerLink]="['/beta']" class="beta-indicator">BETA</a>
     </span>
-    }    <span class="toolbar-spacer">      @if (layout.search()) {
+    } <span class="toolbar-spacer"> @if (layout.search()) {
       <div class="search-container">
         <input type="search" class="search-input" [(ngModel)]="layout.searchInput"
           (input)="layout.onSearchInput($event)" placeholder="Search profiles..." />
@@ -58,7 +58,7 @@
       } @else {
       <mat-icon>search</mat-icon>
       }
-    </button>    @if (pwaUpdateService.updateAvailable()) {
+    </button> @if (pwaUpdateService.updateAvailable()) {
     <button mat-icon-button class="update-button" (click)="pwaUpdateService.updateApplication()"
       matTooltip="Update ready!" aria-label="Update application">
       <mat-icon class="update-icon">system_update</mat-icon>
@@ -66,7 +66,7 @@
     }
 
     @if (app.authenticated() && accountState.profileProcessingState().isProcessing) {
-    <button mat-icon-button class="profile-cache-button" 
+    <button mat-icon-button class="profile-cache-button"
       [matTooltip]="'Caching profiles: ' + accountState.processingProgress() + '% (' + accountState.profileProcessingState().processed + '/' + accountState.profileProcessingState().total + ')'"
       aria-label="Profile caching progress">
       <mat-icon class="spinning-icon">cached</mat-icon>
@@ -182,7 +182,7 @@
 
   @if (app.initialized()) {
   <!-- Sidenav container now below the toolbar -->
-  <mat-sidenav-container class="sidenav-container" autosize="true">    <!-- Side navigation -->
+  <mat-sidenav-container class="sidenav-container" autosize="true"> <!-- Side navigation -->
     <mat-sidenav #sidenav class="sidenav no-print"
       [ngClass]="{ 'sidenav-labels': displayLabels(), 'sidenav-small': !displayLabels()  }" [opened]="opened()"
       [mode]="layout.isHandset() ? 'over' : 'side'" [fixedInViewport]="false">

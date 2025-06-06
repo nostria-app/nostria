@@ -1,6 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatListModule, MatSelectionList } from '@angular/material/list';
+import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { SearchService } from '../../services/search.service';
@@ -18,39 +18,36 @@ import { UtilitiesService } from '../../services/utilities.service';
     @if (searchService.searchResults().length > 0) {
     <div class="search-results">
       <div class="search-results-header">
-        <span>Cached Profiles ({{ searchService.searchResults().length }})</span>
+        <span>Found Profiles ({{ searchService.searchResults().length }})</span>
         <button mat-icon-button (click)="searchService.clearResults()">
           <mat-icon>close</mat-icon>
-        </button>
-      </div>      <mat-selection-list>
+        </button>      </div>
+      <div class="search-results-list">
         @for (profile of searchService.searchResults(); track profile.event.pubkey) {
-        <mat-list-option (click)="searchService.selectSearchResult(profile)">
-          <div class="search-result-item">
-            @if (profile.data.picture) {
-            <img [src]="profile.data.picture" alt="Profile picture" class="search-result-avatar">
-            } @else {
-            <mat-icon class="search-result-avatar-icon">account_circle</mat-icon>
-            }
-            <div class="search-result-info">
-              <div class="search-result-name">
-                {{ profile.data.display_name || profile.data.name || utilities.getNpubFromPubkey(profile.event.pubkey) }}
-              </div>
-              @if (profile.data.nip05) {
-              <div class="search-result-nip05">{{ utilities.parseNip05(profile.data.nip05) }}</div>
-              }
-              <!-- @if (profile.data.about) {
-              <div class="search-result-about">{{ (profile.data.about | slice:0:80) }}@if (profile.data.about.length > 80) {...}</div>
-              } -->
+        <div class="search-result-item" (click)="searchService.selectSearchResult(profile)">
+          @if (profile.data.picture) {
+          <img [src]="profile.data.picture" alt="Profile picture" class="search-result-avatar">
+          } @else {
+          <mat-icon class="search-result-avatar-icon">account_circle</mat-icon>
+          }
+          <div class="search-result-info">
+            <div class="search-result-name">
+              {{ profile.data.display_name || profile.data.name || utilities.getNpubFromPubkey(profile.event.pubkey) }}
             </div>
+            @if (profile.data.nip05) {
+            <div class="search-result-nip05">{{ utilities.parseNip05(profile.data.nip05) }}</div>
+            }
+            <!-- @if (profile.data.about) {
+            <div class="search-result-about">{{ (profile.data.about | slice:0:80) }}@if (profile.data.about.length > 80) {...}</div>
+            } -->
           </div>
-        </mat-list-option>
+        </div>
         }
-      </mat-selection-list>
+      </div>
     </div>
     }
   `,
-  styles: [`
-    .search-results {
+  styles: [`    .search-results {
       position: absolute;
       top: 100%;
       left: 0;
@@ -61,6 +58,7 @@ import { UtilitiesService } from '../../services/utilities.service';
       box-shadow: var(--mat-sys-level3);
       max-height: 400px;
       overflow-y: auto;
+      overflow-x: hidden;
       z-index: 1000;
     }
 
@@ -73,21 +71,37 @@ import { UtilitiesService } from '../../services/utilities.service';
       background: var(--mat-sys-surface-container-high);
       font-weight: 500;
       font-size: 14px;
-    }
-
+    }    
+    
+    .search-results-list {
+      padding: 0;
+    }    
+    
     .search-result-item {
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 8px 0;
+      padding: 0.4rem 1rem;
       width: 100%;
+      min-width: 0;
+      border-bottom: 1px solid var(--mat-sys-outline-variant);
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+      box-sizing: border-box;
     }
 
-    .search-result-avatar {
+    .search-result-item:last-child {
+      border-bottom: none;
+    }
+
+    .search-result-item:hover {
+      background: var(--mat-sys-surface-container-high);
+    }    .search-result-avatar {
       width: 40px;
       height: 40px;
       border-radius: 50%;
       object-fit: cover;
+      flex-shrink: 0;
     }
 
     .search-result-avatar-icon {
@@ -95,11 +109,11 @@ import { UtilitiesService } from '../../services/utilities.service';
       height: 40px;
       font-size: 40px;
       color: var(--mat-sys-on-surface-variant);
-    }
-
-    .search-result-info {
+      flex-shrink: 0;
+    }    .search-result-info {
       flex: 1;
       min-width: 0;
+      overflow: hidden;
     }
 
     .search-result-name {
@@ -109,6 +123,7 @@ import { UtilitiesService } from '../../services/utilities.service';
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      width: 100%;
     }
 
     .search-result-nip05 {
@@ -117,30 +132,13 @@ import { UtilitiesService } from '../../services/utilities.service';
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      width: 100%;
     }
 
     .search-result-about {
       font-size: 12px;
       color: var(--mat-sys-on-surface-variant);
-      line-height: 1.3;
-      margin-top: 2px;
-    }
-
-    mat-selection-list {
-      padding: 0;
-    }
-
-    mat-list-option {
-      padding: 8px 16px !important;
-      border-bottom: 1px solid var(--mat-sys-outline-variant);
-    }
-
-    mat-list-option:last-child {
-      border-bottom: none;
-    }
-
-    mat-list-option:hover {
-      background: var(--mat-sys-surface-container-high);
+      line-height: 1.3;      margin-top: 2px;
     }
   `]
 })
