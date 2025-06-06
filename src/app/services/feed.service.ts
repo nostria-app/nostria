@@ -22,6 +22,7 @@ export interface ColumnConfig {
   path?: string;
   type: 'notes' | 'articles' | 'photos' | 'videos' | 'custom';
   kinds: number[];
+  source?: 'following' | 'public';
   relayConfig: 'user' | 'discovery' | 'custom';
   customRelays?: string[];
   filters?: Record<string, any>;
