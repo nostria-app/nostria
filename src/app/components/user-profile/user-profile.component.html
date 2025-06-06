@@ -70,7 +70,7 @@
 
       <!-- NPUB section - only shown in appropriate views -->
       @if (view() === 'list' || view() === 'details') {
-      <div class="user-profile-npub">{{ npub() }}</div>
+          <div class="user-profile-npub">{{ aliasOrNpub() }}</div>
       }
 
       <!-- About section - only shown in details view -->

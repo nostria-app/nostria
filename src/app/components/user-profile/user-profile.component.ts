@@ -1,4 +1,4 @@
-import { Component, effect, inject, input, output, signal, untracked, ElementRef, OnDestroy, AfterViewInit } from '@angular/core';
+import { Component, effect, inject, input, output, signal, untracked, ElementRef, OnDestroy, AfterViewInit, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, RouterModule } from '@angular/router';
@@ -361,6 +361,17 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
 
         return tooltip;
     }
+
+    aliasOrNpub = computed(() => {
+        const profile = this.profile();
+        debugger;
+        if (!profile || !profile.data || !profile.data.nip05) {
+            return this.npub();
+        }
+
+        // Ensure nip05 is a string
+        return profile.data.nip05;
+    });
 
     /**
      * Gets the tooltip content for the profile avatar

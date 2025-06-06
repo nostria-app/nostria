@@ -5,10 +5,13 @@ import { NostrRecord } from '../../interfaces';
 import { UserProfileComponent } from "../user-profile/user-profile.component";
 import { LayoutService } from '../../services/layout.service';
 import { ContentComponent } from '../content/content.component';
+import { AgoPipe } from '../../pipes/ago.pipe';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { DatePipe } from '@angular/common';
 
 @Component({
   selector: 'app-event',
-  imports: [UserProfileComponent, ContentComponent],
+  imports: [UserProfileComponent, ContentComponent, AgoPipe, MatTooltipModule, DatePipe],
   templateUrl: './event.component.html',
   styleUrl: './event.component.scss'
 })
