@@ -8,11 +8,13 @@ import { SocialPreviewComponent } from '../social-preview/social-preview.compone
 import { MatDialog } from '@angular/material/dialog';
 import { ImageDialogComponent } from '../image-dialog/image-dialog.component';
 import { SettingsService } from '../../services/settings.service';
+import { UtilitiesService } from '../../services/utilities.service';
 
 interface ContentToken {
   id: number;
-  type: 'text' | 'url' | 'youtube' | 'image' | 'audio' | 'video' | 'linebreak';
+  type: 'text' | 'url' | 'youtube' | 'image' | 'audio' | 'video' | 'linebreak' | 'nostr-mention';
   content: string;
+  nostrData?: { type: string; data: any; displayName: string };
 }
 
 interface SocialPreview {
@@ -35,6 +37,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
   private sanitizer = inject(DomSanitizer);
   private dialog = inject(MatDialog);
   settings = inject(SettingsService);
+  private utilities = inject(UtilitiesService);
   
   @ViewChild('contentContainer') contentContainer!: ElementRef;
   
@@ -137,8 +140,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     const imageRegex = /(https?:\/\/[^\s##]+\.(jpg|jpeg|png|gif|webp)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
     const audioRegex = /(https?:\/\/[^\s##]+\.(mp3|wav|ogg)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
     const videoRegex = /(https?:\/\/[^\s##]+\.(mp4|webm|mov|avi|wmv|flv|mkv)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
-    
-    // Remove debugger statement
+    const nostrRegex = /(nostr:[a-zA-Z0-9]+1[a-zA-Z0-9]+)(?=\s|##LINEBREAK##|$)/g;
     
     // Split content and generate tokens
     let tokens: ContentToken[] = [];
@@ -146,11 +148,24 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     let lastIndex = 0;
     
     // Find all matches and their positions
-    const matches: {start: number, end: number, content: string, type: ContentToken['type']}[] = [];
+    const matches: {start: number, end: number, content: string, type: ContentToken['type'], nostrData?: any}[] = [];
     
-    // Find matches using updated regex patterns
-    // Find YouTube URLs
+    // Find Nostr URIs first (highest priority)
     let match: any;
+    while ((match = nostrRegex.exec(processedContent)) !== null) {
+      const nostrData = this.utilities.parseNostrUri(match[0]);
+      if (nostrData) {
+        matches.push({
+          start: match.index,
+          end: match.index + match[0].length,
+          content: match[0],
+          type: 'nostr-mention',
+          nostrData
+        });
+      }
+    }
+    
+    // Find YouTube URLs
     while ((match = youtubeRegex.exec(processedContent)) !== null) {
       matches.push({
         start: match.index,
@@ -222,11 +237,17 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
       }
       
       // Add the match as a token
-      tokens.push({
+      const token: ContentToken = {
         id: tokenId++,
         type: match.type,
         content: match.content
-      });
+      };
+      
+      if (match.nostrData) {
+        token.nostrData = match.nostrData;
+      }
+      
+      tokens.push(token);
       
       lastIndex = match.end;
     }
@@ -383,5 +404,33 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
       height: '100%',
       panelClass: 'image-dialog'
     });
+  }
+
+  onNostrMentionClick(token: ContentToken): void {
+    if (!token.nostrData) return;
+    
+    const { type, data } = token.nostrData;
+    
+    switch (type) {
+      case 'npub':
+      case 'nprofile':
+        // Navigate to profile page
+        const pubkey = type === 'npub' ? data : data.pubkey;
+        window.location.href = `/p/${this.utilities.getNpubFromPubkey(pubkey)}`;
+        break;
+      case 'note':
+      case 'nevent':
+        // Navigate to event page  
+        const eventId = type === 'note' ? data : data.id;
+        window.location.href = `/e/${eventId}`;
+        break;
+      case 'naddr':
+        // Navigate to address-based event
+        const encoded = this.utilities.extractNostrUriIdentifier(token.content);
+        window.location.href = `/a/${encoded}`;
+        break;
+      default:
+        console.warn('Unsupported nostr URI type:', type);
+    }
   }
 }

@@ -83,3 +83,17 @@
 .social-preview {
     margin-top: 1rem;
 }
+
+.nostr-mention {
+    color: var(--mat-sys-primary);
+    cursor: pointer;
+    text-decoration: none;
+
+    &:hover {
+        text-decoration: underline;
+    }
+
+    &:active {
+        color: var(--mat-sys-primary-container);
+    }
+}
