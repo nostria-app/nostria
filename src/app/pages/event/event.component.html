@@ -2,6 +2,21 @@
 
 <app-event [id]="id()"></app-event>
 
+<div class="reactions">
+    @for(reaction of reactions(); track reaction.emoji) {
+    <div class="reaction">
+        <span class="emoji">{{ reaction.emoji }}</span>
+        <span class="count">{{ reaction.count }}</span>
+    </div>
+    }
+</div>
+
+
+@if (error() ) { <div class="warn">
+{{ error() }}
+</div>
+}
+
 <!-- @let item = event();
 
 @if (item) {
