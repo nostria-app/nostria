@@ -59,6 +59,7 @@ export class PrivacySettingsComponent {
     if (!muteList) return [];
     return this.nostrService.getTags(muteList, 'e');
   });
+  
   removeMutedItem(type: string, value: string): void {
     // This would need to be implemented to update the mute list
     console.log(`Remove ${type}: ${value}`);

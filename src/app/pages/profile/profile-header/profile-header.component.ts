@@ -12,6 +12,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { ProfileStateService } from '../../../services/profile-state.service';
 import { NostrRecord } from '../../../interfaces';
 import { isNip05, queryProfile } from 'nostr-tools/nip05';
+import { AccountStateService } from '../../../services/account-state.service';
 
 @Component({
     selector: 'app-profile-header',
@@ -36,6 +37,7 @@ export class ProfileHeaderComponent {
     logger = inject(LoggerService);
     compact = input<boolean>(false);
     profileState = inject(ProfileStateService);
+    accountState = inject(AccountStateService);
 
     // Add signal for verified identifier
     verifiedIdentifier = signal<{ value: string, valid: boolean, status: string }>({ value: '', valid: false, status: '' });
@@ -90,8 +92,7 @@ export class ProfileHeaderComponent {
     }
 
     muteUser(): void {
-        this.logger.debug('Mute requested for:', this.pubkey());
-        // TODO: Implement actual mute functionality
+        this.accountState.mutePubkey(this.pubkey()!);
     }
 
     blockUser(): void {
