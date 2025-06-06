@@ -217,8 +217,8 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     const imageRegex = /(https?:\/\/[^\s##]+\.(jpg|jpeg|png|gif|webp)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
     const audioRegex = /(https?:\/\/[^\s##]+\.(mp3|wav|ogg)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
     const videoRegex = /(https?:\/\/[^\s##]+\.(mp4|webm|mov|avi|wmv|flv|mkv)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
-    const nostrRegex = /(nostr:[a-zA-Z0-9]+1[a-zA-Z0-9]+)(?=\s|##LINEBREAK##|$)/g;
-    const emojiRegex = /(:[a-zA-Z_]+:)(?=\s|##LINEBREAK##|$)/g;
+    const nostrRegex = /(nostr:(?:npub|nprofile|note|nevent|naddr)1[a-zA-Z0-9]+)(?=\s|##LINEBREAK##|$|[^\w])/g;
+    const emojiRegex = /(:[a-zA-Z_]+:)/g;
     
     // Split content and generate tokens
     let tokens: ContentToken[] = [];
