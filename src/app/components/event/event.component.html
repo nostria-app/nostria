@@ -4,7 +4,7 @@
 <app-user-profile [pubkey]="item.event.pubkey"></app-user-profile>
 <div class="event-content" (click)="openEvent()">
     <!-- {{ item.event.pubkey}}<br> -->
-    {{ item.data }}
+      <app-content [content]="item.data"></app-content>
 </div>
 } @else {
 <div class="event-content">
