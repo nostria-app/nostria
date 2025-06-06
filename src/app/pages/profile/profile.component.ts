@@ -80,7 +80,7 @@ export class ProfileComponent {
   layoutService = inject(LayoutService);
   profileState = inject(ProfileStateService);
   accountState = inject(AccountStateService);
-  private readonly utilities = inject(UtilitiesService);
+  readonly utilities = inject(UtilitiesService);
 
   pubkey = signal<string>('');
   userMetadata = signal<NostrRecord | undefined>(undefined);
@@ -120,7 +120,7 @@ export class ProfileComponent {
           this.error.set(null);
 
           if (id.startsWith('npub')) {
-            id = this.nostrService.getPubkeyFromNpub(id);
+            id = this.utilities.getPubkeyFromNpub(id);
           }
 
           this.profileState.setCurrentProfilePubkey(id);
@@ -335,12 +335,12 @@ export class ProfileComponent {
   }
 
   getTruncatedPubkey(): string {
-    return this.nostrService.getTruncatedNpub(this.pubkey());
+    return this.utilities.getTruncatedNpub(this.pubkey());
   }
 
   getFormattedNpub(): string {
     console.debug('LOCATION 3:');
-    return this.nostrService.getNpubFromPubkey(this.pubkey());
+    return this.utilities.getNpubFromPubkey(this.pubkey());
   }
 
   getDefaultBanner(): string {

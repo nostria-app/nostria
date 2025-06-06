@@ -12,7 +12,7 @@ import { LayoutService } from '../../services/layout.service';
   styleUrl: './event.component.scss'
 })
 export class EventComponent {
-  id = input<string>();
+  id = input<string | null | undefined>();
   type = input<'e' | 'a' | 'r' | 't'>('e');
 
   data = inject(DataService);

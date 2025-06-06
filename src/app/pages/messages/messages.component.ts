@@ -31,6 +31,7 @@ import { kinds, SimplePool, getPublicKey, nip04, nip44, generateSecretKey, final
 import { v2 } from 'nostr-tools/nip44';
 import { hexToBytes } from '@noble/hashes/utils';
 import { ApplicationService } from '../../services/application.service';
+import { UtilitiesService } from '../../services/utilities.service';
 
 // Define interfaces for our DM data structures
 interface Chat {
@@ -100,6 +101,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
     private appState = inject(ApplicationStateService);
     private snackBar = inject(MatSnackBar);
     private readonly app = inject(ApplicationService);
+    readonly utilities = inject(UtilitiesService);
 
     // UI state signals
     isLoading = signal<boolean>(false);
@@ -1275,7 +1277,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
                             id: `message-${unwrappedMessage.id}`,
                             type: NotificationType.GENERAL,
                             title: 'New Message',
-                            message: `New message from ${this.nostr.getTruncatedNpub(senderPubkey)}`,
+                            message: `New message from ${this.utilities.getTruncatedNpub(senderPubkey)}`,
                             timestamp: Date.now(),
                             read: false
                         });

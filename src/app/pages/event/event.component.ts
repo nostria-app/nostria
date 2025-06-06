@@ -8,15 +8,24 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { EventPointer } from 'nostr-tools/nip19';
 import { UrlUpdateService } from '../../services/url-update.service';
+import { EventComponent } from '../../components/event/event.component';
+import { UtilitiesService } from '../../services/utilities.service';
+
+/** Description of the EventPageComponent
+ * 
+ * Events and threads for events are retrieved from the OP's relays.
+ * Nostr clients should ensure they post replies and reactions to the OP's relays.
+ */
 
 @Component({
-  selector: 'app-event',
-  imports: [CommonModule],
+  selector: 'app-event-page',
+  imports: [CommonModule, EventComponent],
   templateUrl: './event.component.html',
   styleUrl: './event.component.scss'
 })
-export class EventComponent {
+export class EventPageComponent {
   event = signal<Event | undefined>(undefined);
+  private readonly utilities = inject(UtilitiesService);
   isLoading = signal(false);
   error = signal<string | null>(null);
   layout = inject(LayoutService);
@@ -25,6 +34,7 @@ export class EventComponent {
   data = inject(DataService);
   url = inject(UrlUpdateService);
   private route = inject(ActivatedRoute);
+  id = signal<string | null>(null);
 
   constructor() {
     // Effect to load article when route parameter changes
@@ -39,7 +49,12 @@ export class EventComponent {
   }
 
   async loadEvent(nevent: string) {
-    let hex = this.nostrService.getHex(nevent);
+    const decoded = this.utilities.decode(nevent);
+
+    debugger;
+    let hex = this.utilities.getHex(nevent);
+
+    this.id.set(hex);
 
     // if (nevent.startsWith('nevent')) {
     //   // Convert hex to nevent and update the route parameter.
@@ -52,6 +67,11 @@ export class EventComponent {
     if (receivedData) {
       this.event.set(receivedData);
       this.isLoading.set(false);
+
+      // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.
+      const encoded = nip19.neventEncode({ author: receivedData.pubkey, id: receivedData.id });
+      this.url.updatePathSilently(['/e', encoded]);
+
       // Scroll to top when article is received from navigation state
       setTimeout(() => this.layout.scrollMainContentToTop(), 50);
       return;
@@ -65,6 +85,11 @@ export class EventComponent {
       if (event) {
         this.logger.debug('Loaded article event from storage or relays:', event);
         this.event.set(event.event);
+
+        // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.
+        const encoded = nip19.neventEncode({ author: event.event.pubkey, id: event.event.id });
+        this.url.updatePathSilently(['/e', encoded]);
+
         this.isLoading.set(false);
         return;
       }

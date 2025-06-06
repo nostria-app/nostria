@@ -14,6 +14,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatButtonModule } from '@angular/material/button';
 import { InfoRecord } from '../../services/storage.service';
 import { Event } from 'nostr-tools';
+import { UtilitiesService } from '../../services/utilities.service';
 
 @Component({
     selector: 'app-user-profile',
@@ -37,6 +38,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
     private nostrService = inject(NostrService);
     private logger = inject(LoggerService);
     private elementRef = inject(ElementRef);
+    readonly utilities = inject(UtilitiesService);
     layout = inject(LayoutService);
     publicKey = '';
     pubkey = input<string>('');
@@ -74,7 +76,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
             if (pubkey) {
                 this.publicKey = this.pubkey();
                 // console.debug('LOCATION 1:', pubkey);
-                const npub = this.nostrService.getNpubFromPubkey(pubkey);
+                const npub = this.utilities.getNpubFromPubkey(pubkey);
                 this.npub.set(npub);
 
                 // Only load profile data when the component is visible and not scrolling
@@ -97,7 +99,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
 
                 this.publicKey = event.pubkey;
 
-                const npub = this.nostrService.getNpubFromPubkey(event.pubkey);
+                const npub = this.utilities.getNpubFromPubkey(event.pubkey);
                 this.npub.set(npub);
             }
         });

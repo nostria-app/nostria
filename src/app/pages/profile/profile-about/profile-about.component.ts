@@ -7,6 +7,7 @@ import { ActivatedRoute } from '@angular/router';
 import { NostrService } from '../../../services/nostr.service';
 import { LoggerService } from '../../../services/logger.service';
 import { NostrRecord } from '../../../interfaces';
+import { UtilitiesService } from '../../../services/utilities.service';
 
 @Component({
   selector: 'app-profile-about',
@@ -24,6 +25,7 @@ export class ProfileAboutComponent {
   private route = inject(ActivatedRoute);
   private nostrService = inject(NostrService);
   private logger = inject(LoggerService);
+  utilities = inject(UtilitiesService);
 
   userMetadata = signal<NostrRecord | undefined>(undefined);
   
@@ -46,7 +48,7 @@ export class ProfileAboutComponent {
   getFormattedNpub(): string {
     const pubkey = this.getPubkey();
     console.debug('LOCATION 3:', pubkey);
-    return pubkey ? this.nostrService.getNpubFromPubkey(pubkey) : '';
+    return pubkey ? this.utilities.getNpubFromPubkey(pubkey) : '';
   }
   
   // Load user metadata

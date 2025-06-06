@@ -9,6 +9,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { NostrService } from '../../services/nostr.service';
+import { UtilitiesService } from '../../services/utilities.service';
 
 @Component({
   selector: 'app-credentials',
@@ -29,6 +30,7 @@ import { NostrService } from '../../services/nostr.service';
 export class CredentialsComponent {
   nostrService = inject(NostrService);
   snackBar = inject(MatSnackBar);
+  utilities = inject(UtilitiesService);
   
   isNsecVisible = signal(false);
   
@@ -65,13 +67,13 @@ export class CredentialsComponent {
     if (!pubkey) return '';
 
     console.debug('LOCATION 2:', pubkey);
-    return this.nostrService.getNpubFromPubkey(pubkey);
+    return this.utilities.getNpubFromPubkey(pubkey);
   }
 
   getNsec(): string {
     const privkey = this.nostrService.account()?.privkey;
     if (!privkey) return '';
-    return this.nostrService.getNsecFromPrivkey(privkey);
+    return this.utilities.getNsecFromPrivkey(privkey);
   }
 
   isRemoteAccount(): boolean {

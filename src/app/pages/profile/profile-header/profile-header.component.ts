@@ -13,6 +13,7 @@ import { ProfileStateService } from '../../../services/profile-state.service';
 import { NostrRecord } from '../../../interfaces';
 import { isNip05, queryProfile } from 'nostr-tools/nip05';
 import { AccountStateService } from '../../../services/account-state.service';
+import { UtilitiesService } from '../../../services/utilities.service';
 
 @Component({
     selector: 'app-profile-header',
@@ -38,6 +39,7 @@ export class ProfileHeaderComponent {
     compact = input<boolean>(false);
     profileState = inject(ProfileStateService);
     accountState = inject(AccountStateService);
+    utilities = inject(UtilitiesService);
 
     // Add signal for verified identifier
     verifiedIdentifier = signal<{ value: string, valid: boolean, status: string }>({ value: '', valid: false, status: '' });
@@ -66,7 +68,7 @@ export class ProfileHeaderComponent {
         effect(() => {
             if (this.profile()) {
                 console.debug('LOCATION 4:');
-                this.npub.set(this.nostr.getNpubFromPubkey(this.profile()!.event.pubkey));
+                this.npub.set(this.utilities.getNpubFromPubkey(this.profile()!.event.pubkey));
             }
         });
 
