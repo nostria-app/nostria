@@ -18,6 +18,7 @@ import { SettingsService } from './settings.service';
 import { RegionService } from './region.service';
 import { NostrRecord } from '../interfaces';
 import { DataService } from './data.service';
+import { UtilitiesService } from './utilities.service';
 
 export interface NostrUser {
   pubkey: string;
@@ -51,6 +52,7 @@ export class NostrService {
   private readonly localStorage = inject(LocalStorageService);
   private readonly region = inject(RegionService);
   private readonly data = inject(DataService);
+  private readonly utilities = inject(UtilitiesService);
 
   initialized = signal(false);
   MAX_WAIT_TIME = 2000;
@@ -943,76 +945,6 @@ export class NostrService {
     return metadata;
   }
 
-  /** This is an optimization we had to do to ensure that we have more success finding
-   * the profile of users. Many users have a lot of relays, many which are long dead and gone.
-   * Some have malformed URLs, private relays (required auth), etc.
-   */
-  preferredRelays: string[] = [
-    'wss://relay.damus.io/',
-    'wss://nos.lol/',
-    'wss://relay.primal.net/',
-    'wss://nostr.wine/',
-    'wss://eden.nostr.land/',
-    'wss://relay.snort.social/',
-    'wss://relay.nostr.band/',
-    'wss://nostr.oxtr.dev/',
-    'wss://nostr.mom/',
-  ];
-
-  /** Used to optimize the selection of a few relays from the user's relay list. */
-  pickOptimalRelays(relayUrls: string[], count: number): string[] {
-    // Filter out malformed URLs first
-    const validUrls = relayUrls.filter(url => {
-      // Must start with wss:// and have something after it
-      if (!url.startsWith('wss://') || url === 'wss://') {
-        return false;
-      }
-
-      // Attempt to parse the URL to ensure it's valid
-      try {
-        new URL(url);
-        return true;
-      } catch (e) {
-        return false;
-      }
-    });
-
-    const normalizedUrls = this.relayService.normalizeRelayUrls(validUrls);
-
-    // Helper function to check if a URL is IP-based or localhost
-    const isIpOrLocalhost = (url: string): boolean => {
-      try {
-        const hostname = new URL(url).hostname;
-        const isIp = /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname);
-        const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
-        return isIp || isLocalhost;
-      } catch {
-        return false;
-      }
-    };
-
-    // 1. First tier: Preferred relays
-    const preferredRelays = normalizedUrls.filter(url =>
-      this.preferredRelays.includes(url) && !isIpOrLocalhost(url)
-    );
-
-    // 2. Second tier: Normal domain relays (not IP or localhost)
-    const normalDomainRelays = normalizedUrls.filter(url =>
-      !this.preferredRelays.includes(url) && !isIpOrLocalhost(url)
-    );
-
-    // 3. Third tier: IP-based and localhost relays
-    const ipAndLocalhostRelays = normalizedUrls.filter(url =>
-      isIpOrLocalhost(url)
-    );
-
-    // Combine all three tiers with preferred relays first, then normal domains, then IPs/localhost
-    const sortedRelays = [...preferredRelays, ...normalDomainRelays, ...ipAndLocalhostRelays];
-
-    // Return only up to the requested count
-    return sortedRelays.slice(0, count);
-  }
-
   async discoverMetadata(pubkey: string, disconnect = true): Promise<Event | undefined | null> {
     this.logger.time('getinfo' + pubkey);
     let info: any = await this.storage.getInfo(pubkey, 'user');
@@ -1044,7 +976,7 @@ export class NostrService {
     // If we already have a relay list, go grab the metadata from it.
     if (event) {
       const relayUrls = this.getRelayUrls(event);
-      const selectedRelayUrls = this.pickOptimalRelays(relayUrls, this.MAX_RELAY_COUNT);
+      const selectedRelayUrls = this.utilities.pickOptimalRelays(relayUrls, this.MAX_RELAY_COUNT);
 
       // It can happen that accounts does not have any valid relays, return undefined
       // and then attempt to look up profile using account relays.
@@ -1080,7 +1012,7 @@ export class NostrService {
 
           this.logger.debug('Trying to fetch metadata from individual relays', { relayCount: relayUrls.length });
 
-          const selectedRelayUrls = this.pickOptimalRelays(relayUrls, this.MAX_RELAY_COUNT);
+          const selectedRelayUrls = this.utilities.pickOptimalRelays(relayUrls, this.MAX_RELAY_COUNT);
 
           if (selectedRelayUrls.length === 0) {
             this.logger.warn('No valid relays found in relay list. Unable to find user.');
@@ -1159,7 +1091,7 @@ export class NostrService {
 
             // Filter out any relays that are not reachable
             // const filteredRelays = this.filterRelayUrls(followingRelayUrls);
-            const selectedRelayUrls = this.pickOptimalRelays(followingRelayUrls, this.MAX_RELAY_COUNT)
+            const selectedRelayUrls = this.utilities.pickOptimalRelays(followingRelayUrls, this.MAX_RELAY_COUNT)
             let metadata = await this.retrieveMetadata(pubkey, selectedRelayUrls, info);
 
             return metadata as Event;
@@ -1263,7 +1195,7 @@ export class NostrService {
         }
 
         await this.storage.saveEvent(relayListEvent);
-        relayUrls = this.pickOptimalRelays(this.getRelayUrls(relayListEvent), this.MAX_RELAY_COUNT);
+        relayUrls = this.utilities.pickOptimalRelays(this.getRelayUrls(relayListEvent), this.MAX_RELAY_COUNT);
       } else {
         let followingEvent = await this.relayService.get({
           authors: [pubkey],
@@ -1718,20 +1650,12 @@ export class NostrService {
 
   /** Parses the URLs and cleans up, ensuring only wss:// instances are returned. */
   getRelayUrlsFromFollowing(event: Event, timeouts: boolean = true): string[] {
-    // Check if event.content is a string, return empty array if it is
-    if (!event.content || typeof event.content === 'string') {
-      return [];
-    }
-
-    let relayUrls = Object.keys(event.content).map(url => {
-      const wssIndex = url.indexOf('wss://');
-      return wssIndex >= 0 ? url.substring(wssIndex) : url;
-    });
+    let relayUrls = this.utilities.getRelayUrlsFromFollowing(event);
 
     // Filter out timed out relays if timeouts parameter is true
     if (timeouts) {
       const timedOutRelays = this.relayService.timeouts().map(relay => relay.url);
-      relayUrls = relayUrls.filter(relay => !timedOutRelays.includes(this.relayService.normalizeRelayUrl(relay)));
+      relayUrls = relayUrls.filter(relay => !timedOutRelays.includes(this.utilities.normalizeRelayUrl(relay)));
     }
 
     return relayUrls;
@@ -1739,18 +1663,12 @@ export class NostrService {
 
   /** Parses the URLs and cleans up, ensuring only wss:// instances are returned. */
   getRelayUrls(event: Event, timeouts: boolean = true): string[] {
-    let relayUrls = event.tags
-      .filter(tag => tag.length >= 2 && tag[0] === 'r')
-      .map(tag => {
-        const url = tag[1];
-        const wssIndex = url.indexOf('wss://');
-        return wssIndex >= 0 ? url.substring(wssIndex) : url;
-      });
+    let relayUrls = this.utilities.getRelayUrls(event);
 
     // Filter out timed out relays if timeouts parameter is true
     if (timeouts) {
       const timedOutRelays = this.relayService.timeouts().map(relay => relay.url);
-      relayUrls = relayUrls.filter(relay => !timedOutRelays.includes(this.relayService.normalizeRelayUrl(relay)));
+      relayUrls = relayUrls.filter(relay => !timedOutRelays.includes(this.utilities.normalizeRelayUrl(relay)));
     }
 
     return relayUrls;
@@ -1759,7 +1677,7 @@ export class NostrService {
   /** Filters out timed out or banned relays. */
   filterRelayUrls(relayUrls: string[]): string[] {
     const timedOutRelays = this.relayService.timeouts().map(relay => relay.url);
-    relayUrls = relayUrls.filter(relay => !timedOutRelays.includes(this.relayService.normalizeRelayUrl(relay)));
+    relayUrls = relayUrls.filter(relay => !timedOutRelays.includes(this.utilities.normalizeRelayUrl(relay)));
     return relayUrls;
   }
 

@@ -1,12 +1,13 @@
 import { Injectable, inject, signal, computed, Signal, WritableSignal } from '@angular/core';
 import { LocalStorageService } from './local-storage.service';
 import { LoggerService } from './logger.service';
-import { NostrService } from './nostr.service';
 import { RelayService } from './relay.service';
-import { Event } from 'nostr-tools';
+import { Event, SimplePool } from 'nostr-tools';
 import { SubCloser } from 'nostr-tools/abstract-pool';
 import { ApplicationStateService } from './application-state.service';
 import { AccountStateService } from './account-state.service';
+import { DataService } from './data.service';
+import { UtilitiesService } from './utilities.service';
 
 export interface FeedData {
   column: ColumnConfig,
@@ -115,10 +116,11 @@ const DEFAULT_FEEDS: FeedConfig[] = [
 export class FeedService {
   private readonly localStorageService = inject(LocalStorageService);
   private readonly logger = inject(LoggerService);
-  private readonly nostr = inject(NostrService);
   private readonly relay = inject(RelayService);
   private readonly appState = inject(ApplicationStateService);
   private readonly accountState = inject(AccountStateService);
+  private readonly dataService = inject(DataService);
+  private readonly utilities = inject(UtilitiesService);
 
   // Signals for feeds and relays
   private readonly _feeds = signal<FeedConfig[]>([]);
@@ -248,7 +250,7 @@ export class FeedService {
   /**
    * Subscribe to a single column
    */
-  private subscribeToColumn(column: ColumnConfig): void {
+  private async subscribeToColumn(column: ColumnConfig) {
     // Don't subscribe if already subscribed
     if (this.data.has(column.id)) {
       this.logger.warn(`Column ${column.id} is already subscribed`);
@@ -278,29 +280,49 @@ export class FeedService {
       };
     }
 
-    // Subscribe to relay events
-    const sub = this.relay.subscribe([item.filter], (event) => {
+    // If the source is following, we will loop through the user's following list
+    // and connect to user relays to fetch events.
+    if (column.source === 'following') {
+      const followingList = this.accountState.followingList();
 
-      // Filter out live events that are muted.
-      if (this.accountState.muted(event)) {
-        return;
+      const followingPool = new SimplePool();
+
+      for(const pubkey of followingList) {
+        let relayUrls = await this.dataService.getUserRelays(pubkey);
+        relayUrls = this.utilities.pickOptimalRelays(relayUrls, 2);
       }
 
-      item.events.update(events => [event, ...events]);
-      this.logger.debug(`Column event received for ${column.id}:`, event);
-    });
+      // TODO: This is not implemented yet, we need to decide how many events to fetch,
+      // and how to handle pagination. Optimally it should fetch from the user's favorites,
+      // the user's that the user has interactved with recently.
+      
+    } else {
+      // Subscribe to relay events
+      const sub = this.relay.subscribe([item.filter], (event) => {
 
-    item.subscription = sub as any;
-    this.data.set(column.id, item);
+        // Filter out live events that are muted.
+        if (this.accountState.muted(event)) {
+          return;
+        }
 
-    // Update the reactive signal
-    this._feedData.update(map => {
-      const newMap = new Map(map);
-      newMap.set(column.id, item);
-      return newMap;
-    });
+        item.events.update(events => [event, ...events]);
+        this.logger.debug(`Column event received for ${column.id}:`, event);
+      });
 
-    this.logger.debug(`Subscribed to column: ${column.id}`);
+      item.subscription = sub as any;
+      this.data.set(column.id, item);
+
+      // Update the reactive signal
+      this._feedData.update(map => {
+        const newMap = new Map(map);
+        newMap.set(column.id, item);
+        return newMap;
+      });
+
+      this.logger.debug(`Subscribed to column: ${column.id}`);
+
+    }
+
   }  /**
    * Unsubscribe from a single feed (unsubscribes from all its columns)
    */
