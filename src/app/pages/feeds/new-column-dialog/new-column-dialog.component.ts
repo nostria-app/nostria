@@ -16,6 +16,7 @@ import { COMMA, ENTER } from '@angular/cdk/keycodes';
 import { MatChipInputEvent } from '@angular/material/chips';
 import { MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
 import { FeedService, ColumnConfig } from '../../../services/feed.service';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 
 interface DialogData {
   icons: string[];
@@ -72,7 +73,8 @@ const NOSTR_KINDS = [
     MatStepperModule,
     MatCardModule,
     MatDividerModule,
-    ReactiveFormsModule
+    ReactiveFormsModule,
+    MatButtonToggleModule
   ],
   template: `
     <div class="dialog-container">
@@ -184,6 +186,17 @@ const NOSTR_KINDS = [
                     </mat-autocomplete>
                     <mat-icon matSuffix>category</mat-icon>
                   </mat-form-field>
+                </div>
+
+                 <div class="kinds-section">
+                  <h3>Following or Public</h3>
+                  <p class="section-description">Select which events to include in this column</p>
+                  
+                  <mat-button-toggle-group name="source" formControlName="source">
+                    <mat-button-toggle value="following">Following</mat-button-toggle>
+                    <mat-button-toggle value="public">Public</mat-button-toggle>
+                  </mat-button-toggle-group>
+
                 </div>
               </div>
             </mat-step>
@@ -626,7 +639,7 @@ export class NewColumnDialogComponent {
   private dialogRef = inject(MatDialogRef<NewColumnDialogComponent>);
   private feedService = inject(FeedService);
   readonly data: DialogData = inject(MAT_DIALOG_DATA);
-  
+
   // Form controls
   basicInfoGroup = this.fb.group({
     label: [this.data.column?.label || '', Validators.required],
@@ -634,7 +647,8 @@ export class NewColumnDialogComponent {
   });
 
   contentConfigGroup = this.fb.group({
-    kinds: [this.data.column?.kinds || []]
+    kinds: [this.data.column?.kinds || []],
+    source: [this.data.column?.source || 'following'] // Default to 'following'
   });
 
   relayConfigGroup = this.fb.group({
@@ -655,26 +669,26 @@ export class NewColumnDialogComponent {
   selectedKinds = signal<number[]>(this.data.column?.kinds || []);
   customRelays = signal<string[]>(this.data.column?.customRelays || []);
   showCustomRelays = computed(() => this.columnForm.get('relayConfig')?.value === 'custom');
-  
+
   // Form controls for chips
   kindInputControl = new FormControl('');
   relayInputControl = new FormControl('');
-  
+
   // Chip separator keys
   readonly separatorKeysCodes = [ENTER, COMMA] as const;
-  
+
   // Available options
   columnTypes = signal(this.feedService.getFeedTypes());
   nostrKinds = signal(NOSTR_KINDS);
-  
+
   // Filtered options for autocomplete
   filteredKinds = computed(() => {
     const input = this.kindInputControl.value?.toString().toLowerCase() || '';
     const selected = this.selectedKinds();
-    
+
     return this.nostrKinds().filter(kind => {
-      const matchesInput = kind.label.toLowerCase().includes(input) || 
-                          kind.value.toString().includes(input);
+      const matchesInput = kind.label.toLowerCase().includes(input) ||
+        kind.value.toString().includes(input);
       const notSelected = !selected.includes(kind.value);
       return matchesInput && notSelected;
     });
@@ -683,19 +697,19 @@ export class NewColumnDialogComponent {
   selectColumnType(typeKey: string): void {
     this.selectedColumnType.set(typeKey);
     this.columnForm.patchValue({ type: typeKey as 'photos' | 'videos' | 'notes' | 'articles' | 'custom' });
-    
+
     // Auto-fill based on column type
     const columnType = this.feedService.getFeedType(typeKey as any);
     if (columnType && columnType.kinds.length > 0) {
       this.selectedKinds.set(columnType.kinds);
       this.columnForm.patchValue({ kinds: columnType.kinds });
     }
-    
+
     // Update icon and label if not in edit mode
     if (!this.isEditMode()) {
-      this.columnForm.patchValue({ 
+      this.columnForm.patchValue({
         icon: columnType.icon,
-        label: columnType.label 
+        label: columnType.label
       });
     }
   }
@@ -766,7 +780,7 @@ export class NewColumnDialogComponent {
 
   getActiveRelays(): string[] {
     const relayConfig = this.columnForm.get('relayConfig')?.value;
-    
+
     switch (relayConfig) {
       case 'user':
         return this.feedService.userRelays().map(r => r.url);
@@ -782,12 +796,13 @@ export class NewColumnDialogComponent {
   onSubmit(): void {
     if (this.columnForm.valid) {
       const formValue = this.columnForm.value;
-        // Create column config
+      // Create column config
       const columnConfig: ColumnConfig = {
         id: this.data.column?.id || crypto.randomUUID(),
         label: formValue.label!,
         icon: formValue.icon!,
         type: formValue.type as any,
+        source: formValue.source || 'following',
         kinds: this.selectedKinds(),
         relayConfig: formValue.relayConfig as any,
         customRelays: formValue.relayConfig === 'custom' ? this.customRelays() : undefined,
