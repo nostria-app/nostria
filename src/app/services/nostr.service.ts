@@ -1186,13 +1186,15 @@ export class NostrService {
 
         // Make sure we publish Relay List to Discovery Relays if discovered on Account Relays.
         // We must do this before storage.saveEvent, which transforms the content to JSON.
-        try {
-          this.logger.info('Publishing relay list to discovery relays', { relayListEvent });
-          await this.relayService.publishToDiscoveryRelays(relayListEvent);
-        } catch (error) {
-          debugger;
-          this.logger.error('Failed to publish relay list to discovery relays', { error });
-        }
+        
+        // TODO: Temporary disabled during active development.
+        // try {
+        //   this.logger.info('Publishing relay list to discovery relays', { relayListEvent });
+        //   await this.relayService.publishToDiscoveryRelays(relayListEvent);
+        // } catch (error) {
+        //   debugger;
+        //   this.logger.error('Failed to publish relay list to discovery relays', { error });
+        // }
 
         await this.storage.saveEvent(relayListEvent);
         relayUrls = this.utilities.pickOptimalRelays(this.getRelayUrls(relayListEvent), this.MAX_RELAY_COUNT);

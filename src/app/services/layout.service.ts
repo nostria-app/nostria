@@ -48,16 +48,15 @@ export class LayoutService {
 
     toggleSearch() {
         const newSearchState = !this.search();
-        this.search.set(newSearchState);
-
-        if (newSearchState) {
+        this.search.set(newSearchState);        if (newSearchState) {
             // Add ESC key listener when search is opened
             this.setupEscKeyListener();
         } else {
             // Remove ESC key listener when search is closed
             this.removeEscKeyListener();
-            // Clear search input when closing
+            // Clear search input and query when closing
             this.searchInput = '';
+            this.query.set('');
         }
     }
 
@@ -167,24 +166,25 @@ export class LayoutService {
         setTimeout(() => {
             this.scrollToOptimalProfilePosition();
         }, 300);
-    }
-
-    onSearchInput(event: any) {
+    }    onSearchInput(event: any) {
         if (event.target.value === null) {
             clearTimeout(this.debounceTimer);
             return;
         }
 
-        // Debounce logic to wait until user finishes typing
+        // Set query immediately for cached search results
+        console.log('onSearchInput called with value:', event.target.value);
+        this.query.set(event.target.value);
+
+        // Debounce logic to wait until user finishes typing for special searches
         clearTimeout(this.debounceTimer);
         this.debounceTimer = setTimeout(() => {
             console.log('Handle search called!');
             this.handleSearch(event.target.value);
         }, 750);
-    }
-
-    private handleSearch(value: string): void {
+    }private handleSearch(value: string): void {
         if (!value) {
+            this.query.set('');
             return;
         }
 
@@ -204,7 +204,8 @@ export class LayoutService {
             this.openEvent(value);
         }
         else if (value.includes('@')) {
-            this.query.set(value);
+            // Keep the query set for NIP-05 lookups (already set in onSearchInput)
+            // The search service will handle this
         }
         else if (value.startsWith('nsec')) {
             this.toggleSearch();
@@ -225,7 +226,13 @@ export class LayoutService {
         else if (value.includes(':')) {
             this.openProfile(value);
         } else {
-            this.router.navigate(['/search'], { queryParams: { query: value } });
+            // For regular text searches, let the search service handle cached results
+            // The query is already set in onSearchInput
+            // Only navigate to search page if no cached results are found after a delay
+            setTimeout(() => {
+                // This could be enhanced to check if cached results were found
+                // For now, we'll let the cached search work without navigation
+            }, 100);
         }
     }
 
