@@ -133,12 +133,8 @@ export class DataService {
 
     sanitizeJsonString(json: string): string {
         return json
-            // Remove control characters but preserve spaces and handle newlines in JSON values
-            .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '')
             // Specifically handle newlines that appear before closing quotes in JSON values
             .replace(/\n+"/g, '"')
-            // Clean up any double spaces that might result from the replacements
-            .replace(/\s+/g, ' ')
             .trim();
     }
 

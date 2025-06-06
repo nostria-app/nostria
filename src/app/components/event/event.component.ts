@@ -4,10 +4,11 @@ import { Event } from 'nostr-tools';
 import { NostrRecord } from '../../interfaces';
 import { UserProfileComponent } from "../user-profile/user-profile.component";
 import { LayoutService } from '../../services/layout.service';
+import { ContentComponent } from '../content/content.component';
 
 @Component({
   selector: 'app-event',
-  imports: [UserProfileComponent],
+  imports: [UserProfileComponent, ContentComponent],
   templateUrl: './event.component.html',
   styleUrl: './event.component.scss'
 })
@@ -32,6 +33,8 @@ export class EventComponent {
         if (eventId) {
           const eventData = await this.data.getEventById(eventId);
           this.record.set(eventData);
+
+          console.log('RECORD:', this.record());
         }
       };
     });
