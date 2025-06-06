@@ -13,9 +13,10 @@ import { Router } from '@angular/router';
 
 interface ContentToken {
   id: number;
-  type: 'text' | 'url' | 'youtube' | 'image' | 'audio' | 'video' | 'linebreak' | 'nostr-mention';
+  type: 'text' | 'url' | 'youtube' | 'image' | 'audio' | 'video' | 'linebreak' | 'nostr-mention' | 'emoji';
   content: string;
   nostrData?: { type: string; data: any; displayName: string };
+  emoji?: string;
 }
 
 interface SocialPreview {
@@ -130,6 +131,80 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     this.intersectionObserver.observe(this.contentContainer.nativeElement);
   }
 
+  private emojiMap: Record<string, string> = {
+    ':badge:': '🏅',
+    ':heart:': '❤️',
+    ':fire:': '🔥',
+    ':thumbs_up:': '👍',
+    ':thumbs_down:': '👎',
+    ':smile:': '😊',
+    ':laugh:': '😂',
+    ':cry:': '😢',
+    ':angry:': '😠',
+    ':confused:': '😕',
+    ':surprised:': '😮',
+    ':wink:': '😉',
+    ':cool:': '😎',
+    ':kiss:': '😘',
+    ':heart_eyes:': '😍',
+    ':thinking:': '🤔',
+    ':clap:': '👏',
+    ':pray:': '🙏',
+    ':muscle:': '💪',
+    ':ok_hand:': '👌',
+    ':wave:': '👋',
+    ':point_right:': '👉',
+    ':point_left:': '👈',
+    ':point_up:': '👆',
+    ':point_down:': '👇',
+    ':rocket:': '🚀',
+    ':star:': '⭐',
+    ':lightning:': '⚡',
+    ':sun:': '☀️',
+    ':moon:': '🌙',
+    ':rainbow:': '🌈',
+    ':coffee:': '☕',
+    ':beer:': '🍺',
+    ':wine:': '🍷',
+    ':pizza:': '🍕',
+    ':burger:': '🍔',
+    ':cake:': '🎂',
+    ':party:': '🎉',
+    ':gift:': '🎁',
+    ':music:': '🎵',
+    ':note:': '🎶',
+    ':phone:': '📱',
+    ':computer:': '💻',
+    ':email:': '📧',
+    ':lock:': '🔒',
+    ':unlock:': '🔓',
+    ':key:': '🔑',
+    ':money:': '💰',
+    ':dollar:': '💵',
+    ':euro:': '💶',
+    ':yen:': '💴',
+    ':pound:': '💷',
+    ':gem:': '💎',
+    ':crown:': '👑',
+    ':trophy:': '🏆',
+    ':medal:': '🏅',
+    ':first_place:': '🥇',
+    ':second_place:': '🥈',
+    ':third_place:': '🥉',
+    ':checkmark:': '✅',
+    ':cross:': '❌',
+    ':warning:': '⚠️',
+    ':stop:': '🛑',
+    ':green_circle:': '🟢',
+    ':red_circle:': '🔴',
+    ':yellow_circle:': '🟡',
+    ':blue_circle:': '🔵',
+    ':purple_circle:': '🟣',
+    ':orange_circle:': '🟠',
+    ':white_circle:': '⚪',
+    ':black_circle:': '⚫'
+  };
+
   private parseContent(content: string): ContentToken[] {
     if (!content) return [];
     
@@ -143,6 +218,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     const audioRegex = /(https?:\/\/[^\s##]+\.(mp3|wav|ogg)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
     const videoRegex = /(https?:\/\/[^\s##]+\.(mp4|webm|mov|avi|wmv|flv|mkv)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
     const nostrRegex = /(nostr:[a-zA-Z0-9]+1[a-zA-Z0-9]+)(?=\s|##LINEBREAK##|$)/g;
+    const emojiRegex = /(:[a-zA-Z_]+:)(?=\s|##LINEBREAK##|$)/g;
     
     // Split content and generate tokens
     let tokens: ContentToken[] = [];
@@ -150,10 +226,25 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     let lastIndex = 0;
     
     // Find all matches and their positions
-    const matches: {start: number, end: number, content: string, type: ContentToken['type'], nostrData?: any}[] = [];
+    const matches: {start: number, end: number, content: string, type: ContentToken['type'], nostrData?: any, emoji?: string}[] = [];
     
-    // Find Nostr URIs first (highest priority)
+    // Find emoji codes first (highest priority after nostr)
     let match: any;
+    while ((match = emojiRegex.exec(processedContent)) !== null) {
+      const emojiCode = match[0];
+      const emoji = this.emojiMap[emojiCode];
+      if (emoji) {
+        matches.push({
+          start: match.index,
+          end: match.index + match[0].length,
+          content: emojiCode,
+          type: 'emoji',
+          emoji
+        });
+      }
+    }
+    
+    // Find Nostr URIs (highest priority)
     while ((match = nostrRegex.exec(processedContent)) !== null) {
       const nostrData = this.utilities.parseNostrUri(match[0]);
       if (nostrData) {
@@ -247,6 +338,10 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
       
       if (match.nostrData) {
         token.nostrData = match.nostrData;
+      }
+      
+      if (match.emoji) {
+        token.emoji = match.emoji;
       }
       
       tokens.push(token);
