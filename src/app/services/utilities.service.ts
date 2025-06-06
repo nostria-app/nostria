@@ -273,6 +273,49 @@ export class UtilitiesService {
       : nip05;
   }
 
+  parseNostrUri(uri: string): { type: string; data: any; displayName?: string } | null {
+    try {
+      // Use the proper nip19 function for decoding nostr URIs
+      const decoded = nip19.decodeNostrURI(uri);
+
+      if (!decoded) return null;
+
+      return {
+        type: decoded.type,
+        data: decoded.data,
+        displayName: this.getDisplayNameFromNostrUri(decoded.type, decoded.data)
+      };
+    } catch (error) {
+      this.logger.warn(`Failed to parse nostr URI: ${uri}`, error);
+      return null;
+    }
+  }
+
+  private getDisplayNameFromNostrUri(type: string, data: any): string {
+    switch (type) {
+      case 'npub':
+        return this.getTruncatedNpub(data);
+      case 'nprofile':
+        return this.getTruncatedNpub(data.pubkey);
+      case 'note':
+        return `note${data.substring(0, 8)}...`;
+      case 'nevent':
+        return `event${data.id.substring(0, 8)}...`;
+      case 'naddr':
+        return `${data.kind}:${data.identifier?.substring(0, 8) || 'addr'}...`;
+      default:
+        return type;
+    }
+  }
+
+  isNostrUri(text: string): boolean {
+    return text.startsWith('nostr:') && text.length > 6;
+  }
+
+  extractNostrUriIdentifier(uri: string): string {
+    return uri.replace(/^nostr:/, '');
+  }
+
   /** Used to optimize the selection of a few relays from the user's relay list. */
   pickOptimalRelays(relayUrls: string[], count: number): string[] {
     // Filter out malformed URLs first
