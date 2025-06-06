@@ -277,6 +277,7 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
   }
 
   setActiveSection(section: 'discover' | 'following' | 'media'): void {
+    debugger;
     this.activeSection.set(section);
 
     // Load section data if needed

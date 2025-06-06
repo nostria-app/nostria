@@ -1,12 +1,14 @@
 import { inject, Injectable } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
 import { Event } from 'nostr-tools';
+import { LoggerService } from './logger.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class UtilitiesService {
   private sanitizer = inject(DomSanitizer);
+  private logger = inject(LoggerService);
 
   regexpVideo = /(?:(?:https?)+\:\/\/+[a-zA-Z0-9\/\._-]{1,})+(?:(?:mp4|webm))/gi;
   regexpImage = /(?:(?:https?)+\:\/\/+[a-zA-Z0-9\/\._-]{1,})+(?:(?:jpe?g|png|gif|webp))/gi;
@@ -124,4 +126,148 @@ export class UtilitiesService {
   }
 
 
+  /** Parses the URLs and cleans up, ensuring only wss:// instances are returned. */
+  getRelayUrlsFromFollowing(event: Event): string[] {
+    // Check if event.content is a string, return empty array if it is
+    if (!event.content || typeof event.content === 'string') {
+      return [];
+    }
+
+    let relayUrls = Object.keys(event.content).map(url => {
+      const wssIndex = url.indexOf('wss://');
+      return wssIndex >= 0 ? url.substring(wssIndex) : url;
+    });
+
+    // Filter out timed out relays if timeouts parameter is true
+    // if (timeouts) {
+    //   const timedOutRelays = this.relayService.timeouts().map(relay => relay.url);
+    //   relayUrls = relayUrls.filter(relay => !timedOutRelays.includes(this.relayService.normalizeRelayUrl(relay)));
+    // }
+
+    return relayUrls;
+  }
+
+  /** Parses the URLs and cleans up, ensuring only wss:// instances are returned. */
+  getRelayUrls(event: Event): string[] {
+    let relayUrls = event.tags
+      .filter(tag => tag.length >= 2 && tag[0] === 'r')
+      .map(tag => {
+        const url = tag[1];
+        const wssIndex = url.indexOf('wss://');
+        return wssIndex >= 0 ? url.substring(wssIndex) : url;
+      });
+
+    // Filter out timed out relays if timeouts parameter is true
+    // if (timeouts) {
+    //   const timedOutRelays = this.relayService.timeouts().map(relay => relay.url);
+    //   relayUrls = relayUrls.filter(relay => !timedOutRelays.includes(this.relayService.normalizeRelayUrl(relay)));
+    // }
+
+    return relayUrls;
+  }
+
+
+  /** This is an optimization we had to do to ensure that we have more success finding
+   * the profile of users. Many users have a lot of relays, many which are long dead and gone.
+   * Some have malformed URLs, private relays (required auth), etc.
+   */
+  preferredRelays: string[] = [
+    'wss://relay.damus.io/',
+    'wss://nos.lol/',
+    'wss://relay.primal.net/',
+    'wss://nostr.wine/',
+    'wss://eden.nostr.land/',
+    'wss://relay.snort.social/',
+    'wss://relay.nostr.band/',
+    'wss://nostr.oxtr.dev/',
+    'wss://nostr.mom/',
+  ];
+
+  normalizeRelayUrls(urls: string[]): string[] {
+    return urls.map(url => this.normalizeRelayUrl(url)).filter(url => url !== '');
+  }
+
+
+  /**
+ * Normalizes relay URLs by ensuring root URLs have a trailing slash
+ * but leaves URLs with paths unchanged
+ */
+  normalizeRelayUrl(url: string): string {
+    try {
+      if (!url.startsWith('ws://') && !url.startsWith('wss://')) {
+        return '';
+      }
+
+      const parsedUrl = new URL(url);
+
+      // If the URL has no pathname (or just '/'), ensure it ends with a slash
+      if (parsedUrl.pathname === '' || parsedUrl.pathname === '/') {
+        // Add trailing slash if missing
+        return url.endsWith('/') ? url : `${url}/`;
+      }
+
+      // URL already has a path, return as is
+      return url;
+    } catch (error) {
+      debugger;
+      // If URL parsing fails, return original URL
+      this.logger.warn(`Failed to parse URL: ${url}`, error);
+      return '';
+    }
+  }
+
+
+  /** Used to optimize the selection of a few relays from the user's relay list. */
+  pickOptimalRelays(relayUrls: string[], count: number): string[] {
+    // Filter out malformed URLs first
+    const validUrls = relayUrls.filter(url => {
+      // Must start with wss:// and have something after it
+      if (!url.startsWith('wss://') || url === 'wss://') {
+        return false;
+      }
+
+      // Attempt to parse the URL to ensure it's valid
+      try {
+        new URL(url);
+        return true;
+      } catch (e) {
+        return false;
+      }
+    });
+
+    const normalizedUrls = this.normalizeRelayUrls(validUrls);
+
+    // Helper function to check if a URL is IP-based or localhost
+    const isIpOrLocalhost = (url: string): boolean => {
+      try {
+        const hostname = new URL(url).hostname;
+        const isIp = /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname);
+        const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+        return isIp || isLocalhost;
+      } catch {
+        return false;
+      }
+    };
+
+    // 1. First tier: Preferred relays
+    const preferredRelays = normalizedUrls.filter(url =>
+      this.preferredRelays.includes(url) && !isIpOrLocalhost(url)
+    );
+
+    // 2. Second tier: Normal domain relays (not IP or localhost)
+    const normalDomainRelays = normalizedUrls.filter(url =>
+      !this.preferredRelays.includes(url) && !isIpOrLocalhost(url)
+    );
+
+    // 3. Third tier: IP-based and localhost relays
+    const ipAndLocalhostRelays = normalizedUrls.filter(url =>
+      isIpOrLocalhost(url)
+    );
+
+    // Combine all three tiers with preferred relays first, then normal domains, then IPs/localhost
+    const sortedRelays = [...preferredRelays, ...normalDomainRelays, ...ipAndLocalhostRelays];
+
+    // Return only up to the requested count
+    return sortedRelays.slice(0, count);
+  }
 }

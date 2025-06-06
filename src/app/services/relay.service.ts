@@ -6,6 +6,7 @@ import { ApplicationStateService } from './application-state.service';
 import { NotificationService } from './notification.service';
 import { LocalStorageService } from './local-storage.service';
 import { LayoutService } from './layout.service';
+import { UtilitiesService } from './utilities.service';
 
 export interface Relay {
   url: string;
@@ -35,6 +36,7 @@ export class RelayService {
   private readonly notificationService = inject(NotificationService);
   private readonly localStorage = inject(LocalStorageService);
   private readonly layout = inject(LayoutService);
+  private readonly utilities = inject(UtilitiesService);
 
   // Initialize signals with empty arrays first, then populate in constructor
   discoveryRelays: string[] = [];
@@ -114,7 +116,7 @@ export class RelayService {
     }
 
     // Normalize URL: add trailing slash if it's a root URL without path
-    const normalizedUrl = this.normalizeRelayUrl(relayUrl);
+    const normalizedUrl = this.utilities.normalizeRelayUrl(relayUrl);
 
     // Some user's have "coracle" as their relay URL, which is not a valid relay URL. Disable the relay immediately.
     if (!normalizedUrl) {
@@ -189,38 +191,6 @@ export class RelayService {
     const removedCount = initialCount - this.timeouts.length;
     if (removedCount > 0) {
       this.logger.debug(`Cleaned up ${removedCount} expired relay timeouts`);
-    }
-  }
-
-  normalizeRelayUrls(urls: string[]): string[] {
-    return urls.map(url => this.normalizeRelayUrl(url)).filter(url => url !== '');
-  }
-
-  /**
- * Normalizes relay URLs by ensuring root URLs have a trailing slash
- * but leaves URLs with paths unchanged
- */
-  normalizeRelayUrl(url: string): string {
-    try {
-      if (!url.startsWith('ws://') && !url.startsWith('wss://')) {
-        return '';
-      }
-
-      const parsedUrl = new URL(url);
-
-      // If the URL has no pathname (or just '/'), ensure it ends with a slash
-      if (parsedUrl.pathname === '' || parsedUrl.pathname === '/') {
-        // Add trailing slash if missing
-        return url.endsWith('/') ? url : `${url}/`;
-      }
-
-      // URL already has a path, return as is
-      return url;
-    } catch (error) {
-      debugger;
-      // If URL parsing fails, return original URL
-      this.logger.warn(`Failed to parse URL: ${url}`, error);
-      return '';
     }
   }
 
@@ -613,7 +583,7 @@ export class RelayService {
    */
   addDiscoveryRelay(url: string): void {
     this.logger.debug(`Adding bootstrap relay: ${url}`);
-    const normalizedUrl = this.normalizeRelayUrl(url);
+    const normalizedUrl = this.utilities.normalizeRelayUrl(url);
 
     if (normalizedUrl) {
       this.discoveryRelays.push(normalizedUrl);

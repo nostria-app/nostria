@@ -1,11 +1,11 @@
 import { inject, Injectable, signal } from "@angular/core";
 import { StorageService } from "./storage.service";
-import { NostrService } from "./nostr.service";
 import { RelayService } from "./relay.service";
 import { NostrRecord } from "../interfaces";
 import { LoggerService } from "./logger.service";
 import { Event } from "nostr-tools";
 import { UserRelayFactoryService } from "./user-relay-factory.service";
+import { UtilitiesService } from "./utilities.service";
 
 @Injectable({
     providedIn: 'root'
@@ -15,6 +15,7 @@ export class DataService {
     private readonly relay = inject(RelayService);
     private readonly logger = inject(LoggerService);
     private readonly userRelayFactory = inject(UserRelayFactoryService);
+    private readonly utilities = inject(UtilitiesService);
 
     getRecord(event: Event) {
         return {
@@ -25,6 +26,22 @@ export class DataService {
 
     getRecords(events: Event[]) {
         return events.map(event => this.getRecord(event));
+    }
+
+    async getUserRelays(pubkey: string) {
+        let relayUrls: string[] = [];
+        const relayListEvent = await this.storage.getEventByPubkeyAndKind(pubkey, 10002);
+
+        if (relayListEvent) {
+            relayUrls = this.utilities.getRelayUrls(relayListEvent);
+        }
+
+        const followingEvent = await this.storage.getEventByPubkeyAndKind(pubkey, 3);
+        if (followingEvent) {
+            relayUrls = this.utilities.getRelayUrlsFromFollowing(followingEvent);
+        }
+
+        return relayUrls;
     }
 
     async getEventById(id: string): Promise<NostrRecord | null> {
