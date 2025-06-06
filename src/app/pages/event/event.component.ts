@@ -5,12 +5,13 @@ import { LoggerService } from '../../services/logger.service';
 import { DataService } from '../../services/data.service';
 import { Event, kinds, nip19, SimplePool } from 'nostr-tools';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { DecodedNaddr, DecodedNevent, EventPointer } from 'nostr-tools/nip19';
 import { UrlUpdateService } from '../../services/url-update.service';
 import { EventComponent } from '../../components/event/event.component';
 import { UtilitiesService } from '../../services/utilities.service';
 import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
 
 /** Description of the EventPageComponent
  * 
@@ -31,12 +32,14 @@ export interface ThreadedEvent {
   event: Event;
   replies: ThreadedEvent[];
   level: number;
+  hasMoreReplies?: boolean;
+  deepestReplyId?: string;
 }
 
 @Component({
   selector: 'app-event-page',
   standalone: true,
-  imports: [CommonModule, EventComponent, MatIconModule],
+  imports: [CommonModule, EventComponent, MatIconModule, MatButtonModule],
   templateUrl: './event.component.html',
   styleUrl: './event.component.scss'
 })
@@ -51,22 +54,40 @@ export class EventPageComponent {
   data = inject(DataService);
   url = inject(UrlUpdateService);
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
   id = signal<string | null>(null);
   pool: SimplePool | undefined = undefined;
   userRelays: string[] = [];
+
+  // Create a signal for the route parameter
+  private routeParam = signal<string | null>(null);
 
   replies = signal<Event[]>([]);
   threadedReplies = signal<ThreadedEvent[]>([]);
 
   constructor() {
-    // Effect to load article when route parameter changes
+    // Effect to track route parameter changes
     effect(() => {
-      const addrParam = this.route.snapshot.paramMap.get('id');
-      if (addrParam) {
-        this.pool = new SimplePool();
+      // Subscribe to route params to get reactive updates
+      this.route.paramMap.subscribe(params => {
+        const addrParam = params.get('id');
+        this.routeParam.set(addrParam);
+      });
+    });
 
+    // Effect to load event when route parameter changes
+    effect(() => {
+      const addrParam = this.routeParam();
+      if (addrParam) {
+        // Clean up previous pool if it exists
+        if (this.pool) {
+          this.pool.destroy();
+        }
+        
+        this.pool = new SimplePool();
         this.loadEvent(addrParam);
-        // Scroll to top when navigating to a new article
+        
+        // Scroll to top when navigating to a new event
         setTimeout(() => this.layout.scrollMainContentToTop(), 100);
       }
     });
@@ -104,7 +125,7 @@ export class EventPageComponent {
     return { rootId, replyId, pTags };
   }
 
-  private buildThreadTree(events: Event[], rootEventId: string): ThreadedEvent[] {
+  private buildThreadTree(events: Event[], rootEventId: string, maxDepth: number = 5): ThreadedEvent[] {
     const eventMap = new Map<string, Event>();
     const childrenMap = new Map<string, Event[]>();
     
@@ -121,17 +142,33 @@ export class EventPageComponent {
       childrenMap.get(parentId)!.push(event);
     });
     
-    // Build tree recursively
+    // Build tree recursively with depth limit
     const buildNode = (eventId: string, level: number = 0): ThreadedEvent[] => {
       const children = childrenMap.get(eventId) || [];
       
       return children
         .sort((a, b) => a.created_at - b.created_at) // Sort by creation time
-        .map(child => ({
-          event: child,
-          replies: buildNode(child.id, level + 1),
-          level
-        }));
+        .map(child => {
+          const threadedEvent: ThreadedEvent = {
+            event: child,
+            replies: [],
+            level
+          };
+          
+          // If we're at max depth, check if there are deeper replies
+          if (level >= maxDepth - 1) {
+            const hasDeepReplies = childrenMap.has(child.id) && childrenMap.get(child.id)!.length > 0;
+            if (hasDeepReplies) {
+              threadedEvent.hasMoreReplies = true;
+              threadedEvent.deepestReplyId = child.id;
+            }
+          } else {
+            // Continue building the tree if we haven't reached max depth
+            threadedEvent.replies = buildNode(child.id, level + 1);
+          }
+          
+          return threadedEvent;
+        });
     };
     
     return buildNode(rootEventId);
@@ -168,9 +205,9 @@ export class EventPageComponent {
           if (!existingReply) {
             allReplies.push(event);
             this.replies.set([...allReplies]);
-            
-            // Build threaded structure
-            const threaded = this.buildThreadTree(allReplies, eventId);
+
+            // Build threaded structure with max depth of 4
+            const threaded = this.buildThreadTree(allReplies, eventId, 4);
             this.threadedReplies.set(threaded);
           }
           
@@ -279,5 +316,11 @@ export class EventPageComponent {
         setTimeout(() => this.layout.scrollMainContentToTop(), 100);
       }
     }
+  }
+
+  onViewMoreReplies(eventId: string): void {
+    // Navigate to the specific event to view deeper replies
+    const encoded = nip19.neventEncode({ id: eventId });
+    this.router.navigate(['/e', encoded]);
   }
 }
