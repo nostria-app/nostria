@@ -13,8 +13,7 @@ import { UtilitiesService } from '../../services/utilities.service';
     MatListModule,
     MatIconModule,
     MatButtonModule
-  ],
-  template: `
+  ],  template: `
     @if (searchService.searchResults().length > 0) {
     <div class="search-results">
       <div class="search-results-header">
@@ -46,8 +45,7 @@ import { UtilitiesService } from '../../services/utilities.service';
       </div>
     </div>
     }
-  `,
-  styles: [`    .search-results {
+  `,styles: [`    .search-results {
       position: absolute;
       top: 100%;
       left: 0;
@@ -60,6 +58,20 @@ import { UtilitiesService } from '../../services/utilities.service';
       overflow-y: auto;
       overflow-x: hidden;
       z-index: 1000;
+    }    /* Mobile responsive styles - full width on mobile */
+    @media (max-width: 599px) {
+      .search-results {
+        position: fixed;
+        top: 64px; /* Height of mat-toolbar */
+        left: 16px;
+        right: 16px;
+        width: auto;
+        max-height: 400px; /* Account for toolbar (64px) and mobile menu (80px) */
+        border-radius: 12px;
+        margin: 0;
+        z-index: 1000;
+        margin-bottom: 120px; /* Additional margin to ensure clearance from mobile menu */
+      }
     }
 
     .search-results-header {
