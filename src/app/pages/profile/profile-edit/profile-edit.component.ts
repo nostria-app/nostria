@@ -15,6 +15,7 @@ import { StorageService } from '../../../services/storage.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { DataService } from '../../../services/data.service';
 import { NostrRecord } from '../../../interfaces';
+import { AccountStateService } from '../../../services/account-state.service';
 
 @Component({
   selector: 'app-profile-edit',
@@ -29,22 +30,21 @@ export class ProfileEditComponent {
   relay = inject(RelayService);
   router = inject(Router);
   profile = signal<any>(null);
-  metadata = signal<NostrRecord | undefined>(undefined);
   loading = signal<boolean>(false);
+  accountState = inject(AccountStateService);
 
   constructor() {
 
   }
 
   ngOnInit() {
-    const metadata = this.nostr.getMetadataForAccount(this.nostr.pubkey());
-    this.metadata.set(metadata);
+    const metadata = this.accountState.profile();
     const profileClone = structuredClone(metadata?.data);
     this.profile.set(profileClone);
   }
 
   cancelEdit() { 
-    this.router.navigate(['/p', this.nostr.pubkey()], { replaceUrl: true });
+    this.router.navigate(['/p', this.accountState.pubkey()], { replaceUrl: true });
   }
 
   async updateMetadata() {
@@ -58,7 +58,7 @@ export class ProfileEditComponent {
 
     // this.metadata()!.content = JSON.stringify(profile);
 
-    const unsignedEvent = this.nostr.createEvent(this.metadata()!.event.kind, JSON.stringify(profile), this.metadata()!.event.tags);
+    const unsignedEvent = this.nostr.createEvent(this.accountState.profile()!.event.kind, JSON.stringify(profile), this.accountState.profile()!.event.tags);
     const signedEvent = await this.nostr.signEvent(unsignedEvent);
 
     await this.relay.publish(signedEvent);
@@ -70,14 +70,15 @@ export class ProfileEditComponent {
     await this.storage.saveEvent(signedEvent);
 
     const record = this.data.getRecord(signedEvent);
-    this.nostr.updateAccountMetadata(record);
+    this.accountState.addToAccounts(record.event.pubkey, record);
+    this.accountState.addToCache(record.event.pubkey, record);
 
     // Update the local account profile
-    this.nostr.account()!.name = profile.display_name;
+    this.accountState.account()!.name = profile.display_name;
 
     this.loading.set(false);
 
-    this.router.navigate(['/p', this.nostr.pubkey()], { replaceUrl: true });
+    this.router.navigate(['/p', this.accountState.pubkey()], { replaceUrl: true });
   }
 
   onProfileFileSelected(event: any): void {

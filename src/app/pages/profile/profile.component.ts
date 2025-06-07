@@ -100,8 +100,8 @@ export class ProfileComponent {
   constructor() {
     // When accounts metadata changes, update the current metadata.
     effect(() => {
-      let accounts = this.nostrService.accountsMetadata();
-      let metadata = this.nostrService.getMetadataForAccount(this.nostrService.pubkey());
+      debugger;
+      let metadata = this.accountState.getAccountProfile(this.accountState.pubkey());
       this.userMetadata.set(metadata);
     });
 
@@ -270,7 +270,7 @@ export class ProfileComponent {
           this.profileState.followingList.set(followingList);
 
           // If this is the logged on user, also set the account state.
-          if (this.nostrService.pubkey() === pubkey) {
+          if (this.accountState.pubkey() === pubkey) {
             this.accountState.followingList.set(followingList);
           }
 
@@ -314,7 +314,7 @@ export class ProfileComponent {
   }
 
   private checkIfOwnProfile(pubkey: string): void {
-    this.isOwnProfile.set(this.nostrService.pubkey() === pubkey);
+    this.isOwnProfile.set(this.accountState.pubkey() === pubkey);
   }
 
   getFormattedName(): string {

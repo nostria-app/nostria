@@ -92,7 +92,7 @@ export class PeopleComponent {
     return this.people().filter(pubkey => {
       // If there's a search term, filter by it first
       if (search) {
-        const metadata = this.nostr.usersMetadata().get(pubkey);
+        const metadata = this.accountState.getCachedProfile(pubkey);
         if (!metadata) return false;
 
         // const content = typeof metadata.content === 'string'
@@ -114,7 +114,7 @@ export class PeopleComponent {
         const userInfo = this.userInfoCache().get(pubkey);
 
         // Get user metadata
-        const metadata = this.nostr.usersMetadata().get(pubkey);
+        const metadata = this.accountState.getCachedProfile(pubkey);
         // const content = metadata && metadata.content ?
         //   (typeof metadata.content === 'string' ? JSON.parse(metadata.content) : metadata.content) :
         //   null;

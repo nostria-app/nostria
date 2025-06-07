@@ -3,6 +3,7 @@ import { NostrService } from './nostr.service';
 import { kinds, nip98 } from 'nostr-tools';
 import { SwPush } from '@angular/service-worker';
 import { LoggerService } from './logger.service';
+import { AccountStateService } from './account-state.service';
 
 export interface Device {
   deviceId: string;
@@ -17,6 +18,7 @@ export interface Device {
 export class WebPushService {
   private server: string = isDevMode() ? 'http://localhost:3000' : 'https://notification.nostria.app';
   private nostr = inject(NostrService);
+  accountState = inject(AccountStateService);
   push = inject(SwPush);
   logger = inject(LoggerService);
 
@@ -24,7 +26,7 @@ export class WebPushService {
 
   /** Implements the NIP-98 HTTP Auth */
   private async getAuthHeaders(url: string, method: string | 'GET' | 'PUT' | 'POST' | 'DELETE' | 'PATCH', sha256?: string): Promise<Record<string, string>> {
-    const currentUser = this.nostr.account();
+    const currentUser = this.accountState.account();
     if (!currentUser) {
       throw new Error('User not logged in');
     }
@@ -60,7 +62,7 @@ export class WebPushService {
   async devices(): Promise<Device[]> {
     try {
       try {
-        const url = `${this.server}/api/subscription/devices/${this.nostr.pubkey()}`;
+        const url = `${this.server}/api/subscription/devices/${this.accountState.pubkey()}`;
         const headers = await this.getAuthHeaders(url, 'GET');
 
         const response = await fetch(`${url}`, {
@@ -90,7 +92,7 @@ export class WebPushService {
   /** Sends a notification to all the registered devices for this user. */
   async self(title: string, body: string, data?: any) {
     try {
-      const url = `${this.server}/api/subscription/send/${this.nostr.pubkey()}`;
+      const url = `${this.server}/api/subscription/send/${this.accountState.pubkey()}`;
       const headers = await this.getAuthHeaders(url, 'POST');
       const payload: any = {
         title: title,
@@ -137,7 +139,7 @@ export class WebPushService {
       const subscription = JSON.stringify(pushSubscription);
 
       try {
-        const url = `${this.server}/api/subscription/webpush/${this.nostr.pubkey()}`;
+        const url = `${this.server}/api/subscription/webpush/${this.accountState.pubkey()}`;
         const headers = await this.getAuthHeaders(url, 'POST');
 
         const response = await fetch(`${url}`, {
@@ -189,7 +191,7 @@ export class WebPushService {
     }
 
     try {
-      const url = `${this.server}/api/subscription/webpush/${this.nostr.pubkey()}/${deviceId}`;
+      const url = `${this.server}/api/subscription/webpush/${this.accountState.pubkey()}/${deviceId}`;
       const headers = await this.getAuthHeaders(url, 'DELETE');
 
       const response = await fetch(`${url}`, {

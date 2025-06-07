@@ -19,6 +19,7 @@ import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { UnsignedEvent } from 'nostr-tools/pure';
 import { UtilitiesService } from '../../services/utilities.service';
+import { AccountStateService } from '../../services/account-state.service';
 
 // interface Badge {
 //   id: string;
@@ -62,6 +63,7 @@ export class BadgesComponent {
   private readonly data = inject(DataService);
   private readonly badgeService = inject(BadgeService);
   readonly utilities = inject(UtilitiesService);
+  private readonly accountState = inject(AccountStateService);
 
   profileBadgesEvent = signal<any>(null);
   accepted = signal<{ aTag: string[], eTag: string[], id: string, pubkey: string, slug: string }[]>([]);
@@ -89,17 +91,17 @@ export class BadgesComponent {
       if (appInitialized && appAuthenticated) {
         console.log('appInitialized && appAuthenticated');
         try {
-          const profileBadgesEvent = await this.relay.getEventByPubkeyAndKind(this.nostr.pubkey(), kinds.ProfileBadges);
+          const profileBadgesEvent = await this.relay.getEventByPubkeyAndKind(this.accountState.pubkey(), kinds.ProfileBadges);
           console.log('Profile Badges Event:', profileBadgesEvent);
 
-          const badgeAwardEvents = await this.relay.getEventsByPubkeyAndKind(this.nostr.pubkey(), kinds.BadgeAward);
+          const badgeAwardEvents = await this.relay.getEventsByPubkeyAndKind(this.accountState.pubkey(), kinds.BadgeAward);
           console.log('badgeAwardsEvent:', badgeAwardEvents);
 
           for (const event of badgeAwardEvents) {
             await this.storage.saveEvent(event);
           }
 
-          const badgeDefinitionEvents = await this.relay.getEventsByPubkeyAndKind(this.nostr.pubkey(), kinds.BadgeDefinition);
+          const badgeDefinitionEvents = await this.relay.getEventsByPubkeyAndKind(this.accountState.pubkey(), kinds.BadgeDefinition);
           console.log('badgeAwardsEvent:', badgeDefinitionEvents);
           this.definitions.set(badgeDefinitionEvents);
 
@@ -108,7 +110,7 @@ export class BadgesComponent {
             await this.badgeService.putBadgeDefinition(event);
           }
 
-          const receivedAwardsEvents = await this.relay.getEventsByKindAndPubKeyTag(this.nostr.pubkey(), kinds.BadgeAward);
+          const receivedAwardsEvents = await this.relay.getEventsByKindAndPubKeyTag(this.accountState.pubkey(), kinds.BadgeAward);
           console.log('receivedAwardsEvents:', receivedAwardsEvents);
 
           // Fetch metadata for badge issuers
@@ -317,7 +319,7 @@ export class BadgesComponent {
         created_at: Math.floor(Date.now() / 1000),
         tags: tags,
         content: '',
-        pubkey: this.nostr.pubkey()
+        pubkey: this.accountState.pubkey()
       };
 
       // Sign and publish the event

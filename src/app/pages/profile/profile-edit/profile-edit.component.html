@@ -91,10 +91,10 @@
           <input matInput type="text" [(ngModel)]="profile.lud16" placeholder="satoshi@bitcoin.org" />
         </mat-form-field>
       </p> -->
-            <p>Last updated: {{ metadata()!.event.created_at | ago }}</p>
+            <p>Last updated: {{ accountState.profile()!.event.created_at | ago }}</p>
 
-            {{ metadata() | json }}<br><br>
-            {{ profile() }}
+            <!-- {{ accountState.currentProfile()!.event | json }}<br><br> -->
+            <!-- {{ profile() }} -->
 
         </mat-card-content>
         }

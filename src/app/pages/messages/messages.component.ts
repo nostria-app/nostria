@@ -32,6 +32,7 @@ import { v2 } from 'nostr-tools/nip44';
 import { hexToBytes } from '@noble/hashes/utils';
 import { ApplicationService } from '../../services/application.service';
 import { UtilitiesService } from '../../services/utilities.service';
+import { AccountStateService } from '../../services/account-state.service';
 
 // Define interfaces for our DM data structures
 interface Chat {
@@ -102,6 +103,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
     private snackBar = inject(MatSnackBar);
     private readonly app = inject(ApplicationService);
     readonly utilities = inject(UtilitiesService);
+    private readonly accountState = inject(AccountStateService);
 
     // UI state signals
     isLoading = signal<boolean>(false);
@@ -262,7 +264,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
         this.error.set(null);
 
         try {
-            const myPubkey = this.nostr.pubkey();
+            const myPubkey = this.accountState.pubkey();
             if (!myPubkey) {
                 this.error.set('You need to be logged in to view messages');
                 this.isLoading.set(false);
@@ -413,7 +415,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
      * Fetch the latest message for a specific chat
      */
     async fetchLatestMessageForChat(pubkey: string, relays: string[]): Promise<void> {
-        const myPubkey = this.nostr.pubkey();
+        const myPubkey = this.accountState.pubkey();
         if (!myPubkey || !this.relayPool) return;
 
         try {
@@ -504,7 +506,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
         this.messages.set([]);
 
         try {
-            const myPubkey = this.nostr.pubkey();
+            const myPubkey = this.accountState.pubkey();
             if (!myPubkey || !this.relayPool) {
                 this.error.set('You need to be logged in to view messages');
                 this.isLoading.set(false);
@@ -616,12 +618,12 @@ export class MessagesComponent implements OnInit, OnDestroy {
      * Unwrap and decrypt a gift-wrapped message
      */
     async unwrapMessage(wrappedEvent: any): Promise<any | null> {
-        const myPubkey = this.nostr.pubkey();
+        const myPubkey = this.accountState.pubkey();
         if (!myPubkey) return null;
 
         // Get our private key (in a real app, this would use a more secure method)
         //const privateKey = await this.nostr.getActivePrivateKeySecure();
-        const privateKey = await this.nostr.account()?.privkey;
+        const privateKey = await this.accountState.account()?.privkey;
         if (!privateKey) return null;
 
         const privateKeyBytes = hexToBytes(privateKey);
@@ -684,7 +686,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
 
         try {
             const pubkey = this.selectedChat()?.pubkey;
-            const myPubkey = this.nostr.pubkey();
+            const myPubkey = this.accountState.pubkey();
 
             if (!pubkey || !myPubkey || !this.relayPool) {
                 this.isLoadingMore.set(false);
@@ -839,7 +841,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
     async sendReadReceipts(messageIds: string[]): Promise<void> {
         if (messageIds.length === 0) return;
 
-        const myPubkey = this.nostr.pubkey();
+        const myPubkey = this.accountState.pubkey();
         if (!myPubkey) return;
 
         // Convert array of message IDs to an array of [e, ID] tags
@@ -1164,7 +1166,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
      * Subscribe to new messages
      */
     subscribeToMessages(): void {
-        const myPubkey = this.nostr.pubkey();
+        const myPubkey = this.accountState.pubkey();
         if (!myPubkey || !this.relayPool) return;
 
         // Get relays to subscribe to

@@ -117,6 +117,8 @@ export class FollowingComponent implements OnInit, AfterViewInit {
   async loadFollowingList(pubkeys: string[]): Promise<void> {
     try {
       this.isLoading.set(true);
+
+      debugger;
       
       if (!pubkeys || pubkeys.length === 0) {
         this.followingList.set([]);

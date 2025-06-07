@@ -20,6 +20,7 @@ import { DataService } from '../../../services/data.service';
 import { RelayService } from '../../../services/relay.service';
 import { MatCardModule } from '@angular/material/card';
 import { LayoutService } from '../../../services/layout.service';
+import { AccountStateService } from '../../../services/account-state.service';
 
 interface ArticleDraft {
   title: string;
@@ -60,6 +61,7 @@ export class EditorComponent {
   private dialog = inject(MatDialog);
   private sanitizer = inject(DomSanitizer);
   private layout = inject(LayoutService);
+  private accountState = inject(AccountStateService);
 
   // Editor state
   isLoading = signal(false);
@@ -121,7 +123,7 @@ export class EditorComponent {
   async loadArticle(articleId: string): Promise<void> {
     try {
       this.isLoading.set(true);
-      const pubkey = this.nostrService.pubkey();
+      const pubkey = this.accountState.pubkey();
       
       if (!pubkey) {
         this.snackBar.open('Please log in to edit articles', 'Close', { duration: 3000 });
@@ -215,7 +217,7 @@ export class EditorComponent {
       return;
     }
 
-    const pubkey = this.nostrService.pubkey();
+    const pubkey = this.accountState.pubkey();
     if (!pubkey) {
       this.snackBar.open('Please log in to publish', 'Close', { duration: 3000 });
       return;

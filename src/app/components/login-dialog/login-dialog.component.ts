@@ -82,12 +82,6 @@ export class LoginDialogComponent {
     this.currentStep.set(step);
   }
   
-  // Method to get account metadata (from login dialog)
-  getAccountMetadata(account: any) {
-    const metadata = this.nostrService.getMetadataForAccount(account.pubkey);
-    return metadata ? metadata.data : {};
-  }
-  
   // Initial dialog methods
   startNewAccountFlow(): void {
     this.logger.debug('Starting account creation flow');
