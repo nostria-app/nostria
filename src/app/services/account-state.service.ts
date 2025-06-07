@@ -48,20 +48,32 @@ export class AccountStateService {
     return this.account()?.pubkey || '';
   });
 
-  profile = computed(() => {
-    const account = this.account();
+  profile = signal<NostrRecord | undefined>(undefined);
 
-    if (account) {
-      // If account is set, return its profile
-      return this.getAccountProfile(account.pubkey);
-    }
+  // profile = computed(() => {
+  //   const account = this.account();
 
-    return undefined
-  });
+  //   if (account) {
+  //     // If account is set, return its profile
+  //     return this.getAccountProfile(account.pubkey);
+  //   }
+
+  //   return undefined
+  // });
 
   changeAccount(account: NostrUser | null): void {
     this.accountChanging.set(account?.pubkey || '');
+
+    this.followingList.set([]);
     this.account.set(account);
+    
+    if (!account) {
+      this.profile.set(undefined);
+      return;
+    } else {
+      this.profile.set(this.getAccountProfile(account.pubkey));
+    }
+    
   }
 
   muteList = signal<Event | undefined>(undefined);
@@ -297,8 +309,7 @@ export class AccountStateService {
   // Method to search cached profiles
   searchProfiles(query: string): NostrRecord[] {
     console.log('searchProfiles called with query:', query);
-    if (!query || query.length < 2) {
-      console.log('Query too short or empty, returning empty results');
+    if (!query || query.length < 1) {
       return [];
     }
 

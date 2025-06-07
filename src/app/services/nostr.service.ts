@@ -249,6 +249,8 @@ export class NostrService {
 
         this.accountState.addToCache(metadata.event.pubkey, metadata);
 
+        this.accountState.profile.set(metadata);
+
         this.logger.info('Found user metadata', { metadata });
         this.appState.loadingMessage.set('Found your profile! 👍');
         await this.storage.saveEvent(metadata.event);
