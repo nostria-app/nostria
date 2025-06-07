@@ -99,16 +99,17 @@ export class ProfileComponent {
 
   constructor() {
     // When accounts metadata changes, update the current metadata.
-    effect(() => {
-      debugger;
-      let metadata = this.accountState.getAccountProfile(this.accountState.pubkey());
-      this.userMetadata.set(metadata);
-    });
+    // effect(() => {
+    //   debugger;
+    //   let metadata = this.accountState.getAccountProfile(this.accountState.pubkey());
+    //   this.userMetadata.set(metadata);
+    // });
 
     // React to changes in route parameters and app initialization
     effect(async () => {
       // Only proceed if app is initialized and route params are available
       if (this.app.authenticated() && this.routeParams()) {
+        debugger;
         let id = this.routeParams()?.get('id');
 
         if (id) {

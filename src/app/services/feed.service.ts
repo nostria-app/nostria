@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, computed, Signal, WritableSignal } from '@angular/core';
+import { Injectable, inject, signal, computed, Signal, WritableSignal, effect, untracked } from '@angular/core';
 import { LocalStorageService } from './local-storage.service';
 import { LoggerService } from './logger.service';
 import { RelayService } from './relay.service';
@@ -8,12 +8,13 @@ import { ApplicationStateService } from './application-state.service';
 import { AccountStateService } from './account-state.service';
 import { DataService } from './data.service';
 import { UtilitiesService } from './utilities.service';
+import { ApplicationService } from './application.service';
 
 export interface FeedData {
   column: ColumnConfig,
   filter: any,
   events: WritableSignal<Event[]>,
-  subscription: SubCloser | null
+  subscription: any;
 }
 
 export interface ColumnConfig {
@@ -121,6 +122,7 @@ export class FeedService {
   private readonly accountState = inject(AccountStateService);
   private readonly dataService = inject(DataService);
   private readonly utilities = inject(UtilitiesService);
+  private readonly app = inject(ApplicationService);
 
   // Signals for feeds and relays
   private readonly _feeds = signal<FeedConfig[]>([]);
@@ -141,8 +143,15 @@ export class FeedService {
   readonly feedTypes = COLUMN_TYPES;
 
   constructor() {
-    this.loadFeeds();
-    this.loadRelays();
+    effect(() => {
+      if (this.accountState.initialized()) {
+        debugger;
+        untracked(() => {
+          this.loadFeeds();
+          this.loadRelays();
+        });
+      }
+    });
   }
 
   /**
@@ -287,7 +296,7 @@ export class FeedService {
 
       const followingPool = new SimplePool();
 
-      for(const pubkey of followingList) {
+      for (const pubkey of followingList) {
         let relayUrls = await this.dataService.getUserRelays(pubkey);
         relayUrls = this.utilities.pickOptimalRelays(relayUrls, 2);
       }
@@ -295,7 +304,7 @@ export class FeedService {
       // TODO: This is not implemented yet, we need to decide how many events to fetch,
       // and how to handle pagination. Optimally it should fetch from the user's favorites,
       // the user's that the user has interactved with recently.
-      
+
     } else {
       // Subscribe to relay events
       const sub = this.relay.subscribe([item.filter], (event) => {
@@ -346,7 +355,7 @@ export class FeedService {
     if (columnData) {
       // Close the subscription
       if (columnData.subscription) {
-        columnData.subscription.close();
+        columnData.subscription?.close();
         this.logger.debug(`Closed subscription for column: ${columnId}`);
       }
 
@@ -393,6 +402,7 @@ export class FeedService {
   getEventsForColumn(columnId: string): Signal<Event[]> | undefined {
     return this.data.get(columnId)?.events;
   }
+
   unsubscribe() {
     this.data.forEach(item => item.subscription?.close());
     this.data.clear();

@@ -40,6 +40,9 @@ export class AccountStateService {
   // Current profile pubkey
   // currentProfilePubkey = signal<string>('');
 
+  /** Use this signal to track if account has been loaded. */
+  initialized = signal(false);
+
   accountChanging = signal<string>('');
 
   account = signal<NostrUser | null>(null);

@@ -118,8 +118,6 @@ export class FollowingComponent implements OnInit, AfterViewInit {
     try {
       this.isLoading.set(true);
 
-      debugger;
-      
       if (!pubkeys || pubkeys.length === 0) {
         this.followingList.set([]);
         this.isLoading.set(false);

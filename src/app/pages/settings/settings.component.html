@@ -73,7 +73,7 @@
 
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Log Level</mat-label>
-            <mat-select [ngModel]="currentLogLevel()" (selectionChange)="setLogLevel($event.value)">
+            <mat-select [ngModel]="logger.logLevel" (selectionChange)="setLogLevel($event.value)">
               <mat-option value="debug">Debug</mat-option>
               <mat-option value="info">Info</mat-option>
               <mat-option value="warn">Warning</mat-option>
@@ -82,7 +82,7 @@
             </mat-select>
           </mat-form-field>
           <p>
-            @switch (currentLogLevel()) {
+            @switch (logger.logLevel) {
             @case ('debug') {
             Shows all log messages including detailed debug information.
             }
@@ -103,7 +103,7 @@
 
           <div class="setting-item">
             <span>Show debug overlay</span>
-            <mat-slide-toggle [checked]="logger.logOverlay()" (change)="logger.setLogOverlay(!logger.logOverlay())">
+            <mat-slide-toggle [checked]="logger.logOverlay" (change)="logger.setLogOverlay(!logger.logOverlay)">
             </mat-slide-toggle>
           </div>
         </div>

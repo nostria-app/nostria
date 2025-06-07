@@ -21,29 +21,38 @@ export class ProfileStateService {
   media = signal<NostrRecord[]>([]);
 
   relay: UserRelayService | null = null;
-  
+
   // Current profile pubkey
   currentProfilePubkey = signal<string>('');
-  
+
   private notificationService = inject(NotificationService);
-  
+
   constructor() { }
-  
+
   // setFollowingList(list: string[]): void {
   //   this.followingList.set(list);
   // }
-  
+
   setCurrentProfilePubkey(pubkey: string): void {
+    this.reset();
     debugger
     this.currentProfilePubkey.set(pubkey);
-    
+
     // Notify when a profile is loaded (example usage of notification service)
-    if (pubkey) {
-      this.notificationService.notify(
-        'Profile Loaded',
-        `Successfully loaded profile information for ${pubkey.substring(0, 8)}...`,
-        NotificationType.SUCCESS
-      );
-    }
+    // if (pubkey) {
+    //   this.notificationService.notify(
+    //     'Profile Loaded',
+    //     `Successfully loaded profile information for ${pubkey.substring(0, 8)}...`,
+    //     NotificationType.SUCCESS
+    //   );
+    // }
+  }
+
+  reset() {
+    this.followingList.set([]);
+    this.notes.set([]);
+    this.replies.set([]);
+    this.articles.set([]);
+    this.media.set([]);
   }
 }
