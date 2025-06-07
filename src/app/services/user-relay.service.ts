@@ -110,7 +110,7 @@ export class UserRelayService {
         this.logger.debug('Creating subscription with filters:', filters);
 
         if (!this.pool) {
-            this.logger.error('Cannot subscribe: account pool is not initialized');
+            this.logger.error('Cannot subscribe: user pool is not initialized');
             return {
                 unsubscribe: () => {
                     this.logger.debug('No subscription to unsubscribe from');

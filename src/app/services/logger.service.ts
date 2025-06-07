@@ -25,15 +25,19 @@ export class LoggerService {
   };
 
   // Current log level - can be changed at runtime
-  logLevel = signal<LogLevel>(this.getStoredLogLevel());
-  logOverlay = signal<boolean>(this.getStoredLogOverlay());
+  // logLevel = signal<LogLevel>(this.getStoredLogLevel());
+  logLevel: LogLevel = 'info';
+  logOverlay = false;
+  // logOverlay = signal<boolean>(this.getStoredLogOverlay());
 
   lastDebug = '';
   lastInfo = '';
   lastWarn = '';
 
   constructor() {
-    console.log(`LoggerService initialized with log level: ${this.logLevel()}`);
+    this.logLevel = this.getStoredLogLevel();
+    this.logOverlay = this.getStoredLogOverlay();
+    console.log(`LoggerService initialized with log level: ${this.logLevel}`);
   }
 
   private getStoredLogLevel(): LogLevel {
@@ -53,19 +57,19 @@ export class LoggerService {
   setLogLevel(level: LogLevel): void {
     if (!this.isBrowser()) return; // Return if not in browser context
 
-    this.logLevel.set(level);
+    this.logLevel = level;
     localStorage.setItem(this.LOG_LEVEL_KEY, level);
   }
 
   setLogOverlay(enable: boolean): void {
     if (!this.isBrowser()) return; // Return if not in browser context
 
-    this.logOverlay.set(enable);
+    this.logOverlay = enable;
     localStorage.setItem(this.LOG_OVERLAY_KEY, enable.toString());
   }
 
   private shouldLog(level: LogLevel): boolean {
-    return this.levelPrecedence[level] >= this.levelPrecedence[this.logLevel()];
+    return this.levelPrecedence[level] >= this.levelPrecedence[this.logLevel];
   }
 
   private getTimestamp(): string {
@@ -82,7 +86,7 @@ export class LoggerService {
     if (this.shouldLog('debug')) {
       console.debug(...this.formatMessage('debug', message, ...optionalParams));
 
-      if (this.logOverlay()) {
+      if (this.logOverlay) {
         this.lastDebug = message;
       }
     }
@@ -92,7 +96,7 @@ export class LoggerService {
     if (this.shouldLog('info')) {
       console.info(...this.formatMessage('info', message, ...optionalParams));
 
-      if (this.logOverlay()) {
+      if (this.logOverlay) {
         this.lastInfo = message;
       }
     }
@@ -102,7 +106,7 @@ export class LoggerService {
     if (this.shouldLog('warn')) {
       console.warn(...this.formatMessage('warn', message, ...optionalParams));
 
-      if (this.logOverlay()) {
+      if (this.logOverlay) {
         this.lastWarn = message;
       }
     }

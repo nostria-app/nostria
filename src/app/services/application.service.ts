@@ -59,7 +59,6 @@ export class ApplicationService {
             let pubkey = this.accountState.pubkey();
 
             if (pubkey && pubkey !== this.previousPubKey) {
-                debugger;
                 this.previousPubKey = pubkey;
                 await this.loadAppData();
             }
@@ -72,7 +71,6 @@ export class ApplicationService {
             // Auto-trigger profile processing when following list changes, but only once per account
             const pubkey = this.accountState.pubkey();
 
-            debugger;
             // For reasons unable to figure out,
             // this is triggered twice on app start.
             if (pubkey && followingList.length > 0) {

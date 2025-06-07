@@ -112,13 +112,12 @@ export class NostrService {
 
     effect(async () => {
       const account = this.accountState.account();
-      debugger;
+
       console.log('Account changed', { account });
+
       if (account) {
         await this.loadAccount(account);
       }
-
-      debugger;
 
       // // Set the current user pubkey in the app state
       // this.appState.pubkey.set(account?.pubkey || null);
@@ -143,7 +142,17 @@ export class NostrService {
 
   async initialize() {
     try {
+      debugger;
       const accounts = await this.getAccountsFromStorage();
+
+      if (accounts.length === 0) {
+        // Show success animation instead of waiting
+        this.appState.isLoading.set(false);
+        this.appState.showSuccess.set(false);
+        this.initialized.set(true);
+        return;
+      }
+
       this.accounts.set(accounts);
 
       // We keep an in-memory copy of the user metadata and relay list for all accounts,
@@ -168,8 +177,6 @@ export class NostrService {
       //   await this.loadAccount(account);
       // }
 
-      debugger;
-
       // If no account, finish the loading.
       if (!account) {
         // Show success animation instead of waiting
@@ -185,7 +192,6 @@ export class NostrService {
   }
 
   async loadAccount(account: NostrUser) {
-    debugger;
     if (account) {
       const pubkey = account.pubkey;
       // When the account changes, check what data we have and get if missing.
@@ -259,12 +265,9 @@ export class NostrService {
       }
 
       // After loading the relays and setting them, we load the following list:
-      debugger;
       await this.loadAccountFollowing(pubkey);
       await this.loadAccountMuteList(pubkey);
       await this.subscribeToAccountMetadata(pubkey);
-
-      debugger;
 
       // await this.bookmark.initialize();
 
@@ -287,6 +290,7 @@ export class NostrService {
 
       this.appState.isLoading.set(false);
       this.appState.showSuccess.set(true);
+      this.accountState.initialized.set(true);
 
       // this.accountState.changeAccount(pubkey);
 
@@ -653,7 +657,6 @@ export class NostrService {
   }
 
   private async loadAccountFollowing(pubkey: string) {
-    debugger;
     let followingEvent = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
 
     if (!followingEvent) {
@@ -674,8 +677,6 @@ export class NostrService {
           // Check if the lists are different
           const hasChanged = !this.arraysEqual(currentFollowingList, followingTags);
 
-          debugger;
-
           if (hasChanged) {
             this.accountState.followingList.set(followingTags);
             await this.storage.saveEvent(evt);
@@ -686,7 +687,6 @@ export class NostrService {
 
     if (followingEvent) {
       const followingTags = this.getTags(followingEvent, 'p');
-      debugger;
       this.accountState.followingList.set(followingTags);
     }
   }
@@ -745,7 +745,6 @@ export class NostrService {
 
         break;
       case 'remote':
-        debugger;
         const pool = new SimplePool()
         const bunker = new BunkerSigner(hexToBytes(currentUser.privkey!), this.accountState.account()!.bunker!, { pool });
         signedEvent = await bunker.signEvent(event);
@@ -1256,10 +1255,8 @@ export class NostrService {
             // We must do this before storage.saveEvent, which transforms the content to JSON.
             try {
               this.logger.info('Publishing following list to discovery relays', { followingEvent });
-              debugger;
               await this.relayService.publishToDiscoveryRelays(followingEvent);
             } catch (error) {
-              debugger;
               this.logger.error('Failed to publish relay list to discovery relays', { error });
             }
           }
@@ -1752,7 +1749,6 @@ export class NostrService {
   }
 
   async switchToUser(pubkey: string) {
-    debugger;
     this.logger.info(`Switching to user with pubkey: ${pubkey}`);
     const targetUser = this.accounts().find(u => u.pubkey === pubkey);
     if (targetUser) {
@@ -1778,7 +1774,6 @@ export class NostrService {
   }
 
   async setAccount(user: NostrUser) {
-    debugger;
     this.logger.debug('Updating user in collection', { pubkey: user.pubkey });
 
     // Update lastUsed timestamp
@@ -1989,7 +1984,6 @@ export class NostrService {
     // If we're removing the active user, set active user to null
     if (this.accountState.account()?.pubkey === pubkey) {
       this.logger.debug('Removed account was the active user, logging out');
-      debugger;
       this.accountState.changeAccount(null);
     }
 

@@ -234,12 +234,10 @@ export class RelayService {
     this.logger.debug('Creating subscription with filters:', filters);
 
     if (!this.accountPool) {
+      debugger;
+
       this.logger.error('Cannot subscribe: account pool is not initialized');
-      return {
-        unsubscribe: () => {
-          this.logger.debug('No subscription to unsubscribe from');
-        }
-      };
+      return undefined;
     }
 
     // Use provided relay URLs or default to the user's relays
@@ -247,11 +245,7 @@ export class RelayService {
 
     if (urls.length === 0) {
       this.logger.warn('No relays available for subscription');
-      return {
-        unsubscribe: () => {
-          this.logger.debug('No subscription to unsubscribe from (no relays)');
-        }
-      };
+      return undefined;
     }
 
     try {
@@ -375,6 +369,8 @@ export class RelayService {
     this.logger.debug('Getting events with filters:', filter);
 
     if (!this.accountPool) {
+      debugger;
+
       this.logger.error('Cannot get events: account pool is not initialized');
       return null;
     }
@@ -421,6 +417,8 @@ export class RelayService {
     this.logger.debug('Getting events with filters:', filter);
 
     if (!this.accountPool) {
+      debugger;
+
       this.logger.error('Cannot get events: account pool is not initialized');
       return [];
     }
@@ -484,6 +482,7 @@ export class RelayService {
     this.logger.debug('Publishing event:', event);
 
     if (!this.accountPool) {
+      debugger;
       this.logger.error('Cannot publish event: account pool is not initialized');
       return null;
     }

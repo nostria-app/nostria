@@ -112,6 +112,7 @@ export class DataService {
     }
 
     async getEventsByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<NostrRecord[]> {
+        debugger;
         const events = await this.storage.getEventsByPubkeyAndKind(pubkey, kind);
 
         if (events && events.length > 0) {

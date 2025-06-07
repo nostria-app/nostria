@@ -64,9 +64,6 @@ interface SettingsSection {
 export class SettingsComponent {
   logger = inject(LoggerService);
   private breakpointObserver = inject(BreakpointObserver);
-
-  currentLogLevel = signal<LogLevel>(this.logger.logLevel());
-
   themeService = inject(ThemeService);
   nostrService = inject(NostrService);
   storage = inject(StorageService);
@@ -94,9 +91,9 @@ export class SettingsComponent {
 
   constructor() {
     // Keep the current log level in sync with the service
-    effect(() => {
-      this.currentLogLevel.set(this.logger.logLevel());
-    });
+    // effect(() => {
+    //   this.currentLogLevel.set(this.logger.logLevel());
+    // });
 
     // Check if the screen is mobile-sized
     this.breakpointObserver.observe(['(max-width: 768px)']).subscribe(result => {

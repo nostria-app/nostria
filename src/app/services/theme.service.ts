@@ -55,7 +55,6 @@ export class ThemeService {
 
   private async initBrowserFeatures(): Promise<void> {
     try {
-      debugger;
       // Initialize media query
       this.darkThemeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
       

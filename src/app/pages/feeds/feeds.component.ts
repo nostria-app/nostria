@@ -230,7 +230,7 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
   }
   constructor() {
     // Initialize data loading
-    this.loadTrendingContent();
+    // this.loadTrendingContent();
 
     // Handle route parameters for feed navigation
     effect(() => {
@@ -277,7 +277,6 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
   }
 
   setActiveSection(section: 'discover' | 'following' | 'media'): void {
-    debugger;
     this.activeSection.set(section);
 
     // Load section data if needed
