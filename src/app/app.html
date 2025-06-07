@@ -28,9 +28,11 @@
   @if (app.initialized()) {
   <!-- Top toolbar - now outside and above the sidenav container -->
   <mat-toolbar color="primary" class="app-toolbar no-print">
+    @if (!layout.search()) {
     <button mat-icon-button (click)="toggleSidenav()" aria-label="Toggle sidenav">
       <mat-icon>menu</mat-icon>
     </button>
+    }
     @if (!layout.search()) {
     <img src="icons/icon.svg" class="app-icon hide-tiny" alt="Nostria icon">
     <span class="app-title title-font hide-small">
