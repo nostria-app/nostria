@@ -74,7 +74,6 @@ export class BookmarksComponent {
 
   // Loading states
   loading = signal(false);
-  isLoggedIn = computed(() => !!this.appState.pubkey());
 
   // Bookmark data from service
   // bookmarks = computed(() => {
@@ -226,11 +225,6 @@ export class BookmarksComponent {
   }
 
   async addBookmark(): Promise<void> {
-    if (!this.isLoggedIn()) {
-      this.snackBar.open('Please log in to add bookmarks', 'Close', { duration: 3000 });
-      return;
-    }
-
     // Simple prompt for now - in a full implementation this would be a dialog
     const url = prompt('Enter URL to bookmark:');
     if (!url?.trim()) {
@@ -257,11 +251,6 @@ export class BookmarksComponent {
 
   async deleteBookmark(bookmark: Bookmark, event: Event): Promise<void> {
     event.stopPropagation();
-
-    if (!this.isLoggedIn()) {
-      this.snackBar.open('Please log in to delete bookmarks', 'Close', { duration: 3000 });
-      return;
-    }
 
     if (!confirm(`Are you sure you want to delete this bookmark?\n${bookmark.title}`)) {
       return;

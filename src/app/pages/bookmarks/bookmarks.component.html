@@ -2,14 +2,10 @@
   <div class="bookmarks-header">
     <h1>Bookmarks</h1>
     <div class="header-actions">
-      @if (isLoggedIn()) {
       <button mat-flat-button color="primary" (click)="addBookmark()" [disabled]="loading()">
         <mat-icon>add</mat-icon>
         Add Bookmark
       </button>
-      } @else {
-      <p class="login-message">Please log in to manage bookmarks</p>
-      }
     </div>
   </div>
 
