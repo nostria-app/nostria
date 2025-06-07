@@ -18,8 +18,8 @@ export class ThemeService {
   private localStorage = inject(LocalStorageService);
 
   // Theme colors for PWA
-  private readonly LIGHT_THEME_COLOR = '#FEF7FA'; // Light background color
-  private readonly DARK_THEME_COLOR = '#303030'; // Dark background color
+  private readonly LIGHT_THEME_COLOR = '#FEF7FA';
+  private readonly DARK_THEME_COLOR = '#303030';
 
   darkMode = signal<boolean>(this.getInitialThemePreference());
 
@@ -55,6 +55,7 @@ export class ThemeService {
 
   private async initBrowserFeatures(): Promise<void> {
     try {
+      debugger;
       // Initialize media query
       this.darkThemeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
       
@@ -127,20 +128,12 @@ export class ThemeService {
     if (!isPlatformBrowser(this.platformId)) {
       return; // Don't try to modify DOM during SSR
     }
-    
+
     // Find the theme-color meta tag
     let metaThemeColor = this.document.querySelector('meta[name="theme-color"]');
 
-    // If it doesn't exist, create it
-    if (!metaThemeColor) {
-      this.logger.debug('Creating theme-color meta tag');
-      metaThemeColor = this.document.createElement('meta');
-      metaThemeColor.setAttribute('name', 'theme-color');
-      this.document.head.appendChild(metaThemeColor);
-    }
-
     // Set the color
     this.logger.debug(`Setting theme-color to: ${color}`);
-    metaThemeColor.setAttribute('content', color);
+    metaThemeColor?.setAttribute('content', color);
   }
 }
