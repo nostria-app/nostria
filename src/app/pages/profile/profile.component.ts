@@ -108,8 +108,7 @@ export class ProfileComponent {
     // React to changes in route parameters and app initialization
     effect(async () => {
       // Only proceed if app is initialized and route params are available
-      if (this.app.authenticated() && this.routeParams()) {
-        debugger;
+      if (this.app.initialized() && this.routeParams()) {
         let id = this.routeParams()?.get('id');
 
         if (id) {
