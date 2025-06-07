@@ -1,4 +1,4 @@
-import { computed, effect, inject, Injectable, PLATFORM_ID, signal } from "@angular/core";
+import { computed, effect, inject, Injectable, PLATFORM_ID, signal, untracked } from "@angular/core";
 import { NostrService } from "./nostr.service";
 import { StorageService } from "./storage.service";
 import { Router, RouterLink, RouterModule } from "@angular/router";
@@ -76,19 +76,21 @@ export class ApplicationService {
             // For reasons unable to figure out,
             // this is triggered twice on app start.
             if (pubkey && followingList.length > 0) {
-                // Check if profile discovery has already been done for this account
-                if (!this.accountState.hasProfileDiscoveryBeenDone(pubkey)) {
-                    await this.accountState.startProfileProcessing(followingList, this.nostrService);
-                    this.accountState.markProfileDiscoveryDone(pubkey);
-                } else {
-                    const currentState = this.accountState.profileProcessingState();
-                    if (!currentState.isProcessing) {
-                        // Profile discovery has been done, load profiles from storage into cache
-                        await this.accountState.loadProfilesFromStorageToCache(pubkey, this.dataService, this.storage);
+                untracked(async () => {
+                    debugger
+                    // Check if profile discovery has already been done for this account
+                    if (!this.accountState.hasProfileDiscoveryBeenDone(pubkey)) {
+                        await this.accountState.startProfileProcessing(followingList, this.nostrService);
+                        this.accountState.markProfileDiscoveryDone(pubkey);
+                    } else {
+                        const currentState = this.accountState.profileProcessingState();
+                        if (!currentState.isProcessing) {
+                            // Profile discovery has been done, load profiles from storage into cache
+                            await this.accountState.loadProfilesFromStorageToCache(pubkey, this.dataService, this.storage);
+                        }
                     }
-                }
+                });
             }
-
         });
     }
 
