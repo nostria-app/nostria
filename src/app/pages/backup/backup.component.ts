@@ -12,6 +12,7 @@ import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
 import JSZip from '@progress/jszip-esm';
 import { ApplicationService } from '../../services/application.service';
+import { AccountStateService } from '../../services/account-state.service';
 
 interface BackupStats {
     eventsCount: number;
@@ -42,6 +43,7 @@ export class BackupComponent {
     private snackBar = inject(MatSnackBar);
     private logger = inject(LoggerService);
     private app = inject(ApplicationService);
+    private accountState = inject(AccountStateService);
 
     stats = signal<BackupStats>({
         eventsCount: 0,
@@ -67,7 +69,7 @@ export class BackupComponent {
 
     async loadBackupStats(): Promise<void> {
         try {
-            const pubkey = this.nostr.pubkey();
+            const pubkey = this.accountState.pubkey();
             if (!pubkey) return;
 
             const userEvents = await this.storage.getUserEvents(pubkey);
@@ -98,7 +100,7 @@ export class BackupComponent {
         this.progress.set(0);
 
         try {
-            const pubkey = this.nostr.pubkey();
+            const pubkey = this.accountState.pubkey();
             if (!pubkey) {
                 this.showMessage('No active user found');
                 return;
@@ -217,7 +219,7 @@ export class BackupComponent {
             }
 
             // Check if the backup is for the current user
-            const currentPubkey = this.nostr.pubkey();
+            const currentPubkey = this.accountState.pubkey();
             if (backupData.pubkey !== currentPubkey) {
                 this.showMessage('Warning: This backup is for a different user', 5000);
             }

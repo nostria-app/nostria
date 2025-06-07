@@ -26,6 +26,7 @@ import { ConfirmDialogComponent } from '../../components/confirm-dialog/confirm-
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { LocalStorageService } from '../../services/local-storage.service';
+import { AccountStateService } from '../../services/account-state.service';
 
 @Component({
   selector: 'app-media',
@@ -62,6 +63,7 @@ export class MediaComponent {
   appState = inject(ApplicationStateService);
   app = inject(ApplicationService);
   private readonly localStorage = inject(LocalStorageService);
+  private readonly accountState = inject(AccountStateService);
 
   // View state
   activeTab = signal<'images' | 'videos' | 'files' | 'servers'>('images');
@@ -95,7 +97,7 @@ export class MediaComponent {
     effect(async () => {
       if (this.app.initialized() && this.app.authenticated()) {
         console.log('APP INITIALIZED, FETCHING MEDIA SERVERS');
-        const userServerList = await this.nostr.getMediaServers(this.nostr.pubkey());
+        const userServerList = await this.nostr.getMediaServers(this.accountState.pubkey());
         console.log('USER SERVER LIST', userServerList);
 
         if (userServerList) {

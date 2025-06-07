@@ -10,6 +10,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { NostrService } from '../../services/nostr.service';
 import { UtilitiesService } from '../../services/utilities.service';
+import { AccountStateService } from '../../services/account-state.service';
 
 @Component({
   selector: 'app-credentials',
@@ -31,6 +32,7 @@ export class CredentialsComponent {
   nostrService = inject(NostrService);
   snackBar = inject(MatSnackBar);
   utilities = inject(UtilitiesService);
+  accountState = inject(AccountStateService);
   
   isNsecVisible = signal(false);
   
@@ -63,7 +65,7 @@ export class CredentialsComponent {
   }
 
   getNpub(): string {
-    const pubkey = this.nostrService.pubkey();
+    const pubkey = this.accountState.pubkey();
     if (!pubkey) return '';
 
     console.debug('LOCATION 2:', pubkey);
@@ -71,12 +73,12 @@ export class CredentialsComponent {
   }
 
   getNsec(): string {
-    const privkey = this.nostrService.account()?.privkey;
+    const privkey = this.accountState.account()?.privkey;
     if (!privkey) return '';
     return this.utilities.getNsecFromPrivkey(privkey);
   }
 
   isRemoteAccount(): boolean {
-    return this.nostrService.account()?.source === 'remote';
+    return this.accountState.account()?.source === 'remote';
   }
 }

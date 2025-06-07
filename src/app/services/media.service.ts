@@ -12,6 +12,7 @@ import { sha256 } from '@noble/hashes/sha2';
 import { bytesToHex } from '@noble/hashes/utils';
 import { ApplicationService } from './application.service';
 import { RegionService } from './region.service';
+import { AccountStateService } from './account-state.service';
 
 export interface MediaItem {
   sha256: string; // SHA-256 hash of file (NIP-94)
@@ -42,6 +43,7 @@ export class MediaService {
   private readonly logger = inject(LoggerService);
   private readonly app = inject(ApplicationService);
   private readonly region = inject(RegionService);
+  private readonly accountState = inject(AccountStateService);
 
   // State management
   private _mediaItems = signal<MediaItem[]>([]);
@@ -67,7 +69,7 @@ export class MediaService {
     effect(async () => {
       if (this.app.initialized() && this.app.authenticated()) {
         this.logger.debug('APP INITIALIZED, FETCHING MEDIA SERVERS');
-        const userServerList = await this.nostrService.getMediaServers(this.nostrService.pubkey());
+        const userServerList = await this.nostrService.getMediaServers(this.accountState.pubkey());
         this.logger.debug('USER SERVER LIST', userServerList);
 
         if (userServerList) {
@@ -76,10 +78,10 @@ export class MediaService {
         } else {
           this.logger.debug('No media servers found for user. This user might be a Nostria account or any other Nostr user.');
 
-          if (!this.nostrService.account()?.hasActivated) {
+          if (!this.accountState.account()?.hasActivated) {
             this.logger.debug('User has not activated their account yet, so we will add regional media servers.');
 
-            const region = this.nostrService.account()?.region || 'eu';
+            const region = this.accountState.account()?.region || 'eu';
             const mediaServerUrl = this.region.getMediaServer(region, 0);
             this.setMediaServers([mediaServerUrl!]);
           }
@@ -122,10 +124,10 @@ export class MediaService {
 
   private async loadMediaServers(): Promise<void> {
     // First try to load from localStorage for faster initial load
-    let mediaServerEvent = await this.storage.getEventByPubkeyAndKind(this.nostrService.pubkey(), MEDIA_SERVERS_EVENT_KIND);
+    let mediaServerEvent = await this.storage.getEventByPubkeyAndKind(this.accountState.pubkey(), MEDIA_SERVERS_EVENT_KIND);
 
     if (!mediaServerEvent) {
-      mediaServerEvent = await this.relay.getEventByPubkeyAndKind(this.nostrService.pubkey(), MEDIA_SERVERS_EVENT_KIND);
+      mediaServerEvent = await this.relay.getEventByPubkeyAndKind(this.accountState.pubkey(), MEDIA_SERVERS_EVENT_KIND);
     }
 
     if (mediaServerEvent) {
@@ -146,7 +148,7 @@ export class MediaService {
         return;
       }
 
-      const pubkey = this.nostrService.pubkey();
+      const pubkey = this.accountState.pubkey();
 
       // Generate auth headers once for all servers
       const headers = await this.getAuthHeaders('List Files', 'list');
@@ -968,7 +970,7 @@ export class MediaService {
   }
 
   private async signEvent(event: Partial<NostrEvent>): Promise<NostrEvent> {
-    const currentUser = this.nostrService.account();
+    const currentUser = this.accountState.account();
     if (!currentUser) {
       throw new Error('User not logged in');
     }
@@ -1003,7 +1005,7 @@ export class MediaService {
   }
 
   private async getAuthHeaders(reason: string, action: string | 'list' | 'upload' | 'media' | 'delete' | 'get', sha256?: string, skipContentType = false): Promise<Record<string, string>> {
-    const currentUser = this.nostrService.account();
+    const currentUser = this.accountState.account();
     if (!currentUser) {
       throw new Error('User not logged in');
     }

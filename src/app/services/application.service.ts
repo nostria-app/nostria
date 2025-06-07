@@ -8,6 +8,8 @@ import { ThemeService } from "./theme.service";
 import { NotificationService } from "./notification.service";
 import { LocalStorageService } from "./local-storage.service";
 import { isPlatformBrowser } from "@angular/common";
+import { AccountStateService } from "./account-state.service";
+import { DataService } from "./data.service";
 
 @Injectable({
     providedIn: 'root'
@@ -18,8 +20,10 @@ export class ApplicationService {
     router = inject(Router);
     logger = inject(LoggerService);
     appState = inject(ApplicationStateService);
+    accountState = inject(AccountStateService);
     theme = inject(ThemeService);
     notificationService = inject(NotificationService);
+    dataService = inject(DataService);
     private readonly localStorage = inject(LocalStorageService);
     private readonly platformId = inject(PLATFORM_ID);
     readonly isBrowser = signal(isPlatformBrowser(this.platformId));
@@ -28,7 +32,7 @@ export class ApplicationService {
     initialized = computed(() => this.nostrService.initialized() && this.storage.initialized());
 
     /** User is "authenticated" if there is any account set. */
-    authenticated = computed(() => this.nostrService.account() != null);
+    authenticated = computed(() => this.accountState.account() != null);
 
     /** Used to check if both initialized and authenticated. Used to wait for both conditions. */
     // initializedAndAuthenticated = computed(() => this.initialized() && this.authenticated());
@@ -45,12 +49,46 @@ export class ApplicationService {
         'preview': 2,
     };
 
+    previousPubKey = '';
+
     constructor() {
         // Set up effect to load notifications when app is initialized and authenticated
-        effect(() => {
-            if (this.authenticated()) {
-                this.loadAppData();
+        effect(async () => {
+            // For reasons unable to figure out,
+            // this is triggered twice on app start.
+            let pubkey = this.accountState.pubkey();
+
+            if (pubkey && pubkey !== this.previousPubKey) {
+                debugger;
+                this.previousPubKey = pubkey;
+                await this.loadAppData();
             }
+        });
+
+        effect(async () => {
+            const followingList = this.accountState.followingList();
+            // const initialize = this.appState.
+
+            // Auto-trigger profile processing when following list changes, but only once per account
+            const pubkey = this.accountState.pubkey();
+
+            debugger;
+            // For reasons unable to figure out,
+            // this is triggered twice on app start.
+            if (pubkey && followingList.length > 0) {
+                // Check if profile discovery has already been done for this account
+                if (!this.accountState.hasProfileDiscoveryBeenDone(pubkey)) {
+                    await this.accountState.startProfileProcessing(followingList, this.nostrService);
+                    this.accountState.markProfileDiscoveryDone(pubkey);
+                } else {
+                    const currentState = this.accountState.profileProcessingState();
+                    if (!currentState.isProcessing) {
+                        // Profile discovery has been done, load profiles from storage into cache
+                        await this.accountState.loadProfilesFromStorageToCache(pubkey, this.dataService, this.storage);
+                    }
+                }
+            }
+
         });
     }
 
@@ -86,7 +124,10 @@ export class ApplicationService {
             await this.notificationService.loadNotifications();
         }
 
+        debugger;
+
         // Add any other app data loading here in the future
+        // this.accountState.loadProfiles();
     }
 
     async wipe() {

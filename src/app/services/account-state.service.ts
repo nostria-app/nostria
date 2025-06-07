@@ -1,8 +1,11 @@
-import { Injectable, computed, inject, signal, effect, Injector } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { Event } from 'nostr-tools';
 import { NostrRecord } from '../interfaces';
 import { LocalStorageService } from './local-storage.service';
 import { ApplicationStateService } from './application-state.service';
+import { DataService } from './data.service';
+import { StorageService } from './storage.service';
+import { NostrService, NostrUser } from './nostr.service';
 
 interface ProfileCacheEntry {
   profile: NostrRecord;
@@ -28,22 +31,44 @@ interface ProcessingTracking {
   providedIn: 'root'
 })
 export class AccountStateService {
-  private injector = inject(Injector);
   private localStorage = inject(LocalStorageService);
   private appState = inject(ApplicationStateService);
-  
-  accountChanging = signal<string>('');
 
   // Signal to store the current profile's following list
   followingList = signal<string[]>([]);
 
   // Current profile pubkey
-  currentProfilePubkey = signal<string>('');
+  // currentProfilePubkey = signal<string>('');
+
+  accountChanging = signal<string>('');
+
+  account = signal<NostrUser | null>(null);
+
+  pubkey = computed(() => {
+    return this.account()?.pubkey || '';
+  });
+
+  profile = computed(() => {
+    const account = this.account();
+
+    if (account) {
+      // If account is set, return its profile
+      return this.getAccountProfile(account.pubkey);
+    }
+
+    return undefined
+  });
+
+  changeAccount(account: NostrUser | null): void {
+    this.accountChanging.set(account?.pubkey || '');
+    this.account.set(account);
+  }
 
   muteList = signal<Event | undefined>(undefined);
 
   // Profile cache - in-memory cache for quick searches
-  private profileCache = signal<Map<string, ProfileCacheEntry>>(new Map());
+  private userProfileCache = signal<Map<string, ProfileCacheEntry>>(new Map());
+  private accountProfileCache = signal<Map<string, ProfileCacheEntry>>(new Map());
 
   // Processing state for toolbar indicator
   profileProcessingState = signal<ProfileProcessingState>({
@@ -55,7 +80,8 @@ export class AccountStateService {
   });
 
   // Computed signal for cache access
-  cachedProfiles = computed(() => this.profileCache());
+  cachedUserProfiles = computed(() => this.userProfileCache());
+  cachedAccountProfiles = computed(() => this.accountProfileCache());
 
   // Computed signal for processing progress
   processingProgress = computed(() => {
@@ -64,29 +90,17 @@ export class AccountStateService {
     return Math.round((state.processed / state.total) * 100);
   });// nostr = inject(NostrService);
 
-  publish = signal<Event | undefined>(undefined);  constructor() {
-    // Auto-trigger profile processing when following list changes, but only once per account
-    effect(() => {
-      const followingList = this.followingList();
-      const currentPubkey = this.currentProfilePubkey();
-      
-      if (followingList.length > 0 && currentPubkey) {
-        // Check if profile discovery has already been done for this account
-        if (!this.hasProfileDiscoveryBeenDone(currentPubkey)) {
-          this.startProfileProcessing(followingList);
-          this.markProfileDiscoveryDone(currentPubkey);
-        } else {
-          // Profile discovery has been done, load profiles from storage into cache
-          this.loadProfilesFromStorageToCache(currentPubkey);
-        }
-      }
-    });
+  publish = signal<Event | undefined>(undefined);
+
+  constructor() {
+
   }
 
   // Methods for tracking processing state per account
   private getProcessingTracking(): ProcessingTracking {
     return this.localStorage.getObject<ProcessingTracking>(this.appState.PROCESSING_STORAGE_KEY) || {};
   }
+
   private saveProcessingTracking(tracking: ProcessingTracking): void {
     this.localStorage.setObject(this.appState.PROCESSING_STORAGE_KEY, tracking);
   }
@@ -95,7 +109,8 @@ export class AccountStateService {
     const tracking = this.getProcessingTracking();
     return tracking[pubkey]?.profileDiscovery === true;
   }
-  private markProfileDiscoveryDone(pubkey: string): void {
+
+  markProfileDiscoveryDone(pubkey: string): void {
     const tracking = this.getProcessingTracking();
     if (!tracking[pubkey]) {
       tracking[pubkey] = { profileDiscovery: false, backupDiscovery: false };
@@ -132,8 +147,10 @@ export class AccountStateService {
   getProcessingState(pubkey: string): { profileDiscovery: boolean; backupDiscovery: boolean } {
     const tracking = this.getProcessingTracking();
     return tracking[pubkey] || { profileDiscovery: false, backupDiscovery: false };
-  }// Method to start processing profiles
-  private async startProfileProcessing(pubkeys: string[]): Promise<void> {
+  }
+
+  // Method to start processing profiles
+  async startProfileProcessing(pubkeys: string[], nostrService: NostrService): Promise<void> {
     // Don't start if already processing
     const currentState = this.profileProcessingState();
     if (currentState.isProcessing) {
@@ -151,8 +168,8 @@ export class AccountStateService {
 
     try {
       // Get NostrService from the injector to avoid circular dependency
-      const { NostrService } = await import('./nostr.service');
-      const nostrService = this.injector.get(NostrService);
+      // const { NostrService } = await import('./nostr.service');
+      // const nostrService = this.injector.get(NostrService);
 
       // Use parallel processing with the optimized discovery queue
       await Promise.allSettled(
@@ -200,10 +217,24 @@ export class AccountStateService {
   }
 
   // Method to add profile to cache
-  private addToCache(pubkey: string, profile: NostrRecord): void {
-    const cache = this.profileCache();
+  addToAccounts(pubkey: string, profile: NostrRecord): void {
+    const cache = this.accountProfileCache();
+    const existingEntry = cache.get(pubkey);
+
+    // Check if profile already exists and is newer
+    if (existingEntry) {
+      // Compare created_at timestamps if available, otherwise use cached timestamp
+      const existingTimestamp = existingEntry.profile.event.created_at || existingEntry.cachedAt;
+      const newTimestamp = profile.event.created_at || Date.now();
+
+      // Only update if the new profile is newer
+      if (newTimestamp <= existingTimestamp) {
+        return; // Don't update, existing profile is newer or same age
+      }
+    }
+
     const newCache = new Map(cache);
-    
+
     newCache.set(pubkey, {
       profile,
       cachedAt: Date.now()
@@ -214,15 +245,55 @@ export class AccountStateService {
       // Remove oldest entries
       const entries = Array.from(newCache.entries());
       entries.sort((a, b) => a[1].cachedAt - b[1].cachedAt);
-      
+
       // Keep newest 800 entries
       const toKeep = entries.slice(-800);
       newCache.clear();
       toKeep.forEach(([key, value]) => newCache.set(key, value));
     }
 
-    this.profileCache.set(newCache);
+    this.accountProfileCache.set(newCache);
   }
+
+  // Method to add profile to cache
+  addToCache(pubkey: string, profile: NostrRecord): void {
+    const cache = this.userProfileCache();
+    const existingEntry = cache.get(pubkey);
+
+    // Check if profile already exists and is newer
+    if (existingEntry) {
+      // Compare created_at timestamps if available, otherwise use cached timestamp
+      const existingTimestamp = existingEntry.profile.event.created_at || existingEntry.cachedAt;
+      const newTimestamp = profile.event.created_at || Date.now();
+
+      // Only update if the new profile is newer
+      if (newTimestamp <= existingTimestamp) {
+        return; // Don't update, existing profile is newer or same age
+      }
+    }
+
+    const newCache = new Map(cache);
+
+    newCache.set(pubkey, {
+      profile,
+      cachedAt: Date.now()
+    });
+
+    // Limit cache size to prevent memory issues
+    if (newCache.size > 1000) {
+      // Remove oldest entries
+      const entries = Array.from(newCache.entries());
+      entries.sort((a, b) => a[1].cachedAt - b[1].cachedAt);
+
+      // Keep newest 800 entries
+      const toKeep = entries.slice(-800);
+      newCache.clear();
+      toKeep.forEach(([key, value]) => newCache.set(key, value));
+    }
+
+    this.userProfileCache.set(newCache);
+  }
+
   // Method to search cached profiles
   searchProfiles(query: string): NostrRecord[] {
     console.log('searchProfiles called with query:', query);
@@ -231,7 +302,7 @@ export class AccountStateService {
       return [];
     }
 
-    const cache = this.profileCache();
+    const cache = this.userProfileCache();
     console.log('Profile cache size:', cache.size);
     const results: NostrRecord[] = [];
     const lowercaseQuery = query.toLowerCase();
@@ -261,22 +332,56 @@ export class AccountStateService {
       // Prioritize display_name matches
       const aName = (a.data.display_name || a.data.name || '').toLowerCase();
       const bName = (b.data.display_name || b.data.name || '').toLowerCase();
-      
+
       const aStartsWithQuery = aName.startsWith(lowercaseQuery);
       const bStartsWithQuery = bName.startsWith(lowercaseQuery);
-      
+
       if (aStartsWithQuery && !bStartsWithQuery) return -1;
       if (!aStartsWithQuery && bStartsWithQuery) return 1;
-      
+
       return aName.localeCompare(bName);
     });
   }
 
+  // setCachedProfiles(profiles: NostrRecord[]): void {
+  //   const cache = this.profileCache();
+  //   const newCache = new Map(cache);
+
+  //   profiles.forEach(profile => {
+  //     newCache.set(profile.event.pubkey, {
+  //       profile,
+  //       cachedAt: Date.now()
+  //     });
+  //   });
+
+  //   // Limit cache size to prevent memory issues
+  //   if (newCache.size > 1000) {
+  //     // Remove oldest entries
+  //     const entries = Array.from(newCache.entries());
+  //     entries.sort((a, b) => a[1].cachedAt - b[1].cachedAt);
+
+  //     // Keep newest 800 entries
+  //     const toKeep = entries.slice(-800);
+  //     newCache.clear();
+  //     toKeep.forEach(([key, value]) => newCache.set(key, value));
+  //   }
+
+  //   this.profileCache.set(newCache);
+  // }
+
   // Method to get cached profile
-  getCachedProfile(pubkey: string): NostrRecord | undefined {
-    const cache = this.profileCache();
+
+  getAccountProfile(pubkey: string): NostrRecord | undefined {
+    const cache = this.accountProfileCache();
     const entry = cache.get(pubkey);
-    
+
+    return entry?.profile;
+  }
+
+  getCachedProfile(pubkey: string): NostrRecord | undefined {
+    const cache = this.userProfileCache();
+    const entry = cache.get(pubkey);
+
     if (entry) {
       // Check if cache entry is not too old (24 hours)
       const maxAge = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
@@ -286,19 +391,20 @@ export class AccountStateService {
         // Remove expired entry
         const newCache = new Map(cache);
         newCache.delete(pubkey);
-        this.profileCache.set(newCache);
+        this.userProfileCache.set(newCache);
       }
     }
-    
+
     return undefined;
   }
+
   // Method to clear cache
   clearProfileCache(): void {
-    this.profileCache.set(new Map());
+    this.userProfileCache.set(new Map());
   }
 
   // Method to load profiles from storage into cache when profile discovery has been done
-  async loadProfilesFromStorageToCache(pubkey: string): Promise<void> {
+  async loadProfilesFromStorageToCache(pubkey: string, dataService: DataService, storageService: StorageService): Promise<void> {
     if (!this.hasProfileDiscoveryBeenDone(pubkey)) {
       return; // Don't load if discovery hasn't been done
     }
@@ -309,13 +415,10 @@ export class AccountStateService {
         return; // No following list to load profiles for
       }
 
-      // Get NostrService from the injector to avoid circular dependency
-      const { NostrService } = await import('./nostr.service');
-      const nostrService = this.injector.get(NostrService);
-      const { DataService } = await import('./data.service');
-      const dataService = this.injector.get(DataService);
-      const { StorageService } = await import('./storage.service');
-      const storageService = this.injector.get(StorageService);
+      // const { DataService } = await import('./data.service');
+      // const dataService = this.injector.get(DataService);
+      // const { StorageService } = await import('./storage.service');
+      // const storageService = this.injector.get(StorageService);
 
       console.log('Loading profiles from storage to cache for account:', pubkey);
       console.log('Following list size:', followingList.length);
@@ -339,7 +442,7 @@ export class AccountStateService {
 
   // Method to get cache stats
   getCacheStats(): { size: number; oldestEntry: number; newestEntry: number } {
-    const cache = this.profileCache();
+    const cache = this.userProfileCache();
     if (cache.size === 0) {
       return { size: 0, oldestEntry: 0, newestEntry: 0 };
     }
@@ -376,11 +479,6 @@ export class AccountStateService {
     if (!list || !list.tags) return [];
     return list.tags.filter(tag => tag[0] === 'e').map(tag => tag[1]);
   });
-
-  setCurrentProfilePubkey(pubkey: string): void {
-    this.currentProfilePubkey.set(pubkey);
-    this.accountChanging.set(pubkey);
-  }
 
   // Method to update mute list
   updateMuteList(muteEvent: Event): void {

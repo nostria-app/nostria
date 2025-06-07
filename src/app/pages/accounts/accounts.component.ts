@@ -12,6 +12,7 @@ import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
 import { NPubPipe } from '../../pipes/npub.pipe';
 import { LayoutService } from '../../services/layout.service';
+import { AccountStateService } from '../../services/account-state.service';
 
 @Component({
   selector: 'app-accounts',
@@ -34,8 +35,7 @@ export class AccountsComponent {
   layout = inject(LayoutService);
   private dialog = inject(MatDialog);
   private logger = inject(LoggerService);
-  
-  currentAccount = this.nostrService.account;
+  accountState = inject(AccountStateService);
 
   /**
    * Remove an account after confirmation
@@ -62,7 +62,7 @@ export class AccountsComponent {
         this.logger.debug('Removing account confirmed', { pubkey });
         
         // Check if this is the current account
-        const isCurrentAccount = this.currentAccount()?.pubkey === pubkey;
+        const isCurrentAccount = this.accountState.account()?.pubkey === pubkey;
         
         // Find another account to switch to if we're removing the current one
         if (isCurrentAccount) {
@@ -83,15 +83,6 @@ export class AccountsComponent {
         }
       }
     });
-  }
-
-  /**
-   * Get metadata for an account
-   * @param pubkey The public key of the account
-   */
-  getMetadataForAccount(pubkey: string) {
-    const metadata = this.nostrService.getMetadataForAccount(pubkey);
-    return metadata?.data;
   }
 
   /**

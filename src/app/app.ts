@@ -103,17 +103,6 @@ export class App {
   opened = computed(() => this.localSettings.menuOpen());
   displayLabels = computed(() => this.localSettings.menuExpanded());
 
-  // We'll compute the current user metadata from the nostrService's metadata array
-  accountMetadata = computed(() => {
-    if (this.nostrService.account()) {
-      // First check from accountsMetadata (which should be synchronized)
-      const metadata = this.nostrService.getMetadataForAccount(this.nostrService.pubkey());
-      return metadata;
-    }
-
-    return undefined;
-  });
-
   // Computed signal to count unread notifications
   unreadNotificationsCount = computed(() => {
     return this.notificationService.notifications().filter(notification => !notification.read).length;
@@ -238,6 +227,17 @@ export class App {
           //   this.logger.error('Failed to reload metadata after data loading', err));
         }
       });
+
+      // effect(() => {
+
+      //   // When nostr and storage is initialized, set the pubkey.
+      //   if (this.app.initialized() && this.nostrService.account()) {
+      //     debugger;
+      //     this.accountState.currentProfilePubkey.set(this.nostrService.account()!.pubkey);
+      //   }
+
+
+      // });
 
       // Additional effect to make sure we have metadata for the current user
       // effect(() => {

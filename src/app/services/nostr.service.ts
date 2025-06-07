@@ -60,14 +60,14 @@ export class NostrService {
   MAX_RELAY_COUNT = 2;
   dataLoaded = false;
 
-  account = signal<NostrUser | null>(null);
+  // account = signal<NostrUser | null>(null);
   accounts = signal<NostrUser[]>([]);
 
   // accountChanging = signal<NostrUser | null>(null);
   // accountChanged = signal<NostrUser | null>(null);
 
   /** Holds the metadata event for all accounts in the app. */
-  accountsMetadata = signal<NostrRecord[]>([]);
+  // accountsMetadata = signal<NostrRecord[]>([]);
   accountsRelays = signal<Event[]>([]);
 
   accountRelays = computed(() => {
@@ -81,12 +81,8 @@ export class NostrService {
   // These are cache-lookups for the metadata and relays of all users,
   // to avoid query the database all the time.
   // These lists will grow
-  usersMetadata = signal<Map<string, NostrRecord>>(new Map());
+  // usersMetadata = signal<Map<string, NostrRecord>>(new Map());
   usersRelays = signal<Map<string, Event>>(new Map());
-
-  pubkey = computed(() => {
-    return this.account()?.pubkey || '';
-  });
 
   hasAccounts = computed(() => {
     return this.accounts().length > 0;
@@ -115,14 +111,17 @@ export class NostrService {
     });
 
     effect(async () => {
-      const account = this.account();
+      const account = this.accountState.account();
+      debugger;
       console.log('Account changed', { account });
       if (account) {
-        this.loadAccount(account);
+        await this.loadAccount(account);
       }
 
-      // Set the current user pubkey in the app state
-      this.appState.pubkey.set(account?.pubkey || null);
+      debugger;
+
+      // // Set the current user pubkey in the app state
+      // this.appState.pubkey.set(account?.pubkey || null);
     });
 
     // Save all users to localStorage whenever they change
@@ -150,7 +149,15 @@ export class NostrService {
       // We keep an in-memory copy of the user metadata and relay list for all accounts,
       // they won't take up too much memory space.
       const accountsMetadata = await this.getAccountsMetadata();
-      this.accountsMetadata.set(accountsMetadata);
+
+      for (const metadata of accountsMetadata) {
+        this.accountState.addToAccounts(metadata.event.pubkey, metadata);
+        this.accountState.addToCache(metadata.event.pubkey, metadata);
+      }
+
+      // Also make it available in the general cache.
+      // this.accountState.setCachedProfiles(accountsMetadata);
+      // this.accountsMetadata.set(accountsMetadata);
 
       const accountsRelays = await this.getAccountsRelays();
       this.accountsRelays.set(accountsRelays);
@@ -161,6 +168,8 @@ export class NostrService {
       //   await this.loadAccount(account);
       // }
 
+      debugger;
+
       // If no account, finish the loading.
       if (!account) {
         // Show success animation instead of waiting
@@ -168,7 +177,7 @@ export class NostrService {
         this.appState.showSuccess.set(false);
         this.initialized.set(true);
       } else {
-        this.account.set(account);
+        this.accountState.changeAccount(account);
       }
     } catch (err) {
       this.logger.error('Failed to load data during initialization', err);
@@ -176,6 +185,7 @@ export class NostrService {
   }
 
   async loadAccount(account: NostrUser) {
+    debugger;
     if (account) {
       const pubkey = account.pubkey;
       // When the account changes, check what data we have and get if missing.
@@ -188,15 +198,7 @@ export class NostrService {
       }
 
       // Get the metadata from in-memory if exists.
-      let metadata: NostrRecord | null | undefined = this.getMetadataForAccount(pubkey);
-
-      // If there was metadata, also push it into the 
-      if (metadata) {
-        // Also update the cache for getMetadataForUser
-        if (this.usersMetadata().has(pubkey)) {
-          this.updateMetadataCache(pubkey, metadata);
-        }
-      }
+      // let metadata: NostrRecord | null | undefined = this.accountState.getAccountProfile(pubkey);
 
       if (this.relayService.discoveryRelays.length === 0) {
         // We need to ensure that we have Discovery Relay.
@@ -232,22 +234,20 @@ export class NostrService {
       // Store the relays in the relay service
       this.relayService.setRelays(relayUrls);
 
-      const userPool = new SimplePool();
-      userPool.trackRelays = true;
+      const accountPool = new SimplePool();
+      accountPool.trackRelays = true;
 
       // Attach the userPool to the relay service for further use.
-      this.relayService.setAccountPool(userPool);
+      this.relayService.setAccountPool(accountPool);
 
       const metadataEvent = await this.relayService.getEventByPubkeyAndKind(pubkey, kinds.Metadata);
 
+      let metadata: NostrRecord | null | undefined = null;
+
       if (metadataEvent) {
         metadata = this.data.getRecord(metadataEvent);
-        this.updateAccountMetadata(metadata);
 
-        // Also update the cache for getMetadataForUser
-        if (this.usersMetadata().has(pubkey)) {
-          this.updateMetadataCache(pubkey, metadata);
-        }
+        this.accountState.addToCache(metadata.event.pubkey, metadata);
 
         this.logger.info('Found user metadata', { metadata });
         this.appState.loadingMessage.set('Found your profile! 👍');
@@ -257,12 +257,12 @@ export class NostrService {
       }
 
       // After loading the relays and setting them, we load the following list:
+      debugger;
       await this.loadAccountFollowing(pubkey);
       await this.loadAccountMuteList(pubkey);
       await this.subscribeToAccountMetadata(pubkey);
 
-      // This will trigger other services to load data, including settings.
-      this.accountState.setCurrentProfilePubkey(pubkey);
+      debugger;
 
       // await this.bookmark.initialize();
 
@@ -286,6 +286,8 @@ export class NostrService {
       this.appState.isLoading.set(false);
       this.appState.showSuccess.set(true);
 
+      // this.accountState.changeAccount(pubkey);
+
       // Hide success animation after 1.5 seconds
       setTimeout(() => {
         this.appState.showSuccess.set(false);
@@ -295,15 +297,16 @@ export class NostrService {
 
   reset() {
     this.accounts.set([]);
-    this.account.set(null);
-    this.accountsMetadata.set([]);
+    this.accountState.changeAccount(null);
+    this.accountState.clearProfileCache();
+    // this.accountsMetadata.set([]);
     this.accountsRelays.set([]);
   }
 
   // Method to easily find metadata by pubkey
-  getMetadataForAccount(pubkey: string): NostrRecord | undefined {
-    return this.accountsMetadata().find(meta => meta.event.pubkey === pubkey);
-  }
+  // getMetadataForAccount(pubkey: string): NostrRecord | undefined {
+  //   return this.accountsMetadata().find(meta => meta.event.pubkey === pubkey);
+  // }
 
   getAccountFromStorage() {
     // Initialize account from localStorage if available.
@@ -635,7 +638,20 @@ export class NostrService {
     this.accountSubscription = this.relayService.subscribe(filters, onEvent, onEose);
   }
 
+  private arraysEqual(arr1: string[], arr2: string[]): boolean {
+    if (arr1.length !== arr2.length) {
+      return false;
+    }
+
+    // Sort both arrays to ensure order doesn't matter
+    const sorted1 = [...arr1].sort();
+    const sorted2 = [...arr2].sort();
+
+    return sorted1.every((value, index) => value === sorted2[index]);
+  }
+
   private async loadAccountFollowing(pubkey: string) {
+    debugger;
     let followingEvent = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
 
     if (!followingEvent) {
@@ -649,14 +665,26 @@ export class NostrService {
       this.relayService.getEventByPubkeyAndKind(pubkey, kinds.Contacts).then(async (evt) => {
         if (evt) {
           const followingTags = this.getTags(evt, 'p');
-          this.accountState.followingList.set(followingTags);
-          await this.storage.saveEvent(evt);
+
+          // Get current following list to compare
+          const currentFollowingList = this.accountState.followingList();
+
+          // Check if the lists are different
+          const hasChanged = !this.arraysEqual(currentFollowingList, followingTags);
+
+          debugger;
+
+          if (hasChanged) {
+            this.accountState.followingList.set(followingTags);
+            await this.storage.saveEvent(evt);
+          }
         }
       });
     }
 
     if (followingEvent) {
       const followingTags = this.getTags(followingEvent, 'p');
+      debugger;
       this.accountState.followingList.set(followingTags);
     }
   }
@@ -691,7 +719,7 @@ export class NostrService {
   }
 
   private async sign(event: UnsignedEvent): Promise<Event> {
-    const currentUser = this.account();
+    const currentUser = this.accountState.account();
 
     if (!currentUser) {
       throw new Error('No user account found. Please log in or create an account first.');
@@ -717,7 +745,7 @@ export class NostrService {
       case 'remote':
         debugger;
         const pool = new SimplePool()
-        const bunker = new BunkerSigner(hexToBytes(currentUser.privkey!), this.account()!.bunker!, { pool });
+        const bunker = new BunkerSigner(hexToBytes(currentUser.privkey!), this.accountState.account()!.bunker!, { pool });
         signedEvent = await bunker.signEvent(event);
         this.logger.info('Using remote signer account');
         break;
@@ -747,7 +775,7 @@ export class NostrService {
       created_at: this.currentDate(),
       tags,
       content,
-      pubkey: this.pubkey(),
+      pubkey: this.accountState.pubkey(),
     };
 
     return event;
@@ -756,31 +784,31 @@ export class NostrService {
   /**
  * Adds or updates an entry in the metadata cache with LRU behavior
  */
-  private updateMetadataCache(pubkey: string, record: NostrRecord): void {
-    // Get the current cache
-    const cache = this.usersMetadata();
+  // private updateMetadataCache(pubkey: string, record: NostrRecord): void {
+  //   // Get the current cache
+  //   const cache = this.usersMetadata();
 
-    // If the pubkey exists, delete it first (to update position in Map)
-    if (cache.has(pubkey)) {
-      cache.delete(pubkey);
-    }
+  //   // If the pubkey exists, delete it first (to update position in Map)
+  //   if (cache.has(pubkey)) {
+  //     cache.delete(pubkey);
+  //   }
 
-    // Add to the end (newest position)
-    cache.set(pubkey, record);
+  //   // Add to the end (newest position)
+  //   cache.set(pubkey, record);
 
-    // Enforce size limit (100 items)
-    if (cache.size > 100) {
-      // Delete oldest item (first in the Map)
-      const oldestKey = cache.keys().next().value;
+  //   // Enforce size limit (100 items)
+  //   if (cache.size > 100) {
+  //     // Delete oldest item (first in the Map)
+  //     const oldestKey = cache.keys().next().value;
 
-      if (oldestKey) {
-        cache.delete(oldestKey);
-      }
-    }
+  //     if (oldestKey) {
+  //       cache.delete(oldestKey);
+  //     }
+  //   }
 
-    // Update signal
-    this.usersMetadata.set(new Map(cache));
-  }
+  //   // Update signal
+  //   this.usersMetadata.set(new Map(cache));
+  // }
 
   /**
    * Adds or updates an entry in the relays cache with LRU behavior
@@ -813,16 +841,17 @@ export class NostrService {
 
   /**
    * Get metadata from cache or load it from storage
-   */  async getMetadataForUser(pubkey: string, disconnect = true): Promise<NostrRecord | undefined> {
-    console.log('There are X number in cache:', this.usersMetadata().size);
+   */
+  async getMetadataForUser(pubkey: string, disconnect = true): Promise<NostrRecord | undefined> {
+    console.log('There are X number in cache:', this.accountState.cachedUserProfiles().size);
 
     // Check cache first
-    const cachedMetadata = this.usersMetadata().get(pubkey);
+    const cachedMetadata = this.accountState.getCachedProfile(pubkey);
     if (cachedMetadata) {
       // Move to end of LRU cache
-      this.logger.time('getMetadataForUser - cache hit' + pubkey);
-      this.updateMetadataCache(pubkey, cachedMetadata);
-      this.logger.time('getMetadataForUser - cache hit' + pubkey);
+      // this.logger.time('getMetadataForUser - cache hit' + pubkey);
+      // this.updateMetadataCache(pubkey, cachedMetadata);
+      // this.logger.time('getMetadataForUser - cache hit' + pubkey);
       return cachedMetadata;
     }
 
@@ -832,24 +861,26 @@ export class NostrService {
 
     if (records.length > 0) {
       // Add to cache
-      this.updateMetadataCache(pubkey, records[0]);
+      this.accountState.addToCache(pubkey, records[0]);
       return records[0];
     } else {
       // Check if profile discovery has been completed for the current account
-      const currentAccount = this.account();
-      if (currentAccount && this.accountState.hasProfileDiscoveryBeenDone(currentAccount.pubkey)) {
-        // Profile discovery has been done, but no metadata found in storage
-        // Don't attempt network discovery, return undefined
-        this.logger.debug('Profile discovery completed but no metadata in storage', { pubkey });
-        return undefined;
-      }
+      // const currentAccount = this.account();
+      // debugger;
+      // if (currentAccount && this.accountState.hasProfileDiscoveryBeenDone(currentAccount.pubkey)) {
+      //   // Profile discovery has been done, but no metadata found in storage
+      //   // Don't attempt network discovery, return undefined
+      //   this.logger.debug('Profile discovery completed but no metadata in storage', { pubkey });
+      //   return undefined;
+      // }
 
       // Profile discovery not done yet, proceed with network discovery
       const metadata = await this.queueMetadataDiscovery(pubkey, disconnect);
 
       if (metadata) {
         const record = this.data.getRecord(metadata);
-        this.updateMetadataCache(pubkey, record);
+        this.accountState.addToCache(pubkey, record);
+        // this.updateMetadataCache(pubkey, record);
         return record;
       }
 
@@ -1194,7 +1225,7 @@ export class NostrService {
 
         // Make sure we publish Relay List to Discovery Relays if discovered on Account Relays.
         // We must do this before storage.saveEvent, which transforms the content to JSON.
-        
+
         // TODO: Temporary disabled during active development.
         // try {
         //   this.logger.info('Publishing relay list to discovery relays', { relayListEvent });
@@ -1640,15 +1671,9 @@ export class NostrService {
   //   }
   // }
 
-  updateAccountMetadata(record: NostrRecord) {
-    const existingMetadata = this.accountsMetadata().find(meta => meta.event.pubkey === record.event.pubkey);
-
-    if (existingMetadata) {
-      this.accountsMetadata.update(array => array.map(meta => meta.event.pubkey === record.event.pubkey ? record : meta));
-    } else {
-      this.accountsMetadata.update(array => [...array, record]);
-    }
-  }
+  // updateAccountMetadata(record: NostrRecord) {
+  //   this.accountState.addToCache(record.event.pubkey, record);
+  // }
 
   /** Parses the URLs and cleans up, ensuring only wss:// instances are returned. */
   getRelayUrlsFromFollowing(event: Event, timeouts: boolean = true): string[] {
@@ -1725,17 +1750,19 @@ export class NostrService {
   }
 
   async switchToUser(pubkey: string) {
+    debugger;
     this.logger.info(`Switching to user with pubkey: ${pubkey}`);
     const targetUser = this.accounts().find(u => u.pubkey === pubkey);
     if (targetUser) {
       // Update lastUsed timestamp
       targetUser.lastUsed = Date.now();
 
-      this.account.set(targetUser);
-      this.logger.debug('Successfully switched user');
-
       // Persist the account to local storage.
       this.localStorage.setItem(this.appState.ACCOUNT_STORAGE_KEY, JSON.stringify(targetUser));
+
+      // This will trigger a lot of effects.
+      this.accountState.changeAccount(targetUser);
+      this.logger.debug('Successfully switched user');
 
       // Make sure we have the latest metadata for this user
       // this.getUserMetadata(pubkey).catch(err =>
@@ -1749,6 +1776,7 @@ export class NostrService {
   }
 
   async setAccount(user: NostrUser) {
+    debugger;
     this.logger.debug('Updating user in collection', { pubkey: user.pubkey });
 
     // Update lastUsed timestamp
@@ -1768,11 +1796,12 @@ export class NostrService {
       this.accounts.update(u => [...u, user]);
     }
 
-    // Trigger the user signal which indicates user is logged on.
-    this.account.set(user);
-
     // Persist the account to local storage.
     this.localStorage.setItem(this.appState.ACCOUNT_STORAGE_KEY, JSON.stringify(user));
+
+    // Trigger the user signal which indicates user is logged on.
+    // This will trigger a lot of effects.
+    this.accountState.changeAccount(user);
   }
 
   async generateNewKey(region?: string) {
@@ -1945,7 +1974,7 @@ export class NostrService {
   logout(): void {
     this.logger.info('Logging out current user');
     this.localStorage.removeItem(this.appState.ACCOUNT_STORAGE_KEY);
-    this.account.set(null);
+    this.accountState.changeAccount(null);
     this.logger.debug('User logged out successfully');
   }
 
@@ -1956,16 +1985,16 @@ export class NostrService {
     this.accounts.set(updatedUsers);
 
     // If we're removing the active user, set active user to null
-    if (this.account()?.pubkey === pubkey) {
+    if (this.accountState.account()?.pubkey === pubkey) {
       this.logger.debug('Removed account was the active user, logging out');
       debugger;
-      this.account.set(null);
+      this.accountState.changeAccount(null);
     }
 
     // Remove the user's metadata from the metadata array
     // this.accountsMetadata().update(array => array.filter(m => m.pubkey !== pubkey));
     // this.accountsMetadata()
-    this.accountsMetadata.update(array => array.filter(m => m.event.pubkey !== pubkey));
+    // this.accountsMetadata.update(array => array.filter(m => m.event.pubkey !== pubkey));
     this.logger.debug('Account removed successfully');
   }
 
@@ -2050,7 +2079,7 @@ export class NostrService {
    * Clears the cache while preserving current user data
    */
   async clearCache(): Promise<void> {
-    const currentUser = this.account();
+    const currentUser = this.accountState.account();
     if (!currentUser) {
       this.logger.warn('Cannot clear cache: No user is logged in');
       return;
@@ -2090,7 +2119,7 @@ export class NostrService {
 
     // If not in storage, try to fetch from relays
     try {
-      await this.storage.clearCache(this.pubkey());
+      await this.storage.clearCache(this.accountState.pubkey());
       this.logger.info('Cache cleared successfully');
 
       // TODO: Improve this to discover if needed.
