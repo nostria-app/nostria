@@ -21,7 +21,7 @@ import { MatListModule } from '@angular/material/list';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import QRCode from 'qrcode';
-import { Event, kinds, SimplePool } from 'nostr-tools';
+import { Event, kinds, nip19, SimplePool } from 'nostr-tools';
 import { StorageService } from '../../services/storage.service';
 import { ProfileStateService } from '../../services/profile-state.service';
 import { LayoutService } from '../../services/layout.service';
@@ -34,6 +34,7 @@ import { UserRelayService } from '../../services/user-relay.service';
 import { NostrRecord } from '../../interfaces';
 import { DataService } from '../../services/data.service';
 import { UtilitiesService } from '../../services/utilities.service';
+import { UrlUpdateService } from '../../services/url-update.service';
 
 @Component({
   selector: 'app-profile',
@@ -81,6 +82,7 @@ export class ProfileComponent {
   profileState = inject(ProfileStateService);
   accountState = inject(AccountStateService);
   readonly utilities = inject(UtilitiesService);
+  private readonly url = inject(UrlUpdateService);
 
   pubkey = signal<string>('');
   userMetadata = signal<NostrRecord | undefined>(undefined);
@@ -121,6 +123,11 @@ export class ProfileComponent {
 
           if (id.startsWith('npub')) {
             id = this.utilities.getPubkeyFromNpub(id);
+            this.url.updatePathSilently(['/p', id, 'notes']);
+          } else {
+            // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.
+            const encoded = nip19.npubEncode(id);
+            this.url.updatePathSilently(['/p', encoded, 'notes']);
           }
 
           this.profileState.setCurrentProfilePubkey(id);
