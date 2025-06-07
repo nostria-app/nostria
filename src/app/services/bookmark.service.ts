@@ -6,6 +6,7 @@ import { ApplicationStateService } from './application-state.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { LayoutService } from './layout.service';
 import { Event, kinds } from 'nostr-tools';
+import { AccountStateService } from './account-state.service';
 
 // Define bookmark types
 export type BookmarkType = 'e' | 'a' | 'r' | 't';
@@ -24,6 +25,7 @@ export class BookmarkService {
   nostr = inject(NostrService);
   app = inject(ApplicationService);
   appState = inject(ApplicationStateService);
+  accountState = inject(AccountStateService);
   snackBar = inject(MatSnackBar);
   layout = inject(LayoutService);
 
@@ -38,7 +40,8 @@ export class BookmarkService {
 
   constructor() {
     effect(async () => {
-      const pubkey = this.appState.pubkey();
+      const pubkey = this.accountState.pubkey();
+      debugger;
 
       if (pubkey) {
         await this.initialize();
@@ -52,11 +55,8 @@ export class BookmarkService {
   }
 
   async initialize() {
-    if (!this.appState.pubkey()) {
-      return;
-    }
 
-    const bookmarksEvent = await this.relay.get({ authors: [this.appState.pubkey()!], kinds: [kinds.BookmarkList] });
+    const bookmarksEvent = await this.relay.get({ authors: [this.accountState.pubkey()!], kinds: [kinds.BookmarkList] });
     if (bookmarksEvent) {
       this.bookmarkEvent = bookmarksEvent;
 
@@ -136,7 +136,7 @@ export class BookmarkService {
       // Create a new bookmark event if none exists
       this.bookmarkEvent = {
         kind: 10003,
-        pubkey: this.appState.pubkey()!,
+        pubkey: this.accountState.pubkey(),
         created_at: Math.floor(Date.now() / 1000),
         content: '',
         tags: [],
