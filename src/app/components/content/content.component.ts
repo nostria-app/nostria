@@ -10,6 +10,7 @@ import { ImageDialogComponent } from '../image-dialog/image-dialog.component';
 import { SettingsService } from '../../services/settings.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { Router } from '@angular/router';
+import { MediaPlayerService } from '../../services/media-player.service';
 
 interface ContentToken {
   id: number;
@@ -36,6 +37,7 @@ interface SocialPreview {
   styleUrl: './content.component.scss'
 })
 export class ContentComponent implements AfterViewInit, OnDestroy {
+  readonly media = inject(MediaPlayerService);
   private sanitizer = inject(DomSanitizer);
   private dialog = inject(MatDialog);
   settings = inject(SettingsService);
@@ -382,19 +384,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
       }
     }
   }
-  
-  getYouTubeEmbedUrl(url: string): SafeResourceUrl {
-    const regex = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
-    const match = url.match(regex);
-    
-    if (match && match[1]) {
-      const embedUrl = `https://www.youtube.com/embed/${match[1]}`;
-      return this.sanitizer.bypassSecurityTrustResourceUrl(embedUrl);
-    }
-    
-    return this.sanitizer.bypassSecurityTrustResourceUrl('');
-  }
-  
+ 
   getVideoType(url: string): string {
     const extension = url.split('.').pop()?.split('?')[0]?.toLowerCase();
     switch (extension) {
