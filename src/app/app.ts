@@ -98,6 +98,7 @@ export class App {
   @ViewChild('sidenav') sidenav!: MatSidenav;
   @ViewChild('profileSidenav') profileSidenav!: MatSidenav;
   @ViewChild('appsSidenav') appsSidenav!: MatSidenav;
+  @ViewChild(SearchResultsComponent) searchResults!: SearchResultsComponent;
 
   // Use local settings for sidenav state
   opened = computed(() => this.localSettings.menuOpen());
@@ -362,6 +363,26 @@ export class App {
 
   exitFullscreen(): void {
     this.media.exitFullscreen();
+  }
+
+  onSearchInputKeyDown(event: KeyboardEvent): void {
+    if (event.key === 'Tab' && !event.shiftKey) {
+      // Check if search results are visible
+      if (this.search.searchResults().length > 0) {
+        event.preventDefault();
+        // Focus the search results container after a short delay to ensure it's rendered
+        setTimeout(() => {
+          const searchResultsContainer = this.document.querySelector('.search-results') as HTMLElement;
+          if (searchResultsContainer) {
+            searchResultsContainer.focus();
+          }
+        }, 0);
+      }
+    } else if (event.key === 'Escape') {
+      // Clear search results and close search when Escape is pressed
+      this.search.clearResults();
+      this.layout.toggleSearch();
+    }
   }
 
 }
