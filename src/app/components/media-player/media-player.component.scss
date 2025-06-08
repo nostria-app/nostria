@@ -1,6 +1,7 @@
 :host {
     background: var(--theme-background-color, var(--mat-toolbar-container-background-color, var(--mat-sys-surface)));
     height: 33px;
+    z-index: 1500;
 
     &:not(.footer-mode) {
         /* Toolbar mode - fixed position with window controls overlay support */
@@ -40,6 +41,7 @@
     display: flex;
     height: 100%;
     align-items: center;
+    z-index: 1500;
 }
 
 .media-player-footer {
@@ -239,7 +241,7 @@ input {
     top: 0;
     bottom: 0;
     right: 0;
-    z-index: 1000;
+    z-index: 1600;
     height: 100%;
 }
 
@@ -247,7 +249,7 @@ input {
     position: absolute;
     right: 10px;
     top: 80px;
-    z-index: 1001;
+    z-index: 1601;
 }
 
 .media-player-logo {
@@ -259,5 +261,3 @@ input {
         display: none;
     }
 }
-
-/* Component-specific styles go here */
