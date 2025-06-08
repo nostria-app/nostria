@@ -269,12 +269,17 @@ export class MediaPlayerService implements OnInitialized {
   };
 
 
-  getYouTubeEmbedUrl(url: string): SafeResourceUrl {
+  getYouTubeEmbedUrl(url: string, query?: string): SafeResourceUrl {
     const regex = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
     const match = url.match(regex);
 
     if (match && match[1]) {
       const embedUrl = `https://www.youtube.com/embed/${match[1]}`;
+
+      if (query) {
+        return this.sanitizer.bypassSecurityTrustResourceUrl(`${embedUrl}?${query}`);
+      }
+
       return this.sanitizer.bypassSecurityTrustResourceUrl(embedUrl);
     }
 
@@ -300,12 +305,11 @@ export class MediaPlayerService implements OnInitialized {
 
     this.layout.showMediaPlayer.set(true);
 
-    debugger;
-
     if (file.type === 'YouTube') {
       this.videoMode.set(true);
       this.videoUrl.set(undefined);
-      this.youtubeUrl.set(this.getYouTubeEmbedUrl(file.source + '?autoplay=1'));
+      const youTubeUrl = this.getYouTubeEmbedUrl(file.source, 'autoplay=1');
+      this.youtubeUrl.set(youTubeUrl);
     } else if (file.type === 'Video') {
       this.videoMode.set(true);
       this.youtubeUrl.set(undefined);
