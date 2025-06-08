@@ -206,14 +206,14 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
     const columns = this.columns();
     const feedDataMap = this.feedService.feedDataReactive(); // Use reactive signal instead of regular Map
     const pausedSet = new Set<string>();
-    
+
     columns.forEach(column => {
       const columnData = feedDataMap.get(column.id);
       if (columnData && !columnData.subscription) {
         pausedSet.add(column.id);
       }
     });
-    
+
     return pausedSet;
   });
 
@@ -957,14 +957,14 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
     });
   }
 
-  
+
   /**
    * Get M3U playlist data from event
    */
-  getPlaylistData(event: any): { 
-    title?: string; 
-    alt?: string; 
-    tracks: { url: string; title?: string; artist?: string }[]; 
+  getPlaylistData(event: any): {
+    title?: string;
+    alt?: string;
+    tracks: { url: string; title?: string; artist?: string }[];
     url?: string;
     totalDuration?: string;
   } | null {
@@ -972,18 +972,18 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
     const urlTag = event.tags?.find((tag: any[]) => tag[0] === 'u');
     const playlistUrl = urlTag ? urlTag[1] : null;
     const m3uContent = event.content || '';
-    
+
     if (!m3uContent && !playlistUrl) return null;
 
     const title = this.getEventTitle(event) || 'M3U Playlist';
     const alt = this.getEventAlt(event);
-    
+
     let tracks: { url: string; title?: string; artist?: string }[] = [];
     let totalDuration = 0;
 
     if (m3uContent) {
       tracks = this.parseM3UContent(m3uContent);
-      
+
       // Calculate total duration if available
       tracks.forEach(track => {
         if (track.url) {
@@ -1011,9 +1011,9 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
   private parseM3UContent(content: string): { url: string; title?: string; artist?: string }[] {
     const lines = content.split('\n').map(line => line.trim()).filter(line => line);
     const tracks: { url: string; title?: string; artist?: string }[] = [];
-    
+
     let currentTrack: { url?: string; title?: string; artist?: string } = {};
-    
+
     for (const line of lines) {
       if (line.startsWith('#EXTINF:')) {
         // Parse track info: #EXTINF:duration,artist - title
@@ -1031,7 +1031,7 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
       } else if (line.startsWith('http') || line.startsWith('https') || line.endsWith('.mp3') || line.endsWith('.m4a') || line.endsWith('.wav') || line.endsWith('.flac')) {
         // This is a track URL
         currentTrack.url = line;
-        
+
         if (currentTrack.url) {
           tracks.push({
             url: currentTrack.url,
@@ -1039,13 +1039,13 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
             artist: currentTrack.artist
           });
         }
-        
+
         // Reset for next track
         currentTrack = {};
       } else if (!line.startsWith('#')) {
         // Non-comment line that might be a relative URL or filename
         currentTrack.url = line;
-        
+
         if (currentTrack.url) {
           tracks.push({
             url: currentTrack.url,
@@ -1053,11 +1053,11 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
             artist: currentTrack.artist
           });
         }
-        
+
         currentTrack = {};
       }
     }
-    
+
     return tracks;
   }
 
@@ -1082,19 +1082,29 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
    * Play entire M3U playlist
    */
   playPlaylist(playlistData: { title?: string; tracks: { url: string; title?: string; artist?: string }[] }): void {
+    console.log('Playing M3U playlist:', playlistData);
+
     if (!playlistData.tracks || playlistData.tracks.length === 0) return;
 
     // Clear current media queue and add all tracks
     this.mediaPlayerService.media.set([]);
-      playlistData.tracks.forEach((track, index) => {
+    playlistData.tracks.forEach((track, index) => {
+
+      let type: 'Music' | 'Podcast' | 'YouTube' | 'Video' = 'Video';
+
+      // Extra if the track.url is YouTube, video or music.
+      if (track.url.includes('youtube.com') || track.url.includes('youtu.be')) {
+        type = 'YouTube';
+      }
+
       const mediaItem: MediaItem = {
         title: track.title || `Track ${index + 1}`,
         artist: track.artist || 'Unknown Artist',
         source: track.url,
         artwork: '', // Could be enhanced to extract album art
-        type: 'Video',
+        type,
       };
-      
+
       this.mediaPlayerService.enque(mediaItem);
     });
 
@@ -1106,7 +1116,7 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
    * Add playlist to queue
    */
   addPlaylistToQueue(playlistData: { title?: string; tracks: { url: string; title?: string; artist?: string }[] }): void {
-    if (!playlistData.tracks || playlistData.tracks.length === 0) return;    playlistData.tracks.forEach((track, index) => {
+    if (!playlistData.tracks || playlistData.tracks.length === 0) return; playlistData.tracks.forEach((track, index) => {
       const mediaItem: MediaItem = {
         title: track.title || `Track ${index + 1}`,
         artist: track.artist || 'Unknown Artist',
@@ -1114,7 +1124,7 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
         artwork: '',
         type: 'Video'
       };
-      
+
       this.mediaPlayerService.enque(mediaItem);
     });
   }

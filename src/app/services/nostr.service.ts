@@ -142,7 +142,6 @@ export class NostrService {
 
   async initialize() {
     try {
-      debugger;
       const accounts = await this.getAccountsFromStorage();
 
       if (accounts.length === 0) {

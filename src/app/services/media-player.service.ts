@@ -1,5 +1,5 @@
 import { effect, inject, Injectable, signal, computed } from '@angular/core';
-import { SafeResourceUrl } from '@angular/platform-browser';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { MediaItem, OnInitialized } from '../interfaces';
 import { UtilitiesService } from './utilities.service';
 import { ApplicationService } from './application.service';
@@ -19,6 +19,7 @@ export interface VideoWindowState {
   providedIn: 'root',
 })
 export class MediaPlayerService implements OnInitialized {
+  private sanitizer = inject(DomSanitizer);
   utilities = inject(UtilitiesService);
   localStorage = inject(LocalStorageService);
   layout = inject(LayoutService);
@@ -124,7 +125,7 @@ export class MediaPlayerService implements OnInitialized {
 
   exit() {
     console.log('Exiting media player and hiding footer');
-    
+
     // Use the centralized cleanup method
     this.cleanupCurrentMedia();
 
@@ -150,19 +151,19 @@ export class MediaPlayerService implements OnInitialized {
     this.videoUrl.set(undefined);
     this.pausedYouTubeUrl.set(undefined);
     this._isFullscreen.set(false);
-    
+
     // Clear media queue
     // this.media.set([]);
-    
+
     // Hide the media player footer
     this.layout.showMediaPlayer.set(false);
-    
+
     // Clear saved queue from localStorage
     this.localStorage.removeItem(this.MEDIA_STORAGE_KEY);
-    
+
     // Update media session
     navigator.mediaSession.playbackState = 'none';
-    
+
     console.log('Media player completely exited and hidden');
   }
 
@@ -241,14 +242,14 @@ export class MediaPlayerService implements OnInitialized {
 
   setVideoElement(videoElement: HTMLVideoElement | undefined) {
     console.log('setVideoElement called with:', videoElement);
-    
+
     // Remove event listeners from previous video element
     if (this.videoElement) {
       this.videoElement.removeEventListener('ended', this.handleMediaEnded);
     }
-    
+
     this.videoElement = videoElement;
-    
+
     // Add event listeners to new video element
     if (videoElement) {
       videoElement.addEventListener('ended', this.handleMediaEnded);
@@ -266,6 +267,20 @@ export class MediaPlayerService implements OnInitialized {
       navigator.mediaSession.playbackState = 'none';
     }
   };
+
+
+  getYouTubeEmbedUrl(url: string): SafeResourceUrl {
+    const regex = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+    const match = url.match(regex);
+
+    if (match && match[1]) {
+      const embedUrl = `https://www.youtube.com/embed/${match[1]}`;
+      return this.sanitizer.bypassSecurityTrustResourceUrl(embedUrl);
+    }
+
+    return this.sanitizer.bypassSecurityTrustResourceUrl('');
+  }
+
 
   async start() {
     if (this.index === -1) {
@@ -285,16 +300,18 @@ export class MediaPlayerService implements OnInitialized {
 
     this.layout.showMediaPlayer.set(true);
 
+    debugger;
+
     if (file.type === 'YouTube') {
       this.videoMode.set(true);
       this.videoUrl.set(undefined);
-      this.youtubeUrl.set(this.utilities.sanitizeUrlAndBypassFrame(file.source + '?autoplay=1'));
+      this.youtubeUrl.set(this.getYouTubeEmbedUrl(file.source + '?autoplay=1'));
     } else if (file.type === 'Video') {
       this.videoMode.set(true);
       this.youtubeUrl.set(undefined);
-      
+
       console.log('Starting video, videoElement available:', !!this.videoElement);
-      
+
       // Set the new video URL first
       this.videoUrl.set(this.utilities.sanitizeUrlAndBypassFrame(file.source));
 
@@ -303,7 +320,7 @@ export class MediaPlayerService implements OnInitialized {
         try {
           // Add ended event listener
           this.videoElement.addEventListener('ended', this.handleMediaEnded);
-          
+
           // Add event listeners for when video is ready
           const handleCanPlay = async () => {
             if (this.videoElement) {
@@ -318,7 +335,7 @@ export class MediaPlayerService implements OnInitialized {
           };
 
           this.videoElement.addEventListener('canplay', handleCanPlay, { once: true });
-          
+
         } catch (error) {
           console.error('Error setting up video:', error);
         }
@@ -364,8 +381,8 @@ export class MediaPlayerService implements OnInitialized {
       this.audio.currentTime = 0;
       // Remove event listeners
       this.audio.removeEventListener('ended', this.handleMediaEnded);
-      this.audio.removeEventListener('canplay', () => {});
-      this.audio.removeEventListener('loadeddata', () => {});
+      this.audio.removeEventListener('canplay', () => { });
+      this.audio.removeEventListener('loadeddata', () => { });
     }
 
     // Stop and cleanup video
@@ -374,8 +391,8 @@ export class MediaPlayerService implements OnInitialized {
       this.videoElement.currentTime = 0;
       // Remove event listeners
       this.videoElement.removeEventListener('ended', this.handleMediaEnded);
-      this.videoElement.removeEventListener('canplay', () => {});
-      this.videoElement.removeEventListener('loadeddata', () => {});
+      this.videoElement.removeEventListener('canplay', () => { });
+      this.videoElement.removeEventListener('loadeddata', () => { });
     }
 
     // Clear video URLs to stop any playing videos
@@ -606,10 +623,10 @@ export class MediaPlayerService implements OnInitialized {
 
   clearQueue() {
     console.log('Clearing entire media queue');
-    
+
     // Stop current playback
     this.cleanupCurrentMedia();
-    
+
     // Reset audio
     if (this.audio) {
       this.audio.removeEventListener('ended', this.handleMediaEnded);
@@ -632,19 +649,19 @@ export class MediaPlayerService implements OnInitialized {
     this.videoUrl.set(undefined);
     this.pausedYouTubeUrl.set(undefined);
     this._isFullscreen.set(false);
-    
+
     // Clear media queue
     this.media.set([]);
-    
+
     // Hide the media player
     this.layout.showMediaPlayer.set(false);
-    
+
     // Clear saved queue from localStorage
     this.localStorage.removeItem(this.MEDIA_STORAGE_KEY);
-    
+
     // Update media session
     navigator.mediaSession.playbackState = 'none';
-    
+
     console.log('Media queue completely cleared');
   }
 }
