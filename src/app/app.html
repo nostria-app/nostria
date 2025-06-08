@@ -42,7 +42,9 @@
     } <span class="toolbar-spacer"> @if (layout.search()) {
       <div class="search-container">
         <input type="search" class="search-input" [(ngModel)]="layout.searchInput"
-          (input)="layout.onSearchInput($event)" placeholder="Search..." />
+          (input)="layout.onSearchInput($event)" 
+          (keydown)="onSearchInputKeyDown($event)"
+          placeholder="Search..." />
         <app-search-results></app-search-results>
       </div>
       }
