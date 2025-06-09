@@ -12,17 +12,16 @@
     </p>
   </div>
   }
-
-  @if (userMetadata(); as profile) {
+  @if (!isLoading() && !error()) {
   <div class="profile-header" [class.compact-header]="isCompactHeader()">
     <!-- Show banner only when not in compact mode -->
     @if (!isCompactHeader()) {
     <div class="profile-banner"
-      [style.background-image]="profile.data.banner ? 'url(' + profile.data.banner + ')' : getDefaultBanner()">
+      [style.background-image]="userMetadata()?.data.banner ? 'url(' + userMetadata()!.data.banner + ')' : getDefaultBanner()">
     </div>
     }
 
-    <app-profile-header [profile]="profile" [compact]="isCompactHeader()"></app-profile-header>
+    <app-profile-header [profile]="userMetadata()" [pubkey]="pubkey()" [compact]="isCompactHeader()"></app-profile-header>
 
     <!-- <div class="profile-avatar-container" [class.compact]="isCompactHeader()">
       <div class="profile-avatar" [class.clickable]="profile.content.picture"

@@ -32,6 +32,7 @@ import { UtilitiesService } from '../../../services/utilities.service';
 })
 export class ProfileHeaderComponent {
     profile = input<NostrRecord | undefined>(undefined);
+    pubkey = input<string>(''); // Add pubkey input for cases where no profile exists
     layout = inject(LayoutService);
     nostr = inject(NostrService);
     npub = signal<string | undefined>(undefined);
@@ -44,31 +45,36 @@ export class ProfileHeaderComponent {
     // Add signal for verified identifier
     verifiedIdentifier = signal<{ value: string, valid: boolean, status: string }>({ value: '', valid: false, status: '' });
 
-    pubkey = computed(() => {
-        return this.profile() ? this.profile()!.event.pubkey : undefined;
+    currentPubkey = computed(() => {
+        return this.profile()?.event.pubkey || this.pubkey();
     });
 
     name = computed(() => {
-        if (this.profile()!.data.display_name) {
-            return this.profile()!.data.display_name;
+        const profileData = this.profile();
+        if (!profileData) {
+            // Fallback to truncated pubkey when no profile exists
+            return this.utilities.getTruncatedNpub(this.currentPubkey());
         }
-        else if (this.profile()!.data.name) {
-            return this.profile()!.data.name;
+        
+        if (profileData.data.display_name) {
+            return profileData.data.display_name;
+        }
+        else if (profileData.data.name) {
+            return profileData.data.name;
         }
         else {
-            return this.profile()!.event.pubkey;
+            return this.utilities.getTruncatedNpub(profileData.event.pubkey);
         }
     });
 
     isOwnProfile = computed(() => {
-        return this.accountState.pubkey() === this.profile()?.event.pubkey;
-    });
-
-    constructor() {
+        return this.accountState.pubkey() === this.currentPubkey();
+    });    constructor() {
         effect(() => {
-            if (this.profile()) {
+            const currentPubkey = this.currentPubkey();
+            if (currentPubkey) {
                 console.debug('LOCATION 4:');
-                this.npub.set(this.utilities.getNpubFromPubkey(this.profile()!.event.pubkey));
+                this.npub.set(this.utilities.getNpubFromPubkey(currentPubkey));
             }
         });
 
@@ -86,24 +92,25 @@ export class ProfileHeaderComponent {
                 });
             }
         });
-    }
-
-    unfollowUser(): void {
-        this.logger.debug('Unfollow requested for:', this.pubkey());
+    }    unfollowUser(): void {
+        this.logger.debug('Unfollow requested for:', this.currentPubkey());
         // TODO: Implement actual unfollow functionality
     }
 
     muteUser(): void {
-        this.accountState.mutePubkey(this.pubkey()!);
+        const pubkey = this.currentPubkey();
+        if (pubkey) {
+            this.accountState.mutePubkey(pubkey);
+        }
     }
 
     blockUser(): void {
-        this.logger.debug('Block requested for:', this.pubkey());
+        this.logger.debug('Block requested for:', this.currentPubkey());
         // TODO: Implement actual block functionality
     }
 
     followUser(): void {
-        this.logger.debug('Follow requested for:', this.pubkey());
+        this.logger.debug('Follow requested for:', this.currentPubkey());
         // TODO: Implement actual follow functionality
     }
 
