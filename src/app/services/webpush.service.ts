@@ -261,7 +261,8 @@ export class WebPushService {
   async devices(deviceId?: string): Promise<Device[]> {
     try {
       try {
-        const url = `${this.server}/api/subscription/devices/${this.accountState.pubkey()}?deviceId=${deviceId || ''}`;
+        // const url = `${this.server}/api/subscription/devices/${this.accountState.pubkey()}?deviceId=${deviceId || ''}`;
+        const url = `${this.server}/api/subscription/devices/${this.accountState.pubkey()}`;
         const headers = await this.getAuthHeaders(url, 'GET');
 
         const response = await fetch(`${url}`, {
