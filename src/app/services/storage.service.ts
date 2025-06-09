@@ -96,7 +96,7 @@ export interface InfoRecord {
 // }
 
 export enum NotificationType {
-  RELAY_PUBLISHING = 'relay-publishing',
+  RELAY_PUBLISHING = 'relaypublishing',
   GENERAL = 'general',
   ERROR = 'error',
   SUCCESS = 'success',
@@ -105,13 +105,13 @@ export enum NotificationType {
 
 // User-facing notification types for push notifications
 export enum UserNotificationType {
-  DIRECT_MESSAGES = 'direct-messages',
+  DIRECT_MESSAGES = 'directmessages',
   REPLIES = 'replies',
   MENTIONS = 'mentions',
   REPOSTS = 'reposts',
   ZAPS = 'zaps',
   NEWS = 'news',
-  APP_UPDATES = 'app-updates'
+  APP_UPDATES = 'appupdates'
 }
 
 // Interface for device notification preferences
