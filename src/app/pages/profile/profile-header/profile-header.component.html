@@ -1,17 +1,15 @@
 <div class="profile-header-container" [class.compact]="compact()">
-    @if (profile(); as profile) {
-
     @if (!compact()) {
-    <div class="profile-banner" [class.clickable]="profile.data.banner"
-        [style.background-image]="profile.data.banner ? 'url(' + profile.data.banner + ')' : getDefaultBanner()"
-        (click)="profile.data.banner && layout.openProfileBanner(profile)">
+    <div class="profile-banner" [class.clickable]="profile()?.data.banner"
+        [style.background-image]="profile()?.data.banner ? 'url(' + profile()!.data.banner + ')' : getDefaultBanner()"
+        (click)="profile()?.data.banner && layout.openProfileBanner(profile()!)">
     </div>
     }
     <div class="profile-info-container" [class.compact]="compact()">
-        <div class="profile-avatar" [class.clickable]="profile.data.picture"
-            (click)="profile.data.picture && layout.openProfilePicture(profile)">
-            @if (profile.data.picture) {
-            <img [src]="profile.data.picture" alt="Profile picture" class="avatar-image">
+        <div class="profile-avatar" [class.clickable]="profile()?.data.picture"
+            (click)="profile()?.data.picture && layout.openProfilePicture(profile()!)">
+            @if (profile()?.data.picture) {
+            <img [src]="profile()!.data.picture" alt="Profile picture" class="avatar-image">
             } @else {
             <mat-icon class="default-avatar">account_circle</mat-icon>
             }
@@ -30,30 +28,32 @@
                 <span>{{ npub() }}</span>
             </div>
 
-            @if (!compact()) {
+            @if (!compact() && profile()) {
 
             @let verifiedId = verifiedIdentifier();
 
+            @if (verifiedId.value) {
             <div class="profile-item" title="{{ verifiedId.status }}">
                 @if (verifiedId.valid) {
                 <mat-icon class="verified-icon">verified</mat-icon>
-                } @else if (verifiedId.value) {
+                } @else {
                 <mat-icon class="verified-icon verified-icon-error">verified_off</mat-icon>
                 }
                 <span [class.strikethrough]="!verifiedId.valid">{{ verifiedId.value }}</span>
             </div>
             }
+            }
 
-            @if (!compact() && profile.data.website) {
-            <div class="profile-item" title="{{ profile.data.website }}">
+            @if (!compact() && profile()?.data.website) {
+            <div class="profile-item" title="{{ profile()!.data.website }}">
                 <mat-icon>link</mat-icon>
-                <span><a [href]="profile.data.website" target="_blank" rel="noopener noreferrer">{{
-                        profile.data.website}}</a></span>
+                <span><a [href]="profile()!.data.website" target="_blank" rel="noopener noreferrer">{{
+                        profile()!.data.website}}</a></span>
             </div>
             }
 
-            @if (!compact() && profile.data.about) {
-            <div class="profile-bio">{{ profile.data.about }}</div>
+            @if (!compact() && profile()?.data.about) {
+            <div class="profile-bio">{{ profile()!.data.about }}</div>
             }
 
             <div class="profile-extra-info">
@@ -128,10 +128,10 @@
                 <button mat-menu-item (click)="layout.copyToClipboard(this.npub(), 'npub')">
                     <span>Identifier (npub)</span>
                 </button>
-                <button mat-menu-item (click)="layout.copyToClipboard(this.pubkey(), 'hex')">
+                <button mat-menu-item (click)="layout.copyToClipboard(this.currentPubkey(), 'hex')">
                     <span>Identifier (hex)</span>
                 </button>
-                <button mat-menu-item (click)="layout.copyToClipboard(this.pubkey(), 'nprofile')">
+                <button mat-menu-item (click)="layout.copyToClipboard(this.currentPubkey(), 'nprofile')">
                     <span>Identifier (nprofile)</span>
                 </button>
                 <button mat-menu-item (click)="copyProfileData()">
@@ -156,6 +156,4 @@
         </div>
 
     </div>
-
-    }
 </div>

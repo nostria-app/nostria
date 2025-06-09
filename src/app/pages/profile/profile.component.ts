@@ -128,42 +128,44 @@ export class ProfileComponent {
             // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.
             const encoded = nip19.npubEncode(id);
             this.url.updatePathSilently(['/p', encoded, 'notes']);
-          }
-
-          this.profileState.setCurrentProfilePubkey(id);
+          }          this.profileState.setCurrentProfilePubkey(id);
           this.pubkey.set(id);
 
           try {
             this.userRelay = await this.userRelayFactory.create(id);
             this.profileState.relay = this.userRelay;
-            this.userRelay.subscribe([{
-              kinds: [kinds.ShortTextNote],
-              authors: [id],
-              limit: 30
-            }], (event) => {
-              const record = this.data.getRecord(event);
+            
+            // Only subscribe to events if we have a working user relay
+            if (this.userRelay && this.userRelay.relayUrls.length > 0) {
+              this.userRelay.subscribe([{
+                kinds: [kinds.ShortTextNote],
+                authors: [id],
+                limit: 30
+              }], (event) => {
+                const record = this.data.getRecord(event);
 
-              if (this.isRootPost(event)) {
-                this.profileState.notes.update(events => [...events, record]);
-              } else {
-                this.profileState.replies.update(events => [...events, record]);
-              }
-            }, () => {
-              console.log('FINISHED!!!');
-            });
-
-            // Use untracked to avoid re-running this effect when these signals change
-            untracked(async () => {
-              await this.loadUserProfile(this.pubkey());
-              this.checkIfOwnProfile(this.pubkey());
-            });
+                if (this.isRootPost(event)) {
+                  this.profileState.notes.update(events => [...events, record]);
+                } else {
+                  this.profileState.replies.update(events => [...events, record]);
+                }
+              }, () => {
+                console.log('FINISHED!!!');
+              });
+            } else {
+              this.logger.warn('UserRelay has no relay URLs, cannot subscribe to events');
+            }
 
           } catch (err: any) {
-            console.error(err);
-            this.isLoading.set(false);
-            this.error.set(err.message);
-            return;
+            this.logger.error('Failed to create UserRelay, but continuing with profile load:', err);
+            // Don't return here - continue with loading the profile
           }
+
+          // Always attempt to load user profile and check if own profile, regardless of relay status
+          untracked(async () => {
+            await this.loadUserProfile(this.pubkey());
+            this.checkIfOwnProfile(this.pubkey());
+          });
 
           // this.userRelay.subscribe([{
           //   kinds: [kinds.ShortTextNote],
@@ -228,9 +230,14 @@ export class ProfileComponent {
   private getWindow(): Window | null {
     return isPlatformBrowser(this.platformId) ? this.document.defaultView : null;
   }
-
   private async loadUserData(pubkey: string, disconnect = true): Promise<void> {
     if (!this.userRelay) {
+      this.logger.warn('UserRelay service not available, cannot load user data');
+      return;
+    }
+
+    if (this.userRelay.relayUrls.length === 0) {
+      this.logger.warn('No relay URLs available for user, cannot load user data');
       return;
     }
     // if (!this.nostrService.currentProfileUserPool) {
@@ -293,7 +300,6 @@ export class ProfileComponent {
       },
     });
   }
-
   private async loadUserProfile(pubkey: string): Promise<void> {
     this.isLoading.set(true);
     this.error.set(null);
@@ -304,14 +310,16 @@ export class ProfileComponent {
       this.userMetadata.set(metadata);
 
       if (!metadata) {
-        this.error.set('User profile not found');
-      } else {
-        // Only scroll if profile was successfully loaded
-        setTimeout(() => this.layoutService.scrollToOptimalProfilePosition(), 100);
-
-        // After getting the metadata, get other data from this user.
-        this.loadUserData(pubkey);
+        // Don't set an error - allow the profile page to load without metadata
+        this.logger.warn('User profile metadata not found, but continuing to load profile content');
       }
+
+      // Always scroll and load data, regardless of whether metadata was found
+      setTimeout(() => this.layoutService.scrollToOptimalProfilePosition(), 100);
+      
+      // Load user data regardless of metadata availability
+      this.loadUserData(pubkey);
+      
     } catch (err) {
       this.logger.error('Error loading user profile', err);
       this.error.set('Error loading user profile');

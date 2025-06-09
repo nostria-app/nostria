@@ -32,17 +32,22 @@ export class UserRelayService {
     }
 
     config: any = {};
-    relayUrls: string[] = [];
-
-    /** Initialize is called to discover the user's relay list. */
+    relayUrls: string[] = [];    /** Initialize is called to discover the user's relay list. */
     async initialize(pubkey: string, config?: { customConfig?: any, customRelays?: string[] }) {
         let relayUrls = await this.nostr.getRelays(pubkey);
 
-        // If no relays were found, we will fall back to using the account relays. This is not ideal, but
-        // perhaps the profile will load. We should show a warning to the user that no relays were found.
+        // If no relays were found, we will fall back to using the account relays. This is especially
+        // important when the current logged-on user opens their own profile page and does NOT have 
+        // any relay list discovered yet.
         if (relayUrls.length === 0) {
+            this.logger.warn(`No relays found for user ${pubkey}, falling back to account relays`);
             relayUrls = this.nostr.accountRelayUrls();
             this.userRelaysFound.set(false);
+            
+            // Log additional info for debugging
+            this.logger.debug(`Using ${relayUrls.length} account relays as fallback:`, relayUrls);
+        } else {
+            this.logger.debug(`Found ${relayUrls.length} relays for user ${pubkey}:`, relayUrls);
         }
 
         this.relayUrls = relayUrls;
