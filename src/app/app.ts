@@ -162,14 +162,20 @@ export class App {
       console.warn("server");
       // Not smart to use document here, however, we can inject it ;-)
       // console.log(this.document);
-    }    // Single effect to handle responsive behavior and sidenav sync
+    }    // Track previous handset state to detect transitions
+    let previousIsHandset = this.layout.isHandset();
+    
+    // Single effect to handle responsive behavior and sidenav sync
     effect(() => {
       const isHandset = this.layout.isHandset();
       
-      // On mobile screens, always close sidenav when switching to mobile
-      if (isHandset) {
+      // Only close sidenav when transitioning FROM desktop TO mobile (not when already on mobile)
+      if (isHandset && !previousIsHandset) {
         this.localSettings.setMenuOpen(false);
       }
+      
+      // Update previous state for next comparison
+      previousIsHandset = isHandset;
       
       // Sync sidenav state with local settings (only after view is initialized)
       if (this.sidenav) {
