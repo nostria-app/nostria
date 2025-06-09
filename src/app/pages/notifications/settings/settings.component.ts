@@ -80,6 +80,7 @@ export class NotificationSettingsComponent {  app = inject(ApplicationService);
     this.logger.debug('Push enabled status:', this.push.isEnabled);
 
     this.push.messages.subscribe((message) => {
+      // This is triggered when a push message is received and the app is active.
       this.logger.info('Push message received:', message);
     });
 

@@ -312,9 +312,40 @@ export class NostrService {
   // getMetadataForAccount(pubkey: string): NostrRecord | undefined {
   //   return this.accountsMetadata().find(meta => meta.event.pubkey === pubkey);
   // }
-
   getAccountFromStorage() {
-    // Initialize account from localStorage if available.
+    debugger;
+    // Check for pubkey query parameter first (for notification handling)
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const pubkeyParam = urlParams.get('pubkey');
+      
+      if (pubkeyParam) {
+        this.logger.info('Found pubkey in query parameters, attempting to load account', { pubkey: pubkeyParam });
+        
+        // Look for the account in our accounts list
+        const targetAccount = this.accounts().find(account => account.pubkey === pubkeyParam);
+        
+        if (targetAccount) {
+          this.logger.info('Found matching account for pubkey from query parameter', { pubkey: pubkeyParam });
+          
+          // Clean up the URL by removing the pubkey parameter
+          const url = new URL(window.location.href);
+          url.searchParams.delete('pubkey');
+          window.history.replaceState({}, '', url.toString());
+          
+          return targetAccount;
+        } else {
+          this.logger.warn('No matching account found for pubkey from query parameter', { pubkey: pubkeyParam });
+          
+          // Clean up the URL even if account not found
+          const url = new URL(window.location.href);
+          url.searchParams.delete('pubkey');
+          window.history.replaceState({}, '', url.toString());
+        }
+      }
+    }
+
+    // Fallback to default account from localStorage if no query parameter or account not found
     try {
       const userJson = this.localStorage.getItem(this.appState.ACCOUNT_STORAGE_KEY);
       if (userJson) {
