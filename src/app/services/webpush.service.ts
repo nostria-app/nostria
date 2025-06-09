@@ -36,11 +36,12 @@ export class WebPushService {
   logger = inject(LoggerService);  // Centralized device management  
   deviceList = signal<Device[]>([]);
   devicePreferences = signal<DeviceNotificationPreferences[]>([]);
+  // Temporary preferences for editing (before saving)
+  tempDevicePreferences = signal<DeviceNotificationPreferences[]>([]);
   devicesLoaded = signal(false);
-
   constructor() {
-    // Load preferences from storage on service initialization
-    this.loadPreferencesFromStorage();
+    // Load preferences from server/storage on service initialization
+    this.loadPreferencesFromServer();
   }
 
   // Load devices when needed (on-demand)
@@ -56,9 +57,15 @@ export class WebPushService {
       return [];
     }
   }
-
-  // Get device preferences for a specific device
+  // Get device preferences for a specific device (uses temp preferences if available)
   getDevicePreferences(deviceId: string): Record<UserNotificationType, boolean> {
+    // First check temp preferences (for unsaved changes)
+    const tempPreferences = this.tempDevicePreferences().find(pref => pref.deviceId === deviceId);
+    if (tempPreferences) {
+      return tempPreferences.preferences;
+    }
+    
+    // Fall back to saved preferences
     const preferences = this.devicePreferences().find(pref => pref.deviceId === deviceId);
     if (preferences) {
       return preferences.preferences;
@@ -75,47 +82,87 @@ export class WebPushService {
       [UserNotificationType.APP_UPDATES]: true
     };
   }
-
-  // Update device preferences
+  // Update device preferences (temporary, not saved until commitPreferences is called)
   updateDevicePreferences(deviceId: string, preferences: Record<UserNotificationType, boolean>): void {
-    this.devicePreferences.update(currentPrefs => {
+    this.tempDevicePreferences.update(currentPrefs => {
       const existingIndex = currentPrefs.findIndex(pref => pref.deviceId === deviceId);
       const newPreference: DeviceNotificationPreferences = { deviceId, preferences };
       
       if (existingIndex >= 0) {
-        // Update existing preferences
+        // Update existing temp preferences
         const updated = [...currentPrefs];
         updated[existingIndex] = newPreference;
         return updated;
       } else {
-        // Add new preferences
+        // Add new temp preferences
         return [...currentPrefs, newPreference];
       }
     });
-    
-    // TODO: Save to server/localStorage
-    this.savePreferencesToStorage();
   }
-
-  // Save preferences to localStorage (temporary until server implementation)
-  private savePreferencesToStorage(): void {
+  // Save preferences to server
+  async savePreferencesToServer(): Promise<void> {
     try {
       const prefs = this.devicePreferences();
-      localStorage.setItem('device-notification-preferences', JSON.stringify(prefs));
+      const url = `${this.server}/api/subscription/settings/${this.accountState.pubkey()}`;
+      const headers = await this.getAuthHeaders(url, 'POST');
+
+      debugger;
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(prefs)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to save preferences: ${response.status}`);
+      }
+
+      this.logger.info('Device notification preferences saved successfully');
     } catch (error) {
-      this.logger.error('Failed to save preferences:', error);
+      this.logger.error('Failed to save preferences to server:', error);
+      // Fallback to localStorage if server fails
+      // try {
+      //   const prefs = this.devicePreferences();
+      //   localStorage.setItem('device-notification-preferences', JSON.stringify(prefs));
+      //   this.logger.info('Preferences saved to localStorage as fallback');
+      // } catch (storageError) {
+      //   this.logger.error('Failed to save preferences to localStorage fallback:', storageError);
+      // }
     }
-  }
-  // Load preferences from localStorage
-  loadPreferencesFromStorage(): void {
+  }  // Load preferences from server (with localStorage fallback)
+  async loadPreferencesFromServer(): Promise<void> {
     try {
-      const saved = localStorage.getItem('device-notification-preferences');
-      if (saved) {
-        const preferences = JSON.parse(saved) as DeviceNotificationPreferences[];
-        this.devicePreferences.set(preferences);
+      const url = `${this.server}/api/subscription/settings/${this.accountState.pubkey()}`;
+      const headers = await this.getAuthHeaders(url, 'GET');
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+
+        if (result && result.settings) {
+          const settings = JSON.parse(result.settings);
+          debugger;
+          this.devicePreferences.set(settings);
+          this.logger.info('Device notification preferences loaded from server');
+          return;
+        }
+      } else if (response.status !== 404) {
+        // 404 is expected if no preferences exist yet, other errors should be logged
+        this.logger.warn(`Failed to load preferences from server: ${response.status}`);
       }
     } catch (error) {
-      this.logger.error('Failed to load preferences:', error);
+      this.logger.error('Failed to load preferences from server:', error);
     }
   }
 
@@ -375,5 +422,31 @@ export class WebPushService {
     } catch (error) {
       this.logger.error('Failed to unregister device:', error);
     }
+  }
+
+  // Commit temporary preferences to permanent storage and save to server
+  async commitPreferences(): Promise<void> {
+    // Copy temp preferences to permanent storage
+    this.devicePreferences.set([...this.tempDevicePreferences()]);
+    // Clear temp preferences
+    this.tempDevicePreferences.set([]);
+    // Save to server
+    await this.savePreferencesToServer();
+  }
+
+  // Reset temporary preferences (cancel changes)
+  resetPreferences(): void {
+    this.tempDevicePreferences.set([]);
+  }
+
+  // Initialize temporary preferences for editing (copy current saved preferences)
+  startEditing(): void {
+    // Copy current saved preferences to temp for editing
+    this.tempDevicePreferences.set([...this.devicePreferences()]);
+  }
+
+  // Check if there are unsaved changes
+  hasUnsavedChanges(): boolean {
+    return this.tempDevicePreferences().length > 0;
   }
 }

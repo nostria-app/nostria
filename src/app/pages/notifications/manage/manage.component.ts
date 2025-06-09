@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, effect, inject, OnInit, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -35,7 +35,7 @@ import { LoggerService } from '../../../services/logger.service';
   templateUrl: './manage.component.html',
   styleUrl: './manage.component.scss'
 })
-export class NotificationManageComponent implements OnInit {
+export class NotificationManageComponent implements OnInit, OnDestroy {
   webPush = inject(WebPushService);
   accountState = inject(AccountStateService);
   snackBar = inject(MatSnackBar);
@@ -60,6 +60,9 @@ export class NotificationManageComponent implements OnInit {
   // Device preferences state
   devicePreferences = computed(() => {
     const devices = this.devices();
+
+    debugger;
+
     return devices.map(device => ({
       device,
       preferences: this.webPush.getDevicePreferences(device.deviceId)
@@ -78,11 +81,13 @@ export class NotificationManageComponent implements OnInit {
       });
     }
   }
-
   async loadDevices() {
     this.isLoading.set(true);
     try {
-      await this.webPush.loadDevices();    } catch (error) {
+      await this.webPush.loadDevices();
+      // Start editing mode with current preferences
+      this.webPush.startEditing();
+    } catch (error) {
       this.logger.error('Failed to load devices:', error as Error);
       this.snackBar.open('Failed to load devices', 'Close', { duration: 3000 });
     } finally {
@@ -94,14 +99,13 @@ export class NotificationManageComponent implements OnInit {
     const currentPrefs = this.webPush.getDevicePreferences(deviceId);
     const updatedPrefs = { ...currentPrefs, [notificationType]: enabled };
     this.webPush.updateDevicePreferences(deviceId, updatedPrefs);
-  }
-
-  async saveAllPreferences() {
+  }  async saveAllPreferences() {
     this.isSaving.set(true);
     try {
-      // Save preferences for all devices
-      // This is handled automatically by updateDevicePreferences
-      this.snackBar.open('Preferences saved successfully', 'Close', { duration: 3000 });    } catch (error) {
+      // Commit temporary preferences to permanent storage and save to server
+      await this.webPush.commitPreferences();
+      this.snackBar.open('Preferences saved successfully', 'Close', { duration: 3000 });
+    } catch (error) {
       this.logger.error('Failed to save preferences:', error as Error);
       this.snackBar.open('Failed to save preferences', 'Close', { duration: 3000 });
     } finally {
@@ -128,5 +132,17 @@ export class NotificationManageComponent implements OnInit {
     }, {} as Record<UserNotificationType, boolean>);
     
     this.webPush.updateDevicePreferences(deviceId, updatedPrefs);
+  }
+
+  // Check if there are unsaved changes
+  hasUnsavedChanges(): boolean {
+    return this.webPush.hasUnsavedChanges();
+  }
+
+  ngOnDestroy() {
+    // Reset unsaved changes when component is destroyed
+    if (this.webPush.hasUnsavedChanges()) {
+      this.webPush.resetPreferences();
+    }
   }
 }
