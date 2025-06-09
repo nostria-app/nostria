@@ -17,16 +17,18 @@
         </mat-card-header> -->
         <mat-card-content>
             <mat-list role="list">
-                <div mat-subheader>Your Registered Devices</div>
-                @for(device of devices(); track device.deviceId) {
+                <div mat-subheader>Your Registered Devices</div>                @for(device of devices(); track device.deviceId) {
                 <mat-list-item [class.current-device]="device.deviceId === currentDevice()?.deviceId">
                     <mat-icon matListItemIcon>smartphone</mat-icon>
-                    <div matListItemTitle>Device ID: {{device.deviceId | slice:0:8}}...
+                    <div matListItemTitle>{{ webPush.getDeviceDisplayName(device) }}
                         @if(device.deviceId === currentDevice()?.deviceId) {
                         <span class="current-device-indicator">(Current Device)</span>
                         }
                     </div>
-                    <div matListItemLine>Registered: {{device.createdAt | date:'medium'}}</div>
+                    <div matListItemLine>
+                      Device ID: {{device.deviceId | slice:0:8}}... • 
+                      Registered: {{device.createdAt | date:'medium'}}
+                    </div>
                     <div matListItemMeta>
                         <button mat-icon-button color="warn" class="delete-button"
                             (click)="deleteDevice(device.deviceId, device.endpoint)" aria-label="Delete device">
@@ -66,6 +68,11 @@
         } @else {
         @if (isRemotelyEnabled(currentDevice()?.deviceId)) {
         Notifications are enabled on this device.
+        <p>
+            <button mat-flat-button routerLink="/notifications/manage">
+                Manage notifications
+            </button>
+        </p>
         } @else {
         Notifications are enabled on this device, but not remotely. You can enable them remotely by clicking the button
         below.

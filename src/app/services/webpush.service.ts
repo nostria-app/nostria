@@ -1,16 +1,29 @@
-import { inject, Injectable, isDevMode } from '@angular/core';
+import { inject, Injectable, isDevMode, signal } from '@angular/core';
 import { NostrService } from './nostr.service';
 import { kinds, nip98 } from 'nostr-tools';
 import { SwPush } from '@angular/service-worker';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
+import { UserNotificationType, DeviceNotificationPreferences } from './storage.service';
 
 export interface Device {
   deviceId: string;
   endpoint: string;
+  auth: string;
   lastUpdated: string;
   createdAt: string;
+  userAgent?: string;
 }
+
+// export interface Device {
+//   deviceId: string;
+//   endpoint: string;
+//   // lastUpdated: string;
+//   // createdAt: string;
+//   auth?: string;
+//   // subscriptionId?: string;
+//   userAgent?: string;
+// }
 
 @Injectable({
   providedIn: 'root'
@@ -20,9 +33,148 @@ export class WebPushService {
   private nostr = inject(NostrService);
   accountState = inject(AccountStateService);
   push = inject(SwPush);
-  logger = inject(LoggerService);
+  logger = inject(LoggerService);  // Centralized device management  
+  deviceList = signal<Device[]>([]);
+  devicePreferences = signal<DeviceNotificationPreferences[]>([]);
+  devicesLoaded = signal(false);
 
-  constructor() { }
+  constructor() {
+    // Load preferences from storage on service initialization
+    this.loadPreferencesFromStorage();
+  }
+
+  // Load devices when needed (on-demand)
+  async loadDevices(deviceId?: string): Promise<Device[]> {
+    try {
+      this.logger.debug('Loading devices from server...');
+      const devices = await this.devices(deviceId);
+      this.deviceList.set(devices);
+      this.devicesLoaded.set(true);
+      return devices;
+    } catch (error) {
+      this.logger.error('Failed to load devices:', error);
+      return [];
+    }
+  }
+
+  // Get device preferences for a specific device
+  getDevicePreferences(deviceId: string): Record<UserNotificationType, boolean> {
+    const preferences = this.devicePreferences().find(pref => pref.deviceId === deviceId);
+    if (preferences) {
+      return preferences.preferences;
+    }
+    
+    // Return default preferences (all enabled)
+    return {
+      [UserNotificationType.DIRECT_MESSAGES]: true,
+      [UserNotificationType.REPLIES]: true,
+      [UserNotificationType.MENTIONS]: true,
+      [UserNotificationType.REPOSTS]: true,
+      [UserNotificationType.ZAPS]: true,
+      [UserNotificationType.NEWS]: true,
+      [UserNotificationType.APP_UPDATES]: true
+    };
+  }
+
+  // Update device preferences
+  updateDevicePreferences(deviceId: string, preferences: Record<UserNotificationType, boolean>): void {
+    this.devicePreferences.update(currentPrefs => {
+      const existingIndex = currentPrefs.findIndex(pref => pref.deviceId === deviceId);
+      const newPreference: DeviceNotificationPreferences = { deviceId, preferences };
+      
+      if (existingIndex >= 0) {
+        // Update existing preferences
+        const updated = [...currentPrefs];
+        updated[existingIndex] = newPreference;
+        return updated;
+      } else {
+        // Add new preferences
+        return [...currentPrefs, newPreference];
+      }
+    });
+    
+    // TODO: Save to server/localStorage
+    this.savePreferencesToStorage();
+  }
+
+  // Save preferences to localStorage (temporary until server implementation)
+  private savePreferencesToStorage(): void {
+    try {
+      const prefs = this.devicePreferences();
+      localStorage.setItem('device-notification-preferences', JSON.stringify(prefs));
+    } catch (error) {
+      this.logger.error('Failed to save preferences:', error);
+    }
+  }
+  // Load preferences from localStorage
+  loadPreferencesFromStorage(): void {
+    try {
+      const saved = localStorage.getItem('device-notification-preferences');
+      if (saved) {
+        const preferences = JSON.parse(saved) as DeviceNotificationPreferences[];
+        this.devicePreferences.set(preferences);
+      }
+    } catch (error) {
+      this.logger.error('Failed to load preferences:', error);
+    }
+  }
+
+  // Add device to the signal when a new subscription is created
+  addDevice(device: Device): void {
+    this.deviceList.update(devices => {
+      // Check if device already exists to avoid duplicates
+      const exists = devices.some(d => d.deviceId === device.deviceId);
+      if (!exists) {
+        return [...devices, device];
+      }
+      return devices;
+    });
+  }
+  // Remove device from the signal when unsubscribed
+  removeDevice(deviceId: string): void {
+    this.deviceList.update(devices => 
+      devices.filter(d => d.deviceId !== deviceId)
+    );
+  }
+
+  // Helper method to parse userAgent into a readable device name
+  getDeviceDisplayName(device: Device): string {
+    if (device.userAgent) {
+      // Parse userAgent to extract browser and OS info
+      const userAgent = device.userAgent;
+      
+      // Extract OS
+      let os = 'Unknown OS';
+      if (userAgent.includes('Windows NT')) {
+        os = 'Windows';
+      } else if (userAgent.includes('Mac OS X')) {
+        os = 'macOS';
+      } else if (userAgent.includes('Linux')) {
+        os = 'Linux';
+      } else if (userAgent.includes('Android')) {
+        os = 'Android';
+      } else if (userAgent.includes('iPhone') || userAgent.includes('iPad')) {
+        os = 'iOS';
+      }
+      
+      // Extract browser
+      let browser = 'Unknown Browser';
+      if (userAgent.includes('Chrome') && !userAgent.includes('Edg')) {
+        browser = 'Chrome';
+      } else if (userAgent.includes('Firefox')) {
+        browser = 'Firefox';
+      } else if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) {
+        browser = 'Safari';
+      } else if (userAgent.includes('Edg')) {
+        browser = 'Edge';
+      }
+      
+      return `${browser} on ${os}`;
+    }
+    
+    // Fallback to device ID if no userAgent
+    return `Device ${device.deviceId.slice(0, 8)}...`;
+  }
 
   /** Implements the NIP-98 HTTP Auth */
   private async getAuthHeaders(url: string, method: string | 'GET' | 'PUT' | 'POST' | 'DELETE' | 'PATCH', sha256?: string): Promise<Record<string, string>> {
@@ -59,10 +211,10 @@ export class WebPushService {
     return headers;
   }
 
-  async devices(): Promise<Device[]> {
+  async devices(deviceId?: string): Promise<Device[]> {
     try {
       try {
-        const url = `${this.server}/api/subscription/devices/${this.accountState.pubkey()}`;
+        const url = `${this.server}/api/subscription/devices/${this.accountState.pubkey()}?deviceId=${deviceId || ''}`;
         const headers = await this.getAuthHeaders(url, 'GET');
 
         const response = await fetch(`${url}`, {
@@ -76,6 +228,8 @@ export class WebPushService {
         if (!response.ok) {
           throw new Error(`Failed to get devices: ${response.status}`);
         }
+
+        debugger;
 
         const jsonResult = await response.json();
         return jsonResult.devices || [];
@@ -136,11 +290,16 @@ export class WebPushService {
 
     try {
       const pushSubscription = await this.push.requestSubscription({ serverPublicKey });
-      const subscription = JSON.stringify(pushSubscription);
-
-      try {
+      const subscription = JSON.stringify(pushSubscription);      try {
         const url = `${this.server}/api/subscription/webpush/${this.accountState.pubkey()}`;
         const headers = await this.getAuthHeaders(url, 'POST');
+
+        // Parse subscription to add userAgent
+        const subscriptionData = JSON.parse(subscription);
+        const subscriptionWithUserAgent = {
+          ...subscriptionData,
+          userAgent: navigator.userAgent
+        };
 
         const response = await fetch(`${url}`, {
           method: 'POST',
@@ -148,24 +307,27 @@ export class WebPushService {
             ...headers,
             'Content-Type': 'application/json'
           },
-          body: subscription
+          body: JSON.stringify(subscriptionWithUserAgent)
         });
 
         if (!response.ok) {
           throw new Error(`Failed to register subscription: ${response.status}`);
-        }
-
-        // Only log success once
+        }        // Only log success once
         this.logger.info('Push subscription registered successfully');
 
-        const subscriptionPayload = JSON.parse(subscription);
-
-        return {
-          deviceId: subscriptionPayload.keys.p256dh,
-          endpoint: subscriptionPayload.endpoint,
+        const newDevice = {
+          deviceId: subscriptionData.keys.p256dh,
+          endpoint: subscriptionData.endpoint,
           lastUpdated: new Date().toISOString(),
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
+          auth: subscriptionData.keys.auth,
+          userAgent: navigator.userAgent
         } as Device;
+
+        // Add the device to the signal
+        this.addDevice(newDevice);
+
+        return newDevice;
       } catch (error) {
         this.logger.error('Failed to register push subscription with server:', error);
       }
@@ -200,11 +362,12 @@ export class WebPushService {
           ...headers,
           'Content-Type': 'application/json'
         }
-      });
-
-      if (!response.ok) {
+      });      if (!response.ok) {
         throw new Error(`Failed to unregister device: ${response.status}`);
       }
+
+      // Remove the device from the signal
+      this.removeDevice(deviceId);
 
       // Single log for successful operation
       this.logger.info('Device unregistered successfully');

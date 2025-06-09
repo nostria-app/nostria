@@ -14,6 +14,8 @@ import { MatDialog } from '@angular/material/dialog';
 import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
 import { LoggerService } from '../../../services/logger.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { AccountStateService } from '../../../services/account-state.service';
+import { RouterModule } from '@angular/router';
 
 @Component({
   selector: 'app-settings',
@@ -25,27 +27,55 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
     MatListModule,
     MatIconModule,
     MatButtonModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
+    RouterModule
   ],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.scss'
 })
-export class NotificationSettingsComponent {
-  app = inject(ApplicationService);
+export class NotificationSettingsComponent {  app = inject(ApplicationService);
+  accountState = inject(AccountStateService);
   nostr = inject(NostrService);
   webPush = inject(WebPushService);
   push = inject(SwPush);
   snackBar = inject(MatSnackBar);
   dialog = inject(MatDialog);
   logger = inject(LoggerService);
-  devices = signal<Device[]>([]);
+  
+  // Use devices from WebPushService
+  devices = this.webPush.deviceList;
+  devicesLoaded = this.webPush.devicesLoaded;
+  
   currentDevice = signal<Device | null>(null);
   isLoading = signal(true);
 
   // notificationsSupported = computed(() => 'PushManager' in window && 'serviceWorker' in navigator);
   pushSupported = computed(() => this.push.isEnabled);
 
+  // Add this computed signal to your component
+  notificationPermission = computed(() => {
+    if (!('Notification' in window)) {
+      return 'unsupported';
+    }
+    return Notification.permission; // 'granted', 'denied', or 'default'
+  });
+
+  isNotificationEnabled = computed(() => this.notificationPermission() === 'granted');
+
+  // Add this computed signal to get subscription details from native APIs
+  subscriptionDetails = computed(() => {
+    debugger;
+    if (!this.isNotificationEnabled() || !this.pushSupported()) {
+      return null;
+    }
+
+    // This will be populated when we get the subscription
+    const current = this.currentDevice();
+    return current;
+  });
+
   constructor() {
+    debugger;
     // Only log push status once
     this.logger.debug('Push enabled status:', this.push.isEnabled);
 
@@ -58,11 +88,32 @@ export class NotificationSettingsComponent {
     });
 
     effect(async () => {
-      if (this.app.initialized() && this.app.authenticated()) {
+      if (this.accountState.initialized()) {
+        this.logger.debug('Account loaded:', this.accountState.account());
+
         this.isLoading.set(true);
 
         try {
-          // Set up subscription listener
+          // Check for existing subscription first using native API
+          if (this.isNotificationEnabled()) {
+            this.logger.info('Notifications are enabled');
+
+            const nativeSubscription = await this.getSubscriptionFromNativeAPI();
+
+            if (nativeSubscription) {
+              const subJson = nativeSubscription.toJSON();
+
+              this.currentDevice.set({
+                deviceId: subJson.keys?.['p256dh'] || '',
+                endpoint: subJson.endpoint || '',
+                lastUpdated: new Date().toISOString(),
+                createdAt: new Date().toISOString(),
+                // Add additional subscription details
+                auth: subJson.keys?.['auth'] || '',
+                // subscriptionId: btoa(subJson.endpoint || ''), // Create unique ID from endpoint
+              } as Device);
+            }
+          }          // Also set up Angular's subscription listener for updates
           this.push.subscription.subscribe((sub) => {
             if (!sub) {
               this.currentDevice.set(null);
@@ -75,13 +126,14 @@ export class NotificationSettingsComponent {
               deviceId: subJson.keys.p256dh,
               endpoint: subJson.endpoint,
               lastUpdated: new Date().toISOString(),
-              createdAt: new Date().toISOString()
+              createdAt: new Date().toISOString(),
+              auth: subJson.keys.auth,
+              // subscriptionId: btoa(subJson.endpoint), // Create unique ID from endpoint
             } as Device);
           });
 
-          // Fetch devices
-          const devices = await this.webPush.devices();
-          this.devices.set(devices);
+          // Load devices using WebPushService on-demand
+          await this.webPush.loadDevices(this.currentDevice()?.deviceId);
         } catch (error) {
           this.logger.error('Error loading notification data:', error);
           this.snackBar.open('Failed to load notification data', 'Close', {
@@ -92,6 +144,62 @@ export class NotificationSettingsComponent {
         }
       }
     });
+  }
+
+  async getSubscriptionInfo(): Promise<Device | null> {
+    debugger;
+    const subscription = await this.getSubscriptionFromNativeAPI();
+
+    if (!subscription) {
+      return null;
+    }
+
+    const subJson = subscription.toJSON();
+
+    return {
+      // subscriptionId: btoa(subJson.endpoint || ''), // Base64 encoded endpoint as unique ID
+      endpoint: subJson.endpoint || '',
+      deviceId: subJson.keys?.['p256dh'] || '',
+      auth: subJson.keys?.['auth'] || '',
+      userAgent: navigator.userAgent,
+      createdAt: new Date().toISOString(),
+      lastUpdated: new Date().toISOString()
+    };
+  }
+
+  // Add this method to get subscription from native APIs
+  async getSubscriptionFromNativeAPI(): Promise<PushSubscription | null> {
+    debugger;
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      this.logger.error('Push messaging is not supported');
+      return null;
+    }
+
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
+
+      if (subscription) {
+        this.logger.debug('Found existing subscription:', subscription);
+
+        // Extract all the subscription details
+        const subscriptionJson = subscription.toJSON();
+
+        this.logger.debug('Subscription details:', {
+          endpoint: subscriptionJson.endpoint,
+          p256dh: subscriptionJson.keys?.['p256dh'],
+          auth: subscriptionJson.keys?.['auth'],
+          applicationServerKey: subscription.options?.applicationServerKey
+        });
+
+        return subscription;
+      }
+
+      return null;
+    } catch (error) {
+      this.logger.error('Error getting subscription:', error);
+      return null;
+    }
   }
 
   isRemotelyEnabled(deviceId?: string) {
@@ -180,7 +288,6 @@ export class NotificationSettingsComponent {
   //     }
   //   }
   // }
-
   async createSubscription() {
     if (!this.pushSupported()) {
       this.logger.error('Push notifications not supported in this browser');
@@ -190,12 +297,12 @@ export class NotificationSettingsComponent {
     const sub = await this.webPush.subscribe();
 
     if (sub) {
-      this.devices.update(devices => [...devices, sub]);
+      // Device is automatically added to WebPushService deviceList signal
+      this.logger.debug('Device subscription created and added to service');
     }
   }
 
   async askPermission() {
-    // Removed redundant logging
     return new Promise(function (resolve, reject) {
       const permissionResult = Notification.requestPermission(function (result) {
         resolve(result);
@@ -232,13 +339,10 @@ export class NotificationSettingsComponent {
     if (!confirmed) {
       this.isLoading.set(false);
       return;
-    };
-
-    try {
+    };    try {
       await this.webPush.unsubscribe(deviceId, endpoint);
 
-      // Update the devices signal by filtering out the deleted device
-      this.devices.update(devices => devices.filter(d => d.deviceId !== deviceId));
+      // Device is automatically removed from WebPushService deviceList signal
 
       // Show a success message
       this.snackBar.open('Device unregistered successfully', 'Close', {

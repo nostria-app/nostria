@@ -1,0 +1,355 @@
+.notifications-manage-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+
+  h1 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 500;
+  }
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  text-align: center;
+
+  p {
+    margin-top: 16px;
+    color: rgba(0, 0, 0, 0.6);
+  }
+}
+
+.no-devices-card, .preferences-card, .help-card {
+  box-shadow: var(--mat-sys-level1);
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden; // Prevent content from breaking out
+}
+
+.preferences-card {
+  .mat-card-content {
+    padding: 0; // Remove default padding to control overflow better
+    overflow: hidden;
+  }
+}
+
+.no-devices {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 40px 20px;
+
+  mat-icon {
+    font-size: 64px;
+    height: 64px;
+    width: 64px;
+    margin-bottom: 16px;
+    color: rgba(0, 0, 0, 0.26);
+  }
+
+  h3 {
+    margin: 0 0 8px 0;
+    font-size: 20px;
+  }
+
+  p {
+    margin: 0 0 24px 0;
+    color: rgba(0, 0, 0, 0.6);
+    max-width: 400px;
+  }
+}
+
+.preferences-table {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow-x: auto;
+  width: 100%;
+  min-width: 0; // Allow shrinking
+  
+  // Ensure smooth scrolling on mobile
+  -webkit-overflow-scrolling: touch;
+  
+  // Hide scrollbar on webkit browsers for cleaner look
+  &::-webkit-scrollbar {
+    height: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 3px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 3px;
+  }
+}
+
+.preferences-header {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) repeat(7, minmax(60px, 80px)) minmax(50px, 70px);
+  gap: 8px;
+  padding: 16px 8px;
+  font-weight: 500;
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.6);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  min-width: 600px; // Minimum width for horizontal scroll
+
+  .device-header {
+    display: flex;
+    align-items: center;
+  }
+  .notification-type-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 2px;
+    padding: 4px 2px;
+
+    mat-icon {
+      font-size: 18px;
+      height: 18px;
+      width: 18px;
+    }
+
+    span {
+      font-size: 11px;
+      line-height: 1.1;
+      word-break: break-word;
+    }
+  }
+
+  .actions-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.device-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) repeat(7, minmax(60px, 80px)) minmax(50px, 70px);
+  gap: 8px;
+  padding: 16px 8px;
+  align-items: center;
+  min-width: 600px; // Minimum width for horizontal scroll
+
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+  }
+}
+
+.device-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  mat-icon {
+    color: rgba(0, 0, 0, 0.54);
+  }
+  .device-details {
+    .device-name {
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    .device-date {
+      font-size: 12px;
+      color: rgba(0, 0, 0, 0.6);
+    }
+
+    .device-useragent {
+      font-size: 11px;
+      color: rgba(0, 0, 0, 0.5);
+      font-style: italic;
+      margin-top: 2px;
+      line-height: 1.3;
+    }
+  }
+}
+
+.notification-checkbox {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.device-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.help-card {
+  margin-top: 20px;
+
+  .help-content {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+
+    mat-icon {
+      color: var(--mat-sys-primary);
+      margin-top: 4px;
+    }
+
+    h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+    }
+
+    ul {
+      margin: 0;
+      padding-left: 20px;
+
+      li {
+        margin-bottom: 8px;
+        font-size: 14px;
+        line-height: 1.4;
+
+        strong {
+          color: rgba(0, 0, 0, 0.87);
+        }
+      }
+    }
+  }
+}
+
+// Responsive design for smaller screens
+@media (max-width: 900px) {
+  .preferences-header,
+  .device-row {
+    grid-template-columns: minmax(120px, 1fr) repeat(7, minmax(50px, 70px)) minmax(40px, 60px);
+    gap: 6px;
+    padding: 12px 4px;
+  }
+
+  .notification-type-header span {
+    font-size: 11px;
+  }
+
+  .device-info {
+    gap: 8px;
+  }
+}
+
+@media (max-width: 700px) {
+  .notifications-manage-page {
+    padding: 8px;
+  }
+
+  .preferences-card {
+    margin: 0 -8px; // Extend to screen edges on mobile
+  }
+
+  .preferences-table {
+    overflow-x: auto;
+    width: 100%;
+  }
+
+  .preferences-header,
+  .device-row {
+    grid-template-columns: minmax(100px, 140px) repeat(7, minmax(45px, 60px)) minmax(35px, 50px);
+    gap: 4px;
+    padding: 12px 4px;
+    min-width: 550px; // Reduced minimum width
+  }
+  .notification-type-header {
+    gap: 1px;
+    padding: 2px 1px;
+
+    mat-icon {
+      font-size: 16px;
+      height: 16px;
+      width: 16px;
+    }
+
+    span {
+      font-size: 9px;
+      line-height: 1.0;
+    }
+  }
+
+  .device-info {
+    gap: 6px;    .device-details {
+      .device-name {
+        font-size: 12px;
+        line-height: 1.2;
+      }
+
+      .device-date {
+        font-size: 10px;
+      }
+
+      .device-useragent {
+        font-size: 9px;
+      }
+    }
+  }
+}
+
+// Dark mode adjustments
+@media (prefers-color-scheme: dark) {
+  .device-row:hover {
+    background-color: rgba(255, 255, 255, 0.02);
+  }
+
+  .no-devices {
+    mat-icon {
+      color: rgba(255, 255, 255, 0.3);
+    }
+
+    p {
+      color: rgba(255, 255, 255, 0.6);
+    }
+  }
+
+  .loading-container p {
+    color: rgba(255, 255, 255, 0.6);
+  }
+  .device-info {
+    mat-icon {
+      color: rgba(255, 255, 255, 0.54);
+    }
+
+    .device-details {
+      .device-date {
+        color: rgba(255, 255, 255, 0.6);
+      }
+
+      .device-useragent {
+        color: rgba(255, 255, 255, 0.5);
+      }
+    }
+  }
+
+  .preferences-header {
+    color: rgba(255, 255, 255, 0.6);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .help-content {
+    ul li strong {
+      color: rgba(255, 255, 255, 0.87);
+    }
+  }
+}
