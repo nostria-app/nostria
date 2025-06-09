@@ -1,0 +1,153 @@
+<div class="notifications-manage-page content-small">
+  <div class="page-header">
+    <h1>Manage Notifications</h1>
+    <button mat-icon-button routerLink="/notifications/settings" aria-label="Back to settings">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+  </div>
+
+  @if (isLoading()) {
+    <div class="loading-container">
+      <mat-spinner diameter="40"></mat-spinner>
+      <p>Loading device preferences...</p>
+    </div>
+  } @else if (devices().length === 0) {
+    <mat-card class="no-devices-card">
+      <mat-card-content>
+        <div class="no-devices">
+          <mat-icon>devices_off</mat-icon>
+          <h3>No devices registered</h3>
+          <p>You need to register at least one device for notifications before you can manage preferences.</p>
+          <button mat-raised-button color="primary" routerLink="/notifications/settings">
+            Register a device
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  } @else {
+    <mat-card class="preferences-card">
+      <mat-card-header>
+        <mat-card-title>Notification Preferences by Device</mat-card-title>
+        <mat-card-subtitle>
+          Configure which types of notifications each device should receive
+        </mat-card-subtitle>
+      </mat-card-header>
+      
+      <mat-card-content>
+        <div class="preferences-table">
+          <!-- Header Row -->
+          <div class="preferences-header">
+            <div class="device-header">Device</div>
+            @for (type of notificationTypes; track type.key) {
+              <div class="notification-type-header">
+                <mat-icon>{{ type.icon }}</mat-icon>
+                <span>{{ type.label }}</span>
+              </div>
+            }
+            <div class="actions-header">All</div>
+          </div>
+
+          <mat-divider></mat-divider>
+
+          <!-- Device Rows -->
+          @for (devicePref of devicePreferences(); track devicePref.device.deviceId) {
+            <div class="device-row">              <!-- Device Info -->
+              <div class="device-info">
+                <mat-icon>smartphone</mat-icon>
+                <div class="device-details" 
+                     [matTooltip]="devicePref.device.userAgent || 'User agent not available'"
+                     matTooltipPosition="above">
+                  <div class="device-name">{{ webPush.getDeviceDisplayName(devicePref.device) }}</div>
+                  <div class="device-date">
+                    Device ID: {{ devicePref.device.deviceId | slice:0:8 }}... • 
+                    {{ devicePref.device.createdAt | date:'short' }}
+                  </div>
+                  @if (devicePref.device.userAgent) {
+                    <div class="device-useragent">{{ devicePref.device.userAgent | slice:0:60 }}@if (devicePref.device.userAgent.length > 60) {...}</div>
+                  }
+                </div>
+              </div>
+
+              <!-- Notification Type Checkboxes -->
+              @for (type of notificationTypes; track type.key) {
+                <div class="notification-checkbox">
+                  <mat-checkbox 
+                    [checked]="devicePref.preferences[type.key]"
+                    (change)="updatePreference(devicePref.device.deviceId, type.key, $event.checked)"
+                    [disabled]="isSaving()"
+                    color="primary">
+                  </mat-checkbox>
+                </div>
+              }
+
+              <!-- Toggle All Button -->
+              <div class="device-actions">
+                @if (hasAllEnabled(devicePref.device.deviceId)) {
+                  <button 
+                    mat-icon-button 
+                    (click)="toggleAllForDevice(devicePref.device.deviceId, false)"
+                    [disabled]="isSaving()"
+                    matTooltip="Disable all notifications"
+                    color="primary">
+                    <mat-icon>check_box</mat-icon>
+                  </button>
+                } @else {
+                  <button 
+                    mat-icon-button 
+                    (click)="toggleAllForDevice(devicePref.device.deviceId, true)"
+                    [disabled]="isSaving()"
+                    matTooltip="Enable all notifications">
+                    <mat-icon>check_box_outline_blank</mat-icon>
+                  </button>
+                }
+              </div>
+            </div>
+
+            @if (!$last) {
+              <mat-divider></mat-divider>
+            }
+          }
+        </div>
+      </mat-card-content>
+
+      <mat-card-actions align="end">
+        <button mat-button routerLink="/notifications/settings">
+          <mat-icon>arrow_back</mat-icon>
+          Back to Settings
+        </button>
+        <button 
+          mat-raised-button 
+          color="primary" 
+          (click)="saveAllPreferences()"
+          [disabled]="isSaving()">
+          @if (isSaving()) {
+            <mat-spinner diameter="20"></mat-spinner>
+          } @else {
+            <mat-icon>save</mat-icon>
+          }
+          Save Preferences
+        </button>
+      </mat-card-actions>
+    </mat-card>
+
+    <!-- Help Card -->
+    <mat-card class="help-card">
+      <mat-card-content>
+        <div class="help-content">
+          <mat-icon>info</mat-icon>
+          <div>
+            <h4>About Notification Types</h4>
+            <ul>
+              <li><strong>Direct Messages:</strong> Private messages sent directly to you</li>
+              <li><strong>Replies:</strong> Responses to your posts</li>
+              <li><strong>Mentions:</strong> When someone mentions you in a post</li>
+              <li><strong>Reposts:</strong> When someone reposts your content</li>
+              <li><strong>Zaps:</strong> Bitcoin lightning tips received</li>
+              <li><strong>News:</strong> Important news and announcements</li>
+              <li><strong>App Updates:</strong> Updates about the Nostria app</li>
+            </ul>
+          </div>
+        </div>      </mat-card-content>
+    </mat-card>
+  }
+</div>

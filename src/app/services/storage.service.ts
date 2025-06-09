@@ -103,6 +103,23 @@ export enum NotificationType {
   WARNING = 'warning'
 }
 
+// User-facing notification types for push notifications
+export enum UserNotificationType {
+  DIRECT_MESSAGES = 'direct-messages',
+  REPLIES = 'replies',
+  MENTIONS = 'mentions',
+  REPOSTS = 'reposts',
+  ZAPS = 'zaps',
+  NEWS = 'news',
+  APP_UPDATES = 'app-updates'
+}
+
+// Interface for device notification preferences
+export interface DeviceNotificationPreferences {
+  deviceId: string;
+  preferences: Record<UserNotificationType, boolean>;
+}
+
 export interface Notification {
   id: string;
   type: NotificationType;

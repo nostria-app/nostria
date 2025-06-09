@@ -30,6 +30,7 @@ import { ArticleComponent } from './pages/article/article.component';
 import { EditorComponent } from './pages/article/editor/editor.component';
 import { MediaQueueComponent } from './pages/media-queue/media-queue.component';
 import { EventPageComponent } from './pages/event/event.component';
+import { NotificationManageComponent } from './pages/notifications/manage/manage.component';
 
 export const routes: Routes = [
   { path: '', component: FeedsComponent, pathMatch: 'full' },
@@ -51,6 +52,7 @@ export const routes: Routes = [
   { path: 'media-queue', component: MediaQueueComponent },
   { path: 'notifications', component: NotificationsComponent },
   { path: 'notifications/settings', component: NotificationSettingsComponent },
+  { path: 'notifications/manage', component: NotificationManageComponent },
   { path: 'credentials', component: CredentialsComponent },
   { path: 'accounts', component: AccountsComponent },
   { path: 'about', component: AboutComponent },  { path: 'bookmarks', loadComponent: () => import('./pages/bookmarks/bookmarks.component').then(m => m.BookmarksComponent), title: 'Bookmarks' },

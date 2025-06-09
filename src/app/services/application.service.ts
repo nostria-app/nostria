@@ -75,7 +75,6 @@ export class ApplicationService {
             // this is triggered twice on app start.
             if (pubkey && followingList.length > 0) {
                 untracked(async () => {
-                    debugger
                     // Check if profile discovery has already been done for this account
                     if (!this.accountState.hasProfileDiscoveryBeenDone(pubkey)) {
                         await this.accountState.startProfileProcessing(followingList, this.nostrService);
@@ -123,8 +122,6 @@ export class ApplicationService {
         if (!this.notificationService.notificationsLoaded()) {
             await this.notificationService.loadNotifications();
         }
-
-        debugger;
 
         // Add any other app data loading here in the future
         // this.accountState.loadProfiles();
