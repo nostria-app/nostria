@@ -36,17 +36,31 @@ export class ProfileEditComponent {
   constructor() {
 
   }
-
   ngOnInit() {
     const metadata = this.accountState.profile();
-    const profileClone = structuredClone(metadata?.data);
-    this.profile.set(profileClone);
+    
+    if (metadata?.data) {
+      // User has existing profile data
+      const profileClone = structuredClone(metadata.data);
+      this.profile.set(profileClone);
+    } else {
+      // User has no profile, create a basic empty profile
+      this.profile.set({
+        display_name: '',
+        name: '',
+        about: '',
+        picture: '',
+        banner: '',
+        website: '',
+        lud16: '',
+        nip05: ''
+      });
+    }
   }
 
   cancelEdit() { 
     this.router.navigate(['/p', this.accountState.pubkey()], { replaceUrl: true });
   }
-
   async updateMetadata() {
     this.loading.set(true);
     // We want to be a good Nostr citizen and not delete custom metadata, except for certain deprecated fields.
@@ -56,9 +70,12 @@ export class ProfileEditComponent {
     delete profile.displayName;
     delete profile.username;
 
-    // this.metadata()!.content = JSON.stringify(profile);
+    // Check if user has existing profile
+    const existingProfile = this.accountState.profile();
+    const kind = existingProfile?.event.kind || 0; // Default to kind 0 for metadata
+    const tags = existingProfile?.event.tags || []; // Default to empty tags array
 
-    const unsignedEvent = this.nostr.createEvent(this.accountState.profile()!.event.kind, JSON.stringify(profile), this.accountState.profile()!.event.tags);
+    const unsignedEvent = this.nostr.createEvent(kind, JSON.stringify(profile), tags);
     const signedEvent = await this.nostr.signEvent(unsignedEvent);
 
     await this.relay.publish(signedEvent);
@@ -74,7 +91,7 @@ export class ProfileEditComponent {
     this.accountState.addToCache(record.event.pubkey, record);
 
     // Update the local account profile
-    this.accountState.account()!.name = profile.display_name;
+    this.accountState.account()!.name = profile.display_name || profile.name || '';
 
     this.loading.set(false);
 

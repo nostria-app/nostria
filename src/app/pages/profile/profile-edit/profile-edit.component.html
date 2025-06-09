@@ -1,6 +1,5 @@
 <div class="page">
     <mat-card>
-        @if (profile()) {
         <mat-card-content>
             <p>
                 <button type="button" mat-stroked-button (click)="profileImageInput.click()">Choose profile
@@ -17,6 +16,7 @@
                     <!-- {{selectedBannerFile?.name}} -->
                 </span>
             </p>
+            @if (profile()) {
             <p>
                 <mat-form-field class="input-full-width">
                     <mat-icon matPrefix>badge</mat-icon>
@@ -38,45 +38,20 @@
                     <textarea matInput type="text" [(ngModel)]="profile().about" rows="3"></textarea>
                 </mat-form-field>
             </p>
-            <!-- <p>
-          <mat-form-field class="input-full-width">
-            <mat-icon matPrefix>image</mat-icon>
-            <mat-label>Profile Image</mat-label>
-            <input matInput type="text" [(ngModel)]="profile.picture" />
-          </mat-form-field>
-        </p>
-        <p>
-          <mat-form-field class="input-full-width">
-            <mat-icon matPrefix>image</mat-icon>
-            <mat-label>Profile Banner</mat-label>
-            <input matInput type="text" [(ngModel)]="profile.banner" />
-          </mat-form-field>
-        </p> -->
-            <!-- <p>
-          <button type="button" mat-raised-button (click)="fileInput.click()">Choose File</button>
-          <input hidden (change)="onFileSelected()" #fileInput type="file" id="file" />
-        </p> -->
-            <p>
-                <mat-form-field class="input-full-width">
-                    <mat-icon matPrefix>how_to_reg</mat-icon>
-                    <mat-label>E-mail/Domain Identifier (NIP-05)</mat-label>
-                    <input matInput type="text" [(ngModel)]="profile().nip05" />
-                </mat-form-field>
-            </p>
             <p>
                 <mat-form-field class="input-full-width">
                     <mat-icon matPrefix>public</mat-icon>
                     <mat-label>Website</mat-label>
-                    <input matInput type="text" [(ngModel)]="profile().website" />
+                    <input matInput type="text" [(ngModel)]="profile().website" placeholder="https://" />
                 </mat-form-field>
             </p>
-            <!-- <p>
-          <mat-form-field class="input-full-width">
-            <mat-icon matPrefix>currency_bitcoin</mat-icon>
-            <mat-label>{{ 'Profile.BitcoinPaymentLink' | translate }}</mat-label>
-            <input matInput type="text" [(ngModel)]="profile.lud06" placeholder="LNURL..." />
-          </mat-form-field>
-        </p> -->
+            <p>
+                <mat-form-field class="input-full-width">
+                    <mat-icon matPrefix>how_to_reg</mat-icon>
+                    <mat-label>E-mail/Domain Identifier (NIP-05)</mat-label>
+                    <input matInput type="text" [(ngModel)]="profile().nip05" placeholder="user@domain.com" />
+                </mat-form-field>
+            </p>
             <p>
                 <mat-form-field class="input-full-width">
                     <mat-icon matPrefix>currency_bitcoin</mat-icon>
@@ -84,20 +59,14 @@
                     <input matInput type="text" [(ngModel)]="profile().lud16" placeholder="user@domain" />
                 </mat-form-field>
             </p>
-            <!-- <p>
-        <mat-form-field class="input-full-width">
-          <mat-icon matPrefix>currency_bitcoin</mat-icon>
-          <mat-label>Bitcoin Identity Identifier (LUD16)</mat-label>
-          <input matInput type="text" [(ngModel)]="profile.lud16" placeholder="satoshi@bitcoin.org" />
-        </mat-form-field>
-      </p> -->
+            @if (accountState.profile()) {
             <p>Last updated: {{ accountState.profile()!.event.created_at | ago }}</p>
-
-            <!-- {{ accountState.currentProfile()!.event | json }}<br><br> -->
-            <!-- {{ profile() }} -->
-
+            } @else {
+            <p><em>Creating new profile...</em></p>
+            }
+            }
         </mat-card-content>
-        }
+        
         <mat-card-footer align="end">
             <button mat-button (click)="cancelEdit()">Cancel</button>&nbsp;
             <button mat-flat-button [disabled]="loading()" color="primary" (click)="updateMetadata()">
