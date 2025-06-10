@@ -60,7 +60,7 @@
                   <div class="device-name">{{ webPush.getDeviceDisplayName(devicePref.device) }}</div>
                   <div class="device-date">
                     Device ID: {{ devicePref.device.deviceId | slice:0:8 }}... • 
-                    {{ devicePref.device.createdAt | date:'short' }}
+                    {{ devicePref.device.created | date:'short' }}
                   </div>
                   @if (devicePref.device.userAgent) {
                     <div class="device-useragent">{{ devicePref.device.userAgent | slice:0:60 }}@if (devicePref.device.userAgent.length > 60) {...}</div>
