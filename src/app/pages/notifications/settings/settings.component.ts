@@ -107,8 +107,7 @@ export class NotificationSettingsComponent {  app = inject(ApplicationService);
               this.currentDevice.set({
                 deviceId: subJson.keys?.['p256dh'] || '',
                 endpoint: subJson.endpoint || '',
-                lastUpdated: new Date().toISOString(),
-                createdAt: new Date().toISOString(),
+                created: new Date().toISOString(),
                 // Add additional subscription details
                 auth: subJson.keys?.['auth'] || '',
                 // subscriptionId: btoa(subJson.endpoint || ''), // Create unique ID from endpoint
@@ -126,8 +125,7 @@ export class NotificationSettingsComponent {  app = inject(ApplicationService);
             this.currentDevice.set({
               deviceId: subJson.keys.p256dh,
               endpoint: subJson.endpoint,
-              lastUpdated: new Date().toISOString(),
-              createdAt: new Date().toISOString(),
+              created: new Date().toISOString(),
               auth: subJson.keys.auth,
               // subscriptionId: btoa(subJson.endpoint), // Create unique ID from endpoint
             } as Device);
@@ -163,8 +161,7 @@ export class NotificationSettingsComponent {  app = inject(ApplicationService);
       deviceId: subJson.keys?.['p256dh'] || '',
       auth: subJson.keys?.['auth'] || '',
       userAgent: navigator.userAgent,
-      createdAt: new Date().toISOString(),
-      lastUpdated: new Date().toISOString()
+      created: new Date().toISOString()
     };
   }
 

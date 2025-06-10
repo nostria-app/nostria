@@ -10,8 +10,8 @@ export interface Device {
   deviceId: string;
   endpoint: string;
   auth: string;
-  lastUpdated: string;
-  createdAt: string;
+  modified?: string;
+  created: string;
   userAgent?: string;
 }
 
@@ -366,8 +366,7 @@ export class WebPushService {
         const newDevice = {
           deviceId: subscriptionData.keys.p256dh,
           endpoint: subscriptionData.endpoint,
-          lastUpdated: new Date().toISOString(),
-          createdAt: new Date().toISOString(),
+          created: new Date().toISOString(),
           auth: subscriptionData.keys.auth,
           userAgent: navigator.userAgent
         } as Device;
