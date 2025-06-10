@@ -101,12 +101,14 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
     const isMobile = this.screenWidth() < 1024;
     return isMobile;
   });
-
   // Content Signals
   trendingEvents = signal<NostrRecord[]>([]);
   followingEvents = signal<NostrRecord[]>([]);
   mediaEvents = signal<NostrRecord[]>([]);
   availableTags = signal<string[]>(['nostr', 'bitcoin', 'programming', 'art', 'music', 'photography', 'news', 'sports']);
+
+  // Video expansion state management
+  videoExpandedStates = signal<Record<string, boolean>>({});
 
   // Computed Signals for Filtered Content
   filteredTrending = computed(() => {
@@ -725,8 +727,22 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
     console.log('▶️ Continue column:', column.label, `(${column.id})`);
     console.log('📊 Column status before continue:', this.getColumnStatus(column.id));
     this.feedsCollectionService.continueColumn(column.id);
-    this.notificationService.notify(`Column "${column.label}" continued`);
-    console.log('📊 Column status after continue:', this.getColumnStatus(column.id));
+    this.notificationService.notify(`Column "${column.label}" continued`);    console.log('📊 Column status after continue:', this.getColumnStatus(column.id));
+  }
+
+  // Video expansion state management methods
+  expandVideo(videoKey: string): void {
+    this.videoExpandedStates.update(states => ({
+      ...states,
+      [videoKey]: true
+    }));
+  }
+
+  collapseVideo(videoKey: string): void {
+    this.videoExpandedStates.update(states => ({
+      ...states,
+      [videoKey]: false
+    }));
   }
 
   ngOnInit() {
@@ -778,7 +794,6 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
       return '';
     }
   }
-
   getVideoData(event: any): { url: string; thumbnail?: string; duration?: string; blurhash?: string } | null {
     const imetas = event.tags?.filter((tag: any[]) => tag[0] === 'imeta') || [];
     if (imetas.length === 0) return null;
@@ -790,11 +805,21 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
 
     const durationTag = event.tags?.find((tag: any[]) => tag[0] === 'duration');
 
+    const videoUrl = urlIndex > 0 ? firstImeta[urlIndex].substring(4) : '';
+    const existingThumbnail = imageIndex > 0 ? firstImeta[imageIndex].substring(6) : undefined;
+    const existingBlurhash = blurhashIndex > 0 ? firstImeta[blurhashIndex].substring(9) : undefined;
+
+    // Generate thumbnail using web service if no existing thumbnail or blurhash
+    let generatedThumbnail: string | undefined = existingThumbnail;
+    if (!existingThumbnail && !existingBlurhash && videoUrl) {
+      generatedThumbnail = `https://video-thumb.apps2.slidestr.net/${videoUrl}`;
+    }
+
     return {
-      url: urlIndex > 0 ? firstImeta[urlIndex].substring(4) : '',
-      thumbnail: imageIndex > 0 ? firstImeta[imageIndex].substring(6) : undefined,
+      url: videoUrl,
+      thumbnail: generatedThumbnail,
       duration: durationTag ? durationTag[1] : undefined,
-      blurhash: blurhashIndex > 0 ? firstImeta[blurhashIndex].substring(9) : undefined
+      blurhash: existingBlurhash
     };
   }
 
@@ -1095,9 +1120,7 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
       // Extra if the track.url is YouTube, video or music.
       if (track.url.includes('youtube.com') || track.url.includes('youtu.be')) {
         type = 'YouTube';
-      }
-
-      const mediaItem: MediaItem = {
+      }      const mediaItem: MediaItem = {
         title: track.title || `Track ${index + 1}`,
         artist: track.artist || 'Unknown Artist',
         source: track.url,
@@ -1123,9 +1146,7 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
         source: track.url,
         artwork: '',
         type: 'Video'
-      };
-
-      this.mediaPlayerService.enque(mediaItem);
+      };      this.mediaPlayerService.enque(mediaItem);
     });
   }
 }
