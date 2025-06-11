@@ -27,13 +27,14 @@ export class EncryptionService {
   async encryptNip04(plaintext: string, recipientPubkey: string): Promise<string> {
     try {
       const account = this.accountState.account();
-      if (!account?.privkey) {
-        throw new Error('Private key not available for encryption');
-      }
 
       // Check if we can use the browser extension
-      if (account.source === 'extension' && window.nostr?.nip04) {
+      if (account?.source === 'extension' && window.nostr?.nip04) {
         return await window.nostr.nip04.encrypt(recipientPubkey, plaintext);
+      }
+
+      if (!account?.privkey) {
+        throw new Error('Private key not available for encryption');
       }
 
       // Use nostr-tools nip04 encryption
@@ -50,13 +51,14 @@ export class EncryptionService {
   async decryptNip04(ciphertext: string, senderPubkey: string): Promise<string> {
     try {
       const account = this.accountState.account();
-      if (!account?.privkey) {
-        throw new Error('Private key not available for decryption');
-      }
 
       // Check if we can use the browser extension
-      if (account.source === 'extension' && window.nostr?.nip04) {
+      if (account?.source === 'extension' && window.nostr?.nip04) {
         return await window.nostr.nip04.decrypt(senderPubkey, ciphertext);
+      }
+
+      if (!account?.privkey) {
+        throw new Error('Private key not available for decryption');
       }
 
       // Use nostr-tools nip04 decryption
@@ -73,19 +75,20 @@ export class EncryptionService {
   async encryptNip44(plaintext: string, recipientPubkey: string): Promise<string> {
     try {
       const account = this.accountState.account();
-      if (!account?.privkey) {
-        throw new Error('Private key not available for encryption');
-      }
 
       // Check if we can use the browser extension
-      if (account.source === 'extension' && window.nostr?.nip44) {
+      if (account?.source === 'extension' && window.nostr?.nip44) {
         return await window.nostr.nip44.encrypt(recipientPubkey, plaintext);
+      }
+
+      if (!account?.privkey) {
+        throw new Error('Private key not available for encryption');
       }
 
       // Use nostr-tools nip44 v2 encryption
       const privateKeyBytes = hexToBytes(account.privkey);
       const conversationKey = v2.utils.getConversationKey(privateKeyBytes, recipientPubkey);
-      
+
       return v2.encrypt(plaintext, conversationKey);
     } catch (error) {
       this.logger.error('Failed to encrypt with NIP-44', error);
@@ -98,19 +101,20 @@ export class EncryptionService {
   async decryptNip44(ciphertext: string, senderPubkey: string): Promise<string> {
     try {
       const account = this.accountState.account();
-      if (!account?.privkey) {
-        throw new Error('Private key not available for decryption');
-      }
 
       // Check if we can use the browser extension
-      if (account.source === 'extension' && window.nostr?.nip44) {
+      if (account?.source === 'extension' && window.nostr?.nip44) {
         return await window.nostr.nip44.decrypt(senderPubkey, ciphertext);
+      }
+
+      if (!account?.privkey) {
+        throw new Error('Private key not available for decryption');
       }
 
       // Use nostr-tools nip44 v2 decryption
       const privateKeyBytes = hexToBytes(account.privkey);
       const conversationKey = v2.utils.getConversationKey(privateKeyBytes, senderPubkey);
-      
+
       return v2.decrypt(ciphertext, conversationKey);
     } catch (error) {
       this.logger.error('Failed to decrypt with NIP-44', error);
@@ -122,24 +126,24 @@ export class EncryptionService {
    * Auto-detect encryption type and decrypt accordingly
    */
   async autoDecrypt(ciphertext: string, senderPubkey: string): Promise<DecryptionResult> {
-    // Try NIP-44 first (modern format)
-    try {
-      const content = await this.decryptNip44(ciphertext, senderPubkey);
-      return { content, algorithm: 'nip44' };
-    } catch (error) {
-      this.logger.debug('NIP-44 decryption failed, trying NIP-04', error);
-    }
 
-    // Fallback to NIP-04 (legacy format with ?iv=)
-    try {
-      if (ciphertext.includes('?iv=')) {
+    if (ciphertext.includes('?iv=')) {
+      // Fallback to NIP-04 (legacy format with ?iv=)
+      try {
         const content = await this.decryptNip04(ciphertext, senderPubkey);
         return { content, algorithm: 'nip04' };
+      } catch (error) {
+        this.logger.debug('NIP-04 decryption failed', error);
       }
-    } catch (error) {
-      this.logger.debug('NIP-04 decryption failed', error);
+    } else {
+      // Try NIP-44 first (modern format)
+      try {
+        const content = await this.decryptNip44(ciphertext, senderPubkey);
+        return { content, algorithm: 'nip44' };
+      } catch (error) {
+        this.logger.debug('NIP-44 decryption failed, trying NIP-04', error);
+      }
     }
-
     throw new Error('Unable to decrypt message with any supported algorithm');
   }
 

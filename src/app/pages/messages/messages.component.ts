@@ -27,9 +27,7 @@ import { NPubPipe } from '../../pipes/npub.pipe';
 import { TimestampPipe } from '../../pipes/timestamp.pipe';
 import { AgoPipe } from '../../pipes/ago.pipe';
 import { ConfirmDialogComponent } from '../../components/confirm-dialog/confirm-dialog.component';
-import { kinds, SimplePool, getPublicKey, nip04, nip44, generateSecretKey, finalizeEvent, Event as NostrEvent, Filter } from 'nostr-tools';
-import { v2 } from 'nostr-tools/nip44';
-import { hexToBytes } from '@noble/hashes/utils';
+import { kinds, SimplePool, getPublicKey, generateSecretKey, finalizeEvent, Event as NostrEvent, Filter } from 'nostr-tools';
 import { ApplicationService } from '../../services/application.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { AccountStateService } from '../../services/account-state.service';
@@ -133,12 +131,8 @@ export class MessagesComponent implements OnInit, OnDestroy {
 
     messages = signal<DirectMessage[]>([]);
     newMessageText = signal<string>('');
-    hasMoreMessages = signal<boolean>(false);
-
-    // Computed helpers
-    hasChats = computed(() => this.chats().length > 0);
-
-    // Clean up subscriptions
+    hasMoreMessages = signal<boolean>(false);    // Computed helpers
+    hasChats = computed(() => this.chats().length > 0);    // Subscription management
     private messageSubscription: any = null;
     private chatSubscription: any = null;
 
@@ -290,13 +284,17 @@ export class MessagesComponent implements OnInit, OnDestroy {
                 limit: 100
             }, {
                 maxWait: 5000,
-                label: 'loadChats',
-                onevent: async (event: NostrEvent) => {
+                label: 'loadChats',                onevent: async (event: NostrEvent) => {
                     debugger;
 
                     if (event.kind == kinds.EncryptedDirectMessage) {
-                        const unwrappedMessage = await this.unwrapMessage(event);
+                        const unwrappedMessage = await this.unwrapNip04Message(event);
                         if (unwrappedMessage) {
+                            // Add the sender to our chat list if not us
+                            if (event.pubkey !== myPubkey) {
+                                chatPubkeys.add(event.pubkey);
+                            }
+
                             // Create a DirectMessage object
                             const directMessage: DirectMessage = {
                                 id: unwrappedMessage.id,
@@ -553,34 +551,28 @@ export class MessagesComponent implements OnInit, OnDestroy {
             this.error.set('Failed to load messages. Please try again.');
             this.isLoading.set(false);
         }
-    }
-
-    /**
+    }    /**
      * Unwrap and decrypt a gift-wrapped message
      */
     async unwrapMessage(wrappedEvent: any): Promise<any | null> {
-        debugger;
         const myPubkey = this.accountState.pubkey();
         if (!myPubkey) return null;
 
-        // Get our private key (in a real app, this would use a more secure method)
-        //const privateKey = await this.nostr.getActivePrivateKeySecure();
-        const privateKey = await this.accountState.account()?.privkey;
-        if (!privateKey) return null;
-
-        const privateKeyBytes = hexToBytes(privateKey);
-
         try {
-            debugger;
-            // Parse the wrapped content
-            const convKey = v2.utils.getConversationKey(privateKeyBytes, wrappedEvent.pubkey);
-            const decrypted = v2.decrypt(wrappedEvent.content, convKey);
-            const wrappedContent = JSON.parse(decrypted);
-            // const wrappedContent = JSON.parse(wrappedEvent.content);
-
             // Check if this message is for us
             const recipient = wrappedEvent.tags.find((t: string[]) => t[0] === 'p')?.[1];
             if (recipient !== myPubkey && wrappedEvent.pubkey !== myPubkey) {
+                return null;
+            }
+
+            // First decrypt the wrapped content using the EncryptionService
+            // This will handle both browser extension and direct decryption
+            let wrappedContent: any;
+            try {
+                const decryptionResult = await this.encryption.autoDecrypt(wrappedEvent.content, wrappedEvent.pubkey);
+                wrappedContent = JSON.parse(decryptionResult.content);
+            } catch (err) {
+                this.logger.error('Failed to decrypt wrapped content', err);
                 return null;
             }
 
@@ -590,32 +582,51 @@ export class MessagesComponent implements OnInit, OnDestroy {
                 // If we sent it, we can directly use the encryptedMessage
                 sealedEvent = wrappedContent.encryptedMessage;
             } else {
-                debugger;
-                const convKey = v2.utils.getConversationKey(privateKeyBytes, wrappedContent.pubkey);
-                const decrypted = v2.decrypt(wrappedContent.content, convKey);
-                sealedEvent = JSON.parse(decrypted);
-                console.log('Decrypted content:', decrypted);
-
-                // Otherwise decrypt the message using NIP-44
-                // const sharedKey = getSharedSecret(privateKey, wrappedContent.senderPubkey || wrappedEvent.pubkey);
-                // sealedEvent = JSON.parse(await nip44.decrypt(sharedKey, wrappedContent.encryptedMessage));
+                // Decrypt the sealed content using the EncryptionService
+                try {
+                    const sealedDecryptionResult = await this.encryption.autoDecrypt(wrappedContent.content, wrappedContent.pubkey);
+                    sealedEvent = JSON.parse(sealedDecryptionResult.content);
+                } catch (err) {
+                    this.logger.error('Failed to decrypt sealed content', err);
+                    return null;
+                }
             }
 
-            debugger;
-
-            // Now unseal the actual message content
-            // const sharedKey = sealedEvent.pubkey === myPubkey
-            //     ? getSharedSecret(privateKey, recipient)
-            //     : getSharedSecret(privateKey, sealedEvent.pubkey);
-
-            // const decryptedContent = await nip44.decrypt(sharedKey, sealedEvent.content);
             // Return the final decrypted message
             return {
                 ...sealedEvent
             };
         } catch (err) {
-            this.logger.error('Failed to decrypt message', err);
+            this.logger.error('Failed to unwrap message', err);
             throw err;
+        }
+    }
+
+    /**
+     * Unwrap and decrypt a NIP-04 direct message
+     */
+    async unwrapNip04Message(event: NostrEvent): Promise<any | null> {
+        const myPubkey = this.accountState.pubkey();
+        if (!myPubkey) return null;
+
+        try {
+            // For NIP-04 messages, the sender is the event pubkey
+            const senderPubkey = event.pubkey;
+            
+            // Use the EncryptionService to decrypt
+            const decryptionResult = await this.encryption.autoDecrypt(event.content, senderPubkey);
+            
+            // Return the message with decrypted content
+            return {
+                id: event.id,
+                pubkey: event.pubkey,
+                created_at: event.created_at,
+                content: decryptionResult.content,
+                tags: event.tags
+            };
+        } catch (err) {
+            this.logger.error('Failed to decrypt NIP-04 message', err);
+            return null;
         }
     }
 
