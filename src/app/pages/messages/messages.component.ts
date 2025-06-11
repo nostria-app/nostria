@@ -33,6 +33,8 @@ import { hexToBytes } from '@noble/hashes/utils';
 import { ApplicationService } from '../../services/application.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { AccountStateService } from '../../services/account-state.service';
+import { EncryptionService } from '../../services/encryption.service';
+import { DataService } from '../../services/data.service';
 
 // Define interfaces for our DM data structures
 interface Chat {
@@ -41,6 +43,8 @@ interface Chat {
     unreadCount: number;
     lastMessage?: DirectMessage | null;
     relays?: string[];
+    encryptionType?: 'nip04' | 'nip17';
+    isLegacy?: boolean; // true for NIP-04 chats
 }
 
 interface DirectMessage {
@@ -54,13 +58,15 @@ interface DirectMessage {
     failed?: boolean;
     received?: boolean;
     read?: boolean;
+    encryptionType?: 'nip04' | 'nip17';
 }
 
-// Constants for NIP-17 events
-const DIRECT_MESSAGE_KIND = 14; // Chat messages in NIP-17
-const SEALED_MESSAGE_KIND = 13; // Sealed messages in NIP-17
-const GIFT_WRAPPED_KIND = 1059; // Gift wrapped messages in NIP-17
-const RECEIPT_KIND = 1405; // For read receipts
+// Constants for both NIP-04 and NIP-17 events
+const DIRECT_MESSAGE_KIND = 4;    // NIP-04 direct messages
+// const GIFT_WRAPPED_KIND = 1059;   // NIP-17 gift wrapped messages
+const SEALED_MESSAGE_KIND = 13;   // NIP-17 sealed messages
+const CHAT_MESSAGE_KIND = 14;     // NIP-17 chat messages
+const RECEIPT_KIND = 1405;        // For read receipts
 
 @Component({
     selector: 'app-messages',
@@ -92,6 +98,7 @@ const RECEIPT_KIND = 1405; // For read receipts
     styleUrl: './messages.component.scss'
 })
 export class MessagesComponent implements OnInit, OnDestroy {
+    private data = inject(DataService);
     private nostr = inject(NostrService);
     private relay = inject(RelayService);
     private logger = inject(LoggerService);
@@ -100,10 +107,10 @@ export class MessagesComponent implements OnInit, OnDestroy {
     private storage = inject(StorageService);
     private router = inject(Router);
     private appState = inject(ApplicationStateService);
-    private snackBar = inject(MatSnackBar);
-    private readonly app = inject(ApplicationService);
+    private snackBar = inject(MatSnackBar); private readonly app = inject(ApplicationService);
     readonly utilities = inject(UtilitiesService);
     private readonly accountState = inject(AccountStateService);
+    private readonly encryption = inject(EncryptionService);
 
     // UI state signals
     isLoading = signal<boolean>(false);
@@ -134,8 +141,6 @@ export class MessagesComponent implements OnInit, OnDestroy {
     // Clean up subscriptions
     private messageSubscription: any = null;
     private chatSubscription: any = null;
-    private relayPool: SimplePool | null = null;
-    private preferredRelays = signal<string[]>([]);
 
     constructor() {
         // Set up effect to load messages when chat is selected
@@ -163,9 +168,8 @@ export class MessagesComponent implements OnInit, OnDestroy {
         });
 
         effect(async () => {
-            if (this.app.initialized()) {
+            if (this.accountState.initialized()) {
                 debugger;
-                await this.loadPreferredRelays();
                 await this.loadChats();
                 this.subscribeToMessages();
             }
@@ -173,88 +177,19 @@ export class MessagesComponent implements OnInit, OnDestroy {
     }
 
     ngOnInit(): void {
-        // Initialize relay pool
-        this.relayPool = new SimplePool();
 
-        // Load user's preferred message relays
-        // this.loadPreferredRelays().then(() => {
-        //     debugger;
-        //     // Load chats after relays are loaded
-        //     this.loadChats();
-        //     // Subscribe to new messages
-        //     this.subscribeToMessages();
-        // });
     }
 
     ngOnDestroy(): void {
         // Clean up subscriptions
         if (this.messageSubscription) {
             this.messageSubscription.close();
-            //   this.relayPool?.unsubscribe(this.messageSubscription);
         }
 
         if (this.chatSubscription) {
             this.chatSubscription.close();
-            // this.relayPool?.unsubscribe(this.chatSubscription);
-        }
-
-        // Close relay pool
-        if (this.relayPool) {
-            this.relayPool.close(this.relays);
         }
     }
-
-    /**
-     * Load user's preferred relays for messaging
-     */
-    async loadPreferredRelays() {
-        this.preferredRelays.set(this.relay.relays.map(relay => relay.url));
-
-        // try {
-        //     const myPubkey = this.nostr.activeAccount()?.pubkey;
-        //     if (!myPubkey) {
-        //         throw new Error('Not logged in');
-        //     }
-
-        //     // First check for kind 10002 (relay list metadata)
-        //     const relayListEvents = await this.relayPool?.list(this.getConnectedRelays(), [{
-        //         kinds: [10002],
-        //         authors: [myPubkey],
-        //         limit: 1
-        //     }]);
-
-        //     if (relayListEvents && relayListEvents.length > 0) {
-        //         // Parse relay list from the event
-        //         const relayList = relayListEvents[0].tags
-        //             .filter(tag => tag[0] === 'r')
-        //             .map(tag => tag[1]);
-
-        //         if (relayList.length > 0) {
-        //             this.preferredRelays.set(relayList);
-        //             return;
-        //         }
-        //     }
-
-        //     // Fallback to connected relays
-        //     this.preferredRelays.set(this.getConnectedRelays());
-
-        // } catch (err) {
-        //     this.logger.error('Failed to load preferred relays', err);
-        //     // Fallback to connected relays
-        //     this.preferredRelays.set(this.getConnectedRelays());
-        // }
-    }
-
-    /**
-     * Get currently connected relays
-     */
-    getConnectedRelays(): string[] {
-        return this.relay.relays
-            .filter(relay => relay.status === 'connected')
-            .map(relay => relay.url);
-    }
-
-    relays: string[] = [];
 
     /**
      * Load all chats for the current user
@@ -271,21 +206,8 @@ export class MessagesComponent implements OnInit, OnDestroy {
                 return;
             }
 
-            // Get relays to fetch from
-            const relays = this.preferredRelays().length > 0
-                ? this.preferredRelays()
-                : this.getConnectedRelays();
-
-            this.relays = relays;
-
-            if (relays.length === 0) {
-                this.error.set('No connected relays available.');
-                this.isLoading.set(false);
-                return;
-            }
-
             const filter: Filter = {
-                kinds: [GIFT_WRAPPED_KIND],
+                kinds: [kinds.GiftWrap, kinds.EncryptedDirectMessage],
                 '#p': [myPubkey],
                 limit: 100
             };
@@ -293,54 +215,54 @@ export class MessagesComponent implements OnInit, OnDestroy {
             // Store pubkeys of people who've messaged us
             const chatPubkeys = new Set<string>();
 
+            debugger;
+
             // First, look for existing gift-wrapped messages
-            const sub = this.relayPool?.subscribe(relays, filter, {
-                maxWait: 5000,
-                label: 'loadChats',
-                onevent: async (event: NostrEvent) => {
-                    debugger;
-                    // Handle incoming wrapped events
-                    if (event.kind === GIFT_WRAPPED_KIND) {
+            const sub = this.relay.subscribe([], async (event: NostrEvent) => {
+                debugger;
+                // Handle incoming wrapped events
+                if (event.kind === kinds.GiftWrap) {
 
-                        if (event.pubkey !== myPubkey) {
-                            chatPubkeys.add(event.pubkey);
-                        }
-
-                        // Look for 'p' tags for recipients other than ourselves
-                        const pTags = event.tags.filter(tag => tag[0] === 'p');
-                        for (const tag of pTags) {
-                            const pubkey = tag[1];
-                            if (pubkey !== myPubkey) {
-                                chatPubkeys.add(pubkey);
-                            }
-                        }
-
-                        const chatsList: Chat[] = Array.from(chatPubkeys).map(pubkey => ({
-                            id: pubkey, // Using pubkey as chat ID
-                            pubkey,
-                            unreadCount: 0,
-                            lastMessage: null
-                        }));
-
-                        // Sort chats (will be updated with last messages later)
-                        const sortedChats = chatsList.sort((a, b) => {
-                            const aTime = a.lastMessage?.created_at || 0;
-                            const bTime = b.lastMessage?.created_at || 0;
-                            return bTime - aTime; // Most recent first
-                        });
-
-                        this.chats.set(sortedChats);
-
-                        // For each chat, fetch the latest message
-                        for (const chat of sortedChats) {
-                            await this.fetchLatestMessageForChat(chat.pubkey, relays);
-                        }
-
-                        // this.relayPool?.publish(relays, event);
+                    if (event.pubkey !== myPubkey) {
+                        chatPubkeys.add(event.pubkey);
                     }
-                }
-            });
 
+                    // Look for 'p' tags for recipients other than ourselves
+                    const pTags = event.tags.filter(tag => tag[0] === 'p');
+                    for (const tag of pTags) {
+                        const pubkey = tag[1];
+                        if (pubkey !== myPubkey) {
+                            chatPubkeys.add(pubkey);
+                        }
+                    }
+
+                    const chatsList: Chat[] = Array.from(chatPubkeys).map(pubkey => ({
+                        id: pubkey, // Using pubkey as chat ID
+                        pubkey,
+                        unreadCount: 0,
+                        lastMessage: null
+                    }));
+
+                    // Sort chats (will be updated with last messages later)
+                    const sortedChats = chatsList.sort((a, b) => {
+                        const aTime = a.lastMessage?.created_at || 0;
+                        const bTime = b.lastMessage?.created_at || 0;
+                        return bTime - aTime; // Most recent first
+                    });
+
+                    this.chats.set(sortedChats);
+
+                    // For each chat, fetch the latest message
+                    for (const chat of sortedChats) {
+                        await this.fetchLatestMessageForChat(chat.pubkey);
+                    }
+
+                    // this.relayPool?.publish(relays, event);
+                }
+            }, () => {
+                debugger;
+                console.log('End of data.');
+            })
 
             // Process wrapped events to find unique chat participants
             // if (wrappedEvents && wrappedEvents.length > 0) {
@@ -362,17 +284,47 @@ export class MessagesComponent implements OnInit, OnDestroy {
             // }
 
             // Also add chats from our outgoing messages
-            const ourMessages = await this.relayPool?.subscribe(relays, {
-                kinds: [GIFT_WRAPPED_KIND],
+            const ourMessages = await this.relay.getAccountPool()?.subscribe(this.relay.getAccountRelayUrls(), {
+                kinds: [kinds.GiftWrap, kinds.EncryptedDirectMessage],
                 authors: [myPubkey],
                 limit: 100
             }, {
                 maxWait: 5000,
                 label: 'loadChats',
-                onevent: (event: NostrEvent) => {
+                onevent: async (event: NostrEvent) => {
                     debugger;
+
+                    if (event.kind == kinds.EncryptedDirectMessage) {
+                        const unwrappedMessage = await this.unwrapMessage(event);
+                        if (unwrappedMessage) {
+                            // Create a DirectMessage object
+                            const directMessage: DirectMessage = {
+                                id: unwrappedMessage.id,
+                                pubkey: unwrappedMessage.pubkey,
+                                created_at: unwrappedMessage.created_at,
+                                content: unwrappedMessage.content,
+                                isOutgoing: unwrappedMessage.pubkey === myPubkey,
+                                tags: unwrappedMessage.tags,
+                                received: true // Since we've received and decrypted it
+                            };
+
+                            // Update the chat with this latest message
+                            this.chats.update(chats => {
+                                return chats.map(chat => {
+                                    if (chat.pubkey === myPubkey) {
+                                        return {
+                                            ...chat,
+                                            lastMessage: directMessage
+                                        };
+                                    }
+                                    return chat;
+                                });
+                            });
+                        }
+                    }
+
                     // Handle incoming wrapped events
-                    if (event.kind === GIFT_WRAPPED_KIND) {
+                    if (event.kind === kinds.GiftWrap) {
 
                         const pTags = event.tags.filter(tag => tag[0] === 'p');
                         for (const tag of pTags) {
@@ -414,19 +366,19 @@ export class MessagesComponent implements OnInit, OnDestroy {
     /**
      * Fetch the latest message for a specific chat
      */
-    async fetchLatestMessageForChat(pubkey: string, relays: string[]): Promise<void> {
+    async fetchLatestMessageForChat(pubkey: string): Promise<void> {
         const myPubkey = this.accountState.pubkey();
-        if (!myPubkey || !this.relayPool) return;
 
         try {
             // Fetch wrapped messages between us and this pubkey
-            const wrappedEvents = await this.relayPool.subscribeManyEose(relays, [{
-                kinds: [GIFT_WRAPPED_KIND],
+            // TODO: Wrap this function so we don't go directly to the pool.
+            const wrappedEvents = await this.relay.getAccountPool().subscribeManyEose(this.relay.getAccountRelayUrls(), [{
+                kinds: [kinds.GiftWrap],
                 authors: [pubkey],
                 '#p': [myPubkey],
                 limit: 1
             }, {
-                kinds: [GIFT_WRAPPED_KIND],
+                kinds: [kinds.GiftWrap],
                 authors: [myPubkey],
                 '#p': [pubkey],
                 limit: 1
@@ -437,7 +389,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
                     onevent: async (event: NostrEvent) => {
                         debugger;
                         // Handle incoming wrapped events
-                        if (event.kind === GIFT_WRAPPED_KIND) {
+                        if (event.kind === kinds.GiftWrap) {
                             // this.relayPool?.publish(relays, event);
                             const unwrappedMessage = await this.unwrapMessage(event);
 
@@ -507,31 +459,20 @@ export class MessagesComponent implements OnInit, OnDestroy {
 
         try {
             const myPubkey = this.accountState.pubkey();
-            if (!myPubkey || !this.relayPool) {
+            if (!myPubkey) {
                 this.error.set('You need to be logged in to view messages');
                 this.isLoading.set(false);
                 return;
             }
 
-            // Get relays to fetch from
-            const relays = this.preferredRelays().length > 0
-                ? this.preferredRelays()
-                : this.getConnectedRelays();
-
-            if (relays.length === 0) {
-                this.error.set('No connected relays available.');
-                this.isLoading.set(false);
-                return;
-            }
-
             // Fetch wrapped messages between us and this pubkey (in both directions)
-            const wrappedEvents = await this.relayPool.subscribeManyEose(relays, [{
-                kinds: [GIFT_WRAPPED_KIND],
+            const wrappedEvents = await this.relay.getAccountPool().subscribeManyEose(this.relay.getAccountRelayUrls(), [{
+                kinds: [kinds.GiftWrap],
                 authors: [pubkey],
                 '#p': [myPubkey],
                 limit: 50
             }, {
-                kinds: [GIFT_WRAPPED_KIND],
+                kinds: [kinds.GiftWrap],
                 authors: [myPubkey],
                 '#p': [pubkey],
                 limit: 50
@@ -541,7 +482,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
                 onevent: async (event: NostrEvent) => {
                     debugger;
                     // Handle incoming wrapped events
-                    if (event.kind === GIFT_WRAPPED_KIND) {
+                    if (event.kind === kinds.GiftWrap) {
                         // this.relayPool?.publish(relays, event);
                         const unwrappedMessage = await this.unwrapMessage(event);
 
@@ -618,6 +559,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
      * Unwrap and decrypt a gift-wrapped message
      */
     async unwrapMessage(wrappedEvent: any): Promise<any | null> {
+        debugger;
         const myPubkey = this.accountState.pubkey();
         if (!myPubkey) return null;
 
@@ -688,7 +630,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
             const pubkey = this.selectedChat()?.pubkey;
             const myPubkey = this.accountState.pubkey();
 
-            if (!pubkey || !myPubkey || !this.relayPool) {
+            if (!pubkey || !myPubkey) {
                 this.isLoadingMore.set(false);
                 return;
             }
@@ -702,20 +644,15 @@ export class MessagesComponent implements OnInit, OnDestroy {
 
             const oldestTimestamp = Math.min(...currentMessages.map(m => m.created_at));
 
-            // Get relays to fetch from
-            const relays = this.preferredRelays().length > 0
-                ? this.preferredRelays()
-                : this.getConnectedRelays();
-
             // Fetch older wrapped messages
-            const wrappedEvents = await this.relayPool.subscribeManyEose(relays, [{
-                kinds: [GIFT_WRAPPED_KIND],
+            const wrappedEvents = await this.relay.getAccountPool().subscribeManyEose(this.relay.getAccountRelayUrls(), [{
+                kinds: [kinds.GiftWrap],
                 authors: [pubkey],
                 '#p': [myPubkey],
                 until: oldestTimestamp - 1,
                 limit: 25
             }, {
-                kinds: [GIFT_WRAPPED_KIND],
+                kinds: [kinds.GiftWrap],
                 authors: [myPubkey],
                 '#p': [pubkey],
                 until: oldestTimestamp - 1,
@@ -726,7 +663,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
                 onevent: async (event: NostrEvent) => {
                     debugger;
                     // Handle incoming wrapped events
-                    if (event.kind === GIFT_WRAPPED_KIND) {
+                    if (event.kind === kinds.GiftWrap) {
                         // this.relayPool?.publish(relays, event);
                         const unwrappedMessage = await this.unwrapMessage(event);
 
@@ -859,14 +796,9 @@ export class MessagesComponent implements OnInit, OnDestroy {
             // Sign the event
             const signedEvent = await this.nostr.signEvent(receiptEvent);
 
-            // Get relays to publish to
-            const relays = this.preferredRelays().length > 0
-                ? this.preferredRelays()
-                : this.getConnectedRelays();
-
             // Publish to relays
-            if (signedEvent && this.relayPool) {
-                await this.relayPool.publish(relays, signedEvent);
+            if (signedEvent) {
+                await this.relay.getAccountPool().publish(this.relay.getAccountRelayUrls(), signedEvent);
 
                 // Update message read status in local state
                 this.messages.update(msgs =>
@@ -880,207 +812,113 @@ export class MessagesComponent implements OnInit, OnDestroy {
         } catch (err) {
             this.logger.error('Failed to send read receipts', err);
         }
-    }
-
-    /**
-     * Send a direct message using NIP-17
+    }    /**
+     * Send a direct message using both NIP-04 and NIP-17
      */
     async sendMessage(): Promise<void> {
-        // const messageText = this.newMessageText().trim();
-        // if (!messageText || this.isSending()) return;
+        const messageText = this.newMessageText().trim();
+        if (!messageText || this.isSending()) return;
 
-        // const receiverPubkey = this.selectedChat()?.pubkey;
-        // if (!receiverPubkey) return;
+        const receiverPubkey = this.selectedChat()?.pubkey;
+        if (!receiverPubkey) return;
 
-        // this.isSending.set(true);
+        this.isSending.set(true);
 
-        // try {
-        //     const myPubkey = this.nostr.activeAccount()?.pubkey;
-        //     if (!myPubkey) {
-        //         throw new Error('You need to be logged in to send messages');
-        //     }
+        try {
+            const myPubkey = this.accountState.pubkey();
+            if (!myPubkey) {
+                throw new Error('You need to be logged in to send messages');
+            }
 
-        //     // Get relays to publish to
-        //     const relays = this.preferredRelays().length > 0
-        //         ? this.preferredRelays()
-        //         : this.getConnectedRelays();
+            // Get relays to publish to
+            // TODO: Important, get all relays for the user we are sending DM to and include
+            // it in this array for publishing the DM!!
+            const relays = this.relay.getAccountRelayUrls();
 
-        //     if (relays.length === 0) {
-        //         throw new Error('No connected relays available');
-        //     }
+            // Create a unique ID for the pending message
+            const pendingId = `pending-${Date.now()}-${Math.random()}`;
 
-        //     // Create a pending message to show immediately in the UI
-        //     const pendingMessage: DirectMessage = {
-        //         id: `pending-${Date.now()}`,
-        //         pubkey: myPubkey,
-        //         created_at: Math.floor(Date.now() / 1000),
-        //         content: messageText,
-        //         isOutgoing: true,
-        //         pending: true,
-        //         tags: [['p', receiverPubkey]]
-        //     };
+            // Create a pending message to show immediately in the UI
+            const pendingMessage: DirectMessage = {
+                id: pendingId,
+                pubkey: myPubkey,
+                created_at: Math.floor(Date.now() / 1000),
+                content: messageText,
+                isOutgoing: true,
+                pending: true,
+                tags: [['p', receiverPubkey]],
+                received: false,
+                encryptionType: this.supportsModernEncryption(this.selectedChat()!) ? 'nip17' : 'nip04'
+            };
 
-        //     // Add to the messages immediately so the user sees feedback
-        //     this.messages.update(msgs => [...msgs, pendingMessage]);
+            // Add to the messages immediately so the user sees feedback
+            this.messages.update(msgs => [...msgs, pendingMessage]);
 
-        //     // Clear the input
-        //     this.newMessageText.set('');
+            // Clear the input
+            this.newMessageText.set('');
 
-        //     // Step 1: Create the regular direct message (kind 14)
-        //     const directMessage = {
-        //         kind: DIRECT_MESSAGE_KIND,
-        //         pubkey: myPubkey,
-        //         created_at: Math.floor(Date.now() / 1000),
-        //         tags: [['p', receiverPubkey]],
-        //         content: messageText
-        //     };
+            // Determine which encryption to use based on chat and client capabilities
+            const selectedChat = this.selectedChat()!;
+            const useModernEncryption = this.supportsModernEncryption(selectedChat);
 
-        //     // Sign the direct message
-        //     const signedDirectMessage = await this.nostr.signEvent(directMessage);
+            let finalMessage: DirectMessage;
 
-        //     if (!signedDirectMessage) {
-        //         throw new Error('Failed to sign direct message');
-        //     }
+            if (useModernEncryption) {
+                // Use NIP-17 encryption
+                finalMessage = await this.sendNip17Message(messageText, receiverPubkey, myPubkey, relays);
+            } else {
+                // Use NIP-04 encryption for backwards compatibility
+                finalMessage = await this.sendNip04Message(messageText, receiverPubkey, myPubkey, relays);
+            }
 
-        //     // Step 2: Seal the message (kind 13) using NIP-44
-        //     const privateKey = await this.nostr.getActivePrivateKeySecure();
-        //     if (!privateKey) {
-        //         throw new Error('Could not get private key');
-        //     }
+            // Success: update the message to remove the pending state
+            this.messages.update(msgs =>
+                msgs.map(msg =>
+                    msg.id === pendingId
+                        ? {
+                            ...finalMessage,
+                            pending: false,
+                            received: true
+                        }
+                        : msg
+                )
+            );
 
-        //     // Create shared secret for encryption
-        //     const sharedSecret = getSharedSecret(privateKey, receiverPubkey);
+            // Update the last message for this chat in the chat list
+            this.updateChatLastMessage(selectedChat.id, finalMessage);
 
-        //     // Encrypt the direct message content
-        //     const encryptedContent = await nip44.encrypt(sharedSecret, JSON.stringify(signedDirectMessage));
+            this.isSending.set(false);
 
-        //     // Create sealed message
-        //     const sealedMessage = {
-        //         kind: SEALED_MESSAGE_KIND,
-        //         pubkey: myPubkey,
-        //         created_at: Math.floor(Date.now() / 1000),
-        //         tags: [['p', receiverPubkey]],
-        //         content: encryptedContent
-        //     };
+            // Show success notification
+            this.snackBar.open('Message sent', 'Close', {
+                duration: 3000,
+                horizontalPosition: 'center',
+                verticalPosition: 'bottom'
+            });
 
-        //     // Sign the sealed message
-        //     const signedSealedMessage = await this.nostr.signEvent(sealedMessage);
+        } catch (err) {
+            this.logger.error('Failed to send message', err);
 
-        //     if (!signedSealedMessage) {
-        //         throw new Error('Failed to sign sealed message');
-        //     }
+            // Show error state for the message
+            this.messages.update(msgs =>
+                msgs.map(msg =>
+                    msg.id.startsWith('pending-')
+                        ? { ...msg, pending: false, failed: true }
+                        : msg
+                )
+            );
 
-        //     // Step 3: Gift wrap the sealed message (kind 1059)
-        //     // First, create a gift wrap for the recipient
+            this.isSending.set(false);
 
-        //     // Create another shared secret for the gift wrapping
-        //     const recipientSharedSecret = getSharedSecret(privateKey, receiverPubkey);
-
-        //     // Encrypt the sealed message for the recipient
-        //     const recipientEncryptedMessage = await nip44.encrypt(recipientSharedSecret, JSON.stringify(signedSealedMessage));
-
-        //     // Create recipient gift wrap
-        //     const recipientGiftWrap = {
-        //         kind: GIFT_WRAPPED_KIND,
-        //         pubkey: myPubkey,
-        //         created_at: Math.floor(Date.now() / 1000),
-        //         tags: [['p', receiverPubkey]],
-        //         content: JSON.stringify({
-        //             recipientPubkey: receiverPubkey,
-        //             encryptedMessage: recipientEncryptedMessage
-        //         })
-        //     };
-
-        //     // Sign the recipient gift wrap
-        //     const signedRecipientGiftWrap = await this.nostr.signEvent(recipientGiftWrap);
-
-        //     if (!signedRecipientGiftWrap) {
-        //         throw new Error('Failed to sign recipient gift wrap');
-        //     }
-
-        //     // Now create a self-addressed gift wrap so we can read our own messages
-        //     // (In reality, we could just store our own messages locally too)
-
-        //     // Create self gift wrap (we can just use the sealed message directly)
-        //     const selfGiftWrap = {
-        //         kind: GIFT_WRAPPED_KIND,
-        //         pubkey: myPubkey,
-        //         created_at: Math.floor(Date.now() / 1000),
-        //         tags: [['p', myPubkey]],
-        //         content: JSON.stringify({
-        //             recipientPubkey: myPubkey,
-        //             encryptedMessage: JSON.stringify(signedSealedMessage)
-        //         })
-        //     };
-
-        //     // Sign the self gift wrap
-        //     const signedSelfGiftWrap = await this.nostr.signEvent(selfGiftWrap);
-
-        //     if (!signedSelfGiftWrap) {
-        //         throw new Error('Failed to sign self gift wrap');
-        //     }
-
-        //     // Step 4: Publish the gift-wrapped messages to appropriate relays
-        //     if (this.relayPool) {
-        //         await this.relayPool.publish(relays, signedRecipientGiftWrap);
-        //         await this.relayPool.publish(relays, signedSelfGiftWrap);
-
-        //         // Success: update the message to remove the pending state
-        //         this.messages.update(msgs =>
-        //             msgs.map(msg =>
-        //                 msg.id === pendingMessage.id
-        //                     ? {
-        //                         ...msg,
-        //                         id: signedDirectMessage.id,
-        //                         pending: false
-        //                     }
-        //                     : msg
-        //             )
-        //         );
-
-        //         // Update the last message for this chat in the chat list
-        //         this.updateChatLastMessage(this.selectedChat()?.id || '', {
-        //             id: signedDirectMessage.id,
-        //             pubkey: myPubkey,
-        //             created_at: Math.floor(Date.now() / 1000),
-        //             content: messageText,
-        //             isOutgoing: true,
-        //             tags: [['p', receiverPubkey]]
-        //         });
-
-        //         this.isSending.set(false);
-
-        //         // Show success notification
-        //         this.snackBar.open('Message sent', 'Close', {
-        //             duration: 3000,
-        //             horizontalPosition: 'center',
-        //             verticalPosition: 'bottom'
-        //         });
-        //     }
-
-        // } catch (err) {
-        //     this.logger.error('Failed to send message', err);
-
-        //     // Show error state for the message
-        //     this.messages.update(msgs =>
-        //         msgs.map(msg =>
-        //             msg.id === `pending-${Date.now()}`
-        //                 ? { ...msg, pending: false, failed: true }
-        //                 : msg
-        //         )
-        //     );
-
-        //     this.isSending.set(false);
-
-        //     this.notifications.addNotification({
-        //         id: Date.now().toString(),
-        //         type: NotificationType.ERROR,
-        //         title: 'Message Failed',
-        //         message: 'Failed to send message. Please try again.',
-        //         timestamp: Date.now(),
-        //         read: false
-        //     });
-        // }
+            this.notifications.addNotification({
+                id: Date.now().toString(),
+                type: NotificationType.ERROR,
+                title: 'Message Failed',
+                message: 'Failed to send message. Please try again.',
+                timestamp: Date.now(),
+                read: false
+            });
+        }
     }
 
     /**
@@ -1167,18 +1005,11 @@ export class MessagesComponent implements OnInit, OnDestroy {
      */
     subscribeToMessages(): void {
         const myPubkey = this.accountState.pubkey();
-        if (!myPubkey || !this.relayPool) return;
-
-        // Get relays to subscribe to
-        const relays = this.preferredRelays().length > 0
-            ? this.preferredRelays()
-            : this.getConnectedRelays();
-
-        if (relays.length === 0) return;
+        if (!myPubkey) return;
 
         // Subscribe to gift-wrapped messages addressed to us
-        this.messageSubscription = this.relayPool.subscribe(relays, {
-            kinds: [GIFT_WRAPPED_KIND],
+        this.messageSubscription = this.relay.getAccountPool().subscribe(this.relay.getAccountRelayUrls(), {
+            kinds: [kinds.GiftWrap],
             '#p': [myPubkey],
             since: Math.floor(Date.now() / 1000) // Only get new messages from now on
         }, {
@@ -1306,9 +1137,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
      */
     backToList(): void {
         this.showMobileList.set(true);
-    }
-
-    /**
+    }    /**
      * View profile of the selected chat
      */
     viewProfile(): void {
@@ -1316,5 +1145,184 @@ export class MessagesComponent implements OnInit, OnDestroy {
         if (pubkey) {
             this.router.navigate(['/p', pubkey]);
         }
+    }    /**
+     * Check if a chat supports modern encryption (NIP-17)
+     * For now, we'll always prefer modern encryption when available
+     */
+    private supportsModernEncryption(chat: Chat): boolean {
+        // If chat already has an encryption type set, respect it
+        if (chat.encryptionType) {
+            return chat.encryptionType === 'nip17';
+        }
+
+        // For new chats, prefer modern encryption
+        // In a more sophisticated implementation, we could check:
+        // - If the recipient's client supports NIP-17
+        // - User preferences
+        // - Relay capabilities
+        return true;
+    }
+
+    /**
+     * Check if we should show encryption warning for a chat
+     */
+    shouldShowEncryptionWarning(chat: Chat): boolean {
+        // Show warning for legacy NIP-04 chats
+        return chat.encryptionType === 'nip04' || chat.isLegacy === true;
+    }
+
+    /**
+     * Get encryption status message for a chat
+     */
+    getEncryptionStatusMessage(chat: Chat): string {
+        if (chat.encryptionType === 'nip04' || chat.isLegacy === true) {
+            return 'This chat uses legacy encryption (NIP-04). Consider starting a new chat for better security.';
+        }
+        return 'This chat uses modern encryption (NIP-17) for enhanced security.';
+    }
+
+    /**
+     * Send a message using NIP-04 encryption (legacy)
+     */
+    private async sendNip04Message(
+        messageText: string,
+        receiverPubkey: string,
+        myPubkey: string,
+        relays: string[]
+    ): Promise<DirectMessage> {
+        try {
+            // Encrypt the message using NIP-04
+            const encryptedContent = await this.encryption.encryptNip04(messageText, receiverPubkey);
+
+            // Create the event
+            const event = {
+                kind: DIRECT_MESSAGE_KIND,
+                pubkey: myPubkey,
+                created_at: Math.floor(Date.now() / 1000),
+                tags: [['p', receiverPubkey]],
+                content: encryptedContent
+            };
+
+            // Sign and finalize the event
+            const signedEvent = await this.nostr.signEvent(event);
+
+            // Publish to relays
+            await this.publishToRelays(signedEvent, relays);
+
+            // Return the message object
+            return {
+                id: signedEvent.id,
+                pubkey: myPubkey,
+                created_at: signedEvent.created_at,
+                content: messageText, // Store decrypted content locally
+                isOutgoing: true,
+                tags: signedEvent.tags,
+                encryptionType: 'nip04'
+            };
+        } catch (error) {
+            this.logger.error('Failed to send NIP-04 message', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Send a message using NIP-17 encryption (modern)
+     */
+    private async sendNip17Message(
+        messageText: string,
+        receiverPubkey: string,
+        myPubkey: string,
+        relays: string[]
+    ): Promise<DirectMessage> {
+        try {
+            // Create the inner chat message (kind 14)
+            const chatMessage = {
+                kind: CHAT_MESSAGE_KIND,
+                pubkey: myPubkey,
+                created_at: Math.floor(Date.now() / 1000),
+                tags: [['p', receiverPubkey]],
+                content: messageText
+            };
+
+            // Sign the chat message
+            const signedChatMessage = await this.nostr.signEvent(chatMessage);
+
+            // Create the sealed message (kind 13) - encrypt the chat message
+            const sealedContent = await this.encryption.encryptNip44(
+                JSON.stringify(signedChatMessage),
+                receiverPubkey
+            );
+
+            const sealedMessage = {
+                kind: SEALED_MESSAGE_KIND,
+                pubkey: myPubkey,
+                created_at: Math.floor(Date.now() / 1000),
+                tags: [],
+                content: sealedContent
+            };
+
+            // Sign the sealed message
+            const signedSealedMessage = await this.nostr.signEvent(sealedMessage);
+
+            // Create the gift wrap (kind 1059) - this is what gets published
+            // Generate a random key for the gift wrap
+            const randomKey = generateSecretKey();
+            const randomPubkey = getPublicKey(randomKey);
+
+            const giftWrapContent = await this.encryption.encryptNip44(
+                JSON.stringify(signedSealedMessage),
+                receiverPubkey
+            );
+
+            const giftWrap = {
+                kind: kinds.GiftWrap,
+                pubkey: randomPubkey,
+                created_at: Math.floor(Date.now() / 1000),
+                tags: [['p', receiverPubkey]],
+                content: giftWrapContent
+            };
+
+            // Sign the gift wrap with the random key
+            const signedGiftWrap = finalizeEvent(giftWrap, randomKey);
+
+            // Publish the gift wrap to relays
+            await this.publishToRelays(signedGiftWrap, relays);
+
+            // Return the message object based on the original chat message
+            return {
+                id: signedChatMessage.id,
+                pubkey: myPubkey,
+                created_at: signedChatMessage.created_at,
+                content: messageText,
+                isOutgoing: true,
+                tags: signedChatMessage.tags,
+                encryptionType: 'nip17'
+            };
+        } catch (error) {
+            this.logger.error('Failed to send NIP-17 message', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Publish an event to multiple relays
+     */
+    private async publishToRelays(event: NostrEvent, relays: string[]): Promise<void> {
+        const promises = relays.map(async (relayUrl) => {
+            try {
+                // TODO: We want to have an "UserPool" and "AccountPool" to send
+                // messages to, right now we are connecting to user relays using 
+                // the account relay, we don't want to do that.
+                if (this.relay.getAccountPool()) {
+                    await this.relay.getAccountPool().publish([relayUrl], event);
+                }
+            } catch (error) {
+                this.logger.error(`Failed to publish to relay ${relayUrl}`, error);
+                // Don't throw here - we want to try all relays
+            }
+        });
+
+        // Wait for all publish attempts to complete
+        await Promise.allSettled(promises);
     }
 }

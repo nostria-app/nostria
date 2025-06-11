@@ -111,8 +111,7 @@
               </button>
             </div>
           </div>
-          
-          <!-- Messages -->
+            <!-- Messages -->
           <div class="messages-wrapper">
             @if (isLoading()) {
               <div class="loading-messages">
@@ -123,9 +122,23 @@
               <div class="no-messages">
                 <mat-icon>mail</mat-icon>
                 <p>No messages yet</p>
-                <p class="hint">This conversation is encrypted end-to-end using NIP-17.</p>
+                @if (selectedChat()?.encryptionType === 'nip17') {
+                  <p class="hint">This conversation is encrypted end-to-end using NIP-17.</p>
+                } @else if (selectedChat()?.encryptionType === 'nip04') {
+                  <p class="hint warning">This conversation uses legacy encryption (NIP-04).</p>
+                } @else {
+                  <p class="hint">This conversation will be encrypted end-to-end.</p>
+                }
               </div>
             } @else {
+              <!-- Show encryption warning for legacy chats -->
+              @if (shouldShowEncryptionWarning(selectedChat()!)) {
+                <div class="encryption-warning">
+                  <mat-icon color="warn">warning</mat-icon>
+                  <span>{{ getEncryptionStatusMessage(selectedChat()!) }}</span>
+                </div>
+              }
+              
               <div class="messages-list">
                 @if (hasMoreMessages()) {
                   <button mat-button class="load-more-button" 
@@ -171,8 +184,7 @@
               </div>
             }
           </div>
-          
-          <!-- Message input -->
+            <!-- Message input -->
           <div class="message-input-container">
             <mat-form-field appearance="outline" class="message-input">
               <input matInput [ngModel]="newMessageText()" 
@@ -180,7 +192,13 @@
                 placeholder="Type a message..." 
                 [disabled]="isSending()"
                 (keyup.enter)="sendMessage()">
-              <mat-hint>Messages are encrypted using NIP-44</mat-hint>
+              @if (selectedChat()?.encryptionType === 'nip17') {
+                <mat-hint>Messages are encrypted using NIP-44 (modern encryption)</mat-hint>
+              } @else if (selectedChat()?.encryptionType === 'nip04') {
+                <mat-hint class="warning-hint">Messages use NIP-04 (legacy encryption)</mat-hint>
+              } @else {
+                <mat-hint>Messages will be encrypted end-to-end</mat-hint>
+              }
             </mat-form-field>
             
             <button mat-fab color="primary" class="send-button" 

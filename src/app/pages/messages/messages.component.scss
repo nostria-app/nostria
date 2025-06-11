@@ -382,15 +382,42 @@
       .message-input {
         flex: 1;
         margin-bottom: -1.25em; // Adjust for mat-hint
-      }
-
-      .send-button {
+      }      .send-button {
         flex-shrink: 0;
 
         mat-spinner {
           margin: 8px;
         }
       }
+
+      // Encryption warning styles
+      .warning-hint {
+        color: var(--mat-sys-color-error) !important;
+      }
+    }
+
+    // Encryption warning banner
+    .encryption-warning {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      background-color: var(--mat-sys-color-error-container);
+      color: var(--mat-sys-color-on-error-container);
+      border-radius: 8px;
+      margin: 8px 16px;
+      font-size: 14px;
+
+      mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+    }
+
+    // Warning text in no-messages state
+    .hint.warning {
+      color: var(--mat-sys-color-error);
     }
   }
 }
