@@ -111,12 +111,20 @@
               </button>
             </div>
           </div>
-            <!-- Messages -->
-          <div class="messages-wrapper">
+            <!-- Messages -->          <div class="messages-wrapper">
             @if (isLoading()) {
               <div class="loading-messages">
                 <mat-spinner diameter="40"></mat-spinner>
                 <p>Loading messages...</p>
+              </div>
+            } @else if (isDecryptingMessages()) {
+              <div class="decrypting-messages">
+                <mat-spinner diameter="24"></mat-spinner>
+                <p>Decrypting messages... 
+                  @if (decryptionQueueLength() > 0) {
+                    <span class="queue-info">({{ decryptionQueueLength() }} remaining)</span>
+                  }
+                </p>
               </div>
             } @else if (messages().length === 0) {
               <div class="no-messages">

@@ -130,6 +130,7 @@ export class EncryptionService {
     if (ciphertext.includes('?iv=')) {
       // Fallback to NIP-04 (legacy format with ?iv=)
       try {
+        debugger;
         const content = await this.decryptNip04(ciphertext, senderPubkey);
         return { content, algorithm: 'nip04' };
       } catch (error) {

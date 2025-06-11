@@ -59,6 +59,15 @@ interface DirectMessage {
     encryptionType?: 'nip04' | 'nip17';
 }
 
+interface DecryptionQueueItem {
+    id: string;
+    event: NostrEvent;
+    type: 'nip04' | 'nip17';
+    senderPubkey: string;
+    resolve: (result: any | null) => void;
+    reject: (error: Error) => void;
+}
+
 // Constants for both NIP-04 and NIP-17 events
 const DIRECT_MESSAGE_KIND = 4;    // NIP-04 direct messages
 // const GIFT_WRAPPED_KIND = 1059;   // NIP-17 gift wrapped messages
@@ -108,20 +117,19 @@ export class MessagesComponent implements OnInit, OnDestroy {
     private snackBar = inject(MatSnackBar); private readonly app = inject(ApplicationService);
     readonly utilities = inject(UtilitiesService);
     private readonly accountState = inject(AccountStateService);
-    private readonly encryption = inject(EncryptionService);
-
-    // UI state signals
+    private readonly encryption = inject(EncryptionService);    // UI state signals
     isLoading = signal<boolean>(false);
     isLoadingMore = signal<boolean>(false);
     isSending = signal<boolean>(false);
     error = signal<string | null>(null);
     showMobileList = signal<boolean>(true);
+    isDecryptingMessages = signal<boolean>(false);
+    decryptionQueueLength = signal<number>(0);
 
     // Data signals
     chats = signal<Chat[]>([]);
     selectedChatId = signal<string | null>(null);
     selectedChat = computed(() => {
-        debugger;
         const chatId = this.selectedChatId();
         if (!chatId) return null;
         return this.chats().find(chat => chat.id === chatId) || null;
@@ -136,10 +144,13 @@ export class MessagesComponent implements OnInit, OnDestroy {
     private messageSubscription: any = null;
     private chatSubscription: any = null;
 
+    // Decryption queue management
+    private decryptionQueue: DecryptionQueueItem[] = [];
+    private isProcessingQueue = false;
+
     constructor() {
         // Set up effect to load messages when chat is selected
         effect(() => {
-            debugger;
             const chat = this.selectedChat();
             if (chat) {
                 untracked(() => {
@@ -153,7 +164,6 @@ export class MessagesComponent implements OnInit, OnDestroy {
 
         // Listen to connection status changes
         effect(() => {
-            debugger;
             if (this.appState.isOnline()) {
                 this.error.set(null);
             } else {
@@ -163,7 +173,6 @@ export class MessagesComponent implements OnInit, OnDestroy {
 
         effect(async () => {
             if (this.accountState.initialized()) {
-                debugger;
                 await this.loadChats();
                 this.subscribeToMessages();
             }
@@ -172,9 +181,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
 
     ngOnInit(): void {
 
-    }
-
-    ngOnDestroy(): void {
+    }    ngOnDestroy(): void {
         // Clean up subscriptions
         if (this.messageSubscription) {
             this.messageSubscription.close();
@@ -183,6 +190,9 @@ export class MessagesComponent implements OnInit, OnDestroy {
         if (this.chatSubscription) {
             this.chatSubscription.close();
         }
+
+        // Clear the decryption queue
+        this.clearDecryptionQueue();
     }
 
     /**
@@ -209,11 +219,8 @@ export class MessagesComponent implements OnInit, OnDestroy {
             // Store pubkeys of people who've messaged us
             const chatPubkeys = new Set<string>();
 
-            debugger;
-
             // First, look for existing gift-wrapped messages
-            const sub = this.relay.subscribe([], async (event: NostrEvent) => {
-                debugger;
+            const sub = this.relay.subscribe([filter], async (event: NostrEvent) => {
                 // Handle incoming wrapped events
                 if (event.kind === kinds.GiftWrap) {
 
@@ -285,8 +292,6 @@ export class MessagesComponent implements OnInit, OnDestroy {
             }, {
                 maxWait: 5000,
                 label: 'loadChats',                onevent: async (event: NostrEvent) => {
-                    debugger;
-
                     if (event.kind == kinds.EncryptedDirectMessage) {
                         const unwrappedMessage = await this.unwrapNip04Message(event);
                         if (unwrappedMessage) {
@@ -385,7 +390,6 @@ export class MessagesComponent implements OnInit, OnDestroy {
                     maxWait: 5000,
                     label: 'fetchLatestMessageForChat',
                     onevent: async (event: NostrEvent) => {
-                        debugger;
                         // Handle incoming wrapped events
                         if (event.kind === kinds.GiftWrap) {
                             // this.relayPool?.publish(relays, event);
@@ -451,7 +455,6 @@ export class MessagesComponent implements OnInit, OnDestroy {
      * Load messages for a specific chat
      */
     async loadMessages(pubkey: string): Promise<void> {
-        debugger;
         this.isLoading.set(true);
         this.messages.set([]);
 
@@ -478,7 +481,6 @@ export class MessagesComponent implements OnInit, OnDestroy {
                 maxWait: 5000,
                 label: 'loadMessages',
                 onevent: async (event: NostrEvent) => {
-                    debugger;
                     // Handle incoming wrapped events
                     if (event.kind === kinds.GiftWrap) {
                         // this.relayPool?.publish(relays, event);
@@ -550,11 +552,96 @@ export class MessagesComponent implements OnInit, OnDestroy {
             this.logger.error('Failed to load messages', err);
             this.error.set('Failed to load messages. Please try again.');
             this.isLoading.set(false);
+        }    }    /**
+     * Add a message to the decryption queue for sequential processing
+     */
+    private async queueMessageForDecryption(event: NostrEvent, type: 'nip04' | 'nip17', senderPubkey: string): Promise<any | null> {
+        return new Promise((resolve, reject) => {
+            const queueItem: DecryptionQueueItem = {
+                id: `${event.id}-${Date.now()}`,
+                event,
+                type,
+                senderPubkey,
+                resolve,
+                reject
+            };
+
+            this.decryptionQueue.push(queueItem);
+            this.decryptionQueueLength.set(this.decryptionQueue.length);
+            this.logger.debug(`Added message to decryption queue. Queue length: ${this.decryptionQueue.length}`);
+
+            // Start processing if not already processing
+            if (!this.isProcessingQueue) {
+                this.processDecryptionQueue();
+            }
+        });
+    }
+
+    /**
+     * Process the decryption queue sequentially
+     */
+    private async processDecryptionQueue(): Promise<void> {
+        if (this.isProcessingQueue || this.decryptionQueue.length === 0) {
+            return;
+        }        this.isProcessingQueue = true;
+        this.isDecryptingMessages.set(true);
+        this.logger.debug('Starting decryption queue processing');
+
+        while (this.decryptionQueue.length > 0) {
+            const item = this.decryptionQueue.shift()!;
+            this.decryptionQueueLength.set(this.decryptionQueue.length);
+            
+            try {
+                this.logger.debug(`Processing decryption for message ${item.id}`);
+                
+                let result: any | null = null;                if (item.type === 'nip04') {
+                    result = await this.unwrapNip04MessageInternal(item.event);
+                } else if (item.type === 'nip17') {
+                    result = await this.unwrapMessageInternal(item.event);
+                }
+
+                item.resolve(result);
+                this.logger.debug(`Successfully decrypted message ${item.id}`);
+                
+                // Small delay between processing to prevent overwhelming the user with extension prompts
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+            } catch (error) {
+                this.logger.error(`Failed to decrypt message ${item.id}:`, error);
+                item.reject(error as Error);
+            }
         }
+
+        this.isProcessingQueue = false;
+        this.isDecryptingMessages.set(false);
+        this.decryptionQueueLength.set(0);
+        this.logger.debug('Finished processing decryption queue');
     }    /**
-     * Unwrap and decrypt a gift-wrapped message
+     * Clear the decryption queue (useful for cleanup)
+     */
+    private clearDecryptionQueue(): void {
+        // Reject all pending items
+        this.decryptionQueue.forEach(item => {
+            item.reject(new Error('Decryption queue cleared'));
+        });
+        
+        this.decryptionQueue = [];
+        this.isProcessingQueue = false;
+        this.isDecryptingMessages.set(false);
+        this.decryptionQueueLength.set(0);
+        this.logger.debug('Decryption queue cleared');
+    }/**
+     * Unwrap and decrypt a gift-wrapped message (queued version for user-facing calls)
      */
     async unwrapMessage(wrappedEvent: any): Promise<any | null> {
+        const senderPubkey = wrappedEvent.pubkey;
+        return await this.queueMessageForDecryption(wrappedEvent, 'nip17', senderPubkey);
+    }
+
+    /**
+     * Internal unwrap and decrypt a gift-wrapped message (direct processing)
+     */
+    private async unwrapMessageInternal(wrappedEvent: any): Promise<any | null> {
         const myPubkey = this.accountState.pubkey();
         if (!myPubkey) return null;
 
@@ -600,12 +687,18 @@ export class MessagesComponent implements OnInit, OnDestroy {
             this.logger.error('Failed to unwrap message', err);
             throw err;
         }
+    }    /**
+     * Unwrap and decrypt a NIP-04 direct message (queued version for user-facing calls)
+     */
+    async unwrapNip04Message(event: NostrEvent): Promise<any | null> {
+        const senderPubkey = event.pubkey;
+        return await this.queueMessageForDecryption(event, 'nip04', senderPubkey);
     }
 
     /**
-     * Unwrap and decrypt a NIP-04 direct message
+     * Internal unwrap and decrypt a NIP-04 direct message (direct processing)
      */
-    async unwrapNip04Message(event: NostrEvent): Promise<any | null> {
+    private async unwrapNip04MessageInternal(event: NostrEvent): Promise<any | null> {
         const myPubkey = this.accountState.pubkey();
         if (!myPubkey) return null;
 
@@ -672,7 +765,6 @@ export class MessagesComponent implements OnInit, OnDestroy {
                 maxWait: 5000,
                 label: 'loadMoreMessages',
                 onevent: async (event: NostrEvent) => {
-                    debugger;
                     // Handle incoming wrapped events
                     if (event.kind === kinds.GiftWrap) {
                         // this.relayPool?.publish(relays, event);
