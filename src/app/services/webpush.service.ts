@@ -5,6 +5,7 @@ import { SwPush } from '@angular/service-worker';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
 import { UserNotificationType, DeviceNotificationPreferences } from './storage.service';
+import { environment } from './../../environments/environment';
 
 export interface Device {
   deviceId: string;
@@ -29,7 +30,7 @@ export interface Device {
   providedIn: 'root'
 })
 export class WebPushService {
-  private server: string = isDevMode() ? 'http://localhost:3000' : 'https://notification.nostria.app';
+  private server: string = environment.backendUrl;
   private nostr = inject(NostrService);
   accountState = inject(AccountStateService);
   push = inject(SwPush);
