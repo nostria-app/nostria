@@ -33,6 +33,7 @@ import { UtilitiesService } from '../../services/utilities.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { EncryptionService } from '../../services/encryption.service';
 import { DataService } from '../../services/data.service';
+import { MessagingService } from '../../services/messaging.service';
 
 // Define interfaces for our DM data structures
 interface Chat {
@@ -109,6 +110,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
     private nostr = inject(NostrService);
     private relay = inject(RelayService);
     private logger = inject(LoggerService);
+    messaging = inject(MessagingService);
     private notifications = inject(NotificationService);
     private dialog = inject(MatDialog);
     private storage = inject(StorageService);
@@ -127,20 +129,20 @@ export class MessagesComponent implements OnInit, OnDestroy {
     decryptionQueueLength = signal<number>(0);
 
     // Data signals
-    chats = signal<Chat[]>([]);
+    // chats = signal<Chat[]>([]);
     selectedChatId = signal<string | null>(null);
+
     selectedChat = computed(() => {
         const chatId = this.selectedChatId();
         if (!chatId) return null;
-        return this.chats().find(chat => chat.id === chatId) || null;
+        return this.messaging.getChat(chatId) || null;
     });
 
     activePubkey = computed(() => this.selectedChat()?.pubkey || '');
-
     messages = signal<DirectMessage[]>([]);
     newMessageText = signal<string>('');
     hasMoreMessages = signal<boolean>(false);    // Computed helpers
-    hasChats = computed(() => this.chats().length > 0);    // Subscription management
+    hasChats = computed(() => this.messaging.sortedChats().length > 0);    // Subscription management
     private messageSubscription: any = null;
     private chatSubscription: any = null;
 
@@ -154,7 +156,8 @@ export class MessagesComponent implements OnInit, OnDestroy {
             const chat = this.selectedChat();
             if (chat) {
                 untracked(() => {
-                    this.loadMessages(chat.pubkey);
+                    const chatMessages = this.messaging.getChatMessages(chat.pubkey);
+                    this.messages.set(chatMessages || []);
                     // Mark this chat as read when selected
                     // TODO: FIX, this will trigger selectedChat signal and cause infinite loop
                     // this.markChatAsRead(chat.id);
@@ -173,15 +176,17 @@ export class MessagesComponent implements OnInit, OnDestroy {
 
         effect(async () => {
             if (this.accountState.initialized()) {
-                await this.loadChats();
-                this.subscribeToMessages();
+                await this.messaging.loadChats();
+                // this.subscribeToMessages();
             }
         });
     }
 
     ngOnInit(): void {
 
-    } ngOnDestroy(): void {
+    }
+
+    ngOnDestroy(): void {
         // Clean up subscriptions
         if (this.messageSubscription) {
             this.messageSubscription.close();
@@ -196,537 +201,395 @@ export class MessagesComponent implements OnInit, OnDestroy {
     }
 
     /**
-     * Load all chats for the current user
-     */
-    async loadChats(): Promise<void> {
-        this.isLoading.set(true);
-        this.error.set(null);
-
-        try {
-            const myPubkey = this.accountState.pubkey();
-            if (!myPubkey) {
-                this.error.set('You need to be logged in to view messages');
-                this.isLoading.set(false);
-                return;
-            }
-
-            const filter: Filter = {
-                kinds: [kinds.GiftWrap, kinds.EncryptedDirectMessage],
-                '#p': [myPubkey],
-                limit: 100
-            };
-
-            // Store pubkeys of people who've messaged us
-            const chatPubkeys = new Set<string>();
-
-            // First, look for existing gift-wrapped messages
-            const sub = this.relay.subscribe([filter], async (event: NostrEvent) => {
-                // Handle incoming wrapped events
-                if (event.kind === kinds.GiftWrap) {
-
-                    if (event.pubkey !== myPubkey) {
-                        chatPubkeys.add(event.pubkey);
-                    }
-
-                    // Look for 'p' tags for recipients other than ourselves
-                    const pTags = event.tags.filter(tag => tag[0] === 'p');
-                    for (const tag of pTags) {
-                        const pubkey = tag[1];
-                        if (pubkey !== myPubkey) {
-                            chatPubkeys.add(pubkey);
-                        }
-                    }
-
-                    const chatsList: Chat[] = Array.from(chatPubkeys).map(pubkey => ({
-                        id: pubkey, // Using pubkey as chat ID
-                        pubkey,
-                        unreadCount: 0,
-                        lastMessage: null
-                    }));
-
-                    // Sort chats (will be updated with last messages later)
-                    const sortedChats = chatsList.sort((a, b) => {
-                        const aTime = a.lastMessage?.created_at || 0;
-                        const bTime = b.lastMessage?.created_at || 0;
-                        return bTime - aTime; // Most recent first
-                    });
-
-                    this.chats.set(sortedChats);
-
-                    // For each chat, fetch the latest message
-                    for (const chat of sortedChats) {
-                        await this.fetchLatestMessageForChat(chat.pubkey);
-                    }
-
-                    // this.relayPool?.publish(relays, event);
-                }
-            }, () => {
-                console.log('End of data.');
-            })
-
-            // Process wrapped events to find unique chat participants
-            // if (wrappedEvents && wrappedEvents.length > 0) {
-            //     for (const event of wrappedEvents) {
-            //         // Add the sender to our chat list if not us
-            //         if (event.pubkey !== myPubkey) {
-            //             chatPubkeys.add(event.pubkey);
-            //         }
-
-            //         // Look for 'p' tags for recipients other than ourselves
-            //         const pTags = event.tags.filter(tag => tag[0] === 'p');
-            //         for (const tag of pTags) {
-            //             const pubkey = tag[1];
-            //             if (pubkey !== myPubkey) {
-            //                 chatPubkeys.add(pubkey);
-            //             }
-            //         }
-            //     }
-            // }
-
-            // Also add chats from our outgoing messages
-            const ourMessages = await this.relay.getAccountPool()?.subscribe(this.relay.getAccountRelayUrls(), {
-                kinds: [kinds.GiftWrap, kinds.EncryptedDirectMessage],
-                authors: [myPubkey],
-                limit: 100
-            }, {
-                maxWait: 5000,
-                label: 'loadChats', onevent: async (event: NostrEvent) => {
-                    if (event.kind == kinds.EncryptedDirectMessage) {
-                        const unwrappedMessage = await this.unwrapNip04Message(event);
-                        if (unwrappedMessage) {
-                            // Add the sender to our chat list if not us
-                            if (event.pubkey !== myPubkey) {
-                                chatPubkeys.add(event.pubkey);
-                            }
-
-                            // Create a DirectMessage object
-                            const directMessage: DirectMessage = {
-                                id: unwrappedMessage.id,
-                                pubkey: unwrappedMessage.pubkey,
-                                created_at: unwrappedMessage.created_at,
-                                content: unwrappedMessage.content,
-                                isOutgoing: unwrappedMessage.pubkey === myPubkey,
-                                tags: unwrappedMessage.tags,
-                                received: true // Since we've received and decrypted it
-                            };
-
-                            // Update the chat with this latest message
-                            this.chats.update(chats => {
-                                return chats.map(chat => {
-                                    if (chat.pubkey === myPubkey) {
-                                        return {
-                                            ...chat,
-                                            lastMessage: directMessage
-                                        };
-                                    }
-                                    return chat;
-                                });
-                            });
-                        }
-                    }
-
-                    // Handle incoming wrapped events
-                    if (event.kind === kinds.GiftWrap) {
-
-                        const pTags = event.tags.filter(tag => tag[0] === 'p');
-                        for (const tag of pTags) {
-                            const pubkey = tag[1];
-                            if (pubkey !== myPubkey) {
-                                chatPubkeys.add(pubkey);
-                            }
-                        }
-
-                        // Look for 'p' tags for recipients other than ourselves
-                        // const pTags = event.tags.filter(tag => tag[0] === 'p');
-                        // for (const tag of pTags) {
-                        //     const pubkey = tag[1];
-                        //     if (pubkey !== myPubkey) {
-                        //         chatPubkeys.add(pubkey);
-                        //     }
-                        // }
-                    }
-                }
-            });
-
-            // if (ourMessages && ourMessages.length > 0) {
-            //     for (const event of ourMessages) {
-
-            //     }
-            // }
-
-            // Convert to array of Chat objects
-
-
-            this.isLoading.set(false);
-        } catch (err) {
-            this.logger.error('Failed to load chats', err);
-            this.error.set('Failed to load chats. Please try again.');
-            this.isLoading.set(false);
-        }
-    }
-
-    /**
      * Fetch the latest message for a specific chat
      */
-    async fetchLatestMessageForChat(pubkey: string): Promise<void> {
-        const myPubkey = this.accountState.pubkey();
+    // async fetchLatestMessageForChat(pubkey: string): Promise<void> {
+    //     const myPubkey = this.accountState.pubkey();
 
-        try {
-            // Fetch wrapped messages between us and this pubkey
-            // TODO: Wrap this function so we don't go directly to the pool.
-            const wrappedEvents = await this.relay.getAccountPool().subscribeManyEose(this.relay.getAccountRelayUrls(), [{
-                kinds: [kinds.GiftWrap],
-                authors: [pubkey],
-                '#p': [myPubkey],
-                limit: 1
-            }, {
-                kinds: [kinds.GiftWrap],
-                authors: [myPubkey],
-                '#p': [pubkey],
-                limit: 1
-            }],
-                {
-                    maxWait: 5000,
-                    label: 'fetchLatestMessageForChat',
-                    onevent: async (event: NostrEvent) => {
-                        // Handle incoming wrapped events
-                        if (event.kind === kinds.GiftWrap) {
-                            // this.relayPool?.publish(relays, event);
-                            const unwrappedMessage = await this.unwrapMessage(event);
+    //     try {
+    //         // Fetch wrapped messages between us and this pubkey
+    //         // TODO: Wrap this function so we don't go directly to the pool.
+    //         const wrappedEvents = await this.relay.getAccountPool().subscribeManyEose(this.relay.getAccountRelayUrls(), [{
+    //             kinds: [kinds.GiftWrap],
+    //             authors: [pubkey],
+    //             '#p': [myPubkey],
+    //             limit: 1
+    //         }, {
+    //             kinds: [kinds.GiftWrap],
+    //             authors: [myPubkey],
+    //             '#p': [pubkey],
+    //             limit: 1
+    //         }],
+    //             {
+    //                 maxWait: 5000,
+    //                 label: 'fetchLatestMessageForChat',
+    //                 onevent: async (event: NostrEvent) => {
+    //                     // Handle incoming wrapped events
+    //                     if (event.kind === kinds.GiftWrap) {
+    //                         // this.relayPool?.publish(relays, event);
+    //                         const unwrappedMessage = await this.unwrapMessage(event);
 
-                            if (unwrappedMessage) {
-                                // Create a DirectMessage object
-                                const directMessage: DirectMessage = {
-                                    id: unwrappedMessage.id,
-                                    pubkey: unwrappedMessage.pubkey,
-                                    created_at: unwrappedMessage.created_at,
-                                    content: unwrappedMessage.content,
-                                    isOutgoing: unwrappedMessage.pubkey === myPubkey,
-                                    tags: unwrappedMessage.tags,
-                                    received: true // Since we've received and decrypted it
-                                };
+    //                         if (unwrappedMessage) {
+    //                             // Create a DirectMessage object
+    //                             const directMessage: DirectMessage = {
+    //                                 id: unwrappedMessage.id,
+    //                                 pubkey: unwrappedMessage.pubkey,
+    //                                 created_at: unwrappedMessage.created_at,
+    //                                 content: unwrappedMessage.content,
+    //                                 isOutgoing: unwrappedMessage.pubkey === myPubkey,
+    //                                 tags: unwrappedMessage.tags,
+    //                                 received: true // Since we've received and decrypted it
+    //                             };
 
-                                // Update the chat with this latest message
-                                this.chats.update(chats => {
-                                    return chats.map(chat => {
-                                        if (chat.pubkey === pubkey) {
-                                            return {
-                                                ...chat,
-                                                lastMessage: directMessage
-                                            };
-                                        }
-                                        return chat;
-                                    });
-                                });
+    //                             // Update the chat with this latest message
+    //                             this.chats.update(chats => {
+    //                                 return chats.map(chat => {
+    //                                     if (chat.pubkey === pubkey) {
+    //                                         return {
+    //                                             ...chat,
+    //                                             lastMessage: directMessage
+    //                                         };
+    //                                     }
+    //                                     return chat;
+    //                                 });
+    //                             });
 
-                                // Re-sort chats by latest message
-                                this.chats.update(chats => {
-                                    return [...chats].sort((a, b) => {
-                                        const aTime = a.lastMessage?.created_at || 0;
-                                        const bTime = b.lastMessage?.created_at || 0;
-                                        return bTime - aTime; // Most recent first
-                                    });
-                                });
-                            }
+    //                             // Re-sort chats by latest message
+    //                             this.chats.update(chats => {
+    //                                 return [...chats].sort((a, b) => {
+    //                                     const aTime = a.lastMessage?.created_at || 0;
+    //                                     const bTime = b.lastMessage?.created_at || 0;
+    //                                     return bTime - aTime; // Most recent first
+    //                                 });
+    //                             });
+    //                         }
 
-                        }
-                    }
-                });
+    //                     }
+    //                 }
+    //             });
 
-            // if (!wrappedEvents || wrappedEvents.length === 0) return;
+    //         // if (!wrappedEvents || wrappedEvents.length === 0) return;
 
-            // // Sort by created_at to get the most recent
-            // const latestEvent = wrappedEvents.sort((a, b) => b.created_at - a.created_at)[0];
+    //         // // Sort by created_at to get the most recent
+    //         // const latestEvent = wrappedEvents.sort((a, b) => b.created_at - a.created_at)[0];
 
-            // // Try to unwrap and decrypt the message
-            // try {
-            //     const unwrappedMessage = await this.unwrapMessage(latestEvent);
+    //         // // Try to unwrap and decrypt the message
+    //         // try {
+    //         //     const unwrappedMessage = await this.unwrapMessage(latestEvent);
 
-            // } catch (err) {
-            //     this.logger.error('Failed to unwrap message for chat preview', err);
-            // }
-        } catch (err) {
-            this.logger.error('Failed to fetch latest message for chat', err);
-        }
-    }
+    //         // } catch (err) {
+    //         //     this.logger.error('Failed to unwrap message for chat preview', err);
+    //         // }
+    //     } catch (err) {
+    //         this.logger.error('Failed to fetch latest message for chat', err);
+    //     }
+    // }
 
     /**
      * Load messages for a specific chat
      */
-    async loadMessages(pubkey: string): Promise<void> {
-        this.isLoading.set(true);
-        this.messages.set([]);
+    // async loadMessages(pubkey: string): Promise<void> {
+    //     this.isLoading.set(true);
+    //     this.messages.set([]);
 
-        try {
-            const myPubkey = this.accountState.pubkey();
-            if (!myPubkey) {
-                this.error.set('You need to be logged in to view messages');
-                this.isLoading.set(false);
-                return;
-            }
+    //     try {
+    //         const myPubkey = this.accountState.pubkey();
+    //         if (!myPubkey) {
+    //             this.error.set('You need to be logged in to view messages');
+    //             this.isLoading.set(false);
+    //             return;
+    //         }
 
-            // Fetch wrapped messages between us and this pubkey (in both directions)
-            const wrappedEvents = await this.relay.getAccountPool().subscribeManyEose(this.relay.getAccountRelayUrls(), [{
-                kinds: [kinds.GiftWrap],
-                authors: [pubkey],
-                '#p': [myPubkey],
-                limit: 50
-            }, {
-                kinds: [kinds.GiftWrap],
-                authors: [myPubkey],
-                '#p': [pubkey],
-                limit: 50
-            }], {
-                maxWait: 5000,
-                label: 'loadMessages',
-                onevent: async (event: NostrEvent) => {
-                    // Handle incoming wrapped events
-                    if (event.kind === kinds.GiftWrap) {
-                        // this.relayPool?.publish(relays, event);
-                        const unwrappedMessage = await this.unwrapMessage(event);
+    //         // Fetch wrapped messages between us and this pubkey (in both directions)
+    //         const wrappedEvents = await this.relay.getAccountPool().subscribeManyEose(this.relay.getAccountRelayUrls(), [{
+    //             kinds: [kinds.GiftWrap],
+    //             authors: [pubkey],
+    //             '#p': [myPubkey],
+    //             limit: 50
+    //         }, {
+    //             kinds: [kinds.GiftWrap],
+    //             authors: [myPubkey],
+    //             '#p': [pubkey],
+    //             limit: 50
+    //         }], {
+    //             maxWait: 5000,
+    //             label: 'loadMessages',
+    //             onevent: async (event: NostrEvent) => {
+    //                 // Handle incoming wrapped events
+    //                 if (event.kind === kinds.GiftWrap) {
+    //                     // this.relayPool?.publish(relays, event);
+    //                     const unwrappedMessage = await this.unwrapMessage(event);
 
-                        if (unwrappedMessage) {
-                            // Create a DirectMessage object
-                            const directMessage: DirectMessage = {
-                                id: unwrappedMessage.id,
-                                pubkey: unwrappedMessage.pubkey,
-                                created_at: unwrappedMessage.created_at,
-                                content: unwrappedMessage.content,
-                                isOutgoing: unwrappedMessage.pubkey === myPubkey,
-                                tags: unwrappedMessage.tags,
-                                received: true // Since we've received and decrypted it
-                            };
+    //                     if (unwrappedMessage) {
+    //                         // Create a DirectMessage object
+    //                         const directMessage: DirectMessage = {
+    //                             id: unwrappedMessage.id,
+    //                             pubkey: unwrappedMessage.pubkey,
+    //                             created_at: unwrappedMessage.created_at,
+    //                             content: unwrappedMessage.content,
+    //                             isOutgoing: unwrappedMessage.pubkey === myPubkey,
+    //                             tags: unwrappedMessage.tags,
+    //                             received: true // Since we've received and decrypted it
+    //                         };
 
-                            // Update the messages list with this message
-                            this.messages.update(msgs => [...msgs, directMessage]);
+    //                         // Update the messages list with this message
+    //                         this.messages.update(msgs => [...msgs, directMessage]);
 
 
-                        }
-                    }
-                }
-            });
+    //                     }
+    //                 }
+    //             }
+    //         });
 
-            // if (!wrappedEvents || wrappedEvents.length === 0) {
-            //     this.isLoading.set(false);
-            //     return;
-            // }
+    //         // if (!wrappedEvents || wrappedEvents.length === 0) {
+    //         //     this.isLoading.set(false);
+    //         //     return;
+    //         // }
 
-            // // Process each wrapped message
-            // const decryptedMessages: DirectMessage[] = [];
+    //         // // Process each wrapped message
+    //         // const decryptedMessages: DirectMessage[] = [];
 
-            // for (const event of wrappedEvents) {
-            //     try {
-            //         const unwrappedMessage = await this.unwrapMessage(event);
-            //         if (unwrappedMessage) {
-            //             decryptedMessages.push({
-            //                 id: unwrappedMessage.id,
-            //                 pubkey: unwrappedMessage.pubkey,
-            //                 created_at: unwrappedMessage.created_at,
-            //                 content: unwrappedMessage.content,
-            //                 isOutgoing: unwrappedMessage.pubkey === myPubkey,
-            //                 tags: unwrappedMessage.tags,
-            //                 received: true, // Since we've received and decrypted it
-            //                 read: true // Mark as read since we're viewing it now
-            //             });
-            //         }
-            //     } catch (err) {
-            //         this.logger.error('Failed to unwrap message', err);
-            //     }
-            // }
+    //         // for (const event of wrappedEvents) {
+    //         //     try {
+    //         //         const unwrappedMessage = await this.unwrapMessage(event);
+    //         //         if (unwrappedMessage) {
+    //         //             decryptedMessages.push({
+    //         //                 id: unwrappedMessage.id,
+    //         //                 pubkey: unwrappedMessage.pubkey,
+    //         //                 created_at: unwrappedMessage.created_at,
+    //         //                 content: unwrappedMessage.content,
+    //         //                 isOutgoing: unwrappedMessage.pubkey === myPubkey,
+    //         //                 tags: unwrappedMessage.tags,
+    //         //                 received: true, // Since we've received and decrypted it
+    //         //                 read: true // Mark as read since we're viewing it now
+    //         //             });
+    //         //         }
+    //         //     } catch (err) {
+    //         //         this.logger.error('Failed to unwrap message', err);
+    //         //     }
+    //         // }
 
-            // Sort messages by timestamp
-            // const sortedMessages = decryptedMessages.sort((a, b) => a.created_at - b.created_at);
+    //         // Sort messages by timestamp
+    //         // const sortedMessages = decryptedMessages.sort((a, b) => a.created_at - b.created_at);
 
-            // // Update the messages signal
-            // this.messages.set(sortedMessages);
+    //         // // Update the messages signal
+    //         // this.messages.set(sortedMessages);
 
-            // // There may be more messages
-            // this.hasMoreMessages.set(sortedMessages.length >= 50);
+    //         // // There may be more messages
+    //         // this.hasMoreMessages.set(sortedMessages.length >= 50);
 
-            // // Send read receipts for these messages
-            // this.sendReadReceipts(sortedMessages.filter(m => !m.isOutgoing).map(m => m.id));
+    //         // // Send read receipts for these messages
+    //         // this.sendReadReceipts(sortedMessages.filter(m => !m.isOutgoing).map(m => m.id));
 
-            this.isLoading.set(false);
-        } catch (err) {
-            this.logger.error('Failed to load messages', err);
-            this.error.set('Failed to load messages. Please try again.');
-            this.isLoading.set(false);
-        }
-    }    /**
+    //         this.isLoading.set(false);
+    //     } catch (err) {
+    //         this.logger.error('Failed to load messages', err);
+    //         this.error.set('Failed to load messages. Please try again.');
+    //         this.isLoading.set(false);
+    //     }
+    // }  
+    
+    /**
      * Add a message to the decryption queue for sequential processing
      */
-    private async queueMessageForDecryption(event: NostrEvent, type: 'nip04' | 'nip17', senderPubkey: string): Promise<any | null> {
-        return new Promise((resolve, reject) => {
-            const queueItem: DecryptionQueueItem = {
-                id: `${event.id}-${Date.now()}`,
-                event,
-                type,
-                senderPubkey,
-                resolve,
-                reject
-            };
+    // private async queueMessageForDecryption(event: NostrEvent, type: 'nip04' | 'nip17', senderPubkey: string): Promise<any | null> {
+    //     return new Promise((resolve, reject) => {
+    //         const queueItem: DecryptionQueueItem = {
+    //             id: `${event.id}-${Date.now()}`,
+    //             event,
+    //             type,
+    //             senderPubkey,
+    //             resolve,
+    //             reject
+    //         };
 
-            this.decryptionQueue.push(queueItem);
-            this.decryptionQueueLength.set(this.decryptionQueue.length);
-            this.logger.debug(`Added message to decryption queue. Queue length: ${this.decryptionQueue.length}`);
+    //         this.decryptionQueue.push(queueItem);
+    //         this.decryptionQueueLength.set(this.decryptionQueue.length);
+    //         this.logger.debug(`Added message to decryption queue. Queue length: ${this.decryptionQueue.length}`);
 
-            // Start processing if not already processing
-            if (!this.isProcessingQueue) {
-                this.processDecryptionQueue();
-            }
-        });
-    }
+    //         // Start processing if not already processing
+    //         if (!this.isProcessingQueue) {
+    //             this.processDecryptionQueue();
+    //         }
+    //     });
+    // }
 
     /**
      * Process the decryption queue sequentially
      */
-    private async processDecryptionQueue(): Promise<void> {
-        if (this.isProcessingQueue || this.decryptionQueue.length === 0) {
-            return;
-        } this.isProcessingQueue = true;
-        this.isDecryptingMessages.set(true);
-        this.logger.debug('Starting decryption queue processing');
+    // private async processDecryptionQueue(): Promise<void> {
+    //     if (this.isProcessingQueue || this.decryptionQueue.length === 0) {
+    //         return;
+    //     } this.isProcessingQueue = true;
+    //     this.isDecryptingMessages.set(true);
+    //     this.logger.debug('Starting decryption queue processing');
 
-        while (this.decryptionQueue.length > 0) {
-            const item = this.decryptionQueue.shift()!;
-            this.decryptionQueueLength.set(this.decryptionQueue.length);
+    //     while (this.decryptionQueue.length > 0) {
+    //         const item = this.decryptionQueue.shift()!;
+    //         this.decryptionQueueLength.set(this.decryptionQueue.length);
 
-            try {
-                this.logger.debug(`Processing decryption for message ${item.id}`);
+    //         try {
+    //             this.logger.debug(`Processing decryption for message ${item.id}`);
 
-                let result: any | null = null; if (item.type === 'nip04') {
-                    result = await this.unwrapNip04MessageInternal(item.event);
-                } else if (item.type === 'nip17') {
-                    result = await this.unwrapMessageInternal(item.event);
-                }
+    //             let result: any | null = null; if (item.type === 'nip04') {
+    //                 result = await this.unwrapNip04MessageInternal(item.event);
+    //             } else if (item.type === 'nip17') {
+    //                 result = await this.unwrapMessageInternal(item.event);
+    //             }
 
-                item.resolve(result);
-                this.logger.debug(`Successfully decrypted message ${item.id}`);
+    //             item.resolve(result);
+    //             this.logger.debug(`Successfully decrypted message ${item.id}`);
 
-                // Small delay between processing to prevent overwhelming the user with extension prompts
-                await new Promise(resolve => setTimeout(resolve, 100));
+    //             // Small delay between processing to prevent overwhelming the user with extension prompts
+    //             await new Promise(resolve => setTimeout(resolve, 100));
 
-            } catch (error) {
-                this.logger.error(`Failed to decrypt message ${item.id}:`, error);
-                item.reject(error as Error);
-            }
-        }
+    //         } catch (error) {
+    //             debugger;
+    //             this.logger.error(`Failed to decrypt message ${item.id}:`, error);
+    //             item.reject(error as Error);
+    //         }
+    //     }
 
-        this.isProcessingQueue = false;
-        this.isDecryptingMessages.set(false);
-        this.decryptionQueueLength.set(0);
-        this.logger.debug('Finished processing decryption queue');
-    }    /**
+    //     this.isProcessingQueue = false;
+    //     this.isDecryptingMessages.set(false);
+    //     this.decryptionQueueLength.set(0);
+    //     this.logger.debug('Finished processing decryption queue');
+    // }   
+    
+    /**
      * Clear the decryption queue (useful for cleanup)
      */
     private clearDecryptionQueue(): void {
         // Reject all pending items
-        this.decryptionQueue.forEach(item => {
-            item.reject(new Error('Decryption queue cleared'));
-        });
+        // this.decryptionQueue.forEach(item => {
+        //     item.reject(new Error('Decryption queue cleared'));
+        // });
 
-        this.decryptionQueue = [];
-        this.isProcessingQueue = false;
-        this.isDecryptingMessages.set(false);
-        this.decryptionQueueLength.set(0);
-        this.logger.debug('Decryption queue cleared');
-    }/**
+        // this.decryptionQueue = [];
+        // this.isProcessingQueue = false;
+        // this.isDecryptingMessages.set(false);
+        // this.decryptionQueueLength.set(0);
+        // this.logger.debug('Decryption queue cleared');
+
+        this.messaging.clearDecryptionQueue();
+    }
+    
+    
+    /**
      * Unwrap and decrypt a gift-wrapped message (queued version for user-facing calls)
      */
-    async unwrapMessage(wrappedEvent: any): Promise<any | null> {
-        const senderPubkey = wrappedEvent.pubkey;
-        return await this.queueMessageForDecryption(wrappedEvent, 'nip17', senderPubkey);
-    }
+    // async unwrapMessage(wrappedEvent: any): Promise<any | null> {
+    //     const senderPubkey = wrappedEvent.pubkey;
+    //     return await this.queueMessageForDecryption(wrappedEvent, 'nip17', senderPubkey);
+    // }
 
     /**
      * Internal unwrap and decrypt a gift-wrapped message (direct processing)
      */
-    private async unwrapMessageInternal(wrappedEvent: any): Promise<any | null> {
-        const myPubkey = this.accountState.pubkey();
-        if (!myPubkey) return null;
+    // private async unwrapMessageInternal(wrappedEvent: any): Promise<any | null> {
+    //     const myPubkey = this.accountState.pubkey();
+    //     if (!myPubkey) return null;
 
-        try {
-            // Check if this message is for us
-            const recipient = wrappedEvent.tags.find((t: string[]) => t[0] === 'p')?.[1];
-            if (recipient !== myPubkey && wrappedEvent.pubkey !== myPubkey) {
-                return null;
-            }
+    //     try {
+    //         // Check if this message is for us
+    //         const recipient = wrappedEvent.tags.find((t: string[]) => t[0] === 'p')?.[1];
+    //         if (recipient !== myPubkey && wrappedEvent.pubkey !== myPubkey) {
+    //             return null;
+    //         }
 
-            // First decrypt the wrapped content using the EncryptionService
-            // This will handle both browser extension and direct decryption
-            let wrappedContent: any;
-            try {
-                const decryptionResult = await this.encryption.autoDecrypt(wrappedEvent.content, wrappedEvent.pubkey);
-                wrappedContent = JSON.parse(decryptionResult.content);
-            } catch (err) {
-                this.logger.error('Failed to decrypt wrapped content', err);
-                return null;
-            }
+    //         // First decrypt the wrapped content using the EncryptionService
+    //         // This will handle both browser extension and direct decryption
+    //         let wrappedContent: any;
+    //         try {
+    //             const decryptionResult = await this.encryption.autoDecrypt(wrappedEvent.content, wrappedEvent.pubkey, wrappedEvent);
+    //             wrappedContent = JSON.parse(decryptionResult.content);
+    //         } catch (err) {
+    //             this.logger.error('Failed to decrypt wrapped content', err);
+    //             return null;
+    //         }
 
-            // Get the sealed message
-            let sealedEvent;
-            if (wrappedEvent.pubkey === myPubkey) {
-                // If we sent it, we can directly use the encryptedMessage
-                sealedEvent = wrappedContent.encryptedMessage;
-            } else {
-                // Decrypt the sealed content using the EncryptionService
-                try {
-                    const sealedDecryptionResult = await this.encryption.autoDecrypt(wrappedContent.content, wrappedContent.pubkey);
-                    sealedEvent = JSON.parse(sealedDecryptionResult.content);
-                } catch (err) {
-                    this.logger.error('Failed to decrypt sealed content', err);
-                    return null;
-                }
-            }
+    //         // Get the sealed message
+    //         let sealedEvent;
+    //         if (wrappedEvent.pubkey === myPubkey) {
+    //             // If we sent it, we can directly use the encryptedMessage
+    //             sealedEvent = wrappedContent.encryptedMessage;
+    //         } else {
+    //             // Decrypt the sealed content using the EncryptionService
+    //             try {
+    //                 const sealedDecryptionResult = await this.encryption.autoDecrypt(wrappedContent.content, wrappedContent.pubkey, wrappedEvent);
+    //                 sealedEvent = JSON.parse(sealedDecryptionResult.content);
+    //             } catch (err) {
+    //                 this.logger.error('Failed to decrypt sealed content', err);
+    //                 return null;
+    //             }
+    //         }
 
-            // Return the final decrypted message
-            return {
-                ...sealedEvent
-            };
-        } catch (err) {
-            this.logger.error('Failed to unwrap message', err);
-            throw err;
-        }
-    }    /**
+    //         // Return the final decrypted message
+    //         return {
+    //             ...sealedEvent
+    //         };
+    //     } catch (err) {
+    //         this.logger.error('Failed to unwrap message', err);
+    //         throw err;
+    //     }
+    // } 
+    
+    /**
      * Unwrap and decrypt a NIP-04 direct message (queued version for user-facing calls)
      */
-    async unwrapNip04Message(event: NostrEvent): Promise<any | null> {
-        const senderPubkey = event.pubkey;
-        return await this.queueMessageForDecryption(event, 'nip04', senderPubkey);
-    }
+    // async unwrapNip04Message(event: NostrEvent): Promise<any | null> {
+    //     const senderPubkey = event.pubkey;
+    //     return await this.queueMessageForDecryption(event, 'nip04', senderPubkey);
+    // }
 
     /**
      * Internal unwrap and decrypt a NIP-04 direct message (direct processing)
      */
-    private async unwrapNip04MessageInternal(event: NostrEvent): Promise<any | null> {
-        const myPubkey = this.accountState.pubkey();
-        if (!myPubkey) return null;
+    // private async unwrapNip04MessageInternal(event: NostrEvent): Promise<any | null> {
+    //     const myPubkey = this.accountState.pubkey();
+    //     if (!myPubkey) return null;
 
-        try {
-            // For NIP-04 messages, the sender is the event pubkey
-            const pTags = this.utilities.getPTagsValuesFromEvent(event);
+    //     try {
+    //         // For NIP-04 messages, the sender is the event pubkey
+    //         const tags = this.utilities.getPTagsValuesFromEvent(event);
 
-            if (pTags.length === 0) {
-                return null;
+    //         if (tags.length === 0) {
+    //             return null;
+    //         }
+    //         else if (tags.length > 1) {
+    //             // NIP-04 only supports one recipient, yet some clients have sent DMs with more. Ignore those.
+    //             this.logger.warn('NIP-04 message has multiple recipients, ignoring.', event);
+    //             debugger;
+    //             return null;
+    //         }
 
-            }
+    //         // If we are the sender, get the pubkey from 'p' tag.
+    //         // If we are the receiver, use the event pubkey.
+    //         let decryptionPubkey = event.pubkey;
 
-            // Use the EncryptionService to decrypt
-            const decryptionResult = await this.encryption.autoDecrypt(event.content, pTags[0]);
+    //         if (decryptionPubkey === myPubkey) {
 
-            // Return the message with decrypted content
-            return {
-                id: event.id,
-                pubkey: event.pubkey,
-                created_at: event.created_at,
-                content: decryptionResult.content,
-                tags: event.tags
-            };
-        } catch (err) {
-            this.logger.error('Failed to decrypt NIP-04 message', err);
-            return null;
-        }
-    }
+    //             if (tags.length > 0) {
+    //                 decryptionPubkey = tags[0]; // Use the first 'p' tag as the recipient
+    //             }
+    //         }
+
+    //         // Use the EncryptionService to decrypt
+    //         const decryptionResult = await this.encryption.autoDecrypt(event.content, decryptionPubkey, event);
+
+    //         // Return the message with decrypted content
+    //         return {
+    //             id: event.id,
+    //             pubkey: event.pubkey,
+    //             created_at: event.created_at,
+    //             content: decryptionResult.content,
+    //             tags: event.tags
+    //         };
+    //     } catch (err) {
+    //         this.logger.error('Failed to decrypt NIP-04 message', err);
+    //         return null;
+    //     }
+    // }
 
     /**
      * Load more messages (older messages)
@@ -773,23 +636,23 @@ export class MessagesComponent implements OnInit, OnDestroy {
                     // Handle incoming wrapped events
                     if (event.kind === kinds.GiftWrap) {
                         // this.relayPool?.publish(relays, event);
-                        const unwrappedMessage = await this.unwrapMessage(event);
+                        // const unwrappedMessage = await this.messaging.unwrapMessage(event);
 
-                        if (unwrappedMessage) {
-                            // Create a DirectMessage object
-                            const directMessage: DirectMessage = {
-                                id: unwrappedMessage.id,
-                                pubkey: unwrappedMessage.pubkey,
-                                created_at: unwrappedMessage.created_at,
-                                content: unwrappedMessage.content,
-                                isOutgoing: unwrappedMessage.pubkey === myPubkey,
-                                tags: unwrappedMessage.tags,
-                                received: true // Since we've received and decrypted it
-                            };
+                        // if (unwrappedMessage) {
+                        //     // Create a DirectMessage object
+                        //     const directMessage: DirectMessage = {
+                        //         id: unwrappedMessage.id,
+                        //         pubkey: unwrappedMessage.pubkey,
+                        //         created_at: unwrappedMessage.created_at,
+                        //         content: unwrappedMessage.content,
+                        //         isOutgoing: unwrappedMessage.pubkey === myPubkey,
+                        //         tags: unwrappedMessage.tags,
+                        //         received: true // Since we've received and decrypted it
+                        //     };
 
-                            // Update the messages list with this message
-                            this.messages.update(msgs => [...msgs, directMessage]);
-                        }
+                        //     // Update the messages list with this message
+                        //     this.messages.update(msgs => [...msgs, directMessage]);
+                        // }
                     }
                 }
             });
@@ -858,69 +721,72 @@ export class MessagesComponent implements OnInit, OnDestroy {
      */
     markChatAsRead(chatId: string): void {
         // Update the chat's unread count
-        this.chats.update(chats =>
-            chats.map(chat =>
-                chat.id === chatId
-                    ? { ...chat, unreadCount: 0 }
-                    : chat
-            )
-        );
+        // this.chats.update(chats =>
+        //     chats.map(chat =>
+        //         chat.id === chatId
+        //             ? { ...chat, unreadCount: 0 }
+        //             : chat
+        //     )
+        // );
 
-        // In a real implementation, we would also send read receipts for the messages
-        const chat = this.chats().find(c => c.id === chatId);
-        if (chat && this.messages().length > 0) {
-            // Send read receipts for all messages from this pubkey
-            const messageIds = this.messages()
-                .filter(m => !m.isOutgoing && !m.read)
-                .map(m => m.id);
+        // // In a real implementation, we would also send read receipts for the messages
+        // const chat = this.chats().find(c => c.id === chatId);
+        // if (chat && this.messages().length > 0) {
+        //     // Send read receipts for all messages from this pubkey
+        //     const messageIds = this.messages()
+        //         .filter(m => !m.isOutgoing && !m.read)
+        //         .map(m => m.id);
 
-            if (messageIds.length > 0) {
-                this.sendReadReceipts(messageIds);
-            }
-        }
+        //     if (messageIds.length > 0) {
+        //         this.sendReadReceipts(messageIds);
+        //     }
+        // }
     }
 
     /**
      * Send read receipts for messages
      */
-    async sendReadReceipts(messageIds: string[]): Promise<void> {
-        if (messageIds.length === 0) return;
+    // async sendReadReceipts(messageIds: string[]): Promise<void> {
+    //     if (messageIds.length === 0) return;
 
-        const myPubkey = this.accountState.pubkey();
-        if (!myPubkey) return;
+    //     const myPubkey = this.accountState.pubkey();
+    //     if (!myPubkey) return;
 
-        // Convert array of message IDs to an array of [e, ID] tags
-        const eTags = messageIds.map(id => ['e', id]);
+    //     // Convert array of message IDs to an array of [e, ID] tags
+    //     const eTags = messageIds.map(id => ['e', id]);
 
-        try {
-            const receiptEvent = {
-                kind: RECEIPT_KIND,
-                pubkey: myPubkey,
-                created_at: Math.floor(Date.now() / 1000),
-                tags: eTags,
-                content: '' // Empty content for receipt events
-            };
+    //     try {
+    //         const receiptEvent = {
+    //             kind: RECEIPT_KIND,
+    //             pubkey: myPubkey,
+    //             created_at: Math.floor(Date.now() / 1000),
+    //             tags: eTags,
+    //             content: '' // Empty content for receipt events
+    //         };
 
-            // Sign the event
-            const signedEvent = await this.nostr.signEvent(receiptEvent);
+    //         // Sign the event
+    //         const signedEvent = await this.nostr.signEvent(receiptEvent);
 
-            // Publish to relays
-            if (signedEvent) {
-                await this.relay.getAccountPool().publish(this.relay.getAccountRelayUrls(), signedEvent);
+    //         // Publish to relays
+    //         if (signedEvent) {
+    //             await this.relay.getAccountPool().publish(this.relay.getAccountRelayUrls(), signedEvent);
 
-                // Update message read status in local state
-                this.messages.update(msgs =>
-                    msgs.map(msg =>
-                        messageIds.includes(msg.id)
-                            ? { ...msg, read: true }
-                            : msg
-                    )
-                );
-            }
-        } catch (err) {
-            this.logger.error('Failed to send read receipts', err);
-        }
-    }    /**
+    //             // Update message read status in local state
+    //             this.messages.update(msgs =>
+    //                 msgs.map(msg =>
+    //                     messageIds.includes(msg.id)
+    //                         ? { ...msg, read: true }
+    //                         : msg
+    //                 )
+    //             );
+    //         }
+    //     } catch (err) {
+    //         this.logger.error('Failed to send read receipts', err);
+    //     }
+    // } 
+    
+    
+    /**
      * Send a direct message using both NIP-04 and NIP-17
      */
     async sendMessage(): Promise<void> {
@@ -993,7 +859,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
             );
 
             // Update the last message for this chat in the chat list
-            this.updateChatLastMessage(selectedChat.id, finalMessage);
+            // this.updateChatLastMessage(selectedChat.id, finalMessage);
 
             this.isSending.set(false);
 
@@ -1032,24 +898,24 @@ export class MessagesComponent implements OnInit, OnDestroy {
     /**
      * Update the last message for a chat
      */
-    updateChatLastMessage(chatId: string, message: DirectMessage): void {
-        this.chats.update(chats =>
-            chats.map(chat =>
-                chat.id === chatId
-                    ? { ...chat, lastMessage: message }
-                    : chat
-            )
-        );
+    // updateChatLastMessage(chatId: string, message: DirectMessage): void {
+    //     this.chats.update(chats =>
+    //         chats.map(chat =>
+    //             chat.id === chatId
+    //                 ? { ...chat, lastMessage: message }
+    //                 : chat
+    //         )
+    //     );
 
-        // Also re-sort the chats to put the most recent first
-        this.chats.update(chats => {
-            return [...chats].sort((a, b) => {
-                const aTime = a.lastMessage?.created_at || 0;
-                const bTime = b.lastMessage?.created_at || 0;
-                return bTime - aTime;
-            });
-        });
-    }
+    //     // Also re-sort the chats to put the most recent first
+    //     this.chats.update(chats => {
+    //         return [...chats].sort((a, b) => {
+    //             const aTime = a.lastMessage?.created_at || 0;
+    //             const bTime = b.lastMessage?.created_at || 0;
+    //             return bTime - aTime;
+    //         });
+    //     });
+    // }
 
     /**
      * Retry sending a failed message
@@ -1076,169 +942,169 @@ export class MessagesComponent implements OnInit, OnDestroy {
      * Delete a chat
      */
     async deleteChat(chat: Chat, event?: Event): Promise<void> {
-        if (event) {
-            event.stopPropagation();
-        }
+        // if (event) {
+        //     event.stopPropagation();
+        // }
 
-        // Show confirmation dialog
-        const dialogRef = this.dialog.open(ConfirmDialogComponent, {
-            width: '400px',
-            data: {
-                title: 'Delete Chat',
-                message: 'Are you sure you want to delete this chat? This will only remove it from your device.',
-                confirmText: 'Delete',
-                cancelText: 'Cancel'
-            }
-        });
+        // // Show confirmation dialog
+        // const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+        //     width: '400px',
+        //     data: {
+        //         title: 'Delete Chat',
+        //         message: 'Are you sure you want to delete this chat? This will only remove it from your device.',
+        //         confirmText: 'Delete',
+        //         cancelText: 'Cancel'
+        //     }
+        // });
 
-        const result = await dialogRef.afterClosed().toPromise();
-        if (!result) return;
+        // const result = await dialogRef.afterClosed().toPromise();
+        // if (!result) return;
 
-        // Remove the chat from the list
-        this.chats.update(chats => chats.filter(c => c.id !== chat.id));
+        // // Remove the chat from the list
+        // this.chats.update(chats => chats.filter(c => c.id !== chat.id));
 
-        // If it was the selected chat, clear the selection
-        if (this.selectedChatId() === chat.id) {
-            this.selectedChatId.set(null);
-            this.messages.set([]);
-            this.showMobileList.set(true);
-        }
+        // // If it was the selected chat, clear the selection
+        // if (this.selectedChatId() === chat.id) {
+        //     this.selectedChatId.set(null);
+        //     this.messages.set([]);
+        //     this.showMobileList.set(true);
+        // }
 
-        // In a real implementation, you might also want to delete all related messages from local storage
-        this.snackBar.open('Chat deleted', 'Close', { duration: 3000 });
+        // // In a real implementation, you might also want to delete all related messages from local storage
+        // this.snackBar.open('Chat deleted', 'Close', { duration: 3000 });
     }
 
     /**
      * Subscribe to new messages
      */
-    subscribeToMessages(): void {
-        const myPubkey = this.accountState.pubkey();
-        if (!myPubkey) return;
+    // subscribeToMessages(): void {
+    //     const myPubkey = this.accountState.pubkey();
+    //     if (!myPubkey) return;
 
-        // Subscribe to gift-wrapped messages addressed to us
-        this.messageSubscription = this.relay.getAccountPool().subscribe(this.relay.getAccountRelayUrls(), {
-            kinds: [kinds.GiftWrap],
-            '#p': [myPubkey],
-            since: Math.floor(Date.now() / 1000) // Only get new messages from now on
-        }, {
-            maxWait: 5000,
-            label: 'subscribeToMessages',
-            onevent: async (event: NostrEvent) => {
-                // Handle incoming wrapped events
-                // Only process if it's not from us
-                if (event.pubkey === myPubkey) return;
+    //     // Subscribe to gift-wrapped messages addressed to us
+    //     this.messageSubscription = this.relay.getAccountPool().subscribe(this.relay.getAccountRelayUrls(), {
+    //         kinds: [kinds.GiftWrap],
+    //         '#p': [myPubkey],
+    //         since: Math.floor(Date.now() / 1000) // Only get new messages from now on
+    //     }, {
+    //         maxWait: 5000,
+    //         label: 'subscribeToMessages',
+    //         onevent: async (event: NostrEvent) => {
+    //             // Handle incoming wrapped events
+    //             // Only process if it's not from us
+    //             if (event.pubkey === myPubkey) return;
 
-                try {
-                    // Try to unwrap the message
-                    const unwrappedMessage = await this.unwrapMessage(event);
-                    if (!unwrappedMessage) return;
+    //             try {
+    //                 // Try to unwrap the message
+    //                 const unwrappedMessage = await this.unwrapMessage(event);
+    //                 if (!unwrappedMessage) return;
 
-                    // Extract the sender pubkey
-                    const senderPubkey = unwrappedMessage.pubkey;
+    //                 // Extract the sender pubkey
+    //                 const senderPubkey = unwrappedMessage.pubkey;
 
-                    // Check if we already have a chat with this user
-                    let existingChat = this.chats().find(chat => chat.pubkey === senderPubkey);
-                    let chatId: string;
+    //                 // Check if we already have a chat with this user
+    //                 let existingChat = this.chats().find(chat => chat.pubkey === senderPubkey);
+    //                 let chatId: string;
 
-                    if (existingChat) {
-                        chatId = existingChat.id;
+    //                 if (existingChat) {
+    //                     chatId = existingChat.id;
 
-                        // Update the chat with this new message and increment unread count
-                        this.chats.update(chats => {
-                            return chats.map(chat => {
-                                if (chat.pubkey === senderPubkey) {
-                                    return {
-                                        ...chat,
-                                        lastMessage: {
-                                            id: unwrappedMessage.id,
-                                            pubkey: senderPubkey,
-                                            created_at: unwrappedMessage.created_at,
-                                            content: unwrappedMessage.content,
-                                            isOutgoing: false,
-                                            tags: unwrappedMessage.tags,
-                                        },
-                                        unreadCount: this.selectedChatId() === chat.id ? 0 : chat.unreadCount + 1
-                                    };
-                                }
-                                return chat;
-                            });
-                        });
-                    } else {
-                        // Create a new chat for this sender
-                        chatId = senderPubkey;
+    //                     // Update the chat with this new message and increment unread count
+    //                     this.chats.update(chats => {
+    //                         return chats.map(chat => {
+    //                             if (chat.pubkey === senderPubkey) {
+    //                                 return {
+    //                                     ...chat,
+    //                                     lastMessage: {
+    //                                         id: unwrappedMessage.id,
+    //                                         pubkey: senderPubkey,
+    //                                         created_at: unwrappedMessage.created_at,
+    //                                         content: unwrappedMessage.content,
+    //                                         isOutgoing: false,
+    //                                         tags: unwrappedMessage.tags,
+    //                                     },
+    //                                     unreadCount: this.selectedChatId() === chat.id ? 0 : chat.unreadCount + 1
+    //                                 };
+    //                             }
+    //                             return chat;
+    //                         });
+    //                     });
+    //                 } else {
+    //                     // Create a new chat for this sender
+    //                     chatId = senderPubkey;
 
-                        const newChat: Chat = {
-                            id: chatId,
-                            pubkey: senderPubkey,
-                            unreadCount: 1,
-                            lastMessage: {
-                                id: unwrappedMessage.id,
-                                pubkey: senderPubkey,
-                                created_at: unwrappedMessage.created_at,
-                                content: unwrappedMessage.content,
-                                isOutgoing: false,
-                                tags: unwrappedMessage.tags
-                            }
-                        };
+    //                     const newChat: Chat = {
+    //                         id: chatId,
+    //                         pubkey: senderPubkey,
+    //                         unreadCount: 1,
+    //                         lastMessage: {
+    //                             id: unwrappedMessage.id,
+    //                             pubkey: senderPubkey,
+    //                             created_at: unwrappedMessage.created_at,
+    //                             content: unwrappedMessage.content,
+    //                             isOutgoing: false,
+    //                             tags: unwrappedMessage.tags
+    //                         }
+    //                     };
 
-                        // Add the chat to the list
-                        this.chats.update(chats => [newChat, ...chats]);
-                    }
+    //                     // Add the chat to the list
+    //                     this.chats.update(chats => [newChat, ...chats]);
+    //                 }
 
-                    // Re-sort the chats
-                    this.chats.update(chats => {
-                        return [...chats].sort((a, b) => {
-                            const aTime = a.lastMessage?.created_at || 0;
-                            const bTime = b.lastMessage?.created_at || 0;
-                            return bTime - aTime;
-                        });
-                    });
+    //                 // Re-sort the chats
+    //                 this.chats.update(chats => {
+    //                     return [...chats].sort((a, b) => {
+    //                         const aTime = a.lastMessage?.created_at || 0;
+    //                         const bTime = b.lastMessage?.created_at || 0;
+    //                         return bTime - aTime;
+    //                     });
+    //                 });
 
-                    // If this chat is currently selected, add the message to the view
-                    if (this.selectedChatId() === chatId) {
-                        const newMessage: DirectMessage = {
-                            id: unwrappedMessage.id,
-                            pubkey: senderPubkey,
-                            created_at: unwrappedMessage.created_at,
-                            content: unwrappedMessage.content,
-                            isOutgoing: false,
-                            tags: unwrappedMessage.tags,
-                            received: true
-                        };
+    //                 // If this chat is currently selected, add the message to the view
+    //                 if (this.selectedChatId() === chatId) {
+    //                     const newMessage: DirectMessage = {
+    //                         id: unwrappedMessage.id,
+    //                         pubkey: senderPubkey,
+    //                         created_at: unwrappedMessage.created_at,
+    //                         content: unwrappedMessage.content,
+    //                         isOutgoing: false,
+    //                         tags: unwrappedMessage.tags,
+    //                         received: true
+    //                     };
 
-                        this.messages.update(msgs => [...msgs, newMessage]);
+    //                     this.messages.update(msgs => [...msgs, newMessage]);
 
-                        // Send a read receipt
-                        this.sendReadReceipts([newMessage.id]);
-                    }
+    //                     // Send a read receipt
+    //                     this.sendReadReceipts([newMessage.id]);
+    //                 }
 
-                    // Show notification for new message if not currently viewing this chat
-                    if (this.selectedChatId() !== chatId) {
-                        this.notifications.addNotification({
-                            id: `message-${unwrappedMessage.id}`,
-                            type: NotificationType.GENERAL,
-                            title: 'New Message',
-                            message: `New message from ${this.utilities.getTruncatedNpub(senderPubkey)}`,
-                            timestamp: Date.now(),
-                            read: false
-                        });
-                    }
-                } catch (err) {
-                    this.logger.error('Failed to process incoming message', err);
-                }
-            }
-        });
+    //                 // Show notification for new message if not currently viewing this chat
+    //                 if (this.selectedChatId() !== chatId) {
+    //                     this.notifications.addNotification({
+    //                         id: `message-${unwrappedMessage.id}`,
+    //                         type: NotificationType.GENERAL,
+    //                         title: 'New Message',
+    //                         message: `New message from ${this.utilities.getTruncatedNpub(senderPubkey)}`,
+    //                         timestamp: Date.now(),
+    //                         read: false
+    //                     });
+    //                 }
+    //             } catch (err) {
+    //                 this.logger.error('Failed to process incoming message', err);
+    //             }
+    //         }
+    //     });
 
-        // // Handle incoming events
-        // this.messageSubscription.on('event', async (event: any) => {
+    //     // // Handle incoming events
+    //     // this.messageSubscription.on('event', async (event: any) => {
 
-        // });
+    //     // });
 
-        // // Handle subscription closing
-        // this.messageSubscription.on('eose', () => {
-        //     this.logger.debug('Message subscription EOSE received');
-        // });
-    }
+    //     // // Handle subscription closing
+    //     // this.messageSubscription.on('eose', () => {
+    //     //     this.logger.debug('Message subscription EOSE received');
+    //     // });
+    // }
 
     /**
      * Back to list on mobile view
@@ -1304,7 +1170,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
 
             // Create the event
             const event = {
-                kind: DIRECT_MESSAGE_KIND,
+                kind: kinds.EncryptedDirectMessage,
                 pubkey: myPubkey,
                 created_at: Math.floor(Date.now() / 1000),
                 tags: [['p', receiverPubkey]],

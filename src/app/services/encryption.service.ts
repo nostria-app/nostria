@@ -2,8 +2,9 @@ import { Injectable, inject } from '@angular/core';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
 import { hexToBytes, bytesToHex } from '@noble/hashes/utils';
-import { nip04, nip44 } from 'nostr-tools';
+import { Event, nip04, nip44 } from 'nostr-tools';
 import { v2 } from 'nostr-tools/nip44';
+import { UtilitiesService } from './utilities.service';
 
 export interface EncryptionResult {
   content: string;
@@ -20,6 +21,7 @@ export interface DecryptionResult {
 })
 export class EncryptionService {
   private logger = inject(LoggerService);
+  private readonly utilities = inject(UtilitiesService);
   private accountState = inject(AccountStateService);  /**
    * Encrypt a message using NIP-04 (legacy, less secure)
    * Uses AES-256-CBC encryption
@@ -48,12 +50,13 @@ export class EncryptionService {
   /**
    * Decrypt a message using NIP-04 (legacy, less secure)
    */
-  async decryptNip04(ciphertext: string, senderPubkey: string): Promise<string> {
+  async decryptNip04(ciphertext: string, pubkey: string): Promise<string> {
     try {
-      const account = this.accountState.account();      // Check if we can use the browser extension
+      const account = this.accountState.account();
 
+      // Check if we can use the browser extension
       if (account?.source === 'extension' && window.nostr?.nip04) {
-        const decrypted = await window.nostr.nip04.decrypt(senderPubkey, ciphertext)
+        const decrypted = await window.nostr.nip04.decrypt(pubkey, ciphertext)
         return decrypted;
       }
 
@@ -63,7 +66,7 @@ export class EncryptionService {
 
       // Use nostr-tools nip04 decryption
       const privateKeyBytes = hexToBytes(account.privkey);
-      return await nip04.decrypt(privateKeyBytes, senderPubkey, ciphertext);
+      return await nip04.decrypt(privateKeyBytes, pubkey, ciphertext);
     } catch (error) {
       this.logger.error('Failed to decrypt with NIP-04', error);
       throw new Error('Decryption failed');
@@ -125,10 +128,23 @@ export class EncryptionService {
   /**
    * Auto-detect encryption type and decrypt accordingly
    */
-  async autoDecrypt(ciphertext: string, senderPubkey: string): Promise<DecryptionResult> {
+  async autoDecrypt(ciphertext: string, senderPubkey: string, event: Event): Promise<DecryptionResult> {
     if (ciphertext.includes('?iv=')) {
       // Fallback to NIP-04 (legacy format with ?iv=)
       try {
+        // TODO: Figure out what this "Echo: " prefix is about.
+        // Sometimes the ciphertext might have a prefix like "Echo: ".
+        ciphertext = ciphertext.replace('Echo: ', '');
+
+        // const pTags = this.utilities.getPTagsValuesFromEvent(event);
+        // if (pTags && pTags.length > 0) {
+        //   // If we have p-tags, use the first one as the sender's public key
+        //   const receiverPubkey = pTags[0];
+        //   if (receiverPubkey === "fa984bd7dbb282f07e16e7ae87b26a2a7b9b90b7246a44771f0cf5ae58018f52") {
+        //     debugger;
+        //   }
+        // }
+
         const content = await this.decryptNip04(ciphertext, senderPubkey);
         return { content, algorithm: 'nip04' };
       } catch (error) {

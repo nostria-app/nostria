@@ -7,7 +7,7 @@
     <div class="error-container">
       <mat-icon color="warn">error</mat-icon>
       <p>{{ error() }}</p>
-      <button mat-stroked-button color="primary" (click)="loadChats()">Try Again</button>
+      <button mat-stroked-button color="primary" (click)="messaging.loadChats()">Try Again</button>
     </div>
   } @else {
     <div class="messages-layout" [class.mobile-view]="showMobileList()">
@@ -32,7 +32,12 @@
           </div>
         } @else {
           <mat-nav-list class="chat-list">
-            @for (chat of chats(); track chat.id) {
+            <!-- @for(pubkey of chatPubkeys(); track pubkey) {
+              {{ pubkey }}<br>
+            } -->
+
+            @for (item of messaging.sortedChats(); track item.pubkey) {
+              @let chat = item.chat;
               <a mat-list-item class="chat-item" [class.active]="selectedChat()?.id === chat.id"
                 (click)="selectChat(chat)">
                 <div class="chat-item-content">
