@@ -181,7 +181,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
 
     ngOnInit(): void {
 
-    }    ngOnDestroy(): void {
+    } ngOnDestroy(): void {
         // Clean up subscriptions
         if (this.messageSubscription) {
             this.messageSubscription.close();
@@ -261,7 +261,6 @@ export class MessagesComponent implements OnInit, OnDestroy {
                     // this.relayPool?.publish(relays, event);
                 }
             }, () => {
-                debugger;
                 console.log('End of data.');
             })
 
@@ -291,7 +290,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
                 limit: 100
             }, {
                 maxWait: 5000,
-                label: 'loadChats',                onevent: async (event: NostrEvent) => {
+                label: 'loadChats', onevent: async (event: NostrEvent) => {
                     if (event.kind == kinds.EncryptedDirectMessage) {
                         const unwrappedMessage = await this.unwrapNip04Message(event);
                         if (unwrappedMessage) {
@@ -552,7 +551,8 @@ export class MessagesComponent implements OnInit, OnDestroy {
             this.logger.error('Failed to load messages', err);
             this.error.set('Failed to load messages. Please try again.');
             this.isLoading.set(false);
-        }    }    /**
+        }
+    }    /**
      * Add a message to the decryption queue for sequential processing
      */
     private async queueMessageForDecryption(event: NostrEvent, type: 'nip04' | 'nip17', senderPubkey: string): Promise<any | null> {
@@ -583,18 +583,18 @@ export class MessagesComponent implements OnInit, OnDestroy {
     private async processDecryptionQueue(): Promise<void> {
         if (this.isProcessingQueue || this.decryptionQueue.length === 0) {
             return;
-        }        this.isProcessingQueue = true;
+        } this.isProcessingQueue = true;
         this.isDecryptingMessages.set(true);
         this.logger.debug('Starting decryption queue processing');
 
         while (this.decryptionQueue.length > 0) {
             const item = this.decryptionQueue.shift()!;
             this.decryptionQueueLength.set(this.decryptionQueue.length);
-            
+
             try {
                 this.logger.debug(`Processing decryption for message ${item.id}`);
-                
-                let result: any | null = null;                if (item.type === 'nip04') {
+
+                let result: any | null = null; if (item.type === 'nip04') {
                     result = await this.unwrapNip04MessageInternal(item.event);
                 } else if (item.type === 'nip17') {
                     result = await this.unwrapMessageInternal(item.event);
@@ -602,10 +602,10 @@ export class MessagesComponent implements OnInit, OnDestroy {
 
                 item.resolve(result);
                 this.logger.debug(`Successfully decrypted message ${item.id}`);
-                
+
                 // Small delay between processing to prevent overwhelming the user with extension prompts
                 await new Promise(resolve => setTimeout(resolve, 100));
-                
+
             } catch (error) {
                 this.logger.error(`Failed to decrypt message ${item.id}:`, error);
                 item.reject(error as Error);
@@ -624,7 +624,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
         this.decryptionQueue.forEach(item => {
             item.reject(new Error('Decryption queue cleared'));
         });
-        
+
         this.decryptionQueue = [];
         this.isProcessingQueue = false;
         this.isDecryptingMessages.set(false);
@@ -704,11 +704,16 @@ export class MessagesComponent implements OnInit, OnDestroy {
 
         try {
             // For NIP-04 messages, the sender is the event pubkey
-            const senderPubkey = event.pubkey;
-            
+            const pTags = this.utilities.getPTagsValuesFromEvent(event);
+
+            if (pTags.length === 0) {
+                return null;
+
+            }
+
             // Use the EncryptionService to decrypt
-            const decryptionResult = await this.encryption.autoDecrypt(event.content, senderPubkey);
-            
+            const decryptionResult = await this.encryption.autoDecrypt(event.content, pTags[0]);
+
             // Return the message with decrypted content
             return {
                 id: event.id,

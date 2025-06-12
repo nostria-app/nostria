@@ -313,7 +313,6 @@ export class NostrService {
   //   return this.accountsMetadata().find(meta => meta.event.pubkey === pubkey);
   // }
   getAccountFromStorage() {
-    debugger;
     // Check for pubkey query parameter first (for notification handling)
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);

@@ -413,11 +413,40 @@
         width: 20px;
         height: 20px;
       }
-    }
-
-    // Warning text in no-messages state
+    }    // Warning text in no-messages state
     .hint.warning {
       color: var(--mat-sys-color-error);
+    }
+
+    // Decryption status indicator
+    .decrypting-messages {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 16px;
+      background-color: var(--mat-sys-color-surface-container);
+      color: var(--mat-sys-color-on-surface);
+      border-radius: 8px;
+      margin: 16px;
+      font-size: 14px;
+      box-shadow: var(--mat-sys-level1);
+
+      mat-spinner {
+        ::ng-deep circle {
+          stroke: var(--mat-sys-color-primary);
+        }
+      }
+
+      p {
+        margin: 0;
+        font-weight: 500;
+      }
+
+      .queue-info {
+        color: var(--mat-sys-color-on-surface-variant);
+        font-weight: 400;
+      }
     }
   }
 }

@@ -50,11 +50,11 @@ export class EncryptionService {
    */
   async decryptNip04(ciphertext: string, senderPubkey: string): Promise<string> {
     try {
-      const account = this.accountState.account();
+      const account = this.accountState.account();      // Check if we can use the browser extension
 
-      // Check if we can use the browser extension
       if (account?.source === 'extension' && window.nostr?.nip04) {
-        return await window.nostr.nip04.decrypt(senderPubkey, ciphertext);
+        const decrypted = await window.nostr.nip04.decrypt(senderPubkey, ciphertext)
+        return decrypted;
       }
 
       if (!account?.privkey) {
@@ -126,11 +126,9 @@ export class EncryptionService {
    * Auto-detect encryption type and decrypt accordingly
    */
   async autoDecrypt(ciphertext: string, senderPubkey: string): Promise<DecryptionResult> {
-
     if (ciphertext.includes('?iv=')) {
       // Fallback to NIP-04 (legacy format with ?iv=)
       try {
-        debugger;
         const content = await this.decryptNip04(ciphertext, senderPubkey);
         return { content, algorithm: 'nip04' };
       } catch (error) {
