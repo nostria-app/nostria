@@ -313,8 +313,8 @@
             box-shadow: var(--mat-sys-level1);
 
             &.outgoing {
-              background-color: var(--mat-sys-color-primary-container);
-              color: var(--mat-sys-color-on-primary-container);
+              background-color: var(--mat-sys-on-primary-container);
+              color: var(--mat-sys-on-secondary);
             }
 
             &.pending {

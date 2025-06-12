@@ -23,6 +23,8 @@ box-shadow: var(--mat-sys-level5)
 
 Never set the font-weight in CSS. The current font for headlines does not support different font weights.
 
+Make sure you don't use outdated variables for Angular Material, such as "--mat-sys-color-surface-container-high" and "--mat-sys-color-primary-container" and "--mat-sys-color-on-primary-container".
+
 I'm using a Windows computer, so make sure that paths and commands are compatible with Windows.
 
 When waiting for background terminal output for "npm start", wait another 3 extra seconds to ensure build completes.
