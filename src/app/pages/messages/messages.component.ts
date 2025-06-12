@@ -138,7 +138,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
         return this.messaging.getChat(chatId) || null;
     });
 
-    activePubkey = computed(() => this.selectedChat()?.pubkey || '');
+    // activePubkey = computed(() => this.selectedChat()?.pubkey || '');
     messages = signal<DirectMessage[]>([]);
     newMessageText = signal<string>('');
     hasMoreMessages = signal<boolean>(false);    // Computed helpers
