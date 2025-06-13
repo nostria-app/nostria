@@ -6,6 +6,7 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
+    "gen:api": "ng-openapi-gen --input http://localhost:3000/openapi.json --output src/app/api --module false",
     "test": "ng test",
     "tauri": "tauri",
     "get-version": "node -p \"require('./package.json').version\"",
@@ -57,6 +58,7 @@
     "karma-coverage": "~2.2.1",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
+    "ng-openapi-gen": "^0.53.0",
     "typescript": "~5.8.3"
   }
 }
