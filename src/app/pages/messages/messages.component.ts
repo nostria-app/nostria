@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject, signal, computed, effect, untracked } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, ViewChild, ElementRef, inject, signal, computed, effect, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -34,6 +34,9 @@ import { AccountStateService } from '../../services/account-state.service';
 import { EncryptionService } from '../../services/encryption.service';
 import { DataService } from '../../services/data.service';
 import { MessagingService } from '../../services/messaging.service';
+import { UserRelayFactoryService } from '../../services/user-relay-factory.service';
+import { UserRelayService } from '../../services/user-relay.service';
+import { AccountRelayService } from '../../services/account-relay.service';
 
 // Define interfaces for our DM data structures
 interface Chat {
@@ -69,13 +72,6 @@ interface DecryptionQueueItem {
     reject: (error: Error) => void;
 }
 
-// Constants for both NIP-04 and NIP-17 events
-const DIRECT_MESSAGE_KIND = 4;    // NIP-04 direct messages
-// const GIFT_WRAPPED_KIND = 1059;   // NIP-17 gift wrapped messages
-const SEALED_MESSAGE_KIND = 13;   // NIP-17 sealed messages
-const CHAT_MESSAGE_KIND = 14;     // NIP-17 chat messages
-const RECEIPT_KIND = 1405;        // For read receipts
-
 @Component({
     selector: 'app-messages',
     standalone: true,
@@ -105,18 +101,20 @@ const RECEIPT_KIND = 1405;        // For read receipts
     templateUrl: './messages.component.html',
     styleUrl: './messages.component.scss'
 })
-export class MessagesComponent implements OnInit, OnDestroy {
+export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     private data = inject(DataService);
     private nostr = inject(NostrService);
     private relay = inject(RelayService);
     private logger = inject(LoggerService);
     messaging = inject(MessagingService);
     private notifications = inject(NotificationService);
+    private userRelayFactory = inject(UserRelayFactoryService);
     private dialog = inject(MatDialog);
     private storage = inject(StorageService);
     private router = inject(Router);
     private appState = inject(ApplicationStateService);
-    private snackBar = inject(MatSnackBar); private readonly app = inject(ApplicationService);
+    private snackBar = inject(MatSnackBar);
+    private readonly app = inject(ApplicationService);
     readonly utilities = inject(UtilitiesService);
     private readonly accountState = inject(AccountStateService);
     private readonly encryption = inject(EncryptionService);    // UI state signals
@@ -127,6 +125,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
     showMobileList = signal<boolean>(true);
     isDecryptingMessages = signal<boolean>(false);
     decryptionQueueLength = signal<number>(0);
+    private accountRelayService = inject(AccountRelayService);
 
     // Data signals
     // chats = signal<Chat[]>([]);
@@ -144,20 +143,22 @@ export class MessagesComponent implements OnInit, OnDestroy {
     hasMoreMessages = signal<boolean>(false);    // Computed helpers
     hasChats = computed(() => this.messaging.sortedChats().length > 0);    // Subscription management
     private messageSubscription: any = null;
-    private chatSubscription: any = null;
-
-    // Decryption queue management
+    private chatSubscription: any = null;    // Decryption queue management
     private decryptionQueue: DecryptionQueueItem[] = [];
     private isProcessingQueue = false;
 
-    constructor() {
-        // Set up effect to load messages when chat is selected
+    // ViewChild for scrolling functionality
+    @ViewChild('messagesWrapper', { static: false }) messagesWrapper?: ElementRef<HTMLDivElement>;
+
+    constructor() {        // Set up effect to load messages when chat is selected
         effect(() => {
             const chat = this.selectedChat();
             if (chat) {
                 untracked(() => {
                     const chatMessages = this.messaging.getChatMessages(chat.pubkey);
                     this.messages.set(chatMessages || []);
+                    // Scroll to bottom to show latest messages
+                    this.scrollToBottom();
                     // Mark this chat as read when selected
                     // TODO: FIX, this will trigger selectedChat signal and cause infinite loop
                     // this.markChatAsRead(chat.id);
@@ -186,6 +187,26 @@ export class MessagesComponent implements OnInit, OnDestroy {
 
     }
 
+    ngAfterViewInit(): void {
+        // Initial scroll to bottom if there are messages
+        if (this.messages().length > 0) {
+            this.scrollToBottom();
+        }
+    }
+
+    /**
+     * Scroll the messages wrapper to the bottom to show latest messages
+     */
+    private scrollToBottom(): void {
+        // Use setTimeout to ensure DOM is updated
+        setTimeout(() => {
+            if (this.messagesWrapper?.nativeElement) {
+                const element = this.messagesWrapper.nativeElement;
+                element.scrollTop = element.scrollHeight;
+            }
+        }, 100);
+    }
+
     ngOnDestroy(): void {
         // Clean up subscriptions
         if (this.messageSubscription) {
@@ -206,7 +227,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
     private clearDecryptionQueue(): void {
         this.messaging.clearDecryptionQueue();
     }
-    
+
     /**
      * Load more messages (older messages)
      */
@@ -363,6 +384,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
      * Send a direct message using both NIP-04 and NIP-17
      */
     async sendMessage(): Promise<void> {
+        debugger;
         const messageText = this.newMessageText().trim();
         if (!messageText || this.isSending()) return;
 
@@ -380,7 +402,8 @@ export class MessagesComponent implements OnInit, OnDestroy {
             // Get relays to publish to
             // TODO: Important, get all relays for the user we are sending DM to and include
             // it in this array for publishing the DM!!
-            const relays = this.relay.getAccountRelayUrls();
+            // const relays = this.relay.getAccountRelayUrls();
+            const userRelay = await this.userRelayFactory.create(receiverPubkey);
 
             // Create a unique ID for the pending message
             const pendingId = `pending-${Date.now()}-${Math.random()}`;
@@ -412,10 +435,10 @@ export class MessagesComponent implements OnInit, OnDestroy {
 
             if (useModernEncryption) {
                 // Use NIP-17 encryption
-                finalMessage = await this.sendNip17Message(messageText, receiverPubkey, myPubkey, relays);
+                finalMessage = await this.sendNip17Message(messageText, receiverPubkey, myPubkey, userRelay);
             } else {
                 // Use NIP-04 encryption for backwards compatibility
-                finalMessage = await this.sendNip04Message(messageText, receiverPubkey, myPubkey, relays);
+                finalMessage = await this.sendNip04Message(messageText, receiverPubkey, myPubkey, userRelay);
             }
 
             // Success: update the message to remove the pending state
@@ -530,7 +553,9 @@ export class MessagesComponent implements OnInit, OnDestroy {
      */
     backToList(): void {
         this.showMobileList.set(true);
-    }    /**
+    }
+
+    /**
      * View profile of the selected chat
      */
     viewProfile(): void {
@@ -538,7 +563,9 @@ export class MessagesComponent implements OnInit, OnDestroy {
         if (pubkey) {
             this.router.navigate(['/p', pubkey]);
         }
-    }    /**
+    }
+
+    /**
      * Check if a chat supports modern encryption (NIP-17)
      * For now, we'll always prefer modern encryption when available
      */
@@ -581,7 +608,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
         messageText: string,
         receiverPubkey: string,
         myPubkey: string,
-        relays: string[]
+        userRelay: UserRelayService
     ): Promise<DirectMessage> {
         try {
             // Encrypt the message using NIP-04
@@ -599,8 +626,10 @@ export class MessagesComponent implements OnInit, OnDestroy {
             // Sign and finalize the event
             const signedEvent = await this.nostr.signEvent(event);
 
+            debugger;
+
             // Publish to relays
-            await this.publishToRelays(signedEvent, relays);
+            await this.publishToRelays(signedEvent, userRelay);
 
             // Return the message object
             return {
@@ -625,12 +654,12 @@ export class MessagesComponent implements OnInit, OnDestroy {
         messageText: string,
         receiverPubkey: string,
         myPubkey: string,
-        relays: string[]
+        userRelay: UserRelayService
     ): Promise<DirectMessage> {
         try {
             // Create the inner chat message (kind 14)
             const chatMessage = {
-                kind: CHAT_MESSAGE_KIND,
+                kind: kinds.PrivateDirectMessage,
                 pubkey: myPubkey,
                 created_at: Math.floor(Date.now() / 1000),
                 tags: [['p', receiverPubkey]],
@@ -647,7 +676,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
             );
 
             const sealedMessage = {
-                kind: SEALED_MESSAGE_KIND,
+                kind: kinds.Seal,
                 pubkey: myPubkey,
                 created_at: Math.floor(Date.now() / 1000),
                 tags: [],
@@ -679,7 +708,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
             const signedGiftWrap = finalizeEvent(giftWrap, randomKey);
 
             // Publish the gift wrap to relays
-            await this.publishToRelays(signedGiftWrap, relays);
+            await this.publishToRelays(signedGiftWrap, userRelay);
 
             // Return the message object based on the original chat message
             return {
@@ -700,22 +729,12 @@ export class MessagesComponent implements OnInit, OnDestroy {
     /**
      * Publish an event to multiple relays
      */
-    private async publishToRelays(event: NostrEvent, relays: string[]): Promise<void> {
-        const promises = relays.map(async (relayUrl) => {
-            try {
-                // TODO: We want to have an "UserPool" and "AccountPool" to send
-                // messages to, right now we are connecting to user relays using 
-                // the account relay, we don't want to do that.
-                if (this.relay.getAccountPool()) {
-                    await this.relay.getAccountPool().publish([relayUrl], event);
-                }
-            } catch (error) {
-                this.logger.error(`Failed to publish to relay ${relayUrl}`, error);
-                // Don't throw here - we want to try all relays
-            }
-        });
+    private async publishToRelays(event: NostrEvent, userRelay: UserRelayService): Promise<void> {
+        debugger;
+        const promisesUser = userRelay.publish(event);
+        const promisesAccount = this.accountRelayService.publish(event);
 
         // Wait for all publish attempts to complete
-        await Promise.allSettled(promises);
+        await Promise.allSettled([promisesUser, promisesAccount]);
     }
 }

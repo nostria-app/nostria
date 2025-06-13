@@ -7,6 +7,7 @@ import { NotificationService } from './notification.service';
 import { LocalStorageService } from './local-storage.service';
 import { NostrService } from './nostr.service';
 import { RelayService } from './relay.service';
+import { AccountRelayService } from './account-relay.service';
 
 export interface Relay {
     url: string;
@@ -23,6 +24,7 @@ export class UserRelayService {
     private appState = inject(ApplicationStateService);
     private notification = inject(NotificationService);
     private localStorage = inject(LocalStorageService);
+    private accountRelayService = inject(AccountRelayService);
     private relay = inject(RelayService);
     userRelaysFound = signal<boolean>(true);
     pool = new SimplePool();
@@ -41,9 +43,9 @@ export class UserRelayService {
         // any relay list discovered yet.
         if (relayUrls.length === 0) {
             this.logger.warn(`No relays found for user ${pubkey}, falling back to account relays`);
-            relayUrls = this.nostr.accountRelayUrls();
+            relayUrls = this.relay.getAccountRelayUrls();
             this.userRelaysFound.set(false);
-            
+
             // Log additional info for debugging
             this.logger.debug(`Using ${relayUrls.length} account relays as fallback:`, relayUrls);
         } else {
@@ -64,12 +66,12 @@ export class UserRelayService {
     }
 
     /**
-  * Generic function to fetch Nostr events (one-time query)
-  * @param filter Filter for the query
-  * @param relayUrls Optional specific relay URLs to use (defaults to user's relays)
-  * @param options Optional options for the query
-  * @returns Promise that resolves to an array of events
-  */
+     * Generic function to fetch Nostr events (one-time query)
+     * @param filter Filter for the query
+     * @param relayUrls Optional specific relay URLs to use (defaults to user's relays)
+     * @param options Optional options for the query
+     * @returns Promise that resolves to an array of events
+     */
     async get<T extends Event = Event>(
         filter: { kinds?: number[], authors?: string[], '#e'?: string[], '#p'?: string[], since?: number, until?: number, limit?: number },
         relayUrls?: string[],
@@ -98,14 +100,32 @@ export class UserRelayService {
         }
     }
 
+    publish(event: Event) {
+        this.logger.debug('Publishing event:', event);
+
+        if (!this.pool) {
+            this.logger.error('Cannot publish event: user pool is not initialized');
+            return;
+        }
+
+        try {
+            // Publish the event to all relays
+            return this.pool.publish(this.relayUrls, event);
+        } catch (error) {
+            this.logger.error('Error publishing event', error);
+        }
+
+        return;
+    }
+
     /**
- * Generic function to subscribe to Nostr events
- * @param filters Array of filter objects for the subscription
- * @param onEvent Callback function that will be called for each event received
- * @param onEose Callback function that will be called when EOSE (End Of Stored Events) is received
- * @param relayUrls Optional specific relay URLs to use (defaults to user's relays)
- * @returns Subscription object with unsubscribe method
- */
+     * Generic function to subscribe to Nostr events
+     * @param filters Array of filter objects for the subscription
+     * @param onEvent Callback function that will be called for each event received
+     * @param onEose Callback function that will be called when EOSE (End Of Stored Events) is received
+     * @param relayUrls Optional specific relay URLs to use (defaults to user's relays)
+     * @returns Subscription object with unsubscribe method
+     */
     subscribe<T extends Event = Event>(
         filters: { kinds?: number[], authors?: string[], '#e'?: string[], '#p'?: string[], since?: number, until?: number, limit?: number }[],
         onEvent: (event: T) => void,
@@ -195,5 +215,3 @@ export class UserRelayService {
     //     });
     // }
 }
-
-

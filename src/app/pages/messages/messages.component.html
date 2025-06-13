@@ -140,9 +140,8 @@
           </mat-menu>
 
         </div>
-      </div>
-      <!-- Messages -->
-      <div class="messages-wrapper">
+      </div>      <!-- Messages -->
+      <div class="messages-wrapper" #messagesWrapper>
         @if (isLoading()) {
         <div class="loading-messages">
           <mat-spinner diameter="40"></mat-spinner>
