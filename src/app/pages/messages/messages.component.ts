@@ -130,9 +130,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // Data signals
     // chats = signal<Chat[]>([]);
-    selectedChatId = signal<string | null>(null);
-
-    selectedChat = computed(() => {
+    selectedChatId = signal<string | null>(null);    selectedChat = computed(() => {
         const chatId = this.selectedChatId();
         if (!chatId) return null;
         return this.messaging.getChat(chatId) || null;
