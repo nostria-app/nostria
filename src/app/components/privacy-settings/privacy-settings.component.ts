@@ -1,5 +1,5 @@
 import { Component, inject, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatCardModule } from '@angular/material/card';
 import { MatListModule } from '@angular/material/list';
@@ -16,7 +16,6 @@ import { SettingsService } from '../../services/settings.service';
 @Component({
   selector: 'app-privacy-settings',
   standalone: true,  imports: [
-    CommonModule,
     MatTabsModule,
     MatCardModule,
     MatListModule,

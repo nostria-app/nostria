@@ -1,5 +1,5 @@
-import { Component, inject, signal, effect, untracked, Inject, PLATFORM_ID } from '@angular/core';
-import { CommonModule, DOCUMENT, isPlatformBrowser } from '@angular/common';
+import { Component, inject, signal, effect, untracked, Inject, PLATFORM_ID, DOCUMENT } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, ParamMap, RouterModule, RouterOutlet, Router, NavigationEnd } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -40,7 +40,6 @@ import { UrlUpdateService } from '../../services/url-update.service';
   selector: 'app-profile',
   standalone: true,
   imports: [
-    CommonModule,
     RouterModule,
     RouterOutlet,
     MatCardModule,
@@ -59,8 +58,7 @@ import { UrlUpdateService } from '../../services/url-update.service';
     FormsModule,
     MatFormFieldModule,
     ProfileHeaderComponent
-
-  ],
+],
   templateUrl: './profile.component.html',
   styleUrl: './profile.component.scss'
 })

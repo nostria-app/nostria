@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -40,13 +40,12 @@ interface RelayInfo {
   selector: 'app-relay-info-dialog',
   standalone: true,
   imports: [
-    CommonModule,
     MatDialogModule,
     MatButtonModule,
     MatProgressSpinnerModule,
     MatSlideToggleModule,
     RouterModule
-  ],
+],
   template: `
   @if(adding()) {
     <h2 mat-dialog-title>Adding Relay</h2>

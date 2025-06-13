@@ -1,5 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -100,7 +100,6 @@ const FEED_TEMPLATES = [
   selector: 'app-new-feed-dialog',
   standalone: true,
   imports: [
-    CommonModule,
     MatDialogModule,
     MatButtonModule,
     MatFormFieldModule,
@@ -110,7 +109,7 @@ const FEED_TEMPLATES = [
     MatCardModule,
     MatDividerModule,
     ReactiveFormsModule
-  ],
+],
   template: `
     <div class="dialog-container">
       <div class="dialog-header">

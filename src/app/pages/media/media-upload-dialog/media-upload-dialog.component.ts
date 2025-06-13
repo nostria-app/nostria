@@ -1,5 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -15,7 +15,6 @@ import { MediaService } from '../../../services/media.service';
   selector: 'app-media-upload-dialog',
   standalone: true,
   imports: [
-    CommonModule,
     ReactiveFormsModule,
     MatButtonModule,
     MatDialogModule,
@@ -25,7 +24,7 @@ import { MediaService } from '../../../services/media.service';
     MatProgressBarModule,
     MatCheckboxModule,
     MatProgressSpinnerModule
-  ],
+],
   templateUrl: './media-upload-dialog.component.html',
   styleUrls: ['./media-upload-dialog.component.scss']
 })

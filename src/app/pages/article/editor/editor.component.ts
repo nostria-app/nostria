@@ -1,5 +1,5 @@
 import { Component, inject, signal, effect, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -35,7 +35,6 @@ interface ArticleDraft {
 @Component({
   selector: 'app-editor',
   imports: [
-    CommonModule,
     FormsModule,
     MatFormFieldModule,
     MatInputModule,
@@ -48,7 +47,7 @@ interface ArticleDraft {
     MatSnackBarModule,
     MatDialogModule,
     MatCardModule
-  ],
+],
   templateUrl: './editor.component.html',
   styleUrl: './editor.component.scss'
 })

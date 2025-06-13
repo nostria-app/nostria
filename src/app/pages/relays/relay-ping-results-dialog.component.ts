@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatTableModule } from '@angular/material/table';
 import { MatIconModule } from '@angular/material/icon';
@@ -21,14 +21,13 @@ export interface RelayPingDialogData {
   selector: 'app-relay-ping-results-dialog',
   standalone: true,
   imports: [
-    CommonModule,
     MatDialogModule,
     MatButtonModule,
     MatTableModule,
     MatIconModule,
     MatCardModule,
     MatDividerModule
-  ],
+],
   templateUrl: './relay-ping-results-dialog.component.html',
   styleUrl: './relay-ping-results-dialog.component.scss'
 })
