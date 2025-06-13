@@ -156,8 +156,8 @@
         <div class="no-messages">
           <mat-icon>mail</mat-icon>
           <p>No messages yet</p>
-          @if (selectedChat()?.encryptionType === 'nip17') {
-          <p class="hint">This conversation is encrypted end-to-end using NIP-17.</p>
+          @if (selectedChat()?.encryptionType === 'nip44') {
+          <p class="hint">This conversation is encrypted end-to-end using NIP-44.</p>
           } @else if (selectedChat()?.encryptionType === 'nip04') {
           <p class="hint warning">This conversation uses legacy encryption (NIP-04).</p>
           } @else {
@@ -220,7 +220,7 @@
         <mat-form-field appearance="outline" class="message-input">
           <input matInput [ngModel]="newMessageText()" (ngModelChange)="newMessageText.set($event)"
             placeholder="Type a message..." [disabled]="isSending()" (keyup.enter)="sendMessage()">
-          @if (selectedChat()?.encryptionType === 'nip17') {
+          @if (selectedChat()?.encryptionType === 'nip44') {
           <mat-hint>Messages are encrypted using NIP-44 (modern encryption)</mat-hint>
           } @else if (selectedChat()?.encryptionType === 'nip04') {
           <mat-hint class="warning-hint">Messages use NIP-04 (legacy encryption)</mat-hint>

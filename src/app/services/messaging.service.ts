@@ -14,7 +14,7 @@ interface Chat {
   unreadCount: number;
   lastMessage?: DirectMessage | null;
   relays?: string[];
-  encryptionType?: 'nip04' | 'nip17';
+  encryptionType?: 'nip04' | 'nip44';
   isLegacy?: boolean; // true for NIP-04 chats
   messages: Map<string, DirectMessage>;
 }
@@ -30,13 +30,13 @@ interface DirectMessage {
   failed?: boolean;
   received?: boolean;
   read?: boolean;
-  encryptionType?: 'nip04' | 'nip17';
+  encryptionType?: 'nip04' | 'nip44';
 }
 
 interface DecryptionQueueItem {
   id: string;
   event: NostrEvent;
-  type: 'nip04' | 'nip17';
+  type: 'nip04' | 'nip44';
   senderPubkey: string;
   resolve: (result: any | null) => void;
   reject: (error: Error) => void;
@@ -120,7 +120,7 @@ export class MessagingService {
         unreadCount: 0,
         lastMessage: message,
         relays: [],
-        encryptionType: message.encryptionType || 'nip17',
+        encryptionType: message.encryptionType || 'nip44',
         isLegacy: message.encryptionType === 'nip04',
         messages: new Map([[message.id, message]])
       };
@@ -195,7 +195,7 @@ export class MessagingService {
           //     unreadCount: 0,
           //     lastMessage: null,
           //     relays: [],
-          //     encryptionType: 'nip17',
+          //     encryptionType: 'nip44',
           //     isLegacy: false,
           //     messages: new Map<string, DirectMessage>()
           //   };
@@ -221,7 +221,7 @@ export class MessagingService {
             failed: false,
             received: true,
             read: false,
-            encryptionType: 'nip17' // Gift-wrapped messages are NIP-17
+            encryptionType: 'nip44' // Gift-wrapped messages are NIP-44
           };
 
           // Add the message to the chat
@@ -300,7 +300,7 @@ export class MessagingService {
               failed: false,
               received: true,
               read: false,
-              encryptionType: 'nip04' // Gift-wrapped messages are NIP-17
+              encryptionType: 'nip04' // Gift-wrapped messages are NIP-04
             };
 
             // Add the message to the chat
@@ -442,7 +442,7 @@ export class MessagingService {
   /**
        * Add a message to the decryption queue for sequential processing
        */
-  private async queueMessageForDecryption(event: NostrEvent, type: 'nip04' | 'nip17', senderPubkey: string): Promise<any | null> {
+  private async queueMessageForDecryption(event: NostrEvent, type: 'nip04' | 'nip44', senderPubkey: string): Promise<any | null> {
     return new Promise((resolve, reject) => {
       const queueItem: DecryptionQueueItem = {
         id: `${event.id}-${Date.now()}`,
@@ -499,7 +499,7 @@ export class MessagingService {
 
         let result: any | null = null; if (item.type === 'nip04') {
           result = await this.unwrapNip04MessageInternal(item.event);
-        } else if (item.type === 'nip17') {
+        } else if (item.type === 'nip44') {
           result = await this.unwrapMessageInternal(item.event);
         }
 

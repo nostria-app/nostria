@@ -46,7 +46,7 @@ interface Chat {
     unreadCount: number;
     lastMessage?: DirectMessage | null;
     relays?: string[];
-    encryptionType?: 'nip04' | 'nip17';
+    encryptionType?: 'nip04' | 'nip44';
     isLegacy?: boolean; // true for NIP-04 chats
 }
 
@@ -61,13 +61,13 @@ interface DirectMessage {
     failed?: boolean;
     received?: boolean;
     read?: boolean;
-    encryptionType?: 'nip04' | 'nip17';
+    encryptionType?: 'nip04' | 'nip44';
 }
 
 interface DecryptionQueueItem {
     id: string;
     event: NostrEvent;
-    type: 'nip04' | 'nip17';
+    type: 'nip04' | 'nip44';
     senderPubkey: string;
     resolve: (result: any | null) => void;
     reject: (error: Error) => void;
@@ -382,7 +382,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     /**
-     * Send a direct message using both NIP-04 and NIP-17
+     * Send a direct message using both NIP-04 and NIP-44
      */
     async sendMessage(): Promise<void> {
         debugger;
@@ -419,7 +419,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
                 pending: true,
                 tags: [['p', receiverPubkey]],
                 received: false,
-                encryptionType: this.supportsModernEncryption(this.selectedChat()!) ? 'nip17' : 'nip04'
+                encryptionType: this.supportsModernEncryption(this.selectedChat()!) ? 'nip44' : 'nip04'
             };
 
             // Add to the messages immediately so the user sees feedback
@@ -435,8 +435,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
             let finalMessage: DirectMessage;
 
             if (useModernEncryption) {
-                // Use NIP-17 encryption
-                finalMessage = await this.sendNip17Message(messageText, receiverPubkey, myPubkey, userRelay);
+                // Use NIP-44 encryption
+                finalMessage = await this.sendNip44Message(messageText, receiverPubkey, myPubkey, userRelay);
             } else {
                 // Use NIP-04 encryption for backwards compatibility
                 finalMessage = await this.sendNip04Message(messageText, receiverPubkey, myPubkey, userRelay);
@@ -567,18 +567,18 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     /**
-     * Check if a chat supports modern encryption (NIP-17)
+     * Check if a chat supports modern encryption (NIP-44)
      * For now, we'll always prefer modern encryption when available
      */
     private supportsModernEncryption(chat: Chat): boolean {
         // If chat already has an encryption type set, respect it
         if (chat.encryptionType) {
-            return chat.encryptionType === 'nip17';
+            return chat.encryptionType === 'nip44';
         }
 
         // For new chats, prefer modern encryption
         // In a more sophisticated implementation, we could check:
-        // - If the recipient's client supports NIP-17
+        // - If the recipient's client supports NIP-44
         // - User preferences
         // - Relay capabilities
         return true;
@@ -599,7 +599,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         if (chat.encryptionType === 'nip04' || chat.isLegacy === true) {
             return 'This chat uses legacy encryption (NIP-04). Consider starting a new chat for better security.';
         }
-        return 'This chat uses modern encryption (NIP-17) for enhanced security.';
+        return 'This chat uses modern encryption (NIP-44) for enhanced security.';
     }
 
     /**
@@ -649,9 +649,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     /**
-     * Send a message using NIP-17 encryption (modern)
+     * Send a message using NIP-44 encryption (modern)
      */
-    private async sendNip17Message(
+    private async sendNip44Message(
         messageText: string,
         receiverPubkey: string,
         myPubkey: string,
@@ -719,10 +719,10 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
                 content: messageText,
                 isOutgoing: true,
                 tags: signedChatMessage.tags,
-                encryptionType: 'nip17'
+                encryptionType: 'nip44'
             };
         } catch (error) {
-            this.logger.error('Failed to send NIP-17 message', error);
+            this.logger.error('Failed to send NIP-44 message', error);
             throw error;
         }
     }
