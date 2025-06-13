@@ -1,4 +1,4 @@
-This is an Angular 20 project, make sure to always use signals and effects. Also always use most modern TypeScript, with async/await.
+This is an Angular 19 project, make sure to always use signals and effects. Also always use most modern TypeScript, with async/await.
 
 Make sure to use new flow syntax of latest Angular, which is @if instead of *ngIf, @for instead of *ngFor, and @let instead of *ngLet.
 
@@ -22,6 +22,8 @@ box-shadow: var(--mat-sys-level4)
 box-shadow: var(--mat-sys-level5)
 
 Never set the font-weight in CSS. The current font for headlines does not support different font weights.
+
+Make sure you don't use outdated variables for Angular Material, such as "--mat-sys-color-surface-container-high" and "--mat-sys-color-primary-container" and "--mat-sys-color-on-primary-container".
 
 I'm using a Windows computer, so make sure that paths and commands are compatible with Windows.
 
