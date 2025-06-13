@@ -42,7 +42,7 @@
   }
 
   .chat-list-container {
-    width: 320px;
+    // width: 320px;
     // min-width: 320px;
     display: flex;
     flex-direction: column;
@@ -221,8 +221,8 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 12px 16px;
       border-bottom: 1px solid var(--mat-divider-color);
+      width: 100%;
 
       .chat-header-user {
         display: flex;
@@ -232,14 +232,6 @@
         .back-button {
           margin-right: 4px;
           display: none;
-        }
-
-        .chat-header-info {
-          h3 {
-            margin: 0;
-            font-size: 16px;
-            font-weight: 500;
-          }
         }
       }
     }
@@ -346,7 +338,8 @@
                 width: 14px;
               }
 
-              .read-icon, .received-icon {
+              .read-icon,
+              .received-icon {
                 font-size: 14px;
                 height: 14px;
                 width: 14px;
@@ -382,7 +375,9 @@
       .message-input {
         flex: 1;
         margin-bottom: -1.25em; // Adjust for mat-hint
-      }      .send-button {
+      }
+
+      .send-button {
         flex-shrink: 0;
 
         mat-spinner {
@@ -413,7 +408,9 @@
         width: 20px;
         height: 20px;
       }
-    }    // Warning text in no-messages state
+    }
+
+    // Warning text in no-messages state
     .hint.warning {
       color: var(--mat-sys-color-error);
     }
@@ -465,5 +462,12 @@
         }
       }
     }
+  }
+}
+
+
+@media (max-width: 599px) {
+  .messages-container {
+    height: calc(100vh - 136px); // Include mobile footer menu.
   }
 }

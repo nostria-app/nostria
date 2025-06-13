@@ -103,18 +103,42 @@
             <mat-icon>arrow_back</mat-icon>
           </button>
           }
-
-          <app-user-profile [pubkey]="selectedChat()!.pubkey" view="small"></app-user-profile>
-          <div class="chat-header-info">
-            <h3>{{ selectedChat()?.pubkey | npub }}</h3>
-          </div>
-
+          <app-user-profile [pubkey]="selectedChat()!.pubkey" view="thread"></app-user-profile>
         </div>
 
         <div class="chat-header-actions">
-          <button mat-icon-button matTooltip="View profile" (click)="viewProfile()">
-            <mat-icon>person</mat-icon>
+          <button mat-icon-button [matMenuTriggerFor]="menuChat">
+            <mat-icon>more_vert</mat-icon>
           </button>
+
+          <mat-menu #menuChat="matMenu">
+
+            <!-- <button mat-menu-item routerLink="/notifications">
+              <mat-icon>
+                notifications
+              </mat-icon>
+              <span>DELETE</span>
+              <div class="notification-details dimmed">whut</div>
+            </button>
+            <mat-divider></mat-divider>
+            <button mat-menu-item routerLink="/notifications">
+              <mat-icon>visibility</mat-icon>
+              <span>See all notifications</span>
+            </button>
+
+            <button mat-menu-item routerLink="/notifications">
+              <mat-icon>notifications_off</mat-icon>
+              <span>No notifications</span>
+            </button>
+            <mat-divider></mat-divider> -->
+
+            <button mat-menu-item>
+              <mat-icon>settings</mat-icon>
+              <span>Not implemented</span>
+            </button>
+
+          </mat-menu>
+
         </div>
       </div>
       <!-- Messages -->

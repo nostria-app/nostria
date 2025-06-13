@@ -79,13 +79,8 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
                 const npub = this.utilities.getNpubFromPubkey(pubkey);
                 this.npub.set(npub);
 
-                // Clear existing profile when pubkey changes
-                this.profile.set(null);
-                this.error.set('');
-                this.imageLoadError.set(false);
-
-                // Load profile data when the component is visible and not scrolling
-                if (this.isVisible() && !this.isScrolling()) {
+                // Only load profile data when the component is visible and not scrolling
+                if (this.isVisible() && !this.isScrolling() && !this.profile()) {
                     untracked(() => {
                         this.debouncedLoadProfileData(pubkey);
                     });
@@ -247,12 +242,11 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
     }
 
     private async loadProfileData(npubValue: string): Promise<void> {
-        // Don't reload if we already have data for the same pubkey
-        if (this.profile() && this.publicKey === npubValue) {
-            this.logger.debug('Profile data already loaded for this pubkey, skipping reload');
+        // Don't reload if we already have data
+        if (this.profile()) {
+            this.logger.debug('Profile data already loaded, skipping reload');
             return;
-        }
-        
+        };
         if (this.isLoading()) {
             this.logger.debug('Profile data is already loading, skipping reload');
             return;
