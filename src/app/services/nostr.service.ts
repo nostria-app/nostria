@@ -66,23 +66,12 @@ export class NostrService {
   // accountChanging = signal<NostrUser | null>(null);
   // accountChanged = signal<NostrUser | null>(null);
 
-  /** Holds the metadata event for all accounts in the app. */
-  // accountsMetadata = signal<NostrRecord[]>([]);
-  accountsRelays = signal<Event[]>([]);
-
-  accountRelays = computed(() => {
-    return this.relayService.relaysChanged();
-  });
-
-  accountRelayUrls = computed(() => {
-    return this.accountRelays().map((r) => r.url);
-  });
-
   // These are cache-lookups for the metadata and relays of all users,
   // to avoid query the database all the time.
   // These lists will grow
   // usersMetadata = signal<Map<string, NostrRecord>>(new Map());
   usersRelays = signal<Map<string, Event>>(new Map());
+  accountsRelays = signal<Event[]>([]);
 
   hasAccounts = computed(() => {
     return this.accounts().length > 0;
@@ -313,7 +302,6 @@ export class NostrService {
   //   return this.accountsMetadata().find(meta => meta.event.pubkey === pubkey);
   // }
   getAccountFromStorage() {
-    debugger;
     // Check for pubkey query parameter first (for notification handling)
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
@@ -1851,9 +1839,6 @@ export class NostrService {
     };
 
     this.logger.debug('New keypair generated successfully', { pubkey, region });
-
-    this.accountsRelays
-
 
     await this.setAccount(newUser);
   }

@@ -1,5 +1,5 @@
 .messages-container {
-  height: 100%;
+  height: calc(100vh - 80px);
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -40,7 +40,6 @@
       display: none;
     }
   }
-
   .chat-list-container {
     width: 320px;
     min-width: 320px;
@@ -111,7 +110,7 @@
 
           .chat-info {
             flex: 1;
-            min-width: 0;
+            // min-width: 0;
 
             .chat-name-row {
               display: flex;
@@ -188,6 +187,7 @@
     display: flex;
     flex-direction: column;
     height: 100%;
+    width: 100%;
 
     .no-chat-selected {
       display: flex;
@@ -221,8 +221,8 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 12px 16px;
       border-bottom: 1px solid var(--mat-divider-color);
+      width: 100%;
 
       .chat-header-user {
         display: flex;
@@ -232,14 +232,6 @@
         .back-button {
           margin-right: 4px;
           display: none;
-        }
-
-        .chat-header-info {
-          h3 {
-            margin: 0;
-            font-size: 16px;
-            font-weight: 500;
-          }
         }
       }
     }
@@ -299,6 +291,9 @@
           display: flex;
           align-items: flex-end;
           margin-bottom: 4px;
+          word-wrap: break-word;
+          overflow-wrap: break-word;
+          min-width: 0;
 
           &.outgoing {
             flex-direction: row-reverse;
@@ -306,15 +301,20 @@
 
           .message-bubble {
             max-width: 70%;
+            min-width: 0;
             padding: 12px 16px;
             border-radius: 18px;
             background-color: var(--mat-sys-color-surface-container-high);
             position: relative;
             box-shadow: var(--mat-sys-level1);
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            hyphens: auto;
+            white-space: pre-wrap;
 
             &.outgoing {
-              background-color: var(--mat-sys-color-primary-container);
-              color: var(--mat-sys-color-on-primary-container);
+              background-color: var(--mat-sys-on-primary-container);
+              color: var(--mat-sys-on-secondary);
             }
 
             &.pending {
@@ -346,7 +346,8 @@
                 width: 14px;
               }
 
-              .read-icon, .received-icon {
+              .read-icon,
+              .received-icon {
                 font-size: 14px;
                 height: 14px;
                 width: 14px;
@@ -391,14 +392,73 @@
           margin: 8px;
         }
       }
+
+      // Encryption warning styles
+      .warning-hint {
+        color: var(--mat-sys-color-error) !important;
+      }
+    }
+
+    // Encryption warning banner
+    .encryption-warning {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      background-color: var(--mat-sys-color-error-container);
+      color: var(--mat-sys-color-on-error-container);
+      border-radius: 8px;
+      margin: 8px 16px;
+      font-size: 14px;
+
+      mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+    }
+
+    // Warning text in no-messages state
+    .hint.warning {
+      color: var(--mat-sys-color-error);
+    }
+
+    // Decryption status indicator
+    .decrypting-messages {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 16px;
+      background-color: var(--mat-sys-color-surface-container);
+      color: var(--mat-sys-color-on-surface);
+      border-radius: 8px;
+      margin: 16px;
+      font-size: 14px;
+      box-shadow: var(--mat-sys-level1);
+
+      mat-spinner {
+        ::ng-deep circle {
+          stroke: var(--mat-sys-color-primary);
+        }
+      }
+
+      p {
+        margin: 0;
+        font-weight: 500;
+      }
+
+      .queue-info {
+        color: var(--mat-sys-color-on-surface-variant);
+        font-weight: 400;
+      }
     }
   }
 }
 
 @media (max-width: 768px) {
   .messages-container {
-    .messages-layout {
-      &.mobile-view .chat-list-container {
+    .messages-layout {      &.mobile-view .chat-list-container {
         width: 100%;
         min-width: 100%;
       }
@@ -409,5 +469,12 @@
         }
       }
     }
+  }
+}
+
+
+@media (max-width: 599px) {
+  .messages-container {
+    height: calc(100vh - 136px); // Include mobile footer menu.
   }
 }
