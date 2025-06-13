@@ -188,6 +188,7 @@
     display: flex;
     flex-direction: column;
     height: 100%;
+    width: 100%;
 
     .no-chat-selected {
       display: flex;
@@ -291,6 +292,9 @@
           display: flex;
           align-items: flex-end;
           margin-bottom: 4px;
+          word-wrap: break-word;
+          overflow-wrap: break-word;
+          min-width: 0;
 
           &.outgoing {
             flex-direction: row-reverse;
@@ -298,11 +302,16 @@
 
           .message-bubble {
             max-width: 70%;
+            min-width: 0;
             padding: 12px 16px;
             border-radius: 18px;
             background-color: var(--mat-sys-color-surface-container-high);
             position: relative;
             box-shadow: var(--mat-sys-level1);
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            hyphens: auto;
+            white-space: pre-wrap;
 
             &.outgoing {
               background-color: var(--mat-sys-on-primary-container);
