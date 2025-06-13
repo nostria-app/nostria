@@ -37,6 +37,7 @@ import { MessagingService } from '../../services/messaging.service';
 import { UserRelayFactoryService } from '../../services/user-relay-factory.service';
 import { UserRelayService } from '../../services/user-relay.service';
 import { AccountRelayService } from '../../services/account-relay.service';
+import { LayoutService } from '../../services/layout.service';
 
 // Define interfaces for our DM data structures
 interface Chat {
@@ -105,8 +106,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     private data = inject(DataService);
     private nostr = inject(NostrService);
     private relay = inject(RelayService);
-    private logger = inject(LoggerService);
-    messaging = inject(MessagingService);
+    private logger = inject(LoggerService);    messaging = inject(MessagingService);
     private notifications = inject(NotificationService);
     private userRelayFactory = inject(UserRelayFactoryService);
     private dialog = inject(MatDialog);
@@ -117,7 +117,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     private readonly app = inject(ApplicationService);
     readonly utilities = inject(UtilitiesService);
     private readonly accountState = inject(AccountStateService);
-    private readonly encryption = inject(EncryptionService);    // UI state signals
+    private readonly encryption = inject(EncryptionService);
+    layout = inject(LayoutService);// UI state signals
     isLoading = signal<boolean>(false);
     isLoadingMore = signal<boolean>(false);
     isSending = signal<boolean>(false);
@@ -340,14 +341,16 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
             this.logger.error('Failed to load more messages', err);
             this.isLoadingMore.set(false);
         }
-    }
-
-    /**
+    }    /**
      * Select a chat from the list
      */
     selectChat(chat: Chat): void {
         this.selectedChatId.set(chat.id);
-        this.showMobileList.set(false);
+        
+        // Only hide the chat list on mobile devices
+        if (this.layout.isHandset()) {
+            this.showMobileList.set(false);
+        }
 
         // Mark chat as read when selected
         this.markChatAsRead(chat.id);

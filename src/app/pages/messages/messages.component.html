@@ -8,11 +8,10 @@
     <mat-icon color="warn">error</mat-icon>
     <p>{{ error() }}</p>
     <button mat-stroked-button color="primary" (click)="messaging.loadChats()">Try Again</button>
-  </div>
-  } @else {
-  <div class="messages-layout" [class.mobile-view]="showMobileList()">
+  </div>  } @else {
+  <div class="messages-layout" [class.mobile-view]="layout.isHandset()">
     <!-- Left sidebar with chat list -->
-    <div class="chat-list-container" [class.hidden]="!showMobileList()">
+    <div class="chat-list-container" [class.hidden]="layout.isHandset() && !showMobileList()">
       <div class="chat-list-header">
         <h2>Messages</h2>
         <button mat-mini-fab color="primary" aria-label="New chat" (click)="startNewChat()">
@@ -66,7 +65,7 @@
             </div>
           </div>
 
-          <button mat-icon-button [matMenuTriggerFor]="chatMenu" class="chat-options-button"
+          <!-- <button mat-icon-button [matMenuTriggerFor]="chatMenu" class="chat-options-button"
             (click)="$event.stopPropagation()">
             <mat-icon>more_vert</mat-icon>
           </button>
@@ -75,15 +74,13 @@
               <mat-icon>delete</mat-icon>
               <span>Delete conversation</span>
             </button>
-          </mat-menu>
+          </mat-menu> -->
         </a>
         }
       </mat-nav-list>
       }
-    </div>
-
-    <!-- Right content area with selected chat messages -->
-    <div class="chat-content-container" [class.hidden]="showMobileList()">
+    </div>    <!-- Right content area with selected chat messages -->
+    <div class="chat-content-container" [class.hidden]="layout.isHandset() && showMobileList()">
       @if (!selectedChat()) {
       <div class="no-chat-selected">
         <mat-icon>textsms</mat-icon>
@@ -94,11 +91,10 @@
           New conversation
         </button>
       </div>
-      } @else {
-      <!-- Chat header -->
+      } @else {      <!-- Chat header -->
       <div class="chat-header">
         <div class="chat-header-user">
-          @if (showMobileList() === false) {
+          @if (layout.isHandset() && !showMobileList()) {
           <button mat-icon-button class="back-button" (click)="backToList()">
             <mat-icon>arrow_back</mat-icon>
           </button>

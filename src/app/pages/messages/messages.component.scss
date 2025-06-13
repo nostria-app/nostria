@@ -40,10 +40,9 @@
       display: none;
     }
   }
-
   .chat-list-container {
-    // width: 320px;
-    // min-width: 320px;
+    width: 320px;
+    min-width: 320px;
     display: flex;
     flex-direction: column;
     border-right: 1px solid var(--mat-divider-color);
@@ -459,10 +458,9 @@
 
 @media (max-width: 768px) {
   .messages-container {
-    .messages-layout {
-      &.mobile-view .chat-list-container {
+    .messages-layout {      &.mobile-view .chat-list-container {
         width: 100%;
-        // min-width: 100%;
+        min-width: 100%;
       }
 
       .chat-content-container {
