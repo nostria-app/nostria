@@ -128,7 +128,7 @@ export class AccountService extends BaseService {
   }
 
   /** Path part for operation `getPublicAccount()` */
-  static readonly GetPublicAccountPath = '/account/{pubkey}';
+  static readonly GetPublicAccountPath = '/account/{pubkeyOrUsername}';
 
   /**
    * Get public account information.

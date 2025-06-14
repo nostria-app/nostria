@@ -1,4 +1,4 @@
-import { Component, effect, inject, signal } from '@angular/core';
+import { Component, effect, inject, signal, OnDestroy } from '@angular/core';
 
 import { FormsModule, ReactiveFormsModule, FormGroup, FormBuilder, Validators } from '@angular/forms';
 import { MatStepperModule } from '@angular/material/stepper';
@@ -14,6 +14,7 @@ import { Router } from '@angular/router';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { NameService } from '../../../services/name.service';
+import { debounceTime, firstValueFrom, Subject, takeUntil } from 'rxjs';
 
 interface PaymentOption {
   id: string;
@@ -51,7 +52,8 @@ interface PaymentInvoice {
   templateUrl: './upgrade.component.html',
   styleUrl: './upgrade.component.scss'
 })
-export class UpgradeComponent {
+export class UpgradeComponent implements OnDestroy {
+  private destroy$ = new Subject<void>();
   private formBuilder = inject(FormBuilder);
   private snackBar = inject(MatSnackBar);
   private router = inject(Router);
@@ -110,6 +112,20 @@ export class UpgradeComponent {
 
     // Add CSS variables for primary color in RGB format for opacity support
     this.setupThemeVariables();
+
+    this.usernameFormGroup.get('username')?.valueChanges
+      .pipe(
+        debounceTime(300), // Wait 300ms after last keystroke
+        takeUntil(this.destroy$)
+      )
+      .subscribe(value => {
+        this.checkUsernameAvailability();
+      });
+  }
+
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   private setupThemeVariables() {
@@ -164,8 +180,7 @@ export class UpgradeComponent {
       // Simulate API call to check username availability
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      const isAvailable = this.name.isUsernameAvailable(username);
-
+      const isAvailable = await firstValueFrom(this.name.isUsernameAvailable(username));
       this.isUsernameAvailable.set(isAvailable);
     } finally {
       this.isCheckingUsername.set(false);
