@@ -1,4 +1,4 @@
-import { ApplicationConfig, inject, isDevMode, provideAppInitializer, provideZonelessChangeDetection } from '@angular/core';
+import { ApplicationConfig, inject, isDevMode, provideAppInitializer, provideBrowserGlobalErrorListeners, provideZonelessChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideServiceWorker } from '@angular/service-worker';
@@ -22,6 +22,7 @@ bootstrapLogger.log('Configuring application');
 
 export const appConfig: ApplicationConfig = {
   providers: [
+    provideBrowserGlobalErrorListeners(),
      provideAppInitializer(() => {
       const initializerFn = ((iconRegistry: MatIconRegistry) => () => {
         const defaultFontSetClasses = iconRegistry.getDefaultFontSetClass();
