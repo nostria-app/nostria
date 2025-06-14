@@ -106,15 +106,17 @@ export class MessagingService {
     return Array.from(chat.messages.values())
       .sort((a, b) => a.created_at - b.created_at); // Oldest first
   }
-
   // Helper method to add a message to a chat (prevents duplicates and updates sorting)
   addMessageToChat(pubkey: string, message: DirectMessage): void {
     debugger;
     const currentMap = this.chatsMap();
     const chatId = message.encryptionType === 'nip04' ? `nip04${pubkey}` : `nip44${pubkey}`;
 
+    // Create a new Map to ensure signal reactivity
+    const newMap = new Map(currentMap);
+    
     // Individual chats are keyed by pubkey, so we use pubkey as chatId
-    const chat = currentMap.get(chatId);
+    const chat = newMap.get(chatId);
 
     if (!chat) {
       // Create new chat if it doesn't exist
@@ -129,8 +131,8 @@ export class MessagingService {
         messages: new Map([[message.id, message]])
       };
 
-      // The chats map is keyed by pubkey, so we update the chat using the pubkey
-      currentMap.set(chatId, newChat);
+      // Add the new chat to the new map
+      newMap.set(chatId, newChat);
     } else {
       // Update existing chat
       const updatedMessagesMap = new Map(chat.messages);
@@ -143,11 +145,12 @@ export class MessagingService {
         unreadCount: message.isOutgoing ? chat.unreadCount : chat.unreadCount + 1
       };
 
-      // The chats map is keyed by pubkey, so we update the chat using the pubkey
-      currentMap.set(chatId, updatedChat);
+      // Update the chat in the new map
+      newMap.set(chatId, updatedChat);
     }
 
-    this.chatsMap.set(currentMap);
+    // Set the new map to trigger signal reactivity
+    this.chatsMap.set(newMap);
   }
 
   // Helper method to get the latest message from a messages map
