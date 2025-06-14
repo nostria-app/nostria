@@ -29,7 +29,7 @@
       <form [formGroup]="usernameFormGroup">
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Username</mat-label>
-          <input matInput formControlName="username" placeholder="Choose a username" (input)="checkUsernameAvailability()"
+          <input matInput formControlName="username" placeholder="Choose a username"
             autocomplete="off">
             <mat-icon matPrefix>alternate_email</mat-icon>
             @if (isCheckingUsername()) {
