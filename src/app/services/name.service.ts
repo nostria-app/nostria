@@ -1,6 +1,8 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { routes } from '../app.routes';
 import { Route } from '@angular/router';
+import { AccountService } from '../api/services';
+import { catchError, map, Observable, of, tap, throwError } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -8,6 +10,8 @@ import { Route } from '@angular/router';
 export class NameService {
   // Reserved route paths extracted from app.routes.ts
   private readonly reservedPaths = signal<string[]>(this.extractReservedPathsFromRoutes());
+
+  private accountService = inject(AccountService)
   
   // Bad words that are not allowed as usernames
   private readonly badWords = signal<string[]>([
@@ -106,12 +110,28 @@ export class NameService {
   }
   
   /**
-   * Checks if a username is available (not reserved and doesn't contain bad words)
+   * Checks if a username is available:
+   * - not reserved
+   * - doesn't contain bad words
+   * - is not taken by other account
    * @param username The username to check
    * @returns A boolean indicating whether the username is available
    */
-  isUsernameAvailable(username: string): boolean {
-    return this.validateUsername(username).isValid;
+  isUsernameAvailable(username: string): Observable<boolean> {
+    const isValid = this.validateUsername(username).isValid;
+    if (!isValid) return of(false);
+
+    // check if we have account with such username
+    return this.accountService.getPublicAccount({ pubkeyOrUsername: username }).pipe(
+      map(() => false),
+      catchError(err => {
+        if (err.status === 404) {
+          return of(true);
+        }
+        console.error(err);
+        return of(false);
+      })
+    );
   }
   
   /**

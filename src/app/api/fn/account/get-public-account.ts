@@ -13,15 +13,15 @@ import { PublicAccountDto } from '../../models/public-account-dto';
 export interface GetPublicAccount$Params {
 
 /**
- * User's public key
+ * User's public key in npub format or a username
  */
-  pubkey: string;
+  pubkeyOrUsername: string;
 }
 
 export function getPublicAccount(http: HttpClient, rootUrl: string, params: GetPublicAccount$Params, context?: HttpContext): Observable<StrictHttpResponse<PublicAccountDto>> {
   const rb = new RequestBuilder(rootUrl, getPublicAccount.PATH, 'get');
   if (params) {
-    rb.path('pubkey', params.pubkey, {});
+    rb.path('pubkeyOrUsername', params.pubkeyOrUsername, {});
   }
 
   return http.request(
@@ -34,4 +34,4 @@ export function getPublicAccount(http: HttpClient, rootUrl: string, params: GetP
   );
 }
 
-getPublicAccount.PATH = '/account/{pubkey}';
+getPublicAccount.PATH = '/account/{pubkeyOrUsername}';
