@@ -176,12 +176,14 @@
           <mat-icon color="warn">warning</mat-icon>
           <span>{{ getEncryptionStatusMessage(selectedChat()!) }}</span>
         </div>
-        }
-
-        <div class="messages-list">
+        }        <div class="messages-list">
           @if (hasMoreMessages() && !isLoadingMore()) {
           <div class="load-more-indicator">
             <p class="load-more-hint">Scroll up to load older messages</p>
+            <button mat-button color="primary" (click)="loadMoreMessages()">
+              <mat-icon>expand_less</mat-icon>
+              Load older messages
+            </button>
           </div>
           }
 

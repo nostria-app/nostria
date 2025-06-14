@@ -156,8 +156,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
                     debugger;
                     const chatMessages = this.messaging.getChatMessages(chat.id);
                     this.messages.set(chatMessages || []);
-                    // Initially assume there are more messages to load unless chat is empty
-                    this.hasMoreMessages.set(chatMessages.length > 0);
+                    // Initially assume there are more messages to load for any chat
+                    // We'll only set this to false when loadMoreMessages returns 0 results
+                    this.hasMoreMessages.set(true);
                     // Scroll to bottom to show latest messages
                     this.scrollToBottom();
                     // Mark this chat as read when selected
@@ -186,16 +187,16 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
     ngOnInit(): void {
 
-    }
-
-    ngAfterViewInit(): void {
+    }    ngAfterViewInit(): void {
         // Initial scroll to bottom if there are messages
         if (this.messages().length > 0) {
             this.scrollToBottom();
         }
 
-        // Set up scroll event listener for loading more messages
-        this.setupScrollListener();
+        // Set up scroll event listener for loading more messages with a delay to ensure DOM is ready
+        setTimeout(() => {
+            this.setupScrollListener();
+        }, 100);
     }
 
     /**
@@ -203,18 +204,26 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
      */
     private setupScrollListener(): void {
         const scrollElement = this.messagesWrapper?.nativeElement;
-        if (!scrollElement) return;
+        if (!scrollElement) {
+            this.logger.warn('Messages wrapper element not found for scroll listener');
+            return;
+        }
+
+        this.logger.debug('Setting up scroll listener for loadMoreMessages');
 
         scrollElement.addEventListener('scroll', () => {
             // Check if user is near the top and we have messages to load
-            const { scrollTop } = scrollElement;
+            const { scrollTop, scrollHeight, clientHeight } = scrollElement;
             const threshold = 100; // pixels from top
+
+            this.logger.debug(`Scroll position: ${scrollTop}, threshold: ${threshold}, hasMore: ${this.hasMoreMessages()}, isLoading: ${this.isLoadingMore()}, messages: ${this.messages().length}`);
 
             if (scrollTop <= threshold &&
                 this.hasMoreMessages() &&
                 !this.isLoadingMore() &&
                 this.messages().length > 0) {
 
+                this.logger.debug('Triggering loadMoreMessages');
                 this.loadMoreMessages();
             }
         });
@@ -252,21 +261,24 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
      */
     private clearDecryptionQueue(): void {
         this.messaging.clearDecryptionQueue();
-    }
-
-    /**
+    }    /**
      * Load more messages (older messages)
      */
     async loadMoreMessages(): Promise<void> {
-        debugger;
+        this.logger.debug('loadMoreMessages called');
 
         if (this.isLoadingMore()) {
-            return
-        };
+            this.logger.debug('Already loading more messages, skipping');
+            return;
+        }
 
         const selectedChat = this.selectedChat();
-        if (!selectedChat) return;
+        if (!selectedChat) {
+            this.logger.debug('No selected chat, skipping loadMoreMessages');
+            return;
+        }
 
+        this.logger.debug(`Loading more messages for chat: ${selectedChat.id}`);
         this.isLoadingMore.set(true);
 
         try {
@@ -275,6 +287,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
                 ? Math.min(...currentMessages.map(m => m.created_at)) - 1
                 : undefined;
 
+            this.logger.debug(`Current messages count: ${currentMessages.length}, oldest timestamp: ${oldestTimestamp}`);
+
             // Store current scroll position to maintain it after loading new messages
             const scrollElement = this.messagesWrapper?.nativeElement;
             const scrollHeight = scrollElement?.scrollHeight || 0;
@@ -282,14 +296,18 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
             // Load older messages from the messaging service
             const olderMessages = await this.messaging.loadMoreMessages(selectedChat.id, oldestTimestamp);
+            
+            this.logger.debug(`Loaded ${olderMessages.length} older messages`);
 
             if (olderMessages.length === 0) {
+                this.logger.debug('No more messages available, setting hasMoreMessages to false');
                 this.hasMoreMessages.set(false);
             } else {
                 // Update messages list with older messages
                 this.messages.update(msgs => {
                     const existingIds = new Set(msgs.map(m => m.id));
                     const newMessages = olderMessages.filter(m => !existingIds.has(m.id));
+                    this.logger.debug(`Adding ${newMessages.length} new messages (${olderMessages.length - newMessages.length} duplicates filtered)`);
                     return [...newMessages, ...msgs].sort((a, b) => a.created_at - b.created_at);
                 });
 
@@ -299,6 +317,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
                         const newScrollHeight = scrollElement.scrollHeight;
                         const heightDiff = newScrollHeight - scrollHeight;
                         scrollElement.scrollTop = scrollTop + heightDiff;
+                        this.logger.debug(`Restored scroll position: ${scrollElement.scrollTop} (diff: ${heightDiff})`);
                     }
                 }, 50);
             }
