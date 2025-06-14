@@ -153,7 +153,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
             const chat = this.selectedChat();
             if (chat) {
                 untracked(() => {
-                    const chatMessages = this.messaging.getChatMessages(chat.pubkey);
+                    const chatMessages = this.messaging.getChatMessages(chat.id);
                     this.messages.set(chatMessages || []);
                     // Scroll to bottom to show latest messages
                     this.scrollToBottom();
@@ -342,6 +342,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
      * Select a chat from the list
      */
     selectChat(chat: Chat): void {
+        debugger;
         this.selectedChatId.set(chat.id);
         
         // Only hide the chat list on mobile devices

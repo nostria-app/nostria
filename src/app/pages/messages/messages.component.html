@@ -8,7 +8,7 @@
     <mat-icon color="warn">error</mat-icon>
     <p>{{ error() }}</p>
     <button mat-stroked-button color="primary" (click)="messaging.loadChats()">Try Again</button>
-  </div>  } @else {
+  </div> } @else {
   <div class="messages-layout" [class.mobile-view]="layout.isHandset()">
     <!-- Left sidebar with chat list -->
     <div class="chat-list-container" [class.hidden]="layout.isHandset() && !showMobileList()">
@@ -35,7 +35,7 @@
               {{ pubkey }}<br>
             } -->
 
-        @for (item of messaging.sortedChats(); track item.pubkey) {
+        @for (item of messaging.sortedChats(); track item.chat.id) {
         @let chat = item.chat;
         <a mat-list-item class="chat-item" [class.active]="selectedChat()?.id === chat.id" (click)="selectChat(chat)">
           <div class="chat-item-content">
@@ -79,7 +79,7 @@
         }
       </mat-nav-list>
       }
-    </div>    <!-- Right content area with selected chat messages -->
+    </div> <!-- Right content area with selected chat messages -->
     <div class="chat-content-container" [class.hidden]="layout.isHandset() && showMobileList()">
       @if (!selectedChat()) {
       <div class="no-chat-selected">
@@ -91,7 +91,7 @@
           New conversation
         </button>
       </div>
-      } @else {      <!-- Chat header -->
+      } @else { <!-- Chat header -->
       <div class="chat-header">
         <div class="chat-header-user">
           @if (layout.isHandset() && !showMobileList()) {
@@ -133,10 +133,15 @@
               <span>Not implemented</span>
             </button>
 
+            <button mat-menu-item>
+              <mat-icon>settings</mat-icon>
+              <span>{{ selectedChat()?.id }}</span>
+            </button>
+
           </mat-menu>
 
         </div>
-      </div>      <!-- Messages -->
+      </div> <!-- Messages -->
       <div class="messages-wrapper" #messagesWrapper>
         @if (isLoading()) {
         <div class="loading-messages">

@@ -106,8 +106,9 @@ export class MessagingService {
   }
 
   // Helper method to add a message to a chat (prevents duplicates and updates sorting)
-  addMessageToChat(chatId: string, message: DirectMessage): void {
+  addMessageToChat(pubkey: string, message: DirectMessage): void {
     const currentMap = new Map(this.chatsMap());
+    const chatId = message.encryptionType === 'nip04' ? `nip04${pubkey}` : `nip44${pubkey}`;
 
     // Individual chats are keyed by pubkey, so we use pubkey as chatId
     const chat = currentMap.get(chatId);
@@ -116,7 +117,7 @@ export class MessagingService {
       // Create new chat if it doesn't exist
       const newChat: Chat = {
         id: chatId,
-        pubkey: chatId,
+        pubkey: pubkey,
         unreadCount: 0,
         lastMessage: message,
         relays: [],
@@ -126,7 +127,7 @@ export class MessagingService {
       };
 
       // The chats map is keyed by pubkey, so we update the chat using the pubkey
-      currentMap.set(chatId, newChat);
+      currentMap.set(newChat.id, newChat);
     } else {
       // Update existing chat
       const updatedMessagesMap = new Map(chat.messages);
