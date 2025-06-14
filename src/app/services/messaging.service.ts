@@ -632,7 +632,6 @@ export class MessagingService {
    * Load more (older) messages for a specific chat
    */
   async loadMoreMessages(chatId: string, beforeTimestamp?: number): Promise<DirectMessage[]> {
-    debugger;
     const myPubkey = this.accountState.pubkey();
     if (!myPubkey) {
       throw new Error('User not authenticated');
@@ -739,7 +738,9 @@ export class MessagingService {
         }, () => {
           // EOSE callback - end of stored events
           resolve();
-        });        // Set a timeout to prevent hanging
+        });
+
+        // Set a timeout to prevent hanging
         setTimeout(() => {
           if (sub) {
             sub.close();
