@@ -153,7 +153,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
             const chat = this.selectedChat();
             if (chat) {
                 untracked(() => {
-                    debugger;
                     const chatMessages = this.messaging.getChatMessages(chat.id);
                     this.messages.set(chatMessages || []);
                     // Initially assume there are more messages to load for any chat
