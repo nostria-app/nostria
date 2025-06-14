@@ -77,27 +77,27 @@ interface DecryptionQueueItem {
     selector: 'app-messages',
     standalone: true,
     imports: [
-    FormsModule,
-    MatButtonModule,
-    MatIconModule,
-    MatInputModule,
-    MatFormFieldModule,
-    MatListModule,
-    MatCardModule,
-    MatDividerModule,
-    MatMenuModule,
-    MatTooltipModule,
-    MatBadgeModule,
-    MatProgressSpinnerModule,
-    MatSnackBarModule,
-    MatDialogModule,
-    RouterModule,
-    LoadingOverlayComponent,
-    UserProfileComponent,
-    NPubPipe,
-    TimestampPipe,
-    AgoPipe
-],
+        FormsModule,
+        MatButtonModule,
+        MatIconModule,
+        MatInputModule,
+        MatFormFieldModule,
+        MatListModule,
+        MatCardModule,
+        MatDividerModule,
+        MatMenuModule,
+        MatTooltipModule,
+        MatBadgeModule,
+        MatProgressSpinnerModule,
+        MatSnackBarModule,
+        MatDialogModule,
+        RouterModule,
+        LoadingOverlayComponent,
+        UserProfileComponent,
+        NPubPipe,
+        TimestampPipe,
+        AgoPipe
+    ],
     templateUrl: './messages.component.html',
     styleUrl: './messages.component.scss'
 })
@@ -105,7 +105,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     private data = inject(DataService);
     private nostr = inject(NostrService);
     private relay = inject(RelayService);
-    private logger = inject(LoggerService);    messaging = inject(MessagingService);
+    private logger = inject(LoggerService); messaging = inject(MessagingService);
     private notifications = inject(NotificationService);
     private userRelayFactory = inject(UserRelayFactoryService);
     private dialog = inject(MatDialog);
@@ -129,7 +129,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // Data signals
     // chats = signal<Chat[]>([]);
-    selectedChatId = signal<string | null>(null);    selectedChat = computed(() => {
+    selectedChatId = signal<string | null>(null); selectedChat = computed(() => {
         const chatId = this.selectedChatId();
         if (!chatId) return null;
         return this.messaging.getChat(chatId) || null;
@@ -153,8 +153,11 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
             const chat = this.selectedChat();
             if (chat) {
                 untracked(() => {
+                    debugger;
                     const chatMessages = this.messaging.getChatMessages(chat.id);
                     this.messages.set(chatMessages || []);
+                    // Initially assume there are more messages to load unless chat is empty
+                    this.hasMoreMessages.set(chatMessages.length > 0);
                     // Scroll to bottom to show latest messages
                     this.scrollToBottom();
                     // Mark this chat as read when selected
@@ -190,6 +193,31 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         if (this.messages().length > 0) {
             this.scrollToBottom();
         }
+
+        // Set up scroll event listener for loading more messages
+        this.setupScrollListener();
+    }
+
+    /**
+     * Set up scroll event listener to detect when user scrolls near the top
+     */
+    private setupScrollListener(): void {
+        const scrollElement = this.messagesWrapper?.nativeElement;
+        if (!scrollElement) return;
+
+        scrollElement.addEventListener('scroll', () => {
+            // Check if user is near the top and we have messages to load
+            const { scrollTop } = scrollElement;
+            const threshold = 100; // pixels from top
+
+            if (scrollTop <= threshold &&
+                this.hasMoreMessages() &&
+                !this.isLoadingMore() &&
+                this.messages().length > 0) {
+
+                this.loadMoreMessages();
+            }
+        });
     }
 
     /**
@@ -230,121 +258,66 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
      * Load more messages (older messages)
      */
     async loadMoreMessages(): Promise<void> {
-        if (this.isLoadingMore()) return;
+        debugger;
+
+        if (this.isLoadingMore()) {
+            return
+        };
+
+        const selectedChat = this.selectedChat();
+        if (!selectedChat) return;
+
         this.isLoadingMore.set(true);
 
         try {
-            const pubkey = this.selectedChat()?.pubkey;
-            const myPubkey = this.accountState.pubkey();
-
-            if (!pubkey || !myPubkey) {
-                this.isLoadingMore.set(false);
-                return;
-            }
-
-            // Get the oldest timestamp from current messages
             const currentMessages = this.messages();
-            if (currentMessages.length === 0) {
-                this.isLoadingMore.set(false);
-                return;
+            const oldestTimestamp = currentMessages.length > 0
+                ? Math.min(...currentMessages.map(m => m.created_at)) - 1
+                : undefined;
+
+            // Store current scroll position to maintain it after loading new messages
+            const scrollElement = this.messagesWrapper?.nativeElement;
+            const scrollHeight = scrollElement?.scrollHeight || 0;
+            const scrollTop = scrollElement?.scrollTop || 0;
+
+            // Load older messages from the messaging service
+            const olderMessages = await this.messaging.loadMoreMessages(selectedChat.id, oldestTimestamp);
+
+            if (olderMessages.length === 0) {
+                this.hasMoreMessages.set(false);
+            } else {
+                // Update messages list with older messages
+                this.messages.update(msgs => {
+                    const existingIds = new Set(msgs.map(m => m.id));
+                    const newMessages = olderMessages.filter(m => !existingIds.has(m.id));
+                    return [...newMessages, ...msgs].sort((a, b) => a.created_at - b.created_at);
+                });
+
+                // Restore scroll position after DOM update
+                setTimeout(() => {
+                    if (scrollElement) {
+                        const newScrollHeight = scrollElement.scrollHeight;
+                        const heightDiff = newScrollHeight - scrollHeight;
+                        scrollElement.scrollTop = scrollTop + heightDiff;
+                    }
+                }, 50);
             }
 
-            const oldestTimestamp = Math.min(...currentMessages.map(m => m.created_at));
-
-            // Fetch older wrapped messages
-            const wrappedEvents = await this.relay.getAccountPool().subscribeManyEose(this.relay.getAccountRelayUrls(), [{
-                kinds: [kinds.GiftWrap],
-                authors: [pubkey],
-                '#p': [myPubkey],
-                until: oldestTimestamp - 1,
-                limit: 25
-            }, {
-                kinds: [kinds.GiftWrap],
-                authors: [myPubkey],
-                '#p': [pubkey],
-                until: oldestTimestamp - 1,
-                limit: 25
-            }], {
-                maxWait: 5000,
-                label: 'loadMoreMessages',
-                onevent: async (event: NostrEvent) => {
-                    // Handle incoming wrapped events
-                    if (event.kind === kinds.GiftWrap) {
-                        // this.relayPool?.publish(relays, event);
-                        // const unwrappedMessage = await this.messaging.unwrapMessage(event);
-
-                        // if (unwrappedMessage) {
-                        //     // Create a DirectMessage object
-                        //     const directMessage: DirectMessage = {
-                        //         id: unwrappedMessage.id,
-                        //         pubkey: unwrappedMessage.pubkey,
-                        //         created_at: unwrappedMessage.created_at,
-                        //         content: unwrappedMessage.content,
-                        //         isOutgoing: unwrappedMessage.pubkey === myPubkey,
-                        //         tags: unwrappedMessage.tags,
-                        //         received: true // Since we've received and decrypted it
-                        //     };
-
-                        //     // Update the messages list with this message
-                        //     this.messages.update(msgs => [...msgs, directMessage]);
-                        // }
-                    }
-                }
-            });
-
-            // if (!wrappedEvents || wrappedEvents.length === 0) {
-            //     this.hasMoreMessages.set(false);
-            //     this.isLoadingMore.set(false);
-            //     return;
-            // }
-
-            // // Process each wrapped message
-            // const olderMessages: DirectMessage[] = [];
-
-            // for (const event of wrappedEvents) {
-            //     try {
-            //         const unwrappedMessage = await this.unwrapMessage(event);
-            //         if (unwrappedMessage) {
-            //             olderMessages.push({
-            //                 id: unwrappedMessage.id,
-            //                 pubkey: unwrappedMessage.pubkey,
-            //                 created_at: unwrappedMessage.created_at,
-            //                 content: unwrappedMessage.content,
-            //                 isOutgoing: unwrappedMessage.pubkey === myPubkey,
-            //                 tags: unwrappedMessage.tags,
-            //                 received: true,
-            //                 read: true
-            //             });
-            //         }
-            //     } catch (err) {
-            //         this.logger.error('Failed to unwrap older message', err);
-            //     }
-            // }
-
-            // // Sort messages by timestamp
-            // const sortedOlderMessages = olderMessages.sort((a, b) => a.created_at - b.created_at);
-
-            // // Add to the beginning of the current messages
-            // this.messages.update(currentMsgs => [...sortedOlderMessages, ...currentMsgs]);
-
-            // // There might be more messages
-            // this.hasMoreMessages.set(sortedOlderMessages.length >= 25);
-
-            // // Send read receipts for these messages
-            // this.sendReadReceipts(sortedOlderMessages.filter(m => !m.isOutgoing).map(m => m.id));
-
-            this.isLoadingMore.set(false);
         } catch (err) {
             this.logger.error('Failed to load more messages', err);
+            this.error.set('Failed to load older messages. Please try again.');
+        } finally {
             this.isLoadingMore.set(false);
         }
-    }    /**
+    }
+
+    /**
      * Select a chat from the list
      */
     selectChat(chat: Chat): void {
         debugger;
         this.selectedChatId.set(chat.id);
-        
+
         // Only hide the chat list on mobile devices
         if (this.layout.isHandset()) {
             this.showMobileList.set(false);

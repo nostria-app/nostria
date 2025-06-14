@@ -141,7 +141,7 @@
           </mat-menu>
 
         </div>
-      </div> <!-- Messages -->
+      </div>      <!-- Messages -->
       <div class="messages-wrapper" #messagesWrapper>
         @if (isLoading()) {
         <div class="loading-messages">
@@ -179,15 +179,17 @@
         }
 
         <div class="messages-list">
-          @if (hasMoreMessages()) {
-          <button mat-button class="load-more-button" [disabled]="isLoadingMore()" (click)="loadMoreMessages()">
-            @if (isLoadingMore()) {
-            <mat-spinner diameter="16"></mat-spinner>
-            <span>Loading...</span>
-            } @else {
-            <span>Load older messages</span>
-            }
-          </button>
+          @if (hasMoreMessages() && !isLoadingMore()) {
+          <div class="load-more-indicator">
+            <p class="load-more-hint">Scroll up to load older messages</p>
+          </div>
+          }
+
+          @if (isLoadingMore()) {
+          <div class="loading-more-indicator">
+            <mat-spinner diameter="24"></mat-spinner>
+            <p>Loading older messages...</p>
+          </div>
           }
 
           @for (message of messages(); track message.id) {

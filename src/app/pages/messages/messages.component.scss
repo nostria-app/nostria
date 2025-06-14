@@ -453,6 +453,33 @@
         font-weight: 400;
       }
     }
+
+    .load-more-indicator,
+    .loading-more-indicator {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      text-align: center;
+      gap: 8px;
+
+      .load-more-hint {
+        font-size: 14px;
+        color: var(--mat-sys-color-on-surface-variant);
+        margin: 0;
+        opacity: 0.7;
+      }
+
+      p {
+        margin: 0;
+        font-size: 14px;
+        color: var(--mat-sys-color-on-surface-variant);
+      }
+
+      mat-spinner {
+        margin-right: 8px;
+      }
+    }
   }
 }
 
