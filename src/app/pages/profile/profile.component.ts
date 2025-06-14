@@ -20,7 +20,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { MatListModule } from '@angular/material/list';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import QRCode from 'qrcode';
+import { QRCodeComponent } from 'angularx-qrcode';
 import { Event, kinds, nip19, SimplePool } from 'nostr-tools';
 import { StorageService } from '../../services/storage.service';
 import { ProfileStateService } from '../../services/profile-state.service';
@@ -57,7 +57,8 @@ import { UrlUpdateService } from '../../services/url-update.service';
     MatMenuModule,
     FormsModule,
     MatFormFieldModule,
-    ProfileHeaderComponent
+    ProfileHeaderComponent,
+    QRCodeComponent
 ],
   templateUrl: './profile.component.html',
   styleUrl: './profile.component.scss'
@@ -491,35 +492,35 @@ export class ProfileComponent {
    * Generates a QR code for the user's lightning address and stores it in the lightningQrCode signal
    */
   async generateLightningQRCode(): Promise<void> {
-    if (!isPlatformBrowser(this.platformId)) {
-      this.logger.debug('Cannot generate QR code in server environment');
-      return;
-    }
+    // if (!isPlatformBrowser(this.platformId)) {
+    //   this.logger.debug('Cannot generate QR code in server environment');
+    //   return;
+    // }
 
-    const metadata = this.userMetadata();
-    if (!metadata?.data?.lud16) {
-      this.lightningQrCode.set('');
-      return;
-    }
+    // const metadata = this.userMetadata();
+    // if (!metadata?.data?.lud16) {
+    //   this.lightningQrCode.set('');
+    //   return;
+    // }
 
-    try {
-      // Format lightning address for QR code
-      const lightning = metadata.data.lud16;
+    // try {
+    //   // Format lightning address for QR code
+    //   const lightning = metadata.data.lud16;
 
-      const dataUrl = await QRCode.toDataURL(`lightning:${lightning}`, {
-        margin: 1,
-        width: 200,
-        color: {
-          dark: '#000000',
-          light: '#FFFFFF'
-        }
-      });
+    //   const dataUrl = await QRCode.toDataURL(`lightning:${lightning}`, {
+    //     margin: 1,
+    //     width: 200,
+    //     color: {
+    //       dark: '#000000',
+    //       light: '#FFFFFF'
+    //     }
+    //   });
 
-      this.lightningQrCode.set(dataUrl);
-    } catch (err) {
-      this.logger.error('Error generating QR code:', err);
-      this.lightningQrCode.set('');
-    }
+    //   this.lightningQrCode.set(dataUrl);
+    // } catch (err) {
+    //   this.logger.error('Error generating QR code:', err);
+    //   this.lightningQrCode.set('');
+    // }
   }
 
   /**
