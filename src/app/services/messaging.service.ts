@@ -67,9 +67,11 @@ export class MessagingService {
   }
 
   sortedChats = computed(() => {
+    debugger;
     return Array.from(this.chatsMap().entries())
-      .map(([pubkey, chat]) => ({ pubkey, chat }))
+      .map(([chatId, chat]) => ({ chatId, chat }))
       .sort((a, b) => {
+        debugger;
         const aTime = a.chat.lastMessage?.created_at || 0;
         const bTime = b.chat.lastMessage?.created_at || 0;
         return bTime - aTime; // Most recent first
@@ -107,7 +109,8 @@ export class MessagingService {
 
   // Helper method to add a message to a chat (prevents duplicates and updates sorting)
   addMessageToChat(pubkey: string, message: DirectMessage): void {
-    const currentMap = new Map(this.chatsMap());
+    debugger;
+    const currentMap = this.chatsMap();
     const chatId = message.encryptionType === 'nip04' ? `nip04${pubkey}` : `nip44${pubkey}`;
 
     // Individual chats are keyed by pubkey, so we use pubkey as chatId
@@ -127,7 +130,7 @@ export class MessagingService {
       };
 
       // The chats map is keyed by pubkey, so we update the chat using the pubkey
-      currentMap.set(newChat.id, newChat);
+      currentMap.set(chatId, newChat);
     } else {
       // Update existing chat
       const updatedMessagesMap = new Map(chat.messages);
@@ -170,13 +173,13 @@ export class MessagingService {
       const filterReceived: Filter = {
         kinds: [kinds.GiftWrap, kinds.EncryptedDirectMessage],
         '#p': [myPubkey],
-        limit: 100
+        limit: 1
       };
 
       const filterSent: Filter = {
         kinds: [kinds.GiftWrap, kinds.EncryptedDirectMessage],
         authors: [myPubkey],
-        limit: 100
+        limit: 1
       };
 
       // Store pubkeys of people who've messaged us
@@ -265,22 +268,22 @@ export class MessagingService {
               return; // Skip if we already have this message
             }
 
-            let chats = this.chatsMap();
-            let chat = chats.get(targetPubkey);
+            // let chats = this.chatsMap();
+            // let chat = chats.get(targetPubkey);
 
-            if (!chat) {
-              chat = {
-                id: targetPubkey,
-                pubkey: targetPubkey,
-                unreadCount: 0,
-                lastMessage: null,
-                relays: [],
-                encryptionType: 'nip04',
-                isLegacy: true,
-                messages: new Map<string, DirectMessage>()
-              };
-              chats.set(targetPubkey, chat);
-            }
+            // if (!chat) {
+            //   chat = {
+            //     id: targetPubkey,
+            //     pubkey: targetPubkey,
+            //     unreadCount: 0,
+            //     lastMessage: null,
+            //     relays: [],
+            //     encryptionType: 'nip04',
+            //     isLegacy: true,
+            //     messages: new Map<string, DirectMessage>()
+            //   };
+            //   chats.set(targetPubkey, chat);
+            // }
 
             const unwrappedMessage = await this.unwrapNip04Message(event);
 
@@ -619,6 +622,135 @@ export class MessagingService {
     } catch (err) {
       this.logger.error('Failed to unwrap message', err);
       throw err;
+    }
+  }
+
+  /**
+   * Load more (older) messages for a specific chat
+   */
+  async loadMoreMessages(chatId: string, beforeTimestamp?: number): Promise<DirectMessage[]> {
+    debugger;
+    const myPubkey = this.accountState.pubkey();
+    if (!myPubkey) {
+      throw new Error('User not authenticated');
+    }
+
+    const chat = this.getChat(chatId);
+    if (!chat) {
+      throw new Error('Chat not found');
+    }
+
+    // Determine the oldest timestamp to fetch from
+    let until = beforeTimestamp;
+    if (!until) {
+      const currentMessages = this.getChatMessages(chatId);
+      if (currentMessages.length === 0) {
+        until = Math.floor(Date.now() / 1000); // Current timestamp
+      } else {
+        until = Math.min(...currentMessages.map(m => m.created_at)) - 1;
+      }
+    }
+
+    // Determine which message kinds to fetch based on chat encryption type
+    const messageKinds = chat.encryptionType === 'nip04' 
+      ? [kinds.EncryptedDirectMessage] 
+      : [kinds.GiftWrap];
+
+    this.logger.debug(`Loading more messages for chat ${chatId}, encryption type: ${chat.encryptionType}, until: ${until}`);
+
+    // Create filters for both received and sent messages
+    const filterReceived: Filter = {
+      kinds: messageKinds,
+      authors: [chat.pubkey],
+      '#p': [myPubkey],
+      until: until,
+      limit: 25
+    };
+
+    const filterSent: Filter = {
+      kinds: messageKinds,
+      authors: [myPubkey],
+      '#p': [chat.pubkey],
+      until: until,
+      limit: 25
+    };
+
+    const loadedMessages: DirectMessage[] = [];
+
+    try {
+      // Use subscribe with EOSE to get historical messages
+      await new Promise<void>((resolve, reject) => {
+        const sub = this.relay.subscribe([filterReceived, filterSent], async (event: NostrEvent) => {
+          try {
+            // Skip if we already have this message
+            if (this.hasMessage(chatId, event.id)) {
+              return;
+            }
+
+            let decryptedMessage: any = null;
+
+            if (event.kind === kinds.EncryptedDirectMessage) {
+              // Handle NIP-04 messages
+              decryptedMessage = await this.unwrapNip04MessageInternal(event);
+            } else if (event.kind === kinds.GiftWrap) {
+              // Handle NIP-44 wrapped messages
+              decryptedMessage = await this.unwrapMessageInternal(event);
+            }
+
+            if (decryptedMessage) {
+              // Determine if this is an outgoing message
+              const isOutgoing = event.pubkey === myPubkey;
+              
+              // Determine the other party's pubkey
+              let otherPubkey = chat.pubkey;
+              if (event.kind === kinds.EncryptedDirectMessage) {
+                // For NIP-04, get the other party from 'p' tags
+                const pTags = this.utilities.getPTagsValuesFromEvent(event);
+                if (isOutgoing && pTags.length > 0) {
+                  otherPubkey = pTags[0];
+                } else if (!isOutgoing) {
+                  otherPubkey = event.pubkey;
+                }
+              }
+
+              const directMessage: DirectMessage = {
+                id: decryptedMessage.id,
+                pubkey: otherPubkey,
+                created_at: decryptedMessage.created_at,
+                content: decryptedMessage.content,
+                isOutgoing: isOutgoing,
+                tags: decryptedMessage.tags || [],
+                pending: false,
+                failed: false,
+                received: true,
+                read: false,
+                encryptionType: chat.encryptionType
+              };
+
+              loadedMessages.push(directMessage);
+              this.addMessageToChat(otherPubkey, directMessage);
+            }
+          } catch (error) {
+            this.logger.error('Failed to process older message:', error);
+          }
+        }, () => {
+          // EOSE callback - end of stored events
+          resolve();
+        });        // Set a timeout to prevent hanging
+        setTimeout(() => {
+          if (sub) {
+            sub.close();
+          }
+          resolve();
+        }, 10000);
+      });
+
+      this.logger.debug(`Loaded ${loadedMessages.length} older messages for chat ${chatId}`);
+      return loadedMessages.sort((a, b) => a.created_at - b.created_at);
+
+    } catch (error) {
+      this.logger.error('Failed to load more messages:', error);
+      throw error;
     }
   }
 }
