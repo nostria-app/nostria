@@ -132,14 +132,21 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     selectedChatId = signal<string | null>(null); selectedChat = computed(() => {
         const chatId = this.selectedChatId();
         if (!chatId) return null;
-        return this.messaging.getChat(chatId) || null;
-    });
+        return this.messaging.getChat(chatId) || null;    });
 
     // activePubkey = computed(() => this.selectedChat()?.pubkey || '');
     messages = signal<DirectMessage[]>([]);
     newMessageText = signal<string>('');
-    hasMoreMessages = signal<boolean>(false);    // Computed helpers
-    hasChats = computed(() => this.messaging.sortedChats().length > 0);    // Subscription management
+    hasMoreMessages = signal<boolean>(false);
+      // Track the last selected chat to determine if we should scroll to bottom
+    private lastSelectedChatId = signal<string | null>(null);
+    // Track if we're currently loading more messages to avoid scrolling
+    private isLoadingMoreMessages = signal<boolean>(false);
+
+    // Computed helpers
+    hasChats = computed(() => this.messaging.sortedChats().length > 0);
+
+    // Subscription management
     private messageSubscription: any = null;
     private chatSubscription: any = null;    // Decryption queue management
     private decryptionQueue: DecryptionQueueItem[] = [];
@@ -148,21 +155,39 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     // ViewChild for scrolling functionality
     @ViewChild('messagesWrapper', { static: false }) messagesWrapper?: ElementRef<HTMLDivElement>;
 
-    constructor() {        // Set up effect to load messages when chat is selected
+    constructor() {        // Set up effect to handle chat selection and message updates
         effect(() => {
             const chat = this.selectedChat();
+            
             if (chat) {
                 untracked(() => {
+                    const isNewChat = this.lastSelectedChatId() !== chat.id;
                     const chatMessages = this.messaging.getChatMessages(chat.id);
-                    this.messages.set(chatMessages || []);
-                    // Initially assume there are more messages to load for any chat
-                    // We'll only set this to false when loadMoreMessages returns 0 results
-                    this.hasMoreMessages.set(true);
-                    // Scroll to bottom to show latest messages
-                    this.scrollToBottom();
-                    // Mark this chat as read when selected
-                    // TODO: FIX, this will trigger selectedChat signal and cause infinite loop
-                    // this.markChatAsRead(chat.id);
+                    const currentMessages = this.messages();
+                    
+                    if (isNewChat) {
+                        // New chat selected - load all messages and scroll to bottom
+                        this.lastSelectedChatId.set(chat.id);
+                        this.messages.set(chatMessages || []);
+                        this.hasMoreMessages.set(true);
+                        this.scrollToBottom();
+                        
+                        // Mark this chat as read when selected
+                        // TODO: FIX, this will trigger selectedChat signal and cause infinite loop
+                        // this.markChatAsRead(chat.id);
+                    } else if (!this.isLoadingMoreMessages() && chatMessages.length > 0) {
+                        // Same chat but check for new messages
+                        const latestLocalTimestamp = currentMessages.length > 0 
+                            ? Math.max(...currentMessages.map(m => m.created_at)) 
+                            : 0;
+                        const latestChatTimestamp = Math.max(...chatMessages.map(m => m.created_at));
+                        
+                        // If the chat has newer messages than what we're showing, update and scroll
+                        if (latestChatTimestamp > latestLocalTimestamp) {
+                            this.messages.set(chatMessages);
+                            this.scrollToBottom();
+                        }
+                    }
                 });
             }
         });
@@ -186,14 +211,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
     ngOnInit(): void {
 
-    }
-
-    ngAfterViewInit(): void {
-        // Initial scroll to bottom if there are messages
-        if (this.messages().length > 0) {
-            this.scrollToBottom();
-        }
-
+    }    ngAfterViewInit(): void {
         // Set up scroll event listener for loading more messages with a delay to ensure DOM is ready
         setTimeout(() => {
             this.setupScrollListener();
@@ -263,8 +281,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     private clearDecryptionQueue(): void {
         this.messaging.clearDecryptionQueue();
     }    
-    
-    /**
+      /**
      * Load more messages (older messages)
      */
     async loadMoreMessages(): Promise<void> {
@@ -283,6 +300,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
         this.logger.debug(`Loading more messages for chat: ${selectedChat.id}`);
         this.isLoadingMore.set(true);
+        this.isLoadingMoreMessages.set(true); // Prevent auto-scroll during loading
 
         try {
             const currentMessages = this.messages();
@@ -295,9 +313,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
             // Store current scroll position to maintain it after loading new messages
             const scrollElement = this.messagesWrapper?.nativeElement;
             const scrollHeight = scrollElement?.scrollHeight || 0;
-            const scrollTop = scrollElement?.scrollTop || 0;
-
-            // Load older messages from the messaging service
+            const scrollTop = scrollElement?.scrollTop || 0;            // Load older messages from the messaging service
             const olderMessages = await this.messaging.loadMoreMessages(selectedChat.id, oldestTimestamp);
 
             this.logger.debug(`Loaded ${olderMessages.length} older messages`);
@@ -306,13 +322,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
                 this.logger.debug('No more messages available, setting hasMoreMessages to false');
                 this.hasMoreMessages.set(false);
             } else {
-                // Update messages list with older messages
-                this.messages.update(msgs => {
-                    const existingIds = new Set(msgs.map(m => m.id));
-                    const newMessages = olderMessages.filter(m => !existingIds.has(m.id));
-                    this.logger.debug(`Adding ${newMessages.length} new messages (${olderMessages.length - newMessages.length} duplicates filtered)`);
-                    return [...newMessages, ...msgs].sort((a, b) => a.created_at - b.created_at);
-                });
+                // Get the updated messages from the messaging service (includes decrypted content)
+                const updatedChatMessages = this.messaging.getChatMessages(selectedChat.id);
+                this.messages.set(updatedChatMessages);
 
                 // Restore scroll position after DOM update
                 setTimeout(() => {
@@ -330,6 +342,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
             this.error.set('Failed to load older messages. Please try again.');
         } finally {
             this.isLoadingMore.set(false);
+            this.isLoadingMoreMessages.set(false); // Re-enable auto-scroll
         }
     }
 
@@ -420,10 +433,11 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
                 tags: [['p', receiverPubkey]],
                 received: false,
                 encryptionType: this.supportsModernEncryption(this.selectedChat()!) ? 'nip44' : 'nip04'
-            };
-
-            // Add to the messages immediately so the user sees feedback
+            };            // Add to the messages immediately so the user sees feedback
             this.messages.update(msgs => [...msgs, pendingMessage]);
+
+            // Scroll to bottom for new outgoing messages
+            this.scrollToBottom();
 
             // Clear the input
             this.newMessageText.set('');
