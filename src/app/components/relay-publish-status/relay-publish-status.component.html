@@ -29,7 +29,7 @@
     <mat-progress-bar [value]="progress" [color]="hasFailures ? 'warn' : 'primary'"></mat-progress-bar>
 
     <div class="relays-container">
-      @for (relay of notification.relayPromises; track trackByRelayUrl) {
+      @for (relay of notification.relayPromises; track trackByRelayUrl($index, relay)) {
         <div class="relay-item" [class.success]="relay.status === 'success'"
           [class.failed]="relay.status === 'failed'"
           [class.pending]="relay.status === 'pending'">
