@@ -1,5 +1,5 @@
 import { Component, inject, signal, effect } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -25,15 +25,14 @@ interface BackupStats {
     selector: 'app-backup',
     standalone: true,
     imports: [
-        CommonModule,
-        MatCardModule,
-        MatButtonModule,
-        MatIconModule,
-        MatDividerModule,
-        MatProgressBarModule,
-        MatProgressSpinnerModule,
-        MatSnackBarModule
-    ],
+    MatCardModule,
+    MatButtonModule,
+    MatIconModule,
+    MatDividerModule,
+    MatProgressBarModule,
+    MatProgressSpinnerModule,
+    MatSnackBarModule
+],
     templateUrl: './backup.component.html',
     styleUrl: './backup.component.scss'
 })

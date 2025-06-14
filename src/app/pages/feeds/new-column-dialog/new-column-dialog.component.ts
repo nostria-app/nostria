@@ -1,5 +1,5 @@
 import { Component, inject, signal, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -61,7 +61,6 @@ const NOSTR_KINDS = [
   selector: 'app-new-column-dialog',
   standalone: true,
   imports: [
-    CommonModule,
     MatDialogModule,
     MatButtonModule,
     MatFormFieldModule,
@@ -75,7 +74,7 @@ const NOSTR_KINDS = [
     MatDividerModule,
     ReactiveFormsModule,
     MatButtonToggleModule
-  ],
+],
   template: `
     <div class="dialog-container">
       <div class="dialog-header">

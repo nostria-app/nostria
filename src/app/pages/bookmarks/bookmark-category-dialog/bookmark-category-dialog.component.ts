@@ -1,5 +1,5 @@
 import { Component, Inject, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -23,7 +23,6 @@ interface DialogData {
   selector: 'app-bookmark-category-dialog',
   standalone: true,
   imports: [
-    CommonModule,
     FormsModule,
     MatDialogModule,
     MatButtonModule,
@@ -31,7 +30,7 @@ interface DialogData {
     MatInputModule,
     MatIconModule,
     MatTooltipModule
-  ],
+],
   templateUrl: './bookmark-category-dialog.component.html',
   styleUrls: ['./bookmark-category-dialog.component.scss']
 })

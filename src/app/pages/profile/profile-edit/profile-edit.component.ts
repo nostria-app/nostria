@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -19,7 +19,7 @@ import { AccountStateService } from '../../../services/account-state.service';
 
 @Component({
   selector: 'app-profile-edit',
-  imports: [MatIconModule, MatButtonModule, CommonModule, MatCardModule, MatFormFieldModule, MatInputModule, FormsModule, AgoPipe, MatProgressSpinnerModule],
+  imports: [MatIconModule, MatButtonModule, MatCardModule, MatFormFieldModule, MatInputModule, FormsModule, AgoPipe, MatProgressSpinnerModule],
   templateUrl: './profile-edit.component.html',
   styleUrl: './profile-edit.component.scss'
 })

@@ -2,7 +2,7 @@ import { Component, inject, signal, computed, effect, OnInit, ViewChild, Element
 import { Router, ActivatedRoute } from '@angular/router';
 import { animate, style, transition, trigger } from '@angular/animations';
 import { Location } from '@angular/common';
-import { CommonModule } from '@angular/common';
+
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
@@ -17,14 +17,13 @@ import { LoggerService } from '../../../services/logger.service';
   selector: 'app-following',
   standalone: true,
   imports: [
-    CommonModule,
     MatButtonModule,
     MatIconModule,
     MatListModule,
     MatProgressSpinnerModule,
     MatTabsModule,
-    ScrollingModule,
-  ],
+    ScrollingModule
+],
   templateUrl: './profile-relays.component.html',
   styleUrl: './profile-relays.component.scss',
   animations: [

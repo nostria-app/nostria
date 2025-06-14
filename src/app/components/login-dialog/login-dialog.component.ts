@@ -1,5 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatDialogModule, MatDialogRef, MatDialog } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -32,7 +32,6 @@ enum LoginStep {
   selector: 'app-unified-login-dialog',
   standalone: true,
   imports: [
-    CommonModule,
     MatDialogModule,
     MatButtonModule,
     MatCardModule,
@@ -43,7 +42,7 @@ enum LoginStep {
     MatProgressSpinnerModule,
     MatTooltipModule,
     FormsModule
-  ],
+],
   templateUrl: './login-dialog.component.html',
   styleUrl: './login-dialog.component.scss'
 })

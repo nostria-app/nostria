@@ -1,5 +1,5 @@
 import { Component, inject, signal, computed, effect } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -41,19 +41,18 @@ interface Article {
     selector: 'app-articles',
     standalone: true,
     imports: [
-        CommonModule,
-        MatCardModule,
-        MatButtonModule,
-        MatIconModule,
-        MatDividerModule,
-        MatChipsModule,
-        MatMenuModule,
-        MatTooltipModule,
-        MatSnackBarModule,
-        MatProgressSpinnerModule,
-        LoadingOverlayComponent,
-        AgoPipe
-    ],
+    MatCardModule,
+    MatButtonModule,
+    MatIconModule,
+    MatDividerModule,
+    MatChipsModule,
+    MatMenuModule,
+    MatTooltipModule,
+    MatSnackBarModule,
+    MatProgressSpinnerModule,
+    LoadingOverlayComponent,
+    AgoPipe
+],
     templateUrl: './articles.component.html',
     styleUrl: './articles.component.scss'
 })

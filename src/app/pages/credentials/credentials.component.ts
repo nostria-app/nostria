@@ -1,5 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -16,7 +16,6 @@ import { AccountStateService } from '../../services/account-state.service';
   selector: 'app-credentials',
   standalone: true,
   imports: [
-    CommonModule,
     MatCardModule,
     MatIconModule,
     MatButtonModule,
@@ -24,7 +23,7 @@ import { AccountStateService } from '../../services/account-state.service';
     MatFormFieldModule,
     MatDividerModule,
     MatTooltipModule
-  ],
+],
   templateUrl: './credentials.component.html',
   styleUrl: './credentials.component.scss'
 })

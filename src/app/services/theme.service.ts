@@ -1,6 +1,6 @@
-import { Injectable, PLATFORM_ID, effect, inject, signal } from '@angular/core';
+import { Injectable, PLATFORM_ID, effect, inject, signal, DOCUMENT } from '@angular/core';
 import { LoggerService } from './logger.service';
-import { DOCUMENT, isPlatformBrowser } from '@angular/common';
+import { isPlatformBrowser } from '@angular/common';
 import { LocalStorageService } from './local-storage.service';
 
 @Injectable({

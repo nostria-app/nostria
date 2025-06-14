@@ -25,7 +25,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 1.5rem 2rem;
-  background-color: var(--mdc-filled-card-container-color);
+  background-color: var(--mat-filled-card-container-color);
 }
 
 .step-indicator {
@@ -202,7 +202,7 @@ h2 {
 }
 
 .payment-summary {
-  background-color: var(--mdc-filled-card-container-color);
+  background-color: var(--mat-filled-card-container-color);
   padding: 1.5rem;
   border-radius: 8px;
   margin-bottom: 2rem;
@@ -295,7 +295,7 @@ h2 {
 .invoice-request {
   display: flex;
   align-items: center;
-  background-color: var(--mdc-filled-card-container-color);
+  background-color: var(--mat-filled-card-container-color);
   padding: 0.5rem;
   border-radius: 4px;
   margin-bottom: 1rem;

@@ -1,5 +1,5 @@
 import { Component, inject, signal, effect } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -32,7 +32,6 @@ import { AccountStateService } from '../../services/account-state.service';
   selector: 'app-media',
   standalone: true,
   imports: [
-    CommonModule,
     FormsModule,
     ReactiveFormsModule,
     MatButtonModule,
@@ -49,7 +48,7 @@ import { AccountStateService } from '../../services/account-state.service';
     TimestampPipe,
     MatTooltipModule,
     DragDropModule
-  ],
+],
   templateUrl: './media.component.html',
   styleUrls: ['./media.component.scss']
 })

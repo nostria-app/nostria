@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy, AfterViewInit, ViewChild, ElementRef, inject, signal, computed, effect, untracked } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -77,28 +77,27 @@ interface DecryptionQueueItem {
     selector: 'app-messages',
     standalone: true,
     imports: [
-        CommonModule,
-        FormsModule,
-        MatButtonModule,
-        MatIconModule,
-        MatInputModule,
-        MatFormFieldModule,
-        MatListModule,
-        MatCardModule,
-        MatDividerModule,
-        MatMenuModule,
-        MatTooltipModule,
-        MatBadgeModule,
-        MatProgressSpinnerModule,
-        MatSnackBarModule,
-        MatDialogModule,
-        RouterModule,
-        LoadingOverlayComponent,
-        UserProfileComponent,
-        NPubPipe,
-        TimestampPipe,
-        AgoPipe
-    ],
+    FormsModule,
+    MatButtonModule,
+    MatIconModule,
+    MatInputModule,
+    MatFormFieldModule,
+    MatListModule,
+    MatCardModule,
+    MatDividerModule,
+    MatMenuModule,
+    MatTooltipModule,
+    MatBadgeModule,
+    MatProgressSpinnerModule,
+    MatSnackBarModule,
+    MatDialogModule,
+    RouterModule,
+    LoadingOverlayComponent,
+    UserProfileComponent,
+    NPubPipe,
+    TimestampPipe,
+    AgoPipe
+],
     templateUrl: './messages.component.html',
     styleUrl: './messages.component.scss'
 })

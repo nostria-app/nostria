@@ -1,5 +1,5 @@
 import { Component, inject, signal, effect } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
@@ -26,7 +26,6 @@ interface Connection {
   selector: 'app-profile-connections',
   standalone: true,
   imports: [
-    CommonModule,
     MatTabsModule,
     MatIconModule,
     MatListModule,
@@ -34,7 +33,7 @@ interface Connection {
     MatCardModule,
     MatTooltipModule,
     LoadingOverlayComponent
-  ],
+],
   templateUrl: './profile-connections.component.html',
   styleUrl: './profile-connections.component.scss'
 })
