@@ -59,7 +59,7 @@ export class MessagingService {
   private chatsMap = signal<Map<string, Chat>>(new Map());
   private oldestChatTimestamp = signal<number | null>(null);
 
-  MESSAGE_SIZE = 2;
+  MESSAGE_SIZE = 20;
 
   // chats = computed(() => {
   //   return this.chatsMap();
