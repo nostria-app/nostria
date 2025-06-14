@@ -2,7 +2,7 @@ import { Component, inject, signal, computed, effect, OnInit, ViewChild, Element
 import { Router, ActivatedRoute } from '@angular/router';
 import { animate, style, transition, trigger } from '@angular/animations';
 import { Location } from '@angular/common';
-import { CommonModule } from '@angular/common';
+
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
@@ -18,7 +18,6 @@ import { UserProfileComponent } from '../../../components/user-profile/user-prof
   selector: 'app-following',
   standalone: true,
   imports: [
-    CommonModule,
     MatButtonModule,
     MatIconModule,
     MatListModule,
@@ -26,7 +25,7 @@ import { UserProfileComponent } from '../../../components/user-profile/user-prof
     MatTabsModule,
     ScrollingModule,
     UserProfileComponent
-  ],
+],
   templateUrl: './following.component.html',
   styleUrl: './following.component.scss',
   animations: [

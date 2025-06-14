@@ -1,5 +1,5 @@
 import { Component, effect, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule, ReactiveFormsModule, FormGroup, FormBuilder, Validators } from '@angular/forms';
 import { MatStepperModule } from '@angular/material/stepper';
 import { MatButtonModule } from '@angular/material/button';
@@ -35,7 +35,6 @@ interface PaymentInvoice {
   selector: 'app-upgrade',
   standalone: true,
   imports: [
-    CommonModule,
     FormsModule,
     ReactiveFormsModule,
     MatStepperModule,
@@ -49,7 +48,7 @@ interface PaymentInvoice {
     MatSnackBarModule,
     MatDividerModule,
     MatTooltipModule
-  ],
+],
   templateUrl: './upgrade.component.html',
   styleUrl: './upgrade.component.scss'
 })

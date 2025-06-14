@@ -1,6 +1,6 @@
 import { Component, inject, computed, signal, effect } from '@angular/core';
 import { Event, kinds } from 'nostr-tools';
-import { CommonModule } from '@angular/common';
+
 import { ActivatedRoute } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -24,7 +24,6 @@ import { LayoutService } from '../../services/layout.service';
   selector: 'app-article',
   standalone: true,
   imports: [
-    CommonModule,
     MatCardModule,
     MatButtonModule,
     MatIconModule,
@@ -33,7 +32,7 @@ import { LayoutService } from '../../services/layout.service';
     MatProgressSpinnerModule,
     UserProfileComponent,
     DateToggleComponent
-  ],
+],
   templateUrl: './article.component.html',
   styleUrl: './article.component.scss'
 })

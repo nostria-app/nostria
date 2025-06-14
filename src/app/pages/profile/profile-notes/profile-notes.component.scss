@@ -120,12 +120,12 @@
 
 .note-items {
   border-top: 1px solid var(--mat-sys-outline);
-  border-left: 1px solid var(--mdc-outlined-card-outline-color, var(--mat-sys-outline-variant));
-  border-right: 1px solid var(--mdc-outlined-card-outline-color, var(--mat-sys-outline-variant));
+  border-left: 1px solid var(--mat-card-outlined-outline-color, var(--mat-sys-outline-variant));
+  border-right: 1px solid var(--mat-card-outlined-outline-color, var(--mat-sys-outline-variant));
 }
 
 .note-item {
-  border-bottom: 1px solid var(--mdc-outlined-card-outline-color, var(--mat-sys-outline-variant));
+  border-bottom: 1px solid var(--mat-card-outlined-outline-color, var(--mat-sys-outline-variant));
   padding: 1rem;
 }
 

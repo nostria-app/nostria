@@ -1,7 +1,7 @@
-import { computed, effect, inject, Injectable, PLATFORM_ID, signal } from "@angular/core";
+import { computed, effect, inject, Injectable, PLATFORM_ID, signal, DOCUMENT } from "@angular/core";
 import { Router } from "@angular/router";
 import { LoggerService } from "./logger.service";
-import { DOCUMENT, isPlatformBrowser } from "@angular/common";
+import { isPlatformBrowser } from "@angular/common";
 
 @Injectable({
     providedIn: 'root'

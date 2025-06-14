@@ -67,13 +67,16 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
 
     constructor() {
         // Set up scroll detection
-        this.setupScrollDetection();
-
-        // Set up an effect to watch for changes to npub input
+        this.setupScrollDetection();        // Set up an effect to watch for changes to npub input
         effect(() => {
             const pubkey = this.pubkey();
 
             if (pubkey) {
+                // If the pubkey changed, reset the profile data to force reload
+                if (this.publicKey && this.publicKey !== pubkey) {
+                    this.profile.set(null);
+                }
+                
                 this.publicKey = this.pubkey();
                 // console.debug('LOCATION 1:', pubkey);
                 const npub = this.utilities.getNpubFromPubkey(pubkey);

@@ -1,7 +1,7 @@
-import { Component, ElementRef, inject, signal, effect, input, ViewChild, Renderer2, afterNextRender, AfterViewInit } from '@angular/core';
+import { Component, ElementRef, inject, signal, effect, input, ViewChild, Renderer2, afterNextRender, AfterViewInit, DOCUMENT } from '@angular/core';
 import { LayoutService } from '../../services/layout.service';
 import { ThemeService } from '../../services/theme.service';
-import { CommonModule, DOCUMENT } from '@angular/common';
+
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MediaPlayerService } from '../../services/media-player.service';
@@ -27,7 +27,7 @@ declare global {
 
 @Component({
   selector: 'app-media-player',
-  imports: [MatButtonModule, MatIconModule, RouterModule, MatSliderModule, ReactiveFormsModule, FormsModule, TimePipe, CommonModule],
+  imports: [MatButtonModule, MatIconModule, RouterModule, MatSliderModule, ReactiveFormsModule, FormsModule, TimePipe],
   templateUrl: './media-player.component.html',
   styleUrl: './media-player.component.scss'
 })

@@ -1,10 +1,9 @@
-import { ApplicationConfig, inject, isDevMode, provideAppInitializer, provideExperimentalZonelessChangeDetection } from '@angular/core';
+import { ApplicationConfig, inject, isDevMode, provideAppInitializer, provideZonelessChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideServiceWorker } from '@angular/service-worker';
 import { importProvidersFrom } from '@angular/core';
 import { DragDropModule } from '@angular/cdk/drag-drop';
-
 import { routes } from './app.routes';
 import { LoggerService } from './services/logger.service';
 import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
@@ -42,7 +41,7 @@ export const appConfig: ApplicationConfig = {
     },
     UserRelayFactoryService,
     UserRelayService,
-    provideExperimentalZonelessChangeDetection(),
+    provideZonelessChangeDetection(),
     provideRouter(routes),
     provideAnimations(),
     provideHttpClient(withFetch()),

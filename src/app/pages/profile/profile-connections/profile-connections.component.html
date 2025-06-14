@@ -20,7 +20,7 @@
           <mat-icon>arrow_back</mat-icon>
         </button>
       </div>
-      
+
       <mat-tab-group animationDuration="300ms" (selectedIndexChange)="onTabChange($event)" class="connections-tabs">
         <!-- Mutual connections tab -->
         <mat-tab>
@@ -29,7 +29,7 @@
             <span class="tab-label">Mutual Connections</span>
             <span class="connection-count">{{ mutuals().length }}</span>
           </ng-template>
-          
+
           <div class="tab-content">
             @if (mutuals().length === 0) {
               <div class="empty-state">
@@ -58,7 +58,7 @@
             }
           </div>
         </mat-tab>
-        
+
         <!-- Following tab -->
         <mat-tab>
           <ng-template mat-tab-label>
@@ -66,7 +66,7 @@
             <span class="tab-label">Following</span>
             <span class="connection-count">{{ following().length }}</span>
           </ng-template>
-          
+
           <div class="tab-content">
             @if (following().length === 0) {
               <div class="empty-state">
@@ -100,7 +100,7 @@
             }
           </div>
         </mat-tab>
-        
+
         <!-- Followers tab -->
         <mat-tab>
           <ng-template mat-tab-label>
@@ -108,7 +108,7 @@
             <span class="tab-label">Followers</span>
             <span class="connection-count">{{ followers().length }}</span>
           </ng-template>
-          
+
           <div class="tab-content">
             @if (followers().length === 0) {
               <div class="empty-state">
@@ -133,15 +133,17 @@
                         <mat-icon>people</mat-icon>
                       </span>
                     }
-                    <button 
-                      mat-icon-button 
-                      matListItemMeta 
-                      color="primary" 
-                      (click)="followUser(connection.pubkey, $event)" 
-                      matTooltip="Follow back"
-                      *ngIf="!connection.mutual">
-                      <mat-icon>person_add</mat-icon>
-                    </button>
+                    @if (!connection.mutual) {
+                      <button
+                        mat-icon-button
+                        matListItemMeta
+                        color="primary"
+                        (click)="followUser(connection.pubkey, $event)"
+                        matTooltip="Follow back"
+                        >
+                        <mat-icon>person_add</mat-icon>
+                      </button>
+                    }
                   </a>
                 }
               </mat-nav-list>

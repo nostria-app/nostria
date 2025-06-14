@@ -1,5 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatIconModule } from '@angular/material/icon';
 import { MatGridListModule } from '@angular/material/grid-list';
 import { ActivatedRoute } from '@angular/router';
@@ -11,11 +11,10 @@ import { LoadingOverlayComponent } from '../../../components/loading-overlay/loa
   selector: 'app-profile-media',
   standalone: true,
   imports: [
-    CommonModule,
     MatIconModule,
     MatGridListModule,
     LoadingOverlayComponent
-  ],
+],
   templateUrl: './profile-media.component.html',
   styleUrl: './profile-media.component.scss'
 })

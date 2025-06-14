@@ -1,5 +1,5 @@
 import { Component, effect, inject, input, output, signal, untracked, ElementRef, OnDestroy, AfterViewInit, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { NostrService } from '../../../services/nostr.service';
@@ -19,14 +19,13 @@ import { UtilitiesService } from '../../../services/utilities.service';
     selector: 'app-profile-header',
     standalone: true,
     imports: [
-        CommonModule,
-        MatIconModule,
-        MatListModule,
-        MatProgressSpinnerModule,
-        MatMenuModule,
-        RouterModule,
-        MatButtonModule
-    ],
+    MatIconModule,
+    MatListModule,
+    MatProgressSpinnerModule,
+    MatMenuModule,
+    RouterModule,
+    MatButtonModule
+],
     templateUrl: './profile-header.component.html',
     styleUrl: './profile-header.component.scss'
 })

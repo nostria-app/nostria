@@ -97,7 +97,7 @@ mat-card {
 }
 
 a {
-  color: var(--mdc-text-button-label-text-color, var(--mat-sys-primary));
+  color: var(--mat-button-text-label-text-color, var(--mat-sys-primary));
   text-decoration: none;
 }
 
@@ -199,10 +199,10 @@ body {
 
 // Material dialog in dark mode
 .dark .mat-mdc-dialog-container {
-  --mdc-dialog-container-color: #424242;
-  --mdc-dialog-with-divider-divider-color: rgba(255, 255, 255, 0.12);
-  --mdc-dialog-subhead-color: rgba(255, 255, 255, 0.87);
-  --mdc-dialog-supporting-text-color: rgba(255, 255, 255, 0.7);
+  --mat-dialog-container-color: #424242;
+  --mat-dialog-with-divider-divider-color: rgba(255, 255, 255, 0.12);
+  --mat-dialog-subhead-color: rgba(255, 255, 255, 0.87);
+  --mat-dialog-supporting-text-color: rgba(255, 255, 255, 0.7);
 }
 
 // Add blur effect for dialog backdrops - fixed implementation

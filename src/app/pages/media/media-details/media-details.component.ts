@@ -1,5 +1,5 @@
 import { Component, inject, signal, effect, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -18,7 +18,6 @@ import { MatTooltipModule } from '@angular/material/tooltip';
   selector: 'app-media-details',
   standalone: true,
   imports: [
-    CommonModule,
     MatButtonModule,
     MatIconModule,
     MatCardModule,
@@ -27,7 +26,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     MatSnackBarModule,
     TimestampPipe,
     MatTooltipModule
-  ],
+],
   templateUrl: './media-details.component.html',
   styleUrls: ['./media-details.component.scss']
 })
