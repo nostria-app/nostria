@@ -59,7 +59,7 @@ export class MessagingService {
   private chatsMap = signal<Map<string, Chat>>(new Map());
   private oldestChatTimestamp = signal<number | null>(null);
 
-  MESSAGE_SIZE = 5;
+  MESSAGE_SIZE = 2;
 
   // chats = computed(() => {
   //   return this.chatsMap();
@@ -742,7 +742,6 @@ export class MessagingService {
       throw error;
     }
   }
-
   /**
    * Load more (older) chats by fetching older messages
    */
@@ -788,6 +787,27 @@ export class MessagingService {
       let newOldestTimestamp = oldestTimestamp;
       let messagesReceivedFound = 0;
       let messagesSentFound = 0;
+      let pendingDecryptions = 0;
+      let completedDecryptions = 0;
+      let eoseReceived = false;
+
+      // Function to check if we're done and apply final logic
+      const checkCompletion = () => {
+        if (eoseReceived && pendingDecryptions === completedDecryptions) {
+          this.logger.debug(`Decryption complete. Received: ${messagesReceivedFound}, Sent: ${messagesSentFound}`);
+          
+          // Update the oldest timestamp for future loads
+          this.oldestChatTimestamp.set(newOldestTimestamp);
+
+          // If both received and sent messages are below the limit, we assume no more chats
+          if (messagesReceivedFound < this.MESSAGE_SIZE && messagesSentFound < this.MESSAGE_SIZE) {
+            this.logger.debug('No more chats available');
+            this.hasMoreChats.set(false);
+          }
+
+          this.isLoadingMoreChats.set(false);
+        }
+      };
 
       // Subscribe to get older messages
       const sub = this.relay.subscribe([filterReceived, filterSent], async (event: NostrEvent) => {
@@ -796,104 +816,113 @@ export class MessagingService {
           newOldestTimestamp = event.created_at;
         }
 
-        // Handle incoming wrapped events
-        if (event.kind === kinds.GiftWrap) {
-          const wrappedevent = await this.unwrapMessageInternal(event);
+        // Increment pending decryptions counter
+        pendingDecryptions++;
 
-          if (!wrappedevent) {
-            this.logger.warn('Failed to unwrap gift-wrapped message', event);
-            return;
-          }
+        try {
+          // Handle incoming wrapped events
+          if (event.kind === kinds.GiftWrap) {
+            const wrappedevent = await this.unwrapMessageInternal(event);
 
-          // Create a DirectMessage object from the unwrapped content
-          const directMessage: DirectMessage = {
-            id: wrappedevent.id,
-            pubkey: wrappedevent.pubkey,
-            created_at: wrappedevent.created_at,
-            content: wrappedevent.content,
-            tags: wrappedevent.tags || [],
-            isOutgoing: event.pubkey === myPubkey,
-            pending: false,
-            failed: false,
-            received: true,
-            read: false,
-            encryptionType: 'nip44'
-          };
-
-          if (directMessage.isOutgoing) {
-            messagesSentFound++;
-          }
-          else {
-            messagesReceivedFound++;
-          }
-
-          // Add the message to the chat (this will create new chats if needed)
-          this.addMessageToChat(wrappedevent.pubkey, directMessage);
-
-        } else if (event.kind === kinds.EncryptedDirectMessage) {
-          // Handle incoming NIP-04 direct messages
-          let targetPubkey = event.pubkey;
-
-          // Target pubkey logic
-          if (targetPubkey === myPubkey) {
-            const pTags = this.utilities.getPTagsValuesFromEvent(event);
-            if (pTags.length > 0) {
-              targetPubkey = pTags[0];
-            } else {
-              this.logger.warn('NIP-04 message has no recipients, ignoring.', event);
+            if (!wrappedevent) {
+              this.logger.warn('Failed to unwrap gift-wrapped message', event);
+              completedDecryptions++;
+              checkCompletion();
               return;
             }
+
+            // Create a DirectMessage object from the unwrapped content
+            const directMessage: DirectMessage = {
+              id: wrappedevent.id,
+              pubkey: wrappedevent.pubkey,
+              created_at: wrappedevent.created_at,
+              content: wrappedevent.content,
+              tags: wrappedevent.tags || [],
+              isOutgoing: event.pubkey === myPubkey,
+              pending: false,
+              failed: false,
+              received: true,
+              read: false,
+              encryptionType: 'nip44'
+            };
+
+            if (directMessage.isOutgoing) {
+              messagesSentFound++;
+            } else {
+              messagesReceivedFound++;
+            }
+
+            // Add the message to the chat (this will create new chats if needed)
+            this.addMessageToChat(wrappedevent.pubkey, directMessage);
+
+          } else if (event.kind === kinds.EncryptedDirectMessage) {
+            // Handle incoming NIP-04 direct messages
+            let targetPubkey = event.pubkey;
+
+            // Target pubkey logic
+            if (targetPubkey === myPubkey) {
+              const pTags = this.utilities.getPTagsValuesFromEvent(event);
+              if (pTags.length > 0) {
+                targetPubkey = pTags[0];
+              } else {
+                this.logger.warn('NIP-04 message has no recipients, ignoring.', event);
+                completedDecryptions++;
+                checkCompletion();
+                return;
+              }
+            }
+
+            if (this.hasMessage(targetPubkey, event.id)) {
+              completedDecryptions++;
+              checkCompletion();
+              return; // Skip if we already have this message
+            }
+
+            const unwrappedMessage = await this.unwrapNip04Message(event);
+
+            if (!unwrappedMessage) {
+              this.logger.warn('Failed to unwrap NIP-04 message', event);
+              completedDecryptions++;
+              checkCompletion();
+              return;
+            }
+
+            // Create a DirectMessage object from the unwrapped content
+            const directMessage: DirectMessage = {
+              id: unwrappedMessage.id,
+              pubkey: unwrappedMessage.pubkey,
+              created_at: unwrappedMessage.created_at,
+              content: unwrappedMessage.content,
+              tags: unwrappedMessage.tags || [],
+              isOutgoing: event.pubkey === myPubkey,
+              pending: false,
+              failed: false,
+              received: true,
+              read: false,
+              encryptionType: 'nip04'
+            };
+
+            if (directMessage.isOutgoing) {
+              messagesSentFound++;
+            } else {
+              messagesReceivedFound++;
+            }
+
+            // Add the message to the chat (this will create new chats if needed)
+            this.addMessageToChat(targetPubkey, directMessage);
           }
-
-          if (this.hasMessage(targetPubkey, event.id)) {
-            return; // Skip if we already have this message
-          }
-
-          const unwrappedMessage = await this.unwrapNip04Message(event);
-
-          if (!unwrappedMessage) {
-            this.logger.warn('Failed to unwrap NIP-04 message', event);
-            return;
-          }
-
-          // Create a DirectMessage object from the unwrapped content
-          const directMessage: DirectMessage = {
-            id: unwrappedMessage.id,
-            pubkey: unwrappedMessage.pubkey,
-            created_at: unwrappedMessage.created_at,
-            content: unwrappedMessage.content,
-            tags: unwrappedMessage.tags || [],
-            isOutgoing: event.pubkey === myPubkey,
-            pending: false,
-            failed: false,
-            received: true,
-            read: false,
-            encryptionType: 'nip04'
-          };
-
-          if (directMessage.isOutgoing) {
-            messagesSentFound++;
-          }
-          else {
-            messagesReceivedFound++;
-          }
-
-          // Add the message to the chat (this will create new chats if needed)
-          this.addMessageToChat(targetPubkey, directMessage);
+        } catch (error) {
+          this.logger.error('Error processing message during loadMoreChats:', error);
+        } finally {
+          // Always increment completed counter and check for completion
+          completedDecryptions++;
+          checkCompletion();
         }
       }, () => {
-        // this.logger.debug(`Loaded ${messagesFound} older messages for more chats`);
-
-        // Update the oldest timestamp for future loads
-        this.oldestChatTimestamp.set(newOldestTimestamp);
-
-        // If both received and sent messages are below the limit, we assume no more chats
-        if (messagesReceivedFound < this.MESSAGE_SIZE && messagesSentFound < this.MESSAGE_SIZE) {
-          debugger;
-          this.hasMoreChats.set(false);
-        }
-
-        this.isLoadingMoreChats.set(false);
+        // EOSE callback - just mark that we've received all events
+        this.logger.debug(`EOSE received. Pending: ${pendingDecryptions}, Completed: ${completedDecryptions}`);
+        eoseReceived = true;
+        checkCompletion();
       });
 
     } catch (err) {
