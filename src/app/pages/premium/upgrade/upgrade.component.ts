@@ -14,6 +14,7 @@ import { Router } from '@angular/router';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { NameService } from '../../../services/name.service';
+import { debounceTime } from 'rxjs';
 
 interface PaymentOption {
   id: string;
@@ -111,6 +112,12 @@ export class UpgradeComponent {
 
     // Add CSS variables for primary color in RGB format for opacity support
     this.setupThemeVariables();
+
+    this.usernameFormGroup.get('username')?.valueChanges
+      .pipe(debounceTime(300)) // Wait 300ms after last keystroke
+      .subscribe(value => {
+        this.checkUsernameAvailability();
+      });
   }
 
   private setupThemeVariables() {
@@ -165,9 +172,9 @@ export class UpgradeComponent {
       // Simulate API call to check username availability
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      const isAvailable = this.name.isUsernameAvailable(username);
-
-      this.isUsernameAvailable.set(isAvailable);
+      this.name.isUsernameAvailable(username).subscribe(val => {
+        this.isUsernameAvailable.set(val)
+      })
     } finally {
       this.isCheckingUsername.set(false);
     }
