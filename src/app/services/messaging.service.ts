@@ -50,12 +50,16 @@ export class MessagingService {
   private relay = inject(RelayService);
   private logger = inject(LoggerService);
   private readonly accountState = inject(AccountStateService);
-  readonly utilities = inject(UtilitiesService);
-  private readonly encryption = inject(EncryptionService);
+  readonly utilities = inject(UtilitiesService); private readonly encryption = inject(EncryptionService);
   isLoading = signal<boolean>(false);
+  isLoadingMoreChats = signal<boolean>(false);
+  hasMoreChats = signal<boolean>(true);
   error = signal<string | null>(null);
 
   private chatsMap = signal<Map<string, Chat>>(new Map());
+  private oldestChatTimestamp = signal<number | null>(null);
+
+  MESSAGE_SIZE = 5;
 
   // chats = computed(() => {
   //   return this.chatsMap();
@@ -67,11 +71,9 @@ export class MessagingService {
   }
 
   sortedChats = computed(() => {
-    debugger;
     return Array.from(this.chatsMap().entries())
       .map(([chatId, chat]) => ({ chatId, chat }))
       .sort((a, b) => {
-        debugger;
         const aTime = a.chat.lastMessage?.created_at || 0;
         const bTime = b.chat.lastMessage?.created_at || 0;
         return bTime - aTime; // Most recent first
@@ -108,13 +110,12 @@ export class MessagingService {
   }
   // Helper method to add a message to a chat (prevents duplicates and updates sorting)
   addMessageToChat(pubkey: string, message: DirectMessage): void {
-    debugger;
     const currentMap = this.chatsMap();
     const chatId = message.encryptionType === 'nip04' ? `nip04${pubkey}` : `nip44${pubkey}`;
 
     // Create a new Map to ensure signal reactivity
     const newMap = new Map(currentMap);
-    
+
     // Individual chats are keyed by pubkey, so we use pubkey as chatId
     const chat = newMap.get(chatId);
 
@@ -171,25 +172,26 @@ export class MessagingService {
         this.error.set('You need to be logged in to view messages');
         this.isLoading.set(false);
         return;
-      }
-
-      const filterReceived: Filter = {
+      } const filterReceived: Filter = {
         kinds: [kinds.GiftWrap, kinds.EncryptedDirectMessage],
         '#p': [myPubkey],
-        limit: 1
+        limit: this.MESSAGE_SIZE
       };
 
       const filterSent: Filter = {
         kinds: [kinds.GiftWrap, kinds.EncryptedDirectMessage],
         authors: [myPubkey],
-        limit: 1
-      };
-
-      // Store pubkeys of people who've messaged us
+        limit: this.MESSAGE_SIZE
+      };      // Store pubkeys of people who've messaged us
       const chatPubkeys = new Set<string>();
+      let oldestTimestamp = this.oldestChatTimestamp() || Math.floor(Date.now() / 1000);
 
       // First, look for existing gift-wrapped messages
       const sub = this.relay.subscribe([filterReceived, filterSent], async (event: NostrEvent) => {
+        // Track the oldest timestamp
+        if (event.created_at < oldestTimestamp) {
+          oldestTimestamp = event.created_at;
+        }
         // Handle incoming wrapped events
         if (event.kind === kinds.GiftWrap) {
           // let chats = this.chatsMap();
@@ -317,27 +319,10 @@ export class MessagingService {
       }, () => {
         console.log('End of data for incoming messages.');
 
-        // Now create chats list from collected pubkeys
-        // const chatsList: Chat[] = Array.from(chatPubkeys).map(pubkey => ({
-        //   id: pubkey, // Using pubkey as chat ID
-        //   pubkey,
-        //   unreadCount: 0,
-        //   lastMessage: null
-        // }));
+        // Update the oldest timestamp for loading more chats
+        this.oldestChatTimestamp.set(oldestTimestamp);
 
-        // // Sort chats (will be updated with last messages later)
-        // const sortedChats = chatsList.sort((a, b) => {
-        //   const aTime = a.lastMessage?.created_at || 0;
-        //   const bTime = b.lastMessage?.created_at || 0;
-        //   return bTime - aTime; // Most recent first
-        // });
-
-        // this.chats.set(sortedChats);
-
-        // For each chat, fetch the latest message
-        // for (const chat of sortedChats) {
-        //   this.fetchLatestMessageForChat(chat.pubkey);
-        // }
+        // ...existing code...
 
         this.isLoading.set(false);
       })
@@ -654,8 +639,8 @@ export class MessagingService {
     }
 
     // Determine which message kinds to fetch based on chat encryption type
-    const messageKinds = chat.encryptionType === 'nip04' 
-      ? [kinds.EncryptedDirectMessage] 
+    const messageKinds = chat.encryptionType === 'nip04'
+      ? [kinds.EncryptedDirectMessage]
       : [kinds.GiftWrap];
 
     this.logger.debug(`Loading more messages for chat ${chatId}, encryption type: ${chat.encryptionType}, until: ${until}`);
@@ -666,7 +651,7 @@ export class MessagingService {
       authors: [chat.pubkey],
       '#p': [myPubkey],
       until: until,
-      limit: 25
+      limit: this.MESSAGE_SIZE
     };
 
     const filterSent: Filter = {
@@ -674,7 +659,7 @@ export class MessagingService {
       authors: [myPubkey],
       '#p': [chat.pubkey],
       until: until,
-      limit: 25
+      limit: this.MESSAGE_SIZE
     };
 
     const loadedMessages: DirectMessage[] = [];
@@ -702,7 +687,7 @@ export class MessagingService {
             if (decryptedMessage) {
               // Determine if this is an outgoing message
               const isOutgoing = event.pubkey === myPubkey;
-              
+
               // Determine the other party's pubkey
               let otherPubkey = chat.pubkey;
               if (event.kind === kinds.EncryptedDirectMessage) {
@@ -755,6 +740,166 @@ export class MessagingService {
     } catch (error) {
       this.logger.error('Failed to load more messages:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Load more (older) chats by fetching older messages
+   */
+  async loadMoreChats(): Promise<void> {
+    if (this.isLoadingMoreChats() || !this.hasMoreChats()) {
+      return;
+    }
+
+    this.isLoadingMoreChats.set(true);
+    this.error.set(null);
+
+    try {
+      const myPubkey = this.accountState.pubkey();
+      if (!myPubkey) {
+        this.error.set('You need to be logged in to view messages');
+        this.isLoadingMoreChats.set(false);
+        return;
+      }
+
+      const oldestTimestamp = this.oldestChatTimestamp();
+      if (!oldestTimestamp) {
+        this.hasMoreChats.set(false);
+        this.isLoadingMoreChats.set(false);
+        return;
+      }
+
+      this.logger.debug(`Loading more chats before timestamp: ${oldestTimestamp}`);
+
+      const filterReceived: Filter = {
+        kinds: [kinds.GiftWrap, kinds.EncryptedDirectMessage],
+        '#p': [myPubkey],
+        until: oldestTimestamp - 1,
+        limit: this.MESSAGE_SIZE
+      };
+
+      const filterSent: Filter = {
+        kinds: [kinds.GiftWrap, kinds.EncryptedDirectMessage],
+        authors: [myPubkey],
+        until: oldestTimestamp - 1,
+        limit: this.MESSAGE_SIZE
+      };
+
+      let newOldestTimestamp = oldestTimestamp;
+      let messagesReceivedFound = 0;
+      let messagesSentFound = 0;
+
+      // Subscribe to get older messages
+      const sub = this.relay.subscribe([filterReceived, filterSent], async (event: NostrEvent) => {
+        // Track the oldest timestamp
+        if (event.created_at < newOldestTimestamp) {
+          newOldestTimestamp = event.created_at;
+        }
+
+        // Handle incoming wrapped events
+        if (event.kind === kinds.GiftWrap) {
+          const wrappedevent = await this.unwrapMessageInternal(event);
+
+          if (!wrappedevent) {
+            this.logger.warn('Failed to unwrap gift-wrapped message', event);
+            return;
+          }
+
+          // Create a DirectMessage object from the unwrapped content
+          const directMessage: DirectMessage = {
+            id: wrappedevent.id,
+            pubkey: wrappedevent.pubkey,
+            created_at: wrappedevent.created_at,
+            content: wrappedevent.content,
+            tags: wrappedevent.tags || [],
+            isOutgoing: event.pubkey === myPubkey,
+            pending: false,
+            failed: false,
+            received: true,
+            read: false,
+            encryptionType: 'nip44'
+          };
+
+          if (directMessage.isOutgoing) {
+            messagesSentFound++;
+          }
+          else {
+            messagesReceivedFound++;
+          }
+
+          // Add the message to the chat (this will create new chats if needed)
+          this.addMessageToChat(wrappedevent.pubkey, directMessage);
+
+        } else if (event.kind === kinds.EncryptedDirectMessage) {
+          // Handle incoming NIP-04 direct messages
+          let targetPubkey = event.pubkey;
+
+          // Target pubkey logic
+          if (targetPubkey === myPubkey) {
+            const pTags = this.utilities.getPTagsValuesFromEvent(event);
+            if (pTags.length > 0) {
+              targetPubkey = pTags[0];
+            } else {
+              this.logger.warn('NIP-04 message has no recipients, ignoring.', event);
+              return;
+            }
+          }
+
+          if (this.hasMessage(targetPubkey, event.id)) {
+            return; // Skip if we already have this message
+          }
+
+          const unwrappedMessage = await this.unwrapNip04Message(event);
+
+          if (!unwrappedMessage) {
+            this.logger.warn('Failed to unwrap NIP-04 message', event);
+            return;
+          }
+
+          // Create a DirectMessage object from the unwrapped content
+          const directMessage: DirectMessage = {
+            id: unwrappedMessage.id,
+            pubkey: unwrappedMessage.pubkey,
+            created_at: unwrappedMessage.created_at,
+            content: unwrappedMessage.content,
+            tags: unwrappedMessage.tags || [],
+            isOutgoing: event.pubkey === myPubkey,
+            pending: false,
+            failed: false,
+            received: true,
+            read: false,
+            encryptionType: 'nip04'
+          };
+
+          if (directMessage.isOutgoing) {
+            messagesSentFound++;
+          }
+          else {
+            messagesReceivedFound++;
+          }
+
+          // Add the message to the chat (this will create new chats if needed)
+          this.addMessageToChat(targetPubkey, directMessage);
+        }
+      }, () => {
+        // this.logger.debug(`Loaded ${messagesFound} older messages for more chats`);
+
+        // Update the oldest timestamp for future loads
+        this.oldestChatTimestamp.set(newOldestTimestamp);
+
+        // If both received and sent messages are below the limit, we assume no more chats
+        if (messagesReceivedFound < this.MESSAGE_SIZE && messagesSentFound < this.MESSAGE_SIZE) {
+          debugger;
+          this.hasMoreChats.set(false);
+        }
+
+        this.isLoadingMoreChats.set(false);
+      });
+
+    } catch (err) {
+      this.logger.error('Failed to load more chats', err);
+      this.error.set('Failed to load more chats. Please try again.');
+      this.isLoadingMoreChats.set(false);
     }
   }
 }

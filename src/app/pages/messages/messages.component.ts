@@ -187,7 +187,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
     ngOnInit(): void {
 
-    }    ngAfterViewInit(): void {
+    }
+
+    ngAfterViewInit(): void {
         // Initial scroll to bottom if there are messages
         if (this.messages().length > 0) {
             this.scrollToBottom();
@@ -261,7 +263,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
      */
     private clearDecryptionQueue(): void {
         this.messaging.clearDecryptionQueue();
-    }    /**
+    }    
+    
+    /**
      * Load more messages (older messages)
      */
     async loadMoreMessages(): Promise<void> {
@@ -296,7 +300,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
             // Load older messages from the messaging service
             const olderMessages = await this.messaging.loadMoreMessages(selectedChat.id, oldestTimestamp);
-            
+
             this.logger.debug(`Loaded ${olderMessages.length} older messages`);
 
             if (olderMessages.length === 0) {
@@ -331,10 +335,16 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     /**
+     * Load more chats by fetching older messages
+     */
+    loadMoreChats(): void {
+        this.messaging.loadMoreChats();
+    }
+
+    /**
      * Select a chat from the list
      */
     selectChat(chat: Chat): void {
-        debugger;
         this.selectedChatId.set(chat.id);
 
         // Only hide the chat list on mobile devices
@@ -377,7 +387,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
      * Send a direct message using both NIP-04 and NIP-44
      */
     async sendMessage(): Promise<void> {
-        debugger;
         const messageText = this.newMessageText().trim();
         if (!messageText || this.isSending()) return;
 
@@ -619,8 +628,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
             // Sign and finalize the event
             const signedEvent = await this.nostr.signEvent(event);
 
-            debugger;
-
             // Publish to relays
             await this.publishToRelays(signedEvent, userRelay);
 
@@ -723,7 +730,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
      * Publish an event to multiple relays
      */
     private async publishToRelays(event: NostrEvent, userRelay: UserRelayService): Promise<void> {
-        debugger;
         const promisesUser = userRelay.publish(event);
         const promisesAccount = this.accountRelayService.publish(event);
 

@@ -75,9 +75,29 @@
               <span>Delete conversation</span>
             </button>
           </mat-menu> -->
-        </a>
-        }
+        </a>        }
       </mat-nav-list>
+        <!-- Load more chats button -->
+      @if (messaging.hasMoreChats()) {
+      <div class="load-more-chats">
+        <button 
+          mat-stroked-button 
+          color="primary" 
+          [disabled]="messaging.isLoadingMoreChats()" 
+          (click)="loadMoreChats()"
+          class="load-more-chats-button">
+          @if (messaging.isLoadingMoreChats()) {
+          <mat-spinner diameter="20"></mat-spinner>
+          <span>Loading...</span>
+          } @else {
+          <ng-container>
+            <!-- <mat-icon>expand_more</mat-icon> -->
+            <span>Load more conversations</span>
+          </ng-container>
+          }
+        </button>
+      </div>
+      }
       }
     </div> <!-- Right content area with selected chat messages -->
     <div class="chat-content-container" [class.hidden]="layout.isHandset() && showMobileList()">

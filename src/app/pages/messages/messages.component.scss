@@ -173,10 +173,30 @@
         .chat-options-button {
           opacity: 0;
           transition: opacity 0.2s;
-        }
-
-        &:hover .chat-options-button {
+        }        &:hover .chat-options-button {
           opacity: 1;
+        }
+      }
+    }
+
+    .load-more-chats {
+      padding: 16px;
+      border-top: 1px solid var(--mat-divider-color);
+      background-color: var(--mat-sys-color-surface);
+
+      .load-more-chats-button {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        
+        mat-spinner {
+          margin-right: 8px;
+        }
+        
+        span {
+          font-size: 14px;
         }
       }
     }
