@@ -1,5 +1,5 @@
 import { Component, inject, signal, effect } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -10,11 +10,10 @@ import { UtilitiesService } from '../../services/utilities.service';
   selector: 'app-search-results',
   standalone: true,
   imports: [
-    CommonModule,
     MatListModule,
     MatIconModule,
     MatButtonModule
-  ],
+],
   template: `
     @if (searchService.searchResults().length > 0) {
     <div class="search-results" 

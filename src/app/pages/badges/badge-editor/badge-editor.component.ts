@@ -1,5 +1,5 @@
 import { Component, inject, signal, effect, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -22,7 +22,6 @@ import { LayoutService } from '../../../services/layout.service';
   selector: 'app-badge-editor',
   standalone: true,
   imports: [
-    CommonModule,
     ReactiveFormsModule,
     MatButtonModule,
     MatCardModule,
@@ -36,7 +35,7 @@ import { LayoutService } from '../../../services/layout.service';
     FormsModule,
     MatSlideToggleModule,
     MatProgressBarModule
-  ],
+],
   templateUrl: './badge-editor.component.html',
   styleUrl: './badge-editor.component.scss'
 })

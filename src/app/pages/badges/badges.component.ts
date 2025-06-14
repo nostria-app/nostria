@@ -1,5 +1,5 @@
 import { Component, effect, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -38,7 +38,6 @@ import { AccountStateService } from '../../services/account-state.service';
   selector: 'app-badges',
   standalone: true,
   imports: [
-    CommonModule,
     MatCardModule,
     MatButtonModule,
     MatIconModule,
@@ -48,7 +47,7 @@ import { AccountStateService } from '../../services/account-state.service';
     BadgeComponent,
     MatListModule,
     MatProgressSpinnerModule
-  ],
+],
   templateUrl: './badges.component.html',
   styleUrl: './badges.component.scss'
 })

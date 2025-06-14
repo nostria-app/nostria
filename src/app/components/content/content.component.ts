@@ -1,5 +1,5 @@
 import { Component, Input, ViewChild, ElementRef, AfterViewInit, OnDestroy, computed, effect, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialogModule } from '@angular/material/dialog';
@@ -32,7 +32,7 @@ interface SocialPreview {
 @Component({
   selector: 'app-content',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatProgressSpinnerModule, SocialPreviewComponent, MatDialogModule],
+  imports: [MatCardModule, MatProgressSpinnerModule, SocialPreviewComponent, MatDialogModule],
   templateUrl: './content.component.html',
   styleUrl: './content.component.scss'
 })

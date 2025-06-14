@@ -7,12 +7,16 @@
           <span class="status-chip success" matTooltip="Successful relays">
             <mat-icon>check_circle</mat-icon> {{ successCount }}
           </span>
-          <span class="status-chip pending" *ngIf="pendingCount > 0" matTooltip="Pending relays">
-            <mat-icon>pending</mat-icon> {{ pendingCount }}
-          </span>
-          <span class="status-chip failed" *ngIf="failedCount > 0" matTooltip="Failed relays">
-            <mat-icon>error</mat-icon> {{ failedCount }}
-          </span>
+          @if (pendingCount > 0) {
+            <span class="status-chip pending" matTooltip="Pending relays">
+              <mat-icon>pending</mat-icon> {{ pendingCount }}
+            </span>
+          }
+          @if (failedCount > 0) {
+            <span class="status-chip failed" matTooltip="Failed relays">
+              <mat-icon>error</mat-icon> {{ failedCount }}
+            </span>
+          }
         </div>
       </div>
     </mat-card-title>
@@ -20,15 +24,15 @@
       Event ID: <a [routerLink]="['/e', notification.event.id]">{{ notification.event.id.substring(0, 8) }}</a>...
     </mat-card-subtitle>
   </mat-card-header>
-  
+
   <mat-card-content>
     <mat-progress-bar [value]="progress" [color]="hasFailures ? 'warn' : 'primary'"></mat-progress-bar>
-    
+
     <div class="relays-container">
       @for (relay of notification.relayPromises; track trackByRelayUrl) {
-        <div class="relay-item" [class.success]="relay.status === 'success'" 
-                             [class.failed]="relay.status === 'failed'"
-                             [class.pending]="relay.status === 'pending'">
+        <div class="relay-item" [class.success]="relay.status === 'success'"
+          [class.failed]="relay.status === 'failed'"
+          [class.pending]="relay.status === 'pending'">
           <span class="relay-name">{{ getRelayName(relay.relayUrl) }}</span>
           <span class="relay-status">
             @if (relay.status === 'success') {
@@ -43,7 +47,7 @@
       }
     </div>
   </mat-card-content>
-  
+
   <mat-card-actions align="end">
     <button mat-button color="primary" (click)="onRetry()" [disabled]="!hasFailures">
       <mat-icon>refresh</mat-icon> RETRY FAILED

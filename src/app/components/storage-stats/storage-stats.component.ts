@@ -5,7 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { StorageService } from '../../services/storage.service';
-import { CommonModule } from '@angular/common';
+
 import { NostrService } from '../../services/nostr.service';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { LoggerService } from '../../services/logger.service';
@@ -14,14 +14,13 @@ import { LoggerService } from '../../services/logger.service';
   selector: 'app-storage-stats',
   standalone: true,
   imports: [
-    CommonModule,
     MatCardModule,
     MatButtonModule,
     MatIconModule,
     MatDividerModule,
     MatProgressBarModule,
     MatSnackBarModule
-  ],
+],
   templateUrl: './storage-stats.component.html',
   styleUrl: './storage-stats.component..scss',
 })

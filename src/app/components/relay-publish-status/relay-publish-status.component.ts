@@ -1,5 +1,5 @@
 import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -15,7 +15,6 @@ import { RelayPublishingNotification, RelayPublishPromise } from '../../services
   selector: 'app-relay-publish-status',
   standalone: true,
   imports: [
-    CommonModule,
     MatCardModule,
     MatButtonModule,
     MatIconModule,
@@ -24,7 +23,7 @@ import { RelayPublishingNotification, RelayPublishPromise } from '../../services
     MatChipsModule,
     MatTooltipModule,
     RouterModule
-  ],
+],
   templateUrl: './relay-publish-status.component.html',
   styleUrls: ['./relay-publish-status.component.scss']
 })

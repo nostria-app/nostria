@@ -46,7 +46,7 @@
     overflow: hidden;
     flex-shrink: 0;
     border: 2px solid;
-    border-color: var(--mdc-text-button-label-text-color, var(--mat-sys-primary));
+    border-color: var(--mat-button-text-label-text-color, var(--mat-sys-primary));
     background-color: var(--mat-card-subtle-surface-color, #e0e0e0);
 
     .user-avatar {

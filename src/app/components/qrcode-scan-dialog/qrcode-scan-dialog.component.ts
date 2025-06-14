@@ -1,5 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -10,7 +10,7 @@ import { ZXingScannerModule } from '@zxing/ngx-scanner';
   templateUrl: './qrcode-scan-dialog.component.html',
   styleUrls: ['./qrcode-scan-dialog.component.scss'],
   standalone: true,
-  imports: [CommonModule, MatDialogModule, MatButtonModule, MatIconModule, ZXingScannerModule]
+  imports: [MatDialogModule, MatButtonModule, MatIconModule, ZXingScannerModule]
 })
 export class QrcodeScanDialogComponent {
   private dialogRef = inject(MatDialogRef<QrcodeScanDialogComponent>);

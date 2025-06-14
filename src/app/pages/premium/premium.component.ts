@@ -1,5 +1,5 @@
 import { Component, effect, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -24,7 +24,6 @@ interface FaqItem {
   selector: 'app-premium',
   standalone: true,
   imports: [
-    CommonModule,
     MatCardModule,
     MatButtonModule,
     MatIconModule,
@@ -32,7 +31,7 @@ interface FaqItem {
     MatDividerModule,
     MatDialogModule,
     RouterLink
-  ],
+],
   templateUrl: './premium.component.html',
   styleUrl: './premium.component.scss'
 })
