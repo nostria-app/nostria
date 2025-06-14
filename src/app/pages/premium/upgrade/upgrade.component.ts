@@ -1,4 +1,4 @@
-import { Component, effect, inject, signal } from '@angular/core';
+import { Component, effect, inject, signal, OnDestroy } from '@angular/core';
 
 import { FormsModule, ReactiveFormsModule, FormGroup, FormBuilder, Validators } from '@angular/forms';
 import { MatStepperModule } from '@angular/material/stepper';
@@ -14,7 +14,7 @@ import { Router } from '@angular/router';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { NameService } from '../../../services/name.service';
-import { debounceTime, firstValueFrom } from 'rxjs';
+import { debounceTime, firstValueFrom, Subject, takeUntil } from 'rxjs';
 
 interface PaymentOption {
   id: string;
@@ -52,7 +52,8 @@ interface PaymentInvoice {
   templateUrl: './upgrade.component.html',
   styleUrl: './upgrade.component.scss'
 })
-export class UpgradeComponent {
+export class UpgradeComponent implements OnDestroy {
+  private destroy$ = new Subject<void>();
   private formBuilder = inject(FormBuilder);
   private snackBar = inject(MatSnackBar);
   private router = inject(Router);
@@ -113,10 +114,18 @@ export class UpgradeComponent {
     this.setupThemeVariables();
 
     this.usernameFormGroup.get('username')?.valueChanges
-      .pipe(debounceTime(300)) // Wait 300ms after last keystroke
+      .pipe(
+        debounceTime(300), // Wait 300ms after last keystroke
+        takeUntil(this.destroy$)
+      )
       .subscribe(value => {
         this.checkUsernameAvailability();
       });
+  }
+
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   private setupThemeVariables() {
