@@ -59,7 +59,7 @@ import { UrlUpdateService } from '../../services/url-update.service';
     MatFormFieldModule,
     ProfileHeaderComponent,
     QRCodeComponent
-],
+  ],
   templateUrl: './profile.component.html',
   styleUrl: './profile.component.scss'
 })
@@ -127,19 +127,21 @@ export class ProfileComponent {
             // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.
             const encoded = nip19.npubEncode(id);
             this.url.updatePathSilently(['/p', encoded, 'notes']);
-          }          this.profileState.setCurrentProfilePubkey(id);
+          }
+
+          this.profileState.setCurrentProfilePubkey(id);
           this.pubkey.set(id);
 
           try {
             this.userRelay = await this.userRelayFactory.create(id);
             this.profileState.relay = this.userRelay;
-            
+
             // Only subscribe to events if we have a working user relay
             if (this.userRelay && this.userRelay.relayUrls.length > 0) {
               this.userRelay.subscribe([{
                 kinds: [kinds.ShortTextNote],
                 authors: [id],
-                limit: 30
+                limit: 10
               }], (event) => {
                 const record = this.data.getRecord(event);
 
@@ -305,7 +307,7 @@ export class ProfileComponent {
 
     try {
       // Try to get from cache first
-      let metadata = await this.nostrService.getMetadataForUser(pubkey);
+      let metadata = await this.nostrService.getMetadataForUser(pubkey, true);
       this.userMetadata.set(metadata);
 
       if (!metadata) {
@@ -315,10 +317,10 @@ export class ProfileComponent {
 
       // Always scroll and load data, regardless of whether metadata was found
       setTimeout(() => this.layoutService.scrollToOptimalProfilePosition(), 100);
-      
+
       // Load user data regardless of metadata availability
       this.loadUserData(pubkey);
-      
+
     } catch (err) {
       this.logger.error('Error loading user profile', err);
       this.error.set('Error loading user profile');

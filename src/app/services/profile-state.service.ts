@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, computed } from '@angular/core';
 import { NostrRecord } from '../interfaces';
 import { inject } from '@angular/core';
 import { NotificationService } from './notification.service';
@@ -54,4 +54,17 @@ export class ProfileStateService {
     this.articles.set([]);
     this.media.set([]);
   }
+
+  // Computed signals for sorted data
+  sortedNotes = computed(() => 
+    [...this.notes()].sort((a, b) => b.event.created_at - a.event.created_at)
+  );
+
+  sortedReplies = computed(() => 
+    [...this.replies()].sort((a, b) => b.event.created_at - a.event.created_at)
+  );
+
+  sortedArticles = computed(() => 
+    [...this.articles()].sort((a, b) => b.event.created_at - a.event.created_at)
+  );
 }
