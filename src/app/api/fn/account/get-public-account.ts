@@ -8,7 +8,7 @@ import { filter, map } from 'rxjs/operators';
 import { StrictHttpResponse } from '../../strict-http-response';
 import { RequestBuilder } from '../../request-builder';
 
-import { PublicAccountDto } from '../../models/public-account-dto';
+import { ApiResponse } from '../../models/api-response';
 
 export interface GetPublicAccount$Params {
 
@@ -18,7 +18,7 @@ export interface GetPublicAccount$Params {
   pubkeyOrUsername: string;
 }
 
-export function getPublicAccount(http: HttpClient, rootUrl: string, params: GetPublicAccount$Params, context?: HttpContext): Observable<StrictHttpResponse<PublicAccountDto>> {
+export function getPublicAccount(http: HttpClient, rootUrl: string, params: GetPublicAccount$Params, context?: HttpContext): Observable<StrictHttpResponse<ApiResponse>> {
   const rb = new RequestBuilder(rootUrl, getPublicAccount.PATH, 'get');
   if (params) {
     rb.path('pubkeyOrUsername', params.pubkeyOrUsername, {});
@@ -29,7 +29,7 @@ export function getPublicAccount(http: HttpClient, rootUrl: string, params: GetP
   ).pipe(
     filter((r: any): r is HttpResponse<any> => r instanceof HttpResponse),
     map((r: HttpResponse<any>) => {
-      return r as StrictHttpResponse<PublicAccountDto>;
+      return r as StrictHttpResponse<ApiResponse>;
     })
   );
 }
