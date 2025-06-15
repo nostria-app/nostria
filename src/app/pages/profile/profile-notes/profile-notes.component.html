@@ -36,6 +36,22 @@
           </mat-card-footer>
         </mat-card> 
         }
+        
+        <!-- Loading more indicator -->
+        @if (profileState.isLoadingMoreNotes()) {
+        <div class="loading-more-indicator">
+          <mat-spinner diameter="24"></mat-spinner>
+          <p>Loading more notes...</p>
+        </div>
+        }
+        
+        <!-- No more notes indicator -->
+        @if (!profileState.hasMoreNotes() && profileState.notes().length > 0) {
+        <div class="no-more-indicator">
+          <mat-icon>inbox</mat-icon>
+          <p>You've reached the end</p>
+        </div>
+        }
       </div>
       }
     </div>

@@ -34,7 +34,9 @@ export class UserRelayService {
     }
 
     config: any = {};
-    relayUrls: string[] = [];    /** Initialize is called to discover the user's relay list. */
+    relayUrls: string[] = [];    
+    
+    /** Initialize is called to discover the user's relay list. */
     async initialize(pubkey: string, config?: { customConfig?: any, customRelays?: string[] }) {
         let relayUrls = await this.nostr.getRelays(pubkey);
 
