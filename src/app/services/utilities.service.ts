@@ -11,6 +11,7 @@ export class UtilitiesService {
   private sanitizer = inject(DomSanitizer);
   private logger = inject(LoggerService);
 
+  NIP05_REGEX = /^(?:([\w.+-]+)@)?([\w_-]+(\.[\w_-]+)+)$/
   regexpVideo = /(?:(?:https?)+\:\/\/+[a-zA-Z0-9\/\._-]{1,})+(?:(?:mp4|webm))/gi;
   regexpImage = /(?:(?:https?)+\:\/\/+[a-zA-Z0-9\/\._-]{1,})+(?:(?:jpe?g|png|gif|webp))/gi;
   regexpYouTube = /(?:https?:\/\/)?(?:www\.)?youtu\.?be(?:\.com)?\/?.*(?:watch|embed)?(?:.*v=|v\/|\/)([\w-_]+)/gim;
@@ -368,5 +369,27 @@ export class UtilitiesService {
 
     // Return only up to the requested count
     return sortedRelays.slice(0, count);
+  }
+
+  async queryProfile(fullname: string) {
+    debugger;
+    const match = fullname.match(this.NIP05_REGEX)
+    if (!match) return null
+
+    const [, name = '_', domain] = match
+
+    try {
+      const url = `https://${domain}/.well-known/nostr.json?name=${name}`
+      const res = await fetch(url, { redirect: 'manual' })
+      if (res.status !== 200) {
+        throw Error('Wrong response code')
+      }
+      const json = await res.json()
+
+      const pubkey = json.names[name]
+      return pubkey ? { pubkey, relays: json.relays?.[pubkey] } : null
+    } catch (_e) {
+      return null
+    }
   }
 }

@@ -19,13 +19,13 @@ import { UtilitiesService } from '../../../services/utilities.service';
     selector: 'app-profile-header',
     standalone: true,
     imports: [
-    MatIconModule,
-    MatListModule,
-    MatProgressSpinnerModule,
-    MatMenuModule,
-    RouterModule,
-    MatButtonModule
-],
+        MatIconModule,
+        MatListModule,
+        MatProgressSpinnerModule,
+        MatMenuModule,
+        RouterModule,
+        MatButtonModule
+    ],
     templateUrl: './profile-header.component.html',
     styleUrl: './profile-header.component.scss'
 })
@@ -54,7 +54,7 @@ export class ProfileHeaderComponent {
             // Fallback to truncated pubkey when no profile exists
             return this.utilities.getTruncatedNpub(this.currentPubkey());
         }
-        
+
         if (profileData.data.display_name) {
             return profileData.data.display_name;
         }
@@ -68,7 +68,9 @@ export class ProfileHeaderComponent {
 
     isOwnProfile = computed(() => {
         return this.accountState.pubkey() === this.currentPubkey();
-    });    constructor() {
+    });
+
+    constructor() {
         effect(() => {
             const currentPubkey = this.currentPubkey();
             if (currentPubkey) {
@@ -91,7 +93,9 @@ export class ProfileHeaderComponent {
                 });
             }
         });
-    }    unfollowUser(): void {
+    }
+
+    unfollowUser(): void {
         this.logger.debug('Unfollow requested for:', this.currentPubkey());
         // TODO: Implement actual unfollow functionality
     }
@@ -141,7 +145,8 @@ export class ProfileHeaderComponent {
         const value = this.utilities.parseNip05(metadata.data.nip05);
 
         if (isNip05(metadata.data.nip05)) {
-            const profile = await queryProfile(metadata.data.nip05);
+
+            const profile = await this.utilities.queryProfile(metadata.data.nip05);
 
             if (profile) {
                 if (profile.pubkey === metadata.event.pubkey) {
