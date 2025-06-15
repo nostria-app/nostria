@@ -1,26 +1,46 @@
 @if (preview(); as preview) {
 <a class="social-preview-card" [href]="preview.url" [attr.data-url]="preview.url">
     <mat-card>
-        @if (preview.loading) {
-        <mat-card-content>
-            <mat-progress-spinner mode="indeterminate" diameter="40"></mat-progress-spinner>
-        </mat-card-content>
-        } @else if (preview.error) {
-        <mat-card-content>
-            <p class="error-message">Could not load preview</p>
-        </mat-card-content>
-        } @else {
-        @if (preview.image) {
-        <img class="image" mat-card-image [src]="preview.image" [alt]="preview.title || 'Link preview image'">
-        }
-        <mat-card-header>
-            <mat-card-title>{{preview.title || 'No title available'}}</mat-card-title>
-            <mat-card-subtitle>{{preview.description || 'No description available'}}</mat-card-subtitle>
-        </mat-card-header>
-        <mat-card-content>
-            <p class="preview-url">{{preview.url}}</p>
-        </mat-card-content>
-        }
+        <div class="preview-content">
+            <div class="thumbnail-container">
+                @if (preview.loading) {
+                <div class="thumbnail-placeholder">
+                    <mat-progress-spinner mode="indeterminate" diameter="24"></mat-progress-spinner>
+                </div>
+                } @else if (preview.error) {
+                <div class="thumbnail-placeholder error">
+                    <span class="error-icon">⚠️</span>
+                </div>
+                } @else {
+                @if (preview.image) {
+                <img class="thumbnail" [src]="preview.image" [alt]="preview.title || 'Link preview image'">
+                } @else {
+                <div class="thumbnail-placeholder">
+                    <span class="link-icon">🔗</span>
+                </div>
+                }
+                }
+            </div>
+            
+            <div class="text-content">
+                @if (preview.loading) {
+                <div class="loading-text">
+                    <div class="loading-placeholder title-placeholder"></div>
+                    <div class="loading-placeholder description-placeholder"></div>
+                    <div class="loading-placeholder url-placeholder"></div>
+                </div>
+                } @else if (preview.error) {
+                <div class="error-content">
+                    <div class="error-title">Could not load preview</div>
+                    <div class="preview-url">{{preview.url}}</div>
+                </div>
+                } @else {
+                <div class="preview-title">{{preview.title || 'No title available'}}</div>
+                <div class="preview-description">{{preview.description || 'No description available'}}</div>
+                <div class="preview-url">{{preview.url}}</div>
+                }
+            </div>
+        </div>
     </mat-card>
 </a>
 }
