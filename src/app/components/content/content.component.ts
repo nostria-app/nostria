@@ -45,10 +45,10 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
   private router = inject(Router);
   
   @ViewChild('contentContainer') contentContainer!: ElementRef;
-  
   // Input for raw content
   private _content = signal<string>('');
-    // Track visibility of the component
+  
+  // Track visibility of the component
   private _isVisible = signal<boolean>(false);
   private _hasBeenVisible = signal<boolean>(false);
   isVisible = computed(() => this._isVisible());
@@ -56,23 +56,48 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
   // Observer for intersection
   private intersectionObserver: IntersectionObserver | null = null;
   
-  // Processed content tokens - once loaded, keep them loaded
+  // Cached parsed tokens - managed outside of computed
+  private _cachedTokens = signal<ContentToken[]>([]);
+  private _lastParsedContent = '';
+  
+  // Processed content tokens - returns cached or empty based on visibility
   contentTokens = computed<ContentToken[]>(() => {
-    // Parse content if component is visible OR has been visible before
-    return (this._isVisible() || this._hasBeenVisible()) ? this.parseContent(this._content()) : [];
+    const shouldRender = this._isVisible() || this._hasBeenVisible();
+    
+    if (!shouldRender) {
+      return [];
+    }
+    
+    // Return the cached tokens
+    return this._cachedTokens();
   });
   
   // Social previews for URLs
-  socialPreviews = signal<SocialPreview[]>([]);
-
-  @Input() set content(value: string) {
-    this._content.set(value || '');
+  socialPreviews = signal<SocialPreview[]>([]);  @Input() set content(value: string) {
+    const newContent = value || '';
+    this._content.set(newContent);
   }
 
   get content() {
     return this._content();
-  }
-  constructor() {
+  }  constructor() {
+    // Effect to parse content when it changes and component is visible
+    effect(() => {
+      const shouldRender = this._isVisible() || this._hasBeenVisible();
+      const currentContent = this._content();
+      
+      if (!shouldRender) {
+        return;
+      }
+      
+      // Only reparse if content has actually changed
+      if (currentContent !== this._lastParsedContent) {
+        const newTokens = this.parseContent(currentContent);
+        this._cachedTokens.set(newTokens);
+        this._lastParsedContent = currentContent;
+      }
+    });
+    
     // Use effect to load social previews when content changes AND component is visible
     effect(() => {
       if (!this._isVisible() && !this._hasBeenVisible()) return;
@@ -91,12 +116,15 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
   ngAfterViewInit() {
     this.setupIntersectionObserver();
   }
-
   ngOnDestroy() {
     if (this.intersectionObserver) {
       this.intersectionObserver.disconnect();
       this.intersectionObserver = null;
     }
+    
+    // Clean up cached state
+    this._cachedTokens.set([]);
+    this._lastParsedContent = '';
   }
 
   private setupIntersectionObserver() {
@@ -209,7 +237,6 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     ':white_circle:': '⚪',
     ':black_circle:': '⚫'
   };
-
   private parseContent(content: string): ContentToken[] {
     if (!content) return [];
     
@@ -227,7 +254,6 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     
     // Split content and generate tokens
     let tokens: ContentToken[] = [];
-    let tokenId = 0;
     let lastIndex = 0;
     
     // Find all matches and their positions
@@ -325,18 +351,18 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     // Sort matches by their starting position
     matches.sort((a, b) => a.start - b.start);
     
-    // Process text segments and matches
+    // Process text segments and matches with deterministic IDs
     for (const match of matches) {
       // Add text segment before the match
       if (match.start > lastIndex) {
         const textSegment = processedContent.substring(lastIndex, match.start);
-        this.processTextSegment(textSegment, tokens, tokenId);
-        tokenId = tokens.length;
+        this.processTextSegment(textSegment, tokens, lastIndex);
       }
       
-      // Add the match as a token
+      // Add the match as a token with deterministic ID based on position and content
+      const tokenId = this.generateStableTokenId(match.start, match.content, match.type);
       const token: ContentToken = {
-        id: tokenId++,
+        id: tokenId,
         type: match.type,
         content: match.content
       };
@@ -357,21 +383,21 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     // Add remaining text after the last match
     if (lastIndex < processedContent.length) {
       const textSegment = processedContent.substring(lastIndex);
-      this.processTextSegment(textSegment, tokens, tokenId);
+      this.processTextSegment(textSegment, tokens, lastIndex);
     }
     
     return tokens;
   }
-  
-  private processTextSegment(segment: string, tokens: ContentToken[], startId: number): void {
+    private processTextSegment(segment: string, tokens: ContentToken[], basePosition: number): void {
     // Process line breaks in text segments
     const parts = segment.split('##LINEBREAK##');
 
     for (let i = 0; i < parts.length; i++) {
       // Only add text token if there's actual content (not empty string)
       if (parts[i].trim()) {
+        const tokenId = this.generateStableTokenId(basePosition + i, parts[i].trim(), 'text');
         tokens.push({
-          id: startId++,
+          id: tokenId,
           type: 'text',
           content: parts[i].trim()
         });
@@ -379,8 +405,9 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
       
       // Add a line break token after each part except the last one
       if (i < parts.length - 1) {
+        const linebreakId = this.generateStableTokenId(basePosition + i, '', 'linebreak');
         tokens.push({
-          id: startId++,
+          id: linebreakId,
           type: 'linebreak',
           content: ''
         });
@@ -522,5 +549,25 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
       default:
         console.warn('Unsupported nostr URI type:', type);
     }
+  }
+
+  // Control when content should be shown - once visible, always show
+  shouldShowContent = computed(() => {
+    return this._isVisible() || this._hasBeenVisible();
+  });
+
+  /**
+   * Generate a stable token ID based on position and content
+   */
+  private generateStableTokenId(position: number, content: string, type: string): number {
+    // Create a simple hash from position, content, and type
+    let hash = 0;
+    const str = `${position}-${type}-${content}`;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash);
   }
 }
