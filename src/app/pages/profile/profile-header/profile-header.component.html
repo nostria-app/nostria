@@ -31,7 +31,7 @@
 
             @if (showProfileQrCode()) {
             <div class="qr-code-container">
-                <qrcode [qrdata]="npub()!" [width]="256" [errorCorrectionLevel]="'M'"></qrcode>
+                <qrcode [qrdata]="'npub:' + npub()!" [width]="256" [errorCorrectionLevel]="'M'"></qrcode>
             </div>
             }
 
