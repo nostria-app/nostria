@@ -15,13 +15,13 @@
   // &:hover {
   //   background-color: rgba(0, 0, 0, 0.04);
   // }
-
   .user-profile-container {
     display: flex;
     align-items: center;
     padding: 0; // Removed padding
     width: 100%;
     gap: 0.4rem;
+    justify-content: space-between;
   }
 
   // Banner styles
@@ -77,12 +77,19 @@
     mat-spinner {
       margin: 0;
     }
-  }
-
-  .user-profile-content {
+  }  .user-profile-content {
     flex: 1;
     min-width: 0; // Enable text truncation
     margin-left: 0; // Removed margin
+    display: flex;
+    flex-direction: column;
+  }
+
+  .user-profile-custom-content {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    flex-shrink: 0;
   }
 
   .user-profile-name {

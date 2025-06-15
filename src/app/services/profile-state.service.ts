@@ -35,7 +35,6 @@ export class ProfileStateService {
 
   setCurrentProfilePubkey(pubkey: string): void {
     this.reset();
-    debugger
     this.currentProfilePubkey.set(pubkey);
 
     // Notify when a profile is loaded (example usage of notification service)

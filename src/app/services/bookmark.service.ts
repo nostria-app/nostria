@@ -41,7 +41,6 @@ export class BookmarkService {
   constructor() {
     effect(async () => {
       const pubkey = this.accountState.pubkey();
-      debugger;
 
       if (pubkey) {
         await this.initialize();
