@@ -305,11 +305,13 @@ export class App {
         if (result.startsWith('bunker://')) {
           await this.nostrService.loginWithNostrConnect(result);
         } else if (result.startsWith('npub:')) {
-          this.router.navigate(['/profile', result]);
+          this.router.navigate(['/p', result]);
         }
       }
     });
-  }  toggleSidenav() {
+  }  
+  
+  toggleSidenav() {
     const newState = !this.localSettings.menuOpen();
     this.localSettings.setMenuOpen(newState);
     
