@@ -23,10 +23,17 @@
 
             <h1 class="profile-name">{{ name() }}</h1>
 
-            <div class="profile-item" title="{{ npub() }}">
+            <div class="profile-item pointer" title="{{ npub() }}">
                 <mat-icon>key</mat-icon>
-                <span>{{ npub() }}</span>
+                <span (mouseenter)="showProfileQrCodeHandler()" (mouseleave)="hideProfileQrCodeHandler()"
+                    (click)="toggleProfileQrCodeHandler()">{{ npub() }}</span>
             </div>
+
+            @if (showProfileQrCode()) {
+            <div class="qr-code-container">
+                <qrcode [qrdata]="npub()!" [width]="256" [errorCorrectionLevel]="'M'"></qrcode>
+            </div>
+            }
 
             @if (!compact() && profile()) {
 
@@ -46,11 +53,18 @@
             @let lightningAddress = profile()?.data.lud16 || profile()?.data.lud06;
 
             @if (lightningAddress) {
-            <div class="profile-item">
-                <qrcode [qrdata]="'Your data string'" [width]="256" [errorCorrectionLevel]="'M'"></qrcode>
+            <div class="profile-item lightning-item">
                 <mat-icon>⚡️</mat-icon>
-                <span>{{ lightningAddress }}</span>
+                <span (mouseenter)="showQrCodeHandler()" (mouseleave)="hideQrCodeHandler()"
+                    (click)="toggleQrCodeHandler()">{{ lightningAddress }}</span>
+
             </div>
+
+            @if (showQrCode()) {
+            <div class="qr-code-container">
+                <qrcode [qrdata]="lightningAddress" [width]="256" [errorCorrectionLevel]="'M'"></qrcode>
+            </div>
+            }
             }
             }
 

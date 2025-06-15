@@ -770,6 +770,10 @@ iframe {
   }
 }
 
+.pointer {
+  cursor: pointer;
+}
+
 /* Media queue specific styles to prevent double scrollbars */
 app-media-queue {
   display: flex;
