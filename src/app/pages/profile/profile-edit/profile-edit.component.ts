@@ -36,9 +36,10 @@ export class ProfileEditComponent {
   constructor() {
 
   }
+
   ngOnInit() {
     const metadata = this.accountState.profile();
-    
+
     if (metadata?.data) {
       // User has existing profile data
       const profileClone = structuredClone(metadata.data);
@@ -58,9 +59,10 @@ export class ProfileEditComponent {
     }
   }
 
-  cancelEdit() { 
+  cancelEdit() {
     this.router.navigate(['/p', this.accountState.pubkey()], { replaceUrl: true });
   }
+
   async updateMetadata() {
     this.loading.set(true);
     // We want to be a good Nostr citizen and not delete custom metadata, except for certain deprecated fields.
@@ -74,6 +76,11 @@ export class ProfileEditComponent {
     const existingProfile = this.accountState.profile();
     const kind = existingProfile?.event.kind || 0; // Default to kind 0 for metadata
     const tags = existingProfile?.event.tags || []; // Default to empty tags array
+
+    // If user enters a NIP-05 identifier for root without "_", we must prepend it with "_".
+    if (profile.nip05 && !profile.nip05.startsWith('_')) {
+      profile.nip05 = `_${profile.nip05}`;
+    }
 
     const unsignedEvent = this.nostr.createEvent(kind, JSON.stringify(profile), tags);
     const signedEvent = await this.nostr.signEvent(unsignedEvent);
