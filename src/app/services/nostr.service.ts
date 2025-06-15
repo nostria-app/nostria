@@ -306,25 +306,25 @@ export class NostrService {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
       const pubkeyParam = urlParams.get('pubkey');
-      
+
       if (pubkeyParam) {
         this.logger.info('Found pubkey in query parameters, attempting to load account', { pubkey: pubkeyParam });
-        
+
         // Look for the account in our accounts list
         const targetAccount = this.accounts().find(account => account.pubkey === pubkeyParam);
-        
+
         if (targetAccount) {
           this.logger.info('Found matching account for pubkey from query parameter', { pubkey: pubkeyParam });
-          
+
           // Clean up the URL by removing the pubkey parameter
           const url = new URL(window.location.href);
           url.searchParams.delete('pubkey');
           window.history.replaceState({}, '', url.toString());
-          
+
           return targetAccount;
         } else {
           this.logger.warn('No matching account found for pubkey from query parameter', { pubkey: pubkeyParam });
-          
+
           // Clean up the URL even if account not found
           const url = new URL(window.location.href);
           url.searchParams.delete('pubkey');
@@ -861,7 +861,7 @@ export class NostrService {
   /**
    * Get metadata from cache or load it from storage
    */
-  async getMetadataForUser(pubkey: string, disconnect = true): Promise<NostrRecord | undefined> {
+  async getMetadataForUser(pubkey: string, refresh: boolean = false): Promise<NostrRecord | undefined> {
     console.log('There are X number in cache:', this.accountState.cachedUserProfiles().size);
 
     // Check cache first
@@ -871,6 +871,20 @@ export class NostrService {
       // this.logger.time('getMetadataForUser - cache hit' + pubkey);
       // this.updateMetadataCache(pubkey, cachedMetadata);
       // this.logger.time('getMetadataForUser - cache hit' + pubkey);
+
+      // If refresh is true, make sure to refresh the metadata in the background.
+      if (refresh) {
+        setTimeout(async () => {
+          // Profile discovery not done yet, proceed with network discovery
+          const metadata = await this.queueMetadataDiscovery(pubkey);
+
+          if (metadata) {
+            const record = this.data.getRecord(metadata);
+            this.accountState.addToCache(pubkey, record);
+          }
+        }, 0);
+      }
+
       return cachedMetadata;
     }
 
@@ -894,7 +908,7 @@ export class NostrService {
       // }
 
       // Profile discovery not done yet, proceed with network discovery
-      const metadata = await this.queueMetadataDiscovery(pubkey, disconnect);
+      const metadata = await this.queueMetadataDiscovery(pubkey);
 
       if (metadata) {
         const record = this.data.getRecord(metadata);
@@ -907,11 +921,11 @@ export class NostrService {
     }
   }
 
-  async getMetadataForUsers(pubkey: string[], disconnect = true): Promise<NostrRecord[] | undefined> {
+  async getMetadataForUsers(pubkey: string[]): Promise<NostrRecord[] | undefined> {
     const metadataList: NostrRecord[] = [];
 
     for (const p of pubkey) {
-      const metadata = await this.getMetadataForUser(p, disconnect);
+      const metadata = await this.getMetadataForUser(p);
       if (metadata) {
         metadataList.push(metadata);
         // this.updateMetadataCache(p, metadata);
