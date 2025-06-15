@@ -15,7 +15,7 @@
       </div>
       } @else {
       <div class="notes-list">
-        @for(note of profileState.sortedNotes(); track note.event) {
+        @for(note of profileState.sortedNotes(); track note.event.id) {
         <mat-card class="note-card" appearance="outlined">
           <app-user-profile class="user-profile-thread" view="thread" [pubkey]="profileState.currentProfilePubkey()">
             <a class="date-link" (click)="layout.openEvent(note.event.id, note.event)" [matTooltip]="note.event.created_at * 1000 | date:'medium'" matTooltipPosition="below">
@@ -43,7 +43,7 @@
     <div class="options-section">
       <h3 class="options-title">Display Options</h3>
       <div class="option-controls">
-        <mat-slide-toggle 
+        <!-- <mat-slide-toggle 
           [checked]="showNewestFirst()" 
           (change)="toggleSortOrder()"
           color="primary">
@@ -55,7 +55,7 @@
           } @else {
             Showing oldest notes first
           }
-        </span>
+        </span> -->
       </div>
     </div>
   </div>

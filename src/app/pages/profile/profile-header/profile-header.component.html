@@ -42,6 +42,15 @@
                 <span [class.strikethrough]="!verifiedId.valid">{{ verifiedId.value }}</span>
             </div>
             }
+
+            @let lightningAddress = profile()?.data.lud16 || profile()?.data.lud06;
+
+            @if (lightningAddress) {
+            <div class="profile-item">
+                <mat-icon>⚡️</mat-icon>
+                <span>{{ lightningAddress }}</span>
+            </div>
+            }
             }
 
             @if (!compact() && profile()?.data.website) {
