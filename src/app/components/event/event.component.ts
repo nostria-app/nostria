@@ -8,10 +8,24 @@ import { ContentComponent } from '../content/content.component';
 import { AgoPipe } from '../../pipes/ago.pipe';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { DatePipe } from '@angular/common';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatMenuModule } from '@angular/material/menu';
+import { AccountRelayService } from '../../services/account-relay.service';
+import { MatDividerModule } from '@angular/material/divider';
 
 @Component({
   selector: 'app-event',
-  imports: [UserProfileComponent, ContentComponent, AgoPipe, MatTooltipModule, DatePipe],
+  imports: [
+    UserProfileComponent,
+    ContentComponent,
+    AgoPipe,
+    MatTooltipModule,
+    DatePipe,
+    MatDividerModule,
+    MatButtonModule,
+    MatIconModule,
+    MatMenuModule],
   templateUrl: './event.component.html',
   styleUrl: './event.component.scss'
 })
@@ -24,6 +38,7 @@ export class EventComponent {
   data = inject(DataService);
   record = signal<NostrRecord | null>(null);
   layout = inject(LayoutService);
+  accountRelayService = inject(AccountRelayService);
 
   constructor() {
     effect(() => {
@@ -71,5 +86,15 @@ export class EventComponent {
     } else if (type === 'a') {
       this.layout.openArticle(id, this.record()?.event);
     }
+  }
+
+  async publishEvent() {
+    const event = this.record()?.event;
+    if (!event) {
+      return;
+    }
+
+    debugger;
+    const pub = this.accountRelayService.publish(event);
   }
 }

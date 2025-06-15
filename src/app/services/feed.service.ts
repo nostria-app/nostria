@@ -145,7 +145,6 @@ export class FeedService {
   constructor() {
     effect(() => {
       if (this.accountState.initialized()) {
-        debugger;
         untracked(() => {
           this.loadFeeds();
           this.loadRelays();

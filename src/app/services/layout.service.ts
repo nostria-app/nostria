@@ -44,12 +44,14 @@ export class LayoutService {
         this.breakpointObserver.observe('(min-width: 1200px)').subscribe(result => {
             this.isWideScreen.set(result.matches);
         });
-    }    toggleSearch() {
+    }
+
+    toggleSearch() {
         const newSearchState = !this.search();
-        this.search.set(newSearchState);        if (newSearchState) {
+        this.search.set(newSearchState); if (newSearchState) {
             // Add ESC key listener when search is opened
             this.setupEscKeyListener();
-            
+
             // Focus on search input after DOM update
             setTimeout(() => {
                 const searchInput = document.querySelector('.search-input') as HTMLInputElement;
@@ -102,14 +104,23 @@ export class LayoutService {
 
     private debounceTimer: any;
 
-    copyToClipboard(text: string | undefined | null, type: string): void {
+    copyToClipboard(text: any | undefined | null, type: string, author?: string): void {
         if (text === null || text === undefined) {
             return;
         }
 
         if (type === 'nprofile') {
-            const profile: ProfilePointer = { pubkey: text, relays: this.profileState.relay?.relayUrls };
-            text = nip19.nprofileEncode(profile);
+            const profilePointer: ProfilePointer = { pubkey: text, relays: this.profileState.relay?.relayUrls };
+            text = nip19.nprofileEncode(profilePointer);
+        }
+
+        if (type === 'nevent') {
+            const eventPointer: EventPointer = { id: text, author: author };
+            text = nip19.neventEncode(eventPointer);
+        }
+
+        if (type === 'json') {
+            text = JSON.stringify(text, null, 2);
         }
 
         navigator.clipboard.writeText(text)
@@ -175,7 +186,7 @@ export class LayoutService {
         setTimeout(() => {
             this.scrollToOptimalProfilePosition();
         }, 300);
-    }    onSearchInput(event: any) {
+    } onSearchInput(event: any) {
         if (event.target.value === null) {
             clearTimeout(this.debounceTimer);
             return;
@@ -191,7 +202,7 @@ export class LayoutService {
             console.log('Handle search called!');
             this.handleSearch(event.target.value);
         }, 750);
-    }private handleSearch(value: string): void {
+    } private handleSearch(value: string): void {
         if (!value) {
             this.query.set('');
             return;
@@ -451,6 +462,36 @@ export class LayoutService {
 
             this.logger.debug('Opened profile picture dialog');
         }
+    }
+
+    shareEvent(event: Event): void {
+        if (!event) {
+            this.logger.error('Cannot share event: event is undefined');
+            return;
+        }
+
+        // Share profile action using the Web Share API if available
+        if (navigator.share) {
+            navigator.share({
+                title: `Nostra Event`,
+                text: `Check out this event on Nostr`,
+                url: window.location.href
+            }).then(() => {
+                this.logger.debug('Event shared successfully');
+            }).catch((error) => {
+                this.logger.error('Error sharing profile:', error);
+            });
+        } else {
+            // Fallback if Web Share API is not available
+            this.copyToClipboard(window.location.href, 'event URL');
+        }
+    }
+
+    getCurrentUrl() {
+        // Get the current URL without the query parameters
+        const url = new URL(window.location.href);
+        url.search = ''; // Remove query parameters
+        return url.toString();
     }
 
     shareProfile(npub?: string, name?: string): void {

@@ -46,9 +46,7 @@
         {{isProfileNotFound() ? 'no_accounts' : 'account_circle'}}
       </mat-icon>
       }
-    </a>
-
-    <!-- Content section with conditional rendering based on view -->
+    </a>    <!-- Content section with conditional rendering based on view -->
     @if (view() !== 'large' && view() !== 'medium' && view() !== 'small') {
     <div class="user-profile-content">
       <!-- Name section -->
@@ -77,12 +75,11 @@
       @if (view() === 'details' && profile() && profile().data && profile().data.about) {
       <p class="user-profile-about">{{ profile().data.about }}</p>
       }
+    </div>
 
-      <!-- Named content projection for thread view -->
-      <div class="user-profile-custom-content">
-        <ng-content></ng-content>
-      </div>
-
+    <!-- Named content projection for additional controls (like more options button) -->
+    <div class="user-profile-custom-content">
+      <ng-content></ng-content>
     </div>
     }
 
