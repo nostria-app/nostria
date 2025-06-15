@@ -14,6 +14,7 @@ import { NostrRecord } from '../../../interfaces';
 import { isNip05, queryProfile } from 'nostr-tools/nip05';
 import { AccountStateService } from '../../../services/account-state.service';
 import { UtilitiesService } from '../../../services/utilities.service';
+import { QRCodeComponent } from 'angularx-qrcode';
 
 @Component({
     selector: 'app-profile-header',
@@ -24,7 +25,8 @@ import { UtilitiesService } from '../../../services/utilities.service';
         MatProgressSpinnerModule,
         MatMenuModule,
         RouterModule,
-        MatButtonModule
+        MatButtonModule,
+        QRCodeComponent
     ],
     templateUrl: './profile-header.component.html',
     styleUrl: './profile-header.component.scss'

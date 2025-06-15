@@ -47,6 +47,7 @@
 
             @if (lightningAddress) {
             <div class="profile-item">
+                <qrcode [qrdata]="'Your data string'" [width]="256" [errorCorrectionLevel]="'M'"></qrcode>
                 <mat-icon>⚡️</mat-icon>
                 <span>{{ lightningAddress }}</span>
             </div>
