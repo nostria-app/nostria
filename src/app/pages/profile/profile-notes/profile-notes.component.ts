@@ -15,7 +15,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { FormsModule } from '@angular/forms';
 import { ContentComponent } from '../../../components/content/content.component';
-import { NostrRecord } from '../../../interfaces';
 import { LayoutService } from '../../../services/layout.service';
 
 @Component({
@@ -49,31 +48,7 @@ export class ProfileNotesComponent {
   error = signal<string | null>(null);
   layout = inject(LayoutService);
   
-  // Options
-  showNewestFirst = signal<boolean>(true);
-  sortedNotes = signal<NostrRecord[]>([]);
-
   constructor() {
-    // Setup effect to sort notes when options or source data changes
-    effect(() => {
-      const notes = this.profileState.notes();
-      const newestFirst = this.showNewestFirst();
-      
-      // Apply sorting based on options
-      if (newestFirst) {
-        this.sortedNotes.set([...notes].sort((a, b) => b.event.created_at - a.event.created_at));
-      } else {
-        this.sortedNotes.set([...notes].sort((a, b) => a.event.created_at - b.event.created_at));
-      }
-    });
-  }
 
-  // Get the pubkey from the parent route
-  getPubkey(): string {
-    return this.route.parent?.snapshot.paramMap.get('id') || '';
-  }
-
-  toggleSortOrder() {
-    this.showNewestFirst.set(!this.showNewestFirst());
   }
 }
