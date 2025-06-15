@@ -123,15 +123,7 @@ export class NameService {
 
     // check if we have account with such username
     return this.accountService.getPublicAccount({ pubkeyOrUsername: username }).pipe(
-      map(() => false),
-      catchError(err => {
-        if (err.status === 404) {
-          return of(true);
-        }
-        console.error(err);
-        return of(false);
-      })
-    );
+      map(res => !res.success));
   }
   
   /**
