@@ -24,7 +24,7 @@
   max-width: 680px; // Fixed width for the note container to match note-card
   // Ensure list container appears second on small screens
   order: 2;
-  
+
   @media (min-width: 960px) {
     order: 1; // On larger screens, make it first
     width: 680px; // Fixed width on larger screens
@@ -148,4 +148,87 @@
 
 .note-footer-right {
   margin-left: auto;
+}
+
+// Loading and status indicators
+.loading-more-indicator,
+.no-more-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  margin: 16px 0;
+  text-align: center;
+  border-radius: 8px;
+  
+  p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.loading-more-indicator {
+  background-color: var(--mat-sys-surface-container);
+  box-shadow: var(--mat-sys-level1);
+  
+  mat-spinner {
+    margin-right: 4px;
+  }
+}
+
+.no-more-indicator {
+  background-color: var(--mat-sys-surface-container-lowest);
+  color: var(--mat-sys-on-surface-variant);
+  
+  mat-icon {
+    opacity: 0.6;
+    color: var(--mat-sys-on-surface-variant);
+  }
+  
+  p {
+    font-style: italic;
+  }
+}
+
+// Loading and end indicators
+.loading-more-indicator,
+.no-more-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  text-align: center;
+  gap: 8px;
+  color: var(--mat-sys-on-surface-variant);
+
+  mat-spinner {
+    margin-right: 8px;
+  }
+
+  mat-icon {
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+    opacity: 0.6;
+    margin-right: 8px;
+  }
+
+  p {
+    margin: 0;
+    font-size: 14px;
+    font-style: italic;
+  }
+}
+
+.loading-more-indicator {
+  background-color: var(--mat-sys-surface-container);
+  border-radius: 8px;
+  margin: 1rem;
+  box-shadow: var(--mat-sys-level1);
+}
+
+.no-more-indicator {
+  opacity: 0.7;
 }
