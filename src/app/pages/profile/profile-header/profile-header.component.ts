@@ -43,6 +43,10 @@ export class ProfileHeaderComponent {
     accountState = inject(AccountStateService);
     utilities = inject(UtilitiesService);
 
+    // Add signal for QR code visibility
+    showQrCode = signal<boolean>(false);
+    showProfileQrCode = signal<boolean>(false);
+
     // Add signal for verified identifier
     verifiedIdentifier = signal<{ value: string, valid: boolean, status: string }>({ value: '', valid: false, status: '' });
 
@@ -160,5 +164,30 @@ export class ProfileHeaderComponent {
         }
 
         return { value, valid: false, status: 'Invalid NIP-05' };
+    }
+
+    // Add methods for QR code visibility
+    showQrCodeHandler(): void {
+        this.showQrCode.set(true);
+    }
+
+    hideQrCodeHandler(): void {
+        this.showQrCode.set(false);
+    }
+
+    toggleQrCodeHandler(): void {
+        this.showQrCode.set(!this.showQrCode());
+    }
+
+    showProfileQrCodeHandler(): void {
+        this.showProfileQrCode.set(true);
+    }
+
+    hideProfileQrCodeHandler(): void {
+        this.showProfileQrCode.set(false);
+    }
+
+    toggleProfileQrCodeHandler(): void {
+        this.showProfileQrCode.set(!this.showProfileQrCode());
     }
 }

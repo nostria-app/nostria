@@ -196,7 +196,6 @@
     margin-bottom: 8px;
     color: var(--mat-hint-color, #757575);
     width: auto;
-    /* Changed from 100% to auto to fit content */
     max-width: 100%;
     overflow: hidden;
 
@@ -236,11 +235,6 @@
             text-decoration: underline;
         }
     }
-
-    // .compact & {
-    //     margin-bottom: 4px;
-    //     font-size: 12px;
-    // }
 }
 
 .profile-bio {
@@ -288,4 +282,22 @@
     display: inline-flex;
     align-items: center;
     padding: 4px 8px;
+}
+
+.qr-code-container {
+    position: absolute;
+    z-index: 1000;
+    background: var(--mat-sys-surface);
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: var(--mat-sys-level3);
+    margin-top: 8px;
+
+    qrcode {
+        display: block;
+    }
+}
+
+.lightning-item {
+    cursor: pointer;
 }
