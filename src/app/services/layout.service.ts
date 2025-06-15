@@ -1,4 +1,4 @@
-import { inject, Injectable, signal } from "@angular/core";
+import { inject, Injectable, signal, OnDestroy, effect } from "@angular/core";
 import { NostrService } from "./nostr.service";
 import { StorageService } from "./storage.service";
 import { Router, RouterLink, RouterModule } from "@angular/router";
@@ -12,11 +12,12 @@ import { AddressPointer, EventPointer, ProfilePointer } from "nostr-tools/nip19"
 import { ProfileStateService } from "./profile-state.service";
 import { LoginDialogComponent } from "../components/login-dialog/login-dialog.component";
 import { NostrRecord } from "../interfaces";
+import { AccountStateService } from "./account-state.service";
 
 @Injectable({
     providedIn: 'root'
 })
-export class LayoutService {
+export class LayoutService implements OnDestroy {
     /** Used to perform queries or search when input has been parsed to be NIP-5 or similar. */
     query = signal<string | null>(null);
     search = signal(false);
@@ -30,8 +31,82 @@ export class LayoutService {
     optimalProfilePosition: number = 200;
     premium = signal(false);
     profileState = inject(ProfileStateService);
+    accountStateService = inject(AccountStateService);
     overlayMode = signal(false);
     showMediaPlayer = signal(false);
+
+    // Scroll event signals
+
+    /**
+     * Signal that indicates whether the content wrapper is scrolled to the top
+     * 
+     * Usage example in components:
+     * ```typescript
+     * import { inject, effect } from '@angular/core';
+     * import { LayoutService } from '../services/layout.service';
+     *     * export class MyComponent {
+     *   private layout = inject(LayoutService);
+     * 
+     *   constructor() {
+     *     // React to scroll to top events
+     *     effect(() => {
+     *       // Only react if scroll monitoring is ready to prevent early triggers
+     *       if (this.layout.scrollMonitoringReady() && this.layout.scrolledToTop()) {
+     *         console.log('User scrolled to top - refresh data?');
+     *         // Add your logic here (e.g., pull to refresh)
+     *       }
+     *     });
+     *   }
+     * }
+     * ```
+     */
+    scrolledToTop = signal(false);
+
+    /**
+     * Signal that indicates whether the content wrapper is scrolled to the bottom
+     * 
+     * Usage example in components:
+     * ```typescript
+     * import { inject, effect } from '@angular/core';
+     * import { LayoutService } from '../services/layout.service';
+     * 
+     * export class MyComponent {
+     *   private layout = inject(LayoutService);
+     *   private loading = signal(false);
+     *     *   constructor() {
+     *     // React to scroll to bottom events for infinite loading
+     *     effect(() => {
+     *       // Only react if scroll monitoring is ready to prevent early triggers
+     *       if (this.layout.scrollMonitoringReady() && this.layout.scrolledToBottom() && !this.loading()) {
+     *         console.log('User scrolled to bottom - load more data');
+     *         this.loadMoreData();
+     *       }
+     *     });
+     *   }
+     * 
+     *   private async loadMoreData() {
+     *     this.loading.set(true);
+     *     try {
+     *       // Fetch more data
+     *       const newData = await this.dataService.loadMore();
+     *       // Process and add to existing data
+     *     } finally {
+     *       this.loading.set(false);
+     *     }
+     *   }
+     * }
+     * ```
+     */    scrolledToBottom = signal(false);
+
+    private scrollEventListener?: () => void;
+    private contentWrapper?: Element;
+    private isScrollMonitoringReady = signal(false);
+
+    /**
+     * Signal that indicates whether scroll monitoring is ready and initialized
+     * Use this to ensure scroll signals are reliable before reacting to them
+     */
+    readonly scrollMonitoringReady = this.isScrollMonitoringReady.asReadonly();
 
     constructor() {
         // Monitor only mobile devices (not tablets)
@@ -43,7 +118,264 @@ export class LayoutService {
 
         this.breakpointObserver.observe('(min-width: 1200px)').subscribe(result => {
             this.isWideScreen.set(result.matches);
+        });        effect(() => {
+            if (this.accountStateService.initialized()) {
+                // Initialize scroll monitoring after a longer delay to ensure DOM is fully rendered
+                setTimeout(() => {
+                    this.initializeScrollMonitoring();
+                }, 500); // Increased from 100ms to 500ms to ensure full render
+            }
         });
+    }
+
+    /**
+     * Initializes scroll event monitoring on the content wrapper
+     */
+    private initializeScrollMonitoring(): void {
+        // Find the content wrapper (prioritize .mat-drawer-content, fallback to .content-wrapper)
+        // const matDrawerContent = document.querySelector('.mat-drawer-content');
+        const contentWrapper = document.querySelector('.content-wrapper');
+
+        if (!contentWrapper) {
+            return;
+        }
+
+        this.contentWrapper = contentWrapper; // || matDrawerContent || undefined;
+        // this.contentWrapper = matDrawerContent || contentWrapper || undefined;
+
+        if (!this.contentWrapper) {
+            this.logger.warn('Content wrapper not found for scroll monitoring, retrying in 500ms...');
+            setTimeout(() => this.initializeScrollMonitoring(), 500);
+            return;
+        }
+
+        this.logger.debug('Initializing scroll monitoring on content wrapper');        // Remove existing listener if any
+        if (this.scrollEventListener) {
+            this.contentWrapper.removeEventListener('scroll', this.scrollEventListener);
+        }
+
+        // Create scroll handler with immediate and throttled updates
+        let scrollTimeout: number | undefined;
+        this.scrollEventListener = () => {
+            // Immediate check for critical state changes (top/bottom transitions)
+            const currentTop = this.scrolledToTop();
+            const currentBottom = this.scrolledToBottom();
+
+            // Quick check to see if we need immediate update
+            const scrollTop = this.contentWrapper!.scrollTop;
+            const scrollHeight = this.contentWrapper!.scrollHeight;
+            const clientHeight = this.contentWrapper!.clientHeight;
+            const threshold = 5;
+
+            const isAtTop = scrollTop <= threshold;
+            const isAtBottom = scrollTop + clientHeight >= scrollHeight - threshold;
+
+            // If transitioning away from top or bottom, update immediately
+            if ((currentTop && !isAtTop) || (currentBottom && !isAtBottom)) {
+                this.checkScrollPosition();
+            }
+
+            // Always do throttled update for other cases
+            if (scrollTimeout) {
+                clearTimeout(scrollTimeout);
+            }
+            scrollTimeout = window.setTimeout(() => {
+                this.checkScrollPosition();
+            }, 50);
+        };        this.contentWrapper.addEventListener('scroll', this.scrollEventListener, { passive: true });
+        
+        // Delay the initial scroll position check to ensure everything has rendered
+        // This prevents early triggering of scrolledToTop/scrolledToBottom signals
+        setTimeout(() => {
+            this.checkScrollPosition();
+            this.isScrollMonitoringReady.set(true);
+        }, 1000); // Wait 1 second after scroll monitoring setup before checking position
+    }
+      /**
+     * Checks the current scroll position and updates the scroll signals
+     * Only updates signals if monitoring is ready to prevent early triggering
+     */
+    private checkScrollPosition(): void {
+        if (!this.contentWrapper) {
+            return;
+        }
+
+        const scrollTop = this.contentWrapper.scrollTop;
+        const scrollHeight = this.contentWrapper.scrollHeight;
+        const clientHeight = this.contentWrapper.clientHeight;
+
+        // Threshold for considering "at top" or "at bottom" (5px tolerance)
+        const threshold = 5;
+
+        // Check if scrolled to top
+        const isAtTop = scrollTop <= threshold;
+        const currentAtTop = this.scrolledToTop();
+        if (isAtTop !== currentAtTop && this.isScrollMonitoringReady()) {
+            this.scrolledToTop.set(isAtTop);
+            this.logger.debug('Scroll position - at top changed:', {
+                isAtTop,
+                wasAtTop: currentAtTop,
+                scrollTop,
+                threshold
+            });
+        }
+
+        // Check if scrolled to bottom
+        const isAtBottom = scrollTop + clientHeight >= scrollHeight - threshold;
+        const currentAtBottom = this.scrolledToBottom();
+        if (isAtBottom !== currentAtBottom && this.isScrollMonitoringReady()) {
+            this.scrolledToBottom.set(isAtBottom);
+            this.logger.debug('Scroll position - at bottom changed:', {
+                isAtBottom,
+                wasAtBottom: currentAtBottom,
+                scrollTop,
+                clientHeight,
+                scrollHeight,
+                calculated: scrollTop + clientHeight,
+                targetThreshold: scrollHeight - threshold
+            });
+        }
+    }
+
+    /**
+     * Manually refresh scroll monitoring (useful when content changes)
+     */
+    refreshScrollMonitoring(): void {
+        this.checkScrollPosition();
+    }    /**
+     * Re-initialize scroll monitoring (useful when DOM structure changes)
+     */
+    reinitializeScrollMonitoring(): void {
+        this.isScrollMonitoringReady.set(false);
+        this.initializeScrollMonitoring();
+    }
+
+    /**
+     * Debug method to test scroll signal behavior
+     * Logs current scroll state and signal values
+     */
+    debugScrollState(): void {
+        if (!this.contentWrapper) {
+            console.log('No content wrapper found');
+            return;
+        }
+
+        let scrollTimeout: any;
+        this.contentWrapper.addEventListener("scroll", function () {
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                console.log("Scroll event triggered (debounced)");
+            }, 200);
+        });
+
+        const scrollTop = this.contentWrapper.scrollTop;
+        const scrollHeight = this.contentWrapper.scrollHeight;
+        const clientHeight = this.contentWrapper.clientHeight;
+        const threshold = 5;
+
+        const calculatedAtTop = scrollTop <= threshold;
+        const calculatedAtBottom = scrollTop + clientHeight >= scrollHeight - threshold;
+
+        console.log('Scroll Debug State:', {
+            scrollTop,
+            scrollHeight,
+            clientHeight,
+            threshold,
+            calculatedAtTop,
+            calculatedAtBottom,
+            signalAtTop: this.scrolledToTop(),
+            signalAtBottom: this.scrolledToBottom(),
+            signalsMatch: {
+                top: calculatedAtTop === this.scrolledToTop(),
+                bottom: calculatedAtBottom === this.scrolledToBottom()
+            }
+        });
+    }
+
+    /**
+     * SCROLL SIGNALS USAGE GUIDE:
+     * 
+     * The scrolledToTop and scrolledToBottom signals can be used in any component
+     * to react to scroll events in the main content area. Here are common patterns:
+     * 
+     * 1. INFINITE LOADING (scroll to bottom):
+     * ```typescript
+     * export class MyListComponent {
+     *   private layout = inject(LayoutService);
+     *   private dataService = inject(MyDataService);
+     *   private loading = signal(false);
+     *   items = signal<Item[]>([]);
+     *     *   constructor() {
+     *     effect(() => {
+     *       if (this.layout.scrolledToBottom() && !this.loading()) {
+     *         this.loadMoreItems();
+     *       }
+     *     });
+     *   }
+     * 
+     *   private async loadMoreItems() {
+     *     this.loading.set(true);
+     *     try {
+     *       const newItems = await this.dataService.loadMore();
+     *       this.items.update(current => [...current, ...newItems]);
+     *     } finally {
+     *       this.loading.set(false);
+     *     }
+     *   }
+     * }
+     * ```
+     * 
+     * 2. PULL-TO-REFRESH (scroll to top):
+     * ```typescript
+     * export class MyFeedComponent {
+     *   private layout = inject(LayoutService);
+     *   private dataService = inject(MyDataService);
+     *   private refreshing = signal(false);
+     *     *   constructor() {
+     *     effect(() => {
+     *       if (this.layout.scrolledToTop() && !this.refreshing()) {
+     *         this.refreshData();
+     *       }
+     *     });
+     *   }
+     * 
+     *   private async refreshData() {
+     *     this.refreshing.set(true);
+     *     try {
+     *       const freshData = await this.dataService.refresh();
+     *       // Update your data
+     *     } finally {
+     *       this.refreshing.set(false);
+     *     }
+     *   }
+     * }
+     * ```
+     *     * 3. SHOW/HIDE UI ELEMENTS:
+     * ```typescript
+     * export class MyComponent {
+     *   private layout = inject(LayoutService);
+     *   showScrollToTop = computed(() => 
+     *     this.layout.scrollMonitoringReady() && !this.layout.scrolledToTop()
+     *   );
+     *   showLoadMoreButton = computed(() => 
+     *     this.layout.scrollMonitoringReady() && this.layout.scrolledToBottom()
+     *   );
+     * }
+     * ```
+     * 
+     * IMPORTANT NOTES:
+     * - Always check scrollMonitoringReady() first to prevent early triggers
+     * - Always check for loading states to prevent duplicate requests
+     * - Use computed() for reactive UI updates based on scroll position
+     * - The signals update with a 50ms throttle to prevent excessive updates
+     * - Scroll monitoring initializes 1.5 seconds after account initialization
+     * - Call refreshScrollMonitoring() after dynamic content changes
+     * - Call reinitializeScrollMonitoring() if the DOM structure changes
+     */
+    ngOnDestroy(): void {
+        if (this.contentWrapper && this.scrollEventListener) {
+            this.contentWrapper.removeEventListener('scroll', this.scrollEventListener);
+        }
     }
 
     toggleSearch() {
@@ -274,8 +606,7 @@ export class LayoutService {
 
     /**
      * Scrolls the page to show half of the banner and the full profile picture
-     */
-    scrollToOptimalPosition(scrollPosition: number): void {
+     */    scrollToOptimalPosition(scrollPosition: number): void {
         // We need the banner height to calculate the optimal scroll position
         // const bannerHeight = this.getBannerHeight();
 
@@ -294,6 +625,9 @@ export class LayoutService {
             });
 
             this.logger.debug('Scrolled content wrapper to optimal profile view position', scrollPosition);
+
+            // Refresh scroll monitoring after programmatic scroll
+            setTimeout(() => this.refreshScrollMonitoring(), 300);
         } else {
             this.logger.error('Could not find mat-drawer-content element for scrolling');
         }
@@ -320,8 +654,7 @@ export class LayoutService {
     /**
      * Scrolls an element to the top of the page with smooth animation
      * @param elementSelector CSS selector for the element to scroll
-     */
-    scrollToTop(elementSelector: string = '.content-wrapper'): void {
+     */    scrollToTop(elementSelector: string = '.content-wrapper'): void {
         const element = document.querySelector(elementSelector);
         if (element) {
             element.scrollTo({
@@ -329,6 +662,9 @@ export class LayoutService {
                 behavior: 'smooth'
             });
             this.logger.debug(`Scrolled ${elementSelector} to top`);
+
+            // Refresh scroll monitoring after programmatic scroll
+            setTimeout(() => this.refreshScrollMonitoring(), 300);
         } else {
             this.logger.error(`Could not find ${elementSelector} element for scrolling`);
         }
@@ -337,8 +673,7 @@ export class LayoutService {
     /**
      * Scrolls the main content area to the top - specifically for page navigation
      * Uses the mat-drawer-content element which is the main scrollable container
-     */
-    scrollMainContentToTop(): void {
+     */    scrollMainContentToTop(): void {
         // Try the mat-drawer-content first (main layout container)
         const matDrawerContent = document.querySelector('.mat-drawer-content');
         if (matDrawerContent) {
@@ -347,6 +682,9 @@ export class LayoutService {
                 behavior: 'smooth'
             });
             this.logger.debug('Scrolled mat-drawer-content to top');
+
+            // Refresh scroll monitoring after programmatic scroll
+            setTimeout(() => this.refreshScrollMonitoring(), 300);
             return;
         }
 
