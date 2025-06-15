@@ -47,8 +47,26 @@ export class ProfileNotesComponent {
   isLoading = signal<boolean>(false);
   error = signal<string | null>(null);
   layout = inject(LayoutService);
-  
-  constructor() {
 
+  constructor() {
+    // this.layout.debugScrollState();
+
+    effect(() => {
+      // Only react if scroll monitoring is ready to prevent early triggers
+      if (this.layout.scrollMonitoringReady() && this.layout.scrolledToBottom()) {
+        console.log('Scrolled to bottom, loading more notes...');
+
+        
+
+      }
+    });
+
+    // effect(() => {
+    //   // Only react if scroll monitoring is ready to prevent early triggers
+    //   if (this.layout.scrollMonitoringReady() && this.layout.scrolledToTop()) {
+    //     console.log('Scrolled to top, loading more notes...');
+        
+    //   }
+    // });
   }
 }
