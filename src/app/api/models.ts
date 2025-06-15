@@ -4,6 +4,7 @@
 
 export type { AccountDto } from './models/account-dto';
 export type { AddAccountRequest } from './models/add-account-request';
+export type { ApiResponse } from './models/api-response';
 export type { Error } from './models/error';
 export type { PublicAccountDto } from './models/public-account-dto';
 export type { UpdateAccountRequest } from './models/update-account-request';

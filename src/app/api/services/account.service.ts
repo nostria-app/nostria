@@ -14,11 +14,11 @@ import { StrictHttpResponse } from '../strict-http-response';
 import { AccountDto } from '../models/account-dto';
 import { addAccount } from '../fn/account/add-account';
 import { AddAccount$Params } from '../fn/account/add-account';
+import { ApiResponse } from '../models/api-response';
 import { getAccount } from '../fn/account/get-account';
 import { GetAccount$Params } from '../fn/account/get-account';
 import { getPublicAccount } from '../fn/account/get-public-account';
 import { GetPublicAccount$Params } from '../fn/account/get-public-account';
-import { PublicAccountDto } from '../models/public-account-dto';
 import { updateAccount } from '../fn/account/update-account';
 import { UpdateAccount$Params } from '../fn/account/update-account';
 
@@ -140,7 +140,7 @@ export class AccountService extends BaseService {
    *
    * This method doesn't expect any request body.
    */
-  getPublicAccount$Response(params: GetPublicAccount$Params, context?: HttpContext): Observable<StrictHttpResponse<PublicAccountDto>> {
+  getPublicAccount$Response(params: GetPublicAccount$Params, context?: HttpContext): Observable<StrictHttpResponse<ApiResponse>> {
     return getPublicAccount(this.http, this.rootUrl, params, context);
   }
 
@@ -154,9 +154,9 @@ export class AccountService extends BaseService {
    *
    * This method doesn't expect any request body.
    */
-  getPublicAccount(params: GetPublicAccount$Params, context?: HttpContext): Observable<PublicAccountDto> {
+  getPublicAccount(params: GetPublicAccount$Params, context?: HttpContext): Observable<ApiResponse> {
     return this.getPublicAccount$Response(params, context).pipe(
-      map((r: StrictHttpResponse<PublicAccountDto>): PublicAccountDto => r.body)
+      map((r: StrictHttpResponse<ApiResponse>): ApiResponse => r.body)
     );
   }
 
