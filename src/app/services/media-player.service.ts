@@ -23,11 +23,14 @@ export class MediaPlayerService implements OnInitialized {
   utilities = inject(UtilitiesService);
   localStorage = inject(LocalStorageService);
   layout = inject(LayoutService);
-  app = inject(ApplicationService); media = signal<MediaItem[]>([]);
+  app = inject(ApplicationService);  media = signal<MediaItem[]>([]);
   audio?: HTMLAudioElement;
   current?: MediaItem;
   index = 0;
   readonly MEDIA_STORAGE_KEY = 'nostria-media-queue';
+  
+  // Cache for YouTube embed URLs
+  private _youtubeUrlCache = new Map<string, SafeResourceUrl>();
   readonly WINDOW_STATE_STORAGE_KEY = 'nostria-video-window-state';
 
   // Video window state
@@ -268,23 +271,40 @@ export class MediaPlayerService implements OnInitialized {
     }
   };
 
+  getYouTubeEmbedUrl = computed(() => {
+    // Return a function that caches YouTube embed URLs
+    return (url: string, query?: string): SafeResourceUrl => {
+      console.log('getYouTubeEmbedUrl called with:', url, 'and query:', query);
 
-  getYouTubeEmbedUrl(url: string, query?: string): SafeResourceUrl {
-    const regex = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
-    const match = url.match(regex);
-
-    if (match && match[1]) {
-      const embedUrl = `https://www.youtube.com/embed/${match[1]}`;
-
-      if (query) {
-        return this.sanitizer.bypassSecurityTrustResourceUrl(`${embedUrl}?${query}`);
+      // Create cache key including query parameter
+      const cacheKey = query ? `${url}?${query}` : url;
+      
+      // Check if we already have this URL cached
+      if (this._youtubeUrlCache.has(cacheKey)) {
+        console.log('Returning cached YouTube embed URL for:', cacheKey);
+        return this._youtubeUrlCache.get(cacheKey)!;
       }
 
-      return this.sanitizer.bypassSecurityTrustResourceUrl(embedUrl);
-    }
+      const regex = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+      const match = url.match(regex);
 
-    return this.sanitizer.bypassSecurityTrustResourceUrl('');
-  }
+      let embedUrl: SafeResourceUrl;
+      
+      if (match && match[1]) {
+        const baseEmbedUrl = `https://www.youtube.com/embed/${match[1]}?enablejsapi=1`;
+        const finalUrl = query ? `${baseEmbedUrl}&${query}` : baseEmbedUrl;
+        embedUrl = this.sanitizer.bypassSecurityTrustResourceUrl(finalUrl);
+      } else {
+        embedUrl = this.sanitizer.bypassSecurityTrustResourceUrl('');
+      }
+
+      // Cache the result
+      this._youtubeUrlCache.set(cacheKey, embedUrl);
+      console.log('Cached YouTube embed URL for:', cacheKey);
+      
+      return embedUrl;
+    };
+  });
 
 
   async start() {
@@ -303,12 +323,10 @@ export class MediaPlayerService implements OnInitialized {
 
     this.current = file;
 
-    this.layout.showMediaPlayer.set(true);
-
-    if (file.type === 'YouTube') {
+    this.layout.showMediaPlayer.set(true);    if (file.type === 'YouTube') {
       this.videoMode.set(true);
       this.videoUrl.set(undefined);
-      const youTubeUrl = this.getYouTubeEmbedUrl(file.source, 'autoplay=1');
+      const youTubeUrl = this.getYouTubeEmbedUrl()(file.source, 'autoplay=1');
       this.youtubeUrl.set(youTubeUrl);
     } else if (file.type === 'Video') {
       this.videoMode.set(true);
@@ -667,5 +685,13 @@ export class MediaPlayerService implements OnInitialized {
     navigator.mediaSession.playbackState = 'none';
 
     console.log('Media queue completely cleared');
+  }
+
+  /**
+   * Clear the YouTube URL cache (useful for memory management)
+   */
+  clearYouTubeUrlCache(): void {
+    this._youtubeUrlCache.clear();
+    console.log('YouTube URL cache cleared');
   }
 }

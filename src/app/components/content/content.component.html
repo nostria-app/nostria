@@ -1,5 +1,5 @@
 <div class="content-container" #contentContainer>
-  @defer (when isVisible()) {
+  @if (shouldShowContent()) {
     @for (token of contentTokens(); track token.id) {
       @if (token.type === 'text') {
         <span>{{token.content}}</span>
@@ -13,12 +13,11 @@
         </span>
       } @else if (token.type === 'url') {
         <a [href]="token.content" target="_blank" rel="noopener noreferrer">{{token.content}}</a>
-      } @else if (token.type === 'youtube') {
-        <div class="media-container">
+      } @else if (token.type === 'youtube') {        <div class="media-container">
           <iframe
             width="560"
             height="315"
-            [src]="media.getYouTubeEmbedUrl(token.content)"
+            [src]="media.getYouTubeEmbedUrl()(token.content)"
             frameborder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowfullscreen>
@@ -55,7 +54,7 @@
         <app-social-preview class="social-preview" [url]="preview.url"></app-social-preview>
       }
     }
-  } @loading {
+  } @else {
     <div class="content-placeholder"></div>
   }
 </div>
