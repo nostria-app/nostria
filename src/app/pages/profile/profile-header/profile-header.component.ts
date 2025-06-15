@@ -146,7 +146,7 @@ export class ProfileHeaderComponent {
 
         if (isNip05(metadata.data.nip05)) {
 
-            const profile = await this.utilities.queryProfile(metadata.data.nip05);
+            const profile = await queryProfile(metadata.data.nip05);
 
             if (profile) {
                 if (profile.pubkey === metadata.event.pubkey) {
