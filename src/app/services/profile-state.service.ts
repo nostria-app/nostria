@@ -94,7 +94,7 @@ export class ProfileStateService {
       return new Promise<NostrRecord[]>((resolve) => {
         const newNotes: NostrRecord[] = [];
         
-        this.relay!.subscribe([{
+        this.relay!.subscribeEose([{
           kinds: [kinds.ShortTextNote],
           authors: [pubkey],
           until: oldestTimestamp,

@@ -48,18 +48,18 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
   
   // Input for raw content
   private _content = signal<string>('');
-  
-  // Track visibility of the component
+    // Track visibility of the component
   private _isVisible = signal<boolean>(false);
+  private _hasBeenVisible = signal<boolean>(false);
   isVisible = computed(() => this._isVisible());
   
   // Observer for intersection
   private intersectionObserver: IntersectionObserver | null = null;
   
-  // Processed content tokens
+  // Processed content tokens - once loaded, keep them loaded
   contentTokens = computed<ContentToken[]>(() => {
-    // Only parse content if component is visible
-    return this._isVisible() ? this.parseContent(this._content()) : [];
+    // Parse content if component is visible OR has been visible before
+    return (this._isVisible() || this._hasBeenVisible()) ? this.parseContent(this._content()) : [];
   });
   
   // Social previews for URLs
@@ -72,11 +72,10 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
   get content() {
     return this._content();
   }
-
   constructor() {
     // Use effect to load social previews when content changes AND component is visible
     effect(() => {
-      if (!this._isVisible()) return;
+      if (!this._isVisible() && !this._hasBeenVisible()) return;
       
       const tokens = this.contentTokens();
       const urlTokens = tokens.filter(token => token.type === 'url');
@@ -121,11 +120,15 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
       root: null, // Use viewport as root
       rootMargin: '0px',
       threshold: 0.1 // 10% of the item visible
-    };
-
-    this.intersectionObserver = new IntersectionObserver((entries) => {
+    };    this.intersectionObserver = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
-        this._isVisible.set(entry.isIntersecting);
+        const isIntersecting = entry.isIntersecting;
+        this._isVisible.set(isIntersecting);
+        
+        // Once visible, mark as having been visible (to keep content loaded)
+        if (isIntersecting) {
+          this._hasBeenVisible.set(true);
+        }
       });
     }, options);
 

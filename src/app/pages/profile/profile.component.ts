@@ -138,7 +138,7 @@ export class ProfileComponent {
 
             // Only subscribe to events if we have a working user relay
             if (this.userRelay && this.userRelay.relayUrls.length > 0) {
-              this.userRelay.subscribe([{
+              this.userRelay.subscribeEose([{
                 kinds: [kinds.ShortTextNote],
                 authors: [id],
                 limit: 10
