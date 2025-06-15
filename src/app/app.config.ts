@@ -11,6 +11,8 @@ import { provideHttpClient, withFetch } from '@angular/common/http';
 import { UserRelayFactoryService } from './services/user-relay-factory.service';
 import { UserRelayService } from './services/user-relay.service';
 import { MatIconRegistry } from '@angular/material/icon';
+import { ApiConfiguration } from './api/api-configuration';
+import { environment } from '../environments/environment';
 
 // Create a logger for bootstrapping phase
 const bootstrapLogger = {
@@ -23,7 +25,7 @@ bootstrapLogger.log('Configuring application');
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-     provideAppInitializer(() => {
+    provideAppInitializer(() => {
       const initializerFn = ((iconRegistry: MatIconRegistry) => () => {
         const defaultFontSetClasses = iconRegistry.getDefaultFontSetClass();
         const outlinedFontSetClasses = defaultFontSetClasses
@@ -38,6 +40,12 @@ export const appConfig: ApplicationConfig = {
       useFactory: () => {
         bootstrapLogger.log('Creating LoggerService');
         return new LoggerService();
+      }
+    },
+    {
+      provide: ApiConfiguration,
+      useValue: {
+        rootUrl: environment.backendUrl
       }
     },
     UserRelayFactoryService,
