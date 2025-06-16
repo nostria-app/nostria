@@ -11,6 +11,7 @@ import { SettingsService } from '../../services/settings.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { Router } from '@angular/router';
 import { MediaPlayerService } from '../../services/media-player.service';
+import { ParsingService } from '../../services/parsing.service';
 
 interface ContentToken {
   id: number;
@@ -43,68 +44,71 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
   settings = inject(SettingsService);
   private utilities = inject(UtilitiesService);
   private router = inject(Router);
-  
+  private parsing = inject(ParsingService);
+
   @ViewChild('contentContainer') contentContainer!: ElementRef;
   // Input for raw content
   private _content = signal<string>('');
-  
+
   // Track visibility of the component
   private _isVisible = signal<boolean>(false);
   private _hasBeenVisible = signal<boolean>(false);
   isVisible = computed(() => this._isVisible());
-  
+
   // Observer for intersection
   private intersectionObserver: IntersectionObserver | null = null;
-  
+
   // Cached parsed tokens - managed outside of computed
   private _cachedTokens = signal<ContentToken[]>([]);
   private _lastParsedContent = '';
-  
+
   // Processed content tokens - returns cached or empty based on visibility
   contentTokens = computed<ContentToken[]>(() => {
     const shouldRender = this._isVisible() || this._hasBeenVisible();
-    
+
     if (!shouldRender) {
       return [];
     }
-    
+
     // Return the cached tokens
     return this._cachedTokens();
   });
-  
+
   // Social previews for URLs
-  socialPreviews = signal<SocialPreview[]>([]);  @Input() set content(value: string) {
+  socialPreviews = signal<SocialPreview[]>([]); @Input() set content(value: string) {
     const newContent = value || '';
     this._content.set(newContent);
   }
 
   get content() {
     return this._content();
-  }  constructor() {
+  }
+
+  constructor() {
     // Effect to parse content when it changes and component is visible
-    effect(() => {
+    effect(async () => {
       const shouldRender = this._isVisible() || this._hasBeenVisible();
       const currentContent = this._content();
-      
+
       if (!shouldRender) {
         return;
       }
-      
+
       // Only reparse if content has actually changed
       if (currentContent !== this._lastParsedContent) {
-        const newTokens = this.parseContent(currentContent);
+        const newTokens = await this.parseContent(currentContent);
         this._cachedTokens.set(newTokens);
         this._lastParsedContent = currentContent;
       }
     });
-    
+
     // Use effect to load social previews when content changes AND component is visible
     effect(() => {
       if (!this._isVisible() && !this._hasBeenVisible()) return;
-      
+
       const tokens = this.contentTokens();
       const urlTokens = tokens.filter(token => token.type === 'url');
-      
+
       if (urlTokens.length) {
         this.loadSocialPreviews(urlTokens.map(token => token.content));
       } else {
@@ -121,7 +125,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
       this.intersectionObserver.disconnect();
       this.intersectionObserver = null;
     }
-    
+
     // Clean up cached state
     this._cachedTokens.set([]);
     this._lastParsedContent = '';
@@ -133,13 +137,13 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
       // If element isn't available yet, set a default visible state to true
       // and try again later with a slight delay
       this._isVisible.set(true); // Make content visible by default
-      
+
       setTimeout(() => {
         if (this.contentContainer?.nativeElement) {
           this.setupIntersectionObserver();
         }
       }, 100);
-      
+
       return;
     }
 
@@ -148,11 +152,11 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
       root: null, // Use viewport as root
       rootMargin: '0px',
       threshold: 0.1 // 10% of the item visible
-    };    this.intersectionObserver = new IntersectionObserver((entries) => {
+    }; this.intersectionObserver = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         const isIntersecting = entry.isIntersecting;
         this._isVisible.set(isIntersecting);
-        
+
         // Once visible, mark as having been visible (to keep content loaded)
         if (isIntersecting) {
           this._hasBeenVisible.set(true);
@@ -237,12 +241,13 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     ':white_circle:': '⚪',
     ':black_circle:': '⚫'
   };
-  private parseContent(content: string): ContentToken[] {
+
+  private async parseContent(content: string): Promise<ContentToken[]> {
     if (!content) return [];
-    
+
     // Replace line breaks with placeholders
     let processedContent = content.replace(/\n/g, '##LINEBREAK##');
-    
+
     // Regex for different types of content - updated to avoid capturing trailing LINEBREAK placeholders
     const urlRegex = /(https?:\/\/[^\s##]+)(?=\s|##LINEBREAK##|$)/g;
     const youtubeRegex = /(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})(?=\s|##LINEBREAK##|$)/g;
@@ -251,14 +256,14 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     const videoRegex = /(https?:\/\/[^\s##]+\.(mp4|webm|mov|avi|wmv|flv|mkv)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
     const nostrRegex = /(nostr:(?:npub|nprofile|note|nevent|naddr)1[a-zA-Z0-9]+)(?=\s|##LINEBREAK##|$|[^\w])/g;
     const emojiRegex = /(:[a-zA-Z_]+:)/g;
-    
+
     // Split content and generate tokens
     let tokens: ContentToken[] = [];
     let lastIndex = 0;
-    
+
     // Find all matches and their positions
-    const matches: {start: number, end: number, content: string, type: ContentToken['type'], nostrData?: any, emoji?: string}[] = [];
-    
+    const matches: { start: number, end: number, content: string, type: ContentToken['type'], nostrData?: any, emoji?: string }[] = [];
+
     // Find emoji codes first (highest priority after nostr)
     let match: any;
     while ((match = emojiRegex.exec(processedContent)) !== null) {
@@ -274,10 +279,10 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
         });
       }
     }
-    
+
     // Find Nostr URIs (highest priority)
     while ((match = nostrRegex.exec(processedContent)) !== null) {
-      const nostrData = this.utilities.parseNostrUri(match[0]);
+      const nostrData = await this.parsing.parseNostrUri(match[0]);
       if (nostrData) {
         matches.push({
           start: match.index,
@@ -288,7 +293,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
         });
       }
     }
-    
+
     // Find YouTube URLs
     while ((match = youtubeRegex.exec(processedContent)) !== null) {
       matches.push({
@@ -298,7 +303,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
         type: 'youtube'
       });
     }
-    
+
     // Find image URLs
     imageRegex.lastIndex = 0;
     while ((match = imageRegex.exec(processedContent)) !== null) {
@@ -309,7 +314,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
         type: 'image'
       });
     }
-    
+
     // Find video URLs
     videoRegex.lastIndex = 0;
     while ((match = videoRegex.exec(processedContent)) !== null) {
@@ -320,7 +325,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
         type: 'video'
       });
     }
-    
+
     // Find audio URLs
     audioRegex.lastIndex = 0;
     while ((match = audioRegex.exec(processedContent)) !== null) {
@@ -331,13 +336,13 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
         type: 'audio'
       });
     }
-    
+
     // Find remaining URLs
     urlRegex.lastIndex = 0;
     while ((match = urlRegex.exec(processedContent)) !== null) {
       // Check if this URL was already matched as a special type
       const isSpecialType = matches.some(m => m.start === match.index && m.end === match.index + match[0].length);
-      
+
       if (!isSpecialType) {
         matches.push({
           start: match.index,
@@ -347,10 +352,10 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
         });
       }
     }
-    
+
     // Sort matches by their starting position
     matches.sort((a, b) => a.start - b.start);
-    
+
     // Process text segments and matches with deterministic IDs
     for (const match of matches) {
       // Add text segment before the match
@@ -358,7 +363,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
         const textSegment = processedContent.substring(lastIndex, match.start);
         this.processTextSegment(textSegment, tokens, lastIndex);
       }
-      
+
       // Add the match as a token with deterministic ID based on position and content
       const tokenId = this.generateStableTokenId(match.start, match.content, match.type);
       const token: ContentToken = {
@@ -366,29 +371,29 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
         type: match.type,
         content: match.content
       };
-      
+
       if (match.nostrData) {
         token.nostrData = match.nostrData;
       }
-      
+
       if (match.emoji) {
         token.emoji = match.emoji;
       }
-      
+
       tokens.push(token);
-      
+
       lastIndex = match.end;
     }
-    
+
     // Add remaining text after the last match
     if (lastIndex < processedContent.length) {
       const textSegment = processedContent.substring(lastIndex);
       this.processTextSegment(textSegment, tokens, lastIndex);
     }
-    
+
     return tokens;
   }
-    private processTextSegment(segment: string, tokens: ContentToken[], basePosition: number): void {
+  private processTextSegment(segment: string, tokens: ContentToken[], basePosition: number): void {
     // Process line breaks in text segments
     const parts = segment.split('##LINEBREAK##');
 
@@ -402,7 +407,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
           content: parts[i].trim()
         });
       }
-      
+
       // Add a line break token after each part except the last one
       if (i < parts.length - 1) {
         const linebreakId = this.generateStableTokenId(basePosition + i, '', 'linebreak');
@@ -414,7 +419,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
       }
     }
   }
- 
+
   getVideoType(url: string): string {
     const extension = url.split('.').pop()?.split('?')[0]?.toLowerCase();
     switch (extension) {
@@ -436,7 +441,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
         return 'mp4';
     }
   }
-  
+
   private async loadSocialPreviews(urls: string[]): Promise<void> {
     // Initialize previews with loading state
     const initialPreviews = urls.map(url => ({
@@ -444,22 +449,22 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
       loading: true,
       error: false
     }));
-    
+
     this.socialPreviews.set(initialPreviews);
-    
+
     // Load previews for each URL
     const previewPromises = urls.map(async (url, index) => {
       try {
         // In a real implementation, you would call an API to fetch the metadata
         // For example, using a service like Open Graph or your own backend API
         const response = await fetch(`https://metadata.nostria.app/og?url=${encodeURIComponent(url)}`);
-        
+
         // This is a mock response - replace with actual API call
         // const preview = await response.json();
-        
+
         // Mock preview data
         const preview = await this.mockFetchPreview(url);
-        
+
         return {
           ...preview,
           url,
@@ -475,17 +480,17 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
         };
       }
     });
-    
+
     // Update previews as they complete
     const previews = await Promise.all(previewPromises);
     this.socialPreviews.set(previews);
   }
-  
+
   // Mock function for demonstration purposes
   private async mockFetchPreview(url: string): Promise<Partial<SocialPreview>> {
     // In a real application, replace this with an actual API call
     await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
-    
+
     // Return mock data based on URL type
     if (url.includes('youtube.com') || url.includes('youtu.be')) {
       return {
@@ -507,7 +512,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
       };
     }
   }
-  
+
   /**
    * Opens an image dialog to view the image with zoom capabilities
    */
@@ -523,11 +528,11 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     });
   }
 
-  onNostrMentionClick(token: ContentToken): void {
+  onNostrMentionClick(token: ContentToken) {
     if (!token.nostrData) return;
-    
+
     const { type, data } = token.nostrData;
-    
+
     switch (type) {
       case 'npub':
       case 'nprofile':
@@ -543,7 +548,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
         break;
       case 'naddr':
         // Navigate to address-based event
-        const encoded = this.utilities.extractNostrUriIdentifier(token.content);
+        const encoded = this.parsing.extractNostrUriIdentifier(token.content);
         this.router.navigate(['/a', encoded]);
         break;
       default:

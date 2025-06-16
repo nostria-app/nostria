@@ -195,8 +195,7 @@
   .markdown-content {
     line-height: 1.7;
     color: var(--mat-sys-on-surface);
-    
-    // Markdown styling
+      // Markdown styling
     h1, h2, h3, h4, h5, h6 {
       margin-top: 2rem;
       margin-bottom: 1rem;
@@ -220,14 +219,77 @@
       &:last-child {
         margin-bottom: 0;
       }
+    }    // Style for @username mentions from Nostr tokens
+    :global(.nostr-mention) {
+      color: var(--mat-sys-primary) !important;
+      font-weight: 500;
+      text-decoration: none !important;
+      background-color: var(--mat-sys-primary-container);
+      padding: 2px 6px;
+      border-radius: 12px;
+      font-size: 0.9em;
+      margin: 0 2px;
+      cursor: pointer;
+      display: inline-block;
+      transition: all 0.2s ease-in-out;
+      
+      &:hover {
+        background-color: var(--mat-sys-primary);
+        color: var(--mat-sys-on-primary) !important;
+        transform: translateY(-1px);
+        box-shadow: var(--mat-sys-level1);
+        text-decoration: none !important;
+      }
+      
+      &:visited {
+        color: var(--mat-sys-primary) !important;
+      }
     }
     
-    a {
+    // Style for Nostr reference links (notes, events, articles)
+    :global(.nostr-reference) {
+      color: var(--mat-sys-secondary) !important;
+      font-weight: 500;
+      text-decoration: none !important;
+      background-color: var(--mat-sys-secondary-container);
+      padding: 2px 6px;
+      border-radius: 8px;
+      font-size: 0.85em;
+      margin: 0 2px;
+      cursor: pointer;
+      display: inline-block;
+      font-family: monospace;
+      transition: all 0.2s ease-in-out;
+      
+      &:hover {
+        background-color: var(--mat-sys-secondary);
+        color: var(--mat-sys-on-secondary) !important;
+        transform: translateY(-1px);
+        box-shadow: var(--mat-sys-level1);
+        text-decoration: none !important;
+      }
+      
+      &:visited {
+        color: var(--mat-sys-secondary) !important;
+      }
+    }
+      a {
       color: var(--mat-sys-primary);
       text-decoration: none;
       
       &:hover {
         text-decoration: underline;
+      }
+      
+      // Style for Nostr reference links
+      &[href*="📝"],
+      &[href*="📄"] {
+        font-family: monospace;
+        font-size: 0.9em;
+        background-color: var(--mat-sys-surface-variant);
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin: 0 2px;
       }
     }
     
