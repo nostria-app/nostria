@@ -299,22 +299,79 @@ The future of social networking isn't about finding the next big platform - it's
     } catch {
       return ev.content;
     }
-  });
-
-  // New computed property for parsed markdown content
+  });  // New computed property for parsed markdown content
   parsedContent = computed<SafeHtml>(() => {
     const content = this.content();
-    if (!content) return '';
+    if (!content) return '';    try {
+      // First, preprocess content to convert image URLs to markdown image syntax
+      const preprocessedContent = this.preprocessImageUrls(content);
 
-    try {
-      // Configure marked for security and features
+      // Create a custom renderer for enhanced image handling
+      const renderer = new marked.Renderer();
+      
+      // Custom image renderer with enhanced attributes
+      renderer.image = ({ href, title, text }: { href: string | null; title: string | null; text: string }): string => {
+        if (!href) return '';
+        
+        // Sanitize the href URL
+        const sanitizedHref = href.replace(/[<>"']/g, '');
+        const sanitizedTitle = title ? title.replace(/[<>"']/g, '') : '';
+        const sanitizedAlt = text ? text.replace(/[<>"']/g, '') : '';
+        
+        return `<img 
+          src="${sanitizedHref}" 
+          alt="${sanitizedAlt}" 
+          ${sanitizedTitle ? `title="${sanitizedTitle}"` : ''}
+          class="article-image" 
+          loading="lazy"
+          decoding="async"
+          onload="this.style.opacity='1'"
+          onerror="this.style.opacity='1'; this.style.border='1px solid var(--mat-sys-error)'; this.alt='Failed to load image: ${sanitizedAlt}'"
+          onclick="window.open('${sanitizedHref}', '_blank')"
+          style="opacity: 0; transition: opacity 0.3s ease-in-out;"        />`;
+      };      // Custom link renderer to handle image URLs that aren't in markdown format
+      renderer.link = (link: any): string => {
+        const { href, title, tokens } = link;
+        // Extract text from tokens
+        const text = tokens && tokens.length > 0 ? tokens[0].raw || href : href;
+        
+        if (!href) return text || '';
+        
+        // Check if the link URL points to an image
+        if (this.isImageUrl(href)) {
+          // Render as image instead of link
+          const sanitizedHref = href.replace(/[<>"']/g, '');
+          const sanitizedTitle = title ? title.replace(/[<>"']/g, '') : '';
+          const sanitizedAlt = text || 'Image';
+          
+          return `<img 
+            src="${sanitizedHref}" 
+            alt="${sanitizedAlt}" 
+            ${sanitizedTitle ? `title="${sanitizedTitle}"` : ''}
+            class="article-image" 
+            loading="lazy"
+            decoding="async"
+            onload="this.style.opacity='1'"
+            onerror="this.style.opacity='1'; this.style.border='1px solid var(--mat-sys-error)'; this.alt='Failed to load image: ${sanitizedAlt}'"
+            onclick="window.open('${sanitizedHref}', '_blank')"
+            style="opacity: 0; transition: opacity 0.3s ease-in-out;"
+          />`;
+        }
+        
+        // Regular link rendering
+        const sanitizedHref = href.replace(/[<>"']/g, '');
+        const sanitizedTitle = title ? title.replace(/[<>"']/g, '') : '';
+        return `<a href="${sanitizedHref}" ${sanitizedTitle ? `title="${sanitizedTitle}"` : ''} target="_blank" rel="noopener noreferrer">${text}</a>`;
+      };
+
+      // Configure marked with custom renderer and options
       marked.setOptions({
+        renderer: renderer,
         gfm: true,
-        breaks: true
-      });
-
-      // Parse markdown to HTML (marked.parse returns string)
-      const htmlContent = marked.parse(content) as string;
+        breaks: true,
+        pedantic: false,
+      });      // Parse markdown to HTML (marked.parse returns string)
+      const htmlContent = marked.parse(preprocessedContent) as string;
 
       // Sanitize and return safe HTML
       return this.sanitizer.bypassSecurityTrustHtml(htmlContent);
@@ -388,5 +445,81 @@ The future of social networking isn't about finding the next big platform - it's
         }
       }
     }
+  }
+  // Helper method to check if a URL points to an image
+  private isImageUrl(url: string): boolean {
+    if (!url) return false;
+    
+    // Remove query parameters and fragments for extension check
+    const urlWithoutParams = url.split('?')[0].split('#')[0];
+    
+    // Common image extensions
+    const imageExtensions = /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico|tiff|avif|heic|heif)$/i;
+    
+    // Check file extension
+    if (imageExtensions.test(urlWithoutParams)) {
+      return true;
+    }
+    
+    // Check for common image hosting patterns and CDNs
+    const imageHostPatterns = [
+      /imgur\.com\/\w+$/i,
+      /i\.imgur\.com/i,
+      /images\.unsplash\.com/i,
+      /unsplash\.com\/photos/i,
+      /cdn\.pixabay\.com/i,
+      /pexels\.com\/photo/i,
+      /flickr\.com\/.*\.(jpg|jpeg|png|gif)/i,
+      /githubusercontent\.com.*\.(jpg|jpeg|png|gif|svg|webp)/i,
+      /media\.giphy\.com/i,
+      /tenor\.com\/view/i,
+      /prnt\.sc\/\w+/i,
+      /gyazo\.com\/\w+/i,
+      /postimg\.cc/i,
+      /imgbb\.com/i,
+      /imageban\.ru/i,
+      /photobucket\.com/i,
+      /tinypic\.com/i,
+      /imageshack\.us/i,
+      /cloud\.githubusercontent\.com/i,
+      /avatars\.githubusercontent\.com/i,
+      /raw\.githubusercontent\.com.*\.(jpg|jpeg|png|gif|svg|webp)/i,
+      /discord\.com\/attachments.*\.(jpg|jpeg|png|gif|webp)/i,
+      /cdn\.discordapp\.com.*\.(jpg|jpeg|png|gif|webp)/i,
+      /media\.discordapp\.net.*\.(jpg|jpeg|png|gif|webp)/i,
+      /.*\.cloudfront\.net.*\.(jpg|jpeg|png|gif|svg|webp)/i,
+      /.*\.amazonaws\.com.*\.(jpg|jpeg|png|gif|svg|webp)/i
+    ];
+    
+    return imageHostPatterns.some(pattern => pattern.test(url));
+  }
+  // Helper method to preprocess content and convert standalone image URLs to markdown images
+  private preprocessImageUrls(content: string): string {
+    // Pattern to match standalone URLs that point to images
+    // This will match URLs on their own line or URLs not already in markdown syntax
+    const standaloneImageUrlPattern = /(?:^|\s)(https?:\/\/[^\s<>"\]]+)(?=\s|$)/gm;
+    
+    return content.replace(standaloneImageUrlPattern, (match, url) => {
+      // Don't convert if already in markdown image syntax
+      const beforeMatch = content.substring(0, content.indexOf(match));
+      
+      // Check if it's already part of markdown image syntax ![alt](url)
+      if (beforeMatch.endsWith('](') || beforeMatch.endsWith('![')) {
+        return match;
+      }
+      
+      // Check if it's already part of markdown link syntax [text](url)
+      if (beforeMatch.match(/\[[^\]]*\]$/)) {
+        return match;
+      }
+      
+      // If the URL points to an image, convert it to markdown image syntax
+      if (this.isImageUrl(url.trim())) {
+        const filename = url.split('/').pop()?.split('.')[0] || 'Image';
+        return match.replace(url, `![${filename}](${url.trim()})`);
+      }
+      
+      return match;
+    });
   }
 }
