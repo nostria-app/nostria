@@ -45,7 +45,7 @@ export const appConfig: ApplicationConfig = {
     {
       provide: ApiConfiguration,
       useValue: {
-        rootUrl: environment.backendUrl
+        rootUrl: new URL('api', environment.backendUrl)
       }
     },
     UserRelayFactoryService,
