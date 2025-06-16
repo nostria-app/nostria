@@ -1,7 +1,6 @@
 import { Component, inject, computed, signal, effect } from '@angular/core';
-import { Event, kinds } from 'nostr-tools';
-
-import { ActivatedRoute } from '@angular/router';
+import { Event, kinds, nip19 } from 'nostr-tools';
+import { ActivatedRoute, Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -19,6 +18,7 @@ import { marked } from 'marked';
 import { DataService } from '../../services/data.service';
 import { UserRelayFactoryService } from '../../services/user-relay-factory.service';
 import { LayoutService } from '../../services/layout.service';
+import { ParsingService } from '../../services/parsing.service';
 
 @Component({
   selector: 'app-article',
@@ -32,18 +32,20 @@ import { LayoutService } from '../../services/layout.service';
     MatProgressSpinnerModule,
     UserProfileComponent,
     DateToggleComponent
-],
+  ],
   templateUrl: './article.component.html',
   styleUrl: './article.component.scss'
 })
 export class ArticleComponent {
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private utilities = inject(UtilitiesService);
   private nostrService = inject(NostrService);
   private storageService = inject(StorageService); private logger = inject(LoggerService);
   private sanitizer = inject(DomSanitizer);
   private data = inject(DataService);
   private layout = inject(LayoutService);
+  private parsing = inject(ParsingService);
 
   event = signal<Event | undefined>(undefined);
   isLoading = signal(false);
@@ -299,25 +301,36 @@ The future of social networking isn't about finding the next big platform - it's
     } catch {
       return ev.content;
     }
-  });  // New computed property for parsed markdown content
-  parsedContent = computed<SafeHtml>(() => {
+  });
+  // Signal to hold the parsed markdown content
+  private _parsedContent = signal<SafeHtml>('');
+
+  // Computed property that returns the parsed content signal value
+  parsedContent = computed(() => this._parsedContent());  // Effect to handle async content parsing
+
+  private parseContentEffect = effect(async () => {
     const content = this.content();
-    if (!content) return '';    try {
+    if (!content) {
+      this._parsedContent.set('');
+      return;
+    }
+
+    try {
       // First, preprocess content to convert image URLs to markdown image syntax
-      const preprocessedContent = this.preprocessImageUrls(content);
+      const preprocessedContent = await this.preprocessImageUrls(content);
 
       // Create a custom renderer for enhanced image handling
       const renderer = new marked.Renderer();
-      
+
       // Custom image renderer with enhanced attributes
       renderer.image = ({ href, title, text }: { href: string | null; title: string | null; text: string }): string => {
         if (!href) return '';
-        
+
         // Sanitize the href URL
         const sanitizedHref = href.replace(/[<>"']/g, '');
         const sanitizedTitle = title ? title.replace(/[<>"']/g, '') : '';
         const sanitizedAlt = text ? text.replace(/[<>"']/g, '') : '';
-        
+
         return `<img 
           src="${sanitizedHref}" 
           alt="${sanitizedAlt}" 
@@ -334,16 +347,16 @@ The future of social networking isn't about finding the next big platform - it's
         const { href, title, tokens } = link;
         // Extract text from tokens
         const text = tokens && tokens.length > 0 ? tokens[0].raw || href : href;
-        
+
         if (!href) return text || '';
-        
+
         // Check if the link URL points to an image
         if (this.isImageUrl(href)) {
           // Render as image instead of link
           const sanitizedHref = href.replace(/[<>"']/g, '');
           const sanitizedTitle = title ? title.replace(/[<>"']/g, '') : '';
           const sanitizedAlt = text || 'Image';
-          
+
           return `<img 
             src="${sanitizedHref}" 
             alt="${sanitizedAlt}" 
@@ -357,7 +370,7 @@ The future of social networking isn't about finding the next big platform - it's
             style="opacity: 0; transition: opacity 0.3s ease-in-out;"
           />`;
         }
-        
+
         // Regular link rendering
         const sanitizedHref = href.replace(/[<>"']/g, '');
         const sanitizedTitle = title ? title.replace(/[<>"']/g, '') : '';
@@ -374,13 +387,13 @@ The future of social networking isn't about finding the next big platform - it's
       const htmlContent = marked.parse(preprocessedContent) as string;
 
       // Sanitize and return safe HTML
-      return this.sanitizer.bypassSecurityTrustHtml(htmlContent);
+      this._parsedContent.set(this.sanitizer.bypassSecurityTrustHtml(htmlContent));
     } catch (error) {
       this.logger.error('Error parsing markdown:', error);
       // Fallback to plain text
-      return this.sanitizer.bypassSecurityTrustHtml(
+      this._parsedContent.set(this.sanitizer.bypassSecurityTrustHtml(
         content.replace(/\n/g, '<br>')
-      );
+      ));
     }
   });
 
@@ -446,21 +459,22 @@ The future of social networking isn't about finding the next big platform - it's
       }
     }
   }
+
   // Helper method to check if a URL points to an image
   private isImageUrl(url: string): boolean {
     if (!url) return false;
-    
+
     // Remove query parameters and fragments for extension check
     const urlWithoutParams = url.split('?')[0].split('#')[0];
-    
+
     // Common image extensions
     const imageExtensions = /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico|tiff|avif|heic|heif)$/i;
-    
+
     // Check file extension
     if (imageExtensions.test(urlWithoutParams)) {
       return true;
     }
-    
+
     // Check for common image hosting patterns and CDNs
     const imageHostPatterns = [
       /imgur\.com\/\w+$/i,
@@ -490,36 +504,129 @@ The future of social networking isn't about finding the next big platform - it's
       /.*\.cloudfront\.net.*\.(jpg|jpeg|png|gif|svg|webp)/i,
       /.*\.amazonaws\.com.*\.(jpg|jpeg|png|gif|svg|webp)/i
     ];
-    
+
     return imageHostPatterns.some(pattern => pattern.test(url));
   }
+
   // Helper method to preprocess content and convert standalone image URLs to markdown images
-  private preprocessImageUrls(content: string): string {
+  private async preprocessImageUrls(content: string) {
+    // First, process Nostr tokens
+    content = await this.processNostrTokens(content);
+
     // Pattern to match standalone URLs that point to images
     // This will match URLs on their own line or URLs not already in markdown syntax
     const standaloneImageUrlPattern = /(?:^|\s)(https?:\/\/[^\s<>"\]]+)(?=\s|$)/gm;
-    
+
     return content.replace(standaloneImageUrlPattern, (match, url) => {
       // Don't convert if already in markdown image syntax
       const beforeMatch = content.substring(0, content.indexOf(match));
-      
+
       // Check if it's already part of markdown image syntax ![alt](url)
       if (beforeMatch.endsWith('](') || beforeMatch.endsWith('![')) {
         return match;
       }
-      
+
       // Check if it's already part of markdown link syntax [text](url)
       if (beforeMatch.match(/\[[^\]]*\]$/)) {
         return match;
       }
-      
+
       // If the URL points to an image, convert it to markdown image syntax
       if (this.isImageUrl(url.trim())) {
         const filename = url.split('/').pop()?.split('.')[0] || 'Image';
         return match.replace(url, `![${filename}](${url.trim()})`);
       }
-      
+
       return match;
     });
+  }
+  // Helper method to process Nostr tokens and replace them with @username
+  private async processNostrTokens(content: string): Promise<string> {
+    const nostrRegex = /(nostr:(?:npub|nprofile|note|nevent|naddr)1[a-zA-Z0-9]+)(?=\s|##LINEBREAK##|$|[^\w])/g;
+    
+    // Find all matches first
+    const matches = Array.from(content.matchAll(nostrRegex));
+    
+    // Process each match asynchronously
+    const replacements = await Promise.all(
+      matches.map(async (match: RegExpMatchArray) => {
+        try {
+          const nostrData = await this.parsing.parseNostrUri(match[0]);
+          
+          if (nostrData) {
+            // Generate a user-friendly mention based on the Nostr data type
+            switch (nostrData.type) {
+              case 'npub':
+              case 'nprofile':
+                // For user profiles, create @username mention with proper link
+                const pubkey = nostrData.data?.pubkey || nostrData.data;
+                const username = nostrData.displayName;
+                const npub = this.utilities.getNpubFromPubkey(pubkey);
+                return {
+                  original: match[0],
+                  replacement: `<a href="/p/${npub}" class="nostr-mention" data-pubkey="${pubkey}" data-type="profile" title="View @${username}'s profile">@${username}</a>`
+                };
+
+              case 'note':
+                // For notes, create a reference link
+                const noteId = nostrData.data;
+                const noteRef = nostrData.displayName || `note${noteId.substring(0, 8)}`;
+                const noteEncoded = nip19.noteEncode(noteId);
+                return {
+                  original: match[0],
+                  replacement: `<a href="/e/${noteEncoded}" class="nostr-reference" data-event-id="${noteId}" data-type="note" title="View note">📝 ${noteRef}</a>`
+                };
+
+              case 'nevent':
+                // For events, create a reference link
+                const eventId = nostrData.data?.id || nostrData.data;
+                const eventRef = nostrData.displayName || `event${eventId.substring(0, 8)}`;
+                const neventEncoded = nip19.neventEncode(nostrData.data);
+                return {
+                  original: match[0],
+                  replacement: `<a href="/e/${neventEncoded}" class="nostr-reference" data-event-id="${eventId}" data-type="event" title="View event">📝 ${eventRef}</a>`
+                };
+
+              case 'naddr':
+                // For addresses (like articles), create a reference link
+                const identifier = nostrData.data?.identifier || '';
+                const kind = nostrData.data?.kind || '';
+                const authorPubkey = nostrData.data?.pubkey || '';
+                const addrRef = nostrData.displayName || identifier || `${kind}:${authorPubkey.substring(0, 8)}`;
+                const naddrEncoded = nip19.naddrEncode(nostrData.data);
+                return {
+                  original: match[0],
+                  replacement: `<a href="/a/${naddrEncoded}" class="nostr-reference" data-identifier="${identifier}" data-kind="${kind}" data-type="article" title="View article">📄 ${addrRef}</a>`
+                };
+
+              default:
+                return {
+                  original: match[0],
+                  replacement: `<span class="nostr-mention" title="Nostr reference">${nostrData.displayName || match[0]}</span>`
+                };
+            }
+          }
+
+          return {
+            original: match[0],
+            replacement: match[0]
+          };
+        } catch (error) {
+          this.logger.error('Error parsing Nostr URI:', error);
+          return {
+            original: match[0],
+            replacement: match[0]
+          };
+        }
+      })
+    );
+
+    // Apply all replacements to the content
+    let result = content;
+    for (const replacement of replacements) {
+      result = result.replace(replacement.original, replacement.replacement);
+    }
+
+    return result;
   }
 }
