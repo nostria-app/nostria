@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  backendUrl: 'https://notification.nostria.app/api'
+  backendUrl: 'https://notification.nostria.app'
 };
