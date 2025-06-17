@@ -20,6 +20,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { UnsignedEvent } from 'nostr-tools/pure';
 import { UtilitiesService } from '../../services/utilities.service';
 import { AccountStateService } from '../../services/account-state.service';
+import { LayoutService } from '../../services/layout.service';
 
 // interface Badge {
 //   id: string;
@@ -36,7 +37,7 @@ import { AccountStateService } from '../../services/account-state.service';
 
 @Component({
   selector: 'app-badges',
-  standalone: true,  imports: [
+  standalone: true, imports: [
     MatCardModule,
     MatButtonModule,
     MatIconModule,
@@ -46,7 +47,7 @@ import { AccountStateService } from '../../services/account-state.service';
     BadgeComponent,
     MatListModule,
     MatProgressSpinnerModule
-],
+  ],
   templateUrl: './badges.component.html',
   styleUrl: './badges.component.scss'
 })
@@ -60,6 +61,7 @@ export class BadgesComponent {
   private readonly storage = inject(StorageService);
   private readonly data = inject(DataService);
   private readonly badgeService = inject(BadgeService);
+  private readonly layout = inject(LayoutService);
   readonly utilities = inject(UtilitiesService);
   private readonly accountState = inject(AccountStateService);
   profileBadgesEvent = signal<any>(null);
@@ -86,13 +88,13 @@ export class BadgesComponent {
     const tabParam = this.route.snapshot.queryParamMap.get('tab');
     if (tabParam) {
       this.activeTabIndex.set(parseInt(tabParam, 10));
-    }    effect(async () => {
+    } effect(async () => {
       const appInitialized = this.app.initialized();
       const appAuthenticated = this.app.authenticated();
 
       if (appInitialized && appAuthenticated) {
         console.log('appInitialized && appAuthenticated');
-        
+
         // Set all loading states to true
         this.isInitialLoading.set(true);
         this.isLoadingAccepted.set(true);
@@ -221,21 +223,31 @@ export class BadgesComponent {
   }
 
   viewBadgeDetailsById(id: string, slug: string): void {
-    console.log('Viewing badge details:', id);
+    console.log('Viewing badge details:', id, slug);
+    debugger;
 
-    // Include the active tab index as a query parameter
-    this.router.navigate(['/badges/details', id], {
+    this.layout.openBadge(id, undefined, {
       queryParams: { tab: this.activeTabIndex() }
     });
+
+    // Include the active tab index as a query parameter
+    // this.router.navigate(['/badges/details', id], {
+    //   queryParams: { tab: this.activeTabIndex() }
+    // });
   }
 
   viewBadgeDetails(badge: NostrEvent): void {
+    debugger;
     console.log('Viewing badge details:', badge);
 
-    // Include the active tab index as a query parameter
-    this.router.navigate(['/badges/details', badge.id], {
+    this.layout.openBadge(badge.id, badge, {
       queryParams: { tab: this.activeTabIndex() }
     });
+
+    // Include the active tab index as a query parameter
+    // this.router.navigate(['/badges/details', badge.id], {
+    //   queryParams: { tab: this.activeTabIndex() }
+    // });
   }
 
   // Track tab changes and update URL

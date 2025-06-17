@@ -1,7 +1,7 @@
 import { inject, Injectable, signal, OnDestroy, effect } from "@angular/core";
 import { NostrService } from "./nostr.service";
 import { StorageService } from "./storage.service";
-import { Router, RouterLink, RouterModule } from "@angular/router";
+import { NavigationExtras, Router, RouterLink, RouterModule } from "@angular/router";
 import { LoggerService } from "./logger.service";
 import { MatDialog } from "@angular/material/dialog";
 import { MatSnackBar } from "@angular/material/snack-bar";
@@ -118,7 +118,7 @@ export class LayoutService implements OnDestroy {
 
         this.breakpointObserver.observe('(min-width: 1200px)').subscribe(result => {
             this.isWideScreen.set(result.matches);
-        });        effect(() => {
+        }); effect(() => {
             if (this.accountStateService.initialized()) {
                 // Initialize scroll monitoring after a longer delay to ensure DOM is fully rendered
                 setTimeout(() => {
@@ -182,8 +182,8 @@ export class LayoutService implements OnDestroy {
             scrollTimeout = window.setTimeout(() => {
                 this.checkScrollPosition();
             }, 50);
-        };        this.contentWrapper.addEventListener('scroll', this.scrollEventListener, { passive: true });
-        
+        }; this.contentWrapper.addEventListener('scroll', this.scrollEventListener, { passive: true });
+
         // Delay the initial scroll position check to ensure everything has rendered
         // This prevents early triggering of scrolledToTop/scrolledToBottom signals
         setTimeout(() => {
@@ -191,10 +191,10 @@ export class LayoutService implements OnDestroy {
             this.isScrollMonitoringReady.set(true);
         }, 1000); // Wait 1 second after scroll monitoring setup before checking position
     }
-      /**
-     * Checks the current scroll position and updates the scroll signals
-     * Only updates signals if monitoring is ready to prevent early triggering
-     */
+    /**
+   * Checks the current scroll position and updates the scroll signals
+   * Only updates signals if monitoring is ready to prevent early triggering
+   */
     private checkScrollPosition(): void {
         if (!this.contentWrapper) {
             return;
@@ -598,6 +598,10 @@ export class LayoutService implements OnDestroy {
 
     openArticle(naddr: string, event?: Event): void {
         this.router.navigate(['/a', naddr], { state: { event } });
+    }
+
+    openBadge(badge: string, event?: Event, extra?: NavigationExtras): void {
+        this.router.navigate(['/b', badge], { ...extra, state: { event } });
     }
 
     scrollToOptimalProfilePosition() {
