@@ -47,6 +47,7 @@ export const routes: Routes = [
       { path: 'edit/:id', loadComponent: () => import('./pages/badges/badge-editor/badge-editor.component').then(m => m.BadgeEditorComponent) }
     ]
   },
+  { path: 'b/:id', loadComponent: () => import('./pages/badges/badge-details/badge-details.component').then(m => m.BadgeDetailsComponent) },
   { path: 'messages', component: MessagesComponent },
   { path: 'settings', component: SettingsComponent },
   { path: 'media-queue', component: MediaQueueComponent },

@@ -12,6 +12,7 @@ import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { BadgeService } from '../../../services/badge.service';
 
 interface Badge {
   id: string;
@@ -50,6 +51,7 @@ export class BadgeDetailsComponent {
   private router = inject(Router);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
+  private readonly badgeService = inject(BadgeService);
   
   badge = signal<Badge | null>(null);
   isCreator = signal(false);
@@ -83,6 +85,15 @@ export class BadgeDetailsComponent {
   }
   
   private fetchBadge(id: string): void {
+    debugger;
+    const receivedData = history.state.event as Event | undefined;
+
+    if (receivedData) {
+      console.log('Received badge data from state:', receivedData);
+    }
+
+    
+
     // In a real app, this would fetch from a service
     // For now, we'll use mock data
     setTimeout(() => {
