@@ -19,7 +19,14 @@
     } @else if (badge()) {
         <div class="badge-details">
             <div class="badge-image">
-                <img [src]="badge()?.image" alt="{{ badge()?.name }}">
+                @if (badge()?.image) {
+                    <img [src]="badge()?.image" alt="{{ badge()?.name }}">
+                } @else {
+                    <div class="no-image-placeholder">
+                        <mat-icon>image</mat-icon>
+                        <p>No image available</p>
+                    </div>
+                }
                 
                 @if (isCreator()) {
                     <div class="badge-actions">
@@ -63,7 +70,11 @@
                                 <p>{{ badge()?.created | date:'medium' }}</p>
                             </div>
                             <div>
-                                <h3>Badge ID</h3>
+                                <h3>Slug</h3>
+                                <p>{{ badge()?.slug }}</p>
+                            </div>
+                            <div>
+                                <h3>Event ID</h3>
                                 <p>{{ badge()?.id }}</p>
                             </div>
                         </div>

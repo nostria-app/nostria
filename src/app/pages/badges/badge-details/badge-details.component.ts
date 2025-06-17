@@ -13,8 +13,9 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { BadgeService } from '../../../services/badge.service';
+import { Event, NostrEvent } from 'nostr-tools';
 
-interface Badge {
+interface BadgeDisplayData {
   id: string;
   name: string;
   description: string;
@@ -23,7 +24,8 @@ interface Badge {
   slug: string;
   tags?: string[];
   creator: string;
-  created: number; // Unix timestamp
+  created: number;
+  event?: Event;
 }
 
 @Component({
@@ -53,7 +55,7 @@ export class BadgeDetailsComponent {
   private snackBar = inject(MatSnackBar);
   private readonly badgeService = inject(BadgeService);
   
-  badge = signal<Badge | null>(null);
+  badge = signal<BadgeDisplayData | null>(null);
   isCreator = signal(false);
   loading = signal(true);
   error = signal<string | null>(null);
@@ -74,53 +76,105 @@ export class BadgeDetailsComponent {
 
     effect(() => {
       const id = this.route.snapshot.paramMap.get('id');
+      
       if (!id) {
         this.error.set('No badge ID provided');
         this.loading.set(false);
         return;
       }
       
-      this.fetchBadge(id);
+      // Parse the id format: "kind:pubkey:slug"
+      const parts = id.split(':');
+      if (parts.length < 3) {
+        this.error.set('Invalid badge ID format. Expected: kind:pubkey:slug');
+        this.loading.set(false);
+        return;
+      }
+      
+      const [kind, pubkey, slug] = parts;
+      this.fetchBadge(pubkey, slug);
     });
   }
   
-  private fetchBadge(id: string): void {
-    debugger;
+  private async fetchBadge(pubkey: string, slug: string): Promise<void> {
+    this.loading.set(true);
+    this.error.set(null);
+
     const receivedData = history.state.event as Event | undefined;
-
-    if (receivedData) {
-      console.log('Received badge data from state:', receivedData);
-    }
-
+    debugger;
     
+    try {
+      // Check if we have the badge definition in memory first
+      let badgeDefinition = this.badgeService.getBadgeDefinition(pubkey, slug);
+      
+      // If not found in memory, try to load it
+      if (!badgeDefinition) {
+        await this.badgeService.loadBadgeDefinitions(pubkey);
+        badgeDefinition = this.badgeService.getBadgeDefinition(pubkey, slug);
+      }
+      
+      if (!badgeDefinition) {
+        this.error.set('Badge definition not found');
+        this.loading.set(false);
+        return;
+      }
 
-    // In a real app, this would fetch from a service
-    // For now, we'll use mock data
-    setTimeout(() => {
-      const mockBadge: Badge = {
-        id: id,
-        name: 'Verified Developer',
-        description: 'Awarded to verified developers who contribute to open source projects',
-        image: 'https://placehold.co/1024x1024',
-        thumbnail: 'https://placehold.co/300x300',
-        slug: 'verified-developer',
-        tags: ['developer', 'verified', 'contributor'],
-        creator: 'npub1xxxxxxxxxx', // This would be the actual creator's pubkey
-        created: Date.now() - 3000000
-      };
+      // Extract badge information from the definition event
+      const badgeInfo = this.extractBadgeInfo(badgeDefinition);
       
-      this.badge.set(mockBadge);
+      // Check if current user is the creator
+      // TODO: Replace with actual current user check
+      this.isCreator.set(badgeDefinition.pubkey === pubkey);
       
-      // For demo purposes, we'll simulate that the user is the creator
-      this.isCreator.set(true);
+      this.badge.set(badgeInfo);
       
+    } catch (err) {
+      console.error('Error fetching badge:', err);
+      this.error.set('Failed to load badge details');
+    } finally {
       this.loading.set(false);
-    }, 500); // Simulate network delay
+    }
+  }
+
+  private extractBadgeInfo(badgeEvent: Event): BadgeDisplayData {
+    const tags = badgeEvent.tags || [];
+    
+    // Extract information from tags
+    const nameTag = tags.find(tag => tag[0] === 'name');
+    const descTag = tags.find(tag => tag[0] === 'description');
+    const imageTag = tags.find(tag => tag[0] === 'image');
+    const thumbTag = tags.find(tag => tag[0] === 'thumb');
+    const slugTag = tags.find(tag => tag[0] === 'd');
+    
+    // Extract additional tags for display (excluding system tags)
+    const systemTags = ['name', 'description', 'image', 'thumb', 'd'];
+    const displayTags = tags
+      .filter(tag => !systemTags.includes(tag[0]) && tag[1])
+      .map(tag => tag[1]);
+
+    return {
+      id: badgeEvent.id,
+      name: nameTag?.[1] || 'Unnamed Badge',
+      description: descTag?.[1] || 'No description available',
+      image: imageTag?.[1] || '',
+      thumbnail: thumbTag?.[1] || imageTag?.[1] || '',
+      slug: slugTag?.[1] || '',
+      tags: displayTags.length > 0 ? displayTags : undefined,
+      creator: badgeEvent.pubkey,
+      created: badgeEvent.created_at * 1000, // Convert to milliseconds
+      event: badgeEvent
+    };
   }
   
   editBadge(): void {
     if (this.badge()) {
-      this.router.navigate(['/badges/edit', this.badge()?.id]);
+      const badge = this.badge()!;
+      this.router.navigate(['/badges/edit'], {
+        queryParams: {
+          pubkey: badge.creator,
+          slug: badge.slug
+        }
+      });
     }
   }
   
@@ -128,22 +182,48 @@ export class BadgeDetailsComponent {
     this.issuingBadge.update(value => !value);
   }
   
-  publishBadgeReward(): void {
+  async publishBadgeReward(): Promise<void> {
     const recipients = this.recipientPubkeys.value;
     if (!recipients || !recipients.trim()) {
       this.snackBar.open('Please enter at least one recipient', 'Close', { duration: 3000 });
       return;
     }
     
-    // In a real app, this would publish the badge award to a Nostr relay
-    const pubkeys = recipients.split(/[\s,]+/).filter(key => key.trim() !== '');
+    const badge = this.badge();
+    if (!badge) {
+      this.snackBar.open('Badge information not available', 'Close', { duration: 3000 });
+      return;
+    }
     
-    console.log('Issuing badge to:', pubkeys);
-    this.snackBar.open(`Badge awarded to ${pubkeys.length} recipients`, 'Close', { duration: 3000 });
-    
-    // Reset form
-    this.recipientPubkeys.reset();
-    this.issuingBadge.set(false);
+    try {
+      // Parse recipient pubkeys
+      const pubkeys = recipients.split(/[\s,\n]+/)
+        .map(key => key.trim())
+        .filter(key => key !== '');
+      
+      if (pubkeys.length === 0) {
+        this.snackBar.open('No valid recipients found', 'Close', { duration: 3000 });
+        return;
+      }
+      
+      // TODO: Implement actual badge award publishing through NostrService
+      // This would create and publish BadgeAward events for each recipient
+      console.log('Publishing badge awards:', {
+        badge: badge.slug,
+        creator: badge.creator,
+        recipients: pubkeys
+      });
+      
+      this.snackBar.open(`Badge awarded to ${pubkeys.length} recipients`, 'Close', { duration: 3000 });
+      
+      // Reset form
+      this.recipientPubkeys.reset();
+      this.issuingBadge.set(false);
+      
+    } catch (err) {
+      console.error('Error publishing badge reward:', err);
+      this.snackBar.open('Failed to publish badge reward', 'Close', { duration: 3000 });
+    }
   }
   
   goBack(): void {

@@ -107,7 +107,14 @@ export class BadgesComponent {
 
   viewBadgeDetails(badge: NostrEvent): void {
     console.log('Viewing badge details:', badge);
-    this.layout.openBadge(badge.id, badge, {
+    const id = this.utilities.getATagValueFromEvent(badge);
+
+    if (!id) {
+      console.error('Badge has no a-tag reference');
+      return;
+    }
+
+    this.layout.openBadge(id, badge, {
       queryParams: { tab: this.activeTabIndex() }
     });
   }
