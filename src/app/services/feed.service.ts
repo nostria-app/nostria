@@ -90,10 +90,10 @@ const COLUMN_TYPES = {
 
 const DEFAULT_FEEDS: FeedConfig[] = [
   {
-    id: 'default-feed',
-    label: 'My Feed',
+    id: 'default-feed-following',
+    label: 'Following',
     icon: 'dynamic_feed',
-    description: 'Default feed with notes',
+    description: 'Default feed with notes from following',
     columns: [
       {
         id: 'notes',
@@ -101,6 +101,26 @@ const DEFAULT_FEEDS: FeedConfig[] = [
         icon: 'chat',
         type: 'notes',
         kinds: [1],
+        relayConfig: 'user',
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      }
+    ],
+    createdAt: Date.now(),
+    updatedAt: Date.now()
+  },
+  {
+    id: 'default-feed-articles',
+    label: 'Articles',
+    icon: 'dynamic_feed',
+    description: 'Default feed with articles',
+    columns: [
+      {
+        id: 'notes',
+        label: 'Notes',
+        icon: 'chat',
+        type: 'notes',
+        kinds: [30023],
         relayConfig: 'user',
         createdAt: Date.now(),
         updatedAt: Date.now()
