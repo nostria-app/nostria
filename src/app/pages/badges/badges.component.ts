@@ -36,8 +36,7 @@ import { AccountStateService } from '../../services/account-state.service';
 
 @Component({
   selector: 'app-badges',
-  standalone: true,
-  imports: [
+  standalone: true,  imports: [
     MatCardModule,
     MatButtonModule,
     MatIconModule,
@@ -63,7 +62,6 @@ export class BadgesComponent {
   private readonly badgeService = inject(BadgeService);
   readonly utilities = inject(UtilitiesService);
   private readonly accountState = inject(AccountStateService);
-
   profileBadgesEvent = signal<any>(null);
   accepted = signal<{ aTag: string[], eTag: string[], id: string, pubkey: string, slug: string }[]>([]);
   issued = signal<any[] | null>([]);
@@ -73,6 +71,13 @@ export class BadgesComponent {
   isUpdating = signal<boolean>(false);
   badgeIssuers = signal<{ [key: string]: any }>({});
 
+  // Loading states
+  isLoadingAccepted = signal<boolean>(false);
+  isLoadingReceived = signal<boolean>(false);
+  isLoadingIssued = signal<boolean>(false);
+  isLoadingDefinitions = signal<boolean>(false);
+  isInitialLoading = signal<boolean>(true);
+
   // Active tab index
   activeTabIndex = signal<number>(0);
 
@@ -81,53 +86,73 @@ export class BadgesComponent {
     const tabParam = this.route.snapshot.queryParamMap.get('tab');
     if (tabParam) {
       this.activeTabIndex.set(parseInt(tabParam, 10));
-    }
-
-    effect(async () => {
+    }    effect(async () => {
       const appInitialized = this.app.initialized();
       const appAuthenticated = this.app.authenticated();
 
       if (appInitialized && appAuthenticated) {
         console.log('appInitialized && appAuthenticated');
+        
+        // Set all loading states to true
+        this.isInitialLoading.set(true);
+        this.isLoadingAccepted.set(true);
+        this.isLoadingReceived.set(true);
+        this.isLoadingIssued.set(true);
+        this.isLoadingDefinitions.set(true);
+
         try {
+          // Load profile badges (accepted)
           const profileBadgesEvent = await this.relay.getEventByPubkeyAndKind(this.accountState.pubkey(), kinds.ProfileBadges);
           console.log('Profile Badges Event:', profileBadgesEvent);
 
+          // Load issued badges
           const badgeAwardEvents = await this.relay.getEventsByPubkeyAndKind(this.accountState.pubkey(), kinds.BadgeAward);
           console.log('badgeAwardsEvent:', badgeAwardEvents);
 
           for (const event of badgeAwardEvents) {
             await this.storage.saveEvent(event);
           }
+          this.issued.set(badgeAwardEvents);
+          this.isLoadingIssued.set(false);
 
+          // Load badge definitions (created)
           const badgeDefinitionEvents = await this.relay.getEventsByPubkeyAndKind(this.accountState.pubkey(), kinds.BadgeDefinition);
-          console.log('badgeAwardsEvent:', badgeDefinitionEvents);
+          console.log('badgeDefinitionEvents:', badgeDefinitionEvents);
           this.definitions.set(badgeDefinitionEvents);
 
           for (const event of badgeDefinitionEvents) {
             await this.storage.saveEvent(event);
             await this.badgeService.putBadgeDefinition(event);
           }
+          this.isLoadingDefinitions.set(false);
 
+          // Load received badges
           const receivedAwardsEvents = await this.relay.getEventsByKindAndPubKeyTag(this.accountState.pubkey(), kinds.BadgeAward);
           console.log('receivedAwardsEvents:', receivedAwardsEvents);
 
           // Fetch metadata for badge issuers
           await this.fetchBadgeIssuers(receivedAwardsEvents);
+          this.received.set(receivedAwardsEvents);
+          this.isLoadingReceived.set(false);
 
-          // Make sure we set these after we've loaded the definitions.
+          // Process accepted badges
           if (profileBadgesEvent && profileBadgesEvent.tags) {
             this.parseBadgeTags(profileBadgesEvent.tags);
-
             await this.storage.saveEvent(profileBadgesEvent);
           }
 
           this.profileBadgesEvent.set(profileBadgesEvent);
-          this.issued.set(badgeAwardEvents);
-          this.received.set(receivedAwardsEvents);
+          this.isLoadingAccepted.set(false);
 
         } catch (err) {
           console.error('Error fetching profile badges:', err);
+          // Set all loading states to false on error
+          this.isLoadingAccepted.set(false);
+          this.isLoadingReceived.set(false);
+          this.isLoadingIssued.set(false);
+          this.isLoadingDefinitions.set(false);
+        } finally {
+          this.isInitialLoading.set(false);
         }
       }
     });
