@@ -2,18 +2,31 @@ import { inject, Injectable, signal } from "@angular/core";
 import { StorageService } from "./storage.service";
 import { NostrService } from "./nostr.service";
 import { RelayService } from "./relay.service";
-import { Event, kinds } from "nostr-tools";
+import { Event, kinds, NostrEvent } from "nostr-tools";
+import { UtilitiesService } from "./utilities.service";
 
 @Injectable({
     providedIn: 'root'
 })
 export class BadgeService {
     private readonly storage = inject(StorageService);
-    private readonly nost = inject(NostrService);
+    private readonly nostr = inject(NostrService);
     private readonly relay = inject(RelayService);
+    private readonly utilities = inject(UtilitiesService);
 
-    // Signal to store the list of badges
+    // Signals to store different types of badges
     badgeDefinitions = signal<Event[]>([]);
+    profileBadgesEvent = signal<NostrEvent | null>(null);
+    acceptedBadges = signal<{ aTag: string[], eTag: string[], id: string, pubkey: string, slug: string }[]>([]);
+    issuedBadges = signal<NostrEvent[]>([]);
+    receivedBadges = signal<NostrEvent[]>([]);
+    badgeIssuers = signal<{ [key: string]: any }>({});
+
+    // Loading states
+    isLoadingAccepted = signal<boolean>(false);
+    isLoadingReceived = signal<boolean>(false);
+    isLoadingIssued = signal<boolean>(false);
+    isLoadingDefinitions = signal<boolean>(false);
 
     getBadgeDefinition(pubkey: string, slug: string): Event | undefined {
         const badge = this.badgeDefinitions().find(badge => {
@@ -36,5 +49,197 @@ export class BadgeService {
                 return badges;
             });
         }
+    }
+
+    async loadAcceptedBadges(pubkey: string): Promise<void> {
+        this.isLoadingAccepted.set(true);
+        try {
+            const profileBadgesEvent = await this.relay.getEventByPubkeyAndKind(pubkey, kinds.ProfileBadges);
+            console.log('Profile Badges Event:', profileBadgesEvent);
+
+            if (profileBadgesEvent) {
+                this.parseBadgeTags(profileBadgesEvent.tags);
+                await this.storage.saveEvent(profileBadgesEvent);
+            }
+
+            this.profileBadgesEvent.set(profileBadgesEvent);
+        } catch (err) {
+            console.error('Error loading accepted badges:', err);
+        } finally {
+            this.isLoadingAccepted.set(false);
+        }
+    }
+
+    async loadIssuedBadges(pubkey: string): Promise<void> {
+        this.isLoadingIssued.set(true);
+        try {
+            const badgeAwardEvents = await this.relay.getEventsByPubkeyAndKind(pubkey, kinds.BadgeAward);
+            console.log('badgeAwardsEvent:', badgeAwardEvents);
+
+            for (const event of badgeAwardEvents) {
+                await this.storage.saveEvent(event);
+            }
+            this.issuedBadges.set(badgeAwardEvents);
+        } catch (err) {
+            console.error('Error loading issued badges:', err);
+        } finally {
+            this.isLoadingIssued.set(false);
+        }
+    }
+
+    async loadBadgeDefinitions(pubkey: string): Promise<void> {
+        this.isLoadingDefinitions.set(true);
+        try {
+            const badgeDefinitionEvents = await this.relay.getEventsByPubkeyAndKind(pubkey, kinds.BadgeDefinition);
+            console.log('badgeDefinitionEvents:', badgeDefinitionEvents);
+
+            for (const event of badgeDefinitionEvents) {
+                await this.storage.saveEvent(event);
+                await this.putBadgeDefinition(event);
+            }
+
+            this.badgeDefinitions.set(badgeDefinitionEvents);
+        } catch (err) {
+            console.error('Error loading badge definitions:', err);
+        } finally {
+            this.isLoadingDefinitions.set(false);
+        }
+    }
+
+    async loadReceivedBadges(pubkey: string): Promise<void> {
+        this.isLoadingReceived.set(true);
+        try {
+            const receivedAwardsEvents = await this.relay.getEventsByKindAndPubKeyTag(pubkey, kinds.BadgeAward);
+            console.log('receivedAwardsEvents:', receivedAwardsEvents);
+
+            await this.fetchBadgeIssuers(receivedAwardsEvents);
+            this.receivedBadges.set(receivedAwardsEvents);
+        } catch (err) {
+            console.error('Error loading received badges:', err);
+        } finally {
+            this.isLoadingReceived.set(false);
+        }
+    }
+
+    async loadAllBadges(pubkey: string): Promise<void> {
+        await Promise.all([
+            this.loadAcceptedBadges(pubkey),
+            this.loadIssuedBadges(pubkey),
+            this.loadBadgeDefinitions(pubkey),
+            this.loadReceivedBadges(pubkey)
+        ]);
+    }
+
+    private async fetchBadgeIssuers(receivedBadges: NostrEvent[]): Promise<void> {
+        const issuers: { [key: string]: any } = {};
+
+        // Get unique issuer pubkeys
+        const issuerPubkeys = [...new Set(receivedBadges.map(badge => badge.pubkey))];
+
+        // Fetch metadata for each issuer
+        for (const pubkey of issuerPubkeys) {
+            try {
+                const metadata = await this.nostr.getMetadataForUser(pubkey);
+
+                if (metadata) {
+                    issuers[pubkey] = metadata.data;
+                } else {
+                    issuers[pubkey] = { name: this.utilities.getTruncatedNpub(pubkey) };
+                }
+            } catch (err) {
+                console.error(`Error fetching metadata for ${pubkey}:`, err);
+                issuers[pubkey] = { name: this.utilities.getTruncatedNpub(pubkey) };
+            }
+        }
+
+        this.badgeIssuers.set(issuers);
+    }
+
+    private parseBadgeTags(tags: string[][]): void {
+        // Find the 'a' tags
+        const aTags = tags.filter(tag => tag[0] === 'a');
+        // Find the 'e' tags
+        const eTags = tags.filter(tag => tag[0] === 'e');
+
+        // Match them together based on their position
+        const pairs = aTags.map((aTag, index) => {
+            const eTag = index < eTags.length ? eTags[index] : null;
+
+            const values = aTag[1].split(':');
+            const kind = values[0];
+            const pubkey = values[1];
+            const slug = values[2];
+
+            return {
+                pubkey,
+                slug,
+                kind,
+                id: aTag[1],
+                eventId: eTag![0],
+                aTag,
+                eTag: eTag || []
+            };
+        });
+
+        console.log('Parsed badge pairs:', pairs);
+        this.acceptedBadges.set(pairs);
+    }
+
+    isBadgeAccepted(badgeAward: NostrEvent): boolean {
+        const badgeATag = this.getBadgeATag(badgeAward);
+        return this.acceptedBadges().some(badge => badge.id === badgeATag);
+    }
+
+    getBadgeATag(badgeAward: NostrEvent): string {
+        const aTag = badgeAward.tags.find(tag => tag[0] === 'a');
+        return aTag ? aTag[1] : '';
+    }
+
+    getBadgeDefinitionByATag(aTag: string): NostrEvent | undefined {
+        if (!aTag) return undefined;
+
+        const parts = aTag.split(':');
+        if (parts.length < 3) return undefined;
+
+        const kind = parts[0];
+        const pubkey = parts[1];
+        const slug = parts[2];
+
+        return this.getBadgeDefinition(pubkey, slug);
+    }
+
+    getBadgeInfo(badgeAward: NostrEvent): { name: string, description: string, image: string, thumbnail: string } {
+        const aTag = this.getBadgeATag(badgeAward);
+        const badgeDefinition = this.getBadgeDefinitionByATag(aTag);
+
+        if (!badgeDefinition) {
+            return {
+                name: 'Unknown Badge',
+                description: 'Badge definition not found',
+                image: '',
+                thumbnail: ''
+            };
+        }
+
+        const nameTag = badgeDefinition.tags.find(tag => tag[0] === 'name');
+        const descTag = badgeDefinition.tags.find(tag => tag[0] === 'description');
+        const imageTag = badgeDefinition.tags.find(tag => tag[0] === 'image');
+        const thumbTag = badgeDefinition.tags.find(tag => tag[0] === 'thumb');
+
+        return {
+            name: nameTag ? nameTag[1] : 'Unnamed Badge',
+            description: descTag ? descTag[1] : 'No description',
+            image: imageTag ? imageTag[1] : '',
+            thumbnail: thumbTag ? thumbTag[1] : (imageTag ? imageTag[1] : '')
+        };
+    }
+
+    resetBadgeData(): void {
+        this.badgeDefinitions.set([]);
+        this.profileBadgesEvent.set(null);
+        this.acceptedBadges.set([]);
+        this.issuedBadges.set([]);
+        this.receivedBadges.set([]);
+        this.badgeIssuers.set({});
     }
 }
