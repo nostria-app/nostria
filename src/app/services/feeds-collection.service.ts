@@ -28,29 +28,6 @@ export interface FeedDefinition {
   updatedAt: number;
 }
 
-const DEFAULT_FEEDS: FeedDefinition[] = [
-  {
-    id: 'default-feed',
-    label: 'My Feed',
-    icon: 'dynamic_feed',
-    description: 'Default feed with notes',
-    columns: [
-      {
-        id: 'notes',
-        label: 'Notes',
-        icon: 'chat',
-        type: 'notes',
-        kinds: [1],
-        relayConfig: 'user',
-        createdAt: Date.now(),
-        updatedAt: Date.now()
-      }
-    ],
-    createdAt: Date.now(),
-    updatedAt: Date.now()
-  }
-];
-
 @Injectable({
   providedIn: 'root'
 })
