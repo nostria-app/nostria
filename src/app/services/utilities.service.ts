@@ -30,6 +30,11 @@ export class UtilitiesService {
       : nip05;
   }
 
+  // Get a-tag value from an event
+  getATagValueFromEvent(event: Event): string | undefined {
+    return this.getATagValueFromTags(event.tags);
+  }
+
   // Get d-tag value from an event
   getDTagValueFromEvent(event: Event): string | undefined {
     return this.getDTagValueFromTags(event.tags);
@@ -44,6 +49,16 @@ export class UtilitiesService {
   getDTagValueFromTags(tags: string[][]): string | undefined {
     for (const tag of tags) {
       if (tag.length >= 2 && tag[0] === 'd') {
+        return tag[1];
+      }
+    }
+    return undefined;
+  }
+
+  // Get d-tag value
+  getATagValueFromTags(tags: string[][]): string | undefined {
+    for (const tag of tags) {
+      if (tag.length >= 2 && tag[0] === 'a') {
         return tag[1];
       }
     }
