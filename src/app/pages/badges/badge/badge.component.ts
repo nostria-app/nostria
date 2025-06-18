@@ -73,6 +73,7 @@ export class BadgeComponent {
     if (event.slug) {
       await this.loadBadgeDefinition(event.pubkey, event.slug);
     }
+
     else if (event.kind === kinds.BadgeDefinition) {
       const parsedBadge = this.badgeService.parseBadgeDefinition(event);
 
@@ -93,9 +94,12 @@ export class BadgeComponent {
       const parsedBadge = await this.badgeService.parseReward(event);
 
       if (!parsedBadge) {
+        debugger;
         this.error.set('Failed to parse badge data');
         return;
       }
+
+      debugger;
 
       // Update the signals with the parsed values
       this.id.set(parsedBadge.id || '');
