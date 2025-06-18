@@ -70,7 +70,6 @@ export class BadgeService {
     }
 
     putBadgeDefinition(badge: Event): void {
-        debugger;
         if (badge.kind === kinds.BadgeDefinition) {
             this.badgeDefinitions.update(badges => {
                 const index = badges.findIndex(b => b.id === badge.id);
@@ -106,12 +105,14 @@ export class BadgeService {
     async loadIssuedBadges(pubkey: string): Promise<void> {
         this.isLoadingIssued.set(true);
         try {
+            0
             const badgeAwardEvents = await this.relay.getEventsByPubkeyAndKind(pubkey, kinds.BadgeAward);
             console.log('badgeAwardsEvent:', badgeAwardEvents);
 
             for (const event of badgeAwardEvents) {
                 await this.storage.saveEvent(event);
             }
+
             this.issuedBadges.set(badgeAwardEvents);
         } catch (err) {
             console.error('Error loading issued badges:', err);
@@ -131,7 +132,6 @@ export class BadgeService {
             // If the definition is not found on the user's relays, try to fetch from author and then re-publish to user's relays.
             if (!definition) {
                 try {
-                    debugger;
                     let userRelay = await this.userRelayFactory.create(pubkey);
                     definition = await userRelay.getEventByPubkeyAndKindAndTag(pubkey, kinds.BadgeDefinition, { key: 'd', value: slug });
                     console.log('Badge definition not found on user relays, fetched from author relays:', definition);
@@ -272,12 +272,17 @@ export class BadgeService {
     }
 
     async loadAllBadges(pubkey: string): Promise<void> {
-        await Promise.all([
-            this.loadAcceptedBadges(pubkey),
-            this.loadIssuedBadges(pubkey),
-            this.loadBadgeDefinitions(pubkey),
-            this.loadReceivedBadges(pubkey)
-        ]);
+        // First load the badge definitions of the account.
+        await this.loadBadgeDefinitions(pubkey);
+
+        // Then load all issued badges.
+        await this.loadIssuedBadges(pubkey);
+
+        // Load the profile badges event.
+        await this.loadAcceptedBadges(pubkey);
+
+        // Finally load the received badges.
+        await this.loadReceivedBadges(pubkey);
     }
 
     private async fetchBadgeIssuers(receivedBadges: NostrEvent[]): Promise<void> {

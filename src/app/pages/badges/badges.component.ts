@@ -19,6 +19,7 @@ import { UtilitiesService } from '../../services/utilities.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { LayoutService } from '../../services/layout.service';
 import { RelayService } from '../../services/relay.service';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-badges',
@@ -32,7 +33,8 @@ import { RelayService } from '../../services/relay.service';
     MatTooltipModule,
     BadgeComponent,
     MatListModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
+    CommonModule
   ],
   templateUrl: './badges.component.html',
   styleUrl: './badges.component.scss'
