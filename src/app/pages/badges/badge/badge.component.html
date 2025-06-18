@@ -1,30 +1,32 @@
-@if (badge()) {
+@let item = parsed();
+
+@if (item) {
 <mat-card [class]="'badge-card ' + layout()">
     @if (layout() === 'vertical') {
         <mat-card-header>
-            @if (thumb()) {
-            <img [src]="thumb()" alt="Badge thumbnail" mat-card-avatar>
+            @if (item.thumb) {
+            <img [src]="item.thumb" alt="Badge thumbnail" mat-card-avatar>
             }
             
             @if (error()) {
                 <mat-card-title>{{ error() }}</mat-card-title>
             } @else {
-                <mat-card-title>{{ name() }}</mat-card-title>
+                <mat-card-title>{{ item.name }}</mat-card-title>
             }
 
             <mat-card-subtitle>
-                @for (type of tags(); track type) {
+                @for (type of item.tags; track type) {
                 <span class="badge-type">{{ type }}</span>
                 }
             </mat-card-subtitle>
         </mat-card-header>
 
-        @if (image()) {
-        <img [src]="image()" alt="Badge image" mat-card-image>
+        @if (item.image) {
+        <img [src]="item.image" alt="Badge image" mat-card-image>
         }
 
         <mat-card-content>
-            <p>{{ description() }}</p>
+            <p>{{ item.description }}</p>
             
             @if (issuerName()) {
             <div class="badge-metadata">
@@ -64,8 +66,8 @@
     @if (layout() === 'horizontal') {
         <mat-card-content class="badge-card-content">
             <div class="badge-thumbnail">
-                @if (thumb()) {
-                <img [src]="thumb()" alt="Badge thumbnail">
+                @if (item.thumb) {
+                <img [src]="item.thumb" alt="Badge thumbnail">
                 } @else {
                 <div class="placeholder-thumbnail">
                     <mat-icon>military_tech</mat-icon>
@@ -74,8 +76,8 @@
             </div>
             
             <div class="badge-details">
-                <h3>{{ name() }}</h3>
-                <p>{{ description() }}</p>
+                <h3>{{ item.name }}</h3>
+                <p>{{ item.description }}</p>
                 
                 @if (issuerName()) {
                 <div class="badge-metadata">

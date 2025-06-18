@@ -78,9 +78,6 @@
             } @else {
             <div class="badges-grid">
                 @for (badge of issued(); track badge.id) {
-
-                {{badge | json}}
-
                 <app-badge [badge]="badge" (click)="viewBadgeDetails(badge)"></app-badge>
                 }
             </div>
