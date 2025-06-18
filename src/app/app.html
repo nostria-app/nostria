@@ -42,9 +42,7 @@
     } <span class="toolbar-spacer"> @if (layout.search()) {
       <div class="search-container">
         <input type="search" class="search-input" [(ngModel)]="layout.searchInput"
-          (input)="layout.onSearchInput($event)" 
-          (keydown)="onSearchInputKeyDown($event)"
-          placeholder="Search..." />
+          (input)="layout.onSearchInput($event)" (keydown)="onSearchInputKeyDown($event)" placeholder="Search..." />
         <app-search-results></app-search-results>
       </div>
       }
@@ -142,6 +140,19 @@
     </button>
 
     <mat-menu #menuApps="matMenu">
+      <button mat-menu-item (click)="layout.createNote()">
+        <mat-icon>create</mat-icon>
+        <span>Create Note</span>
+      </button>
+      <button mat-menu-item (click)="layout.createArticle()">
+        <mat-icon>article</mat-icon>
+        <span>Write Article</span>
+      </button>
+      <button mat-menu-item (click)="layout.uploadMedia()">
+        <mat-icon>upload</mat-icon>
+        <span>Upload</span>
+      </button>
+      <mat-divider></mat-divider>
       <button mat-menu-item routerLink="/media-queue">
         <mat-icon>queue_music</mat-icon>
         <span>Media Queue</span>

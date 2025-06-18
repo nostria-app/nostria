@@ -81,6 +81,11 @@ export class UserRelayService {
     ): Promise<T | null> {
         this.logger.debug('Getting events with filters:', filter);
 
+        if (this.relayUrls.length === 0) {
+            this.logger.warn('No relays available for query', filter);
+            return null;
+        }
+
         if (!this.pool) {
             this.logger.error('Cannot get events: user pool is not initialized');
             return null;
@@ -107,6 +112,11 @@ export class UserRelayService {
 
         if (!this.pool) {
             this.logger.error('Cannot publish event: user pool is not initialized');
+            return;
+        }
+
+        if (this.relayUrls.length === 0) {
+            this.logger.warn('No relays available for publishing event', event);
             return;
         }
 
@@ -299,6 +309,12 @@ export class UserRelayService {
                 }
             };
         }
+    }
+
+    destroy() {
+        this.pool.destroy();
+        this.relayUrls = [];
+        this.logger.debug('UserRelayService destroyed');
     }
 
     // async getEventByPubkeyAndKindAndTag(pubkey: string | string[], kind: number, tag: string[]): Promise<NostrEvent | null> {

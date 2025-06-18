@@ -1,9 +1,33 @@
-import { inject, Injectable, signal } from "@angular/core";
+import { computed, inject, Injectable, signal } from "@angular/core";
 import { StorageService } from "./storage.service";
 import { NostrService } from "./nostr.service";
 import { RelayService } from "./relay.service";
 import { Event, kinds, NostrEvent } from "nostr-tools";
 import { UtilitiesService } from "./utilities.service";
+import { UserRelayFactoryService } from "./user-relay-factory.service";
+import { LoggerService } from "./logger.service";
+import { AccountStateService } from "./account-state.service";
+
+interface ParsedBadge {
+    id: string;
+    description: string;
+    name: string;
+    image: string;
+    thumb: string;
+    tags: string[];
+}
+
+interface ParsedReward {
+    badgeId: string;
+    slug: string;
+    pubkey: string;
+    id: string;
+    description: string;
+    name: string;
+    image: string;
+    thumb: string;
+    tags: string[];
+}
 
 @Injectable({
     providedIn: 'root'
@@ -13,9 +37,17 @@ export class BadgeService {
     private readonly nostr = inject(NostrService);
     private readonly relay = inject(RelayService);
     private readonly utilities = inject(UtilitiesService);
+    userRelayFactory = inject(UserRelayFactoryService);
+    private readonly logger = inject(LoggerService);
+    private readonly accountState = inject(AccountStateService);
 
     // Signals to store different types of badges
     badgeDefinitions = signal<Event[]>([]);
+
+    createdDefinitions = computed(() => {
+        return this.badgeDefinitions().filter(badge => badge.pubkey === this.accountState.pubkey())
+    });
+
     profileBadgesEvent = signal<NostrEvent | null>(null);
     acceptedBadges = signal<{ aTag: string[], eTag: string[], id: string, pubkey: string, slug: string }[]>([]);
     issuedBadges = signal<NostrEvent[]>([]);
@@ -38,6 +70,7 @@ export class BadgeService {
     }
 
     putBadgeDefinition(badge: Event): void {
+        debugger;
         if (badge.kind === kinds.BadgeDefinition) {
             this.badgeDefinitions.update(badges => {
                 const index = badges.findIndex(b => b.id === badge.id);
@@ -87,6 +120,123 @@ export class BadgeService {
         }
     }
 
+    /** Attempts to discovery a badge definition. */
+    async loadBadgeDefinition(pubkey: string, slug: string) {
+        let definition: NostrEvent | null | undefined = this.getBadgeDefinition(pubkey, slug);
+
+        if (!definition) {
+            definition = await this.relay.getEventByPubkeyAndKindAndTag(pubkey, kinds.BadgeDefinition, { key: 'd', value: slug });
+            console.log('Badge definition not found in local storage, fetched from relay:', definition);
+
+            // If the definition is not found on the user's relays, try to fetch from author and then re-publish to user's relays.
+            if (!definition) {
+                try {
+                    debugger;
+                    let userRelay = await this.userRelayFactory.create(pubkey);
+                    definition = await userRelay.getEventByPubkeyAndKindAndTag(pubkey, kinds.BadgeDefinition, { key: 'd', value: slug });
+                    console.log('Badge definition not found on user relays, fetched from author relays:', definition);
+                    userRelay.destroy();
+
+                    if (!definition) {
+                        this.logger.error('Badge definition not found on author relays.');
+                    }
+
+                } catch (err: any) {
+                    this.logger.error(err.message);
+                }
+            }
+        }
+
+        if (definition) {
+            this.putBadgeDefinition(definition);
+            await this.storage.saveEvent(definition);
+            this.parseBadgeDefinition(definition);
+        }
+
+        return definition;
+    }
+
+
+    parseBadgeDefinition(badgeEvent: NostrEvent) {
+        if (!badgeEvent || !badgeEvent.tags) {
+            return;
+        }
+
+        const parsedBadge: Partial<ParsedBadge> = {
+            tags: []
+        };
+
+        // Parse each tag based on its identifier
+        for (const tag of badgeEvent.tags) {
+            if (tag.length >= 2) {
+                const [key, value] = tag;
+
+                switch (key) {
+                    case 'd':
+                        parsedBadge.id = value;
+                        break;
+                    case 'description':
+                        parsedBadge.description = value;
+                        break;
+                    case 'name':
+                        parsedBadge.name = value;
+                        break;
+                    case 'image':
+                        parsedBadge.image = value;
+                        break;
+                    case 'thumb':
+                        parsedBadge.thumb = value;
+                        break;
+                    case 't':
+                        // Accumulate types in an array
+                        if (parsedBadge.tags) {
+                            parsedBadge.tags.push(value);
+                        }
+                        break;
+                }
+            }
+        }
+
+        return parsedBadge;
+
+    }
+
+    async parseReward(rewardEvent: NostrEvent) {
+        if (!rewardEvent || !rewardEvent.tags) {
+            return;
+        }
+
+        const parsedReward: Partial<ParsedReward> = {
+            tags: []
+        };
+
+        const badgeTag = this.nostr.getTags(rewardEvent, 'a');
+
+        if (badgeTag.length !== 1) {
+            return;
+        }
+
+        const receivers = this.nostr.getTags(rewardEvent, 'p');
+        const badgeTagArray = badgeTag[0].split(':');
+
+        // Just validate if the badge type is a badge definition
+        if (Number(badgeTagArray[0]) !== kinds.BadgeDefinition) {
+            return;
+        }
+
+        // Validate that the pubkey is the same as the one in the badge tag
+        if (badgeTagArray[1] !== rewardEvent.pubkey) {
+            return;
+        }
+
+        const pubkey = rewardEvent.pubkey;
+        const slug = badgeTagArray[2];
+
+        await this.loadBadgeDefinition(pubkey, slug);
+
+        return parsedReward;
+    }
+
     async loadBadgeDefinitions(pubkey: string): Promise<void> {
         this.isLoadingDefinitions.set(true);
         try {
@@ -95,10 +245,10 @@ export class BadgeService {
 
             for (const event of badgeDefinitionEvents) {
                 await this.storage.saveEvent(event);
-                await this.putBadgeDefinition(event);
+                this.putBadgeDefinition(event);
             }
 
-            this.badgeDefinitions.set(badgeDefinitionEvents);
+            // this.badgeDefinitions.set(badgeDefinitionEvents);
         } catch (err) {
             console.error('Error loading badge definitions:', err);
         } finally {

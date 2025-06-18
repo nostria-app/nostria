@@ -13,36 +13,15 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { CommonModule, DatePipe } from '@angular/common';
 import { UtilitiesService } from '../../../services/utilities.service';
 
-interface ParsedBadge {
-  id: string;
-  description: string;
-  name: string;
-  image: string;
-  thumb: string;
-  tags: string[];
-}
-
-interface ParsedReward {
-  badgeId: string;
-  slug: string;
-  pubkey: string;
-  id: string;
-  description: string;
-  name: string;
-  image: string;
-  thumb: string;
-  tags: string[];
-}
-
 export type BadgeLayout = 'vertical' | 'horizontal';
 
 @Component({
   selector: 'app-badge',
   standalone: true,
   imports: [
-    MatCardModule, 
-    MatButtonModule, 
-    MatIconModule, 
+    MatCardModule,
+    MatButtonModule,
+    MatIconModule,
     MatProgressSpinnerModule,
     CommonModule,
     DatePipe
@@ -58,10 +37,10 @@ export class BadgeComponent {
   isUpdating = input<boolean>(false);
   issuerName = input<string | null>(null);
   utilities = inject(UtilitiesService);
-  
+
   @Output() acceptClicked = new EventEmitter<void>();
   @Output() viewClicked = new EventEmitter<void>();
-  
+
   nostr = inject(NostrService);
   storage = inject(StorageService);
   data = inject(DataService);
@@ -95,10 +74,36 @@ export class BadgeComponent {
       await this.loadBadgeDefinition(event.pubkey, event.slug);
     }
     else if (event.kind === kinds.BadgeDefinition) {
-      this.parseBadgeDefinition(event);
+      const parsedBadge = this.badgeService.parseBadgeDefinition(event);
+
+      if (!parsedBadge) {
+        this.error.set('Failed to parse badge data');
+        return;
+      }
+
+      // Update the signals with the parsed values
+      this.id.set(parsedBadge.id || '');
+      this.description.set(parsedBadge.description || '');
+      this.name.set(parsedBadge.name || '');
+      this.image.set(parsedBadge.image || '');
+      this.thumb.set(parsedBadge.thumb || '');
+      this.tags.set(parsedBadge.tags || []);
     }
     else if (event.kind === kinds.BadgeAward) {
-      this.parseReward(event);
+      const parsedBadge = await this.badgeService.parseReward(event);
+
+      if (!parsedBadge) {
+        this.error.set('Failed to parse badge data');
+        return;
+      }
+
+      // Update the signals with the parsed values
+      this.id.set(parsedBadge.id || '');
+      this.description.set(parsedBadge.description || '');
+      this.name.set(parsedBadge.name || '');
+      this.image.set(parsedBadge.image || '');
+      this.thumb.set(parsedBadge.thumb || '');
+      this.tags.set(parsedBadge.tags || []);
     }
   }
 
@@ -114,119 +119,7 @@ export class BadgeComponent {
 
   async loadBadgeDefinition(pubkey: string, slug: string) {
     let definition: NostrEvent | null | undefined = this.badgeService.getBadgeDefinition(pubkey, slug);
-
-    if (!definition) {
-      definition = await this.relay.getEventByPubkeyAndKindAndTag(pubkey, kinds.BadgeDefinition, { key: 'd', value: slug });
-      console.log('Badge definition not found in local storage, fetched from relay:', definition);
-      // const userRelay = this.userRelayFactory.createUserRelayService();
-
-      // If the definition is not found on the user's relays, try to fetch from author and then re-publish to user's relays.
-      if (!definition) {
-        try {
-          const userRelay = await this.userRelayFactory.create(pubkey);
-          definition = await userRelay.getEventByPubkeyAndKindAndTag(pubkey, kinds.BadgeDefinition, { key: 'd', value: slug });
-          console.log('Badge definition not found on user relays, fetched from author relays:', definition);
-
-          if (!definition) {
-            this.error.set('Badge definition not found on author relays.');
-          }
-
-        } catch (err: any) {
-          console.error(err);
-          this.error.set(err.message);
-        }
-      }
-    }
-
-    if (definition) {
-      this.badgeService.putBadgeDefinition(definition);
-      await this.storage.saveEvent(definition);
-      this.parseBadgeDefinition(definition);
-    }
-
     return definition;
   }
 
-  parseBadgeDefinition(badgeEvent: NostrEvent) {
-    if (!badgeEvent || !badgeEvent.tags) {
-      return;
-    }
-
-    const parsedBadge: Partial<ParsedBadge> = {
-      tags: []
-    };
-
-    // Parse each tag based on its identifier
-    for (const tag of badgeEvent.tags) {
-      if (tag.length >= 2) {
-        const [key, value] = tag;
-
-        switch (key) {
-          case 'd':
-            parsedBadge.id = value;
-            break;
-          case 'description':
-            parsedBadge.description = value;
-            break;
-          case 'name':
-            parsedBadge.name = value;
-            break;
-          case 'image':
-            parsedBadge.image = value;
-            break;
-          case 'thumb':
-            parsedBadge.thumb = value;
-            break;
-          case 't':
-            // Accumulate types in an array
-            if (parsedBadge.tags) {
-              parsedBadge.tags.push(value);
-            }
-            break;
-        }
-      }
-    }
-
-    // Update the signals with the parsed values
-    this.id.set(parsedBadge.id || '');
-    this.description.set(parsedBadge.description || '');
-    this.name.set(parsedBadge.name || '');
-    this.image.set(parsedBadge.image || '');
-    this.thumb.set(parsedBadge.thumb || '');
-    this.tags.set(parsedBadge.tags || []);
-  }
-
-  async parseReward(rewardEvent: NostrEvent) {
-    if (!rewardEvent || !rewardEvent.tags) {
-      return;
-    }
-
-    const parsedReward: Partial<ParsedReward> = {
-      tags: []
-    };
-
-    const badgeTag = this.nostr.getTags(rewardEvent, 'a');
-
-    if (badgeTag.length !== 1) {
-      return;
-    }
-
-    const receivers = this.nostr.getTags(rewardEvent, 'p');
-    const badgeTagArray = badgeTag[0].split(':');
-
-    // Just validate if the badge type is a badge definition
-    if (Number(badgeTagArray[0]) !== kinds.BadgeDefinition) {
-      return;
-    }
-
-    // Validate that the pubkey is the same as the one in the badge tag
-    if (badgeTagArray[1] !== rewardEvent.pubkey) {
-      return;
-    }
-
-    const pubkey = rewardEvent.pubkey;
-    const slug = badgeTagArray[2];
-
-    await this.loadBadgeDefinition(pubkey, slug);
-  }
 }

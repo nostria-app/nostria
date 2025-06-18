@@ -85,6 +85,7 @@ export class BadgesComponent {
   get received() { return this.badgeService.receivedBadges; }
   get issued() { return this.badgeService.issuedBadges; }
   get definitions() { return this.badgeService.badgeDefinitions; }
+  get createdDefinitions() { return this.badgeService.createdDefinitions; }
   get badgeIssuers() { return this.badgeService.badgeIssuers; }
   get profileBadgesEvent() { return this.badgeService.profileBadgesEvent; }
 
@@ -100,6 +101,7 @@ export class BadgesComponent {
 
   viewBadgeDetailsById(id: string, slug: string): void {
     console.log('Viewing badge details:', id, slug);
+    debugger;
     this.layout.openBadge(id, undefined, {
       queryParams: { tab: this.activeTabIndex() }
     });
@@ -107,6 +109,7 @@ export class BadgesComponent {
 
   viewBadgeDetails(badge: NostrEvent): void {
     console.log('Viewing badge details:', badge);
+    debugger
     const id = this.utilities.getATagValueFromEvent(badge);
 
     if (!id) {
