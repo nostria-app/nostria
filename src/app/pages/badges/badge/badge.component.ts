@@ -1,10 +1,10 @@
-import { Component, effect, inject, input, signal, Output, EventEmitter } from '@angular/core';
+import { Component, effect, inject, input, signal, Output, EventEmitter, computed, untracked } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { NostrService } from '../../../services/nostr.service';
 import { kinds, NostrEvent } from 'nostr-tools';
 import { StorageService } from '../../../services/storage.service';
 import { DataService } from '../../../services/data.service';
-import { BadgeService } from '../../../services/badge.service';
+import { BadgeService, ParsedBadge } from '../../../services/badge.service';
 import { RelayService } from '../../../services/relay.service';
 import { UserRelayFactoryService } from '../../../services/user-relay-factory.service';
 import { MatButtonModule } from '@angular/material/button';
@@ -31,6 +31,13 @@ export type BadgeLayout = 'vertical' | 'horizontal';
 })
 export class BadgeComponent {
   badge = input<NostrEvent | any | undefined>(undefined);
+  definition = signal<NostrEvent | undefined | null>(undefined);
+  parsed = signal<ParsedBadge | undefined>(undefined);
+  // definition = input<NostrEvent | any | undefined>(undefined);
+
+  // image = computed(() => {
+  // });
+
   layout = input<BadgeLayout>('vertical');
   showActions = input<boolean>(false);
   isAccepted = input<boolean>(false);
@@ -61,7 +68,9 @@ export class BadgeComponent {
   constructor() {
     effect(async () => {
       if (this.badge()) {
-        await this.parseBadge(this.badge()!);
+        untracked(async () => {
+          await this.parseBadge(this.badge()!);
+        });
         // if (this.badge().created_at) {
         //   this.awardDate.set(this.badge().created_at);
         // }
@@ -71,35 +80,45 @@ export class BadgeComponent {
 
   async parseBadge(event: NostrEvent | any) {
     if (event.slug) {
-      await this.loadBadgeDefinition(event.pubkey, event.slug);
+      const definition = await this.loadBadgeDefinition(event.pubkey, event.slug);
+      this.definition.set(definition);
     }
-
     else if (event.kind === kinds.BadgeDefinition) {
-      const parsedBadge = this.badgeService.parseBadgeDefinition(event);
+      this.definition.set(event);
 
-      if (!parsedBadge) {
-        this.error.set('Failed to parse badge data');
+      // const parsedBadge = this.badgeService.parseBadgeDefinition(event);
+
+      // if (!parsedBadge) {
+      //   this.error.set('Failed to parse badge data');
+      //   return;
+      // }
+
+      // // Update the signals with the parsed values
+      // this.id.set(parsedBadge.slug || '');
+      // this.description.set(parsedBadge.description || '');
+      // this.name.set(parsedBadge.name || '');
+      // this.image.set(parsedBadge.image || '');
+      // this.thumb.set(parsedBadge.thumb || '');
+      // this.tags.set(parsedBadge.tags || []);
+    }
+    else if (event.kind === kinds.BadgeAward) {
+      const aTag = this.utilities.getATagValueFromEvent(event);
+      const values = aTag?.split(':');
+
+      if (!values) {
         return;
       }
 
-      // Update the signals with the parsed values
-      this.id.set(parsedBadge.id || '');
-      this.description.set(parsedBadge.description || '');
-      this.name.set(parsedBadge.name || '');
-      this.image.set(parsedBadge.image || '');
-      this.thumb.set(parsedBadge.thumb || '');
-      this.tags.set(parsedBadge.tags || []);
-    }
-    else if (event.kind === kinds.BadgeAward) {
+      const slug = values[2];
+
+      const definition = await this.loadBadgeDefinition(event.pubkey, slug);
+      this.definition.set(definition);
       const parsedBadge = await this.badgeService.parseReward(event);
 
       if (!parsedBadge) {
-        debugger;
         this.error.set('Failed to parse badge data');
         return;
       }
-
-      debugger;
 
       // Update the signals with the parsed values
       this.id.set(parsedBadge.id || '');
@@ -108,6 +127,15 @@ export class BadgeComponent {
       this.image.set(parsedBadge.image || '');
       this.thumb.set(parsedBadge.thumb || '');
       this.tags.set(parsedBadge.tags || []);
+    }
+
+    if (this.definition()) {
+      const parsedBadge = this.badgeService.parseDefinition(this.definition()!);
+      console.log('Parsed Badge:', parsedBadge);
+      this.parsed.set(parsedBadge);
+    }
+    else {
+      this.error.set('Failed to parse badge data');
     }
   }
 
@@ -123,6 +151,11 @@ export class BadgeComponent {
 
   async loadBadgeDefinition(pubkey: string, slug: string) {
     let definition: NostrEvent | null | undefined = this.badgeService.getBadgeDefinition(pubkey, slug);
+
+    if (!definition) {
+      definition = await this.badgeService.loadBadgeDefinition(pubkey, slug);
+    }
+
     return definition;
   }
 

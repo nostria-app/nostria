@@ -8,8 +8,8 @@ import { UserRelayFactoryService } from "./user-relay-factory.service";
 import { LoggerService } from "./logger.service";
 import { AccountStateService } from "./account-state.service";
 
-interface ParsedBadge {
-    id: string;
+export interface ParsedBadge {
+    slug: string;
     description: string;
     name: string;
     image: string;
@@ -105,7 +105,6 @@ export class BadgeService {
     async loadIssuedBadges(pubkey: string): Promise<void> {
         this.isLoadingIssued.set(true);
         try {
-            0
             const badgeAwardEvents = await this.relay.getEventsByPubkeyAndKind(pubkey, kinds.BadgeAward);
             console.log('badgeAwardsEvent:', badgeAwardEvents);
 
@@ -150,55 +149,10 @@ export class BadgeService {
         if (definition) {
             this.putBadgeDefinition(definition);
             await this.storage.saveEvent(definition);
-            this.parseBadgeDefinition(definition);
+            // this.parseBadgeDefinition(definition);
         }
 
         return definition;
-    }
-
-
-    parseBadgeDefinition(badgeEvent: NostrEvent) {
-        if (!badgeEvent || !badgeEvent.tags) {
-            return;
-        }
-
-        const parsedBadge: Partial<ParsedBadge> = {
-            tags: []
-        };
-
-        // Parse each tag based on its identifier
-        for (const tag of badgeEvent.tags) {
-            if (tag.length >= 2) {
-                const [key, value] = tag;
-
-                switch (key) {
-                    case 'd':
-                        parsedBadge.id = value;
-                        break;
-                    case 'description':
-                        parsedBadge.description = value;
-                        break;
-                    case 'name':
-                        parsedBadge.name = value;
-                        break;
-                    case 'image':
-                        parsedBadge.image = value;
-                        break;
-                    case 'thumb':
-                        parsedBadge.thumb = value;
-                        break;
-                    case 't':
-                        // Accumulate types in an array
-                        if (parsedBadge.tags) {
-                            parsedBadge.tags.push(value);
-                        }
-                        break;
-                }
-            }
-        }
-
-        return parsedBadge;
-
     }
 
     async parseReward(rewardEvent: NostrEvent) {
@@ -363,31 +317,119 @@ export class BadgeService {
         return this.getBadgeDefinition(pubkey, slug);
     }
 
-    getBadgeInfo(badgeAward: NostrEvent): { name: string, description: string, image: string, thumbnail: string } {
-        const aTag = this.getBadgeATag(badgeAward);
-        const badgeDefinition = this.getBadgeDefinitionByATag(aTag);
+    // parseBadgeDefinition(event: NostrEvent) {
+    //     if (!event || !event.tags) {
+    //         return;
+    //     }
 
-        if (!badgeDefinition) {
+    //     const parsedBadge: Partial<ParsedBadge> = {
+    //         tags: []
+    //     };
+
+    //     // Parse each tag based on its identifier
+    //     for (const tag of event.tags) {
+    //         if (tag.length >= 2) {
+    //             const [key, value] = tag;
+
+    //             switch (key) {
+    //                 case 'd':
+    //                     parsedBadge.slug = value;
+    //                     break;
+    //                 case 'description':
+    //                     parsedBadge.description = value;
+    //                     break;
+    //                 case 'name':
+    //                     parsedBadge.name = value;
+    //                     break;
+    //                 case 'image':
+    //                     parsedBadge.image = value;
+    //                     break;
+    //                 case 'thumb':
+    //                     parsedBadge.thumb = value;
+    //                     break;
+    //                 case 't':
+    //                     // Accumulate types in an array
+    //                     if (parsedBadge.tags) {
+    //                         parsedBadge.tags.push(value);
+    //                     }
+    //                     break;
+    //             }
+    //         }
+    //     }
+
+    //     return parsedBadge;
+    // }
+
+    parseDefinition(event: NostrEvent): ParsedBadge {
+        // Early return with complete fallback object
+        if (!event?.tags?.length) {
             return {
+                slug: '',
                 name: 'Unknown Badge',
                 description: 'Badge definition not found',
                 image: '',
-                thumbnail: ''
+                thumb: '',
+                tags: []
             };
         }
 
-        const nameTag = badgeDefinition.tags.find(tag => tag[0] === 'name');
-        const descTag = badgeDefinition.tags.find(tag => tag[0] === 'description');
-        const imageTag = badgeDefinition.tags.find(tag => tag[0] === 'image');
-        const thumbTag = badgeDefinition.tags.find(tag => tag[0] === 'thumb');
+        // Create a tag lookup map for O(1) access to first occurrence
+        const tagMap = new Map<string, string>();
+        const tagValues: string[] = [];
+
+        for (const tag of event.tags) {
+            if (tag.length >= 2) {
+                const [key, value] = tag;
+
+                // Store first occurrence of each tag type
+                if (!tagMap.has(key)) {
+                    tagMap.set(key, value);
+                }
+
+                // Collect all 't' tag values
+                if (key === 't') {
+                    tagValues.push(value);
+                }
+            }
+        }
+
+        const image = tagMap.get('image') || '';
 
         return {
-            name: nameTag ? nameTag[1] : 'Unnamed Badge',
-            description: descTag ? descTag[1] : 'No description',
-            image: imageTag ? imageTag[1] : '',
-            thumbnail: thumbTag ? thumbTag[1] : (imageTag ? imageTag[1] : '')
+            slug: tagMap.get('d') || '',
+            name: tagMap.get('name') || 'Unnamed Badge',
+            description: tagMap.get('description') || 'No description',
+            image,
+            thumb: tagMap.get('thumb') || image, // Fallback to image
+            tags: tagValues
         };
     }
+
+    // getBadgeInfo(badgeAward: NostrEvent): ParsedBadge {
+    //     const aTag = this.getBadgeATag(badgeAward);
+    //     const badgeDefinition = this.getBadgeDefinitionByATag(aTag);
+
+    //     if (!badgeDefinition) {
+    //         return {
+    //             name: 'Unknown Badge',
+    //             description: 'Badge definition not found',
+    //             image: '',
+    //             thumb: ''
+    //         };
+    //     }
+
+    //     const nameTag = badgeDefinition.tags.find(tag => tag[0] === 'name');
+    //     const descTag = badgeDefinition.tags.find(tag => tag[0] === 'description');
+    //     const imageTag = badgeDefinition.tags.find(tag => tag[0] === 'image');
+    //     const thumbTag = badgeDefinition.tags.find(tag => tag[0] === 'thumb');
+
+    //     return {
+    //         name: nameTag ? nameTag[1] : 'Unnamed Badge',
+    //         description: descTag ? descTag[1] : 'No description',
+    //         image: imageTag ? imageTag[1] : '',
+    //         thumb: thumbTag ? thumbTag[1] : (imageTag ? imageTag[1] : '')
+    //     };
+    // }
 
     resetBadgeData(): void {
         this.badgeDefinitions.set([]);
