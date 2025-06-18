@@ -13,6 +13,7 @@ import { ProfileStateService } from "./profile-state.service";
 import { LoginDialogComponent } from "../components/login-dialog/login-dialog.component";
 import { NostrRecord } from "../interfaces";
 import { AccountStateService } from "./account-state.service";
+import { NoteEditorDialogComponent } from "../components/note-editor-dialog/note-editor-dialog.component";
 
 @Injectable({
     providedIn: 'root'
@@ -606,6 +607,32 @@ export class LayoutService implements OnDestroy {
 
     scrollToOptimalProfilePosition() {
         this.scrollToOptimalPosition(this.optimalProfilePosition);
+    }
+
+    // Handler methods for different creation types
+    createNote(): void {
+        // Open note editor dialog
+        const dialogRef = this.dialog.open(NoteEditorDialogComponent, {
+            width: '600px',
+            maxWidth: '90vw',
+            data: {} // No reply/quote data for new notes
+        });
+
+        dialogRef.afterClosed().subscribe(result => {
+            if (result?.published) {
+                console.log('Note published successfully:', result.event);
+            }
+        });
+    }
+
+    createArticle(): void {
+        // Navigate to article creation
+        this.router.navigate(['/article/create']);
+    }
+
+    async uploadMedia(): Promise<void> {
+        // Navigate to media page with upload parameter
+        await this.router.navigate(['/media'], { queryParams: { upload: 'true' } });
     }
 
     /**

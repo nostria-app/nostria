@@ -100,11 +100,11 @@
                     </div>
                 } @else {
                     <div class="badges-grid">
-                        @for (badge of definitions(); track badge.id) {
+                        @for (badge of createdDefinitions(); track badge.id) {
                         <app-badge [badge]="badge" (click)="viewBadgeDetails(badge)"></app-badge>
                         }
 
-                        @if (definitions()?.length === 0) {
+                        @if (createdDefinitions()?.length === 0) {
                         <div class="no-badges-message">
                             <mat-icon>sentiment_very_dissatisfied</mat-icon>
                             <p>You haven't created any badges yet</p>
