@@ -538,6 +538,12 @@ mat-nav-list .mat-icon {
   animation: pulse 1.5s infinite ease-in-out;
 }
 
+.menu-create-button {
+  // box-shadow: var(--mat-sys-level4);
+  // color: var(--mat-sys-primary-container);
+  // margin-left: 8px;
+}
+
 .desktop-create-fab {
   position: fixed;
   bottom: 0.4rem;

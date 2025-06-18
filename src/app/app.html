@@ -227,18 +227,23 @@
         </a>
         }
         }
-
-
-
         }
+
+        <a mat-list-item  (click)="openCreateOptions()">
+          <mat-icon matListItemIcon>add</mat-icon>
+          @if(displayLabels()) {
+          <span class="nav-label">Create</span>
+          }
+        </a>
 
         <a mat-list-item (click)="toggleMenuSize()">
           @if (displayLabels()) {
-          <mat-icon>chevron_left</mat-icon>
+          <mat-icon matListItemIcon>chevron_left</mat-icon>
           } @else {
-          <mat-icon>chevron_right</mat-icon>
+          <mat-icon matListItemIcon>chevron_right</mat-icon>
           }
         </a>
+
       </mat-nav-list>
     </mat-sidenav>
 
@@ -398,12 +403,12 @@
   }
 
   <!-- Desktop FAB button (only visible when not in handset mode) -->
-  @if (!layout.isHandset() && app.authenticated()) {
+  <!-- @if (!layout.isHandset() && app.authenticated()) {
   <button mat-mini-fab color="primary" class="desktop-create-fab no-print" aria-label="Create new content"
     (click)="openCreateOptions()">
     <mat-icon>add</mat-icon>
-  </button>
-  }
+  </button> 
+  } -->
 
   <!-- Mobile navigation footer - now outside of sidenav container -->
   @if (layout.isHandset()) {
