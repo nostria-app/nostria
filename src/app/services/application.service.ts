@@ -10,6 +10,7 @@ import { LocalStorageService } from "./local-storage.service";
 import { isPlatformBrowser } from "@angular/common";
 import { AccountStateService } from "./account-state.service";
 import { DataService } from "./data.service";
+import { BadgeService } from "./badge.service";
 
 @Injectable({
     providedIn: 'root'
@@ -21,6 +22,7 @@ export class ApplicationService {
     logger = inject(LoggerService);
     appState = inject(ApplicationStateService);
     accountState = inject(AccountStateService);
+    badgeService = inject(BadgeService);
     theme = inject(ThemeService);
     notificationService = inject(NotificationService);
     dataService = inject(DataService);
@@ -117,6 +119,9 @@ export class ApplicationService {
 
     private async loadAppData(): Promise<void> {
         this.logger.info('Application initialized and authenticated, loading app data');
+
+        // Reset the badge service.
+        this.badgeService.resetBadgeData();
 
         // Load notifications from storage
         if (!this.notificationService.notificationsLoaded()) {
