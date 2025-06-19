@@ -52,7 +52,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            background-color: #f5f5f5;
+            // background-color: #f5f5f5;
             
             img {
                 max-width: 100%;
@@ -63,7 +63,7 @@
         
         .placeholder-image {
             flex-direction: column;
-            color: rgba(0, 0, 0, 0.4);
+            // color: rgba(0, 0, 0, 0.4);
             
             mat-icon {
                 font-size: 64px;
@@ -82,7 +82,7 @@
             
             p {
                 margin: 0;
-                color: rgba(0, 0, 0, 0.6);
+                // color: rgba(0, 0, 0, 0.6);
             }
         }
     }
@@ -112,7 +112,7 @@
             
             span {
                 font-size: 14px;
-                color: rgba(0, 0, 0, 0.6);
+                // color: rgba(0, 0, 0, 0.6);
             }
         }
     }
@@ -123,7 +123,7 @@
         gap: 16px;
         
         span {
-            color: rgba(0, 0, 0, 0.6);
+            // color: rgba(0, 0, 0, 0.6);
         }
     }
 }
@@ -166,7 +166,7 @@
     gap: 12px;
     padding: 16px;
     margin-bottom: 16px;
-    background-color: rgba(255, 152, 0, 0.1);
+    // background-color: rgba(255, 152, 0, 0.1);
     border-radius: 4px;
     border-left: 4px solid var(--mat-warn-500);
 
