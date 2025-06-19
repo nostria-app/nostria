@@ -7,7 +7,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
-import { MatRadioModule, MatRadioGroup } from '@angular/material/radio';
+import { MatRadioModule } from '@angular/material/radio';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
@@ -15,21 +15,31 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { NameService } from '../../../services/name.service';
 import { debounceTime, firstValueFrom, Subject, takeUntil } from 'rxjs';
+import { AccountService } from '../../../api/services';
+import { TierDetails } from '../../../api/models/tier-details';
 
-interface PaymentOption {
-  id: string;
-  name: string;
-  pricePerMonth: number;
-  billingPeriod: string;
-  totalPrice: number;
-  description: string;
-}
 
 interface PaymentInvoice {
   paymentRequest: string;
   expiresAt: number;
   status: 'pending' | 'paid' | 'expired';
 }
+
+interface PricingDisplay {
+    pricePerMonth: string,
+    totalPrice: string,
+    currency: string,
+    period: string,
+};
+
+interface TierDisplay {
+  key: string;
+  details: TierDetails;
+  pricing: {
+    quarterly: PricingDisplay;
+    yearly: PricingDisplay;
+  }
+};
 
 @Component({
   selector: 'app-upgrade',
@@ -58,55 +68,53 @@ export class UpgradeComponent implements OnDestroy {
   private snackBar = inject(MatSnackBar);
   private router = inject(Router);
   private name = inject(NameService);
+  private accountService = inject(AccountService)
 
   usernameFormGroup = this.formBuilder.group({
     username: ['', [Validators.required, Validators.minLength(3), Validators.pattern('^[a-zA-Z0-9_]+$')]]
   });
 
   paymentFormGroup = this.formBuilder.group({
-    paymentOption: ['yearly', Validators.required]
+    paymentOption: ['yearly' as 'yearly', Validators.required]
   });
 
   currentStep = signal<number>(0);
   isUsernameAvailable = signal<boolean | null>(null);
   isCheckingUsername = signal<boolean>(false);
-  paymentOptions = signal<PaymentOption[]>([
-    {
-      id: 'quarterly',
-      name: 'Quarterly',
-      pricePerMonth: 6,
-      billingPeriod: '3 months',
-      totalPrice: 18,
-      description: 'Billed as $18 every 3 months'
-    },
-    {
-      id: 'yearly',
-      name: 'Yearly',
-      pricePerMonth: 5,
-      billingPeriod: '12 months',
-      totalPrice: 60,
-      description: 'Billed as $60 per year (Save $12)'
-    }
-  ]);
-
-  selectedPaymentOption = signal<PaymentOption | null>(null);
+  tiers = signal<TierDisplay[]>([]);
+  selectedTier = signal<TierDisplay | null>(null);
+  selectedPaymentOption = signal<'quarterly' | 'yearly' | null>('yearly');
   paymentInvoice = signal<PaymentInvoice | null>(null);
   isGeneratingInvoice = signal<boolean>(false);
   isPaymentCompleted = signal<boolean>(false);
   paymentCheckInterval = signal<number | null | any>(null);
+  
 
   constructor() {
-    // Initialize with yearly plan selected
-    this.selectedPaymentOption.set(this.paymentOptions()[1]);
+    // Fetch tiers from API
+    this.accountService.getTiers().pipe(takeUntil(this.destroy$)).subscribe(tiersObj => {
+      const tiers = Object.values(tiersObj).map(tier => {
+        return {
+          key: tier.tier,
+          details: tier,
+          pricing: {
+            quarterly: this.getPricing(tier, 'quarterly'),
+            yearly: this.getPricing(tier, 'yearly'),
+          }
+        }
+      });
+
+      this.tiers.set(tiers);
+      if (tiers.length > 0) {
+        this.selectedTier.set(tiers[0]);
+      }
+    });
 
     // Set up form value changes
     effect(() => {
       const paymentOption = this.paymentFormGroup.get('paymentOption')?.value;
       if (paymentOption) {
-        const option = this.paymentOptions().find(opt => opt.id === paymentOption);
-        if (option) {
-          this.selectedPaymentOption.set(option);
-        }
+        this.selectedPaymentOption.set(paymentOption);
       }
     });
 
@@ -202,7 +210,7 @@ export class UpgradeComponent implements OnDestroy {
   }
 
   async generatePaymentInvoice() {
-    if (!this.selectedPaymentOption()) return;
+    if (!this.selectedTier()) return;
 
     this.isGeneratingInvoice.set(true);
 
@@ -331,5 +339,23 @@ export class UpgradeComponent implements OnDestroy {
     this.snackBar.open('Payment request copied to clipboard', 'Ok', {
       duration: 3000
     });
+  }
+
+  // Helper for template: get human-readable features for a tier
+  getFeatureDescriptions(tier: TierDisplay): string[] {
+    if (!tier.details.entitlements?.features) return [];
+    return tier.details.entitlements.features.map(feature => feature.label || feature.key);
+  }
+
+  // Helper for template: get pricing for a tier and billing period
+  getPricing(tier: TierDetails, period: 'quarterly' | 'yearly'): PricingDisplay {
+    const price = tier.pricing?.[period];
+    if (!price) return { pricePerMonth: '', totalPrice: '', currency: '', period: '' };
+    return {
+      pricePerMonth: price.priceCents ? (price.priceCents / 100 / (period === 'yearly' ? 12 : 3)).toFixed(2) : '-',
+      totalPrice: price.priceCents ? (price.priceCents / 100).toFixed(2) : '-',
+      currency: price.currency || 'USD',
+      period: period === 'yearly' ? '12 months' : '3 months',
+    };
   }
 }

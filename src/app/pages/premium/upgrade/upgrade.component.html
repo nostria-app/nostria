@@ -93,56 +93,68 @@
         <h2>Select Your Premium Plan</h2>
         <p class="step-description">Choose a plan that works best for you.</p>
 
-        <form [formGroup]="paymentFormGroup">
-          <mat-radio-group formControlName="paymentOption">
-            <div class="payment-options">
-              @for (option of paymentOptions(); track option.id) {
-                <mat-card class="payment-option-card"
-                  [class.selected]="paymentFormGroup.get('paymentOption')?.value === option.id"
-                  (click)="paymentFormGroup.get('paymentOption')?.setValue(option.id)">
-                  <mat-card-content>
-                    <div class="payment-header">
-                      <mat-radio-button [value]="option.id" color="primary">
-                        {{ option.name }}
-                      </mat-radio-button>
-                      @if (option.id === 'yearly') {
-                        <span class="best-value-tag">Best Value</span>
-                      }
-                    </div>
+        <div class="tier-options">
+          @for (tier of tiers(); track tier.key) {
+            <mat-card class="tier-option-card" [class.selected]="selectedTier()?.key === tier.key" (click)="selectedTier.set(tier)">
+              <mat-card-header>
+                <mat-card-title>{{ tier.details.name }}</mat-card-title>
+              </mat-card-header>
+              <mat-card-content class="fill-card-content">
+                <ul class="feature-list">
+                  @for (feature of getFeatureDescriptions(tier); track feature) {
+                    <li>{{ feature }}</li>
+                  }
+                </ul>
+                <div class="pricing-options">
+                  <div class="payment-option-cards">
+                    <mat-card class="payment-option-card" [class.selected]="selectedTier()?.key === tier.key && selectedPaymentOption() === 'quarterly'">
+                      <label>
+                        <input type="radio" name="paymentOption-{{tier.key}}" value="quarterly"
+                          [checked]="selectedTier()?.key === tier.key && selectedPaymentOption() === 'quarterly'"
+                          (change)="selectedTier.set(tier); selectedPaymentOption.set('quarterly')">
+                        <div class="payment-option-content">
+                          <span class="pricing-label">Pay Quarterly</span>
+                          <span class="pricing-detail"><span class="price-amount">${{ tier.pricing.quarterly.totalPrice }}</span> {{ tier.pricing.quarterly.currency }} &bull; ${{ tier.pricing.quarterly.pricePerMonth }}/mo</span>
+                          <span class="pricing-detail">Billed every {{ tier.pricing.quarterly.period }}</span>
+                        </div>
+                      </label>
+                    </mat-card>
+                    <mat-card class="payment-option-card" [class.selected]="selectedTier()?.key === tier.key && selectedPaymentOption() === 'yearly'">
+                      <label>
+                        <input type="radio" name="paymentOption-{{tier.key}}" value="yearly"
+                          [checked]="selectedTier()?.key === tier.key && selectedPaymentOption() === 'yearly'"
+                          (change)="selectedTier.set(tier); selectedPaymentOption.set('yearly')">
+                        <div class="payment-option-content">
+                          <span class="pricing-label">Pay Yearly</span>
+                          <span class="pricing-detail"><span class="price-amount">${{ tier.pricing.yearly.totalPrice }}</span> {{ tier.pricing.yearly.currency }} &bull; ${{ tier.pricing.yearly.pricePerMonth }}/mo</span>
+                          <span class="pricing-detail">Billed every {{ tier.pricing.yearly.period }}</span>
+                          <span class="best-value-tag">Best Value</span>
+                        </div>
+                      </label>
+                    </mat-card>
+                  </div>
+                </div>
+              </mat-card-content>
+            </mat-card>
+          }
+        </div>
 
-                    <div class="payment-details">
-                      <div class="payment-price">
-                        <span class="price-amount">${{ option.pricePerMonth }}</span>/month
-                      </div>
-                      <div class="payment-period">
-                        Billed as ${{ option.totalPrice }} every {{ option.billingPeriod }}
-                      </div>
-                    </div>
-                  </mat-card-content>
-                </mat-card>
-              }
-            </div>
-          </mat-radio-group>
-        </form>
-
-        @if (selectedPaymentOption()) {
-          <div class="payment-summary">
-            <h3>Order Summary</h3>
-            <div class="summary-row">
-              <span>Nostria Premium ({{ selectedPaymentOption()?.billingPeriod }})</span>
-              <span>${{ selectedPaymentOption()?.totalPrice }}.00</span>
-            </div>
-            <mat-divider></mat-divider>
-            <div class="summary-row total">
-              <span>Total</span>
-              <span>${{ selectedPaymentOption()?.totalPrice }}.00</span>
-            </div>
+        <div *ngIf="selectedTier() && selectedPaymentOption() && getPricing(selectedTier().details, selectedPaymentOption()) as summary" class="payment-summary">
+          <h3>Order Summary</h3>
+          <div class="summary-row">
+            <span>{{ selectedTier()?.details?.name }} ({{ summary.period }})</span>
+            <span>${{ summary.totalPrice }} {{ summary.currency }}</span>
           </div>
-        }
+          <mat-divider></mat-divider>
+          <div class="summary-row total">
+            <span>Total</span>
+            <span>${{ summary.totalPrice }} {{ summary.currency }}</span>
+          </div>
+        </div>
 
         <div class="step-actions">
           <button mat-button (click)="prevStep()">Back</button>
-          <button mat-flat-button color="primary" (click)="nextStep()">
+          <button mat-flat-button color="primary" [disabled]="!selectedTier() || !selectedPaymentOption()" (click)="nextStep()">
             Continue to Payment
           </button>
         </div>
