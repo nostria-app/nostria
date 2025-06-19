@@ -19,6 +19,9 @@ import { getAccount } from '../fn/account/get-account';
 import { GetAccount$Params } from '../fn/account/get-account';
 import { getPublicAccount } from '../fn/account/get-public-account';
 import { GetPublicAccount$Params } from '../fn/account/get-public-account';
+import { getTiers } from '../fn/account/get-tiers';
+import { GetTiers$Params } from '../fn/account/get-tiers';
+import { TierDetails } from '../models/tier-details';
 import { updateAccount } from '../fn/account/update-account';
 import { UpdateAccount$Params } from '../fn/account/update-account';
 
@@ -26,6 +29,47 @@ import { UpdateAccount$Params } from '../fn/account/update-account';
 export class AccountService extends BaseService {
   constructor(config: ApiConfiguration, http: HttpClient) {
     super(config, http);
+  }
+
+  /** Path part for operation `getTiers()` */
+  static readonly GetTiersPath = '/account/tiers';
+
+  /**
+   * Get available subscription tiers.
+   *
+   * Retrieve all available subscription tiers and their details
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `getTiers()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  getTiers$Response(params?: GetTiers$Params, context?: HttpContext): Observable<StrictHttpResponse<{
+[key: string]: TierDetails;
+}>> {
+    return getTiers(this.http, this.rootUrl, params, context);
+  }
+
+  /**
+   * Get available subscription tiers.
+   *
+   * Retrieve all available subscription tiers and their details
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `getTiers$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  getTiers(params?: GetTiers$Params, context?: HttpContext): Observable<{
+[key: string]: TierDetails;
+}> {
+    return this.getTiers$Response(params, context).pipe(
+      map((r: StrictHttpResponse<{
+[key: string]: TierDetails;
+}>): {
+[key: string]: TierDetails;
+} => r.body)
+    );
   }
 
   /** Path part for operation `getAccount()` */

@@ -5,6 +5,13 @@
 export type { AccountDto } from './models/account-dto';
 export type { AddAccountRequest } from './models/add-account-request';
 export type { ApiResponse } from './models/api-response';
+export type { Entitlements } from './models/entitlements';
 export type { Error } from './models/error';
+export { Feature } from './models/feature';
+export type { FeatureWithLabel } from './models/feature-with-label';
+export type { Price } from './models/price';
+export type { Pricing } from './models/pricing';
 export type { PublicAccountDto } from './models/public-account-dto';
+export { Tier } from './models/tier';
+export type { TierDetails } from './models/tier-details';
 export type { UpdateAccountRequest } from './models/update-account-request';
