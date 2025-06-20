@@ -12,6 +12,12 @@ Web: https://nostria.app
 
 Desktop: https://github.com/sondreb/nostria/releases
 
+## Documentation
+
+Documentation of source code is available here: [Nostria DeepWiki](https://deepwiki.com/nostria-app/nostria)
+
+Additional documents here: [docs](docs/)
+
 ## Architecture
 
 The client is built on Angular and Angular Material. It is utilizing Tauri to package the app for desktop users.
