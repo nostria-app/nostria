@@ -123,9 +123,9 @@ export class App {
   });
 
   navItems: NavItem[] = [
-    { path: '', label: 'Feeds', icon: 'stacks' },
+    { path: '', label: 'Feeds', icon: 'stacks', authenticated: true },
     // { path: 'feed', label: 'Feed', icon: 'notes', showInMobile: true },
-    { path: 'articles', label: 'Articles', icon: 'article' },
+    { path: 'articles', label: 'Articles', icon: 'article', authenticated: true },
     // { path: 'podcasts', label: 'Podcasts', icon: 'podcasts', showInMobile: false },
     { path: 'people', label: 'People', icon: 'people', authenticated: true },
     { path: 'messages', label: 'Messages', icon: 'mail', level: 'beta', authenticated: true },

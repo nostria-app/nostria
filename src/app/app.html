@@ -140,6 +140,7 @@
     </button>
 
     <mat-menu #menuApps="matMenu">
+      @if (app.authenticated()) {
       <button mat-menu-item (click)="layout.createNote()">
         <mat-icon>create</mat-icon>
         <span>Create Note</span>
@@ -152,6 +153,7 @@
         <mat-icon>upload</mat-icon>
         <span>Upload</span>
       </button>
+      }
       <mat-divider></mat-divider>
       <button mat-menu-item routerLink="/media-queue">
         <mat-icon>queue_music</mat-icon>
@@ -229,12 +231,14 @@
         }
         }
 
-        <a mat-list-item  (click)="openCreateOptions()">
+        @if (app.authenticated()) {
+        <a mat-list-item (click)="openCreateOptions()">
           <mat-icon matListItemIcon>add</mat-icon>
           @if(displayLabels()) {
           <span class="nav-label">Create</span>
           }
         </a>
+        }
 
         <a mat-list-item (click)="toggleMenuSize()">
           @if (displayLabels()) {
