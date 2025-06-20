@@ -13,6 +13,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { AccountRelayService } from '../../services/account-relay.service';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatDialog } from '@angular/material/dialog';
+import { PublishDialogComponent, PublishDialogData } from './publish-dialog/publish-dialog.component';
 
 @Component({
   selector: 'app-event',
@@ -35,10 +37,10 @@ export class EventComponent {
 
   event = input<Event | null>(null);
 
-  data = inject(DataService);
-  record = signal<NostrRecord | null>(null);
+  data = inject(DataService);  record = signal<NostrRecord | null>(null);
   layout = inject(LayoutService);
   accountRelayService = inject(AccountRelayService);
+  dialog = inject(MatDialog);
 
   constructor() {
     effect(() => {
@@ -87,14 +89,20 @@ export class EventComponent {
       this.layout.openArticle(id, this.record()?.event);
     }
   }
-
   async publishEvent() {
     const event = this.record()?.event;
     if (!event) {
       return;
     }
 
-    debugger;
-    const pub = this.accountRelayService.publish(event);
+    const dialogData: PublishDialogData = {
+      event: event
+    };
+
+    this.dialog.open(PublishDialogComponent, {
+      data: dialogData,
+      width: '600px',
+      disableClose: false
+    });
   }
 }

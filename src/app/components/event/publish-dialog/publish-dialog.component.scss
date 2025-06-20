@@ -1,0 +1,133 @@
+.publish-dialog-content {
+  min-width: 500px;
+  max-width: 600px;
+}
+
+.publish-options {
+  margin-bottom: 24px;
+
+  h3 {
+    margin-bottom: 16px;
+    font-weight: 500;
+  }
+
+  .publish-option {
+    display: block;
+    margin-bottom: 16px;
+    width: 100%;
+
+    mat-checkbox {
+      width: 100%;
+
+      .mdc-form-field {
+        width: 100%;
+      }
+    }
+
+    .option-content {
+      margin-left: 8px;
+
+      .option-label {
+        font-weight: 500;
+        margin-bottom: 4px;
+      }
+
+      .option-description {
+        font-size: 0.875rem;
+        color: var(--mat-sys-on-surface-variant);
+        margin-bottom: 4px;
+      }
+
+      .relay-count {
+        font-size: 0.75rem;
+        color: var(--mat-sys-primary);
+        font-weight: 500;
+      }
+    }
+  }
+}
+
+.custom-relays-section {
+  margin-bottom: 24px;
+  padding: 16px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 8px;
+
+  h4 {
+    margin-bottom: 16px;
+    font-weight: 500;
+  }
+
+  .add-relay-form {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+    margin-bottom: 16px;
+
+    .relay-input {
+      flex: 1;
+    }
+  }
+
+  .custom-relays-list {
+    mat-chip-listbox {
+      width: 100%;
+    }
+  }
+}
+
+.publish-results {
+  margin-top: 24px;
+  padding: 16px;
+  background: var(--mat-sys-surface-container-low);
+  border-radius: 8px;
+
+  h4 {
+    margin-bottom: 16px;
+    font-weight: 500;
+  }
+
+  .result-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+
+    .relay-url {
+      font-family: monospace;
+      font-size: 0.875rem;
+      flex: 1;
+    }
+
+    .result-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.875rem;
+
+      &.status-pending {
+        color: var(--mat-sys-on-surface-variant);
+      }
+
+      &.status-success {
+        color: var(--mat-sys-primary);
+      }
+
+      &.status-error {
+        color: var(--mat-sys-error);
+      }
+    }
+  }
+}
+
+mat-dialog-actions {
+  padding: 16px 24px;
+
+  button {
+    margin-left: 8px;
+
+    mat-spinner {
+      margin-right: 8px;
+    }
+  }
+}
