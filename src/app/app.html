@@ -352,7 +352,7 @@
           @if (account.pubkey !== accountState.account()?.pubkey) {
 
           @if(accountState.getAccountProfile(account.pubkey); as metadata) {
-          <a mat-list-item (click)="switchAccount(account.pubkey); toggleProfileSidenav()" class="account-item">
+          <a mat-list-item (click)="switchAccount(account.pubkey); toggleProfileSidenav();" class="account-item">
             @if (metadata.data?.picture; as account) {
             <div class="account-avatar" matListItemIcon>
               <img [src]="metadata?.data?.picture" alt="Profile picture" class="avatar-image">
@@ -369,7 +369,7 @@
             </span>
           </a>
           } @else {
-          <a mat-list-item (click)="switchAccount(account.pubkey)" class="account-item">
+          <a mat-list-item (click)="switchAccount(account.pubkey); toggleProfileSidenav();" class="account-item">
             <mat-icon matListItemIcon>account_circle</mat-icon>
             <span matListItemTitle>
               {{account.pubkey | npub }}

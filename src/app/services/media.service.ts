@@ -6,7 +6,7 @@ import { StorageService } from './storage.service';
 import { LoggerService } from './logger.service';
 import { EventTemplate, finalizeEvent } from 'nostr-tools';
 import { RelayService } from './relay.service';
-import { MEDIA_SERVERS_EVENT_KIND } from '../interfaces';
+import { MEDIA_SERVERS_EVENT_KIND, NostriaService } from '../interfaces';
 import { NostrTagKey, standardizedTag, StandardizedTagType } from '../standardized-tags';
 import { sha256 } from '@noble/hashes/sha2';
 import { bytesToHex } from '@noble/hashes/utils';
@@ -36,7 +36,7 @@ export interface NostrEvent {
 @Injectable({
   providedIn: 'root'
 })
-export class MediaService {
+export class MediaService implements NostriaService {
   private readonly nostrService = inject(NostrService);
   readonly relay = inject(RelayService);
   private readonly storage = inject(StorageService);
@@ -66,36 +66,66 @@ export class MediaService {
     // this.getFiles();
     // Load saved media servers
     // this.loadMediaServers();
-    effect(async () => {
-      if (this.accountState.accountChanging()) {
-        this.clear();
-        const userServerList = await this.nostrService.getMediaServers(this.accountState.pubkey());
+    // effect(async () => {
+    //   if (this.accountState.accountChanging()) {
+    //     this.clear();
+    //     const userServerList = await this.nostrService.getMediaServers(this.accountState.pubkey());
 
-        if (userServerList) {
-          const servers = this.nostrService.getTags(userServerList, standardizedTag.server);
-          this.setMediaServers(servers);
-        } else {
-          this.logger.debug('No media servers found for user. This user might be a Nostria account or any other Nostr user.');
+    //     if (userServerList) {
+    //       const servers = this.nostrService.getTags(userServerList, standardizedTag.server);
+    //       this.setMediaServers(servers);
+    //     } else {
+    //       this.logger.debug('No media servers found for user. This user might be a Nostria account or any other Nostr user.');
 
-          if (!this.accountState.account()?.hasActivated) {
-            this.logger.debug('User has not activated their account yet, so we will add regional media servers.');
+    //       if (!this.accountState.account()?.hasActivated) {
+    //         this.logger.debug('User has not activated their account yet, so we will add regional media servers.');
 
-            const region = this.accountState.account()?.region || 'eu';
-            const mediaServerUrl = this.region.getMediaServer(region, 0);
-            this.setMediaServers([mediaServerUrl!]);
-          }
-        }
+    //         const region = this.accountState.account()?.region || 'eu';
+    //         const mediaServerUrl = this.region.getMediaServer(region, 0);
+    //         this.setMediaServers([mediaServerUrl!]);
+    //       }
+    //     }
 
-        if (this.mediaServers().length > 0) {
-          // Only fetch files if it's been more than 10 minutes since last fetch
-          const tenMinutesInMs = 10 * 60 * 1000; // 10 minutes in milliseconds
-          const currentTime = Date.now();
-          const lastFetchTime = this.getLastFetchTime(); if (currentTime - lastFetchTime > tenMinutesInMs) {
-            await this.getFiles();
-          }
-        }
+    //     if (this.mediaServers().length > 0) {
+    //       // Only fetch files if it's been more than 10 minutes since last fetch
+    //       const tenMinutesInMs = 10 * 60 * 1000; // 10 minutes in milliseconds
+    //       const currentTime = Date.now();
+    //       const lastFetchTime = this.getLastFetchTime(); if (currentTime - lastFetchTime > tenMinutesInMs) {
+    //         await this.getFiles();
+    //       }
+    //     }
+    //   }
+    // });
+  }
+
+  async load() {
+    const userServerList = await this.nostrService.getMediaServers(this.accountState.pubkey());
+
+    if (userServerList) {
+      const servers = this.nostrService.getTags(userServerList, standardizedTag.server);
+      this.setMediaServers(servers);
+    } else {
+      this.logger.debug('No media servers found for user. This user might be a Nostria account or any other Nostr user.');
+
+      if (!this.accountState.account()?.hasActivated) {
+        this.logger.debug('User has not activated their account yet, so we will add regional media servers.');
+
+        const region = this.accountState.account()?.region || 'eu';
+        const mediaServerUrl = this.region.getMediaServer(region, 0);
+        this.setMediaServers([mediaServerUrl!]);
       }
-    });
+    }
+  }
+
+  async loadMedia() {
+    if (this.mediaServers().length > 0) {
+      // Only fetch files if it's been more than 10 minutes since last fetch
+      const tenMinutesInMs = 10 * 60 * 1000; // 10 minutes in milliseconds
+      const currentTime = Date.now();
+      const lastFetchTime = this.getLastFetchTime(); if (currentTime - lastFetchTime > tenMinutesInMs) {
+        await this.getFiles();
+      }
+    }
   }
 
   clear() {

@@ -94,6 +94,13 @@ export class MediaComponent {
       this.selectedItems.set([]);
     });
 
+    effect(async () => {
+      if (this.accountState.initialized()) {
+        // This is currently triggered twice...
+        await this.mediaService.getFiles();
+      }
+    });
+
     // effect(async () => {
     //   if (this.accountState.accountChanging()) {
 
@@ -122,8 +129,8 @@ export class MediaComponent {
 
     //   // }
     // });    
-    
-    
+
+
     // Check for upload query parameter and trigger upload dialog
     this.route.queryParamMap.subscribe(params => {
       const uploadParam = params.get('upload');

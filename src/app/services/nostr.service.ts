@@ -2,21 +2,18 @@ import { Injectable, signal, computed, effect, inject, untracked } from '@angula
 import { Event, generateSecretKey, getPublicKey, UnsignedEvent, VerifiedEvent } from 'nostr-tools/pure';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
 import * as nip19 from 'nostr-tools/nip19';
-import { makeAuthEvent } from 'nostr-tools/nip42';
 import { LoggerService } from './logger.service';
 import { RelayService } from './relay.service';
 import { NostrEventData, StorageService, UserMetadata } from './storage.service';
 import { kinds, SimplePool } from 'nostr-tools';
-import { finalizeEvent, verifyEvent } from 'nostr-tools/pure';
+import { finalizeEvent } from 'nostr-tools/pure';
 import { BunkerPointer, BunkerSigner, parseBunkerInput } from 'nostr-tools/nip46';
-import { NostrTagKey, StandardizedTagType } from '../standardized-tags';
+import { NostrTagKey } from '../standardized-tags';
 import { ApplicationStateService } from './application-state.service';
 import { AccountStateService } from './account-state.service';
 import { LocalStorageService } from './local-storage.service';
-import { BookmarkService } from './bookmark.service';
-import { SettingsService } from './settings.service';
 import { RegionService } from './region.service';
-import { NostrRecord } from '../interfaces';
+import { NostriaService, NostrRecord } from '../interfaces';
 import { DataService } from './data.service';
 import { UtilitiesService } from './utilities.service';
 
@@ -43,7 +40,7 @@ export interface UserMetadataWithPubkey extends NostrEventData<UserMetadata> {
 @Injectable({
   providedIn: 'root'
 })
-export class NostrService {
+export class NostrService implements NostriaService {
   private readonly logger = inject(LoggerService);
   private readonly relayService = inject(RelayService);
   private readonly storage = inject(StorageService);
@@ -99,19 +96,6 @@ export class NostrService {
       }
     });
 
-    effect(async () => {
-      const account = this.accountState.account();
-
-      console.log('Account changed', { account });
-
-      if (account) {
-        await this.loadAccount(account);
-      }
-
-      // // Set the current user pubkey in the app state
-      // this.appState.pubkey.set(account?.pubkey || null);
-    });
-
     // Save all users to localStorage whenever they change
     effect(() => {
       const allUsers = this.accounts();
@@ -161,10 +145,6 @@ export class NostrService {
 
       const account = this.getAccountFromStorage();
 
-      // if (account) {
-      //   await this.loadAccount(account);
-      // }
-
       // If no account, finish the loading.
       if (!account) {
         // Show success animation instead of waiting
@@ -179,7 +159,9 @@ export class NostrService {
     }
   }
 
-  async loadAccount(account: NostrUser) {
+  async load() {
+    const account = this.accountState.account();
+
     if (account) {
       const pubkey = account.pubkey;
       // When the account changes, check what data we have and get if missing.
@@ -292,9 +274,12 @@ export class NostrService {
   reset() {
     this.accounts.set([]);
     this.accountState.changeAccount(null);
+  }
+
+  clear() {
     this.accountState.clearProfileCache();
     // this.accountsMetadata.set([]);
-    this.accountsRelays.set([]);
+    // this.accountsRelays.set([]);
   }
 
   // Method to easily find metadata by pubkey
@@ -1859,6 +1844,10 @@ export class NostrService {
     };
 
     this.logger.debug('New keypair generated successfully', { pubkey, region });
+
+    // Create Relay List event for the new user
+
+    // Create Media Server event for the new user
 
     await this.setAccount(newUser);
   }

@@ -38,6 +38,7 @@ import { MediaPlayerService } from './services/media-player.service';
 import { LocalSettingsService } from './services/local-settings.service';
 import { AccountStateService } from './services/account-state.service';
 import { SearchResultsComponent } from './components/search-results/search-results.component';
+import { StateService } from './services/state.service';
 
 interface NavItem {
   path: string;
@@ -92,6 +93,7 @@ export class App {
   media = inject(MediaPlayerService);
   localSettings = inject(LocalSettingsService);
   accountState = inject(AccountStateService);
+  state = inject(StateService);
   private readonly platform = inject(PLATFORM_ID);
   private readonly document = inject(DOCUMENT);
   
