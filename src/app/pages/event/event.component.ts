@@ -1,17 +1,19 @@
-import { Component, effect, inject, signal } from '@angular/core';
+import { Component, effect, inject, signal, untracked } from '@angular/core';
 import { LayoutService } from '../../services/layout.service';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
 import { DataService } from '../../services/data.service';
 import { Event, kinds, nip19, SimplePool } from 'nostr-tools';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, ParamMap, Router } from '@angular/router';
 import { DecodedNaddr, DecodedNevent, EventPointer } from 'nostr-tools/nip19';
 import { UrlUpdateService } from '../../services/url-update.service';
 import { EventComponent } from '../../components/event/event.component';
 import { UtilitiesService } from '../../services/utilities.service';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { ApplicationService } from '../../services/application.service';
+import { toSignal } from '@angular/core/rxjs-interop';
 
 /** Description of the EventPageComponent
  * 
@@ -58,37 +60,29 @@ export class EventPageComponent {
   id = signal<string | null>(null);
   pool: SimplePool | undefined = undefined;
   userRelays: string[] = [];
-
-  // Create a signal for the route parameter
-  private routeParam = signal<string | null>(null);
-
+  app = inject(ApplicationService);
+  private routeParams = toSignal<ParamMap>(this.route.paramMap);
   replies = signal<Event[]>([]);
   threadedReplies = signal<ThreadedEvent[]>([]);
 
   constructor() {
-    // Effect to track route parameter changes
-    effect(() => {
-      // Subscribe to route params to get reactive updates
-      this.route.paramMap.subscribe(params => {
-        const addrParam = params.get('id');
-        this.routeParam.set(addrParam);
-      });
-    });
-
     // Effect to load event when route parameter changes
-    effect(() => {
-      const addrParam = this.routeParam();
-      if (addrParam) {
-        // Clean up previous pool if it exists
-        if (this.pool) {
-          this.pool.destroy();
+    effect(async () => {
+      if (this.app.initialized() && this.routeParams()) {
+        debugger;
+        let id = this.routeParams()?.get('id');
+        if (id) {
+          // Clean up previous pool if it exists
+          if (this.pool) {
+            this.pool.destroy();
+          }
+
+          this.pool = new SimplePool();
+          await this.loadEvent(id);
+
+          // Scroll to top when navigating to a new event
+          setTimeout(() => this.layout.scrollMainContentToTop(), 100);
         }
-        
-        this.pool = new SimplePool();
-        this.loadEvent(addrParam);
-        
-        // Scroll to top when navigating to a new event
-        setTimeout(() => this.layout.scrollMainContentToTop(), 100);
       }
     });
   }
@@ -103,16 +97,16 @@ export class EventPageComponent {
   private getEventTags(event: Event): { rootId: string | null; replyId: string | null; pTags: string[] } {
     const eTags = event.tags.filter(tag => tag[0] === 'e');
     const pTags = event.tags.filter(tag => tag[0] === 'p').map(tag => tag[1]);
-    
+
     let rootId: string | null = null;
     let replyId: string | null = null;
-    
+
     // Find root tag
     const rootTag = eTags.find(tag => tag[3] === 'root');
     if (rootTag) {
       rootId = rootTag[1];
     }
-    
+
     // Find reply tag
     const replyTag = eTags.find(tag => tag[3] === 'reply');
     if (replyTag) {
@@ -121,31 +115,31 @@ export class EventPageComponent {
       // If no explicit reply tag but has e tags, assume replying to the last e tag
       replyId = eTags[eTags.length - 1][1];
     }
-    
+
     return { rootId, replyId, pTags };
   }
 
   private buildThreadTree(events: Event[], rootEventId: string, maxDepth: number = 5): ThreadedEvent[] {
     const eventMap = new Map<string, Event>();
     const childrenMap = new Map<string, Event[]>();
-    
+
     // Build maps
     events.forEach(event => {
       eventMap.set(event.id, event);
-      
+
       const { replyId } = this.getEventTags(event);
       const parentId = replyId || rootEventId;
-      
+
       if (!childrenMap.has(parentId)) {
         childrenMap.set(parentId, []);
       }
       childrenMap.get(parentId)!.push(event);
     });
-    
+
     // Build tree recursively with depth limit
     const buildNode = (eventId: string, level: number = 0): ThreadedEvent[] => {
       const children = childrenMap.get(eventId) || [];
-      
+
       return children
         .sort((a, b) => a.created_at - b.created_at) // Sort by creation time
         .map(child => {
@@ -154,7 +148,7 @@ export class EventPageComponent {
             replies: [],
             level
           };
-          
+
           // If we're at max depth, check if there are deeper replies
           if (level >= maxDepth - 1) {
             const hasDeepReplies = childrenMap.has(child.id) && childrenMap.get(child.id)!.length > 0;
@@ -166,11 +160,11 @@ export class EventPageComponent {
             // Continue building the tree if we haven't reached max depth
             threadedEvent.replies = buildNode(child.id, level + 1);
           }
-          
+
           return threadedEvent;
         });
     };
-    
+
     return buildNode(rootEventId);
   }
 
@@ -196,11 +190,11 @@ export class EventPageComponent {
     }, {
       onevent: (event) => {
         console.log('Received event:', event);
-        
+
         if (event.kind === kinds.ShortTextNote && event.content) {
           // Handle text replies
           console.log('Text reply:', event);
-          
+
           const existingReply = allReplies.find(reply => reply.id === event.id);
           if (!existingReply) {
             allReplies.push(event);
@@ -210,18 +204,18 @@ export class EventPageComponent {
             const threaded = this.buildThreadTree(allReplies, eventId, 4);
             this.threadedReplies.set(threaded);
           }
-          
+
         } else if (event.kind === kinds.Reaction && event.content) {
           // Count each unique reaction emoji
           const emoji = event.content;
           reactionCounts.set(emoji, (reactionCounts.get(emoji) || 0) + 1);
-          
+
           // Convert map to Reaction array and update signal
           const reactionsArray: Reaction[] = Array.from(reactionCounts.entries()).map(([emoji, count]) => ({
             emoji,
             count
           }));
-          
+
           this.reactions.set(reactionsArray);
         } else if (event.kind === kinds.Repost) {
           this.reposts.update(currentReposts => [...currentReposts, { pubkey: event.pubkey }]);
@@ -286,13 +280,19 @@ export class EventPageComponent {
           const userRelays = await this.data.getUserRelays(decoded.data.author);
           this.userRelays = userRelays;
 
-          if (!userRelays || userRelays.length === 0) {
+          if (!this.userRelays || this.userRelays.length === 0) {
+            // If the current user is anonymous, we will end up here. Let's discover the user relays.
+            const discoveredRelays = await this.nostrService.discoverRelays(decoded.data.author);
+            this.userRelays = discoveredRelays.relayUrls;
+          }
+
+          if (!this.userRelays || this.userRelays.length === 0) {
             this.error.set('No user relays found for the author.');
             this.isLoading.set(false);
             return;
           }
 
-          const event = await this.pool?.get(userRelays, { ids: [decoded.data.id] });
+          const event = await this.pool!.get(this.userRelays, { ids: [decoded.data.id] }, { maxWait: 4000 });
 
           if (!event) {
             this.error.set('Event not found on user relays.');
