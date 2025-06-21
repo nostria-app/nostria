@@ -395,7 +395,7 @@ export class NostrService {
         this.logger.info(`Found ${relayUrls.length} relays for user`, { relayUrls });
 
         if (relayUrls.length > 0) {
-          result.relayUrls = relayUrls;
+          result.relayUrls = this.utilities.normalizeRelayUrls(relayUrls);
           result.relayList = true;
         }
       } else {
@@ -412,7 +412,7 @@ export class NostrService {
           const relayUrls = this.getRelayUrlsFromFollowing(contacts, false);
 
           if (relayUrls.length > 0) {
-            result.relayUrls = relayUrls;
+            result.relayUrls = this.utilities.normalizeRelayUrls(relayUrls);
             result.followingList = true;
           }
         }
