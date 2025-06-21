@@ -6,6 +6,7 @@ import { AccountStateService } from './account-state.service';
 import { Filter, kinds, NostrEvent } from 'nostr-tools';
 import { UtilitiesService } from './utilities.service';
 import { EncryptionService } from './encryption.service';
+import { NostriaService } from '../interfaces';
 
 // Define interfaces for our DM data structures
 interface Chat {
@@ -45,7 +46,7 @@ interface DecryptionQueueItem {
 @Injectable({
   providedIn: 'root'
 })
-export class MessagingService {
+export class MessagingService implements NostriaService {
   private nostr = inject(NostrService);
   private relay = inject(RelayService);
   private logger = inject(LoggerService);
@@ -108,6 +109,7 @@ export class MessagingService {
     return Array.from(chat.messages.values())
       .sort((a, b) => a.created_at - b.created_at); // Oldest first
   }
+
   // Helper method to add a message to a chat (prevents duplicates and updates sorting)
   addMessageToChat(pubkey: string, message: DirectMessage): void {
     const currentMap = this.chatsMap();
@@ -160,6 +162,20 @@ export class MessagingService {
 
     return Array.from(messagesMap.values())
       .sort((a, b) => b.created_at - a.created_at)[0];
+  }
+
+  clear() {
+    this.chatsMap.set(new Map());
+    this.oldestChatTimestamp.set(null);
+    this.isLoading.set(false);
+    this.isLoadingMoreChats.set(false);
+    this.hasMoreChats.set(true);
+    this.error.set(null);
+    this.clearDecryptionQueue();
+  }
+
+  async load() {
+
   }
 
   async loadChats() {

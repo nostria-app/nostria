@@ -37,14 +37,9 @@ export class AccountStateService {
   // Signal to store the current profile's following list
   followingList = signal<string[]>([]);
 
-  // Current profile pubkey
-  // currentProfilePubkey = signal<string>('');
-
   /** Use this signal to track if account has been loaded. */
   initialized = signal(false);
-
   accountChanging = signal<string>('');
-
   account = signal<NostrUser | null>(null);
 
   pubkey = computed(() => {
@@ -52,17 +47,6 @@ export class AccountStateService {
   });
 
   profile = signal<NostrRecord | undefined>(undefined);
-
-  // profile = computed(() => {
-  //   const account = this.account();
-
-  //   if (account) {
-  //     // If account is set, return its profile
-  //     return this.getAccountProfile(account.pubkey);
-  //   }
-
-  //   return undefined
-  // });
 
   changeAccount(account: NostrUser | null): void {
     this.accountChanging.set(account?.pubkey || '');
@@ -76,7 +60,6 @@ export class AccountStateService {
     } else {
       this.profile.set(this.getAccountProfile(account.pubkey));
     }
-    
   }
 
   muteList = signal<Event | undefined>(undefined);

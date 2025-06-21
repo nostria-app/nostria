@@ -7,6 +7,7 @@ import { UtilitiesService } from "./utilities.service";
 import { UserRelayFactoryService } from "./user-relay-factory.service";
 import { LoggerService } from "./logger.service";
 import { AccountStateService } from "./account-state.service";
+import { NostriaService } from "../interfaces";
 
 export interface ParsedBadge {
     slug: string;
@@ -32,7 +33,7 @@ interface ParsedReward {
 @Injectable({
     providedIn: 'root'
 })
-export class BadgeService {
+export class BadgeService implements NostriaService {
     private readonly storage = inject(StorageService);
     private readonly nostr = inject(NostrService);
     private readonly relay = inject(RelayService);
@@ -81,6 +82,10 @@ export class BadgeService {
                 return badges;
             });
         }
+    }
+
+    async load() {
+        
     }
 
     async loadAcceptedBadges(pubkey: string): Promise<void> {
@@ -431,7 +436,7 @@ export class BadgeService {
     //     };
     // }
 
-    resetBadgeData(): void {
+    clear(): void {
         this.badgeDefinitions.set([]);
         this.profileBadgesEvent.set(null);
         this.acceptedBadges.set([]);
