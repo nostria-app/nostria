@@ -56,7 +56,8 @@ export const routes: Routes = [
   { path: 'notifications/manage', component: NotificationManageComponent },
   { path: 'credentials', component: CredentialsComponent },
   { path: 'accounts', component: AccountsComponent },
-  { path: 'about', component: AboutComponent },  { path: 'bookmarks', loadComponent: () => import('./pages/bookmarks/bookmarks.component').then(m => m.BookmarksComponent), title: 'Bookmarks' },
+  { path: 'about', component: AboutComponent },
+  { path: 'bookmarks', loadComponent: () => import('./pages/bookmarks/bookmarks.component').then(m => m.BookmarksComponent), title: 'Bookmarks' },
   { path: 'articles', component: ArticlesComponent, title: 'Articles' },
   { path: 'article/create', component: EditorComponent, title: 'New Article' },
   { path: 'article/edit/:id', component: EditorComponent, title: 'Edit Article' },
@@ -65,8 +66,8 @@ export const routes: Routes = [
     path: 'p/:id',
     component: ProfileComponent,
     children: [
-      { 
-        path: '', 
+      {
+        path: '',
         component: ProfileHomeComponent,
         children: [
           { path: '', redirectTo: 'notes', pathMatch: 'full' },
@@ -74,7 +75,7 @@ export const routes: Routes = [
           { path: 'replies', component: ProfileRepliesComponent },
           { path: 'reads', component: ProfileReadsComponent },
           { path: 'media', component: ProfileMediaComponent }
-        ] 
+        ]
       },
       { path: 'about', component: ProfileAboutComponent },
       { path: 'edit', component: ProfileEditComponent },

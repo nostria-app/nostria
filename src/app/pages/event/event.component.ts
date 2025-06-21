@@ -69,7 +69,6 @@ export class EventPageComponent {
     // Effect to load event when route parameter changes
     effect(async () => {
       if (this.app.initialized() && this.routeParams()) {
-        debugger;
         let id = this.routeParams()?.get('id');
         if (id) {
           // Clean up previous pool if it exists
