@@ -950,10 +950,16 @@ export class NostrService {
 
     if (!event) {
       event = await this.relayService.getEventByPubkeyAndKind(pubkey, 10063);
+
+      if (event) {
+        this.storage.saveEvent(event as Event);
+      }
     } else {
       // Queue up refresh of this event in the background
       this.relayService.getEventByPubkeyAndKind(pubkey, 10063).then((newEvent) => {
-        this.storage.saveEvent(newEvent as Event);
+        if (newEvent) {
+          this.storage.saveEvent(newEvent as Event);
+        }
       });
     }
 

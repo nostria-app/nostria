@@ -67,10 +67,9 @@ export class MediaService {
     // Load saved media servers
     // this.loadMediaServers();
     effect(async () => {
-      if (this.app.initialized() && this.app.authenticated()) {
-        this.logger.debug('APP INITIALIZED, FETCHING MEDIA SERVERS');
+      if (this.accountState.accountChanging()) {
+        this.clear();
         const userServerList = await this.nostrService.getMediaServers(this.accountState.pubkey());
-        this.logger.debug('USER SERVER LIST', userServerList);
 
         if (userServerList) {
           const servers = this.nostrService.getTags(userServerList, standardizedTag.server);
@@ -86,8 +85,26 @@ export class MediaService {
             this.setMediaServers([mediaServerUrl!]);
           }
         }
+
+        if (this.mediaServers().length > 0) {
+          // Only fetch files if it's been more than 10 minutes since last fetch
+          const tenMinutesInMs = 10 * 60 * 1000; // 10 minutes in milliseconds
+          const currentTime = Date.now();
+          const lastFetchTime = this.getLastFetchTime(); if (currentTime - lastFetchTime > tenMinutesInMs) {
+            await this.getFiles();
+          }
+        }
       }
     });
+  }
+
+  clear() {
+    this._mediaItems.set([]);
+    this.loading.set(false);
+    this.uploading.set(false);
+    this._error.set(null);
+    this._mediaServers.set([]);
+    this.lastFetchTime.set(0);
   }
 
   async getFileById(id: string): Promise<MediaItem> {
@@ -257,17 +274,17 @@ export class MediaService {
     // Check if the new normalized URL already exists (excluding the original)
     const existingServers = this._mediaServers();
     const duplicateExists = existingServers.some(s => s === normalizedUrl && s !== original);
-    
+
     if (duplicateExists) {
       throw new Error('Server with this URL already exists');
     }
 
     // Find and replace the original server
     const serverIndex = existingServers.findIndex(s => s === original);
-    
+
     if (serverIndex !== -1) {
       // Replace the server at the found index
-      this._mediaServers.update(servers => 
+      this._mediaServers.update(servers =>
         servers.map((server, index) => index === serverIndex ? normalizedUrl : server)
       );
 
@@ -320,10 +337,6 @@ export class MediaService {
         message: `Connection error: ${error instanceof Error ? error.message : String(error)}`
       };
     }
-  }
-
-  async initialize() {
-
   }
 
   async publishMediaServers(): Promise<void> {
