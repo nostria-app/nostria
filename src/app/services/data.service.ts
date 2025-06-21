@@ -28,6 +28,7 @@ export class DataService {
         return events.map(event => this.getRecord(event));
     }
 
+    /** Get relay for a specific user, only local search. */
     async getUserRelays(pubkey: string) {
         let relayUrls: string[] = [];
         const relayListEvent = await this.storage.getEventByPubkeyAndKind(pubkey, 10002);

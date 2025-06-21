@@ -35,7 +35,7 @@ import { ApplicationService } from '../../services/application.service';
 export class EventComponent {
   id = input<string | null | undefined>();
   type = input<'e' | 'a' | 'r' | 't'>('e');
-  event = input<Event | null>(null);
+  event = input<Event | null | undefined>(null);
   data = inject(DataService); record = signal<NostrRecord | null>(null);
   layout = inject(LayoutService);
   accountRelayService = inject(AccountRelayService);
@@ -59,8 +59,6 @@ export class EventComponent {
         const eventId = this.id();
         const type = this.type();
 
-        debugger;
-
         if (!eventId || !type) {
           return;
         }
@@ -69,7 +67,6 @@ export class EventComponent {
           if (eventId) {
             const eventData = await this.data.getEventById(eventId);
             this.record.set(eventData);
-
             console.log('RECORD:', this.record());
           }
         };
