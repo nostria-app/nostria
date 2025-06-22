@@ -1,4 +1,4 @@
-import { Component, effect, inject, signal, untracked } from '@angular/core';
+import { Component, effect, inject, OnInit, signal, TransferState, untracked } from '@angular/core';
 import { LayoutService } from '../../services/layout.service';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
@@ -14,6 +14,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { ApplicationService } from '../../services/application.service';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { EVENT_STATE_KEY, EventData } from '../../data-resolver';
 
 /** Description of the EventPageComponent
  * 
@@ -45,7 +46,7 @@ export interface ThreadedEvent {
   templateUrl: './event.component.html',
   styleUrl: './event.component.scss'
 })
-export class EventPageComponent {
+export class EventPageComponent implements OnInit {
   event = signal<Event | undefined>(undefined);
   private readonly utilities = inject(UtilitiesService);
   isLoading = signal(false);
@@ -64,11 +65,28 @@ export class EventPageComponent {
   private routeParams = toSignal<ParamMap>(this.route.paramMap);
   replies = signal<Event[]>([]);
   threadedReplies = signal<ThreadedEvent[]>([]);
+  transferState = inject(TransferState);
+
+  item!: EventData;
 
   constructor() {
+    // this.item = this.route.snapshot.data['data'];
+    console.log('EventPageComponent initialized with data:', this.item);
+
+    if (this.transferState.hasKey(EVENT_STATE_KEY)) {
+      const data = this.transferState.get<any>(EVENT_STATE_KEY, null);
+      console.log('Transferred data:', data);
+      this.item = data;
+      this.transferState.remove(EVENT_STATE_KEY); // optional cleanup
+    }
+
     // Effect to load event when route parameter changes
     effect(async () => {
       if (this.app.initialized() && this.routeParams()) {
+
+        // this.item = this.route.snapshot.data['data'];
+        // console.log('EventPageComponent initialized with data:', this.route.snapshot);
+
         let id = this.routeParams()?.get('id');
         if (id) {
           // Clean up previous pool if it exists
@@ -84,6 +102,10 @@ export class EventPageComponent {
         }
       }
     });
+  }
+
+  ngOnInit() {
+
   }
 
   ngOnDestroy() {
@@ -235,6 +257,14 @@ export class EventPageComponent {
     const decoded = this.utilities.decode(nevent) as DecodedNevent;
     const hex = decoded.data.id;
     this.id.set(hex);
+
+    if (this.item?.event && this.item.event.id === hex) {
+      // If we already have the event in the item, use it directly.
+      this.event.set(this.item.event);
+      this.isLoading.set(false);
+      await this.loadReplies(this.item.event.id, this.item.event.pubkey);
+      return;
+    }
 
     const receivedData = history.state.event as Event | undefined;
 

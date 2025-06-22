@@ -48,9 +48,10 @@ export class AboutComponent {
       this.fetchManifestVersion();
     });
   }
-
   resetIntroduction() {
-    localStorage.setItem('nostria-welcome', 'true');
+    if (this.app.isBrowser()) {
+      localStorage.setItem('nostria-welcome', 'true');
+    }
     this.layout.showWelcomeScreen.set(true);
   }
 

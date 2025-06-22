@@ -1,4 +1,4 @@
-import { inject, Injectable, signal, OnDestroy, effect } from "@angular/core";
+import { inject, Injectable, signal, OnDestroy, effect, PLATFORM_ID } from "@angular/core";
 import { NostrService } from "./nostr.service";
 import { StorageService } from "./storage.service";
 import { NavigationExtras, Router, RouterLink, RouterModule } from "@angular/router";
@@ -14,6 +14,8 @@ import { LoginDialogComponent } from "../components/login-dialog/login-dialog.co
 import { NostrRecord } from "../interfaces";
 import { AccountStateService } from "./account-state.service";
 import { NoteEditorDialogComponent } from "../components/note-editor-dialog/note-editor-dialog.component";
+import { isPlatformBrowser } from "@angular/common";
+import { LocalStorageService } from "./local-storage.service";
 
 @Injectable({
     providedIn: 'root'
@@ -35,6 +37,9 @@ export class LayoutService implements OnDestroy {
     accountStateService = inject(AccountStateService);
     overlayMode = signal(false);
     showMediaPlayer = signal(false);
+    private readonly platformId = inject(PLATFORM_ID);
+    readonly isBrowser = signal(isPlatformBrowser(this.platformId));
+    localStorage = inject(LocalStorageService);
 
     // Scroll event signals
 
@@ -120,7 +125,7 @@ export class LayoutService implements OnDestroy {
         this.breakpointObserver.observe('(min-width: 1200px)').subscribe(result => {
             this.isWideScreen.set(result.matches);
         }); effect(() => {
-            if (this.accountStateService.initialized()) {
+            if (this.isBrowser() && this.accountStateService.initialized()) {
                 // Initialize scroll monitoring after a longer delay to ensure DOM is fully rendered
                 setTimeout(() => {
                     this.initializeScrollMonitoring();
@@ -477,7 +482,7 @@ export class LayoutService implements OnDestroy {
             });
     }
 
-    showWelcomeScreen = signal<boolean>(localStorage.getItem('nostria-welcome') !== 'false');
+    showWelcomeScreen = signal<boolean>(this.localStorage.getItem('nostria-welcome') !== 'false');
 
     // Method to update welcome screen preference
     setWelcomeScreenPreference(show: boolean): void {

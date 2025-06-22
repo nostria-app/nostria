@@ -31,11 +31,12 @@ import { EditorComponent } from './pages/article/editor/editor.component';
 import { MediaQueueComponent } from './pages/media-queue/media-queue.component';
 import { EventPageComponent } from './pages/event/event.component';
 import { NotificationManageComponent } from './pages/notifications/manage/manage.component';
+import { DataResolver } from './data-resolver';
 
 export const routes: Routes = [
   { path: '', component: FeedsComponent, pathMatch: 'full' },
   { path: 'f/:path', component: FeedsComponent },
-  { path: 'e/:id', component: EventPageComponent },
+  { path: 'e/:id', component: EventPageComponent, resolve: { data: DataResolver } },
   { path: 'beta', component: BetaComponent, title: 'Beta' },
   { path: 'relays', component: RelaysComponent },
   {

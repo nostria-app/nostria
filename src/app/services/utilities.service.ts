@@ -1,9 +1,10 @@
-import { inject, Injectable } from '@angular/core';
+import { inject, Injectable, PLATFORM_ID, signal } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
 import { Event, nip19 } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { hexToBytes } from 'nostr-tools/utils';
 import { ProfilePointer } from 'nostr-tools/nip19';
+import { isPlatformBrowser } from '@angular/common';
 
 @Injectable({
   providedIn: 'root'
@@ -21,6 +22,9 @@ export class UtilitiesService {
   regexpSpotify = /((http|https?)?(.+?\.?)(open.spotify.com)(.+?\.?)?)/gi;
   regexpTidal = /((http|https?)?(.+?\.?)(tidal.com)(.+?\.?)?)/gi;
   regexpUrl = /([\w+]+\:\/\/)?([\w\d-]+\.)*[\w-]+[\.\:]\w+([\/\?\=\&\#.]?[\w-]+)*\/?/gi;
+
+  private readonly platformId = inject(PLATFORM_ID);
+  readonly isBrowser = signal(isPlatformBrowser(this.platformId));
 
   constructor() { }
 

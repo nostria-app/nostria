@@ -356,7 +356,7 @@ export class NostrService implements NostriaService {
   }
 
   /** Will attempt to discover relays for a pubkey. Will persist the event to database. */
-  async discoverRelays(pubkey: string): Promise<{ relayUrls: string[], relayList: boolean, followingList: boolean }> {
+  async discoverRelays(pubkey: string, persist = false): Promise<{ relayUrls: string[], relayList: boolean, followingList: boolean }> {
     // Perform relay discovery for the given pubkey
     const discoveryPool = new SimplePool();
     const discoveryRelays = this.relayService.discoveryRelays;
@@ -368,14 +368,33 @@ export class NostrService implements NostriaService {
     };
 
     try {
+      console.log('Starting relay discovery for pubkey', pubkey, discoveryRelays);
+
+      discoveryPool.subscribe(discoveryRelays, {
+        kinds: [kinds.RelayList],
+        authors: [pubkey],
+      }, {
+        onevent: (event: Event) => {
+          console.log('Received event on discovery relays:', event);
+        }
+      });
+
+      console.log('Waiting for relay discovery to complete...');
+
       const relays = await discoveryPool.get(discoveryRelays, {
         kinds: [kinds.RelayList],
         authors: [pubkey],
       });
 
+      console.log('FOUND ANYTHING', relays);
+
       if (relays) {
         this.logger.info('Found your relays on network', { relays });
-        await this.storage.saveEvent(relays);
+
+        if (persist) {
+          await this.storage.saveEvent(relays);
+        }
+
         const relayUrls = this.getRelayUrls(relays, false); // Make sure to pass false to avoid ignoring automatic banned relays
         this.logger.info(`Found ${relayUrls.length} relays for user`, { relayUrls });
 
@@ -393,7 +412,10 @@ export class NostrService implements NostriaService {
         });
 
         if (contacts) {
-          this.storage.saveEvent(contacts);
+          if (persist) {
+            this.storage.saveEvent(contacts);
+          }
+
           const relayUrls = this.getRelayUrlsFromFollowing(contacts, false);
 
           if (relayUrls.length > 0) {
