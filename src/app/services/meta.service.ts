@@ -123,6 +123,14 @@ export class MetaService {
             // This API will parse out the event ID and author from the Nostr event address.
             url = `https://metadata.nostria.app/e/${addr}`;
             targetUrl = `https://nostria.app/e/${addr}`;
+        } else if (addr.startsWith('nprofile') || addr.startsWith('npub')) {
+            // This API will parse out the profile ID from the Nostr profile address.
+            url = `https://metadata.nostria.app/p/${addr}`;
+            targetUrl = `https://nostria.app/p/${addr}`;
+        } else if (addr.startsWith('naddr')) {
+            // This API will parse out the event ID from the Nostr address.
+            url = `https://metadata.nostria.app/a/${addr}`;
+            targetUrl = `https://nostria.app/a/${addr}`;
         }
 
         console.log('Fetching event on server...', url);

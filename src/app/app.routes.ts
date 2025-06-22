@@ -62,17 +62,18 @@ export const routes: Routes = [
   { path: 'articles', component: ArticlesComponent, title: 'Articles' },
   { path: 'article/create', component: EditorComponent, title: 'New Article' },
   { path: 'article/edit/:id', component: EditorComponent, title: 'Edit Article' },
-  { path: 'a/:id', component: ArticleComponent, title: 'Article' },
+  { path: 'a/:id', component: ArticleComponent, title: 'Article', resolve: { data: DataResolver } },
   {
     path: 'p/:id',
     component: ProfileComponent,
+    resolve: { data: DataResolver },
     children: [
       {
         path: '',
         component: ProfileHomeComponent,
         children: [
           { path: '', redirectTo: 'notes', pathMatch: 'full' },
-          { path: 'notes', component: ProfileNotesComponent },
+          { path: 'notes', component: ProfileNotesComponent, resolve: { data: DataResolver }, },
           { path: 'replies', component: ProfileRepliesComponent },
           { path: 'reads', component: ProfileReadsComponent },
           { path: 'media', component: ProfileMediaComponent }
