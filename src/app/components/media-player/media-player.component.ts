@@ -56,6 +56,10 @@ export class MediaPlayerComponent implements AfterViewInit {
 
   private mediaQueryList?: MediaQueryList;
   constructor() {
+    if (!this.utilities.isBrowser()) {
+      return;
+    }
+
     // Effect to handle footer mode class
     effect(() => {
       const div = this.elementRef.nativeElement;
@@ -151,7 +155,13 @@ export class MediaPlayerComponent implements AfterViewInit {
         div.style.setProperty('--theme-background-color', themeColor);
       }
     }
-  } ngOnInit() {
+  }
+
+  ngOnInit() {
+    if (!this.utilities.isBrowser()) {
+      return;
+    }
+
     const div = this.elementRef.nativeElement;
 
     // Only apply window controls overlay logic for toolbar mode (not footer mode)

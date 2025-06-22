@@ -5,6 +5,10 @@
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
+    "build:ssr": "ng build --configuration=development",
+    "serve:ssr": "npm run build:ssr && npm run serve:ssr:app",
+    "build:ssr:prod": "ng build --configuration=production",
+    "serve:ssr:prod": "npm run build:ssr:prod && npm run serve:ssr:app",
     "watch": "ng build --watch --configuration development",
     "gen:api": "ng-openapi-gen --input http://localhost:3000/openapi.json --output src/app/api --module false",
     "test": "ng test",
@@ -43,7 +47,8 @@
     "marked": "^15.0.12",
     "nostr-tools": "^2.15.0",
     "rxjs": "~7.8.2",
-    "tslib": "^2.8.1"
+    "tslib": "^2.8.1",
+    "ws": "^8.18.2"
   },
   "devDependencies": {
     "@angular/build": "^20.0.2",
@@ -53,6 +58,7 @@
     "@types/express": "^5.0.3",
     "@types/jasmine": "~5.1.8",
     "@types/qrcode": "^1.5.5",
+    "@types/ws": "^8.18.1",
     "jasmine-core": "~5.8.0",
     "karma": "~6.4.4",
     "karma-chrome-launcher": "~3.2.0",

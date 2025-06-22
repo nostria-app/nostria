@@ -68,7 +68,7 @@ interface NavItem {
     LoadingOverlayComponent,
     FormsModule,
     MatFormFieldModule,
-    NPubPipe,    MatBadgeModule,    MatBottomSheetModule,
+    NPubPipe, MatBadgeModule, MatBottomSheetModule,
     WelcomeComponent,
     DebugOverlayComponent,
     MediaPlayerComponent,
@@ -84,11 +84,13 @@ export class App {
   nostrService = inject(NostrService);
   storage = inject(StorageService);
   appState = inject(ApplicationStateService);
-  app = inject(ApplicationService); layout = inject(LayoutService);
+  app = inject(ApplicationService);
+  layout = inject(LayoutService);
   router = inject(Router);
   notificationService = inject(NotificationService);
   notificationType = NotificationType;
-  bottomSheet = inject(MatBottomSheet);  logger = inject(LoggerService);
+  bottomSheet = inject(MatBottomSheet);
+  logger = inject(LoggerService);
   search = inject(SearchService);
   media = inject(MediaPlayerService);
   localSettings = inject(LocalSettingsService);
@@ -96,7 +98,7 @@ export class App {
   state = inject(StateService);
   private readonly platform = inject(PLATFORM_ID);
   private readonly document = inject(DOCUMENT);
-  
+
   @ViewChild('sidenav') sidenav!: MatSidenav;
   @ViewChild('profileSidenav') profileSidenav!: MatSidenav;
   @ViewChild('appsSidenav') appsSidenav!: MatSidenav;
@@ -145,6 +147,10 @@ export class App {
   constructor() {
     this.logger.debug('AppComponent constructor started');
 
+    if (!this.app.isBrowser()) {
+      return;
+    }
+
     if ('launchQueue' in window) {
       const launchQueue = (window as any).launchQueue;
       launchQueue.setConsumer((launchParams: any) => {
@@ -154,31 +160,21 @@ export class App {
       });
     }
 
-    if (isPlatformBrowser(this.platform)) {
-      console.warn("browser");
-      // Safe to use document, window, localStorage, etc. :-)
-      // console.log(document);
-    }
-
-    if (isPlatformServer(this.platform)) {
-      console.warn("server");
-      // Not smart to use document here, however, we can inject it ;-)
-      // console.log(this.document);
-    }    // Track previous handset state to detect transitions
+    // Track previous handset state to detect transitions
     let previousIsHandset = this.layout.isHandset();
-    
+
     // Single effect to handle responsive behavior and sidenav sync
     effect(() => {
       const isHandset = this.layout.isHandset();
-      
+
       // Only close sidenav when transitioning FROM desktop TO mobile (not when already on mobile)
       if (isHandset && !previousIsHandset) {
         this.localSettings.setMenuOpen(false);
       }
-      
+
       // Update previous state for next comparison
       previousIsHandset = isHandset;
-      
+
       // Sync sidenav state with local settings (only after view is initialized)
       if (this.sidenav) {
         const shouldBeOpen = this.localSettings.menuOpen();
@@ -265,13 +261,18 @@ export class App {
     this.logger.debug('AppComponent constructor completed');    // Register a one-time callback after the first render
     afterNextRender(() => {
       this.logger.debug('AppComponent first render completed');
-      
+
       // Initialize sidenav state after view is ready
       this.initializeSidenavState();
     });
   }
+  
   async ngOnInit() {
     this.logger.debug('AppComponent ngOnInit');
+
+    if (!this.app.isBrowser()) {
+      return;
+    }
 
     // Initialize storage, then nostr initialized and then app state.
     await this.storage.init();
@@ -311,12 +312,12 @@ export class App {
         }
       }
     });
-  }  
-  
+  }
+
   toggleSidenav() {
     const newState = !this.localSettings.menuOpen();
     this.localSettings.setMenuOpen(newState);
-    
+
     // Immediately sync with the sidenav component
     if (this.sidenav) {
       if (newState) {
