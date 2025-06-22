@@ -126,8 +126,9 @@ export class ProfileComponent {
           this.error.set(null);
 
           if (id.startsWith('npub')) {
-            id = this.utilities.getPubkeyFromNpub(id);
+            // First update URL to have npub in URL.
             this.url.updatePathSilently(['/p', id, 'notes']);
+            id = this.utilities.getPubkeyFromNpub(id);
           } else {
             // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.
             const encoded = nip19.npubEncode(id);
