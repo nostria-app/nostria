@@ -23,6 +23,8 @@ export class MetaService {
     private meta = inject(Meta);
     private title = inject(Title);
     private readonly http = inject(HttpClient);
+    #metadataUrl = 'https://metadata.nostria.app/';
+    // #metadataUrl = 'http://localhost:3000/';
 
     /**
      * Sets the page title
@@ -72,28 +74,15 @@ export class MetaService {
         if (config.title) this.setTitle(config.title);
         if (config.description) this.setDescription(config.description);
 
-        // this.meta.updateTag({ property: 'og:title', content: config.title! });
-        // this.meta.updateTag({ property: 'og:description', content: config.description! });
-        // this.meta.updateTag({ property: 'og:image', content: config.image! });
-        // this.meta.updateTag({ property: 'og:image', content: config.image! });
-        // this.meta.updateTag({ property: 'og:image', content: config.image! });
-
-        // this.meta.updateTag({ name: 'twitter:title', content: data.title });
-        // this.meta.updateTag({ name: 'twitter:description', content: data.description || 'Amazing Nostr event content' });
-
         // Open Graph
         if (config.title) this.meta.updateTag({ property: 'og:title', content: config.title });
         if (config.description) this.meta.updateTag({ property: 'og:description', content: config.description });
         if (config.image) this.meta.updateTag({ property: 'og:image', content: config.image });
-        // if (config.url) this.updateMetaTag('og:url', config.url);
-        // if (config.type) this.updateMetaTag('og:type', config.type);
 
         // Twitter Card
-        // if (config.twitterCard) this.updateMetaTag('twitter:card', config.twitterCard);
         if (config.title) this.meta.updateTag({ name: 'twitter:title', content: config.title });
         if (config.description) this.meta.updateTag({ name: 'twitter:description', content: config.description });
         if (config.image) this.meta.updateTag({ name: 'twitter:image', content: config.image });
-        // if (config.author) this.updateMetaTag('twitter:creator', config.author);
     }
 
     /**
@@ -105,22 +94,12 @@ export class MetaService {
         return document.querySelector(`link[rel='${rel}']`);
     }
 
-    #metadataUrl = 'https://metadata.nostria.app/';
-    // #metadataUrl = 'http://localhost:3000/';
-
     async loadSocialMetadata(addr: string): Promise<MetadataResponse> {
-        let type = 'e';
-        let profileHex: string | undefined = '';
-        let eventHex: string | undefined = '';
-
         let title = '';
-        let description = 'No description available';
-        let imageUrl = 'https://nostria.app/icons/icon-192x192.png'; // Default fallback image URL
-
-        console.log('Loading social metadata for address:', addr);
-
+        let description = '';
+        let imageUrl = '';
         let url = '';
-        let targetUrl = ``;
+        let targetUrl = '';
 
         if (addr.startsWith('nevent')) {
             // This API will parse out the event ID and author from the Nostr event address.
@@ -136,11 +115,7 @@ export class MetaService {
             targetUrl = `https://nostria.app/a/${addr}`;
         }
 
-        console.log('Fetching event on server...', url);
         const data = await firstValueFrom(this.http.get<MetadataResponse>(url));
-        console.log('Fetching done.', data);
-
-        // First we attempt to get thumbnail from the event. If not found, fallback to user profile.
 
         // Extract image URL from imeta tag or content
         let eventImageUrl = this.extractImageUrlFromImeta(data.tags);
@@ -159,100 +134,14 @@ export class MetaService {
         const fullDescription = data.content || 'No description available';
         description = fullDescription.length > 200 ? fullDescription.substring(0, 200) + '...' : fullDescription;
 
-        console.log('Title:', title);
-        console.log('Description:', description);
-
         this.updateSocialMetadata({
             title: title,
             description: description,
-            image: imageUrl || 'https://nostria.app/icons/icon-192x192.png', // Use extracted image or fallback
+            image: imageUrl || 'https://nostria.app/icons/icon-512x512.png', // Use extracted image or fallback
             url: targetUrl
         });
 
         return data;
-
-        // const decoded = nip19.decode(addr);
-
-        // if (decoded.type === 'nprofile') {
-        //     profileHex = decoded.data.pubkey;
-        //     type = 'p'; // Profile
-        // }
-        // else if (decoded.type === 'npub') {
-        //     profileHex = decoded.data;
-        //     type = 'p'; // Profile
-        // } else if (decoded.type === 'nevent') {
-        //     profileHex = decoded.data.author;
-        //     eventHex = decoded.data.id;
-        //     type = 'e'; // Event
-        // } else if (decoded.type === 'naddr') {
-        //     // hex = decoded.data;
-        //     eventHex = decoded.data.identifier;
-        //     type = 'a'; // Article
-        // }
-
-        // try {
-        //     if (profileHex) {
-        //         // Get the profile URL.
-        //         const url = `https://metadata.nostria.app/p/${profileHex}`;
-        //         console.log('Profile URL:', url);
-
-        //         console.log('Fetching metadata on server...');
-        //         const data = await firstValueFrom(this.http.get<any>(url));
-        //         console.log('Fetching done.');
-
-        //         if (data.profile.name) {
-        //             title = data.profile.name;
-        //         } else if (data.profile.display_name) {
-        //             title = data.profile.display_name;
-        //         }
-
-        //         if (data.profile.about) {
-        //             description = data.profile.about;
-        //         }
-
-        //         if (data.profile.picture) {
-        //             imageUrl = data.profile.picture;
-        //         }
-        //     }
-
-        //     if (eventHex) {
-        //         // Get current browsing URL
-        //         const currentUrl = `https://metadata.nostria.app/${type}/${addr}`;
-        //         console.log('Event URL:', currentUrl);
-        //         let twitterCard = 'summary_large_image'; // Default Twitter card type
-
-        //         console.log('Fetching metadata on server...');
-        //         const data = await firstValueFrom(this.http.get<MetadataResponse>(currentUrl));
-        //         console.log('Fetching done.');
-
-        //         // Extract image URL from imeta tag or content
-        //         let eventImageUrl = this.extractImageUrlFromImeta(data.tags);
-        //         if (!eventImageUrl) {
-        //             eventImageUrl = this.extractImageUrlFromContent(data.content);
-        //         }
-
-        //         if (eventImageUrl) {
-        //             imageUrl = eventImageUrl; // Use extracted image if available
-        //         }
-
-
-
-        //         // Summary card should be used for Nostr Profiles, use summary_large_image for events.
-        //         if (false) {
-        //             twitterCard = 'summary';
-        //         }
-        //     }
-
-        // this.updateSocialMetadata({
-        //     title: data.author.profile.display_name || data.author.profile.name,
-        //     description: data.content,
-        //     image: imageUrl || 'https://nostria.app/icons/icon-192x192.png', // Use extracted image or fallback
-        //     url: currentUrl,
-        //     twitterCard: twitterCard
-        // });
-        // } catch (err) {
-        //     console.error('Error loading social metadata:', err);
-        // }
     }
 
     private extractImageUrlFromImeta(tags: any[]): string | null {

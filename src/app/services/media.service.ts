@@ -391,7 +391,6 @@ export class MediaService implements NostriaService {
 
       const result = await this.relay.publish(signedEvent);
 
-      console.log('Result from publish:', result);
       this.logger.info('Media servers published to Nostr', { eventId: signedEvent.id });
     } catch (error) {
       this._error.set(error instanceof Error ? error.message : 'Failed to publish media servers');
