@@ -39,10 +39,6 @@ export class ApplicationService {
     /** Used to check if both initialized and authenticated. Used to wait for both conditions. */
     // initializedAndAuthenticated = computed(() => this.initialized() && this.authenticated());
 
-    loadingMessage = signal('Loading data...');
-    showSuccess = signal(false);
-    isLoading = signal(false);
-
     featureLevel = signal<FeatureLevel>(this.getStoredFeatureLevel());
 
     private readonly featurePrecedence: Record<FeatureLevel, number> = {

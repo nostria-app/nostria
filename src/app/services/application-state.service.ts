@@ -9,7 +9,8 @@ import { isPlatformBrowser } from "@angular/common";
 export class ApplicationStateService {
     router = inject(Router);
     logger = inject(LoggerService);
-    loadingMessage = signal('Loading data...');
+    loadingMessage = signal('Starting Nostria...');
+
     showSuccess = signal(false);
     isLoading = signal(true);
     isOnline = signal(navigator.onLine);

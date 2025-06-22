@@ -322,7 +322,9 @@ mat-card-content li {
   justify-content: center;
   align-items: center;
   pointer-events: none;
-  animation: fadeOut 1.5s ease-in-out forwards;
+  animation: fadeOut 0.5s ease-in-out forwards;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(5px);
 }
 
 .success-checkmark {
