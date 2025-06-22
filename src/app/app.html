@@ -358,7 +358,9 @@
               <img [src]="metadata?.data?.picture" alt="Profile picture" class="avatar-image">
             </div>
             } @else {
-            <mat-icon matListItemIcon>account_circle</mat-icon>
+            <div class="account-avatar" matListItemIcon>
+              <mat-icon>account_circle</mat-icon>
+            </div>
             }
             <span matListItemTitle>
               {{ metadata.data?.display_name || metadata.data?.name ||
@@ -370,7 +372,9 @@
           </a>
           } @else {
           <a mat-list-item (click)="switchAccount(account.pubkey); toggleProfileSidenav();" class="account-item">
-            <mat-icon matListItemIcon>account_circle</mat-icon>
+            <div class="account-avatar" matListItemIcon>
+              <mat-icon>account_circle</mat-icon>
+            </div>
             <span matListItemTitle>
               {{account.pubkey | npub }}
             </span>
