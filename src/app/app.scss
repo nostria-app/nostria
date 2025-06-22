@@ -304,6 +304,17 @@ mat-sidenav-content {
 
 .profile-button {
   margin-left: 8px;
+  padding: 0 !important;
+  
+  .mat-icon {
+    font-size: 32px;
+    height: 32px;
+    width: 32px;
+  }
+  
+  .profile-button-avatar {
+    margin: 4px;
+  }
 }
 
 .profile-content {
