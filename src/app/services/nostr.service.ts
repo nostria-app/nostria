@@ -160,6 +160,7 @@ export class NostrService implements NostriaService {
   }
 
   async load() {
+    this.appState.isLoading.set(true);
     const account = this.accountState.account();
 
     if (account) {
