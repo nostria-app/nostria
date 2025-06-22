@@ -217,86 +217,87 @@ export class DataResolver implements Resolve<EventData | null> {
     }
 
     async resolve(route: ActivatedRouteSnapshot): Promise<EventData | null> {
+        console.warn('DataResolver.resolve!!!!');
+
         if (this.layout.isBrowser()) {
             return null;
         }
 
-        console.log(route.url[0]?.path === 'e');
+        const id = route.params['id'];
 
-        if (route.url[0]?.path === 'e') {
-            const id = route.params['id'];
+        let data: EventData = {
+            title: 'Nostr Event',
+            description: 'Loading Nostr event content...'
+        };
 
-            let data: EventData = {
-                title: 'Nostr Event',
-                description: 'Loading Nostr event content...'
-            };
+        try {
+            if (this.utilities.isHex(id)) {
+                // If we only have hex, we can't know which relay to find the event on.
+                data.title = 'Nostr Event (Hex)';
+            } else {
+                // const decoded = this.utilities.decode(id) as DecodedNevent;
 
-            try {
-                if (this.utilities.isHex(id)) {
-                    // If we only have hex, we can't know which relay to find the event on.
-                    data.title = 'Nostr Event (Hex)';
-                } else {
-                    const decoded = this.utilities.decode(id) as DecodedNevent;
+                // if (!decoded.data.author) {
+                //     data.title = 'Nostr Event (No Author)';
+                // } else {
 
-                    if (!decoded.data.author) {
-                        data.title = 'Nostr Event (No Author)';
-                    } else {
-                        const metadata = await this.metaService.loadSocialMetadata(id);
-                        const { author, ...metadataWithoutAuthor } = metadata;
-                        data.event = metadataWithoutAuthor;
+                console.log('DataResolver.resolve', id);
 
-                        // console.log('Finding article for', decoded.data.author);
+                const metadata = await this.metaService.loadSocialMetadata(id);
+                const { author, ...metadataWithoutAuthor } = metadata;
+                data.event = metadataWithoutAuthor;
 
-                        // const discoveryResult = await this.connectToDiscoveryRelay(decoded.data.author);
-                        // console.log('DataResolver.discoveryResult', discoveryResult);
+                console.log('DataResolver.resolve.metadata', metadata);
 
-                        // if (discoveryResult.success && discoveryResult.relayCount > 0) {
-                        //     // Fetch the actual event from the discovered relays
-                        //     const eventResult = await this.fetchEventFromRelays(discoveryResult.relays, decoded.data.id);
+                // console.log('Finding article for', decoded.data.author);
 
-                        //     if (eventResult.success && eventResult.event) {
-                        //         const event = eventResult.event;
-                        //         data.title = event.content ? event.content.substring(0, 50) + '...' : `Nostr Event from ${decoded.data.author.substring(0, 8)}...`;
-                        //         data.description = `Found event: ${event.kind ? `Kind ${event.kind}` : 'Unknown type'} - ${event.content ? event.content.substring(0, 100) + '...' : 'No content available'}`;
-                        //         data.event = event;
-                        //     } else {
-                        //         data.title = `Nostr Event from ${decoded.data.author.substring(0, 8)}...`;
-                        //         data.description = `Found on ${discoveryResult.relayCount} relays: ${discoveryResult.relays.slice(0, 3).join(', ')}${discoveryResult.relays.length > 3 ? '...' : ''}`;
-                        //     }
-                        // } else {
-                        //     data.title = 'Nostr Event (No Relays Found)';
-                        //     data.description = 'Could not discover relay information';
-                        // }
-                    }
-                }
-            } catch (error) {
-                console.error('Error processing Nostr event:', error);
-                data.title = 'Nostr Event (Error)';
-                data.description = 'Error loading event content';
+                // const discoveryResult = await this.connectToDiscoveryRelay(decoded.data.author);
+                // console.log('DataResolver.discoveryResult', discoveryResult);
+
+                // if (discoveryResult.success && discoveryResult.relayCount > 0) {
+                //     // Fetch the actual event from the discovered relays
+                //     const eventResult = await this.fetchEventFromRelays(discoveryResult.relays, decoded.data.id);
+
+                //     if (eventResult.success && eventResult.event) {
+                //         const event = eventResult.event;
+                //         data.title = event.content ? event.content.substring(0, 50) + '...' : `Nostr Event from ${decoded.data.author.substring(0, 8)}...`;
+                //         data.description = `Found event: ${event.kind ? `Kind ${event.kind}` : 'Unknown type'} - ${event.content ? event.content.substring(0, 100) + '...' : 'No content available'}`;
+                //         data.event = event;
+                //     } else {
+                //         data.title = `Nostr Event from ${decoded.data.author.substring(0, 8)}...`;
+                //         data.description = `Found on ${discoveryResult.relayCount} relays: ${discoveryResult.relays.slice(0, 3).join(', ')}${discoveryResult.relays.length > 3 ? '...' : ''}`;
+                //     }
+                // } else {
+                //     data.title = 'Nostr Event (No Relays Found)';
+                //     data.description = 'Could not discover relay information';
+                // }
+                // }
             }
-
-            console.log('DataResolver.data', data);
-
-            // this.metaService.updateSocialMetadata()
-
-            // og:title
-            // og:description
-            // og:image
-            // twitter:title
-            // twitter:description
-            // twitter:image
-
-            // Set meta tags
-            // this.meta.updateTag({ property: 'og:title', content: data.title });
-            // this.meta.updateTag({ property: 'og:description', content: data.description || 'Amazing Nostr event content' });
-            // this.meta.updateTag({ name: 'twitter:title', content: data.title });
-            // this.meta.updateTag({ name: 'twitter:description', content: data.description || 'Amazing Nostr event content' });
-
-            this.transferState.set(EVENT_STATE_KEY, data);
-
-            return data;
+        } catch (error) {
+            console.error('Error processing Nostr event:', error);
+            data.title = 'Nostr Event (Error)';
+            data.description = 'Error loading event content';
         }
 
-        return null;
+        console.log('DataResolver.data', data);
+
+        // this.metaService.updateSocialMetadata()
+
+        // og:title
+        // og:description
+        // og:image
+        // twitter:title
+        // twitter:description
+        // twitter:image
+
+        // Set meta tags
+        // this.meta.updateTag({ property: 'og:title', content: data.title });
+        // this.meta.updateTag({ property: 'og:description', content: data.description || 'Amazing Nostr event content' });
+        // this.meta.updateTag({ name: 'twitter:title', content: data.title });
+        // this.meta.updateTag({ name: 'twitter:description', content: data.description || 'Amazing Nostr event content' });
+
+        this.transferState.set(EVENT_STATE_KEY, data);
+
+        return data;
     }
 }

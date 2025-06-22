@@ -52,6 +52,10 @@ export class ArticleComponent {
   error = signal<string | null>(null);
 
   constructor() {
+    if (!this.layout.isBrowser()) {
+      return;
+    }
+
     // Effect to load article when route parameter changes
     effect(() => {
       const addrParam = this.route.snapshot.paramMap.get('id');
@@ -65,7 +69,7 @@ export class ArticleComponent {
 
   async loadArticle(naddr: string): Promise<void> {
     const receivedData = history.state.event as Event | undefined;
-
+  
     if (receivedData) {
       this.logger.debug('Received event from navigation state:', receivedData);
       this.event.set(receivedData);
