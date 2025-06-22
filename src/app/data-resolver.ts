@@ -14,6 +14,7 @@ export interface EventData {
     title: string;
     description: string;
     event?: any;
+    metadata?: any;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -240,28 +241,32 @@ export class DataResolver implements Resolve<EventData | null> {
                     if (!decoded.data.author) {
                         data.title = 'Nostr Event (No Author)';
                     } else {
-                        console.log('Finding article for', decoded.data.author);
+                        const metadata = await this.metaService.loadSocialMetadata(id);
+                        const { author, ...metadataWithoutAuthor } = metadata;
+                        data.event = metadataWithoutAuthor;
 
-                        const discoveryResult = await this.connectToDiscoveryRelay(decoded.data.author);
-                        console.log('DataResolver.discoveryResult', discoveryResult);
+                        // console.log('Finding article for', decoded.data.author);
 
-                        if (discoveryResult.success && discoveryResult.relayCount > 0) {
-                            // Fetch the actual event from the discovered relays
-                            const eventResult = await this.fetchEventFromRelays(discoveryResult.relays, decoded.data.id);
+                        // const discoveryResult = await this.connectToDiscoveryRelay(decoded.data.author);
+                        // console.log('DataResolver.discoveryResult', discoveryResult);
 
-                            if (eventResult.success && eventResult.event) {
-                                const event = eventResult.event;
-                                data.title = event.content ? event.content.substring(0, 50) + '...' : `Nostr Event from ${decoded.data.author.substring(0, 8)}...`;
-                                data.description = `Found event: ${event.kind ? `Kind ${event.kind}` : 'Unknown type'} - ${event.content ? event.content.substring(0, 100) + '...' : 'No content available'}`;
-                                data.event = event;
-                            } else {
-                                data.title = `Nostr Event from ${decoded.data.author.substring(0, 8)}...`;
-                                data.description = `Found on ${discoveryResult.relayCount} relays: ${discoveryResult.relays.slice(0, 3).join(', ')}${discoveryResult.relays.length > 3 ? '...' : ''}`;
-                            }
-                        } else {
-                            data.title = 'Nostr Event (No Relays Found)';
-                            data.description = 'Could not discover relay information';
-                        }
+                        // if (discoveryResult.success && discoveryResult.relayCount > 0) {
+                        //     // Fetch the actual event from the discovered relays
+                        //     const eventResult = await this.fetchEventFromRelays(discoveryResult.relays, decoded.data.id);
+
+                        //     if (eventResult.success && eventResult.event) {
+                        //         const event = eventResult.event;
+                        //         data.title = event.content ? event.content.substring(0, 50) + '...' : `Nostr Event from ${decoded.data.author.substring(0, 8)}...`;
+                        //         data.description = `Found event: ${event.kind ? `Kind ${event.kind}` : 'Unknown type'} - ${event.content ? event.content.substring(0, 100) + '...' : 'No content available'}`;
+                        //         data.event = event;
+                        //     } else {
+                        //         data.title = `Nostr Event from ${decoded.data.author.substring(0, 8)}...`;
+                        //         data.description = `Found on ${discoveryResult.relayCount} relays: ${discoveryResult.relays.slice(0, 3).join(', ')}${discoveryResult.relays.length > 3 ? '...' : ''}`;
+                        //     }
+                        // } else {
+                        //     data.title = 'Nostr Event (No Relays Found)';
+                        //     data.description = 'Could not discover relay information';
+                        // }
                     }
                 }
             } catch (error) {
@@ -282,10 +287,10 @@ export class DataResolver implements Resolve<EventData | null> {
             // twitter:image
 
             // Set meta tags
-            this.meta.updateTag({ property: 'og:title', content: data.title });
-            this.meta.updateTag({ property: 'og:description', content: data.description || 'Amazing Nostr event content' });
-            this.meta.updateTag({ name: 'twitter:title', content: data.title });
-            this.meta.updateTag({ name: 'twitter:description', content: data.description || 'Amazing Nostr event content' });
+            // this.meta.updateTag({ property: 'og:title', content: data.title });
+            // this.meta.updateTag({ property: 'og:description', content: data.description || 'Amazing Nostr event content' });
+            // this.meta.updateTag({ name: 'twitter:title', content: data.title });
+            // this.meta.updateTag({ name: 'twitter:description', content: data.description || 'Amazing Nostr event content' });
 
             this.transferState.set(EVENT_STATE_KEY, data);
 
