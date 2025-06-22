@@ -105,6 +105,9 @@ export class MetaService {
         return document.querySelector(`link[rel='${rel}']`);
     }
 
+    #metadataUrl = 'https://metadata.nostria.app/';
+    // #metadataUrl = 'http://localhost:3000/';
+
     async loadSocialMetadata(addr: string): Promise<MetadataResponse> {
         let type = 'e';
         let profileHex: string | undefined = '';
@@ -121,15 +124,15 @@ export class MetaService {
 
         if (addr.startsWith('nevent')) {
             // This API will parse out the event ID and author from the Nostr event address.
-            url = `https://metadata.nostria.app/e/${addr}`;
+            url = `${this.#metadataUrl}e/${addr}`;
             targetUrl = `https://nostria.app/e/${addr}`;
         } else if (addr.startsWith('nprofile') || addr.startsWith('npub')) {
             // This API will parse out the profile ID from the Nostr profile address.
-            url = `https://metadata.nostria.app/p/${addr}`;
+            url = `${this.#metadataUrl}p/${addr}`;
             targetUrl = `https://nostria.app/p/${addr}`;
         } else if (addr.startsWith('naddr')) {
             // This API will parse out the event ID from the Nostr address.
-            url = `https://metadata.nostria.app/a/${addr}`;
+            url = `${this.#metadataUrl}a/${addr}`;
             targetUrl = `https://nostria.app/a/${addr}`;
         }
 
@@ -152,7 +155,9 @@ export class MetaService {
         }
 
         title = data.author?.profile?.display_name || data.author?.profile?.name || 'Nostr Event';
-        description = data.content || 'No description available';
+
+        const fullDescription = data.content || 'No description available';
+        description = fullDescription.length > 200 ? fullDescription.substring(0, 200) + '...' : fullDescription;
 
         console.log('Title:', title);
         console.log('Description:', description);

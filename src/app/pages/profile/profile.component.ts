@@ -99,6 +99,11 @@ export class ProfileComponent {
   private userRelay: UserRelayService | undefined = undefined;
 
   constructor() {
+    if (!this.app.isBrowser()) {
+      console.warn('Profile component can only be used in browser context');
+      return;
+    }
+
     // When accounts metadata changes, update the current metadata.
     // effect(() => {
     //   debugger;

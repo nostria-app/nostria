@@ -48,6 +48,10 @@ export class ProfileNotesComponent {
   error = signal<string | null>(null);
 
   constructor() {
+    if (!this.layout.isBrowser()) {
+      return;
+    }
+
     // Effect to handle scroll events from layout service when user scrolls to bottom
     effect(() => {
       // Only react if scroll monitoring is ready to prevent early triggers

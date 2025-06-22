@@ -73,7 +73,7 @@ export const routes: Routes = [
         component: ProfileHomeComponent,
         children: [
           { path: '', redirectTo: 'notes', pathMatch: 'full' },
-          { path: 'notes', component: ProfileNotesComponent, resolve: { data: DataResolver }, },
+          { path: 'notes', component: ProfileNotesComponent },
           { path: 'replies', component: ProfileRepliesComponent },
           { path: 'reads', component: ProfileReadsComponent },
           { path: 'media', component: ProfileMediaComponent }
