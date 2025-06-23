@@ -41,18 +41,18 @@ interface Article {
     selector: 'app-articles',
     standalone: true,
     imports: [
-    MatCardModule,
-    MatButtonModule,
-    MatIconModule,
-    MatDividerModule,
-    MatChipsModule,
-    MatMenuModule,
-    MatTooltipModule,
-    MatSnackBarModule,
-    MatProgressSpinnerModule,
-    LoadingOverlayComponent,
-    AgoPipe
-],
+        MatCardModule,
+        MatButtonModule,
+        MatIconModule,
+        MatDividerModule,
+        MatChipsModule,
+        MatMenuModule,
+        MatTooltipModule,
+        MatSnackBarModule,
+        MatProgressSpinnerModule,
+        LoadingOverlayComponent,
+        AgoPipe
+    ],
     templateUrl: './articles.component.html',
     styleUrl: './articles.component.scss'
 })
@@ -251,14 +251,7 @@ export class ArticlesComponent {
     }
 
     viewArticle(article: Article): void {
-        // In a real implementation, navigate to article detail view
         this.logger.debug('Viewing article:', article);
-
-        debugger;
-
-        const decoded = nip19.decode('naddr1qvzqqqr4gupzq9lz3z0m5qgzr5zg5ylapwss3tf3cwpjv225vrppu6wy8750heg4qqx8vmmvw4h8gctj095hxmgngvafv');
-        console.log('Decoded Nostr Address:', decoded);
-
         const dTag = this.utilities.getDTagValueFromTags(article.event.tags);
 
         if (!dTag) {
@@ -268,8 +261,6 @@ export class ArticlesComponent {
             });
             return;
         }
-
-        // const tag = article.tags.find(tag => tag[0] == 'd')[1];
 
         const pointer: nip19.AddressPointer = {
             identifier: dTag,
