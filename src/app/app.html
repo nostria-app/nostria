@@ -367,7 +367,7 @@
               (account.pubkey | npub) }}
             </span>
             <span matListItemLine class="account-source">
-              {{ account.source }} - Last used: {{ account.lastUsed| date:'short' }}
+              {{ account.source }} - used {{ account.lastUsed| date:'short' }}
             </span>
           </a>
           } @else {
@@ -379,7 +379,7 @@
               {{account.pubkey | npub }}
             </span>
             <span matListItemLine class="account-source">
-              {{ account.source }} - Last used: {{ account.lastUsed| date:'short' }}
+              {{ account.source }} - used {{ account.lastUsed| date:'short' }}
             </span>
           </a>
           }

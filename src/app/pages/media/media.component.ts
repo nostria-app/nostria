@@ -97,7 +97,7 @@ export class MediaComponent {
     effect(async () => {
       if (this.accountState.initialized()) {
         // This is currently triggered twice...
-        await this.mediaService.getFiles();
+        await this.mediaService.loadMedia();
       }
     });
 
