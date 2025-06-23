@@ -3,14 +3,13 @@ import { from, Observable, switchMap } from "rxjs";
 import { inject } from "@angular/core";
 import { NostrService } from "../nostr.service";
 
-export const USE_NIP98 = new HttpContextToken<boolean>(() => true);
+export const USE_NIP98 = new HttpContextToken<boolean>(() => false);
 
 export function nip98AuthInterceptor(
   req: HttpRequest<unknown>,
   next: HttpHandlerFn
 ): Observable<HttpEvent<unknown>> {
   const nostr = inject(NostrService)
-
   if (req.context.get(USE_NIP98)) {
     const method = req.method;
     const url = req.urlWithParams;
