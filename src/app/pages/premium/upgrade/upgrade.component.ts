@@ -15,14 +15,17 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { NameService } from '../../../services/name.service';
 import { debounceTime, firstValueFrom, Subject, takeUntil } from 'rxjs';
-import { AccountService } from '../../../api/services';
+import { AccountService, PaymentService } from '../../../api/services';
 import { TierDetails } from '../../../api/models/tier-details';
+import { AccountStateService } from '../../../services/account-state.service';
+import { CreatePayment$Params } from '../../../api/fn/payment/create-payment';
 
 
 interface PaymentInvoice {
-  paymentRequest: string;
-  expiresAt: number;
+  id: string;
+  invoice: string;
   status: 'pending' | 'paid' | 'expired';
+  expiresAt: Date;
 }
 
 interface PricingDisplay {
@@ -69,6 +72,8 @@ export class UpgradeComponent implements OnDestroy {
   private router = inject(Router);
   private name = inject(NameService);
   private accountService = inject(AccountService)
+  private paymentService = inject(PaymentService)
+  private accountState = inject(AccountStateService);
 
   usernameFormGroup = this.formBuilder.group({
     username: ['', [Validators.required, Validators.minLength(3), Validators.pattern('^[a-zA-Z0-9_]+$')]]
@@ -85,6 +90,7 @@ export class UpgradeComponent implements OnDestroy {
   selectedTier = signal<TierDisplay | null>(null);
   selectedPaymentOption = signal<'quarterly' | 'yearly' | null>('yearly');
   paymentInvoice = signal<PaymentInvoice | null>(null);
+  invoiceExpiresIn = signal<string>('15');
   isGeneratingInvoice = signal<boolean>(false);
   isPaymentCompleted = signal<boolean>(false);
   paymentCheckInterval = signal<number | null | any>(null);
@@ -185,9 +191,6 @@ export class UpgradeComponent implements OnDestroy {
     this.isCheckingUsername.set(true);
 
     try {
-      // Simulate API call to check username availability
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
       const isAvailable = await firstValueFrom(this.name.isUsernameAvailable(username));
       this.isUsernameAvailable.set(isAvailable);
     } finally {
@@ -210,21 +213,36 @@ export class UpgradeComponent implements OnDestroy {
   }
 
   async generatePaymentInvoice() {
-    if (!this.selectedTier()) return;
+    const selectedTier = this.selectedTier()
+    const selectedPaymentOption = this.selectedPaymentOption()
+    if (!selectedTier || !selectedPaymentOption) return;
+
+    const selectedPrice = selectedTier.details.pricing[selectedPaymentOption]?.priceCents
+
+    if (!selectedPrice) {
+      console.error('No price found for selected tier and payment option ', selectedTier.key, selectedPaymentOption);
+      return;
+    }
 
     this.isGeneratingInvoice.set(true);
 
     try {
-      // Simulate API call to generate Lightning invoice
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      // Create a mock invoice that expires in 15 minutes
-      const expiryTime = Date.now() + (15 * 60 * 1000);
+      const pubkey = this.accountState.npub();
+      const request: CreatePayment$Params = {
+        body: {
+          billingCycle: selectedPaymentOption,
+          tierName: selectedTier.details.tier,
+          price: selectedPrice,
+          pubkey,
+        }
+      }
+      const payment = await firstValueFrom(this.paymentService.createPayment(request));
 
       this.paymentInvoice.set({
-        paymentRequest: 'lnbc1500n1p3zug37pp5hvpwkj3j5ww760na4h6kpuqfk5htx2wvteypjhxguwuclep3uyylqdq8w3jhxapqvehhygzyfap4xxqyz5vqcqzpgxqyz5vqsp5u7unxml9qtupqf0f056lt227yqwemkwd8hm6x2a3u4u473tkpars9qyyssqtfyvk8yyj0n48jemgzwlh3qaplj4012lgjg8g8hh95dfjky9vn3h68z0wl397l078zx4dg4jxgzqvhl8mhjq7xq40mlrj8893zegpsxgmzs5',
-        expiresAt: expiryTime,
-        status: 'pending'
+        id: payment.id,
+        invoice: payment.lnInvoice,
+        status: payment.status,
+        expiresAt: new Date(payment.expiresAt),
       });
 
       // Move to the payment step
@@ -251,11 +269,15 @@ export class UpgradeComponent implements OnDestroy {
     // Check every 3 seconds
     const intervalId = window.setInterval(async () => {
       await this.checkPaymentStatus();
-
+      const invoice = this.paymentInvoice();
+      if (!invoice) return;
+      const minutesToExpiry = Math.round((invoice.expiresAt.getTime() - Date.now()) / 60000);
+      this.invoiceExpiresIn.set(String(minutesToExpiry))
       // If payment completed or expired, stop checking
       if (this.paymentInvoice()?.status !== 'pending') {
         window.clearInterval(this.paymentCheckInterval()!);
         this.paymentCheckInterval.set(null);
+        this.paymentInvoice.set(null);
       }
     }, 3000);
 
@@ -263,17 +285,34 @@ export class UpgradeComponent implements OnDestroy {
   }
 
   async checkPaymentStatus() {
-    if (!this.paymentInvoice()) return;
+    const paymentInvoice = this.paymentInvoice()
+    if (!paymentInvoice) return;
 
-    // Simulate API call to check payment status
-    // For demo, we'll randomly complete the payment after a few checks
-    if (Math.random() > 0.7) {
+    const payment = await firstValueFrom(this.paymentService.getPayment({ 
+      paymentId: paymentInvoice.id
+    }));
+    
+    if (payment.status === 'paid') {
       this.paymentInvoice.set({
         ...this.paymentInvoice()!,
         status: 'paid'
       });
 
+      // TODO: check reponse code
+      // 409 — npub already registered
+      // 400/500 — something is wrong. Notify devs and retry
+      await firstValueFrom(this.accountService.addAccount({
+        body: {
+          pubkey: this.accountState.npub(),
+          username: this.usernameFormGroup.get('username')?.value,
+          paymentId: this.paymentInvoice()!.id,
+        }
+      }));
+
       this.isPaymentCompleted.set(true);
+      // touch account state to load account subscription
+      this.accountState.changeAccount(this.accountState.account())
+
 
       // Show success message
       this.snackBar.open('Payment successful! Your premium account is now active.', 'Great!', {
@@ -287,7 +326,7 @@ export class UpgradeComponent implements OnDestroy {
     }
 
     // Check if invoice has expired
-    if (this.paymentInvoice()!.expiresAt < Date.now()) {
+    if (payment.status === 'expired') {
       this.paymentInvoice.set({
         ...this.paymentInvoice()!,
         status: 'expired'

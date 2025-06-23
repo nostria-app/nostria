@@ -1,11 +1,14 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { Event } from 'nostr-tools';
+import { Event, nip19 } from 'nostr-tools';
 import { NostrRecord } from '../interfaces';
 import { LocalStorageService } from './local-storage.service';
 import { ApplicationStateService } from './application-state.service';
 import { DataService } from './data.service';
 import { StorageService } from './storage.service';
 import { NostrService, NostrUser } from './nostr.service';
+import { AccountService } from '../api/services';
+import { Account } from '../api/models';
+import { Subject, takeUntil } from 'rxjs';
 
 interface ProfileCacheEntry {
   profile: NostrRecord;
@@ -33,6 +36,9 @@ interface ProcessingTracking {
 export class AccountStateService {
   private localStorage = inject(LocalStorageService);
   private appState = inject(ApplicationStateService);
+  private accountService = inject(AccountService);
+
+  private destroy$ = new Subject<void>();
 
   // Signal to store the current profile's following list
   followingList = signal<string[]>([]);
@@ -46,7 +52,14 @@ export class AccountStateService {
     return this.account()?.pubkey || '';
   });
 
+  npub = computed(() => {
+    if (!this.account()) return '';
+    return nip19.npubEncode(this.account()?.pubkey || '');
+  })
+
   profile = signal<NostrRecord | undefined>(undefined);
+
+  accountSubscription = signal<Account | undefined>(undefined);
 
   changeAccount(account: NostrUser | null): void {
     this.accountChanging.set(account?.pubkey || '');
@@ -56,9 +69,19 @@ export class AccountStateService {
     
     if (!account) {
       this.profile.set(undefined);
+      this.accountSubscription.set(undefined);
       return;
     } else {
       this.profile.set(this.getAccountProfile(account.pubkey));
+      this.accountService.getAccount()
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (accountObj) => this.accountSubscription.set(accountObj),
+          error: (err) => {
+            console.error('Failed to fetch account:', err);
+            this.accountSubscription.set(undefined);
+          }
+        });
     }
   }
 
@@ -516,4 +539,10 @@ export class AccountStateService {
   //   const event = await this.nostr.publish(muteList);
   //   this.updateMuteList(event);
   // }
+
+  // Add a method to clean up subscriptions if needed
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
 }

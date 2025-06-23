@@ -8,17 +8,20 @@ import { filter, map } from 'rxjs/operators';
 import { StrictHttpResponse } from '../../strict-http-response';
 import { RequestBuilder } from '../../request-builder';
 
-import { Account } from '../../models/account';
-import { UpdateAccountRequest } from '../../models/update-account-request';
+import { Payment } from '../../models/payment';
 
-export interface UpdateAccount$Params {
-      body: UpdateAccountRequest
+export interface GetPayment$Params {
+
+/**
+ * Payment id
+ */
+  paymentId: string;
 }
 
-export function updateAccount(http: HttpClient, rootUrl: string, params: UpdateAccount$Params, context?: HttpContext): Observable<StrictHttpResponse<Account>> {
-  const rb = new RequestBuilder(rootUrl, updateAccount.PATH, 'put');
+export function getPayment(http: HttpClient, rootUrl: string, params: GetPayment$Params, context?: HttpContext): Observable<StrictHttpResponse<Payment>> {
+  const rb = new RequestBuilder(rootUrl, getPayment.PATH, 'get');
   if (params) {
-    rb.body(params.body, 'application/json');
+    rb.path('paymentId', params.paymentId, {});
   }
 
   return http.request(
@@ -26,9 +29,9 @@ export function updateAccount(http: HttpClient, rootUrl: string, params: UpdateA
   ).pipe(
     filter((r: any): r is HttpResponse<any> => r instanceof HttpResponse),
     map((r: HttpResponse<any>) => {
-      return r as StrictHttpResponse<Account>;
+      return r as StrictHttpResponse<Payment>;
     })
   );
 }
 
-updateAccount.PATH = '/account';
+getPayment.PATH = '/payment/{paymentId}';

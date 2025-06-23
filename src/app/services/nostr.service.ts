@@ -1,7 +1,7 @@
 import { Injectable, signal, computed, effect, inject, untracked } from '@angular/core';
 import { Event, generateSecretKey, getPublicKey, UnsignedEvent, VerifiedEvent } from 'nostr-tools/pure';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
-import * as nip19 from 'nostr-tools/nip19';
+import { nip19, nip98 } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { RelayService } from './relay.service';
 import { NostrEventData, StorageService, UserMetadata } from './storage.service';
@@ -2208,5 +2208,11 @@ export class NostrService implements NostriaService {
     const publishPromises = await this.relayService.publish(signedEvent);
 
     return signedEvent;
+  }
+
+  async getNIP98AuthToken({ url, method }: { url: string, method: string }) {
+    const currentUser = this.accountState.account();
+    if (!currentUser) return;
+    return nip98.getToken(url, method, e => finalizeEvent(e, hexToBytes(currentUser.privkey!)))
   }
 }

@@ -5,12 +5,17 @@
 export interface AddAccountRequest {
 
   /**
-   * User's email address
+   * Payment Id for the premium payment
    */
-  email?: string | null;
+  paymentId?: string | null;
 
   /**
    * User's public key
    */
   pubkey: string;
+
+  /**
+   * User's username
+   */
+  username?: string | null;
 }
