@@ -9,11 +9,9 @@ export function nip98AuthInterceptor(
   req: HttpRequest<unknown>,
   next: HttpHandlerFn
 ): Observable<HttpEvent<unknown>> {
-  console.log(req.url, req.urlWithParams);
   const nostr = inject(NostrService)
 
   if (req.context.get(USE_NIP98)) {
-    
     const method = req.method;
     const url = req.urlWithParams;
     

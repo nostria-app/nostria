@@ -19,6 +19,7 @@ import { AccountService, PaymentService } from '../../../api/services';
 import { TierDetails } from '../../../api/models/tier-details';
 import { AccountStateService } from '../../../services/account-state.service';
 import { CreatePayment$Params } from '../../../api/fn/payment/create-payment';
+import { ApplicationService } from '../../../services/application.service';
 
 
 interface PaymentInvoice {
@@ -29,10 +30,10 @@ interface PaymentInvoice {
 }
 
 interface PricingDisplay {
-    pricePerMonth: string,
-    totalPrice: string,
-    currency: string,
-    period: string,
+  pricePerMonth: string,
+  totalPrice: string,
+  currency: string,
+  period: string,
 };
 
 interface TierDisplay {
@@ -61,7 +62,7 @@ interface TierDisplay {
     MatSnackBarModule,
     MatDividerModule,
     MatTooltipModule
-],
+  ],
   templateUrl: './upgrade.component.html',
   styleUrl: './upgrade.component.scss'
 })
@@ -74,6 +75,7 @@ export class UpgradeComponent implements OnDestroy {
   private accountService = inject(AccountService)
   private paymentService = inject(PaymentService)
   private accountState = inject(AccountStateService);
+  private readonly app = inject(ApplicationService);
 
   usernameFormGroup = this.formBuilder.group({
     username: ['', [Validators.required, Validators.minLength(3), Validators.pattern('^[a-zA-Z0-9_]+$')]]
@@ -94,25 +96,28 @@ export class UpgradeComponent implements OnDestroy {
   isGeneratingInvoice = signal<boolean>(false);
   isPaymentCompleted = signal<boolean>(false);
   paymentCheckInterval = signal<number | null | any>(null);
-  
 
   constructor() {
-    // Fetch tiers from API
-    this.accountService.getTiers().pipe(takeUntil(this.destroy$)).subscribe(tiersObj => {
-      const tiers = Object.values(tiersObj).map(tier => {
-        return {
-          key: tier.tier,
-          details: tier,
-          pricing: {
-            quarterly: this.getPricing(tier, 'quarterly'),
-            yearly: this.getPricing(tier, 'yearly'),
-          }
-        }
-      });
+    effect(() => {
+      if (this.accountState.initialized()) {
+        // Fetch tiers from API
+        this.accountService.getTiers().pipe(takeUntil(this.destroy$)).subscribe(tiersObj => {
+          const tiers = Object.values(tiersObj).map(tier => {
+            return {
+              key: tier.tier,
+              details: tier,
+              pricing: {
+                quarterly: this.getPricing(tier, 'quarterly'),
+                yearly: this.getPricing(tier, 'yearly'),
+              }
+            }
+          });
 
-      this.tiers.set(tiers);
-      if (tiers.length > 0) {
-        this.selectedTier.set(tiers[0]);
+          this.tiers.set(tiers);
+          if (tiers.length > 0) {
+            this.selectedTier.set(tiers[0]);
+          }
+        });
       }
     });
 
@@ -288,10 +293,10 @@ export class UpgradeComponent implements OnDestroy {
     const paymentInvoice = this.paymentInvoice()
     if (!paymentInvoice) return;
 
-    const payment = await firstValueFrom(this.paymentService.getPayment({ 
+    const payment = await firstValueFrom(this.paymentService.getPayment({
       paymentId: paymentInvoice.id
     }));
-    
+
     if (payment.status === 'paid') {
       this.paymentInvoice.set({
         ...this.paymentInvoice()!,

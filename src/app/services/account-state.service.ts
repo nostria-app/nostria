@@ -66,23 +66,43 @@ export class AccountStateService {
 
     this.followingList.set([]);
     this.account.set(account);
-    
+
     if (!account) {
       this.profile.set(undefined);
       this.accountSubscription.set(undefined);
       return;
     } else {
       this.profile.set(this.getAccountProfile(account.pubkey));
-      this.accountService.getAccount()
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: (accountObj) => this.accountSubscription.set(accountObj),
-          error: (err) => {
-            console.error('Failed to fetch account:', err);
-            this.accountSubscription.set(undefined);
+
+      // TODO: Improve this!
+      if (account.source === 'extension') {
+        // Check for window.nostr availability with interval
+        const checkNostrInterval = setInterval(() => {
+          if (window.nostr) {
+            clearInterval(checkNostrInterval);
+            this.loadData();
           }
-        });
+        }, 100); // Check every 100ms
+
+        // Optional: Add a timeout to prevent infinite checking
+        setTimeout(() => {
+          clearInterval(checkNostrInterval);
+          console.warn('Timeout waiting for window.nostr to become available');
+        }, 10000); // Stop checking after 10 seconds
+      }
     }
+  }
+
+  private loadData() {
+    this.accountService.getAccount()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (accountObj) => this.accountSubscription.set(accountObj),
+        error: (err) => {
+          console.error('Failed to fetch account:', err);
+          this.accountSubscription.set(undefined);
+        }
+      });
   }
 
   muteList = signal<Event | undefined>(undefined);
