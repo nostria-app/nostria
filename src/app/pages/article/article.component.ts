@@ -326,7 +326,7 @@ The future of social networking isn't about finding the next big platform - it's
       // Create a custom renderer for enhanced image handling
       const renderer = new marked.Renderer();
 
-      // Custom image renderer with enhanced attributes
+      // Custom image renderer with enhanced attributes and link support
       renderer.image = ({ href, title, text }: { href: string | null; title: string | null; text: string }): string => {
         if (!href) return '';
 
@@ -345,8 +345,11 @@ The future of social networking isn't about finding the next big platform - it's
           onload="this.style.opacity='1'"
           onerror="this.style.opacity='1'; this.style.border='1px solid var(--mat-sys-error)'; this.alt='Failed to load image: ${sanitizedAlt}'"
           onclick="window.open('${sanitizedHref}', '_blank')"
-          style="opacity: 0; transition: opacity 0.3s ease-in-out;"        />`;
-      };      // Custom link renderer to handle image URLs that aren't in markdown format
+          style="opacity: 0; transition: opacity 0.3s ease-in-out; cursor: pointer;"
+        />`;
+      };
+
+      // Custom link renderer that preserves markdown image links and handles standalone image URLs
       renderer.link = (link: any): string => {
         const { href, title, tokens } = link;
         // Extract text from tokens
@@ -354,7 +357,33 @@ The future of social networking isn't about finding the next big platform - it's
 
         if (!href) return text || '';
 
-        // Check if the link URL points to an image
+        // Check if this link contains an image (markdown image link syntax: [![alt](image)](link))
+        const imageRegex = /!\[([^\]]*)\]\(([^)]+)\)/;
+        const imageMatch = text.match(imageRegex);
+        
+        if (imageMatch) {
+          // This is a markdown image link: [![alt](image)](link)
+          const [, altText, imageSrc] = imageMatch;
+          const sanitizedHref = href.replace(/[<>"']/g, '');
+          const sanitizedImageSrc = imageSrc.replace(/[<>"']/g, '');
+          const sanitizedAlt = altText.replace(/[<>"']/g, '');
+          const sanitizedTitle = title ? title.replace(/[<>"']/g, '') : '';
+
+          return `<a href="${sanitizedHref}" target="_blank" rel="noopener noreferrer" ${sanitizedTitle ? `title="${sanitizedTitle}"` : ''}>
+            <img 
+              src="${sanitizedImageSrc}" 
+              alt="${sanitizedAlt}" 
+              class="article-image linked-image" 
+              loading="lazy"
+              decoding="async"
+              onload="this.style.opacity='1'"
+              onerror="this.style.opacity='1'; this.style.border='1px solid var(--mat-sys-error)'; this.alt='Failed to load image: ${sanitizedAlt}'"
+              style="opacity: 0; transition: opacity 0.3s ease-in-out; cursor: pointer;"
+            />
+          </a>`;
+        }
+
+        // Check if the link URL itself points to an image (standalone image URLs)
         if (this.isImageUrl(href)) {
           // Render as image instead of link
           const sanitizedHref = href.replace(/[<>"']/g, '');
@@ -371,7 +400,7 @@ The future of social networking isn't about finding the next big platform - it's
             onload="this.style.opacity='1'"
             onerror="this.style.opacity='1'; this.style.border='1px solid var(--mat-sys-error)'; this.alt='Failed to load image: ${sanitizedAlt}'"
             onclick="window.open('${sanitizedHref}', '_blank')"
-            style="opacity: 0; transition: opacity 0.3s ease-in-out;"
+            style="opacity: 0; transition: opacity 0.3s ease-in-out; cursor: pointer;"
           />`;
         }
 
@@ -387,7 +416,9 @@ The future of social networking isn't about finding the next big platform - it's
         gfm: true,
         breaks: true,
         pedantic: false,
-      });      // Parse markdown to HTML (marked.parse returns string)
+      });
+
+      // Parse markdown to HTML (marked.parse returns string)
       const htmlContent = marked.parse(preprocessedContent) as string;
 
       // Sanitize and return safe HTML
@@ -519,14 +550,15 @@ The future of social networking isn't about finding the next big platform - it's
 
     // Pattern to match standalone URLs that point to images
     // This will match URLs on their own line or URLs not already in markdown syntax
+    // Updated to be more careful about existing markdown syntax
     const standaloneImageUrlPattern = /(?:^|\s)(https?:\/\/[^\s<>"\]]+)(?=\s|$)/gm;
 
     return content.replace(standaloneImageUrlPattern, (match, url) => {
       // Don't convert if already in markdown image syntax
       const beforeMatch = content.substring(0, content.indexOf(match));
 
-      // Check if it's already part of markdown image syntax ![alt](url)
-      if (beforeMatch.endsWith('](') || beforeMatch.endsWith('![')) {
+      // Check if it's already part of markdown image syntax ![alt](url) or [![alt](url)](link)
+      if (beforeMatch.endsWith('](') || beforeMatch.endsWith('![') || beforeMatch.match(/!\[[^\]]*\]$/)) {
         return match;
       }
 
