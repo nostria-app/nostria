@@ -9,6 +9,8 @@ import { NostrService, NostrUser } from './nostr.service';
 import { AccountService } from '../api/services';
 import { Account } from '../api/models';
 import { Subject, takeUntil } from 'rxjs';
+import { USE_NIP98 } from './interceptors/nip98Auth';
+import { HttpContext } from '@angular/common/http';
 
 interface ProfileCacheEntry {
   profile: NostrRecord;
@@ -73,7 +75,7 @@ export class AccountStateService {
       return;
     } else {
       this.profile.set(this.getAccountProfile(account.pubkey));
-      this.accountService.getAccount()
+      this.accountService.getAccount(undefined, new HttpContext().set(USE_NIP98, true))
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: (accountObj) => this.accountSubscription.set(accountObj),
