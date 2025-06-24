@@ -10,7 +10,7 @@ export interface Account {
   /**
    * Subscription expiry date
    */
-  expiresAt?: string | null;
+  expires?: number | null;
 
   /**
    * Last login date
@@ -26,6 +26,7 @@ export interface Account {
    * Account creation date
    */
   signupDate?: string;
+  
   tier?: Tier;
 
   /**

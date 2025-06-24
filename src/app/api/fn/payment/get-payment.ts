@@ -11,16 +11,17 @@ import { RequestBuilder } from '../../request-builder';
 import { Payment } from '../../models/payment';
 
 export interface GetPayment$Params {
-
-/**
- * Payment id
- */
+  /**
+   * Payment id
+   */
   paymentId: string;
+  pubkey: string;
 }
 
 export function getPayment(http: HttpClient, rootUrl: string, params: GetPayment$Params, context?: HttpContext): Observable<StrictHttpResponse<Payment>> {
   const rb = new RequestBuilder(rootUrl, getPayment.PATH, 'get');
   if (params) {
+    rb.path('pubkey', params.pubkey, {});
     rb.path('paymentId', params.paymentId, {});
   }
 
@@ -34,4 +35,4 @@ export function getPayment(http: HttpClient, rootUrl: string, params: GetPayment
   );
 }
 
-getPayment.PATH = '/payment/{paymentId}';
+getPayment.PATH = '/payment/{pubkey}/{paymentId}';

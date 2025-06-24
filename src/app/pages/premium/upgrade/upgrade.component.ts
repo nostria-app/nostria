@@ -20,13 +20,14 @@ import { TierDetails } from '../../../api/models/tier-details';
 import { AccountStateService } from '../../../services/account-state.service';
 import { CreatePayment$Params } from '../../../api/fn/payment/create-payment';
 import { ApplicationService } from '../../../services/application.service';
-
+import { environment } from '../../../../environments/environment';
+import { Payment } from '../../../api/models';
 
 interface PaymentInvoice {
   id: string;
   invoice: string;
   status: 'pending' | 'paid' | 'expired';
-  expiresAt: Date;
+  expires: number;
 }
 
 interface PricingDisplay {
@@ -76,6 +77,7 @@ export class UpgradeComponent implements OnDestroy {
   private paymentService = inject(PaymentService)
   private accountState = inject(AccountStateService);
   private readonly app = inject(ApplicationService);
+  environment = environment;
 
   usernameFormGroup = this.formBuilder.group({
     username: ['', [Validators.required, Validators.minLength(3), Validators.pattern('^[a-zA-Z0-9_]+$')]]
@@ -191,8 +193,6 @@ export class UpgradeComponent implements OnDestroy {
       return;
     }
 
-
-
     this.isCheckingUsername.set(true);
 
     try {
@@ -232,7 +232,7 @@ export class UpgradeComponent implements OnDestroy {
     this.isGeneratingInvoice.set(true);
 
     try {
-      const pubkey = this.accountState.npub();
+      const pubkey = this.accountState.pubkey();
       const request: CreatePayment$Params = {
         body: {
           billingCycle: selectedPaymentOption,
@@ -241,13 +241,14 @@ export class UpgradeComponent implements OnDestroy {
           pubkey,
         }
       }
+
       const payment = await firstValueFrom(this.paymentService.createPayment(request));
 
       this.paymentInvoice.set({
         id: payment.id,
         invoice: payment.lnInvoice,
         status: payment.status,
-        expiresAt: new Date(payment.expiresAt),
+        expires: payment.expires,
       });
 
       // Move to the payment step
@@ -276,7 +277,9 @@ export class UpgradeComponent implements OnDestroy {
       await this.checkPaymentStatus();
       const invoice = this.paymentInvoice();
       if (!invoice) return;
-      const minutesToExpiry = Math.round((invoice.expiresAt.getTime() - Date.now()) / 60000);
+      // const minutesToExpiry = Math.round((invoice.expires - Date.now()) / 60000);
+      const minutesToExpiry = Math.max(0, Math.round((invoice.expires - Date.now()) / 60000));
+      debugger;
       this.invoiceExpiresIn.set(String(minutesToExpiry))
       // If payment completed or expired, stop checking
       if (this.paymentInvoice()?.status !== 'pending') {
@@ -289,12 +292,39 @@ export class UpgradeComponent implements OnDestroy {
     this.paymentCheckInterval.set(intervalId);
   }
 
+  // async finalize() {
+  //   await firstValueFrom(this.accountService.addAccount({
+  //     body: {
+  //       pubkey: this.accountState.pubkey(),
+  //       username: 'sondreb',
+  //       paymentId: 'payment-972e68f1-c8c1-482f-94cb-ac708ca7baa3',
+  //     }
+  //   }));
+
+  //   this.isPaymentCompleted.set(true);
+  //   // touch account state to load account subscription
+  //   this.accountState.changeAccount(this.accountState.account())
+
+  //   // Show success message
+  //   this.snackBar.open('Payment successful! Your premium account is now active.', 'Great!', {
+  //     duration: 8000
+  //   });
+
+  //   // After 2 seconds, proceed to completion step
+  //   setTimeout(() => {
+  //     this.currentStep.set(3);
+  //   }, 2000);
+  // }
+
   async checkPaymentStatus() {
     const paymentInvoice = this.paymentInvoice()
     if (!paymentInvoice) return;
 
-    const payment = await firstValueFrom(this.paymentService.getPayment({
-      paymentId: paymentInvoice.id
+    let payment: Payment | undefined;
+
+    payment = await firstValueFrom(this.paymentService.getPayment({
+      paymentId: paymentInvoice.id,
+      pubkey: this.accountState.pubkey()
     }));
 
     if (payment.status === 'paid') {
@@ -304,11 +334,11 @@ export class UpgradeComponent implements OnDestroy {
       });
 
       // TODO: check reponse code
-      // 409 — npub already registered
+      // 409 — pubkey already registered
       // 400/500 — something is wrong. Notify devs and retry
       await firstValueFrom(this.accountService.addAccount({
         body: {
-          pubkey: this.accountState.npub(),
+          pubkey: this.accountState.pubkey(),
           username: this.usernameFormGroup.get('username')?.value,
           paymentId: this.paymentInvoice()!.id,
         }
@@ -317,7 +347,6 @@ export class UpgradeComponent implements OnDestroy {
       this.isPaymentCompleted.set(true);
       // touch account state to load account subscription
       this.accountState.changeAccount(this.accountState.account())
-
 
       // Show success message
       this.snackBar.open('Payment successful! Your premium account is now active.', 'Great!', {

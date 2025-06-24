@@ -58,7 +58,7 @@ interface SettingsSection {
     AboutComponent,
     RelaysComponent,
     BackupComponent
-],
+  ],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.scss',
 })
@@ -160,13 +160,20 @@ export class SettingsComponent {
   }
 
   async loadSettings() {
-    debugger;
     const result = await this.web.fetchJson(`http://localhost:3000/api/settings/${this.accountState.pubkey()}`, { method: 'GET' }, { kind: 27235 });
     console.log('Loaded settings:', result);
   }
 
   async saveSettings() {
+    const settings = {
+      releaseChannel: "alpha",
+      socialSharing: true
+    };
 
+    const json = JSON.stringify(settings);
+
+    const result = await this.web.fetchJson(`http://localhost:3000/api/settings/${this.accountState.pubkey()}`, { method: 'POST', body: json }, { kind: 27235 });
+    console.log('Loaded settings:', result);
   }
 
 }

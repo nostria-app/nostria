@@ -7,7 +7,7 @@ export interface Payment {
   /**
    * Expiry date
    */
-  expiresAt: string;
+  expires: number;
 
   /**
    * Invoice ID

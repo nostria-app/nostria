@@ -31,6 +31,18 @@ export class WebRequest {
 
   async fetchJson(url: string, options?: RequestInit, auth?: AuthenticationInit): Promise<any> {
     try {
+
+      if (!options) {
+        options = {};
+      }
+
+      if (!options.headers) {
+        options.headers = {};
+      }
+
+      // Set the Content-Type header to application/json
+      (options.headers as Record<string, string>)['Content-Type'] = 'application/json';
+
       const response = await this.fetch(url, options, auth);
       return await response.json();
     } catch (error) {
@@ -40,8 +52,6 @@ export class WebRequest {
 
   async fetch(url: string, options?: RequestInit, auth?: AuthenticationInit): Promise<Response> {
     try {
-      debugger;
-
       if (auth) {
         // Use NIP-98 authentication if available
         const authHeader = await this.nostr.getNIP98AuthToken({
@@ -61,7 +71,17 @@ export class WebRequest {
         (options.headers as Record<string, string>)['Authorization'] = `Nostr ${authHeader}`;
       }
 
+      console.log('WebRequest.fetch', url, options)
       const response = await fetch(url, options);
+
+      // const response = await fetch(url, {
+      //   method: 'POST',
+      //   headers: {
+      //     ...headers,
+      //     'Content-Type': 'application/json'
+      //   },
+      //   body: JSON.stringify(subscriptionWithUserAgent)
+      // });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

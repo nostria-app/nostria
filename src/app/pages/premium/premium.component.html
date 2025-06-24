@@ -38,7 +38,7 @@
           Plan: {{ accountState.accountSubscription()?.tier }}
         </mat-list-item>
         <mat-list-item role="listitem">
-          Expiry date: {{ accountState.accountSubscription()?.expiresAt | date:'short' }}
+          Expiry date: {{ accountState.accountSubscription()?.expires | date:'short' }}
         </mat-list-item>
       </mat-list>
 
