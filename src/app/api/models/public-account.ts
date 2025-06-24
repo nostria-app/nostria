@@ -17,7 +17,7 @@ export interface PublicAccount {
   /**
    * Account creation date
    */
-  signupDate?: string;
+  signupDate?: number;
 
   /**
    * User's subscription tier

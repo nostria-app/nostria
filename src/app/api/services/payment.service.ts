@@ -57,7 +57,7 @@ export class PaymentService extends BaseService {
   }
 
   /** Path part for operation `getPayment()` */
-  static readonly GetPaymentPath = '/payment/{paymentId}';
+  static readonly GetPaymentPath = '/payment/{pubkey}/{paymentId}';
 
   /**
    * Get payment.
