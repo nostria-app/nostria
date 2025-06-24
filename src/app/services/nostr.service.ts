@@ -1,7 +1,7 @@
 import { Injectable, signal, computed, effect, inject, untracked } from '@angular/core';
-import { Event, generateSecretKey, getPublicKey, UnsignedEvent, VerifiedEvent } from 'nostr-tools/pure';
+import { Event, EventTemplate, generateSecretKey, getPublicKey, UnsignedEvent, VerifiedEvent } from 'nostr-tools/pure';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
-import * as nip19 from 'nostr-tools/nip19';
+import { nip19, nip98 } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { RelayService } from './relay.service';
 import { NostrEventData, StorageService, UserMetadata } from './storage.service';
@@ -742,18 +742,22 @@ export class NostrService implements NostriaService {
     }
   }
 
-  async signEvent(event: UnsignedEvent) {
+  async signEvent(event: EventTemplate) {
     return this.sign(event);
   }
 
-  private async sign(event: UnsignedEvent): Promise<Event> {
+  private async sign(event: EventTemplate): Promise<Event> {
     const currentUser = this.accountState.account();
 
     if (!currentUser) {
       throw new Error('No user account found. Please log in or create an account first.');
     }
 
-    let signedEvent: Event | null = null;
+    let signedEvent: Event | EventTemplate | null = null;
+
+    if (!('pubkey' in event) || !event.pubkey) {
+      (event as any).pubkey = currentUser.pubkey;
+    }
 
     switch (currentUser?.source) {
       case 'extension':
@@ -785,7 +789,7 @@ export class NostrService implements NostriaService {
         break;
     }
 
-    return signedEvent;
+    return signedEvent as Event;
   }
 
   currentDate() {
@@ -2208,5 +2212,12 @@ export class NostrService implements NostriaService {
     const publishPromises = await this.relayService.publish(signedEvent);
 
     return signedEvent;
+  }
+
+  async getNIP98AuthToken({ url, method }: { url: string, method: string }) {
+    return nip98.getToken(url, method, async (e) => {
+      const event = await this.signEvent(e);
+      return event;
+    })
   }
 }

@@ -5,11 +5,6 @@
 export interface UpdateAccountRequest {
 
   /**
-   * User's email address
-   */
-  email?: string | null;
-
-  /**
    * User's username
    */
   username?: string | null;

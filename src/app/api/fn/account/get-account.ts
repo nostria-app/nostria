@@ -8,12 +8,12 @@ import { filter, map } from 'rxjs/operators';
 import { StrictHttpResponse } from '../../strict-http-response';
 import { RequestBuilder } from '../../request-builder';
 
-import { AccountDto } from '../../models/account-dto';
+import { Account } from '../../models/account';
 
 export interface GetAccount$Params {
 }
 
-export function getAccount(http: HttpClient, rootUrl: string, params?: GetAccount$Params, context?: HttpContext): Observable<StrictHttpResponse<AccountDto>> {
+export function getAccount(http: HttpClient, rootUrl: string, params?: GetAccount$Params, context?: HttpContext): Observable<StrictHttpResponse<Account>> {
   const rb = new RequestBuilder(rootUrl, getAccount.PATH, 'get');
   if (params) {
   }
@@ -23,7 +23,7 @@ export function getAccount(http: HttpClient, rootUrl: string, params?: GetAccoun
   ).pipe(
     filter((r: any): r is HttpResponse<any> => r instanceof HttpResponse),
     map((r: HttpResponse<any>) => {
-      return r as StrictHttpResponse<AccountDto>;
+      return r as StrictHttpResponse<Account>;
     })
   );
 }
