@@ -27,6 +27,8 @@ import { BreakpointObserver } from '@angular/cdk/layout';
 import { AboutComponent } from '../about/about.component';
 import { RelaysComponent } from '../relays/relays.component';
 import { BackupComponent } from '../backup/backup.component';
+import { WebRequest } from '../../services/web-request';
+import { AccountStateService } from '../../services/account-state.service';
 
 interface SettingsSection {
   id: string;
@@ -67,9 +69,11 @@ export class SettingsComponent {
   nostrService = inject(NostrService);
   storage = inject(StorageService);
   appState = inject(ApplicationStateService);
+  accountState = inject(AccountStateService);
   app = inject(ApplicationService);
   dialog = inject(MatDialog);
   router = inject(Router);
+  web = inject(WebRequest);
 
   currentFeatureLevel = signal<FeatureLevel>(this.app.featureLevel());
 
@@ -154,4 +158,15 @@ export class SettingsComponent {
       }
     });
   }
+
+  async loadSettings() {
+    debugger;
+    const result = await this.web.fetchJson(`http://localhost:3000/api/settings/${this.accountState.pubkey()}`, { method: 'GET' }, { kind: 27235 });
+    console.log('Loaded settings:', result);
+  }
+
+  async saveSettings() {
+
+  }
+
 }
