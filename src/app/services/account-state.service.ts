@@ -75,7 +75,9 @@ export class AccountStateService {
       this.profile.set(this.getAccountProfile(account.pubkey));
 
       // TODO: Improve this!
-      if (account.source === 'extension') {
+      if (account.source === 'nsec') {
+        this.loadData();
+      } else if (account.source === 'extension') {
         // Check for window.nostr availability with interval
         const checkNostrInterval = setInterval(() => {
           if (window.nostr) {
