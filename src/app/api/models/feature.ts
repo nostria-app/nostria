@@ -9,6 +9,7 @@
 export enum Feature {
   BasicWebpush = 'BASIC_WEBPUSH',
   CommunitySupport = 'COMMUNITY_SUPPORT',
+  Username = 'USERNAME',
   AdvancedFiltering = 'ADVANCED_FILTERING',
   PrioritySupport = 'PRIORITY_SUPPORT',
   CustomTemplates = 'CUSTOM_TEMPLATES',

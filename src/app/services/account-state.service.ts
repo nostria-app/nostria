@@ -1,11 +1,16 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { Event } from 'nostr-tools';
+import { Event, nip19 } from 'nostr-tools';
 import { NostrRecord } from '../interfaces';
 import { LocalStorageService } from './local-storage.service';
 import { ApplicationStateService } from './application-state.service';
 import { DataService } from './data.service';
 import { StorageService } from './storage.service';
 import { NostrService, NostrUser } from './nostr.service';
+import { AccountService } from '../api/services';
+import { Account } from '../api/models';
+import { Subject, takeUntil } from 'rxjs';
+import { HttpContext } from '@angular/common/http';
+import { USE_NIP98 } from './interceptors/nip98Auth';
 
 interface ProfileCacheEntry {
   profile: NostrRecord;
@@ -33,6 +38,9 @@ interface ProcessingTracking {
 export class AccountStateService {
   private localStorage = inject(LocalStorageService);
   private appState = inject(ApplicationStateService);
+  private accountService = inject(AccountService);
+
+  private destroy$ = new Subject<void>();
 
   // Signal to store the current profile's following list
   followingList = signal<string[]>([]);
@@ -46,20 +54,59 @@ export class AccountStateService {
     return this.account()?.pubkey || '';
   });
 
+  npub = computed(() => {
+    if (!this.account()) return '';
+    return nip19.npubEncode(this.account()?.pubkey || '');
+  })
+
   profile = signal<NostrRecord | undefined>(undefined);
+
+  accountSubscription = signal<Account | undefined>(undefined);
 
   changeAccount(account: NostrUser | null): void {
     this.accountChanging.set(account?.pubkey || '');
 
     this.followingList.set([]);
     this.account.set(account);
-    
+
     if (!account) {
       this.profile.set(undefined);
+      this.accountSubscription.set(undefined);
       return;
     } else {
       this.profile.set(this.getAccountProfile(account.pubkey));
+
+      // TODO: Improve this!
+      if (account.source === 'nsec') {
+        this.loadData();
+      } else if (account.source === 'extension') {
+        // Check for window.nostr availability with interval
+        const checkNostrInterval = setInterval(() => {
+          if (window.nostr) {
+            clearInterval(checkNostrInterval);
+            this.loadData();
+          }
+        }, 100); // Check every 100ms
+
+        // Optional: Add a timeout to prevent infinite checking
+        setTimeout(() => {
+          clearInterval(checkNostrInterval);
+          console.warn('Timeout waiting for window.nostr to become available');
+        }, 10000); // Stop checking after 10 seconds
+      }
     }
+  }
+
+  private loadData() {
+    this.accountService.getAccount(undefined, new HttpContext().set(USE_NIP98, true))
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (accountObj) => this.accountSubscription.set(accountObj),
+        error: (err) => {
+          console.error('Failed to fetch account:', err);
+          this.accountSubscription.set(undefined);
+        }
+      });
   }
 
   muteList = signal<Event | undefined>(undefined);
@@ -516,4 +563,10 @@ export class AccountStateService {
   //   const event = await this.nostr.publish(muteList);
   //   this.updateMuteList(event);
   // }
+
+  // Add a method to clean up subscriptions if needed
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
 }

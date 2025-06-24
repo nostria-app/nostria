@@ -81,8 +81,6 @@
             Next
           </button>
 
-          THIS IS JUST A DEMO, NO REAL PAYMENT
-
         </div>
       </div>
     }
@@ -164,7 +162,7 @@
     <!-- Step 3: Bitcoin Lightning Payment -->
     @if (currentStep() === 2) {
       <div class="step-content payment-step">
-        <h2>Complete Your Payment (THIS IS NOT REAL, JUST DEMO!!)</h2>
+        <h2>Complete Your Payment</h2>
         <p class="step-description">Pay using Bitcoin Lightning Network to activate your premium account.</p>
 
         @if (isGeneratingInvoice()) {
@@ -177,7 +175,7 @@
             @if (paymentInvoice()?.status === 'pending') {
               <div class="qr-container">
                 <img
-                  src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ paymentInvoice()?.paymentRequest }}&bgcolor=ffffff"
+                  src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ paymentInvoice()?.invoice }}&bgcolor=ffffff"
                   alt="Lightning QR Code" class="qr-code">
                   @if (isPaymentCompleted()) {
                     <div class="payment-check-overlay">
@@ -194,16 +192,16 @@
                   wallet</p>
 
                   <div class="invoice-request">
-                    <div class="invoice-text">{{ paymentInvoice()?.paymentRequest?.substring(0, 30) }}...{{
-                    paymentInvoice()?.paymentRequest?.substring(paymentInvoice()?.paymentRequest!.length - 20) }}</div>
-                    <button mat-icon-button color="primary" (click)="copyToClipboard(paymentInvoice()?.paymentRequest || '')">
+                    <div class="invoice-text">{{ paymentInvoice()?.invoice?.substring(0, 30) }}...{{
+                    paymentInvoice()?.invoice?.substring(paymentInvoice()?.invoice!.length - 20) }}</div>
+                    <button mat-icon-button color="primary" (click)="copyToClipboard(paymentInvoice()?.invoice || '')">
                       <mat-icon>content_copy</mat-icon>
                     </button>
                   </div>
 
                   <div class="invoice-expiry">
                     <mat-icon>timer</mat-icon>
-                    <span>This invoice expires in 15 minutes</span>
+                    <span>This invoice expires in {{ invoiceExpiresIn() }} minutes</span>
                   </div>
 
                   <div class="payment-status">
