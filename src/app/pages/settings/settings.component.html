@@ -46,6 +46,10 @@
       <mat-card-content>
         <!-- General Settings -->
         @if (activeSection() === 'general') {
+
+          <!-- <button (click)="saveSettings()">Save Settings</button>
+          <button (click)="loadSettings()">Load Settings</button> -->
+
         <div class="setting-item">
           <span>Dark Mode</span>
           <mat-slide-toggle [checked]="themeService.darkMode()" (change)="toggleDarkMode()">
