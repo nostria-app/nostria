@@ -131,9 +131,6 @@ export class UpgradeComponent implements OnDestroy {
       }
     });
 
-    // Add CSS variables for primary color in RGB format for opacity support
-    this.setupThemeVariables();
-
     this.usernameFormGroup.get('username')?.valueChanges
       .pipe(
         debounceTime(300), // Wait 300ms after last keystroke
