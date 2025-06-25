@@ -46,6 +46,7 @@ interface NavItem {
   icon: string;
   level?: FeatureLevel;
   authenticated?: boolean;
+  hideOnSubscribed?: boolean;
   action?: () => void;
 }
 
@@ -126,6 +127,30 @@ export class App {
     });
   });
 
+  navigationItems = computed(() => {
+    const subscription = this.accountState.accountSubscription();
+    console.log('navigationItems recomputing, subscription:', subscription);
+
+    return this.navItems.filter(item => {
+      // Filter out items that are not authenticated if user is not logged in
+      if (item.authenticated && !this.app.authenticated()) {
+        return false;
+      }
+      // Filter out items that require a specific feature level if the feature is not enabled
+      if (item.level && !this.app.enabledFeature(item.level)) {
+        return false;
+      }
+
+      // Filter out items that should be hidden when subscribed
+      if (item.hideOnSubscribed && subscription) {
+        console.log('Hiding item due to subscription:', item.label);
+        return false;
+      }
+
+      return true;
+    });
+  });
+
   navItems: NavItem[] = [
     { path: '', label: 'Feeds', icon: 'stacks', authenticated: true },
     // { path: 'feed', label: 'Feed', icon: 'notes', showInMobile: true },
@@ -139,7 +164,7 @@ export class App {
     // { path: 'relays', label: 'Relays', icon: 'dns', showInMobile: false },
     // { path: 'backup', label: 'Backup', icon: 'archive', showInMobile: false },
     { path: 'settings', label: 'Settings', icon: 'settings' },
-    { path: 'premium', label: 'Premium', icon: 'diamond', level: 'preview', authenticated: true },
+    { path: 'premium', label: 'Premium', icon: 'diamond', level: 'preview', authenticated: true, hideOnSubscribed: true },
     // { path: 'about', label: 'About', icon: 'info', showInMobile: true },
     // { path: '', label: 'Logout', icon: 'logout', action: () => this.logout(), showInMobile: false }
   ];
@@ -266,7 +291,7 @@ export class App {
       this.initializeSidenavState();
     });
   }
-  
+
   async ngOnInit() {
     this.logger.debug('AppComponent ngOnInit');
 

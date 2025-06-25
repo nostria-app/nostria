@@ -204,10 +204,7 @@
       [ngClass]="{ 'sidenav-labels': displayLabels(), 'sidenav-small': !displayLabels()  }" [opened]="opened()"
       [mode]="layout.isHandset() ? 'over' : 'side'" [fixedInViewport]="false">
       <mat-nav-list>
-        @for (item of navItems; track $index) {
-
-        @if (item.authenticated && app.authenticated()) {
-        @if (this.app.enabledFeature(item.level)) {
+        @for (item of navigationItems(); track $index) {
         <a mat-list-item [routerLink]="item.action ? undefined : [item.path]" routerLinkActive="active-link"
           [routerLinkActiveOptions]="{exact: true}"
           (click)="item.action ? item.action() : (layout.isHandset() ? toggleSidenav() : null)">
@@ -216,19 +213,6 @@
           <span class="nav-label">{{item.label}}</span>
           }
         </a>
-        }
-        } @else if (!item.authenticated) {
-        @if (this.app.enabledFeature(item.level)) {
-        <a mat-list-item [routerLink]="item.action ? undefined : [item.path]" routerLinkActive="active-link"
-          [routerLinkActiveOptions]="{exact: true}"
-          (click)="item.action ? item.action() : (layout.isHandset() ? toggleSidenav() : null)">
-          <mat-icon matListItemIcon>{{item.icon}}</mat-icon>
-          @if(displayLabels()) {
-          <span class="nav-label">{{item.label}}</span>
-          }
-        </a>
-        }
-        }
         }
 
         @if (app.authenticated()) {
