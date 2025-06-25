@@ -207,9 +207,10 @@ h2 {
 }
 
 .payment-option-card {
-  width: fit-content;
+  flex: none;
+  width: 100%;
   min-width: 0;
-  max-width: 100%;
+  max-width: none;
   border-radius: 8px;
   border: 2px solid var(--mat-sys-outline-variant);
   box-shadow: var(--mat-sys-level1);
@@ -222,6 +223,7 @@ h2 {
   position: relative;
   min-height: 90px;
   color: var(--mat-sys-on-surface);
+  box-sizing: border-box;
 }
 .payment-option-card.selected {
   border-color: var(--mat-sys-primary);
@@ -604,6 +606,7 @@ h2 {
     align-items: stretch;
   }
   .payment-option-card {
+    flex: none;
     min-width: 0;
     max-width: 100%;
     width: 100%;
