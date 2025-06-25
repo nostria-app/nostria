@@ -1,6 +1,6 @@
 import { Component, inject, signal, effect, untracked, Inject, PLATFORM_ID, DOCUMENT } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { ActivatedRoute, ParamMap, RouterModule, RouterOutlet, Router, NavigationEnd } from '@angular/router';
+import { ActivatedRoute, ParamMap, RouterModule, RouterOutlet, Router, NavigationEnd, Data } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -95,6 +95,7 @@ export class ProfileComponent {
 
   // Convert route params to a signal
   private routeParams = toSignal<ParamMap>(this.route.paramMap);
+  private routeData = toSignal<Data>(this.route.data);
   private userRelayFactory = inject(UserRelayFactoryService);
   private userRelay: UserRelayService | undefined = undefined;
 
@@ -114,8 +115,18 @@ export class ProfileComponent {
     // React to changes in route parameters and app initialization
     effect(async () => {
       // Only proceed if app is initialized and route params are available
-      if (this.app.initialized() && this.routeParams()) {
-        let id = this.routeParams()?.get('id');
+      if (this.app.initialized() && this.routeParams() && this.routeData()) {
+
+        let id, username;
+
+        // Check if component renders /u/username and we have pubkey resolved from username
+        const pubkeyForUsername = this.routeData()?.['data']?.id;
+        if (pubkeyForUsername) {
+          id = pubkeyForUsername;
+          username = this.routeData()?.['data']?.username;
+        } else {
+          id = this.routeParams()?.get('id')
+        }
 
         if (id) {
           this.logger.debug('Profile page opened with pubkey:', id);
@@ -127,7 +138,12 @@ export class ProfileComponent {
 
           if (id.startsWith('npub')) {
             // First update URL to have npub in URL.
-            this.url.updatePathSilently(['/p', id, 'notes']);
+            if (username) {
+              this.url.updatePathSilently(['/u', username, 'notes']);
+            } else {
+              this.url.updatePathSilently(['/p', id, 'notes']);
+            }
+
             id = this.utilities.getPubkeyFromNpub(id);
           } else {
             // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.

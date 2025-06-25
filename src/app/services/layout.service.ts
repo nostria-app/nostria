@@ -892,11 +892,18 @@ export class LayoutService implements OnDestroy {
     }
 
     shareProfileUrl(npub: string | null | undefined): void {
-        if (!npub) {
+        const username = this.accountStateService.accountSubscription()?.username;
+
+        if (!npub && !username) {
             return;
         }
 
-        let url = 'https://nostria.app/p/' + npub;
+        let url;
+        if (username) {
+            url = 'https://nostria.app/u/' + username;
+        } else {
+            url = 'https://nostria.app/p/' + npub;
+        }
         this.copyToClipboard(url, 'profile URL');
     }
 

@@ -7,7 +7,7 @@ import { DataService } from './data.service';
 import { StorageService } from './storage.service';
 import { NostrService, NostrUser } from './nostr.service';
 import { AccountService } from '../api/services';
-import { Account } from '../api/models';
+import { Account, Feature } from '../api/models';
 import { Subject, takeUntil } from 'rxjs';
 import { HttpContext } from '@angular/common/http';
 import { USE_NIP98 } from './interceptors/nip98Auth';
@@ -62,6 +62,23 @@ export class AccountStateService {
   profile = signal<NostrRecord | undefined>(undefined);
 
   accountSubscription = signal<Account | undefined>(undefined);
+
+  profilePath = computed(() => {
+    const sub = this.accountSubscription();
+    const username = sub?.username;
+    if (username && this.hasFeature('USERNAME' as Feature)) {
+      return `/u/${username}`;
+    } else {
+      return `/p/${this.npub()}`;
+    }
+  });
+
+  hasFeature(feature: Feature): boolean {
+    const sub = this.accountSubscription();
+    if (!sub) return false;
+    const features = (sub.entitlements?.features || []) as any as Feature[];
+    return features.includes(feature);
+  }
 
   changeAccount(account: NostrUser | null): void {
     this.accountChanging.set(account?.pubkey || '');

@@ -32,6 +32,27 @@ import { MediaQueueComponent } from './pages/media-queue/media-queue.component';
 import { EventPageComponent } from './pages/event/event.component';
 import { NotificationManageComponent } from './pages/notifications/manage/manage.component';
 import { DataResolver } from './data-resolver';
+import { UsernameResolver } from './usernameResolver';
+
+const profileChildren: Routes = [
+  {
+    path: '',
+    component: ProfileHomeComponent,
+    children: [
+      { path: '', redirectTo: 'notes', pathMatch: 'full' },
+      { path: 'notes', component: ProfileNotesComponent },
+      { path: 'replies', component: ProfileRepliesComponent },
+      { path: 'reads', component: ProfileReadsComponent },
+      { path: 'media', component: ProfileMediaComponent }
+    ]
+  },
+  { path: 'about', component: ProfileAboutComponent },
+  { path: 'edit', component: ProfileEditComponent },
+  { path: 'connections', component: ProfileConnectionsComponent },
+  { path: 'following', component: FollowingComponent },
+  { path: 'relays', component: ProfileRelaysComponent },
+  { path: 'details', component: DetailsComponent }
+];
 
 export const routes: Routes = [
   { path: '', component: FeedsComponent, pathMatch: 'full' },
@@ -67,25 +88,13 @@ export const routes: Routes = [
     path: 'p/:id',
     component: ProfileComponent,
     resolve: { data: DataResolver },
-    children: [
-      {
-        path: '',
-        component: ProfileHomeComponent,
-        children: [
-          { path: '', redirectTo: 'notes', pathMatch: 'full' },
-          { path: 'notes', component: ProfileNotesComponent },
-          { path: 'replies', component: ProfileRepliesComponent },
-          { path: 'reads', component: ProfileReadsComponent },
-          { path: 'media', component: ProfileMediaComponent }
-        ]
-      },
-      { path: 'about', component: ProfileAboutComponent },
-      { path: 'edit', component: ProfileEditComponent },
-      { path: 'connections', component: ProfileConnectionsComponent },
-      { path: 'following', component: FollowingComponent },
-      { path: 'relays', component: ProfileRelaysComponent },
-      { path: 'details', component: DetailsComponent }
-    ]
+    children: profileChildren,
+  },
+  {
+    path: 'u/:username',
+    component: ProfileComponent,
+    resolve: { data: UsernameResolver },
+    children: profileChildren,
   },
   {
     path: 'premium',
