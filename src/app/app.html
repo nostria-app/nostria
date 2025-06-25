@@ -318,7 +318,7 @@
 
         <mat-nav-list>
           @if(app.authenticated()) {
-          <a mat-list-item [routerLink]="['/p', accountState.pubkey()]" (click)="toggleProfileSidenav()">
+          <a mat-list-item [routerLink]="accountState.profilePath()" (click)="toggleProfileSidenav()">
             <mat-icon matListItemIcon>person</mat-icon>
             <span>My Profile</span>
           </a>
