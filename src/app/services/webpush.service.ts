@@ -6,6 +6,7 @@ import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
 import { UserNotificationType, DeviceNotificationPreferences } from './storage.service';
 import { environment } from './../../environments/environment';
+import { WebRequest } from './web-request';
 
 export interface Device {
   deviceId: string;
@@ -40,6 +41,7 @@ export class WebPushService {
   // Temporary preferences for editing (before saving)
   tempDevicePreferences = signal<DeviceNotificationPreferences[]>([]);
   devicesLoaded = signal(false);
+  webRequest = inject(WebRequest);
   constructor() {
     // Load preferences from server/storage on service initialization
     this.loadPreferencesFromServer();
@@ -65,13 +67,13 @@ export class WebPushService {
     if (tempPreferences) {
       return tempPreferences.preferences;
     }
-    
+
     // Fall back to saved preferences
     const preferences = this.devicePreferences().find(pref => pref.deviceId === deviceId);
     if (preferences) {
       return preferences.preferences;
     }
-    
+
     // Return default preferences (all enabled)
     return {
       [UserNotificationType.DIRECT_MESSAGES]: true,
@@ -88,7 +90,7 @@ export class WebPushService {
     this.tempDevicePreferences.update(currentPrefs => {
       const existingIndex = currentPrefs.findIndex(pref => pref.deviceId === deviceId);
       const newPreference: DeviceNotificationPreferences = { deviceId, preferences };
-      
+
       if (existingIndex >= 0) {
         // Update existing temp preferences
         const updated = [...currentPrefs];
@@ -105,22 +107,27 @@ export class WebPushService {
     try {
       const prefs = this.devicePreferences();
       const url = `${this.server}/api/subscription/settings/${this.accountState.pubkey()}`;
-      const headers = await this.getAuthHeaders(url, 'POST');
 
       debugger;
 
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          ...headers,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(prefs)
-      });
+      const response = await this.webRequest.fetchJson(url, { method: 'POST', body: JSON.stringify(prefs) }, { kind: kinds.HTTPAuth });
+      console.log('Response from savePreferencesToServer:', response);
+      // const headers = await this.nostr.getNIP98AuthToken({ url, method: 'POST' });
 
-      if (!response.ok) {
-        throw new Error(`Failed to save preferences: ${response.status}`);
-      }
+      // debugger;
+
+      // const response = await fetch(url, {
+      //   method: 'POST',
+      //   headers: {
+      //     ...headers,
+      //     'Content-Type': 'application/json'
+      //   },
+      //   body: JSON.stringify(prefs)
+      // });
+
+      // if (!response.ok) {
+      //   throw new Error(`Failed to save preferences: ${response.status}`);
+      // }
 
       this.logger.info('Device notification preferences saved successfully');
     } catch (error) {
@@ -138,29 +145,15 @@ export class WebPushService {
   async loadPreferencesFromServer(): Promise<void> {
     try {
       const url = `${this.server}/api/subscription/settings/${this.accountState.pubkey()}`;
-      const headers = await this.getAuthHeaders(url, 'GET');
 
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          ...headers,
-          'Content-Type': 'application/json'
-        }
-      });
+      const result = await this.webRequest.fetchJson(url, { method: 'GET' }, { kind: kinds.HTTPAuth });
 
-      if (response.ok) {
-        const result = await response.json();
-
-        if (result && result.settings) {
-          const settings = JSON.parse(result.settings);
-          debugger;
-          this.devicePreferences.set(settings);
-          this.logger.info('Device notification preferences loaded from server');
-          return;
-        }
-      } else if (response.status !== 404) {
-        // 404 is expected if no preferences exist yet, other errors should be logged
-        this.logger.warn(`Failed to load preferences from server: ${response.status}`);
+      if (result && result.settings) {
+        const settings = JSON.parse(result.settings);
+        debugger;
+        this.devicePreferences.set(settings);
+        this.logger.info('Device notification preferences loaded from server');
+        return;
       }
     } catch (error) {
       this.logger.error('Failed to load preferences from server:', error);
@@ -180,7 +173,7 @@ export class WebPushService {
   }
   // Remove device from the signal when unsubscribed
   removeDevice(deviceId: string): void {
-    this.deviceList.update(devices => 
+    this.deviceList.update(devices =>
       devices.filter(d => d.deviceId !== deviceId)
     );
   }
@@ -190,7 +183,7 @@ export class WebPushService {
     if (device.userAgent) {
       // Parse userAgent to extract browser and OS info
       const userAgent = device.userAgent;
-      
+
       // Extract OS
       let os = 'Unknown OS';
       if (userAgent.includes('Windows NT')) {
@@ -204,7 +197,7 @@ export class WebPushService {
       } else if (userAgent.includes('iPhone') || userAgent.includes('iPad')) {
         os = 'iOS';
       }
-      
+
       // Extract browser
       let browser = 'Unknown Browser';
       if (userAgent.includes('Chrome') && !userAgent.includes('Edg')) {
@@ -216,72 +209,63 @@ export class WebPushService {
       } else if (userAgent.includes('Edg')) {
         browser = 'Edge';
       }
-      
+
       return `${browser} on ${os}`;
     }
-    
+
     // Fallback to device ID if no userAgent
     return `Device ${device.deviceId.slice(0, 8)}...`;
   }
 
   /** Implements the NIP-98 HTTP Auth */
-  private async getAuthHeaders(url: string, method: string | 'GET' | 'PUT' | 'POST' | 'DELETE' | 'PATCH', sha256?: string): Promise<Record<string, string>> {
-    const currentUser = this.accountState.account();
-    if (!currentUser) {
-      throw new Error('User not logged in');
-    }
+  // private async getAuthHeaders(url: string, method: string | 'GET' | 'PUT' | 'POST' | 'DELETE' | 'PATCH', sha256?: string): Promise<Record<string, string>> {
+  //   const currentUser = this.accountState.account();
+  //   if (!currentUser) {
+  //     throw new Error('User not logged in');
+  //   }
 
-    const headers: Record<string, string> = {};
+  //   const headers: Record<string, string> = {};
 
-    // Don't attempt to add auth headers if the user is using the preview account
-    if (currentUser.source !== 'preview') {
-      const tags = [
-        ['u', url],
-        ["method", method]
-      ];
+  //   // Don't attempt to add auth headers if the user is using the preview account
+  //   if (currentUser.source !== 'preview') {
+  //     const tags = [
+  //       ['u', url],
+  //       ["method", method]
+  //     ];
 
-      if (sha256) {
-        tags.push(['payload', sha256]);
-      }
+  //     if (sha256) {
+  //       tags.push(['payload', sha256]);
+  //     }
 
-      const authEvent = this.nostr.createEvent(kinds.HTTPAuth, '', tags);
-      const signedEvent = await this.nostr.signEvent(authEvent);
+  //     const authEvent = this.nostr.createEvent(kinds.HTTPAuth, '', tags);
+  //     const signedEvent = await this.nostr.signEvent(authEvent);
 
-      if (!signedEvent) {
-        throw new Error('Failed to sign event for authorization headers');
-      }
+  //     if (!signedEvent) {
+  //       throw new Error('Failed to sign event for authorization headers');
+  //     }
 
-      // Convert signed event to base64 string for Authorization header
-      const base64Event = btoa(JSON.stringify(signedEvent));
-      headers['Authorization'] = `Nostr ${base64Event}`
-    }
+  //     // Convert signed event to base64 string for Authorization header
+  //     const base64Event = btoa(JSON.stringify(signedEvent));
+  //     headers['Authorization'] = `Nostr ${base64Event}`
+  //   }
 
-    return headers;
-  }
+  //   return headers;
+  // }
 
   async devices(deviceId?: string): Promise<Device[]> {
     try {
       try {
         // const url = `${this.server}/api/subscription/devices/${this.accountState.pubkey()}?deviceId=${deviceId || ''}`;
         const url = `${this.server}/api/subscription/devices/${this.accountState.pubkey()}`;
-        const headers = await this.getAuthHeaders(url, 'GET');
 
-        const response = await fetch(`${url}`, {
-          method: 'GET',
-          headers: {
-            ...headers,
-            'Content-Type': 'application/json'
-          }
-        });
+        debugger;
+        console.log('Fetching devices from:', url);
 
-        if (!response.ok) {
-          throw new Error(`Failed to get devices: ${response.status}`);
-        }
+        const result = await this.webRequest.fetchJson(url, { method: 'GET' }, { kind: kinds.HTTPAuth });
 
         debugger;
 
-        const jsonResult = await response.json();
-        return jsonResult.devices || [];
+        return result.devices || [];
       } catch (error) {
         this.logger.error('Error fetching devices:', error);
         return [];
@@ -296,25 +280,15 @@ export class WebPushService {
   async self(title: string, body: string, data?: any) {
     try {
       const url = `${this.server}/api/subscription/send/${this.accountState.pubkey()}`;
-      const headers = await this.getAuthHeaders(url, 'POST');
+
       const payload: any = {
         title: title,
         body: body,
         data: data || {}
       };
 
-      const response = await fetch(`${url}`, {
-        method: 'POST',
-        headers: {
-          ...headers,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to send notification: ${response.status}`);
-      }
+      const result = await this.webRequest.fetchJson(url, { method: 'POST', body: JSON.stringify(payload) }, { kind: kinds.HTTPAuth });
+      console.log('Response from self notification:', result);
 
     } catch (error) {
       this.logger.error('Failed to send self notification:', error);
@@ -339,30 +313,20 @@ export class WebPushService {
 
     try {
       const pushSubscription = await this.push.requestSubscription({ serverPublicKey });
-      const subscription = JSON.stringify(pushSubscription);      try {
+      const subscription = JSON.stringify(pushSubscription); try {
         const url = `${this.server}/api/subscription/webpush/${this.accountState.pubkey()}`;
-        const headers = await this.getAuthHeaders(url, 'POST');
 
+        
         // Parse subscription to add userAgent
         const subscriptionData = JSON.parse(subscription);
         const subscriptionWithUserAgent = {
           ...subscriptionData,
           userAgent: navigator.userAgent
         };
-
-        const response = await fetch(`${url}`, {
-          method: 'POST',
-          headers: {
-            ...headers,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(subscriptionWithUserAgent)
-        });
-
-        if (!response.ok) {
-          throw new Error(`Failed to register subscription: ${response.status}`);
-        }        // Only log success once
-        this.logger.info('Push subscription registered successfully');
+        
+        const result = await this.webRequest.fetchJson(url, { method: 'POST', body: JSON.stringify(subscriptionWithUserAgent) }, { kind: kinds.HTTPAuth });
+        
+        this.logger.info('Push subscription registered successfully', result);
 
         const newDevice = {
           deviceId: subscriptionData.keys.p256dh,
@@ -402,24 +366,17 @@ export class WebPushService {
 
     try {
       const url = `${this.server}/api/subscription/webpush/${this.accountState.pubkey()}/${deviceId}`;
-      const headers = await this.getAuthHeaders(url, 'DELETE');
-
-      const response = await fetch(`${url}`, {
-        method: 'DELETE',
-        headers: {
-          ...headers,
-          'Content-Type': 'application/json'
-        }
-      });      if (!response.ok) {
-        throw new Error(`Failed to unregister device: ${response.status}`);
-      }
+    
+       const result = await this.webRequest.fetchJson(url, { method: 'DELETE' }, { kind: kinds.HTTPAuth });
+        
+       console.log('Response from unsubscribe:', result);
 
       // Remove the device from the signal
       this.removeDevice(deviceId);
 
       // Single log for successful operation
       this.logger.info('Device unregistered successfully');
-      
+
     } catch (error) {
       this.logger.error('Failed to unregister device:', error);
     }

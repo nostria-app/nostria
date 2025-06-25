@@ -3,6 +3,7 @@ import { Meta, Title } from '@angular/platform-browser';
 import { firstValueFrom } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { Event, nip19 } from 'nostr-tools';
+import { environment } from '../../environments/environment';
 
 export interface MetadataResponse {
     author: {
@@ -23,8 +24,7 @@ export class MetaService {
     private meta = inject(Meta);
     private title = inject(Title);
     private readonly http = inject(HttpClient);
-    #metadataUrl = 'https://metadata.nostria.app/';
-    // #metadataUrl = 'http://localhost:3000/';
+    #metadataUrl = environment.metadataUrl;;
 
     /**
      * Sets the page title
