@@ -13,7 +13,7 @@ import { ApplicationStateService } from './application-state.service';
 import { AccountStateService } from './account-state.service';
 import { LocalStorageService } from './local-storage.service';
 import { RegionService } from './region.service';
-import { NostriaService, NostrRecord } from '../interfaces';
+import { MEDIA_SERVERS_EVENT_KIND, NostriaService, NostrRecord } from '../interfaces';
 import { DataService } from './data.service';
 import { UtilitiesService } from './utilities.service';
 
@@ -1852,6 +1852,7 @@ export class NostrService implements NostriaService {
   }
 
   async generateNewKey(region?: string) {
+    debugger;
     this.logger.info('Generating new Nostr keypair');
     // Generate a proper Nostr key pair using nostr-tools
     const secretKey = generateSecretKey(); // Returns a Uint8Array
@@ -1872,10 +1873,41 @@ export class NostrService implements NostriaService {
 
     this.logger.debug('New keypair generated successfully', { pubkey, region });
 
+    const relayServerUrl = this.region.getRelayServer(region!, 0);
+    const relayTags = this.createTags('r', [relayServerUrl!]);
+
     // Create Relay List event for the new user
+    const relayListEvent: UnsignedEvent = {
+      pubkey,
+      created_at: Math.floor(Date.now() / 1000),
+      kind: kinds.RelayList,
+      tags: relayTags,
+      content: ''
+    };
 
-    // Create Media Server event for the new user
+    const signedEvent = finalizeEvent(relayListEvent, secretKey);
 
+    // Save locally first, then publish to discovery relays.
+    await this.storage.saveEvent(signedEvent);
+    await this.relayService.publishToDiscoveryRelays(signedEvent);
+
+    const mediaServerUrl = this.region.getMediaServer(region!, 0);
+    const mediaTags = this.createTags('server', [mediaServerUrl!]);
+
+    // Create Media Server event for the new user, this we cannot publish yet, because account is not initialized.
+    const mediaServerEvent: UnsignedEvent = {
+      pubkey,
+      created_at: Math.floor(Date.now() / 1000),
+      kind: MEDIA_SERVERS_EVENT_KIND,
+      tags: mediaTags,
+      content: ''
+    };
+
+    const signedMediaEvent = finalizeEvent(mediaServerEvent, secretKey);
+    await this.storage.saveEvent(signedMediaEvent);
+
+    // TODO: The media server event should be published to discovery relays, but we cannot do that yet, implement
+    // a queue for event publishing.
     await this.setAccount(newUser);
   }
 
