@@ -1,4 +1,4 @@
-@if (!accountState.accountSubscription()) {
+@if (!accountState.subscription()) {
 <div class="premium-container">
   <div class="premium-header">
     <h1 class="premium-title title-font">Nostria Premium</h1>
@@ -28,10 +28,10 @@
     <mat-card-content>
       <mat-list role="list">
         <mat-list-item role="listitem">
-          Plan: {{ accountState.accountSubscription()?.tier }}
+          Plan: {{ accountState.subscription()?.tier }}
         </mat-list-item>
         <mat-list-item role="listitem">
-          Expiry date: {{ accountState.accountSubscription()?.expires | date:'short' }}
+          Expiry date: {{ accountState.subscription()?.expires | date:'short' }}
         </mat-list-item>
       </mat-list>
 

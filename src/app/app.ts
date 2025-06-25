@@ -128,7 +128,7 @@ export class App {
   });
 
   navigationItems = computed(() => {
-    const subscription = this.accountState.accountSubscription();
+    const subscription = this.accountState.subscription();
     console.log('navigationItems recomputing, subscription:', subscription);
 
     return this.navItems.filter(item => {

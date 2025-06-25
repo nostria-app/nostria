@@ -330,9 +330,9 @@
         </mat-nav-list>
         <mat-divider></mat-divider>
         <!-- Account selection menu -->
-        @if (nostrService.hasAccounts()) {
+        @if (accountState.hasAccounts()) {
         <mat-nav-list class="accounts-list">
-          @for (account of nostrService.accounts(); track account.pubkey) {
+          @for (account of accountState.accounts(); track account.pubkey) {
           @if (account.pubkey !== accountState.account()?.pubkey) {
 
           @if(accountState.getAccountProfile(account.pubkey); as metadata) {

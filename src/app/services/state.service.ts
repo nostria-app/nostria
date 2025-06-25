@@ -31,6 +31,7 @@ export class StateService implements NostriaService {
   }
 
   async load() {
+    this.accountState.loadSubscriptions();
     await this.nostr.load();
 
     // Load notifications from storage

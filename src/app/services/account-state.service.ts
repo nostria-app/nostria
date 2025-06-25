@@ -7,7 +7,7 @@ import { DataService } from './data.service';
 import { StorageService } from './storage.service';
 import { NostrService, NostrUser } from './nostr.service';
 import { AccountService } from '../api/services';
-import { Account, Feature } from '../api/models';
+import { Account, Feature, Tier } from '../api/models';
 import { Subject, takeUntil } from 'rxjs';
 import { HttpContext } from '@angular/common/http';
 import { USE_NIP98 } from './interceptors/nip98Auth';
@@ -50,6 +50,12 @@ export class AccountStateService {
   accountChanging = signal<string>('');
   account = signal<NostrUser | null>(null);
 
+  accounts = signal<NostrUser[]>([]);
+
+  hasAccounts = computed(() => {
+    return this.accounts().length > 0;
+  });
+
   pubkey = computed(() => {
     return this.account()?.pubkey || '';
   });
@@ -61,10 +67,10 @@ export class AccountStateService {
 
   profile = signal<NostrRecord | undefined>(undefined);
 
-  accountSubscription = signal<Account | undefined>(undefined);
+  // accountSubscription = signal<Account | undefined>(undefined);
 
   profilePath = computed(() => {
-    const sub = this.accountSubscription();
+    const sub = this.subscription();
     const username = sub?.username;
     if (username && this.hasFeature('USERNAME' as Feature)) {
       return `/u/${username}`;
@@ -74,7 +80,7 @@ export class AccountStateService {
   });
 
   hasFeature(feature: Feature): boolean {
-    const sub = this.accountSubscription();
+    const sub = this.subscription();
     if (!sub) return false;
     const features = (sub.entitlements?.features || []) as any as Feature[];
     return features.includes(feature);
@@ -88,7 +94,6 @@ export class AccountStateService {
 
     if (!account) {
       this.profile.set(undefined);
-      this.accountSubscription.set(undefined);
       return;
     } else {
       this.profile.set(this.getAccountProfile(account.pubkey));
@@ -114,16 +119,79 @@ export class AccountStateService {
     }
   }
 
+  updateAccount(account: NostrUser) {
+    debugger;
+    // Update lastUsed timestamp
+    const allAccounts = this.accounts();
+    const existingAccountIndex = allAccounts.findIndex(u => u.pubkey === account.pubkey);
+
+    if (existingAccountIndex >= 0) {
+      this.accounts.update(u => u.map(existingUser => existingUser.pubkey === account.pubkey ? account : existingUser));
+    }
+  }
+
+  subscriptions = signal<Account[]>([]);
+
+  subscription = computed(() => {
+    const pubkey = this.pubkey();
+    if (!pubkey) return undefined;
+
+    const subs = this.subscriptions();
+    return subs.find(sub => sub.pubkey === pubkey);
+  });
+
+  loadSubscriptions() {
+    const subscriptions = this.localStorage.getObject<Account[]>(this.appState.SUBSCRIPTIONS_STORAGE_KEY);
+    this.subscriptions.set(subscriptions || []);
+  }
+
+  addSubscription(account: Account) {
+    const currentSubscriptions = this.subscriptions();
+    const existingIndex = currentSubscriptions.findIndex(sub => sub.pubkey === account.pubkey);
+
+    if (existingIndex >= 0) {
+      // Update existing subscription
+      currentSubscriptions[existingIndex] = account;
+    } else {
+      // Add new subscription
+      currentSubscriptions.push(account);
+    }
+
+    this.localStorage.setObject(this.appState.SUBSCRIPTIONS_STORAGE_KEY, currentSubscriptions);
+    this.subscriptions.set(currentSubscriptions);
+  }
+
   private loadData() {
     const pubkey = this.pubkey();
+
+    if (!this.account()) {
+      return;
+    }
+
+    const subscription = this.subscription() as any;
+
+    // Don't fetch if data is less than 3 days old
+    if (subscription && Date.now() - subscription.retrieved < 3 * 24 * 60 * 60 * 1000) {
+      return;
+    }
 
     this.accountService.getAccount(pubkey, new HttpContext().set(USE_NIP98, true))
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (accountObj) => this.accountSubscription.set(accountObj),
+        next: (accountObj) => {
+          // this.accountSubscription.set(accountObj);
+
+          debugger;
+
+          // Create a copy with lastRetrieved property
+          const accountWithTimestamp = { ...accountObj, retrieved: Date.now() };
+
+          // Add the subscription to the local storage
+          this.addSubscription(accountWithTimestamp);
+        },
         error: (err) => {
           console.error('Failed to fetch account:', err);
-          this.accountSubscription.set(undefined);
+          // this.accountSubscription.set(undefined);
         }
       });
   }

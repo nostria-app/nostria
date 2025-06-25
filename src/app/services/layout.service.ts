@@ -892,7 +892,7 @@ export class LayoutService implements OnDestroy {
     }
 
     shareProfileUrl(npub: string | null | undefined): void {
-        const username = this.accountStateService.accountSubscription()?.username;
+        const username = this.accountStateService.subscription()?.username;
 
         if (!npub && !username) {
             return;
