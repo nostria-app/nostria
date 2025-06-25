@@ -147,6 +147,7 @@ export class UpgradeComponent implements OnDestroy {
   ngOnDestroy() {
     this.destroy$.next();
     this.destroy$.complete();
+    this.resetPayment();
   }
 
   private setupThemeVariables() {
@@ -266,11 +267,16 @@ export class UpgradeComponent implements OnDestroy {
     }
   }
 
-  startPaymentCheck() {
-    // Clear any existing interval
+  stopPaymentCheck() {
     if (this.paymentCheckInterval() !== null) {
       window.clearInterval(this.paymentCheckInterval());
+      this.paymentCheckInterval.set(null);
     }
+  }
+
+  startPaymentCheck() {
+    // Clear any existing interval
+    this.stopPaymentCheck();
 
     // Check every 3 seconds
     const intervalId = window.setInterval(async () => {
@@ -279,11 +285,10 @@ export class UpgradeComponent implements OnDestroy {
       if (!invoice) return;
       // const minutesToExpiry = Math.round((invoice.expires - Date.now()) / 60000);
       const minutesToExpiry = Math.max(0, Math.round((invoice.expires - Date.now()) / 60000));
-      debugger;
       this.invoiceExpiresIn.set(String(minutesToExpiry))
       // If payment completed or expired, stop checking
       if (this.paymentInvoice()?.status !== 'pending') {
-        window.clearInterval(this.paymentCheckInterval()!);
+        this.stopPaymentCheck();
         this.paymentCheckInterval.set(null);
         this.paymentInvoice.set(null);
       }
@@ -374,10 +379,7 @@ export class UpgradeComponent implements OnDestroy {
 
   resetPayment() {
     // Stop any payment check interval
-    if (this.paymentCheckInterval() !== null) {
-      window.clearInterval(this.paymentCheckInterval());
-      this.paymentCheckInterval.set(null);
-    }
+    this.stopPaymentCheck();
 
     // Reset the payment state
     this.paymentInvoice.set(null);
