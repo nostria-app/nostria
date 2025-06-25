@@ -8,9 +8,6 @@ import { map, Observable } from "rxjs";
 export class UsernameResolver implements Resolve<{ id: string | undefined, username: string }> {
     accountService = inject(AccountService)
 
-    constructor() {
-
-    }
 
     resolve(route: ActivatedRouteSnapshot): Observable<{ id: string | undefined, username: string }> {
         const username = route.params['username'];
