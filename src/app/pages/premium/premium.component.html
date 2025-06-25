@@ -5,17 +5,10 @@
     <p class="premium-subtitle">Unlock the full potential of your Nostr experience</p>
 
     <div class="cta-container">
-      @if (!environment.production) {
       <button mat-flat-button color="primary" class="premium-cta-button" [routerLink]="['/premium/upgrade']">
         <mat-icon>stars</mat-icon>
         Upgrade to Premium
       </button>
-      } @else {
-      <button mat-flat-button color="primary" class="premium-cta-button" [disabled]="true">
-        <mat-icon>stars</mat-icon>
-        Upgrade to Premium
-      </button>
-      }
     </div>
     <p>
       <br>
