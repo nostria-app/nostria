@@ -42,9 +42,11 @@
     </mat-card>
   </div>
 
-  @if (nostrService.accounts().length > 0) { <div class="all-accounts">
-    <h2>Account List</h2>    <mat-list class="accounts-list"> @for (account of nostrService.accounts(); track account.pubkey) { <mat-list-item
-        class="account-item" [class.current-account-item]="account.pubkey === accountState.account()?.pubkey"
+  @if (accountState.accounts().length > 0) { <div class="all-accounts">
+    <h2>Account List</h2> <mat-list class="accounts-list">
+      @for (account of accountState.accounts(); track account.pubkey) {
+      <mat-list-item class="account-item"
+        [class.current-account-item]="account.pubkey === accountState.account()?.pubkey"
         (click)="account.pubkey !== accountState.account()?.pubkey ? switchAccount(account.pubkey) : null">
         <div class="account-item-content">
           <div class="account-avatar list-avatar">

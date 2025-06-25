@@ -16,6 +16,7 @@ import { RegionService } from './region.service';
 import { MEDIA_SERVERS_EVENT_KIND, NostriaService, NostrRecord } from '../interfaces';
 import { DataService } from './data.service';
 import { UtilitiesService } from './utilities.service';
+import { Tier } from '../api/models';
 
 export interface NostrUser {
   pubkey: string;
@@ -26,6 +27,7 @@ export interface NostrUser {
   bunker?: BunkerPointer;
   region?: string; // Add this new property
 
+  // TODO: Not needed anymore, remove.
   /** Indicates if this account has been "activated". This means the account has published it's relay list. For brand new accounts,
    * we won't publish Relay List until the user has performed their first signing action. When that happens, we will set this to true,
    * and publish Relay List + other events, like Profile Edit or publishing a post.
@@ -58,8 +60,6 @@ export class NostrService implements NostriaService {
   dataLoaded = false;
 
   // account = signal<NostrUser | null>(null);
-  accounts = signal<NostrUser[]>([]);
-
   // accountChanging = signal<NostrUser | null>(null);
   // accountChanged = signal<NostrUser | null>(null);
 
@@ -69,10 +69,6 @@ export class NostrService implements NostriaService {
   // usersMetadata = signal<Map<string, NostrRecord>>(new Map());
   usersRelays = signal<Map<string, Event>>(new Map());
   accountsRelays = signal<Event[]>([]);
-
-  hasAccounts = computed(() => {
-    return this.accounts().length > 0;
-  });
 
   discoveryQueue: any = [];
   activeDiscoveries: any = [];
@@ -98,7 +94,7 @@ export class NostrService implements NostriaService {
 
     // Save all users to localStorage whenever they change
     effect(() => {
-      const allUsers = this.accounts();
+      const allUsers = this.accountState.accounts();
 
       if (allUsers.length === 0) {
         this.logger.debug('No users to save to localStorage');
@@ -125,7 +121,7 @@ export class NostrService implements NostriaService {
         return;
       }
 
-      this.accounts.set(accounts);
+      this.accountState.accounts.set(accounts);
 
       // We keep an in-memory copy of the user metadata and relay list for all accounts,
       // they won't take up too much memory space.
@@ -273,7 +269,7 @@ export class NostrService implements NostriaService {
   }
 
   reset() {
-    this.accounts.set([]);
+    this.accountState.accounts.set([]);
     this.accountState.changeAccount(null);
   }
 
@@ -297,7 +293,7 @@ export class NostrService implements NostriaService {
         this.logger.info('Found pubkey in query parameters, attempting to load account', { pubkey: pubkeyParam });
 
         // Look for the account in our accounts list
-        const targetAccount = this.accounts().find(account => account.pubkey === pubkeyParam);
+        const targetAccount = this.accountState.accounts().find(account => account.pubkey === pubkeyParam);
 
         if (targetAccount) {
           this.logger.info('Found matching account for pubkey from query parameter', { pubkey: pubkeyParam });
@@ -1679,13 +1675,13 @@ export class NostrService implements NostriaService {
   // }
 
   async getAccountsMetadata() {
-    const pubkeys = this.accounts().map(user => user.pubkey);
+    const pubkeys = this.accountState.accounts().map(user => user.pubkey);
     const events = await this.data.getEventsByPubkeyAndKind(pubkeys, kinds.Metadata);
     return events;
   }
 
   async getAccountsRelays() {
-    const pubkeys = this.accounts().map(user => user.pubkey);
+    const pubkeys = this.accountState.accounts().map(user => user.pubkey);
     const relays = await this.storage.getEventsByPubkeyAndKind(pubkeys, kinds.RelayList);
     return relays;
   }
@@ -1800,7 +1796,7 @@ export class NostrService implements NostriaService {
 
   async switchToUser(pubkey: string) {
     this.logger.info(`Switching to user with pubkey: ${pubkey}`);
-    const targetUser = this.accounts().find(u => u.pubkey === pubkey);
+    const targetUser = this.accountState.accounts().find(u => u.pubkey === pubkey);
     if (targetUser) {
       // Update lastUsed timestamp
       targetUser.lastUsed = Date.now();
@@ -1830,17 +1826,17 @@ export class NostrService implements NostriaService {
     user.lastUsed = Date.now();
     user.name ??= this.utilities.getTruncatedNpub(user.pubkey);
 
-    const allUsers = this.accounts();
+    const allUsers = this.accountState.accounts();
     const existingUserIndex = allUsers.findIndex(u => u.pubkey === user.pubkey);
 
     if (existingUserIndex >= 0) {
       // Update existing user
       this.logger.debug('Updating existing user in collection', { index: existingUserIndex });
-      this.accounts.update(u => u.map(existingUser => existingUser.pubkey === user.pubkey ? user : existingUser));
+      this.accountState.accounts.update(u => u.map(existingUser => existingUser.pubkey === user.pubkey ? user : existingUser));
     } else {
       // Add new user
       this.logger.debug('Adding new user to collection');
-      this.accounts.update(u => [...u, user]);
+      this.accountState.accounts.update(u => [...u, user]);
     }
 
     // Persist the account to local storage.
@@ -2060,9 +2056,9 @@ export class NostrService implements NostriaService {
 
   removeAccount(pubkey: string): void {
     this.logger.info(`Removing account with pubkey: ${pubkey}`);
-    const allUsers = this.accounts();
+    const allUsers = this.accountState.accounts();
     const updatedUsers = allUsers.filter(u => u.pubkey !== pubkey);
-    this.accounts.set(updatedUsers);
+    this.accountState.accounts.set(updatedUsers);
 
     // If we're removing the active user, set active user to null
     if (this.accountState.account()?.pubkey === pubkey) {
