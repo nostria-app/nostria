@@ -9,6 +9,7 @@
   font-size: 2rem;
   margin-bottom: 2rem;
   background: linear-gradient(90deg, var(--mat-sys-primary), var(--mat-sys-tertiary));
+  background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -200,6 +201,9 @@ h2 {
 
 .payment-option-cards {
   margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 .payment-option-card {
@@ -543,6 +547,10 @@ h2 {
 
 /* Responsive styles */
 @media (max-width: 768px) {
+  .upgrade-container {
+    padding: 1.5rem 0.75rem;
+  }
+  
   .step-indicator-container {
     padding: 1rem;
   }
@@ -569,6 +577,14 @@ h2 {
     font-size: 1.6rem;
     padding: 0.8rem;
   }
+  
+  .tier-option-card {
+    margin: 0 0.5rem;
+  }
+  
+  .payment-option-card {
+    margin: 0;
+  }
 }
 
 @media (max-width: 900px) {
@@ -578,21 +594,24 @@ h2 {
     gap: 1.5rem;
   }
   .tier-option-card {
-    min-width: 90vw;
-    max-width: 98vw;
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
   }
   .payment-option-cards {
     flex-direction: column;
-    gap: 0.7rem;
+    gap: 0.75rem;
     align-items: stretch;
   }
   .payment-option-card {
-    min-width: 90vw;
-    max-width: 98vw;
-    padding: 0.7rem 0.5rem 0.5rem 0.5rem;
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+    padding: 0.75rem;
+    box-sizing: border-box;
   }
   .payment-option-content {
-    margin-left: 2.2rem;
+    margin-left: 2rem;
   }
 }
 

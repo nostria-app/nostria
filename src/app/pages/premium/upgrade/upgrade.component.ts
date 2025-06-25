@@ -147,42 +147,6 @@ export class UpgradeComponent implements OnDestroy {
     this.resetPayment();
   }
 
-  private setupThemeVariables() {
-    // Get the computed primary color and convert to RGB for opacity support
-    const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--mat-sys-primary').trim();
-    if (primaryColor) {
-      const rgb = this.hexToRgb(primaryColor) || '142, 68, 173'; // Fallback to default purple
-      document.documentElement.style.setProperty('--mat-sys-background', rgb);
-    }
-
-    // Get the background color for overlay calculations
-    const backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--mat-card-container-color').trim();
-    if (backgroundColor) {
-      const rgb = this.hexToRgb(backgroundColor) || '255, 255, 255';
-      document.documentElement.style.setProperty('--mat-background-rgb', rgb);
-    }
-  }
-
-  private hexToRgb(hex: string): string | null {
-    // Remove # if present
-    hex = hex.replace('#', '');
-
-    // Convert 3-digit hex to 6-digit
-    if (hex.length === 3) {
-      hex = hex.split('').map(x => x + x).join('');
-    }
-
-    const r = parseInt(hex.substring(0, 2), 16);
-    const g = parseInt(hex.substring(2, 4), 16);
-    const b = parseInt(hex.substring(4, 6), 16);
-
-    if (isNaN(r) || isNaN(g) || isNaN(b)) {
-      return null;
-    }
-
-    return `${r}, ${g}, ${b}`;
-  }
-
   async checkUsernameAvailability() {
     const username = this.usernameFormGroup.get('username')?.value;
 
