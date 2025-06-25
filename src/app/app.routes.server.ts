@@ -10,6 +10,10 @@ export const serverRoutes: ServerRoute[] = [
     renderMode: RenderMode.Server
   },
   {
+    path: 'u/**',
+    renderMode: RenderMode.Server
+  },
+  {
     path: 'a/**',
     renderMode: RenderMode.Server
   },
