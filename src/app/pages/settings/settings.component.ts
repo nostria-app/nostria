@@ -29,6 +29,7 @@ import { RelaysComponent } from '../relays/relays.component';
 import { BackupComponent } from '../backup/backup.component';
 import { WebRequest } from '../../services/web-request';
 import { AccountStateService } from '../../services/account-state.service';
+import { PremiumSettings } from '../premium/settings/settings';
 
 interface SettingsSection {
   id: string;
@@ -57,7 +58,8 @@ interface SettingsSection {
     LogsSettingsComponent,
     AboutComponent,
     RelaysComponent,
-    BackupComponent
+    BackupComponent,
+    PremiumSettings
   ],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.scss',
@@ -88,6 +90,7 @@ export class SettingsComponent {
     { id: 'relays', title: 'Relays', icon: 'dns', authenticated: true },
     { id: 'privacy', title: 'Privacy & Safety', icon: 'security', authenticated: true },
     { id: 'backup', title: 'Backup', icon: 'archive', authenticated: true },
+    { id: 'premium', title: 'Premium', icon: 'diamond', authenticated: true },
     { id: 'logs', title: 'Logs', icon: 'article', authenticated: true },
     { id: 'about', title: 'About', icon: 'info' }
   ];

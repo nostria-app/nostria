@@ -47,8 +47,8 @@
         <!-- General Settings -->
         @if (activeSection() === 'general') {
 
-          <!-- Enable to test API stored settings, most settings should be app-specific data on relays, not API. -->
-          <!-- <button (click)="saveSettings()">Save Settings</button>
+        <!-- Enable to test API stored settings, most settings should be app-specific data on relays, not API. -->
+        <!-- <button (click)="saveSettings()">Save Settings</button>
           <button (click)="loadSettings()">Load Settings</button> -->
 
         <div class="setting-item">
@@ -149,6 +149,10 @@
 
         @if (activeSection() === 'backup') {
         <app-backup></app-backup>
+        }
+
+        @if (activeSection() === 'premium') {
+        <app-premium-settings></app-premium-settings>
         }
 
       </mat-card-content>

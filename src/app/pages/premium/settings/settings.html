@@ -1,0 +1,21 @@
+<div class="content-medium">
+  <h1>Nostria Premium</h1>
+
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>Your subscription</mat-card-title>
+    </mat-card-header>
+
+    <mat-card-content>
+      <mat-list role="list">
+        <mat-list-item role="listitem">
+          Plan: {{ accountState.accountSubscription()?.tier }}
+        </mat-list-item>
+        <mat-list-item role="listitem">
+          Expiry date: {{ accountState.accountSubscription()?.expires | date:'short' }}
+        </mat-list-item>
+      </mat-list>
+
+    </mat-card-content>
+  </mat-card>
+</div>
