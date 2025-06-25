@@ -115,7 +115,9 @@ export class AccountStateService {
   }
 
   private loadData() {
-    this.accountService.getAccount(undefined, new HttpContext().set(USE_NIP98, true))
+    const pubkey = this.pubkey();
+
+    this.accountService.getAccount(pubkey, new HttpContext().set(USE_NIP98, true))
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (accountObj) => this.accountSubscription.set(accountObj),

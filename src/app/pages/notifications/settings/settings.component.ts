@@ -75,7 +75,6 @@ export class NotificationSettingsComponent {  app = inject(ApplicationService);
   });
 
   constructor() {
-    debugger;
     // Only log push status once
     this.logger.debug('Push enabled status:', this.push.isEnabled);
 
@@ -94,10 +93,12 @@ export class NotificationSettingsComponent {  app = inject(ApplicationService);
 
         this.isLoading.set(true);
 
+        debugger;
+
         try {
           // Check for existing subscription first using native API
           if (this.isNotificationEnabled()) {
-            this.logger.info('Notifications are enabled');
+            this.logger.info('Notifications is enabled');
 
             const nativeSubscription = await this.getSubscriptionFromNativeAPI();
 
@@ -130,6 +131,8 @@ export class NotificationSettingsComponent {  app = inject(ApplicationService);
               // subscriptionId: btoa(subJson.endpoint), // Create unique ID from endpoint
             } as Device);
           });
+
+          debugger;
 
           // Load devices using WebPushService on-demand
           await this.webPush.loadDevices(this.currentDevice()?.deviceId);
@@ -167,7 +170,6 @@ export class NotificationSettingsComponent {  app = inject(ApplicationService);
 
   // Add this method to get subscription from native APIs
   async getSubscriptionFromNativeAPI(): Promise<PushSubscription | null> {
-    debugger;
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
       this.logger.error('Push messaging is not supported');
       return null;
