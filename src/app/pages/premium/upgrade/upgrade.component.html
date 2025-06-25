@@ -33,9 +33,9 @@
         <mat-icon matPrefix>alternate_email</mat-icon>
         @if (isCheckingUsername()) {
         <mat-spinner matSuffix diameter="20"></mat-spinner>
-        } @else if (isUsernameAvailable() === true) {
+        } @else if (isUsernameAvailable()) {
         <mat-icon matSuffix color="primary" matTooltip="Username is available">check_circle</mat-icon>
-        } @else if (isUsernameAvailable() === false) {
+        } @else if (!isUsernameAvailable()) {
         <mat-icon matSuffix color="warn" matTooltip="Username already taken">error</mat-icon>
         }
 
@@ -61,16 +61,23 @@
         <p>Your username must be at least 3 characters and can only contain letters, numbers, and underscores.</p>
       </div>
 
-      @if (usernameFormGroup.get('username')?.value!.length > 0) {
-      <div class="username-preview">
-        <span class="username-part">{{ usernameFormGroup.get('username')?.value }}</span>
-        <span class="domain-part">&#64;nostria.app</span>
-      </div>
+      @if (isUsernameAvailable()) {
+        @if (usernameFormGroup.get('username')?.value!.length > 0) {
+        <div class="username-preview">
+          <span class="username-part">{{ usernameFormGroup.get('username')?.value }}</span>
+          <span class="domain-part">&#64;nostria.app</span>
+        </div>
 
-      <div class="username-preview">
-        <span class="domain-part">https://nostria.app/u/</span>
-        <span class="username-part">{{ usernameFormGroup.get('username')?.value }}</span>
-      </div>
+        <div class="username-preview">
+          <span class="domain-part">https://nostria.app/u/</span>
+          <span class="username-part">{{ usernameFormGroup.get('username')?.value }}</span>
+        </div>
+        }
+      } @else {
+           <div class="username-preview">
+          <span class="username-part">{{ usernameFormGroup.get('username')?.value }}</span>
+          <span class="domain-part">&nbsp;not available</span>
+        </div>
       }
     </form>
 
