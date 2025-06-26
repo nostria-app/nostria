@@ -655,8 +655,13 @@ export class NostrService implements NostriaService {
       authors: [pubkey],
     }];
 
-    const onEvent = (event: Event) => {
+    const onEvent = async (event: Event) => {
       console.log('Received event on the account subscription:', event);
+
+      if (event.kind === kinds.Contacts) {
+        // Refresh the following list in the account state
+        this.accountState.parseFollowingList(event);
+      }
     }
 
     const onEose = () => {
@@ -666,17 +671,7 @@ export class NostrService implements NostriaService {
     this.accountSubscription = this.relayService.subscribe(filters, onEvent, onEose);
   }
 
-  private arraysEqual(arr1: string[], arr2: string[]): boolean {
-    if (arr1.length !== arr2.length) {
-      return false;
-    }
 
-    // Sort both arrays to ensure order doesn't matter
-    const sorted1 = [...arr1].sort();
-    const sorted2 = [...arr2].sort();
-
-    return sorted1.every((value, index) => value === sorted2[index]);
-  }
 
   private async loadAccountFollowing(pubkey: string) {
     let followingEvent = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
@@ -691,18 +686,7 @@ export class NostrService implements NostriaService {
       // Queue up refresh of this event in the background
       this.relayService.getEventByPubkeyAndKind(pubkey, kinds.Contacts).then(async (evt) => {
         if (evt) {
-          const followingTags = this.getTags(evt, 'p');
-
-          // Get current following list to compare
-          const currentFollowingList = this.accountState.followingList();
-
-          // Check if the lists are different
-          const hasChanged = !this.arraysEqual(currentFollowingList, followingTags);
-
-          if (hasChanged) {
-            this.accountState.followingList.set(followingTags);
-            await this.storage.saveEvent(evt);
-          }
+          this.accountState.parseFollowingList(evt);
         }
       });
     }
@@ -2226,7 +2210,7 @@ export class NostrService implements NostriaService {
     return undefined;
   }
 
-  async publish(event: Event) {
+  async publish(event: UnsignedEvent | Event | any) {
     // Clone the bookmark event and remove id and sig
     const eventToSign = { ...event };
     eventToSign.id = '';

@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect, untracked, Inject, PLATFORM_ID, DOCUMENT } from '@angular/core';
+import { Component, inject, signal, effect, untracked, Inject, PLATFORM_ID, DOCUMENT, computed } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, ParamMap, RouterModule, RouterOutlet, Router, NavigationEnd, Data } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -492,10 +492,16 @@ export class ProfileComponent {
     this.copyToClipboard(this.getCurrentUrl(), 'profile URL');
   }
 
-  unfollowUser(): void {
+  async unfollowUser() {
     this.logger.debug('Unfollow requested for:', this.pubkey());
-    // TODO: Implement actual unfollow functionality
+    await this.accountState.unfollow(this.pubkey());
   }
+
+  isFollowing = computed(() => {
+    const followingList = this.accountState.followingList();
+    debugger;
+    return followingList.includes(this.pubkey());
+  });
 
   muteUser(): void {
     this.logger.debug('Mute requested for:', this.pubkey());
@@ -510,9 +516,9 @@ export class ProfileComponent {
   /**
    * Follows the user
    */
-  followUser(): void {
+  async followUser() {
     this.logger.debug('Follow requested for:', this.pubkey());
-    // TODO: Implement actual follow functionality
+    await this.accountState.follow(this.pubkey());
   }
 
   /**

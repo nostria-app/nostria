@@ -6,9 +6,11 @@
     <mat-icon>error</mat-icon>
     <h2>{{ error() }}</h2>
     <p>The profile you're looking for couldn't be loaded or doesn't exist.</p>
-    <p>The user is likely not found on your Discovery Relays. You can add <a [routerLink]="['/settings']">additional ones</a> and try again.</p>
+    <p>The user is likely not found on your Discovery Relays. You can add <a [routerLink]="['/settings']">additional
+        ones</a> and try again.</p>
     <p class="profile-link-container">
-      <a class="wrap-link" [href]="'https://nostr.at/' + utilities.getNpubFromPubkey(pubkey())" target="_blank" rel="noopener noreferrer">https://nostr.at/{{ utilities.getNpubFromPubkey(pubkey()) }}</a>
+      <a class="wrap-link" [href]="'https://nostr.at/' + utilities.getNpubFromPubkey(pubkey())" target="_blank"
+        rel="noopener noreferrer">https://nostr.at/{{ utilities.getNpubFromPubkey(pubkey()) }}</a>
     </p>
   </div>
   }
@@ -21,7 +23,8 @@
     </div>
     }
 
-    <app-profile-header [profile]="userMetadata()" [pubkey]="pubkey()" [compact]="isCompactHeader()"></app-profile-header>
+    <app-profile-header [profile]="userMetadata()" [pubkey]="pubkey()"
+      [compact]="isCompactHeader()"></app-profile-header>
 
     <!-- <div class="profile-avatar-container" [class.compact]="isCompactHeader()">
       <div class="profile-avatar" [class.clickable]="profile.content.picture"
@@ -161,18 +164,29 @@
         <mat-icon>edit</mat-icon> Edit Profile
       </button> -->
       } @else {
-      <button mat-flat-button color="primary">
+
+      @if(!isFollowing()) {
+      <button mat-flat-button color="primary" (click)="followUser()">
         <mat-icon>person_add</mat-icon> Follow
       </button>
+      } @else {
+      <button mat-flat-button color="warn" (click)="unfollowUser()">
+        <mat-icon>person_remove</mat-icon> Unfollow
+      </button>
+      }
+
       <button mat-stroked-button color="primary">
         <mat-icon>message</mat-icon> Message
       </button>
+
+
+
       }
     </div>
     }
   </div>
 
-  <div class="profile-outlet"  [class.mobile]="layoutService.isHandset()">
+  <div class="profile-outlet" [class.mobile]="layoutService.isHandset()">
     <router-outlet></router-outlet>
   </div>
   }

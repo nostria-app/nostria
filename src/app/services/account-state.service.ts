@@ -1,5 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { Event, nip19 } from 'nostr-tools';
+import { Event, nip19, UnsignedEvent } from 'nostr-tools';
 import { NostrRecord } from '../interfaces';
 import { LocalStorageService } from './local-storage.service';
 import { ApplicationStateService } from './application-state.service';
@@ -11,6 +11,7 @@ import { Account, Feature, Tier } from '../api/models';
 import { Subject, takeUntil } from 'rxjs';
 import { HttpContext } from '@angular/common/http';
 import { USE_NIP98 } from './interceptors/nip98Auth';
+import { UtilitiesService } from './utilities.service';
 
 interface ProfileCacheEntry {
   profile: NostrRecord;
@@ -36,9 +37,11 @@ interface ProcessingTracking {
   providedIn: 'root'
 })
 export class AccountStateService {
-  private localStorage = inject(LocalStorageService);
-  private appState = inject(ApplicationStateService);
-  private accountService = inject(AccountService);
+  private readonly localStorage = inject(LocalStorageService);
+  private readonly appState = inject(ApplicationStateService);
+  private readonly accountService = inject(AccountService);
+  private readonly storage = inject(StorageService);
+  private readonly utilities = inject(UtilitiesService);
 
   private destroy$ = new Subject<void>();
 
@@ -86,6 +89,106 @@ export class AccountStateService {
     return features.includes(feature);
   }
 
+  async unfollow(pubkey: string) {
+    const account = this.account();
+    if (!account) {
+      console.warn('No account is currently set to unfollow:', pubkey);
+      return;
+    }
+
+    // Check if not following
+    if (!this.followingList().includes(pubkey)) {
+      console.log(`Not following ${pubkey}, cannot unfollow.`);
+      return;
+    }
+
+    // Remove from following list
+    this.followingList.update(list => list.filter(p => p !== pubkey));
+
+    // Get the existing following event so we don't loose existing structure.
+    // Ensure we keep original 'content' and relays/pet names.
+    const followingEvent = await this.storage.getEventByPubkeyAndKind([account.pubkey], 3);
+
+    if (!followingEvent) {
+      console.warn('No existing following event found, cannot unfollow:', pubkey);
+      return;
+    }
+
+    // Remove the pubkey from the following list in the event
+    followingEvent.tags = followingEvent.tags.filter(tag => !(tag[0] === 'p' && tag[1] === pubkey));
+
+    // Publish the event to update the following list
+    try {
+      this.publish.set(followingEvent);
+      console.log(`Unfollowed ${pubkey} successfully.`);
+    } catch (error) {
+      console.error(`Failed to unfollow ${pubkey}:`, error);
+    }
+  }
+
+  isFollowing = computed(() => {
+
+  });
+
+  async follow(pubkey: string) {
+    const account = this.account();
+    if (!account) {
+      console.warn('No account is currently set to follow:', pubkey);
+      return;
+    }
+
+    // Check if already following
+    if (this.followingList().includes(pubkey)) {
+      console.log(`Already following ${pubkey}`);
+      return;
+    }
+
+    // Add to following list
+    this.followingList.update(list => [...list, pubkey]);
+
+    // Get the existing following event so we don't loose existing structure.
+    // Ensure we keep original 'content' and relays/pet names.
+    const followingEvent = await this.storage.getEventByPubkeyAndKind([account.pubkey], 3);
+
+    if (!followingEvent) {
+      console.warn('No existing following event found, cannot unfollow:', pubkey);
+      return;
+    }
+
+    // Add the pubkey from the following list in the event, if not already present
+    if (!followingEvent.tags.some(tag => tag[0] === 'p' && tag[1] === pubkey)) {
+      followingEvent.tags.push(['p', pubkey]);
+    } else {
+      console.log(`Pubkey ${pubkey} is already in the following list.`);
+      return;
+    }
+
+    // Publish the event to update the following list
+    try {
+      this.publish.set(followingEvent);
+      console.log(`Unfollowed ${pubkey} successfully.`);
+    } catch (error) {
+      console.error(`Failed to unfollow ${pubkey}:`, error);
+    }
+  }
+
+  async parseFollowingList(event: Event) {
+    if (event) {
+      const followingTags = this.utilities.getTags(event, 'p');
+
+      // Get current following list to compare
+      const currentFollowingList = this.followingList();
+
+      // Check if the lists are different
+      const hasChanged = !this.utilities.arraysEqual(currentFollowingList, followingTags);
+
+      if (hasChanged) {
+        this.followingList.set(followingTags);
+        await this.storage.saveEvent(event);
+      }
+    }
+  }
+
   changeAccount(account: NostrUser | null): void {
     this.accountChanging.set(account?.pubkey || '');
 
@@ -120,7 +223,6 @@ export class AccountStateService {
   }
 
   updateAccount(account: NostrUser) {
-    debugger;
     // Update lastUsed timestamp
     const allAccounts = this.accounts();
     const existingAccountIndex = allAccounts.findIndex(u => u.pubkey === account.pubkey);
@@ -181,8 +283,6 @@ export class AccountStateService {
         next: (accountObj) => {
           // this.accountSubscription.set(accountObj);
 
-          debugger;
-
           // Create a copy with lastRetrieved property
           const accountWithTimestamp = { ...accountObj, retrieved: Date.now() };
 
@@ -222,6 +322,7 @@ export class AccountStateService {
     return Math.round((state.processed / state.total) * 100);
   });// nostr = inject(NostrService);
 
+  // Signal to publish event
   publish = signal<Event | undefined>(undefined);
 
   constructor() {
