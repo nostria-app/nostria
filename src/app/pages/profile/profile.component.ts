@@ -159,9 +159,9 @@ export class ProfileComponent {
             }
           } else {
             if (!username) {
-              // TODO: Implement!
-              username = '';
-              // username = await this.username.getUsername(id);
+              debugger;
+              username = await this.username.getUsername(id);
+              debugger;
 
               if (username) {
                 this.url.updatePathSilently(['/u', username, 'notes']);
