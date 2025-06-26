@@ -102,9 +102,6 @@ export class AccountStateService {
       return;
     }
 
-    // Remove from following list
-    this.followingList.update(list => list.filter(p => p !== pubkey));
-
     // Get the existing following event so we don't loose existing structure.
     // Ensure we keep original 'content' and relays/pet names.
     const followingEvent = await this.storage.getEventByPubkeyAndKind([account.pubkey], 3);
@@ -116,6 +113,9 @@ export class AccountStateService {
 
     // Remove the pubkey from the following list in the event
     followingEvent.tags = followingEvent.tags.filter(tag => !(tag[0] === 'p' && tag[1] === pubkey));
+
+    // Remove from following list
+    this.followingList.update(list => list.filter(p => p !== pubkey));
 
     // Publish the event to update the following list
     try {
@@ -143,9 +143,6 @@ export class AccountStateService {
       return;
     }
 
-    // Add to following list
-    this.followingList.update(list => [...list, pubkey]);
-
     // Get the existing following event so we don't loose existing structure.
     // Ensure we keep original 'content' and relays/pet names.
     const followingEvent = await this.storage.getEventByPubkeyAndKind([account.pubkey], 3);
@@ -162,6 +159,9 @@ export class AccountStateService {
       console.log(`Pubkey ${pubkey} is already in the following list.`);
       return;
     }
+
+    // Add to following list
+    this.followingList.update(list => [...list, pubkey]);
 
     // Publish the event to update the following list
     try {
