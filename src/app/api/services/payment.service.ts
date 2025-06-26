@@ -24,7 +24,7 @@ export class PaymentService extends BaseService {
   }
 
   /** Path part for operation `createPayment()` */
-  static readonly CreatePaymentPath = '/payment';
+  static readonly CreatePaymentPath = 'payment';
 
   /**
    * Create a new payment invoice.
@@ -57,7 +57,7 @@ export class PaymentService extends BaseService {
   }
 
   /** Path part for operation `getPayment()` */
-  static readonly GetPaymentPath = '/payment/{pubkey}/{paymentId}';
+  static readonly GetPaymentPath = 'payment/{pubkey}/{paymentId}';
 
   /**
    * Get payment.

@@ -32,7 +32,7 @@ export class AccountService extends BaseService {
   }
 
   /** Path part for operation `getTiers()` */
-  static readonly GetTiersPath = '/account/tiers';
+  static readonly GetTiersPath = 'account/tiers';
 
   /**
    * Get available subscription tiers.
@@ -73,7 +73,7 @@ export class AccountService extends BaseService {
   }
 
   /** Path part for operation `getAccount()` */
-  static readonly GetAccountPath = '/account';
+  static readonly GetAccountPath = 'account';
 
   /**
    * Get authenticated user's account.
@@ -106,7 +106,7 @@ export class AccountService extends BaseService {
   }
 
   /** Path part for operation `updateAccount()` */
-  static readonly UpdateAccountPath = '/account';
+  static readonly UpdateAccountPath = 'account';
 
   /**
    * Update authenticated user's account.
@@ -139,7 +139,7 @@ export class AccountService extends BaseService {
   }
 
   /** Path part for operation `addAccount()` */
-  static readonly AddAccountPath = '/account';
+  static readonly AddAccountPath = 'account';
 
   /**
    * Create a new account.
@@ -172,7 +172,7 @@ export class AccountService extends BaseService {
   }
 
   /** Path part for operation `getPublicAccount()` */
-  static readonly GetPublicAccountPath = '/account/{pubkeyOrUsername}';
+  static readonly GetPublicAccountPath = 'account/{pubkeyOrUsername}';
 
   /**
    * Get public account information.

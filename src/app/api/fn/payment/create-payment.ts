@@ -31,4 +31,4 @@ export function createPayment(http: HttpClient, rootUrl: string, params: CreateP
   );
 }
 
-createPayment.PATH = '/payment';
+createPayment.PATH = 'payment';

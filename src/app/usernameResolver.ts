@@ -16,7 +16,6 @@ export class UsernameResolver implements Resolve<{ id: string | undefined, usern
         const sub = this.accountState.subscription();
         if (sub && sub.username === username) {
             return new Observable(observer => {
-                debugger;
                 observer.next({ id: sub.pubkey, username });
                 observer.complete();
             });
