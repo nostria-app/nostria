@@ -34,4 +34,4 @@ export function getPublicAccount(http: HttpClient, rootUrl: string, params: GetP
   );
 }
 
-getPublicAccount.PATH = 'account/{pubkeyOrUsername}';
+getPublicAccount.PATH = '/account/{pubkeyOrUsername}';
