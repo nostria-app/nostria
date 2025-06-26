@@ -121,8 +121,6 @@ export class ProfileComponent {
 
         let id, username;
 
-        debugger;
-
         // Check if component renders /u/username and we have pubkey resolved from username
         const pubkeyForUsername = this.routeData()?.['data']?.id;
         if (pubkeyForUsername) {
@@ -161,7 +159,9 @@ export class ProfileComponent {
             }
           } else {
             if (!username) {
-              username = await this.username.getUsername(id);
+              // TODO: Implement!
+              username = '';
+              // username = await this.username.getUsername(id);
 
               if (username) {
                 this.url.updatePathSilently(['/u', username, 'notes']);
