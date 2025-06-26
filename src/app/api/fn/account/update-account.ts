@@ -31,4 +31,4 @@ export function updateAccount(http: HttpClient, rootUrl: string, params: UpdateA
   );
 }
 
-updateAccount.PATH = '/account';
+updateAccount.PATH = 'account';

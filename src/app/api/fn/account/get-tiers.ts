@@ -32,4 +32,4 @@ export function getTiers(http: HttpClient, rootUrl: string, params?: GetTiers$Pa
   );
 }
 
-getTiers.PATH = '/account/tiers';
+getTiers.PATH = 'account/tiers';

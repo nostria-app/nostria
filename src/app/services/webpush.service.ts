@@ -106,7 +106,7 @@ export class WebPushService {
   async savePreferencesToServer(): Promise<void> {
     try {
       const prefs = this.devicePreferences();
-      const url = `${this.server}/api/subscription/settings/${this.accountState.pubkey()}`;
+      const url = `${this.server}api/subscription/settings/${this.accountState.pubkey()}`;
 
       debugger;
 
@@ -144,7 +144,7 @@ export class WebPushService {
   }  // Load preferences from server (with localStorage fallback)
   async loadPreferencesFromServer(): Promise<void> {
     try {
-      const url = `${this.server}/api/subscription/settings/${this.accountState.pubkey()}`;
+      const url = `${this.server}api/subscription/settings/${this.accountState.pubkey()}`;
 
       const result = await this.webRequest.fetchJson(url, { method: 'GET' }, { kind: kinds.HTTPAuth });
 
@@ -256,7 +256,7 @@ export class WebPushService {
     try {
       try {
         // const url = `${this.server}/api/subscription/devices/${this.accountState.pubkey()}?deviceId=${deviceId || ''}`;
-        const url = `${this.server}/api/subscription/devices/${this.accountState.pubkey()}`;
+        const url = `${this.server}api/subscription/devices/${this.accountState.pubkey()}`;
 
         debugger;
         console.log('Fetching devices from:', url);
@@ -279,7 +279,7 @@ export class WebPushService {
   /** Sends a notification to all the registered devices for this user. */
   async self(title: string, body: string, data?: any) {
     try {
-      const url = `${this.server}/api/subscription/send/${this.accountState.pubkey()}`;
+      const url = `${this.server}api/subscription/send/${this.accountState.pubkey()}`;
 
       const payload: any = {
         title: title,
@@ -296,7 +296,7 @@ export class WebPushService {
   }
 
   async subscribe() {
-    const result = await fetch(`${this.server}/api/key`);
+    const result = await fetch(`${this.server}api/key`);
 
     if (!result.ok) {
       this.logger.error('Failed to fetch server key:', result.statusText);
@@ -314,7 +314,7 @@ export class WebPushService {
     try {
       const pushSubscription = await this.push.requestSubscription({ serverPublicKey });
       const subscription = JSON.stringify(pushSubscription); try {
-        const url = `${this.server}/api/subscription/webpush/${this.accountState.pubkey()}`;
+        const url = `${this.server}api/subscription/webpush/${this.accountState.pubkey()}`;
 
         
         // Parse subscription to add userAgent
@@ -365,7 +365,7 @@ export class WebPushService {
     }
 
     try {
-      const url = `${this.server}/api/subscription/webpush/${this.accountState.pubkey()}/${deviceId}`;
+      const url = `${this.server}api/subscription/webpush/${this.accountState.pubkey()}/${deviceId}`;
     
        const result = await this.webRequest.fetchJson(url, { method: 'DELETE' }, { kind: kinds.HTTPAuth });
         
