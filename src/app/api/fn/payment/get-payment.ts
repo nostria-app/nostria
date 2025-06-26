@@ -35,4 +35,4 @@ export function getPayment(http: HttpClient, rootUrl: string, params: GetPayment
   );
 }
 
-getPayment.PATH = 'payment/{pubkey}/{paymentId}';
+getPayment.PATH = '/payment/{pubkey}/{paymentId}';

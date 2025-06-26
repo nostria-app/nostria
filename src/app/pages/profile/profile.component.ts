@@ -35,6 +35,7 @@ import { NostrRecord } from '../../interfaces';
 import { DataService } from '../../services/data.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { UrlUpdateService } from '../../services/url-update.service';
+import { UsernameService } from '../../services/username';
 
 @Component({
   selector: 'app-profile',
@@ -82,6 +83,7 @@ export class ProfileComponent {
   accountState = inject(AccountStateService);
   readonly utilities = inject(UtilitiesService);
   private readonly url = inject(UrlUpdateService);
+  private readonly username = inject(UsernameService);
 
   pubkey = signal<string>('');
   userMetadata = signal<NostrRecord | undefined>(undefined);
@@ -119,6 +121,8 @@ export class ProfileComponent {
 
         let id, username;
 
+        debugger;
+
         // Check if component renders /u/username and we have pubkey resolved from username
         const pubkeyForUsername = this.routeData()?.['data']?.id;
         if (pubkeyForUsername) {
@@ -137,18 +141,37 @@ export class ProfileComponent {
           this.error.set(null);
 
           if (id.startsWith('npub')) {
+            id = this.utilities.getPubkeyFromNpub(id);
+
             // First update URL to have npub in URL.
             if (username) {
               this.url.updatePathSilently(['/u', username, 'notes']);
             } else {
-              this.url.updatePathSilently(['/p', id, 'notes']);
-            }
 
-            id = this.utilities.getPubkeyFromNpub(id);
+              username = await this.username.getUsername(id);
+
+              if (username) {
+                this.url.updatePathSilently(['/u', username, 'notes']);
+              }
+              else {
+                // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.
+                const encoded = nip19.npubEncode(id);
+                this.url.updatePathSilently(['/p', id, 'notes']);
+              }
+            }
           } else {
-            // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.
-            const encoded = nip19.npubEncode(id);
-            this.url.updatePathSilently(['/p', encoded, 'notes']);
+            if (!username) {
+              username = await this.username.getUsername(id);
+
+              if (username) {
+                this.url.updatePathSilently(['/u', username, 'notes']);
+              }
+              else {
+                // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.
+                const encoded = nip19.npubEncode(id);
+                this.url.updatePathSilently(['/p', encoded, 'notes']);
+              }
+            }
           }
 
           this.profileState.setCurrentProfilePubkey(id);
@@ -566,7 +589,7 @@ export class ProfileComponent {
     // Use configured app URL or fallback
     const baseUrl = isPlatformBrowser(this.platformId)
       ? this.document.location?.origin
-      : 'https://nostria.app';
+      : 'https://nostria.app/';
     return `${baseUrl}${url}`;
   }
 }

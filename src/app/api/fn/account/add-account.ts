@@ -31,4 +31,4 @@ export function addAccount(http: HttpClient, rootUrl: string, params: AddAccount
   );
 }
 
-addAccount.PATH = 'account';
+addAccount.PATH = '/account';
