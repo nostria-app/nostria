@@ -15,6 +15,8 @@ import { Account } from '../models/account';
 import { addAccount } from '../fn/account/add-account';
 import { AddAccount$Params } from '../fn/account/add-account';
 import { ApiResponse } from '../models/api-response';
+import { checkUsername } from '../fn/account/check-username';
+import { CheckUsername$Params } from '../fn/account/check-username';
 import { getAccount } from '../fn/account/get-account';
 import { GetAccount$Params } from '../fn/account/get-account';
 import { getPublicAccount } from '../fn/account/get-public-account';
@@ -168,6 +170,39 @@ export class AccountService extends BaseService {
   addAccount(params: AddAccount$Params, context?: HttpContext): Observable<Account> {
     return this.addAccount$Response(params, context).pipe(
       map((r: StrictHttpResponse<Account>): Account => r.body)
+    );
+  }
+
+  /** Path part for operation `checkUsername()` */
+  static readonly CheckUsernamePath = '/account/check/{username}';
+
+  /**
+   * Check username can be used.
+   *
+   * Checks the given username is correct and is not taken
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `checkUsername()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  checkUsername$Response(params: CheckUsername$Params, context?: HttpContext): Observable<StrictHttpResponse<ApiResponse>> {
+    return checkUsername(this.http, this.rootUrl, params, context);
+  }
+
+  /**
+   * Check username can be used.
+   *
+   * Checks the given username is correct and is not taken
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `checkUsername$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  checkUsername(params: CheckUsername$Params, context?: HttpContext): Observable<ApiResponse> {
+    return this.checkUsername$Response(params, context).pipe(
+      map((r: StrictHttpResponse<ApiResponse>): ApiResponse => r.body)
     );
   }
 

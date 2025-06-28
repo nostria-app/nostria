@@ -499,7 +499,6 @@ export class ProfileComponent {
 
   isFollowing = computed(() => {
     const followingList = this.accountState.followingList();
-    debugger;
     return followingList.includes(this.pubkey());
   });
 

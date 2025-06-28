@@ -8,20 +8,22 @@ import { filter, map } from 'rxjs/operators';
 import { StrictHttpResponse } from '../../strict-http-response';
 import { RequestBuilder } from '../../request-builder';
 
-import { ApiResponse } from '../../models/api-response';
 
-export interface GetPublicAccount$Params {
+export interface SettingsPubkeyDelete$Params {
 
 /**
- * User's public key in pubkey format or a username
+ * User's public key (hexadecimal format)
  */
-  pubkeyOrUsername: string;
+  pubkey: string;
 }
 
-export function getPublicAccount(http: HttpClient, rootUrl: string, params: GetPublicAccount$Params, context?: HttpContext): Observable<StrictHttpResponse<ApiResponse>> {
-  const rb = new RequestBuilder(rootUrl, getPublicAccount.PATH, 'get');
+export function settingsPubkeyDelete(http: HttpClient, rootUrl: string, params: SettingsPubkeyDelete$Params, context?: HttpContext): Observable<StrictHttpResponse<{
+'success'?: boolean;
+'message'?: string;
+}>> {
+  const rb = new RequestBuilder(rootUrl, settingsPubkeyDelete.PATH, 'delete');
   if (params) {
-    rb.path('pubkeyOrUsername', params.pubkeyOrUsername, {});
+    rb.path('pubkey', params.pubkey, {});
   }
 
   return http.request(
@@ -29,9 +31,12 @@ export function getPublicAccount(http: HttpClient, rootUrl: string, params: GetP
   ).pipe(
     filter((r: any): r is HttpResponse<any> => r instanceof HttpResponse),
     map((r: HttpResponse<any>) => {
-      return r as StrictHttpResponse<ApiResponse>;
+      return r as StrictHttpResponse<{
+      'success'?: boolean;
+      'message'?: string;
+      }>;
     })
   );
 }
 
-getPublicAccount.PATH = '/account/{pubkeyOrUsername}';
+settingsPubkeyDelete.PATH = '/settings/{pubkey}';

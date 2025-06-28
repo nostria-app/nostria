@@ -15,11 +15,6 @@ export interface PublicAccount {
   pubkey?: string;
 
   /**
-   * User's username
-   */
-  username?: string;
-
-  /**
    * Account creation date
    */
   signupDate?: number;
@@ -28,4 +23,9 @@ export interface PublicAccount {
    * User's subscription tier
    */
   tier?: string;
+
+  /**
+   * User's username
+   */
+  username?: string | null;
 }
