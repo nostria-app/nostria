@@ -8,20 +8,17 @@ import { filter, map } from 'rxjs/operators';
 import { StrictHttpResponse } from '../../strict-http-response';
 import { RequestBuilder } from '../../request-builder';
 
-import { ApiResponse } from '../../models/api-response';
+import { BackupJobResponse } from '../../models/backup-job-response';
+import { CreateBackupJobRequest } from '../../models/create-backup-job-request';
 
-export interface GetPublicAccount$Params {
-
-/**
- * User's public key in pubkey format or a username
- */
-  pubkeyOrUsername: string;
+export interface BackupPost$Params {
+      body: CreateBackupJobRequest
 }
 
-export function getPublicAccount(http: HttpClient, rootUrl: string, params: GetPublicAccount$Params, context?: HttpContext): Observable<StrictHttpResponse<ApiResponse>> {
-  const rb = new RequestBuilder(rootUrl, getPublicAccount.PATH, 'get');
+export function backupPost(http: HttpClient, rootUrl: string, params: BackupPost$Params, context?: HttpContext): Observable<StrictHttpResponse<BackupJobResponse>> {
+  const rb = new RequestBuilder(rootUrl, backupPost.PATH, 'post');
   if (params) {
-    rb.path('pubkeyOrUsername', params.pubkeyOrUsername, {});
+    rb.body(params.body, 'application/json');
   }
 
   return http.request(
@@ -29,9 +26,9 @@ export function getPublicAccount(http: HttpClient, rootUrl: string, params: GetP
   ).pipe(
     filter((r: any): r is HttpResponse<any> => r instanceof HttpResponse),
     map((r: HttpResponse<any>) => {
-      return r as StrictHttpResponse<ApiResponse>;
+      return r as StrictHttpResponse<BackupJobResponse>;
     })
   );
 }
 
-getPublicAccount.PATH = '/account/{pubkeyOrUsername}';
+backupPost.PATH = '/backup';

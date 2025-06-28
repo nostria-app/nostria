@@ -1,13 +1,15 @@
 import { inject, Injectable } from '@angular/core';
 import { AccountStateService } from './account-state.service';
 import { AccountService } from '../api/services';
+import { firstValueFrom, map } from 'rxjs';
+import { ApiResponse } from '../api/models';
 
 @Injectable({
   providedIn: 'root'
 })
 export class UsernameService {
-  accountState = inject(AccountStateService);
-  accountService = inject(AccountService);
+  private accountState = inject(AccountStateService);
+  private accountService = inject(AccountService);
 
   constructor() {
 
@@ -19,8 +21,6 @@ export class UsernameService {
     if (sub && sub.username == username && sub.pubkey) {
       return sub.pubkey;
     }
-
-    debugger;
 
     let publicProfile = await this.accountService.getPublicAccount({ pubkeyOrUsername: username }).toPromise();
 
@@ -40,12 +40,23 @@ export class UsernameService {
 
     let username = await this.accountService.getPublicAccount({ pubkeyOrUsername: pubkey }).toPromise();
 
-    debugger;
-
     if (username && username.success && username.result) {
       return username.result.username || '';
     }
 
     return '';
   }
+
+
+  /**
+   * Checks if a username is available:
+   * - not reserved
+   * - is not taken by other account
+   * @param username The username to check
+   * @returns A boolean indicating whether the username is available
+   */
+  isUsernameAvailable(username: string): Promise<ApiResponse> {
+    return firstValueFrom(this.accountService.checkUsername({ username }));
+  }
+
 }
