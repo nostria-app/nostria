@@ -8,26 +8,23 @@ import { filter, map } from 'rxjs/operators';
 import { StrictHttpResponse } from '../../strict-http-response';
 import { RequestBuilder } from '../../request-builder';
 
-import { Payment } from '../../models/payment';
+import { SuccessResponse } from '../../models/success-response';
+import { UserSettingsUpdate } from '../../models/user-settings-update';
 
-export interface GetPayment$Params {
+export interface SettingsPubkeyPatch$Params {
 
 /**
- * pubkey
+ * User's public key (hexadecimal format)
  */
   pubkey: string;
-
-/**
- * Payment id
- */
-  paymentId: string;
+      body: UserSettingsUpdate
 }
 
-export function getPayment(http: HttpClient, rootUrl: string, params: GetPayment$Params, context?: HttpContext): Observable<StrictHttpResponse<Payment>> {
-  const rb = new RequestBuilder(rootUrl, getPayment.PATH, 'get');
+export function settingsPubkeyPatch(http: HttpClient, rootUrl: string, params: SettingsPubkeyPatch$Params, context?: HttpContext): Observable<StrictHttpResponse<SuccessResponse>> {
+  const rb = new RequestBuilder(rootUrl, settingsPubkeyPatch.PATH, 'patch');
   if (params) {
     rb.path('pubkey', params.pubkey, {});
-    rb.path('paymentId', params.paymentId, {});
+    rb.body(params.body, 'application/json');
   }
 
   return http.request(
@@ -35,9 +32,9 @@ export function getPayment(http: HttpClient, rootUrl: string, params: GetPayment
   ).pipe(
     filter((r: any): r is HttpResponse<any> => r instanceof HttpResponse),
     map((r: HttpResponse<any>) => {
-      return r as StrictHttpResponse<Payment>;
+      return r as StrictHttpResponse<SuccessResponse>;
     })
   );
 }
 
-getPayment.PATH = '/payment/{pubkey}/{paymentId}';
+settingsPubkeyPatch.PATH = '/settings/{pubkey}';

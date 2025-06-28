@@ -15,7 +15,7 @@ export interface Account {
   /**
    * Last login date
    */
-  lastLoginDate?: string | null;
+  lastLoginDate?: number | null;
 
   /**
    * User's public key
@@ -25,8 +25,7 @@ export interface Account {
   /**
    * Account creation date
    */
-  signupDate?: string;
-  
+  signupDate?: number;
   tier?: Tier;
 
   /**

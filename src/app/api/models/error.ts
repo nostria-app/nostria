@@ -8,4 +8,9 @@ export interface Error {
    * Error message
    */
   error?: string;
+
+  /**
+   * Additional error details
+   */
+  message?: string | null;
 }

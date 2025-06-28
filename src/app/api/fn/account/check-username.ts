@@ -10,18 +10,18 @@ import { RequestBuilder } from '../../request-builder';
 
 import { ApiResponse } from '../../models/api-response';
 
-export interface GetPublicAccount$Params {
+export interface CheckUsername$Params {
 
 /**
- * User's public key in pubkey format or a username
+ * Username
  */
-  pubkeyOrUsername: string;
+  username: string;
 }
 
-export function getPublicAccount(http: HttpClient, rootUrl: string, params: GetPublicAccount$Params, context?: HttpContext): Observable<StrictHttpResponse<ApiResponse>> {
-  const rb = new RequestBuilder(rootUrl, getPublicAccount.PATH, 'get');
+export function checkUsername(http: HttpClient, rootUrl: string, params: CheckUsername$Params, context?: HttpContext): Observable<StrictHttpResponse<ApiResponse>> {
+  const rb = new RequestBuilder(rootUrl, checkUsername.PATH, 'get');
   if (params) {
-    rb.path('pubkeyOrUsername', params.pubkeyOrUsername, {});
+    rb.path('username', params.username, {});
   }
 
   return http.request(
@@ -34,4 +34,4 @@ export function getPublicAccount(http: HttpClient, rootUrl: string, params: GetP
   );
 }
 
-getPublicAccount.PATH = '/account/{pubkeyOrUsername}';
+checkUsername.PATH = '/account/check/{username}';

@@ -14,5 +14,5 @@ export interface ApiResponse {
   /**
    * Whether the request was successful
    */
-  success?: boolean;
+  success: boolean;
 }

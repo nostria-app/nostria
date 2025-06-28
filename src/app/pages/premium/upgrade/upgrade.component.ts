@@ -1,6 +1,6 @@
-import { Component, effect, inject, signal, OnDestroy } from '@angular/core';
+import { Component, effect, inject, signal, OnDestroy, WritableSignal } from '@angular/core';
 
-import { FormsModule, ReactiveFormsModule, FormGroup, FormBuilder, Validators } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormBuilder, Validators, AsyncValidatorFn, AbstractControl, ValidationErrors } from '@angular/forms';
 import { MatStepperModule } from '@angular/material/stepper';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -13,8 +13,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { NameService } from '../../../services/name.service';
-import { debounceTime, firstValueFrom, Subject, takeUntil } from 'rxjs';
+import { debounceTime, distinctUntilChanged, finalize, firstValueFrom, from, map, Observable, of, Subject, switchMap, takeUntil } from 'rxjs';
 import { AccountService, PaymentService } from '../../../api/services';
 import { TierDetails } from '../../../api/models/tier-details';
 import { AccountStateService } from '../../../services/account-state.service';
@@ -22,6 +21,7 @@ import { CreatePayment$Params } from '../../../api/fn/payment/create-payment';
 import { ApplicationService } from '../../../services/application.service';
 import { environment } from '../../../../environments/environment';
 import { Payment } from '../../../api/models';
+import { UsernameService } from '../../../services/username';
 
 interface PaymentInvoice {
   id: string;
@@ -72,7 +72,7 @@ export class UpgradeComponent implements OnDestroy {
   private formBuilder = inject(FormBuilder);
   private snackBar = inject(MatSnackBar);
   private router = inject(Router);
-  private name = inject(NameService);
+  private usernameService = inject(UsernameService);
   private accountService = inject(AccountService)
   private paymentService = inject(PaymentService)
   private accountState = inject(AccountStateService);
@@ -88,7 +88,6 @@ export class UpgradeComponent implements OnDestroy {
   });
 
   currentStep = signal<number>(0);
-  isUsernameAvailable = signal<boolean | null>(null);
   isCheckingUsername = signal<boolean>(false);
   tiers = signal<TierDisplay[]>([]);
   selectedTier = signal<TierDisplay | null>(null);
@@ -133,11 +132,21 @@ export class UpgradeComponent implements OnDestroy {
 
     this.usernameFormGroup.get('username')?.valueChanges
       .pipe(
+        takeUntil(this.destroy$),
         debounceTime(300), // Wait 300ms after last keystroke
-        takeUntil(this.destroy$)
-      )
-      .subscribe(value => {
-        this.checkUsernameAvailability();
+        distinctUntilChanged(),
+        switchMap(value => {
+          const trimmedValue = (value || '').trim();
+          if (!trimmedValue) {
+            return of({ success: true, message: '' });
+          }
+          return from(this.usernameService.isUsernameAvailable(trimmedValue));
+        }),
+      ).subscribe(({ success, message }) => {
+        if (!success) {
+          this.usernameFormGroup.get('username')!.setErrors({ username: message });
+          this.usernameFormGroup.get('username')!.markAllAsTouched();
+        }
       });
   }
 
@@ -147,26 +156,8 @@ export class UpgradeComponent implements OnDestroy {
     this.resetPayment();
   }
 
-  async checkUsernameAvailability() {
-    const username = this.usernameFormGroup.get('username')?.value;
-
-    if (!username || username.length < 3) {
-      this.isUsernameAvailable.set(null);
-      return;
-    }
-
-    this.isCheckingUsername.set(true);
-
-    try {
-      const isAvailable = await firstValueFrom(this.name.isUsernameAvailable(username));
-      this.isUsernameAvailable.set(isAvailable);
-    } finally {
-      this.isCheckingUsername.set(false);
-    }
-  }
-
   nextStep() {
-    if (this.currentStep() === 0 && this.usernameFormGroup.valid && this.isUsernameAvailable()) {
+    if (this.currentStep() === 0 && this.usernameFormGroup.valid) {
       this.currentStep.set(1);
     } else if (this.currentStep() === 1 && this.paymentFormGroup.valid) {
       this.generatePaymentInvoice();

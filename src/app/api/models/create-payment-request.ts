@@ -15,7 +15,7 @@ export interface CreatePaymentRequest {
   price: number;
 
   /**
-   * User's public key in npub format
+   * User's public key in hex format (64 lowercase hex chars, not npub)
    */
   pubkey: string;
 

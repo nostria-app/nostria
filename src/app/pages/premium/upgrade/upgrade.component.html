@@ -33,9 +33,9 @@
         <mat-icon matPrefix>alternate_email</mat-icon>
         @if (isCheckingUsername()) {
         <mat-spinner matSuffix diameter="20"></mat-spinner>
-        } @else if (isUsernameAvailable()) {
+        } @else if (usernameFormGroup.valid) {
         <mat-icon matSuffix color="primary" matTooltip="Username is available">check_circle</mat-icon>
-        } @else if (!isUsernameAvailable()) {
+        } @else {
         <mat-icon matSuffix color="warn" matTooltip="Username already taken">error</mat-icon>
         }
 
@@ -54,6 +54,11 @@
           Username must contain only letters, numbers, and underscores
         </mat-error>
         }
+        @if (usernameFormGroup.get('username')?.errors?.['username']) {
+        <mat-error>
+          {{ usernameFormGroup.get('username')?.errors?.['username'] }}
+        </mat-error>
+        }
       </mat-form-field>
 
       <div class="username-info">
@@ -61,29 +66,28 @@
         <p>Your username must be at least 3 characters and can only contain letters, numbers, and underscores.</p>
       </div>
 
-      @if (isUsernameAvailable()) {
-        @if (usernameFormGroup.get('username')?.value!.length > 0) {
-        <div class="username-preview">
-          <span class="username-part">{{ usernameFormGroup.get('username')?.value }}</span>
-          <span class="domain-part">&#64;nostria.app</span>
-        </div>
+      @if (usernameFormGroup.valid) {
+      @if (usernameFormGroup.get('username')?.value!.length > 0) {
+      <div class="username-preview">
+        <span class="username-part">{{ usernameFormGroup.get('username')?.value }}</span>
+        <span class="domain-part">&#64;nostria.app</span>
+      </div>
 
-        <div class="username-preview">
-          <span class="domain-part">https://nostria.app/u/</span>
-          <span class="username-part">{{ usernameFormGroup.get('username')?.value }}</span>
-        </div>
-        }
+      <div class="username-preview">
+        <span class="domain-part">https://nostria.app/u/</span>
+        <span class="username-part">{{ usernameFormGroup.get('username')?.value }}</span>
+      </div>
+      }
       } @else {
-           <div class="username-preview">
-          <span class="username-part">{{ usernameFormGroup.get('username')?.value }}</span>
-          <span class="domain-part">&nbsp;not available</span>
-        </div>
+      <div class="username-preview">
+        <span class="username-part">{{ usernameFormGroup.get('username')?.value }}</span>
+        <span class="domain-part">&nbsp;not available</span>
+      </div>
       }
     </form>
 
     <div class="step-actions">
-      <button mat-flat-button color="primary" [disabled]="!usernameFormGroup.valid || isUsernameAvailable() !== true"
-        (click)="nextStep()">
+      <button mat-flat-button color="primary" [disabled]="!usernameFormGroup.valid" (click)="nextStep()">
         Next
       </button>
 

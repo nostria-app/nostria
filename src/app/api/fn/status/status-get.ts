@@ -8,20 +8,14 @@ import { filter, map } from 'rxjs/operators';
 import { StrictHttpResponse } from '../../strict-http-response';
 import { RequestBuilder } from '../../request-builder';
 
-import { ApiResponse } from '../../models/api-response';
+import { ServiceStatus } from '../../models/service-status';
 
-export interface GetPublicAccount$Params {
-
-/**
- * User's public key in pubkey format or a username
- */
-  pubkeyOrUsername: string;
+export interface StatusGet$Params {
 }
 
-export function getPublicAccount(http: HttpClient, rootUrl: string, params: GetPublicAccount$Params, context?: HttpContext): Observable<StrictHttpResponse<ApiResponse>> {
-  const rb = new RequestBuilder(rootUrl, getPublicAccount.PATH, 'get');
+export function statusGet(http: HttpClient, rootUrl: string, params?: StatusGet$Params, context?: HttpContext): Observable<StrictHttpResponse<ServiceStatus>> {
+  const rb = new RequestBuilder(rootUrl, statusGet.PATH, 'get');
   if (params) {
-    rb.path('pubkeyOrUsername', params.pubkeyOrUsername, {});
   }
 
   return http.request(
@@ -29,9 +23,9 @@ export function getPublicAccount(http: HttpClient, rootUrl: string, params: GetP
   ).pipe(
     filter((r: any): r is HttpResponse<any> => r instanceof HttpResponse),
     map((r: HttpResponse<any>) => {
-      return r as StrictHttpResponse<ApiResponse>;
+      return r as StrictHttpResponse<ServiceStatus>;
     })
   );
 }
 
-getPublicAccount.PATH = '/account/{pubkeyOrUsername}';
+statusGet.PATH = '/status';
