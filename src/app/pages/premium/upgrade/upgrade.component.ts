@@ -140,9 +140,11 @@ export class UpgradeComponent implements OnDestroy {
           if (!trimmedValue) {
             return of({ success: true, message: '' });
           }
+          this.isCheckingUsername.set(true);
           return from(this.usernameService.isUsernameAvailable(trimmedValue));
         }),
       ).subscribe(({ success, message }) => {
+        this.isCheckingUsername.set(false);
         if (!success) {
           this.usernameFormGroup.get('username')!.setErrors({ username: message });
           this.usernameFormGroup.get('username')!.markAllAsTouched();
