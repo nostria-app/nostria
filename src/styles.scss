@@ -89,6 +89,35 @@ body {
   .mat-drawer-content {
     margin-left: 0px !important;
   }
+
+  /* Hide scrollbars during print */
+  ::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  * {
+    scrollbar-width: none !important;
+  }
+
+  /* Ensure content flows properly for printing */
+  html, body {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .sidenav-container {
+    height: auto !important;
+  }
+
+  mat-sidenav-content {
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  .content-wrapper {
+    overflow: visible !important;
+    height: auto !important;
+  }
 }
 
 mat-card {
