@@ -90,47 +90,38 @@ body {
     margin-left: 0px !important;
   }
 
+  /* Critical: Remove all height and overflow constraints for multi-page printing */
+  * {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    scrollbar-width: none !important;
+  }
+
   /* Hide scrollbars during print */
   ::-webkit-scrollbar {
     display: none !important;
   }
 
-  * {
-    scrollbar-width: none !important;
-  }
-
-  /* Ensure content flows properly for printing */
+  /* Root elements - ensure no viewport constraints */
   html, body {
     height: auto !important;
     overflow: visible !important;
     max-height: none !important;
   }
 
-  /* App-specific layout containers */
-  .app-container {
-    height: auto !important;
-    max-height: none !important;
-    overflow: visible !important;
-  }
-
-  .sidenav-container {
-    height: auto !important;
-    max-height: none !important;
-    overflow: visible !important;
-  }
-
-  mat-sidenav-content {
-    overflow: visible !important;
-    height: auto !important;
-    max-height: none !important;
-    display: block !important;
-  }
-
+  /* App layout containers - remove all flexbox and height constraints */
+  .app-container,
+  .sidenav-container,
+  mat-sidenav-container,
+  mat-sidenav-content,
   .content-wrapper {
-    overflow: visible !important;
     height: auto !important;
     max-height: none !important;
+    overflow: visible !important;
     flex: none !important;
+    display: block !important;
+    position: static !important;
   }
 
   /* Article-specific print styles */
@@ -169,16 +160,6 @@ body {
 
   .article-footer {
     display: none !important;
-  }
-
-  /* General content containers */
-  .content,
-  .content-medium,
-  .content-small {
-    max-width: none !important;
-    width: 100% !important;
-    padding: 0 !important;
-    margin: 0 !important;
   }
 
   /* Ensure proper page breaks for long content */
