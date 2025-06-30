@@ -103,19 +103,104 @@ body {
   html, body {
     height: auto !important;
     overflow: visible !important;
+    max-height: none !important;
+  }
+
+  /* App-specific layout containers */
+  .app-container {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
   }
 
   .sidenav-container {
     height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
   }
 
   mat-sidenav-content {
     overflow: visible !important;
     height: auto !important;
+    max-height: none !important;
+    display: block !important;
   }
 
   .content-wrapper {
     overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    flex: none !important;
+  }
+
+  /* Article-specific print styles */
+  .article-container {
+    max-width: none !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .article-header {
+    margin-bottom: 16px !important;
+    page-break-inside: avoid;
+  }
+
+  .article-hero-image {
+    page-break-inside: avoid;
+    max-height: 50vh !important;
+  }
+
+  .article-content {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    page-break-inside: auto;
+  }
+
+  .markdown-content {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .article-footer {
+    display: none !important;
+  }
+
+  /* General content containers */
+  .content,
+  .content-medium,
+  .content-small {
+    max-width: none !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Ensure proper page breaks for long content */
+  .markdown-content h1,
+  .markdown-content h2,
+  .markdown-content h3 {
+    page-break-after: avoid;
+    page-break-inside: avoid;
+  }
+
+  .markdown-content p,
+  .markdown-content ul,
+  .markdown-content ol,
+  .markdown-content blockquote {
+    page-break-inside: avoid;
+    orphans: 2;
+    widows: 2;
+  }
+
+  .markdown-content img {
+    page-break-inside: avoid;
+    max-width: 100% !important;
     height: auto !important;
   }
 }
