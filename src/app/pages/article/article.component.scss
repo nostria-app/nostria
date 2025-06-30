@@ -456,3 +456,72 @@
     }
   }
 }
+
+// Print-specific styles for articles
+@media print {
+  .article-container {
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .article-header {
+    margin-bottom: 12px !important;
+  }
+
+  .article-hero-image {
+    margin-bottom: 16px !important;
+    page-break-inside: avoid;
+  }
+
+  .article-title {
+    font-size: 24pt !important;
+    margin-bottom: 12pt !important;
+    page-break-after: avoid;
+  }
+
+  .article-summary {
+    font-size: 14pt !important;
+    margin-bottom: 16pt !important;
+    padding: 12pt !important;
+  }
+
+  .article-meta {
+    margin-bottom: 12pt !important;
+    font-size: 10pt !important;
+  }
+
+  .article-author {
+    margin-bottom: 16pt !important;
+    padding: 12pt !important;
+  }
+
+  .article-content {
+    margin-bottom: 0 !important;
+  }
+
+  .markdown-content {
+    font-size: 12pt !important;
+    line-height: 1.5 !important;
+    
+    h1, h2, h3, h4, h5, h6 {
+      font-size: 16pt !important;
+      margin-top: 12pt !important;
+      margin-bottom: 6pt !important;
+      page-break-after: avoid;
+    }
+    
+    p {
+      margin-bottom: 8pt !important;
+    }
+    
+    img {
+      max-width: 100% !important;
+      page-break-inside: avoid;
+    }
+  }
+
+  .article-footer {
+    display: none !important;
+  }
+}
