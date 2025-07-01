@@ -107,18 +107,19 @@ export class ProfileComponent {
       return;
     }
 
-    // When accounts metadata changes, update the current metadata.
-    // effect(() => {
-    //   debugger;
-    //   let metadata = this.accountState.getAccountProfile(this.accountState.pubkey());
-    //   this.userMetadata.set(metadata);
-    // });
+    // Whenever profile is edited by user, update the user metadata if it matches the current pubkey
+    effect(() => {
+      const profile = this.accountState.profile();
+
+      if (profile?.event.pubkey === this.pubkey() && this.userMetadata()?.event.id != profile?.event.id) {
+        this.userMetadata.set(profile);
+      }
+    });
 
     // React to changes in route parameters and app initialization
     effect(async () => {
       // Only proceed if app is initialized and route params are available
       if (this.app.initialized() && this.routeParams() && this.routeData()) {
-
         let id, username;
 
         // Check if component renders /u/username and we have pubkey resolved from username
