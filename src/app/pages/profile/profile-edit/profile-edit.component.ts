@@ -178,6 +178,9 @@ export class ProfileEditComponent {
       // Update the local account profile
       this.accountState.account()!.name = profile.display_name || profile.name || '';
 
+      // Update the profile signal with the new data
+      this.accountState.profile.set(this.accountState.getAccountProfile(record.event.pubkey));
+
       this.loading.set(false);
 
       this.router.navigate(['/p', this.accountState.pubkey()], { replaceUrl: true });
