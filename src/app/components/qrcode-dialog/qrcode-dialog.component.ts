@@ -4,7 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleChange, MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
-import * as QRCode from 'qrcode';
+import encodeQR from 'qr';
 
 @Component({
   selector: 'app-qrcode-dialog',
@@ -31,11 +31,54 @@ export class QRCodeDialogComponent {
     this.qrValue = data;
 
     const canvas = document.querySelector('canvas');
-    QRCode.toCanvas(canvas, data, { width: 256 }, (error: any) => {
-      if (error) {
-        console.error('Error generating QR code: ', error);
+    if (!canvas) {
+      console.error('Canvas element not found');
+      return;
+    }
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      console.error('Could not get canvas context');
+      return;
+    }
+
+    try {
+      // Generate QR code as 2D boolean array
+      const qrMatrix = encodeQR(data, 'raw', {
+        ecc: 'medium',
+        border: 2
+      });
+
+      const qrSize = qrMatrix.length;
+      const canvasSize = 256;
+      canvas.width = canvasSize;
+      canvas.height = canvasSize;
+
+      // Calculate cell size
+      const cellSize = Math.floor(canvasSize / qrSize);
+      const offset = Math.floor((canvasSize - qrSize * cellSize) / 2);
+
+      // Clear canvas with white background
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw QR code
+      ctx.fillStyle = '#000000';
+      for (let y = 0; y < qrSize; y++) {
+        for (let x = 0; x < qrSize; x++) {
+          if (qrMatrix[y][x]) {
+            ctx.fillRect(
+              offset + x * cellSize,
+              offset + y * cellSize,
+              cellSize,
+              cellSize
+            );
+          }
+        }
       }
-    });
+    } catch (error) {
+      console.error('Error generating QR code: ', error);
+    }
   }
 
   onToggleGroupChange(event: MatButtonToggleChange) {
