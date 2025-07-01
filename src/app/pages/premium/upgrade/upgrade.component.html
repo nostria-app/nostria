@@ -4,9 +4,9 @@
   <div class="stepper-container">
     <div class="step-indicator-container">
       @for (i of [0, 1, 2, 3]; track i) {
-      <div class="step-indicator" [class.active]="currentStep() >= i" [class.completed]="currentStep() > i">
+      <div class="step-indicator" [class.active]="currentStep() >= i" [class.completed]="stepComplete()[i]">
         <div class="step-circle">
-          @if (currentStep() > i) {
+          @if (stepComplete()[i]) {
           <mat-icon>check</mat-icon>
           } @else {
           {{ i + 1 }}
