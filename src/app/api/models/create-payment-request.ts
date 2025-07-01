@@ -10,11 +10,6 @@ export interface CreatePaymentRequest {
   billingCycle: 'monthly' | 'quarterly' | 'yearly';
 
   /**
-   * Price in USD cents
-   */
-  price: number;
-
-  /**
    * User's public key in hex format (64 lowercase hex chars, not npub)
    */
   pubkey: string;

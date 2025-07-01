@@ -197,7 +197,6 @@ export class UpgradeComponent implements OnDestroy {
         body: {
           billingCycle: selectedPaymentOption,
           tierName: selectedTier.details.tier,
-          price: selectedPrice,
           pubkey,
         }
       }
