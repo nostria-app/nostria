@@ -336,7 +336,11 @@ export class ProfileComponent {
 
           // Now you can use 'this' here
           // For example: this.handleContacts(evt);
+        } else if (evt.kind === kinds.LongFormArticle) {
+          this.profileState.articles.update(articles => [...articles, this.data.getRecord(evt)]);
         }
+
+
       },
       onclose: (reasons) => {
         console.log('Pool closed', reasons);

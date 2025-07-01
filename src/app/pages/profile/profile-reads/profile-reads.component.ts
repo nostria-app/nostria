@@ -10,6 +10,7 @@ import { UserProfileComponent } from '../../../components/user-profile/user-prof
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { BookmarkService } from '../../../services/bookmark.service';
 import { AgoPipe } from '../../../pipes/ago.pipe';
+import { MatButtonModule } from '@angular/material/button';
 
 @Component({
   selector: 'app-profile-reads',
@@ -21,7 +22,8 @@ import { AgoPipe } from '../../../pipes/ago.pipe';
     UserProfileComponent,
     RouterModule,
     MatTooltipModule,
-    AgoPipe
+    AgoPipe,
+    MatButtonModule
   ],
   templateUrl: './profile-reads.component.html',
   styleUrl: './profile-reads.component.scss'
