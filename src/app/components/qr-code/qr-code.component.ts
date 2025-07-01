@@ -1,4 +1,5 @@
-import { Component, input, effect, signal, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
+import { Component, input, effect, signal, ElementRef, ViewChild, AfterViewInit, inject } from '@angular/core';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import encodeQR from 'qr';
 
 @Component({
@@ -22,8 +23,9 @@ export class QrCodeComponent implements AfterViewInit {
   errorCorrectionLevel = input<'low' | 'medium' | 'quartile' | 'high'>('medium');
   mode = input<'canvas' | 'svg'>('svg');
   border = input<number>(2);
-  
-  svgData = signal<string>('');
+  svgData = signal<SafeHtml>('');
+
+  private sanitizer = inject(DomSanitizer);
 
   ngAfterViewInit() {
     // Generate QR code when component initializes
@@ -107,6 +109,7 @@ export class QrCodeComponent implements AfterViewInit {
       scale: Math.floor(size / 25) // Approximate scale based on typical QR size
     });
 
-    this.svgData.set(svg);
+    // Sanitize the SVG data
+    this.svgData.set(this.sanitizer.bypassSecurityTrustHtml(svg));
   }
 }
