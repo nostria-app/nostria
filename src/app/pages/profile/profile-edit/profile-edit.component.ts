@@ -9,13 +9,11 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AgoPipe } from '../../../pipes/ago.pipe';
 import { NostrService } from '../../../services/nostr.service';
-import { NostrEvent } from 'nostr-tools';
 import { RelayService } from '../../../services/relay.service';
 import { Router } from '@angular/router';
 import { StorageService } from '../../../services/storage.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { DataService } from '../../../services/data.service';
-import { NostrRecord } from '../../../interfaces';
 import { AccountStateService } from '../../../services/account-state.service';
 import { MediaService } from '../../../services/media.service';
 
@@ -62,7 +60,7 @@ export class ProfileEditComponent {
       profileClone.pictureUrl = profileClone.picture || '';
       profileClone.bannerUrl = profileClone.banner || '';
       this.profile.set(profileClone);
-      
+
       // Set initial toggle states based on existing URLs
       if (profileClone.picture) {
         this.useProfileImageUrl.set(true);
@@ -95,7 +93,7 @@ export class ProfileEditComponent {
 
   async updateMetadata() {
     this.loading.set(true);
-    
+
     try {
       // We want to be a good Nostr citizen and not delete custom metadata, except for certain deprecated fields.
       let profile = this.profile();
@@ -103,13 +101,13 @@ export class ProfileEditComponent {
       // Remove deprecated fields NIP-24: https://github.com/nostr-protocol/nips/blob/master/24.md
       delete profile.displayName;
       delete profile.username;
-      
+
       // Check if file uploads are needed
-      const needsFileUpload = (!this.useProfileImageUrl() && profile.selectedProfileFile) || 
-                             (!this.useBannerUrl() && profile.selectedBannerFile);
-                             
+      const needsFileUpload = (!this.useProfileImageUrl() && profile.selectedProfileFile) ||
+        (!this.useBannerUrl() && profile.selectedBannerFile);
+
       if (needsFileUpload && !this.hasMediaServers()) {
-        this.snackBar.open('You need to configure media servers to upload images', 'Configure Now', { 
+        this.snackBar.open('You need to configure media servers to upload images', 'Configure Now', {
           duration: 8000
         }).onAction().subscribe(() => {
           this.navigateToMediaSettings();
@@ -122,11 +120,11 @@ export class ProfileEditComponent {
       if (profile.selectedProfileFile && !this.useProfileImageUrl()) {
         const mediaServers = this.media.mediaServers();
         const uploadResult = await this.media.uploadFile(profile.selectedProfileFile, true, mediaServers);
-        
+
         if (!uploadResult.item) {
           throw new Error(`Failed to upload profile image: ${uploadResult.message || 'Unknown error'}`);
         }
-        
+
         profile.picture = uploadResult.item.url;
       } else if (this.useProfileImageUrl() && profile.pictureUrl) {
         profile.picture = profile.pictureUrl;
@@ -136,11 +134,11 @@ export class ProfileEditComponent {
       if (profile.selectedBannerFile && !this.useBannerUrl()) {
         const mediaServers = this.media.mediaServers();
         const uploadResult = await this.media.uploadFile(profile.selectedBannerFile, true, mediaServers);
-        
+
         if (!uploadResult.item) {
           throw new Error(`Failed to upload banner image: ${uploadResult.message || 'Unknown error'}`);
         }
-        
+
         profile.banner = uploadResult.item.url;
       } else if (this.useBannerUrl() && profile.bannerUrl) {
         profile.banner = profile.bannerUrl;
@@ -185,8 +183,8 @@ export class ProfileEditComponent {
       this.router.navigate(['/p', this.accountState.pubkey()], { replaceUrl: true });
     } catch (error) {
       console.error('Error updating profile:', error);
-      this.snackBar.open(`Failed to update profile: ${error instanceof Error ? error.message : 'Unknown error'}`, 'Close', { 
-        duration: 5000 
+      this.snackBar.open(`Failed to update profile: ${error instanceof Error ? error.message : 'Unknown error'}`, 'Close', {
+        duration: 5000
       });
       this.loading.set(false);
     }
@@ -197,17 +195,17 @@ export class ProfileEditComponent {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files[0]) {
       const file = input.files[0];
-      
+
       // Simple file type validation
       if (!file.type.includes('image/')) {
         this.snackBar.open('Please select a valid image file', 'Close', { duration: 3000 });
         return;
       }
-      
+
       const reader = new FileReader();
       reader.onload = (e) => {
         const result = e.target?.result as string;
-        
+
         if (type === 'profile') {
           this.previewProfileImage.set(result);
           // Store the file for later upload
@@ -248,44 +246,44 @@ export class ProfileEditComponent {
     if (type === 'profile') {
       const currentUrl = this.profile()?.picture || '';
       this.useProfileImageUrl.update(current => !current);
-      
+
       if (this.useProfileImageUrl()) {
         // Switching to URL mode - preserve existing URL
-        this.profile.update(p => ({ 
-          ...p, 
+        this.profile.update(p => ({
+          ...p,
           pictureUrl: currentUrl,
-          selectedProfileFile: null 
+          selectedProfileFile: null
         }));
         if (currentUrl) {
           this.previewProfileImage.set(currentUrl);
         }
       } else {
         // Switching to file mode - clear file selection but keep URL for potential switch back
-        this.profile.update(p => ({ 
-          ...p, 
-          selectedProfileFile: null 
+        this.profile.update(p => ({
+          ...p,
+          selectedProfileFile: null
         }));
         this.previewProfileImage.set(currentUrl || null);
       }
     } else {
       const currentUrl = this.profile()?.banner || '';
       this.useBannerUrl.update(current => !current);
-      
+
       if (this.useBannerUrl()) {
         // Switching to URL mode - preserve existing URL
-        this.profile.update(p => ({ 
-          ...p, 
+        this.profile.update(p => ({
+          ...p,
           bannerUrl: currentUrl,
-          selectedBannerFile: null 
+          selectedBannerFile: null
         }));
         if (currentUrl) {
           this.previewBanner.set(currentUrl);
         }
       } else {
         // Switching to file mode - clear file selection but keep URL for potential switch back
-        this.profile.update(p => ({ 
-          ...p, 
-          selectedBannerFile: null 
+        this.profile.update(p => ({
+          ...p,
+          selectedBannerFile: null
         }));
         this.previewBanner.set(currentUrl || null);
       }

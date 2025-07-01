@@ -22,13 +22,18 @@ export class UsernameService {
       return sub.pubkey;
     }
 
-    let publicProfile = await this.accountService.getPublicAccount({ pubkeyOrUsername: username }).toPromise();
+    try {
+      let publicProfile = await this.accountService.getPublicAccount({ pubkeyOrUsername: username }).toPromise();
 
-    if (publicProfile && publicProfile.success && publicProfile.result) {
-      return publicProfile.result.pubkey || '';
+      if (publicProfile && publicProfile.success && publicProfile.result) {
+        return publicProfile.result.pubkey || '';
+      }
+
+      return '';
+    } catch (e) {
+      console.error('Error fetching public key:', e);
+      return '';
     }
-
-    return '';
   }
 
   async getUsername(pubkey: string): Promise<string> {
@@ -38,13 +43,18 @@ export class UsernameService {
       return sub.username!;
     }
 
-    let username = await this.accountService.getPublicAccount({ pubkeyOrUsername: pubkey }).toPromise();
+    try {
+      let username = await this.accountService.getPublicAccount({ pubkeyOrUsername: pubkey }).toPromise();
 
-    if (username && username.success && username.result) {
-      return username.result.username || '';
+      if (username && username.success && username.result) {
+        return username.result.username || '';
+      }
+
+      return '';
+    } catch (e) {
+      console.error('Error fetching username:', e);
+      return '';
     }
-
-    return '';
   }
 
 
