@@ -63,11 +63,13 @@ export class ProfileEditComponent {
       profileClone.bannerUrl = profileClone.banner || '';
       this.profile.set(profileClone);
       
-      // Set initial preview images if they exist
+      // Set initial toggle states based on existing URLs
       if (profileClone.picture) {
+        this.useProfileImageUrl.set(true);
         this.previewProfileImage.set(profileClone.picture);
       }
       if (profileClone.banner) {
+        this.useBannerUrl.set(true);
         this.previewBanner.set(profileClone.banner);
       }
     } else {
@@ -226,19 +228,17 @@ export class ProfileEditComponent {
       const url = this.profile()?.pictureUrl;
       if (url && url.trim() !== '') {
         this.previewProfileImage.set(url);
-        this.profile.update(p => ({ ...p, picture: url }));
+        // Don't update the main picture field here, let updateMetadata handle it
       } else {
         this.previewProfileImage.set(null);
-        this.profile.update(p => ({ ...p, picture: '' }));
       }
     } else {
       const url = this.profile()?.bannerUrl;
       if (url && url.trim() !== '') {
         this.previewBanner.set(url);
-        this.profile.update(p => ({ ...p, banner: url }));
+        // Don't update the main banner field here, let updateMetadata handle it
       } else {
         this.previewBanner.set(null);
-        this.profile.update(p => ({ ...p, banner: '' }));
       }
     }
   }
@@ -246,15 +246,49 @@ export class ProfileEditComponent {
   // Toggle image input method
   toggleImageInputMethod(type: 'profile' | 'banner'): void {
     if (type === 'profile') {
+      const currentUrl = this.profile()?.picture || '';
       this.useProfileImageUrl.update(current => !current);
-      // Clear values when switching
-      this.profile.update(p => ({ ...p, picture: '', pictureUrl: '', selectedProfileFile: null }));
-      this.previewProfileImage.set(null);
+      
+      if (this.useProfileImageUrl()) {
+        // Switching to URL mode - preserve existing URL
+        this.profile.update(p => ({ 
+          ...p, 
+          pictureUrl: currentUrl,
+          selectedProfileFile: null 
+        }));
+        if (currentUrl) {
+          this.previewProfileImage.set(currentUrl);
+        }
+      } else {
+        // Switching to file mode - clear file selection but keep URL for potential switch back
+        this.profile.update(p => ({ 
+          ...p, 
+          selectedProfileFile: null 
+        }));
+        this.previewProfileImage.set(currentUrl || null);
+      }
     } else {
+      const currentUrl = this.profile()?.banner || '';
       this.useBannerUrl.update(current => !current);
-      // Clear values when switching
-      this.profile.update(p => ({ ...p, banner: '', bannerUrl: '', selectedBannerFile: null }));
-      this.previewBanner.set(null);
+      
+      if (this.useBannerUrl()) {
+        // Switching to URL mode - preserve existing URL
+        this.profile.update(p => ({ 
+          ...p, 
+          bannerUrl: currentUrl,
+          selectedBannerFile: null 
+        }));
+        if (currentUrl) {
+          this.previewBanner.set(currentUrl);
+        }
+      } else {
+        // Switching to file mode - clear file selection but keep URL for potential switch back
+        this.profile.update(p => ({ 
+          ...p, 
+          selectedBannerFile: null 
+        }));
+        this.previewBanner.set(currentUrl || null);
+      }
     }
   }
 
