@@ -14,6 +14,7 @@ import { MatIconRegistry } from '@angular/material/icon';
 import { ApiConfiguration } from './api/api-configuration';
 import { environment } from '../environments/environment';
 import { nip98AuthInterceptor } from './services/interceptors/nip98Auth';
+import { MAT_FORM_FIELD_DEFAULT_OPTIONS } from '@angular/material/form-field';
 
 // Create a logger for bootstrapping phase
 const bootstrapLogger = {
@@ -48,6 +49,10 @@ export const appConfig: ApplicationConfig = {
       useValue: {
         rootUrl: new URL('api', environment.backendUrl)
       }
+    },
+     {
+      provide: MAT_FORM_FIELD_DEFAULT_OPTIONS,
+      useValue: { appearance: 'outline' }
     },
     UserRelayFactoryService,
     UserRelayService,

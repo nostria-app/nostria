@@ -2,3 +2,54 @@
     padding-right: 1rem;
     padding-bottom: 1rem;
 }
+
+.file-upload-section {
+    margin-bottom: 16px;
+    
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        
+        h3 {
+            margin: 0;
+        }
+        
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            
+            span {
+                font-size: 14px;
+            }
+        }
+    }
+    
+    .file-upload {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+}
+
+.media-server-warning {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+    border-radius: 4px;
+    border-left: 4px solid var(--mat-warn-500);
+
+    mat-icon {
+        margin-right: 8px;
+    }
+
+    span {
+        color: var(--mat-warn-700);
+        margin-bottom: 8px;
+    }
+}
