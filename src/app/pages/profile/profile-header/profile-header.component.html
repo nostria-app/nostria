@@ -31,7 +31,7 @@
 
             @if (showProfileQrCode()) {
             <div class="qr-code-container">
-                <qrcode [qrdata]="'npub:' + npub()!" [width]="256" [errorCorrectionLevel]="'M'"></qrcode>
+                <qr-code [qrdata]="'npub:' + npub()!" [width]="256" [errorCorrectionLevel]="'medium'"></qr-code>
             </div>
             }
 
@@ -62,7 +62,7 @@
 
             @if (showQrCode()) {
             <div class="qr-code-container">
-                <qrcode [qrdata]="lightningAddress" [width]="256" [errorCorrectionLevel]="'M'"></qrcode>
+                <qr-code [qrdata]="lightningAddress" [width]="256" [errorCorrectionLevel]="'medium'"></qr-code>
             </div>
             }
             }
