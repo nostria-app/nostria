@@ -20,7 +20,6 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { MatListModule } from '@angular/material/list';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { QRCodeComponent } from 'angularx-qrcode';
 import { Event, kinds, nip19, SimplePool } from 'nostr-tools';
 import { StorageService } from '../../services/storage.service';
 import { ProfileStateService } from '../../services/profile-state.service';
@@ -58,8 +57,7 @@ import { UsernameService } from '../../services/username';
     MatMenuModule,
     FormsModule,
     MatFormFieldModule,
-    ProfileHeaderComponent,
-    QRCodeComponent
+    ProfileHeaderComponent
   ],
   templateUrl: './profile.component.html',
   styleUrl: './profile.component.scss'
