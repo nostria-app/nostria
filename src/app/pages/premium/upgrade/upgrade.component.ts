@@ -1,6 +1,6 @@
-import { Component, effect, inject, signal, OnDestroy, WritableSignal } from '@angular/core';
+import { Component, effect, inject, signal, OnDestroy, } from '@angular/core';
 
-import { FormsModule, ReactiveFormsModule, FormBuilder, Validators, AsyncValidatorFn, AbstractControl, ValidationErrors } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatStepperModule } from '@angular/material/stepper';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -13,7 +13,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { debounceTime, distinctUntilChanged, finalize, firstValueFrom, from, map, Observable, of, Subject, switchMap, takeUntil } from 'rxjs';
+import { debounceTime, firstValueFrom, from, of, Subject, switchMap, takeUntil } from 'rxjs';
 import { AccountService, PaymentService } from '../../../api/services';
 import { TierDetails } from '../../../api/models/tier-details';
 import { AccountStateService } from '../../../services/account-state.service';
@@ -84,10 +84,11 @@ export class UpgradeComponent implements OnDestroy {
   });
 
   paymentFormGroup = this.formBuilder.group({
-    paymentOption: ['yearly' as 'yearly', Validators.required]
+    paymentOption: [Validators.required]
   });
 
   currentStep = signal<number>(0);
+  stepComplete = signal<Record<number, boolean>>({});
   isCheckingUsername = signal<boolean>(false);
   tiers = signal<TierDisplay[]>([]);
   selectedTier = signal<TierDisplay | null>(null);
@@ -122,19 +123,10 @@ export class UpgradeComponent implements OnDestroy {
       }
     });
 
-    // Set up form value changes
-    effect(() => {
-      const paymentOption = this.paymentFormGroup.get('paymentOption')?.value;
-      if (paymentOption) {
-        this.selectedPaymentOption.set(paymentOption);
-      }
-    });
-
     this.usernameFormGroup.get('username')?.valueChanges
       .pipe(
         takeUntil(this.destroy$),
         debounceTime(300), // Wait 300ms after last keystroke
-        distinctUntilChanged(),
         switchMap(value => {
           const trimmedValue = (value || '').trim();
           if (!trimmedValue) {
@@ -160,8 +152,21 @@ export class UpgradeComponent implements OnDestroy {
 
   nextStep() {
     if (this.currentStep() === 0 && this.usernameFormGroup.valid) {
-      this.currentStep.set(1);
+      this.stepComplete.set({
+        ...this.stepComplete(),
+        0: true,
+      });
+
+      if (this.stepComplete()[1] && this.stepComplete()[2]) {
+        this.createAccount();
+      } else {
+        this.currentStep.set(1);
+      }
     } else if (this.currentStep() === 1 && this.paymentFormGroup.valid) {
+      this.stepComplete.set({
+        ...this.stepComplete(),
+        1: true,
+      });
       this.generatePaymentInvoice();
     }
   }
@@ -244,7 +249,6 @@ export class UpgradeComponent implements OnDestroy {
       if (this.paymentInvoice()?.status !== 'pending') {
         this.stopPaymentCheck();
         this.paymentCheckInterval.set(null);
-        this.paymentInvoice.set(null);
       }
     }, 3000);
 
@@ -277,7 +281,7 @@ export class UpgradeComponent implements OnDestroy {
 
   async checkPaymentStatus() {
     const paymentInvoice = this.paymentInvoice()
-    if (!paymentInvoice) return;
+    if (!paymentInvoice || paymentInvoice.status !== 'pending') return;
 
     let payment: Payment | undefined;
 
@@ -291,31 +295,12 @@ export class UpgradeComponent implements OnDestroy {
         ...this.paymentInvoice()!,
         status: 'paid'
       });
-
-      // TODO: check reponse code
-      // 409 — pubkey already registered
-      // 400/500 — something is wrong. Notify devs and retry
-      await firstValueFrom(this.accountService.addAccount({
-        body: {
-          pubkey: this.accountState.pubkey(),
-          username: this.usernameFormGroup.get('username')?.value,
-          paymentId: this.paymentInvoice()!.id,
-        }
-      }));
-
-      this.isPaymentCompleted.set(true);
-      // touch account state to load account subscription
-      this.accountState.changeAccount(this.accountState.account())
-
-      // Show success message
-      this.snackBar.open('Payment successful! Your premium account is now active.', 'Great!', {
-        duration: 8000
+      this.stepComplete.set({
+        ...this.stepComplete(),
+        2: true,
       });
 
-      // After 2 seconds, proceed to completion step
-      setTimeout(() => {
-        this.currentStep.set(3);
-      }, 2000);
+      await this.createAccount();
     }
 
     // Check if invoice has expired
@@ -329,6 +314,48 @@ export class UpgradeComponent implements OnDestroy {
         duration: 5000
       });
     }
+  }
+
+  async createAccount() {
+    // 409 — pubkey already registered
+    // 400/500 — something is wrong. TODO: Notify devs and retry
+    try {
+      await firstValueFrom(this.accountService.addAccount({
+        body: {
+          pubkey: this.accountState.pubkey(),
+          username: this.usernameFormGroup.get('username')?.value,
+          paymentId: this.paymentInvoice()!.id,
+        }
+      }));
+      this.stepComplete.set({
+        ...this.stepComplete(),
+        3: true,
+      });
+      this.isPaymentCompleted.set(true);
+      // touch account state to load account subscription
+      this.accountState.changeAccount(this.accountState.account())
+
+      // Show success message
+      this.snackBar.open('Payment successful! Your premium account is now active.', 'Great!', {
+        duration: 8000
+      });
+
+      // After 2 seconds, proceed to completion step
+      setTimeout(() => {
+        this.currentStep.set(3);
+      }, 2000);
+
+    } catch (e: any) {
+      if (e.status === 409) {
+        this.snackBar.open(e?.error?.error, 'Ok', { duration: 5000 });
+        this.stepComplete.set({
+          ...this.stepComplete(),
+          0: false,
+        });
+        this.currentStep.set(0);
+        this.usernameFormGroup.get('username')!.setValue(this.usernameFormGroup.get('username')!.value);
+      }
+    };
   }
 
   resetPayment() {
