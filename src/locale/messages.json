@@ -2,6 +2,15 @@
   "locale": "en-US",
   "translations": {
     "settings.back.title": "{$INTERPOLATION}",
-    "settings.title": "Settings"
+    "settings.title": "Settings",
+    "settings.dark-mode": "Dark Mode",
+    "settings.release-channel": "Release Channel {$START_TAG_MAT_ICON}diamond{$CLOSE_TAG_MAT_ICON}",
+    "settings.release-channel.description": "Get early access to new features (Premium)",
+    "settings.feature-level": "Feature Level",
+    "settings.feature-level.stable": "Stable",
+    "settings.feature-level.beta": "Beta",
+    "settings.feature-level.preview": "Preview",
+    "settings.logging": "Logging",
+    "settings.logging.description": "Configure application logging levels"
   }
 }
