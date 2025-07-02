@@ -5,6 +5,7 @@
     "ng": "ng",
     "start": "ng serve",
     "start:ru": "ng serve --configuration=ru",
+    "start:no": "ng serve --configuration=no",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "gen:api": "ng-openapi-gen --input http://localhost:3000/openapi.json --output src/app/api --module false",

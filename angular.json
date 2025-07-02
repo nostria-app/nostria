@@ -6,7 +6,10 @@
     "app": {
       "i18n": {
         "sourceLocale":"en-US",
-        "locales": {"ru": "src/locale/messages.ru.json"}
+        "locales": {
+          "ru": "src/locale/messages.ru.json",
+          "no": "src/locale/messages.no.json"
+        }
       },
       "projectType": "application",
       "schematics": {
@@ -21,7 +24,7 @@
         "build": {
           "builder": "@angular/build:application",
           "options": {
-            "localize": ["ru"],
+            "localize": ["ru", "no"],
             "outputPath": "dist/app",
             "index": "src/index.html",
             "browser": "src/main.ts",
@@ -87,6 +90,19 @@
                   "with": "src/environments/environment.development.ts"
                 }
               ]
+            },
+            "no": {
+              "serviceWorker": "ngsw-config.json",
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "localize": ["no"],
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.development.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -102,6 +118,9 @@
             },
             "ru": {
               "buildTarget": "app:build:ru"
+            },
+            "no": {
+              "buildTarget": "app:build:no"
             }
           },
           "defaultConfiguration": "development"

@@ -1,0 +1,7 @@
+{
+  "locale": "no",
+  "translations": {
+    "settings.back.title": "{$INTERPOLATION}",
+    "settings.title": "Innstillinger"
+  }
+}
