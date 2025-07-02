@@ -24,7 +24,7 @@
         "build": {
           "builder": "@angular/build:application",
           "options": {
-            "localize": ["ru", "no"],
+            "localize": true,
             "outputPath": "dist/app",
             "index": "src/index.html",
             "browser": "src/main.ts",
