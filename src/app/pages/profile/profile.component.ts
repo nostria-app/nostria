@@ -142,17 +142,17 @@ export class ProfileComponent {
 
             // First update URL to have npub in URL.
             if (username) {
-              this.url.updatePathSilently(['/u', username, 'notes']);
+              this.url.updatePathSilently(['/u', username]);
             } else {
               username = await this.username.getUsername(id);
 
               if (username) {
-                this.url.updatePathSilently(['/u', username, 'notes']);
+                this.url.updatePathSilently(['/u', username]);
               }
               else {
                 // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.
                 const encoded = nip19.npubEncode(id);
-                this.url.updatePathSilently(['/p', id, 'notes']);
+                this.url.updatePathSilently(['/p', id]);
               }
             }
           } else {
@@ -160,12 +160,12 @@ export class ProfileComponent {
               username = await this.username.getUsername(id);
 
               if (username) {
-                this.url.updatePathSilently(['/u', username, 'notes']);
+                this.url.updatePathSilently(['/u', username]);
               }
               else {
                 // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.
                 const encoded = nip19.npubEncode(id);
-                this.url.updatePathSilently(['/p', encoded, 'notes']);
+                this.url.updatePathSilently(['/p', encoded]);
               }
             }
           }

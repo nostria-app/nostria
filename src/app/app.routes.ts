@@ -39,7 +39,7 @@ const profileChildren: Routes = [
     path: '',
     component: ProfileHomeComponent,
     children: [
-      { path: '', redirectTo: 'notes', pathMatch: 'full' },
+      { path: '', component: ProfileNotesComponent },
       { path: 'notes', component: ProfileNotesComponent },
       { path: 'replies', component: ProfileRepliesComponent },
       { path: 'reads', component: ProfileReadsComponent },
