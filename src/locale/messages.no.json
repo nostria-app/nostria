@@ -2,6 +2,15 @@
   "locale": "no",
   "translations": {
     "settings.back.title": "{$INTERPOLATION}",
-    "settings.title": "Innstillinger"
+    "settings.title": "Innstillinger",
+    "settings.dark-mode": "Mørk modus",
+    "settings.release-channel": "Utgivelseskanal {$START_TAG_MAT_ICON}diamond{$CLOSE_TAG_MAT_ICON}",
+    "settings.release-channel.description": "Få tidlig tilgang til nye funksjoner (Premium)",
+    "settings.feature-level": "Funksjonsnivå",
+    "settings.feature-level.stable": "Stabil",
+    "settings.feature-level.beta": "Beta",
+    "settings.feature-level.preview": "Forhåndsvisning",
+    "settings.logging": "Logging",
+    "settings.logging.description": "Konfigurer applikasjonens loggingnivåer"
   }
 }

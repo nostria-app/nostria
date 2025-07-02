@@ -47,29 +47,29 @@
         <!-- General Settings -->
         @if (activeSection() === 'general') {
         <div class="setting-item">
-          <span>Dark Mode</span>
+          <span i18n="@@settings.dark-mode">Dark Mode</span>
           <mat-slide-toggle [checked]="themeService.darkMode()" (change)="toggleDarkMode()">
           </mat-slide-toggle>
         </div>
 
         <div>
-          <h2>Release Channel <mat-icon class="minor-icon">diamond</mat-icon></h2>
-          <p>Get early access to new features (Premium)</p>
+          <h2 i18n="@@settings.release-channel">Release Channel <mat-icon class="minor-icon">diamond</mat-icon></h2>
+          <p i18n="@@settings.release-channel.description">Get early access to new features (Premium)</p>
 
           <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Feature Level</mat-label>
+            <mat-label i18n="@@settings.feature-level">Feature Level</mat-label>
             <mat-select [ngModel]="currentFeatureLevel()" (selectionChange)="setFeatureLevel($event.value)">
-              <mat-option value="stable">Stable</mat-option>
-              <mat-option value="beta">Beta</mat-option>
-              <mat-option value="preview">Preview</mat-option>
+              <mat-option value="stable" i18n="@@settings.feature-level.stable">Stable</mat-option>
+              <mat-option value="beta" i18n="@@settings.feature-level.beta">Beta</mat-option>
+              <mat-option value="preview" i18n="@@settings.feature-level.preview">Preview</mat-option>
             </mat-select>
           </mat-form-field>
         </div>
 
 
         <div>
-          <h2>Logging</h2>
-          <p>Configure application logging levels</p>
+          <h2 i18n="@@settings.logging">Logging</h2>
+          <p i18n="@@settings.logging.description">Configure application logging levels</p>
 
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Log Level</mat-label>

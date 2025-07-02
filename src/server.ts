@@ -6,12 +6,59 @@ import {
 } from '@angular/ssr/node';
 import express from 'express';
 import cors from 'cors';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
+import { existsSync } from 'node:fs';
 
-const browserDistFolder = join(import.meta.dirname, '../browser');
+// Define supported locales
+type SupportedLocale = 'en-US' | 'ru' | 'no';
+
+// Get the directory where the server is running
+const serverDistFolder = import.meta.dirname;
+
+// Define locale-specific browser dist folders
+const localeDistFolders: Record<SupportedLocale, string> = {
+  'en-US': resolve(serverDistFolder, '../en-US/browser'),
+  'ru': resolve(serverDistFolder, '../ru/browser'),
+  'no': resolve(serverDistFolder, '../no/browser')
+};
+
+// Default fallback to en-US
+const defaultLocale: SupportedLocale = 'en-US';
+const browserDistFolder = localeDistFolders[defaultLocale];
 
 const app = express();
-const angularApp = new AngularNodeAppEngine();
+
+// Function to detect user's preferred locale from Accept-Language header
+function detectUserLocale(acceptLanguageHeader: string | undefined): SupportedLocale {
+  if (!acceptLanguageHeader) {
+    return defaultLocale;
+  }
+
+  // Parse Accept-Language header and extract preferred languages
+  const languages = acceptLanguageHeader
+    .split(',')
+    .map(lang => {
+      const [locale, q = '1'] = lang.trim().split(';q=');
+      return { locale: locale.toLowerCase(), quality: parseFloat(q) };
+    })
+    .sort((a, b) => b.quality - a.quality);
+
+  // Check for exact locale matches first
+  for (const { locale } of languages) {
+    if (locale === 'en-us' || locale === 'en') return 'en-US';
+    if (locale === 'ru' || locale.startsWith('ru-')) return 'ru';
+    if (locale === 'no' || locale === 'nb' || locale === 'nn' || locale.startsWith('no-')) return 'no';
+  }
+
+  return defaultLocale;
+}
+
+// Create locale-specific Angular app engines
+const angularApps: Record<SupportedLocale, AngularNodeAppEngine> = {
+  'en-US': new AngularNodeAppEngine(),
+  'ru': new AngularNodeAppEngine(),
+  'no': new AngularNodeAppEngine()
+};
 
 /**
  * Configure CORS to allow web clients to make API requests
@@ -37,23 +84,38 @@ app.use(
  */
 
 /**
- * Serve static files from /browser
- */
-app.use(
-  express.static(browserDistFolder, {
-    maxAge: '1y',
-    index: false,
-    redirect: false,
-  }),
-);
-
-/**
- * Handle all other requests by rendering the Angular application.
+ * Serve static files from the appropriate locale folder based on user's language preference
  */
 app.use((req, res, next) => {
+  const userLocale = detectUserLocale(req.headers['accept-language']);
+  const localeDistFolder = localeDistFolders[userLocale];
+  
+  if (existsSync(localeDistFolder)) {
+    express.static(localeDistFolder, {
+      maxAge: '1y',
+      index: false,
+      redirect: false,
+    })(req, res, next);
+  } else {
+    // Fallback to default locale
+    express.static(browserDistFolder, {
+      maxAge: '1y',
+      index: false,
+      redirect: false,
+    })(req, res, next);
+  }
+});
+
+/**
+ * Handle all other requests by rendering the Angular application using the appropriate locale.
+ */
+app.use((req, res, next) => {
+  const userLocale = detectUserLocale(req.headers['accept-language']);
+  const angularApp = angularApps[userLocale] || angularApps[defaultLocale];
+
   angularApp
     .handle(req)
-    .then((response) =>
+    .then((response: any) =>
       response ? writeResponseToNodeResponse(response, res) : next(),
     )
     .catch(next);

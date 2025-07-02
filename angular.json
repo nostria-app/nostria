@@ -24,7 +24,6 @@
         "build": {
           "builder": "@angular/build:application",
           "options": {
-            "localize": true,
             "outputPath": "dist/app",
             "index": "src/index.html",
             "browser": "src/main.ts",
@@ -78,12 +77,27 @@
                 }
               ]
             },
+            "en-US": {
+              "serviceWorker": "ngsw-config.json",
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "localize": ["en-US"],
+              "outputPath": "dist/app/en-US",
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.development.ts"
+                }
+              ]
+            },
             "ru": {
               "serviceWorker": "ngsw-config.json",
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true,
               "localize": ["ru"],
+              "outputPath": "dist/app/ru",
               "fileReplacements": [
                 {
                   "replace": "src/environments/environment.ts",
@@ -97,6 +111,7 @@
               "extractLicenses": false,
               "sourceMap": true,
               "localize": ["no"],
+              "outputPath": "dist/app/no",
               "fileReplacements": [
                 {
                   "replace": "src/environments/environment.ts",
@@ -115,6 +130,9 @@
             },
             "development": {
               "buildTarget": "app:build:development"
+            },
+            "en-US": {
+              "buildTarget": "app:build:en-US"
             },
             "ru": {
               "buildTarget": "app:build:ru"
