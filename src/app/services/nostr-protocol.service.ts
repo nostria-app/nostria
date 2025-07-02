@@ -60,12 +60,35 @@ export class NostrProtocolService {
         return;
       }
 
+      // Clean the nostr value by removing web+nostr:// protocol wrapper if present
+      this.logger.debug('[NostrProtocol] Cleaning nostr value of protocol wrappers');
+      let cleanedNostrValue = nostrValue;
+      
+      // Check if it contains the web+nostr:// protocol wrapper
+      if (cleanedNostrValue.includes('web+nostr://')) {
+        this.logger.debug('[NostrProtocol] Found web+nostr:// protocol wrapper, removing it');
+        // Extract everything after web+nostr://
+        const parts = cleanedNostrValue.split('web+nostr://');
+        if (parts.length > 1) {
+          cleanedNostrValue = parts[1];
+          this.logger.debug('[NostrProtocol] Extracted content after web+nostr://:', cleanedNostrValue);
+        }
+      }
+      
+      // Remove trailing slash if present
+      if (cleanedNostrValue.endsWith('/')) {
+        this.logger.debug('[NostrProtocol] Removing trailing slash');
+        cleanedNostrValue = cleanedNostrValue.slice(0, -1);
+      }
+      
+      this.logger.debug('[NostrProtocol] Cleaned nostr value:', cleanedNostrValue);
+      
       // Ensure it has the nostr: prefix
-      this.logger.debug('[NostrProtocol] Checking if nostr value has nostr: prefix');
-      const hasPrefix = nostrValue.startsWith('nostr:');
+      this.logger.debug('[NostrProtocol] Checking if cleaned value has nostr: prefix');
+      const hasPrefix = cleanedNostrValue.startsWith('nostr:');
       this.logger.debug('[NostrProtocol] Has nostr: prefix:', hasPrefix);
       
-      const nostrUri = hasPrefix ? nostrValue : `nostr:${nostrValue}`;
+      const nostrUri = hasPrefix ? cleanedNostrValue : `nostr:${cleanedNostrValue}`;
       this.logger.info('[NostrProtocol] Final nostr URI to process:', nostrUri);
 
       // Parse the nostr URI
