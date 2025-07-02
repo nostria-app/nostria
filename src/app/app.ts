@@ -38,6 +38,7 @@ import { MediaPlayerService } from './services/media-player.service';
 import { LocalSettingsService } from './services/local-settings.service';
 import { AccountStateService } from './services/account-state.service';
 import { SearchResultsComponent } from './components/search-results/search-results.component';
+import { NostrProtocolService } from './services/nostr-protocol.service';
 import { StateService } from './services/state.service';
 
 interface NavItem {
@@ -97,6 +98,7 @@ export class App {
   localSettings = inject(LocalSettingsService);
   accountState = inject(AccountStateService);
   state = inject(StateService);
+  nostrProtocol = inject(NostrProtocolService);
   private readonly platform = inject(PLATFORM_ID);
   private readonly document = inject(DOCUMENT);
 
@@ -170,19 +172,74 @@ export class App {
   ];
 
   constructor() {
-    this.logger.debug('AppComponent constructor started');
+    this.logger.info('[App] ==> AppComponent constructor started');
+    this.logger.debug('[App] Services injection status:');
+    this.logger.debug('[App] - NostrProtocolService injected:', !!this.nostrProtocol);
+    this.logger.debug('[App] - ApplicationService injected:', !!this.app);
+    this.logger.debug('[App] - LoggerService injected:', !!this.logger);
 
     if (!this.app.isBrowser()) {
+      this.logger.info('[App] Not in browser environment, skipping browser-specific setup');
       return;
     }
 
     if ('launchQueue' in window) {
+      this.logger.info('[App] LaunchQueue is available, setting up consumer');
       const launchQueue = (window as any).launchQueue;
-      launchQueue.setConsumer((launchParams: any) => {
-        if (launchParams.targetURL) {
-          console.log('launchParams.targetURL:', launchParams.targetURL);
+      
+      launchQueue.setConsumer(async (launchParams: any) => {
+        this.logger.info('[App] LaunchQueue consumer triggered');
+        this.logger.info('[App] LaunchParams received:', launchParams);
+        this.logger.info('[App] LaunchParams type:', typeof launchParams);
+        
+        if (launchParams?.targetURL) {
+          this.logger.info('[App] Target URL found in launch params');
+          this.logger.info('[App] Target URL:', launchParams.targetURL);
+          this.logger.info('[App] Target URL type:', typeof launchParams.targetURL);
+          this.logger.info('[App] Target URL length:', launchParams.targetURL?.length || 'undefined');
+          
+          // Handle nostr protocol links
+          const url = launchParams.targetURL;
+          this.logger.debug('[App] Checking if URL contains nostr parameter');
+          
+          if (url.includes('nostr=')) {
+            this.logger.info('[App] *** NOSTR PROTOCOL DETECTED IN LAUNCH QUEUE ***');
+            this.logger.info('[App] Processing nostr protocol from launch queue');
+            this.logger.info('[App] URL with nostr parameter:', url);
+            
+            try {
+              await this.nostrProtocol.handleNostrProtocol(url);
+              this.logger.info('[App] *** NOSTR PROTOCOL HANDLING COMPLETED SUCCESSFULLY ***');
+            } catch (error) {
+              this.logger.error('[App] *** NOSTR PROTOCOL HANDLING FAILED ***');
+              this.logger.error('[App] Launch queue nostr protocol error:', error);
+              
+              if (error instanceof Error) {
+                this.logger.error('[App] Launch queue error name:', error.name);
+                this.logger.error('[App] Launch queue error message:', error.message);
+                this.logger.error('[App] Launch queue error stack:', error.stack);
+              }
+            }
+          } else {
+            this.logger.debug('[App] No nostr parameter found in launch queue URL');
+            this.logger.debug('[App] URL content for analysis:', url);
+            
+            // Check for other patterns that might indicate nostr content
+            if (url.includes('nostr')) {
+              this.logger.warn('[App] URL contains "nostr" but not as expected parameter:', url);
+            }
+          }
+        } else {
+          this.logger.warn('[App] LaunchQueue consumer triggered but no targetURL found');
+          this.logger.warn('[App] LaunchParams structure:', Object.keys(launchParams || {}));
         }
       });
+      
+      this.logger.info('[App] LaunchQueue consumer setup completed');
+    } else {
+      this.logger.info('[App] LaunchQueue not available in this environment');
+      this.logger.debug('[App] Window object keys containing "launch":', 
+        Object.keys(window).filter(key => key.toLowerCase().includes('launch')));
     }
 
     // Track previous handset state to detect transitions
@@ -293,14 +350,23 @@ export class App {
   }
 
   async ngOnInit() {
-    this.logger.debug('AppComponent ngOnInit');
+    this.logger.info('[App] ==> ngOnInit started');
+    this.logger.debug('[App] Platform check - isBrowser:', this.app.isBrowser());
 
     if (!this.app.isBrowser()) {
+      this.logger.info('[App] Not in browser environment, skipping initialization');
       return;
     }
 
+    this.logger.info('[App] Initializing storage');
     // Initialize storage, then nostr initialized and then app state.
     await this.storage.init();
+    this.logger.info('[App] Storage initialized successfully');
+
+    // Check for nostr protocol parameter in current URL
+    this.logger.info('[App] Checking for nostr protocol in current URL');
+    await this.checkForNostrProtocolInUrl();
+    this.logger.info('[App] ==> ngOnInit completed');
   }
 
   /**
@@ -418,6 +484,80 @@ export class App {
       // Clear search results and close search when Escape is pressed
       this.search.clearResults();
       this.layout.toggleSearch();
+    }
+  }
+
+  /**
+   * Check if the current URL contains a nostr protocol parameter and handle it
+   */
+  private async checkForNostrProtocolInUrl(): Promise<void> {
+    this.logger.info('[App] ==> Checking for nostr protocol in current URL');
+    
+    try {
+      this.logger.debug('[App] Getting current URL from window.location');
+      const currentUrl = window.location.href;
+      
+      this.logger.info('[App] Current URL:', currentUrl);
+      this.logger.info('[App] Current URL length:', currentUrl?.length || 'undefined');
+      this.logger.debug('[App] Current URL breakdown:', {
+        href: window.location.href,
+        origin: window.location.origin,
+        pathname: window.location.pathname,
+        search: window.location.search,
+        hash: window.location.hash
+      });
+      
+      this.logger.debug('[App] Checking if current URL contains nostr parameter');
+      
+      if (currentUrl.includes('nostr=')) {
+        this.logger.info('[App] *** NOSTR PARAMETER DETECTED IN CURRENT URL ***');
+        this.logger.info('[App] URL with nostr parameter:', currentUrl);
+        
+        // Extract and log the nostr parameter value
+        try {
+          const urlObj = new URL(currentUrl);
+          const nostrParam = urlObj.searchParams.get('nostr');
+          this.logger.info('[App] Extracted nostr parameter value:', nostrParam);
+          this.logger.debug('[App] All URL parameters:', Array.from(urlObj.searchParams.entries()));
+        } catch (urlParseError) {
+          this.logger.error('[App] Failed to parse current URL for parameter extraction:', urlParseError);
+        }
+        
+        this.logger.info('[App] Calling nostr protocol handler for current URL');
+        await this.nostrProtocol.handleNostrProtocol(currentUrl);
+        this.logger.info('[App] *** NOSTR PROTOCOL HANDLING FROM URL COMPLETED ***');
+        
+      } else {
+        this.logger.debug('[App] No nostr parameter found in current URL');
+        
+        // Check for other nostr-related patterns
+        if (currentUrl.includes('nostr')) {
+          this.logger.info('[App] URL contains "nostr" but not as parameter:', currentUrl);
+        }
+        
+        // Check for direct nostr protocol in hash or other locations
+        if (window.location.hash && window.location.hash.includes('nostr')) {
+          this.logger.info('[App] Found nostr reference in URL hash:', window.location.hash);
+        }
+      }
+      
+      this.logger.info('[App] ==> URL check completed');
+      
+    } catch (error) {
+      this.logger.error('[App] ==> ERROR: Failed to check for nostr protocol in URL');
+      this.logger.error('[App] URL check error:', error);
+      
+      if (error instanceof Error) {
+        this.logger.error('[App] URL check error name:', error.name);
+        this.logger.error('[App] URL check error message:', error.message);
+        this.logger.error('[App] URL check error stack:', error.stack);
+      }
+      
+      this.logger.error('[App] URL check error context:', {
+        currentUrl: window?.location?.href || 'unavailable',
+        userAgent: navigator?.userAgent || 'unavailable',
+        timestamp: new Date().toISOString()
+      });
     }
   }
 
