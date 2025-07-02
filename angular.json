@@ -6,7 +6,7 @@
     "app": {
       "i18n": {
         "sourceLocale":"en-US",
-        "locales": {"ru-RU": "src/locale/messages.ru.xlf"}
+        "locales": {"ru-RU": "src/locale/messages.ru.json"}
       },
       "projectType": "application",
       "schematics": {
@@ -91,7 +91,11 @@
           "defaultConfiguration": "development"
         },
         "extract-i18n": {
-          "builder": "@angular/build:extract-i18n"
+          "builder": "@angular/build:extract-i18n",
+          "options": {
+            "format": "json",
+            "outputPath": "src/locale"
+          }
         },
         "test": {
           "builder": "@angular/build:karma",

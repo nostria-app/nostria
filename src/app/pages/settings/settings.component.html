@@ -5,14 +5,14 @@
     <button mat-icon-button (click)="goBack()" aria-label="Go back">
       <mat-icon>arrow_back</mat-icon>
     </button>
-    <h2>{{ getTitle() }}</h2>
+    <h2 i18n="@@settings.back.title">{{ getTitle() }}</h2>
   </div>
   }
 
   <!-- Left sidebar with navigation options -->
   @if (!isMobile() || !showDetails()) {
   <div class="settings-sidebar">
-    <h1 class="page-title">Settings</h1>
+    <h1 class="page-title" i18n="@@settings.title">Settings</h1>
     <mat-nav-list>
       @for (section of sections; track section.id) {
 
