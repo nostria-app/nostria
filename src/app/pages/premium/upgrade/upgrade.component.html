@@ -153,20 +153,15 @@
       }
     </div>
 
-    <div
-      *ngIf="selectedTier() && selectedPaymentOption() && getPricing(selectedTier().details, selectedPaymentOption()) as summary"
-      class="payment-summary">
+    @if (selectedTier() && selectedPaymentOption() && getPricing(selectedTier()!.details, selectedPaymentOption()!)) {
+    <div class="payment-summary">
       <h3>Order Summary</h3>
       <div class="summary-row">
-        <span>{{ selectedTier()?.details?.name }} ({{ summary.period }})</span>
-        <span>${{ summary.totalPrice }} {{ summary.currency }}</span>
-      </div>
-      <mat-divider></mat-divider>
-      <div class="summary-row total">
-        <span>Total</span>
-        <span>${{ summary.totalPrice }} {{ summary.currency }}</span>
+        <span>{{ selectedTier()?.details?.name }} (valid till {{ selectedTierTill() }})</span>
+        <span>{{ (selectedPrice().priceCents || 0) / 100 }} {{ selectedPrice().currency }}</span>
       </div>
     </div>
+    }
 
     <div class="step-actions">
       <button mat-button (click)="prevStep()">Back</button>
