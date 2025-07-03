@@ -4,6 +4,13 @@
   "newProjectRoot": "projects",
   "projects": {
     "app": {
+      "i18n": {
+        "sourceLocale":"en-US",
+        "locales": {
+          "ru": "src/locale/messages.ru.json",
+          "no": "src/locale/messages.no.json"
+        }
+      },
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -24,11 +31,16 @@
               {
                 "glob": "**/*",
                 "input": "public"
-              }
+              },
+              "src/locale"
             ],
             "styles": [
               "src/styles.scss"
             ],
+            "scripts": [],
+            "polyfills": [
+              "@angular/localize/init"
+            ]
             "server": "src/main.server.ts",
             "outputMode": "server",
             "ssr": {
@@ -50,13 +62,15 @@
                 }
               ],
               "outputHashing": "all",
-              "serviceWorker": "ngsw-config.json"
+              "serviceWorker": "ngsw-config.json",
+              "localize": false
             },
             "development": {
               "serviceWorker": "ngsw-config.json",
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true,
+              "localize": false,
               "fileReplacements": [
                 {
                   "replace": "src/environments/environment.ts",
@@ -80,7 +94,11 @@
           "defaultConfiguration": "development"
         },
         "extract-i18n": {
-          "builder": "@angular/build:extract-i18n"
+          "builder": "@angular/build:extract-i18n",
+          "options": {
+            "format": "json",
+            "outputPath": "src/locale"
+          }
         },
         "test": {
           "builder": "@angular/build:karma",
@@ -91,10 +109,15 @@
               {
                 "glob": "**/*",
                 "input": "public"
-              }
+              },
+              "src/locale"
             ],
             "styles": [
               "src/styles.scss"
+            ],
+            "scripts": [],
+            "polyfills": [
+              "@angular/localize/init"
             ]
           }
         }

@@ -27,6 +27,7 @@ import { BreakpointObserver } from '@angular/cdk/layout';
 import { AboutComponent } from '../about/about.component';
 import { RelaysComponent } from '../relays/relays.component';
 import { BackupComponent } from '../backup/backup.component';
+import { LocalSettingsService } from '../../services/local-settings.service';
 import { WebRequest } from '../../services/web-request';
 import { AccountStateService } from '../../services/account-state.service';
 import { PremiumSettings } from '../premium/settings/settings';
@@ -36,6 +37,11 @@ interface SettingsSection {
   title: string;
   icon: string;
   authenticated?: boolean;
+}
+
+interface Language {
+  code: string;
+  name: string;
 }
 
 @Component({
@@ -75,9 +81,17 @@ export class SettingsComponent {
   app = inject(ApplicationService);
   dialog = inject(MatDialog);
   router = inject(Router);
+  localSettings = inject(LocalSettingsService);
   web = inject(WebRequest);
 
   currentFeatureLevel = signal<FeatureLevel>(this.app.featureLevel());
+
+  // Available languages
+  languages: Language[] = [
+    { code: 'en', name: 'English' },
+    { code: 'ru', name: 'Русский' },
+    { code: 'no', name: 'Norsk' }
+  ];
 
   // Track active section
   activeSection = signal('general');
@@ -143,6 +157,14 @@ export class SettingsComponent {
 
   getTitle() {
     return this.sections.find(section => section.id === this.activeSection())?.title || 'Settings';
+  }
+
+  setLanguage(languageCode: string): void {
+    this.localSettings.setLocale(languageCode);
+    // Reload the page to apply the new language
+    if (this.app.isBrowser()) {
+      window.location.reload();
+    }
   }
 
   wipeData(): void {

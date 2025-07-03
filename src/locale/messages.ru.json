@@ -1,0 +1,16 @@
+{
+  "locale": "ru",
+  "translations": {
+    "settings.back.title": "{$INTERPOLATION}",
+    "settings.title": "Настройки",
+    "settings.dark-mode": "Тёмный режим",
+    "settings.release-channel": "Канал релизов {$START_TAG_MAT_ICON}diamond{$CLOSE_TAG_MAT_ICON}",
+    "settings.release-channel.description": "Получите ранний доступ к новым функциям (Премиум)",
+    "settings.feature-level": "Уровень функций",
+    "settings.feature-level.stable": "Стабильный",
+    "settings.feature-level.beta": "Бета",
+    "settings.feature-level.preview": "Предварительный",
+    "settings.logging": "Журналирование",
+    "settings.logging.description": "Настройка уровней журналирования приложения"
+  }
+}
