@@ -1,0 +1,16 @@
+{
+  "locale": "sw",
+  "translations": {
+    "settings.back.title": "{$INTERPOLATION}",
+    "settings.title": "Mipangilio",
+    "settings.dark-mode": "Hali ya Giza",
+    "settings.release-channel": "Kituo cha Toleo {$START_TAG_MAT_ICON}diamond{$CLOSE_TAG_MAT_ICON}",
+    "settings.release-channel.description": "Pata ufikiaji wa mapema kwa vipengele vipya (Premium)",
+    "settings.feature-level": "Kiwango cha Kipengele",
+    "settings.feature-level.stable": "Imara",
+    "settings.feature-level.beta": "Beta",
+    "settings.feature-level.preview": "Hakikisho",
+    "settings.logging": "Kumbukumbu",
+    "settings.logging.description": "Sanidi viwango vya kumbukumbu za programu"
+  }
+}

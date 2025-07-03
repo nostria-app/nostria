@@ -59,7 +59,11 @@ async function getLocaleModule(locale: string) {
     case 'ru':
       return await import('@angular/common/locales/ru');
     case 'no':
-      return await import('@angular/common/locales/nb'); // Norwegian Bokmål
+      return await import('@angular/common/locales/nb');
+    case 'sw':
+      return await import('@angular/common/locales/sw');
+    case 'zu':
+      return await import('@angular/common/locales/zu');
     default:
       throw new Error(`Unsupported locale: ${locale}`);
   }
