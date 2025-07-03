@@ -9,7 +9,6 @@ console.log('[BOOTSTRAP] Starting application bootstrap');
 let appLang = 'en'; // Default language
 
 if (typeof window !== 'undefined') {
-  debugger;
   const settings = localStorage.getItem('nostria-settings');
 
   if (settings) {
@@ -26,7 +25,6 @@ initLanguage(appLang)
   });
 
 async function initLanguage(locale: string): Promise<void> {
-  debugger;
   console.log(`[BOOTSTRAP] Initializing language: ${locale}`);
 
   if (locale === "en") {

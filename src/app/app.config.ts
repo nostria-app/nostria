@@ -21,7 +21,14 @@ if (typeof window !== 'undefined') {
 
   if (settings) {
     const parsedSettings = JSON.parse(settings);
-    appLang = parsedSettings.locale || 'en'; // Fallback to 'en' if locale is not set
+    let locale = parsedSettings.locale || 'en';
+    
+    // Map 'no' to 'nb' for Angular locale compatibility
+    if (locale === 'no') {
+      locale = 'nb';
+    }
+    
+    appLang = locale;
   }
 }
 
