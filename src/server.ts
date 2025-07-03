@@ -86,7 +86,7 @@ app.use((req, res, next) => {
   const userLocale = detectUserLocale(req.headers['accept-language']);
   const localeDistFolder = localeDistFolders[userLocale];
   
-  if (existsSync(localeDistFolder)) {
+  if (localeFolderExists[userLocale]) {
     express.static(localeDistFolder, {
       maxAge: '1y',
       index: false,
