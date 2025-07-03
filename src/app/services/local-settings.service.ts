@@ -5,11 +5,13 @@ import { LoggerService } from './logger.service';
 export interface LocalSettings {
   menuOpen: boolean;
   menuExpanded: boolean;
+  locale: string;
 }
 
 const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
   menuOpen: true,
-  menuExpanded: true
+  menuExpanded: true,
+  locale: 'en'
 };
 
 /**
@@ -30,6 +32,7 @@ export class LocalSettingsService {
   // Computed signals for individual settings
   readonly menuOpen = computed(() => this.settings().menuOpen);
   readonly menuExpanded = computed(() => this.settings().menuExpanded);
+  readonly locale = computed(() => this.settings().locale);
 
   constructor() {
     this.loadSettings();
@@ -105,6 +108,13 @@ export class LocalSettingsService {
    */
   setMenuExpanded(expanded: boolean): void {
     this.updateSettings({ menuExpanded: expanded });
+  }
+
+  /**
+   * Set locale
+   */
+  setLocale(locale: string): void {
+    this.updateSettings({ locale });
   }
 
   /**
