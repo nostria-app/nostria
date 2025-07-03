@@ -21,6 +21,7 @@ import { RelayService } from '../../../services/relay.service';
 import { MatCardModule } from '@angular/material/card';
 import { LayoutService } from '../../../services/layout.service';
 import { AccountStateService } from '../../../services/account-state.service';
+import { RichTextEditorComponent } from '../../../components/rich-text-editor/rich-text-editor.component';
 
 interface ArticleDraft {
   title: string;
@@ -46,7 +47,8 @@ interface ArticleDraft {
     MatProgressBarModule,
     MatSnackBarModule,
     MatDialogModule,
-    MatCardModule
+    MatCardModule,
+    RichTextEditorComponent
 ],
   templateUrl: './editor.component.html',
   styleUrl: './editor.component.scss'
@@ -211,6 +213,7 @@ export class EditorComponent {
   }
 
   async publishArticle(kind: number = 30023): Promise<void> {
+    debugger;
     if (!this.isValid()) {
       this.snackBar.open('Please fill in required fields', 'Close', { duration: 3000 });
       return;

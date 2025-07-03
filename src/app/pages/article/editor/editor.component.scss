@@ -105,6 +105,21 @@
           line-height: 1.6;
         }
       }
+      
+      .editor-hint {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 12px;
+        color: var(--mat-sys-on-surface-variant);
+        font-size: 0.9em;
+        
+        mat-icon {
+          font-size: 18px;
+          width: 18px;
+          height: 18px;
+        }
+      }
     }
     
     .preview-tab {
