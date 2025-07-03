@@ -14,6 +14,8 @@ import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { marked } from 'marked';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { NostrService } from '../../../services/nostr.service';
 import { DataService } from '../../../services/data.service';
@@ -48,7 +50,9 @@ interface ArticleDraft {
     MatSnackBarModule,
     MatDialogModule,
     MatCardModule,
-    RichTextEditorComponent
+    RichTextEditorComponent,
+    MatExpansionModule,
+    MatTooltipModule
 ],
   templateUrl: './editor.component.html',
   styleUrl: './editor.component.scss'
@@ -69,7 +73,8 @@ export class EditorComponent {
   isPublishing = signal(false);
   isEditMode = signal(false);
   selectedTabIndex = signal(0);
-
+  autoTitleEnabled = signal(true);
+  
   // Article data
   article = signal<ArticleDraft>({
     title: '',
@@ -78,6 +83,36 @@ export class EditorComponent {
     content: '',
     tags: [],
     dTag: this.generateUniqueId()
+  });
+  
+  // Auto-title feature
+  suggestedTitle = computed(() => {
+    if (!this.autoTitleEnabled()) return '';
+    
+    const content = this.article().content;
+    if (!content.trim()) return '';
+    
+    // Extract first line and clean it up
+    const firstLine = content.split('\n')[0];
+    
+    // Remove markdown heading syntax
+    let title = firstLine.replace(/^#{1,6}\s+/, '');
+    
+    // Remove other markdown formatting
+    title = title
+      .replace(/\*\*/g, '')  // Bold
+      .replace(/\*/g, '')     // Italic
+      .replace(/\_\_/g, '')   // Bold
+      .replace(/\_/g, '')     // Italic
+      .replace(/\~\~/g, '')   // Strikethrough
+      .replace(/\`/g, '');    // Code
+    
+    // Limit length
+    if (title.length > 100) {
+      title = title.substring(0, 97) + '...';
+    }
+    
+    return title;
   });
   // Form validation
   isValid = computed(() => {
@@ -309,9 +344,31 @@ export class EditorComponent {
 
   updateContent(value: string): void {
     this.article.update(art => ({ ...art, content: value }));
+    
+    // If auto-title is enabled and there's a suggested title, apply it
+    // Removed the check for empty title to allow auto-title to update existing titles
+    if (this.autoTitleEnabled() && this.suggestedTitle()) {
+      this.applyAutoTitle();
+    }
   }
 
   updateDTag(value: string): void {
     this.article.update(art => ({ ...art, dTag: value }));
+  }
+  
+  toggleAutoTitleMode(): void {
+    this.autoTitleEnabled.update(enabled => !enabled);
+    // Apply auto-title when enabling, regardless of existing title
+    if (this.autoTitleEnabled() && this.suggestedTitle()) {
+      this.applyAutoTitle();
+    }
+  }
+  
+  applyAutoTitle(): void {
+    const suggested = this.suggestedTitle();
+    if (suggested) {
+      this.updateTitle(suggested);
+      this.snackBar.open('Title updated from content', 'Close', { duration: 2000 });
+    }
   }
 }
