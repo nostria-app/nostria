@@ -7,12 +7,14 @@ import { DragDropModule } from '@angular/cdk/drag-drop';
 import { routes } from './app.routes';
 import { LoggerService } from './services/logger.service';
 import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
-import { provideHttpClient, withFetch } from '@angular/common/http';
+import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { UserRelayFactoryService } from './services/user-relay-factory.service';
 import { UserRelayService } from './services/user-relay.service';
 import { MatIconRegistry } from '@angular/material/icon';
 import { ApiConfiguration } from './api/api-configuration';
 import { environment } from '../environments/environment';
+import { nip98AuthInterceptor } from './services/interceptors/nip98Auth';
+import { MAT_FORM_FIELD_DEFAULT_OPTIONS } from '@angular/material/form-field';
 
 let appLang = 'en'; // Default language
 
@@ -67,16 +69,23 @@ export const appConfig: ApplicationConfig = {
         rootUrl: new URL('api', environment.backendUrl)
       }
     },
+     {
+      provide: MAT_FORM_FIELD_DEFAULT_OPTIONS,
+      useValue: { appearance: 'outline' }
+    },
     UserRelayFactoryService,
     UserRelayService,
     provideZonelessChangeDetection(),
     provideRouter(routes),
     provideAnimations(),
-    provideHttpClient(withFetch()),
+    provideHttpClient(
+      withFetch(),
+      withInterceptors([nip98AuthInterceptor]),
+    ),
     provideClientHydration(withEventReplay()),
     provideServiceWorker('ngsw-worker.js', {
-      // enabled: !isDevMode(),
-      enabled: true, // For development, set to true to test service worker. Also add "serviceWorker" in angular.json.
+      enabled: !isDevMode(),
+      // enabled: true, // For development, set to true to test service worker. Also add "serviceWorker" in angular.json.
       registrationStrategy: 'registerWhenStable:30000'
     }),
     importProvidersFrom(DragDropModule)

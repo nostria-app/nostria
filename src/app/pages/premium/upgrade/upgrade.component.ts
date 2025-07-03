@@ -1,6 +1,6 @@
-import { Component, effect, inject, signal, OnDestroy } from '@angular/core';
+import { Component, effect, inject, signal, OnDestroy, } from '@angular/core';
 
-import { FormsModule, ReactiveFormsModule, FormGroup, FormBuilder, Validators } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatStepperModule } from '@angular/material/stepper';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -13,23 +13,28 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { NameService } from '../../../services/name.service';
-import { debounceTime, firstValueFrom, Subject, takeUntil } from 'rxjs';
-import { AccountService } from '../../../api/services';
+import { debounceTime, firstValueFrom, from, of, Subject, switchMap, takeUntil } from 'rxjs';
+import { AccountService, PaymentService } from '../../../api/services';
 import { TierDetails } from '../../../api/models/tier-details';
-
+import { AccountStateService } from '../../../services/account-state.service';
+import { CreatePayment$Params } from '../../../api/fn/payment/create-payment';
+import { ApplicationService } from '../../../services/application.service';
+import { environment } from '../../../../environments/environment';
+import { Payment } from '../../../api/models';
+import { UsernameService } from '../../../services/username';
 
 interface PaymentInvoice {
-  paymentRequest: string;
-  expiresAt: number;
+  id: string;
+  invoice: string;
   status: 'pending' | 'paid' | 'expired';
+  expires: number;
 }
 
 interface PricingDisplay {
-    pricePerMonth: string,
-    totalPrice: string,
-    currency: string,
-    period: string,
+  pricePerMonth: string,
+  totalPrice: string,
+  currency: string,
+  period: string,
 };
 
 interface TierDisplay {
@@ -58,7 +63,7 @@ interface TierDisplay {
     MatSnackBarModule,
     MatDividerModule,
     MatTooltipModule
-],
+  ],
   templateUrl: './upgrade.component.html',
   styleUrl: './upgrade.component.scss'
 })
@@ -67,138 +72,101 @@ export class UpgradeComponent implements OnDestroy {
   private formBuilder = inject(FormBuilder);
   private snackBar = inject(MatSnackBar);
   private router = inject(Router);
-  private name = inject(NameService);
+  private usernameService = inject(UsernameService);
   private accountService = inject(AccountService)
+  private paymentService = inject(PaymentService)
+  private accountState = inject(AccountStateService);
+  private readonly app = inject(ApplicationService);
+  environment = environment;
 
   usernameFormGroup = this.formBuilder.group({
     username: ['', [Validators.required, Validators.minLength(3), Validators.pattern('^[a-zA-Z0-9_]+$')]]
   });
 
   paymentFormGroup = this.formBuilder.group({
-    paymentOption: ['yearly' as 'yearly', Validators.required]
+    paymentOption: [Validators.required]
   });
 
   currentStep = signal<number>(0);
-  isUsernameAvailable = signal<boolean | null>(null);
+  stepComplete = signal<Record<number, boolean>>({});
   isCheckingUsername = signal<boolean>(false);
   tiers = signal<TierDisplay[]>([]);
   selectedTier = signal<TierDisplay | null>(null);
   selectedPaymentOption = signal<'quarterly' | 'yearly' | null>('yearly');
   paymentInvoice = signal<PaymentInvoice | null>(null);
+  invoiceExpiresIn = signal<string>('15');
   isGeneratingInvoice = signal<boolean>(false);
   isPaymentCompleted = signal<boolean>(false);
   paymentCheckInterval = signal<number | null | any>(null);
-  
 
   constructor() {
-    // Fetch tiers from API
-    this.accountService.getTiers().pipe(takeUntil(this.destroy$)).subscribe(tiersObj => {
-      const tiers = Object.values(tiersObj).map(tier => {
-        return {
-          key: tier.tier,
-          details: tier,
-          pricing: {
-            quarterly: this.getPricing(tier, 'quarterly'),
-            yearly: this.getPricing(tier, 'yearly'),
-          }
-        }
-      });
-
-      this.tiers.set(tiers);
-      if (tiers.length > 0) {
-        this.selectedTier.set(tiers[0]);
-      }
-    });
-
-    // Set up form value changes
     effect(() => {
-      const paymentOption = this.paymentFormGroup.get('paymentOption')?.value;
-      if (paymentOption) {
-        this.selectedPaymentOption.set(paymentOption);
+      if (this.accountState.initialized()) {
+        // Fetch tiers from API
+        this.accountService.getTiers().pipe(takeUntil(this.destroy$)).subscribe(tiersObj => {
+          const tiers = Object.values(tiersObj).map(tier => {
+            return {
+              key: tier.tier,
+              details: tier,
+              pricing: {
+                quarterly: this.getPricing(tier, 'quarterly'),
+                yearly: this.getPricing(tier, 'yearly'),
+              }
+            }
+          });
+
+          this.tiers.set(tiers);
+          if (tiers.length > 0) {
+            this.selectedTier.set(tiers[0]);
+          }
+        });
       }
     });
-
-    // Add CSS variables for primary color in RGB format for opacity support
-    this.setupThemeVariables();
 
     this.usernameFormGroup.get('username')?.valueChanges
       .pipe(
+        takeUntil(this.destroy$),
         debounceTime(300), // Wait 300ms after last keystroke
-        takeUntil(this.destroy$)
-      )
-      .subscribe(value => {
-        this.checkUsernameAvailability();
+        switchMap(value => {
+          const trimmedValue = (value || '').trim();
+          if (!trimmedValue) {
+            return of({ success: true, message: '' });
+          }
+          this.isCheckingUsername.set(true);
+          return from(this.usernameService.isUsernameAvailable(trimmedValue));
+        }),
+      ).subscribe(({ success, message }) => {
+        this.isCheckingUsername.set(false);
+        if (!success) {
+          this.usernameFormGroup.get('username')!.setErrors({ username: message });
+          this.usernameFormGroup.get('username')!.markAllAsTouched();
+        }
       });
   }
 
   ngOnDestroy() {
     this.destroy$.next();
     this.destroy$.complete();
-  }
-
-  private setupThemeVariables() {
-    // Get the computed primary color and convert to RGB for opacity support
-    const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--mat-sys-primary').trim();
-    if (primaryColor) {
-      const rgb = this.hexToRgb(primaryColor) || '142, 68, 173'; // Fallback to default purple
-      document.documentElement.style.setProperty('--mat-sys-background', rgb);
-    }
-
-    // Get the background color for overlay calculations
-    const backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--mat-card-container-color').trim();
-    if (backgroundColor) {
-      const rgb = this.hexToRgb(backgroundColor) || '255, 255, 255';
-      document.documentElement.style.setProperty('--mat-background-rgb', rgb);
-    }
-  }
-
-  private hexToRgb(hex: string): string | null {
-    // Remove # if present
-    hex = hex.replace('#', '');
-
-    // Convert 3-digit hex to 6-digit
-    if (hex.length === 3) {
-      hex = hex.split('').map(x => x + x).join('');
-    }
-
-    const r = parseInt(hex.substring(0, 2), 16);
-    const g = parseInt(hex.substring(2, 4), 16);
-    const b = parseInt(hex.substring(4, 6), 16);
-
-    if (isNaN(r) || isNaN(g) || isNaN(b)) {
-      return null;
-    }
-
-    return `${r}, ${g}, ${b}`;
-  }
-
-  async checkUsernameAvailability() {
-    const username = this.usernameFormGroup.get('username')?.value;
-
-    if (!username || username.length < 3) {
-      this.isUsernameAvailable.set(null);
-      return;
-    }
-
-
-
-    this.isCheckingUsername.set(true);
-
-    try {
-      // Simulate API call to check username availability
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      const isAvailable = await firstValueFrom(this.name.isUsernameAvailable(username));
-      this.isUsernameAvailable.set(isAvailable);
-    } finally {
-      this.isCheckingUsername.set(false);
-    }
+    this.resetPayment();
   }
 
   nextStep() {
-    if (this.currentStep() === 0 && this.usernameFormGroup.valid && this.isUsernameAvailable()) {
-      this.currentStep.set(1);
+    if (this.currentStep() === 0 && this.usernameFormGroup.valid) {
+      this.stepComplete.set({
+        ...this.stepComplete(),
+        0: true,
+      });
+
+      if (this.stepComplete()[1] && this.stepComplete()[2]) {
+        this.createAccount();
+      } else {
+        this.currentStep.set(1);
+      }
     } else if (this.currentStep() === 1 && this.paymentFormGroup.valid) {
+      this.stepComplete.set({
+        ...this.stepComplete(),
+        1: true,
+      });
       this.generatePaymentInvoice();
     }
   }
@@ -210,21 +178,36 @@ export class UpgradeComponent implements OnDestroy {
   }
 
   async generatePaymentInvoice() {
-    if (!this.selectedTier()) return;
+    const selectedTier = this.selectedTier()
+    const selectedPaymentOption = this.selectedPaymentOption()
+    if (!selectedTier || !selectedPaymentOption) return;
+
+    const selectedPrice = selectedTier.details.pricing[selectedPaymentOption]?.priceCents
+
+    if (!selectedPrice) {
+      console.error('No price found for selected tier and payment option ', selectedTier.key, selectedPaymentOption);
+      return;
+    }
 
     this.isGeneratingInvoice.set(true);
 
     try {
-      // Simulate API call to generate Lightning invoice
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const pubkey = this.accountState.pubkey();
+      const request: CreatePayment$Params = {
+        body: {
+          billingCycle: selectedPaymentOption,
+          tierName: selectedTier.details.tier,
+          pubkey,
+        }
+      }
 
-      // Create a mock invoice that expires in 15 minutes
-      const expiryTime = Date.now() + (15 * 60 * 1000);
+      const payment = await firstValueFrom(this.paymentService.createPayment(request));
 
       this.paymentInvoice.set({
-        paymentRequest: 'lnbc1500n1p3zug37pp5hvpwkj3j5ww760na4h6kpuqfk5htx2wvteypjhxguwuclep3uyylqdq8w3jhxapqvehhygzyfap4xxqyz5vqcqzpgxqyz5vqsp5u7unxml9qtupqf0f056lt227yqwemkwd8hm6x2a3u4u473tkpars9qyyssqtfyvk8yyj0n48jemgzwlh3qaplj4012lgjg8g8hh95dfjky9vn3h68z0wl397l078zx4dg4jxgzqvhl8mhjq7xq40mlrj8893zegpsxgmzs5',
-        expiresAt: expiryTime,
-        status: 'pending'
+        id: payment.id,
+        invoice: payment.lnInvoice,
+        status: payment.status,
+        expires: payment.expires,
       });
 
       // Move to the payment step
@@ -242,19 +225,28 @@ export class UpgradeComponent implements OnDestroy {
     }
   }
 
-  startPaymentCheck() {
-    // Clear any existing interval
+  stopPaymentCheck() {
     if (this.paymentCheckInterval() !== null) {
       window.clearInterval(this.paymentCheckInterval());
+      this.paymentCheckInterval.set(null);
     }
+  }
+
+  startPaymentCheck() {
+    // Clear any existing interval
+    this.stopPaymentCheck();
 
     // Check every 3 seconds
     const intervalId = window.setInterval(async () => {
       await this.checkPaymentStatus();
-
+      const invoice = this.paymentInvoice();
+      if (!invoice) return;
+      // const minutesToExpiry = Math.round((invoice.expires - Date.now()) / 60000);
+      const minutesToExpiry = Math.max(0, Math.round((invoice.expires - Date.now()) / 60000));
+      this.invoiceExpiresIn.set(String(minutesToExpiry))
       // If payment completed or expired, stop checking
       if (this.paymentInvoice()?.status !== 'pending') {
-        window.clearInterval(this.paymentCheckInterval()!);
+        this.stopPaymentCheck();
         this.paymentCheckInterval.set(null);
       }
     }, 3000);
@@ -262,32 +254,56 @@ export class UpgradeComponent implements OnDestroy {
     this.paymentCheckInterval.set(intervalId);
   }
 
-  async checkPaymentStatus() {
-    if (!this.paymentInvoice()) return;
+  // async finalize() {
+  //   await firstValueFrom(this.accountService.addAccount({
+  //     body: {
+  //       pubkey: this.accountState.pubkey(),
+  //       username: 'sondreb',
+  //       paymentId: 'payment-972e68f1-c8c1-482f-94cb-ac708ca7baa3',
+  //     }
+  //   }));
 
-    // Simulate API call to check payment status
-    // For demo, we'll randomly complete the payment after a few checks
-    if (Math.random() > 0.7) {
+  //   this.isPaymentCompleted.set(true);
+  //   // touch account state to load account subscription
+  //   this.accountState.changeAccount(this.accountState.account())
+
+  //   // Show success message
+  //   this.snackBar.open('Payment successful! Your premium account is now active.', 'Great!', {
+  //     duration: 8000
+  //   });
+
+  //   // After 2 seconds, proceed to completion step
+  //   setTimeout(() => {
+  //     this.currentStep.set(3);
+  //   }, 2000);
+  // }
+
+  async checkPaymentStatus() {
+    const paymentInvoice = this.paymentInvoice()
+    if (!paymentInvoice || paymentInvoice.status !== 'pending') return;
+
+    let payment: Payment | undefined;
+
+    payment = await firstValueFrom(this.paymentService.getPayment({
+      paymentId: paymentInvoice.id,
+      pubkey: this.accountState.pubkey()
+    }));
+
+    if (payment.status === 'paid') {
       this.paymentInvoice.set({
         ...this.paymentInvoice()!,
         status: 'paid'
       });
-
-      this.isPaymentCompleted.set(true);
-
-      // Show success message
-      this.snackBar.open('Payment successful! Your premium account is now active.', 'Great!', {
-        duration: 8000
+      this.stepComplete.set({
+        ...this.stepComplete(),
+        2: true,
       });
 
-      // After 2 seconds, proceed to completion step
-      setTimeout(() => {
-        this.currentStep.set(3);
-      }, 2000);
+      await this.createAccount();
     }
 
     // Check if invoice has expired
-    if (this.paymentInvoice()!.expiresAt < Date.now()) {
+    if (payment.status === 'expired') {
       this.paymentInvoice.set({
         ...this.paymentInvoice()!,
         status: 'expired'
@@ -299,12 +315,51 @@ export class UpgradeComponent implements OnDestroy {
     }
   }
 
+  async createAccount() {
+    // 409 — pubkey already registered
+    // 400/500 — something is wrong. TODO: Notify devs and retry
+    try {
+      await firstValueFrom(this.accountService.addAccount({
+        body: {
+          pubkey: this.accountState.pubkey(),
+          username: this.usernameFormGroup.get('username')?.value,
+          paymentId: this.paymentInvoice()!.id,
+        }
+      }));
+      this.stepComplete.set({
+        ...this.stepComplete(),
+        3: true,
+      });
+      this.isPaymentCompleted.set(true);
+      // touch account state to load account subscription
+      this.accountState.changeAccount(this.accountState.account())
+
+      // Show success message
+      this.snackBar.open('Payment successful! Your premium account is now active.', 'Great!', {
+        duration: 8000
+      });
+
+      // After 2 seconds, proceed to completion step
+      setTimeout(() => {
+        this.currentStep.set(3);
+      }, 2000);
+
+    } catch (e: any) {
+      if (e.status === 409) {
+        this.snackBar.open(e?.error?.error, 'Ok', { duration: 5000 });
+        this.stepComplete.set({
+          ...this.stepComplete(),
+          0: false,
+        });
+        this.currentStep.set(0);
+        this.usernameFormGroup.get('username')!.setValue(this.usernameFormGroup.get('username')!.value);
+      }
+    };
+  }
+
   resetPayment() {
     // Stop any payment check interval
-    if (this.paymentCheckInterval() !== null) {
-      window.clearInterval(this.paymentCheckInterval());
-      this.paymentCheckInterval.set(null);
-    }
+    this.stopPaymentCheck();
 
     // Reset the payment state
     this.paymentInvoice.set(null);

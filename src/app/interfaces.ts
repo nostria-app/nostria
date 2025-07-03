@@ -20,6 +20,13 @@ export declare interface OnInitialized {
     initialize(): void;
 }
 
+/** Interface that is implemented by services and called when account changes. */
+export declare interface NostriaService {
+    // initialize(): Promise<any>;
+    load(): Promise<any>;
+    clear(): void;
+}
+
 // Interface for Nostr events
 // export interface NostrEvent extends Event {
 //     /** Data is the parsed content. */

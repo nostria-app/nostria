@@ -28,6 +28,9 @@ import { AboutComponent } from '../about/about.component';
 import { RelaysComponent } from '../relays/relays.component';
 import { BackupComponent } from '../backup/backup.component';
 import { LocalSettingsService } from '../../services/local-settings.service';
+import { WebRequest } from '../../services/web-request';
+import { AccountStateService } from '../../services/account-state.service';
+import { PremiumSettings } from '../premium/settings/settings';
 
 interface SettingsSection {
   id: string;
@@ -61,8 +64,9 @@ interface Language {
     LogsSettingsComponent,
     AboutComponent,
     RelaysComponent,
-    BackupComponent
-],
+    BackupComponent,
+    PremiumSettings
+  ],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.scss',
 })
@@ -73,10 +77,12 @@ export class SettingsComponent {
   nostrService = inject(NostrService);
   storage = inject(StorageService);
   appState = inject(ApplicationStateService);
+  accountState = inject(AccountStateService);
   app = inject(ApplicationService);
   dialog = inject(MatDialog);
   router = inject(Router);
   localSettings = inject(LocalSettingsService);
+  web = inject(WebRequest);
 
   currentFeatureLevel = signal<FeatureLevel>(this.app.featureLevel());
 
@@ -98,6 +104,7 @@ export class SettingsComponent {
     { id: 'relays', title: 'Relays', icon: 'dns', authenticated: true },
     { id: 'privacy', title: 'Privacy & Safety', icon: 'security', authenticated: true },
     { id: 'backup', title: 'Backup', icon: 'archive', authenticated: true },
+    { id: 'premium', title: 'Premium', icon: 'diamond', authenticated: true },
     { id: 'logs', title: 'Logs', icon: 'article', authenticated: true },
     { id: 'about', title: 'About', icon: 'info' }
   ];
@@ -176,4 +183,22 @@ export class SettingsComponent {
       }
     });
   }
+
+  async loadSettings() {
+    const result = await this.web.fetchJson(`http://localhost:3000/api/settings/${this.accountState.pubkey()}`, { method: 'GET' }, { kind: 27235 });
+    console.log('Loaded settings:', result);
+  }
+
+  async saveSettings() {
+    const settings = {
+      releaseChannel: "alpha",
+      socialSharing: true
+    };
+
+    const json = JSON.stringify(settings);
+
+    const result = await this.web.fetchJson(`http://localhost:3000/api/settings/${this.accountState.pubkey()}`, { method: 'POST', body: json }, { kind: 27235 });
+    console.log('Loaded settings:', result);
+  }
+
 }

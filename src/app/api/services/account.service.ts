@@ -11,10 +11,12 @@ import { BaseService } from '../base-service';
 import { ApiConfiguration } from '../api-configuration';
 import { StrictHttpResponse } from '../strict-http-response';
 
-import { AccountDto } from '../models/account-dto';
+import { Account } from '../models/account';
 import { addAccount } from '../fn/account/add-account';
 import { AddAccount$Params } from '../fn/account/add-account';
 import { ApiResponse } from '../models/api-response';
+import { checkUsername } from '../fn/account/check-username';
+import { CheckUsername$Params } from '../fn/account/check-username';
 import { getAccount } from '../fn/account/get-account';
 import { GetAccount$Params } from '../fn/account/get-account';
 import { getPublicAccount } from '../fn/account/get-public-account';
@@ -85,7 +87,7 @@ export class AccountService extends BaseService {
    *
    * This method doesn't expect any request body.
    */
-  getAccount$Response(params?: GetAccount$Params, context?: HttpContext): Observable<StrictHttpResponse<AccountDto>> {
+  getAccount$Response(params?: GetAccount$Params, context?: HttpContext): Observable<StrictHttpResponse<Account>> {
     return getAccount(this.http, this.rootUrl, params, context);
   }
 
@@ -99,9 +101,9 @@ export class AccountService extends BaseService {
    *
    * This method doesn't expect any request body.
    */
-  getAccount(params?: GetAccount$Params, context?: HttpContext): Observable<AccountDto> {
+  getAccount(params?: GetAccount$Params, context?: HttpContext): Observable<Account> {
     return this.getAccount$Response(params, context).pipe(
-      map((r: StrictHttpResponse<AccountDto>): AccountDto => r.body)
+      map((r: StrictHttpResponse<Account>): Account => r.body)
     );
   }
 
@@ -118,7 +120,7 @@ export class AccountService extends BaseService {
    *
    * This method sends `application/json` and handles request body of type `application/json`.
    */
-  updateAccount$Response(params: UpdateAccount$Params, context?: HttpContext): Observable<StrictHttpResponse<AccountDto>> {
+  updateAccount$Response(params: UpdateAccount$Params, context?: HttpContext): Observable<StrictHttpResponse<Account>> {
     return updateAccount(this.http, this.rootUrl, params, context);
   }
 
@@ -132,9 +134,9 @@ export class AccountService extends BaseService {
    *
    * This method sends `application/json` and handles request body of type `application/json`.
    */
-  updateAccount(params: UpdateAccount$Params, context?: HttpContext): Observable<AccountDto> {
+  updateAccount(params: UpdateAccount$Params, context?: HttpContext): Observable<Account> {
     return this.updateAccount$Response(params, context).pipe(
-      map((r: StrictHttpResponse<AccountDto>): AccountDto => r.body)
+      map((r: StrictHttpResponse<Account>): Account => r.body)
     );
   }
 
@@ -151,7 +153,7 @@ export class AccountService extends BaseService {
    *
    * This method sends `application/json` and handles request body of type `application/json`.
    */
-  addAccount$Response(params: AddAccount$Params, context?: HttpContext): Observable<StrictHttpResponse<AccountDto>> {
+  addAccount$Response(params: AddAccount$Params, context?: HttpContext): Observable<StrictHttpResponse<Account>> {
     return addAccount(this.http, this.rootUrl, params, context);
   }
 
@@ -165,9 +167,42 @@ export class AccountService extends BaseService {
    *
    * This method sends `application/json` and handles request body of type `application/json`.
    */
-  addAccount(params: AddAccount$Params, context?: HttpContext): Observable<AccountDto> {
+  addAccount(params: AddAccount$Params, context?: HttpContext): Observable<Account> {
     return this.addAccount$Response(params, context).pipe(
-      map((r: StrictHttpResponse<AccountDto>): AccountDto => r.body)
+      map((r: StrictHttpResponse<Account>): Account => r.body)
+    );
+  }
+
+  /** Path part for operation `checkUsername()` */
+  static readonly CheckUsernamePath = '/account/check/{username}';
+
+  /**
+   * Check username can be used.
+   *
+   * Checks the given username is correct and is not taken
+   *
+   * This method provides access to the full `HttpResponse`, allowing access to response headers.
+   * To access only the response body, use `checkUsername()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  checkUsername$Response(params: CheckUsername$Params, context?: HttpContext): Observable<StrictHttpResponse<ApiResponse>> {
+    return checkUsername(this.http, this.rootUrl, params, context);
+  }
+
+  /**
+   * Check username can be used.
+   *
+   * Checks the given username is correct and is not taken
+   *
+   * This method provides access only to the response body.
+   * To access the full response (for headers, for example), `checkUsername$Response()` instead.
+   *
+   * This method doesn't expect any request body.
+   */
+  checkUsername(params: CheckUsername$Params, context?: HttpContext): Observable<ApiResponse> {
+    return this.checkUsername$Response(params, context).pipe(
+      map((r: StrictHttpResponse<ApiResponse>): ApiResponse => r.body)
     );
   }
 

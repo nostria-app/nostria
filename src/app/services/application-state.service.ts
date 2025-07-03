@@ -9,7 +9,8 @@ import { isPlatformBrowser } from "@angular/common";
 export class ApplicationStateService {
     router = inject(Router);
     logger = inject(LoggerService);
-    loadingMessage = signal('Loading data...');
+    loadingMessage = signal('Starting Nostria...');
+
     showSuccess = signal(false);
     isLoading = signal(true);
     isOnline = signal(navigator.onLine);
@@ -29,6 +30,7 @@ export class ApplicationStateService {
     readonly RELAYS_STORAGE_KEY = 'nostria-relays';
     readonly PROCESSING_STORAGE_KEY = 'nostria-processing';
     readonly SETTINGS_KEY = 'nostria-settings';
+    readonly SUBSCRIPTIONS_STORAGE_KEY = 'nostria-subscriptions';
 
     showOfflineWarning = computed(() => !this.isOnline() && !this.offlineDismissed());
     // showOfflineWarning = signal(true);

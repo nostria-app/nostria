@@ -46,6 +46,11 @@
       <mat-card-content>
         <!-- General Settings -->
         @if (activeSection() === 'general') {
+
+        <!-- Enable to test API stored settings, most settings should be app-specific data on relays, not API. -->
+        <!-- <button (click)="saveSettings()">Save Settings</button>
+          <button (click)="loadSettings()">Load Settings</button> -->
+
         <div class="setting-item">
           <span i18n="@@settings.dark-mode">Dark Mode</span>
           <mat-slide-toggle [checked]="themeService.darkMode()" (change)="toggleDarkMode()">
@@ -158,6 +163,10 @@
 
         @if (activeSection() === 'backup') {
         <app-backup></app-backup>
+        }
+
+        @if (activeSection() === 'premium') {
+        <app-premium-settings></app-premium-settings>
         }
 
       </mat-card-content>

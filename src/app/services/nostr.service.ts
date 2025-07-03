@@ -1,24 +1,22 @@
 import { Injectable, signal, computed, effect, inject, untracked } from '@angular/core';
-import { Event, generateSecretKey, getPublicKey, UnsignedEvent, VerifiedEvent } from 'nostr-tools/pure';
+import { Event, EventTemplate, generateSecretKey, getPublicKey, UnsignedEvent, VerifiedEvent } from 'nostr-tools/pure';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
-import * as nip19 from 'nostr-tools/nip19';
-import { makeAuthEvent } from 'nostr-tools/nip42';
+import { nip19, nip98 } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { RelayService } from './relay.service';
 import { NostrEventData, StorageService, UserMetadata } from './storage.service';
 import { kinds, SimplePool } from 'nostr-tools';
-import { finalizeEvent, verifyEvent } from 'nostr-tools/pure';
+import { finalizeEvent } from 'nostr-tools/pure';
 import { BunkerPointer, BunkerSigner, parseBunkerInput } from 'nostr-tools/nip46';
-import { NostrTagKey, StandardizedTagType } from '../standardized-tags';
+import { NostrTagKey } from '../standardized-tags';
 import { ApplicationStateService } from './application-state.service';
 import { AccountStateService } from './account-state.service';
 import { LocalStorageService } from './local-storage.service';
-import { BookmarkService } from './bookmark.service';
-import { SettingsService } from './settings.service';
 import { RegionService } from './region.service';
-import { NostrRecord } from '../interfaces';
+import { MEDIA_SERVERS_EVENT_KIND, NostriaService, NostrRecord } from '../interfaces';
 import { DataService } from './data.service';
 import { UtilitiesService } from './utilities.service';
+import { Tier } from '../api/models';
 
 export interface NostrUser {
   pubkey: string;
@@ -29,6 +27,7 @@ export interface NostrUser {
   bunker?: BunkerPointer;
   region?: string; // Add this new property
 
+  // TODO: Not needed anymore, remove.
   /** Indicates if this account has been "activated". This means the account has published it's relay list. For brand new accounts,
    * we won't publish Relay List until the user has performed their first signing action. When that happens, we will set this to true,
    * and publish Relay List + other events, like Profile Edit or publishing a post.
@@ -43,7 +42,7 @@ export interface UserMetadataWithPubkey extends NostrEventData<UserMetadata> {
 @Injectable({
   providedIn: 'root'
 })
-export class NostrService {
+export class NostrService implements NostriaService {
   private readonly logger = inject(LoggerService);
   private readonly relayService = inject(RelayService);
   private readonly storage = inject(StorageService);
@@ -61,8 +60,6 @@ export class NostrService {
   dataLoaded = false;
 
   // account = signal<NostrUser | null>(null);
-  accounts = signal<NostrUser[]>([]);
-
   // accountChanging = signal<NostrUser | null>(null);
   // accountChanged = signal<NostrUser | null>(null);
 
@@ -72,10 +69,6 @@ export class NostrService {
   // usersMetadata = signal<Map<string, NostrRecord>>(new Map());
   usersRelays = signal<Map<string, Event>>(new Map());
   accountsRelays = signal<Event[]>([]);
-
-  hasAccounts = computed(() => {
-    return this.accounts().length > 0;
-  });
 
   discoveryQueue: any = [];
   activeDiscoveries: any = [];
@@ -99,22 +92,9 @@ export class NostrService {
       }
     });
 
-    effect(async () => {
-      const account = this.accountState.account();
-
-      console.log('Account changed', { account });
-
-      if (account) {
-        await this.loadAccount(account);
-      }
-
-      // // Set the current user pubkey in the app state
-      // this.appState.pubkey.set(account?.pubkey || null);
-    });
-
     // Save all users to localStorage whenever they change
     effect(() => {
-      const allUsers = this.accounts();
+      const allUsers = this.accountState.accounts();
 
       if (allUsers.length === 0) {
         this.logger.debug('No users to save to localStorage');
@@ -141,7 +121,7 @@ export class NostrService {
         return;
       }
 
-      this.accounts.set(accounts);
+      this.accountState.accounts.set(accounts);
 
       // We keep an in-memory copy of the user metadata and relay list for all accounts,
       // they won't take up too much memory space.
@@ -161,10 +141,6 @@ export class NostrService {
 
       const account = this.getAccountFromStorage();
 
-      // if (account) {
-      //   await this.loadAccount(account);
-      // }
-
       // If no account, finish the loading.
       if (!account) {
         // Show success animation instead of waiting
@@ -179,7 +155,10 @@ export class NostrService {
     }
   }
 
-  async loadAccount(account: NostrUser) {
+  async load() {
+    this.appState.isLoading.set(true);
+    const account = this.accountState.account();
+
     if (account) {
       const pubkey = account.pubkey;
       // When the account changes, check what data we have and get if missing.
@@ -290,11 +269,14 @@ export class NostrService {
   }
 
   reset() {
-    this.accounts.set([]);
+    this.accountState.accounts.set([]);
     this.accountState.changeAccount(null);
+  }
+
+  clear() {
     this.accountState.clearProfileCache();
     // this.accountsMetadata.set([]);
-    this.accountsRelays.set([]);
+    // this.accountsRelays.set([]);
   }
 
   // Method to easily find metadata by pubkey
@@ -311,7 +293,7 @@ export class NostrService {
         this.logger.info('Found pubkey in query parameters, attempting to load account', { pubkey: pubkeyParam });
 
         // Look for the account in our accounts list
-        const targetAccount = this.accounts().find(account => account.pubkey === pubkeyParam);
+        const targetAccount = this.accountState.accounts().find(account => account.pubkey === pubkeyParam);
 
         if (targetAccount) {
           this.logger.info('Found matching account for pubkey from query parameter', { pubkey: pubkeyParam });
@@ -371,7 +353,7 @@ export class NostrService {
   }
 
   /** Will attempt to discover relays for a pubkey. Will persist the event to database. */
-  async discoverRelays(pubkey: string): Promise<{ relayUrls: string[], relayList: boolean, followingList: boolean }> {
+  async discoverRelays(pubkey: string, persist = false): Promise<{ relayUrls: string[], relayList: boolean, followingList: boolean }> {
     // Perform relay discovery for the given pubkey
     const discoveryPool = new SimplePool();
     const discoveryRelays = this.relayService.discoveryRelays;
@@ -383,19 +365,38 @@ export class NostrService {
     };
 
     try {
+      console.log('Starting relay discovery for pubkey', pubkey, discoveryRelays);
+
+      discoveryPool.subscribe(discoveryRelays, {
+        kinds: [kinds.RelayList],
+        authors: [pubkey],
+      }, {
+        onevent: (event: Event) => {
+          console.log('Received event on discovery relays:', event);
+        }
+      });
+
+      console.log('Waiting for relay discovery to complete...');
+
       const relays = await discoveryPool.get(discoveryRelays, {
         kinds: [kinds.RelayList],
         authors: [pubkey],
       });
 
+      console.log('FOUND ANYTHING', relays);
+
       if (relays) {
         this.logger.info('Found your relays on network', { relays });
-        await this.storage.saveEvent(relays);
+
+        if (persist) {
+          await this.storage.saveEvent(relays);
+        }
+
         const relayUrls = this.getRelayUrls(relays, false); // Make sure to pass false to avoid ignoring automatic banned relays
         this.logger.info(`Found ${relayUrls.length} relays for user`, { relayUrls });
 
         if (relayUrls.length > 0) {
-          result.relayUrls = relayUrls;
+          result.relayUrls = this.utilities.normalizeRelayUrls(relayUrls);
           result.relayList = true;
         }
       } else {
@@ -408,11 +409,14 @@ export class NostrService {
         });
 
         if (contacts) {
-          this.storage.saveEvent(contacts);
+          if (persist) {
+            this.storage.saveEvent(contacts);
+          }
+
           const relayUrls = this.getRelayUrlsFromFollowing(contacts, false);
 
           if (relayUrls.length > 0) {
-            result.relayUrls = relayUrls;
+            result.relayUrls = this.utilities.normalizeRelayUrls(relayUrls);
             result.followingList = true;
           }
         }
@@ -651,8 +655,13 @@ export class NostrService {
       authors: [pubkey],
     }];
 
-    const onEvent = (event: Event) => {
+    const onEvent = async (event: Event) => {
       console.log('Received event on the account subscription:', event);
+
+      if (event.kind === kinds.Contacts) {
+        // Refresh the following list in the account state
+        this.accountState.parseFollowingList(event);
+      }
     }
 
     const onEose = () => {
@@ -662,17 +671,7 @@ export class NostrService {
     this.accountSubscription = this.relayService.subscribe(filters, onEvent, onEose);
   }
 
-  private arraysEqual(arr1: string[], arr2: string[]): boolean {
-    if (arr1.length !== arr2.length) {
-      return false;
-    }
 
-    // Sort both arrays to ensure order doesn't matter
-    const sorted1 = [...arr1].sort();
-    const sorted2 = [...arr2].sort();
-
-    return sorted1.every((value, index) => value === sorted2[index]);
-  }
 
   private async loadAccountFollowing(pubkey: string) {
     let followingEvent = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
@@ -687,18 +686,7 @@ export class NostrService {
       // Queue up refresh of this event in the background
       this.relayService.getEventByPubkeyAndKind(pubkey, kinds.Contacts).then(async (evt) => {
         if (evt) {
-          const followingTags = this.getTags(evt, 'p');
-
-          // Get current following list to compare
-          const currentFollowingList = this.accountState.followingList();
-
-          // Check if the lists are different
-          const hasChanged = !this.arraysEqual(currentFollowingList, followingTags);
-
-          if (hasChanged) {
-            this.accountState.followingList.set(followingTags);
-            await this.storage.saveEvent(evt);
-          }
+          this.accountState.parseFollowingList(evt);
         }
       });
     }
@@ -734,18 +722,22 @@ export class NostrService {
     }
   }
 
-  async signEvent(event: UnsignedEvent) {
+  async signEvent(event: EventTemplate) {
     return this.sign(event);
   }
 
-  private async sign(event: UnsignedEvent): Promise<Event> {
+  private async sign(event: EventTemplate): Promise<Event> {
     const currentUser = this.accountState.account();
 
     if (!currentUser) {
       throw new Error('No user account found. Please log in or create an account first.');
     }
 
-    let signedEvent: Event | null = null;
+    let signedEvent: Event | EventTemplate | null = null;
+
+    if (!('pubkey' in event) || !event.pubkey) {
+      (event as any).pubkey = currentUser.pubkey;
+    }
 
     switch (currentUser?.source) {
       case 'extension':
@@ -777,7 +769,7 @@ export class NostrService {
         break;
     }
 
-    return signedEvent;
+    return signedEvent as Event;
   }
 
   currentDate() {
@@ -950,10 +942,16 @@ export class NostrService {
 
     if (!event) {
       event = await this.relayService.getEventByPubkeyAndKind(pubkey, 10063);
+
+      if (event) {
+        this.storage.saveEvent(event as Event);
+      }
     } else {
       // Queue up refresh of this event in the background
       this.relayService.getEventByPubkeyAndKind(pubkey, 10063).then((newEvent) => {
-        this.storage.saveEvent(newEvent as Event);
+        if (newEvent) {
+          this.storage.saveEvent(newEvent as Event);
+        }
       });
     }
 
@@ -1661,13 +1659,13 @@ export class NostrService {
   // }
 
   async getAccountsMetadata() {
-    const pubkeys = this.accounts().map(user => user.pubkey);
+    const pubkeys = this.accountState.accounts().map(user => user.pubkey);
     const events = await this.data.getEventsByPubkeyAndKind(pubkeys, kinds.Metadata);
     return events;
   }
 
   async getAccountsRelays() {
-    const pubkeys = this.accounts().map(user => user.pubkey);
+    const pubkeys = this.accountState.accounts().map(user => user.pubkey);
     const relays = await this.storage.getEventsByPubkeyAndKind(pubkeys, kinds.RelayList);
     return relays;
   }
@@ -1782,7 +1780,7 @@ export class NostrService {
 
   async switchToUser(pubkey: string) {
     this.logger.info(`Switching to user with pubkey: ${pubkey}`);
-    const targetUser = this.accounts().find(u => u.pubkey === pubkey);
+    const targetUser = this.accountState.accounts().find(u => u.pubkey === pubkey);
     if (targetUser) {
       // Update lastUsed timestamp
       targetUser.lastUsed = Date.now();
@@ -1812,17 +1810,17 @@ export class NostrService {
     user.lastUsed = Date.now();
     user.name ??= this.utilities.getTruncatedNpub(user.pubkey);
 
-    const allUsers = this.accounts();
+    const allUsers = this.accountState.accounts();
     const existingUserIndex = allUsers.findIndex(u => u.pubkey === user.pubkey);
 
     if (existingUserIndex >= 0) {
       // Update existing user
       this.logger.debug('Updating existing user in collection', { index: existingUserIndex });
-      this.accounts.update(u => u.map(existingUser => existingUser.pubkey === user.pubkey ? user : existingUser));
+      this.accountState.accounts.update(u => u.map(existingUser => existingUser.pubkey === user.pubkey ? user : existingUser));
     } else {
       // Add new user
       this.logger.debug('Adding new user to collection');
-      this.accounts.update(u => [...u, user]);
+      this.accountState.accounts.update(u => [...u, user]);
     }
 
     // Persist the account to local storage.
@@ -1834,6 +1832,7 @@ export class NostrService {
   }
 
   async generateNewKey(region?: string) {
+    debugger;
     this.logger.info('Generating new Nostr keypair');
     // Generate a proper Nostr key pair using nostr-tools
     const secretKey = generateSecretKey(); // Returns a Uint8Array
@@ -1854,6 +1853,41 @@ export class NostrService {
 
     this.logger.debug('New keypair generated successfully', { pubkey, region });
 
+    const relayServerUrl = this.region.getRelayServer(region!, 0);
+    const relayTags = this.createTags('r', [relayServerUrl!]);
+
+    // Create Relay List event for the new user
+    const relayListEvent: UnsignedEvent = {
+      pubkey,
+      created_at: Math.floor(Date.now() / 1000),
+      kind: kinds.RelayList,
+      tags: relayTags,
+      content: ''
+    };
+
+    const signedEvent = finalizeEvent(relayListEvent, secretKey);
+
+    // Save locally first, then publish to discovery relays.
+    await this.storage.saveEvent(signedEvent);
+    await this.relayService.publishToDiscoveryRelays(signedEvent);
+
+    const mediaServerUrl = this.region.getMediaServer(region!, 0);
+    const mediaTags = this.createTags('server', [mediaServerUrl!]);
+
+    // Create Media Server event for the new user, this we cannot publish yet, because account is not initialized.
+    const mediaServerEvent: UnsignedEvent = {
+      pubkey,
+      created_at: Math.floor(Date.now() / 1000),
+      kind: MEDIA_SERVERS_EVENT_KIND,
+      tags: mediaTags,
+      content: ''
+    };
+
+    const signedMediaEvent = finalizeEvent(mediaServerEvent, secretKey);
+    await this.storage.saveEvent(signedMediaEvent);
+
+    // TODO: The media server event should be published to discovery relays, but we cannot do that yet, implement
+    // a queue for event publishing.
     await this.setAccount(newUser);
   }
 
@@ -2006,9 +2040,9 @@ export class NostrService {
 
   removeAccount(pubkey: string): void {
     this.logger.info(`Removing account with pubkey: ${pubkey}`);
-    const allUsers = this.accounts();
+    const allUsers = this.accountState.accounts();
     const updatedUsers = allUsers.filter(u => u.pubkey !== pubkey);
-    this.accounts.set(updatedUsers);
+    this.accountState.accounts.set(updatedUsers);
 
     // If we're removing the active user, set active user to null
     if (this.accountState.account()?.pubkey === pubkey) {
@@ -2176,7 +2210,7 @@ export class NostrService {
     return undefined;
   }
 
-  async publish(event: Event) {
+  async publish(event: UnsignedEvent | Event | any) {
     // Clone the bookmark event and remove id and sig
     const eventToSign = { ...event };
     eventToSign.id = '';
@@ -2190,5 +2224,12 @@ export class NostrService {
     const publishPromises = await this.relayService.publish(signedEvent);
 
     return signedEvent;
+  }
+
+  async getNIP98AuthToken({ url, method }: { url: string, method: string }) {
+    return nip98.getToken(url, method, async (e) => {
+      const event = await this.signEvent(e);
+      return event;
+    })
   }
 }

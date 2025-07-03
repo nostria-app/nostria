@@ -1,9 +1,11 @@
-import { inject, Injectable } from '@angular/core';
+import { inject, Injectable, PLATFORM_ID, signal } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
-import { Event, nip19 } from 'nostr-tools';
+import { Event, nip19, UnsignedEvent } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { hexToBytes } from 'nostr-tools/utils';
 import { ProfilePointer } from 'nostr-tools/nip19';
+import { isPlatformBrowser } from '@angular/common';
+import { NostrTagKey } from '../standardized-tags';
 
 @Injectable({
   providedIn: 'root'
@@ -21,6 +23,9 @@ export class UtilitiesService {
   regexpSpotify = /((http|https?)?(.+?\.?)(open.spotify.com)(.+?\.?)?)/gi;
   regexpTidal = /((http|https?)?(.+?\.?)(tidal.com)(.+?\.?)?)/gi;
   regexpUrl = /([\w+]+\:\/\/)?([\w\d-]+\.)*[\w-]+[\.\:]\w+([\/\?\=\&\#.]?[\w-]+)*\/?/gi;
+
+  private readonly platformId = inject(PLATFORM_ID);
+  readonly isBrowser = signal(isPlatformBrowser(this.platformId));
 
   constructor() { }
 
@@ -264,6 +269,26 @@ export class UtilitiesService {
     // Convert the hex public key to a Nostr public key (npub)
     const result = nip19.decode(npub).data;
     return result as string;
+  }
+
+  getTags(event: Event | UnsignedEvent, tagType: NostrTagKey): string[] {
+    let tags = event.tags
+      .filter(tag => tag.length >= 2 && tag[0] === tagType)
+      .map(tag => tag[1]);
+
+    return tags;
+  }
+
+  arraysEqual(arr1: string[], arr2: string[]): boolean {
+    if (arr1.length !== arr2.length) {
+      return false;
+    }
+
+    // Sort both arrays to ensure order doesn't matter
+    const sorted1 = [...arr1].sort();
+    const sorted2 = [...arr2].sort();
+
+    return sorted1.every((value, index) => value === sorted2[index]);
   }
 
   isHex(value: string) {

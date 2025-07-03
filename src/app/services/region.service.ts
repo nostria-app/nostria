@@ -36,7 +36,7 @@ export class RegionService {
   regions: Region[] = [
     { id: 'eu', name: 'Europe', enabled: true, icon: 'euro_symbol' },
     { id: 'af', name: 'Africa', enabled: true, icon: 'public' },
-    { id: 'us', name: 'North America', enabled: false, icon: 'north_america' },
+    { id: 'us', name: 'North America', enabled: true, icon: 'north_america' },
     { id: 'sa', name: 'South America', enabled: false, icon: 'south_america' },
     { id: 'as', name: 'Asia', enabled: false, icon: 'asia' }
   ];

@@ -1,0 +1,11 @@
+:host {
+  display: inline-block;
+  min-width: 240px;
+  min-height: 240px;
+  background-color: white;
+}
+
+canvas, div {
+  max-width: 100%;
+  height: auto;
+}

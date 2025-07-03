@@ -66,7 +66,7 @@ export class AccountsComponent {
         
         // Find another account to switch to if we're removing the current one
         if (isCurrentAccount) {
-          const allAccounts = this.nostrService.accounts();
+          const allAccounts = this.accountState.accounts();
           const nextAccount = allAccounts.find(acc => acc.pubkey !== pubkey);
           
           // Remove the account

@@ -8,6 +8,10 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { RouterLink } from '@angular/router';
 import { ApplicationService } from '../../services/application.service';
+import { AccountStateService } from '../../services/account-state.service';
+import { MatListModule } from '@angular/material/list';
+import { CommonModule } from '@angular/common';
+import { environment } from '../../../environments/environment';
 
 interface PremiumFeature {
   title: string;
@@ -24,9 +28,11 @@ interface FaqItem {
   selector: 'app-premium',
   standalone: true,
   imports: [
+    CommonModule,
     MatCardModule,
     MatButtonModule,
     MatIconModule,
+    MatListModule,
     MatExpansionModule,
     MatDividerModule,
     MatDialogModule,
@@ -37,8 +43,9 @@ interface FaqItem {
 })
 export class PremiumComponent {
   app = inject(ApplicationService);
+  accountState = inject(AccountStateService);
+  environment = environment;
 
   constructor() {
-
   }
 }

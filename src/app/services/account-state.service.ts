@@ -1,11 +1,17 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { Event } from 'nostr-tools';
+import { Event, nip19, UnsignedEvent } from 'nostr-tools';
 import { NostrRecord } from '../interfaces';
 import { LocalStorageService } from './local-storage.service';
 import { ApplicationStateService } from './application-state.service';
 import { DataService } from './data.service';
 import { StorageService } from './storage.service';
 import { NostrService, NostrUser } from './nostr.service';
+import { AccountService } from '../api/services';
+import { Account, Feature, Tier } from '../api/models';
+import { Subject, takeUntil } from 'rxjs';
+import { HttpContext } from '@angular/common/http';
+import { USE_NIP98 } from './interceptors/nip98Auth';
+import { UtilitiesService } from './utilities.service';
 
 interface ProfileCacheEntry {
   profile: NostrRecord;
@@ -31,52 +37,263 @@ interface ProcessingTracking {
   providedIn: 'root'
 })
 export class AccountStateService {
-  private localStorage = inject(LocalStorageService);
-  private appState = inject(ApplicationStateService);
+  private readonly localStorage = inject(LocalStorageService);
+  private readonly appState = inject(ApplicationStateService);
+  private readonly accountService = inject(AccountService);
+  private readonly storage = inject(StorageService);
+  private readonly utilities = inject(UtilitiesService);
+
+  private destroy$ = new Subject<void>();
 
   // Signal to store the current profile's following list
   followingList = signal<string[]>([]);
 
-  // Current profile pubkey
-  // currentProfilePubkey = signal<string>('');
-
   /** Use this signal to track if account has been loaded. */
   initialized = signal(false);
-
   accountChanging = signal<string>('');
-
   account = signal<NostrUser | null>(null);
+
+  accounts = signal<NostrUser[]>([]);
+
+  hasAccounts = computed(() => {
+    return this.accounts().length > 0;
+  });
 
   pubkey = computed(() => {
     return this.account()?.pubkey || '';
   });
 
+  npub = computed(() => {
+    if (!this.account()) return '';
+    return nip19.npubEncode(this.account()?.pubkey || '');
+  })
+
   profile = signal<NostrRecord | undefined>(undefined);
 
-  // profile = computed(() => {
-  //   const account = this.account();
+  // accountSubscription = signal<Account | undefined>(undefined);
 
-  //   if (account) {
-  //     // If account is set, return its profile
-  //     return this.getAccountProfile(account.pubkey);
-  //   }
+  profilePath = computed(() => {
+    const sub = this.subscription();
+    const username = sub?.username;
+    if (username && this.hasFeature('USERNAME' as Feature)) {
+      return `/u/${username}`;
+    } else {
+      return `/p/${this.npub()}`;
+    }
+  });
 
-  //   return undefined
-  // });
+  hasFeature(feature: Feature): boolean {
+    const sub = this.subscription();
+    if (!sub) return false;
+    const features = (sub.entitlements?.features || []) as any as Feature[];
+    return features.includes(feature);
+  }
+
+  async unfollow(pubkey: string) {
+    const account = this.account();
+    if (!account) {
+      console.warn('No account is currently set to unfollow:', pubkey);
+      return;
+    }
+
+    // Check if not following
+    if (!this.followingList().includes(pubkey)) {
+      console.log(`Not following ${pubkey}, cannot unfollow.`);
+      return;
+    }
+
+    // Get the existing following event so we don't loose existing structure.
+    // Ensure we keep original 'content' and relays/pet names.
+    const followingEvent = await this.storage.getEventByPubkeyAndKind([account.pubkey], 3);
+
+    if (!followingEvent) {
+      console.warn('No existing following event found, cannot unfollow:', pubkey);
+      return;
+    }
+
+    // Remove the pubkey from the following list in the event
+    followingEvent.tags = followingEvent.tags.filter(tag => !(tag[0] === 'p' && tag[1] === pubkey));
+
+    // Remove from following list
+    this.followingList.update(list => list.filter(p => p !== pubkey));
+
+    // Publish the event to update the following list
+    try {
+      this.publish.set(followingEvent);
+      console.log(`Unfollowed ${pubkey} successfully.`);
+    } catch (error) {
+      console.error(`Failed to unfollow ${pubkey}:`, error);
+    }
+  }
+
+  isFollowing = computed(() => {
+
+  });
+
+  async follow(pubkey: string) {
+    const account = this.account();
+    if (!account) {
+      console.warn('No account is currently set to follow:', pubkey);
+      return;
+    }
+
+    // Check if already following
+    if (this.followingList().includes(pubkey)) {
+      console.log(`Already following ${pubkey}`);
+      return;
+    }
+
+    // Get the existing following event so we don't loose existing structure.
+    // Ensure we keep original 'content' and relays/pet names.
+    const followingEvent = await this.storage.getEventByPubkeyAndKind([account.pubkey], 3);
+
+    if (!followingEvent) {
+      console.warn('No existing following event found, cannot unfollow:', pubkey);
+      return;
+    }
+
+    // Add the pubkey from the following list in the event, if not already present
+    if (!followingEvent.tags.some(tag => tag[0] === 'p' && tag[1] === pubkey)) {
+      followingEvent.tags.push(['p', pubkey]);
+    } else {
+      console.log(`Pubkey ${pubkey} is already in the following list.`);
+      return;
+    }
+
+    // Add to following list
+    this.followingList.update(list => [...list, pubkey]);
+
+    // Publish the event to update the following list
+    try {
+      this.publish.set(followingEvent);
+      console.log(`Unfollowed ${pubkey} successfully.`);
+    } catch (error) {
+      console.error(`Failed to unfollow ${pubkey}:`, error);
+    }
+  }
+
+  async parseFollowingList(event: Event) {
+    if (event) {
+      const followingTags = this.utilities.getTags(event, 'p');
+
+      // Get current following list to compare
+      const currentFollowingList = this.followingList();
+
+      // Check if the lists are different
+      const hasChanged = !this.utilities.arraysEqual(currentFollowingList, followingTags);
+
+      if (hasChanged) {
+        this.followingList.set(followingTags);
+        await this.storage.saveEvent(event);
+      }
+    }
+  }
 
   changeAccount(account: NostrUser | null): void {
     this.accountChanging.set(account?.pubkey || '');
 
     this.followingList.set([]);
     this.account.set(account);
-    
+
     if (!account) {
       this.profile.set(undefined);
       return;
     } else {
       this.profile.set(this.getAccountProfile(account.pubkey));
+
+      // TODO: Improve this!
+      if (account.source === 'nsec') {
+        this.loadData();
+      } else if (account.source === 'extension') {
+        // Check for window.nostr availability with interval
+        const checkNostrInterval = setInterval(() => {
+          if (window.nostr) {
+            clearInterval(checkNostrInterval);
+            this.loadData();
+          }
+        }, 100); // Check every 100ms
+
+        // Optional: Add a timeout to prevent infinite checking
+        setTimeout(() => {
+          clearInterval(checkNostrInterval);
+          console.warn('Timeout waiting for window.nostr to become available');
+        }, 10000); // Stop checking after 10 seconds
+      }
     }
-    
+  }
+
+  updateAccount(account: NostrUser) {
+    // Update lastUsed timestamp
+    const allAccounts = this.accounts();
+    const existingAccountIndex = allAccounts.findIndex(u => u.pubkey === account.pubkey);
+
+    if (existingAccountIndex >= 0) {
+      this.accounts.update(u => u.map(existingUser => existingUser.pubkey === account.pubkey ? account : existingUser));
+    }
+  }
+
+  subscriptions = signal<Account[]>([]);
+
+  subscription = computed(() => {
+    const pubkey = this.pubkey();
+    if (!pubkey) return undefined;
+
+    const subs = this.subscriptions();
+    return subs.find(sub => sub.pubkey === pubkey);
+  });
+
+  loadSubscriptions() {
+    const subscriptions = this.localStorage.getObject<Account[]>(this.appState.SUBSCRIPTIONS_STORAGE_KEY);
+    this.subscriptions.set(subscriptions || []);
+  }
+
+  addSubscription(account: Account) {
+    const currentSubscriptions = this.subscriptions();
+    const existingIndex = currentSubscriptions.findIndex(sub => sub.pubkey === account.pubkey);
+
+    if (existingIndex >= 0) {
+      // Update existing subscription
+      currentSubscriptions[existingIndex] = account;
+    } else {
+      // Add new subscription
+      currentSubscriptions.push(account);
+    }
+
+    this.localStorage.setObject(this.appState.SUBSCRIPTIONS_STORAGE_KEY, currentSubscriptions);
+    this.subscriptions.set(currentSubscriptions);
+  }
+
+  private loadData() {
+    const pubkey = this.pubkey();
+
+    if (!this.account()) {
+      return;
+    }
+
+    const subscription = this.subscription() as any;
+
+    // Don't fetch if data is less than 3 days old
+    if (subscription && Date.now() - subscription.retrieved < 3 * 24 * 60 * 60 * 1000) {
+      return;
+    }
+
+    this.accountService.getAccount(pubkey, new HttpContext().set(USE_NIP98, true))
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (accountObj) => {
+          // this.accountSubscription.set(accountObj);
+
+          // Create a copy with lastRetrieved property
+          const accountWithTimestamp = { ...accountObj, retrieved: Date.now() };
+
+          // Add the subscription to the local storage
+          this.addSubscription(accountWithTimestamp);
+        },
+        error: (err) => {
+          console.error('Failed to fetch account:', err);
+          // this.accountSubscription.set(undefined);
+        }
+      });
   }
 
   muteList = signal<Event | undefined>(undefined);
@@ -105,6 +322,7 @@ export class AccountStateService {
     return Math.round((state.processed / state.total) * 100);
   });// nostr = inject(NostrService);
 
+  // Signal to publish event
   publish = signal<Event | undefined>(undefined);
 
   constructor() {
@@ -533,4 +751,10 @@ export class AccountStateService {
   //   const event = await this.nostr.publish(muteList);
   //   this.updateMuteList(event);
   // }
+
+  // Add a method to clean up subscriptions if needed
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
 }

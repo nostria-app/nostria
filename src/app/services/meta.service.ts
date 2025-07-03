@@ -1,5 +1,21 @@
 import { Injectable, inject } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
+import { firstValueFrom } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { Event, nip19 } from 'nostr-tools';
+import { environment } from '../../environments/environment';
+
+export interface MetadataResponse {
+    author: {
+        profile: {
+            display_name?: string;
+            name?: string;
+            picture: string;
+        }
+    };
+    content: string;
+    tags: any[];
+}
 
 @Injectable({
     providedIn: 'root'
@@ -7,6 +23,8 @@ import { Meta, Title } from '@angular/platform-browser';
 export class MetaService {
     private meta = inject(Meta);
     private title = inject(Title);
+    private readonly http = inject(HttpClient);
+    #metadataUrl = environment.metadataUrl;;
 
     /**
      * Sets the page title
@@ -21,7 +39,7 @@ export class MetaService {
      * @param description The description to set
      */
     setDescription(description: string): void {
-        this.updateMetaTag('description', description);
+        this.meta.updateTag({ property: 'description', content: description });
     }
 
     /**
@@ -57,38 +75,14 @@ export class MetaService {
         if (config.description) this.setDescription(config.description);
 
         // Open Graph
-        if (config.title) this.updateMetaTag('og:title', config.title);
-        if (config.description) this.updateMetaTag('og:description', config.description);
-        if (config.image) this.updateMetaTag('og:image', config.image);
-        if (config.url) this.updateMetaTag('og:url', config.url);
-        if (config.type) this.updateMetaTag('og:type', config.type);
+        if (config.title) this.meta.updateTag({ property: 'og:title', content: config.title });
+        if (config.description) this.meta.updateTag({ property: 'og:description', content: config.description });
+        if (config.image) this.meta.updateTag({ property: 'og:image', content: config.image });
 
         // Twitter Card
-        if (config.twitterCard) this.updateMetaTag('twitter:card', config.twitterCard);
-        if (config.title) this.updateMetaTag('twitter:title', config.title);
-        if (config.description) this.updateMetaTag('twitter:description', config.description);
-        if (config.image) this.updateMetaTag('twitter:image', config.image);
-        if (config.author) this.updateMetaTag('twitter:creator', config.author);
-    }
-
-    /**
-     * Updates or creates a meta tag
-     * @param name Name or property of the meta tag
-     * @param content Content value for the meta tag
-     * @param isProperty Whether this is a property attribute (true) or name attribute (false)
-     */
-    private updateMetaTag(name: string, content: string) {
-        // Determine if this tag uses property or name attribute
-        // Only OpenGraph (og:) tags use property attribute, Twitter cards use name
-        const attrType = name.startsWith('og:') ? 'property' : 'name';
-
-        try {
-            // Try to update the tag if it exists, otherwise add it
-            this.meta.updateTag({ [attrType]: name, content });
-        } catch (error) {
-            // If updateTag fails (which happens if the tag doesn't exist), add it
-            this.meta.addTag({ [attrType]: name, content });
-        }
+        if (config.title) this.meta.updateTag({ name: 'twitter:title', content: config.title });
+        if (config.description) this.meta.updateTag({ name: 'twitter:description', content: config.description });
+        if (config.image) this.meta.updateTag({ name: 'twitter:image', content: config.image });
     }
 
     /**
@@ -98,5 +92,80 @@ export class MetaService {
      */
     private getLinkElement(rel: string): HTMLLinkElement | null {
         return document.querySelector(`link[rel='${rel}']`);
+    }
+
+    async loadSocialMetadata(addr: string): Promise<MetadataResponse> {
+        let title = '';
+        let description = '';
+        let imageUrl = '';
+        let url = '';
+        let targetUrl = '';
+
+        if (addr.startsWith('nevent')) {
+            // This API will parse out the event ID and author from the Nostr event address.
+            url = `${this.#metadataUrl}e/${addr}`;
+            targetUrl = `https://nostria.app/e/${addr}`;
+        } else if (addr.startsWith('nprofile') || addr.startsWith('npub')) {
+            // This API will parse out the profile ID from the Nostr profile address.
+            url = `${this.#metadataUrl}p/${addr}`;
+            targetUrl = `https://nostria.app/p/${addr}`;
+        } else if (addr.startsWith('naddr')) {
+            // This API will parse out the event ID from the Nostr address.
+            url = `${this.#metadataUrl}a/${addr}`;
+            targetUrl = `https://nostria.app/a/${addr}`;
+        }
+
+        const data = await firstValueFrom(this.http.get<MetadataResponse>(url));
+
+        // Extract image URL from imeta tag or content
+        let eventImageUrl = this.extractImageUrlFromImeta(data.tags);
+        if (!eventImageUrl) {
+            eventImageUrl = this.extractImageUrlFromContent(data.content);
+        }
+
+        if (eventImageUrl) {
+            imageUrl = eventImageUrl; // Use extracted image if available
+        } else if (data.author?.profile?.picture) {
+            imageUrl = data.author.profile.picture;
+        }
+
+        title = data.author?.profile?.display_name || data.author?.profile?.name || 'Nostr Event';
+
+        const fullDescription = data.content || 'No description available';
+        description = fullDescription.length > 200 ? fullDescription.substring(0, 200) + '...' : fullDescription;
+
+        this.updateSocialMetadata({
+            title: title,
+            description: description,
+            image: imageUrl || 'https://nostria.app/icons/icon-512x512.png', // Use extracted image or fallback
+            url: targetUrl
+        });
+
+        return data;
+    }
+
+    private extractImageUrlFromImeta(tags: any[]): string | null {
+        if (!tags || !Array.isArray(tags)) return null;
+
+        for (const tag of tags) {
+            if (Array.isArray(tag) && tag[0] === 'imeta') {
+                // Extract URL from imeta tag content which is typically in format "url https://..."
+                const imetaContent = tag[1];
+                if (imetaContent && imetaContent.startsWith('url ')) {
+                    return imetaContent.substring(4).trim(); // Remove 'url ' prefix
+                }
+            }
+        }
+        return null;
+    }
+
+    private extractImageUrlFromContent(content: string): string | null {
+        if (!content) return null;
+
+        // Regular expression to match image URLs in content
+        const urlRegex = /(https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp))/i;
+        const match = content.match(urlRegex);
+
+        return match ? match[0] : null;
     }
 }

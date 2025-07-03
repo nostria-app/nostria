@@ -39,6 +39,13 @@ export class ProfileHomeComponent {
       // { path: 'following', label: 'Following', icon: 'people' }
     ];
 
+  isLinkActive(path: string, isActive: boolean): boolean {
+    const firstChild = this.route.firstChild?.snapshot.url[0]?.path ?? '';
+    return (
+      isActive || (path === 'notes' && firstChild === '')
+    );
+  }
+
   // We'll get the pubkey from the parent route
   getPubkey(): string {
     return this.route.parent?.snapshot.paramMap.get('id') || '';

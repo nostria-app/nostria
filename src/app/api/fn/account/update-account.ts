@@ -8,14 +8,14 @@ import { filter, map } from 'rxjs/operators';
 import { StrictHttpResponse } from '../../strict-http-response';
 import { RequestBuilder } from '../../request-builder';
 
-import { AccountDto } from '../../models/account-dto';
+import { Account } from '../../models/account';
 import { UpdateAccountRequest } from '../../models/update-account-request';
 
 export interface UpdateAccount$Params {
       body: UpdateAccountRequest
 }
 
-export function updateAccount(http: HttpClient, rootUrl: string, params: UpdateAccount$Params, context?: HttpContext): Observable<StrictHttpResponse<AccountDto>> {
+export function updateAccount(http: HttpClient, rootUrl: string, params: UpdateAccount$Params, context?: HttpContext): Observable<StrictHttpResponse<Account>> {
   const rb = new RequestBuilder(rootUrl, updateAccount.PATH, 'put');
   if (params) {
     rb.body(params.body, 'application/json');
@@ -26,7 +26,7 @@ export function updateAccount(http: HttpClient, rootUrl: string, params: UpdateA
   ).pipe(
     filter((r: any): r is HttpResponse<any> => r instanceof HttpResponse),
     map((r: HttpResponse<any>) => {
-      return r as StrictHttpResponse<AccountDto>;
+      return r as StrictHttpResponse<Account>;
     })
   );
 }

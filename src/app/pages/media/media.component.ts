@@ -48,7 +48,7 @@ import { AccountStateService } from '../../services/account-state.service';
     TimestampPipe,
     MatTooltipModule,
     DragDropModule
-],
+  ],
   templateUrl: './media.component.html',
   styleUrls: ['./media.component.scss']
 })
@@ -88,33 +88,50 @@ export class MediaComponent {
       const allMedia = this.mediaService.mediaItems();
       this.images.set(allMedia.filter(item => item.type?.startsWith('image') || false));
       this.videos.set(allMedia.filter(item => item.type?.startsWith('video') || false));
-      this.files.set(allMedia.filter(item => 
+      this.files.set(allMedia.filter(item =>
         !item.type || (!item.type.startsWith('image') && !item.type.startsWith('video'))
       ));
+      this.selectedItems.set([]);
     });
 
     effect(async () => {
-      if (this.app.initialized() && this.app.authenticated()) {
-        console.log('APP INITIALIZED, FETCHING MEDIA SERVERS');
-        const userServerList = await this.nostr.getMediaServers(this.accountState.pubkey());
-        console.log('USER SERVER LIST', userServerList);
-
-        if (userServerList) {
-          const servers = this.nostr.getTags(userServerList, standardizedTag.server);
-          this.mediaService.setMediaServers(servers);
-        }
-
-        // Fetch the media servers (from cache or relay).
-        await this.mediaService.initialize();
-
-        // Only fetch files if it's been more than 10 minutes since last fetch
-        const tenMinutesInMs = 10 * 60 * 1000; // 10 minutes in milliseconds
-        const currentTime = Date.now();
-        const lastFetchTime = this.mediaService.getLastFetchTime();        if (currentTime - lastFetchTime > tenMinutesInMs) {
-          await this.mediaService.getFiles();
-        }
+      if (this.accountState.initialized()) {
+        // This is currently triggered twice...
+        await this.mediaService.loadMedia();
       }
-    });    // Check for upload query parameter and trigger upload dialog
+    });
+
+    // effect(async () => {
+    //   if (this.accountState.accountChanging()) {
+
+    //     debugger;
+    //     console.log('APP INITIALIZED, FETCHING MEDIA SERVERS');
+    //     const userServerList = await this.nostr.getMediaServers(this.accountState.pubkey());
+    //     console.log('USER SERVER LIST', userServerList);
+
+    //     if (userServerList) {
+    //       const servers = this.nostr.getTags(userServerList, standardizedTag.server);
+    //       this.mediaService.setMediaServers(servers);
+    //     }
+
+    //     // Fetch the media servers (from cache or relay).
+    //     await this.mediaService.initialize();
+
+    //     // Only fetch files if it's been more than 10 minutes since last fetch
+    //     const tenMinutesInMs = 10 * 60 * 1000; // 10 minutes in milliseconds
+    //     const currentTime = Date.now();
+    //     const lastFetchTime = this.mediaService.getLastFetchTime(); if (currentTime - lastFetchTime > tenMinutesInMs) {
+    //       await this.mediaService.getFiles();
+    //     }
+    //   }
+
+    //   // if (this.app.initialized() && this.app.authenticated()) {
+
+    //   // }
+    // });    
+
+
+    // Check for upload query parameter and trigger upload dialog
     this.route.queryParamMap.subscribe(params => {
       const uploadParam = params.get('upload');
       if (uploadParam === 'true') {
@@ -124,7 +141,7 @@ export class MediaComponent {
           queryParams: {},
           replaceUrl: true
         });
-        
+
         // Open upload dialog after a small delay to ensure navigation is complete
         setTimeout(() => {
           this.openUploadDialog();
@@ -147,7 +164,7 @@ export class MediaComponent {
 
           // Pass the selected servers to the uploadFile method
           const uploadResult = await this.mediaService.uploadFile(result.file, result.uploadOriginal, result.servers);
-          
+
           // Set the uploading state to false
           this.mediaService.uploading.set(false);
 
@@ -231,19 +248,19 @@ export class MediaComponent {
   async reorderServers(event: CdkDragDrop<string[]>): Promise<void> {
     // Get current servers
     const currentServers = this.mediaService.mediaServers();
-    
+
     // Skip if index didn't change (item dropped in same position)
     if (event.previousIndex === event.currentIndex) {
       return;
     }
-    
+
     // Create a new array with the updated order
     const newOrder = [...currentServers];
     moveItemInArray(newOrder, event.previousIndex, event.currentIndex);
-    
+
     // Check if the order actually changed by comparing arrays
     const orderChanged = newOrder.some((server, index) => server !== currentServers[index]);
-    
+
     if (orderChanged) {
       try {
         await this.mediaService.reorderMediaServers(newOrder);
@@ -340,7 +357,7 @@ export class MediaComponent {
         } else {
           // Fall back to individual deletes when disabled or for single items
           let deletedCount = 0;
-          
+
           for (const id of itemsToDelete) {
             try {
               await this.mediaService.deleteFile(id);
@@ -349,12 +366,12 @@ export class MediaComponent {
               console.error(`Failed to delete item ${id}:`, err);
             }
           }
-          
+
           if (deletedCount === 0 && itemsToDelete.length > 0) {
             throw new Error('Failed to delete any items');
           }
         }
-        
+
         this.snackBar.open(`${itemsToDelete.length} ${itemsToDelete.length === 1 ? 'item' : 'items'} deleted`, 'Close', { duration: 3000 });
         this.selectedItems.set([]);
       } catch (error) {
@@ -373,11 +390,11 @@ export class MediaComponent {
     }
 
     if (itemsToDownload.length === 0) return;
-    
+
     try {
       // Set a status message during download
       this.snackBar.open(`Starting download of ${itemsToDownload.length} file(s)...`, 'Close', { duration: 3000 });
-      
+
       // For each selected item, fetch and download
       for (const id of itemsToDownload) {
         const item = await this.mediaService.getFileById(id);
@@ -386,20 +403,20 @@ export class MediaComponent {
             // Fetch the file content
             const response = await fetch(item.url);
             const blob = await response.blob();
-            
+
             // Create a download link with proper filename
             const filename = this.getFileName(item.url);
             const url = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
             link.download = filename;
-            
+
             // Trigger download and clean up
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
             window.URL.revokeObjectURL(url);
-            
+
             // Small delay between downloads to prevent browser issues
             await new Promise(resolve => setTimeout(resolve, 300));
           } catch (err) {
@@ -407,22 +424,22 @@ export class MediaComponent {
           }
         }
       }
-      
+
       this.snackBar.open(`Download of ${itemsToDownload.length} file(s) initiated`, 'Close', { duration: 3000 });
     } catch (error) {
       this.snackBar.open('Failed to download some items', 'Close', { duration: 3000 });
     }
   }
-  
+
   async mirrorSelected(): Promise<void> {
     const itemsToMirror = this.selectedItems();
     if (itemsToMirror.length === 0) return;
-    
+
     try {
       // Collect items to mirror and those already fully mirrored
       const toMirror: MediaItem[] = [];
       const alreadyMirrored: MediaItem[] = [];
-      
+
       // First collect the items and check mirroring status
       for (const id of itemsToMirror) {
         const item = await this.mediaService.getFileById(id);
@@ -434,7 +451,7 @@ export class MediaComponent {
           }
         }
       }
-      
+
       if (toMirror.length > 0) {
         // Check if batch operations are disabled
         if (!this.mediaService.batchOperationsTemporarilyDisabledDueToBug) {
@@ -443,7 +460,7 @@ export class MediaComponent {
         } else {
           // Fall back to individual mirrors when disabled
           let mirroredCount = 0;
-          
+
           for (const item of toMirror) {
             try {
               await this.mediaService.mirrorFile(item.sha256, item.url);
@@ -452,13 +469,13 @@ export class MediaComponent {
               console.error(`Failed to mirror item ${item.sha256}:`, err);
             }
           }
-          
+
           if (mirroredCount === 0 && toMirror.length > 0) {
             throw new Error('Failed to mirror any items');
           }
         }
       }
-      
+
       // Show appropriate message based on results
       if (toMirror.length > 0 && alreadyMirrored.length > 0) {
         this.snackBar.open(`Mirrored ${toMirror.length} file(s), ${alreadyMirrored.length} already fully mirrored`, 'Close', { duration: 3000 });
@@ -484,7 +501,7 @@ export class MediaComponent {
       this.snackBar.open('Media is already mirrored to all your servers', 'Close', { duration: 3000 });
       return;
     }
-    
+
     try {
       await this.mediaService.mirrorFile(sha256, url);
       this.snackBar.open('Media mirrored successfully', 'Close', { duration: 3000 });

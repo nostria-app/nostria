@@ -39,10 +39,6 @@ export class ApplicationService {
     /** Used to check if both initialized and authenticated. Used to wait for both conditions. */
     // initializedAndAuthenticated = computed(() => this.initialized() && this.authenticated());
 
-    loadingMessage = signal('Loading data...');
-    showSuccess = signal(false);
-    isLoading = signal(false);
-
     featureLevel = signal<FeatureLevel>(this.getStoredFeatureLevel());
 
     private readonly featurePrecedence: Record<FeatureLevel, number> = {
@@ -55,16 +51,16 @@ export class ApplicationService {
 
     constructor() {
         // Set up effect to load notifications when app is initialized and authenticated
-        effect(async () => {
-            // For reasons unable to figure out,
-            // this is triggered twice on app start.
-            let pubkey = this.accountState.pubkey();
+        // effect(async () => {
+        //     // For reasons unable to figure out,
+        //     // this is triggered twice on app start.
+        //     let pubkey = this.accountState.pubkey();
 
-            if (pubkey && pubkey !== this.previousPubKey) {
-                this.previousPubKey = pubkey;
-                await this.loadAppData();
-            }
-        });
+        //     if (pubkey && pubkey !== this.previousPubKey) {
+        //         this.previousPubKey = pubkey;
+        //         await this.loadAppData();
+        //     }
+        // });
 
         effect(async () => {
             const followingList = this.accountState.followingList();
@@ -117,23 +113,8 @@ export class ApplicationService {
         }
     }
 
-    private async loadAppData(): Promise<void> {
-        this.logger.info('Application initialized and authenticated, loading app data');
-
-        // Reset the badge service.
-        this.badgeService.resetBadgeData();
-
-        // Load notifications from storage
-        if (!this.notificationService.notificationsLoaded()) {
-            await this.notificationService.loadNotifications();
-        }
-
-        // Add any other app data loading here in the future
-        // this.accountState.loadProfiles();
-    }
-
     async wipe() {
-        this.nostrService.reset();
+        this.nostrService.clear();
 
         // Clear known localStorage keys related to the app
         const keysToRemove = [

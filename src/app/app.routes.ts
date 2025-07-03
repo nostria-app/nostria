@@ -31,11 +31,33 @@ import { EditorComponent } from './pages/article/editor/editor.component';
 import { MediaQueueComponent } from './pages/media-queue/media-queue.component';
 import { EventPageComponent } from './pages/event/event.component';
 import { NotificationManageComponent } from './pages/notifications/manage/manage.component';
+import { DataResolver } from './data-resolver';
+import { UsernameResolver } from './usernameResolver';
+
+const profileChildren: Routes = [
+  {
+    path: '',
+    component: ProfileHomeComponent,
+    children: [
+      { path: '', component: ProfileNotesComponent },
+      { path: 'notes', component: ProfileNotesComponent },
+      { path: 'replies', component: ProfileRepliesComponent },
+      { path: 'reads', component: ProfileReadsComponent },
+      { path: 'media', component: ProfileMediaComponent }
+    ]
+  },
+  { path: 'about', component: ProfileAboutComponent },
+  { path: 'edit', component: ProfileEditComponent },
+  { path: 'connections', component: ProfileConnectionsComponent },
+  { path: 'following', component: FollowingComponent },
+  { path: 'relays', component: ProfileRelaysComponent },
+  { path: 'details', component: DetailsComponent }
+];
 
 export const routes: Routes = [
   { path: '', component: FeedsComponent, pathMatch: 'full' },
   { path: 'f/:path', component: FeedsComponent },
-  { path: 'e/:id', component: EventPageComponent },
+  { path: 'e/:id', component: EventPageComponent, resolve: { data: DataResolver } },
   { path: 'beta', component: BetaComponent, title: 'Beta' },
   { path: 'relays', component: RelaysComponent },
   {
@@ -56,33 +78,23 @@ export const routes: Routes = [
   { path: 'notifications/manage', component: NotificationManageComponent },
   { path: 'credentials', component: CredentialsComponent },
   { path: 'accounts', component: AccountsComponent },
-  { path: 'about', component: AboutComponent },  { path: 'bookmarks', loadComponent: () => import('./pages/bookmarks/bookmarks.component').then(m => m.BookmarksComponent), title: 'Bookmarks' },
+  { path: 'about', component: AboutComponent },
+  { path: 'bookmarks', loadComponent: () => import('./pages/bookmarks/bookmarks.component').then(m => m.BookmarksComponent), title: 'Bookmarks' },
   { path: 'articles', component: ArticlesComponent, title: 'Articles' },
   { path: 'article/create', component: EditorComponent, title: 'New Article' },
   { path: 'article/edit/:id', component: EditorComponent, title: 'Edit Article' },
-  { path: 'a/:id', component: ArticleComponent, title: 'Article' },
+  { path: 'a/:id', component: ArticleComponent, title: 'Article', resolve: { data: DataResolver } },
   {
     path: 'p/:id',
     component: ProfileComponent,
-    children: [
-      { 
-        path: '', 
-        component: ProfileHomeComponent,
-        children: [
-          { path: '', redirectTo: 'notes', pathMatch: 'full' },
-          { path: 'notes', component: ProfileNotesComponent },
-          { path: 'replies', component: ProfileRepliesComponent },
-          { path: 'reads', component: ProfileReadsComponent },
-          { path: 'media', component: ProfileMediaComponent }
-        ] 
-      },
-      { path: 'about', component: ProfileAboutComponent },
-      { path: 'edit', component: ProfileEditComponent },
-      { path: 'connections', component: ProfileConnectionsComponent },
-      { path: 'following', component: FollowingComponent },
-      { path: 'relays', component: ProfileRelaysComponent },
-      { path: 'details', component: DetailsComponent }
-    ]
+    resolve: { data: DataResolver },
+    children: profileChildren,
+  },
+  {
+    path: 'u/:username',
+    component: ProfileComponent,
+    resolve: { data: UsernameResolver },
+    children: profileChildren,
   },
   {
     path: 'premium',

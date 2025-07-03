@@ -89,6 +89,101 @@ body {
   .mat-drawer-content {
     margin-left: 0px !important;
   }
+
+  /* Critical: Remove all height and overflow constraints for multi-page printing */
+  * {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    scrollbar-width: none !important;
+  }
+
+  /* Hide scrollbars during print */
+  ::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  /* Root elements - ensure no viewport constraints */
+  html, body {
+    height: auto !important;
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  /* App layout containers - remove all flexbox and height constraints */
+  .app-container,
+  .sidenav-container,
+  mat-sidenav-container,
+  mat-sidenav-content,
+  .content-wrapper {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    flex: none !important;
+    display: block !important;
+    position: static !important;
+  }
+
+  /* Article-specific print styles */
+  .article-container {
+    max-width: none !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .article-header {
+    margin-bottom: 16px !important;
+    page-break-inside: avoid;
+  }
+
+  .article-hero-image {
+    page-break-inside: avoid;
+    max-height: 50vh !important;
+  }
+
+  .article-content {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    page-break-inside: auto;
+  }
+
+  .markdown-content {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .article-footer {
+    display: none !important;
+  }
+
+  /* Ensure proper page breaks for long content */
+  .markdown-content h1,
+  .markdown-content h2,
+  .markdown-content h3 {
+    page-break-after: avoid;
+    page-break-inside: avoid;
+  }
+
+  .markdown-content p,
+  .markdown-content ul,
+  .markdown-content ol,
+  .markdown-content blockquote {
+    page-break-inside: avoid;
+    orphans: 2;
+    widows: 2;
+  }
+
+  .markdown-content img {
+    page-break-inside: avoid;
+    max-width: 100% !important;
+    height: auto !important;
+  }
 }
 
 mat-card {
@@ -322,7 +417,9 @@ mat-card-content li {
   justify-content: center;
   align-items: center;
   pointer-events: none;
-  animation: fadeOut 1.5s ease-in-out forwards;
+  animation: fadeOut 0.5s ease-in-out forwards;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(5px);
 }
 
 .success-checkmark {

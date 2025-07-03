@@ -1,3 +1,4 @@
+@if (!accountState.subscription()) {
 <div class="premium-container">
   <div class="premium-header">
     <h1 class="premium-title title-font">Nostria Premium</h1>
@@ -8,37 +9,6 @@
         <mat-icon>stars</mat-icon>
         Upgrade to Premium
       </button>
-
-      <br><br>
-      <h2>Premium</h2>
-
-      <div class="premium-price-container">
-        <div class="price-option">
-          <span class="price-amount">$10</span>/month
-          <span class="price-period">montly billing</span>
-        </div>
-        <span class="price-divider">or</span>
-        <div class="price-option best-value">
-          <span class="price-amount">$8</span>/month
-          <span class="price-period">yearly billing</span>
-          <span class="price-tag">Best Value</span>
-        </div>
-      </div>
-
-      <h2>Premium+</h2>
-
-      <div class="premium-price-container">
-        <div class="price-option">
-          <span class="price-amount">$25</span>/month
-          <span class="price-period">montly billing</span>
-        </div>
-        <span class="price-divider">or</span>
-        <div class="price-option best-value">
-          <span class="price-amount">$20</span>/month
-          <span class="price-period">yearly billing</span>
-          <span class="price-tag">Best Value</span>
-        </div>
-      </div>
     </div>
     <p>
       <br>
@@ -46,3 +16,26 @@
     </p>
   </div>
 </div>
+} @else {
+<div class="content-medium">
+  <h1>Nostria Premium</h1>
+
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>Your subscription</mat-card-title>
+    </mat-card-header>
+
+    <mat-card-content>
+      <mat-list role="list">
+        <mat-list-item role="listitem">
+          Plan: {{ accountState.subscription()?.tier }}
+        </mat-list-item>
+        <mat-list-item role="listitem">
+          Expiry date: {{ accountState.subscription()?.expires | date:'short' }}
+        </mat-list-item>
+      </mat-list>
+
+    </mat-card-content>
+  </mat-card>
+</div>
+}

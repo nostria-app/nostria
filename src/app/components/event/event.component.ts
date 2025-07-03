@@ -15,6 +15,7 @@ import { AccountRelayService } from '../../services/account-relay.service';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatDialog } from '@angular/material/dialog';
 import { PublishDialogComponent, PublishDialogData } from './publish-dialog/publish-dialog.component';
+import { ApplicationService } from '../../services/application.service';
 
 @Component({
   selector: 'app-event',
@@ -34,13 +35,12 @@ import { PublishDialogComponent, PublishDialogData } from './publish-dialog/publ
 export class EventComponent {
   id = input<string | null | undefined>();
   type = input<'e' | 'a' | 'r' | 't'>('e');
-
-  event = input<Event | null>(null);
-
-  data = inject(DataService);  record = signal<NostrRecord | null>(null);
+  event = input<Event | null | undefined>(null);
+  data = inject(DataService); record = signal<NostrRecord | null>(null);
   layout = inject(LayoutService);
   accountRelayService = inject(AccountRelayService);
   dialog = inject(MatDialog);
+  app = inject(ApplicationService);
 
   constructor() {
     effect(() => {
@@ -55,21 +55,22 @@ export class EventComponent {
     });
 
     effect(async () => {
-      const eventId = this.id();
-      const type = this.type();
+      if (this.app.initialized()) {
+        const eventId = this.id();
+        const type = this.type();
 
-      if (!eventId || !type) {
-        return;
-      }
-
-      if (type === 'e' || type === 'a') {
-        if (eventId) {
-          const eventData = await this.data.getEventById(eventId);
-          this.record.set(eventData);
-
-          console.log('RECORD:', this.record());
+        if (!eventId || !type) {
+          return;
         }
-      };
+
+        if (type === 'e' || type === 'a') {
+          if (eventId) {
+            const eventData = await this.data.getEventById(eventId);
+            this.record.set(eventData);
+            console.log('RECORD:', this.record());
+          }
+        };
+      }
     });
   }
 

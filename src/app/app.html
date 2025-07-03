@@ -204,10 +204,7 @@
       [ngClass]="{ 'sidenav-labels': displayLabels(), 'sidenav-small': !displayLabels()  }" [opened]="opened()"
       [mode]="layout.isHandset() ? 'over' : 'side'" [fixedInViewport]="false">
       <mat-nav-list>
-        @for (item of navItems; track $index) {
-
-        @if (item.authenticated && app.authenticated()) {
-        @if (this.app.enabledFeature(item.level)) {
+        @for (item of navigationItems(); track $index) {
         <a mat-list-item [routerLink]="item.action ? undefined : [item.path]" routerLinkActive="active-link"
           [routerLinkActiveOptions]="{exact: true}"
           (click)="item.action ? item.action() : (layout.isHandset() ? toggleSidenav() : null)">
@@ -216,19 +213,6 @@
           <span class="nav-label">{{item.label}}</span>
           }
         </a>
-        }
-        } @else if (!item.authenticated) {
-        @if (this.app.enabledFeature(item.level)) {
-        <a mat-list-item [routerLink]="item.action ? undefined : [item.path]" routerLinkActive="active-link"
-          [routerLinkActiveOptions]="{exact: true}"
-          (click)="item.action ? item.action() : (layout.isHandset() ? toggleSidenav() : null)">
-          <mat-icon matListItemIcon>{{item.icon}}</mat-icon>
-          @if(displayLabels()) {
-          <span class="nav-label">{{item.label}}</span>
-          }
-        </a>
-        }
-        }
         }
 
         @if (app.authenticated()) {
@@ -318,7 +302,7 @@
 
         <mat-nav-list>
           @if(app.authenticated()) {
-          <a mat-list-item [routerLink]="['/p', accountState.pubkey()]" (click)="toggleProfileSidenav()">
+          <a mat-list-item [routerLink]="accountState.profilePath()" (click)="toggleProfileSidenav()">
             <mat-icon matListItemIcon>person</mat-icon>
             <span>My Profile</span>
           </a>
@@ -346,36 +330,40 @@
         </mat-nav-list>
         <mat-divider></mat-divider>
         <!-- Account selection menu -->
-        @if (nostrService.hasAccounts()) {
+        @if (accountState.hasAccounts()) {
         <mat-nav-list class="accounts-list">
-          @for (account of nostrService.accounts(); track account.pubkey) {
+          @for (account of accountState.accounts(); track account.pubkey) {
           @if (account.pubkey !== accountState.account()?.pubkey) {
 
           @if(accountState.getAccountProfile(account.pubkey); as metadata) {
-          <a mat-list-item (click)="switchAccount(account.pubkey); toggleProfileSidenav()" class="account-item">
+          <a mat-list-item (click)="switchAccount(account.pubkey); toggleProfileSidenav();" class="account-item">
             @if (metadata.data?.picture; as account) {
             <div class="account-avatar" matListItemIcon>
               <img [src]="metadata?.data?.picture" alt="Profile picture" class="avatar-image">
             </div>
             } @else {
-            <mat-icon matListItemIcon>account_circle</mat-icon>
+            <div class="account-avatar" matListItemIcon>
+              <mat-icon>account_circle</mat-icon>
+            </div>
             }
             <span matListItemTitle>
               {{ metadata.data?.display_name || metadata.data?.name ||
               (account.pubkey | npub) }}
             </span>
             <span matListItemLine class="account-source">
-              {{ account.source }} - Last used: {{ account.lastUsed| date:'short' }}
+              {{ account.source }} - used {{ account.lastUsed| date:'short' }}
             </span>
           </a>
           } @else {
-          <a mat-list-item (click)="switchAccount(account.pubkey)" class="account-item">
-            <mat-icon matListItemIcon>account_circle</mat-icon>
+          <a mat-list-item (click)="switchAccount(account.pubkey); toggleProfileSidenav();" class="account-item">
+            <div class="account-avatar" matListItemIcon>
+              <mat-icon>account_circle</mat-icon>
+            </div>
             <span matListItemTitle>
               {{account.pubkey | npub }}
             </span>
             <span matListItemLine class="account-source">
-              {{ account.source }} - Last used: {{ account.lastUsed| date:'short' }}
+              {{ account.source }} - used {{ account.lastUsed| date:'short' }}
             </span>
           </a>
           }

@@ -13,7 +13,7 @@ import { ApiResponse } from '../../models/api-response';
 export interface GetPublicAccount$Params {
 
 /**
- * User's public key in npub format or a username
+ * User's public key in pubkey format or a username
  */
   pubkeyOrUsername: string;
 }

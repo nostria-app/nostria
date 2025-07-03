@@ -23,12 +23,12 @@ export class MediaPlayerService implements OnInitialized {
   utilities = inject(UtilitiesService);
   localStorage = inject(LocalStorageService);
   layout = inject(LayoutService);
-  app = inject(ApplicationService);  media = signal<MediaItem[]>([]);
+  app = inject(ApplicationService); media = signal<MediaItem[]>([]);
   audio?: HTMLAudioElement;
   current?: MediaItem;
   index = 0;
   readonly MEDIA_STORAGE_KEY = 'nostria-media-queue';
-  
+
   // Cache for YouTube embed URLs
   private _youtubeUrlCache = new Map<string, SafeResourceUrl>();
   readonly WINDOW_STATE_STORAGE_KEY = 'nostria-video-window-state';
@@ -65,6 +65,10 @@ export class MediaPlayerService implements OnInitialized {
   isFullscreen = this._isFullscreen.asReadonly();
 
   constructor() {
+    if (!this.app.isBrowser()) {
+      return;
+    }
+
     effect(() => {
       if (this.app.initialized()) {
         this.initialize();
@@ -278,7 +282,7 @@ export class MediaPlayerService implements OnInitialized {
 
       // Create cache key including query parameter
       const cacheKey = query ? `${url}?${query}` : url;
-      
+
       // Check if we already have this URL cached
       if (this._youtubeUrlCache.has(cacheKey)) {
         console.log('Returning cached YouTube embed URL for:', cacheKey);
@@ -289,7 +293,7 @@ export class MediaPlayerService implements OnInitialized {
       const match = url.match(regex);
 
       let embedUrl: SafeResourceUrl;
-      
+
       if (match && match[1]) {
         const baseEmbedUrl = `https://www.youtube.com/embed/${match[1]}?enablejsapi=1`;
         const finalUrl = query ? `${baseEmbedUrl}&${query}` : baseEmbedUrl;
@@ -301,7 +305,7 @@ export class MediaPlayerService implements OnInitialized {
       // Cache the result
       this._youtubeUrlCache.set(cacheKey, embedUrl);
       console.log('Cached YouTube embed URL for:', cacheKey);
-      
+
       return embedUrl;
     };
   });
@@ -323,7 +327,7 @@ export class MediaPlayerService implements OnInitialized {
 
     this.current = file;
 
-    this.layout.showMediaPlayer.set(true);    if (file.type === 'YouTube') {
+    this.layout.showMediaPlayer.set(true); if (file.type === 'YouTube') {
       this.videoMode.set(true);
       this.videoUrl.set(undefined);
       const youTubeUrl = this.getYouTubeEmbedUrl()(file.source, 'autoplay=1');

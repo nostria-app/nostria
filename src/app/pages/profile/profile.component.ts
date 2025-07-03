@@ -1,6 +1,6 @@
-import { Component, inject, signal, effect, untracked, Inject, PLATFORM_ID, DOCUMENT } from '@angular/core';
+import { Component, inject, signal, effect, untracked, Inject, PLATFORM_ID, DOCUMENT, computed } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { ActivatedRoute, ParamMap, RouterModule, RouterOutlet, Router, NavigationEnd } from '@angular/router';
+import { ActivatedRoute, ParamMap, RouterModule, RouterOutlet, Router, NavigationEnd, Data } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -20,7 +20,6 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { MatListModule } from '@angular/material/list';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { QRCodeComponent } from 'angularx-qrcode';
 import { Event, kinds, nip19, SimplePool } from 'nostr-tools';
 import { StorageService } from '../../services/storage.service';
 import { ProfileStateService } from '../../services/profile-state.service';
@@ -35,6 +34,7 @@ import { NostrRecord } from '../../interfaces';
 import { DataService } from '../../services/data.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { UrlUpdateService } from '../../services/url-update.service';
+import { UsernameService } from '../../services/username';
 
 @Component({
   selector: 'app-profile',
@@ -57,8 +57,7 @@ import { UrlUpdateService } from '../../services/url-update.service';
     MatMenuModule,
     FormsModule,
     MatFormFieldModule,
-    ProfileHeaderComponent,
-    QRCodeComponent
+    ProfileHeaderComponent
   ],
   templateUrl: './profile.component.html',
   styleUrl: './profile.component.scss'
@@ -82,6 +81,7 @@ export class ProfileComponent {
   accountState = inject(AccountStateService);
   readonly utilities = inject(UtilitiesService);
   private readonly url = inject(UrlUpdateService);
+  private readonly username = inject(UsernameService);
 
   pubkey = signal<string>('');
   userMetadata = signal<NostrRecord | undefined>(undefined);
@@ -95,22 +95,39 @@ export class ProfileComponent {
 
   // Convert route params to a signal
   private routeParams = toSignal<ParamMap>(this.route.paramMap);
+  private routeData = toSignal<Data>(this.route.data);
   private userRelayFactory = inject(UserRelayFactoryService);
   private userRelay: UserRelayService | undefined = undefined;
 
   constructor() {
-    // When accounts metadata changes, update the current metadata.
-    // effect(() => {
-    //   debugger;
-    //   let metadata = this.accountState.getAccountProfile(this.accountState.pubkey());
-    //   this.userMetadata.set(metadata);
-    // });
+    if (!this.app.isBrowser()) {
+      console.warn('Profile component can only be used in browser context');
+      return;
+    }
+
+    // Whenever profile is edited by user, update the user metadata if it matches the current pubkey
+    effect(() => {
+      const profile = this.accountState.profile();
+
+      if (profile?.event.pubkey === this.pubkey() && this.userMetadata()?.event.id != profile?.event.id) {
+        this.userMetadata.set(profile);
+      }
+    });
 
     // React to changes in route parameters and app initialization
     effect(async () => {
       // Only proceed if app is initialized and route params are available
-      if (this.app.initialized() && this.routeParams()) {
-        let id = this.routeParams()?.get('id');
+      if (this.app.initialized() && this.routeParams() && this.routeData()) {
+        let id, username;
+
+        // Check if component renders /u/username and we have pubkey resolved from username
+        const pubkeyForUsername = this.routeData()?.['data']?.id;
+        if (pubkeyForUsername) {
+          id = pubkeyForUsername;
+          username = this.routeData()?.['data']?.username;
+        } else {
+          id = this.routeParams()?.get('id')
+        }
 
         if (id) {
           this.logger.debug('Profile page opened with pubkey:', id);
@@ -122,11 +139,35 @@ export class ProfileComponent {
 
           if (id.startsWith('npub')) {
             id = this.utilities.getPubkeyFromNpub(id);
-            this.url.updatePathSilently(['/p', id, 'notes']);
+
+            // First update URL to have npub in URL.
+            if (username) {
+              this.url.updatePathSilently(['/u', username]);
+            } else {
+              username = await this.username.getUsername(id);
+
+              if (username) {
+                this.url.updatePathSilently(['/u', username]);
+              }
+              else {
+                // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.
+                const encoded = nip19.npubEncode(id);
+                this.url.updatePathSilently(['/p', id]);
+              }
+            }
           } else {
-            // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.
-            const encoded = nip19.npubEncode(id);
-            this.url.updatePathSilently(['/p', encoded, 'notes']);
+            if (!username) {
+              username = await this.username.getUsername(id);
+
+              if (username) {
+                this.url.updatePathSilently(['/u', username]);
+              }
+              else {
+                // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.
+                const encoded = nip19.npubEncode(id);
+                this.url.updatePathSilently(['/p', encoded]);
+              }
+            }
           }
 
           this.profileState.setCurrentProfilePubkey(id);
@@ -293,7 +334,11 @@ export class ProfileComponent {
 
           // Now you can use 'this' here
           // For example: this.handleContacts(evt);
+        } else if (evt.kind === kinds.LongFormArticle) {
+          this.profileState.articles.update(articles => [...articles, this.data.getRecord(evt)]);
         }
+
+
       },
       onclose: (reasons) => {
         console.log('Pool closed', reasons);
@@ -447,10 +492,15 @@ export class ProfileComponent {
     this.copyToClipboard(this.getCurrentUrl(), 'profile URL');
   }
 
-  unfollowUser(): void {
+  async unfollowUser() {
     this.logger.debug('Unfollow requested for:', this.pubkey());
-    // TODO: Implement actual unfollow functionality
+    await this.accountState.unfollow(this.pubkey());
   }
+
+  isFollowing = computed(() => {
+    const followingList = this.accountState.followingList();
+    return followingList.includes(this.pubkey());
+  });
 
   muteUser(): void {
     this.logger.debug('Mute requested for:', this.pubkey());
@@ -465,9 +515,9 @@ export class ProfileComponent {
   /**
    * Follows the user
    */
-  followUser(): void {
+  async followUser() {
     this.logger.debug('Follow requested for:', this.pubkey());
-    // TODO: Implement actual follow functionality
+    await this.accountState.follow(this.pubkey());
   }
 
   /**
@@ -544,7 +594,7 @@ export class ProfileComponent {
     // Use configured app URL or fallback
     const baseUrl = isPlatformBrowser(this.platformId)
       ? this.document.location?.origin
-      : 'https://nostria.app';
+      : 'https://nostria.app/';
     return `${baseUrl}${url}`;
   }
 }
