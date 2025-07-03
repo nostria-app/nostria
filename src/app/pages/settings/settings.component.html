@@ -53,6 +53,20 @@
         </div>
 
         <div>
+          <h2 i18n="@@settings.language">Language</h2>
+          <p i18n="@@settings.language.description">Select your preferred language</p>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label i18n="@@settings.language.label">Language</mat-label>
+            <mat-select [ngModel]="localSettings.locale()" (selectionChange)="setLanguage($event.value)">
+              @for (language of languages; track language.code) {
+              <mat-option [value]="language.code">{{ language.name }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        </div>
+
+        <div>
           <h2 i18n="@@settings.release-channel">Release Channel <mat-icon class="minor-icon">diamond</mat-icon></h2>
           <p i18n="@@settings.release-channel.description">Get early access to new features (Premium)</p>
 

@@ -15,6 +15,7 @@ type SupportedLocale = 'en-US' | 'ru' | 'no';
 // Get the directory where the server is running
 const serverDistFolder = import.meta.dirname;
 
+// With localize: true, Angular builds locale folders automatically
 // Define locale-specific browser dist folders
 const localeDistFolders: Record<SupportedLocale, string> = {
   'en-US': resolve(serverDistFolder, '../en-US/browser'),
@@ -24,7 +25,6 @@ const localeDistFolders: Record<SupportedLocale, string> = {
 
 // Default fallback to en-US
 const defaultLocale: SupportedLocale = 'en-US';
-const browserDistFolder = localeDistFolders[defaultLocale];
 
 const app = express();
 
@@ -53,12 +53,8 @@ function detectUserLocale(acceptLanguageHeader: string | undefined): SupportedLo
   return defaultLocale;
 }
 
-// Create locale-specific Angular app engines
-const angularApps: Record<SupportedLocale, AngularNodeAppEngine> = {
-  'en-US': new AngularNodeAppEngine(),
-  'ru': new AngularNodeAppEngine(),
-  'no': new AngularNodeAppEngine()
-};
+// Create a single Angular app engine that handles all locales
+const angularApp = new AngularNodeAppEngine();
 
 /**
  * Configure CORS to allow web clients to make API requests
@@ -98,7 +94,8 @@ app.use((req, res, next) => {
     })(req, res, next);
   } else {
     // Fallback to default locale
-    express.static(browserDistFolder, {
+    const fallbackFolder = localeDistFolders[defaultLocale];
+    express.static(fallbackFolder, {
       maxAge: '1y',
       index: false,
       redirect: false,
@@ -107,12 +104,16 @@ app.use((req, res, next) => {
 });
 
 /**
- * Handle all other requests by rendering the Angular application using the appropriate locale.
+ * Handle all other requests by rendering the Angular application.
+ * The single Angular app engine will automatically handle locale-specific routing.
  */
 app.use((req, res, next) => {
+  // Add locale information to the request for Angular to use
   const userLocale = detectUserLocale(req.headers['accept-language']);
-  const angularApp = angularApps[userLocale] || angularApps[defaultLocale];
-
+  
+  // Set up environment variable or header that Angular can use to determine locale
+  req.headers['x-locale'] = userLocale;
+  
   angularApp
     .handle(req)
     .then((response: any) =>

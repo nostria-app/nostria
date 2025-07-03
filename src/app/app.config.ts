@@ -1,4 +1,4 @@
-import { ApplicationConfig, inject, isDevMode, provideAppInitializer, provideBrowserGlobalErrorListeners, provideZonelessChangeDetection } from '@angular/core';
+import { ApplicationConfig, inject, isDevMode, LOCALE_ID, provideAppInitializer, provideBrowserGlobalErrorListeners, provideZonelessChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideServiceWorker } from '@angular/service-worker';
@@ -14,6 +14,17 @@ import { MatIconRegistry } from '@angular/material/icon';
 import { ApiConfiguration } from './api/api-configuration';
 import { environment } from '../environments/environment';
 
+let appLang = 'en'; // Default language
+
+if (typeof window !== 'undefined') {
+  const settings = localStorage.getItem('nostria-settings');
+
+  if (settings) {
+    const parsedSettings = JSON.parse(settings);
+    appLang = parsedSettings.locale || 'en'; // Fallback to 'en' if locale is not set
+  }
+}
+
 // Create a logger for bootstrapping phase
 const bootstrapLogger = {
   log: (message: string) => console.log(`[BOOTSTRAP] ${message}`),
@@ -24,6 +35,7 @@ bootstrapLogger.log('Configuring application');
 
 export const appConfig: ApplicationConfig = {
   providers: [
+    { provide: LOCALE_ID, useValue: appLang },
     provideBrowserGlobalErrorListeners(),
     provideAppInitializer(() => {
       const initializerFn = ((iconRegistry: MatIconRegistry) => () => {
