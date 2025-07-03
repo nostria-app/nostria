@@ -1,0 +1,16 @@
+{
+  "locale": "zu",
+  "translations": {
+    "settings.back.title": "{$INTERPOLATION}",
+    "settings.title": "Izilungiselelo",
+    "settings.dark-mode": "Imodi Emnyama",
+    "settings.release-channel": "Isiteshi Sokukhishwa {$START_TAG_MAT_ICON}diamond{$CLOSE_TAG_MAT_ICON}",
+    "settings.release-channel.description": "Thola ukufinyelela kusenesikhathi ezicini ezintsha (Premium)",
+    "settings.feature-level": "Izinga Lesici",
+    "settings.feature-level.stable": "Ozinzile",
+    "settings.feature-level.beta": "Beta",
+    "settings.feature-level.preview": "Ukubuka kuqala",
+    "settings.logging": "Ukungena",
+    "settings.logging.description": "Lungisa amazinga wokungena kohlelo lokusebenza"
+  }
+}

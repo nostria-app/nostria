@@ -88,9 +88,11 @@ export class SettingsComponent {
 
   // Available languages
   languages: Language[] = [
-    { code: 'en', name: 'English' },
-    { code: 'ru', name: 'Русский' },
-    { code: 'no', name: 'Norsk' }
+ { code: 'en', name: 'English' },
+  { code: 'ru', name: 'Русский' },
+  { code: 'no', name: 'Norsk' },
+  { code: 'sw', name: 'Kiswahili' },
+  { code: 'zu', name: 'isiZulu' }
   ];
 
   // Track active section
