@@ -1,4 +1,4 @@
-import { Component, effect, inject, signal, OnDestroy, } from '@angular/core';
+import { Component, effect, inject, signal, OnDestroy, computed, } from '@angular/core';
 
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatStepperModule } from '@angular/material/stepper';
@@ -98,6 +98,18 @@ export class UpgradeComponent implements OnDestroy {
   isGeneratingInvoice = signal<boolean>(false);
   isPaymentCompleted = signal<boolean>(false);
   paymentCheckInterval = signal<number | null | any>(null);
+  selectedPrice = computed(() =>
+    this.selectedTier()?.details?.pricing?.[this.selectedPaymentOption() || 'monthly'] || { priceCents: 0, currency: 'USD' }
+  )
+  selectedTierTill = computed(() => {
+    if (!this.selectedTier() || !this.selectedPaymentOption()) return '';
+    const validTill = Date.now() + 24 * 60 * 60 * 1000 * (this.selectedPaymentOption() === 'quarterly' ? 92 : 365)
+    const date = new Date(validTill);
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = date.toLocaleString('en-US', { month: 'long' });
+    const year = date.getFullYear();
+    return `${day} ${month} ${year}`;
+  })
 
   constructor() {
     effect(() => {
@@ -182,7 +194,7 @@ export class UpgradeComponent implements OnDestroy {
     const selectedPaymentOption = this.selectedPaymentOption()
     if (!selectedTier || !selectedPaymentOption) return;
 
-    const selectedPrice = selectedTier.details.pricing[selectedPaymentOption]?.priceCents
+    const selectedPrice = this.selectedPrice().priceCents
 
     if (!selectedPrice) {
       console.error('No price found for selected tier and payment option ', selectedTier.key, selectedPaymentOption);
