@@ -119,17 +119,14 @@
         <mat-tab-group [(selectedIndex)]="selectedTabIndex" class="content-tabs">
           <mat-tab label="Write">
             <div class="write-tab">
-              <mat-form-field appearance="outline" class="full-width content-editor">
-                <mat-label>Article Content *</mat-label>
-                <textarea matInput 
-                          [value]="article().content"
-                          (input)="updateContent($any($event.target).value)"
-                          placeholder="Write your article content in Markdown..."
-                          rows="20"
-                          required>
-                </textarea>
-                <mat-hint>You can use Markdown formatting</mat-hint>
-              </mat-form-field>
+              <app-rich-text-editor
+                [content]="article().content"
+                (contentChange)="updateContent($event)">
+              </app-rich-text-editor>
+              <div class="editor-hint">
+                <mat-icon>info</mat-icon>
+                <span>Toggle between Rich Text and Markdown modes using the controls above</span>
+              </div>
             </div>
           </mat-tab>
           
@@ -143,9 +140,10 @@
                   }
                   @if (article().image) {
                     <img [src]="article().image" 
-                         [alt]="article().title" 
+                         [alt]="article().title || 'Article featured image'" 
                          class="preview-image"
-                         loading="lazy">
+                         loading="lazy"
+                         [title]="article().title || 'Article featured image'">
                   }                  <div class="preview-markdown">
                     <div [innerHTML]="markdownHtml()"></div>
                   </div>
