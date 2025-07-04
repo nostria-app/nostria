@@ -74,6 +74,7 @@ export class EditorComponent {
   isEditMode = signal(false);
   selectedTabIndex = signal(0);
   autoTitleEnabled = signal(true);
+  autoDTagEnabled = signal(true);
   
   // Article data
   article = signal<ArticleDraft>({
@@ -114,6 +115,23 @@ export class EditorComponent {
     
     return title;
   });
+
+  // Auto-dTag feature
+  suggestedDTag = computed(() => {
+    const title = this.article().title;
+    if (!title.trim()) return '';
+    
+    // Convert to lowercase, replace spaces with dashes, remove special characters
+    return title
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '-')          // Replace spaces with dashes
+      .replace(/[^\w\-]+/g, '')       // Remove all non-word chars (except dashes)
+      .replace(/\-\-+/g, '-')         // Replace multiple dashes with single dash
+      .replace(/^-+/, '')             // Trim dashes from start
+      .replace(/-+$/, '');            // Trim dashes from end
+  });
+
   // Form validation
   isValid = computed(() => {
     const art = this.article();
@@ -332,6 +350,11 @@ export class EditorComponent {
 
   updateTitle(value: string): void {
     this.article.update(art => ({ ...art, title: value }));
+    
+    // If auto-dTag is enabled and there's a suggested dTag, apply it
+    if (this.autoDTagEnabled() && this.suggestedDTag()) {
+      this.applyAutoDTag();
+    }
   }
 
   updateSummary(value: string): void {
@@ -369,6 +392,21 @@ export class EditorComponent {
     if (suggested) {
       this.updateTitle(suggested);
       this.snackBar.open('Title updated from content', 'Close', { duration: 2000 });
+    }
+  }
+  
+  toggleAutoDTagMode(): void {
+    this.autoDTagEnabled.update(enabled => !enabled);
+    // Apply auto-dTag when enabling
+    if (this.autoDTagEnabled() && this.suggestedDTag()) {
+      this.applyAutoDTag();
+    }
+  }
+  
+  applyAutoDTag(): void {
+    const suggested = this.suggestedDTag();
+    if (suggested) {
+      this.article.update(art => ({ ...art, dTag: suggested }));
     }
   }
 }
