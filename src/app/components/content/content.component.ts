@@ -3,7 +3,7 @@ import { Component, Input, ViewChild, ElementRef, AfterViewInit, OnDestroy, comp
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialogModule } from '@angular/material/dialog';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { DomSanitizer, SafeHtml, SafeResourceUrl } from '@angular/platform-browser';
 import { SocialPreviewComponent } from '../social-preview/social-preview.component';
 import { MatDialog } from '@angular/material/dialog';
 import { ImageDialogComponent } from '../image-dialog/image-dialog.component';
@@ -80,7 +80,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     this._content.set(newContent);
   }
 
-  get content() {
+  get content() : string {
     return this._content();
   }
 
@@ -88,7 +88,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     // Effect to parse content when it changes and component is visible
     effect(async () => {
       const shouldRender = this._isVisible() || this._hasBeenVisible();
-      const currentContent = this._content();
+      const currentContent = this._content() as string;
 
       if (!shouldRender) {
         return;
