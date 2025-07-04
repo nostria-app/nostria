@@ -54,8 +54,8 @@
     <div class="content-editor-section">
       <mat-form-field appearance="outline" class="content-field">
         <mat-label>What's on your mind?</mat-label>
-        <textarea matInput [(ngModel)]="content" placeholder="Write your note..." rows="4" maxlength="280"
-          class="content-textarea" #contentTextarea>
+        <textarea matInput [(ngModel)]="content" placeholder="Write your note..." rows="4" class="content-textarea"
+          #contentTextarea>
         </textarea>
         <mat-hint align="end">
           {{ characterCount() }} characters
