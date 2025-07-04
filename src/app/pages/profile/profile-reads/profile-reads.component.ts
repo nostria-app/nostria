@@ -11,6 +11,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { BookmarkService } from '../../../services/bookmark.service';
 import { AgoPipe } from '../../../pipes/ago.pipe';
 import { MatButtonModule } from '@angular/material/button';
+import { UtilitiesService } from '../../../services/utilities.service';
 
 @Component({
   selector: 'app-profile-reads',
@@ -36,6 +37,7 @@ export class ProfileReadsComponent implements OnChanges {
   private logger = inject(LoggerService);
   profileState = inject(ProfileStateService);
   bookmark = inject(BookmarkService);
+  utilities = inject(UtilitiesService);
 
   isLoading = signal(true);
   reads = signal<any[]>([]);

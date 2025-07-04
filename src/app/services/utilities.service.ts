@@ -266,6 +266,10 @@ export class UtilitiesService {
   }
 
   getPubkeyFromNpub(npub: string): string {
+    if (!npub.startsWith('npub')) {
+      return npub;
+    }
+
     // Convert the hex public key to a Nostr public key (npub)
     const result = nip19.decode(npub).data;
     return result as string;
