@@ -124,6 +124,28 @@
       }
     }
     
+    .dTag-field-container {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      
+      mat-form-field {
+        flex: 1;
+      }
+      
+      .dTag-controls {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-top: 8px;
+        
+        button {
+          width: 40px;
+          height: 40px;
+        }
+      }
+    }
+    
     .tags-section {
       h3 {
         margin: 0 0 16px 0;
