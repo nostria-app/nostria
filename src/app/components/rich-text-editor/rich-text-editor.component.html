@@ -142,7 +142,7 @@
            [attr.placeholder]="'Write your article content...'">
       </div>
     } @else {
-      <textarea 
+      <textarea #markdownTextarea
         class="markdown-content"
         [value]="markdownContent()"
         (input)="onMarkdownContentChange($event)"

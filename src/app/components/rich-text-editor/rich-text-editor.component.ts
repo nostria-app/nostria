@@ -34,6 +34,7 @@ export class RichTextEditorComponent implements AfterViewInit {
   
   @ViewChild('editorContent') editorContent!: ElementRef;
   @ViewChild('fileInput') fileInput!: ElementRef;
+  @ViewChild('markdownTextarea') markdownTextarea!: ElementRef;
   
   isRichTextMode = signal(true);
   markdownContent = signal('');
@@ -51,6 +52,9 @@ export class RichTextEditorComponent implements AfterViewInit {
     // Reset drag counter when component initializes
     this.dragCounter = 0;
     this.isDragOver.set(false);
+    
+    // Add paste event listener for clipboard image handling
+    this.setupPasteHandler();
   }
   
   setContent(content: string) {
@@ -76,6 +80,13 @@ export class RichTextEditorComponent implements AfterViewInit {
     }
     
     this.isRichTextMode.update(mode => !mode);
+    
+    // Set up paste handlers for the newly active editor
+    setTimeout(() => {
+      if (!this.isRichTextMode() && this.markdownTextarea) {
+        this.markdownTextarea.nativeElement.addEventListener('paste', this.handlePaste.bind(this));
+      }
+    }, 100);
   }
   
   onMarkdownContentChange(event: Event) {
@@ -440,5 +451,61 @@ export class RichTextEditorComponent implements AfterViewInit {
   private getCursorPositionInTextarea(): number {
     // For now, append to end. In a real implementation, you'd track cursor position
     return this.markdownContent().length;
+  }
+  
+  private setupPasteHandler(): void {
+    // Add paste handler to rich text editor
+    if (this.editorContent) {
+      this.editorContent.nativeElement.addEventListener('paste', this.handlePaste.bind(this));
+    }
+    
+    // Add paste handler to markdown textarea (will be available when component switches to markdown mode)
+    setTimeout(() => {
+      if (this.markdownTextarea) {
+        this.markdownTextarea.nativeElement.addEventListener('paste', this.handlePaste.bind(this));
+      }
+    }, 100);
+  }
+  
+  private handlePaste(event: ClipboardEvent): void {
+    const items = event.clipboardData?.items;
+    if (!items) return;
+    
+    let hasImageFile = false;
+    let imageFiles: File[] = [];
+    
+    // First pass: check for image files
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      
+      if (item.kind === 'file') {
+        const file = item.getAsFile();
+        if (file && this.isImageFile(file)) {
+          hasImageFile = true;
+          imageFiles.push(file);
+        }
+      }
+    }
+    
+    // If we found image files, prevent default and upload them
+    if (hasImageFile && imageFiles.length > 0) {
+      event.preventDefault();
+      this.uploadFiles(imageFiles);
+      return;
+    }
+    
+    // If no image files, allow normal text pasting
+    // The browser will handle text pasting automatically
+  }
+  
+  private isImageFile(file: File): boolean {
+    // Check if the file is an image by MIME type
+    if (file.type.startsWith('image/')) {
+      return true;
+    }
+    
+    // Additional check by file extension as fallback
+    const imageExtensions = /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico|tiff|avif|heic|heif)$/i;
+    return imageExtensions.test(file.name);
   }
 }
