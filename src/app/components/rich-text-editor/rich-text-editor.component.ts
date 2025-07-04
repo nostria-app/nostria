@@ -328,7 +328,7 @@ export class RichTextEditorComponent implements AfterViewInit {
   }
   
   private async uploadFiles(files: File[]): Promise<void> {
-    if (files.length === 0) return;
+    if (files.length === 0) return Promise.resolve();
     
     this.isUploading.set(true);
     
@@ -386,6 +386,8 @@ export class RichTextEditorComponent implements AfterViewInit {
     } finally {
       this.isUploading.set(false);
     }
+    
+    return Promise.resolve();
   }
   
   private insertFileLink(url: string, fileName: string, fileType: string): void {
@@ -487,10 +489,45 @@ export class RichTextEditorComponent implements AfterViewInit {
       }
     }
     
-    // If we found image files, prevent default and upload them
+    // If we found image files, prevent ALL default behavior and upload them
     if (hasImageFile && imageFiles.length > 0) {
       event.preventDefault();
-      this.uploadFiles(imageFiles);
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      
+      // Clear any selection to prevent unwanted HTML insertion
+      if (this.isRichTextMode()) {
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+          // Store the current selection to restore cursor position after upload
+          const range = selection.getRangeAt(0);
+          const startContainer = range.startContainer;
+          const startOffset = range.startOffset;
+          
+          // Upload files and restore cursor position
+          this.uploadFiles(imageFiles).then(() => {
+            // Restore cursor position after upload
+            setTimeout(() => {
+              try {
+                const newRange = document.createRange();
+                newRange.setStart(startContainer, startOffset);
+                newRange.collapse(true);
+                selection.removeAllRanges();
+                selection.addRange(newRange);
+              } catch (e) {
+                // If restoring cursor position fails, just focus the editor
+                this.editorContent.nativeElement.focus();
+              }
+            }, 100);
+          });
+        } else {
+          this.uploadFiles(imageFiles);
+        }
+      } else {
+        // For markdown mode, just upload without cursor management
+        this.uploadFiles(imageFiles);
+      }
+      
       return;
     }
     
