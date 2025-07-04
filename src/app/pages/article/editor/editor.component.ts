@@ -24,6 +24,7 @@ import { MatCardModule } from '@angular/material/card';
 import { LayoutService } from '../../../services/layout.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { RichTextEditorComponent } from '../../../components/rich-text-editor/rich-text-editor.component';
+import { nip19 } from 'nostr-tools';
 
 interface ArticleDraft {
   title: string;
@@ -53,7 +54,7 @@ interface ArticleDraft {
     RichTextEditorComponent,
     MatExpansionModule,
     MatTooltipModule
-],
+  ],
   templateUrl: './editor.component.html',
   styleUrl: './editor.component.scss'
 })
@@ -62,7 +63,7 @@ export class EditorComponent {
   private route = inject(ActivatedRoute);
   private nostrService = inject(NostrService);
   private dataService = inject(DataService);
-  private relayService = inject(RelayService);  private snackBar = inject(MatSnackBar);
+  private relayService = inject(RelayService); private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private sanitizer = inject(DomSanitizer);
   private layout = inject(LayoutService);
@@ -75,7 +76,7 @@ export class EditorComponent {
   selectedTabIndex = signal(0);
   autoTitleEnabled = signal(true);
   autoDTagEnabled = signal(true);
-  
+
   // Article data
   article = signal<ArticleDraft>({
     title: '',
@@ -85,20 +86,20 @@ export class EditorComponent {
     tags: [],
     dTag: this.generateUniqueId()
   });
-  
+
   // Auto-title feature
   suggestedTitle = computed(() => {
     if (!this.autoTitleEnabled()) return '';
-    
+
     const content = this.article().content;
     if (!content.trim()) return '';
-    
+
     // Extract first line and clean it up
     const firstLine = content.split('\n')[0];
-    
+
     // Remove markdown heading syntax
     let title = firstLine.replace(/^#{1,6}\s+/, '');
-    
+
     // Remove other markdown formatting
     title = title
       .replace(/\*\*/g, '')  // Bold
@@ -107,12 +108,12 @@ export class EditorComponent {
       .replace(/\_/g, '')     // Italic
       .replace(/\~\~/g, '')   // Strikethrough
       .replace(/\`/g, '');    // Code
-    
+
     // Limit length
     if (title.length > 100) {
       title = title.substring(0, 97) + '...';
     }
-    
+
     return title;
   });
 
@@ -120,7 +121,7 @@ export class EditorComponent {
   suggestedDTag = computed(() => {
     const title = this.article().title;
     if (!title.trim()) return '';
-    
+
     // Convert to lowercase, replace spaces with dashes, remove special characters
     return title
       .toLowerCase()
@@ -135,15 +136,15 @@ export class EditorComponent {
   // Form validation
   isValid = computed(() => {
     const art = this.article();
-    return art.title.trim().length > 0 && 
-           art.content.trim().length > 0 && 
-           art.dTag.trim().length > 0;
+    return art.title.trim().length > 0 &&
+      art.content.trim().length > 0 &&
+      art.dTag.trim().length > 0;
   });
   // Markdown preview
   markdownHtml = computed(() => {
     const content = this.article().content;
     if (!content.trim()) return this.sanitizer.bypassSecurityTrustHtml('');
-    
+
     try {
       const html = marked.parse(content);
       return this.sanitizer.bypassSecurityTrustHtml(html as string);
@@ -178,7 +179,7 @@ export class EditorComponent {
     try {
       this.isLoading.set(true);
       const pubkey = this.accountState.pubkey();
-      
+
       if (!pubkey) {
         this.snackBar.open('Please log in to edit articles', 'Close', { duration: 3000 });
         this.router.navigate(['/articles']);
@@ -186,16 +187,16 @@ export class EditorComponent {
       }
 
       const record = await this.dataService.getEventByPubkeyAndKindAndReplaceableEvent(
-        pubkey, 
-        30023, 
-        articleId, 
+        pubkey,
+        30023,
+        articleId,
         true
       );
 
       if (record?.event) {
         const event = record.event;
         const tags = event.tags;
-        
+
         this.article.set({
           title: this.getTagValue(tags, 'title') || '',
           summary: this.getTagValue(tags, 'summary') || '',
@@ -281,7 +282,7 @@ export class EditorComponent {
     try {
       this.isPublishing.set(true);
       const art = this.article();
-      
+
       // Build tags array according to NIP-23
       const tags: string[][] = [
         ['d', art.dTag],
@@ -327,10 +328,16 @@ export class EditorComponent {
 
       const action = kind === 30024 ? 'Draft saved' : 'Article published';
       this.snackBar.open(`${action} successfully`, 'Close', { duration: 3000 });
-      
+
       if (kind === 30023) {
+        // We don't do "note" much, we want URLs that embeds the autor.
+        // const note = nip19.noteEncode(signedEvent.id);
+        // this.router.navigate(['/e', note]); // Navigate to the published event
+        // const nevent = nip19.neventEncode({ id: signedEvent.id, author: signedEvent.pubkey });
+        // this.router.navigate(['/e', nevent], { state: { event: signedEvent } }); // Navigate to the published event
+
         // Navigate to the published article
-        this.router.navigate(['/a', pubkey, art.dTag]);
+        this.router.navigate(['/a', pubkey, art.dTag], { state: { event: signedEvent } });
       }
     } catch (error) {
       console.error('Error publishing article:', error);
@@ -350,7 +357,7 @@ export class EditorComponent {
 
   updateTitle(value: string): void {
     this.article.update(art => ({ ...art, title: value }));
-    
+
     // If auto-dTag is enabled and there's a suggested dTag, apply it
     if (this.autoDTagEnabled() && this.suggestedDTag()) {
       this.applyAutoDTag();
@@ -367,7 +374,7 @@ export class EditorComponent {
 
   updateContent(value: string): void {
     this.article.update(art => ({ ...art, content: value }));
-    
+
     // If auto-title is enabled and there's a suggested title, apply it
     // Removed the check for empty title to allow auto-title to update existing titles
     if (this.autoTitleEnabled() && this.suggestedTitle()) {
@@ -378,7 +385,7 @@ export class EditorComponent {
   updateDTag(value: string): void {
     this.article.update(art => ({ ...art, dTag: value }));
   }
-  
+
   toggleAutoTitleMode(): void {
     this.autoTitleEnabled.update(enabled => !enabled);
     // Apply auto-title when enabling, regardless of existing title
@@ -386,7 +393,7 @@ export class EditorComponent {
       this.applyAutoTitle();
     }
   }
-  
+
   applyAutoTitle(): void {
     const suggested = this.suggestedTitle();
     if (suggested) {
@@ -394,7 +401,7 @@ export class EditorComponent {
       this.snackBar.open('Title updated from content', 'Close', { duration: 2000 });
     }
   }
-  
+
   toggleAutoDTagMode(): void {
     this.autoDTagEnabled.update(enabled => !enabled);
     // Apply auto-dTag when enabling
@@ -402,7 +409,7 @@ export class EditorComponent {
       this.applyAutoDTag();
     }
   }
-  
+
   applyAutoDTag(): void {
     const suggested = this.suggestedDTag();
     if (suggested) {

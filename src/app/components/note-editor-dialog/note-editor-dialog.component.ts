@@ -16,6 +16,8 @@ import { RelayService } from '../../services/relay.service';
 import { MediaService } from '../../services/media.service';
 import { UnsignedEvent } from 'nostr-tools/pure';
 import { ContentComponent } from '../content/content.component';
+import { Router } from '@angular/router';
+import { nip19 } from 'nostr-tools';
 
 export interface NoteEditorDialogData {
   replyTo?: {
@@ -57,6 +59,7 @@ export class NoteEditorDialogComponent implements AfterViewInit {
   private mediaService = inject(MediaService);
   private snackBar = inject(MatSnackBar);
   private sanitizer = inject(DomSanitizer);
+  private router = inject(Router);
 
   @ViewChild('contentTextarea') contentTextarea!: ElementRef<HTMLTextAreaElement>;
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
@@ -144,6 +147,12 @@ export class NoteEditorDialogComponent implements AfterViewInit {
         await this.relayService.publish(signedEvent);
         this.snackBar.open('Note published successfully!', 'Close', { duration: 3000 });
         this.dialogRef.close({ published: true, event: signedEvent });
+
+        // We don't do "note" much, we want URLs that embeds the autor.
+        // const note = nip19.noteEncode(signedEvent.id);
+        // this.router.navigate(['/e', note]); // Navigate to the published event
+        const nevent = nip19.neventEncode({ id: signedEvent.id, author: signedEvent.pubkey });
+        this.router.navigate(['/e', nevent], { state: { event: signedEvent } }); // Navigate to the published event
       } else {
         throw new Error('Failed to sign event');
       }
@@ -376,7 +385,6 @@ export class NoteEditorDialogComponent implements AfterViewInit {
   }
   
   private setupPasteHandler(): void {
-    debugger;
     if (this.contentTextarea) {
       this.contentTextarea.nativeElement.addEventListener('paste', this.handlePaste.bind(this));
     }
