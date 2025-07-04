@@ -104,8 +104,6 @@ export class ArticleComponent {
         slug = slugParam;
         pubkey = this.utilities.getPubkeyFromNpub(naddr);
 
-        debugger;
-
         // Let's make the URL nicer, TODO add support for replacing with username, for now replace with npub.
         const npub = this.utilities.getNpubFromPubkey(pubkey);
         this.url.updatePathSilently(['/a', npub, slug]);
