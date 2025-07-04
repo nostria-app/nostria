@@ -84,6 +84,7 @@ export const routes: Routes = [
   { path: 'article/create', component: EditorComponent, title: 'New Article' },
   { path: 'article/edit/:id', component: EditorComponent, title: 'Edit Article' },
   { path: 'a/:id', component: ArticleComponent, title: 'Article', resolve: { data: DataResolver } },
+  { path: 'a/:id/:slug', component: ArticleComponent, title: 'Article', resolve: { data: DataResolver } },
   {
     path: 'p/:id',
     component: ProfileComponent,
