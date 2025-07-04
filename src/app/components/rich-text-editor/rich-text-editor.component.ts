@@ -116,6 +116,9 @@ export class RichTextEditorComponent implements AfterViewInit {
       // Handle paragraphs (two newlines)
       .replace(/\n\n/g, '</p><p>')
       
+      // Handle images - convert ![alt](url) to <img> tags (must come before links)
+      .replace(/!\[([^\]]*)\]\(([^\)]+)\)/g, '<img src="$2" alt="$1" style="max-width: 100%; height: auto; border-radius: 4px;" />')
+      
       // Handle text formatting - non-greedy to prevent overlapping tags
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
@@ -130,7 +133,7 @@ export class RichTextEditorComponent implements AfterViewInit {
       // Handle blockquotes
       .replace(/^> (.*?)$/gm, '<blockquote>$1</blockquote>')
       
-      // Handle links
+      // Handle links (after images to avoid conflict)
       .replace(/\[([^\[]+)\]\(([^\)]+)\)/g, '<a href="$2">$1</a>')
       
       // Handle unordered lists - collect consecutive list items
@@ -181,6 +184,11 @@ export class RichTextEditorComponent implements AfterViewInit {
       .replace(/<br\s*\/?>/gi, '\n')
       .replace(/<p>(.*?)<\/p>/gi, '$1\n\n')
       
+      // Handle images BEFORE links (images have similar syntax)
+      .replace(/<img[^>]+src="([^"]*)"[^>]*alt="([^"]*)"[^>]*>/gi, '![$2]($1)')
+      .replace(/<img[^>]+alt="([^"]*)"[^>]*src="([^"]*)"[^>]*>/gi, '![$1]($2)')
+      .replace(/<img[^>]+src="([^"]*)"[^>]*>/gi, '![]($1)')
+      
       // Handle headings
       .replace(/<h1>(.*?)<\/h1>/gi, '# $1\n\n')
       .replace(/<h2>(.*?)<\/h2>/gi, '## $1\n\n')
@@ -200,7 +208,7 @@ export class RichTextEditorComponent implements AfterViewInit {
       // Handle blockquotes
       .replace(/<blockquote>(.*?)<\/blockquote>/gi, '> $1\n\n')
       
-      // Handle links
+      // Handle links (after images to avoid conflict)
       .replace(/<a href="(.*?)">(.*?)<\/a>/gi, '[$2]($1)')
       
       // Handle lists - more complex handling needed for nested lists
@@ -414,18 +422,27 @@ export class RichTextEditorComponent implements AfterViewInit {
   private insertMarkdownIntoRichText(markdown: string): void {
     if (!this.editorContent) return;
     
+    // Convert markdown to HTML for rich text display
+    const html = this.convertMarkdownToHtml(markdown);
+    
     const selection = window.getSelection();
     if (selection && selection.rangeCount > 0) {
       const range = selection.getRangeAt(0);
       
-      // Create a text node with the markdown
-      const textNode = document.createTextNode(markdown + '\n\n');
-      range.deleteContents();
-      range.insertNode(textNode);
+      // Create a temporary container to hold the HTML
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = html + '<br><br>';
       
-      // Move cursor after the inserted text
-      range.setStartAfter(textNode);
-      range.setEndAfter(textNode);
+      // Insert all nodes from the temp div
+      range.deleteContents();
+      let node: Node | null;
+      while ((node = tempDiv.firstChild)) {
+        range.insertNode(node);
+        range.setStartAfter(node);
+      }
+      
+      // Collapse the range and update selection
+      range.collapse(true);
       selection.removeAllRanges();
       selection.addRange(range);
       
@@ -433,9 +450,23 @@ export class RichTextEditorComponent implements AfterViewInit {
     } else {
       // No selection, append to end
       const content = this.editorContent.nativeElement;
-      content.innerHTML += markdown + '<br><br>';
+      content.innerHTML += html + '<br><br>';
       this.onRichTextContentChange();
     }
+  }
+
+  private convertMarkdownToHtml(markdown: string): string {
+    // Simple markdown to HTML conversion for individual pieces
+    return markdown
+      // Handle images first (before links)
+      .replace(/!\[([^\]]*)\]\(([^\)]+)\)/g, '<img src="$2" alt="$1" style="max-width: 100%; height: auto; border-radius: 4px;" />')
+      // Handle links
+      .replace(/\[([^\[]+)\]\(([^\)]+)\)/g, '<a href="$2">$1</a>')
+      // Handle text formatting
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/~~(.*?)~~/g, '<del>$1</del>')
+      .replace(/`([^`]+)`/g, '<code>$1</code>');
   }
   
   private insertMarkdownIntoTextarea(markdown: string): void {
