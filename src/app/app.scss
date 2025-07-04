@@ -26,6 +26,7 @@ nav {
 }
 
 @media (display-mode: window-controls-overlay) {
+
   /** This is for when the app is running in a window with custom title bar controls. */
   .app-container {
     padding-top: env(titlebar-area-height, 33px);
@@ -52,7 +53,7 @@ mat-sidenav-content {
   display: flex;
   flex-direction: column;
   height: 100%;
-  
+
   // Adjust for mobile navigation
   @media (max-width: 599px) {
     padding-bottom: 56px; // Height of mobile nav
@@ -85,11 +86,11 @@ mat-sidenav-content {
 
 .close-button {
   position: absolute;
+  right: 16px;
 }
 
 .theme-button {
   position: absolute;
-  right: 16px;
 }
 
 .app-title {
@@ -295,23 +296,43 @@ mat-sidenav-content {
 .profile-sidenav {
   width: 300px;
   max-width: 90vw;
+  z-index: 1001; // Higher than app-toolbar (z-index: 2) and mobile-nav (z-index: 1000)
 }
 
 // Animation for the profile sidenav
 .profile-sidenav.mat-drawer {
   transition: transform 0.3s ease-in-out;
+  z-index: 1001; // Ensure the drawer itself also has high z-index
+}
+
+// Ensure the sidenav container doesn't resize when profile sidenav opens
+.sidenav-container.mat-sidenav-container {
+  transform: none !important;
+  z-index: 1000; // Ensure container has proper stacking context
+
+  // Prevent content from shifting when right sidenav opens
+  .mat-sidenav-content {
+    margin-right: 0 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  // Ensure right sidenav has proper backdrop behavior
+  .mat-sidenav-backdrop {
+    position: fixed !important;
+  }
 }
 
 .profile-button {
   margin-left: 8px;
   padding: 0 !important;
-  
+
   .mat-icon {
     font-size: 32px;
     height: 32px;
     width: 32px;
   }
-  
+
   .profile-button-avatar {
     margin: 4px;
   }
@@ -435,7 +456,7 @@ mat-sidenav-content {
   align-items: center;
   background-color: var(--mat-primary-300);
   position: relative;
-  
+
   .avatar-image {
     width: 100%;
     height: 100%;
@@ -443,13 +464,13 @@ mat-sidenav-content {
     border-radius: 50%;
     overflow: hidden;
   }
-  
+
   .mat-icon {
     font-size: 32px;
     height: 32px;
     width: 32px;
   }
-  
+
   &::before {
     content: '';
     position: absolute;
@@ -468,7 +489,7 @@ mat-sidenav-content {
 .account-item {
   margin-bottom: 4px;
   transition: background-color 0.2s ease;
-  
+
   &:hover {
     .account-avatar::before {
       animation: circleGlow 0.8s ease-out forwards;
@@ -482,24 +503,29 @@ mat-sidenav-content {
     transform: scale(0.8) rotate(0deg);
     border-color: transparent var(--mat-sys-primary) transparent transparent;
   }
+
   25% {
     opacity: 1;
     transform: scale(1) rotate(90deg);
     border-color: transparent transparent var(--mat-sys-primary) transparent;
   }
+
   50% {
     transform: scale(1) rotate(180deg);
     border-color: transparent transparent transparent var(--mat-sys-primary);
   }
+
   75% {
     transform: scale(1) rotate(270deg);
     border-color: var(--mat-sys-primary) transparent transparent transparent;
   }
+
   90% {
     opacity: 1;
     transform: scale(1) rotate(360deg);
     border-color: var(--mat-sys-primary) var(--mat-sys-primary) var(--mat-sys-primary) var(--mat-sys-primary);
   }
+
   100% {
     opacity: 0;
     transform: scale(1) rotate(360deg);
@@ -632,11 +658,11 @@ mat-sidenav-content {
 // Profile cache button styles
 .profile-cache-button {
   position: relative;
-  
+
   .spinning-icon {
     animation: spin 2s linear infinite;
   }
-  
+
   .progress-badge {
     position: absolute;
     top: -2px;
@@ -655,6 +681,21 @@ mat-sidenav-content {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+// Additional z-index fixes for Material sidenav
+.profile-sidenav .mat-drawer-inner-container {
+  z-index: 1001;
+}
+
+// Ensure backdrop appears above toolbar but below sidenav
+.sidenav-container .mat-drawer-backdrop {
+  z-index: 1000 !important;
 }

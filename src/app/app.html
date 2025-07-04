@@ -199,7 +199,7 @@
 
   @if (app.initialized()) {
   <!-- Sidenav container now below the toolbar -->
-  <mat-sidenav-container class="sidenav-container" autosize="true"> <!-- Side navigation -->
+  <mat-sidenav-container class="sidenav-container" [autosize]="false"> <!-- Side navigation -->
     <mat-sidenav #sidenav class="sidenav no-print"
       [ngClass]="{ 'sidenav-labels': displayLabels(), 'sidenav-small': !displayLabels()  }" [opened]="opened()"
       [mode]="layout.isHandset() ? 'over' : 'side'" [fixedInViewport]="false">
@@ -236,22 +236,23 @@
     </mat-sidenav>
 
 
-    <mat-sidenav #profileSidenav position="end" class="profile-sidenav" mode="over">
+    <mat-sidenav #profileSidenav position="end" class="profile-sidenav" mode="over" [fixedInViewport]="true"
+      [fixedTopGap]="0" [fixedBottomGap]="0" [disableClose]="false">
       <!-- <mat-toolbar>
         <span>Profile</span>
         <span class="toolbar-spacer"></span>
         
       </mat-toolbar> -->
       <div class="profile-content">
-        <button class="close-button" mat-icon-button (click)="toggleProfileSidenav()">
-          <mat-icon>close</mat-icon>
-        </button>
         <button class="theme-button" mat-icon-button (click)="themeService.toggleDarkMode()">
           @if (themeService.darkMode()) {
           <mat-icon>dark_mode</mat-icon>
           } @else {
           <mat-icon>light_mode</mat-icon>
           }
+        </button>
+        <button class="close-button" mat-icon-button (click)="toggleProfileSidenav()">
+          <mat-icon>close</mat-icon>
         </button>
         <div class="profile-header">
           @if (accountState.profile(); as metadata) {
