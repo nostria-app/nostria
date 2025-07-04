@@ -75,11 +75,10 @@ export class NoteEditorDialogComponent implements AfterViewInit {
 
   // Computed properties
   characterCount = computed(() => this.content().length);
-  charactersRemaining = computed(() => 280 - this.characterCount());
-  isOverLimit = computed(() => this.characterCount() > 280);
+  // charactersRemaining = computed(() => 280 - this.characterCount());
+  // isOverLimit = computed(() => this.characterCount() > 280);
   canPublish = computed(() => 
     this.content().trim().length > 0 && 
-    !this.isOverLimit() && 
     !this.isPublishing() &&
     !this.isUploading()
   );
@@ -205,13 +204,6 @@ export class NoteEditorDialogComponent implements AfterViewInit {
 
   cancel(): void {
     this.dialogRef.close({ published: false });
-  }
-
-  getCharacterCountColor(): string {
-    const remaining = this.charactersRemaining();
-    if (remaining < 0) return 'error-text';
-    if (remaining < 20) return 'warning-text';
-    return 'primary-text';
   }
 
   // Preview functionality
