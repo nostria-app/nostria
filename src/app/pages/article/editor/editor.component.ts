@@ -330,7 +330,7 @@ export class EditorComponent {
       
       if (kind === 30023) {
         // Navigate to the published article
-        this.router.navigate(['/a', art.dTag]);
+        this.router.navigate(['/a', pubkey, art.dTag]);
       }
     } catch (error) {
       console.error('Error publishing article:', error);
