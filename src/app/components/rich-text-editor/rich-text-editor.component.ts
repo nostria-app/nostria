@@ -6,7 +6,10 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { FormsModule } from '@angular/forms';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { DomSanitizer } from '@angular/platform-browser';
+import { MediaService } from '../../services/media.service';
 
 @Component({
   selector: 'app-rich-text-editor',
@@ -18,7 +21,9 @@ import { DomSanitizer } from '@angular/platform-browser';
     MatTooltipModule,
     MatDividerModule,
     FormsModule,
-    MatButtonToggleModule
+    MatButtonToggleModule,
+    MatProgressBarModule,
+    MatSnackBarModule
   ],
   templateUrl: './rich-text-editor.component.html',
   styleUrl: './rich-text-editor.component.scss'
@@ -28,14 +33,24 @@ export class RichTextEditorComponent implements AfterViewInit {
   @Output() contentChange = new EventEmitter<string>();
   
   @ViewChild('editorContent') editorContent!: ElementRef;
+  @ViewChild('fileInput') fileInput!: ElementRef;
   
   isRichTextMode = signal(true);
   markdownContent = signal('');
+  isUploading = signal(false);
+  isDragOver = signal(false);
+  private dragCounter = 0;
   
   private sanitizer = inject(DomSanitizer);
+  private mediaService = inject(MediaService);
+  private snackBar = inject(MatSnackBar);
   
   ngAfterViewInit() {
     this.setContent(this.content || '');
+    
+    // Reset drag counter when component initializes
+    this.dragCounter = 0;
+    this.isDragOver.set(false);
   }
   
   setContent(content: string) {
@@ -249,5 +264,181 @@ export class RichTextEditorComponent implements AfterViewInit {
   private execCommand(command: string, value: string = '') {
     document.execCommand(command, false, value);
     this.onRichTextContentChange();
+  }
+  
+  // File upload functionality
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      this.uploadFiles(Array.from(input.files));
+    }
+    // Reset the input so the same file can be selected again
+    input.value = '';
+  }
+  
+  openFileDialog(): void {
+    this.fileInput.nativeElement.click();
+  }
+  
+  onDragEnter(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.dragCounter++;
+    if (this.dragCounter === 1) {
+      this.isDragOver.set(true);
+    }
+  }
+  
+  onDragOver(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    // Don't change state here, just prevent default
+  }
+  
+  onDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.dragCounter--;
+    if (this.dragCounter <= 0) {
+      this.dragCounter = 0;
+      this.isDragOver.set(false);
+    }
+  }
+  
+  onDrop(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.dragCounter = 0;
+    this.isDragOver.set(false);
+    
+    if (event.dataTransfer?.files && event.dataTransfer.files.length > 0) {
+      this.uploadFiles(Array.from(event.dataTransfer.files));
+    }
+  }
+  
+  private async uploadFiles(files: File[]): Promise<void> {
+    if (files.length === 0) return;
+    
+    this.isUploading.set(true);
+    
+    try {
+      // Load media service if not already loaded
+      await this.mediaService.load();
+      
+      const uploadPromises = files.map(async (file) => {
+        try {
+          const result = await this.mediaService.uploadFile(file, false, this.mediaService.mediaServers());
+          
+          if (result.status === 'success' && result.item) {
+            this.insertFileLink(result.item.url, file.name, file.type);
+            return { success: true, fileName: file.name };
+          } else {
+            return { success: false, fileName: file.name, error: result.message };
+          }
+        } catch (error) {
+          return { 
+            success: false, 
+            fileName: file.name, 
+            error: error instanceof Error ? error.message : 'Upload failed' 
+          };
+        }
+      });
+      
+      const results = await Promise.all(uploadPromises);
+      
+      // Show success/error messages
+      const successful = results.filter(r => r.success);
+      const failed = results.filter(r => !r.success);
+      
+      if (successful.length > 0) {
+        this.snackBar.open(
+          `${successful.length} file(s) uploaded successfully`, 
+          'Close', 
+          { duration: 3000 }
+        );
+      }
+      
+      if (failed.length > 0) {
+        this.snackBar.open(
+          `${failed.length} file(s) failed to upload`, 
+          'Close', 
+          { duration: 5000 }
+        );
+      }
+      
+    } catch (error) {
+      this.snackBar.open(
+        'Upload failed: ' + (error instanceof Error ? error.message : 'Unknown error'), 
+        'Close', 
+        { duration: 5000 }
+      );
+    } finally {
+      this.isUploading.set(false);
+    }
+  }
+  
+  private insertFileLink(url: string, fileName: string, fileType: string): void {
+    const isImage = fileType.startsWith('image/');
+    let markdownLink: string;
+    
+    if (isImage) {
+      // For images, use image syntax with alt text
+      markdownLink = `![${fileName}](${url})`;
+    } else {
+      // For other files, use link syntax
+      markdownLink = `[${fileName}](${url})`;
+    }
+    
+    if (this.isRichTextMode()) {
+      // Insert into rich text editor
+      this.insertMarkdownIntoRichText(markdownLink);
+    } else {
+      // Insert into markdown editor
+      this.insertMarkdownIntoTextarea(markdownLink);
+    }
+  }
+  
+  private insertMarkdownIntoRichText(markdown: string): void {
+    if (!this.editorContent) return;
+    
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      
+      // Create a text node with the markdown
+      const textNode = document.createTextNode(markdown + '\n\n');
+      range.deleteContents();
+      range.insertNode(textNode);
+      
+      // Move cursor after the inserted text
+      range.setStartAfter(textNode);
+      range.setEndAfter(textNode);
+      selection.removeAllRanges();
+      selection.addRange(range);
+      
+      this.onRichTextContentChange();
+    } else {
+      // No selection, append to end
+      const content = this.editorContent.nativeElement;
+      content.innerHTML += markdown + '<br><br>';
+      this.onRichTextContentChange();
+    }
+  }
+  
+  private insertMarkdownIntoTextarea(markdown: string): void {
+    const currentContent = this.markdownContent();
+    const cursorPosition = this.getCursorPositionInTextarea();
+    
+    const beforeCursor = currentContent.substring(0, cursorPosition);
+    const afterCursor = currentContent.substring(cursorPosition);
+    
+    const newContent = beforeCursor + markdown + '\n\n' + afterCursor;
+    this.markdownContent.set(newContent);
+    this.contentChange.emit(newContent);
+  }
+  
+  private getCursorPositionInTextarea(): number {
+    // For now, append to end. In a real implementation, you'd track cursor position
+    return this.markdownContent().length;
   }
 }

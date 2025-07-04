@@ -1,10 +1,24 @@
 .rich-editor-container {
+  position: relative;
   display: flex;
   flex-direction: column;
   border: 1px solid var(--mat-sys-outline-variant);
   border-radius: 4px;
   background-color: var(--mat-sys-surface);
   min-height: 400px;
+  transition: border-color 0.2s ease;
+
+  &.drag-over {
+    border-color: var(--mat-sys-primary);
+    border-width: 1px;
+    background-color: var(--mat-sys-primary-container);
+  }
+
+  // Hide file input
+  .hidden-file-input,
+  input[type="file"] {
+    display: none;
+  }
 
   .editor-toolbar {
     display: flex;
@@ -147,6 +161,71 @@
       font-family: 'JetBrains Mono', 'Fira Code', 'Monaco', 'Consolas', monospace;
       font-size: 14px;
       line-height: 1.6;
+    }
+  }
+  
+  .upload-progress {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+    background-color: var(--mat-sys-primary-container);
+    color: var(--mat-sys-on-primary-container);
+    
+    mat-progress-bar {
+      width: 100%;
+      margin-bottom: 8px;
+    }
+    
+    span {
+      font-size: 0.9rem;
+    }
+  }
+  
+  .drag-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(var(--mat-sys-primary-rgb), 0.1);
+    border: 2px dashed var(--mat-sys-primary);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    
+    .drag-message {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: var(--mat-sys-primary);
+      
+      mat-icon {
+        font-size: 48px;
+        width: 48px;
+        height: 48px;
+        margin-bottom: 16px;
+      }
+      
+      p {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 500;
+      }
+    }
+  }
+  
+  .markdown-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    
+    button {
+      &:hover {
+        background-color: var(--mat-sys-surface);
+      }
     }
   }
 }
