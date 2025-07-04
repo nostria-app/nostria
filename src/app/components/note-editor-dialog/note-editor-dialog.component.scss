@@ -1,10 +1,14 @@
 .note-editor-dialog {
   min-width: 400px;
   max-width: 600px;
+  width: 600px;
   width: 100%;
-  max-height: 90vh;
+  // max-height: 90vh;
   display: flex;
   flex-direction: column;
+  // border: 2px solid red;
+  // padding: 1rem;
+  // margin: 1rem;
 
   .dialog-header {
     display: flex;
@@ -19,7 +23,7 @@
   }
 
   .dialog-content {
-    padding: 16px 0;
+    padding: 16px 16px;
     overflow-y: auto;
     flex: 1;
     min-height: 0;
@@ -96,23 +100,23 @@
     }
   }
 
-  .dialog-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-    padding: 16px 0 0 0;
-    flex-shrink: 0;
+  // .dialog-actions {
+  //   display: flex;
+  //   justify-content: flex-end;
+  //   gap: 8px;
+  //   padding: 16px 0 0 0;
+  //   flex-shrink: 0;
     
-    .publish-button {
-      display: flex;
-      align-items: center;
-      gap: 8px;
+  //   .publish-button {
+  //     display: flex;
+  //     align-items: center;
+  //     gap: 8px;
       
-      .spinning {
-        animation: spin 1s linear infinite;
-      }
-    }
-  }
+  //     .spinning {
+  //       animation: spin 1s linear infinite;
+  //     }
+  //   }
+  // }
 }
 
 @keyframes spin {
@@ -170,7 +174,7 @@
   position: relative;
   
   &.drag-over {
-    border: 2px dashed var(--mat-sys-primary);
+    border: 0px dashed var(--mat-sys-primary);
     border-radius: 8px;
     background-color: rgba(var(--mat-sys-primary-rgb), 0.05);
   }
