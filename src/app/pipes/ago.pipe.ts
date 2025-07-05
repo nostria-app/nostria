@@ -2,7 +2,7 @@ import { Pipe, PipeTransform } from '@angular/core';
 
 @Pipe({ name: 'ago', standalone: true })
 export class AgoPipe implements PipeTransform {
-  transform(value: number): string {
+  transform(value: number | any): string {
     if (value === 0) {
       return '';
     }

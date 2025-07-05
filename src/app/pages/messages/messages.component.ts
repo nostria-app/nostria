@@ -14,6 +14,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTabsModule } from '@angular/material/tabs';
 import { Router, RouterModule } from '@angular/router';
 import { NostrService } from '../../services/nostr.service';
 import { RelayService, Relay } from '../../services/relay.service';
@@ -27,6 +28,7 @@ import { NPubPipe } from '../../pipes/npub.pipe';
 import { TimestampPipe } from '../../pipes/timestamp.pipe';
 import { AgoPipe } from '../../pipes/ago.pipe';
 import { ConfirmDialogComponent } from '../../components/confirm-dialog/confirm-dialog.component';
+import { StartChatDialogComponent, StartChatDialogResult } from '../../components/start-chat-dialog/start-chat-dialog.component';
 import { kinds, SimplePool, getPublicKey, generateSecretKey, finalizeEvent, Event as NostrEvent, Filter } from 'nostr-tools';
 import { ApplicationService } from '../../services/application.service';
 import { UtilitiesService } from '../../services/utilities.service';
@@ -48,6 +50,7 @@ interface Chat {
     relays?: string[];
     encryptionType?: 'nip04' | 'nip44';
     isLegacy?: boolean; // true for NIP-04 chats
+    messages: Map<string, DirectMessage>;
 }
 
 interface DirectMessage {
@@ -91,6 +94,7 @@ interface DecryptionQueueItem {
         MatProgressSpinnerModule,
         MatSnackBarModule,
         MatDialogModule,
+        MatTabsModule,
         RouterModule,
         LoadingOverlayComponent,
         UserProfileComponent,
@@ -117,7 +121,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     readonly utilities = inject(UtilitiesService);
     private readonly accountState = inject(AccountStateService);
     private readonly encryption = inject(EncryptionService);
-    layout = inject(LayoutService);// UI state signals
+    layout = inject(LayoutService);    // UI state signals
     isLoading = signal<boolean>(false);
     isLoadingMore = signal<boolean>(false);
     isSending = signal<boolean>(false);
@@ -125,6 +129,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     showMobileList = signal<boolean>(true);
     isDecryptingMessages = signal<boolean>(false);
     decryptionQueueLength = signal<number>(0);
+    selectedTabIndex = signal<number>(0); // 0 = Following, 1 = Others
     private accountRelayService = inject(AccountRelayService);
 
     // Data signals
@@ -146,6 +151,29 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // Computed helpers
     hasChats = computed(() => this.messaging.sortedChats().length > 0);
+    
+    // Filtered chats based on selected tab
+    followingChats = computed(() => {
+        const followingList = this.accountState.followingList();
+        return this.messaging.sortedChats().filter(item => 
+            followingList.includes(item.chat.pubkey)
+        );
+    });
+    
+    otherChats = computed(() => {
+        const followingList = this.accountState.followingList();
+        return this.messaging.sortedChats().filter(item => 
+            !followingList.includes(item.chat.pubkey)
+        );
+    });
+    
+    filteredChats = computed(() => {
+        const tabIndex = this.selectedTabIndex();
+        return tabIndex === 0 ? this.followingChats() : this.otherChats();
+    });
+    
+    hasFollowingChats = computed(() => this.followingChats().length > 0);
+    hasOtherChats = computed(() => this.otherChats().length > 0);
 
     // Subscription management
     private messageSubscription: any = null;
@@ -557,9 +585,18 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
      * Start a new chat with a user
      */
     startNewChat(): void {
-        // Navigate to the people page to select a user
-        this.router.navigate(['/people'], {
-            queryParams: { mode: 'select', returnUrl: '/messages' }
+        const dialogRef = this.dialog.open(StartChatDialogComponent, {
+            width: '500px',
+            maxWidth: '90vw',
+            maxHeight: '80vh',
+            disableClose: false,
+            autoFocus: true
+        });
+
+        dialogRef.afterClosed().subscribe((result: StartChatDialogResult | undefined) => {
+            if (result) {
+                this.startChatWithUser(result.pubkey, result.isLegacy);
+            }
         });
     }
 
@@ -604,6 +641,13 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
      */
     backToList(): void {
         this.showMobileList.set(true);
+    }
+
+    /**
+     * Handle tab change between Following and Others
+     */
+    onTabChange(index: number): void {
+        this.selectedTabIndex.set(index);
     }
 
     /**
@@ -784,5 +828,50 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
         // Wait for all publish attempts to complete
         await Promise.allSettled([promisesUser, promisesAccount]);
+    }
+
+    /**
+     * Start a chat with a specific user
+     */
+    private async startChatWithUser(pubkey: string, isLegacy: boolean): Promise<void> {
+        try {
+            // Create a chat ID based on encryption type
+            const chatId = isLegacy ? `nip04${pubkey}` : `nip44${pubkey}`;
+            
+            // Check if chat already exists
+            const existingChat = this.messaging.getChat(chatId);
+            if (existingChat) {
+                // Chat already exists, just select it
+                this.selectChat(existingChat);
+                this.snackBar.open('Chat already exists', 'Close', { duration: 3000 });
+                return;
+            }
+
+            // For now, just switch to the chat view and let the user send the first message
+            // The chat will be created when the first message is sent
+            
+            // Create a temporary chat object for UI purposes
+            const tempChat: Chat = {
+                id: chatId,
+                pubkey: pubkey,
+                unreadCount: 0,
+                lastMessage: null,
+                relays: [], // TODO: Use discovered relays from dialog
+                encryptionType: isLegacy ? 'nip04' : 'nip44',
+                isLegacy: isLegacy,
+                messages: new Map()
+            };
+
+            // Select the chat (this will show the chat interface)
+            this.selectChat(tempChat);
+            
+            // Show success message
+            const chatType = isLegacy ? 'Legacy (NIP-04)' : 'Modern (NIP-44)';
+            this.snackBar.open(`Ready to start ${chatType} chat`, 'Close', { duration: 3000 });
+
+        } catch (error) {
+            console.error('Error starting chat:', error);
+            this.snackBar.open('Failed to start chat', 'Close', { duration: 3000 });
+        }
     }
 }

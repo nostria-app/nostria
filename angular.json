@@ -5,7 +5,7 @@
   "projects": {
     "app": {
       "i18n": {
-        "sourceLocale":"en-US",
+        "sourceLocale": "en-US",
         "locales": {
           "ru": "src/locale/messages.ru.json",
           "no": "src/locale/messages.no.json"
@@ -40,12 +40,7 @@
             "scripts": [],
             "polyfills": [
               "@angular/localize/init"
-            ]
-            "server": "src/main.server.ts",
-            "outputMode": "server",
-            "ssr": {
-              "entry": "src/server.ts"
-            }
+            ],
           },
           "configurations": {
             "production": {
@@ -63,10 +58,14 @@
               ],
               "outputHashing": "all",
               "serviceWorker": "ngsw-config.json",
-              "localize": false
+              "localize": false,
+              "server": "src/main.server.ts",
+              "outputMode": "server",
+              "ssr": {
+                "entry": "src/server.ts"
+              }
             },
             "development": {
-              "serviceWorker": "ngsw-config.json",
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true,
