@@ -372,4 +372,20 @@ export class UtilitiesService {
     // Return only up to the requested count
     return sortedRelays.slice(0, count);
   }
+
+  currentDate() {
+    return Math.floor(Date.now() / 1000);
+  }
+
+  createEvent(kind: number, content: string, tags: string[][], pubkey: string): UnsignedEvent {
+    const event: UnsignedEvent = {
+      kind: kind,
+      created_at: this.currentDate(),
+      tags,
+      content,
+      pubkey: pubkey,
+    };
+
+    return event;
+  }
 }
