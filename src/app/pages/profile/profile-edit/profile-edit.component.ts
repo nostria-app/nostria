@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, effect } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -32,8 +32,13 @@ export class ProfileEditComponent {
   media = inject(MediaService);
   private snackBar = inject(MatSnackBar);
   profile = signal<any>(null);
+  pubkey = '';
   loading = signal<boolean>(false);
   accountState = inject(AccountStateService);
+
+  // isOwnProfile = computed(() => {
+  //   return this.accountState.pubkey() === this.pubkey();
+  // });
 
   // Toggle states for profile image and banner
   useProfileImageUrl = signal<boolean>(false);
@@ -47,13 +52,25 @@ export class ProfileEditComponent {
   hasMediaServers = computed(() => this.media.mediaServers().length > 0);
 
   constructor() {
+    effect(() => {
+      const account = this.accountState.account();
 
+      // If the account changes while on edit screen, redirect to main profile page.
+      if (account?.pubkey != this.pubkey) {
+        this.router.navigate(['/p', this.pubkey], { replaceUrl: true });
+      }
+    });
   }
 
   ngOnInit() {
     const metadata = this.accountState.profile();
 
+    // Keep a reference to the pubkey for the profile being edited, used for navigation and updates
+    this.pubkey = this.accountState.pubkey();
+
     if (metadata?.data) {
+      this.pubkey = metadata?.event.pubkey;
+
       // User has existing profile data
       const profileClone = structuredClone(metadata.data);
       // Add URL fields for the toggles

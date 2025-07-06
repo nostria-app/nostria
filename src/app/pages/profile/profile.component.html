@@ -1,6 +1,7 @@
 <div class="profile-page">
   @if (isLoading()) {
-  <app-loading-overlay message="Loading profile..."></app-loading-overlay>
+  Loading profile...
+  <!-- <app-loading-overlay message="Loading profile..."></app-loading-overlay> -->
   } @else if (error()) {
   <div class="error-container">
     <mat-icon>error</mat-icon>
@@ -160,9 +161,9 @@
     @if (!isCompactHeader()) {
     <div class="profile-actions">
       @if (isOwnProfile()) {
-      <!-- <button mat-flat-button color="primary">
+      <button mat-flat-button color="primary" routerLink="edit">
         <mat-icon>edit</mat-icon> Edit Profile
-      </button> -->
+      </button>
       } @else {
 
       @if(!isFollowing()) {
@@ -174,7 +175,7 @@
         <mat-icon>person_remove</mat-icon> Unfollow
       </button>
       }
-      
+
       <button mat-stroked-button color="primary">
         <mat-icon>message</mat-icon> Message
       </button>

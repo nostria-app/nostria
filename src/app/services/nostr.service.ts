@@ -150,7 +150,6 @@ export class NostrService implements NostriaService {
         this.appState.showSuccess.set(false);
         this.initialized.set(true);
       } else {
-        debugger;
         this.accountState.changeAccount(account);
       }
     } catch (err) {

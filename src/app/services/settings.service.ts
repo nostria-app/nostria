@@ -27,8 +27,8 @@ export class SettingsService {
 
     constructor() {
         effect(async () => {
-            if (this.accountState.accountChanging()) {
-                await this.loadSettings(this.accountState.accountChanging());
+            if (this.accountState.account()) {
+                await this.loadSettings(this.accountState.pubkey());
             }
         });
     }
