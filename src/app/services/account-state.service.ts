@@ -1,5 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { Event, nip19, UnsignedEvent } from 'nostr-tools';
+import { Event, kinds, nip19, UnsignedEvent } from 'nostr-tools';
 import { NostrRecord } from '../interfaces';
 import { LocalStorageService } from './local-storage.service';
 import { ApplicationStateService } from './application-state.service';
@@ -104,10 +104,10 @@ export class AccountStateService {
 
     // Get the existing following event so we don't loose existing structure.
     // Ensure we keep original 'content' and relays/pet names.
-    const followingEvent = await this.storage.getEventByPubkeyAndKind([account.pubkey], 3);
+    let followingEvent = await this.storage.getEventByPubkeyAndKind([account.pubkey], 3);
 
     if (!followingEvent) {
-      console.warn('No existing following event found, cannot unfollow:', pubkey);
+      console.warn('No existing following event found. Cannot unfollow.', pubkey);
       return;
     }
 
@@ -145,19 +145,19 @@ export class AccountStateService {
 
     // Get the existing following event so we don't loose existing structure.
     // Ensure we keep original 'content' and relays/pet names.
-    const followingEvent = await this.storage.getEventByPubkeyAndKind([account.pubkey], 3);
+    let followingEvent: Event | UnsignedEvent | null = await this.storage.getEventByPubkeyAndKind([account.pubkey], 3);
 
     if (!followingEvent) {
-      console.warn('No existing following event found, cannot unfollow:', pubkey);
-      return;
-    }
-
-    // Add the pubkey from the following list in the event, if not already present
-    if (!followingEvent.tags.some(tag => tag[0] === 'p' && tag[1] === pubkey)) {
-      followingEvent.tags.push(['p', pubkey]);
+      console.warn('No existing following event found. This might result in overwriting this event on unknown relays.', pubkey);
+      followingEvent = this.utilities.createEvent(kinds.Contacts, "", [[`p`, pubkey]], account.pubkey);
     } else {
-      console.log(`Pubkey ${pubkey} is already in the following list.`);
-      return;
+      // Add the pubkey from the following list in the event, if not already present
+      if (!followingEvent.tags.some(tag => tag[0] === 'p' && tag[1] === pubkey)) {
+        followingEvent.tags.push(['p', pubkey]);
+      } else {
+        console.log(`Pubkey ${pubkey} is already in the following list.`);
+        return;
+      }
     }
 
     // Add to following list
@@ -323,7 +323,7 @@ export class AccountStateService {
   });// nostr = inject(NostrService);
 
   // Signal to publish event
-  publish = signal<Event | undefined>(undefined);
+  publish = signal<Event | UnsignedEvent | undefined>(undefined);
 
   constructor() {
 
