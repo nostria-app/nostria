@@ -88,6 +88,12 @@
   padding: 0.4rem;
 }
 
+.chat-header-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .message-list {
   box-sizing: border-box;
   height: 100%;
@@ -254,8 +260,10 @@
 
 @media (max-width: 599px) {
   .messages {
+
     // On mobile, make sure full width is used
-    .messages-left, .messages-right {
+    .messages-left,
+    .messages-right {
       width: 100%;
       min-width: 100%;
       flex: 1;
