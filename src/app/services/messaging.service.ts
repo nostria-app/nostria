@@ -189,18 +189,22 @@ export class MessagingService implements NostriaService {
 
     try {
       const myPubkey = this.accountState.pubkey();
+
       if (!myPubkey) {
         this.error.set('You need to be logged in to view messages');
         this.isLoading.set(false);
         return;
-      } const filterReceived: Filter = {
+      }
+
+      // This contains both incoming and outgoing messages for Giftwrapped messages.
+      const filterReceived: Filter = {
         kinds: [kinds.GiftWrap, kinds.EncryptedDirectMessage],
         '#p': [myPubkey],
         limit: this.MESSAGE_SIZE
       };
 
       const filterSent: Filter = {
-        kinds: [kinds.GiftWrap, kinds.EncryptedDirectMessage],
+        kinds: [kinds.EncryptedDirectMessage],
         authors: [myPubkey],
         limit: this.MESSAGE_SIZE
       };      // Store pubkeys of people who've messaged us
@@ -602,13 +606,13 @@ export class MessagingService implements NostriaService {
 
       // The "wrappedEvent.pubkey" is a random pubkey used to wrap the message. We must use recipient pubkey to decrypt the wrapped content.
       // const wrappedPubkey = recipient;
-      const wrappedPubkey = wrappedEvent.pubkey;
+      // const wrappedPubkey = wrappedEvent.pubkey;
 
       // First decrypt the wrapped content using the EncryptionService
       // This will handle both browser extension and direct decryption
       let wrappedContent: any;
       try {
-        const decryptionResult = await this.encryption.autoDecrypt(wrappedEvent.content, wrappedPubkey, wrappedEvent);
+        const decryptionResult = await this.encryption.autoDecrypt(wrappedEvent.content, wrappedEvent.pubkey, wrappedEvent);
         wrappedContent = JSON.parse(decryptionResult.content);
       } catch (err) {
         this.logger.error('Failed to decrypt wrapped content', err);

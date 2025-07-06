@@ -1,4 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideZonelessChangeDetection } from '@angular/core';
+import { DomSanitizer } from '@angular/platform-browser';
 import { QrCodeComponent } from './qr-code.component';
 
 describe('QrCodeComponent', () => {
@@ -7,7 +9,10 @@ describe('QrCodeComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [QrCodeComponent]
+      imports: [QrCodeComponent],
+      providers: [
+        provideZonelessChangeDetection()
+      ]
     })
     .compileComponents();
 
@@ -19,22 +24,31 @@ describe('QrCodeComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should generate SVG QR code by default', () => {
+  it('should generate SVG QR code by default', async () => {
     fixture.componentRef.setInput('qrdata', 'test data');
+    
+    // In zoneless mode, we need to trigger change detection manually
     fixture.detectChanges();
     
+    // Wait for effects to run
+    await fixture.whenStable();
+    
     expect(component.svgData()).toBeTruthy();
-    expect(component.svgData()).toContain('<svg');
+    // Convert SafeHtml to string for testing
+    const svgString = component.svgData().toString();
+    expect(svgString).toContain('<svg');
   });
 
-  it('should update QR code when input changes', () => {
+  it('should update QR code when input changes', async () => {
     fixture.componentRef.setInput('qrdata', 'test data 1');
     fixture.detectChanges();
-    const firstSvg = component.svgData();
+    await fixture.whenStable();
+    const firstSvg = component.svgData().toString();
     
     fixture.componentRef.setInput('qrdata', 'test data 2');
     fixture.detectChanges();
-    const secondSvg = component.svgData();
+    await fixture.whenStable();
+    const secondSvg = component.svgData().toString();
     
     expect(firstSvg).not.toEqual(secondSvg);
   });
