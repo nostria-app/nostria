@@ -127,7 +127,9 @@ export class NostrService implements NostriaService {
       // they won't take up too much memory space.
       const accountsMetadata = await this.getAccountsMetadata();
 
-      for (const metadata of accountsMetadata) {
+      const accountsMetadataRecords = this.data.getRecords(accountsMetadata);
+
+      for (const metadata of accountsMetadataRecords) {
         this.accountState.addToAccounts(metadata.event.pubkey, metadata);
         this.accountState.addToCache(metadata.event.pubkey, metadata);
       }
@@ -148,6 +150,7 @@ export class NostrService implements NostriaService {
         this.appState.showSuccess.set(false);
         this.initialized.set(true);
       } else {
+        debugger;
         this.accountState.changeAccount(account);
       }
     } catch (err) {
@@ -1051,6 +1054,7 @@ export class NostrService implements NostriaService {
       // It can happen that accounts does not have any valid relays, return undefined
       // and then attempt to look up profile using account relays.
       if (selectedRelayUrls.length === 0) {
+        debugger;
         this.logger.warn('No valid relays found in relay list. Unable to find user.');
         info.hasNoValidRelays = true
         await this.storage.saveInfo(pubkey, 'user', info);
@@ -1085,6 +1089,7 @@ export class NostrService implements NostriaService {
           const selectedRelayUrls = this.utilities.pickOptimalRelays(relayUrls, this.MAX_RELAY_COUNT);
 
           if (selectedRelayUrls.length === 0) {
+            debugger;
             this.logger.warn('No valid relays found in relay list. Unable to find user.');
             info.hasNoValidRelays = true
             await this.storage.saveInfo(pubkey, 'user', info);
@@ -1660,7 +1665,10 @@ export class NostrService implements NostriaService {
 
   async getAccountsMetadata() {
     const pubkeys = this.accountState.accounts().map(user => user.pubkey);
-    const events = await this.data.getEventsByPubkeyAndKind(pubkeys, kinds.Metadata);
+
+    // Get metadata for all accounts from storage, we have not initialized accounts pool yet so cannot get from relays.
+    const events = await this.storage.getEventsByPubkeyAndKind(pubkeys, kinds.Metadata);
+    // const events = await this.data.getEventsByPubkeyAndKind(pubkeys, kinds.Metadata);
     return events;
   }
 

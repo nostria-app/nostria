@@ -215,8 +215,8 @@ export class MessagingService implements NostriaService {
         }
         // Handle incoming wrapped events
         if (event.kind === kinds.GiftWrap) {
-          
-            debugger;
+
+          debugger;
 
           // let chats = this.chatsMap();
           // let chat = chats.get(event.pubkey);
@@ -618,6 +618,8 @@ export class MessagingService implements NostriaService {
       // Get the sealed message
       let sealedEvent;
       if (wrappedEvent.pubkey === myPubkey) {
+        // This will never happen for NIP-44?
+        debugger;
         // If we sent it, we can directly use the encryptedMessage
         sealedEvent = wrappedContent.encryptedMessage;
       } else {
@@ -629,6 +631,10 @@ export class MessagingService implements NostriaService {
           this.logger.error('Failed to decrypt sealed content', err);
           return null;
         }
+      }
+
+      if (wrappedContent.pubkey !== sealedEvent.pubkey) {
+        throw new Error('Decrypted message pubkey does not match wrapped content pubkey');
       }
 
       // Return the final decrypted message

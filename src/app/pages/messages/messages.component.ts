@@ -29,7 +29,8 @@ import { TimestampPipe } from '../../pipes/timestamp.pipe';
 import { AgoPipe } from '../../pipes/ago.pipe';
 import { ConfirmDialogComponent } from '../../components/confirm-dialog/confirm-dialog.component';
 import { StartChatDialogComponent, StartChatDialogResult } from '../../components/start-chat-dialog/start-chat-dialog.component';
-import { kinds, SimplePool, getPublicKey, generateSecretKey, finalizeEvent, Event as NostrEvent, Filter } from 'nostr-tools';
+import { kinds, SimplePool, getPublicKey, generateSecretKey, finalizeEvent, Event as NostrEvent, Filter, getEventHash } from 'nostr-tools';
+import { bytesToHex } from '@noble/hashes/utils';
 import { ApplicationService } from '../../services/application.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { AccountStateService } from '../../services/account-state.service';
@@ -768,8 +769,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         userRelay: UserRelayService
     ): Promise<DirectMessage> {
         try {
-            // Create the inner chat message (kind 14)
-            const chatMessage = {
+            // Step 1: Create the message (unsigned event) - kind 14
+            const unsignedMessage = {
                 kind: kinds.PrivateDirectMessage,
                 pubkey: myPubkey,
                 created_at: Math.floor(Date.now() / 1000),
@@ -777,21 +778,20 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
                 content: messageText
             };
 
-            debugger;
+            // Calculate the message ID (but don't sign it)
+            const rumorId = getEventHash(unsignedMessage);
+            const rumorWithId = { ...unsignedMessage, id: rumorId };
 
-            // Sign the chat message
-            const signedChatMessage = await this.nostr.signEvent(chatMessage);
-
-            // Create the sealed message (kind 13) - encrypt the chat message
+            // Step 2: Create the seal (kind 13) - encrypt the rumor with sender's key
             const sealedContent = await this.encryption.encryptNip44(
-                JSON.stringify(signedChatMessage),
+                JSON.stringify(rumorWithId),
                 receiverPubkey
             );
 
             const sealedMessage = {
                 kind: kinds.Seal,
                 pubkey: myPubkey,
-                created_at: Math.floor(Date.now() / 1000),
+                created_at: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800), // Random timestamp within 2 days
                 tags: [],
                 content: sealedContent
             };
@@ -799,38 +799,57 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
             // Sign the sealed message
             const signedSealedMessage = await this.nostr.signEvent(sealedMessage);
 
-            // Create the gift wrap (kind 1059) - this is what gets published
-            // Generate a random key for the gift wrap
-            const randomKey = generateSecretKey();
-            const randomPubkey = getPublicKey(randomKey);
+            // Step 3: Create the gift wrap (kind 1059) - encrypt with ephemeral key
+            // Generate a random ephemeral key for the gift wrap
+            const ephemeralKey = generateSecretKey();
+            const ephemeralPubkey = getPublicKey(ephemeralKey);
 
-            const giftWrapContent = await this.encryption.encryptNip44(
+            // Encrypt the sealed message using the ephemeral key and recipient's pubkey
+            const giftWrapContent = await this.encryption.encryptNip44WithKey(
                 JSON.stringify(signedSealedMessage),
+                bytesToHex(ephemeralKey),
                 receiverPubkey
             );
 
             const giftWrap = {
                 kind: kinds.GiftWrap,
-                pubkey: randomPubkey,
-                created_at: Math.floor(Date.now() / 1000),
+                pubkey: ephemeralPubkey,
+                created_at: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800), // Random timestamp within 2 days
                 tags: [['p', receiverPubkey]],
                 content: giftWrapContent
             };
 
-            // Sign the gift wrap with the random key
-            const signedGiftWrap = finalizeEvent(giftWrap, randomKey);
+            // Sign the gift wrap with the ephemeral key
+            const signedGiftWrap = finalizeEvent(giftWrap, ephemeralKey);
 
-            // Publish the gift wrap to relays
-            await this.publishToRelays(signedGiftWrap, userRelay);
+            // Step 4: Create the gift wrap for self (kind 1059) - same content but different tags in pubkey.
+            // Should we use different ephemeral key for self? The content is the same anyway, 
+            // so correlation of messages (and pub keys who are chatting) can be done through the content of gift wrap.
+            const giftWrapSelf = {
+                kind: kinds.GiftWrap,
+                pubkey: ephemeralPubkey,
+                created_at: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800), // Random timestamp within 2 days
+                tags: [['p', myPubkey]],
+                content: giftWrapContent
+            };
 
-            // Return the message object based on the original chat message
+            // Sign the gift wrap with the ephemeral key
+            const signedGiftWrapSelf = finalizeEvent(giftWrapSelf, ephemeralKey);
+
+            // Publish the gift wrap to relays of the recipient
+            await this.publishToUserRelays(signedGiftWrap, userRelay);
+
+            // Publish the gift wrap to account relays, so the chat can be discovered on other devices.
+            await this.publishToAccountRelays(signedGiftWrapSelf);
+
+            // Return the message object based on the original rumor
             return {
-                id: signedChatMessage.id,
+                id: rumorId,
                 pubkey: myPubkey,
-                created_at: signedChatMessage.created_at,
+                created_at: unsignedMessage.created_at,
                 content: messageText,
                 isOutgoing: true,
-                tags: signedChatMessage.tags,
+                tags: unsignedMessage.tags,
                 encryptionType: 'nip44'
             };
         } catch (error) {
@@ -848,6 +867,20 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
         // Wait for all publish attempts to complete
         await Promise.allSettled([promisesUser, promisesAccount]);
+    }
+
+    private async publishToUserRelays(event: NostrEvent, userRelay: UserRelayService): Promise<void> {
+        const promisesUser = userRelay.publish(event);
+
+        // Wait for all publish attempts to complete
+        await Promise.allSettled([promisesUser]);
+    }
+
+    private async publishToAccountRelays(event: NostrEvent): Promise<void> {
+        const promisesAccount = this.accountRelayService.publish(event);
+
+        // Wait for all publish attempts to complete
+        await Promise.allSettled([promisesAccount]);
     }
 
     /**

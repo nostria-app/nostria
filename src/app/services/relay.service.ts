@@ -234,6 +234,7 @@ export class RelayService {
     this.logger.debug('Creating subscription with filters:', filters);
 
     if (!this.accountPool) {
+      debugger;
       this.logger.error('Cannot subscribe: account pool is not initialized');
       return undefined;
     }
@@ -367,6 +368,7 @@ export class RelayService {
     this.logger.debug('Getting events with filters:', filter);
 
     if (!this.accountPool) {
+      debugger;
       this.logger.error('Cannot get events: account pool is not initialized');
       return null;
     }
@@ -413,6 +415,7 @@ export class RelayService {
     this.logger.debug('Getting events with filters:', filter);
 
     if (!this.accountPool) {
+      debugger;
       this.logger.error('Cannot get events: account pool is not initialized');
       return [];
     }
@@ -476,6 +479,7 @@ export class RelayService {
     this.logger.debug('Publishing event:', event);
 
     if (!this.accountPool) {
+      debugger;
       this.logger.error('Cannot publish event: account pool is not initialized');
       return null;
     }
