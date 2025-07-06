@@ -61,7 +61,7 @@ export class RegionService {
     const instance = this.#relayNames[instanceId];
 
     if (region) {
-      return `https://${instance.toLowerCase()}.${region.id}.nostria.app`;
+      return `wss://${instance.toLowerCase()}.${region.id}.nostria.app`;
     }
 
     return null;

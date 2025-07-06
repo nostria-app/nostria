@@ -126,6 +126,22 @@ export class EncryptionService {
   }
 
   /**
+   * Encrypt a message using NIP-44 with a custom private key (for gift wrap)
+   */
+  async encryptNip44WithKey(plaintext: string, privateKeyHex: string, recipientPubkey: string): Promise<string> {
+    try {
+      // Use nostr-tools nip44 v2 encryption with the provided private key
+      const privateKeyBytes = hexToBytes(privateKeyHex);
+      const conversationKey = v2.utils.getConversationKey(privateKeyBytes, recipientPubkey);
+
+      return v2.encrypt(plaintext, conversationKey);
+    } catch (error) {
+      this.logger.error('Failed to encrypt with NIP-44 using custom key', error);
+      throw new Error('Encryption failed');
+    }
+  }
+
+  /**
    * Auto-detect encryption type and decrypt accordingly
    */
   async autoDecrypt(ciphertext: string, senderPubkey: string, event: Event): Promise<DecryptionResult> {
