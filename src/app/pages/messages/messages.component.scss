@@ -7,17 +7,32 @@
 }
 
 .messages-left {
-  flex: 0 1 320px;
-  max-width: 320px;
-  min-width: 100px;
+  flex: 0 0 320px;
+  width: 320px;
+  min-width: 320px;
   display: flex;
   flex-direction: column;
   height: 100%;
   overflow: hidden;
+
+  // On larger screens, increase to 420px
+  @media (min-width: 1200px) {
+    flex: 0 0 420px;
+    width: 420px;
+    min-width: 420px;
+  }
+
+  // On mobile, hide when showing messages
+  @media (max-width: 599px) {
+    &.mobile-hidden {
+      display: none;
+    }
+  }
 }
 
 .message-threads-header {
   box-sizing: border-box;
+  padding: 0 1rem;
   height: 64px;
   flex-shrink: 0;
   display: flex;
@@ -57,6 +72,13 @@
   /* container fills parent */
   box-sizing: border-box;
   flex: 1;
+
+  // On mobile, hide when showing list
+  @media (max-width: 599px) {
+    &.mobile-hidden {
+      display: none;
+    }
+  }
 }
 
 .message-list-header {
@@ -74,6 +96,7 @@
   overflow-y: auto;
   /* enable scrolling if needed */
   box-sizing: border-box;
+  padding: 0 0.4rem;
 }
 
 .message-input-container {
@@ -89,11 +112,6 @@
 
   border-top: 1px solid var(--mat-divider-color);
   background-color: var(--mat-sys-color-surface);
-}
-
-.message-input {
-  // flex: 1;
-  // margin-bottom: -1.25em;
 }
 
 .send-button {
@@ -172,6 +190,7 @@
     box-shadow: var(--mat-sys-level1);
     word-wrap: break-word;
     overflow-wrap: break-word;
+    -webkit-hyphens: auto;
     hyphens: auto;
     white-space: pre-wrap;
 
@@ -233,516 +252,18 @@
   gap: 6px;
 }
 
-// app-user-profile {
-//   width: 32px;
-//   height:32px;
-// }
-
-
-// .messages-container {
-//   height: calc(100vh - 200px);
-//   width: 100%;
-//   display: flex;
-//   flex-direction: column;
-
-//   .loading-container,
-//   .error-container {
-//     display: flex;
-//     flex-direction: column;
-//     align-items: center;
-//     justify-content: center;
-//     height: 100%;
-//     gap: 16px;
-
-//     mat-icon {
-//       font-size: 48px;
-//       width: 48px;
-//       height: 48px;
-//     }
-
-//     p {
-//       font-size: 16px;
-//       text-align: center;
-//       max-width: 400px;
-//       margin: 0;
-//     }
-//   }
-
-//   .messages-layout {
-//     display: flex;
-//     height: 100%;
-//     width: 100%;
-
-//     &.mobile-view {
-//       flex-direction: column;
-//     }
-
-//     .hidden {
-//       display: none;
-//     }
-//   }
-
-//   .chat-list-container {
-//     width: 320px;
-//     min-width: 320px;
-//     display: flex;
-//     flex-direction: column;
-//     border-right: 1px solid var(--mat-divider-color);
-//     height: 100%;
-
-//     .chat-list-header {
-//       display: flex;
-//       justify-content: space-between;
-//       align-items: center;
-//       padding: 16px;
-//       border-bottom: 1px solid var(--mat-divider-color);
-
-//       h2 {
-//         margin: 0;
-//         font-size: 20px;
-//         font-weight: 500;
-//       }
-//     }
-
-//     .empty-chats {
-//       display: flex;
-//       flex-direction: column;
-//       align-items: center;
-//       justify-content: center;
-//       height: 100%;
-//       padding: 32px;
-//       text-align: center;
-
-//       mat-icon {
-//         font-size: 48px;
-//         width: 48px;
-//         height: 48px;
-//         margin-bottom: 16px;
-//         opacity: 0.6;
-//       }
-
-//       p {
-//         margin-bottom: 24px;
-//         color: var(--mat-sys-color-on-surface-variant);
-//       }
-//     }
-
-//     .chat-list {
-//       overflow-y: auto;
-//       flex: 1;
-//       padding: 0;
-
-//       .chat-item {
-//         height: auto;
-//         padding: 12px 16px;
-
-//         &.active {
-//           background-color: var(--mat-sys-color-surface-container-high);
-//         }
-
-//         .chat-item-content {
-//           display: flex;
-//           width: 100%;
-//           gap: 12px;
-//           align-items: center;
-
-//           .chat-avatar {
-//             flex-shrink: 0;
-//           }
-
-//           .chat-info {
-//             flex: 1;
-
-//             .chat-name-row {
-//               display: flex;
-//               justify-content: space-between;
-//               align-items: center;
-
-//               .chat-name {
-//                 font-weight: 500;
-//                 white-space: nowrap;
-//                 overflow: hidden;
-//                 text-overflow: ellipsis;
-//               }
-
-//               .unread-badge {
-//                 background-color: var(--mat-sys-color-primary);
-//                 color: white;
-//                 border-radius: 50%;
-//                 min-width: 20px;
-//                 height: 20px;
-//                 display: flex;
-//                 align-items: center;
-//                 justify-content: center;
-//                 font-size: 12px;
-//                 padding: 0 6px;
-//               }
-//             }
-
-//             .chat-preview {
-//               display: flex;
-//               justify-content: space-between;
-//               font-size: 14px;
-//               color: var(--mat-sys-color-on-surface-variant);
-//               margin-top: 4px;
-
-//               .message-preview {
-//                 white-space: nowrap;
-//                 overflow: hidden;
-//                 text-overflow: ellipsis;
-//                 max-width: 180px;
-
-//                 &.empty-message {
-//                   font-style: italic;
-//                   opacity: 0.7;
-//                 }
-
-//                 .outgoing-prefix {
-//                   opacity: 0.7;
-//                 }
-//               }
-
-//               .message-time {
-//                 flex-shrink: 0;
-//                 margin-left: 8px;
-//                 font-size: 12px;
-//               }
-//             }
-//           }
-//         }
-
-//         .chat-options-button {
-//           opacity: 0;
-//           transition: opacity 0.2s;
-//         }
-
-//         &:hover .chat-options-button {
-//           opacity: 1;
-//         }
-//       }
-//     }
-
-//     .load-more-chats {
-//       padding: 16px;
-//       border-top: 1px solid var(--mat-divider-color);
-//       background-color: var(--mat-sys-color-surface);
-
-//       .load-more-chats-button {
-//         width: 100%;
-//         display: flex;
-//         align-items: center;
-//         justify-content: center;
-//         gap: 8px;
-
-//         mat-spinner {
-//           margin-right: 8px;
-//         }
-
-//         span {
-//           font-size: 14px;
-//         }
-//       }
-//     }
-//   }
-
-//   .chat-content-container {
-//     flex: 1;
-//     display: flex;
-//     flex-direction: column;
-//     height: 100%;
-//     width: 100%;
-
-//     .no-chat-selected {
-//       display: flex;
-//       flex-direction: column;
-//       align-items: center;
-//       justify-content: center;
-//       height: 100%;
-//       padding: 32px;
-//       text-align: center;
-
-//       mat-icon {
-//         font-size: 64px;
-//         width: 64px;
-//         height: 64px;
-//         margin-bottom: 24px;
-//         opacity: 0.5;
-//       }
-
-//       h3 {
-//         margin-bottom: 8px;
-//         font-weight: 500;
-//       }
-
-//       p {
-//         margin-bottom: 32px;
-//         color: var(--mat-sys-color-on-surface-variant);
-//       }
-//     }
-
-//     .chat-header {
-//       display: flex;
-//       justify-content: space-between;
-//       align-items: center;
-//       border-bottom: 1px solid var(--mat-divider-color);
-//       width: 100%;
-
-//       .chat-header-user {
-//         display: flex;
-//         align-items: center;
-//         gap: 12px;
-
-//         .back-button {
-//           margin-right: 4px;
-//           display: none;
-//         }
-//       }
-//     }
-
-//     .messages-wrapper {
-//       flex: 1;
-//       padding: 16px;
-//       overflow-y: auto;
-//       background-color: var(--mat-sys-color-surface-container-lowest);
-//       display: flex;
-//       flex-direction: column;
-
-//       .loading-messages,
-//       .no-messages {
-//         display: flex;
-//         flex-direction: column;
-//         align-items: center;
-//         justify-content: center;
-//         height: 100%;
-//         text-align: center;
-
-//         mat-icon {
-//           font-size: 48px;
-//           width: 48px;
-//           height: 48px;
-//           opacity: 0.6;
-//           margin-bottom: 16px;
-//         }
-
-//         .hint {
-//           font-size: 14px;
-//           opacity: 0.7;
-//           margin-top: 8px;
-//         }
-//       }
-
-//       .messages-list {
-//         display: flex;
-//         flex-direction: column;
-//         width: 100%;
-//         gap: 16px;
-
-//         .load-more-button {
-//           align-self: center;
-//           margin-bottom: 16px;
-//           opacity: 0.8;
-//           display: flex;
-//           align-items: center;
-//           gap: 8px;
-
-//           mat-spinner {
-//             margin-right: 8px;
-//           }
-//         }
-
-//         .message-bubble-container {
-//           display: flex;
-//           align-items: flex-end;
-//           margin-bottom: 4px;
-//           word-wrap: break-word;
-//           overflow-wrap: break-word;
-//           min-width: 0;
-
-//           &.outgoing {
-//             flex-direction: row-reverse;
-//           }
-
-//           .message-bubble {
-//             max-width: 70%;
-//             min-width: 0;
-//             padding: 12px 16px;
-//             border-radius: 18px;
-//             background-color: var(--mat-sys-color-surface-container-high);
-//             position: relative;
-//             box-shadow: var(--mat-sys-level1);
-//             word-wrap: break-word;
-//             overflow-wrap: break-word;
-//             hyphens: auto;
-//             white-space: pre-wrap;
-
-//             &.outgoing {
-//               background-color: var(--mat-sys-on-primary-container);
-//               color: var(--mat-sys-on-secondary);
-//             }
-
-//             &.pending {
-//               opacity: 0.7;
-//             }
-
-//             &.failed {
-//               background-color: var(--mat-sys-color-error-container);
-//               color: var(--mat-sys-color-on-error-container);
-//             }
-
-//             .message-status {
-//               display: flex;
-//               align-items: center;
-//               justify-content: flex-end;
-//               font-size: 12px;
-//               margin-top: 4px;
-//               color: var(--mat-sys-color-on-surface-variant);
-//               gap: 4px;
-
-//               .pending-spinner {
-//                 margin-right: 4px;
-//               }
-
-//               .failed-icon {
-//                 color: var(--mat-sys-color-error);
-//                 font-size: 14px;
-//                 height: 14px;
-//                 width: 14px;
-//               }
-
-//               .read-icon,
-//               .received-icon {
-//                 font-size: 14px;
-//                 height: 14px;
-//                 width: 14px;
-//               }
-
-//               .read-icon {
-//                 color: var(--mat-sys-color-primary);
-//               }
-//             }
-//           }
-
-//           .retry-button {
-//             margin: 0 8px;
-
-//             mat-icon {
-//               font-size: 18px;
-//               height: 18px;
-//               width: 18px;
-//             }
-//           }
-//         }
-//       }
-//     }
-
-
-
-//     .encryption-warning {
-//       display: flex;
-//       align-items: center;
-//       gap: 8px;
-//       padding: 12px 16px;
-//       background-color: var(--mat-sys-color-error-container);
-//       color: var(--mat-sys-color-on-error-container);
-//       border-radius: 8px;
-//       margin: 8px 16px;
-//       font-size: 14px;
-
-//       mat-icon {
-//         font-size: 20px;
-//         width: 20px;
-//         height: 20px;
-//       }
-//     }
-
-//     .hint.warning {
-//       color: var(--mat-sys-color-error);
-//     }
-
-//     .decrypting-messages {
-//       display: flex;
-//       align-items: center;
-//       justify-content: center;
-//       gap: 12px;
-//       padding: 16px;
-//       background-color: var(--mat-sys-color-surface-container);
-//       color: var(--mat-sys-color-on-surface);
-//       border-radius: 8px;
-//       margin: 16px;
-//       font-size: 14px;
-//       box-shadow: var(--mat-sys-level1);
-
-//       mat-spinner {
-//         ::ng-deep circle {
-//           stroke: var(--mat-sys-color-primary);
-//         }
-//       }
-
-//       p {
-//         margin: 0;
-//         font-weight: 500;
-//       }
-
-//       .queue-info {
-//         color: var(--mat-sys-color-on-surface-variant);
-//         font-weight: 400;
-//       }
-//     }
-
-//     .load-more-indicator,
-//     .loading-more-indicator {
-//       display: flex;
-//       align-items: center;
-//       justify-content: center;
-//       padding: 16px;
-//       text-align: center;
-//       gap: 8px;
-
-//       .load-more-hint {
-//         font-size: 14px;
-//         color: var(--mat-sys-color-on-surface-variant);
-//         margin: 0;
-//         opacity: 0.7;
-//       }
-
-//       p {
-//         margin: 0;
-//         font-size: 14px;
-//         color: var(--mat-sys-color-on-surface-variant);
-//       }
-
-//       mat-spinner {
-//         margin-right: 8px;
-//       }
-//     }
-//   }
-// }
-
-@media (max-width: 768px) {
-  .messages-container {
-    .messages-layout {
-      &.mobile-view .chat-list-container {
-        width: 100%;
-        min-width: 100%;
-      }
-
-      .chat-content-container {
-        .chat-header .chat-header-user .back-button {
-          display: block;
-        }
-      }
+@media (max-width: 599px) {
+  .messages {
+    // On mobile, make sure full width is used
+    .messages-left, .messages-right {
+      width: 100%;
+      min-width: 100%;
+      flex: 1;
+    }
+
+    .messages-left.mobile-hidden,
+    .messages-right.mobile-hidden {
+      display: none;
     }
   }
 }
-
-
-@media (max-width: 599px) {
-  .messages-container {
-    height: calc(100vh - 300px); // Include mobile footer menu.
-  }
-}
-
-
-// .mat-mdc-tab-body-wrapper {
-//   overflow: scroll;
-// }
