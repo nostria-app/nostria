@@ -33,4 +33,4 @@ export declare interface NostriaService {
 //     data: any;
 // }
 
-export type ViewMode = 'large' | 'medium' | 'small' | 'details' | 'list' | 'tiles' | 'grid' | 'thread';
+export type ViewMode = 'large' | 'medium' | 'small' | 'details' | 'list' | 'tiles' | 'grid' | 'thread' | 'icon';
