@@ -215,6 +215,9 @@ export class MessagingService implements NostriaService {
         }
         // Handle incoming wrapped events
         if (event.kind === kinds.GiftWrap) {
+          
+            debugger;
+
           // let chats = this.chatsMap();
           // let chat = chats.get(event.pubkey);
 
@@ -597,11 +600,15 @@ export class MessagingService implements NostriaService {
         return null;
       }
 
+      // The "wrappedEvent.pubkey" is a random pubkey used to wrap the message. We must use recipient pubkey to decrypt the wrapped content.
+      // const wrappedPubkey = recipient;
+      const wrappedPubkey = wrappedEvent.pubkey;
+
       // First decrypt the wrapped content using the EncryptionService
       // This will handle both browser extension and direct decryption
       let wrappedContent: any;
       try {
-        const decryptionResult = await this.encryption.autoDecrypt(wrappedEvent.content, wrappedEvent.pubkey, wrappedEvent);
+        const decryptionResult = await this.encryption.autoDecrypt(wrappedEvent.content, wrappedPubkey, wrappedEvent);
         wrappedContent = JSON.parse(decryptionResult.content);
       } catch (err) {
         this.logger.error('Failed to decrypt wrapped content', err);

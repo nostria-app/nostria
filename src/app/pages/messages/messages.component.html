@@ -46,6 +46,11 @@
                 (click)="selectChat(chat)">
                 <div class="chat-item-content">
                   <div class="chat-avatar">
+
+                    @if (chat.encryptionType === 'nip44') {
+                    <mat-icon inline="true" class="chat-encryption-icon">shield_lock</mat-icon>
+                    }
+
                     <app-user-profile [pubkey]="chat.pubkey" view="icon" #profileComp>
 
                       <!-- {{ profileComp.profile() }} -->
@@ -67,10 +72,10 @@
                         <div class="chat-preview">
                           @if (chat.lastMessage) {
                           <span class="message-preview">
-                            @if (chat.lastMessage?.isOutgoing) {
+                            @if (chat.lastMessage.isOutgoing) {
                             <span class="outgoing-prefix">You: </span>
                             }
-                            {{ chat.lastMessage?.content }}
+                            {{ chat.lastMessage.content }}
                           </span>
                           <!-- <span class="message-time">{{ chat.lastMessage?.created_at | ago }}</span> -->
                           } @else {
