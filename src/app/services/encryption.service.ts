@@ -67,9 +67,9 @@ export class EncryptionService {
       // Use nostr-tools nip04 decryption
       const privateKeyBytes = hexToBytes(account.privkey);
       return await nip04.decrypt(privateKeyBytes, pubkey, ciphertext);
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error('Failed to decrypt with NIP-04', error);
-      throw new Error('Decryption failed');
+      throw new Error('Decryption failed: ', error.message);
     }
   }
   /**
@@ -119,9 +119,9 @@ export class EncryptionService {
       const conversationKey = v2.utils.getConversationKey(privateKeyBytes, senderPubkey);
 
       return v2.decrypt(ciphertext, conversationKey);
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error('Failed to decrypt with NIP-44', error);
-      throw new Error('Decryption failed');
+      throw new Error('Decryption failed: ', error.message);
     }
   }
 

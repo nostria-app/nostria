@@ -777,6 +777,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
                 content: messageText
             };
 
+            debugger;
+
             // Sign the chat message
             const signedChatMessage = await this.nostr.signEvent(chatMessage);
 
