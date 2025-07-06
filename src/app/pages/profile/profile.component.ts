@@ -87,7 +87,11 @@ export class ProfileComponent {
   userMetadata = signal<NostrRecord | undefined>(undefined);
   isLoading = signal<boolean>(true);
   error = signal<string | null>(null);
-  isOwnProfile = signal<boolean>(false);
+
+  isOwnProfile = computed(() => {
+    return this.accountState.pubkey() === this.pubkey();
+  });
+
   showLightningQR = signal(false);
   lightningQrCode = signal<string>('');
   followingList = signal<string[]>([]); // This would be dynamically updated with real data
@@ -206,7 +210,6 @@ export class ProfileComponent {
           // Always attempt to load user profile and check if own profile, regardless of relay status
           untracked(async () => {
             await this.loadUserProfile(this.pubkey());
-            this.checkIfOwnProfile(this.pubkey());
           });
 
           // this.userRelay.subscribe([{
@@ -346,6 +349,7 @@ export class ProfileComponent {
       },
     });
   }
+
   private async loadUserProfile(pubkey: string): Promise<void> {
     this.isLoading.set(true);
     this.error.set(null);
@@ -372,10 +376,6 @@ export class ProfileComponent {
     } finally {
       this.isLoading.set(false);
     }
-  }
-
-  private checkIfOwnProfile(pubkey: string): void {
-    this.isOwnProfile.set(this.accountState.pubkey() === pubkey);
   }
 
   getFormattedName(): string {

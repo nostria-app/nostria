@@ -50,7 +50,7 @@ export class AccountStateService {
 
   /** Use this signal to track if account has been loaded. */
   initialized = signal(false);
-  accountChanging = signal<string>('');
+  // accountChanging = signal<string>('');
   account = signal<NostrUser | null>(null);
 
   accounts = signal<NostrUser[]>([]);
@@ -190,9 +190,12 @@ export class AccountStateService {
   }
 
   changeAccount(account: NostrUser | null): void {
-    this.accountChanging.set(account?.pubkey || '');
+    debugger;
+    // this.accountChanging.set(account?.pubkey || '');
 
     this.followingList.set([]);
+
+    debugger;
     this.account.set(account);
 
     if (!account) {
