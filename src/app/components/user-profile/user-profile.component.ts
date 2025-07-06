@@ -76,7 +76,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
                 if (this.publicKey && this.publicKey !== pubkey) {
                     this.profile.set(null);
                 }
-                
+
                 this.publicKey = this.pubkey();
                 // console.debug('LOCATION 1:', pubkey);
                 const npub = this.utilities.getNpubFromPubkey(pubkey);
@@ -297,6 +297,8 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
                 return 40;
             case 'grid':
                 return 36;
+            case 'icon':
+                return 48;
             default: // 'list'
                 return 40;
         }
@@ -367,7 +369,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
 
     aliasOrNpub = computed(() => {
         const profile = this.profile();
-        
+
         if (!profile || !profile.data || !profile.data.nip05) {
             return this.npub();
         }

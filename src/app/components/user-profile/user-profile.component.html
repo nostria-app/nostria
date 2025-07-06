@@ -33,7 +33,6 @@
       [matTooltipClass]="'user-profile-tooltip'" matTooltipPosition="above" (touchstart)="handleTouchEvent($event)"
       (touchmove)="handleTouchEvent($event)" (touchend)="handleTouchEvent($event)"> -->
 
-
       @if (isLoading()) {
       <mat-spinner [diameter]="getSpinnerSize()" color="primary"></mat-spinner>
       } @else if (profile()?.data?.picture && !imageLoadError()) {
@@ -46,8 +45,8 @@
         {{isProfileNotFound() ? 'no_accounts' : 'account_circle'}}
       </mat-icon>
       }
-    </a>    <!-- Content section with conditional rendering based on view -->
-    @if (view() !== 'large' && view() !== 'medium' && view() !== 'small') {
+    </a> <!-- Content section with conditional rendering based on view -->
+    @if (view() !== 'large' && view() !== 'medium' && view() !== 'small' && view() !== 'icon') {
     <div class="user-profile-content">
       <!-- Name section -->
       <a [routerLink]="['/p', publicKey]" class="user-profile-name">
@@ -68,7 +67,7 @@
 
       <!-- NPUB section - only shown in appropriate views -->
       @if (view() === 'list' || view() === 'details') {
-          <div class="user-profile-npub">{{ aliasOrNpub() }}</div>
+      <div class="user-profile-npub">{{ aliasOrNpub() }}</div>
       }
 
       <!-- About section - only shown in details view -->
@@ -77,11 +76,12 @@
       }
     </div>
 
+    }
+
     <!-- Named content projection for additional controls (like more options button) -->
     <div class="user-profile-custom-content">
       <ng-content></ng-content>
     </div>
-    }
 
     @if (view() ==='thread') {
     <div>

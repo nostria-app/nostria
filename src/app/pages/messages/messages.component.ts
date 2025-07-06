@@ -40,6 +40,7 @@ import { UserRelayFactoryService } from '../../services/user-relay-factory.servi
 import { UserRelayService } from '../../services/user-relay.service';
 import { AccountRelayService } from '../../services/account-relay.service';
 import { LayoutService } from '../../services/layout.service';
+import { NamePipe } from '../../pipes/name.pipe';
 
 // Define interfaces for our DM data structures
 interface Chat {
@@ -100,7 +101,8 @@ interface DecryptionQueueItem {
         UserProfileComponent,
         NPubPipe,
         TimestampPipe,
-        AgoPipe
+        AgoPipe,
+        NamePipe
     ],
     templateUrl: './messages.component.html',
     styleUrl: './messages.component.scss'
