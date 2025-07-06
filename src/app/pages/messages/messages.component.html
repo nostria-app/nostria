@@ -56,7 +56,7 @@
                             @if (profileComp.profile()) {
                             {{ profileComp.profile().data | name }}
                             } @else {
-                              Unknown
+                            Unknown
                             }
                           </span>
                           @if (chat.unreadCount > 0) {
@@ -264,15 +264,13 @@
       </div>
       }
 
-
     </div>
     <div class="message-input-container">
-
+      @if (selectedChat()) {
       <mat-form-field appearance="outline" class="message-input" subscriptSizing="dynamic">
         <input matInput [ngModel]="newMessageText()" (ngModelChange)="newMessageText.set($event)"
           placeholder="Type a message..." [disabled]="isSending()" (keyup.enter)="sendMessage()">
       </mat-form-field>
-
       <button mat-icon-button type="button" [disabled]="!newMessageText().trim() || isSending()"
         (click)="sendMessage()">
         @if (isSending()) {
@@ -281,6 +279,7 @@
         <mat-icon>send</mat-icon>
         }
       </button>
+      }
     </div>
   </div>
   }
