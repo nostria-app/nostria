@@ -174,13 +174,18 @@ export class MessagingService implements NostriaService {
     this.clearDecryptionQueue();
   }
 
+  reset() {
+    this.chatsMap.set(new Map());
+    this.oldestChatTimestamp.set(null);
+  }
+
   async load() {
 
   }
 
   async loadChats() {
+    this.clear();
     this.isLoading.set(true);
-    this.error.set(null);
 
     try {
       const myPubkey = this.accountState.pubkey();
@@ -811,7 +816,7 @@ export class MessagingService implements NostriaService {
       const checkCompletion = () => {
         if (eoseReceived && pendingDecryptions === completedDecryptions) {
           this.logger.debug(`Decryption complete. Received: ${messagesReceivedFound}, Sent: ${messagesSentFound}`);
-          
+
           // Update the oldest timestamp for future loads
           this.oldestChatTimestamp.set(newOldestTimestamp);
 
@@ -946,5 +951,13 @@ export class MessagingService implements NostriaService {
       this.error.set('Failed to load more chats. Please try again.');
       this.isLoadingMoreChats.set(false);
     }
+  }
+
+  // Helper method to add a chat directly to the chatsMap (for temporary/new chats)
+  addChat(chat: Chat): void {
+    const currentMap = this.chatsMap();
+    const newMap = new Map(currentMap);
+    newMap.set(chat.id, chat);
+    this.chatsMap.set(newMap);
   }
 }

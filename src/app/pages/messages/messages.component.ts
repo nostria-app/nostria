@@ -136,7 +136,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // Data signals
     // chats = signal<Chat[]>([]);
-    selectedChatId = signal<string | null>(null); selectedChat = computed(() => {
+    selectedChatId = signal<string | null>(null);
+
+    selectedChat = computed(() => {
         const chatId = this.selectedChatId();
         if (!chatId) return null;
         return this.messaging.getChat(chatId) || null;
@@ -153,27 +155,27 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // Computed helpers
     hasChats = computed(() => this.messaging.sortedChats().length > 0);
-    
+
     // Filtered chats based on selected tab
     followingChats = computed(() => {
         const followingList = this.accountState.followingList();
-        return this.messaging.sortedChats().filter(item => 
+        return this.messaging.sortedChats().filter(item =>
             followingList.includes(item.chat.pubkey)
         );
     });
-    
+
     otherChats = computed(() => {
         const followingList = this.accountState.followingList();
-        return this.messaging.sortedChats().filter(item => 
+        return this.messaging.sortedChats().filter(item =>
             !followingList.includes(item.chat.pubkey)
         );
     });
-    
+
     filteredChats = computed(() => {
         const tabIndex = this.selectedTabIndex();
         return tabIndex === 0 ? this.followingChats() : this.otherChats();
     });
-    
+
     hasFollowingChats = computed(() => this.followingChats().length > 0);
     hasOtherChats = computed(() => this.otherChats().length > 0);
 
@@ -185,7 +187,10 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     @ViewChild('messagesWrapper', { static: false }) messagesWrapper?: ElementRef<HTMLDivElement>;
 
     // Throttling for scroll handler
-    private scrollThrottleTimeout: any = null; constructor() {        // Set up effect to handle chat selection and message updates
+    private scrollThrottleTimeout: any = null;
+
+    constructor() {
+        // Set up effect to handle chat selection and message updates
         effect(() => {
             const chat = this.selectedChat();
 
@@ -237,16 +242,21 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         });
 
         effect(async () => {
-            if (this.accountState.initialized()) {
-                await this.messaging.loadChats();
-                // this.subscribeToMessages();
+            if (this.accountState.account()) {
+                untracked(async () => {
+                    this.messages.set([]);
+                    this.selectedChatId.set(null);
+                    await this.messaging.loadChats();
+                });
             }
         });
     }
 
     ngOnInit(): void {
 
-    } ngAfterViewInit(): void {
+    }
+
+    ngAfterViewInit(): void {
         // Set up scroll event listener for loading more messages with a delay to ensure DOM is ready
         setTimeout(() => {
             this.setupScrollListener();
@@ -270,7 +280,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
         // Add the scroll event listener
         scrollElement.addEventListener('scroll', this.scrollHandler);
-    }    /**
+    }
+
+    /**
      * Scroll event handler - defined as arrow function to maintain 'this' context
      * Uses throttling to prevent excessive calls during rapid scrolling
      */
@@ -315,7 +327,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
                 element.scrollTop = element.scrollHeight;
             }
         }, 100);
-    } ngOnDestroy(): void {
+    }
+
+    ngOnDestroy(): void {
         // Clean up scroll listener
         const scrollElement = this.messagesWrapper?.nativeElement;
         if (scrollElement) {
@@ -347,6 +361,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     private clearDecryptionQueue(): void {
         this.messaging.clearDecryptionQueue();
     }
+
     /**
    * Load more messages (older messages)
    */
@@ -465,6 +480,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
      * Send a direct message using both NIP-04 and NIP-44
      */
     async sendMessage(): Promise<void> {
+        debugger;
         const messageText = this.newMessageText().trim();
         if (!messageText || this.isSending()) return;
 
@@ -839,7 +855,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         try {
             // Create a chat ID based on encryption type
             const chatId = isLegacy ? `nip04${pubkey}` : `nip44${pubkey}`;
-            
+
             // Check if chat already exists
             const existingChat = this.messaging.getChat(chatId);
             if (existingChat) {
@@ -851,7 +867,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
             // For now, just switch to the chat view and let the user send the first message
             // The chat will be created when the first message is sent
-            
+
             // Create a temporary chat object for UI purposes
             const tempChat: Chat = {
                 id: chatId,
@@ -864,9 +880,12 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
                 messages: new Map()
             };
 
+            // Add the temporary chat to the messaging service's chatsMap
+            this.messaging.addChat(tempChat);
+
             // Select the chat (this will show the chat interface)
             this.selectChat(tempChat);
-            
+
             // Show success message
             const chatType = isLegacy ? 'Legacy (NIP-04)' : 'Modern (NIP-44)';
             this.snackBar.open(`Ready to start ${chatType} chat`, 'Close', { duration: 3000 });
