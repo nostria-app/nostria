@@ -50,9 +50,7 @@ export class AccountStateService {
 
   /** Use this signal to track if account has been loaded. */
   initialized = signal(false);
-  // accountChanging = signal<string>('');
   account = signal<NostrUser | null>(null);
-
   accounts = signal<NostrUser[]>([]);
 
   hasAccounts = computed(() => {
@@ -70,7 +68,15 @@ export class AccountStateService {
 
   profile = signal<NostrRecord | undefined>(undefined);
 
-  // accountSubscription = signal<Account | undefined>(undefined);
+  subscriptions = signal<Account[]>([]);
+
+  subscription = computed(() => {
+    const pubkey = this.pubkey();
+    if (!pubkey) return undefined;
+
+    const subs = this.subscriptions();
+    return subs.find(sub => sub.pubkey === pubkey);
+  });
 
   profilePath = computed(() => {
     const sub = this.subscription();
@@ -130,7 +136,46 @@ export class AccountStateService {
 
   });
 
+  async load() {
+    const account = this.account();
+
+    if (!account) {
+      return;
+    }
+
+    this.profile.set(this.getAccountProfile(account.pubkey));
+
+    // TODO: Improve this!
+    if (account.source === 'nsec') {
+      this.loadData();
+    } else if (account.source === 'extension') {
+      // Check for window.nostr availability with interval
+      const checkNostrInterval = setInterval(() => {
+        if (window.nostr) {
+          clearInterval(checkNostrInterval);
+          this.loadData();
+        }
+      }, 100); // Check every 100ms
+
+      // Optional: Add a timeout to prevent infinite checking
+      setTimeout(() => {
+        clearInterval(checkNostrInterval);
+        console.warn('Timeout waiting for window.nostr to become available');
+      }, 10000); // Stop checking after 10 seconds
+    } else {
+      // Remote signing, readonly, etc.
+      debugger;
+      this.loadData();
+    }
+  }
+
+  clear() {
+    this.followingList.set([]);
+    this.profile.set(undefined);
+  }
+
   async follow(pubkey: string) {
+    debugger;
     const account = this.account();
     if (!account) {
       console.warn('No account is currently set to follow:', pubkey);
@@ -148,6 +193,7 @@ export class AccountStateService {
     let followingEvent: Event | UnsignedEvent | null = await this.storage.getEventByPubkeyAndKind([account.pubkey], 3);
 
     if (!followingEvent) {
+      debugger;
       console.warn('No existing following event found. This might result in overwriting this event on unknown relays.', pubkey);
       followingEvent = this.utilities.createEvent(kinds.Contacts, "", [[`p`, pubkey]], account.pubkey);
     } else {
@@ -166,7 +212,7 @@ export class AccountStateService {
     // Publish the event to update the following list
     try {
       this.publish.set(followingEvent);
-      console.log(`Unfollowed ${pubkey} successfully.`);
+      console.log(`Followed ${pubkey} successfully.`);
     } catch (error) {
       console.error(`Failed to unfollow ${pubkey}:`, error);
     }
@@ -174,6 +220,7 @@ export class AccountStateService {
 
   async parseFollowingList(event: Event) {
     if (event) {
+      debugger;
       const followingTags = this.utilities.getTags(event, 'p');
 
       // Get current following list to compare
@@ -182,6 +229,7 @@ export class AccountStateService {
       // Check if the lists are different
       const hasChanged = !this.utilities.arraysEqual(currentFollowingList, followingTags);
 
+      debugger;
       if (hasChanged) {
         this.followingList.set(followingTags);
         await this.storage.saveEvent(event);
@@ -190,39 +238,18 @@ export class AccountStateService {
   }
 
   changeAccount(account: NostrUser | null): void {
-    debugger;
+    // debugger;
     // this.accountChanging.set(account?.pubkey || '');
 
-    this.followingList.set([]);
-
-    debugger;
+    // debugger;
     this.account.set(account);
 
-    if (!account) {
-      this.profile.set(undefined);
-      return;
-    } else {
-      this.profile.set(this.getAccountProfile(account.pubkey));
+    // if (!account) {
+    //   this.profile.set(undefined);
+    //   return;
+    // } else {
 
-      // TODO: Improve this!
-      if (account.source === 'nsec') {
-        this.loadData();
-      } else if (account.source === 'extension') {
-        // Check for window.nostr availability with interval
-        const checkNostrInterval = setInterval(() => {
-          if (window.nostr) {
-            clearInterval(checkNostrInterval);
-            this.loadData();
-          }
-        }, 100); // Check every 100ms
-
-        // Optional: Add a timeout to prevent infinite checking
-        setTimeout(() => {
-          clearInterval(checkNostrInterval);
-          console.warn('Timeout waiting for window.nostr to become available');
-        }, 10000); // Stop checking after 10 seconds
-      }
-    }
+    // }
   }
 
   updateAccount(account: NostrUser) {
@@ -234,16 +261,6 @@ export class AccountStateService {
       this.accounts.update(u => u.map(existingUser => existingUser.pubkey === account.pubkey ? account : existingUser));
     }
   }
-
-  subscriptions = signal<Account[]>([]);
-
-  subscription = computed(() => {
-    const pubkey = this.pubkey();
-    if (!pubkey) return undefined;
-
-    const subs = this.subscriptions();
-    return subs.find(sub => sub.pubkey === pubkey);
-  });
 
   loadSubscriptions() {
     const subscriptions = this.localStorage.getObject<Account[]>(this.appState.SUBSCRIPTIONS_STORAGE_KEY);

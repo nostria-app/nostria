@@ -100,8 +100,8 @@ export class ProfileComponent {
   // Convert route params to a signal
   private routeParams = toSignal<ParamMap>(this.route.paramMap);
   private routeData = toSignal<Data>(this.route.data);
-  private userRelayFactory = inject(UserRelayFactoryService);
-  private userRelay: UserRelayService | undefined = undefined;
+  // private userRelayFactory = inject(UserRelayFactoryService);
+  // private userRelay: UserRelayService | undefined = undefined;
 
   constructor() {
     if (!this.app.isBrowser()) {
@@ -177,35 +177,7 @@ export class ProfileComponent {
           this.profileState.setCurrentProfilePubkey(id);
           this.pubkey.set(id);
 
-          try {
-            this.userRelay = await this.userRelayFactory.create(id);
-            this.profileState.relay = this.userRelay;
-
-            // Only subscribe to events if we have a working user relay
-            if (this.userRelay && this.userRelay.relayUrls.length > 0) {
-              this.userRelay.subscribeEose([{
-                kinds: [kinds.ShortTextNote],
-                authors: [id],
-                limit: 10
-              }], (event) => {
-                const record = this.data.getRecord(event);
-
-                if (this.isRootPost(event)) {
-                  this.profileState.notes.update(events => [...events, record]);
-                } else {
-                  this.profileState.replies.update(events => [...events, record]);
-                }
-              }, () => {
-                console.log('FINISHED!!!');
-              });
-            } else {
-              this.logger.warn('UserRelay has no relay URLs, cannot subscribe to events');
-            }
-
-          } catch (err: any) {
-            this.logger.error('Failed to create UserRelay, but continuing with profile load:', err);
-            // Don't return here - continue with loading the profile
-          }
+         
 
           // Always attempt to load user profile and check if own profile, regardless of relay status
           untracked(async () => {
@@ -253,11 +225,6 @@ export class ProfileComponent {
     });
   }
 
-  isRootPost(event: Event) {
-    // A root post has no 'e' tag (no reply or root reference)
-    return !event.tags.some(tag => tag[0] === 'e');
-  };
-
   // Helper method to determine if the current route should use compact header
   private shouldUseCompactHeader(url: string): boolean {
     // Check if URL contains these paths that require compact header
@@ -275,80 +242,33 @@ export class ProfileComponent {
   private getWindow(): Window | null {
     return isPlatformBrowser(this.platformId) ? this.document.defaultView : null;
   }
-  private async loadUserData(pubkey: string, disconnect = true): Promise<void> {
-    if (!this.userRelay) {
-      this.logger.warn('UserRelay service not available, cannot load user data');
-      return;
-    }
 
-    if (this.userRelay.relayUrls.length === 0) {
-      this.logger.warn('No relay URLs available for user, cannot load user data');
-      return;
-    }
-    // if (!this.nostrService.currentProfileUserPool) {
-    //   this.nostrService.currentProfileUserPool = new SimplePool();
-    // }
+  // private async loadUserData(pubkey: string, disconnect = true): Promise<void> {
+  //   if (!this.userRelay) {
+  //     this.logger.warn('UserRelay service not available, cannot load user data');
+  //     return;
+  //   }
 
-    // let relays = await this.nostrService.getRelaysForUser(pubkey, disconnect);
-    // if (!relays) {
-    //   return this.error.set('No relays found for this user');
-    // }
+  //   if (this.userRelay.relayUrls.length === 0) {
+  //     this.logger.warn('No relay URLs available for user, cannot load user data');
+  //     return;
+  //   }
 
-    // let relayUrls = this.nostrService.getRelayUrls(relays);
-    // this.nostrService.currentProfileRelayUrls = relayUrls;
-    // const pool = this.nostrService.currentProfileUserPool;
+  //   await this.profileState.loadUserData();
 
-    // TODO: Move this logic into the relay or nostr service.
-    this.userRelay.pool.subscribeMany(this.userRelay.relayUrls, [{
-      kinds: [kinds.Contacts],
-      authors: [pubkey],
-    },
-    {
-      kinds: [kinds.ShortTextNote],
-      authors: [pubkey],
-      limit: 30
-    },
-    {
-      kinds: [kinds.LongFormArticle],
-      authors: [pubkey],
-      limit: 30
-    },
-    {
-      kinds: [10063], // BUD-03: User Server List
-      authors: [pubkey],
-      limit: 1
-    },
-    ], {
-      onevent: (evt) => {
-        console.log('Event received', evt);
+  //   // if (!this.nostrService.currentProfileUserPool) {
+  //   //   this.nostrService.currentProfileUserPool = new SimplePool();
+  //   // }
 
-        if (evt.kind === kinds.Contacts) {
-          const followingList = this.utilities.getPTagsValuesFromEvent(evt);
-          console.log(followingList);
-          // this.followingList.set(followingList);
-          this.profileState.followingList.set(followingList);
+  //   // let relays = await this.nostrService.getRelaysForUser(pubkey, disconnect);
+  //   // if (!relays) {
+  //   //   return this.error.set('No relays found for this user');
+  //   // }
 
-          // If this is the logged on user, also set the account state.
-          if (this.accountState.pubkey() === pubkey) {
-            this.accountState.followingList.set(followingList);
-          }
-
-          this.storage.saveEvent(evt);
-
-          // Now you can use 'this' here
-          // For example: this.handleContacts(evt);
-        } else if (evt.kind === kinds.LongFormArticle) {
-          this.profileState.articles.update(articles => [...articles, this.data.getRecord(evt)]);
-        }
-
-
-      },
-      onclose: (reasons) => {
-        console.log('Pool closed', reasons);
-        // Also changed this to an arrow function for consistency
-      },
-    });
-  }
+  //   // let relayUrls = this.nostrService.getRelayUrls(relays);
+  //   // this.nostrService.currentProfileRelayUrls = relayUrls;
+  //   // const pool = this.nostrService.currentProfileUserPool;
+  // }
 
   private async loadUserProfile(pubkey: string): Promise<void> {
     this.isLoading.set(true);
@@ -368,7 +288,7 @@ export class ProfileComponent {
       setTimeout(() => this.layoutService.scrollToOptimalProfilePosition(), 100);
 
       // Load user data regardless of metadata availability
-      this.loadUserData(pubkey);
+      // this.loadUserData(pubkey);
 
     } catch (err) {
       this.logger.error('Error loading user profile', err);

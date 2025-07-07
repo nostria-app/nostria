@@ -78,11 +78,16 @@ export class NostrService implements NostriaService {
     this.logger.info('Initializing NostrService');
 
     effect(async () => {
+      debugger;
       const event = this.accountState.publish();
 
       if (event) {
         await this.publish(event);
       }
+
+      untracked(() => {
+        this.accountState.publish.set(undefined);
+      });
     });
 
     effect(async () => {
@@ -232,6 +237,8 @@ export class NostrService implements NostriaService {
       } else {
         this.logger.warn('No metadata found for user');
       }
+
+      debugger;
 
       // After loading the relays and setting them, we load the following list:
       await this.loadAccountFollowing(pubkey);
@@ -650,6 +657,7 @@ export class NostrService implements NostriaService {
   accountSubscription: any = null;
 
   private async subscribeToAccountMetadata(pubkey: string) {
+    debugger;
     this.logger.info('subscribeToAccountMetadata', { pubkey });
 
     const filters = [{
@@ -676,6 +684,7 @@ export class NostrService implements NostriaService {
 
 
   private async loadAccountFollowing(pubkey: string) {
+    debugger;
     let followingEvent = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
 
     if (!followingEvent) {
@@ -687,6 +696,7 @@ export class NostrService implements NostriaService {
     } else {
       // Queue up refresh of this event in the background
       this.relayService.getEventByPubkeyAndKind(pubkey, kinds.Contacts).then(async (evt) => {
+        debugger;
         if (evt) {
           this.accountState.parseFollowingList(evt);
         }
@@ -1811,6 +1821,7 @@ export class NostrService implements NostriaService {
   }
 
   async setAccount(user: NostrUser) {
+    debugger;
     this.logger.debug('Updating user in collection', { pubkey: user.pubkey });
 
     // Update lastUsed timestamp

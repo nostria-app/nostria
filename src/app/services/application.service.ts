@@ -73,16 +73,20 @@ export class ApplicationService {
             // this is triggered twice on app start.
             if (pubkey && followingList.length > 0) {
                 untracked(async () => {
-                    // Check if profile discovery has already been done for this account
-                    if (!this.accountState.hasProfileDiscoveryBeenDone(pubkey)) {
-                        await this.accountState.startProfileProcessing(followingList, this.nostrService);
-                        this.accountState.markProfileDiscoveryDone(pubkey);
-                    } else {
-                        const currentState = this.accountState.profileProcessingState();
-                        if (!currentState.isProcessing) {
-                            // Profile discovery has been done, load profiles from storage into cache
-                            await this.accountState.loadProfilesFromStorageToCache(pubkey, this.dataService, this.storage);
+                    try {
+                        // Check if profile discovery has already been done for this account
+                        if (!this.accountState.hasProfileDiscoveryBeenDone(pubkey)) {
+                            await this.accountState.startProfileProcessing(followingList, this.nostrService);
+                            this.accountState.markProfileDiscoveryDone(pubkey);
+                        } else {
+                            const currentState = this.accountState.profileProcessingState();
+                            if (!currentState.isProcessing) {
+                                // Profile discovery has been done, load profiles from storage into cache
+                                await this.accountState.loadProfilesFromStorageToCache(pubkey, this.dataService, this.storage);
+                            }
                         }
+                    } catch (error) {
+                        this.logger.error('Error during profile processing:', error);
                     }
                 });
             }

@@ -516,7 +516,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
                 tags: [['p', receiverPubkey]],
                 received: false,
                 encryptionType: this.supportsModernEncryption(this.selectedChat()!) ? 'nip44' : 'nip04'
-            };            // Add to the messages immediately so the user sees feedback
+            };
+
+            // Add to the messages immediately so the user sees feedback
             this.messages.update(msgs => [...msgs, pendingMessage]);
 
             // Scroll to bottom for new outgoing messages
@@ -778,14 +780,22 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
                 content: messageText
             };
 
+            debugger;
+
             // Calculate the message ID (but don't sign it)
             const rumorId = getEventHash(unsignedMessage);
             const rumorWithId = { ...unsignedMessage, id: rumorId };
+            const eventText = JSON.stringify(rumorWithId);
 
             // Step 2: Create the seal (kind 13) - encrypt the rumor with sender's key
             const sealedContent = await this.encryption.encryptNip44(
-                JSON.stringify(rumorWithId),
+                eventText,
                 receiverPubkey
+            );
+
+            const sealedContent2 = await this.encryption.encryptNip44(
+                eventText,
+                myPubkey
             );
 
             const sealedMessage = {
@@ -796,11 +806,21 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
                 content: sealedContent
             };
 
+            const sealedMessage2 = {
+                kind: kinds.Seal,
+                pubkey: myPubkey,
+                created_at: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800), // Random timestamp within 2 days
+                tags: [],
+                content: sealedContent2
+            };
+
             // Sign the sealed message
             const signedSealedMessage = await this.nostr.signEvent(sealedMessage);
+            const signedSealedMessage2 = await this.nostr.signEvent(sealedMessage2);
 
             // Step 3: Create the gift wrap (kind 1059) - encrypt with ephemeral key
-            // Generate a random ephemeral key for the gift wrap
+            // Generate a random ephemeral key for the gift wrap.
+            // TODO: Figure out if we should use a different ephemeral key for self and recipient.
             const ephemeralKey = generateSecretKey();
             const ephemeralPubkey = getPublicKey(ephemeralKey);
 
@@ -811,6 +831,12 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
                 receiverPubkey
             );
 
+            const giftWrapContent2 = await this.encryption.encryptNip44WithKey(
+                JSON.stringify(signedSealedMessage2),
+                bytesToHex(ephemeralKey),
+                myPubkey
+            );
+
             const giftWrap = {
                 kind: kinds.GiftWrap,
                 pubkey: ephemeralPubkey,
@@ -819,28 +845,37 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
                 content: giftWrapContent
             };
 
-            // Sign the gift wrap with the ephemeral key
-            const signedGiftWrap = finalizeEvent(giftWrap, ephemeralKey);
-
-            // Step 4: Create the gift wrap for self (kind 1059) - same content but different tags in pubkey.
-            // Should we use different ephemeral key for self? The content is the same anyway, 
-            // so correlation of messages (and pub keys who are chatting) can be done through the content of gift wrap.
-            const giftWrapSelf = {
+            const giftWrap2 = {
                 kind: kinds.GiftWrap,
                 pubkey: ephemeralPubkey,
                 created_at: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800), // Random timestamp within 2 days
                 tags: [['p', myPubkey]],
-                content: giftWrapContent
+                content: giftWrapContent2
             };
 
             // Sign the gift wrap with the ephemeral key
-            const signedGiftWrapSelf = finalizeEvent(giftWrapSelf, ephemeralKey);
+            const signedGiftWrap = finalizeEvent(giftWrap, ephemeralKey);
+            const signedGiftWrap2 = finalizeEvent(giftWrap2, ephemeralKey);
+
+            // Step 4: Create the gift wrap for self (kind 1059) - same content but different tags in pubkey.
+            // Should we use different ephemeral key for self? The content is the same anyway, 
+            // so correlation of messages (and pub keys who are chatting) can be done through the content of gift wrap.
+            // const giftWrapSelf = {
+            //     kind: kinds.GiftWrap,
+            //     pubkey: ephemeralPubkey,
+            //     created_at: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800), // Random timestamp within 2 days
+            //     tags: [['p', myPubkey]],
+            //     content: giftWrapContent
+            // };
+
+            // Sign the gift wrap with the ephemeral key
+            // const signedGiftWrapSelf = finalizeEvent(giftWrapSelf, ephemeralKey);
 
             // Publish the gift wrap to relays of the recipient
             await this.publishToUserRelays(signedGiftWrap, userRelay);
 
             // Publish the gift wrap to account relays, so the chat can be discovered on other devices.
-            await this.publishToAccountRelays(signedGiftWrapSelf);
+            await this.publishToAccountRelays(signedGiftWrap2);
 
             // Return the message object based on the original rumor
             return {

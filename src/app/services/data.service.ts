@@ -18,14 +18,11 @@ export class DataService {
     private readonly utilities = inject(UtilitiesService);
 
     getRecord(event: Event) {
-        return {
-            event,
-            data: this.parseContent(event.content)
-        }
+        return this.utilities.getRecord(event);
     }
 
     getRecords(events: Event[]) {
-        return events.map(event => this.getRecord(event));
+        return this.utilities.getRecords(events);
     }
 
     /** Get relay for a specific user, only local search. */
@@ -130,41 +127,5 @@ export class DataService {
         }
 
         return [];
-    }
-
-    sanitizeJsonString(json: string): string {
-        return json
-            // Specifically handle newlines that appear before closing quotes in JSON values
-            .replace(/\n+"/g, '"')
-            .trim();
-    }
-
-    /** Attempts to parse the content if it is a JSON string. */
-    parseContent(content: string): any {
-        if (content && content !== '') {
-            try {
-                // First check if the content is already an object (not a string)
-                if (typeof content === 'string') {
-                    // Sanitize the JSON string to remove problematic characters
-                    // Example npub that is problematic: npub1xdn5apqgt2fyuace95cv7lvx344wdw5ppac7kvwycdqzlg7zdnds2ly4d0
-                    content = this.sanitizeJsonString(content);
-
-                    // Check if it looks like JSON (starts with { or [)
-                    const trimmedContent = content.trim();
-
-                    if ((trimmedContent.startsWith('{') && trimmedContent.endsWith('}')) ||
-                        (trimmedContent.startsWith('[') && trimmedContent.endsWith(']'))) {
-                        // Try parsing it as JSON
-                        content = JSON.parse(content);
-                    }
-                    // If it doesn't look like JSON or parsing fails, the catch block will keep it as a string
-                }
-            } catch (e) {
-                debugger;
-                this.logger.error('Failed to parse event content', e);
-            }
-        }
-
-        return content;
     }
 }

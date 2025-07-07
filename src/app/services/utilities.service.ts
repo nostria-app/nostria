@@ -29,6 +29,53 @@ export class UtilitiesService {
 
   constructor() { }
 
+  getRecord(event: Event) {
+    return {
+      event,
+      data: this.parseContent(event.content)
+    }
+  }
+
+  getRecords(events: Event[]) {
+    return events.map(event => this.getRecord(event));
+  }
+
+  /** Attempts to parse the content if it is a JSON string. */
+  parseContent(content: string): any {
+    if (content && content !== '') {
+      try {
+        // First check if the content is already an object (not a string)
+        if (typeof content === 'string') {
+          // Sanitize the JSON string to remove problematic characters
+          // Example npub that is problematic: npub1xdn5apqgt2fyuace95cv7lvx344wdw5ppac7kvwycdqzlg7zdnds2ly4d0
+          content = this.sanitizeJsonString(content);
+
+          // Check if it looks like JSON (starts with { or [)
+          const trimmedContent = content.trim();
+
+          if ((trimmedContent.startsWith('{') && trimmedContent.endsWith('}')) ||
+            (trimmedContent.startsWith('[') && trimmedContent.endsWith(']'))) {
+            // Try parsing it as JSON
+            content = JSON.parse(content);
+          }
+          // If it doesn't look like JSON or parsing fails, the catch block will keep it as a string
+        }
+      } catch (e) {
+        debugger;
+        this.logger.error('Failed to parse event content', e);
+      }
+    }
+
+    return content;
+  }
+
+  sanitizeJsonString(json: string): string {
+    return json
+      // Specifically handle newlines that appear before closing quotes in JSON values
+      .replace(/\n+"/g, '"')
+      .trim();
+  }
+
   parseNip05(nip05: string) {
     return nip05.startsWith('_@')
       ? nip05.substring(1)
@@ -376,6 +423,11 @@ export class UtilitiesService {
   currentDate() {
     return Math.floor(Date.now() / 1000);
   }
+
+  isRootPost(event: Event) {
+    // A root post has no 'e' tag (no reply or root reference)
+    return !event.tags.some(tag => tag[0] === 'e');
+  };
 
   createEvent(kind: number, content: string, tags: string[][], pubkey: string): UnsignedEvent {
     const event: UnsignedEvent = {

@@ -107,7 +107,7 @@ export class UserRelayService {
         }
     }
 
-    publish(event: Event) {
+    async publish(event: Event) {
         this.logger.debug('Publishing event:', event);
 
         if (!this.pool) {
