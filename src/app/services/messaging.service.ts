@@ -287,6 +287,8 @@ export class MessagingService implements NostriaService {
         return;
       }
 
+      debugger;
+
       // This contains both incoming and outgoing messages for Giftwrapped messages.
       const filterReceived: Filter = {
         kinds: [kinds.GiftWrap, kinds.EncryptedDirectMessage],
@@ -304,6 +306,7 @@ export class MessagingService implements NostriaService {
 
       // First, look for existing gift-wrapped messages
       const sub = this.relay.subscribe([filterReceived, filterSent], async (event: NostrEvent) => {
+        debugger;
         // Track the oldest timestamp
         if (event.created_at < oldestTimestamp) {
           oldestTimestamp = event.created_at;
@@ -344,7 +347,7 @@ export class MessagingService implements NostriaService {
             created_at: wrappedevent.created_at,
             content: wrappedevent.content,
             tags: wrappedevent.tags || [],
-            isOutgoing: event.pubkey === myPubkey,
+            isOutgoing: wrappedevent.pubkey === myPubkey,
             pending: false,
             failed: false,
             received: true,
@@ -352,8 +355,15 @@ export class MessagingService implements NostriaService {
             encryptionType: 'nip44' // Gift-wrapped messages are NIP-44
           };
 
+          let targetPubkey = wrappedevent.pubkey;
+
+          // If this is outgoing, it means the target is in the tags on the kind 14.
+          if (directMessage.isOutgoing) {
+            targetPubkey = this.utilities.getPTagsValuesFromEvent(wrappedevent)[0];
+          }
+
           // Add the message to the chat
-          this.addMessageToChat(wrappedevent.pubkey, directMessage);
+          this.addMessageToChat(targetPubkey, directMessage);
 
           // Add all pubkeys to the list, including self, we might chat with ourselves for notes, etc.
           // chatPubkeys.add(event.pubkey);
