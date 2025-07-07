@@ -64,7 +64,6 @@ export class NotificationSettingsComponent {  app = inject(ApplicationService);
 
   // Add this computed signal to get subscription details from native APIs
   subscriptionDetails = computed(() => {
-    debugger;
     if (!this.isNotificationEnabled() || !this.pushSupported()) {
       return null;
     }
@@ -92,8 +91,6 @@ export class NotificationSettingsComponent {  app = inject(ApplicationService);
         this.logger.debug('Account loaded:', this.accountState.account());
 
         this.isLoading.set(true);
-
-        debugger;
 
         try {
           // Check for existing subscription first using native API
@@ -132,8 +129,6 @@ export class NotificationSettingsComponent {  app = inject(ApplicationService);
             } as Device);
           });
 
-          debugger;
-
           // Load devices using WebPushService on-demand
           await this.webPush.loadDevices(this.currentDevice()?.deviceId);
         } catch (error) {
@@ -149,7 +144,6 @@ export class NotificationSettingsComponent {  app = inject(ApplicationService);
   }
 
   async getSubscriptionInfo(): Promise<Device | null> {
-    debugger;
     const subscription = await this.getSubscriptionFromNativeAPI();
 
     if (!subscription) {

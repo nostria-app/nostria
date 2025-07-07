@@ -267,7 +267,6 @@ export class EditorComponent {
   }
 
   async publishArticle(kind: number = 30023): Promise<void> {
-    debugger;
     if (!this.isValid()) {
       this.snackBar.open('Please fill in required fields', 'Close', { duration: 3000 });
       return;

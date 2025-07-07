@@ -282,7 +282,6 @@ export class MediaPlayerComponent implements AfterViewInit {
     });
 
     dialogRef.afterClosed().subscribe(async (result: AddMediaDialogData) => {
-      debugger;
       if (!result || !result.url) {
         return;
       }

@@ -281,8 +281,6 @@ export class App {
         // const isLoggedIn = this.app.authenticated()
         // const isInitialized = this.app.initialized();
 
-        // debugger;
-
         // if (isInitialized && !isLoggedIn) {
         //   this.logger.debug('Showing login dialog');
         //   this.showLoginDialog();
@@ -319,7 +317,6 @@ export class App {
 
       //   // When nostr and storage is initialized, set the pubkey.
       //   if (this.app.initialized() && this.nostrService.account()) {
-      //     debugger;
       //     this.accountState.currentProfilePubkey.set(this.nostrService.account()!.pubkey);
       //   }
 

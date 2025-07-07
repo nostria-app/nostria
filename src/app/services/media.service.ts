@@ -118,7 +118,6 @@ export class MediaService implements NostriaService {
   }
 
   async loadMedia() {
-    debugger;
     if (this.mediaServers().length > 0) {
       // Only fetch files if it's been more than 10 minutes since last fetch
       const tenMinutesInMs = 10 * 60 * 1000; // 10 minutes in milliseconds

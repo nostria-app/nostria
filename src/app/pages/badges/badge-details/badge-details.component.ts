@@ -101,7 +101,6 @@ export class BadgeDetailsComponent {
     this.error.set(null);
 
     const receivedData = history.state.event as Event | undefined;
-    debugger;
     
     try {
       // Check if we have the badge definition in memory first

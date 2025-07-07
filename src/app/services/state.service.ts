@@ -33,7 +33,6 @@ export class StateService implements NostriaService {
   }
 
   async load() {
-    debugger;
     this.accountState.load();
     this.accountState.loadSubscriptions();
     await this.nostr.load();

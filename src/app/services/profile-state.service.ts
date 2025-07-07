@@ -92,7 +92,6 @@ export class ProfileStateService {
   }
 
   reset() {
-    debugger;
     this.followingList.set([]);
     this.notes.set([]);
     this.replies.set([]);
@@ -119,8 +118,6 @@ export class ProfileStateService {
       return;
     }
 
-    debugger;
-
     // TODO: Move this logic into the relay or nostr service.
     this.relay.pool.subscribeMany(this.relay.relayUrls, [{
       kinds: [kinds.Contacts],
@@ -146,7 +143,6 @@ export class ProfileStateService {
         console.log('Event received', evt);
 
         if (evt.kind === kinds.Contacts) {
-          debugger;
           const followingList = this.utilities.getPTagsValuesFromEvent(evt);
           console.log(followingList);
           // this.followingList.set(followingList);
@@ -241,7 +237,6 @@ export class ProfileStateService {
           // One relay might say there are no more events, but another might have some, so
           // they will set the flag back to true if we found any new notes.
           if (!foundAnything) {
-            debugger;
             this.hasMoreNotes.set(false);
           } else {
             // Add new notes to the existing ones

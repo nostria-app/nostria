@@ -61,8 +61,6 @@ export class NotificationManageComponent implements OnInit, OnDestroy {
   devicePreferences = computed(() => {
     const devices = this.devices();
 
-    debugger;
-
     return devices.map(device => ({
       device,
       preferences: this.webPush.getDevicePreferences(device.deviceId)

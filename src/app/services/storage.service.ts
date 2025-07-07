@@ -358,7 +358,6 @@ export class StorageService {
       //       // If it doesn't look like JSON or parsing fails, the catch block will keep it as a string
       //     }
       //   } catch (e) {
-      //     debugger;
       //     this.logger.error('Failed to parse event content', e);
       //   }
       // }
@@ -611,7 +610,6 @@ export class StorageService {
 
   // async saveRelay(relay: Relay, nip11Info?: Nip11Info): Promise<void> {
   //   try {
-  //     debugger;
   //     const enhancedRelay: any = { ...relay };
 
   //     if (nip11Info) {

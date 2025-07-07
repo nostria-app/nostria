@@ -309,7 +309,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
                 this.hasMoreMessages() &&
                 !this.isLoadingMore() &&
                 this.messages().length > 0) {
-                debugger;
 
                 this.logger.debug('Triggering loadMoreMessages from scroll');
                 this.loadMoreMessages();
@@ -481,7 +480,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
      * Send a direct message using both NIP-04 and NIP-44
      */
     async sendMessage(): Promise<void> {
-        debugger;
         const messageText = this.newMessageText().trim();
         if (!messageText || this.isSending()) return;
 
@@ -779,8 +777,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
                 tags: [['p', receiverPubkey]],
                 content: messageText
             };
-
-            debugger;
 
             // Calculate the message ID (but don't sign it)
             const rumorId = getEventHash(unsignedMessage);
