@@ -15,7 +15,7 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTabsModule } from '@angular/material/tabs';
-import { Router, RouterModule } from '@angular/router';
+import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { NostrService } from '../../services/nostr.service';
 import { RelayService, Relay } from '../../services/relay.service';
 import { LoggerService } from '../../services/logger.service';
@@ -118,6 +118,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     private dialog = inject(MatDialog);
     private storage = inject(StorageService);
     private router = inject(Router);
+    private route = inject(ActivatedRoute);
     private appState = inject(ApplicationStateService);
     private snackBar = inject(MatSnackBar);
     private readonly app = inject(ApplicationService);
@@ -254,7 +255,20 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     ngOnInit(): void {
-
+        // Check for route parameters to start a new chat
+        this.route.queryParams.subscribe(params => {
+            const pubkey = params['pubkey'];
+            if (pubkey) {
+                // Start a new chat with the specified pubkey
+                this.startChatWithPubkey(pubkey);
+                // Remove the pubkey from the URL
+                this.router.navigate([], {
+                    relativeTo: this.route,
+                    queryParams: { pubkey: null },
+                    queryParamsHandling: 'merge'
+                });
+            }
+        });
     }
 
     ngAfterViewInit(): void {
@@ -617,6 +631,14 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
                 this.startChatWithUser(result.pubkey, result.isLegacy);
             }
         });
+    }
+
+    /**
+     * Start a new chat with a specific pubkey (public method for external navigation)
+     */
+    startChatWithPubkey(pubkey: string): void {
+        // Use modern encryption (NIP-44) by default
+        this.startChatWithUser(pubkey, false);
     }
 
     /**
