@@ -157,7 +157,6 @@ export class PublishDialogComponent {
   }
 
   async publish(): Promise<void> {
-    debugger;
     const targetRelays = this.getTargetRelays();
     
     if (targetRelays.length === 0) {

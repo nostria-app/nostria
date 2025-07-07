@@ -61,7 +61,6 @@ export class UtilitiesService {
           // If it doesn't look like JSON or parsing fails, the catch block will keep it as a string
         }
       } catch (e) {
-        debugger;
         this.logger.error('Failed to parse event content', e);
       }
     }
@@ -285,7 +284,6 @@ export class UtilitiesService {
       // URL already has a path, return as is
       return url;
     } catch (error) {
-      debugger;
       // If URL parsing fails, return original URL
       this.logger.warn(`Failed to parse URL: ${url}`, error);
       return '';

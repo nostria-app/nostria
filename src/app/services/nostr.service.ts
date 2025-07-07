@@ -78,7 +78,6 @@ export class NostrService implements NostriaService {
     this.logger.info('Initializing NostrService');
 
     effect(async () => {
-      debugger;
       const event = this.accountState.publish();
 
       if (event) {
@@ -237,8 +236,6 @@ export class NostrService implements NostriaService {
       } else {
         this.logger.warn('No metadata found for user');
       }
-
-      debugger;
 
       // After loading the relays and setting them, we load the following list:
       await this.loadAccountFollowing(pubkey);
@@ -657,7 +654,6 @@ export class NostrService implements NostriaService {
   accountSubscription: any = null;
 
   private async subscribeToAccountMetadata(pubkey: string) {
-    debugger;
     this.logger.info('subscribeToAccountMetadata', { pubkey });
 
     const filters = [{
@@ -684,7 +680,6 @@ export class NostrService implements NostriaService {
 
 
   private async loadAccountFollowing(pubkey: string) {
-    debugger;
     let followingEvent = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
 
     if (!followingEvent) {
@@ -696,7 +691,6 @@ export class NostrService implements NostriaService {
     } else {
       // Queue up refresh of this event in the background
       this.relayService.getEventByPubkeyAndKind(pubkey, kinds.Contacts).then(async (evt) => {
-        debugger;
         if (evt) {
           this.accountState.parseFollowingList(evt);
         }
@@ -903,7 +897,6 @@ export class NostrService implements NostriaService {
     } else {
       // Check if profile discovery has been completed for the current account
       // const currentAccount = this.account();
-      // debugger;
       // if (currentAccount && this.accountState.hasProfileDiscoveryBeenDone(currentAccount.pubkey)) {
       //   // Profile discovery has been done, but no metadata found in storage
       //   // Don't attempt network discovery, return undefined
@@ -1063,7 +1056,6 @@ export class NostrService implements NostriaService {
       // It can happen that accounts does not have any valid relays, return undefined
       // and then attempt to look up profile using account relays.
       if (selectedRelayUrls.length === 0) {
-        debugger;
         this.logger.warn('No valid relays found in relay list. Unable to find user.');
         info.hasNoValidRelays = true
         await this.storage.saveInfo(pubkey, 'user', info);
@@ -1098,7 +1090,6 @@ export class NostrService implements NostriaService {
           const selectedRelayUrls = this.utilities.pickOptimalRelays(relayUrls, this.MAX_RELAY_COUNT);
 
           if (selectedRelayUrls.length === 0) {
-            debugger;
             this.logger.warn('No valid relays found in relay list. Unable to find user.');
             info.hasNoValidRelays = true
             await this.storage.saveInfo(pubkey, 'user', info);
@@ -1133,7 +1124,6 @@ export class NostrService implements NostriaService {
             const followingRelayUrls = this.getRelayUrlsFromFollowing(followingEvent);
 
             if (followingRelayUrls.length > 30) {
-              debugger;
             }
 
             if (followingRelayUrls.length === 0) {
@@ -1276,7 +1266,6 @@ export class NostrService implements NostriaService {
         //   this.logger.info('Publishing relay list to discovery relays', { relayListEvent });
         //   await this.relayService.publishToDiscoveryRelays(relayListEvent);
         // } catch (error) {
-        //   debugger;
         //   this.logger.error('Failed to publish relay list to discovery relays', { error });
         // }
 
@@ -1391,7 +1380,6 @@ export class NostrService implements NostriaService {
 
       // Process all items in the queue
       // while (this.discoveryQueue.length > 0) {
-      //   debugger;
       // Take all items from the queue
       // const items = this.discoveryQueue.splice(0, this.discoveryQueue.length);
 
@@ -1622,7 +1610,6 @@ export class NostrService implements NostriaService {
     } else {
       // This should never happen, relays should be discovered while getting metadata
       // and stored in database.
-      debugger;
 
       // TODO!! and use "disconnect" paramter.
       // TODO: Implement this.
@@ -1821,7 +1808,6 @@ export class NostrService implements NostriaService {
   }
 
   async setAccount(user: NostrUser) {
-    debugger;
     this.logger.debug('Updating user in collection', { pubkey: user.pubkey });
 
     // Update lastUsed timestamp
@@ -1850,7 +1836,6 @@ export class NostrService implements NostriaService {
   }
 
   async generateNewKey(region?: string) {
-    debugger;
     this.logger.info('Generating new Nostr keypair');
     // Generate a proper Nostr key pair using nostr-tools
     const secretKey = generateSecretKey(); // Returns a Uint8Array

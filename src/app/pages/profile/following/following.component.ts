@@ -129,8 +129,6 @@ export class FollowingComponent implements OnInit, AfterViewInit {
         name: `User ${index + 1}`,
         picture: null
       }));
-      
-      debugger;
       this.followingList.set(followingProfiles);
       this.isLoading.set(false);
     } catch (err) {

@@ -103,8 +103,6 @@ export class MediaComponent {
 
     // effect(async () => {
     //   if (this.accountState.accountChanging()) {
-
-    //     debugger;
     //     console.log('APP INITIALIZED, FETCHING MEDIA SERVERS');
     //     const userServerList = await this.nostr.getMediaServers(this.accountState.pubkey());
     //     console.log('USER SERVER LIST', userServerList);

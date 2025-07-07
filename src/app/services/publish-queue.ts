@@ -25,7 +25,6 @@ export class PublishQueueService {
 
   // Add a task to the queue
   publish(event: UnsignedEvent | Event, target: PublishTarget): void {
-    debugger;
     this.queue.push({ event, target });
 
     if (this.queue.length > 0) {

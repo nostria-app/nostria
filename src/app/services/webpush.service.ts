@@ -108,13 +108,9 @@ export class WebPushService {
       const prefs = this.devicePreferences();
       const url = `${this.server}api/subscription/settings/${this.accountState.pubkey()}`;
 
-      debugger;
-
       const response = await this.webRequest.fetchJson(url, { method: 'POST', body: JSON.stringify(prefs) }, { kind: kinds.HTTPAuth });
       console.log('Response from savePreferencesToServer:', response);
       // const headers = await this.nostr.getNIP98AuthToken({ url, method: 'POST' });
-
-      // debugger;
 
       // const response = await fetch(url, {
       //   method: 'POST',
@@ -150,7 +146,6 @@ export class WebPushService {
 
       if (result && result.settings) {
         const settings = JSON.parse(result.settings);
-        debugger;
         this.devicePreferences.set(settings);
         this.logger.info('Device notification preferences loaded from server');
         return;
@@ -257,13 +252,9 @@ export class WebPushService {
       try {
         // const url = `${this.server}/api/subscription/devices/${this.accountState.pubkey()}?deviceId=${deviceId || ''}`;
         const url = `${this.server}api/subscription/devices/${this.accountState.pubkey()}`;
-
-        debugger;
         console.log('Fetching devices from:', url);
 
         const result = await this.webRequest.fetchJson(url, { method: 'GET' }, { kind: kinds.HTTPAuth });
-
-        debugger;
 
         return result.devices || [];
       } catch (error) {

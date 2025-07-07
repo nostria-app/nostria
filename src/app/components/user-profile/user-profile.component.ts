@@ -110,7 +110,6 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
 
         // Additional effect to watch for visibility changes and scrolling status
         // effect(() => {
-        //     debugger;
         //     if (this.isVisible() && !this.isScrolling() && this.pubkey() && !this.profile()) {
         //         untracked(() => {
         //             this.debouncedLoadProfileData(this.pubkey());

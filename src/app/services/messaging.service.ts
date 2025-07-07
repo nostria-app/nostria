@@ -287,8 +287,6 @@ export class MessagingService implements NostriaService {
         return;
       }
 
-      debugger;
-
       // This contains both incoming and outgoing messages for Giftwrapped messages.
       const filterReceived: Filter = {
         kinds: [kinds.GiftWrap, kinds.EncryptedDirectMessage],
@@ -306,15 +304,12 @@ export class MessagingService implements NostriaService {
 
       // First, look for existing gift-wrapped messages
       const sub = this.relay.subscribe([filterReceived, filterSent], async (event: NostrEvent) => {
-        debugger;
         // Track the oldest timestamp
         if (event.created_at < oldestTimestamp) {
           oldestTimestamp = event.created_at;
         }
         // Handle incoming wrapped events
         if (event.kind === kinds.GiftWrap) {
-
-          debugger;
 
           // let chats = this.chatsMap();
           // let chat = chats.get(event.pubkey);
@@ -631,7 +626,6 @@ export class MessagingService implements NostriaService {
         await new Promise(resolve => setTimeout(resolve, 100));
 
       } catch (error) {
-        debugger;
         this.logger.error(`Failed to decrypt message ${item.id}:`, error);
         item.reject(error as Error);
       }
@@ -724,7 +718,6 @@ export class MessagingService implements NostriaService {
       let sealedEvent;
       if (wrappedEvent.pubkey === myPubkey) {
         // This will never happen for NIP-44?
-        debugger;
         // If we sent it, we can directly use the encryptedMessage
         sealedEvent = wrappedContent.encryptedMessage;
       } else {

@@ -383,7 +383,6 @@ export class NoteEditorDialogComponent implements AfterViewInit {
   }
   
   private handlePaste(event: ClipboardEvent): void {
-    debugger;
     const items = event.clipboardData?.items;
     if (!items) return;
     

@@ -180,7 +180,6 @@ export class BadgeEditorComponent {
 
   // Form submission with file upload handling
   async publishBadge(): Promise<void> {
-    debugger;
     if (this.badgeForm.invalid) {
       // Mark all fields as touched to show validation errors
       Object.keys(this.badgeForm.controls).forEach(key => {
