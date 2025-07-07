@@ -130,6 +130,7 @@ export class FollowingComponent implements OnInit, AfterViewInit {
         picture: null
       }));
       
+      debugger;
       this.followingList.set(followingProfiles);
       this.isLoading.set(false);
     } catch (err) {
