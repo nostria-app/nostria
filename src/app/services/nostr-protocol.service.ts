@@ -1,17 +1,16 @@
 import { inject, Injectable } from '@angular/core';
 import { Router } from '@angular/router';
-import { ParsingService } from './parsing.service';
 import { LoggerService } from './logger.service';
+import { nip19 } from 'nostr-tools';
 
 @Injectable({
   providedIn: 'root'
 })
 export class NostrProtocolService {
-  private readonly parsing = inject(ParsingService);
   private readonly router = inject(Router);
   private readonly logger = inject(LoggerService);
 
-  constructor() {}
+  constructor() { }
 
   /**
    * Handles nostr protocol URLs by parsing the URI and navigating to the appropriate route
@@ -21,10 +20,10 @@ export class NostrProtocolService {
     this.logger.info('[NostrProtocol] Input URL:', url);
     this.logger.info('[NostrProtocol] URL type:', typeof url);
     this.logger.info('[NostrProtocol] URL length:', url?.length || 'undefined');
-    
+
     try {
       this.logger.debug('[NostrProtocol] Creating URL object from:', url);
-      
+
       let urlObj: URL;
       try {
         urlObj = new URL(url);
@@ -41,7 +40,7 @@ export class NostrProtocolService {
       this.logger.debug('[NostrProtocol] Extracting nostr parameter from URL');
       const urlParams = new URLSearchParams(urlObj.search);
       this.logger.debug('[NostrProtocol] URLSearchParams created, available keys:', Array.from(urlParams.keys()));
-      
+
       const nostrValue = urlParams.get('nostr');
       this.logger.debug('[NostrProtocol] Raw nostr parameter value:', nostrValue);
       this.logger.debug('[NostrProtocol] Nostr value type:', typeof nostrValue);
@@ -63,40 +62,34 @@ export class NostrProtocolService {
       // Clean the nostr value by removing web+nostr:// protocol wrapper if present
       this.logger.debug('[NostrProtocol] Cleaning nostr value of protocol wrappers');
       let cleanedNostrValue = nostrValue;
-      
-      // Check if it contains the web+nostr:// protocol wrapper
-      if (cleanedNostrValue.includes('web+nostr://')) {
-        this.logger.debug('[NostrProtocol] Found web+nostr:// protocol wrapper, removing it');
-        // Extract everything after web+nostr://
-        const parts = cleanedNostrValue.split('web+nostr://');
-        if (parts.length > 1) {
-          cleanedNostrValue = parts[1];
-          this.logger.debug('[NostrProtocol] Extracted content after web+nostr://:', cleanedNostrValue);
-        }
-      }
-      
+
+      cleanedNostrValue = cleanedNostrValue.replace('web+nostr://', '');
+      cleanedNostrValue = cleanedNostrValue.replace('web+nostr:', '');
+
+      this.logger.debug('[NostrProtocol] Extracted content after replace:', cleanedNostrValue);
+
       // Remove trailing slash if present
       if (cleanedNostrValue.endsWith('/')) {
         this.logger.debug('[NostrProtocol] Removing trailing slash');
         cleanedNostrValue = cleanedNostrValue.slice(0, -1);
       }
-      
+
       this.logger.debug('[NostrProtocol] Cleaned nostr value:', cleanedNostrValue);
-      
+
       // Ensure it has the nostr: prefix
       this.logger.debug('[NostrProtocol] Checking if cleaned value has nostr: prefix');
       const hasPrefix = cleanedNostrValue.startsWith('nostr:');
       this.logger.debug('[NostrProtocol] Has nostr: prefix:', hasPrefix);
-      
+
       const nostrUri = hasPrefix ? cleanedNostrValue : `nostr:${cleanedNostrValue}`;
       this.logger.info('[NostrProtocol] Final nostr URI to process:', nostrUri);
 
       // Parse the nostr URI
       this.logger.debug('[NostrProtocol] Calling parsing service to parse nostr URI');
       const parseStartTime = Date.now();
-      
-      const parsed = await this.parsing.parseNostrUri(nostrUri);
-      
+
+      const parsed = nip19.decodeNostrURI(nostrUri);
+
       const parseEndTime = Date.now();
       this.logger.debug('[NostrProtocol] Parsing completed in:', parseEndTime - parseStartTime, 'ms');
       this.logger.debug('[NostrProtocol] Parse result:', parsed);
@@ -116,21 +109,21 @@ export class NostrProtocolService {
       // Route based on the type
       this.logger.debug('[NostrProtocol] Calling routeByNostrType with:', { type: parsed.type, data: parsed.data });
       await this.routeByNostrType(parsed.type, parsed.data);
-      
+
       this.logger.info('[NostrProtocol] ==> Protocol handling completed successfully');
 
     } catch (error) {
       this.logger.error('[NostrProtocol] ==> ERROR: Protocol handling failed');
       this.logger.error('[NostrProtocol] Error details:', error);
       this.logger.error('[NostrProtocol] Original URL that caused error:', url);
-      
+
       // Log additional context
       if (error instanceof Error) {
         this.logger.error('[NostrProtocol] Error name:', error.name);
         this.logger.error('[NostrProtocol] Error message:', error.message);
         this.logger.error('[NostrProtocol] Error stack:', error.stack);
       }
-      
+
       // Log environment info
       this.logger.error('[NostrProtocol] User agent:', navigator?.userAgent || 'unknown');
       this.logger.error('[NostrProtocol] Current location:', window?.location?.href || 'unknown');
@@ -146,7 +139,7 @@ export class NostrProtocolService {
     this.logger.info('[NostrProtocol] Type:', type);
     this.logger.info('[NostrProtocol] Data:', data);
     this.logger.info('[NostrProtocol] Data type:', typeof data);
-    
+
     if (data && typeof data === 'object') {
       this.logger.debug('[NostrProtocol] Data object keys:', Object.keys(data));
       this.logger.debug('[NostrProtocol] Data object values:', Object.values(data));
@@ -165,12 +158,12 @@ export class NostrProtocolService {
           this.logger.info('[NostrProtocol] Routing to profile page for nprofile');
           this.logger.debug('[NostrProtocol] Profile data:', data);
           this.logger.debug('[NostrProtocol] Profile pubkey:', data?.pubkey);
-          
+
           if (!data?.pubkey) {
             this.logger.error('[NostrProtocol] No pubkey found in nprofile data:', data);
             throw new Error('Invalid nprofile data: missing pubkey');
           }
-          
+
           await this.router.navigate(['/p', data.pubkey]);
           this.logger.info('[NostrProtocol] Successfully navigated to profile page from nprofile');
           break;
@@ -186,12 +179,12 @@ export class NostrProtocolService {
           this.logger.info('[NostrProtocol] Routing to event page for nevent');
           this.logger.debug('[NostrProtocol] Event data:', data);
           this.logger.debug('[NostrProtocol] Event id:', data?.id);
-          
+
           if (!data?.id) {
             this.logger.error('[NostrProtocol] No id found in nevent data:', data);
             throw new Error('Invalid nevent data: missing id');
           }
-          
+
           await this.router.navigate(['/e', data.id]);
           this.logger.info('[NostrProtocol] Successfully navigated to event page from nevent');
           break;
@@ -200,7 +193,7 @@ export class NostrProtocolService {
           this.logger.info('[NostrProtocol] Routing for naddr (address pointer)');
           this.logger.debug('[NostrProtocol] Address data:', data);
           this.logger.debug('[NostrProtocol] Address identifier:', data?.identifier);
-          
+
           // For address pointers, we might need to construct a specific route
           // For now, navigate to the event page with the identifier
           if (data?.identifier) {
@@ -222,15 +215,15 @@ export class NostrProtocolService {
           await this.router.navigate(['/']);
           break;
       }
-      
+
       this.logger.info('[NostrProtocol] --> Routing completed successfully');
-      
+
     } catch (routingError) {
       this.logger.error('[NostrProtocol] --> ERROR: Routing failed');
       this.logger.error('[NostrProtocol] Routing error:', routingError);
       this.logger.error('[NostrProtocol] Failed for type:', type);
       this.logger.error('[NostrProtocol] Failed for data:', data);
-      
+
       // Attempt fallback navigation to home
       try {
         this.logger.info('[NostrProtocol] Attempting fallback navigation to home');
@@ -239,72 +232,6 @@ export class NostrProtocolService {
       } catch (fallbackError) {
         this.logger.error('[NostrProtocol] Even fallback navigation failed:', fallbackError);
       }
-    }
-  }
-
-  /**
-   * Handles direct nostr URI without the web+nostr protocol
-   */
-  async handleDirectNostrUri(nostrUri: string): Promise<void> {
-    this.logger.info('[NostrProtocol] ==> Starting direct nostr URI handling');
-    this.logger.info('[NostrProtocol] Direct nostr URI:', nostrUri);
-    this.logger.info('[NostrProtocol] URI type:', typeof nostrUri);
-    this.logger.info('[NostrProtocol] URI length:', nostrUri?.length || 'undefined');
-    
-    try {
-      this.logger.debug('[NostrProtocol] Validating direct nostr URI format');
-      
-      if (!nostrUri || typeof nostrUri !== 'string') {
-        this.logger.error('[NostrProtocol] Invalid direct nostr URI - not a string or empty:', nostrUri);
-        return;
-      }
-      
-      if (!nostrUri.startsWith('nostr:')) {
-        this.logger.warn('[NostrProtocol] Direct nostr URI does not start with nostr: prefix:', nostrUri);
-        this.logger.debug('[NostrProtocol] Attempting to add nostr: prefix');
-        nostrUri = `nostr:${nostrUri}`;
-      }
-      
-      this.logger.debug('[NostrProtocol] Processing direct nostr URI:', nostrUri);
-
-      // Parse the nostr URI
-      this.logger.debug('[NostrProtocol] Calling parsing service for direct URI');
-      const parseStartTime = Date.now();
-      
-      const parsed = await this.parsing.parseNostrUri(nostrUri);
-      
-      const parseEndTime = Date.now();
-      this.logger.debug('[NostrProtocol] Direct URI parsing completed in:', parseEndTime - parseStartTime, 'ms');
-      this.logger.debug('[NostrProtocol] Direct URI parse result:', parsed);
-
-      if (!parsed) {
-        this.logger.error('[NostrProtocol] Failed to parse direct nostr URI');
-        this.logger.error('[NostrProtocol] Original direct URI:', nostrUri);
-        return;
-      }
-      
-      this.logger.info('[NostrProtocol] Successfully parsed direct nostr URI');
-      this.logger.info('[NostrProtocol] Direct URI parsed type:', parsed.type);
-      this.logger.info('[NostrProtocol] Direct URI parsed data:', parsed.data);
-
-      // Route based on the type
-      this.logger.debug('[NostrProtocol] Calling routeByNostrType for direct URI');
-      await this.routeByNostrType(parsed.type, parsed.data);
-      
-      this.logger.info('[NostrProtocol] ==> Direct nostr URI handling completed successfully');
-
-    } catch (error) {
-      this.logger.error('[NostrProtocol] ==> ERROR: Direct nostr URI handling failed');
-      this.logger.error('[NostrProtocol] Direct URI error:', error);
-      this.logger.error('[NostrProtocol] Original direct nostr URI:', nostrUri);
-      
-      if (error instanceof Error) {
-        this.logger.error('[NostrProtocol] Direct URI error name:', error.name);
-        this.logger.error('[NostrProtocol] Direct URI error message:', error.message);
-        this.logger.error('[NostrProtocol] Direct URI error stack:', error.stack);
-      }
-      
-      this.logger.error('[NostrProtocol] Direct URI error timestamp:', new Date().toISOString());
     }
   }
 }
