@@ -17,11 +17,14 @@ import { RelayInfoDialogComponent } from './relay-info-dialog.component';
 import { RelayPingResultsDialogComponent, PingResult } from './relay-ping-results-dialog.component';
 import { LayoutService } from '../../services/layout.service';
 import { NostrService } from '../../services/nostr.service';
-import { kinds, SimplePool } from 'nostr-tools';
+import { kinds, SimplePool, UnsignedEvent } from 'nostr-tools';
 import { StorageService } from '../../services/storage.service';
 import { NotificationService } from '../../services/notification.service';
 import { ApplicationService } from '../../services/application.service';
 import { ProfileStateService } from '../../services/profile-state.service';
+import { UtilitiesService } from '../../services/utilities.service';
+import { AccountStateService } from '../../services/account-state.service';
+import { AccountRelayService } from '../../services/account-relay.service';
 
 @Component({
   selector: 'app-relays-page',
@@ -52,6 +55,9 @@ export class RelaysComponent implements OnInit, OnDestroy {
   private notifications = inject(NotificationService);
   private app = inject(ApplicationService);
   private profileState = inject(ProfileStateService);
+  private readonly utilities = inject(UtilitiesService);
+  private readonly accountState = inject(AccountStateService);
+  private readonly accountRelay = inject(AccountRelayService);
 
   newRelayUrl = signal('');
   newBootstrapUrl = signal('');
@@ -367,6 +373,28 @@ export class RelaysComponent implements OnInit, OnDestroy {
     });
   }
 
+  async updateDirectMessageRelayList() {
+    debugger;
+    const relayUrls = this.relays().map(relay => { return relay.url });
+    const normalizedUrls = this.utilities.normalizeRelayUrls(relayUrls);
+    const relayTags = this.nostr.createTags('relay', normalizedUrls);
+    const pubkey = this.accountState.pubkey();
+
+    // const relayTags = this.createTags('r', [relayServerUrl!]);
+
+    // Create Relay List event for the new user
+    const relayListEvent: UnsignedEvent = {
+      pubkey,
+      created_at: Math.floor(Date.now() / 1000),
+      kind: kinds.DirectMessageRelaysList,
+      tags: relayTags,
+      content: ''
+    };
+
+    const signedEvent = await this.nostr.signEvent(relayListEvent);
+    const publishResults = this.accountRelay.publish(signedEvent);
+  }
+
   async discoveryRelayTest() {
     const relaysUrls = ['ws://localhost:5210'];
     const pubkey = '17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515';
@@ -450,7 +478,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
   async findClosestRelay(): Promise<void> {
     this.isCheckingRelays.set(true);
     this.logger.info('Starting latency check to find closest discovery relay');
-    
+
     // Combine user's discovery relays with known ones, removing duplicates
     const relaysToCheck = [...new Set([
       ...this.relay.discoveryRelays,
@@ -495,7 +523,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
       dialogRef.afterClosed().subscribe(result => {
         if (result?.selected) {
           const selectedRelay = result.selected as PingResult;
-          
+
           // Run in setTimeout to avoid the ExpressionChangedAfterItHasBeenCheckedError
           setTimeout(() => {
             this.relay.addDiscoveryRelay(selectedRelay.url);
@@ -515,34 +543,34 @@ export class RelaysComponent implements OnInit, OnDestroy {
   private async checkRelayPing(relayUrl: string): Promise<number> {
     return new Promise<number>((resolve, reject) => {
       let startTime: number;
-      
+
       try {
         // Use WebSocket for ping checking since we're testing relay connections
         startTime = performance.now();
         const ws = new WebSocket(relayUrl);
-        
+
         const timeout = setTimeout(() => {
           ws.close();
           reject(new Error('Timeout'));
         }, 5000); // 5 second timeout
-        
+
         ws.onopen = () => {
           // Connection established, calculate ping time
           const pingTime = Math.round(performance.now() - startTime);
           clearTimeout(timeout);
-          
+
           // Send a simple ping message if possible
           try {
             ws.send(JSON.stringify(["REQ", "ping-check", {}]));
           } catch (e) {
             // Ignore errors when sending ping
           }
-          
+
           // Start closing the connection
           ws.close();
           resolve(pingTime);
         };
-        
+
         ws.onerror = (error) => {
           clearTimeout(timeout);
           reject(error);

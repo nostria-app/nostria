@@ -1892,12 +1892,14 @@ export class NostrService implements NostriaService {
     await this.storage.saveEvent(signedMediaEvent);
     this.publishQueueService.publish(signedMediaEvent, PublishTarget.Account);
 
+    const relayDMTags = this.createTags('relay', [relayServerUrl!]);
+
     // Create DM Relay List event for the new user to support NIP-17.
     const relayDMListEvent: UnsignedEvent = {
       pubkey,
       created_at: Math.floor(Date.now() / 1000),
       kind: kinds.DirectMessageRelaysList,
-      tags: relayTags,
+      tags: relayDMTags,
       content: ''
     };
 
