@@ -32,9 +32,8 @@ export class CredentialsComponent {
   snackBar = inject(MatSnackBar);
   utilities = inject(UtilitiesService);
   accountState = inject(AccountStateService);
-  
   isNsecVisible = signal(false);
-  
+
   toggleNsecVisibility(): void {
     this.isNsecVisible.update(current => !current);
   }

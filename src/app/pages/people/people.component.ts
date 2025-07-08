@@ -312,6 +312,6 @@ export class PeopleComponent {
   }
 
   viewProfile(pubkey: string) {
-    this.router.navigate(['/profile', pubkey]);
+    this.router.navigate(['/p', pubkey]);
   }
 }
