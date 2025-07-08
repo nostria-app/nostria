@@ -143,12 +143,12 @@
                     <div class="chat-preview">
                       @if (chat.lastMessage) {
                       <span class="message-preview">
-                        @if (chat.lastMessage?.isOutgoing) {
+                        @if (chat.lastMessage.isOutgoing) {
                         <span class="outgoing-prefix">You: </span>
                         }
-                        {{ chat.lastMessage?.content }}
+                        {{ chat.lastMessage.content }}
                       </span>
-                      <span class="message-time">{{ chat.lastMessage?.created_at | ago }}</span>
+                      <span class="message-time">{{ chat.lastMessage.created_at | ago }}</span>
                       } @else {
                       <span class="message-preview empty-message">New conversation</span>
                       }

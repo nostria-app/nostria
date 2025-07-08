@@ -40,6 +40,7 @@ import { AccountStateService } from './services/account-state.service';
 import { SearchResultsComponent } from './components/search-results/search-results.component';
 import { NostrProtocolService } from './services/nostr-protocol.service';
 import { StateService } from './services/state.service';
+import { PublishQueueService } from './services/publish-queue';
 
 interface NavItem {
   path: string;
@@ -99,6 +100,7 @@ export class App {
   accountState = inject(AccountStateService);
   state = inject(StateService);
   nostrProtocol = inject(NostrProtocolService);
+  publishQueue = inject(PublishQueueService);
   private readonly platform = inject(PLATFORM_ID);
   private readonly document = inject(DOCUMENT);
 

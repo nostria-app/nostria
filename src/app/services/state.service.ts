@@ -7,7 +7,6 @@ import { NotificationService } from './notification.service';
 import { NostrService } from './nostr.service';
 import { RelayService } from './relay.service';
 import { MessagingService } from './messaging.service';
-import { PublishQueueService } from './publish-queue';
 
 /** Service that handles changing account, will clear and load data in different services. */
 @Injectable({
@@ -21,7 +20,6 @@ export class StateService implements NostriaService {
   nostr = inject(NostrService);
   relay = inject(RelayService);
   messaging = inject(MessagingService);
-  queue = inject(PublishQueueService);
 
   constructor() {
     effect(async () => {
@@ -46,7 +44,6 @@ export class StateService implements NostriaService {
   }
 
   clear() {
-    this.queue.clear();
     this.accountState.clear();
     this.messaging.clear();
     this.nostr.clear();
