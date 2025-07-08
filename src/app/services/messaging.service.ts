@@ -114,7 +114,7 @@ export class MessagingService implements NostriaService {
   // Helper method to add a message to a chat (prevents duplicates and updates sorting)
   addMessageToChat(pubkey: string, message: DirectMessage): void {
     const currentMap = this.chatsMap();
-    const chatId = message.encryptionType === 'nip04' ? `nip04${pubkey}` : `nip44${pubkey}`;
+    const chatId = message.encryptionType === 'nip04' ? `${pubkey}-nip04` : `${pubkey}-nip44`;
 
     // Create a new Map to ensure signal reactivity
     const newMap = new Map(currentMap);

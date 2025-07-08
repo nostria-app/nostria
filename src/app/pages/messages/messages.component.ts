@@ -461,6 +461,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
         // Mark chat as read when selected
         this.markChatAsRead(chat.id);
+
+        this.router.navigate(['/messages', chat.id]);
     }
 
     /**

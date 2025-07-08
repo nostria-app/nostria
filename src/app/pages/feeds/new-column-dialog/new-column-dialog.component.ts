@@ -439,7 +439,6 @@ const NOSTR_KINDS = [
         justify-content: space-between;
         flex: 1;
         height: 100%;
-        box-sizing: border-box;
       }
 
       .type-header {

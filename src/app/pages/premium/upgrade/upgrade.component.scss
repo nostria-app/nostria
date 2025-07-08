@@ -223,7 +223,6 @@ h2 {
   position: relative;
   min-height: 90px;
   color: var(--mat-sys-on-surface);
-  box-sizing: border-box;
 }
 .payment-option-card.selected {
   border-color: var(--mat-sys-primary);
@@ -611,7 +610,6 @@ h2 {
     max-width: 100%;
     width: 100%;
     padding: 0.75rem;
-    box-sizing: border-box;
   }
   .payment-option-content {
     margin-left: 2rem;

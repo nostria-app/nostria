@@ -114,7 +114,6 @@ import { UtilitiesService } from '../../services/utilities.service';
       border-bottom: 1px solid var(--mat-sys-outline-variant);
       cursor: pointer;
       transition: background-color 0.2s ease;
-      box-sizing: border-box;
     }
 
     .search-result-item:last-child {

@@ -33,6 +33,8 @@ import { EventPageComponent } from './pages/event/event.component';
 import { NotificationManageComponent } from './pages/notifications/manage/manage.component';
 import { DataResolver } from './data-resolver';
 import { UsernameResolver } from './usernameResolver';
+import { MessagesMain } from './pages/messages/main/main';
+import { MessagesList } from './pages/messages/list/list';
 
 const profileChildren: Routes = [
   {
@@ -70,7 +72,17 @@ export const routes: Routes = [
     ]
   },
   { path: 'b/:id', loadComponent: () => import('./pages/badges/badge-details/badge-details.component').then(m => m.BadgeDetailsComponent) },
-  { path: 'messages', component: MessagesComponent },
+  
+  // { path: 'messages', component: MessagesComponent },
+  {
+    path: 'messages',
+    component: MessagesComponent,
+    children: [
+      { path: '', component: MessagesMain },
+       { path: ':id', component: MessagesList },
+    ]
+  },
+
   { path: 'settings', component: SettingsComponent },
   { path: 'media-queue', component: MediaQueueComponent },
   { path: 'notifications', component: NotificationsComponent },

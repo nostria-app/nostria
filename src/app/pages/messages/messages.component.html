@@ -224,6 +224,8 @@
 
     <div class="message-list" #messagesWrapper>
 
+      <router-outlet></router-outlet>
+
       @if (hasMoreMessages() && !isLoadingMore()) {
       <div class="load-more-indicator">
         <p class="load-more-hint">Scroll up to load older messages</p>

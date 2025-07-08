@@ -1,6 +1,5 @@
 .messages {
   display: flex;
-  box-sizing: border-box;
   flex-wrap: nowrap;
   width: 100%;
   height: 100%;
@@ -31,7 +30,6 @@
 }
 
 .message-threads-header {
-  box-sizing: border-box;
   padding: 0 1rem;
   height: 64px;
   flex-shrink: 0;
@@ -49,7 +47,6 @@
 }
 
 .message-threads {
-  box-sizing: border-box;
   flex: 1;
   /* takes remaining space */
   overflow-y: auto;
@@ -57,7 +54,6 @@
 
 .message-threads-load-more {
   height: 80px;
-  box-sizing: border-box;
   flex-shrink: 0;
 
   display: flex;
@@ -69,8 +65,6 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  /* container fills parent */
-  box-sizing: border-box;
   flex: 1;
 
   // On mobile, hide when showing list
@@ -82,7 +76,6 @@
 }
 
 .message-list-header {
-  box-sizing: border-box;
   height: 64px;
   flex-shrink: 0;
   padding: 0.4rem;
@@ -95,20 +88,16 @@
 }
 
 .message-list {
-  box-sizing: border-box;
   height: 100%;
   flex: 1;
   /* takes all remaining space */
   overflow-y: auto;
   /* enable scrolling if needed */
-  box-sizing: border-box;
   padding: 0 0.4rem;
 }
 
 .message-input-container {
   height: 80px;
-  /* optional styling */
-  box-sizing: border-box;
   display: flex;
   // padding: 12px 16px;
   gap: 0.4rem;
