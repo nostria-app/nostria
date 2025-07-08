@@ -88,6 +88,29 @@
           <mat-card-header>
             <mat-card-title>
               <div class="info-title">
+                <mat-icon class="info-icon">dns</mat-icon>
+                Direct Message relays
+              </div>
+            </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <p>
+              Nostria advices Nostr users to not use different relays for Direct Messages. If you want this advanced feature, 
+              you can use a different Nostr client that supports it.
+            </p>
+            <p>
+              Click the button below to update your Direct Messages Relays to be the same relays as your User Relays.
+            </p>
+            <p>
+              <button mat-flat-button (click)="updateDirectMessageRelayList()">Update Direct Message Relay List</button>
+            </p>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="info-card">
+          <mat-card-header>
+            <mat-card-title>
+              <div class="info-title">
                 <mat-icon class="info-icon">info</mat-icon>
                 How Your Relays Work
               </div>
