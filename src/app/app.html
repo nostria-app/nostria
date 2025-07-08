@@ -8,9 +8,9 @@
   <app-loading-overlay [message]="appState.loadingMessage()"></app-loading-overlay>
   }
 
-  @if (logger.logOverlay) {
+  <!-- @if (logger.logOverlay) {
   <app-debug-overlay></app-debug-overlay>
-  }
+  } -->
 
   <!-- Success overlay with checkmark -->
   @if (appState.showSuccess()) {
