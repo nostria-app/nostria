@@ -51,7 +51,6 @@
 
 .welcome-logo-container {
   padding: 1rem;
-  box-sizing: border-box;
 }
 
 .welcome-logo {
@@ -60,7 +59,6 @@
 }
 
 .welcome-content {
-  box-sizing: border-box;
   flex: 1; // Take remaining space
   overflow-y: auto;
   // display: flex;
@@ -84,7 +82,6 @@
 }
 
 .welcome-content-container {
-  box-sizing: border-box;
   flex: 1; // Take remaining space
   // overflow-y: auto; // Enable scrolling
   display: flex;
@@ -108,7 +105,6 @@
 }
 
 .welcome-footer {
-  box-sizing: border-box;
   height: 60px;
   min-height: 60px;
   width: 100%;

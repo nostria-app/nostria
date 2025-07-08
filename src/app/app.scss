@@ -150,7 +150,6 @@ mat-sidenav-content {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  box-sizing: border-box;
   // Remove fixed height since we're using flexbox now
 }
 
