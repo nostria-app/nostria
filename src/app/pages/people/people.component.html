@@ -126,9 +126,7 @@
         'details-list': viewMode() === 'details' || viewMode() === 'list',
         'tiles-container': viewMode() === 'tiles'      }">
           @for (pubkey of filteredPeople(); track pubkey) {
-
             <!-- {{ userInfoCache().get(pubkey) | json }} -->
-
           <app-user-profile [info]="userInfoCache().get(pubkey)" [pubkey]="pubkey" [view]="viewMode()" [passthrough]="true" (click)="viewProfile(pubkey)"></app-user-profile>
           }
         </div>

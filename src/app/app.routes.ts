@@ -132,7 +132,6 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/people/people.component').then(m => m.PeopleComponent),
     title: 'People'
   },
-  { path: 'profile', redirectTo: '/credentials' },
   { path: 'login', component: LoginDialogComponent },
   { path: '**', redirectTo: '/' } // Update to redirect to root instead of /home
 ];
