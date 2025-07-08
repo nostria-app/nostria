@@ -17,6 +17,7 @@ import { MEDIA_SERVERS_EVENT_KIND, NostriaService, NostrRecord } from '../interf
 import { DataService } from './data.service';
 import { UtilitiesService } from './utilities.service';
 import { Tier } from '../api/models';
+import { PublishQueueService, PublishTarget } from './publish-queue';
 
 export interface NostrUser {
   pubkey: string;
@@ -52,6 +53,7 @@ export class NostrService implements NostriaService {
   private readonly region = inject(RegionService);
   private readonly data = inject(DataService);
   private readonly utilities = inject(UtilitiesService);
+  private readonly publishQueueService = inject(PublishQueueService);
 
   initialized = signal(false);
   MAX_WAIT_TIME = 2000;
@@ -1888,8 +1890,22 @@ export class NostrService implements NostriaService {
 
     const signedMediaEvent = finalizeEvent(mediaServerEvent, secretKey);
     await this.storage.saveEvent(signedMediaEvent);
+    this.publishQueueService.publish(signedMediaEvent, PublishTarget.Account);
 
-    // TODO: The media server event should be published to discovery relays, but we cannot do that yet, implement
+    // Create DM Relay List event for the new user to support NIP-17.
+    const relayDMListEvent: UnsignedEvent = {
+      pubkey,
+      created_at: Math.floor(Date.now() / 1000),
+      kind: kinds.DirectMessageRelaysList,
+      tags: relayTags,
+      content: ''
+    };
+
+    const signedDMEvent = finalizeEvent(relayDMListEvent, secretKey);
+    await this.storage.saveEvent(signedDMEvent);
+    this.publishQueueService.publish(signedDMEvent, PublishTarget.Account);
+
+    // TODO: The media server event should be published to user relays, but we cannot do that yet, implement
     // a queue for event publishing.
     await this.setAccount(newUser);
   }
