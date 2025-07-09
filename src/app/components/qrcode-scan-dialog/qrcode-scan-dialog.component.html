@@ -1,60 +1,63 @@
 <div class="qr-dialog-container">
-  <div class="qr-dialog-header">
-    <h2 mat-dialog-title>Scan QR Code</h2>
-    <button mat-icon-button mat-dialog-close class="close-button">
-      <mat-icon>close</mat-icon>
-    </button>
-  </div>
-  
   <mat-dialog-content class="qr-dialog-content">
     <div class="camera-container">
       <video #videoElement class="camera-video" autoplay playsinline muted></video>
       <canvas #canvasElement class="camera-overlay"></canvas>
-    </div>
-    
-  @if (errorMessage()) {
-    <div class="error-message">
-      <mat-icon>error</mat-icon>
-      {{ errorMessage() }}
-    </div>
-    
-    @if (availableCameras().length > 0) {
-      <div class="camera-selection">
-        <h3>Try a different camera:</h3>
-        <div class="camera-buttons">
-          @for (camera of availableCameras(); track camera.deviceId) {
-            <button 
-              mat-raised-button 
-              [color]="currentDevice()?.deviceId === camera.deviceId ? 'primary' : 'basic'"
-              (click)="tryDifferentCamera(camera.deviceId)"
-              class="camera-option-button">
-              <mat-icon>videocam</mat-icon>
-              {{ camera.label }}
-            </button>
+      
+      <!-- Floating close button -->
+      <button mat-icon-button mat-dialog-close class="floating-close-button">
+        <mat-icon>close</mat-icon>
+      </button>
+      
+      <!-- Scanning indicator - top center -->
+      @if (isScanning()) {
+        <div class="scanning-indicator">
+          <mat-icon>qr_code_scanner</mat-icon>
+          Scanning for QR codes...
+        </div>
+      }
+      
+      <!-- Camera controls - bottom center -->
+      @if (availableCameras().length > 1) {
+        <div class="camera-controls">
+          <button mat-raised-button color="primary" (click)="switchCamera()" [disabled]="!isScanning()">
+            <mat-icon>switch_camera</mat-icon>
+            Switch Camera ({{ currentCameraIndex() + 1 }}/{{ availableCameras().length }})
+          </button>
+          @if (currentDevice()) {
+            <div class="camera-info">
+              Current: {{ currentDevice()?.label || 'Unknown camera' }}
+            </div>
           }
         </div>
-      </div>
-    }
-  }
+      }
+    </div>
     
-    @if (availableCameras().length > 1) {
-      <div class="camera-controls">
-        <button mat-raised-button color="primary" (click)="switchCamera()" [disabled]="!isScanning()">
-          <mat-icon>switch_camera</mat-icon>
-          Switch Camera ({{ currentCameraIndex() + 1 }}/{{ availableCameras().length }})
-        </button>
-        @if (currentDevice()) {
-          <div class="camera-info">
-            Current: {{ currentDevice()?.label || 'Unknown camera' }}
+    <!-- Error panel - outside camera container -->
+    @if (errorMessage()) {
+      <div class="error-panel">
+        <div class="error-message">
+          <mat-icon>error</mat-icon>
+          {{ errorMessage() }}
+        </div>
+        
+        @if (availableCameras().length > 0) {
+          <div class="camera-selection">
+            <h3>Try a different camera:</h3>
+            <div class="camera-buttons">
+              @for (camera of availableCameras(); track camera.deviceId) {
+                <button 
+                  mat-raised-button 
+                  [color]="currentDevice()?.deviceId === camera.deviceId ? 'primary' : 'basic'"
+                  (click)="tryDifferentCamera(camera.deviceId)"
+                  class="camera-option-button">
+                  <mat-icon>videocam</mat-icon>
+                  {{ camera.label }}
+                </button>
+              }
+            </div>
           </div>
         }
-      </div>
-    }
-    
-    @if (isScanning()) {
-      <div class="scanning-indicator">
-        <mat-icon>qr_code_scanner</mat-icon>
-        Scanning for QR codes...
       </div>
     }
   </mat-dialog-content>
