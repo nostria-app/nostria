@@ -209,6 +209,21 @@ export class StorageService {
   // Signal to track database initialization status
   initialized = signal(false);
 
+  // Signal to track storage capabilities and issues
+  storageInfo = signal<{
+    isIndexedDBAvailable: boolean;
+    isPrivateMode: boolean;
+    quotaInfo: any;
+    initializationAttempts: number;
+    lastError?: string;
+  }>({
+    isIndexedDBAvailable: false,
+    isPrivateMode: false,
+    quotaInfo: null,
+    initializationAttempts: 0,
+    lastError: undefined
+  });
+
   // Database stats
   dbStats = signal<{
     relaysCount: number;
@@ -226,71 +241,81 @@ export class StorageService {
     estimatedSize: 0
   });
 
+  // Fallback storage using localStorage when IndexedDB fails
+  private fallbackStorage = new Map<string, any>();
+  useFallbackMode = signal(false);
+
   constructor() {
 
   }
 
   async init(): Promise<void> {
+    this.logger.info('StorageService.init() called');
+    
     if (this.initialized()) {
       this.logger.info('Database already initialized, skipping initialization');
       return;
     }
 
-    // Initialize the database
-    await this.initDatabase();
+    try {
+      this.logger.info('Starting IndexedDB availability check');
+      
+      // Update storage info
+      this.storageInfo.update(info => ({
+        ...info,
+        isIndexedDBAvailable: 'indexedDB' in window,
+        isPrivateMode: this.detectPrivateMode(),
+        initializationAttempts: info.initializationAttempts + 1
+      }));
+      
+      // Check if IndexedDB is available
+      if (!('indexedDB' in window)) {
+        throw new Error('IndexedDB is not supported in this browser');
+      }
+
+      this.logger.info('IndexedDB is available, proceeding with initialization');
+      
+      // Get quota info
+      const quotaInfo = await this.getStorageQuotaInfo();
+      this.storageInfo.update(info => ({ ...info, quotaInfo }));
+      
+      // Initialize the database
+      await this.initDatabase();
+      
+      this.logger.info('StorageService initialization completed successfully');
+    } catch (error: any) {
+      this.logger.error('StorageService initialization failed', {
+        error: error?.message || 'Unknown error',
+        name: error?.name || 'Unknown',
+        userAgent: navigator.userAgent,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Update storage info with error
+      this.storageInfo.update(info => ({
+        ...info,
+        lastError: error?.message || 'Unknown error'
+      }));
+      
+      // Still mark as initialized to prevent blocking the app
+      this.initialized.set(true);
+      throw error; // Re-throw so the app can handle it
+    }
   }
 
   private async initDatabase(): Promise<void> {
     try {
       this.logger.info('Initializing IndexedDB storage');
-      this.db = await openDB<NostriaDBSchema>(this.DB_NAME, this.DB_VERSION, {
-        upgrade: async (db, oldVersion, newVersion) => {
-          this.logger.info('Creating database schema', { oldVersion, newVersion });
-
-          // Create object stores if they don't exist
-          if (!db.objectStoreNames.contains('relays')) {
-            const relayStore = db.createObjectStore('relays', { keyPath: 'url' });
-            relayStore.createIndex('by-status', 'status');
-            this.logger.debug('Created relays object store');
-          }
-
-          // if (!db.objectStoreNames.contains('userMetadata')) {
-          //   const userMetadataStore = db.createObjectStore('userMetadata', { keyPath: 'pubkey' });
-          //   userMetadataStore.createIndex('by-updated', 'updated');
-          //   this.logger.debug('Created userMetadata object store');
-          // }
-
-          // if (!db.objectStoreNames.contains('userRelays')) {
-          //   const userRelaysStore = db.createObjectStore('userRelays', { keyPath: 'pubkey' });
-          //   userRelaysStore.createIndex('by-updated', 'updated');
-          //   this.logger.debug('Created userRelays object store');
-          // }
-
-          if (!db.objectStoreNames.contains('events')) {
-            const eventsStore = db.createObjectStore('events', { keyPath: 'id' });
-            eventsStore.createIndex('by-kind', 'kind');
-            eventsStore.createIndex('by-pubkey', 'pubkey');
-            eventsStore.createIndex('by-created', 'created_at');
-            eventsStore.createIndex('by-pubkey-kind', ['pubkey', 'kind']);
-            eventsStore.createIndex('by-pubkey-kind-d-tag', ['pubkey', 'kind', 'dTag']);
-            this.logger.debug('Created events object store');
-          }
-
-          if (!db.objectStoreNames.contains('info')) {
-            const infoStore = db.createObjectStore('info', { keyPath: 'compositeKey' });
-            infoStore.createIndex('by-type', 'type');
-            infoStore.createIndex('by-key', 'key');
-            infoStore.createIndex('by-updated', 'updated');
-            this.logger.debug('Created info object store');
-          }
-
-          if (!db.objectStoreNames.contains('notifications')) {
-            const notificationsStore = db.createObjectStore('notifications', { keyPath: 'id' });
-            notificationsStore.createIndex('by-timestamp', 'timestamp');
-            this.logger.debug('Created notifications object store');
-          }
-        }
+      
+      // Add timeout to prevent hanging
+      const initPromise = this.createDatabase();
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('IndexedDB initialization timeout after 10 seconds'));
+        }, 10000); // 10 second timeout
       });
+
+      this.db = await Promise.race([initPromise, timeoutPromise]);
 
       this.logger.info('IndexedDB initialization completed');
 
@@ -298,8 +323,148 @@ export class StorageService {
       this.initialized.set(true);
     } catch (error) {
       this.logger.error('Failed to initialize IndexedDB', error);
-      // Set initialized to false in case of error
-      this.initialized.set(false);
+      this.handleInitializationError(error);
+    }
+  }
+
+  private async createDatabase(): Promise<IDBPDatabase<NostriaDBSchema>> {
+    this.logger.debug('Starting IndexedDB database creation/opening');
+    
+    return await openDB<NostriaDBSchema>(this.DB_NAME, this.DB_VERSION, {
+      upgrade: async (db, oldVersion, newVersion) => {
+        this.logger.info('Creating database schema', { oldVersion, newVersion });
+
+        // Create object stores if they don't exist
+        if (!db.objectStoreNames.contains('relays')) {
+          const relayStore = db.createObjectStore('relays', { keyPath: 'url' });
+          relayStore.createIndex('by-status', 'status');
+          this.logger.debug('Created relays object store');
+        }
+
+        if (!db.objectStoreNames.contains('events')) {
+          const eventsStore = db.createObjectStore('events', { keyPath: 'id' });
+          eventsStore.createIndex('by-kind', 'kind');
+          eventsStore.createIndex('by-pubkey', 'pubkey');
+          eventsStore.createIndex('by-created', 'created_at');
+          eventsStore.createIndex('by-pubkey-kind', ['pubkey', 'kind']);
+          eventsStore.createIndex('by-pubkey-kind-d-tag', ['pubkey', 'kind', 'dTag']);
+          this.logger.debug('Created events object store');
+        }
+
+        if (!db.objectStoreNames.contains('info')) {
+          const infoStore = db.createObjectStore('info', { keyPath: 'compositeKey' });
+          infoStore.createIndex('by-type', 'type');
+          infoStore.createIndex('by-key', 'key');
+          infoStore.createIndex('by-updated', 'updated');
+          this.logger.debug('Created info object store');
+        }
+
+        if (!db.objectStoreNames.contains('notifications')) {
+          const notificationsStore = db.createObjectStore('notifications', { keyPath: 'id' });
+          notificationsStore.createIndex('by-timestamp', 'timestamp');
+          this.logger.debug('Created notifications object store');
+        }
+      },
+      blocked: (currentVersion, blockedVersion, event) => {
+        this.logger.warn('IndexedDB upgrade blocked', { currentVersion, blockedVersion });
+      },
+      blocking: (currentVersion, blockedVersion, event) => {
+        this.logger.warn('IndexedDB blocking other connections', { currentVersion, blockedVersion });
+      },
+      terminated: () => {
+        this.logger.error('IndexedDB connection terminated unexpectedly');
+      }
+    });
+  }
+
+  private handleInitializationError(error: any): void {
+    this.logger.error('IndexedDB initialization failed', {
+      error: error.message,
+      name: error.name,
+      stack: error.stack,
+      userAgent: navigator.userAgent,
+      isPrivateMode: this.detectPrivateMode(),
+      storageQuota: this.getStorageQuotaInfo()
+    });
+
+    // Set initialized to false in case of error
+    this.initialized.set(false);
+
+    // Attempt to fall back to a simpler database or memory storage
+    this.attemptFallbackInitialization();
+  }
+
+  private detectPrivateMode(): boolean {
+    try {
+      // Simple test for private mode
+      const testKey = '__test_storage__';
+      localStorage.setItem(testKey, 'test');
+      localStorage.removeItem(testKey);
+      return false;
+    } catch {
+      return true;
+    }
+  }
+
+  private async getStorageQuotaInfo(): Promise<any> {
+    try {
+      if ('storage' in navigator && 'estimate' in navigator.storage) {
+        const estimate = await navigator.storage.estimate();
+        return {
+          quota: estimate.quota,
+          usage: estimate.usage,
+          available: estimate.quota ? estimate.quota - (estimate.usage || 0) : 'unknown'
+        };
+      }
+    } catch (error) {
+      this.logger.debug('Could not get storage quota info', error);
+    }
+    return null;
+  }
+
+  private async attemptFallbackInitialization(): Promise<void> {
+    this.logger.info('Attempting fallback IndexedDB initialization');
+    
+    try {
+      // Try to delete and recreate the database
+      this.logger.info('Deleting corrupted database');
+      await deleteDB(this.DB_NAME);
+      
+      // Wait a bit before recreating
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Try again with a simplified approach
+      this.logger.info('Recreating database with simplified schema');
+      this.db = await openDB<NostriaDBSchema>(this.DB_NAME, 1, {
+        upgrade: async (db) => {
+          this.logger.info('Creating minimal database schema');
+          
+          // Create only essential stores
+          if (!db.objectStoreNames.contains('events')) {
+            const eventsStore = db.createObjectStore('events', { keyPath: 'id' });
+            eventsStore.createIndex('by-kind', 'kind');
+            eventsStore.createIndex('by-pubkey', 'pubkey');
+            this.logger.debug('Created minimal events store');
+          }
+        }
+      });
+
+      this.logger.info('Fallback IndexedDB initialization successful');
+      this.initialized.set(true);
+    } catch (fallbackError) {
+      this.logger.error('Fallback initialization also failed', fallbackError);
+      
+      // Final fallback: enable memory-only storage mode
+      this.logger.warn('Enabling memory-only storage mode due to IndexedDB failure');
+      this.useFallbackMode.set(true);
+      this.initialized.set(true);
+      
+      // Update storage info
+      this.storageInfo.update(info => ({
+        ...info,
+        lastError: 'Complete IndexedDB failure - using memory storage',
+        initializationAttempts: info.initializationAttempts + 1
+      }));
     }
   }
 
@@ -337,30 +502,13 @@ export class StorageService {
 
   // Generic event storage methods
   async saveEvent(event: Event): Promise<void> {
+    if (this.useFallbackMode()) {
+      return this.saveEventToFallback(event);
+    }
+
     try {
       const { kind } = event;
       
-
-      // Always store the content serialized.
-      // if (event.content && event.content !== '') {
-      //   try {
-
-      //     // First check if the content is already an object (not a string)
-      //     if (typeof event.content === 'string') {
-      //       // Check if it looks like JSON (starts with { or [)
-      //       const trimmedContent = event.content.trim();
-
-      //       if ((trimmedContent.startsWith('{') && trimmedContent.endsWith('}')) ||
-      //         (trimmedContent.startsWith('[') && trimmedContent.endsWith(']'))) {
-      //         // Try parsing it as JSON
-      //         event.content = JSON.parse(event.content);
-      //       }
-      //       // If it doesn't look like JSON or parsing fails, the catch block will keep it as a string
-      //     }
-      //   } catch (e) {
-      //     this.logger.error('Failed to parse event content', e);
-      //   }
-      // }
 
       // Handle according to event classification
       if (this.isReplaceableEvent(kind)) {
@@ -369,7 +517,6 @@ export class StorageService {
         await this.saveParameterizedReplaceableEvent(event);
       } else {
         // Regular or ephemeral events are stored directly
-        // For ephemeral events, we still store them but could implement a cleanup mechanism
         const eventToStore: any = { ...event };
 
         // Add dTag field for indexing if it's a parameterized replaceable event
@@ -384,6 +531,18 @@ export class StorageService {
       await this.updateStats();
     } catch (error) {
       this.logger.error(`Error saving event`, error);
+      // Fall back to in-memory storage
+      this.saveEventToFallback(event);
+    }
+  }
+
+  private async saveEventToFallback(event: Event): Promise<void> {
+    try {
+      const key = `event_${event.id}`;
+      this.fallbackStorage.set(key, event);
+      this.logger.debug(`Saved event to fallback storage: ${event.id}`);
+    } catch (error) {
+      this.logger.error(`Failed to save event to fallback storage`, error);
     }
   }
 
@@ -465,11 +624,16 @@ export class StorageService {
   }
 
   async getEvent(id: string): Promise<Event | undefined> {
+    if (this.useFallbackMode()) {
+      return this.fallbackStorage.get(`event_${id}`);
+    }
+
     try {
       return await this.db.get('events', id);
     } catch (error) {
       this.logger.error(`Error getting event ${id}`, error);
-      return undefined;
+      // Try fallback storage as last resort
+      return this.fallbackStorage.get(`event_${id}`);
     }
   }
 
@@ -1067,6 +1231,75 @@ export class StorageService {
       await this.updateStats();
     } catch (error) {
       this.logger.error('Error clearing all notifications', error);
+    }
+  }
+
+  // Diagnostic methods
+  async getDiagnosticInfo(): Promise<any> {
+    const info = {
+      timestamp: new Date().toISOString(),
+      userAgent: navigator.userAgent,
+      indexedDBSupported: 'indexedDB' in window,
+      isPrivateMode: this.detectPrivateMode(),
+      quotaInfo: await this.getStorageQuotaInfo(),
+      currentStorageInfo: this.storageInfo(),
+      initialized: this.initialized(),
+      dbConnection: !!this.db,
+      platform: {
+        isMobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
+        isIOS: /iPad|iPhone|iPod/.test(navigator.userAgent),
+        isAndroid: /Android/.test(navigator.userAgent),
+        isWebView: /(iPhone|iPod|iPad).*AppleWebKit(?!.*Safari)/i.test(navigator.userAgent) ||
+                   /; wv\)/.test(navigator.userAgent)
+      },
+      storage: {
+        localStorage: this.testLocalStorage(),
+        sessionStorage: this.testSessionStorage()
+      }
+    };
+
+    this.logger.info('Storage diagnostic info collected', info);
+    return info;
+  }
+
+  private testLocalStorage(): boolean {
+    try {
+      const test = '__storage_test__';
+      localStorage.setItem(test, test);
+      localStorage.removeItem(test);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private testSessionStorage(): boolean {
+    try {
+      const test = '__storage_test__';
+      sessionStorage.setItem(test, test);
+      sessionStorage.removeItem(test);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async checkStorageHealth(): Promise<boolean> {
+    try {
+      if (!this.db) {
+        this.logger.warn('Database connection not available');
+        return false;
+      }
+
+      // Try a simple operation
+      const tx = this.db.transaction('events', 'readonly');
+      await tx.store.count();
+      
+      this.logger.debug('Storage health check passed');
+      return true;
+    } catch (error: any) {
+      this.logger.error('Storage health check failed', error);
+      return false;
     }
   }
 }

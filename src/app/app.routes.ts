@@ -132,6 +132,11 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/people/people.component').then(m => m.PeopleComponent),
     title: 'People'
   },
+  { 
+    path: 'debug/storage', 
+    loadComponent: () => import('./components/storage-debug/storage-debug.component').then(mod => mod.StorageDebugComponent),
+    title: 'Storage Debug'
+  },
   { path: 'login', component: LoginDialogComponent },
   { path: '**', redirectTo: '/' } // Update to redirect to root instead of /home
 ];

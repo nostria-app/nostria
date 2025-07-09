@@ -357,15 +357,70 @@ export class App {
       return;
     }
 
-    this.logger.info('[App] Initializing storage');
-    // Initialize storage, then nostr initialized and then app state.
-    await this.storage.init();
-    this.logger.info('[App] Storage initialized successfully');
+    try {
+      this.logger.info('[App] Initializing storage');
+      
+      // Add timeout for storage initialization
+      const storageInitPromise = this.storage.init();
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('Storage initialization timeout after 15 seconds'));
+        }, 15000);
+      });
+
+      await Promise.race([storageInitPromise, timeoutPromise]);
+      this.logger.info('[App] Storage initialized successfully');
+
+      // Get diagnostic info if there were any issues
+      if (!this.storage.initialized()) {
+        const diagnostics = await this.storage.getDiagnosticInfo();
+        this.logger.warn('[App] Storage not properly initialized, diagnostic info:', diagnostics);
+      }
+
+    } catch (error: any) {
+      this.logger.error('[App] Storage initialization failed', {
+        error: error?.message || 'Unknown error',
+        name: error?.name || 'Unknown'
+      });
+
+      // Get diagnostic information
+      try {
+        const diagnostics = await this.storage.getDiagnosticInfo();
+        this.logger.error('[App] Storage diagnostic info after failure:', diagnostics);
+        
+        // Show user-friendly error message
+        this.showStorageError(error, diagnostics);
+      } catch (diagError) {
+        this.logger.error('[App] Failed to collect diagnostic info', diagError);
+      }
+
+      // Don't completely block the app, continue with limited functionality
+      this.logger.warn('[App] Continuing with limited functionality due to storage failure');
+    }
 
     // Check for nostr protocol parameter in current URL
     this.logger.info('[App] Checking for nostr protocol in current URL');
     await this.checkForNostrProtocolInUrl();
     this.logger.info('[App] ==> ngOnInit completed');
+  }
+
+  private showStorageError(error: any, diagnostics: any): void {
+    let errorMessage = 'Storage initialization failed. ';
+    
+    if (diagnostics.platform.isIOS && diagnostics.platform.isWebView) {
+      errorMessage += 'This appears to be an iOS WebView which may have IndexedDB restrictions. ';
+    } else if (diagnostics.isPrivateMode) {
+      errorMessage += 'Private browsing mode detected which may limit storage capabilities. ';
+    } else if (!diagnostics.indexedDBSupported) {
+      errorMessage += 'IndexedDB is not supported in this browser. ';
+    }
+    
+    errorMessage += 'The app will continue with limited functionality.';
+    
+    this.logger.warn('[App] User-friendly error message:', errorMessage);
+    
+    // You could show a toast/snackbar here if needed
+    // this.snackBar.open(errorMessage, 'OK', { duration: 10000 });
   }
 
   /**
