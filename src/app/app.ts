@@ -388,6 +388,11 @@ export class App {
       data: { did: '' },
       width: '100vw',
       height: '100vh',
+      maxWidth: '100vw',
+      maxHeight: '100vh',
+      panelClass: 'qr-scan-dialog',
+      hasBackdrop: true,
+      disableClose: false
     });
 
     dialogRef.afterClosed().subscribe(async (result) => {

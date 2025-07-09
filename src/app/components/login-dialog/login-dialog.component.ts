@@ -157,6 +157,11 @@ export class LoginDialogComponent {
     const scanDialogRef = this.dialog.open(QrcodeScanDialogComponent, {
       width: '100vw',
       height: '100vh',
+      maxWidth: '100vw',
+      maxHeight: '100vh',
+      panelClass: 'qr-scan-dialog',
+      hasBackdrop: true,
+      disableClose: false
     });
 
     scanDialogRef.afterClosed().subscribe(async result => {

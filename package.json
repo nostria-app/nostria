@@ -39,7 +39,6 @@
     "@progress/jszip-esm": "^1.0.4",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-opener": "^2",
-    "@zxing/ngx-scanner": "^20.0.0",
     "blurhash": "^2.0.5",
     "cors": "^2.8.5",
     "express": "^4.21.2",

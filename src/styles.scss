@@ -895,3 +895,79 @@ app-media-queue .media-list mat-list {
   font-size: 0.8rem;
   color: var(--mat-sys-on-surface-variant);
 }
+
+// QR Scan Dialog global styles
+.qr-scan-dialog .mdc-dialog__container {
+  height: 100vh !important;
+  width: 100vw !important;
+}
+
+.qr-scan-dialog .mdc-dialog__surface {
+  height: 100vh !important;
+  width: 100vw !important;
+  max-height: 100vh !important;
+  max-width: 100vw !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+}
+
+.qr-scan-dialog .mat-mdc-dialog-container {
+  padding: 0 !important;
+  height: 100vh !important;
+  width: 100vw !important;
+}
+
+// QR Scan Dialog styles
+.qr-scan-dialog {
+  .mdc-dialog__container {
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  
+  .mat-mdc-dialog-container {
+    --mdc-dialog-container-color: transparent;
+    --mat-dialog-container-max-width: 100vw !important;
+    --mat-dialog-container-max-height: 100vh !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: rgba(0, 0, 0, 0.9) !important;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+  }
+  
+  .mat-mdc-dialog-content {
+    padding: 24px !important;
+    margin: 0 !important;
+    max-height: none !important;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+  }
+  
+  .mat-mdc-dialog-title {
+    color: white !important;
+    text-align: center;
+    margin-bottom: 24px !important;
+  }
+  
+  .mat-mdc-dialog-actions {
+    padding: 24px !important;
+    justify-content: center;
+    
+    button {
+      color: white !important;
+      border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    }
+  }
+}
+
+// Safari fallback for backdrop-filter
+@supports not (backdrop-filter: blur(10px)) {
+  .qr-scan-dialog .mat-mdc-dialog-container {
+    background: rgba(0, 0, 0, 0.95) !important;
+  }
+}
