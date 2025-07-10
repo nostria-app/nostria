@@ -42,6 +42,7 @@ export class ProfileHeaderComponent {
     profileState = inject(ProfileStateService);
     accountState = inject(AccountStateService);
     utilities = inject(UtilitiesService);
+    layoutService = inject(LayoutService);
 
     // Add signal for QR code visibility
     showQrCode = signal<boolean>(false);
