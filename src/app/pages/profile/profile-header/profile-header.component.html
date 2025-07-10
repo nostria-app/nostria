@@ -5,8 +5,8 @@
         (click)="profile()?.data.banner && layout.openProfileBanner(profile()!)">
     </div>
     }
-    <div class="profile-info-container" [class.compact]="compact()">
-        <div class="profile-avatar" [class.clickable]="profile()?.data.picture"
+    <div class="profile-info-container" [class.compact]="compact()" [class.mobile]="layoutService.isHandset()">
+        <div class="profile-avatar" [class.clickable]="profile()?.data.picture" [class.mobile]="layoutService.isHandset()"
             (click)="profile()?.data.picture && layout.openProfilePicture(profile()!)">
             @if (profile()?.data.picture) {
             <img [src]="profile()!.data.picture" alt="Profile picture" class="avatar-image">
