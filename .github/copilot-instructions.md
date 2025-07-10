@@ -27,6 +27,4 @@ Make sure you don't use outdated variables for Angular Material, such as "--mat-
 
 I'm using a Windows computer, so make sure that paths and commands are compatible with Windows.
 
-When waiting for background terminal output for "npm start", wait another 3 extra seconds to ensure build completes.
-
 Do not make any changes, until have you 95% confidence that you know what to build ask me follow up questions until you have that confidence

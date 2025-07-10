@@ -1,7 +1,37 @@
 <div class="profile-page">
   @if (isLoading()) {
-  Loading profile...
-  <!-- <app-loading-overlay message="Loading profile..."></app-loading-overlay> -->
+  <div class="profile-loading-container">
+    <div class="profile-loading-content">
+      <!-- Profile skeleton -->
+      <div class="profile-loading-skeleton">
+        <!-- Banner skeleton -->
+        <div class="banner-skeleton"></div>
+        
+        <!-- Avatar and info skeleton -->
+        <div class="profile-info-skeleton">
+          <div class="avatar-skeleton"></div>
+          <div class="profile-details-skeleton">
+            <div class="name-skeleton"></div>
+            <div class="npub-skeleton"></div>
+            <div class="bio-skeleton"></div>
+          </div>
+        </div>
+        
+        <!-- Actions skeleton -->
+        <div class="actions-skeleton">
+          <div class="action-button-skeleton"></div>
+          <div class="action-button-skeleton"></div>
+        </div>
+      </div>
+      
+      <!-- Loading spinner and message -->
+      <div class="loading-spinner-section">
+        <mat-spinner diameter="48"></mat-spinner>
+        <p class="loading-message">Loading profile...</p>
+        <p class="loading-submessage">Fetching user data from the network</p>
+      </div>
+    </div>
+  </div>
   } @else if (error()) {
   <div class="error-container">
     <mat-icon>error</mat-icon>
