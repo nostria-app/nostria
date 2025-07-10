@@ -819,6 +819,8 @@ export class LayoutService implements OnDestroy {
             const dialogRef = this.dialog.open(MediaPreviewDialogComponent, {
                 data: {
                     mediaUrl: profile.data.picture,
+                    mediaType: 'image',
+                    mediaTitle: profile.data.display_name || profile.data.name || 'Profile Picture'
                 },
                 maxWidth: '100vw',
                 maxHeight: '100vh',
@@ -834,6 +836,8 @@ export class LayoutService implements OnDestroy {
             const dialogRef = this.dialog.open(MediaPreviewDialogComponent, {
                 data: {
                     mediaUrl: profile.data.banner,
+                    mediaType: 'image',
+                    mediaTitle: `${profile.data.display_name || profile.data.name || 'Profile'} Banner`
                 },
                 maxWidth: '100vw',
                 maxHeight: '100vh',
