@@ -458,8 +458,9 @@ export class ProfileComponent {
     if (metadata?.data.picture) {
       const dialogRef = this.dialog.open(MediaPreviewDialogComponent, {
         data: {
-          imageUrl: metadata.data.picture,
-          userName: this.getFormattedName()
+          mediaUrl: metadata.data.picture,
+          mediaType: 'image',
+          mediaTitle: this.getFormattedName() + ' Profile Picture'
         },
         maxWidth: '100vw',
         maxHeight: '100vh',
