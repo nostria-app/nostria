@@ -45,8 +45,9 @@
 
     &.compact {
         // When compact class is applied
-        flex-direction: row;
+        flex-direction: column;
         position: initial;
+        border: 2px solid red;
 
         // First div should be fixed at 80px in compact mode
         >div:first-child {
@@ -58,6 +59,9 @@
         }
     }
 }
+
+
+
 
 .profile-banner {
     width: 100%;

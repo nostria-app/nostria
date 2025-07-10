@@ -13,7 +13,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
-import { LoadingOverlayComponent } from '../../components/loading-overlay/loading-overlay.component';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { RelayService } from '../../services/relay.service';
 import { ApplicationStateService } from '../../services/application-state.service';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -52,7 +52,7 @@ import { UsernameService } from '../../services/username';
     MatTooltipModule,
     MatSnackBarModule,
     MatDialogModule,
-    LoadingOverlayComponent,
+    MatProgressSpinnerModule,
     MatListModule,
     MatMenuModule,
     FormsModule,
