@@ -267,115 +267,115 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
     });
 
     // Automatic refresh effect
-    effect(() => {
-      const interval = setInterval(() => {
-        this.loadTrendingContent(true);
-      }, 60000); // Refresh every minute
+    // effect(() => {
+    //   const interval = setInterval(() => {
+    //     this.loadTrendingContent(true);
+    //   }, 60000); // Refresh every minute
 
-      return () => {
-        clearInterval(interval);
-      };
-    });
+    //   return () => {
+    //     clearInterval(interval);
+    //   };
+    // });
   }
 
-  setActiveSection(section: 'discover' | 'following' | 'media'): void {
-    this.activeSection.set(section);
+  // setActiveSection(section: 'discover' | 'following' | 'media'): void {
+  //   this.activeSection.set(section);
 
-    // Load section data if needed
-    switch (section) {
-      case 'following':
-        if (this.followingEvents().length === 0) {
-          this.loadFollowingContent();
-        }
-        break;
-      case 'media':
-        if (this.mediaEvents().length === 0) {
-          this.loadMediaContent();
-        }
-        break;
-    }
-  }
+  //   // Load section data if needed
+  //   switch (section) {
+  //     case 'following':
+  //       if (this.followingEvents().length === 0) {
+  //         this.loadFollowingContent();
+  //       }
+  //       break;
+  //     case 'media':
+  //       if (this.mediaEvents().length === 0) {
+  //         this.loadMediaContent();
+  //       }
+  //       break;
+  //   }
+  // }
 
-  async loadTrendingContent(silent = false): Promise<void> {
-    if (!silent) {
-      this.isLoading.set(true);
-    }
+  // async loadTrendingContent(silent = false): Promise<void> {
+  //   if (!silent) {
+  //     this.isLoading.set(true);
+  //   }
 
-    try {
-      const events = await this.fetchTrendingEvents();
-      this.trendingEvents.set(events);
-      if (!silent) {
-        this.notificationService.notify('Trending content updated');
-      }
-    } catch (error) {
-      console.error('Failed to load trending content:', error);
-      if (!silent) {
-        this.notificationService.notify('Failed to load trending content', 'error');
-      }
-    } finally {
-      if (!silent) {
-        this.isLoading.set(false);
-      }
-    }
-  }
+  //   try {
+  //     const events = await this.fetchTrendingEvents();
+  //     this.trendingEvents.set(events);
+  //     if (!silent) {
+  //       this.notificationService.notify('Trending content updated');
+  //     }
+  //   } catch (error) {
+  //     console.error('Failed to load trending content:', error);
+  //     if (!silent) {
+  //       this.notificationService.notify('Failed to load trending content', 'error');
+  //     }
+  //   } finally {
+  //     if (!silent) {
+  //       this.isLoading.set(false);
+  //     }
+  //   }
+  // }
 
-  async loadFollowingContent(): Promise<void> {
-    this.isLoading.set(true);
+  // async loadFollowingContent(): Promise<void> {
+  //   this.isLoading.set(true);
 
-    try {
-      const events = await this.fetchFollowingEvents();
-      this.followingEvents.set(events);
-    } catch (error) {
-      console.error('Failed to load following content:', error);
-      this.notificationService.notify('Failed to load following content', 'error');
-    } finally {
-      this.isLoading.set(false);
-    }
-  }
+  //   try {
+  //     const events = await this.fetchFollowingEvents();
+  //     this.followingEvents.set(events);
+  //   } catch (error) {
+  //     console.error('Failed to load following content:', error);
+  //     this.notificationService.notify('Failed to load following content', 'error');
+  //   } finally {
+  //     this.isLoading.set(false);
+  //   }
+  // }
 
-  async loadMediaContent(): Promise<void> {
-    this.isLoading.set(true);
+  // async loadMediaContent(): Promise<void> {
+  //   this.isLoading.set(true);
 
-    try {
-      const events = await this.fetchMediaEvents();
-      this.mediaEvents.set(events);
-    } catch (error) {
-      console.error('Failed to load media content:', error);
-      this.notificationService.notify('Failed to load media content', 'error');
-    } finally {
-      this.isLoading.set(false);
-    }
-  }
+  //   try {
+  //     const events = await this.fetchMediaEvents();
+  //     this.mediaEvents.set(events);
+  //   } catch (error) {
+  //     console.error('Failed to load media content:', error);
+  //     this.notificationService.notify('Failed to load media content', 'error');
+  //   } finally {
+  //     this.isLoading.set(false);
+  //   }
+  // }
 
-  async fetchTrendingEvents(): Promise<NostrRecord[]> {
-    // Example implementation - would be replaced with actual fetch from nostrService
-    const response = await fetch('/api/trending');
-    if (!response.ok) {
-      throw new Error('Failed to fetch trending events');
-    }
+  // async fetchTrendingEvents(): Promise<NostrRecord[]> {
+  //   // Example implementation - would be replaced with actual fetch from nostrService
+  //   const response = await fetch('/api/trending');
+  //   if (!response.ok) {
+  //     throw new Error('Failed to fetch trending events');
+  //   }
 
-    return await response.json() as NostrRecord[];
-  }
+  //   return await response.json() as NostrRecord[];
+  // }
 
-  async fetchFollowingEvents(): Promise<NostrRecord[]> {
-    // Example implementation - would be replaced with actual fetch from nostrService
-    const response = await fetch('/api/following');
-    if (!response.ok) {
-      throw new Error('Failed to fetch following events');
-    }
+  // async fetchFollowingEvents(): Promise<NostrRecord[]> {
+  //   // Example implementation - would be replaced with actual fetch from nostrService
+  //   const response = await fetch('/api/following');
+  //   if (!response.ok) {
+  //     throw new Error('Failed to fetch following events');
+  //   }
 
-    return await response.json() as NostrRecord[];
-  }
+  //   return await response.json() as NostrRecord[];
+  // }
 
-  async fetchMediaEvents(): Promise<NostrRecord[]> {
-    // Example implementation - would be replaced with actual fetch from nostrService
-    const response = await fetch('/api/media');
-    if (!response.ok) {
-      throw new Error('Failed to fetch media events');
-    }
+  // async fetchMediaEvents(): Promise<NostrRecord[]> {
+  //   // Example implementation - would be replaced with actual fetch from nostrService
+  //   const response = await fetch('/api/media');
+  //   if (!response.ok) {
+  //     throw new Error('Failed to fetch media events');
+  //   }
 
-    return await response.json() as NostrRecord[];
-  }
+  //   return await response.json() as NostrRecord[];
+  // }
 
   toggleAdvancedFilters(): void {
     this.showAdvancedFilters.update(value => !value);
@@ -391,19 +391,19 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
     });
   }
 
-  refreshContent(): void {
-    switch (this.activeSection()) {
-      case 'discover':
-        this.loadTrendingContent();
-        break;
-      case 'following':
-        this.loadFollowingContent();
-        break;
-      case 'media':
-        this.loadMediaContent();
-        break;
-    }
-  }
+  // refreshContent(): void {
+  //   switch (this.activeSection()) {
+  //     case 'discover':
+  //       this.loadTrendingContent();
+  //       break;
+  //     case 'following':
+  //       this.loadFollowingContent();
+  //       break;
+  //     case 'media':
+  //       this.loadMediaContent();
+  //       break;
+  //   }
+  // }
 
   shareContent(event: NostrRecord): void {
     // Implement share functionality
