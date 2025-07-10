@@ -31,7 +31,7 @@ export class LayoutService implements OnDestroy {
     isHandset = signal(false);
     isWideScreen = signal(false);
     breakpointObserver = inject(BreakpointObserver);
-    optimalProfilePosition: number = 200;
+    optimalProfilePosition: number = 240;
     premium = signal(false);
     profileState = inject(ProfileStateService);
     accountStateService = inject(AccountStateService);
@@ -102,7 +102,8 @@ export class LayoutService implements OnDestroy {
      *   }
      * }
      * ```
-     */    scrolledToBottom = signal(false);
+     */
+    scrolledToBottom = signal(false);
 
     private scrollEventListener?: () => void;
     private contentWrapper?: Element;
@@ -197,6 +198,7 @@ export class LayoutService implements OnDestroy {
             this.isScrollMonitoringReady.set(true);
         }, 1000); // Wait 1 second after scroll monitoring setup before checking position
     }
+
     /**
    * Checks the current scroll position and updates the scroll signals
    * Only updates signals if monitoring is ready to prevent early triggering
@@ -248,9 +250,12 @@ export class LayoutService implements OnDestroy {
      */
     refreshScrollMonitoring(): void {
         this.checkScrollPosition();
-    }    /**
+    }   
+    
+    /**
      * Re-initialize scroll monitoring (useful when DOM structure changes)
      */
+
     reinitializeScrollMonitoring(): void {
         this.isScrollMonitoringReady.set(false);
         this.initializeScrollMonitoring();
@@ -642,7 +647,8 @@ export class LayoutService implements OnDestroy {
 
     /**
      * Scrolls the page to show half of the banner and the full profile picture
-     */    scrollToOptimalPosition(scrollPosition: number): void {
+     */
+    scrollToOptimalPosition(scrollPosition: number): void {
         // We need the banner height to calculate the optimal scroll position
         // const bannerHeight = this.getBannerHeight();
 
@@ -652,7 +658,7 @@ export class LayoutService implements OnDestroy {
         // const scrollPosition = bannerHeight / 2;
 
         // Find the content wrapper element
-        const contentWrapper = document.querySelector('.mat-drawer-content');
+        const contentWrapper = document.querySelector('.content-wrapper');
         if (contentWrapper) {
             // Scroll the content wrapper to the calculated position with smooth animation
             contentWrapper.scrollTo({
