@@ -41,6 +41,7 @@ import { SearchResultsComponent } from './components/search-results/search-resul
 import { NostrProtocolService } from './services/nostr-protocol.service';
 import { StateService } from './services/state.service';
 import { PublishQueueService } from './services/publish-queue';
+import { NavigationComponent } from './components/navigation/navigation';
 
 interface NavItem {
   path: string;
@@ -75,7 +76,8 @@ interface NavItem {
     WelcomeComponent,
     DebugOverlayComponent,
     MediaPlayerComponent,
-    SearchResultsComponent
+    SearchResultsComponent,
+    NavigationComponent
   ], templateUrl: './app.html',
   styleUrl: './app.scss'
 })

@@ -48,7 +48,7 @@ const profileChildren: Routes = [
       { path: 'media', component: ProfileMediaComponent }
     ]
   },
-  { path: 'about', component: ProfileAboutComponent },
+  { path: 'about', component: ProfileAboutComponent, data: { isRoot: true } },
   { path: 'edit', component: ProfileEditComponent },
   { path: 'connections', component: ProfileConnectionsComponent },
   { path: 'following', component: FollowingComponent },
@@ -57,13 +57,14 @@ const profileChildren: Routes = [
 ];
 
 export const routes: Routes = [
-  { path: '', component: FeedsComponent, pathMatch: 'full' },
+  { path: '', component: FeedsComponent, data: { isRoot: true }, pathMatch: 'full' },
   { path: 'f/:path', component: FeedsComponent },
   { path: 'e/:id', component: EventPageComponent, resolve: { data: DataResolver } },
   { path: 'beta', component: BetaComponent, title: 'Beta' },
   { path: 'relays', component: RelaysComponent },
   {
     path: 'badges',
+    data: { isRoot: true },
     children: [
       { path: '', component: BadgesComponent },
       { path: 'create', loadComponent: () => import('./pages/badges/badge-editor/badge-editor.component').then(m => m.BadgeEditorComponent) },
@@ -72,27 +73,28 @@ export const routes: Routes = [
     ]
   },
   { path: 'b/:id', loadComponent: () => import('./pages/badges/badge-details/badge-details.component').then(m => m.BadgeDetailsComponent) },
-  
+
   // { path: 'messages', component: MessagesComponent },
   {
     path: 'messages',
     component: MessagesComponent,
+    data: { isRoot: true }, 
     children: [
       { path: '', component: MessagesMain },
-       { path: ':id', component: MessagesList },
+      { path: ':id', component: MessagesList },
     ]
   },
 
-  { path: 'settings', component: SettingsComponent },
+  { path: 'settings', component: SettingsComponent, data: { isRoot: true } },
   { path: 'media-queue', component: MediaQueueComponent },
   { path: 'notifications', component: NotificationsComponent },
   { path: 'notifications/settings', component: NotificationSettingsComponent },
   { path: 'notifications/manage', component: NotificationManageComponent },
-  { path: 'credentials', component: CredentialsComponent },
-  { path: 'accounts', component: AccountsComponent },
-  { path: 'about', component: AboutComponent },
-  { path: 'bookmarks', loadComponent: () => import('./pages/bookmarks/bookmarks.component').then(m => m.BookmarksComponent), title: 'Bookmarks' },
-  { path: 'articles', component: ArticlesComponent, title: 'Articles' },
+  { path: 'credentials', component: CredentialsComponent, data: { isRoot: true } },
+  { path: 'accounts', component: AccountsComponent, data: { isRoot: true } },
+  { path: 'about', component: AboutComponent, data: { isRoot: true } },
+  { path: 'bookmarks', data: { isRoot: true }, loadComponent: () => import('./pages/bookmarks/bookmarks.component').then(m => m.BookmarksComponent), title: 'Bookmarks' },
+  { path: 'articles', component: ArticlesComponent, data: { isRoot: true }, title: 'Articles' },
   { path: 'article/create', component: EditorComponent, title: 'New Article' },
   { path: 'article/edit/:id', component: EditorComponent, title: 'Edit Article' },
   { path: 'a/:id', component: ArticleComponent, title: 'Article', resolve: { data: DataResolver } },
@@ -112,7 +114,8 @@ export const routes: Routes = [
   {
     path: 'premium',
     component: PremiumComponent,
-    title: 'Nostria Premium'
+    title: 'Nostria Premium',
+    data: { isRoot: true }
   },
   {
     path: 'premium/upgrade',
@@ -122,18 +125,20 @@ export const routes: Routes = [
   { path: 'backup', loadComponent: () => import('./pages/backup/backup.component').then(mod => mod.BackupComponent) },
   {
     path: 'media',
+    data: { isRoot: true },
     children: [
       { path: '', loadComponent: () => import('./pages/media/media.component').then(mod => mod.MediaComponent) },
       { path: 'details/:id', loadComponent: () => import('./pages/media/media-details/media-details.component').then(mod => mod.MediaDetailsComponent) }
-    ]
+    ],
   },
   {
     path: 'people',
+    data: { isRoot: true },
     loadComponent: () => import('./pages/people/people.component').then(m => m.PeopleComponent),
     title: 'People'
   },
-  { 
-    path: 'debug/storage', 
+  {
+    path: 'debug/storage',
     loadComponent: () => import('./components/storage-debug/storage-debug.component').then(mod => mod.StorageDebugComponent),
     title: 'Storage Debug'
   },
