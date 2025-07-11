@@ -35,6 +35,11 @@ import { DataResolver } from './data-resolver';
 import { UsernameResolver } from './usernameResolver';
 import { MessagesMain } from './pages/messages/main/main';
 import { MessagesList } from './pages/messages/list/list';
+import { PrivacySettingsComponent } from './components/privacy-settings/privacy-settings.component';
+import { LogsSettingsComponent } from './components/logs-settings/logs-settings.component';
+import { BackupComponent } from './pages/backup/backup.component';
+import { PremiumSettings } from './pages/premium/settings/settings';
+import { GeneralSettingsComponent } from './pages/settings/general/general.component';
 
 const profileChildren: Routes = [
   {
@@ -87,7 +92,22 @@ export const routes: Routes = [
     ]
   },
 
-  { path: 'settings', component: SettingsComponent, data: { isRoot: true }, title: 'Settings' },
+  {
+    path: 'settings',
+    component: SettingsComponent,
+    data: { isRoot: true },
+    title: 'Settings',
+    children: [
+      { path: '', redirectTo: 'general', pathMatch: 'full' },
+      { path: 'general', component: GeneralSettingsComponent, title: 'General Settings' },
+      { path: 'relays', component: RelaysComponent, title: 'Relays' },
+      { path: 'privacy', component: PrivacySettingsComponent, title: 'Privacy & Safety' },
+      { path: 'backup', component: BackupComponent, title: 'Backup' },
+      { path: 'premium', component: PremiumSettings, title: 'Premium' },
+      { path: 'logs', component: LogsSettingsComponent, title: 'Logs' },
+      { path: 'about', component: AboutComponent, title: 'About' }
+    ]
+  },
   { path: 'media-queue', component: MediaQueueComponent, title: 'Media Queue' },
   { path: 'notifications', component: NotificationsComponent, title: 'Notifications' },
   { path: 'notifications/settings', component: NotificationSettingsComponent },
