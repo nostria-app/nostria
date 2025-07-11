@@ -1,0 +1,34 @@
+@if (isVisible()) {
+  <div class="context-menu-overlay" 
+       (click)="closeMenu($event)">
+    <div class="context-menu" 
+         [style.left.px]="menuPosition().x" 
+         [style.top.px]="menuPosition().y"
+         (click)="$event.stopPropagation()">
+      <div class="context-menu-header">
+        <mat-icon>history</mat-icon>
+        <span>Navigation History</span>
+      </div>
+      
+      @if (getDisplayItems().length > 0) {
+        <div class="context-menu-items">
+          @for (item of getDisplayItems(); track item.url; let i = $index) {
+            <button class="context-menu-item" 
+                    (click)="selectItem(i)"
+                    [title]="item.title + ' - ' + item.url">
+              <mat-icon>arrow_back</mat-icon>
+              <div class="item-content">
+                <span class="item-title">{{ item.title }}</span>
+                <span class="item-url">{{ item.url }}</span>
+              </div>
+            </button>
+          }
+        </div>
+      } @else {
+        <div class="context-menu-empty">
+          <span>No navigation history</span>
+        </div>
+      }
+    </div>
+  </div>
+}

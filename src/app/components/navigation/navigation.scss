@@ -8,4 +8,27 @@
 
 .back-button {
     margin-right: 4px;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+
+    &:active {
+        transform: scale(0.95);
+    }
+
+    &:focus {
+        outline: none;
+    }
+
+    // Prevent text selection and context menu on touch devices
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }

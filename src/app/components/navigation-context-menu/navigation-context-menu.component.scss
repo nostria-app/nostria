@@ -1,0 +1,154 @@
+// Navigation context menu - rendered at app root level
+:host {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 99999; // Extremely high z-index to ensure it's above everything
+}
+
+.context-menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.1);
+  z-index: 99999;
+  pointer-events: auto;
+  -webkit-backdrop-filter: blur(1px);
+  backdrop-filter: blur(1px);
+}
+
+.context-menu {
+  position: absolute;
+  min-width: 250px;
+  max-width: 350px;
+  width: max-content;
+  background: var(--mat-sys-surface-container);
+  border-radius: 8px;
+  box-shadow: var(--mat-sys-level5);
+  border: 1px solid var(--mat-sys-outline-variant);
+  overflow: hidden;
+  z-index: 100000;
+  pointer-events: auto;
+  
+  // Ensure it renders above everything
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+.context-menu-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--mat-sys-surface-container-high);
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  color: var(--mat-sys-on-surface);
+  font-weight: 500;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.context-menu-items {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  background: transparent;
+  color: var(--mat-sys-on-surface);
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.2s ease;
+  min-width: 0; // Allow flex children to shrink below content size
+
+  &:hover {
+    background: var(--mat-sys-surface-container-high);
+  }
+
+  &:active {
+    background: var(--mat-sys-surface-container-highest);
+  }
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    color: var(--mat-sys-on-surface-variant);
+    flex-shrink: 0; // Never shrink the icon
+  }
+
+  .item-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0; // Allow content to shrink
+    overflow: hidden;
+  }
+
+  .item-title {
+    font-weight: 500;
+    font-size: 14px;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .item-url {
+    font-size: 12px;
+    color: var(--mat-sys-on-surface-variant);
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    opacity: 0.8;
+  }
+}
+
+.context-menu-empty {
+  padding: 16px;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 14px;
+}
+
+// Responsive design for mobile devices
+@media (max-width: 768px) {
+  .context-menu {
+    min-width: 200px;
+    max-width: 280px;
+  }
+  
+  .context-menu-item {
+    padding: 14px 16px;
+    gap: 10px;
+    
+    .item-content {
+      gap: 1px;
+    }
+    
+    .item-title {
+      font-size: 13px;
+    }
+    
+    .item-url {
+      font-size: 11px;
+    }
+  }
+}

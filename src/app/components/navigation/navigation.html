@@ -1,5 +1,20 @@
 @if (hasState()) {
-<button mat-icon-button class="back-button">
+
+
+{{this.routeDataService.navigationHistory().length}} ||
+ 
+ {{ this.routeDataService.navigationHistory() | json }}
+
+||
+
+    <button mat-icon-button 
+        class="back-button"
+        title="Go back • Right-click or long-press for history"
+        (click)="goBack()"
+        (contextmenu)="onRightClick($event)"
+        (touchstart)="onTouchStart($event)"
+        (touchend)="onTouchEnd($event)"
+        (touchcancel)="onTouchCancel($event)">
     <mat-icon>arrow_back</mat-icon>
 </button>
 } @else {
