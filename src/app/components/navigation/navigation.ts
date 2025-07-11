@@ -15,7 +15,7 @@ import { CommonModule } from '@angular/common';
 })
 export class NavigationComponent {
   hasState = computed(() => {
-    return this.routeDataService.navigationHistory().length > 0;
+    return this.routeDataService.canGoBack();
   });
 
   private route = inject(ActivatedRoute);
@@ -99,7 +99,7 @@ export class NavigationComponent {
   // Show context menu using global service
   private showContextMenu(event: MouseEvent) {
     const history = this.routeDataService.getNavigationHistory();
-    if (history.length > 1) {
+    if (this.routeDataService.canGoBack()) {
       // Dispatch a custom event to show the context menu
       const customEvent = new CustomEvent('show-navigation-context-menu', {
         detail: {

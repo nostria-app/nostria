@@ -80,10 +80,14 @@ export class NavigationContextMenuComponent implements OnInit, OnDestroy {
   }
 
   selectItem(index: number) {
-    // Convert back to original index (accounting for reverse and current page exclusion)
-    const originalIndex = this.historyItems().length - 2 - index;
+    // Get display items (excluding current page)
+    const displayItems = this.getDisplayItems();
     
-    if (this.onItemSelected) {
+    // Convert back to original index 
+    // Display items are reversed, so we need to account for that
+    const originalIndex = displayItems.length - 1 - index;
+    
+    if (this.onItemSelected && originalIndex >= 0) {
       this.onItemSelected(originalIndex);
     }
     
