@@ -43,8 +43,13 @@ export class NavigationContextMenuComponent implements OnInit, OnDestroy {
   }
 
   onClearHistory() {
-    // Clear navigation history through the service
-    this.routeDataService.navigationHistory.set([]);
+    // Clear navigation history but keep the current page
+    const currentHistory = this.routeDataService.navigationHistory();
+    if (currentHistory.length > 0) {
+      // Keep only the current page (last item in history)
+      const currentPage = currentHistory[currentHistory.length - 1];
+      this.routeDataService.navigationHistory.set([currentPage]);
+    }
   }
 
   showMenu(x: number, y: number, onItemSelected: (index: number) => void) {
