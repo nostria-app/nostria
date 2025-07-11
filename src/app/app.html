@@ -34,7 +34,7 @@
     </button>
     }
     @if (!layout.search()) {
-    <img src="icons/icon.svg" class="app-icon hide-tiny" alt="Nostria icon">
+    <app-navigation></app-navigation>
     <span class="app-title title-font hide-small">
       {{title}}
       <a [routerLink]="['/beta']" class="beta-indicator">BETA</a>
@@ -165,7 +165,8 @@
       </button>
     </mat-menu>
 
-    <button mat-icon-button [class.profile-button-picture]="accountState.profile()?.data?.picture" (click)="toggleProfileSidenav()" aria-label="Toggle profile" class="profile-button">
+    <button mat-icon-button [class.profile-button-picture]="accountState.profile()?.data?.picture"
+      (click)="toggleProfileSidenav()" aria-label="Toggle profile" class="profile-button">
       @if (accountState.profile()?.data?.picture) {
       <img [src]="accountState.profile()?.data?.picture" class="profile-button-avatar" alt="Profile picture">
       } @else {
