@@ -2,7 +2,7 @@ import { Component, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { map } from 'rxjs';
 import { RouteDataService } from '../../services/route-data.service';
 import { CommonModule } from '@angular/common';
@@ -19,7 +19,6 @@ export class NavigationComponent {
   });
 
   private route = inject(ActivatedRoute);
-  private router = inject(Router);
 
   // Convert route data to signal
   routeData = toSignal(
@@ -98,14 +97,12 @@ export class NavigationComponent {
 
   // Show context menu using global service
   private showContextMenu(event: MouseEvent) {
-    const history = this.routeDataService.getNavigationHistory();
     if (this.routeDataService.canGoBack()) {
       // Dispatch a custom event to show the context menu
       const customEvent = new CustomEvent('show-navigation-context-menu', {
         detail: {
           x: event.clientX,
           y: event.clientY,
-          history: history,
           onItemSelected: (index: number) => {
             this.routeDataService.goToHistoryItem(index);
           }

@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, Renderer2, inject, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { NavigationHistoryItem } from '../../services/route-data.service';
+import { NavigationHistoryItem, RouteDataService } from '../../services/route-data.service';
 import { DOCUMENT } from '@angular/common';
 
 @Component({
@@ -13,11 +13,11 @@ import { DOCUMENT } from '@angular/common';
 export class NavigationContextMenuComponent implements OnInit, OnDestroy {
   private renderer = inject(Renderer2);
   private document = inject(DOCUMENT);
+  private routeDataService = inject(RouteDataService);
   
   // Menu state
   isVisible = signal<boolean>(false);
   menuPosition = signal<{ x: number; y: number }>({ x: 0, y: 0 });
-  historyItems = signal<NavigationHistoryItem[]>([]);
   
   // Callback for item selection
   private onItemSelected: ((index: number) => void) | null = null;
@@ -37,16 +37,20 @@ export class NavigationContextMenuComponent implements OnInit, OnDestroy {
 
   private handleShowContextMenu(event: Event) {
     const customEvent = event as CustomEvent;
-    const { x, y, history, onItemSelected } = customEvent.detail;
+    const { x, y, onItemSelected } = customEvent.detail;
     
-    this.showMenu(x, y, history, onItemSelected);
+    this.showMenu(x, y, onItemSelected);
   }
 
   onClearHistory() {
-    this.historyItems.set([]);
+    // Clear navigation history through the service
+    this.routeDataService.navigationHistory.set([]);
   }
 
-  showMenu(x: number, y: number, history: NavigationHistoryItem[], onItemSelected: (index: number) => void) {
+  showMenu(x: number, y: number, onItemSelected: (index: number) => void) {
+    // Get history from the service
+    const history = this.routeDataService.navigationHistory();
+    
     // Calculate optimal menu position
     const menuWidth = 250;
     const menuHeight = Math.min(300, (history.length - 1) * 50 + 60);
@@ -70,7 +74,6 @@ export class NavigationContextMenuComponent implements OnInit, OnDestroy {
     y = Math.max(8, y);
     
     this.menuPosition.set({ x, y });
-    this.historyItems.set(history);
     this.onItemSelected = onItemSelected;
     this.isVisible.set(true);
   }
@@ -100,7 +103,7 @@ export class NavigationContextMenuComponent implements OnInit, OnDestroy {
 
   // Get history items excluding the current page
   getDisplayItems() {
-    const items = this.historyItems();
+    const items = this.routeDataService.navigationHistory();
     // Return all items except the last one (current page), reversed
     return items.slice(0, -1).reverse();
   }
