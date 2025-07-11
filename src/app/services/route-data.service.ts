@@ -1,8 +1,9 @@
-import { Injectable, inject, signal, computed } from '@angular/core';
+import { Injectable, inject, signal, computed, OnDestroy } from '@angular/core';
 import { Router, NavigationEnd, Event } from '@angular/router';
 import { filter, take } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Title } from '@angular/platform-browser';
+import { Location } from '@angular/common';
 
 export interface NavigationHistoryItem {
     url: string;
@@ -13,15 +14,22 @@ export interface NavigationHistoryItem {
 @Injectable({
     providedIn: 'root'
 })
-export class RouteDataService {
+export class RouteDataService implements OnDestroy {
     private router = inject(Router);
     private titleService = inject(Title);
+    private location = inject(Location);
 
     // Signal for current route data
     currentRouteData = signal<any>({});
 
     // Signal for navigation history
     navigationHistory = signal<NavigationHistoryItem[]>([]);
+
+    // Track programmatic navigation to distinguish from browser navigation
+    private isProgrammaticNavigation = false;
+    
+    // Store the popstate event listener for cleanup
+    private popstateListener: ((event: PopStateEvent) => void) | null = null;
 
     // Computed signal for whether we can go back
     canGoBack = computed(() => {
@@ -52,6 +60,22 @@ export class RouteDataService {
                 this.updateNavigationHistory(event);
             }, 0);
         });
+
+        // Listen for browser back/forward navigation using popstate
+        if (typeof window !== 'undefined') {
+            this.popstateListener = () => {
+                if (!this.isProgrammaticNavigation) {
+                    console.log('Browser back/forward detected');
+                    // Small delay to ensure router has processed the navigation
+                    setTimeout(() => {
+                        this.handleBrowserNavigation();
+                    }, 50);
+                } else {
+                    console.log('Programmatic navigation detected, skipping browser navigation handler');
+                }
+            };
+            window.addEventListener('popstate', this.popstateListener);
+        }
     }
 
     private initializeHistory() {
@@ -95,15 +119,51 @@ export class RouteDataService {
             return;
         }
 
-        const newItem: NavigationHistoryItem = {
-            url: event.url,
-            title: currentTitle,
-            timestamp: new Date()
-        };
+        // If this is not programmatic navigation, we need to add to history
+        if (!this.isProgrammaticNavigation) {
+            const newItem: NavigationHistoryItem = {
+                url: event.url,
+                title: currentTitle,
+                timestamp: new Date()
+            };
 
-        // Keep only last 10 history items
-        const updatedHistory = [...currentHistory, newItem].slice(-10);
-        this.navigationHistory.set(updatedHistory);
+            // Keep only last 10 history items
+            const updatedHistory = [...currentHistory, newItem].slice(-10);
+            this.navigationHistory.set(updatedHistory);
+        }
+    }
+
+    private handleBrowserNavigation() {
+        console.log('Handling browser navigation...');
+
+        // When browser back/forward is used, adjust our history
+        const currentUrl = this.router.url;
+        const currentHistory = this.navigationHistory();
+        
+        console.log('Current URL:', currentUrl);
+        console.log('Current history length:', currentHistory.length);
+        
+        // Find if the current URL exists in our history
+        const existingIndex = currentHistory.findIndex(item => item.url === currentUrl);
+        
+        if (existingIndex !== -1) {
+            console.log('Found URL in history at index:', existingIndex);
+            // If we found the URL in history, truncate history to that point
+            this.navigationHistory.set(currentHistory.slice(0, existingIndex + 1));
+        } else {
+            console.log('URL not found in history, adding as new item');
+            // If URL not in history, add it as a new item
+            // This handles cases where user navigated via browser address bar or external links
+            const routeTitle = this.getRouteTitle(currentUrl);
+            const newItem: NavigationHistoryItem = {
+                url: currentUrl,
+                title: routeTitle,
+                timestamp: new Date()
+            };
+            this.navigationHistory.set([...currentHistory, newItem].slice(-10));
+        }
+        
+        console.log('Updated history length:', this.navigationHistory().length);
     }
 
     private getRouteTitle(url: string): string {
@@ -243,9 +303,31 @@ export class RouteDataService {
             const history = this.navigationHistory();
             const previousUrl = history[history.length - 2]?.url;
             if (previousUrl) {
-                // Remove current item from history before navigating
-                this.navigationHistory.set(history.slice(0, -1));
-                this.router.navigateByUrl(previousUrl);
+                // Mark as programmatic navigation to prevent double handling
+                this.isProgrammaticNavigation = true;
+                
+                // Use browser's back() method to keep browser and app navigation in sync
+                if (this.canUseBrowserBack()) {
+                    // Remove current item from history before navigating
+                    this.navigationHistory.set(history.slice(0, -1));
+                    
+                    // Use browser back - this will trigger popstate event
+                    window.history.back();
+                    
+                    // Reset flag after a short delay
+                    setTimeout(() => {
+                        this.isProgrammaticNavigation = false;
+                    }, 100);
+                } else {
+                    // Fallback to router navigation if browser history is not available
+                    this.navigationHistory.set(history.slice(0, -1));
+                    
+                    this.router.navigateByUrl(previousUrl).then(() => {
+                        setTimeout(() => {
+                            this.isProgrammaticNavigation = false;
+                        }, 0);
+                    });
+                }
             }
         }
     }
@@ -254,13 +336,58 @@ export class RouteDataService {
         const history = this.navigationHistory();
         if (index >= 0 && index < history.length) {
             const targetUrl = history[index].url;
-            // Remove items after the target index
-            this.navigationHistory.set(history.slice(0, index + 1));
-            this.router.navigateByUrl(targetUrl);
+            const currentIndex = history.length - 1;
+            
+            // Mark as programmatic navigation
+            this.isProgrammaticNavigation = true;
+            
+            // Calculate how many steps back we need to go
+            const stepsBack = currentIndex - index;
+            
+            if (stepsBack > 0 && this.canUseBrowserHistory() && window.history.length > stepsBack) {
+                // Remove items after the target index
+                this.navigationHistory.set(history.slice(0, index + 1));
+                
+                // Use browser history to go back the calculated steps
+                window.history.go(-stepsBack);
+                
+                // Reset flag after navigation
+                setTimeout(() => {
+                    this.isProgrammaticNavigation = false;
+                }, 100);
+            } else {
+                // Fallback to router navigation
+                this.navigationHistory.set(history.slice(0, index + 1));
+                
+                this.router.navigateByUrl(targetUrl).then(() => {
+                    setTimeout(() => {
+                        this.isProgrammaticNavigation = false;
+                    }, 0);
+                });
+            }
         }
     }
 
     getNavigationHistory(): NavigationHistoryItem[] {
         return this.navigationHistory();
+    }
+
+    // Helper method to check if browser history navigation is available
+    private canUseBrowserHistory(): boolean {
+        return typeof window !== 'undefined' && 
+               typeof window.history !== 'undefined' && 
+               window.history.length > 1;
+    }
+
+    // Helper method to check if we can go back using browser history
+    private canUseBrowserBack(): boolean {
+        return this.canUseBrowserHistory() && this.navigationHistory().length > 1;
+    }
+
+    // Cleanup method for destroying the service
+    ngOnDestroy() {
+        if (this.popstateListener && typeof window !== 'undefined') {
+            window.removeEventListener('popstate', this.popstateListener);
+        }
     }
 }
