@@ -41,53 +41,55 @@ const profileChildren: Routes = [
     path: '',
     component: ProfileHomeComponent,
     children: [
-      { path: '', component: ProfileNotesComponent },
-      { path: 'notes', component: ProfileNotesComponent },
-      { path: 'replies', component: ProfileRepliesComponent },
-      { path: 'reads', component: ProfileReadsComponent },
-      { path: 'media', component: ProfileMediaComponent }
+      { path: '', component: ProfileNotesComponent, title: 'Notes' },
+      { path: 'notes', component: ProfileNotesComponent, title: 'Notes' },
+      { path: 'replies', component: ProfileRepliesComponent, title: 'Replies' },
+      { path: 'reads', component: ProfileReadsComponent, title: 'Reads' },
+      { path: 'media', component: ProfileMediaComponent, title: 'Media' }
     ]
   },
-  { path: 'about', component: ProfileAboutComponent, data: { isRoot: true } },
-  { path: 'edit', component: ProfileEditComponent },
-  { path: 'connections', component: ProfileConnectionsComponent },
-  { path: 'following', component: FollowingComponent },
-  { path: 'relays', component: ProfileRelaysComponent },
-  { path: 'details', component: DetailsComponent }
+  { path: 'about', component: ProfileAboutComponent, data: { isRoot: true }, title: 'About' },
+  { path: 'edit', component: ProfileEditComponent, title: 'Edit Profile' },
+  { path: 'connections', component: ProfileConnectionsComponent, title: 'Connections' },
+  { path: 'following', component: FollowingComponent, title: 'Following' },
+  { path: 'relays', component: ProfileRelaysComponent, title: 'Relays' },
+  { path: 'details', component: DetailsComponent, title: 'Details' }
 ];
 
 export const routes: Routes = [
-  { path: '', component: FeedsComponent, data: { isRoot: true }, pathMatch: 'full' },
-  { path: 'f/:path', component: FeedsComponent },
-  { path: 'e/:id', component: EventPageComponent, resolve: { data: DataResolver } },
+  { path: '', component: FeedsComponent, data: { isRoot: true }, pathMatch: 'full', title: 'Home' },
+  { path: 'f/:path', component: FeedsComponent, title: 'Feeds' },
+  { path: 'e/:id', component: EventPageComponent, resolve: { data: DataResolver }, title: 'Event' },
   { path: 'beta', component: BetaComponent, title: 'Beta' },
-  { path: 'relays', component: RelaysComponent },
+  { path: 'relays', component: RelaysComponent, title: 'Relays' },
   {
     path: 'badges',
     data: { isRoot: true },
+    title: 'Badges',
     children: [
       { path: '', component: BadgesComponent },
-      { path: 'create', loadComponent: () => import('./pages/badges/badge-editor/badge-editor.component').then(m => m.BadgeEditorComponent) },
-      { path: 'details/:id', loadComponent: () => import('./pages/badges/badge-details/badge-details.component').then(m => m.BadgeDetailsComponent) },
-      { path: 'edit/:id', loadComponent: () => import('./pages/badges/badge-editor/badge-editor.component').then(m => m.BadgeEditorComponent) }
+      { path: 'create', loadComponent: () => import('./pages/badges/badge-editor/badge-editor.component').then(m => m.BadgeEditorComponent), title: 'Create Badge' },
+      { path: 'details/:id', loadComponent: () => import('./pages/badges/badge-details/badge-details.component').then(m => m.BadgeDetailsComponent), title: 'Badge Details' },
+      { path: 'edit/:id', loadComponent: () => import('./pages/badges/badge-editor/badge-editor.component').then(m => m.BadgeEditorComponent), title: 'Edit Badge' }
     ]
   },
-  { path: 'b/:id', loadComponent: () => import('./pages/badges/badge-details/badge-details.component').then(m => m.BadgeDetailsComponent) },
+  { path: 'b/:id', loadComponent: () => import('./pages/badges/badge-details/badge-details.component').then(m => m.BadgeDetailsComponent), title: 'Badge' },
 
   // { path: 'messages', component: MessagesComponent },
   {
     path: 'messages',
     component: MessagesComponent,
-    data: { isRoot: true }, 
+    data: { isRoot: true },
+    title: 'Messages',
     children: [
       { path: '', component: MessagesMain },
-      { path: ':id', component: MessagesList },
+      { path: ':id', component: MessagesList, title: 'Conversation' },
     ]
   },
 
-  { path: 'settings', component: SettingsComponent, data: { isRoot: true } },
-  { path: 'media-queue', component: MediaQueueComponent },
-  { path: 'notifications', component: NotificationsComponent },
+  { path: 'settings', component: SettingsComponent, data: { isRoot: true }, title: 'Settings' },
+  { path: 'media-queue', component: MediaQueueComponent, title: 'Media Queue' },
+  { path: 'notifications', component: NotificationsComponent, title: 'Notifications' },
   { path: 'notifications/settings', component: NotificationSettingsComponent },
   { path: 'notifications/manage', component: NotificationManageComponent },
   { path: 'credentials', component: CredentialsComponent, data: { isRoot: true } },
