@@ -441,16 +441,6 @@ export class ProfileComponent {
   }
 
   /**
-   * Navigate to messages page to start a new chat with this user
-   */
-  sendMessage(): void {
-    this.logger.debug('Message requested for:', this.pubkey());
-    this.router.navigate(['/messages'], { 
-      queryParams: { pubkey: this.pubkey() } 
-    });
-  }
-
-  /**
    * Opens the profile picture in a larger view dialog
    */
   openProfilePicture(): void {
