@@ -1,0 +1,37 @@
+h2 {
+  margin-top: 2em;
+}
+
+.danger-zone {
+  h2 {
+    color: #f44336;
+    margin-bottom: 8px;
+  }
+}
+
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding: 12px 0;
+  
+  &.danger-zone {
+    border-top: 1px solid rgba(0, 0, 0, 0.12);
+    padding-top: 24px;
+    margin-top: 24px;
+    
+    @media (prefers-color-scheme: dark) {
+      border-top-color: rgba(255, 255, 255, 0.12);
+    }
+  }
+}
+
+.full-width {
+  width: 100%;
+}
+
+.wipe-data-button {
+  background-color: #f44336;
+  color: white;
+}
