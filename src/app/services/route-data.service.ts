@@ -1,6 +1,6 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, inject, signal, computed } from '@angular/core';
 import { Router, NavigationEnd, Event } from '@angular/router';
-import { filter } from 'rxjs/operators';
+import { filter, take } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Title } from '@angular/platform-browser';
 
@@ -23,6 +23,11 @@ export class RouteDataService {
     // Signal for navigation history
     navigationHistory = signal<NavigationHistoryItem[]>([]);
 
+    // Computed signal for whether we can go back
+    canGoBack = computed(() => {
+        return this.navigationHistory().length > 1;
+    });
+
     // Listen to navigation events
     navigationEvents = toSignal(
         this.router.events.pipe(
@@ -31,7 +36,13 @@ export class RouteDataService {
     );
 
     constructor() {
-        // Update route data when navigation occurs
+        // Update route data immediately
+        this.updateRouteData();
+        
+        // Initialize with current route
+        setTimeout(() => this.initializeHistory(), 0);
+        
+        // Listen for router events and track navigation
         this.router.events.pipe(
             filter(event => event instanceof NavigationEnd)
         ).subscribe((event: NavigationEnd) => {
@@ -41,6 +52,22 @@ export class RouteDataService {
                 this.updateNavigationHistory(event);
             }, 0);
         });
+    }
+
+    private initializeHistory() {
+        // Add the initial/current route to history if not already present
+        const currentUrl = this.router.url;
+        const currentHistory = this.navigationHistory();
+        
+        if (currentHistory.length === 0 && currentUrl) {
+            const initialTitle = this.getRouteTitle(currentUrl);
+            const initialItem: NavigationHistoryItem = {
+                url: currentUrl,
+                title: initialTitle,
+                timestamp: new Date()
+            };
+            this.navigationHistory.set([initialItem]);
+        }
     }
 
     private updateRouteData() {
@@ -211,10 +238,6 @@ export class RouteDataService {
     }
 
     // Navigation history methods
-    canGoBack(): boolean {
-        return this.navigationHistory().length > 1;
-    }
-
     goBack(): void {
         if (this.canGoBack()) {
             const history = this.navigationHistory();
