@@ -6,7 +6,8 @@
     </div>
     }
     <div class="profile-info-container" [class.compact]="compact()" [class.mobile]="layoutService.isHandset()">
-        <div class="profile-avatar" [class.clickable]="profile()?.data.picture" [class.mobile]="layoutService.isHandset()"
+        <div class="profile-avatar" [class.clickable]="profile()?.data.picture"
+            [class.mobile]="layoutService.isHandset()"
             (click)="profile()?.data.picture && layout.openProfilePicture(profile()!)">
             @if (profile()?.data.picture) {
             <img [src]="profile()!.data.picture" alt="Profile picture" class="avatar-image">
@@ -17,9 +18,35 @@
 
         <div class="profile-info" [class.compact]="compact()">
 
-            <button mat-icon-button class="profile-menu-button" [matMenuTriggerFor]="profileMenu">
-                <mat-icon>more_vert</mat-icon>
-            </button>
+            <div class="profile-menu-actions">
+
+
+                @if (isOwnProfile()) {
+                <button mat-flat-button color="primary" routerLink="edit">
+                    <mat-icon>edit</mat-icon> Edit Profile
+                </button>
+                } @else {
+
+                @if(!isFollowing()) {
+                <button mat-flat-button color="primary" (click)="followUser()">
+                    <mat-icon>person_add</mat-icon> Follow
+                </button>
+                } @else {
+                <!-- <button mat-flat-button color="warn" (click)="unfollowUser()">
+                    <mat-icon>person_remove</mat-icon> Unfollow
+                </button> -->
+                }
+
+                <button mat-stroked-button color="primary" (click)="layoutService.openSendMessage(currentPubkey())">
+                    <mat-icon>message</mat-icon> Message
+                </button>
+                }
+
+                <button mat-icon-button class="profile-menu-button" [matMenuTriggerFor]="profileMenu">
+                    <mat-icon>more_vert</mat-icon>
+                </button>
+            </div>
+
 
             <h1 class="profile-name">{{ name() }}</h1>
 
@@ -103,14 +130,17 @@
 
             <mat-menu #profileMenu="matMenu">
                 @if (!isOwnProfile()) {
+                @if(!isFollowing()) {
                 <button mat-menu-item (click)="followUser()">
                     <mat-icon>person_add</mat-icon>
                     <span>Follow</span>
                 </button>
+                } @else {
                 <button mat-menu-item (click)="unfollowUser()">
                     <mat-icon>person_remove</mat-icon>
                     <span>Unfollow</span>
                 </button>
+                }
                 }
 
                 @if (isOwnProfile()) {

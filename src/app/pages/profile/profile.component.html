@@ -190,26 +190,7 @@
 
     @if (!isCompactHeader()) {
     <div class="profile-actions">
-      @if (isOwnProfile()) {
-      <button mat-flat-button color="primary" routerLink="edit">
-        <mat-icon>edit</mat-icon> Edit Profile
-      </button>
-      } @else {
 
-      @if(!isFollowing()) {
-      <button mat-flat-button color="primary" (click)="followUser()">
-        <mat-icon>person_add</mat-icon> Follow
-      </button>
-      } @else {
-      <button mat-flat-button color="warn" (click)="unfollowUser()">
-        <mat-icon>person_remove</mat-icon> Unfollow
-      </button>
-      }
-
-      <button mat-stroked-button color="primary" (click)="sendMessage()">
-        <mat-icon>message</mat-icon> Message
-      </button>
-      }
     </div>
     }
   </div>

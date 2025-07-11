@@ -259,9 +259,25 @@
     line-height: 1.5;
 }
 
-.profile-menu-button {
+.profile-menu-actions {
     position: relative;
     float: right;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    // top: 16px;
+    // right: 16px;
+
+    // .compact & {
+    //     top: auto;
+    //     right: 0;
+    //     background-color: transparent;
+    // }
+}
+
+.profile-menu-button {
+    // position: relative;
+    // float: right;
     // top: 16px;
     // right: 16px;
 

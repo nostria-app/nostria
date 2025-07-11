@@ -77,6 +77,11 @@ export class ProfileHeaderComponent {
         return this.accountState.pubkey() === this.currentPubkey();
     });
 
+    isFollowing = computed(() => {
+        const followingList = this.accountState.followingList();
+        return followingList.includes(this.pubkey());
+    });
+
     constructor() {
         effect(() => {
             const currentPubkey = this.currentPubkey();

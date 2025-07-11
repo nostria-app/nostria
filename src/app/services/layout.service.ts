@@ -250,8 +250,8 @@ export class LayoutService implements OnDestroy {
      */
     refreshScrollMonitoring(): void {
         this.checkScrollPosition();
-    }   
-    
+    }
+
     /**
      * Re-initialize scroll monitoring (useful when DOM structure changes)
      */
@@ -829,6 +829,16 @@ export class LayoutService implements OnDestroy {
 
             this.logger.debug('Opened profile picture dialog');
         }
+    }
+
+    /**
+    * Navigate to messages page to start a new chat with this user
+    */
+    openSendMessage(pubkey: string) {
+        this.logger.debug('Message requested for:', pubkey);
+        this.router.navigate(['/messages'], {
+            queryParams: { pubkey: pubkey }
+        });
     }
 
     openProfileBanner(profile: NostrRecord): void {
