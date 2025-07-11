@@ -34,7 +34,7 @@
   overflow: hidden;
   z-index: 100000;
   pointer-events: auto;
-  
+
   // Ensure it renders above everything
   transform: translateZ(0);
   will-change: transform;
@@ -128,25 +128,29 @@
   font-size: 14px;
 }
 
+.clear-button {
+  float: right;
+}
+
 // Responsive design for mobile devices
 @media (max-width: 768px) {
   .context-menu {
     min-width: 200px;
     max-width: 280px;
   }
-  
+
   .context-menu-item {
     padding: 14px 16px;
     gap: 10px;
-    
+
     .item-content {
       gap: 1px;
     }
-    
+
     .item-title {
       font-size: 13px;
     }
-    
+
     .item-url {
       font-size: 11px;
     }
