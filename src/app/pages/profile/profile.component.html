@@ -6,7 +6,7 @@
       <div class="profile-loading-skeleton">
         <!-- Banner skeleton -->
         <div class="banner-skeleton"></div>
-        
+
         <!-- Avatar and info skeleton -->
         <div class="profile-info-skeleton">
           <div class="avatar-skeleton"></div>
@@ -16,14 +16,14 @@
             <div class="bio-skeleton"></div>
           </div>
         </div>
-        
+
         <!-- Actions skeleton -->
         <div class="actions-skeleton">
           <div class="action-button-skeleton"></div>
           <div class="action-button-skeleton"></div>
         </div>
       </div>
-      
+
       <!-- Loading spinner and message -->
       <div class="loading-spinner-section">
         <mat-spinner diameter="48"></mat-spinner>
@@ -53,146 +53,7 @@
       [style.background-image]="userMetadata()?.data.banner ? 'url(' + userMetadata()!.data.banner + ')' : getDefaultBanner()">
     </div>
     }
-
-    <app-profile-header [profile]="userMetadata()" [pubkey]="pubkey()"
-      [compact]="isCompactHeader()"></app-profile-header>
-
-    <!-- <div class="profile-avatar-container" [class.compact]="isCompactHeader()">
-      <div class="profile-avatar" [class.clickable]="profile.content.picture"
-        (click)="profile.content.picture && openProfilePicture()">
-        @if (profile.content.picture) {
-        <img [src]="profile.content.picture" alt="Profile picture" class="avatar-image">
-        } @else {
-        <mat-icon class="default-avatar">account_circle</mat-icon>
-        }
-      </div>
-    </div> -->
-
-    <!-- <div class="profile-info" [class.compact]="isCompactHeader()">
-      <h1 class="profile-name">{{ getFormattedName() }}</h1>
-
-      <div class="profile-item" title="{{ getFormattedNpub() }}">
-        <mat-icon>key</mat-icon>
-        <span>{{ getFormattedNpub() }}</span>
-      </div>
-
-      @if (getVerifiedIdentifier()) {
-      <div class="profile-item" title="{{ getVerifiedIdentifier() }}">
-        <mat-icon class="verified-icon">verified</mat-icon>
-        <span>{{ getVerifiedIdentifier() }}</span>
-      </div>
-      }
-
-      @if (profile.content.website) {
-      <div class="profile-item" title="{{ profile.content.website }}">
-        <mat-icon>link</mat-icon>
-        <span><a [href]="profile.content.website" target="_blank">{{ profile.content.website}}</a></span>
-      </div>
-      }
-
-      @if (profile.content.lud16 && !isCompactHeader()) {
-      <div class="profile-item">
-        <mat-icon class="profile-icon-custom">⚡️</mat-icon>
-        <span class="verified-name" (mouseenter)="showLightningQR.set(true)"
-          (mouseleave)="showLightningQR.set(false)">{{ profile.content.lud16 }}</span>
-
-        @if (showLightningQR() && lightningQrCode()) {
-        <div class="qr-popover">
-          <div class="qr-container">
-            <div class="qr-code">
-              <img [src]="lightningQrCode()" alt="Lightning QR Code" class="qr-image">
-            </div>
-            <p class="qr-caption">Scan to send sats</p>
-          </div>
-        </div>
-        }
-      </div>
-      }
-
-      @if (!isCompactHeader() && profile.content.about) {
-      <div class="profile-bio">
-        {{ profile.content.about }}
-      </div>
-      }
-
-      @if (!isCompactHeader()) {
-      <a class="following-count" [routerLink]="'following'" [queryParamsHandling]="'preserve'">
-        Following {{ profileState.followingList().length }}
-      </a>
-      }
-
-      <button mat-icon-button class="profile-menu-button" [matMenuTriggerFor]="profileMenu">
-        <mat-icon>more_vert</mat-icon>
-      </button>
-
-      <mat-menu #profileMenu="matMenu">
-        @if (!isOwnProfile()) {
-        <button mat-menu-item (click)="followUser()">
-          <mat-icon>person_add</mat-icon>
-          <span>Follow</span>
-        </button>
-        <button mat-menu-item (click)="unfollowUser()">
-          <mat-icon>person_remove</mat-icon>
-          <span>Unfollow</span>
-        </button>
-        }
-
-        <button mat-menu-item [matMenuTriggerFor]="copyMenu">
-          <mat-icon>content_copy</mat-icon>
-          <span>Copy</span>
-        </button>
-
-        <button mat-menu-item [matMenuTriggerFor]="shareMenu">
-          <mat-icon>share</mat-icon>
-          <span>Share</span>
-        </button>
-
-        @if (!isOwnProfile()) {
-        <mat-divider></mat-divider>
-        <button mat-menu-item (click)="muteUser()">
-          <mat-icon>notifications_off</mat-icon>
-          <span>Mute</span>
-        </button>
-        <button mat-menu-item (click)="blockUser()">
-          <mat-icon>block</mat-icon>
-          <span>Block</span>
-        </button>
-        }
-      </mat-menu>
-
-      <mat-menu #copyMenu="matMenu">
-        <button mat-menu-item (click)="copyNpub()">
-          <span>Identifier (npub)</span>
-        </button>
-        <button mat-menu-item (click)="copyNprofile()">
-          <span>Identifier (nprofile)</span>
-        </button>
-        <button mat-menu-item (click)="copyProfileData()">
-          <span>Profile Data</span>
-        </button>
-        <button mat-menu-item (click)="copyFollowingList()">
-          <span>Following List</span>
-        </button>
-        <button mat-menu-item (click)="copyRelayList()">
-          <span>Relay List</span>
-        </button>
-      </mat-menu>
-
-      <mat-menu #shareMenu="matMenu">
-        <button mat-menu-item (click)="shareProfile()">
-          <span>Profile</span>
-        </button>
-        <button mat-menu-item (click)="shareProfileUrl()">
-          <span>Profile URL</span>
-        </button>
-      </mat-menu>
-    </div> -->
-
-    @if (!isCompactHeader()) {
-    <div class="profile-actions">
-
-    </div>
-    }
+    <app-profile-header [profile]="userMetadata()" [pubkey]="pubkey()" [compact]="isCompactHeader()"></app-profile-header>
   </div>
 
   <div class="profile-outlet" [class.mobile]="layoutService.isHandset()">
