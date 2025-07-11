@@ -42,6 +42,10 @@ export class NavigationContextMenuComponent implements OnInit, OnDestroy {
     this.showMenu(x, y, history, onItemSelected);
   }
 
+  onClearHistory() {
+    this.historyItems.set([]);
+  }
+
   showMenu(x: number, y: number, history: NavigationHistoryItem[], onItemSelected: (index: number) => void) {
     // Calculate optimal menu position
     const menuWidth = 250;
