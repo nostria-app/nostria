@@ -77,7 +77,8 @@
     }
     } @else if (selectedCategory() === 'articles') {
     @for(bookmark of bookmarkService.bookmarkArticles(); track bookmark.id) {
-    <app-article [pubkey]="bookmark.id" [kind]="bookmark.kind" [slug]="bookmark.slug"></app-article>
+      @let bm = bookmarkService.parseArticleId(bookmark.id);
+    <app-article [pubkey]="bm.id" [kind]="bm.kind" [slug]="bm.slug"></app-article>
     }
     } @else if (selectedCategory() === 'urls') {
     @for(bookmark of bookmarkService.bookmarkUrls(); track bookmark.id) {

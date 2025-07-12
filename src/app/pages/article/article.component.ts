@@ -16,10 +16,11 @@ import { DateToggleComponent } from '../../components/date-toggle/date-toggle.co
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { marked } from 'marked';
 import { DataService } from '../../services/data.service';
-import { UserRelayFactoryService } from '../../services/user-relay-factory.service';
 import { LayoutService } from '../../services/layout.service';
 import { ParsingService } from '../../services/parsing.service';
 import { UrlUpdateService } from '../../services/url-update.service';
+import { BookmarkService } from '../../services/bookmark.service';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-article',
@@ -32,7 +33,8 @@ import { UrlUpdateService } from '../../services/url-update.service';
     MatDividerModule,
     MatProgressSpinnerModule,
     UserProfileComponent,
-    DateToggleComponent
+    DateToggleComponent,
+    CommonModule
   ],
   templateUrl: './article.component.html',
   styleUrl: './article.component.scss'
@@ -48,6 +50,7 @@ export class ArticleComponent {
   private layout = inject(LayoutService);
   private parsing = inject(ParsingService);
   private url = inject(UrlUpdateService);
+  bookmark = inject(BookmarkService);
 
   event = signal<Event | undefined>(undefined);
   isLoading = signal(false);
@@ -68,6 +71,22 @@ export class ArticleComponent {
       }
     });
   }
+
+  bookmarkArticle() {
+    this.bookmark.toggleBookmark(this.id(), 'a');
+  }
+
+  id = computed(() => {
+    const ev = this.event();
+    if (!ev) return '';
+    return `${this.event()?.kind}:${this.authorPubkey()}:${this.slug()}`;
+  });
+
+  slug = computed(() => {
+    const ev = this.event();
+    if (!ev) return '';
+    return this.utilities.getTagValues('d', ev.tags)[0] || '';
+  });
 
   async loadArticle(naddr: string): Promise<void> {
     const receivedData = history.state.event as Event | undefined;
