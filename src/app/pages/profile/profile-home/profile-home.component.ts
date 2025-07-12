@@ -32,7 +32,7 @@ export class ProfileHomeComponent {
     navLinks: NavLink[] = [
       { path: 'notes', label: 'Notes', icon: 'chat' },
       { path: 'replies', label: 'Replies', icon: 'reply_all' },
-      { path: 'reads', label: 'Reads', icon: 'bookmark' },
+      { path: 'reads', label: 'Articles', icon: 'article' },
       { path: 'media', label: 'Media', icon: 'image' },
       // { path: 'about', label: 'About', icon: 'info' },
       // { path: 'connections', label: 'Connections', icon: 'people' },
