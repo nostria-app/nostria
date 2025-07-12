@@ -463,6 +463,8 @@ export class App {
           await this.nostrService.loginWithNostrConnect(result);
         } else if (result.startsWith('npub:')) {
           this.router.navigate(['/p', result]);
+        } else if (result.startsWith('nostr+walletconnect://')) {
+          // Handle WalletConnect URL
         }
       }
     });
