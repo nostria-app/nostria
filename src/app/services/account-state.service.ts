@@ -12,6 +12,7 @@ import { Subject, takeUntil } from 'rxjs';
 import { HttpContext } from '@angular/common/http';
 import { USE_NIP98 } from './interceptors/nip98Auth';
 import { UtilitiesService } from './utilities.service';
+import { Wallets } from './wallets';
 
 interface ProfileCacheEntry {
   profile: NostrRecord;
@@ -42,6 +43,7 @@ export class AccountStateService {
   private readonly accountService = inject(AccountService);
   private readonly storage = inject(StorageService);
   private readonly utilities = inject(UtilitiesService);
+  private readonly wallets = inject(Wallets);
 
   private destroy$ = new Subject<void>();
 

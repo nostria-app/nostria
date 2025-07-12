@@ -11,6 +11,8 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { NostrService } from '../../services/nostr.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { AccountStateService } from '../../services/account-state.service';
+import { MatTabsModule } from '@angular/material/tabs';
+import { Wallets } from '../../services/wallets';
 
 @Component({
   selector: 'app-credentials',
@@ -22,7 +24,8 @@ import { AccountStateService } from '../../services/account-state.service';
     MatInputModule,
     MatFormFieldModule,
     MatDividerModule,
-    MatTooltipModule
+    MatTooltipModule,
+    MatTabsModule
 ],
   templateUrl: './credentials.component.html',
   styleUrl: './credentials.component.scss'
@@ -33,6 +36,7 @@ export class CredentialsComponent {
   utilities = inject(UtilitiesService);
   accountState = inject(AccountStateService);
   isNsecVisible = signal(false);
+  wallets = inject(Wallets);
 
   toggleNsecVisibility(): void {
     this.isNsecVisible.update(current => !current);
