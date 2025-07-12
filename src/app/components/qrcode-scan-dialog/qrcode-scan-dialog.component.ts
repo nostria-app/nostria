@@ -176,6 +176,7 @@ export class QrcodeScanDialogComponent implements AfterViewInit, OnDestroy {
       try {
         const result = this.camera.readFrame(this.qrCanvas);
         if (result) {
+          debugger;
           this.onScanSuccess(result);
         }
       } catch (error) {
