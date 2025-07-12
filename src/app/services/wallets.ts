@@ -6,6 +6,7 @@ import { nip47 } from 'nostr-tools';
 export interface Wallet {
   pubkey: string;
   connections: string[];
+  name?: string;
 }
 
 @Injectable({
@@ -41,11 +42,17 @@ export class Wallets {
   }
 
   addWallet(pubkey: string, connection: string, data: any) {
-    debugger;
-    const currentWallet = this.wallets()[pubkey] || { pubkey, connections: [], data };
+    const currentWallets = this.wallets();
+    const currentWallet = currentWallets[pubkey] || { 
+      pubkey, 
+      connections: [], 
+      data,
+      name: this.generateWalletName(currentWallets)
+    };
+    
     if (!currentWallet.connections.includes(connection)) {
       currentWallet.connections.push(connection);
-      this.wallets.set({ ...this.wallets(), [pubkey]: currentWallet });
+      this.wallets.set({ ...currentWallets, [pubkey]: currentWallet });
     }
 
     this.save();
@@ -54,5 +61,42 @@ export class Wallets {
   save() {
     this.localStorage.setObject(this.appState.WALLETS_KEY, this.wallets());
     console.log('Wallets saved to local storage', this.wallets());
+  }
+
+  removeWallet(pubkey: string) {
+    const currentWallets = this.wallets();
+    if (currentWallets[pubkey]) {
+      delete currentWallets[pubkey];
+      this.wallets.set({ ...currentWallets });
+      this.save();
+    }
+  }
+
+  generateWalletName(wallets: Record<string, Wallet>): string {
+    const existingNumbers = Object.values(wallets)
+      .map(w => w.name || '')
+      .filter(name => name.match(/^Wallet \d+$/))
+      .map(name => parseInt(name.replace('Wallet ', '')))
+      .sort((a, b) => a - b);
+
+    let nextNumber = 1;
+    for (const num of existingNumbers) {
+      if (num === nextNumber) {
+        nextNumber++;
+      } else {
+        break;
+      }
+    }
+
+    return `Wallet ${nextNumber}`;
+  }
+
+  updateWalletName(pubkey: string, newName: string) {
+    const currentWallets = this.wallets();
+    if (currentWallets[pubkey]) {
+      currentWallets[pubkey].name = newName;
+      this.wallets.set({ ...currentWallets });
+      this.save();
+    }
   }
 }
