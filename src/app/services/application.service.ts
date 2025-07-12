@@ -136,6 +136,7 @@ export class ApplicationService {
             this.appState.RELAYS_STORAGE_KEY,
             this.appState.PROCESSING_STORAGE_KEY,
             this.appState.SETTINGS_KEY,
+            this.appState.WALLETS_KEY,
         ];
 
         for (let i = 0; i < keysToRemove.length; i++) {

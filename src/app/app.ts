@@ -43,6 +43,8 @@ import { StateService } from './services/state.service';
 import { PublishQueueService } from './services/publish-queue';
 import { NavigationComponent } from './components/navigation/navigation';
 import { NavigationContextMenuComponent } from './components/navigation-context-menu/navigation-context-menu.component';
+import { nip47 } from 'nostr-tools';
+import { Wallets } from './services/wallets';
 
 interface NavItem {
   path: string;
@@ -105,6 +107,7 @@ export class App {
   state = inject(StateService);
   nostrProtocol = inject(NostrProtocolService);
   publishQueue = inject(PublishQueueService);
+  private readonly wallets = inject(Wallets);
   private readonly platform = inject(PLATFORM_ID);
   private readonly document = inject(DOCUMENT);
 
@@ -192,34 +195,34 @@ export class App {
     if ('launchQueue' in window) {
       this.logger.info('[App] LaunchQueue is available, setting up consumer');
       const launchQueue = (window as any).launchQueue;
-      
+
       launchQueue.setConsumer(async (launchParams: any) => {
         this.logger.info('[App] LaunchQueue consumer triggered');
         this.logger.info('[App] LaunchParams received:', launchParams);
         this.logger.info('[App] LaunchParams type:', typeof launchParams);
-        
+
         if (launchParams?.targetURL) {
           this.logger.info('[App] Target URL found in launch params');
           this.logger.info('[App] Target URL:', launchParams.targetURL);
           this.logger.info('[App] Target URL type:', typeof launchParams.targetURL);
           this.logger.info('[App] Target URL length:', launchParams.targetURL?.length || 'undefined');
-          
+
           // Handle nostr protocol links
           const url = launchParams.targetURL;
           this.logger.debug('[App] Checking if URL contains nostr parameter');
-          
+
           if (url.includes('nostr=')) {
             this.logger.info('[App] *** NOSTR PROTOCOL DETECTED IN LAUNCH QUEUE ***');
             this.logger.info('[App] Processing nostr protocol from launch queue');
             this.logger.info('[App] URL with nostr parameter:', url);
-            
+
             try {
               await this.nostrProtocol.handleNostrProtocol(url);
               this.logger.info('[App] *** NOSTR PROTOCOL HANDLING COMPLETED SUCCESSFULLY ***');
             } catch (error) {
               this.logger.error('[App] *** NOSTR PROTOCOL HANDLING FAILED ***');
               this.logger.error('[App] Launch queue nostr protocol error:', error);
-              
+
               if (error instanceof Error) {
                 this.logger.error('[App] Launch queue error name:', error.name);
                 this.logger.error('[App] Launch queue error message:', error.message);
@@ -229,7 +232,7 @@ export class App {
           } else {
             this.logger.debug('[App] No nostr parameter found in launch queue URL');
             this.logger.debug('[App] URL content for analysis:', url);
-            
+
             // Check for other patterns that might indicate nostr content
             if (url.includes('nostr')) {
               this.logger.warn('[App] URL contains "nostr" but not as expected parameter:', url);
@@ -240,11 +243,11 @@ export class App {
           this.logger.warn('[App] LaunchParams structure:', Object.keys(launchParams || {}));
         }
       });
-      
+
       this.logger.info('[App] LaunchQueue consumer setup completed');
     } else {
       this.logger.info('[App] LaunchQueue not available in this environment');
-      this.logger.debug('[App] Window object keys containing "launch":', 
+      this.logger.debug('[App] Window object keys containing "launch":',
         Object.keys(window).filter(key => key.toLowerCase().includes('launch')));
     }
 
@@ -363,7 +366,7 @@ export class App {
 
     try {
       this.logger.info('[App] Initializing storage');
-      
+
       // Add timeout for storage initialization
       const storageInitPromise = this.storage.init();
       const timeoutPromise = new Promise<never>((_, reject) => {
@@ -391,7 +394,7 @@ export class App {
       try {
         const diagnostics = await this.storage.getDiagnosticInfo();
         this.logger.error('[App] Storage diagnostic info after failure:', diagnostics);
-        
+
         // Show user-friendly error message
         this.showStorageError(error, diagnostics);
       } catch (diagError) {
@@ -410,7 +413,7 @@ export class App {
 
   private showStorageError(error: any, diagnostics: any): void {
     let errorMessage = 'Storage initialization failed. ';
-    
+
     if (diagnostics.platform.isIOS && diagnostics.platform.isWebView) {
       errorMessage += 'This appears to be an iOS WebView which may have IndexedDB restrictions. ';
     } else if (diagnostics.isPrivateMode) {
@@ -418,11 +421,11 @@ export class App {
     } else if (!diagnostics.indexedDBSupported) {
       errorMessage += 'IndexedDB is not supported in this browser. ';
     }
-    
+
     errorMessage += 'The app will continue with limited functionality.';
-    
+
     this.logger.warn('[App] User-friendly error message:', errorMessage);
-    
+
     // You could show a toast/snackbar here if needed
     // this.snackBar.open(errorMessage, 'OK', { duration: 10000 });
   }
@@ -465,6 +468,8 @@ export class App {
           this.router.navigate(['/p', result]);
         } else if (result.startsWith('nostr+walletconnect://')) {
           // Handle WalletConnect URL
+          const connect = nip47.parseConnectionString(result);
+          this.wallets.addWallet(this.accountState.pubkey(), result, connect);
         }
       }
     });
@@ -557,11 +562,11 @@ export class App {
    */
   private async checkForNostrProtocolInUrl(): Promise<void> {
     this.logger.info('[App] ==> Checking for nostr protocol in current URL');
-    
+
     try {
       this.logger.debug('[App] Getting current URL from window.location');
       const currentUrl = window.location.href;
-      
+
       this.logger.info('[App] Current URL:', currentUrl);
       this.logger.info('[App] Current URL length:', currentUrl?.length || 'undefined');
       this.logger.debug('[App] Current URL breakdown:', {
@@ -571,13 +576,13 @@ export class App {
         search: window.location.search,
         hash: window.location.hash
       });
-      
+
       this.logger.debug('[App] Checking if current URL contains nostr parameter');
-      
+
       if (currentUrl.includes('nostr=')) {
         this.logger.info('[App] *** NOSTR PARAMETER DETECTED IN CURRENT URL ***');
         this.logger.info('[App] URL with nostr parameter:', currentUrl);
-        
+
         // Extract and log the nostr parameter value
         try {
           const urlObj = new URL(currentUrl);
@@ -587,37 +592,37 @@ export class App {
         } catch (urlParseError) {
           this.logger.error('[App] Failed to parse current URL for parameter extraction:', urlParseError);
         }
-        
+
         this.logger.info('[App] Calling nostr protocol handler for current URL');
         await this.nostrProtocol.handleNostrProtocol(currentUrl);
         this.logger.info('[App] *** NOSTR PROTOCOL HANDLING FROM URL COMPLETED ***');
-        
+
       } else {
         this.logger.debug('[App] No nostr parameter found in current URL');
-        
+
         // Check for other nostr-related patterns
         if (currentUrl.includes('nostr')) {
           this.logger.info('[App] URL contains "nostr" but not as parameter:', currentUrl);
         }
-        
+
         // Check for direct nostr protocol in hash or other locations
         if (window.location.hash && window.location.hash.includes('nostr')) {
           this.logger.info('[App] Found nostr reference in URL hash:', window.location.hash);
         }
       }
-      
+
       this.logger.info('[App] ==> URL check completed');
-      
+
     } catch (error) {
       this.logger.error('[App] ==> ERROR: Failed to check for nostr protocol in URL');
       this.logger.error('[App] URL check error:', error);
-      
+
       if (error instanceof Error) {
         this.logger.error('[App] URL check error name:', error.name);
         this.logger.error('[App] URL check error message:', error.message);
         this.logger.error('[App] URL check error stack:', error.stack);
       }
-      
+
       this.logger.error('[App] URL check error context:', {
         currentUrl: window?.location?.href || 'unavailable',
         userAgent: navigator?.userAgent || 'unavailable',
