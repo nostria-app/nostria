@@ -29,14 +29,23 @@ export class BookmarkService {
   snackBar = inject(MatSnackBar);
   layout = inject(LayoutService);
 
-  bookmarkEvents = signal<any[]>([]);
-  bookmarkArticles = signal<any[]>([]);
-  bookmarkUrls = signal<any[]>([]);
+  bookmarkEvent = signal<Event | null>(null);
 
-  // Legacy computed properties for backward compatibility
-  // bookmarkEventsStatus = computed(() => this.bookmarkStatus().event);
-  // bookmarkEventsIcons = computed(() => this.bookmarkIcons().event);
-  bookmarkEvent: Event | null = null;
+  bookmarks = computed<any[]>(() => {
+    return this.bookmarkEvent()?.tags.map(tag => ({ id: tag[1] })) || [];
+  });
+
+  bookmarkEvents = computed<any[]>(() => {
+    return this.bookmarkEvent()?.tags.filter(tag => tag[0] === 'e').map(tag => ({ id: tag[1] })) || [];
+  });
+
+  bookmarkArticles = computed<any[]>(() => {
+    return this.bookmarkEvent()?.tags.filter(tag => tag[0] === 'a').map(tag => ({ id: tag[1] })) || [];
+  });
+
+  bookmarkUrls = computed<any[]>(() => {
+    return this.bookmarkEvent()?.tags.filter(tag => tag[0] === 'r').map(tag => ({ id: tag[1] })) || [];
+  });
 
   constructor() {
     effect(async () => {
@@ -45,37 +54,18 @@ export class BookmarkService {
       if (pubkey) {
         await this.initialize();
       } else {
-        this.bookmarkEvent = null;
-        this.bookmarkEvents.set([]);
-        this.bookmarkArticles.set([]);
-        this.bookmarkUrls.set([]);
+        this.bookmarkEvent.set(null);
       }
     });
   }
 
   async initialize() {
-
     const bookmarksEvent = await this.relay.get({ authors: [this.accountState.pubkey()!], kinds: [kinds.BookmarkList] });
-    if (bookmarksEvent) {
-      this.bookmarkEvent = bookmarksEvent;
-
-      const bookmarksEvents = bookmarksEvent.tags.filter(tag => tag[0] === 'e').map(tag => ({ id: tag[1] }));
-      this.bookmarkEvents.set(bookmarksEvents);
-
-      const bookmarksArticles = bookmarksEvent.tags.filter(tag => tag[0] === 'a').map(tag => {
-        const values = tag[1].split(':');
-        return { id: values[1], kind: parseInt(values[0]), slug: values[2] };
-      });
-
-      this.bookmarkArticles.set(bookmarksArticles);
-
-      const bookmarkUrls = bookmarksEvent.tags.filter(tag => tag[0] === 'r').map(tag => ({ id: tag[1] }));
-      this.bookmarkUrls.set(bookmarkUrls);
-    }
+    this.bookmarkEvent.set(bookmarksEvent);
   }
 
   // Helper to get the appropriate signal based on bookmark type
-  private getBookmarkSignal(type: BookmarkType) {
+  getBookmarkSignal(type: BookmarkType) {
     switch (type) {
       case 'e': return this.bookmarkEvents;
       case 'a': return this.bookmarkArticles;
@@ -84,57 +74,23 @@ export class BookmarkService {
     }
   }
 
-  // Create computed signals to track bookmarked status for all types
-  bookmarkStatus = computed(() => {
-    const eventStatus = this.createStatusMap(this.bookmarkEvents());
-    const articleStatus = this.createStatusMap(this.bookmarkArticles());
-    const urlStatus = this.createStatusMap(this.bookmarkUrls());
+  parseArticleId(id: string) {
+    const split = id.split(':');
 
     return {
-      event: eventStatus,
-      article: articleStatus,
-      url: urlStatus
-    };
-  });
-
-  // Create computed signal for bookmark icons for all types
-  bookmarkIcons = computed(() => {
-    const statuses = this.bookmarkStatus();
-    const result = {
-      event: this.createIconMap(statuses.event),
-      article: this.createIconMap(statuses.article),
-      url: this.createIconMap(statuses.url)
-    };
-
-    return result;
-  });
-
-  // Helper method to create status maps
-  private createStatusMap(bookmarks: any[]): Record<string, boolean> {
-    const statusMap: Record<string, boolean> = {};
-    bookmarks.forEach(bookmark => {
-      statusMap[bookmark.id] = true;
-    });
-    return statusMap;
-  }
-
-  // Helper method to create icon maps
-  private createIconMap(statusMap: Record<string, boolean>): Record<string, string> {
-    const iconMap: Record<string, string> = {};
-    Object.keys(statusMap).forEach(id => {
-      iconMap[id] = statusMap[id] ? 'bookmark' : 'bookmark_border';
-    });
-    return iconMap;
+      kind: parseInt(split[0], 10),
+      id: split[1],
+      slug: split[2] || ''
+    }
   }
 
   async addBookmark(id: string, type: BookmarkType = 'e') {
-    const signal = this.getBookmarkSignal(type);
-    const existingBookmark = signal().find(b => b.id === id);
+    let event = this.bookmarkEvent();
 
-    if (!this.bookmarkEvent) {
+    if (!event) {
       // Create a new bookmark event if none exists
-      this.bookmarkEvent = {
-        kind: 10003,
+      event = {
+        kind: kinds.BookmarkList,
         pubkey: this.accountState.pubkey(),
         created_at: Math.floor(Date.now() / 1000),
         content: '',
@@ -144,114 +100,58 @@ export class BookmarkService {
       };
     }
 
-    // Get the appropriate tag prefix based on type
-    // const tagPrefix = this.getTagPrefix(type);
+    let bookmarkId = id;
 
+    // Check if the bookmark already exists
+    const existingBookmark = this.bookmarks().find(b => b.id === bookmarkId);
+
+    // If it exists, remove it; if not, add it
     if (existingBookmark) {
-      // Remove from signal
-      signal.update(bookmarks => bookmarks.filter(b => b.id !== id));
-
-      // Remove from event tags
-      if (this.bookmarkEvent) {
-        this.bookmarkEvent.tags = this.bookmarkEvent.tags.filter(
-          tag => !(tag[0] === type && tag[1] === id)
-        );
-      }
+      // Remove from the bookmark event tags
+      event.tags = event.tags.filter(tag => !(tag[0] === type && tag[1] === bookmarkId));
     } else {
-      // Add to signal
-      signal.update(bookmarks => [...bookmarks, { id }]);
-
-      // Add to event tags
-      if (this.bookmarkEvent) {
-        this.bookmarkEvent.tags.push([type, id]);
-      }
+      // Add to the bookmark event tags
+      event.tags.push([type, bookmarkId]);
     }
 
     // Publish the updated event
-    await this.publish();
+    await this.publish(event);
   }
 
   toggleBookmark(id: string, type: BookmarkType = 'e') {
+    debugger;
     this.addBookmark(id, type); // Add and toggle are the same operation
   }
 
-  // Helper to get tag prefix based on bookmark type
-  // private getTagPrefix(type: BookmarkType): string {
-  //   switch (type) {
-  //     case 'event': return 'e';
-  //     case 'article': return 'a';
-  //     case 'url': return 'r';
-  //     default: return 'e';
-  //   }
-  // }
-
   isBookmarked(id: string, type: BookmarkType = 'e'): boolean {
-    return !!this.getBookmarkSignal(type)().find(b => b.id === id);
+    const list = this.getBookmarkSignal(type)();
+    return list.find(b => b.id === id);
   }
 
   // Helper method to get tooltip text based on bookmark status
   getBookmarkTooltip(id: string, type: BookmarkType = 'e'): string {
-    if (type === 'a') {
-      return '';
-    }
-
-    if (type === 'e') {
-      return this.bookmarkEvents().find(b => b.id === id) ? 'Remove bookmark' : 'Add bookmark';
-    }
-
-    return '';
+    return this.bookmarkEvents().find(b => b.id === id) ? 'Remove bookmark' : 'Add bookmark';
   }
 
   // Helper method to get icon based on bookmark status
   getBookmarkIcon(id: string, type: BookmarkType = 'e'): string {
-    if (type === 'a') {
-      return '';
-    }
-
-    if (type === 'e') {
-      return this.bookmarkEvents().find(b => b.id === id) ? 'bookmark' : 'bookmark_border';
-    }
-
-    return 'bookmark_border';
+    return this.bookmarkEvents().find(b => b.id === id) ? 'bookmark_remove' : 'bookmark_add';
   }
 
-  // Legacy methods for backward compatibility
-  addBookmarkEvent(id: string) {
-    this.addBookmark(id, 'e');
-  }
-
-  toggleBookmarkEvent(id: string) {
-    this.toggleBookmark(id, 'e');
-  }
-
-  isBookmarkedEvent(id: string): boolean {
-    return this.isBookmarked(id, 'e');
-  }
-
-  // getBookmarkEventTooltip(id: string): string {
-  //   return this.getBookmarkTooltip(id, 'e');
-  // }
-
-  // getBookmarkEventIcon(id: string): string {
-  //   return this.getBookmarkIcon(id, 'e');
-  // }
-
-  async publish() {
-    if (!this.bookmarkEvent) {
+  async publish(event: Event) {
+    if (!event) {
       return;
     }
 
-    // Clone the bookmark event and remove id and sig
-    const eventToSign = { ...this.bookmarkEvent };
-    eventToSign.id = '';
-    eventToSign.sig = '';
-    eventToSign.created_at = Math.floor(Date.now() / 1000);
+    event.id = '';
+    event.sig = '';
+    event.created_at = Math.floor(Date.now() / 1000);
 
     // Sign the event
-    const signedEvent = await this.nostr.signEvent(eventToSign);
+    const signedEvent = await this.nostr.signEvent(event);
 
     // Update the local bookmark event with the signed event
-    this.bookmarkEvent = signedEvent;
+    this.bookmarkEvent.set(signedEvent);
 
     // Publish to relays and get array of promises
     const publishPromises = await this.relay.publish(signedEvent);
