@@ -1,4 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
+import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -25,7 +26,8 @@ import { Wallets } from '../../services/wallets';
     MatFormFieldModule,
     MatDividerModule,
     MatTooltipModule,
-    MatTabsModule
+    MatTabsModule,
+    ReactiveFormsModule
 ],
   templateUrl: './credentials.component.html',
   styleUrl: './credentials.component.scss'
@@ -37,6 +39,15 @@ export class CredentialsComponent {
   accountState = inject(AccountStateService);
   isNsecVisible = signal(false);
   wallets = inject(Wallets);
+  
+  connectionStringControl = new FormControl('', [
+    Validators.required,
+    Validators.pattern(/^nostr\+walletconnect:\/\//i)
+  ]);
+  
+  isAddingWallet = signal(false);
+  editingWallet = signal<string | null>(null);
+  editNameControl = new FormControl('', [Validators.required]);
 
   toggleNsecVisibility(): void {
     this.isNsecVisible.update(current => !current);
@@ -82,5 +93,90 @@ export class CredentialsComponent {
 
   isRemoteAccount(): boolean {
     return this.accountState.account()?.source === 'remote';
+  }
+
+  async addWallet(): Promise<void> {
+    if (this.connectionStringControl.invalid) {
+      this.snackBar.open('Please enter a valid Nostr Wallet Connect connection string', 'Dismiss', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom'
+      });
+      return;
+    }
+
+    this.isAddingWallet.set(true);
+
+    try {
+      const connectionString = this.connectionStringControl.value!;
+      const parsed = this.wallets.parseConnectionString(connectionString);
+      
+      this.wallets.addWallet(parsed.pubkey, connectionString, {
+        relay: parsed.relay,
+        secret: parsed.secret
+      });
+
+      this.connectionStringControl.reset();
+      this.snackBar.open('Wallet added successfully', 'Dismiss', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom'
+      });
+    } catch (error) {
+      console.error('Failed to add wallet:', error);
+      this.snackBar.open('Failed to add wallet. Please check the connection string.', 'Dismiss', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom'
+      });
+    } finally {
+      this.isAddingWallet.set(false);
+    }
+  }
+
+  removeWallet(pubkey: string): void {
+    this.wallets.removeWallet(pubkey);
+    this.snackBar.open('Wallet removed successfully', 'Dismiss', {
+      duration: 3000,
+      horizontalPosition: 'center',
+      verticalPosition: 'bottom'
+    });
+  }
+
+  getWalletEntries() {
+    return Object.entries(this.wallets.wallets());
+  }
+
+  getFirstConnectionString(wallet: any): string {
+    return wallet.connections && wallet.connections.length > 0 ? wallet.connections[0] : '';
+  }
+
+  startEditingWallet(pubkey: string, currentName: string): void {
+    this.editingWallet.set(pubkey);
+    this.editNameControl.setValue(currentName);
+  }
+
+  cancelEditingWallet(): void {
+    this.editingWallet.set(null);
+    this.editNameControl.reset();
+  }
+
+  saveWalletName(): void {
+    const editingPubkey = this.editingWallet();
+    const newName = this.editNameControl.value;
+    
+    if (editingPubkey && newName) {
+      this.wallets.updateWalletName(editingPubkey, newName);
+      this.snackBar.open('Wallet name updated successfully', 'Dismiss', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom'
+      });
+      this.cancelEditingWallet();
+    }
+  }
+
+  getWalletName(wallet: any): string {
+    return wallet.name || 'Unnamed Wallet';
   }
 }
