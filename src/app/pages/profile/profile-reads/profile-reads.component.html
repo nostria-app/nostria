@@ -7,15 +7,10 @@
   } @else {
   <div class="reads-list">
     @for(note of profileState.articles(); track note.event.id) {
-
-
-{{ utilities.getDTagValueFromEvent(note.event) }}||
-
     <mat-card class="note-card" appearance="outlined">
       <app-user-profile class="user-profile-thread" view="thread" [pubkey]="profileState.currentProfilePubkey()">
-        <a class="date-link" [routerLink]="['/a', note.event.pubkey, utilities.getDTagValueFromEvent(note.event)]" [matTooltip]="note.data.created_at * 1000 | date:'medium'"
-          matTooltipPosition="below">
-          {{ note.data.created_at | ago }}
+        <a class="date-link" [routerLink]="['/a', note.event.pubkey, utilities.getDTagValueFromEvent(note.event)]" matTooltipPosition="below">
+          {{ note.event.tags | tags:'published_at' }} 
         </a>
       </app-user-profile>
       <mat-card-content>{{note.data}}</mat-card-content>
