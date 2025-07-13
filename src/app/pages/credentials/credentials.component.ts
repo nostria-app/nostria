@@ -14,6 +14,8 @@ import { UtilitiesService } from '../../services/utilities.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { MatTabsModule } from '@angular/material/tabs';
 import { Wallets } from '../../services/wallets';
+import { nip47 } from 'nostr-tools';
+import { LN, USD } from "@getalby/sdk";
 
 @Component({
   selector: 'app-credentials',
@@ -28,7 +30,7 @@ import { Wallets } from '../../services/wallets';
     MatTooltipModule,
     MatTabsModule,
     ReactiveFormsModule
-],
+  ],
   templateUrl: './credentials.component.html',
   styleUrl: './credentials.component.scss'
 })
@@ -39,12 +41,12 @@ export class CredentialsComponent {
   accountState = inject(AccountStateService);
   isNsecVisible = signal(false);
   wallets = inject(Wallets);
-  
+
   connectionStringControl = new FormControl('', [
     Validators.required,
     Validators.pattern(/^nostr\+walletconnect:\/\//i)
   ]);
-  
+
   isAddingWallet = signal(false);
   editingWallet = signal<string | null>(null);
   editNameControl = new FormControl('', [Validators.required]);
@@ -52,7 +54,7 @@ export class CredentialsComponent {
   toggleNsecVisibility(): void {
     this.isNsecVisible.update(current => !current);
   }
-  
+
   async copyToClipboard(text: string, label: string): Promise<void> {
     try {
       await navigator.clipboard.writeText(text);
@@ -70,7 +72,7 @@ export class CredentialsComponent {
       });
     }
   }
-    getMaskedNsec(nsec: string): string {
+  getMaskedNsec(nsec: string): string {
     if (!nsec) return '';
     // Show only first 4 characters, mask the rest
     const prefix = nsec.substring(0, 4);
@@ -110,7 +112,7 @@ export class CredentialsComponent {
     try {
       const connectionString = this.connectionStringControl.value!;
       const parsed = this.wallets.parseConnectionString(connectionString);
-      
+
       this.wallets.addWallet(parsed.pubkey, connectionString, {
         relay: parsed.relay,
         secret: parsed.secret
@@ -143,6 +145,24 @@ export class CredentialsComponent {
     });
   }
 
+  async donate(wallet: any) {
+    console.log('Initiating donation for wallet:', wallet);
+
+    // const request = await new LN(wallet.connections[0]).requestPayment(USD(0.1));
+    // 15 minutes.
+    // request.onTimeout(900, () => {
+    //   console.error('Payment request timed out');
+    // });
+
+    // request.onPaid(() => {
+    //   console.log('Donation successful');
+    //   debugger;
+    // });
+
+    const request = await new LN(wallet.connections[0]).pay("sondreb@npub.cash", USD(0.1));
+    console.log('Payment request created:', request);
+  }
+
   getWalletEntries() {
     return Object.entries(this.wallets.wallets());
   }
@@ -164,7 +184,7 @@ export class CredentialsComponent {
   saveWalletName(): void {
     const editingPubkey = this.editingWallet();
     const newName = this.editNameControl.value;
-    
+
     if (editingPubkey && newName) {
       this.wallets.updateWalletName(editingPubkey, newName);
       this.snackBar.open('Wallet name updated successfully', 'Dismiss', {

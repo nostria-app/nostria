@@ -35,6 +35,7 @@
     "@angular/router": "^20.0.3",
     "@angular/service-worker": "^20.0.3",
     "@angular/ssr": "^20.0.2",
+    "@getalby/sdk": "^5.1.1",
     "@noble/hashes": "^1.8.0",
     "@progress/jszip-esm": "^1.0.4",
     "@tauri-apps/api": "^2",
