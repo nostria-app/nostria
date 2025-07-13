@@ -72,12 +72,78 @@
           matTooltip="Upload image">
           <mat-icon>image</mat-icon>
         </button>
+        <button mat-icon-button type="button" (click)="toggleAdvancedOptions()" [color]="showAdvancedOptions() ? 'primary' : ''"
+          matTooltip="Advanced options">
+          <mat-icon>settings</mat-icon>
+        </button>
       </div>
 
       <!-- Hidden file input -->
       <input type="file" #fileInput (change)="onFileSelected($event)" accept="image/*" multiple
         class="hidden-file-input" aria-label="Upload image files">
     </div>
+
+    <!-- Advanced Options -->
+    @if (showAdvancedOptions()) {
+    <div class="advanced-options-section">
+      <div class="advanced-options-header">
+        <mat-icon class="options-icon">settings</mat-icon>
+        <span class="options-title">Advanced Options</span>
+      </div>
+
+      <!-- Expiration Option -->
+      <div class="option-row">
+        <div class="option-header">
+          <mat-slide-toggle 
+            [checked]="expirationEnabled()" 
+            (change)="onExpirationToggle($event.checked)"
+            color="primary">
+            Expiration
+          </mat-slide-toggle>
+          <span class="option-description">Set an expiration date and time for this note</span>
+        </div>
+        
+        @if (expirationEnabled()) {
+        <div class="option-content">
+          <div class="expiration-inputs">
+            <mat-form-field appearance="outline" class="date-field">
+              <mat-label>Expiration Date</mat-label>
+              <input matInput 
+                [matDatepicker]="expirationPicker" 
+                [value]="expirationDate()"
+                (dateInput)="onExpirationDateChange($event.value)"
+                (dateChange)="onExpirationDateChange($event.value)"
+                placeholder="Select date"
+                [min]="minDate()"
+                readonly>
+              <mat-datepicker-toggle matIconSuffix [for]="expirationPicker"></mat-datepicker-toggle>
+              <mat-datepicker #expirationPicker></mat-datepicker>
+            </mat-form-field>
+            
+            <mat-form-field appearance="outline" class="time-field">
+              <mat-label>Expiration Time</mat-label>
+              <input matInput 
+                type="time"
+                [value]="expirationTime()"
+                (input)="onExpirationTimeChange($event)"
+                placeholder="Select time">
+            </mat-form-field>
+          </div>
+          
+          @if (!expirationValidation().valid) {
+          <div class="expiration-error">
+            <mat-icon color="warn">warning</mat-icon>
+            <span>{{ expirationValidation().message }}</span>
+          </div>
+          }
+          
+          <mat-hint class="expiration-hint">Note will be considered expired after this date and time</mat-hint>
+        </div>
+        }
+      </div>
+
+    </div>
+    }
 
     <!-- Preview section -->
     @if (showPreview()) {
