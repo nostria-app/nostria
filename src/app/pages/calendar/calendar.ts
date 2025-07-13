@@ -17,6 +17,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatDividerModule } from '@angular/material/divider';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Event } from 'nostr-tools';
+import { Router } from '@angular/router';
 import { AccountRelayService } from '../../services/account-relay.service';
 import { LoggerService } from '../../services/logger.service';
 import { ApplicationService } from '../../services/application.service';
@@ -57,6 +58,17 @@ interface CalendarEventRSVP {
   freeBusy?: 'free' | 'busy';
 }
 
+interface CalendarCollection {
+  id: string;
+  pubkey: string;
+  created_at: number;
+  kind: 31924;
+  content: string;
+  tags: string[][];
+  title: string;
+  events: string[]; // Array of event coordinates
+}
+
 @Component({
   selector: 'app-calendar',
   imports: [
@@ -86,6 +98,7 @@ export class Calendar {
   private logger = inject(LoggerService);
   public app = inject(ApplicationService); // Made public for template access
   private dialog = inject(MatDialog);
+  private router = inject(Router);
 
   // Current view state
   selectedDate = signal<Date>(new Date());
@@ -96,6 +109,11 @@ export class Calendar {
   events = signal<CalendarEvent[]>([]);
   rsvps = signal<CalendarEventRSVP[]>([]);
   isLoading = signal<boolean>(false);
+  
+  // Calendar collections state (kind 31924)
+  calendars = signal<CalendarCollection[]>([]);
+  enabledCalendars = signal<Set<string>>(new Set()); // Calendar IDs that are enabled
+  isLoadingCalendars = signal<boolean>(false);
   
   // Helper arrays for template
   dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -197,6 +215,64 @@ export class Calendar {
       .sort((a, b) => a.date.getTime() - b.date.getTime());
   });
 
+  // Filtered events based on enabled calendars
+  filteredEvents = computed(() => {
+    const allEvents = this.events();
+    const enabledCals = this.enabledCalendars();
+    
+    // If no calendars are specifically enabled, show all events
+    if (enabledCals.size === 0) {
+      return allEvents;
+    }
+    
+    // Filter events based on enabled calendars
+    return allEvents.filter(event => {
+      // Check if event belongs to an enabled calendar
+      const calendars = this.calendars();
+      const eventCalendar = calendars.find(cal => 
+        cal.events.some(eventCoord => eventCoord.includes(event.id))
+      );
+      
+      return eventCalendar ? enabledCals.has(eventCalendar.id) : true;
+    });
+  });
+
+  // Override existing computed values to use filtered events
+  selectedDateEventsFiltered = computed(() => {
+    const selected = this.selectedDate();
+    return this.filteredEvents().filter(event => {
+      return this.isSameDay(event.start, selected) ||
+             (event.end && this.isDateInRange(selected, event.start, event.end));
+    });
+  });
+
+  weekEventsFiltered = computed(() => {
+    const weekDates = this.weekDates();
+    return this.filteredEvents().filter(event => {
+      return weekDates.some(date => this.isSameDay(event.start, date));
+    });
+  });
+
+  agendaEventsFiltered = computed(() => {
+    const events = this.filteredEvents();
+    const groupedEvents = new Map<string, CalendarEvent[]>();
+    
+    events.forEach(event => {
+      const dateKey = event.start.toDateString();
+      if (!groupedEvents.has(dateKey)) {
+        groupedEvents.set(dateKey, []);
+      }
+      groupedEvents.get(dateKey)!.push(event);
+    });
+    
+    return Array.from(groupedEvents.entries())
+      .map(([dateStr, events]) => ({
+        date: new Date(dateStr),
+        events: events.sort((a, b) => a.start.getTime() - b.start.getTime())
+      }))
+      .sort((a, b) => a.date.getTime() - b.date.getTime());
+  });
+
   constructor() {
     // Effect to load events when date changes
     effect(async () => {
@@ -213,11 +289,167 @@ export class Calendar {
       });
     });
 
+    // Check for event parameter in URL on load
+    this.checkForEventInUrl();
+
     // Initial load
     this.loadCurrentUserEvents();
+    this.loadCalendars();
     
     // Add some demo events for testing
-    this.addDemoEvents();
+    // this.addDemoEvents();
+  }
+
+  // Check if there's an event parameter in the URL and open the event details
+  private async checkForEventInUrl(): Promise<void> {
+    const urlParams = new URLSearchParams(window.location.search);
+    const eventParam = urlParams.get('event');
+    
+    if (eventParam) {
+      try {
+        const [kind, pubkey, dTag] = eventParam.split(':');
+        
+        // Wait a moment for events to load, then try to find and open the event
+        setTimeout(() => {
+          const event = this.events().find(e => 
+            e.kind.toString() === kind && 
+            e.pubkey === pubkey && 
+            this.getEventDTag(e) === dTag
+          );
+          
+          if (event) {
+            this.openEventDetails(event);
+          } else {
+            // If event not found, try to load it specifically
+            this.loadSpecificEvent(kind, pubkey, dTag);
+          }
+        }, 1000);
+      } catch (error) {
+        this.logger.error('Error parsing event parameter from URL', error);
+      }
+    }
+  }
+
+  // Load a specific event by its coordinates
+  private async loadSpecificEvent(kind: string, pubkey: string, dTag: string): Promise<void> {
+    try {
+      // Note: We need to use a more generic filter since the relay types may not support #d
+      this.accountRelay.subscribe(
+        [
+          {
+            kinds: [parseInt(kind)],
+            authors: [pubkey],
+            limit: 10 // Get a few events and filter manually
+          }
+        ],
+        (event: Event) => {
+          // Check if this event has the matching d tag
+          const eventDTag = event.tags.find(tag => tag[0] === 'd')?.[1];
+          if (eventDTag === dTag) {
+            const calendarEvent = this.parseCalendarEvent(event);
+            if (calendarEvent) {
+              this.addEvent(calendarEvent);
+              this.openEventDetails(calendarEvent);
+            }
+          }
+        }
+      );
+    } catch (error) {
+      this.logger.error('Error loading specific event', error);
+    }
+  }
+
+  // Calendar collection management methods
+  async loadCalendars(): Promise<void> {
+    if (!this.app.accountState.pubkey()) {
+      this.logger.warn('No user logged in, cannot load calendars');
+      return;
+    }
+
+    this.isLoadingCalendars.set(true);
+    
+    try {
+      // Load calendars (kind 31924) for current user and followed users
+      this.accountRelay.subscribe(
+        [
+          {
+            kinds: [31924], // Calendar collections
+            authors: [this.app.accountState.pubkey()!], // Start with user's own calendars
+            limit: 50
+          }
+        ],
+        (event: Event) => {
+          const calendar = this.parseCalendar(event);
+          if (calendar) {
+            this.addCalendar(calendar);
+          }
+        }
+      );
+    } catch (error) {
+      this.logger.error('Error loading calendars', error);
+    } finally {
+      this.isLoadingCalendars.set(false);
+    }
+  }
+
+  private parseCalendar(event: Event): CalendarCollection | null {
+    try {
+      const tags = new Map(event.tags.map(tag => [tag[0], tag.slice(1)]));
+      
+      const title = tags.get('title')?.[0] || 'Untitled Calendar';
+      const dTag = tags.get('d')?.[0] || '';
+      
+      // Get event references (a tags)
+      const events = event.tags
+        .filter(tag => tag[0] === 'a')
+        .map(tag => tag[1]);
+
+      return {
+        id: event.id,
+        pubkey: event.pubkey,
+        created_at: event.created_at,
+        kind: 31924,
+        content: event.content,
+        tags: event.tags,
+        title,
+        events
+      };
+    } catch (error) {
+      this.logger.error('Error parsing calendar', error);
+      return null;
+    }
+  }
+
+  private addCalendar(calendar: CalendarCollection): void {
+    const currentCalendars = this.calendars();
+    const existingIndex = currentCalendars.findIndex(c => c.id === calendar.id);
+    
+    if (existingIndex >= 0) {
+      // Update existing calendar
+      const updatedCalendars = [...currentCalendars];
+      updatedCalendars[existingIndex] = calendar;
+      this.calendars.set(updatedCalendars);
+    } else {
+      // Add new calendar and enable it by default
+      this.calendars.set([...currentCalendars, calendar]);
+      this.enabledCalendars.update(enabled => new Set(enabled).add(calendar.id));
+    }
+  }
+
+  toggleCalendar(calendarId: string): void {
+    this.enabledCalendars.update(enabled => {
+      const newEnabled = new Set(enabled);
+      if (newEnabled.has(calendarId)) {
+        newEnabled.delete(calendarId);
+      } else {
+        newEnabled.add(calendarId);
+      }
+      return newEnabled;
+    });
+  }
+
+  isCalendarEnabled(calendarId: string): boolean {
+    return this.enabledCalendars().has(calendarId);
   }
 
   // Demo events for testing the calendar UI
@@ -567,7 +799,7 @@ export class Calendar {
   }
 
   getEventsForDate(date: Date): CalendarEvent[] {
-    return this.events().filter(event => {
+    return this.filteredEvents().filter(event => {
       return this.isSameDay(event.start, date) ||
              (event.end && this.isDateInRange(date, event.start, event.end));
     });
@@ -618,7 +850,7 @@ export class Calendar {
     const weekDates = this.weekDates();
     const targetDate = weekDates[dayIndex];
     
-    return this.weekEvents().filter(event => {
+    return this.weekEventsFiltered().filter(event => {
       if (!this.isSameDay(event.start, targetDate)) return false;
       
       if (event.isAllDay) {
@@ -638,11 +870,19 @@ export class Calendar {
   }
 
   async openEventDetails(event: CalendarEvent): Promise<void> {
+    // Update URL to reflect the selected event
+    const eventDTag = this.getEventDTag(event);
+    this.router.navigate([], {
+      queryParams: { event: `${event.kind}:${event.pubkey}:${eventDTag}` },
+      queryParamsHandling: 'merge'
+    });
+
     const dialogRef = this.dialog.open(EventDetailsDialogComponent, {
       data: {
         event,
         canEdit: event.pubkey === this.app.accountState.pubkey(),
-        canDelete: event.pubkey === this.app.accountState.pubkey()
+        canDelete: event.pubkey === this.app.accountState.pubkey(),
+        currentUserPubkey: this.app.accountState.pubkey()
       } as EventDetailsDialogData,
       width: '600px',
       maxWidth: '90vw',
@@ -650,6 +890,12 @@ export class Calendar {
     });
 
     const result = await dialogRef.afterClosed().toPromise() as EventDetailsResult;
+    
+    // Clear event from URL when dialog closes
+    this.router.navigate([], {
+      queryParams: { event: null },
+      queryParamsHandling: 'merge'
+    });
     
     if (!result || result.action === 'close') {
       return;
@@ -668,7 +914,40 @@ export class Calendar {
       case 'delete':
         await this.deleteEvent(event);
         break;
+      case 'share':
+        this.shareEvent(event);
+        break;
     }
+  }
+
+  shareEvent(event: CalendarEvent): void {
+    const eventDTag = this.getEventDTag(event);
+    const eventCoordinate = `${event.kind}:${event.pubkey}:${eventDTag}`;
+    const shareUrl = `${window.location.origin}${window.location.pathname}?event=${encodeURIComponent(eventCoordinate)}`;
+    
+    if (navigator.share) {
+      // Use native sharing if available
+      navigator.share({
+        title: event.title,
+        text: event.summary || event.content,
+        url: shareUrl
+      }).catch(error => {
+        this.logger.error('Error sharing event', error);
+        this.copyEventUrl(shareUrl);
+      });
+    } else {
+      // Fallback to copying URL to clipboard
+      this.copyEventUrl(shareUrl);
+    }
+  }
+
+  private copyEventUrl(url: string): void {
+    navigator.clipboard.writeText(url).then(() => {
+      // Could show a snackbar here indicating the URL was copied
+      this.logger.info('Event URL copied to clipboard');
+    }).catch(error => {
+      this.logger.error('Failed to copy URL to clipboard', error);
+    });
   }
 
   onEventClick(event: CalendarEvent, clickEvent: MouseEvent): void {

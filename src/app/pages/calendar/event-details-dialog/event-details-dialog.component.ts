@@ -7,7 +7,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatCardModule } from '@angular/material/card';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
 
 interface CalendarEvent {
@@ -29,14 +29,26 @@ interface CalendarEvent {
   status?: 'accepted' | 'declined' | 'tentative';
 }
 
+interface Calendar {
+  id: string;
+  pubkey: string;
+  created_at: number;
+  kind: 31924;
+  content: string;
+  tags: string[][];
+  title: string;
+  events: string[]; // Array of event coordinates
+}
+
 export interface EventDetailsDialogData {
   event: CalendarEvent;
   canEdit: boolean;
   canDelete: boolean;
+  currentUserPubkey?: string;
 }
 
 export interface EventDetailsResult {
-  action: 'edit' | 'delete' | 'rsvp' | 'close';
+  action: 'edit' | 'delete' | 'rsvp' | 'close' | 'share';
   rsvpStatus?: 'accepted' | 'declined' | 'tentative';
 }
 
@@ -51,7 +63,9 @@ export interface EventDetailsResult {
     MatChipsModule,
     MatCardModule,
     MatMenuModule,
-    MatDividerModule
+    MatDividerModule,
+    MatSnackBarModule,
+    UserProfileComponent
   ],
   template: `
     <div class="event-details-dialog">
@@ -83,10 +97,10 @@ export interface EventDetailsResult {
               <mat-icon color="warn">cancel</mat-icon>
               <span>Decline</span>
             </button>
-            @if (data.canEdit || data.canDelete) {
+            @if (canEditEvent || data.canDelete) {
               <mat-divider></mat-divider>
             }
-            @if (data.canEdit) {
+            @if (canEditEvent) {
               <button mat-menu-item (click)="editEvent()">
                 <mat-icon>edit</mat-icon>
                 <span>Edit Event</span>
@@ -98,6 +112,15 @@ export interface EventDetailsResult {
                 <span>Delete Event</span>
               </button>
             }
+            <mat-divider></mat-divider>
+            <button mat-menu-item (click)="copyEventData()">
+              <mat-icon>content_copy</mat-icon>
+              <span>Copy Event Data</span>
+            </button>
+            <button mat-menu-item (click)="shareEvent()">
+              <mat-icon>share</mat-icon>
+              <span>Share Event</span>
+            </button>
           </mat-menu>
           
           <button mat-icon-button 
@@ -110,6 +133,28 @@ export interface EventDetailsResult {
 
       <div class="dialog-content">
         <mat-card class="event-card">
+          <!-- Event Host -->
+          <div class="event-host-section">
+            <mat-icon class="section-icon">person</mat-icon>
+            <div class="host-details">
+              <div class="host-label">Hosted by</div>
+              <app-user-profile [pubkey]="data.event.pubkey" view="thread"></app-user-profile>
+            </div>
+          </div>
+
+          <!-- Event Image -->
+          @if (data.event.image) {
+            <div class="event-image-section">
+              <mat-icon class="section-icon">image</mat-icon>
+              <div class="image-details">
+                <img [src]="data.event.image" 
+                     [alt]="data.event.title" 
+                     class="event-image"
+                     (error)="onImageError($event)">
+              </div>
+            </div>
+          }
+
           <!-- Event Time -->
           <div class="event-time-section">
             <mat-icon class="section-icon">schedule</mat-icon>
@@ -236,11 +281,20 @@ export interface EventDetailsResult {
 })
 export class EventDetailsDialogComponent {
   isLoading = signal(false);
+  private snackBar = inject(MatSnackBar);
 
   constructor(
     public dialogRef: MatDialogRef<EventDetailsDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: EventDetailsDialogData
   ) {}
+
+  get isCurrentUserEvent(): boolean {
+    return this.data.currentUserPubkey === this.data.event.pubkey;
+  }
+
+  get canEditEvent(): boolean {
+    return this.data.canEdit && this.isCurrentUserEvent;
+  }
 
   isLocationUrl(location: string): boolean {
     try {
@@ -284,6 +338,43 @@ export class EventDetailsDialogComponent {
   deleteEvent(): void {
     this.dialogRef.close({
       action: 'delete'
+    } as EventDetailsResult);
+  }
+
+  copyEventData(): void {
+    try {
+      const eventData = {
+        id: this.data.event.id,
+        pubkey: this.data.event.pubkey,
+        created_at: this.data.event.created_at,
+        kind: this.data.event.kind,
+        content: this.data.event.content,
+        tags: this.data.event.tags
+      };
+      
+      navigator.clipboard.writeText(JSON.stringify(eventData, null, 2));
+      this.snackBar.open('Event data copied to clipboard', 'Close', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom'
+      });
+    } catch (error) {
+      this.snackBar.open('Failed to copy event data', 'Close', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom'
+      });
+    }
+  }
+
+  onImageError(event: Event): void {
+    const imgElement = event.target as HTMLImageElement;
+    imgElement.style.display = 'none';
+  }
+
+  shareEvent(): void {
+    this.dialogRef.close({
+      action: 'share'
     } as EventDetailsResult);
   }
 }

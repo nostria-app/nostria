@@ -60,7 +60,9 @@
       .event-description-section,
       .event-tags-section,
       .event-participants-section,
-      .event-rsvp-section {
+      .event-rsvp-section,
+      .event-host-section,
+      .event-image-section {
         display: flex;
         gap: 16px;
         padding: 20px 24px;
@@ -85,7 +87,9 @@
         .description-content,
         .tags-content,
         .participants-content,
-        .rsvp-content {
+        .rsvp-content,
+        .host-details,
+        .image-details {
           flex: 1;
           min-width: 0;
         }
@@ -199,6 +203,32 @@
               background: var(--mat-sys-tertiary-container);
               color: var(--mat-sys-on-tertiary-container);
             }
+          }
+        }
+      }
+
+      .event-host-section {
+        .host-details {
+          .host-label {
+            font-size: 0.875rem;
+            color: var(--mat-sys-on-surface-variant);
+            margin-bottom: 8px;
+            font-weight: 500;
+          }
+
+          app-user-profile {
+            display: block;
+          }
+        }
+      }
+
+      .event-image-section {
+        .image-details {
+          .event-image {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: var(--mat-sys-level1);
           }
         }
       }
