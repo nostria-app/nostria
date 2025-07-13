@@ -1,4 +1,4 @@
-import { Component, Inject, signal } from '@angular/core';
+import { Component, Inject, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -7,6 +7,8 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatCardModule } from '@angular/material/card';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
 
 interface CalendarEvent {
   id: string;
@@ -134,7 +136,16 @@ export interface EventDetailsResult {
             <div class="event-location-section">
               <mat-icon class="section-icon">location_on</mat-icon>
               <div class="location-details">
-                <span>{{ data.event.location }}</span>
+                @if (isLocationUrl(data.event.location)) {
+                  <a [href]="data.event.location" 
+                     target="_blank" 
+                     rel="noopener noreferrer"
+                     class="location-link">
+                    {{ data.event.location }}
+                  </a>
+                } @else {
+                  <span>{{ data.event.location }}</span>
+                }
               </div>
             </div>
           }
@@ -230,6 +241,15 @@ export class EventDetailsDialogComponent {
     public dialogRef: MatDialogRef<EventDetailsDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: EventDetailsDialogData
   ) {}
+
+  isLocationUrl(location: string): boolean {
+    try {
+      const url = new URL(location);
+      return url.protocol === 'http:' || url.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  }
 
   formatTime(date: Date): string {
     return date.toLocaleTimeString('en-US', {
