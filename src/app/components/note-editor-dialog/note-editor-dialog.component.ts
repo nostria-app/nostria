@@ -8,6 +8,10 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule, provideNativeDateAdapter } from '@angular/material/core';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -46,8 +50,13 @@ export interface NoteEditorDialogData {
     MatChipsModule,
     MatProgressBarModule,
     MatTooltipModule,
+    MatDatepickerModule,
+    MatNativeDateModule,
+    MatCheckboxModule,
+    MatSlideToggleModule,
     ContentComponent
   ],
+  providers: [provideNativeDateAdapter()],
   templateUrl: './note-editor-dialog.component.html',
   styleUrl: './note-editor-dialog.component.scss'
 })
@@ -70,18 +79,50 @@ export class NoteEditorDialogComponent implements AfterViewInit {
   isUploading = signal(false);
   isDragOver = signal(false);
   showPreview = signal(false);
+  showAdvancedOptions = signal(false);
   mentions = signal<string[]>(this.data?.mentions || []);
+  
+  // Advanced options
+  expirationEnabled = signal(false);
+  expirationDate = signal<Date | null>(null);
+  expirationTime = signal<string>('12:00');
+  
   private dragCounter = 0;
 
   // Computed properties
   characterCount = computed(() => this.content().length);
   // charactersRemaining = computed(() => 280 - this.characterCount());
   // isOverLimit = computed(() => this.characterCount() > 280);
-  canPublish = computed(() => 
-    this.content().trim().length > 0 && 
-    !this.isPublishing() &&
-    !this.isUploading()
-  );
+  canPublish = computed(() => {
+    const hasContent = this.content().trim().length > 0;
+    const notPublishing = !this.isPublishing();
+    const notUploading = !this.isUploading();
+    
+    // Check expiration validation
+    let expirationValid = true;
+    if (this.expirationEnabled()) {
+      const expirationDateTime = this.getExpirationDateTime();
+      expirationValid = expirationDateTime !== null && expirationDateTime > new Date();
+    }
+    
+    return hasContent && notPublishing && notUploading && expirationValid;
+  });
+
+  // Validation for expiration
+  expirationValidation = computed(() => {
+    if (!this.expirationEnabled()) return { valid: true, message: '' };
+    
+    const expirationDateTime = this.getExpirationDateTime();
+    if (!expirationDateTime) {
+      return { valid: false, message: 'Please select both date and time' };
+    }
+    
+    if (expirationDateTime <= new Date()) {
+      return { valid: false, message: 'Expiration must be in the future' };
+    }
+    
+    return { valid: true, message: '' };
+  });
 
   // Preview content with URL parsing and formatting
   previewContent = computed((): string => {
@@ -107,6 +148,9 @@ export class NoteEditorDialogComponent implements AfterViewInit {
   // Dialog mode indicators
   isReply = computed(() => !!this.data?.replyTo);
   isQuote = computed(() => !!this.data?.quote);
+  
+  // Date constraints
+  minDate = computed(() => new Date());
 
   ngAfterViewInit() {
     // Reset drag counter when component initializes
@@ -188,6 +232,15 @@ export class NoteEditorDialogComponent implements AfterViewInit {
       tags.push(['p', pubkey]);
     });
 
+    // Add expiration tag if enabled
+    if (this.expirationEnabled()) {
+      const expirationDateTime = this.getExpirationDateTime();
+      if (expirationDateTime) {
+        const expirationTimestamp = Math.floor(expirationDateTime.getTime() / 1000);
+        tags.push(['expiration', expirationTimestamp.toString()]);
+      }
+    }
+
     return tags;
   }
 
@@ -211,6 +264,48 @@ export class NoteEditorDialogComponent implements AfterViewInit {
     this.showPreview.update(current => !current);
   }
 
+  // Advanced options functionality
+  toggleAdvancedOptions(): void {
+    this.showAdvancedOptions.update(current => !current);
+  }
+
+  onExpirationToggle(enabled: boolean): void {
+    this.expirationEnabled.set(enabled);
+    if (!enabled) {
+      this.expirationDate.set(null);
+      this.expirationTime.set('12:00');
+    }
+  }
+
+  onExpirationDateChange(date: Date | null): void {
+    this.expirationDate.set(date);
+  }
+
+  onExpirationTimeChange(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    const time = target.value;
+    this.expirationTime.set(time);
+  }
+
+  private getExpirationDateTime(): Date | null {
+    const date = this.expirationDate();
+    const time = this.expirationTime();
+    
+    if (!date || !time) return null;
+    
+    const [hours, minutes] = time.split(':').map(Number);
+    const dateTime = new Date(date);
+    dateTime.setHours(hours, minutes, 0, 0);
+    
+    return dateTime;
+  }
+
+  // Format date for display
+  formatDate(date: Date | null): string {
+    if (!date) return '';
+    return date.toLocaleDateString();
+  }
+  
   private formatPreviewContent(content: string): string {
     // Escape HTML to prevent XSS
     const escaped = content

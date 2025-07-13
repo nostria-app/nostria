@@ -319,3 +319,118 @@
     }
   }
 }
+
+// Advanced Options section styles
+.advanced-options-section {
+  margin-top: 16px;
+  padding: 16px;
+  background-color: var(--mat-sys-surface-variant);
+  border-radius: 8px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  
+  .advanced-options-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
+    
+    .options-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      color: var(--mat-sys-primary);
+    }
+    
+    .options-title {
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--mat-sys-on-surface);
+    }
+  }
+  
+  .option-row {
+    margin-bottom: 16px;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+    
+    .option-header {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-bottom: 12px;
+      
+      .mat-slide-toggle {
+        align-self: flex-start;
+      }
+      
+      .option-description {
+        font-size: 12px;
+        color: var(--mat-sys-on-surface-variant);
+        margin-left: 4px;
+      }
+    }
+    
+    .option-content {
+      margin-left: 16px;
+      
+      .expiration-inputs {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+        
+        .date-field {
+          flex: 1;
+          max-width: 200px;
+        }
+        
+        .time-field {
+          flex: 0 0 120px;
+        }
+      }
+      
+      .expiration-hint {
+        font-size: 12px;
+        color: var(--mat-sys-on-surface-variant);
+        margin-top: 4px;
+        display: block;
+      }
+      
+      .expiration-error {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 4px;
+        color: var(--mat-sys-error);
+        font-size: 12px;
+        
+        mat-icon {
+          font-size: 16px;
+          width: 16px;
+          height: 16px;
+        }
+      }
+    }
+  }
+}
+
+// Responsive design for advanced options
+@media (max-width: 600px) {
+  .advanced-options-section {
+    .option-content {
+      .expiration-inputs {
+        flex-direction: column;
+        gap: 8px;
+        
+        .date-field,
+        .time-field {
+          max-width: 100%;
+          flex: 1;
+        }
+      }
+    }
+  }
+}
