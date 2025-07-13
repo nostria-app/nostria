@@ -163,6 +163,11 @@
         <mat-icon>dock_to_bottom</mat-icon>
         <span>Media Player</span>
       </button>
+      <mat-divider></mat-divider>
+      <button mat-menu-item (click)="toggleMediaPlayer();">
+        <mat-icon>calendar_month</mat-icon>
+        <span>Calendar</span>
+      </button>
     </mat-menu>
 
     <button mat-icon-button [class.profile-button-picture]="accountState.profile()?.data?.picture"
