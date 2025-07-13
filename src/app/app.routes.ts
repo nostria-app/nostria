@@ -40,6 +40,7 @@ import { LogsSettingsComponent } from './components/logs-settings/logs-settings.
 import { BackupComponent } from './pages/backup/backup.component';
 import { PremiumSettings } from './pages/premium/settings/settings';
 import { GeneralSettingsComponent } from './pages/settings/general/general.component';
+import { Calendar } from './pages/calendar/calendar';
 
 const profileChildren: Routes = [
   {
@@ -115,6 +116,7 @@ export const routes: Routes = [
   { path: 'credentials', component: CredentialsComponent, data: { isRoot: true } },
   { path: 'accounts', component: AccountsComponent, data: { isRoot: true } },
   { path: 'about', component: AboutComponent, data: { isRoot: true } },
+  { path: 'calendar', component: Calendar, data: { isRoot: true } },
   { path: 'bookmarks', data: { isRoot: true }, loadComponent: () => import('./pages/bookmarks/bookmarks.component').then(m => m.BookmarksComponent), title: 'Bookmarks' },
   { path: 'articles', component: ArticlesComponent, data: { isRoot: true }, title: 'Articles' },
   { path: 'article/create', component: EditorComponent, title: 'New Article' },
