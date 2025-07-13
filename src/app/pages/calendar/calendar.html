@@ -177,7 +177,7 @@
     <!-- Agenda view -->
     @if (viewMode() === 'agenda') {
       <div class="agenda-view">
-        @if (agendaEvents().length === 0) {
+        @if (agendaEventsFiltered().length === 0) {
           <div class="no-events">
             <mat-icon class="no-events-icon">event_busy</mat-icon>
             <h3>No upcoming events</h3>
@@ -190,7 +190,7 @@
             </button>
           </div>
         } @else {
-          @for (dayGroup of agendaEvents(); track dayGroup.date) {
+          @for (dayGroup of agendaEventsFiltered(); track dayGroup.date) {
             <div class="agenda-day-group">
               <div class="agenda-date-header">
                 <h3>{{ dayGroup.date | date:'EEEE, MMMM d, y' }}</h3>
@@ -308,8 +308,50 @@
     }
     </div>
 
+    <!-- Calendars sidebar -->
+    <div class="calendars-sidebar">
+      <mat-card class="sidebar-card">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>calendar_today</mat-icon>
+            My Calendars
+          </mat-card-title>
+        </mat-card-header>
+
+        <mat-card-content>
+          @if (isLoadingCalendars()) {
+            <div class="loading-calendars">
+              <mat-icon>refresh</mat-icon>
+              Loading calendars...
+            </div>
+          }
+          
+          @if (calendars().length === 0 && !isLoadingCalendars()) {
+            <div class="no-calendars">
+              <mat-icon>info</mat-icon>
+              No calendars available
+            </div>
+          }
+          
+          @for (calendar of calendars(); track calendar.id) {
+            <div class="calendar-item">
+              <label class="calendar-checkbox">
+                <input type="checkbox" 
+                       [checked]="isCalendarEnabled(calendar.id)"
+                       (change)="toggleCalendar(calendar.id)">
+                <span class="calendar-name">{{ calendar.title }}</span>
+              </label>
+              <div class="calendar-info">
+                <span class="event-count">{{ calendar.events.length }} events</span>
+              </div>
+            </div>
+          }
+        </mat-card-content>
+      </mat-card>
+    </div>
+
     <!-- Selected date sidebar -->
-    @if (selectedDateEvents().length > 0 && viewMode() === 'month') {
+    @if (selectedDateEventsFiltered().length > 0 && viewMode() === 'month') {
       <div class="selected-date-sidebar">
         <mat-card class="sidebar-card">
           <mat-card-header>
@@ -323,7 +365,7 @@
             }
           </mat-card-header>
 
-          <mat-card-content>          @for (event of selectedDateEvents(); track event.id) {
+          <mat-card-content>          @for (event of selectedDateEventsFiltered(); track event.id) {
             <div class="sidebar-event" (click)="onEventClick(event, $event)">
               <div class="event-time-badge" [class.all-day]="event.isAllDay">
                 @if (event.isAllDay) {
