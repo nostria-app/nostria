@@ -1,0 +1,285 @@
+.event-details-dialog {
+  min-width: 500px;
+  max-width: 700px;
+  max-height: 90vh;
+  
+  .dialog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 24px 24px 16px;
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
+
+    .event-header-info {
+      flex: 1;
+      min-width: 0;
+
+      h2 {
+        margin: 0 0 8px;
+        color: var(--mat-sys-on-surface);
+        font-weight: 500;
+        font-size: 1.75rem;
+        line-height: 1.2;
+        overflow-wrap: break-word;
+      }
+
+      .event-subtitle {
+        margin: 0;
+        color: var(--mat-sys-on-surface-variant);
+        font-size: 1rem;
+        line-height: 1.4;
+      }
+    }
+
+    .dialog-actions-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: 16px;
+      flex-shrink: 0;
+
+      button {
+        color: var(--mat-sys-on-surface-variant);
+      }
+    }
+  }
+
+  .dialog-content {
+    padding: 24px;
+    max-height: 60vh;
+    overflow-y: auto;
+
+    .event-card {
+      box-shadow: none;
+      border: 1px solid var(--mat-sys-outline-variant);
+      border-radius: 16px;
+      overflow: hidden;
+
+      .event-time-section,
+      .event-location-section,
+      .event-description-section,
+      .event-tags-section,
+      .event-participants-section,
+      .event-rsvp-section {
+        display: flex;
+        gap: 16px;
+        padding: 20px 24px;
+        border-bottom: 1px solid var(--mat-sys-outline-variant);
+        align-items: flex-start;
+
+        &:last-child {
+          border-bottom: none;
+        }
+
+        .section-icon {
+          color: var(--mat-sys-primary);
+          font-size: 1.5rem;
+          width: 1.5rem;
+          height: 1.5rem;
+          margin-top: 2px;
+          flex-shrink: 0;
+        }
+
+        .time-details,
+        .location-details,
+        .description-content,
+        .tags-content,
+        .participants-content,
+        .rsvp-content {
+          flex: 1;
+          min-width: 0;
+        }
+      }
+
+      .event-time-section {
+        background: linear-gradient(135deg, var(--mat-sys-primary-container) 0%, var(--mat-sys-secondary-container) 100%);
+        color: var(--mat-sys-on-primary-container);
+
+        .section-icon {
+          color: var(--mat-sys-on-primary-container);
+        }
+
+        .time-info {
+          strong {
+            display: block;
+            font-size: 1.25rem;
+            margin-bottom: 4px;
+          }
+
+          .date-info {
+            display: block;
+            font-size: 0.95rem;
+            opacity: 0.8;
+          }
+        }
+      }
+
+      .event-location-section {
+        .location-details {
+          span {
+            font-size: 1rem;
+            color: var(--mat-sys-on-surface);
+          }
+        }
+      }
+
+      .event-description-section {
+        .description-content {
+          p {
+            margin: 0;
+            line-height: 1.6;
+            color: var(--mat-sys-on-surface);
+            white-space: pre-wrap;
+          }
+        }
+      }
+
+      .event-tags-section {
+        .tags-content {
+          .tags-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+
+            mat-chip {
+              --mdc-chip-container-color: var(--mat-sys-secondary-container);
+              --mdc-chip-label-text-color: var(--mat-sys-on-secondary-container);
+            }
+          }
+        }
+      }
+
+      .event-participants-section {
+        .participants-content {
+          span {
+            color: var(--mat-sys-on-surface-variant);
+            font-size: 0.95rem;
+          }
+        }
+      }
+
+      .event-rsvp-section {
+        .rsvp-content {
+          .rsvp-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 24px;
+            font-size: 0.875rem;
+            font-weight: 500;
+
+            &.status-accepted {
+              background: var(--mat-success-lighter);
+              color: var(--mat-success-darker);
+            }
+
+            &.status-declined {
+              background: var(--mat-sys-error-container);
+              color: var(--mat-sys-on-error-container);
+            }
+
+            &.status-tentative {
+              background: var(--mat-sys-tertiary-container);
+              color: var(--mat-sys-on-tertiary-container);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  .dialog-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px 24px;
+    border-top: 1px solid var(--mat-sys-outline-variant);
+
+    .rsvp-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+
+      button {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+
+        mat-icon {
+          font-size: 1.1rem;
+          width: 1.1rem;
+          height: 1.1rem;
+        }
+      }
+    }
+  }
+
+  .delete-option {
+    color: var(--mat-sys-error) !important;
+    
+    mat-icon {
+      color: var(--mat-sys-error) !important;
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .event-details-dialog {
+    min-width: 90vw;
+    max-width: 95vw;
+
+    .dialog-header {
+      flex-direction: column;
+      gap: 16px;
+
+      .dialog-actions-header {
+        margin-left: 0;
+        align-self: flex-end;
+      }
+
+      .event-header-info {
+        h2 {
+          font-size: 1.5rem;
+        }
+      }
+    }
+
+    .dialog-content {
+      padding: 16px;
+
+      .event-card {
+        .event-time-section,
+        .event-location-section,
+        .event-description-section,
+        .event-tags-section,
+        .event-participants-section,
+        .event-rsvp-section {
+          padding: 16px;
+          gap: 12px;
+
+          .section-icon {
+            font-size: 1.25rem;
+            width: 1.25rem;
+            height: 1.25rem;
+          }
+        }
+      }
+    }
+
+    .dialog-actions {
+      flex-direction: column;
+      gap: 16px;
+      align-items: stretch;
+
+      .rsvp-actions {
+        justify-content: space-between;
+
+        button {
+          flex: 1;
+        }
+      }
+    }
+  }
+}

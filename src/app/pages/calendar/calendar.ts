@@ -1,13 +1,678 @@
-import { Component } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { MatCardModule } from '@angular/material/card';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatInputModule } from '@angular/material/input';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatNativeDateModule } from '@angular/material/core';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatDialogModule, MatDialog } from '@angular/material/dialog';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatBadgeModule } from '@angular/material/badge';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatDividerModule } from '@angular/material/divider';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { Event } from 'nostr-tools';
+import { AccountRelayService } from '../../services/account-relay.service';
+import { LoggerService } from '../../services/logger.service';
+import { ApplicationService } from '../../services/application.service';
+import { CreateEventDialogComponent, CreateEventDialogData, CreateEventResult } from './create-event-dialog/create-event-dialog.component';
+import { EventDetailsDialogComponent, EventDetailsDialogData, EventDetailsResult } from './event-details-dialog/event-details-dialog.component';
+
+// Calendar event interfaces based on NIP-52
+interface CalendarEvent {
+  id: string;
+  pubkey: string;
+  created_at: number;
+  kind: 31922 | 31923; // Date-based or time-based
+  content: string;
+  tags: string[][];
+  // Parsed fields
+  title: string;
+  summary?: string;
+  image?: string;
+  location?: string;
+  start: Date;
+  end?: Date;
+  participants: string[];
+  hashtags: string[];
+  isAllDay: boolean;
+  status?: 'accepted' | 'declined' | 'tentative';
+}
+
+interface CalendarEventRSVP {
+  id: string;
+  pubkey: string;
+  created_at: number;
+  kind: 31925;
+  content: string;
+  tags: string[][];
+  // Parsed fields
+  eventId: string;
+  status: 'accepted' | 'declined' | 'tentative';
+  freeBusy?: 'free' | 'busy';
+}
 
 @Component({
   selector: 'app-calendar',
-  imports: [],
+  imports: [
+    CommonModule,
+    MatCardModule,
+    MatButtonModule,
+    MatIconModule,
+    MatDatepickerModule,
+    MatInputModule,
+    MatFormFieldModule,
+    MatNativeDateModule,
+    MatButtonToggleModule,
+    MatChipsModule,
+    MatMenuModule,
+    MatDialogModule,
+    MatTooltipModule,
+    MatBadgeModule,
+    MatProgressBarModule,
+    MatDividerModule,
+    ReactiveFormsModule
+  ],
   templateUrl: './calendar.html',
   styleUrl: './calendar.scss'
 })
 export class Calendar {
-  constructor() {
+  private accountRelay = inject(AccountRelayService);
+  private logger = inject(LoggerService);
+  public app = inject(ApplicationService); // Made public for template access
+  private dialog = inject(MatDialog);
+
+  // Current view state
+  selectedDate = signal<Date>(new Date());
+  viewMode = signal<'month' | 'week' | 'agenda'>('month');
+  selectedDateControl = new FormControl(new Date());
+  
+  // Calendar events state
+  events = signal<CalendarEvent[]>([]);
+  rsvps = signal<CalendarEventRSVP[]>([]);
+  isLoading = signal<boolean>(false);
+  
+  // Helper arrays for template
+  dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  hoursArray = Array.from({length: 24}, (_, i) => i);
+  weekDaysArray = Array.from({length: 7}, (_, i) => i);
+  
+  // Computed values
+  currentMonth = computed(() => {
+    const date = this.selectedDate();
+    return {
+      year: date.getFullYear(),
+      month: date.getMonth(),
+      name: date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    };
+  });
+
+  // Calendar grid for month view
+  calendarGrid = computed(() => {
+    const date = this.selectedDate();
+    const year = date.getFullYear();
+    const month = date.getMonth();
     
+    // Get first day of month and calculate starting point
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startDate = new Date(firstDay);
+    startDate.setDate(startDate.getDate() - firstDay.getDay()); // Start on Sunday
+    
+    const weeks: Date[][] = [];
+    let currentWeek: Date[] = [];
+    
+    for (let i = 0; i < 42; i++) { // 6 weeks max
+      const currentDate = new Date(startDate);
+      currentDate.setDate(startDate.getDate() + i);
+      
+      currentWeek.push(currentDate);
+      
+      if (currentWeek.length === 7) {
+        weeks.push(currentWeek);
+        currentWeek = [];
+      }
+      
+      // Stop if we've gone past the month and filled a week
+      if (currentDate > lastDay && currentWeek.length === 0) {
+        break;
+      }
+    }
+    
+    return weeks;
+  });
+
+  // Week dates for week view
+  weekDates = computed(() => {
+    const selected = this.selectedDate();
+    const dates: Date[] = [];
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(selected.getFullYear(), selected.getMonth(), selected.getDate() - selected.getDay() + i);
+      dates.push(date);
+    }
+    return dates;
+  });
+
+  // Events for selected date
+  selectedDateEvents = computed(() => {
+    const selected = this.selectedDate();
+    return this.events().filter(event => {
+      return this.isSameDay(event.start, selected) ||
+             (event.end && this.isDateInRange(selected, event.start, event.end));
+    });
+  });
+
+  // Events for the current week
+  weekEvents = computed(() => {
+    const weekDates = this.weekDates();
+    return this.events().filter(event => {
+      return weekDates.some(date => this.isSameDay(event.start, date));
+    });
+  });
+
+  // Events grouped by date for agenda view
+  agendaEvents = computed(() => {
+    const events = this.events();
+    const groupedEvents = new Map<string, CalendarEvent[]>();
+    
+    events.forEach(event => {
+      const dateKey = event.start.toDateString();
+      if (!groupedEvents.has(dateKey)) {
+        groupedEvents.set(dateKey, []);
+      }
+      groupedEvents.get(dateKey)!.push(event);
+    });
+    
+    // Convert to array and sort by date
+    return Array.from(groupedEvents.entries())
+      .map(([dateStr, events]) => ({
+        date: new Date(dateStr),
+        events: events.sort((a, b) => a.start.getTime() - b.start.getTime())
+      }))
+      .sort((a, b) => a.date.getTime() - b.date.getTime());
+  });
+
+  constructor() {
+    // Effect to load events when date changes
+    effect(async () => {
+      const date = this.selectedDate();
+      await this.loadEventsForMonth(date);
+    });
+
+    // Effect to handle date picker changes
+    effect(() => {
+      this.selectedDateControl.valueChanges.subscribe(date => {
+        if (date) {
+          this.selectedDate.set(date);
+        }
+      });
+    });
+
+    // Initial load
+    this.loadCurrentUserEvents();
+    
+    // Add some demo events for testing
+    this.addDemoEvents();
+  }
+
+  // Demo events for testing the calendar UI
+  private addDemoEvents(): void {
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const nextWeek = new Date(today);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    
+    const demoEvents: CalendarEvent[] = [
+      {
+        id: 'demo-1',
+        pubkey: this.app.accountState.pubkey() || 'demo-pubkey',
+        created_at: Math.floor(Date.now() / 1000),
+        kind: 31923,
+        content: 'Join our weekly community call to discuss latest developments and upcoming features.',
+        tags: [['d', 'demo-1'], ['title', 'Community Call'], ['start', Math.floor(today.getTime() / 1000).toString()]],
+        title: 'Community Call',
+        summary: 'Weekly sync with the development team',
+        location: 'Virtual - Jitsi Meet',
+        start: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 14, 0),
+        end: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 15, 0),
+        participants: [],
+        hashtags: ['community', 'meeting'],
+        isAllDay: false
+      },
+      {
+        id: 'demo-2',
+        pubkey: this.app.accountState.pubkey() || 'demo-pubkey',
+        created_at: Math.floor(Date.now() / 1000),
+        kind: 31922,
+        content: 'Annual conference focusing on decentralized technologies and protocols.',
+        tags: [['d', 'demo-2'], ['title', 'Nostr Conference 2025'], ['start', tomorrow.toISOString().split('T')[0]]],
+        title: 'Nostr Conference 2025',
+        summary: 'Annual gathering of the Nostr community',
+        location: 'Austin, Texas',
+        start: tomorrow,
+        end: new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate() + 2),
+        participants: [],
+        hashtags: ['conference', 'nostr', 'decentralized'],
+        isAllDay: true
+      },
+      {
+        id: 'demo-3',
+        pubkey: this.app.accountState.pubkey() || 'demo-pubkey',
+        created_at: Math.floor(Date.now() / 1000),
+        kind: 31923,
+        content: 'Monthly retrospective to review progress and plan upcoming work.',
+        tags: [['d', 'demo-3'], ['title', 'Team Retrospective'], ['start', Math.floor(nextWeek.getTime() / 1000).toString()]],
+        title: 'Team Retrospective',
+        summary: 'Monthly team meeting',
+        location: 'Conference Room A',
+        start: new Date(nextWeek.getFullYear(), nextWeek.getMonth(), nextWeek.getDate(), 10, 0),
+        end: new Date(nextWeek.getFullYear(), nextWeek.getMonth(), nextWeek.getDate(), 11, 30),
+        participants: [],
+        hashtags: ['team', 'retrospective'],
+        isAllDay: false
+      }
+    ];
+
+    this.events.set(demoEvents);
+  }
+
+  // Navigation methods
+  previousMonth(): void {
+    const current = this.selectedDate();
+    const previous = new Date(current.getFullYear(), current.getMonth() - 1, 1);
+    this.selectedDate.set(previous);
+  }
+
+  nextMonth(): void {
+    const current = this.selectedDate();
+    const next = new Date(current.getFullYear(), current.getMonth() + 1, 1);
+    this.selectedDate.set(next);
+  }
+
+  goToToday(): void {
+    this.selectedDate.set(new Date());
+  }
+
+  selectDate(date: Date): void {
+    this.selectedDate.set(date);
+  }
+
+  // View mode management
+  onViewModeChange(mode: 'month' | 'week' | 'agenda'): void {
+    console.log('View mode change requested:', mode);
+    this.viewMode.set(mode);
+  }
+
+  // Event loading methods
+  private async loadCurrentUserEvents(): Promise<void> {
+    if (!this.app.accountState.pubkey()) {
+      this.logger.warn('No user logged in, cannot load calendar events');
+      return;
+    }
+
+    this.isLoading.set(true);
+    
+    try {
+      // Load calendar events (both date and time based)
+      await Promise.all([
+        this.loadDateBasedEvents(),
+        this.loadTimeBasedEvents(),
+        this.loadRSVPs()
+      ]);
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  private async loadEventsForMonth(date: Date): Promise<void> {
+    // Calculate month range
+    const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+    const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+    
+    // Load events for the month range
+    await this.loadEventsInRange(startOfMonth, endOfMonth);
+  }
+
+  private async loadEventsInRange(start: Date, end: Date): Promise<void> {
+    if (!this.app.accountState.pubkey()) return;
+
+    const since = Math.floor(start.getTime() / 1000);
+    const until = Math.floor(end.getTime() / 1000);
+
+    try {
+      // Create subscription for events in date range
+      this.accountRelay.subscribe(
+        [
+          {
+            kinds: [31922, 31923], // Date-based and time-based calendar events
+            since,
+            until,
+            limit: 100
+          }
+        ],
+        (event: Event) => {
+          const calendarEvent = this.parseCalendarEvent(event);
+          if (calendarEvent) {
+            this.addEvent(calendarEvent);
+          }
+        }
+      );
+    } catch (error) {
+      this.logger.error('Error loading calendar events', error);
+    }
+  }
+
+  private async loadDateBasedEvents(): Promise<void> {
+    // Implementation for loading date-based events (kind 31922)
+    // This would typically load events for the current user and followed users
+  }
+
+  private async loadTimeBasedEvents(): Promise<void> {
+    // Implementation for loading time-based events (kind 31923)
+  }
+
+  private async loadRSVPs(): Promise<void> {
+    // Implementation for loading RSVPs (kind 31925)
+  }
+
+  // Event parsing methods
+  private parseCalendarEvent(event: Event): CalendarEvent | null {
+    try {
+      const tags = new Map(event.tags.map(tag => [tag[0], tag.slice(1)]));
+      
+      const title = tags.get('title')?.[0] || 'Untitled Event';
+      const summary = tags.get('summary')?.[0];
+      const image = tags.get('image')?.[0];
+      const location = tags.get('location')?.[0];
+      
+      let start: Date;
+      let end: Date | undefined;
+      let isAllDay: boolean;
+
+      if (event.kind === 31922) {
+        // Date-based event
+        const startDate = tags.get('start')?.[0];
+        const endDate = tags.get('end')?.[0];
+        
+        if (!startDate) return null;
+        
+        start = new Date(startDate + 'T00:00:00');
+        end = endDate ? new Date(endDate + 'T00:00:00') : undefined;
+        isAllDay = true;
+      } else {
+        // Time-based event
+        const startTimestamp = tags.get('start')?.[0];
+        const endTimestamp = tags.get('end')?.[0];
+        
+        if (!startTimestamp) return null;
+        
+        start = new Date(parseInt(startTimestamp) * 1000);
+        end = endTimestamp ? new Date(parseInt(endTimestamp) * 1000) : undefined;
+        isAllDay = false;
+      }
+
+      const participants = event.tags
+        .filter(tag => tag[0] === 'p')
+        .map(tag => tag[1]);
+
+      const hashtags = event.tags
+        .filter(tag => tag[0] === 't')
+        .map(tag => tag[1]);
+
+      return {
+        id: event.id,
+        pubkey: event.pubkey,
+        created_at: event.created_at,
+        kind: event.kind as 31922 | 31923,
+        content: event.content,
+        tags: event.tags,
+        title,
+        summary,
+        image,
+        location,
+        start,
+        end,
+        participants,
+        hashtags,
+        isAllDay
+      };
+    } catch (error) {
+      this.logger.error('Error parsing calendar event', error);
+      return null;
+    }
+  }
+
+  // Event management methods
+  private addEvent(event: CalendarEvent): void {
+    const currentEvents = this.events();
+    const existingIndex = currentEvents.findIndex(e => e.id === event.id);
+    
+    if (existingIndex >= 0) {
+      // Update existing event
+      const updatedEvents = [...currentEvents];
+      updatedEvents[existingIndex] = event;
+      this.events.set(updatedEvents);
+    } else {
+      // Add new event
+      this.events.set([...currentEvents, event]);
+    }
+  }
+
+  async createEvent(): Promise<void> {
+    const dialogData: CreateEventDialogData = {
+      selectedDate: this.selectedDate()
+    };
+
+    const dialogRef = this.dialog.open(CreateEventDialogComponent, {
+      data: dialogData,
+      width: '600px',
+      maxWidth: '90vw',
+      maxHeight: '90vh',
+      disableClose: false,
+      autoFocus: true
+    });
+
+    const result = await dialogRef.afterClosed().toPromise() as CreateEventResult | undefined;
+    
+    if (result?.event) {
+      this.logger.info('New calendar event created:', result.event);
+      
+      // Parse and add the new event to our local signal
+      const calendarEvent = this.parseCalendarEvent(result.event);
+      if (calendarEvent) {
+        this.addEvent(calendarEvent);
+      }
+    }
+  }
+
+  async respondToEvent(event: CalendarEvent, status: 'accepted' | 'declined' | 'tentative'): Promise<void> {
+    if (!this.app.accountState.pubkey()) {
+      this.logger.error('User not logged in');
+      return;
+    }
+
+    try {
+      // Create RSVP event (kind 31925)
+      const rsvpEvent = {
+        kind: 31925,
+        content: '',
+        tags: [
+          ['a', `${event.kind}:${event.pubkey}:${this.getEventDTag(event)}`],
+          ['e', event.id],
+          ['d', this.generateRandomId()],
+          ['status', status],
+          ['p', event.pubkey]
+        ],
+        created_at: Math.floor(Date.now() / 1000),
+        pubkey: this.app.accountState.pubkey()!
+      };
+
+      // Sign and publish the RSVP
+      // TODO: Implement signing with user's private key
+      console.log('Publishing RSVP:', rsvpEvent);
+      
+    } catch (error) {
+      this.logger.error('Error responding to event', error);
+    }
+  }
+
+  async deleteEvent(event: CalendarEvent): Promise<void> {
+    if (!this.app.accountState.pubkey() || event.pubkey !== this.app.accountState.pubkey()) {
+      this.logger.error('Cannot delete event: not authorized');
+      return;
+    }
+
+    try {
+      // Create deletion request event (kind 5) according to NIP-09
+      const deletionEvent = {
+        kind: 5,
+        content: 'Calendar event deleted',
+        tags: [
+          ['e', event.id],
+          ['a', `${event.kind}:${event.pubkey}:${this.getEventDTag(event)}`],
+          ['k', event.kind.toString()]
+        ],
+        created_at: Math.floor(Date.now() / 1000),
+        pubkey: this.app.accountState.pubkey()!
+      };
+
+      // Sign and publish the deletion
+      // TODO: Implement signing with user's private key
+      console.log('Publishing deletion:', deletionEvent);
+      
+      // Remove from local state
+      const updatedEvents = this.events().filter(e => e.id !== event.id);
+      this.events.set(updatedEvents);
+      
+    } catch (error) {
+      this.logger.error('Error deleting event', error);
+    }
+  }
+
+  // Utility methods
+  private getEventDTag(event: CalendarEvent): string {
+    const dTag = event.tags.find(tag => tag[0] === 'd');
+    return dTag ? dTag[1] : '';
+  }
+
+  private generateRandomId(): string {
+    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  }
+
+  getEventsForDate(date: Date): CalendarEvent[] {
+    return this.events().filter(event => {
+      return this.isSameDay(event.start, date) ||
+             (event.end && this.isDateInRange(date, event.start, event.end));
+    });
+  }
+
+  isCurrentMonth(date: Date): boolean {
+    const current = this.selectedDate();
+    return date.getMonth() === current.getMonth() && date.getFullYear() === current.getFullYear();
+  }
+
+  isToday(date: Date): boolean {
+    const today = new Date();
+    return this.isSameDay(date, today);
+  }
+
+  isSelectedDate(date: Date): boolean {
+    return this.isSameDay(date, this.selectedDate());
+  }
+
+  private isSameDay(date1: Date, date2: Date): boolean {
+    return date1.getDate() === date2.getDate() &&
+           date1.getMonth() === date2.getMonth() &&
+           date1.getFullYear() === date2.getFullYear();
+  }
+
+  private isDateInRange(date: Date, start: Date, end: Date): boolean {
+    const dateTime = date.getTime();
+    return dateTime >= start.getTime() && dateTime < end.getTime();
+  }
+
+  formatTime(date: Date): string {
+    return date.toLocaleTimeString('en-US', { 
+      hour: 'numeric', 
+      minute: '2-digit',
+      hour12: true 
+    });
+  }
+
+  formatDateShort(date: Date): string {
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric' 
+    });
+  }
+
+  // Get events for a specific hour and day in week view
+  getEventsForWeekHour(dayIndex: number, hour: number): CalendarEvent[] {
+    const weekDates = this.weekDates();
+    const targetDate = weekDates[dayIndex];
+    
+    return this.weekEvents().filter(event => {
+      if (!this.isSameDay(event.start, targetDate)) return false;
+      
+      if (event.isAllDay) {
+        return hour === 0; // Show all-day events at the top
+      }
+      
+      const eventHour = event.start.getHours();
+      return eventHour === hour;
+    });
+  }
+
+  selectWeekCell(dayIndex: number, hour: number): void {
+    const weekDates = this.weekDates();
+    const selectedDate = new Date(weekDates[dayIndex]);
+    selectedDate.setHours(hour, 0, 0, 0);
+    this.selectedDate.set(selectedDate);
+  }
+
+  async openEventDetails(event: CalendarEvent): Promise<void> {
+    const dialogRef = this.dialog.open(EventDetailsDialogComponent, {
+      data: {
+        event,
+        canEdit: event.pubkey === this.app.accountState.pubkey(),
+        canDelete: event.pubkey === this.app.accountState.pubkey()
+      } as EventDetailsDialogData,
+      width: '600px',
+      maxWidth: '90vw',
+      autoFocus: false
+    });
+
+    const result = await dialogRef.afterClosed().toPromise() as EventDetailsResult;
+    
+    if (!result || result.action === 'close') {
+      return;
+    }
+
+    switch (result.action) {
+      case 'rsvp':
+        if (result.rsvpStatus) {
+          await this.respondToEvent(event, result.rsvpStatus);
+        }
+        break;
+      case 'edit':
+        // TODO: Implement edit functionality
+        console.log('Edit event:', event);
+        break;
+      case 'delete':
+        await this.deleteEvent(event);
+        break;
+    }
+  }
+
+  onEventClick(event: CalendarEvent, clickEvent: MouseEvent): void {
+    clickEvent.stopPropagation();
+    this.openEventDetails(event);
   }
 }

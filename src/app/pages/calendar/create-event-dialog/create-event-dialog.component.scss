@@ -1,0 +1,131 @@
+.create-event-dialog {
+  min-width: 600px;
+  max-width: 800px;
+  max-height: 90vh;
+  
+  .dialog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px 24px 0;
+    margin-bottom: 16px;
+
+    h2 {
+      margin: 0;
+      color: var(--mat-sys-on-surface);
+      font-weight: 500;
+    }
+
+    .close-button {
+      color: var(--mat-sys-on-surface-variant);
+    }
+  }
+
+  .dialog-content {
+    padding: 0 24px;
+    max-height: 60vh;
+    overflow-y: auto;
+
+    .event-form {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+
+      .full-width {
+        width: 100%;
+      }
+
+      .all-day-section {
+        .all-day-toggle {
+          .toggle-label {
+            font-size: 1rem;
+            color: var(--mat-sys-on-surface);
+            margin-left: 12px;
+          }
+        }
+      }
+
+      .datetime-section {
+        .datetime-row {
+          display: flex;
+          gap: 16px;
+          align-items: flex-start;
+
+          .date-field {
+            flex: 2;
+          }
+
+          .time-field {
+            flex: 1;
+          }
+        }
+      }
+
+      .hashtags-section {
+        .hashtag-input {
+          width: 100%;
+        }
+
+        .hashtags-display {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-top: 12px;
+
+          mat-chip {
+            --mdc-chip-container-color: var(--mat-sys-primary-container);
+            --mdc-chip-label-text-color: var(--mat-sys-on-primary-container);
+            --mdc-chip-with-trailing-icon-trailing-icon-color: var(--mat-sys-on-primary-container);
+          }
+        }
+      }
+    }
+  }
+
+  .dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 24px;
+    border-top: 1px solid var(--mat-sys-outline-variant);
+    margin-top: 24px;
+
+    .create-button {
+      background: linear-gradient(135deg, var(--mat-sys-primary) 0%, var(--mat-sys-secondary) 100%);
+      
+      .spinning {
+        animation: spin 1s linear infinite;
+      }
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .create-event-dialog {
+    min-width: 90vw;
+    max-width: 95vw;
+
+    .dialog-content {
+      max-height: 70vh;
+
+      .event-form {
+        .datetime-section .datetime-row {
+          flex-direction: column;
+          gap: 12px;
+
+          .date-field,
+          .time-field {
+            flex: 1;
+            width: 100%;
+          }
+        }
+      }
+    }
+  }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
