@@ -120,6 +120,22 @@
             font-size: 1rem;
             color: var(--mat-sys-on-surface);
           }
+          
+          .location-link {
+            font-size: 1rem;
+            color: var(--mat-sys-primary);
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: border-bottom-color 0.2s ease;
+
+            &:hover {
+              border-bottom-color: var(--mat-sys-primary);
+            }
+
+            &:visited {
+              color: var(--mat-sys-primary);
+            }
+          }
         }
       }
 
