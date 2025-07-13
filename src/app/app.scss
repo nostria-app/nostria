@@ -34,9 +34,9 @@ nav {
   }
 }
 
-.app-toolbar {
-  z-index: 2;
-}
+// .app-toolbar {
+//   z-index: 2;
+// }
 
 .sidenav-container {
   flex: 1;
@@ -291,7 +291,7 @@ mat-sidenav-content {
 // Ensure the sidenav container doesn't resize when profile sidenav opens
 .sidenav-container.mat-sidenav-container {
   transform: none !important;
-  z-index: 1000; // Ensure container has proper stacking context
+  // z-index: 1000; // Ensure container has proper stacking context
 
   // Prevent content from shifting when right sidenav opens
   .mat-sidenav-content {
