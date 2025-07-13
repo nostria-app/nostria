@@ -374,7 +374,7 @@ export class Calendar {
         [
           {
             kinds: [31924], // Calendar collections
-            authors: [this.app.accountState.pubkey()!], // Start with user's own calendars
+            // authors: [this.app.accountState.pubkey()!], // Start with user's own calendars
             limit: 50
           }
         ],

@@ -2,6 +2,9 @@
   min-width: 500px;
   max-width: 700px;
   max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; // Prevent dialog container from scrolling
   
   .dialog-header {
     display: flex;
@@ -9,6 +12,7 @@
     align-items: flex-start;
     padding: 24px 24px 16px;
     border-bottom: 1px solid var(--mat-sys-outline-variant);
+    flex-shrink: 0; // Header should not shrink
 
     .event-header-info {
       flex: 1;
@@ -46,14 +50,34 @@
 
   .dialog-content {
     padding: 24px;
-    max-height: 60vh;
+    flex: 1;
     overflow-y: auto;
+    min-height: 0; // Allow content to shrink
+
+    &::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    
+    &::-webkit-scrollbar-thumb {
+      background: var(--mat-sys-outline-variant);
+      border-radius: 4px;
+      
+      &:hover {
+        background: var(--mat-sys-outline);
+      }
+    }
 
     .event-card {
       box-shadow: none;
       border: 1px solid var(--mat-sys-outline-variant);
       border-radius: 16px;
       overflow: hidden;
+      background: var(--mat-sys-surface);
+      box-shadow: var(--mat-sys-level1);
 
       .event-time-section,
       .event-location-section,

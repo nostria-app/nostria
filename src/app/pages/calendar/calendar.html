@@ -72,6 +72,50 @@
 
   <!-- Main calendar content -->
   <div class="calendar-content">
+    <!-- Calendars sidebar (left) -->
+    <div class="calendars-sidebar">
+      <mat-card class="sidebar-card">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>calendar_today</mat-icon>
+            My Calendars
+          </mat-card-title>
+        </mat-card-header>
+
+        <mat-card-content>
+          @if (isLoadingCalendars()) {
+            <div class="loading-calendars">
+              <mat-icon>refresh</mat-icon>
+              Loading calendars...
+            </div>
+          }
+          
+          @if (calendars().length === 0 && !isLoadingCalendars()) {
+            <div class="no-calendars">
+              <mat-icon>info</mat-icon>
+              No calendars available
+            </div>
+          }
+          
+          <div class="calendars-list">
+            @for (calendar of calendars(); track calendar.id) {
+              <div class="calendar-item">
+                <label class="calendar-checkbox">
+                  <input type="checkbox" 
+                         [checked]="isCalendarEnabled(calendar.id)"
+                         (change)="toggleCalendar(calendar.id)">
+                  <span class="calendar-name">{{ calendar.title }}</span>
+                </label>
+                <div class="calendar-info">
+                  <span class="event-count">{{ calendar.events.length }} events</span>
+                </div>
+              </div>
+            }
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
     <!-- Calendar views container -->
     <div class="calendar-views">
       <!-- Month view -->
@@ -308,49 +352,7 @@
     }
     </div>
 
-    <!-- Calendars sidebar -->
-    <div class="calendars-sidebar">
-      <mat-card class="sidebar-card">
-        <mat-card-header>
-          <mat-card-title>
-            <mat-icon>calendar_today</mat-icon>
-            My Calendars
-          </mat-card-title>
-        </mat-card-header>
-
-        <mat-card-content>
-          @if (isLoadingCalendars()) {
-            <div class="loading-calendars">
-              <mat-icon>refresh</mat-icon>
-              Loading calendars...
-            </div>
-          }
-          
-          @if (calendars().length === 0 && !isLoadingCalendars()) {
-            <div class="no-calendars">
-              <mat-icon>info</mat-icon>
-              No calendars available
-            </div>
-          }
-          
-          @for (calendar of calendars(); track calendar.id) {
-            <div class="calendar-item">
-              <label class="calendar-checkbox">
-                <input type="checkbox" 
-                       [checked]="isCalendarEnabled(calendar.id)"
-                       (change)="toggleCalendar(calendar.id)">
-                <span class="calendar-name">{{ calendar.title }}</span>
-              </label>
-              <div class="calendar-info">
-                <span class="event-count">{{ calendar.events.length }} events</span>
-              </div>
-            </div>
-          }
-        </mat-card-content>
-      </mat-card>
-    </div>
-
-    <!-- Selected date sidebar -->
+    <!-- Selected date sidebar (right) -->
     @if (selectedDateEventsFiltered().length > 0 && viewMode() === 'month') {
       <div class="selected-date-sidebar">
         <mat-card class="sidebar-card">
@@ -365,27 +367,28 @@
             }
           </mat-card-header>
 
-          <mat-card-content>          @for (event of selectedDateEventsFiltered(); track event.id) {
-            <div class="sidebar-event" (click)="onEventClick(event, $event)">
-              <div class="event-time-badge" [class.all-day]="event.isAllDay">
-                @if (event.isAllDay) {
-                  <span>All day</span>
-                } @else {
-                  <span>{{ formatTime(event.start) }}</span>
-                }
+          <mat-card-content>
+            @for (event of selectedDateEventsFiltered(); track event.id) {
+              <div class="sidebar-event" (click)="onEventClick(event, $event)">
+                <div class="event-time-badge" [class.all-day]="event.isAllDay">
+                  @if (event.isAllDay) {
+                    <span>All day</span>
+                  } @else {
+                    <span>{{ formatTime(event.start) }}</span>
+                  }
+                </div>
+                
+                <div class="event-details">
+                  <h4>{{ event.title }}</h4>
+                  @if (event.location) {
+                    <div class="event-location">
+                      <mat-icon>location_on</mat-icon>
+                      <span>{{ event.location }}</span>
+                    </div>
+                  }
+                </div>
               </div>
-              
-              <div class="event-details">
-                <h4>{{ event.title }}</h4>
-                @if (event.location) {
-                  <div class="event-location">
-                    <mat-icon>location_on</mat-icon>
-                    <span>{{ event.location }}</span>
-                  </div>
-                }
-              </div>
-            </div>
-          }
+            }
           </mat-card-content>
         </mat-card>
       </div>
