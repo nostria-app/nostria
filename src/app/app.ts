@@ -45,6 +45,7 @@ import { NavigationComponent } from './components/navigation/navigation';
 import { NavigationContextMenuComponent } from './components/navigation-context-menu/navigation-context-menu.component';
 import { nip47 } from 'nostr-tools';
 import { Wallets } from './services/wallets';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 interface NavItem {
   path: string;
@@ -107,6 +108,7 @@ export class App {
   state = inject(StateService);
   nostrProtocol = inject(NostrProtocolService);
   publishQueue = inject(PublishQueueService);
+  snackBar = inject(MatSnackBar);
   private readonly wallets = inject(Wallets);
   private readonly platform = inject(PLATFORM_ID);
   private readonly document = inject(DOCUMENT);
@@ -468,8 +470,28 @@ export class App {
           this.router.navigate(['/p', result]);
         } else if (result.startsWith('nostr+walletconnect://')) {
           // Handle WalletConnect URL
-          const connect = nip47.parseConnectionString(result);
-          this.wallets.addWallet(this.accountState.pubkey(), result, connect);
+          // const connect = nip47.parseConnectionString(result);
+          try {
+            const parsed = this.wallets.parseConnectionString(result);
+
+            this.wallets.addWallet(parsed.pubkey, result, {
+              relay: parsed.relay,
+              secret: parsed.secret
+            });
+
+            this.snackBar.open('Wallet added successfully', 'Dismiss', {
+              duration: 3000,
+              horizontalPosition: 'center',
+              verticalPosition: 'bottom'
+            });
+          } catch (error) {
+            console.error('Failed to add wallet:', error);
+            this.snackBar.open('Failed to add wallet. Please check the connection string.', 'Dismiss', {
+              duration: 3000,
+              horizontalPosition: 'center',
+              verticalPosition: 'bottom'
+            });
+          }
         }
       }
     });
