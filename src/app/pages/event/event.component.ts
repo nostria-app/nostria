@@ -193,7 +193,7 @@ export class EventPageComponent implements OnInit {
     debugger;
     this.logger.info('loadReplies called with eventId:', eventId, 'pubkey:', pubkey);
     this.logger.info('Current userRelays length:', this.userRelays.length);
-    
+
     if (this.userRelays.length === 0) {
       this.logger.info('No user relays cached, discovering relays for pubkey:', pubkey);
       // We need to discover the event from user's relays.
@@ -260,7 +260,7 @@ export class EventPageComponent implements OnInit {
   async loadEvent(nevent: string) {
     debugger;
     this.logger.info('loadEvent called with nevent:', nevent);
-    
+
     if (this.utilities.isHex(nevent)) {
       this.logger.info('Input is hex string, encoding to nevent');
       // If the input is a hex string, we assume it's an event ID.
@@ -274,7 +274,10 @@ export class EventPageComponent implements OnInit {
     this.id.set(hex);
 
     if (this.item?.event && this.item.event.id === hex) {
-       // TODO: If this happens, we have NOT loaded the user relays yet and made them available for "loadReplies".
+      // If this happens, we have NOT loaded the user relays yet and made them available for "loadReplies".
+      // We need to discover the event from user's relays.
+      const userRelays = await this.data.getUserRelays(this.item.event.pubkey);
+      this.userRelays = userRelays;
 
       this.logger.info('Using cached event from item');
       // If we already have the event in the item, use it directly.
