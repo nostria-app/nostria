@@ -26,12 +26,12 @@ export class DataService {
     private readonly utilities = inject(UtilitiesService);
     private readonly cache = inject(Cache);
 
-    getRecord(event: Event) {
-        return this.utilities.getRecord(event);
+    toRecord(event: Event) {
+        return this.utilities.toRecord(event);
     }
 
-    getRecords(events: Event[]) {
-        return this.utilities.getRecords(events);
+    toRecords(events: Event[]) {
+        return this.utilities.toRecords(events);
     }
 
     async getEventById(id: string, options?: CacheOptions & DataOptions): Promise<NostrRecord | null> {
@@ -63,7 +63,7 @@ export class DataService {
             await this.storage.saveEvent(event);
         }
 
-        return this.getRecord(event);
+        return this.toRecord(event);
     }
 
     // async getEventsById(ids: string[]): Promise<NostrRecord[]> {
@@ -110,7 +110,7 @@ export class DataService {
         let event: Event | null | undefined = await this.storage.getParameterizedReplaceableEvent(pubkey, kind, dTagValue);
 
         if (event) {
-            return this.getRecord(event);
+            return this.toRecord(event);
         }
 
         if (userRelays) {
@@ -120,7 +120,7 @@ export class DataService {
 
             if (event) {
                 this.storage.saveEvent(event);
-                return this.getRecord(event);
+                return this.toRecord(event);
             }
         }
 
@@ -129,7 +129,7 @@ export class DataService {
 
         if (event) {
             this.storage.saveEvent(event);
-            return this.getRecord(event);
+            return this.toRecord(event);
         }
 
         return null;
@@ -140,14 +140,14 @@ export class DataService {
         let event = await this.storage.getEventByPubkeyAndKind(pubkey, kind);
 
         if (event) {
-            return this.getRecord(event);
+            return this.toRecord(event);
         }
 
         event = await this.relay.getEventByPubkeyAndKind(pubkey, kind);
 
         if (event) {
             this.storage.saveEvent(event);
-            return this.getRecord(event);
+            return this.toRecord(event);
         }
 
         return null;
@@ -157,7 +157,7 @@ export class DataService {
         const events = await this.storage.getEventsByPubkeyAndKind(pubkey, kind);
 
         if (events && events.length > 0) {
-            return events.map(event => this.getRecord(event));
+            return events.map(event => this.toRecord(event));
         }
 
         const relayEvents = await this.relay.getEventsByPubkeyAndKind(pubkey, kind);
@@ -167,7 +167,7 @@ export class DataService {
                 await this.storage.saveEvent(event);
             }
 
-            return relayEvents.map(event => this.getRecord(event));
+            return relayEvents.map(event => this.toRecord(event));
         }
 
         return [];

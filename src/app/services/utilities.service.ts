@@ -29,15 +29,15 @@ export class UtilitiesService {
 
   constructor() { }
 
-  getRecord(event: Event) {
+  toRecord(event: Event) {
     return {
       event,
       data: this.parseContent(event.content)
     }
   }
 
-  getRecords(events: Event[]) {
-    return events.map(event => this.getRecord(event));
+  toRecords(events: Event[]) {
+    return events.map(event => this.toRecord(event));
   }
 
   /** Attempts to parse the content if it is a JSON string. */

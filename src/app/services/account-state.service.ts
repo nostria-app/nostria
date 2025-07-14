@@ -670,7 +670,7 @@ export class AccountStateService {
 
       // Load metadata events from storage for all following users
       const events = await storageService.getEventsByPubkeyAndKind(followingList, 0); // kind 0 is metadata
-      const records = dataService.getRecords(events);
+      const records = dataService.toRecords(events);
 
       console.log('Found metadata records in storage:', records.length);
 
