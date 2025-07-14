@@ -190,13 +190,19 @@ export class EventPageComponent implements OnInit {
   }
 
   async loadReplies(eventId: string, pubkey: string) {
+    this.logger.info('loadReplies called with eventId:', eventId, 'pubkey:', pubkey);
+    this.logger.info('Current userRelays length:', this.userRelays.length);
+    
     if (this.userRelays.length === 0) {
+      this.logger.info('No user relays cached, discovering relays for pubkey:', pubkey);
       // We need to discover the event from user's relays.
       const userRelays = await this.data.getUserRelays(pubkey);
       this.userRelays = userRelays;
+      this.logger.info('Retrieved user relays from data service:', userRelays);
     }
 
     if (!this.userRelays || this.userRelays.length === 0) {
+      this.logger.info('No user relays found for author when loading replies. userRelays:', this.userRelays);
       debugger;
       this.error.set('No user relays found for the author when loading replies.');
       return;
@@ -250,16 +256,22 @@ export class EventPageComponent implements OnInit {
   }
 
   async loadEvent(nevent: string) {
+    this.logger.info('loadEvent called with nevent:', nevent);
+    
     if (this.utilities.isHex(nevent)) {
+      this.logger.info('Input is hex string, encoding to nevent');
       // If the input is a hex string, we assume it's an event ID.
       nevent = nip19.neventEncode({ id: nevent }) as string;
+      this.logger.info('Encoded to nevent:', nevent);
     }
 
     const decoded = this.utilities.decode(nevent) as DecodedNevent;
     const hex = decoded.data.id;
+    this.logger.info('Decoded event ID:', hex, 'Author:', decoded.data.author);
     this.id.set(hex);
 
     if (this.item?.event && this.item.event.id === hex) {
+      this.logger.info('Using cached event from item');
       // If we already have the event in the item, use it directly.
       this.event.set(this.item.event);
       this.isLoading.set(false);
@@ -270,6 +282,7 @@ export class EventPageComponent implements OnInit {
     const receivedData = history.state.event as Event | undefined;
 
     if (receivedData) {
+      this.logger.info('Using event from navigation state:', receivedData.id);
       this.event.set(receivedData);
       this.isLoading.set(false);
 
@@ -282,6 +295,7 @@ export class EventPageComponent implements OnInit {
 
       await this.loadReplies(receivedData.id, receivedData.pubkey);
     } else {
+      this.logger.info('No cached event, attempting to load from storage or relays');
 
       try {
         this.isLoading.set(true);
@@ -289,6 +303,7 @@ export class EventPageComponent implements OnInit {
         let event = await this.data.getEventById(hex);
 
         if (event) {
+          this.logger.info('Loaded article event from storage or relays:', event.event.id);
           this.logger.debug('Loaded article event from storage or relays:', event);
           this.event.set(event.event);
 
@@ -299,38 +314,48 @@ export class EventPageComponent implements OnInit {
           this.isLoading.set(false);
           await this.loadReplies(event.event.id, event.event.pubkey);
         } else {
+          this.logger.info('Event not found in storage, attempting relay discovery');
 
           if (!decoded.data.author) {
+            this.logger.info('No author in decoded data, cannot discover relays');
             this.error.set('Event not found. There is no pubkey to discover the event from.');
             this.isLoading.set(false);
             return;
           }
 
+          this.logger.info('Discovering user relays for author:', decoded.data.author);
           // We need to discover the event from user's relays.
           const userRelays = await this.data.getUserRelays(decoded.data.author);
           this.userRelays = userRelays;
+          this.logger.info('Retrieved user relays from data service:', userRelays);
 
           if (!this.userRelays || this.userRelays.length === 0) {
+            this.logger.info('No user relays found, attempting relay discovery via NostrService');
             // If the current user is anonymous, we will end up here. Let's discover the user relays.
             const discoveredRelays = await this.nostrService.discoverRelays(decoded.data.author);
             this.userRelays = discoveredRelays.relayUrls;
+            this.logger.info('Discovered relays via NostrService:', discoveredRelays.relayUrls);
           }
 
           if (!this.userRelays || this.userRelays.length === 0) {
+            this.logger.info('Still no user relays found after all discovery attempts. userRelays:', this.userRelays);
             debugger;
             this.error.set('No user relays found for the author.');
             this.isLoading.set(false);
             return;
           }
 
+          this.logger.info('Attempting to fetch event from user relays:', this.userRelays);
           const event = await this.pool!.get(this.userRelays, { ids: [decoded.data.id] }, { maxWait: 4000 });
 
           if (!event) {
+            this.logger.info('Event not found on user relays');
             this.error.set('Event not found on user relays.');
             this.isLoading.set(false);
             return;
           }
 
+          this.logger.info('Successfully fetched event from user relays:', event.id);
           this.event.set(event);
 
           // We found the event, now we'll discover reactions and replies.
