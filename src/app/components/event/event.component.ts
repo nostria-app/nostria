@@ -50,7 +50,7 @@ export class EventComponent {
         return;
       }
 
-      const record = this.data.getRecord(event);
+      const record = this.data.toRecord(event);
       this.record.set(record);
     });
 

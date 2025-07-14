@@ -133,7 +133,7 @@ export class NostrService implements NostriaService {
       // they won't take up too much memory space.
       const accountsMetadata = await this.getAccountsMetadata();
 
-      const accountsMetadataRecords = this.data.getRecords(accountsMetadata);
+      const accountsMetadataRecords = this.data.toRecords(accountsMetadata);
 
       for (const metadata of accountsMetadataRecords) {
         this.accountState.addToAccounts(metadata.event.pubkey, metadata);
@@ -226,7 +226,7 @@ export class NostrService implements NostriaService {
       let metadata: NostrRecord | null | undefined = null;
 
       if (metadataEvent) {
-        metadata = this.data.getRecord(metadataEvent);
+        metadata = this.data.toRecord(metadataEvent);
 
         this.accountState.addToCache(metadata.event.pubkey, metadata);
 
@@ -879,7 +879,7 @@ export class NostrService implements NostriaService {
           const metadata = await this.queueMetadataDiscovery(pubkey);
 
           if (metadata) {
-            const record = this.data.getRecord(metadata);
+            const record = this.data.toRecord(metadata);
             this.accountState.addToCache(pubkey, record);
           }
         }, 0);
@@ -890,7 +890,7 @@ export class NostrService implements NostriaService {
 
     // Not in cache, get from storage
     const events = await this.storage.getEventsByPubkeyAndKind(pubkey, kinds.Metadata);
-    const records = this.data.getRecords(events);
+    const records = this.data.toRecords(events);
 
     if (records.length > 0) {
       // Add to cache
@@ -910,7 +910,7 @@ export class NostrService implements NostriaService {
       const metadata = await this.queueMetadataDiscovery(pubkey);
 
       if (metadata) {
-        const record = this.data.getRecord(metadata);
+        const record = this.data.toRecord(metadata);
         this.accountState.addToCache(pubkey, record);
         // this.updateMetadataCache(pubkey, record);
         return record;

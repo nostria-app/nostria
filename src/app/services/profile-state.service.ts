@@ -157,9 +157,9 @@ export class ProfileStateService {
           // Now you can use 'this' here
           // For example: this.handleContacts(evt);
         } else if (evt.kind === kinds.LongFormArticle) {
-          this.articles.update(articles => [...articles, this.utilities.getRecord(evt)]);
+          this.articles.update(articles => [...articles, this.utilities.toRecord(evt)]);
         } else if (evt.kind === kinds.ShortTextNote) {
-          const record = this.utilities.getRecord(evt);
+          const record = this.utilities.toRecord(evt);
           if (this.utilities.isRootPost(evt)) {
             this.notes.update(events => [...events, record]);
           } else {

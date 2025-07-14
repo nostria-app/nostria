@@ -188,7 +188,7 @@ export class ProfileEditComponent {
       // const clonedEvent = structuredClone(signedEvent);
       await this.storage.saveEvent(signedEvent);
 
-      const record = this.data.getRecord(signedEvent);
+      const record = this.data.toRecord(signedEvent);
       this.accountState.addToAccounts(record.event.pubkey, record);
       this.accountState.addToCache(record.event.pubkey, record);
 
