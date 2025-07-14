@@ -74,6 +74,7 @@ ignored.
 - NIP-58: Badges: Badges should be self-contained on the user's relays. That means both the badge definition and the badge claim should be on the user's relays. This is to ensure that the user has full set of data for their own needs. Maybe Nostria will perform lookup on issuer relays 
 to get updated badge definitions, but this is not a requirement. The user should be able to use the badge without relying on the issuer relay.
 That means that Nostria will publish both the badge definition and the badge claim to the user's relays.
+- NIP-B0: Web Bookmarking. We are not implementing this NIP, as this is something better left to the web browser.
 
 ## Scaling Nostr
 
