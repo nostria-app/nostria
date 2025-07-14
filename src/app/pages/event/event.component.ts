@@ -190,6 +190,7 @@ export class EventPageComponent implements OnInit {
   }
 
   async loadReplies(eventId: string, pubkey: string) {
+    debugger;
     this.logger.info('loadReplies called with eventId:', eventId, 'pubkey:', pubkey);
     this.logger.info('Current userRelays length:', this.userRelays.length);
     
@@ -217,6 +218,7 @@ export class EventPageComponent implements OnInit {
       ['#e']: [eventId],
     }, {
       onevent: (event) => {
+        debugger;
         console.log('Received event:', event);
 
         if (event.kind === kinds.ShortTextNote && event.content) {
@@ -256,6 +258,7 @@ export class EventPageComponent implements OnInit {
   }
 
   async loadEvent(nevent: string) {
+    debugger;
     this.logger.info('loadEvent called with nevent:', nevent);
     
     if (this.utilities.isHex(nevent)) {
@@ -271,6 +274,8 @@ export class EventPageComponent implements OnInit {
     this.id.set(hex);
 
     if (this.item?.event && this.item.event.id === hex) {
+       // TODO: If this happens, we have NOT loaded the user relays yet and made them available for "loadReplies".
+
       this.logger.info('Using cached event from item');
       // If we already have the event in the item, use it directly.
       this.event.set(this.item.event);
