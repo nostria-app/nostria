@@ -197,7 +197,8 @@ export class EventPageComponent implements OnInit {
     }
 
     if (!this.userRelays || this.userRelays.length === 0) {
-      this.error.set('No user relays found for the author.');
+      debugger;
+      this.error.set('No user relays found for the author when loading replies.');
       return;
     }
 
@@ -316,6 +317,7 @@ export class EventPageComponent implements OnInit {
           }
 
           if (!this.userRelays || this.userRelays.length === 0) {
+            debugger;
             this.error.set('No user relays found for the author.');
             this.isLoading.set(false);
             return;
