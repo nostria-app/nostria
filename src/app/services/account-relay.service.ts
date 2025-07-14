@@ -1,11 +1,10 @@
 import { Injectable, inject, signal, computed, effect, untracked } from '@angular/core';
 import { LoggerService } from './logger.service';
-import { StorageService, Nip11Info, NostrEventData, UserMetadata } from './storage.service';
 import { Event, kinds, SimplePool } from 'nostr-tools';
-import { ApplicationStateService } from './application-state.service';
-import { NotificationService } from './notification.service';
-import { LocalStorageService } from './local-storage.service';
-import { NostrService } from './nostr.service';
+// import { ApplicationStateService } from './application-state.service';
+// import { NotificationService } from './notification.service';
+// import { LocalStorageService } from './local-storage.service';
+// import { NostrService } from './nostr.service';
 import { RelayService } from './relay.service';
 
 export interface Relay {
@@ -20,11 +19,10 @@ export interface Relay {
 })
 export class AccountRelayService {
     private logger = inject(LoggerService);
-    private storage = inject(StorageService);
-    private nostr = inject(NostrService);
-    private appState = inject(ApplicationStateService);
-    private notification = inject(NotificationService);
-    private localStorage = inject(LocalStorageService);
+    // private nostr = inject(NostrService);
+    // private appState = inject(ApplicationStateService);
+    // private notification = inject(NotificationService);
+    // private localStorage = inject(LocalStorageService);
     private relay = inject(RelayService);
     userRelaysFound = signal<boolean>(true);
     pool = new SimplePool();
