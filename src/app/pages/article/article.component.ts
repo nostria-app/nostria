@@ -21,6 +21,7 @@ import { ParsingService } from '../../services/parsing.service';
 import { UrlUpdateService } from '../../services/url-update.service';
 import { BookmarkService } from '../../services/bookmark.service';
 import { CommonModule } from '@angular/common';
+import { AccountStateService } from '../../services/account-state.service';
 
 @Component({
   selector: 'app-article',
@@ -51,6 +52,7 @@ export class ArticleComponent {
   private parsing = inject(ParsingService);
   private url = inject(UrlUpdateService);
   bookmark = inject(BookmarkService);
+  private accountState = inject(AccountStateService);
 
   event = signal<Event | undefined>(undefined);
   isLoading = signal(false);
@@ -133,7 +135,8 @@ export class ArticleComponent {
       this.isLoading.set(true);
       this.error.set(null);
 
-      let event = await this.data.getEventByPubkeyAndKindAndReplaceableEvent(pubkey, kinds.LongFormArticle, slug, true);
+      const isNotCurrentUser = !this.accountState.isCurrentUser(pubkey);
+      let event = await this.data.getEventByPubkeyAndKindAndReplaceableEvent(pubkey, kinds.LongFormArticle, slug, { save: false, cache: false }, isNotCurrentUser);
 
       if (event) {
         this.logger.debug('Loaded article event from storage or relays:', event);

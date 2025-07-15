@@ -119,7 +119,6 @@ export class BookmarkService {
   }
 
   toggleBookmark(id: string, type: BookmarkType = 'e') {
-    debugger;
     this.addBookmark(id, type); // Add and toggle are the same operation
   }
 

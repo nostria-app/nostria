@@ -138,6 +138,10 @@ export class AccountStateService {
 
   });
 
+  isCurrentUser(pubkey: string): boolean {
+    return this.pubkey() === pubkey;
+  }
+
   async load() {
     const account = this.account();
 

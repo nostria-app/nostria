@@ -1,11 +1,12 @@
 import { Injectable, inject, signal, computed, effect, untracked } from '@angular/core';
 import { LoggerService } from './logger.service';
 import { Event, kinds, SimplePool } from 'nostr-tools';
-// import { ApplicationStateService } from './application-state.service';
-// import { NotificationService } from './notification.service';
-// import { LocalStorageService } from './local-storage.service';
-// import { NostrService } from './nostr.service';
 import { RelayService } from './relay.service';
+import { UtilitiesService } from './utilities.service';
+import { NostriaService } from '../interfaces';
+import { LocalStorageService } from './local-storage.service';
+import { ApplicationStateService } from './application-state.service';
+import { StorageService } from './storage.service';
 
 export interface Relay {
     url: string;
@@ -13,6 +14,351 @@ export interface Relay {
     lastUsed?: number;
     timeout?: number;
 }
+
+export abstract class RelayServiceBase {
+    #pool!: SimplePool;
+    protected relayUrls: string[] = [];
+    protected logger = inject(LoggerService);
+
+    constructor(pool: SimplePool) {
+        this.#pool = pool;
+    }
+
+    /** Inits the relay URLs. Make sure URLs are normalized before setting. */
+    init(relayUrls: string[]) {
+        this.destroy();
+
+        this.relayUrls = relayUrls;
+        this.#pool = new SimplePool();
+    }
+
+    destroy() {
+        this.#pool.destroy();
+    }
+
+    getRelayUrls(): string[] {
+        return this.relayUrls;
+    }
+
+    async getEventsByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<Event[]> {
+        // Check if pubkey is already an array or a single string
+        const authors = Array.isArray(pubkey) ? pubkey : [pubkey];
+
+        return this.getMany({
+            authors,
+            kinds: [kind]
+        });
+    }
+
+    async getEventByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<Event | null> {
+        // Check if pubkey is already an array or a single string
+        const authors = Array.isArray(pubkey) ? pubkey : [pubkey];
+
+        return this.get({
+            authors,
+            kinds: [kind]
+        });
+    }
+
+    async getEventById(id: string): Promise<Event | null> {
+        return this.get({
+            ids: [id]
+        });
+    }
+
+    async getEventsByKindAndPubKeyTag(pubkey: string | string[], kind: number): Promise<Event[]> {
+        const authors = Array.isArray(pubkey) ? pubkey : [pubkey];
+
+        return this.getMany({
+            "#p": authors,
+            kinds: [kind]
+        });
+    }
+
+    async getEventByPubkeyAndKindAndTag(pubkey: string, kind: number, tag: { key: string, value: string }): Promise<Event | null> {
+        const authors = Array.isArray(pubkey) ? pubkey : [pubkey];
+
+        return this.get({
+            authors,
+            [`#${tag.key}`]: [tag.value],
+            kinds: [kind]
+        });
+    }
+
+    /**
+     * Generic function to fetch Nostr events (one-time query)
+     * @param filter Filter for the query
+     * @param relayUrls Optional specific relay URLs to use (defaults to user's relays)
+     * @param options Optional options for the query
+     * @returns Promise that resolves to an array of events
+     */
+    async get<T extends Event = Event>(
+        filter: { ids?: string[], kinds?: number[], authors?: string[], '#e'?: string[], '#p'?: string[], since?: number, until?: number, limit?: number },
+        options: { timeout?: number } = {}
+    ): Promise<T | null> {
+        this.logger.debug('Getting events with filters:', filter);
+
+        // if (!this.#pool) {
+        //     this.logger.error('Cannot get events: account pool is not initialized');
+        //     return null;
+        // }
+
+        const urls = this.relayUrls
+
+        if (urls.length === 0) {
+            this.logger.warn('No relays available for query');
+            return null;
+        }
+
+        try {
+            // Default timeout is 5 seconds if not specified
+            const timeout = options.timeout || 5000;
+
+            // Execute the query
+            const event = await this.#pool.get(urls, filter, { maxWait: timeout }) as T;
+
+            this.logger.debug(`Received event from query`, event);
+
+            // Update lastUsed for all relays used in this query
+            // urls.forEach(url => this.updateRelayLastUsed(url));
+
+            return event;
+        } catch (error) {
+            this.logger.error('Error fetching events', error);
+            return null;
+        }
+    }
+
+    /**
+    * Generic function to fetch Nostr events (one-time query)
+    * @param filter Filter for the query
+    * @param relayUrls Optional specific relay URLs to use (defaults to user's relays)
+    * @param options Optional options for the query
+    * @returns Promise that resolves to an array of events
+    */
+    async getMany<T extends Event = Event>(
+        filter: { kinds?: number[], authors?: string[], '#e'?: string[], '#p'?: string[], since?: number, until?: number, limit?: number },
+        options: { timeout?: number } = {}
+    ): Promise<T[]> {
+        this.logger.debug('Getting events with filters:', filter);
+
+        // Use provided relay URLs or default to the user's relays
+        const urls = this.relayUrls;
+
+        if (urls.length === 0) {
+            this.logger.warn('No relays available for query');
+            return [];
+        }
+
+        try {
+            // Default timeout is 5 seconds if not specified
+            const timeout = options.timeout || 5000;
+
+            // Execute the query
+            const events: T[] = [];
+            return new Promise<T[]>((resolve) => {
+                const sub = this.#pool!.subscribeEose(urls, filter, {
+                    maxWait: timeout,
+                    onevent: (event) => {
+                        // Add the received event to our collection
+                        events.push(event as T);
+                    },
+                    onclose: (reasons) => {
+                        console.log('Subscriptions closed', reasons);
+
+                        // When subscription closes, resolve the promise with all collected events
+                        // Update lastUsed for all relays used in this query
+                        //urls.forEach(url => this.updateRelayLastUsed(url));
+
+                        resolve(events);
+                    },
+                });
+            });
+
+            // this.logger.debug(`Received event from query`, event);
+            // Update lastUsed for all relays used in this query
+            // urls.forEach(url => this.updateRelayLastUsed(url));
+            // return event;
+        } catch (error) {
+            this.logger.error('Error fetching events', error);
+            return [];
+        }
+    }
+
+    /**
+   * Generic function to publish a Nostr event to specified relays
+   * @param event The Nostr event to publish
+   * @param relayUrls Optional specific relay URLs to use (defaults to user's relays)
+   * @param options Optional options for publishing
+   * @returns Promise that resolves to an object with status for each relay
+   */
+    async publish(event: Event) {
+        this.logger.debug('Publishing event:', event);
+
+        if (!this.#pool) {
+            this.logger.error('Cannot publish event: account pool is not initialized');
+            return null;
+        }
+
+        // Use provided relay URLs or default to the user's relays
+        const urls = this.relayUrls;
+
+        if (urls.length === 0) {
+            this.logger.warn('No relays available for publishing');
+            return null;
+        }
+
+        try {
+            // Publish the event
+            const publishResults = this.#pool.publish(urls, event);
+            this.logger.debug('Publish results:', publishResults);
+
+            // Update lastUsed for all relays used in this publish operation
+            // urls.forEach(url => this.updateRelayLastUsed(url));
+
+            return publishResults;
+        } catch (error) {
+            this.logger.error('Error publishing event', error);
+            return null;
+        }
+    }
+}
+
+@Injectable({
+    providedIn: 'root'
+})
+export class AccountRelayServiceEx extends RelayServiceBase {
+    private storage = inject(StorageService);
+    private utilities = inject(UtilitiesService);
+    private discoveryRelay = inject(DiscoveryRelayServiceEx);
+
+    constructor() {
+        // TODO: We always create a new instance here that will be immediately destroyed by setAccount.
+        super(new SimplePool());
+    }
+
+    async setAccount(pubkey: string) {
+        this.destroy();
+
+        // When the active user is changed, we need to discover their relay urls
+        this.logger.debug(`Setting account relays for pubkey: ${pubkey}`);
+
+        let relayUrls: string[] = [];
+
+        // Get the relays URLs from storage, if available.
+        let event = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
+
+        if (event) {
+            this.logger.debug(`Found relay list for pubkey ${pubkey} in storage`);
+            relayUrls = this.utilities.getRelayUrls(event);
+        } else {
+            event = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
+
+            if (event) {
+                relayUrls = this.utilities.getRelayUrlsFromFollowing(event);
+            }
+        }
+
+        if (relayUrls.length === 0) {
+            relayUrls = await this.discoveryRelay.getUserRelayUrls(pubkey);
+        }
+
+        this.init(relayUrls);
+    }
+
+    clear() { }
+}
+
+@Injectable({
+    providedIn: 'root'
+})
+export class UserRelayServiceEx extends RelayServiceBase {
+    private discoveryRelay = inject(DiscoveryRelayServiceEx);
+    private pubkey = '';
+
+    constructor() {
+        super(new SimplePool());
+    }
+
+    /** When the active user is changed, we need to discover their relay urls */
+    async setUser(pubkey: string) {
+        if (this.pubkey === pubkey) {
+            return;
+        }
+
+        this.pubkey = pubkey;
+        const relayUrls = await this.discoveryRelay.getUserRelayUrls(pubkey);
+        this.init(relayUrls);
+    }
+
+    async initialize(pubkey: string): Promise<void> {
+        await this.setUser(pubkey);
+    }
+}
+
+@Injectable({
+    providedIn: 'root'
+})
+export class DiscoveryRelayServiceEx extends RelayServiceBase implements NostriaService {
+    private readonly utilities = inject(UtilitiesService);
+    private localStorage = inject(LocalStorageService);
+    private appState = inject(ApplicationStateService);
+    private readonly DEFAULT_BOOTSTRAP_RELAYS = ['wss://discovery.eu.nostria.app/'];
+
+    constructor() {
+        super(new SimplePool());
+    }
+
+    async getUserRelayUrls(pubkey: string): Promise<string[]> {
+        // Query the Discovery Relays for user relay URLs.
+        // Instead of doing duplicate kinds, we will query in order to get the user relay URLs. When the global network has moved 
+        // away from kind 3 relay lists, this will be more optimal.
+        let relayUrls: string[] = [];
+        let event = await this.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
+
+        if (event) {
+            relayUrls = this.utilities.getRelayUrls(event);
+        }
+        else {
+            event = await this.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
+
+            if (event) {
+                relayUrls = this.utilities.getRelayUrlsFromFollowing(event);
+            }
+        }
+
+        // Fallback methods... should we attempt to get the relay URLs from the account relays?
+        return relayUrls;
+    }
+
+    async load() {
+        // Load bootstrap relays from local storage or use default ones
+        const bootstrapRelays = this.loadDiscoveryRelaysFromStorage();
+        this.init(bootstrapRelays);
+    }
+
+    clear() { }
+
+    /**
+     * Loads bootstrap relays from local storage
+     */
+    private loadDiscoveryRelaysFromStorage(): string[] {
+        try {
+            const storedRelays = this.localStorage.getItem(this.appState.DISCOVERY_RELAYS_STORAGE_KEY);
+            if (storedRelays) {
+                const parsedRelays = JSON.parse(storedRelays);
+                if (Array.isArray(parsedRelays) && parsedRelays.length > 0) {
+                    this.logger.debug(`Loaded ${parsedRelays.length} discovery relays from storage`);
+                    return parsedRelays;
+                }
+            }
+        } catch (error) {
+            this.logger.error('Error loading discovery relays from storage', error);
+        }
+        return this.DEFAULT_BOOTSTRAP_RELAYS;
+    }
+}
+
 
 @Injectable({
     providedIn: 'root'
