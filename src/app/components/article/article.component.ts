@@ -25,7 +25,7 @@ export class ArticleComponent {
     effect(async () => {
       if (this.pubkey() && this.slug() && this.kind()) {
         this.loading.set(true);
-        const eventData = await this.data.getEventByPubkeyAndKindAndReplaceableEvent(this.pubkey(), this.kind(), this.slug(), true);
+        const eventData = await this.data.getEventByPubkeyAndKindAndReplaceableEvent(this.pubkey(), this.kind(), this.slug(), undefined, true);
         this.record.set(eventData);
         this.loading.set(false);
       };

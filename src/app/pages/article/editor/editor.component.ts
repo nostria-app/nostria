@@ -186,11 +186,15 @@ export class EditorComponent {
         return;
       }
 
+      // Since we're doing editing here, we'll save and cache locally.
       const record = await this.dataService.getEventByPubkeyAndKindAndReplaceableEvent(
         pubkey,
         30023,
         articleId,
-        true
+        {
+          cache: true,
+          save: true
+        }
       );
 
       if (record?.event) {

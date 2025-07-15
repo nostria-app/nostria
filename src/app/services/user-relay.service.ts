@@ -57,6 +57,22 @@ export class UserRelayService {
         this.relayUrls = relayUrls;
     }
 
+    async getEventById(id: string): Promise<Event | null> {
+        return this.get({
+            ids: [id]
+        });
+    }
+
+    async getEventByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<Event | null> {
+        // Check if pubkey is already an array or a single string
+        const authors = Array.isArray(pubkey) ? pubkey : [pubkey];
+
+        return this.get({
+            authors,
+            kinds: [kind]
+        });
+    }
+
     async getEventByPubkeyAndKindAndTag(pubkey: string, kind: number, tag: { key: string, value: string }): Promise<Event | null> {
         const authors = Array.isArray(pubkey) ? pubkey : [pubkey];
 
@@ -75,7 +91,7 @@ export class UserRelayService {
      * @returns Promise that resolves to an array of events
      */
     async get<T extends Event = Event>(
-        filter: { kinds?: number[], authors?: string[], '#e'?: string[], '#p'?: string[], since?: number, until?: number, limit?: number },
+        filter: { ids?: string[], kinds?: number[], authors?: string[], '#e'?: string[], '#p'?: string[], since?: number, until?: number, limit?: number },
         relayUrls?: string[],
         options: { timeout?: number } = {}
     ): Promise<T | null> {

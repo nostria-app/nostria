@@ -7,7 +7,8 @@ import { Event } from "nostr-tools";
 import { UserRelayFactoryService } from "./user-relay-factory.service";
 import { UtilitiesService } from "./utilities.service";
 import { Cache, CacheOptions } from "./cache";
-import { AccountRelayService } from "./account-relay.service";
+import { AccountRelayService, AccountRelayServiceEx, DiscoveryRelayServiceEx, UserRelayServiceEx } from "./account-relay.service";
+import { UserRelayService } from "./user-relay.service";
 
 export interface DataOptions {
     cache: boolean; // Whether to use cache
@@ -20,9 +21,16 @@ export interface DataOptions {
 export class DataService {
     private readonly storage = inject(StorageService);
     private readonly relay = inject(RelayService);
+    
     private readonly accountRelay = inject(AccountRelayService);
-    private readonly logger = inject(LoggerService);
     private readonly userRelayFactory = inject(UserRelayFactoryService);
+
+    private readonly userRelayEx = inject(UserRelayServiceEx);
+    private readonly discoveryRelayEx = inject(DiscoveryRelayServiceEx);
+    private readonly accountRelayEx = inject(AccountRelayServiceEx);
+    
+    private readonly logger = inject(LoggerService);
+
     private readonly utilities = inject(UtilitiesService);
     private readonly cache = inject(Cache);
 
@@ -34,7 +42,7 @@ export class DataService {
         return this.utilities.toRecords(events);
     }
 
-    async getEventById(id: string, options?: CacheOptions & DataOptions): Promise<NostrRecord | null> {
+    async getEventById(id: string, options?: CacheOptions & DataOptions, userRelays = false): Promise<NostrRecord | null> {
         let event: Event | null = null;
 
         if (options?.cache) {
@@ -46,8 +54,15 @@ export class DataService {
             event = await this.storage.getEventById(id);
         }
 
+        // If the caller explicitly supplies user relay, don't attempt to user account relay.
         if (!event) {
-            event = await this.relay.getEventById(id);
+            if (userRelays) {
+                // If userRelays is true, we will try to get the event from user relays.
+                event = await this.userRelayEx.getEventById(id);
+            } else {
+                // Try to get the event from the account relay.
+                event = await this.accountRelayEx.getEventById(id);
+            }
         }
 
         if (!event) {
@@ -106,70 +121,123 @@ export class DataService {
     }
 
     /** Will read event from local database, if available, or get from relay, and then save to database. */
-    async getEventByPubkeyAndKindAndReplaceableEvent(pubkey: string, kind: number, dTagValue: string, userRelays: boolean): Promise<NostrRecord | null> {
-        let event: Event | null | undefined = await this.storage.getParameterizedReplaceableEvent(pubkey, kind, dTagValue);
+    async getEventByPubkeyAndKindAndReplaceableEvent(pubkey: string, kind: number, dTagValue: string, options?: CacheOptions & DataOptions, userRelays = false): Promise<NostrRecord | null> {
+        const cacheKey = `${pubkey}-${kind}-${dTagValue}`;
+        let event: Event | null = null;
 
-        if (event) {
-            return this.toRecord(event);
+        if (options?.cache) {
+            event = this.cache.get<Event>(cacheKey);
         }
 
-        if (userRelays) {
-            // If userRelays is true, we will try to get the event from user relays.
-            const userRelayService = await this.userRelayFactory.create(pubkey);
-            event = await userRelayService.getEventByPubkeyAndKindAndTag(pubkey, kind, { key: 'd', value: dTagValue });
+        // If the caller explicitly don't want to save, we will not check the storage.
+        if (options?.save) {
+            event = await this.storage.getParameterizedReplaceableEvent(pubkey, kind, dTagValue) || null;
+        }
 
-            if (event) {
-                this.storage.saveEvent(event);
-                return this.toRecord(event);
+        // If the caller explicitly supplies user relay, don't attempt to user account relay.
+        if (!event) {
+            if (userRelays) {
+                // If userRelays is true, we will try to get the event from user relays.
+                await this.userRelayEx.setUser(pubkey);
+                event = await this.userRelayEx.getEventByPubkeyAndKindAndTag(pubkey, kind, { key: 'd', value: dTagValue });
+            } else {
+                // Try to get the event from the account relay.
+                event = await this.accountRelayEx.getEventByPubkeyAndKindAndTag(pubkey, kind, { key: 'd', value: dTagValue });
             }
         }
 
-        // If not found in user relays, we will try to get the event from the main relay.
-        event = await this.relay.getEventByPubkeyAndKindAndTag(pubkey, kind, { key: 'd', value: dTagValue });
-
-        if (event) {
-            this.storage.saveEvent(event);
-            return this.toRecord(event);
+        if (!event) {
+            return null;
         }
 
-        return null;
+        if (options?.cache) {
+            this.cache.set(cacheKey, event, options);
+        }
+
+        if (options?.save) {
+            await this.storage.saveEvent(event);
+        }
+
+        return this.toRecord(event);
     }
 
     /** Will read event from local database, if available, or get from relay, and then save to database. */
-    async getEventByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<NostrRecord | null> {
-        let event = await this.storage.getEventByPubkeyAndKind(pubkey, kind);
+    async getEventByPubkeyAndKind(pubkey: string | string[], kind: number, options?: CacheOptions & DataOptions, userRelays = false): Promise<NostrRecord | null> {
+        const cacheKey = `${Array.isArray(pubkey) ? pubkey.join(',') : pubkey}-${kind}`;
+        let event: Event | null = null;
 
-        if (event) {
-            return this.toRecord(event);
+        if (options?.cache) {
+            event = this.cache.get<Event>(cacheKey);
         }
 
-        event = await this.relay.getEventByPubkeyAndKind(pubkey, kind);
-
-        if (event) {
-            this.storage.saveEvent(event);
-            return this.toRecord(event);
+        // If the caller explicitly don't want to save, we will not check the storage.
+        if (options?.save) {
+            event = await this.storage.getEventByPubkeyAndKind(pubkey, kind);
         }
 
-        return null;
+        // If the caller explicitly supplies user relay, don't attempt to user account relay.
+        if (!event) {
+            if (userRelays) {
+                // If userRelays is true, we will try to get the event from user relays.
+                event = await this.userRelayEx.getEventByPubkeyAndKind(pubkey, kind);
+            } else {
+                // Try to get the event from the account relay.
+                event = await this.accountRelayEx.getEventByPubkeyAndKind(pubkey, kind);
+            }
+        }
+
+        if (!event) {
+            return null;
+        }
+
+        if (options?.cache) {
+            this.cache.set(cacheKey, event, options);
+        }
+
+        if (options?.save) {
+            await this.storage.saveEvent(event);
+        }
+
+        return this.toRecord(event);
     }
 
-    async getEventsByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<NostrRecord[]> {
-        const events = await this.storage.getEventsByPubkeyAndKind(pubkey, kind);
+    async getEventsByPubkeyAndKind(pubkey: string | string[], kind: number, options?: CacheOptions & DataOptions): Promise<NostrRecord[]> {
+        const cacheKey = `${Array.isArray(pubkey) ? pubkey.join(',') : pubkey}-${kind}-all`;
+        let events: Event[] = [];
 
-        if (events && events.length > 0) {
-            return events.map(event => this.toRecord(event));
+        if (options?.cache) {
+            const cachedEvents = this.cache.get<Event[]>(cacheKey);
+            if (cachedEvents) {
+                events = cachedEvents;
+            }
         }
 
-        const relayEvents = await this.relay.getEventsByPubkeyAndKind(pubkey, kind);
+        // If the caller explicitly don't want to save, we will not check the storage.
+        if (events.length === 0 && options?.save) {
+            events = await this.storage.getEventsByPubkeyAndKind(pubkey, kind);
+        }
 
-        if (relayEvents && relayEvents.length > 0) {
-            for (const event of relayEvents) {
+        if (events.length === 0) {
+            const relayEvents = await this.relay.getEventsByPubkeyAndKind(pubkey, kind);
+            if (relayEvents && relayEvents.length > 0) {
+                events = relayEvents;
+            }
+        }
+
+        if (events.length === 0) {
+            return [];
+        }
+
+        if (options?.cache) {
+            this.cache.set(cacheKey, events, options);
+        }
+
+        if (options?.save) {
+            for (const event of events) {
                 await this.storage.saveEvent(event);
             }
-
-            return relayEvents.map(event => this.toRecord(event));
         }
 
-        return [];
+        return events.map(event => this.toRecord(event));
     }
 }
