@@ -21,16 +21,12 @@ export interface DataOptions {
 export class DataService {
     private readonly storage = inject(StorageService);
     private readonly relay = inject(RelayService);
-    
     private readonly accountRelay = inject(AccountRelayService);
     private readonly userRelayFactory = inject(UserRelayFactoryService);
-
     private readonly userRelayEx = inject(UserRelayServiceEx);
     private readonly discoveryRelayEx = inject(DiscoveryRelayServiceEx);
     private readonly accountRelayEx = inject(AccountRelayServiceEx);
-    
     private readonly logger = inject(LoggerService);
-
     private readonly utilities = inject(UtilitiesService);
     private readonly cache = inject(Cache);
 
