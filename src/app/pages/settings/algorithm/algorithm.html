@@ -55,25 +55,6 @@
       </mat-card-content>
     </mat-card>
 
-    <!-- Action Buttons -->
-    <mat-card class="actions-card">
-      <mat-card-header>
-        <mat-card-title>Actions</mat-card-title>
-      </mat-card-header>
-      <mat-card-content>
-        <div class="action-buttons">
-          <button mat-raised-button color="primary" (click)="refreshData()">
-            <mat-icon>refresh</mat-icon>
-            Refresh Data
-          </button>
-          <button mat-raised-button color="warn" (click)="resetAllMetrics()">
-            <mat-icon>delete_forever</mat-icon>
-            Reset All Metrics
-          </button>
-        </div>
-      </mat-card-content>
-    </mat-card>
-
     <!-- User Metrics Tabs -->
     <mat-card class="metrics-card">
       <mat-card-header>
@@ -306,5 +287,26 @@
         </mat-tab-group>
       </mat-card-content>
     </mat-card>
+
+    
+    <!-- Action Buttons -->
+    <mat-card class="actions-card">
+      <mat-card-header>
+        <mat-card-title>Actions</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="action-buttons">
+          <button mat-flat-button (click)="refreshData()">
+            <mat-icon>refresh</mat-icon>
+            Refresh Data
+          </button>
+          <button mat-raised-button class="warn" (click)="resetAllMetrics()">
+            <mat-icon>delete_forever</mat-icon>
+            Reset All Metrics
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
   }
 </div>
