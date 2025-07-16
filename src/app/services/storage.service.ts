@@ -952,7 +952,7 @@ export class StorageService {
    * @param type The type of the info record
    * @param data Additional data to store
    */
-  async saveInfo(key: string, type: 'user' | 'relay', data: Record<string, any>): Promise<void> {
+  async saveInfo(key: string, type: 'user' | 'relay' | 'metric', data: Record<string, any>): Promise<void> {
     try {
       const compositeKey = this.generateCompositeKey(key, type);
 
@@ -990,7 +990,7 @@ export class StorageService {
   /**
    * Get info record by key
    */
-  async getInfo(key: string, type: 'user' | 'relay',) {
+  async getInfo(key: string, type: 'user' | 'relay' | 'metric') {
     try {
       const compositeKey = this.generateCompositeKey(key, type);
 
