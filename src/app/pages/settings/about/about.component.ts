@@ -2,12 +2,12 @@ import { Component, effect, inject, signal } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
-import { ApplicationService } from '../../services/application.service';
-import { MetaService } from '../../services/meta.service';
+import { ApplicationService } from '../../../services/application.service';
+import { MetaService } from '../../../services/meta.service';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { Router } from '@angular/router';
-import { LayoutService } from '../../services/layout.service';
+import { LayoutService } from '../../../services/layout.service';
 import { MatButtonModule } from '@angular/material/button';
 
 interface WebManifest {

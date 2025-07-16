@@ -29,6 +29,7 @@ import { decode } from 'blurhash';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 import { UrlUpdateService } from '../../services/url-update.service';
 import { MediaPlayerService } from '../../services/media-player.service';
+import { MatDividerModule } from '@angular/material/divider';
 
 interface NavLink {
   id: string;
@@ -61,6 +62,7 @@ const DEFAULT_COLUMNS: NavLink[] = [
     MatDialogModule,
     MatProgressSpinnerModule,
     UserProfileComponent,
+    MatDividerModule
   ],
   templateUrl: './feeds.component.html',
   styleUrl: './feeds.component.scss'

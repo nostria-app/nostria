@@ -6,12 +6,12 @@ import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
-import { AccountStateService } from '../../services/account-state.service';
-import { NostrService } from '../../services/nostr.service';
-import { InfoRecord, StorageService } from '../../services/storage.service';
-import { RelayService } from '../../services/relay.service';
-import { ApplicationService } from '../../services/application.service';
-import { LoggerService } from '../../services/logger.service';
+import { AccountStateService } from '../../../services/account-state.service';
+import { NostrService } from '../../../services/nostr.service';
+import { InfoRecord, StorageService } from '../../../services/storage.service';
+import { RelayService } from '../../../services/relay.service';
+import { ApplicationService } from '../../../services/application.service';
+import { LoggerService } from '../../../services/logger.service';
 
 @Component({
   selector: 'app-logs-settings',

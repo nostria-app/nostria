@@ -4,9 +4,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
-import { LoggerService } from '../../services/logger.service';
-import { LayoutService } from '../../services/layout.service';
 import { RouterModule } from '@angular/router';
+import { LayoutService } from '../../../services/layout.service';
+import { LoggerService } from '../../../services/logger.service';
 
 export interface RelayDialogData {
   relayUrl: string;
