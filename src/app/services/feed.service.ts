@@ -100,10 +100,11 @@ const DEFAULT_FEEDS: FeedConfig[] = [
     columns: [
       {
         id: 'notes',
-        label: 'Notes',
+        label: 'Notes (Following)',
         icon: 'chat',
         type: 'notes',
         kinds: [1],
+        source: 'following',
         relayConfig: 'user',
         createdAt: Date.now(),
         updatedAt: Date.now()
@@ -116,14 +117,15 @@ const DEFAULT_FEEDS: FeedConfig[] = [
     id: 'default-feed-articles',
     label: 'Articles',
     icon: 'dynamic_feed',
-    description: 'Default feed with articles',
+    description: 'Default feed with articles from following',
     columns: [
       {
         id: 'notes',
-        label: 'Notes',
+        label: 'Articles (Following)',
         icon: 'chat',
-        type: 'notes',
+        type: 'articles',
         kinds: [30023],
+        source: 'following',
         relayConfig: 'user',
         createdAt: Date.now(),
         updatedAt: Date.now()
@@ -347,6 +349,14 @@ export class FeedService {
 
   /**
    * Load following feed using algorithm-based approach
+   * 
+   * This method implements an optimized feed loading strategy:
+   * 1. Gets top 10 most engaged users from the algorithm
+   * 2. Fetches latest 5 events from each user using the outbox model
+   * 3. Filters out events older than 7 days for initial load
+   * 4. Aggregates events ensuring diversity (at least one from each user)
+   * 5. Sorts by creation time with newest first
+   * 6. Tracks lastTimestamp for pagination
    */
   private async loadFollowingFeed(feedData: FeedData) {
     try {
