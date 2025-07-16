@@ -2,13 +2,14 @@ import { Injectable, inject, signal, computed, Signal, WritableSignal, effect, u
 import { LocalStorageService } from './local-storage.service';
 import { LoggerService } from './logger.service';
 import { RelayService } from './relay.service';
-import { Event, SimplePool } from 'nostr-tools';
+import { Event, kinds, SimplePool } from 'nostr-tools';
 import { SubCloser } from 'nostr-tools/abstract-pool';
 import { ApplicationStateService } from './application-state.service';
 import { AccountStateService } from './account-state.service';
 import { DataService } from './data.service';
 import { UtilitiesService } from './utilities.service';
 import { ApplicationService } from './application.service';
+import { UserRelayServiceEx } from './account-relay.service';
 
 export interface FeedData {
   column: ColumnConfig,
@@ -143,6 +144,7 @@ export class FeedService {
   private readonly dataService = inject(DataService);
   private readonly utilities = inject(UtilitiesService);
   private readonly app = inject(ApplicationService);
+  private readonly userRelayEx = inject(UserRelayServiceEx);
 
   // Signals for feeds and relays
   private readonly _feeds = signal<FeedConfig[]>([]);
@@ -313,11 +315,16 @@ export class FeedService {
     if (column.source === 'following') {
       const followingList = this.accountState.followingList();
 
-      const followingPool = new SimplePool();
-
       for (const pubkey of followingList) {
-        let relayUrls = await this.dataService.getUserRelays(pubkey);
-        relayUrls = this.utilities.pickOptimalRelays(relayUrls, 2);
+        await this.userRelayEx.setUser(pubkey);
+        const events = await this.userRelayEx.getEventsByPubkeyAndKind(pubkey, kinds.ShortTextNote);
+
+        if (events.length > 0) {
+          item.events.update(events => [...events, ...events]);
+        }
+
+        // let relayUrls = await this.dataService.getUserRelays(pubkey);
+        // relayUrls = this.utilities.pickOptimalRelays(relayUrls, 2);
       }
 
       // TODO: This is not implemented yet, we need to decide how many events to fetch,

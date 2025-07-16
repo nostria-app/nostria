@@ -192,7 +192,7 @@ const NOSTR_KINDS = [
                   <p class="section-description">Select which events to include in this column</p>
                   
                   <mat-button-toggle-group name="source" formControlName="source">
-                    <mat-button-toggle [disabled]="true" value="following">Following</mat-button-toggle>
+                    <mat-button-toggle value="following">Following</mat-button-toggle>
                     <mat-button-toggle value="public">Public</mat-button-toggle>
                   </mat-button-toggle-group>
 
@@ -646,7 +646,7 @@ export class NewColumnDialogComponent {
 
   contentConfigGroup = this.fb.group({
     kinds: [this.data.column?.kinds || []],
-    source: [this.data.column?.source || 'public'] 
+    source: [this.data.column?.source || 'following'] 
   });
 
   relayConfigGroup = this.fb.group({
