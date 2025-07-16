@@ -199,6 +199,7 @@
         text-overflow: ellipsis;
         display: -webkit-box;
         -webkit-line-clamp: 3;
+        line-clamp: 3;
         -webkit-box-orient: vertical;
       }
 
@@ -493,6 +494,16 @@
   mat-checkbox {
     display: block;
     margin: 0.5rem 0;
+  }
+
+  mat-radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  mat-radio-button {
+    margin: 0.25rem 0;
   }
 }
 

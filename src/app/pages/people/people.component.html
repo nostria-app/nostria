@@ -43,6 +43,26 @@
         <mat-divider></mat-divider>
 
         <div class="filter-section" (click)="preventPropagation($event)">
+          <h3>Sort By</h3>
+          <mat-radio-group [value]="sortOption()" (change)="changeSortOption($event.value)">
+            <mat-radio-button value="default" (click)="preventPropagation($event)">
+              Default
+            </mat-radio-button>
+            <mat-radio-button value="reverse" (click)="preventPropagation($event)">
+              Reverse
+            </mat-radio-button>
+            <mat-radio-button value="engagement-desc" (click)="preventPropagation($event)">
+              Engagement (High to Low)
+            </mat-radio-button>
+            <mat-radio-button value="engagement-asc" (click)="preventPropagation($event)">
+              Engagement (Low to High)
+            </mat-radio-button>
+          </mat-radio-group>
+        </div>
+
+        <mat-divider></mat-divider>
+
+        <div class="filter-section" (click)="preventPropagation($event)">
           <h3>User Properties</h3>
           <mat-checkbox [checked]="filters().hasRelayList" (change)="toggleFilter('hasRelayList', $event)"
             (click)="preventPropagation($event)">
@@ -70,7 +90,13 @@
             (click)="preventPropagation($event)">
             Has Bio
           </mat-checkbox>
+          <mat-checkbox [checked]="filters().favoritesOnly" (change)="toggleFilter('favoritesOnly', $event)"
+            (click)="preventPropagation($event)">
+            Favorites Only
+          </mat-checkbox>
         </div>
+
+
       </mat-menu>
 
       <!-- Search input -->
@@ -101,7 +127,7 @@
       <mat-icon color="warn">error</mat-icon>
       <p>{{ error() }}</p>
     </div>
-    } @else if (filteredPeople().length === 0) {
+    } @else if (sortedPeople().length === 0) {
     <div class="empty-container">
       @if (searchTerm()) {
       <mat-icon>search_off</mat-icon>
@@ -125,9 +151,10 @@
         'small-grid': viewMode() === 'small',
         'details-list': viewMode() === 'details' || viewMode() === 'list',
         'tiles-container': viewMode() === 'tiles'      }">
-          @for (pubkey of filteredPeople(); track pubkey) {
-            <!-- {{ userInfoCache().get(pubkey) | json }} -->
-          <app-user-profile [info]="userInfoCache().get(pubkey)" [pubkey]="pubkey" [view]="viewMode()" [passthrough]="true" (click)="viewProfile(pubkey)"></app-user-profile>
+          @for (pubkey of sortedPeople(); track pubkey) {
+          <!-- {{ userInfoCache().get(pubkey) | json }} -->
+          <app-user-profile [info]="userInfoCache().get(pubkey)" [pubkey]="pubkey" [view]="viewMode()"
+            [passthrough]="true" (click)="viewProfile(pubkey)"></app-user-profile>
           }
         </div>
       </div>
