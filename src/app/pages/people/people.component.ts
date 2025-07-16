@@ -246,7 +246,7 @@ export class PeopleComponent {
     // Apply favorites filter if enabled
     const activeFilters = this.filters();
     if (activeFilters.favoritesOnly) {
-      const favorites = JSON.parse(this.localStorage.getItem('algorithm-favorites') || '[]');
+      const favorites = JSON.parse(this.localStorage.getItem('nostria-favorites') || '[]');
       result = result.filter(pubkey => favorites.includes(pubkey));
     }
 

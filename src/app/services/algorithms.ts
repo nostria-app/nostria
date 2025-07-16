@@ -49,7 +49,7 @@ export class Algorithms {
   }
 
   private getFavorites(): string[] {
-    const favorites = localStorage.getItem('algorithm-favorites');
+    const favorites = localStorage.getItem('nostria-favorites');
     if (favorites) {
       try {
         return JSON.parse(favorites);
