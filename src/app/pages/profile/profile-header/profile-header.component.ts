@@ -9,6 +9,8 @@ import { LayoutService } from '../../../services/layout.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { ProfileStateService } from '../../../services/profile-state.service';
 import { NostrRecord } from '../../../interfaces';
 import { isNip05, queryProfile } from 'nostr-tools/nip05';
@@ -26,6 +28,7 @@ import { QrCodeComponent } from '../../../components/qr-code/qr-code.component';
         MatMenuModule,
         RouterModule,
         MatButtonModule,
+        MatDividerModule,
         QrCodeComponent
     ],
     templateUrl: './profile-header.component.html',
@@ -43,6 +46,7 @@ export class ProfileHeaderComponent {
     accountState = inject(AccountStateService);
     utilities = inject(UtilitiesService);
     layoutService = inject(LayoutService);
+    private snackBar = inject(MatSnackBar);
 
     // Add signal for QR code visibility
     showQrCode = signal<boolean>(false);
@@ -50,6 +54,9 @@ export class ProfileHeaderComponent {
 
     // Add signal for verified identifier
     verifiedIdentifier = signal<{ value: string, valid: boolean, status: string }>({ value: '', valid: false, status: '' });
+
+    // Add signal for favorites
+    favoriteUsers = signal<string[]>([]);
 
     currentPubkey = computed(() => {
         return this.profile()?.event.pubkey || this.pubkey();
@@ -82,6 +89,10 @@ export class ProfileHeaderComponent {
         return followingList.includes(this.pubkey());
     });
 
+    isFavorite = computed(() => {
+        return this.favoriteUsers().includes(this.currentPubkey());
+    });
+
     constructor() {
         effect(() => {
             const currentPubkey = this.currentPubkey();
@@ -105,6 +116,9 @@ export class ProfileHeaderComponent {
                 });
             }
         });
+
+        // Load favorites from localStorage
+        this.loadFavorites();
     }
 
     unfollowUser(): void {
@@ -195,5 +209,43 @@ export class ProfileHeaderComponent {
 
     toggleProfileQrCodeHandler(): void {
         this.showProfileQrCode.set(!this.showProfileQrCode());
+    }
+
+    private loadFavorites() {
+        const favorites = localStorage.getItem('algorithm-favorites');
+        if (favorites) {
+            try {
+                this.favoriteUsers.set(JSON.parse(favorites));
+            } catch (error) {
+                console.error('Error loading favorites:', error);
+                this.favoriteUsers.set([]);
+            }
+        }
+    }
+
+    private saveFavorites() {
+        localStorage.setItem('algorithm-favorites', JSON.stringify(this.favoriteUsers()));
+    }
+
+    toggleFavorite(): void {
+        const currentPubkey = this.currentPubkey();
+        if (!currentPubkey) return;
+
+        const favorites = this.favoriteUsers();
+        const index = favorites.indexOf(currentPubkey);
+        
+        if (index > -1) {
+            // Remove from favorites
+            const newFavorites = favorites.filter(f => f !== currentPubkey);
+            this.favoriteUsers.set(newFavorites);
+            this.snackBar.open('Removed from favorites', 'Close', { duration: 2000 });
+        } else {
+            // Add to favorites
+            const newFavorites = [...favorites, currentPubkey];
+            this.favoriteUsers.set(newFavorites);
+            this.snackBar.open('Added to favorites', 'Close', { duration: 2000 });
+        }
+        
+        this.saveFavorites();
     }
 }

@@ -21,15 +21,44 @@ export class Algorithms {
     // Get metrics for all users we follow
     const followingMetrics = await this.metrics.getUserMetrics(following);
     
-    // Sort by engagement score or another metric
-    const sortedMetrics = followingMetrics.sort((a, b) => {
+    // Get favorites from localStorage
+    const favorites = this.getFavorites();
+    
+    // Separate favorites from regular users
+    const favoriteMetrics = followingMetrics.filter(metric => favorites.includes(metric.pubkey));
+    const regularMetrics = followingMetrics.filter(metric => !favorites.includes(metric.pubkey));
+    
+    // Sort favorites by engagement score (favorites are always at the top)
+    const sortedFavorites = favoriteMetrics.sort((a, b) => {
       const scoreA = a.engagementScore || 0;
       const scoreB = b.engagementScore || 0;
-      
       return ascending ? scoreA - scoreB : scoreB - scoreA;
     });
     
-    return sortedMetrics.slice(0, limit);
+    // Sort regular users by engagement score
+    const sortedRegular = regularMetrics.sort((a, b) => {
+      const scoreA = a.engagementScore || 0;
+      const scoreB = b.engagementScore || 0;
+      return ascending ? scoreA - scoreB : scoreB - scoreA;
+    });
+    
+    // Combine favorites first, then regular users
+    const combined = [...sortedFavorites, ...sortedRegular];
+    
+    return combined.slice(0, limit);
+  }
+
+  private getFavorites(): string[] {
+    const favorites = localStorage.getItem('algorithm-favorites');
+    if (favorites) {
+      try {
+        return JSON.parse(favorites);
+      } catch (error) {
+        console.error('Error loading favorites:', error);
+        return [];
+      }
+    }
+    return [];
   }
 
   /**
