@@ -8,6 +8,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatRadioModule } from '@angular/material/radio';
 import { RouterModule } from '@angular/router';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { NostrService } from '../../services/nostr.service';
@@ -20,6 +21,7 @@ import { Router } from '@angular/router';
 import { AccountStateService } from '../../services/account-state.service';
 import { ApplicationService } from '../../services/application.service';
 import { LocalStorageService } from '../../services/local-storage.service';
+import { Metrics } from '../../services/metrics';
 
 // Define filter options interface
 interface FilterOptions {
@@ -28,7 +30,11 @@ interface FilterOptions {
   hasNip05: boolean;
   hasPicture: boolean;
   hasBio: boolean;
+  favoritesOnly: boolean;
 }
+
+// Define sorting options
+type SortOption = 'default' | 'reverse' | 'engagement-asc' | 'engagement-desc';
 
 @Component({
   selector: 'app-people',
@@ -43,6 +49,7 @@ interface FilterOptions {
     MatTooltipModule,
     MatMenuModule,
     MatCheckboxModule,
+    MatRadioModule,
     RouterModule,
     ScrollingModule,
     UserProfileComponent,
@@ -59,6 +66,7 @@ export class PeopleComponent {
   private accountState = inject(AccountStateService);
   private app = inject(ApplicationService);
   private readonly localStorage = inject(LocalStorageService);
+  private metrics = inject(Metrics);
 
   // People data signals
   people = signal<string[]>([]);
@@ -78,8 +86,12 @@ export class PeopleComponent {
     hasFollowingList: false,
     hasNip05: false,
     hasPicture: false,
-    hasBio: false
+    hasBio: false,
+    favoritesOnly: false
   });
+
+  // Sorting options
+  sortOption = signal<SortOption>('default');
 
   // Cache for user info records
   userInfoCache = signal<Map<string, InfoRecord>>(new Map());
@@ -94,10 +106,6 @@ export class PeopleComponent {
       if (search) {
         const metadata = this.accountState.getCachedProfile(pubkey);
         if (!metadata) return false;
-
-        // const content = typeof metadata.content === 'string'
-        //   ? JSON.parse(metadata.content)
-        //   : metadata.content;
 
         const name = metadata.data?.name || '';
         const displayName = metadata.data?.display_name || '';
@@ -115,9 +123,6 @@ export class PeopleComponent {
 
         // Get user metadata
         const metadata = this.accountState.getCachedProfile(pubkey);
-        // const content = metadata && metadata.content ?
-        //   (typeof metadata.content === 'string' ? JSON.parse(metadata.content) : metadata.content) :
-        //   null;
 
         if (!metadata) {
           return false;
@@ -135,12 +140,12 @@ export class PeopleComponent {
         }
 
         if (activeFilters.hasNip05 &&
-          (metadata!.data.nip05)) {
+          (!metadata.data.nip05)) {
           return false;
         }
 
         if (activeFilters.hasPicture &&
-          (metadata.data.picture)) {
+          (!metadata.data.picture)) {
           return false;
         }
 
@@ -153,6 +158,9 @@ export class PeopleComponent {
       return true;
     });
   });
+
+  // Signal for sorted people
+  sortedPeople = signal<string[]>([]);
 
   // Virtual scrolling settings
   minBufferPx = 800;
@@ -211,6 +219,76 @@ export class PeopleComponent {
     effect(() => {
       this.localStorage.setItem('peopleFilters', JSON.stringify(this.filters()));
     });
+
+    // Load sort option from localStorage if available
+    const savedSortOption = this.localStorage.getItem('peopleSortOption');
+    if (savedSortOption) {
+      this.sortOption.set(savedSortOption as SortOption);
+    }
+
+    // Save sort option when it changes
+    effect(() => {
+      this.localStorage.setItem('peopleSortOption', this.sortOption());
+    });
+
+    // Update sorted people when filtered people or sort option changes
+    effect(() => {
+      this.updateSortedPeople();
+    });
+  }
+
+  private async updateSortedPeople() {
+    const filtered = this.filteredPeople();
+    const sortOption = this.sortOption();
+
+    let result = [...filtered];
+
+    // Apply favorites filter if enabled
+    const activeFilters = this.filters();
+    if (activeFilters.favoritesOnly) {
+      const favorites = JSON.parse(this.localStorage.getItem('algorithm-favorites') || '[]');
+      result = result.filter(pubkey => favorites.includes(pubkey));
+    }
+
+    // Apply sorting
+    switch (sortOption) {
+      case 'default':
+        // Keep original order (added order)
+        break;
+      
+      case 'reverse':
+        // Reverse the order
+        result.reverse();
+        break;
+      
+      case 'engagement-asc':
+      case 'engagement-desc':
+        // Get metrics for all users
+        const userMetrics = new Map<string, number>();
+        
+        for (const pubkey of result) {
+          try {
+            const metric = await this.metrics.getUserMetric(pubkey);
+            userMetrics.set(pubkey, metric?.engagementScore || 0);
+          } catch (error) {
+            userMetrics.set(pubkey, 0);
+          }
+        }
+        
+        result.sort((a, b) => {
+          const scoreA = userMetrics.get(a) || 0;
+          const scoreB = userMetrics.get(b) || 0;
+          
+          if (sortOption === 'engagement-asc') {
+            return scoreA - scoreB;
+          } else {
+            return scoreB - scoreA;
+          }
+        });
+        break;
+    }
+
+    this.sortedPeople.set(result);
   }
 
   private async loadPeople() {
@@ -290,6 +368,10 @@ export class PeopleComponent {
     this.localStorage.setItem('peopleViewMode', mode);
   }
 
+  changeSortOption(option: SortOption) {
+    this.sortOption.set(option);
+  }
+
   toggleFilter(filterName: keyof FilterOptions, event?: Event | any) {
     this.filters.update(current => ({
       ...current,
@@ -303,7 +385,8 @@ export class PeopleComponent {
       hasFollowingList: false,
       hasNip05: false,
       hasPicture: false,
-      hasBio: false
+      hasBio: false,
+      favoritesOnly: false
     });
   }
 
