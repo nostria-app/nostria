@@ -226,7 +226,6 @@ const FEED_TEMPLATES = [
       <div class="dialog-actions" mat-dialog-actions>
         <button mat-button mat-dialog-close type="button">Cancel</button>
         <button mat-flat-button color="primary" (click)="onSubmit()" [disabled]="!feedForm.valid">
-          <mat-icon>{{ isEditMode() ? 'save' : 'add' }}</mat-icon>
           {{ isEditMode() ? 'Save Changes' : 'Create Feed' }}
         </button>
       </div>
