@@ -8,10 +8,10 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { FormsModule } from '@angular/forms';
-import { AccountStateService } from '../../services/account-state.service';
-import { NostrService } from '../../services/nostr.service';
-import { UserProfileComponent } from "../user-profile/user-profile.component";
-import { SettingsService } from '../../services/settings.service';
+import { AccountStateService } from '../../../services/account-state.service';
+import { NostrService } from '../../../services/nostr.service';
+import { UserProfileComponent } from "../../../components/user-profile/user-profile.component";
+import { SettingsService } from '../../../services/settings.service';
 
 @Component({
   selector: 'app-privacy-settings',

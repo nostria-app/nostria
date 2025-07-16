@@ -1,7 +1,6 @@
 import { Routes } from '@angular/router';
-import { RelaysComponent } from './pages/relays/relays.component';
 import { SettingsComponent } from './pages/settings/settings.component';
-import { AboutComponent } from './pages/about/about.component';
+import { AboutComponent } from './pages/settings/about/about.component';
 import { CredentialsComponent } from './pages/credentials/credentials.component';
 import { ProfileComponent } from './pages/profile/profile.component';
 import { ProfileNotesComponent } from './pages/profile/profile-notes/profile-notes.component';
@@ -35,13 +34,14 @@ import { DataResolver } from './data-resolver';
 import { UsernameResolver } from './usernameResolver';
 import { MessagesMain } from './pages/messages/main/main';
 import { MessagesList } from './pages/messages/list/list';
-import { PrivacySettingsComponent } from './components/privacy-settings/privacy-settings.component';
-import { LogsSettingsComponent } from './components/logs-settings/logs-settings.component';
+import { PrivacySettingsComponent } from './pages/settings/privacy-settings/privacy-settings.component';
+import { LogsSettingsComponent } from './pages/settings/logs-settings/logs-settings.component';
 import { BackupComponent } from './pages/backup/backup.component';
 import { PremiumSettings } from './pages/premium/settings/settings';
 import { GeneralSettingsComponent } from './pages/settings/general/general.component';
 import { Calendar } from './pages/calendar/calendar';
 import { AlgorithmComponent } from './pages/settings/algorithm/algorithm';
+import { RelaysComponent } from './pages/settings/relays/relays.component';
 
 const profileChildren: Routes = [
   {

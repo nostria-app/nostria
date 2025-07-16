@@ -11,20 +11,20 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatDialog } from '@angular/material/dialog';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { RelayService, Relay } from '../../services/relay.service';
-import { LoggerService } from '../../services/logger.service';
 import { RelayInfoDialogComponent } from './relay-info-dialog.component';
 import { RelayPingResultsDialogComponent, PingResult } from './relay-ping-results-dialog.component';
-import { LayoutService } from '../../services/layout.service';
-import { NostrService } from '../../services/nostr.service';
 import { kinds, SimplePool, UnsignedEvent } from 'nostr-tools';
-import { StorageService } from '../../services/storage.service';
-import { NotificationService } from '../../services/notification.service';
-import { ApplicationService } from '../../services/application.service';
-import { ProfileStateService } from '../../services/profile-state.service';
-import { UtilitiesService } from '../../services/utilities.service';
-import { AccountStateService } from '../../services/account-state.service';
-import { AccountRelayService } from '../../services/account-relay.service';
+import { RelayService, Relay } from '../../../services/relay.service';
+import { NostrService } from '../../../services/nostr.service';
+import { LoggerService } from '../../../services/logger.service';
+import { LayoutService } from '../../../services/layout.service';
+import { StorageService } from '../../../services/storage.service';
+import { NotificationService } from '../../../services/notification.service';
+import { ApplicationService } from '../../../services/application.service';
+import { ProfileStateService } from '../../../services/profile-state.service';
+import { UtilitiesService } from '../../../services/utilities.service';
+import { AccountStateService } from '../../../services/account-state.service';
+import { AccountRelayService } from '../../../services/account-relay.service';
 
 @Component({
   selector: 'app-relays-page',
