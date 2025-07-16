@@ -48,7 +48,12 @@
             </div>
 
 
-            <h1 class="profile-name">{{ name() }}</h1>
+            <h1 class="profile-name">
+                {{ name() }}
+                @if (isFavorite()) {
+                    <mat-icon class="favorite-indicator" matTooltip="Favorite User">star</mat-icon>
+                }
+            </h1>
 
             <div class="profile-item pointer" title="{{ npub() }}">
                 <mat-icon>key</mat-icon>
@@ -141,6 +146,11 @@
                     <span>Unfollow</span>
                 </button>
                 }
+
+                <button mat-menu-item (click)="toggleFavorite()">
+                    <mat-icon>{{ isFavorite() ? 'heart_minus' : 'heart_plus' }}</mat-icon>
+                    <span>{{ isFavorite() ? 'Unfavorite' : 'Favorite' }}</span>
+                </button>
                 }
 
                 @if (isOwnProfile()) {

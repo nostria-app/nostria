@@ -82,6 +82,26 @@ body {
   box-sizing: border-box;
 }
 
+.filled {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  display: inline-block;
+  line-height: 1;
+  text-transform: none;
+  letter-spacing: normal;
+  white-space: nowrap;
+  direction: ltr;
+  /* This is key for the filled style */
+  font-variation-settings: 'FILL' 1;
+}
+
+.yellow {
+  color: yellow;
+  background-color: orange;
+}
+
 @media print {
   .no-print {
     display: none !important;
@@ -105,7 +125,8 @@ body {
   }
 
   /* Root elements - ensure no viewport constraints */
-  html, body {
+  html,
+  body {
     height: auto !important;
     overflow: visible !important;
     max-height: none !important;
@@ -923,7 +944,7 @@ app-media-queue .media-list mat-list {
     align-items: center !important;
     justify-content: center !important;
   }
-  
+
   .mat-mdc-dialog-container {
     --mdc-dialog-container-color: transparent;
     --mat-dialog-container-max-width: 100vw !important;
@@ -936,7 +957,7 @@ app-media-queue .media-list mat-list {
     -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
   }
-  
+
   .mat-mdc-dialog-content {
     padding: 24px !important;
     margin: 0 !important;
@@ -947,17 +968,17 @@ app-media-queue .media-list mat-list {
     align-items: center;
     min-height: 100vh;
   }
-  
+
   .mat-mdc-dialog-title {
     color: white !important;
     text-align: center;
     margin-bottom: 24px !important;
   }
-  
+
   .mat-mdc-dialog-actions {
     padding: 24px !important;
     justify-content: center;
-    
+
     button {
       color: white !important;
       border: 1px solid rgba(255, 255, 255, 0.3) !important;

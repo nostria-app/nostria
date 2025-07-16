@@ -23,6 +23,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { Event, kinds, nip19, SimplePool } from 'nostr-tools';
 import { StorageService } from '../../services/storage.service';
 import { ProfileStateService } from '../../services/profile-state.service';
+import { ProfileTrackingService } from '../../services/profile-tracking.service';
 import { LayoutService } from '../../services/layout.service';
 import { ProfileHeaderComponent } from './profile-header/profile-header.component';
 import { ApplicationService } from '../../services/application.service';
@@ -82,6 +83,7 @@ export class ProfileComponent {
   readonly utilities = inject(UtilitiesService);
   private readonly url = inject(UrlUpdateService);
   private readonly username = inject(UsernameService);
+  private readonly profileTracking = inject(ProfileTrackingService);
 
   pubkey = signal<string>('');
   userMetadata = signal<NostrRecord | undefined>(undefined);
@@ -182,6 +184,11 @@ export class ProfileComponent {
           // Always attempt to load user profile and check if own profile, regardless of relay status
           untracked(async () => {
             await this.loadUserProfile(this.pubkey());
+            
+            // Track profile view (but not for own profile)
+            if (!this.isOwnProfile()) {
+              await this.profileTracking.trackProfileView(this.pubkey());
+            }
           });
 
           // this.userRelay.subscribe([{

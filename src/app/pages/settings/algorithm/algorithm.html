@@ -1,1 +1,310 @@
-<p>algorithm works!</p>
+<div class="algorithm-page">
+  <!-- Header Section -->
+  <div class="page-header">
+    <h2>Algorithm Settings</h2>
+    <p>Manage your content recommendation algorithm and user engagement metrics</p>
+    <p><strong>Privacy:</strong> All these metrics are locally on your device and not shared with anyone.</p>
+  </div>
+
+  <!-- Loading Spinner -->
+  @if (isLoading()) {
+    <div class="loading-container">
+      <mat-spinner></mat-spinner>
+      <p>Loading algorithm data...</p>
+    </div>
+  }
+
+  @if (!isLoading()) {
+    <!-- Algorithm Stats -->
+    <mat-card class="stats-card">
+      <mat-card-header>
+        <mat-card-title>Algorithm Statistics</mat-card-title>
+        <mat-card-subtitle>Overview of your engagement metrics</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <mat-icon>people</mat-icon>
+            <div class="stat-content">
+              <span class="stat-number">{{ algorithmStats().totalUsers }}</span>
+              <span class="stat-label">Total Users</span>
+            </div>
+          </div>
+          <div class="stat-item">
+            <mat-icon>favorite</mat-icon>
+            <div class="stat-content">
+              <span class="stat-number">{{ algorithmStats().favoriteUsers }}</span>
+              <span class="stat-label">Favorites</span>
+            </div>
+          </div>
+          <div class="stat-item">
+            <mat-icon>trending_up</mat-icon>
+            <div class="stat-content">
+              <span class="stat-number">{{ algorithmStats().activeUsers }}</span>
+              <span class="stat-label">Active (7d)</span>
+            </div>
+          </div>
+          <div class="stat-item">
+            <mat-icon>analytics</mat-icon>
+            <div class="stat-content">
+              <span class="stat-number">{{ algorithmStats().averageEngagement }}</span>
+              <span class="stat-label">Avg Engagement</span>
+            </div>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Action Buttons -->
+    <mat-card class="actions-card">
+      <mat-card-header>
+        <mat-card-title>Actions</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="action-buttons">
+          <button mat-raised-button color="primary" (click)="refreshData()">
+            <mat-icon>refresh</mat-icon>
+            Refresh Data
+          </button>
+          <button mat-raised-button color="warn" (click)="resetAllMetrics()">
+            <mat-icon>delete_forever</mat-icon>
+            Reset All Metrics
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- User Metrics Tabs -->
+    <mat-card class="metrics-card">
+      <mat-card-header>
+        <mat-card-title>User Metrics</mat-card-title>
+        <mat-card-subtitle>View and manage user engagement data</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <mat-tab-group [(selectedIndex)]="selectedTabIndex">
+          <!-- Top Engaged Users Tab -->
+          <mat-tab label="Top Engaged">
+            <div class="tab-content">
+              <p>Users with highest engagement scores</p>
+              <div class="table-container">
+                <table mat-table [dataSource]="topEngagedUsers()" class="metrics-table">
+                  <!-- Position Column -->
+                  <ng-container matColumnDef="position">
+                    <th mat-header-cell *matHeaderCellDef> # </th>
+                    <td mat-cell *matCellDef="let element; let i = index">
+                      @if (isFavorite(element.pubkey)) {
+                        <mat-icon class="favorite-icon" matTooltip="Favorite">heart_minus</mat-icon>
+                      } @else {
+                        {{ i + 1 }}
+                      }
+                    </td>
+                  </ng-container>
+
+                  <!-- Pubkey Column -->
+                  <ng-container matColumnDef="pubkey">
+                    <th mat-header-cell *matHeaderCellDef> User </th>
+                    <td mat-cell *matCellDef="let element">
+                      <div class="user-info">
+                        <span class="pubkey">{{ getTruncatedPubkey(element.pubkey) }}</span>
+                        @if (isFavorite(element.pubkey)) {
+                          <mat-chip color="primary">Favorite</mat-chip>
+                        }
+                      </div>
+                    </td>
+                  </ng-container>
+
+                  <!-- Name Column -->
+                  <ng-container matColumnDef="name">
+                    <th mat-header-cell *matHeaderCellDef> Name </th>
+                    <td mat-cell *matCellDef="let element">
+                      {{ getDisplayName(element.pubkey) }}
+                    </td>
+                  </ng-container>
+
+                  <!-- Engagement Score Column -->
+                  <ng-container matColumnDef="engagementScore">
+                    <th mat-header-cell *matHeaderCellDef> Score </th>
+                    <td mat-cell *matCellDef="let element">
+                      <mat-chip [color]="getEngagementColor(element.engagementScore || 0)">
+                        {{ element.engagementScore || 0 }}
+                      </mat-chip>
+                    </td>
+                  </ng-container>
+
+                  <!-- Viewed Column -->
+                  <ng-container matColumnDef="viewed">
+                    <th mat-header-cell *matHeaderCellDef> Views </th>
+                    <td mat-cell *matCellDef="let element">
+                      {{ element.viewed }}
+                    </td>
+                  </ng-container>
+
+                  <!-- Liked Column -->
+                  <ng-container matColumnDef="liked">
+                    <th mat-header-cell *matHeaderCellDef> Likes </th>
+                    <td mat-cell *matCellDef="let element">
+                      {{ element.liked }}
+                    </td>
+                  </ng-container>
+
+                  <!-- Time Spent Column -->
+                  <ng-container matColumnDef="timeSpent">
+                    <th mat-header-cell *matHeaderCellDef> Time </th>
+                    <td mat-cell *matCellDef="let element">
+                      {{ formatTimeSpent(element.timeSpent) }}
+                    </td>
+                  </ng-container>
+
+                  <!-- Actions Column -->
+                  <ng-container matColumnDef="actions">
+                    <th mat-header-cell *matHeaderCellDef> Actions </th>
+                    <td mat-cell *matCellDef="let element">
+                      <button mat-icon-button [matMenuTriggerFor]="userMenu">
+                        <mat-icon>more_vert</mat-icon>
+                      </button>
+                      <mat-menu #userMenu="matMenu">
+                        <button mat-menu-item (click)="toggleFavorite(element.pubkey)">
+                          <mat-icon class="yellow filled">{{ isFavorite(element.pubkey) ? 'heart_minus' : 'heart_plus' }}</mat-icon>
+                          <span>{{ isFavorite(element.pubkey) ? 'Remove from Favorites' : 'Add to Favorites' }}</span>
+                        </button>
+                        <button mat-menu-item (click)="resetUserMetrics(element.pubkey)">
+                          <mat-icon>refresh</mat-icon>
+                          <span>Reset Metrics</span>
+                        </button>
+                      </mat-menu>
+                    </td>
+                  </ng-container>
+
+                  <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+                  <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+                </table>
+              </div>
+            </div>
+          </mat-tab>
+
+          <!-- Recently Viewed Tab -->
+          <mat-tab label="Recently Viewed">
+            <div class="tab-content">
+              <p>Users you've recently interacted with</p>
+              <div class="recent-users-grid">
+                @for (user of recentlyViewed(); track user.pubkey) {
+                  <mat-card class="user-card">
+                    <mat-card-header>
+                      <mat-card-title>
+                        <a routerLink="/p/{{ user.pubkey }}" class="user-link">
+                          {{ getDisplayName(user.pubkey) || getTruncatedPubkey(user.pubkey) }}
+                        </a>
+                      </mat-card-title>
+                      <mat-card-subtitle>{{ formatLastInteraction(user.lastInteraction) }}</mat-card-subtitle>
+                    </mat-card-header>
+                    <mat-card-content>
+                      <div class="user-metrics">
+                        <div class="metric">
+                          <mat-icon>visibility</mat-icon>
+                          <span>{{ user.viewed }} views</span>
+                        </div>
+                        <div class="metric">
+                          <mat-icon>favorite</mat-icon>
+                          <span>{{ user.liked }} likes</span>
+                        </div>
+                        <div class="metric">
+                          <mat-icon>schedule</mat-icon>
+                          <span>{{ formatTimeSpent(user.timeSpent) }}</span>
+                        </div>
+                      </div>
+                    </mat-card-content>
+                    <mat-card-actions>
+                      <button mat-button (click)="toggleFavorite(user.pubkey)">
+                        <mat-icon>{{ isFavorite(user.pubkey) ? 'heart_minus' : 'heart_plus' }}</mat-icon>
+                        {{ isFavorite(user.pubkey) ? 'Unfavorite' : 'Favorite' }}
+                      </button>
+                      <button mat-button (click)="resetUserMetrics(user.pubkey)">
+                        <mat-icon>refresh</mat-icon>
+                        Reset
+                      </button>
+                    </mat-card-actions>
+                  </mat-card>
+                }
+              </div>
+            </div>
+          </mat-tab>
+
+          <!-- Declining Engagement Tab -->
+          <mat-tab label="Declining Engagement">
+            <div class="tab-content">
+              <p>Users with declining engagement that might need re-engagement</p>
+              <div class="declining-users-list">
+                @for (user of decliningUsers(); track user.pubkey) {
+                  <mat-card class="declining-user-card">
+                    <mat-card-content>
+                      <div class="user-info">
+                        <div class="user-details">
+                          <h3>
+                            <a routerLink="/p/{{ user.pubkey }}" class="user-link">
+                              {{ getTruncatedPubkey(user.pubkey) }}
+                            </a>
+                        </h3>
+                          <p>Last interaction: {{ formatLastInteraction(user.lastInteraction) }}</p>
+                          <p>Engagement score: {{ user.engagementScore || 0 }}</p>
+                        </div>
+                        <div class="user-actions">
+                          <button mat-icon-button (click)="toggleFavorite(user.pubkey)" 
+                                  [matTooltip]="isFavorite(user.pubkey) ? 'Remove from favorites' : 'Add to favorites'">
+                            <mat-icon>{{ isFavorite(user.pubkey) ? 'heart_minus' : 'heart_plus' }}</mat-icon>
+                          </button>
+                          <button mat-icon-button (click)="resetUserMetrics(user.pubkey)" 
+                                  matTooltip="Reset metrics">
+                            <mat-icon>refresh</mat-icon>
+                          </button>
+                        </div>
+                      </div>
+                    </mat-card-content>
+                  </mat-card>
+                }
+              </div>
+            </div>
+          </mat-tab>
+
+          <!-- Favorites Tab -->
+          <mat-tab label="Favorites">
+            <div class="tab-content">
+              <p>Your favorite users (always ranked at the top)</p>
+              @if (favoriteUsers().length === 0) {
+                <div class="empty-state">
+                  <mat-icon>favorite</mat-icon>
+                  <h3>No favorites yet</h3>
+                  <p>Add users to your favorites to ensure they always appear at the top of your feed.</p>
+                </div>
+              } @else {
+                <div class="favorites-grid">
+                  @for (pubkey of favoriteUsers(); track pubkey) {
+                    <mat-card class="favorite-card">
+                      <mat-card-header>
+                        <!-- <mat-icon mat-card-avatar>favorite</mat-icon> -->
+                        <mat-card-title>
+                            <a routerLink="/p/{{ pubkey }}" class="user-link">
+                              {{ getTruncatedPubkey(pubkey) }}
+                            </a>
+                        </mat-card-title>
+                      </mat-card-header>
+                      <mat-card-actions>
+                        <button mat-button (click)="toggleFavorite(pubkey)">
+                          <mat-icon>heart_minus</mat-icon>
+                          Remove
+                        </button>
+                        <button mat-button (click)="resetUserMetrics(pubkey)">
+                          <mat-icon>refresh</mat-icon>
+                          Reset
+                        </button>
+                      </mat-card-actions>
+                    </mat-card>
+                  }
+                </div>
+              }
+            </div>
+          </mat-tab>
+        </mat-tab-group>
+      </mat-card-content>
+    </mat-card>
+  }
+</div>
