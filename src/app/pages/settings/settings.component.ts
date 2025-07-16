@@ -49,6 +49,7 @@ export class SettingsComponent {
   // Define settings sections
   sections: SettingsSection[] = [
     { id: 'general', title: 'General', icon: 'settings' },
+    { id: 'algorithm', title: 'Algorithm', icon: 'model_training' },
     { id: 'relays', title: 'Relays', icon: 'dns', authenticated: true },
     { id: 'privacy', title: 'Privacy & Safety', icon: 'security', authenticated: true },
     { id: 'backup', title: 'Backup', icon: 'archive', authenticated: true },

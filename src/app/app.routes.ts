@@ -41,6 +41,7 @@ import { BackupComponent } from './pages/backup/backup.component';
 import { PremiumSettings } from './pages/premium/settings/settings';
 import { GeneralSettingsComponent } from './pages/settings/general/general.component';
 import { Calendar } from './pages/calendar/calendar';
+import { AlgorithmComponent } from './pages/settings/algorithm/algorithm';
 
 const profileChildren: Routes = [
   {
@@ -101,6 +102,7 @@ export const routes: Routes = [
     children: [
       { path: '', redirectTo: 'general', pathMatch: 'full' },
       { path: 'general', component: GeneralSettingsComponent, title: 'General Settings' },
+      { path: 'algorithm', component: AlgorithmComponent, title: 'Algorithm' },
       { path: 'relays', component: RelaysComponent, title: 'Relays' },
       { path: 'privacy', component: PrivacySettingsComponent, title: 'Privacy & Safety' },
       { path: 'backup', component: BackupComponent, title: 'Backup' },
