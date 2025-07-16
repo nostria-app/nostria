@@ -374,7 +374,6 @@ export class RelaysComponent implements OnInit, OnDestroy {
   }
 
   async updateDirectMessageRelayList() {
-    debugger;
     const relayUrls = this.relays().map(relay => { return relay.url });
     const normalizedUrls = this.utilities.normalizeRelayUrls(relayUrls);
     const relayTags = this.nostr.createTags('relay', normalizedUrls);

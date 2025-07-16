@@ -190,7 +190,6 @@ export class EventPageComponent implements OnInit {
   }
 
   async loadReplies(eventId: string, pubkey: string) {
-    debugger;
     this.logger.info('loadReplies called with eventId:', eventId, 'pubkey:', pubkey);
     this.logger.info('Current userRelays length:', this.userRelays.length);
 
@@ -204,7 +203,6 @@ export class EventPageComponent implements OnInit {
 
     if (!this.userRelays || this.userRelays.length === 0) {
       this.logger.info('No user relays found for author when loading replies. userRelays:', this.userRelays);
-      debugger;
       this.error.set('No user relays found for the author when loading replies.');
       return;
     }
@@ -218,7 +216,6 @@ export class EventPageComponent implements OnInit {
       ['#e']: [eventId],
     }, {
       onevent: (event) => {
-        debugger;
         console.log('Received event:', event);
 
         if (event.kind === kinds.ShortTextNote && event.content) {
@@ -258,7 +255,6 @@ export class EventPageComponent implements OnInit {
   }
 
   async loadEvent(nevent: string) {
-    debugger;
     this.logger.info('loadEvent called with nevent:', nevent);
 
     if (this.utilities.isHex(nevent)) {
@@ -347,7 +343,6 @@ export class EventPageComponent implements OnInit {
 
           if (!this.userRelays || this.userRelays.length === 0) {
             this.logger.info('Still no user relays found after all discovery attempts. userRelays:', this.userRelays);
-            debugger;
             this.error.set('No user relays found for the author.');
             this.isLoading.set(false);
             return;

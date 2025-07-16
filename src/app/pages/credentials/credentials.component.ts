@@ -156,7 +156,6 @@ export class CredentialsComponent {
 
     // request.onPaid(() => {
     //   console.log('Donation successful');
-    //   debugger;
     // });
 
     const request = await new LN(wallet.connections[0]).pay("sondreb@npub.cash", USD(0.1));
