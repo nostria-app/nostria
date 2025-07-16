@@ -212,7 +212,7 @@ export class ProfileHeaderComponent {
     }
 
     private loadFavorites() {
-        const favorites = localStorage.getItem('algorithm-favorites');
+        const favorites = localStorage.getItem('nostria-favorites');
         if (favorites) {
             try {
                 this.favoriteUsers.set(JSON.parse(favorites));
@@ -224,7 +224,7 @@ export class ProfileHeaderComponent {
     }
 
     private saveFavorites() {
-        localStorage.setItem('algorithm-favorites', JSON.stringify(this.favoriteUsers()));
+        localStorage.setItem('nostria-favorites', JSON.stringify(this.favoriteUsers()));
     }
 
     toggleFavorite(): void {

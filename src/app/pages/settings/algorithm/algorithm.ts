@@ -117,7 +117,7 @@ export class AlgorithmComponent implements OnInit {
   }
 
   private loadFavorites() {
-    const favorites = localStorage.getItem('algorithm-favorites');
+    const favorites = localStorage.getItem('nostria-favorites');
     if (favorites) {
       try {
         this.favoriteUsers.set(JSON.parse(favorites));
@@ -129,7 +129,7 @@ export class AlgorithmComponent implements OnInit {
   }
 
   private saveFavorites() {
-    localStorage.setItem('algorithm-favorites', JSON.stringify(this.favoriteUsers()));
+    localStorage.setItem('nostria-favorites', JSON.stringify(this.favoriteUsers()));
   }
 
   async resetUserMetrics(pubkey: string) {
