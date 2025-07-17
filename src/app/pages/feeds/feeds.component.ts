@@ -155,14 +155,17 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
     const columns = this.columns();
     const isDragging = this.isDragging();
     const eventsMap = new Map<string, Event[]>();
+    
+    // Get reactive feed data map from service
+    const feedDataMap = this.feedService.feedDataReactive();
 
     columns.forEach(column => {
       if (isDragging) {
         // During drag operations, use cached events to prevent DOM updates
         eventsMap.set(column.id, this._eventCache.get(column.id) || []);
       } else {
-        // Normal operation: get fresh events from service
-        const columnData = this.feedService.data.get(column.id);
+        // Normal operation: get fresh events from reactive service
+        const columnData = feedDataMap.get(column.id);
         const events = columnData?.events() || [];
 
         // Update cache for potential drag operations
@@ -228,7 +231,8 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
 
   // Helper method to get pause status for debugging
   getColumnStatus(columnId: string): string {
-    const columnData = this.feedService.data.get(columnId);
+    const feedDataMap = this.feedService.feedDataReactive();
+    const columnData = feedDataMap.get(columnId);
     if (!columnData) return 'not found';
     return columnData.subscription ? 'active' : 'paused';
   }
@@ -529,8 +533,9 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
 
     // Pre-cache all column events to prevent DOM updates during drag
     const columns = this.columns();
+    const feedDataMap = this.feedService.feedDataReactive();
     columns.forEach(column => {
-      const columnData = this.feedService.data.get(column.id);
+      const columnData = feedDataMap.get(column.id);
       const events = columnData?.events() || [];
       this._eventCache.set(column.id, events);
     });
