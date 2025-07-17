@@ -43,9 +43,14 @@ export class DataService {
 
     async getEventById(id: string, options?: CacheOptions & DataOptions, userRelays = false): Promise<NostrRecord | null> {
         let event: Event | null = null;
+        let record: NostrRecord | undefined = undefined;
 
         if (options?.cache) {
-            event = this.cache.get<Event>(`${id}`);
+            record = this.cache.get<NostrRecord>(`${id}`);
+
+            if (record) {
+                return record;
+            }
         }
 
         // If the caller explicitly don't want to save, we will not check the storage.
@@ -68,8 +73,10 @@ export class DataService {
             return null;
         }
 
+        record = this.toRecord(event);
+
         if (options?.cache) {
-            this.cache.set(`${id}`, event, options);
+            this.cache.set(`${id}`, record, options);
         }
 
         if (options?.save) {
@@ -77,7 +84,7 @@ export class DataService {
             await this.storage.saveEvent(event);
         }
 
-        return this.toRecord(event);
+        return record;
     }
 
     // async getEventsById(ids: string[]): Promise<NostrRecord[]> {
@@ -153,14 +160,20 @@ export class DataService {
     async getProfile(pubkey: string, refresh: boolean = false): Promise<NostrRecord | undefined> {
         const cacheKey = `metadata-${pubkey}`;
         let metadata: Event | null = null;
+        let record: NostrRecord | undefined = undefined;
 
         if (this.cache.has(cacheKey)) {
-            metadata = this.cache.get<Event>(cacheKey);
+            record = this.cache.get<NostrRecord>(cacheKey);
+
+            if (record) {
+                return record;
+            }
         } else {
             metadata = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Metadata);
 
             if (metadata) {
-                this.cache.set(cacheKey, metadata);
+                record = this.toRecord(metadata);
+                this.cache.set(cacheKey, record);
             }
         }
 
@@ -169,7 +182,8 @@ export class DataService {
             metadata = await this.sharedRelayEx.get(pubkey, { authors: [pubkey], kinds: [kinds.Metadata] });
 
             if (metadata) {
-                this.cache.set(cacheKey, metadata);
+                record = this.toRecord(metadata);
+                this.cache.set(cacheKey, record);
                 await this.storage.saveEvent(metadata);
             }
         } else if (refresh) {
@@ -178,7 +192,8 @@ export class DataService {
                 let fresh = await this.sharedRelayEx.get(pubkey, { authors: [pubkey], kinds: [kinds.Metadata] });
 
                 if (fresh) {
-                    this.cache.set(cacheKey, fresh);
+                    const freshRecord = this.toRecord(fresh);
+                    this.cache.set(cacheKey, freshRecord);
                     await this.storage.saveEvent(fresh);
                 }
             });
@@ -188,16 +203,21 @@ export class DataService {
             return undefined;
         }
 
-        return this.toRecord(metadata);
+        return record;
     }
 
     /** Will read event from local database, if available, or get from relay, and then save to database. */
     async getEventByPubkeyAndKindAndReplaceableEvent(pubkey: string, kind: number, dTagValue: string, options?: CacheOptions & DataOptions, userRelays = false): Promise<NostrRecord | null> {
         const cacheKey = `${pubkey}-${kind}-${dTagValue}`;
         let event: Event | null = null;
+        let record: NostrRecord | undefined = undefined;
 
         if (options?.cache) {
-            event = this.cache.get<Event>(cacheKey);
+            record = this.cache.get<NostrRecord>(cacheKey);
+
+            if (record) {
+                return record;
+            }
         }
 
         // If the caller explicitly don't want to save, we will not check the storage.
@@ -221,24 +241,31 @@ export class DataService {
             return null;
         }
 
+        record = this.toRecord(event);
+
         if (options?.cache) {
-            this.cache.set(cacheKey, event, options);
+            this.cache.set(cacheKey, record, options);
         }
 
         if (options?.save) {
             await this.storage.saveEvent(event);
         }
 
-        return this.toRecord(event);
+        return record;
     }
 
     /** Will read event from local database, if available, or get from relay, and then save to database. */
     async getEventByPubkeyAndKind(pubkey: string | string[], kind: number, options?: CacheOptions & DataOptions, userRelays = false): Promise<NostrRecord | null> {
         const cacheKey = `${Array.isArray(pubkey) ? pubkey.join(',') : pubkey}-${kind}`;
         let event: Event | null = null;
+        let record: NostrRecord | undefined = undefined;
 
         if (options?.cache) {
-            event = this.cache.get<Event>(cacheKey);
+            record = this.cache.get<NostrRecord>(cacheKey);
+
+            if (record) {
+                return record;
+            }
         }
 
         // If the caller explicitly don't want to save, we will not check the storage.
@@ -261,25 +288,29 @@ export class DataService {
             return null;
         }
 
+        record = this.toRecord(event);
+
         if (options?.cache) {
-            this.cache.set(cacheKey, event, options);
+            this.cache.set(cacheKey, record, options);
         }
 
         if (options?.save) {
             await this.storage.saveEvent(event);
         }
 
-        return this.toRecord(event);
+        return record;
     }
 
     async getEventsByPubkeyAndKind(pubkey: string | string[], kind: number, options?: CacheOptions & DataOptions): Promise<NostrRecord[]> {
         const cacheKey = `${Array.isArray(pubkey) ? pubkey.join(',') : pubkey}-${kind}-all`;
         let events: Event[] = [];
+        let records: NostrRecord[] = [];
 
         if (options?.cache) {
-            const cachedEvents = this.cache.get<Event[]>(cacheKey);
-            if (cachedEvents) {
-                events = cachedEvents;
+            const records = this.cache.get<NostrRecord[]>(cacheKey);
+
+            if (records) {
+                return records;
             }
         }
 
@@ -299,8 +330,10 @@ export class DataService {
             return [];
         }
 
+        records = events.map(event => this.toRecord(event));
+
         if (options?.cache) {
-            this.cache.set(cacheKey, events, options);
+            this.cache.set(cacheKey, records, options);
         }
 
         if (options?.save) {
@@ -309,6 +342,6 @@ export class DataService {
             }
         }
 
-        return events.map(event => this.toRecord(event));
+        return records;
     }
 }

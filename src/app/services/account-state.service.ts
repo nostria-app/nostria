@@ -312,10 +312,6 @@ export class AccountStateService {
 
   muteList = signal<Event | undefined>(undefined);
 
-  // Profile caches using Cache service
-  private userProfileCache = new Cache();
-  private accountProfileCache = new Cache();
-
   // Processing state for toolbar indicator
   profileProcessingState = signal<ProfileProcessingState>({
     isProcessing: false,
@@ -325,30 +321,7 @@ export class AccountStateService {
     startedAt: 0
   });
 
-  // Computed signals for cache access
-  cachedUserProfiles = computed(() => {
-    const keys = this.userProfileCache.keys();
-    const profiles: NostrRecord[] = [];
-    for (const key of keys) {
-      const profile = this.userProfileCache.get<NostrRecord>(key);
-      if (profile) {
-        profiles.push(profile);
-      }
-    }
-    return profiles;
-  });
-
-  cachedAccountProfiles = computed(() => {
-    const keys = this.accountProfileCache.keys();
-    const profiles: NostrRecord[] = [];
-    for (const key of keys) {
-      const profile = this.accountProfileCache.get<NostrRecord>(key);
-      if (profile) {
-        profiles.push(profile);
-      }
-    }
-    return profiles;
-  });
+  // Computed signals for cache access - removed since we can't iterate over injected cache keys
 
   // Computed signal for processing progress
   processingProgress = computed(() => {
@@ -361,9 +334,7 @@ export class AccountStateService {
   publish = signal<Event | UnsignedEvent | undefined>(undefined);
 
   constructor() {
-    // Configure the caches with specific options
-    this.userProfileCache.configure({ maxSize: 300, ttl: 24 * 60 * 60 * 1000 }); // 24 hours TTL, max 300 entries
-    this.accountProfileCache.configure({ persistent: true, maxSize: 1000 }); // Persistent, max 1000 entries
+    // Cache configuration is now handled by the injected cache service
   }
 
   // Methods for tracking processing state per account
@@ -448,8 +419,6 @@ export class AccountStateService {
 
             const profile = await dataService.getProfile(pubkey);
 
-            debugger;
-
             if (profile) {
               this.addToCache(pubkey, profile);
             }
@@ -487,7 +456,8 @@ export class AccountStateService {
 
   // Method to add profile to account cache
   addToAccounts(pubkey: string, profile: NostrRecord): void {
-    const existingProfile = this.accountProfileCache.get<NostrRecord>(pubkey);
+    const cacheKey = `metadata-${pubkey}`;
+    const existingProfile = this.cache.get<NostrRecord>(cacheKey);
 
     // Check if profile already exists and is newer
     if (existingProfile) {
@@ -501,13 +471,14 @@ export class AccountStateService {
       }
     }
 
-    // Add to cache with persistent option
-    this.accountProfileCache.set(pubkey, profile, { persistent: true });
+    // Add to cache
+    this.cache.set(cacheKey, profile);
   }
 
   // Method to add profile to user cache
   addToCache(pubkey: string, profile: NostrRecord): void {
-    const existingProfile = this.userProfileCache.get<NostrRecord>(pubkey);
+    const cacheKey = `metadata-${pubkey}`;
+    const existingProfile = this.cache.get<NostrRecord>(cacheKey);
 
     // Check if profile already exists and is newer
     if (existingProfile) {
@@ -521,8 +492,8 @@ export class AccountStateService {
       }
     }
 
-    // Add to cache with max size limit of 300
-    this.userProfileCache.set(pubkey, profile, { maxSize: 300 });
+    // Add to cache
+    this.cache.set(cacheKey, profile);
   }
 
   // Method to search cached profiles
@@ -532,13 +503,23 @@ export class AccountStateService {
       return [];
     }
 
-    const cacheKeys = this.userProfileCache.keys();
-    console.log('Profile cache size:', cacheKeys.length);
+    // Since we can't iterate over cache keys with the injected cache service,
+    // we'll search through the following list and additional known pubkeys
+    const pubkeysToSearch = [...this.followingList()];
+    
+    // Also add the current user's pubkey if available
+    const currentPubkey = this.pubkey();
+    if (currentPubkey && !pubkeysToSearch.includes(currentPubkey)) {
+      pubkeysToSearch.push(currentPubkey);
+    }
+
+    console.log('Searching through pubkeys:', pubkeysToSearch.length);
     const results: NostrRecord[] = [];
     const lowercaseQuery = query.toLowerCase();
 
-    for (const pubkey of cacheKeys) {
-      const profile = this.userProfileCache.get<NostrRecord>(pubkey);
+    for (const pubkey of pubkeysToSearch) {
+      const cacheKey = `metadata-${pubkey}`;
+      const profile = this.cache.get<NostrRecord>(cacheKey);
       if (!profile) continue;
 
       const data = profile.data;
@@ -603,17 +584,14 @@ export class AccountStateService {
 
   // Method to get cached account profile
   getAccountProfile(pubkey: string): NostrRecord | undefined {
-    return this.accountProfileCache.get<NostrRecord>(pubkey) || undefined;
+    const cacheKey = `metadata-${pubkey}`;
+    return this.cache.get<NostrRecord>(cacheKey) || undefined;
   }
 
   getCachedProfile(pubkey: string): NostrRecord | undefined {
     // The Cache service handles TTL automatically, so no need to check age manually
-    return this.userProfileCache.get<NostrRecord>(pubkey) || undefined;
-  }
-
-  // Method to clear cache
-  clearProfileCache(): void {
-    this.userProfileCache.clear();
+    const cacheKey = `metadata-${pubkey}`;
+    return this.cache.get<NostrRecord>(cacheKey) || undefined;
   }
 
   // Method to load profiles from storage into cache when profile discovery has been done
@@ -651,26 +629,6 @@ export class AccountStateService {
     } catch (error) {
       console.error('Failed to load profiles from storage to cache:', error);
     }
-  }
-
-  // Method to get cache stats
-  getCacheStats(): { size: number; oldestEntry: number; newestEntry: number } {
-    const stats = this.userProfileCache.stats();
-    const cacheKeys = this.userProfileCache.keys();
-    
-    if (cacheKeys.length === 0) {
-      return { size: 0, oldestEntry: 0, newestEntry: 0 };
-    }
-
-    // Get timestamp information from cache entries
-    const entries = this.userProfileCache.entries<NostrRecord>();
-    const timestamps = entries.map(([_, entry]) => entry.timestamp);
-    
-    return {
-      size: stats.size,
-      oldestEntry: timestamps.length > 0 ? Math.min(...timestamps) : 0,
-      newestEntry: timestamps.length > 0 ? Math.max(...timestamps) : 0
-    };
   }
 
   // Computed signals for different types of mutes

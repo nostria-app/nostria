@@ -284,7 +284,7 @@ export class NostrService implements NostriaService {
   }
 
   clear() {
-    this.accountState.clearProfileCache();
+    // this.accountState.clearProfileCache();
     // this.accountsMetadata.set([]);
     // this.accountsRelays.set([]);
   }
@@ -864,8 +864,6 @@ export class NostrService implements NostriaService {
    * Get metadata from cache or load it from storage
    */
   async getMetadataForUser(pubkey: string, refresh: boolean = false): Promise<NostrRecord | undefined> {
-    console.log('There are X number in cache:', this.accountState.cachedUserProfiles().length);
-
     // Check cache first
     const cachedMetadata = this.accountState.getCachedProfile(pubkey);
     
