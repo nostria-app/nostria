@@ -19,6 +19,7 @@ import { RelayService } from '../../services/relay.service';
 import { standardizedTag } from '../../standardized-tags';
 import { ApplicationService } from '../../services/application.service';
 import { UtilitiesService } from '../../services/utilities.service';
+import { DataService } from '../../services/data.service';
 
 interface Article {
     id: string;
@@ -64,6 +65,7 @@ export class ArticlesComponent {
     private logger = inject(LoggerService);
     private snackBar = inject(MatSnackBar);
     private readonly utilities = inject(UtilitiesService);
+    private readonly data = inject(DataService);
 
     isLoading = signal(true);
     articles = signal<Article[]>([]);
@@ -210,7 +212,8 @@ export class ArticlesComponent {
 
         try {
             // Fetch metadata for all authors
-            const metadata = await this.nostrService.getMetadataForUsers(pubkeys);
+            const metadata = await this.data.getProfiles(pubkeys);
+            // const metadata = await this.nostrService.getMetadataForUsers(pubkeys);
 
             // Update articles with author information
             this.articles.update(articles => {

@@ -8,6 +8,7 @@ import { NostrService } from '../../../services/nostr.service';
 import { LoggerService } from '../../../services/logger.service';
 import { NostrRecord } from '../../../interfaces';
 import { UtilitiesService } from '../../../services/utilities.service';
+import { DataService } from '../../../services/data.service';
 
 @Component({
   selector: 'app-profile-about',
@@ -25,6 +26,7 @@ export class ProfileAboutComponent {
   private route = inject(ActivatedRoute);
   private nostrService = inject(NostrService);
   private logger = inject(LoggerService);
+  private readonly data = inject(DataService);
   utilities = inject(UtilitiesService);
 
   userMetadata = signal<NostrRecord | undefined>(undefined);
@@ -54,7 +56,9 @@ export class ProfileAboutComponent {
   // Load user metadata
   async loadUserMetadata(pubkey: string): Promise<void> {
     try {
-      const metadata = await this.nostrService.getMetadataForUser(pubkey);
+      debugger;
+      const metadata = await this.data.getProfile(pubkey);
+      // const metadata = await this.nostrService.getMetadataForUser(pubkey);
       this.userMetadata.set(metadata);
     } catch (err) {
       this.logger.error('Error loading user metadata:', err);

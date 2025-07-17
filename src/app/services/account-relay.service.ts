@@ -7,6 +7,7 @@ import { NostriaService } from '../interfaces';
 import { LocalStorageService } from './local-storage.service';
 import { ApplicationStateService } from './application-state.service';
 import { StorageService } from './storage.service';
+import { RelaysService } from './relays.service';
 
 export interface Relay {
     url: string;
@@ -274,6 +275,7 @@ export class AccountRelayServiceEx extends RelayServiceBase {
 })
 export class UserRelayServiceEx extends RelayServiceBase {
     private discoveryRelay = inject(DiscoveryRelayServiceEx);
+    private relaysService = inject(RelaysService);
     private pubkey = '';
 
     constructor() {
@@ -301,17 +303,13 @@ export class UserRelayServiceEx extends RelayServiceBase {
 })
 export class SharedRelayServiceEx {
     #pool = new SimplePool();
-
     private logger = inject(LoggerService);
     private discoveryRelay = inject(DiscoveryRelayServiceEx);
-    private pubkey = '';
-
-    private userRelayUrls = new Map<string, string[]>();
+    private readonly relaysService = inject(RelaysService);
 
     constructor() {
 
     }
-
 
     /**
   * Generic function to fetch Nostr events (one-time query)
@@ -327,11 +325,13 @@ export class SharedRelayServiceEx {
     ): Promise<T | null> {
         this.logger.debug('Getting events with filters:', filter);
 
-        let relayUrls = this.userRelayUrls.get(pubkey);
+        // Get optimal relays for the user
+        let relayUrls = await this.relaysService.getOptimalUserRelays(pubkey, 3);
+        // let relayUrls = this.userRelayUrls.get(pubkey);
 
-        if (!relayUrls) {
-            relayUrls = await this.discoveryRelay.getUserRelayUrls(pubkey);
-        }
+        // if (!relayUrls) {
+        //     relayUrls = await this.discoveryRelay.getUserRelayUrls(pubkey);
+        // }
 
         if (relayUrls.length === 0) {
             this.logger.warn('No relays available for query');
@@ -371,11 +371,7 @@ export class SharedRelayServiceEx {
     ): Promise<T[]> {
         this.logger.debug('Getting events with filters:', filter);
 
-        let relayUrls = this.userRelayUrls.get(pubkey);
-
-        if (!relayUrls) {
-            relayUrls = await this.discoveryRelay.getUserRelayUrls(pubkey);
-        }
+        let relayUrls = await this.relaysService.getOptimalUserRelays(pubkey, 3);
 
         if (relayUrls.length === 0) {
             this.logger.warn('No relays available for query');

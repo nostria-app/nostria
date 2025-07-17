@@ -287,7 +287,8 @@ export class ProfileComponent {
 
     try {
       // Try to get from cache first
-      let metadata = await this.nostrService.getMetadataForUser(pubkey, true);
+      let metadata = await this.data.getProfile(pubkey, true);
+      // let metadata = await this.nostrService.getMetadataForUser(pubkey, true);
       this.userMetadata.set(metadata);
 
       if (!metadata) {

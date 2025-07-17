@@ -76,7 +76,7 @@ export class ApplicationService {
                     try {
                         // Check if profile discovery has already been done for this account
                         if (!this.accountState.hasProfileDiscoveryBeenDone(pubkey)) {
-                            await this.accountState.startProfileProcessing(followingList, this.nostrService);
+                            await this.accountState.startProfileProcessing(followingList, this.dataService);
                             this.accountState.markProfileDiscoveryDone(pubkey);
                         } else {
                             const currentState = this.accountState.profileProcessingState();

@@ -33,3 +33,268 @@ mat-list {
   border: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: 4px;
 }
+
+/* New styles for relay statistics */
+.stats-overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.04);
+  gap: 12px;
+  
+  mat-icon {
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+  }
+}
+
+.stat-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-number {
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #757575;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.relay-actions {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  
+  button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+.relay-panel,
+.cluster-panel {
+  margin-bottom: 16px;
+  box-shadow: var(--mat-sys-level1);
+}
+
+.relay-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.relay-item {
+  padding: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.relay-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.relay-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.relay-url {
+  font-family: monospace;
+  font-size: 14px;
+  word-break: break-all;
+  flex: 1;
+}
+
+.web-link {
+  color: inherit;
+  text-decoration: none;
+  
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.relay-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 8px;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+}
+
+.stat-row .stat-label {
+  font-size: 14px;
+  color: #666;
+}
+
+.stat-row .stat-value {
+  font-weight: 500;
+  font-family: monospace;
+}
+
+.performance-score {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  
+  mat-progress-bar {
+    flex: 1;
+    height: 8px;
+  }
+  
+  .score-value {
+    font-size: 12px;
+    font-weight: 500;
+    min-width: 40px;
+    text-align: right;
+  }
+}
+
+/* Cluster analysis styles */
+.cluster-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.cluster-item {
+  padding: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.cluster-header {
+  margin-bottom: 16px;
+}
+
+.cluster-relay {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  
+  .relay-url {
+    flex: 1;
+    min-width: 200px;
+  }
+  
+  mat-chip-set {
+    display: flex;
+    gap: 4px;
+  }
+  
+  mat-chip {
+    font-size: 12px;
+  }
+}
+
+.cluster-connections {
+  h4 {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: #666;
+  }
+}
+
+.connection-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.connection-relay {
+  font-family: monospace;
+  font-size: 12px;
+  width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.connection-strength {
+  font-size: 12px;
+  color: #666;
+  min-width: 80px;
+  text-align: right;
+}
+
+.connection-item mat-progress-bar {
+  flex: 1;
+  height: 6px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .stats-overview {
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  }
+  
+  .relay-stats {
+    grid-template-columns: 1fr;
+  }
+  
+  .cluster-relay {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    
+    .relay-url {
+      min-width: auto;
+    }
+  }
+  
+  .connection-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    
+    .connection-relay {
+      width: auto;
+      white-space: normal;
+      text-align: left;
+    }
+    
+    .connection-strength {
+      min-width: auto;
+      text-align: left;
+    }
+  }
+}

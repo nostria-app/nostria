@@ -8,6 +8,7 @@ import { UserRelayFactoryService } from "./user-relay-factory.service";
 import { LoggerService } from "./logger.service";
 import { AccountStateService } from "./account-state.service";
 import { NostriaService } from "../interfaces";
+import { DataService } from "./data.service";
 
 export interface ParsedBadge {
     slug: string;
@@ -41,6 +42,7 @@ export class BadgeService implements NostriaService {
     userRelayFactory = inject(UserRelayFactoryService);
     private readonly logger = inject(LoggerService);
     private readonly accountState = inject(AccountStateService);
+    private readonly data = inject(DataService);
 
     // Signals to store different types of badges
     badgeDefinitions = signal<Event[]>([]);
@@ -253,7 +255,8 @@ export class BadgeService implements NostriaService {
         // Fetch metadata for each issuer
         for (const pubkey of issuerPubkeys) {
             try {
-                const metadata = await this.nostr.getMetadataForUser(pubkey);
+                const metadata = await this.data.getProfile(pubkey);
+                // const metadata = await this.nostr.getMetadataForUser(pubkey);
 
                 if (metadata) {
                     issuers[pubkey] = metadata.data;

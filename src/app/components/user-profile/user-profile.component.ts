@@ -13,8 +13,11 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatButtonModule } from '@angular/material/button';
 import { InfoRecord } from '../../services/storage.service';
-import { Event } from 'nostr-tools';
+import { Event, kinds } from 'nostr-tools';
 import { UtilitiesService } from '../../services/utilities.service';
+import { DataService } from '../../services/data.service';
+import { RelaysService } from '../../services/relays.service';
+import { SharedRelayServiceEx } from '../../services/account-relay.service';
 
 @Component({
     selector: 'app-user-profile',
@@ -36,9 +39,12 @@ import { UtilitiesService } from '../../services/utilities.service';
 export class UserProfileComponent implements AfterViewInit, OnDestroy {
     private route = inject(ActivatedRoute);
     private nostrService = inject(NostrService);
+    private data = inject(DataService);
     private logger = inject(LoggerService);
     private elementRef = inject(ElementRef);
     readonly utilities = inject(UtilitiesService);
+    private relaysService = inject(RelaysService);
+    private readonly sharedRelay = inject(SharedRelayServiceEx);
     layout = inject(LayoutService);
     publicKey = '';
     pubkey = input<string>('');
@@ -261,8 +267,9 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
             this.logger.debug('Loading profile data for:', npubValue);
 
             this.logger.time('Loading profile data in user profile' + npubValue);
-
-            const data = await this.nostrService.getMetadataForUser(npubValue);
+            
+            // const data = await this.sharedRelay.get(npubValue, { authors: [npubValue], kinds: [kinds.Metadata] });
+            const data = await this.data.getProfile(npubValue);
             this.logger.timeEnd('Loading profile data in user profile' + npubValue);
 
             this.logger.debug('Profile data loaded:', data);

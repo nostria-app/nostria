@@ -3,12 +3,13 @@ import { StorageService } from "./storage.service";
 import { RelayService } from "./relay.service";
 import { NostrRecord } from "../interfaces";
 import { LoggerService } from "./logger.service";
-import { Event } from "nostr-tools";
+import { Event, kinds } from "nostr-tools";
 import { UserRelayFactoryService } from "./user-relay-factory.service";
 import { UtilitiesService } from "./utilities.service";
 import { Cache, CacheOptions } from "./cache";
-import { AccountRelayService, AccountRelayServiceEx, DiscoveryRelayServiceEx, UserRelayServiceEx } from "./account-relay.service";
+import { AccountRelayService, AccountRelayServiceEx, DiscoveryRelayServiceEx, SharedRelayServiceEx, UserRelayServiceEx } from "./account-relay.service";
 import { UserRelayService } from "./user-relay.service";
+import { RelaysService } from "./relays.service";
 
 export interface DataOptions {
     cache: boolean; // Whether to use cache
@@ -26,9 +27,11 @@ export class DataService {
     private readonly userRelayEx = inject(UserRelayServiceEx);
     private readonly discoveryRelayEx = inject(DiscoveryRelayServiceEx);
     private readonly accountRelayEx = inject(AccountRelayServiceEx);
+    private readonly sharedRelayEx = inject(SharedRelayServiceEx);
     private readonly logger = inject(LoggerService);
     private readonly utilities = inject(UtilitiesService);
     private readonly cache = inject(Cache);
+    private readonly relaysService = inject(RelaysService);
 
     toRecord(event: Event) {
         return this.utilities.toRecord(event);
@@ -97,7 +100,20 @@ export class DataService {
     //     return [];
     // }
 
-    /** Get relay for a specific user, only local search. */
+    // async getUserProfile(pubkey: string, relayUrls: string[], options?: CacheOptions & DataOptions): Promise<NostrRecord | null> {
+
+    //     this.relaysService.getUserRelays(pubkey);
+
+
+    //     // First get the relays for the user.
+    //     this.sharedRelayEx.get(pubkey, )
+
+    // }
+
+    async discoverUserRelays(pubkey: string): Promise<string[]> {
+        return this.discoveryRelayEx.getUserRelayUrls(pubkey);
+    }
+
     async getUserRelays(pubkey: string) {
         let relayUrls: string[] = [];
         const relayListEvent = await this.storage.getEventByPubkeyAndKind(pubkey, 10002);
@@ -113,7 +129,66 @@ export class DataService {
             }
         }
 
+        if (!relayUrls || relayUrls.length === 0) {
+            // If we still don't have any relays, we will try to discover them.
+            relayUrls = await this.discoverUserRelays(pubkey);
+        }
+
         return relayUrls;
+    }
+
+    async getProfiles(pubkey: string[]): Promise<NostrRecord[] | undefined> {
+        const metadataList: NostrRecord[] = [];
+
+        for (const p of pubkey) {
+            const metadata = await this.getProfile(p);
+            if (metadata) {
+                metadataList.push(metadata);
+            }
+        }
+
+        return metadataList;
+    }
+
+    async getProfile(pubkey: string, refresh: boolean = false): Promise<NostrRecord | undefined> {
+        const cacheKey = `metadata-${pubkey}`;
+        let metadata: Event | null = null;
+
+        if (this.cache.has(cacheKey)) {
+            metadata = this.cache.get<Event>(cacheKey);
+        } else {
+            metadata = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Metadata);
+
+            if (metadata) {
+                this.cache.set(cacheKey, metadata);
+            }
+        }
+
+        if (!metadata) {
+            // Try to get from relays
+            metadata = await this.sharedRelayEx.get(pubkey, { authors: [pubkey], kinds: [kinds.Metadata] });
+
+            if (metadata) {
+                this.cache.set(cacheKey, metadata);
+                await this.storage.saveEvent(metadata);
+            }
+        } else if (refresh) {
+            // If we have metadata and refresh is true, we will refresh it in the background.
+            queueMicrotask(async () => {
+                let fresh = await this.sharedRelayEx.get(pubkey, { authors: [pubkey], kinds: [kinds.Metadata] });
+
+                if (fresh) {
+                    this.cache.set(cacheKey, fresh);
+                    await this.storage.saveEvent(fresh);
+                }
+            });
+        }
+
+        if (!metadata) {
+            return undefined;
+        }
+
+        return this.toRecord(metadata);
     }
 
     /** Will read event from local database, if available, or get from relay, and then save to database. */
