@@ -69,7 +69,7 @@ export class Cache {
     }
 
     this.cache.set(key, entry);
-    this.updateStats({ size: this.cache.size });
+    this.scheduleStatsUpdate({ size: this.cache.size });
   }
 
   /**
@@ -79,14 +79,14 @@ export class Cache {
     const entry = this.cache.get(key) as CacheEntry<T> | undefined;
 
     if (!entry) {
-      this.updateStats({ misses: this._stats().misses + 1 });
+      this.scheduleStatsUpdate({ misses: this._stats().misses + 1 });
       return null;
     }
 
     // Check if entry has expired
     if (entry.expiresAt && Date.now() > entry.expiresAt) {
       this.cache.delete(key);
-      this.updateStats({
+      this.scheduleStatsUpdate({
         size: this.cache.size,
         misses: this._stats().misses + 1
       });
@@ -95,7 +95,7 @@ export class Cache {
 
     // Update last accessed time
     entry.lastAccessed = Date.now();
-    this.updateStats({ hits: this._stats().hits + 1 });
+    this.scheduleStatsUpdate({ hits: this._stats().hits + 1 });
 
     return entry.value;
   }
@@ -113,7 +113,7 @@ export class Cache {
   delete(key: string): boolean {
     const deleted = this.cache.delete(key);
     if (deleted) {
-      this.updateStats({ size: this.cache.size });
+      this.scheduleStatsUpdate({ size: this.cache.size });
     }
     return deleted;
   }
@@ -183,7 +183,7 @@ export class Cache {
     }
 
     if (removedCount > 0) {
-      this.updateStats({ size: this.cache.size });
+      this.scheduleStatsUpdate({ size: this.cache.size });
     }
 
     return removedCount;
@@ -194,7 +194,7 @@ export class Cache {
    */
   configure(options: Partial<CacheOptions>): void {
     Object.assign(this.defaultOptions, options);
-    this.updateStats({ maxSize: this.defaultOptions.maxSize });
+    this.scheduleStatsUpdate({ maxSize: this.defaultOptions.maxSize });
   }
 
   /**
@@ -227,7 +227,7 @@ export class Cache {
 
     if (lruKey) {
       this.cache.delete(lruKey);
-      this.updateStats({
+      this.scheduleStatsUpdate({
         size: this.cache.size,
         evictions: this._stats().evictions + 1
       });
@@ -236,6 +236,13 @@ export class Cache {
 
   private updateStats(updates: Partial<CacheStats>): void {
     this._stats.update(current => ({ ...current, ...updates }));
+  }
+
+  private scheduleStatsUpdate(updates: Partial<CacheStats>): void {
+    // Use setTimeout to defer the signal update until after the current rendering cycle
+    setTimeout(() => {
+      this.updateStats(updates);
+    }, 0);
   }
 
   private scheduleCleanup(): void {
