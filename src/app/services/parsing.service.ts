@@ -39,7 +39,8 @@ export class ParsingService {
       }
 
       if (pubkey) {
-        metadata = await this.nostr.getMetadataForUser(pubkey);
+        metadata = await this.data.getProfile(pubkey);
+        // metadata = await this.nostr.getMetadataForUser(pubkey);
 
         if (metadata) {
           displayName = metadata.data.display_name || metadata.data.name || this.utilities.getTruncatedNpub(pubkey);

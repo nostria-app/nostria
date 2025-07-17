@@ -340,24 +340,24 @@ export class PeopleComponent {
   //   }
   // }
 
-  private preloadMetadata(pubkeys: string[]) {
-    // Load metadata for the first 20 users to improve initial rendering
-    const initialBatch = pubkeys.slice(0, 20);
+  // private preloadMetadata(pubkeys: string[]) {
+  //   // Load metadata for the first 20 users to improve initial rendering
+  //   const initialBatch = pubkeys.slice(0, 20);
 
-    for (const pubkey of initialBatch) {
-      this.nostr.getMetadataForUser(pubkey).catch(err =>
-        this.logger.error(`Failed to preload metadata for ${pubkey}`, err));
-    }
+  //   for (const pubkey of initialBatch) {
+  //     this.nostr.getMetadataForUser(pubkey).catch(err =>
+  //       this.logger.error(`Failed to preload metadata for ${pubkey}`, err));
+  //   }
 
-    // Load the rest in the background
-    setTimeout(() => {
-      const remainingBatch = pubkeys.slice(20);
-      for (const pubkey of remainingBatch) {
-        this.nostr.getMetadataForUser(pubkey).catch(err =>
-          this.logger.error(`Failed to preload metadata for ${pubkey}`, err));
-      }
-    }, 1000);
-  }
+  //   // Load the rest in the background
+  //   setTimeout(() => {
+  //     const remainingBatch = pubkeys.slice(20);
+  //     for (const pubkey of remainingBatch) {
+  //       this.nostr.getMetadataForUser(pubkey).catch(err =>
+  //         this.logger.error(`Failed to preload metadata for ${pubkey}`, err));
+  //     }
+  //   }, 1000);
+  // }
 
   updateSearch(term: string) {
     this.searchChanged.next(term);

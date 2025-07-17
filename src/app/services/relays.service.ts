@@ -1,60 +1,302 @@
-// import { Injectable } from "@angular/core";
-// import { SimplePool } from "nostr-tools";
+import { Injectable, inject, signal } from "@angular/core";
+import { SimplePool } from "nostr-tools";
+import { UtilitiesService } from "./utilities.service";
+import { DiscoveryRelayServiceEx } from "./account-relay.service";
+import { StorageService } from "./storage.service";
 
-// /** Responsible for holding and managing the instances of SimplePool utilized in Nostria. */
-// @Injectable({
-//     providedIn: 'root'
-// })
-// export class RelaysService {
-//     private readonly accountPool = new SimplePool();
-//     private readonly userPool = new SimplePool();
-//     private readonly discoveryPool = new SimplePool();
+export interface RelayStats {
+    url: string;
+    isConnected: boolean;
+    isOffline: boolean;
+    eventsReceived: number;
+    lastConnectionRetry: number; // timestamp in seconds
+    lastSuccessfulConnection: number; // timestamp in seconds
+    connectionAttempts: number;
+}
 
-//     private readonly accountRelayUrls: string[] = [];
-//     private readonly userRelayUrls: string[] = [];
-//     private readonly discoveryRelayUrls: string[] = [];
+@Injectable({
+    providedIn: 'root'
+})
+export class RelaysService {
+    private utilities = inject(UtilitiesService);
 
-//     constructor() {
-//         // Every 1 minutes, we will clean up the userPool by calling close on all connections that are not part of the current
-//         // user relay list.
-//         setInterval(() => {
-//             this.closeUnused();
-//         }, 1 * 60 * 1000);
-//     }
+    private readonly discoveryRelay = inject(DiscoveryRelayServiceEx);
+    private readonly storage = inject(StorageService);
 
-//     closeUnused() {
-//         // Create a diff from current connections with the current relay URLs, and close those that are not in the list.
-//         const currentUserUrls = Array.from(this.userPool.listConnectionStatus().keys());
-//         const unusedUrls = currentUserUrls.filter(url => !this.userRelayUrls.includes(url));
-//         this.userPool.close(unusedUrls);
+    // Map of relay URL to relay statistics
+    private relayStats = new Map<string, RelayStats>();
 
-//         // TODO: The SimplePool does NOT remove relays from the internal "relays" Map. Maybe this could be improved in the future.
-//     }
+    // Map of user public keys to their relay URLs
+    private userRelays = new Map<string, string[]>();
 
-//     getAccountPool(): SimplePool {
-//         return this.accountPool;
-//     }
+    // Signals for reactive updates
+    readonly relayStatsSignal = signal<Map<string, RelayStats>>(new Map());
+    readonly userRelaysSignal = signal<Map<string, string[]>>(new Map());
 
-//     getUserPool(): SimplePool {
-//         return this.userPool;
-//     }
+    constructor() {
+        // Initialize with preferred relays
+        this.initializePreferredRelays();
+    }
 
-//     getDiscoveryPool(): SimplePool {
-//         return this.discoveryPool;
-//     }
+    private initializePreferredRelays(): void {
+        this.utilities.preferredRelays.forEach(url => {
+            this.addRelay(url);
+        });
+    }
 
-//     setAccountRelayUrls(urls: string[]): void {
-//         this.accountRelayUrls.length = 0;
-//         this.accountRelayUrls.push(...urls);
-//     }
+    /**
+     * Add a relay to the stats map
+     */
+    addRelay(url: string): void {
+        const normalizedUrl = this.utilities.normalizeRelayUrl(url);
+        if (!normalizedUrl) return;
 
-//     setUserRelayUrls(urls: string[]): void {
-//         this.userRelayUrls.length = 0;
-//         this.userRelayUrls.push(...urls);
-//     }
+        if (!this.relayStats.has(normalizedUrl)) {
+            const stats: RelayStats = {
+                url: normalizedUrl,
+                isConnected: false,
+                isOffline: false,
+                eventsReceived: 0,
+                lastConnectionRetry: 0,
+                lastSuccessfulConnection: 0,
+                connectionAttempts: 0
+            };
 
-//     setDiscoveryRelayUrls(urls: string[]): void {
-//         this.discoveryRelayUrls.length = 0;
-//         this.discoveryRelayUrls.push(...urls);
-//     }
-// }
+            this.relayStats.set(normalizedUrl, stats);
+            this.updateSignals();
+        }
+    }
+
+    /**
+     * Update relay connection status
+     */
+    updateRelayConnection(url: string, isConnected: boolean): void {
+        const normalizedUrl = this.utilities.normalizeRelayUrl(url);
+        if (!normalizedUrl) return;
+
+        const stats = this.relayStats.get(normalizedUrl);
+        if (stats) {
+            stats.isConnected = isConnected;
+            stats.isOffline = !isConnected;
+
+            if (isConnected) {
+                stats.lastSuccessfulConnection = this.utilities.currentDate();
+            }
+
+            this.updateSignals();
+        }
+    }
+
+    /**
+     * Record a connection retry attempt
+     */
+    recordConnectionRetry(url: string): void {
+        const normalizedUrl = this.utilities.normalizeRelayUrl(url);
+        if (!normalizedUrl) return;
+
+        const stats = this.relayStats.get(normalizedUrl);
+        if (stats) {
+            stats.lastConnectionRetry = this.utilities.currentDate();
+            stats.connectionAttempts++;
+            this.updateSignals();
+        }
+    }
+
+    /**
+     * Increment event count for a relay
+     */
+    incrementEventCount(url: string): void {
+        const normalizedUrl = this.utilities.normalizeRelayUrl(url);
+        if (!normalizedUrl) return;
+
+        const stats = this.relayStats.get(normalizedUrl);
+        if (stats) {
+            stats.eventsReceived++;
+            this.updateSignals();
+        }
+    }
+
+    /**
+     * Get relay statistics
+     */
+    getRelayStats(url: string): RelayStats | undefined {
+        const normalizedUrl = this.utilities.normalizeRelayUrl(url);
+        return this.relayStats.get(normalizedUrl);
+    }
+
+    /**
+     * Get all relay statistics
+     */
+    getAllRelayStats(): Map<string, RelayStats> {
+        return new Map(this.relayStats);
+    }
+
+    /**
+     * Set relays for a user
+     */
+    setUserRelays(pubkey: string, relays: string[]): void {
+        const normalizedRelays = this.utilities.normalizeRelayUrls(relays);
+        this.userRelays.set(pubkey, normalizedRelays);
+
+        // Add these relays to our stats if they don't exist
+        normalizedRelays.forEach(url => this.addRelay(url));
+
+        this.updateSignals();
+    }
+
+    /**
+     * Get relays for a user
+     */
+    getUserRelays(pubkey: string): string[] {
+        return this.userRelays.get(pubkey) || [];
+    }
+
+    /**
+     * Get optimal relays for a user with connection preference
+     */
+    async getOptimalUserRelays(pubkey: string, limit: number = 5): Promise<string[]> {
+        let relayUrls = this.getUserRelays(pubkey);
+
+        if (relayUrls.length === 0) {
+            // If there are no user relays in memory, let's go discover.
+            const relayListEvent = await this.storage.getEventByPubkeyAndKind(pubkey, 10002);
+
+            if (relayListEvent) {
+                relayUrls = this.utilities.getRelayUrls(relayListEvent);
+            }
+
+            if (!relayUrls || relayUrls.length === 0) {
+                const followingEvent = await this.storage.getEventByPubkeyAndKind(pubkey, 3);
+
+                if (followingEvent) {
+                    relayUrls = this.utilities.getRelayUrlsFromFollowing(followingEvent);
+                }
+            }
+
+            if (!relayUrls || relayUrls.length === 0) {
+                // If we still don't have any relays, we will try to discover them.
+                relayUrls = await this.discoveryRelay.getUserRelayUrls(pubkey);
+            }
+
+            // Fallback to preferred relays if user has no relays
+            // return this.utilities.pickOptimalRelays(this.utilities.preferredRelays, limit);
+        }
+
+        // We have not discovered any relays for this user, what should we do?
+        if (relayUrls.length === 0) {
+            relayUrls = this.utilities.preferredRelays.slice(0, limit);
+        }
+
+        // Use utilities to filter out bad relays first
+        const validRelays = this.utilities.pickOptimalRelays(relayUrls, relayUrls.length);
+
+        // Sort by connection status and performance
+        const sortedRelays = validRelays.sort((a, b) => {
+            const statsA = this.getRelayStats(a);
+            const statsB = this.getRelayStats(b);
+
+            if (!statsA && !statsB) return 0;
+            if (!statsA) return 1;
+            if (!statsB) return -1;
+
+            // Prefer connected relays
+            if (statsA.isConnected && !statsB.isConnected) return -1;
+            if (!statsA.isConnected && statsB.isConnected) return 1;
+
+            // Prefer relays with more events received
+            if (statsA.eventsReceived !== statsB.eventsReceived) {
+                return statsB.eventsReceived - statsA.eventsReceived;
+            }
+
+            // Prefer relays with more recent successful connections
+            return statsB.lastSuccessfulConnection - statsA.lastSuccessfulConnection;
+        });
+
+        return sortedRelays.slice(0, limit);
+    }
+
+    /**
+     * Get connected relays
+     */
+    getConnectedRelays(): string[] {
+        return Array.from(this.relayStats.entries())
+            .filter(([_, stats]) => stats.isConnected)
+            .map(([url, _]) => url);
+    }
+
+    /**
+     * Get offline relays
+     */
+    getOfflineRelays(): string[] {
+        return Array.from(this.relayStats.entries())
+            .filter(([_, stats]) => stats.isOffline)
+            .map(([url, _]) => url);
+    }
+
+    /**
+     * Clear all relay statistics
+     */
+    clearAllStats(): void {
+        this.relayStats.clear();
+        this.userRelays.clear();
+        this.initializePreferredRelays();
+        this.updateSignals();
+    }
+
+    /**
+     * Remove a relay from statistics
+     */
+    removeRelay(url: string): void {
+        const normalizedUrl = this.utilities.normalizeRelayUrl(url);
+        if (normalizedUrl) {
+            this.relayStats.delete(normalizedUrl);
+            this.updateSignals();
+        }
+    }
+
+    /**
+     * Get relay performance score (0-100)
+     */
+    getRelayPerformanceScore(url: string): number {
+        const stats = this.getRelayStats(url);
+        if (!stats) return 0;
+
+        let score = 0;
+
+        // Connection status (50% weight)
+        if (stats.isConnected) {
+            score += 50;
+        } else if (!stats.isOffline) {
+            score += 25; // Unknown state
+        }
+
+        // Events received (30% weight)
+        if (stats.eventsReceived > 0) {
+            // Logarithmic scale for events
+            score += Math.min(30, Math.log10(stats.eventsReceived + 1) * 10);
+        }
+
+        // Recent successful connection (20% weight)
+        if (stats.lastSuccessfulConnection > 0) {
+            const now = this.utilities.currentDate();
+            const hoursSinceLastConnection = (now - stats.lastSuccessfulConnection) / 3600;
+
+            if (hoursSinceLastConnection < 1) {
+                score += 20;
+            } else if (hoursSinceLastConnection < 24) {
+                score += 15;
+            } else if (hoursSinceLastConnection < 168) { // 1 week
+                score += 10;
+            } else {
+                score += 5;
+            }
+        }
+
+        return Math.min(100, Math.max(0, score));
+    }
+
+    private updateSignals(): void {
+        this.relayStatsSignal.set(new Map(this.relayStats));
+        this.userRelaysSignal.set(new Map(this.userRelays));
+    }
+}

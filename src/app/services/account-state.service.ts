@@ -420,7 +420,7 @@ export class AccountStateService {
   }
 
   // Method to start processing profiles
-  async startProfileProcessing(pubkeys: string[], nostrService: NostrService): Promise<void> {
+  async startProfileProcessing(pubkeys: string[], dataService: DataService): Promise<void> {
     // Don't start if already processing
     const currentState = this.profileProcessingState();
     if (currentState.isProcessing) {
@@ -437,10 +437,6 @@ export class AccountStateService {
     });
 
     try {
-      // Get NostrService from the injector to avoid circular dependency
-      // const { NostrService } = await import('./nostr.service');
-      // const nostrService = this.injector.get(NostrService);
-
       // Use parallel processing with the optimized discovery queue
       await Promise.allSettled(
         pubkeys.map(async (pubkey) => {
@@ -450,7 +446,10 @@ export class AccountStateService {
               currentProfile: pubkey
             }));
 
-            const profile = await nostrService.getMetadataForUser(pubkey);
+            const profile = await dataService.getProfile(pubkey);
+
+            debugger;
+
             if (profile) {
               this.addToCache(pubkey, profile);
             }

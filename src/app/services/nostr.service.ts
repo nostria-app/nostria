@@ -18,6 +18,7 @@ import { DataService } from './data.service';
 import { UtilitiesService } from './utilities.service';
 import { Tier } from '../api/models';
 import { PublishQueueService, PublishTarget } from './publish-queue';
+import { SharedRelayServiceEx } from './account-relay.service';
 
 export interface NostrUser {
   pubkey: string;
@@ -54,6 +55,7 @@ export class NostrService implements NostriaService {
   private readonly data = inject(DataService);
   private readonly utilities = inject(UtilitiesService);
   private readonly publishQueueService = inject(PublishQueueService);
+  private readonly sharedRelay = inject(SharedRelayServiceEx);
 
   initialized = signal(false);
   MAX_WAIT_TIME = 2000;
@@ -866,6 +868,7 @@ export class NostrService implements NostriaService {
 
     // Check cache first
     const cachedMetadata = this.accountState.getCachedProfile(pubkey);
+    
     if (cachedMetadata) {
       // Move to end of LRU cache
       // this.logger.time('getMetadataForUser - cache hit' + pubkey);
@@ -875,6 +878,7 @@ export class NostrService implements NostriaService {
       // If refresh is true, make sure to refresh the metadata in the background.
       if (refresh) {
         setTimeout(async () => {
+          debugger;
           // Profile discovery not done yet, proceed with network discovery
           const metadata = await this.queueMetadataDiscovery(pubkey);
 
@@ -891,6 +895,8 @@ export class NostrService implements NostriaService {
     // Not in cache, get from storage
     const events = await this.storage.getEventsByPubkeyAndKind(pubkey, kinds.Metadata);
     const records = this.data.toRecords(events);
+
+    debugger;
 
     if (records.length > 0) {
       // Add to cache
@@ -1023,6 +1029,12 @@ export class NostrService implements NostriaService {
   }
 
   async discoverMetadata(pubkey: string, disconnect = true): Promise<Event | undefined | null> {
+    debugger;
+    const data = await this.sharedRelay.get(pubkey, { authors: [pubkey], kinds: [kinds.Metadata] });
+    return data;
+  }
+
+  async discoverMetadata2(pubkey: string, disconnect = true): Promise<Event | undefined | null> {
     this.logger.time('getinfo' + pubkey);
     let info: any = await this.storage.getInfo(pubkey, 'user');
     this.logger.timeEnd('getinfo' + pubkey);
@@ -1030,6 +1042,7 @@ export class NostrService implements NostriaService {
     if (!info) {
       info = {};
     }
+
 
     // if (info.lastDiscovery && info.lastDiscovery > this.currentDate() - 60) {
     //   // Skip discovery if it happened in the last 60 seconds
@@ -1045,6 +1058,8 @@ export class NostrService implements NostriaService {
     // }
 
     info.lastDiscovery = this.currentDate();
+    debugger;
+    const data = await this.sharedRelay.get(pubkey, { authors: [pubkey], kinds: [kinds.Metadata] });
 
     // FLOW: Find the user's relays first. Save it.
     // Connect to their relays and get metadata. Save it.
