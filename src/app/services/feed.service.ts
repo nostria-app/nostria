@@ -387,35 +387,105 @@ export class FeedService {
 
   /**
    * Fetch events from a list of users using the outbox model
+   * Updates UI incrementally as events are received for better UX
    */
   private async fetchEventsFromUsers(pubkeys: string[], feedData: FeedData) {
     const eventsPerUser = 5; // Fetch latest 5 events per user
     const now = Math.floor(Date.now() / 1000); // current timestamp in seconds
     const sevenDaysAgo = now - (7 * 24 * 60 * 60); // subtract 7 days in seconds
-    // console.log("Unix timestamp for 7 days ago:", sevenDaysAgo);
 
     const userEventsMap = new Map<string, Event[]>();
-    const promises: Promise<void>[] = [];
+    let processedUsers = 0;
+    const totalUsers = pubkeys.length;
 
-    for (const pubkey of pubkeys) {
+    // Process users in parallel but update UI incrementally
+    const fetchPromises = pubkeys.map(async (pubkey) => {
       try {
-        const events = await this.sharedRelayEx.getMany(pubkey, { authors: [pubkey], kinds: [kinds.ShortTextNote], limit: eventsPerUser, since: sevenDaysAgo }, { timeout: 2500 });
-        userEventsMap.set(pubkey, events);
+        const events = await this.sharedRelayEx.getMany(
+          pubkey, 
+          { 
+            authors: [pubkey], 
+            kinds: [kinds.ShortTextNote], 
+            limit: eventsPerUser, 
+            since: sevenDaysAgo 
+          }, 
+          { timeout: 2500 }
+        );
+
+        console.log('Events found:', events);
+
+        // Store events for this user
+        if (events.length > 0) {
+          userEventsMap.set(pubkey, events);
+        }
+        
+        processedUsers++;
+        
+        // Update UI incrementally every time we get events from a user
+        this.updateFeedIncremental(userEventsMap, feedData, processedUsers, totalUsers);
+        
       } catch (error) {
         this.logger.error(`Error fetching events for user ${pubkey}:`, error);
+        processedUsers++;
+        
+        // Still update UI even if this user failed
+        this.updateFeedIncremental(userEventsMap, feedData, processedUsers, totalUsers);
       }
+    });
+
+    // Wait for all requests to complete
+    await Promise.all(fetchPromises);
+    
+    // Final update to ensure everything is properly sorted
+    this.finalizeIncrementalFeed(userEventsMap, feedData);
+  }
+
+  /**
+   * Update feed incrementally as events are received
+   */
+  private updateFeedIncremental(
+    userEventsMap: Map<string, Event[]>, 
+    feedData: FeedData, 
+    processedUsers: number, 
+    totalUsers: number
+  ) {
+    // debugger;
+
+    // Update UI immediately if we have events from any user
+    // if (userEventsMap.size === 0) {
+    //   return;
+    // }
+
+    // Aggregate current events
+    const currentEvents = this.aggregateAndSortEvents(userEventsMap);
+    
+    if (currentEvents.length > 0) {
+      // Update the feed with current events
+      feedData.events.set(currentEvents);
+      
+      // Update last timestamp for pagination
+      feedData.lastTimestamp = Math.min(...currentEvents.map(e => (e.created_at || 0) * 1000));
+      
+      this.logger.debug(`Incremental update: ${processedUsers}/${totalUsers} users processed, ${currentEvents.length} events`);
     }
+  }
 
-    // Aggregate and sort events
-    const aggregatedEvents = this.aggregateAndSortEvents(userEventsMap);
-
-    // Update feed data with aggregated events
-    feedData.events.set(aggregatedEvents);
-
+  /**
+   * Finalize the incremental feed with a final sort and cleanup
+   */
+  private finalizeIncrementalFeed(userEventsMap: Map<string, Event[]>, feedData: FeedData) {
+    // Final aggregation and sort
+    const finalEvents = this.aggregateAndSortEvents(userEventsMap);
+    
+    // Update feed data with final aggregated events
+    feedData.events.set(finalEvents);
+    
     // Update last timestamp for pagination
-    if (aggregatedEvents.length > 0) {
-      feedData.lastTimestamp = Math.min(...aggregatedEvents.map(e => (e.created_at || 0) * 1000));
+    if (finalEvents.length > 0) {
+      feedData.lastTimestamp = Math.min(...finalEvents.map(e => (e.created_at || 0) * 1000));
     }
+    
+    this.logger.debug(`Final update: ${finalEvents.length} total events from ${userEventsMap.size} users`);
   }
 
   /**
@@ -467,7 +537,7 @@ export class FeedService {
   }
 
   /**
-   * Fetch older events for pagination
+   * Fetch older events for pagination with incremental updates
    */
   private async fetchOlderEventsFromUsers(pubkeys: string[], feedData: FeedData) {
     const eventsPerUser = 5;
@@ -475,8 +545,12 @@ export class FeedService {
     const until = Math.floor((feedData.lastTimestamp || Date.now()) / 1000); // Convert to seconds
 
     const userEventsMap = new Map<string, Event[]>();
+    let processedUsers = 0;
+    const totalUsers = pubkeys.length;
+    const existingEvents = feedData.events(); // Get current events
 
-    for (const pubkey of pubkeys) {
+    // Process users in parallel with incremental updates
+    const fetchPromises = pubkeys.map(async (pubkey) => {
       try {
         await this.userRelayEx.setUser(pubkey);
 
@@ -500,20 +574,80 @@ export class FeedService {
             userEventsMap.set(pubkey, olderEvents);
           }
         }
+
+        processedUsers++;
+        
+        // Update UI incrementally for pagination
+        this.updatePaginationIncremental(userEventsMap, feedData, existingEvents, processedUsers, totalUsers);
+        
       } catch (error) {
         this.logger.error(`Error fetching older events for user ${pubkey}:`, error);
+        processedUsers++;
+        
+        // Still update UI even if this user failed
+        this.updatePaginationIncremental(userEventsMap, feedData, existingEvents, processedUsers, totalUsers);
       }
+    });
+
+    // Wait for all requests to complete
+    await Promise.all(fetchPromises);
+    
+    // Final update for pagination
+    this.finalizePaginationIncremental(userEventsMap, feedData, existingEvents);
+  }
+
+  /**
+   * Update pagination incrementally as older events are received
+   */
+  private updatePaginationIncremental(
+    userEventsMap: Map<string, Event[]>, 
+    feedData: FeedData, 
+    existingEvents: Event[],
+    processedUsers: number, 
+    totalUsers: number
+  ) {
+    // Only update UI if we have events and either:
+    // 1. We've processed at least 2 users (get some initial content quickly)
+    // 2. We've processed all users (final update)
+    if (userEventsMap.size === 0 || (processedUsers < 2 && processedUsers < totalUsers)) {
+      return;
     }
 
-    // Aggregate and sort older events
+    // Aggregate current older events
     const olderEvents = this.aggregateAndSortEvents(userEventsMap);
-
-    // Append to existing events
+    
     if (olderEvents.length > 0) {
-      feedData.events.update(currentEvents => [...currentEvents, ...olderEvents]);
-
+      // Append to existing events
+      const updatedEvents = [...existingEvents, ...olderEvents];
+      feedData.events.set(updatedEvents);
+      
       // Update last timestamp
       feedData.lastTimestamp = Math.min(...olderEvents.map(e => (e.created_at || 0) * 1000));
+      
+      this.logger.debug(`Pagination incremental update: ${processedUsers}/${totalUsers} users processed, ${olderEvents.length} older events`);
+    }
+  }
+
+  /**
+   * Finalize pagination with final sort and cleanup
+   */
+  private finalizePaginationIncremental(
+    userEventsMap: Map<string, Event[]>, 
+    feedData: FeedData, 
+    existingEvents: Event[]
+  ) {
+    // Final aggregation and sort of older events
+    const finalOlderEvents = this.aggregateAndSortEvents(userEventsMap);
+    
+    // Append to existing events if we have any
+    if (finalOlderEvents.length > 0) {
+      const updatedEvents = [...existingEvents, ...finalOlderEvents];
+      feedData.events.set(updatedEvents);
+      
+      // Update last timestamp
+      feedData.lastTimestamp = Math.min(...finalOlderEvents.map(e => (e.created_at || 0) * 1000));
+      
+      this.logger.debug(`Final pagination update: ${finalOlderEvents.length} older events from ${userEventsMap.size} users`);
     }
   }  /**
    * Unsubscribe from a single feed (unsubscribes from all its columns)

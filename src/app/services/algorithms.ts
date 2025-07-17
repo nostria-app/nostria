@@ -65,7 +65,6 @@ export class Algorithms {
    * Get users most likely to be interested in based on engagement patterns
    */
   async getRecommendedUsers(limit: number = 10): Promise<UserMetric[]> {
-    debugger;
     const allMetrics = await this.metrics.getMetrics();
     
     // Filter users with meaningful engagement
