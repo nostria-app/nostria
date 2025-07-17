@@ -72,4 +72,12 @@ export class PrivacySettingsComponent {
       console.error('Failed to toggle social sharing preview setting', error);
     }
   }
+
+  async toggleImageCache(): Promise<void> {
+    try {
+      await this.settingsService.toggleImageCache();
+    } catch (error) {
+      console.error('Failed to toggle social sharing preview setting', error);
+    }
+  }
 }

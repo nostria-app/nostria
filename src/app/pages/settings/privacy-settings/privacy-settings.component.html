@@ -2,11 +2,22 @@
   <h2>Privacy and Safety Settings</h2>
 
   <section class="sharing-section">
+    <h3>Image Cache Service</h3>
+    <div class="settings-option">
+      <mat-checkbox [checked]="settingsService.settings().imageCacheEnabled" (change)="toggleImageCache()">
+        Enable image cache
+      </mat-checkbox>
+      <p class="option-description">
+        When enabled, profile images and other images might be using a cache service to improve loading times. Disable if you 
+        want to ensure images are always loaded directly from the source. Disabling this will increase bandwidth usage.
+      </p>
+    </div>
+  </section>
+
+  <section class="sharing-section">
     <h3>Social Sharing Options</h3>
     <div class="settings-option">
-      <mat-checkbox 
-        [checked]="settingsService.settings().socialSharingPreview"
-        (change)="toggleSocialSharingPreview()">
+      <mat-checkbox [checked]="settingsService.settings().socialSharingPreview" (change)="toggleSocialSharingPreview()">
         Enable social sharing preview
       </mat-checkbox>
       <p class="option-description">

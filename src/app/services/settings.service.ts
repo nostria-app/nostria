@@ -7,11 +7,13 @@ import { AccountStateService } from './account-state.service';
 
 export interface UserSettings {
     socialSharingPreview: boolean;
+    imageCacheEnabled?: boolean; // Optional setting for image cache
     // Add more settings as needed
 }
 
 const DEFAULT_SETTINGS: UserSettings = {
-    socialSharingPreview: true
+    socialSharingPreview: true,
+    imageCacheEnabled: true
 };
 
 @Injectable({
@@ -95,6 +97,13 @@ export class SettingsService {
         const currentValue = this.settings().socialSharingPreview;
         await this.updateSettings({
             socialSharingPreview: !currentValue
+        });
+    }
+    
+    async toggleImageCache(): Promise<void> {
+        const currentValue = this.settings().imageCacheEnabled;
+        await this.updateSettings({
+            imageCacheEnabled: !currentValue
         });
     }
 }

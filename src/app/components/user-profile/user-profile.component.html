@@ -36,7 +36,13 @@
       @if (isLoading()) {
       <mat-spinner [diameter]="getSpinnerSize()" color="primary"></mat-spinner>
       } @else if (profile()?.data?.picture && !imageLoadError()) {
+
+      @if(settingsService.settings().imageCacheEnabled) {
+      <img [src]="'https://proxy.eu.nostria.app/api/ImageOptimizeProxy?w=250&h=250&url=' + profile().data.picture" (error)="onImageLoadError($event)" alt="User Avatar" class="user-avatar" />
+      } @else {
       <img [src]="profile().data.picture" (error)="onImageLoadError($event)" alt="User Avatar" class="user-avatar" />
+      }
+
       } @else {
       <mat-icon [ngClass]="['default-user-avatar', 
                      isProfileNotFound() ? 'not-found-avatar' : '',
