@@ -36,6 +36,7 @@ import { DataService } from '../../services/data.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { UrlUpdateService } from '../../services/url-update.service';
 import { UsernameService } from '../../services/username';
+import { Metrics } from '../../services/metrics';
 
 @Component({
   selector: 'app-profile',
@@ -84,6 +85,7 @@ export class ProfileComponent {
   private readonly url = inject(UrlUpdateService);
   private readonly username = inject(UsernameService);
   private readonly profileTracking = inject(ProfileTrackingService);
+  private readonly metrics = inject(Metrics);
 
   pubkey = signal<string>('');
   userMetadata = signal<NostrRecord | undefined>(undefined);
@@ -112,8 +114,9 @@ export class ProfileComponent {
     }
 
     // Whenever profile is edited by user, update the user metadata if it matches the current pubkey
-    effect(() => {
+    effect(async () => {
       const profile = this.accountState.profile();
+
 
       if (profile?.event.pubkey === this.pubkey() && this.userMetadata()?.event.id != profile?.event.id) {
         this.userMetadata.set(profile);
@@ -179,12 +182,13 @@ export class ProfileComponent {
           this.profileState.setCurrentProfilePubkey(id);
           this.pubkey.set(id);
 
-         
 
           // Always attempt to load user profile and check if own profile, regardless of relay status
           untracked(async () => {
             await this.loadUserProfile(this.pubkey());
-            
+
+            await this.metrics.incrementMetric(this.pubkey(), 'viewed');
+
             // Track profile view (but not for own profile)
             if (!this.isOwnProfile()) {
               await this.profileTracking.trackProfileView(this.pubkey());
