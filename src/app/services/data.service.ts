@@ -168,26 +168,28 @@ export class DataService {
             if (record) {
                 return record;
             }
-        } else {
-            metadata = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Metadata);
-
-            if (metadata) {
-                record = this.toRecord(metadata);
-                this.cache.set(cacheKey, record);
-            }
         }
 
-        if (!metadata) {
+        metadata = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Metadata);
+
+        if (metadata) {
+            record = this.toRecord(metadata);
+            this.cache.set(cacheKey, record);
+        } else {
             // Try to get from relays
+            console.log('getProfile', pubkey, metadata);
             metadata = await this.sharedRelayEx.get(pubkey, { authors: [pubkey], kinds: [kinds.Metadata] });
+            console.log('gotProfile', pubkey, metadata);
 
             if (metadata) {
                 record = this.toRecord(metadata);
                 this.cache.set(cacheKey, record);
                 await this.storage.saveEvent(metadata);
             }
-        } else if (refresh) {
-            // If we have metadata and refresh is true, we will refresh it in the background.
+        }
+
+        if (refresh) {
+            // If refresh is true, we will refresh it in the background.
             queueMicrotask(async () => {
                 let fresh = await this.sharedRelayEx.get(pubkey, { authors: [pubkey], kinds: [kinds.Metadata] });
 

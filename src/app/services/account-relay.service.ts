@@ -327,6 +327,7 @@ export class SharedRelayServiceEx {
 
         // Get optimal relays for the user
         let relayUrls = await this.relaysService.getOptimalUserRelays(pubkey, 3);
+        console.log('relayUrls', relayUrls);
         // let relayUrls = this.userRelayUrls.get(pubkey);
 
         // if (!relayUrls) {
