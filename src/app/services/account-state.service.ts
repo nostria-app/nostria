@@ -13,11 +13,7 @@ import { HttpContext } from '@angular/common/http';
 import { USE_NIP98 } from './interceptors/nip98Auth';
 import { UtilitiesService } from './utilities.service';
 import { Wallets } from './wallets';
-
-interface ProfileCacheEntry {
-  profile: NostrRecord;
-  cachedAt: number;
-}
+import { Cache } from './cache';
 
 interface ProfileProcessingState {
   isProcessing: boolean;
@@ -44,6 +40,7 @@ export class AccountStateService {
   private readonly storage = inject(StorageService);
   private readonly utilities = inject(UtilitiesService);
   private readonly wallets = inject(Wallets);
+  private readonly cache = inject(Cache);
 
   private destroy$ = new Subject<void>();
 
@@ -315,9 +312,9 @@ export class AccountStateService {
 
   muteList = signal<Event | undefined>(undefined);
 
-  // Profile cache - in-memory cache for quick searches
-  private userProfileCache = signal<Map<string, ProfileCacheEntry>>(new Map());
-  private accountProfileCache = signal<Map<string, ProfileCacheEntry>>(new Map());
+  // Profile caches using Cache service
+  private userProfileCache = new Cache();
+  private accountProfileCache = new Cache();
 
   // Processing state for toolbar indicator
   profileProcessingState = signal<ProfileProcessingState>({
@@ -328,9 +325,30 @@ export class AccountStateService {
     startedAt: 0
   });
 
-  // Computed signal for cache access
-  cachedUserProfiles = computed(() => this.userProfileCache());
-  cachedAccountProfiles = computed(() => this.accountProfileCache());
+  // Computed signals for cache access
+  cachedUserProfiles = computed(() => {
+    const keys = this.userProfileCache.keys();
+    const profiles: NostrRecord[] = [];
+    for (const key of keys) {
+      const profile = this.userProfileCache.get<NostrRecord>(key);
+      if (profile) {
+        profiles.push(profile);
+      }
+    }
+    return profiles;
+  });
+
+  cachedAccountProfiles = computed(() => {
+    const keys = this.accountProfileCache.keys();
+    const profiles: NostrRecord[] = [];
+    for (const key of keys) {
+      const profile = this.accountProfileCache.get<NostrRecord>(key);
+      if (profile) {
+        profiles.push(profile);
+      }
+    }
+    return profiles;
+  });
 
   // Computed signal for processing progress
   processingProgress = computed(() => {
@@ -343,7 +361,9 @@ export class AccountStateService {
   publish = signal<Event | UnsignedEvent | undefined>(undefined);
 
   constructor() {
-
+    // Configure the caches with specific options
+    this.userProfileCache.configure({ maxSize: 300, ttl: 24 * 60 * 60 * 1000 }); // 24 hours TTL, max 300 entries
+    this.accountProfileCache.configure({ persistent: true, maxSize: 1000 }); // Persistent, max 1000 entries
   }
 
   // Methods for tracking processing state per account
@@ -466,15 +486,14 @@ export class AccountStateService {
     }
   }
 
-  // Method to add profile to cache
+  // Method to add profile to account cache
   addToAccounts(pubkey: string, profile: NostrRecord): void {
-    const cache = this.accountProfileCache();
-    const existingEntry = cache.get(pubkey);
+    const existingProfile = this.accountProfileCache.get<NostrRecord>(pubkey);
 
     // Check if profile already exists and is newer
-    if (existingEntry) {
-      // Compare created_at timestamps if available, otherwise use cached timestamp
-      const existingTimestamp = existingEntry.profile.event.created_at || existingEntry.cachedAt;
+    if (existingProfile) {
+      // Compare created_at timestamps if available
+      const existingTimestamp = existingProfile.event.created_at || 0;
       const newTimestamp = profile.event.created_at || Date.now();
 
       // Only update if the new profile is newer
@@ -483,37 +502,18 @@ export class AccountStateService {
       }
     }
 
-    const newCache = new Map(cache);
-
-    newCache.set(pubkey, {
-      profile,
-      cachedAt: Date.now()
-    });
-
-    // Limit cache size to prevent memory issues
-    if (newCache.size > 1000) {
-      // Remove oldest entries
-      const entries = Array.from(newCache.entries());
-      entries.sort((a, b) => a[1].cachedAt - b[1].cachedAt);
-
-      // Keep newest 800 entries
-      const toKeep = entries.slice(-800);
-      newCache.clear();
-      toKeep.forEach(([key, value]) => newCache.set(key, value));
-    }
-
-    this.accountProfileCache.set(newCache);
+    // Add to cache with persistent option
+    this.accountProfileCache.set(pubkey, profile, { persistent: true });
   }
 
-  // Method to add profile to cache
+  // Method to add profile to user cache
   addToCache(pubkey: string, profile: NostrRecord): void {
-    const cache = this.userProfileCache();
-    const existingEntry = cache.get(pubkey);
+    const existingProfile = this.userProfileCache.get<NostrRecord>(pubkey);
 
     // Check if profile already exists and is newer
-    if (existingEntry) {
-      // Compare created_at timestamps if available, otherwise use cached timestamp
-      const existingTimestamp = existingEntry.profile.event.created_at || existingEntry.cachedAt;
+    if (existingProfile) {
+      // Compare created_at timestamps if available
+      const existingTimestamp = existingProfile.event.created_at || 0;
       const newTimestamp = profile.event.created_at || Date.now();
 
       // Only update if the new profile is newer
@@ -522,26 +522,8 @@ export class AccountStateService {
       }
     }
 
-    const newCache = new Map(cache);
-
-    newCache.set(pubkey, {
-      profile,
-      cachedAt: Date.now()
-    });
-
-    // Limit cache size to prevent memory issues
-    if (newCache.size > 1000) {
-      // Remove oldest entries
-      const entries = Array.from(newCache.entries());
-      entries.sort((a, b) => a[1].cachedAt - b[1].cachedAt);
-
-      // Keep newest 800 entries
-      const toKeep = entries.slice(-800);
-      newCache.clear();
-      toKeep.forEach(([key, value]) => newCache.set(key, value));
-    }
-
-    this.userProfileCache.set(newCache);
+    // Add to cache with max size limit of 300
+    this.userProfileCache.set(pubkey, profile, { maxSize: 300 });
   }
 
   // Method to search cached profiles
@@ -551,13 +533,15 @@ export class AccountStateService {
       return [];
     }
 
-    const cache = this.userProfileCache();
-    console.log('Profile cache size:', cache.size);
+    const cacheKeys = this.userProfileCache.keys();
+    console.log('Profile cache size:', cacheKeys.length);
     const results: NostrRecord[] = [];
     const lowercaseQuery = query.toLowerCase();
 
-    for (const [pubkey, entry] of cache.entries()) {
-      const profile = entry.profile;
+    for (const pubkey of cacheKeys) {
+      const profile = this.userProfileCache.get<NostrRecord>(pubkey);
+      if (!profile) continue;
+
       const data = profile.data;
 
       // Search in display name, name, about, and nip05
@@ -618,38 +602,19 @@ export class AccountStateService {
   //   this.profileCache.set(newCache);
   // }
 
-  // Method to get cached profile
-
+  // Method to get cached account profile
   getAccountProfile(pubkey: string): NostrRecord | undefined {
-    const cache = this.accountProfileCache();
-    const entry = cache.get(pubkey);
-
-    return entry?.profile;
+    return this.accountProfileCache.get<NostrRecord>(pubkey) || undefined;
   }
 
   getCachedProfile(pubkey: string): NostrRecord | undefined {
-    const cache = this.userProfileCache();
-    const entry = cache.get(pubkey);
-
-    if (entry) {
-      // Check if cache entry is not too old (24 hours)
-      const maxAge = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
-      if (Date.now() - entry.cachedAt < maxAge) {
-        return entry.profile;
-      } else {
-        // Remove expired entry
-        const newCache = new Map(cache);
-        newCache.delete(pubkey);
-        this.userProfileCache.set(newCache);
-      }
-    }
-
-    return undefined;
+    // The Cache service handles TTL automatically, so no need to check age manually
+    return this.userProfileCache.get<NostrRecord>(pubkey) || undefined;
   }
 
   // Method to clear cache
   clearProfileCache(): void {
-    this.userProfileCache.set(new Map());
+    this.userProfileCache.clear();
   }
 
   // Method to load profiles from storage into cache when profile discovery has been done
@@ -691,16 +656,21 @@ export class AccountStateService {
 
   // Method to get cache stats
   getCacheStats(): { size: number; oldestEntry: number; newestEntry: number } {
-    const cache = this.userProfileCache();
-    if (cache.size === 0) {
+    const stats = this.userProfileCache.stats();
+    const cacheKeys = this.userProfileCache.keys();
+    
+    if (cacheKeys.length === 0) {
       return { size: 0, oldestEntry: 0, newestEntry: 0 };
     }
 
-    const timestamps = Array.from(cache.values()).map(entry => entry.cachedAt);
+    // Get timestamp information from cache entries
+    const entries = this.userProfileCache.entries<NostrRecord>();
+    const timestamps = entries.map(([_, entry]) => entry.timestamp);
+    
     return {
-      size: cache.size,
-      oldestEntry: Math.min(...timestamps),
-      newestEntry: Math.max(...timestamps)
+      size: stats.size,
+      oldestEntry: timestamps.length > 0 ? Math.min(...timestamps) : 0,
+      newestEntry: timestamps.length > 0 ? Math.max(...timestamps) : 0
     };
   }
 
