@@ -20,6 +20,11 @@ export abstract class RelayServiceBase {
     #pool!: SimplePool;
     protected relayUrls: string[] = [];
     protected logger = inject(LoggerService);
+    
+    // Basic concurrency control for base class
+    protected readonly maxConcurrentRequests = 2;
+    protected currentRequests = 0;
+    protected requestQueue: Array<() => void> = [];
 
     constructor(pool: SimplePool) {
         this.#pool = pool;
@@ -39,6 +44,34 @@ export abstract class RelayServiceBase {
 
     getRelayUrls(): string[] {
         return this.relayUrls;
+    }
+
+    /**
+     * Acquires a semaphore slot for making a request
+     */
+    protected async acquireSemaphore(): Promise<void> {
+        return new Promise<void>((resolve) => {
+            if (this.currentRequests < this.maxConcurrentRequests) {
+                this.currentRequests++;
+                resolve();
+            } else {
+                this.requestQueue.push(() => {
+                    this.currentRequests++;
+                    resolve();
+                });
+            }
+        });
+    }
+
+    /**
+     * Releases a semaphore slot and processes the next queued request
+     */
+    protected releaseSemaphore(): void {
+        this.currentRequests--;
+        const nextRequest = this.requestQueue.shift();
+        if (nextRequest) {
+            nextRequest();
+        }
     }
 
     async getEventsByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<Event[]> {
@@ -87,11 +120,10 @@ export abstract class RelayServiceBase {
     }
 
     /**
-     * Generic function to fetch Nostr events (one-time query)
+     * Generic function to fetch Nostr events (one-time query) with concurrency control
      * @param filter Filter for the query
-     * @param relayUrls Optional specific relay URLs to use (defaults to user's relays)
      * @param options Optional options for the query
-     * @returns Promise that resolves to an array of events
+     * @returns Promise that resolves to a single event
      */
     async get<T extends Event = Event>(
         filter: { ids?: string[], kinds?: number[], authors?: string[], '#e'?: string[], '#p'?: string[], since?: number, until?: number, limit?: number },
@@ -99,17 +131,14 @@ export abstract class RelayServiceBase {
     ): Promise<T | null> {
         this.logger.debug('Getting events with filters:', filter);
 
-        // if (!this.#pool) {
-        //     this.logger.error('Cannot get events: account pool is not initialized');
-        //     return null;
-        // }
-
         const urls = this.relayUrls
 
         if (urls.length === 0) {
             this.logger.warn('No relays available for query');
             return null;
         }
+
+        await this.acquireSemaphore();
 
         try {
             // Default timeout is 5 seconds if not specified
@@ -120,20 +149,18 @@ export abstract class RelayServiceBase {
 
             this.logger.debug(`Received event from query`, event);
 
-            // Update lastUsed for all relays used in this query
-            // urls.forEach(url => this.updateRelayLastUsed(url));
-
             return event;
         } catch (error) {
             this.logger.error('Error fetching events', error);
             return null;
+        } finally {
+            this.releaseSemaphore();
         }
     }
 
     /**
-    * Generic function to fetch Nostr events (one-time query)
+    * Generic function to fetch Nostr events (one-time query) with concurrency control
     * @param filter Filter for the query
-    * @param relayUrls Optional specific relay URLs to use (defaults to user's relays)
     * @param options Optional options for the query
     * @returns Promise that resolves to an array of events
     */
@@ -151,6 +178,8 @@ export abstract class RelayServiceBase {
             return [];
         }
 
+        await this.acquireSemaphore();
+
         try {
             // Default timeout is 5 seconds if not specified
             const timeout = options.timeout || 5000;
@@ -166,23 +195,15 @@ export abstract class RelayServiceBase {
                     },
                     onclose: (reasons) => {
                         console.log('Subscriptions closed', reasons);
-
-                        // When subscription closes, resolve the promise with all collected events
-                        // Update lastUsed for all relays used in this query
-                        //urls.forEach(url => this.updateRelayLastUsed(url));
-
                         resolve(events);
                     },
                 });
             });
-
-            // this.logger.debug(`Received event from query`, event);
-            // Update lastUsed for all relays used in this query
-            // urls.forEach(url => this.updateRelayLastUsed(url));
-            // return event;
         } catch (error) {
             this.logger.error('Error fetching events', error);
             return [];
+        } finally {
+            this.releaseSemaphore();
         }
     }
 
@@ -306,18 +327,84 @@ export class SharedRelayServiceEx {
     private logger = inject(LoggerService);
     private discoveryRelay = inject(DiscoveryRelayServiceEx);
     private readonly relaysService = inject(RelaysService);
+    
+    // Semaphore for controlling concurrent requests
+    private readonly maxConcurrentRequests = 3;
+    private currentRequests = 0;
+    private requestQueue: Array<() => void> = [];
+    
+    // Request deduplication cache
+    private readonly requestCache = new Map<string, Promise<any>>();
+    private readonly cacheTimeout = 1000; // 1 second cache
 
     constructor() {
 
     }
 
     /**
-  * Generic function to fetch Nostr events (one-time query)
-  * @param filter Filter for the query
-  * @param relayUrls Optional specific relay URLs to use (defaults to user's relays)
-  * @param options Optional options for the query
-  * @returns Promise that resolves to an array of events
-  */
+     * Creates a unique cache key for request deduplication
+     */
+    private createCacheKey(pubkey: string, filter: any, timeout: number): string {
+        return JSON.stringify({ pubkey, filter, timeout });
+    }
+
+    /**
+     * Acquires a semaphore slot for making a request
+     */
+    private async acquireSemaphore(): Promise<void> {
+        return new Promise<void>((resolve) => {
+            if (this.currentRequests < this.maxConcurrentRequests) {
+                this.currentRequests++;
+                resolve();
+            } else {
+                this.requestQueue.push(() => {
+                    this.currentRequests++;
+                    resolve();
+                });
+            }
+        });
+    }
+
+    /**
+     * Releases a semaphore slot and processes the next queued request
+     */
+    private releaseSemaphore(): void {
+        this.currentRequests--;
+        const nextRequest = this.requestQueue.shift();
+        if (nextRequest) {
+            nextRequest();
+        }
+    }
+
+    /**
+     * Internal method that performs the actual relay request with concurrency control
+     */
+    private async performRequest<T extends Event = Event>(
+        relayUrls: string[],
+        filter: any,
+        timeout: number
+    ): Promise<T | null> {
+        await this.acquireSemaphore();
+        
+        try {
+            const event = await this.#pool.get(relayUrls, filter, { maxWait: timeout }) as T;
+            this.logger.debug(`Received event from query`, event);
+            return event;
+        } catch (error) {
+            this.logger.error('Error fetching events', error);
+            return null;
+        } finally {
+            this.releaseSemaphore();
+        }
+    }
+
+    /**
+     * Generic function to fetch Nostr events (one-time query) with concurrency control
+     * @param pubkey The public key of the user
+     * @param filter Filter for the query
+     * @param options Optional options for the query
+     * @returns Promise that resolves to a single event
+     */
     async get<T extends Event = Event>(
         pubkey: string,
         filter: { ids?: string[], kinds?: number[], authors?: string[], '#e'?: string[], '#p'?: string[], since?: number, until?: number, limit?: number },
@@ -325,14 +412,43 @@ export class SharedRelayServiceEx {
     ): Promise<T | null> {
         this.logger.debug('Getting events with filters:', filter);
 
+        // Default timeout is 5 seconds if not specified
+        const timeout = options.timeout || 5000;
+
+        // Create cache key for request deduplication
+        const cacheKey = this.createCacheKey(pubkey, filter, timeout);
+
+        // Check if we already have a pending request for the same parameters
+        if (this.requestCache.has(cacheKey)) {
+            this.logger.debug('Returning cached request for duplicate query');
+            return this.requestCache.get(cacheKey) as Promise<T | null>;
+        }
+
+        // Create the request promise
+        const requestPromise = this.executeGetRequest<T>(pubkey, filter, timeout);
+
+        // Cache the promise
+        this.requestCache.set(cacheKey, requestPromise);
+
+        // Clean up cache after timeout
+        setTimeout(() => {
+            this.requestCache.delete(cacheKey);
+        }, this.cacheTimeout);
+
+        return requestPromise;
+    }
+
+    /**
+     * Internal method to execute the actual get request
+     */
+    private async executeGetRequest<T extends Event = Event>(
+        pubkey: string,
+        filter: any,
+        timeout: number
+    ): Promise<T | null> {
         // Get optimal relays for the user
         let relayUrls = await this.relaysService.getOptimalUserRelays(pubkey, 3);
         console.log('relayUrls', relayUrls);
-        // let relayUrls = this.userRelayUrls.get(pubkey);
-
-        // if (!relayUrls) {
-        //     relayUrls = await this.discoveryRelay.getUserRelayUrls(pubkey);
-        // }
 
         if (relayUrls.length === 0) {
             this.logger.warn('No relays available for query');
@@ -340,18 +456,8 @@ export class SharedRelayServiceEx {
         }
 
         try {
-            // Default timeout is 5 seconds if not specified
-            const timeout = options.timeout || 5000;
-
-            // Execute the query
-            const event = await this.#pool.get(relayUrls, filter, { maxWait: timeout }) as T;
-
-            this.logger.debug(`Received event from query`, event);
-
-            // Update lastUsed for all relays used in this query
-            // urls.forEach(url => this.updateRelayLastUsed(url));
-
-            return event;
+            // Execute the query with concurrency control
+            return await this.performRequest<T>(relayUrls, filter, timeout);
         } catch (error) {
             this.logger.error('Error fetching events', error);
             return null;
@@ -359,12 +465,12 @@ export class SharedRelayServiceEx {
     }
 
     /**
-    * Generic function to fetch Nostr events (one-time query)
-    * @param filter Filter for the query
-    * @param relayUrls Optional specific relay URLs to use (defaults to user's relays)
-    * @param options Optional options for the query
-    * @returns Promise that resolves to an array of events
-    */
+     * Generic function to fetch Nostr events (one-time query) with concurrency control
+     * @param pubkey The public key of the user
+     * @param filter Filter for the query
+     * @param options Optional options for the query
+     * @returns Promise that resolves to an array of events
+     */
     async getMany<T extends Event = Event>(
         pubkey: string,
         filter: { kinds?: number[], authors?: string[], '#e'?: string[], '#p'?: string[], since?: number, until?: number, limit?: number },
@@ -372,6 +478,40 @@ export class SharedRelayServiceEx {
     ): Promise<T[]> {
         this.logger.debug('Getting events with filters:', filter);
 
+        // Default timeout is 5 seconds if not specified
+        const timeout = options.timeout || 5000;
+
+        // Create cache key for request deduplication
+        const cacheKey = this.createCacheKey(pubkey + '_many', filter, timeout);
+
+        // Check if we already have a pending request for the same parameters
+        if (this.requestCache.has(cacheKey)) {
+            this.logger.debug('Returning cached request for duplicate getMany query');
+            return this.requestCache.get(cacheKey) as Promise<T[]>;
+        }
+
+        // Create the request promise
+        const requestPromise = this.executeGetManyRequest<T>(pubkey, filter, timeout);
+
+        // Cache the promise
+        this.requestCache.set(cacheKey, requestPromise);
+
+        // Clean up cache after timeout
+        setTimeout(() => {
+            this.requestCache.delete(cacheKey);
+        }, this.cacheTimeout);
+
+        return requestPromise;
+    }
+
+    /**
+     * Internal method to execute the actual getMany request
+     */
+    private async executeGetManyRequest<T extends Event = Event>(
+        pubkey: string,
+        filter: any,
+        timeout: number
+    ): Promise<T[]> {
         let relayUrls = await this.relaysService.getOptimalUserRelays(pubkey, 3);
 
         if (relayUrls.length === 0) {
@@ -379,10 +519,9 @@ export class SharedRelayServiceEx {
             return [];
         }
 
-        try {
-            // Default timeout is 5 seconds if not specified
-            const timeout = options.timeout || 5000;
+        await this.acquireSemaphore();
 
+        try {
             // Execute the query
             const events: T[] = [];
             return new Promise<T[]>((resolve) => {
@@ -394,41 +533,17 @@ export class SharedRelayServiceEx {
                     },
                     onclose: (reasons) => {
                         console.log('Subscriptions closed', reasons);
-
-                        // When subscription closes, resolve the promise with all collected events
-                        // Update lastUsed for all relays used in this query
-                        //urls.forEach(url => this.updateRelayLastUsed(url));
-                        
                         resolve(events);
                     },
                 });
             });
-
-            // this.logger.debug(`Received event from query`, event);
-            // Update lastUsed for all relays used in this query
-            // urls.forEach(url => this.updateRelayLastUsed(url));
-            // return event;
         } catch (error) {
             this.logger.error('Error fetching events', error);
             return [];
+        } finally {
+            this.releaseSemaphore();
         }
     }
-
-
-    /** When the active user is changed, we need to discover their relay urls */
-    // async setUser(pubkey: string) {
-    //     if (this.pubkey === pubkey) {
-    //         return;
-    //     }
-
-    //     this.pubkey = pubkey;
-    //     const relayUrls = await this.discoveryRelay.getUserRelayUrls(pubkey);
-    //     this.init(relayUrls);
-    // }
-
-    // async initialize(pubkey: string): Promise<void> {
-    //     await this.setUser(pubkey);
-    // }
 }
 
 @Injectable({
