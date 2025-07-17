@@ -185,10 +185,16 @@
             </div>
             } @else { <!-- Default placeholder content - replace with actual content -->
             <div class="column-items">
+
+              YESYESYES
+
               @let columnData = feedService.data.get(column.id);
               @let columnEventsData = columnEvents().get(column.id);
               @if (columnData && columnEventsData) {
               @for(event of columnEventsData; track event.id) {
+
+                FORFORFOR
+
               <mat-card class="content-card">
 
                 <mat-card-header>
@@ -199,6 +205,9 @@
                   <mat-card-subtitle>{{ event.created_at * 1000 | date:'short' }}</mat-card-subtitle> -->
                 </mat-card-header>
                 <mat-card-content>
+
+                  {{ event | json }}
+
                   <!-- Photos (NIP-68, kind 20) -->
                   @if (event.kind === 20 || columnData.column.type === 'photos') {
                   @if (hasContentWarning(event)) {
