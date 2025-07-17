@@ -75,12 +75,12 @@ export class Cache {
   /**
    * Gets a value from the cache
    */
-  get<T>(key: string): T | null {
+  get<T>(key: string): T | undefined {
     const entry = this.cache.get(key) as CacheEntry<T> | undefined;
 
     if (!entry) {
       this.scheduleStatsUpdate({ misses: this._stats().misses + 1 });
-      return null;
+      return undefined;
     }
 
     // Check if entry has expired
@@ -90,7 +90,7 @@ export class Cache {
         size: this.cache.size,
         misses: this._stats().misses + 1
       });
-      return null;
+      return undefined;
     }
 
     // Update last accessed time
@@ -164,7 +164,7 @@ export class Cache {
   /**
    * Gets multiple values at once
    */
-  getMany<T>(keys: string[]): Array<[string, T | null]> {
+  getMany<T>(keys: string[]): Array<[string, T | undefined]> {
     return keys.map(key => [key, this.get<T>(key)]);
   }
 
