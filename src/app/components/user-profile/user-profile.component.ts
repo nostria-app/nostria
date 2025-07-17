@@ -18,6 +18,7 @@ import { UtilitiesService } from '../../services/utilities.service';
 import { DataService } from '../../services/data.service';
 import { RelaysService } from '../../services/relays.service';
 import { SharedRelayServiceEx } from '../../services/account-relay.service';
+import { SettingsService } from '../../services/settings.service';
 
 @Component({
     selector: 'app-user-profile',
@@ -43,6 +44,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
     private logger = inject(LoggerService);
     private elementRef = inject(ElementRef);
     readonly utilities = inject(UtilitiesService);
+    settingsService = inject(SettingsService);
     private relaysService = inject(RelaysService);
     private readonly sharedRelay = inject(SharedRelayServiceEx);
     layout = inject(LayoutService);
