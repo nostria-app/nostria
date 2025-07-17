@@ -16,8 +16,7 @@
     Save Draft
   </button>
   
-  <button mat-raised-button 
-          color="primary" 
+  <button mat-flat-button 
           (click)="publish()" 
           [disabled]="!isValid() || isPublishing()">
     <mat-icon>publish</mat-icon>
