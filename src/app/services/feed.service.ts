@@ -9,7 +9,7 @@ import { AccountStateService } from './account-state.service';
 import { DataService } from './data.service';
 import { UtilitiesService } from './utilities.service';
 import { ApplicationService } from './application.service';
-import { UserRelayServiceEx } from './account-relay.service';
+import { SharedRelayServiceEx, UserRelayServiceEx } from './account-relay.service';
 import { Algorithms } from './algorithms';
 
 export interface FeedData {
@@ -149,6 +149,7 @@ export class FeedService {
   private readonly utilities = inject(UtilitiesService);
   private readonly app = inject(ApplicationService);
   private readonly userRelayEx = inject(UserRelayServiceEx);
+  private readonly sharedRelayEx = inject(SharedRelayServiceEx);
   private readonly algorithms = inject(Algorithms);
 
   // Signals for feeds and relays
@@ -362,7 +363,7 @@ export class FeedService {
     try {
       // Get top 10 engaged users from the algorithm
       const topEngagedUsers = await this.algorithms.getRecommendedUsers(10);
-      
+
       if (topEngagedUsers.length === 0) {
         this.logger.warn('No engaged users found, falling back to recent following');
         // Fallback to first 10 users from following list
@@ -374,10 +375,10 @@ export class FeedService {
 
       // Extract pubkeys from top engaged users
       const topPubkeys = topEngagedUsers.map(user => user.pubkey);
-      
+
       // Fetch events from these top engaged users
       await this.fetchEventsFromUsers(topPubkeys, feedData);
-      
+
       this.logger.debug(`Loaded following feed with ${topPubkeys.length} top engaged users`);
     } catch (error) {
       this.logger.error('Error loading following feed:', error);
@@ -389,40 +390,28 @@ export class FeedService {
    */
   private async fetchEventsFromUsers(pubkeys: string[], feedData: FeedData) {
     const eventsPerUser = 5; // Fetch latest 5 events per user
-    const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
-    const now = Date.now();
-    
+    const now = Math.floor(Date.now() / 1000); // current timestamp in seconds
+    const sevenDaysAgo = now - (7 * 24 * 60 * 60); // subtract 7 days in seconds
+    // console.log("Unix timestamp for 7 days ago:", sevenDaysAgo);
+
     const userEventsMap = new Map<string, Event[]>();
-    
+    const promises: Promise<void>[] = [];
+
     for (const pubkey of pubkeys) {
       try {
-        await this.userRelayEx.setUser(pubkey);
-        const events = await this.userRelayEx.getEventsByPubkeyAndKind(pubkey, kinds.ShortTextNote);
-        
-        if (events.length > 0) {
-          // Filter events to only include recent ones (within max age)
-          const recentEvents = events
-            .filter(event => {
-              const eventAge = now - (event.created_at || 0) * 1000;
-              return eventAge <= maxAge;
-            })
-            .slice(0, eventsPerUser); // Limit to eventsPerUser per user
-          
-          if (recentEvents.length > 0) {
-            userEventsMap.set(pubkey, recentEvents);
-          }
-        }
+        const events = await this.sharedRelayEx.getMany(pubkey, { authors: [pubkey], kinds: [kinds.ShortTextNote], limit: eventsPerUser, since: sevenDaysAgo }, { timeout: 2500 });
+        userEventsMap.set(pubkey, events);
       } catch (error) {
         this.logger.error(`Error fetching events for user ${pubkey}:`, error);
       }
     }
-    
+
     // Aggregate and sort events
     const aggregatedEvents = this.aggregateAndSortEvents(userEventsMap);
-    
+
     // Update feed data with aggregated events
     feedData.events.set(aggregatedEvents);
-    
+
     // Update last timestamp for pagination
     if (aggregatedEvents.length > 0) {
       feedData.lastTimestamp = Math.min(...aggregatedEvents.map(e => (e.created_at || 0) * 1000));
@@ -435,7 +424,7 @@ export class FeedService {
   private aggregateAndSortEvents(userEventsMap: Map<string, Event[]>): Event[] {
     const result: Event[] = [];
     const usedUsers = new Set<string>();
-    
+
     // First pass: Include one recent event from each user
     for (const [pubkey, events] of userEventsMap) {
       if (events.length > 0) {
@@ -443,14 +432,14 @@ export class FeedService {
         usedUsers.add(pubkey);
       }
     }
-    
+
     // Second pass: Fill remaining slots with other events, maintaining diversity
     for (const [pubkey, events] of userEventsMap) {
       for (let i = 1; i < events.length; i++) {
         result.push(events[i]);
       }
     }
-    
+
     // Sort by creation time (newest first)
     return result.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
   }
@@ -463,15 +452,15 @@ export class FeedService {
     if (!feedData || !feedData.column.source || feedData.column.source !== 'following') {
       return;
     }
-    
+
     try {
       // Get top engaged users again (they might have changed)
       const topEngagedUsers = await this.algorithms.getRecommendedUsers(10);
       const topPubkeys = topEngagedUsers.map(user => user.pubkey);
-      
+
       // Fetch older events using the lastTimestamp
       await this.fetchOlderEventsFromUsers(topPubkeys, feedData);
-      
+
     } catch (error) {
       this.logger.error('Error loading more events:', error);
     }
@@ -484,19 +473,19 @@ export class FeedService {
     const eventsPerUser = 5;
     const maxAge = 30 * 24 * 60 * 60 * 1000; // 30 days for older content
     const until = Math.floor((feedData.lastTimestamp || Date.now()) / 1000); // Convert to seconds
-    
+
     const userEventsMap = new Map<string, Event[]>();
-    
+
     for (const pubkey of pubkeys) {
       try {
         await this.userRelayEx.setUser(pubkey);
-        
+
         // Fetch events older than the last timestamp
         const events = await this.userRelayEx.getEventsByPubkeyAndKind(
-          pubkey, 
+          pubkey,
           kinds.ShortTextNote
         );
-        
+
         if (events.length > 0) {
           // Filter events to exclude already loaded ones and ensure they're not too old
           const olderEvents = events
@@ -506,7 +495,7 @@ export class FeedService {
               return eventTime < (feedData.lastTimestamp || Date.now()) && eventAge <= maxAge;
             })
             .slice(0, eventsPerUser);
-          
+
           if (olderEvents.length > 0) {
             userEventsMap.set(pubkey, olderEvents);
           }
@@ -515,14 +504,14 @@ export class FeedService {
         this.logger.error(`Error fetching older events for user ${pubkey}:`, error);
       }
     }
-    
+
     // Aggregate and sort older events
     const olderEvents = this.aggregateAndSortEvents(userEventsMap);
-    
+
     // Append to existing events
     if (olderEvents.length > 0) {
       feedData.events.update(currentEvents => [...currentEvents, ...olderEvents]);
-      
+
       // Update last timestamp
       feedData.lastTimestamp = Math.min(...olderEvents.map(e => (e.created_at || 0) * 1000));
     }
@@ -619,7 +608,7 @@ export class FeedService {
   getColumnInfo(columnId: string): { column: ColumnConfig, isFollowing: boolean, lastTimestamp?: number } | undefined {
     const feedData = this.data.get(columnId);
     if (!feedData) return undefined;
-    
+
     return {
       column: feedData.column,
       isFollowing: feedData.column.source === 'following',
