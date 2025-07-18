@@ -263,6 +263,7 @@
     border-radius: 8px;
     overflow: hidden;
     box-sizing: border-box;
+    max-width: 100%; // Prevent container from exceeding parent width
 
     :hover {
       background-color: var(--mat-sys-secondary-container);
@@ -272,48 +273,56 @@
       padding: 16px;
       flex-direction: row;
       align-items: flex-start;
+      min-width: 0; // Allow flex item to shrink below its content size
     }
     
     .user-profile-avatar {
       width: 40px;
       height: 40px;
       margin-bottom: 8px;
+      flex-shrink: 0; // Prevent avatar from shrinking
     }
     
     .user-profile-content {
-      margin-left: 0;
+      margin-left: 12px; // Add some spacing from avatar
+      min-width: 0; // Allow content to shrink and wrap
+      flex: 1; // Take up remaining space
+      overflow-wrap: break-word; // Break long words
+      word-wrap: break-word; // Legacy support
+      -webkit-hyphens: auto; // Safari support
+      hyphens: auto; // Add hyphenation for better breaking
     }
-  }
 
-  &.tiles {
-    width: 280px; // Fixed width to match parent container
-    flex-shrink: 0;
+    // Override text styles for details view to handle overflow
+    .user-profile-name {
+      white-space: normal; // Allow wrapping instead of nowrap
+      overflow: visible; // Don't hide overflowing text
+      text-overflow: unset; // Don't use ellipsis, wrap instead
+      word-break: break-word; // Break long words
+      line-height: 1.3; // Improve readability for wrapped text
+    }
 
-    box-shadow: var(--mat-sys-level1);
-    border-radius: 8px;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    
-    .user-profile-container {
-      flex-direction: column;
-      height: 100%;
-      padding: 0;
+    .user-profile-npub {
+      white-space: normal; // Allow wrapping instead of nowrap
+      overflow: visible; // Don't hide overflowing text
+      text-overflow: unset; // Don't use ellipsis, wrap instead
+      word-break: break-all; // Break anywhere for long strings like npub
+      font-family: 'Courier New', monospace; // Use monospace for better readability of codes
+      font-size: 12px; // Slightly smaller for long strings
+      line-height: 1.4; // Better spacing for wrapped monospace text
     }
-    
-    .user-profile-avatar {
-      width: 100%;
-      height: 0;
-      padding-bottom: 100%; // Creates a square aspect ratio
-      border-radius: 0;
-      border: none;
+
+    .user-profile-about {
+      word-break: break-word; // Break long words
+      overflow-wrap: break-word; // Modern browsers
+      white-space: pre-wrap; // Preserve line breaks but allow wrapping
+      max-width: 100%; // Ensure it doesn't exceed container
     }
-    
-    .user-profile-content {
-      margin: 8px;
-      text-align: center;
-      margin-left: 0;
+
+    .user-profile-details {
+      word-break: break-word; // Break long words in details
+      overflow-wrap: break-word; // Modern browsers
+      margin-top: 4px; // Add some spacing between detail lines
     }
   }
 

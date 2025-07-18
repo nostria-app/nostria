@@ -301,7 +301,6 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
             case 'small':
                 return 48;
             case 'details':
-            case 'tiles':
                 return 40;
             case 'grid':
                 return 36;
@@ -324,7 +323,6 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
             case 'small':
                 return '48px';
             case 'details':
-            case 'tiles':
                 return '40px';
             case 'grid':
                 return '36px';

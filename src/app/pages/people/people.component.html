@@ -22,9 +22,6 @@
           <mat-button-toggle value="details" (click)="changeViewMode('details')" matTooltip="Details">
             <mat-icon>view_list</mat-icon>
           </mat-button-toggle>
-          <mat-button-toggle value="tiles" (click)="changeViewMode('tiles')" matTooltip="Tiles">
-            <mat-icon>dashboard</mat-icon>
-          </mat-button-toggle>
         </mat-button-toggle-group>
       </div>
 
@@ -143,19 +140,19 @@
     <cdk-virtual-scroll-viewport class="virtual-scroll-viewport" [itemSize]="itemSize()" [minBufferPx]="minBufferPx"
       [maxBufferPx]="maxBufferPx">
 
-        <!-- Apply different container classes based on viewMode() -->
-        <div class="people-container" [ngClass]="{
+      <!-- Apply different container classes based on viewMode() -->
+      <div class="people-container" [ngClass]="{
         'large-grid': viewMode() === 'large' || viewMode() === 'grid',
         'medium-grid': viewMode() === 'medium',
         'small-grid': viewMode() === 'small',
-        'details-list': viewMode() === 'details' || viewMode() === 'list',
-        'tiles-container': viewMode() === 'tiles'      }">
-          @for (pubkey of sortedPeople(); track pubkey) {
-          <!-- {{ userInfoCache().get(pubkey) | json }} -->
-          <app-user-profile [info]="userInfoCache().get(pubkey)" [pubkey]="pubkey" [view]="viewMode()"
-            [passthrough]="true" (click)="viewProfile(pubkey)"></app-user-profile>
-          }
-        </div>
+        'details-list': viewMode() === 'details' || viewMode() === 'list',}">
+
+        @for (pubkey of sortedPeople(); track pubkey) {
+        <!-- {{ userInfoCache().get(pubkey) | json }} -->
+        <app-user-profile [info]="userInfoCache().get(pubkey)" [pubkey]="pubkey" [view]="viewMode()"
+          [passthrough]="true" (click)="viewProfile(pubkey)"></app-user-profile>
+        }
+      </div>
 
     </cdk-virtual-scroll-viewport>
     }

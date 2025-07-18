@@ -173,7 +173,6 @@ export class PeopleComponent {
       case 'medium': return 150;
       case 'small': return 100;
       case 'details': return 72;
-      case 'tiles': return 150;
       default: return 150;
     }
   });
