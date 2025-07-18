@@ -10,7 +10,7 @@ Nostria is accessible as both web app and desktop app.
 
 Web: https://nostria.app
 
-Desktop: https://github.com/sondreb/nostria/releases
+Desktop: https://github.com/nostria-app/nostria/releases
 
 ## Documentation
 
