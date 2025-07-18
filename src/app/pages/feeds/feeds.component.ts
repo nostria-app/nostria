@@ -103,6 +103,17 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
     const isMobile = this.screenWidth() < 1024;
     return isMobile;
   });
+
+  feedIcon = computed(() => {
+    const activeFeed = this.activeFeed();
+    return activeFeed ? activeFeed.icon : '';
+  });
+
+  feedLabel = computed(() => {
+    const activeFeed = this.activeFeed();
+    return activeFeed ? activeFeed.label : '';
+  });
+
   // Content Signals
   trendingEvents = signal<NostrRecord[]>([]);
   followingEvents = signal<NostrRecord[]>([]);
@@ -155,7 +166,7 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
     const columns = this.columns();
     const isDragging = this.isDragging();
     const eventsMap = new Map<string, Event[]>();
-    
+
     // Get reactive feed data map from service
     const feedDataMap = this.feedService.feedDataReactive();
 
@@ -205,10 +216,13 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
 
   // Computed signals for scroll indicators
   canScrollLeft = computed(() => this.scrollPosition() > 0);
+
   canScrollRight = computed(() => {
     const maxScroll = this.maxScroll();
     return maxScroll > 0 && this.scrollPosition() < maxScroll;
-  });  // Computed signal to track which columns are paused (no active subscription)
+  });
+
+  // Computed signal to track which columns are paused (no active subscription)
   pausedColumns = computed(() => {
     const columns = this.columns();
     const feedDataMap = this.feedService.feedDataReactive(); // Use reactive signal instead of regular Map
@@ -734,7 +748,7 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
     console.log('▶️ Continue column:', column.label, `(${column.id})`);
     console.log('📊 Column status before continue:', this.getColumnStatus(column.id));
     this.feedsCollectionService.continueColumn(column.id);
-    this.notificationService.notify(`Column "${column.label}" continued`);    console.log('📊 Column status after continue:', this.getColumnStatus(column.id));
+    this.notificationService.notify(`Column "${column.label}" continued`); console.log('📊 Column status after continue:', this.getColumnStatus(column.id));
   }
 
   // Video expansion state management methods
@@ -1127,7 +1141,7 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
       // Extra if the track.url is YouTube, video or music.
       if (track.url.includes('youtube.com') || track.url.includes('youtu.be')) {
         type = 'YouTube';
-      }      const mediaItem: MediaItem = {
+      } const mediaItem: MediaItem = {
         title: track.title || `Track ${index + 1}`,
         artist: track.artist || 'Unknown Artist',
         source: track.url,
@@ -1153,7 +1167,7 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
         source: track.url,
         artwork: '',
         type: 'Video'
-      };      this.mediaPlayerService.enque(mediaItem);
+      }; this.mediaPlayerService.enque(mediaItem);
     });
   }
 }
