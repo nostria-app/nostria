@@ -153,16 +153,27 @@ export class ProfileComponent {
             if (username) {
               this.url.updatePathSilently(['/u', username]);
             } else {
-              username = await this.username.getUsername(id);
+              // username = await this.username.getUsername(id);
+              const identifier: string = id;
+              this.username.getUsername(id).then((username) => {
+                if (username) {
+                  this.url.updatePathSilently(['/u', username]);
+                }
+                else {
+                  // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.
+                  const encoded = nip19.npubEncode(identifier);
+                  this.url.updatePathSilently(['/p', identifier]);
+                }
+              });
 
-              if (username) {
-                this.url.updatePathSilently(['/u', username]);
-              }
-              else {
-                // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.
-                const encoded = nip19.npubEncode(id);
-                this.url.updatePathSilently(['/p', id]);
-              }
+              // if (username) {
+              //   this.url.updatePathSilently(['/u', username]);
+              // }
+              // else {
+              //   // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.
+              //   const encoded = nip19.npubEncode(id);
+              //   this.url.updatePathSilently(['/p', id]);
+              // }
             }
           } else {
             if (!username) {
