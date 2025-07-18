@@ -56,7 +56,7 @@
                 </app-badge>
                 }
 
-                @if (received()?.length === 0) {
+                @if (received().length === 0) {
                 <div class="no-badges-message">
                     <mat-icon>emoji_events</mat-icon>
                     <p>You haven't received any badges yet</p>
@@ -99,7 +99,7 @@
                 <app-badge [badge]="badge" (click)="viewBadgeDetails(badge)"></app-badge>
                 }
 
-                @if (createdDefinitions()?.length === 0) {
+                @if (createdDefinitions().length === 0) {
                 <div class="no-badges-message">
                     <mat-icon>sentiment_very_dissatisfied</mat-icon>
                     <p>You haven't created any badges yet</p>

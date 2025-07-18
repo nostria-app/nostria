@@ -31,7 +31,6 @@ import { MatBottomSheet, MatBottomSheetModule } from '@angular/material/bottom-s
 import { CreateOptionsSheetComponent } from './components/create-options-sheet/create-options-sheet.component';
 import { LoginDialogComponent } from './components/login-dialog/login-dialog.component';
 import { WelcomeComponent } from './components/welcome/welcome.component';
-import { DebugOverlayComponent } from './components/debug-overlay/debug-overlay.component';
 import { SearchService } from './services/search.service';
 import { MediaPlayerComponent } from './components/media-player/media-player.component';
 import { MediaPlayerService } from './services/media-player.service';
@@ -78,7 +77,6 @@ interface NavItem {
     MatFormFieldModule,
     NPubPipe, MatBadgeModule, MatBottomSheetModule,
     WelcomeComponent,
-    DebugOverlayComponent,
     MediaPlayerComponent,
     SearchResultsComponent,
     NavigationComponent,

@@ -1,10 +1,8 @@
 import { Injectable, PLATFORM_ID, inject, signal } from '@angular/core';
-import { LocalStorageService } from './local-storage.service';
 import { isPlatformBrowser } from '@angular/common';
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'none';
 export type FeatureLevel = 'stable' | 'beta' | 'preview';
-
 
 @Injectable({
   providedIn: 'root'
@@ -28,15 +26,12 @@ export class LoggerService {
   // logLevel = signal<LogLevel>(this.getStoredLogLevel());
   logLevel: LogLevel = 'info';
   logOverlay = false;
-  // logOverlay = signal<boolean>(this.getStoredLogOverlay());
-
   lastDebug = '';
   lastInfo = '';
   lastWarn = '';
 
   constructor() {
     this.logLevel = this.getStoredLogLevel();
-    this.logOverlay = this.getStoredLogOverlay();
     console.log(`LoggerService initialized with log level: ${this.logLevel}`);
   }
 
@@ -47,25 +42,11 @@ export class LoggerService {
     return storedLevel || 'info'; // Default to info level
   }
 
-  private getStoredLogOverlay(): boolean {
-    if (!this.isBrowser()) return false;
-
-    const storedLevel = localStorage.getItem(this.LOG_OVERLAY_KEY) as boolean | null;
-    return storedLevel || false;
-  }
-
   setLogLevel(level: LogLevel): void {
     if (!this.isBrowser()) return; // Return if not in browser context
 
     this.logLevel = level;
     localStorage.setItem(this.LOG_LEVEL_KEY, level);
-  }
-
-  setLogOverlay(enable: boolean): void {
-    if (!this.isBrowser()) return; // Return if not in browser context
-
-    this.logOverlay = enable;
-    localStorage.setItem(this.LOG_OVERLAY_KEY, enable.toString());
   }
 
   private shouldLog(level: LogLevel): boolean {
@@ -85,30 +66,18 @@ export class LoggerService {
   debug(message: any, ...optionalParams: any[]): void {
     if (this.shouldLog('debug')) {
       console.debug(...this.formatMessage('debug', message, ...optionalParams));
-
-      if (this.logOverlay) {
-        this.lastDebug = message;
-      }
     }
   }
 
   info(message: any, ...optionalParams: any[]): void {
     if (this.shouldLog('info')) {
       console.info(...this.formatMessage('info', message, ...optionalParams));
-
-      if (this.logOverlay) {
-        this.lastInfo = message;
-      }
     }
   }
 
   warn(message: any, ...optionalParams: any[]): void {
     if (this.shouldLog('warn')) {
       console.warn(...this.formatMessage('warn', message, ...optionalParams));
-
-      if (this.logOverlay) {
-        this.lastWarn = message;
-      }
     }
   }
 

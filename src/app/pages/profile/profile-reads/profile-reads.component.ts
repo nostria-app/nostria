@@ -9,7 +9,6 @@ import { MatCardModule } from '@angular/material/card';
 import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { BookmarkService } from '../../../services/bookmark.service';
-import { AgoPipe } from '../../../pipes/ago.pipe';
 import { MatButtonModule } from '@angular/material/button';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { TagsPipe } from '../../../pipes/tags';
@@ -24,7 +23,6 @@ import { TagsPipe } from '../../../pipes/tags';
     UserProfileComponent,
     RouterModule,
     MatTooltipModule,
-    AgoPipe,
     MatButtonModule,
     TagsPipe
   ],
