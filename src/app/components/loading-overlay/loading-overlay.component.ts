@@ -34,9 +34,6 @@ export class LoadingOverlayComponent implements OnInit, OnDestroy {
   logMessages = computed(() => this.currentLogMessages());
   
   ngOnInit(): void {
-    // Enable log overlay in the logger service
-    this.loggerService.setLogOverlay(true);
-    
     // Poll for new log messages every 100ms
     this.logCheckInterval = window.setInterval(() => {
       this.updateLogMessages();
@@ -47,8 +44,6 @@ export class LoadingOverlayComponent implements OnInit, OnDestroy {
     if (this.logCheckInterval) {
       clearInterval(this.logCheckInterval);
     }
-    // Optionally disable log overlay when component is destroyed
-    // this.loggerService.setLogOverlay(false);
   }
   
   private updateLogMessages(): void {

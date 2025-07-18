@@ -90,8 +90,10 @@
           <mat-spinner diameter="20"></mat-spinner>
           <span>Discovering relays...</span>
           } @else {
-          <mat-icon>wifi_find</mat-icon>
-          <span>Discover relays</span>
+          <ng-container>
+            <mat-icon>wifi_find</mat-icon>
+            <span>Discover relays</span>
+          </ng-container>
           }
         </button>
       </div>

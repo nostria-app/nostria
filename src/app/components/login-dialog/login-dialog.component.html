@@ -253,8 +253,10 @@
             <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
             <span>Connecting...</span>
           } @else {
-            <mat-icon>phone_iphone</mat-icon>
-            <span>Connect</span>
+            <ng-container>
+              <mat-icon>phone_iphone</mat-icon>
+              <span>Connect</span>
+            </ng-container>
           }
         </button>
       </div>
