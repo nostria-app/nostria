@@ -5,6 +5,22 @@
       <div class="feed-selector">
         <div class="feed-tabs">
 
+
+
+          @if (isMobileView()) {
+          <button mat-stroked-button [matMenuTriggerFor]="menu"><mat-icon>{{ feedIcon() }}</mat-icon>{{ feedLabel()
+            }}</button>
+
+          <mat-menu #menu="matMenu">
+            @for (feed of feeds(); track feed.id) {
+            <button mat-menu-item (click)="selectFeed(feed.id)">
+              <mat-icon>{{ feed.icon }}</mat-icon>
+              <span>{{ feed.label }}</span>
+            </button>
+            }
+
+          </mat-menu>
+          } @else {
           <button mat-icon-button (click)="addNewFeed()" matTooltip="Add feed">
             <mat-icon>add</mat-icon>
           </button>
@@ -15,6 +31,7 @@
             <mat-icon>{{ feed.icon }}</mat-icon>
             <span>{{ feed.label }}</span>
           </button>
+          }
           }
         </div>
 
@@ -225,7 +242,7 @@
                   @if (event.content) {
                   <p class="photo-description">{{ removeHashtagsFromContent(event.content) }}</p>
                   }
-                  }                  <!-- Videos (NIP-71, kind 21/22) -->
+                  } <!-- Videos (NIP-71, kind 21/22) -->
                   @else if (event.kind === 21 || event.kind === 22 || columnData.column.type === 'videos') {
                   @if (hasContentWarning(event)) {
                   <div class="content-warning">
@@ -247,18 +264,19 @@
                       <img [src]="generateBlurhashDataUrl(videoData.blurhash, 400, 225)" class="video-thumbnail"
                         [alt]="getEventAlt(event)">
                       } @else if (videoData.thumbnail) {
-                      <img [src]="videoData.thumbnail" class="video-thumbnail" [alt]="getEventAlt(event)" loading="lazy">
+                      <img [src]="videoData.thumbnail" class="video-thumbnail" [alt]="getEventAlt(event)"
+                        loading="lazy">
                       } @else {
                       <div class="video-thumbnail-placeholder">
                         <mat-icon class="video-placeholder-icon">play_circle_outline</mat-icon>
                       </div>
                       }
-                      
+
                       <!-- Play button overlay -->
                       <div class="video-play-overlay">
                         <mat-icon class="play-button">play_circle_filled</mat-icon>
                       </div>
-                      
+
                       @if (videoData.duration) {
                       <div class="video-duration">{{ formatDuration(videoData.duration) }}</div>
                       }
@@ -271,7 +289,7 @@
                         <source [src]="videoData.url" type="video/mp4">
                         Your browser does not support the video tag.
                       </video>
-                      <button mat-icon-button class="collapse-video-btn" (click)="collapseVideo(videoExpandedKey)" 
+                      <button mat-icon-button class="collapse-video-btn" (click)="collapseVideo(videoExpandedKey)"
                         matTooltip="Show thumbnail">
                         <mat-icon>picture_in_picture_alt</mat-icon>
                       </button>
@@ -430,7 +448,7 @@
         </div>
       </div>
       }
-      
+
       <!-- Zero state when no columns are available but feeds exist -->
       @else if (columns().length === 0) {
       <div class="empty-columns-state">
