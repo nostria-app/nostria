@@ -22,13 +22,13 @@
 
 
                 @if (isOwnProfile()) {
-                <button mat-flat-button color="primary" routerLink="edit">
+                <button mat-flat-button routerLink="edit">
                     <mat-icon>edit</mat-icon> Edit Profile
                 </button>
                 } @else {
 
                 @if(!isFollowing()) {
-                <button mat-flat-button color="primary" (click)="followUser()">
+                <button mat-flat-button (click)="followUser()">
                     <mat-icon>person_add</mat-icon> Follow
                 </button>
                 } @else {
@@ -37,7 +37,7 @@
                 </button> -->
                 }
 
-                <button class="hide-small" mat-stroked-button color="primary" (click)="layoutService.openSendMessage(currentPubkey())">
+                <button mat-stroked-button (click)="layoutService.openSendMessage(currentPubkey())">
                     <mat-icon>message</mat-icon> Message
                 </button>
                 }
@@ -51,7 +51,7 @@
             <h1 class="profile-name">
                 {{ name() }}
                 @if (isFavorite()) {
-                    <mat-icon class="favorite-indicator" matTooltip="Favorite User">star</mat-icon>
+                <mat-icon class="favorite-indicator" matTooltip="Favorite User">star</mat-icon>
                 }
             </h1>
 
@@ -159,6 +159,11 @@
                     <span>Edit Profile</span>
                 </button>
                 }
+
+                <button mat-menu-item (click)="layoutService.openSendMessage(currentPubkey())">
+                    <mat-icon>message</mat-icon>
+                    <span>Message</span>
+                </button>
 
                 <button mat-menu-item [matMenuTriggerFor]="copyMenu">
                     <mat-icon>content_copy</mat-icon>
