@@ -66,17 +66,58 @@ export class Algorithms {
    */
   async getRecommendedUsers(limit: number = 10): Promise<UserMetric[]> {
     const allMetrics = await this.metrics.getMetrics();
+    const favorites = this.getFavorites();
     
-    // Filter users with meaningful engagement
-    const engagedUsers = allMetrics.filter(metric => 
-      (metric.engagementScore || 0) > 10 && // Minimum engagement threshold
-      metric.viewed > 5 && // Viewed multiple times
-      metric.lastInteraction > Date.now() - (30 * 24 * 60 * 60 * 1000) // Active in last 30 days
-    );
+    // Filter users with meaningful engagement OR are favorites
+    const candidateUsers = allMetrics.filter(metric => {
+      const isFavorite = favorites.includes(metric.pubkey);
+      const hasEngagement = (metric.engagementScore || 0) > 10 && 
+                           metric.viewed > 5 && 
+                           metric.lastInteraction > Date.now() - (30 * 24 * 60 * 60 * 1000);
+      
+      return hasEngagement || isFavorite;
+    });
     
-    // Sort by engagement score
-    return engagedUsers
-      .sort((a, b) => (b.engagementScore || 0) - (a.engagementScore || 0))
+    // Add favorites that don't have metrics yet
+    const metricsPublicKeys = new Set(allMetrics.map(m => m.pubkey));
+    const favoritesWithoutMetrics = favorites.filter(pubkey => !metricsPublicKeys.has(pubkey));
+    
+    // Create minimal metrics for favorites without data
+    const favoriteMetrics: UserMetric[] = favoritesWithoutMetrics.map(pubkey => ({
+      pubkey,
+      viewed: 0,
+      profileClicks: 0,
+      liked: 0,
+      read: 0,
+      replied: 0,
+      reposted: 0,
+      quoted: 0,
+      messaged: 0,
+      mentioned: 0,
+      timeSpent: 0,
+      lastInteraction: Date.now(),
+      firstInteraction: Date.now(),
+      updated: Date.now(),
+      engagementScore: 1 // Very small positive score for favorites without metrics
+    }));
+    
+    // Combine all candidates
+    const allCandidates = [...candidateUsers, ...favoriteMetrics];
+    
+    // Calculate final score with favorite boost
+    const scoredUsers = allCandidates.map(metric => {
+      const baseScore = metric.engagementScore || 0;
+      const favoriteBoost = favorites.includes(metric.pubkey) ? 2 : 0; // Small boost for favorites
+      
+      return {
+        ...metric,
+        finalScore: baseScore + favoriteBoost
+      };
+    });
+    
+    // Sort by final score and return
+    return scoredUsers
+      .sort((a, b) => b.finalScore - a.finalScore)
       .slice(0, limit);
   }
 
