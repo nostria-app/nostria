@@ -143,7 +143,6 @@
     <cdk-virtual-scroll-viewport class="virtual-scroll-viewport" [itemSize]="itemSize()" [minBufferPx]="minBufferPx"
       [maxBufferPx]="maxBufferPx">
 
-      <div class="margin">
         <!-- Apply different container classes based on viewMode() -->
         <div class="people-container" [ngClass]="{
         'large-grid': viewMode() === 'large' || viewMode() === 'grid',
@@ -157,7 +156,6 @@
             [passthrough]="true" (click)="viewProfile(pubkey)"></app-user-profile>
           }
         </div>
-      </div>
 
     </cdk-virtual-scroll-viewport>
     }

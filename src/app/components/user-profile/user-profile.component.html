@@ -38,7 +38,8 @@
       } @else if (profile()?.data?.picture && !imageLoadError()) {
 
       @if(settingsService.settings().imageCacheEnabled) {
-      <img [src]="'https://proxy.eu.nostria.app/api/ImageOptimizeProxy?w=250&h=250&url=' + profile().data.picture" (error)="onImageLoadError($event)" alt="User Avatar" class="user-avatar" />
+      <img [src]="'https://proxy.eu.nostria.app/api/ImageOptimizeProxy?w=250&h=250&url=' + profile().data.picture"
+        (error)="onImageLoadError($event)" alt="User Avatar" class="user-avatar" />
       } @else {
       <img [src]="profile().data.picture" (error)="onImageLoadError($event)" alt="User Avatar" class="user-avatar" />
       }
@@ -78,10 +79,21 @@
 
       <!-- About section - only shown in details view -->
       @if (view() === 'details' && profile() && profile().data && profile().data.about) {
-      <p class="user-profile-about">{{ profile().data.about }}</p>
+      <div class="user-profile-about">{{ profile().data.about }}</div>
+      }
+
+      @if (view() === 'details' && profile() && profile().data) {
+      @if (profile().data.nip05) {
+      <div class="user-profile-details">NIP-05: {{ profile().data.nip05 }}</div>
+      }
+      @if (profile().data.lud16) {
+      <div class="user-profile-details">LUD16: {{ profile().data.lud16 }}</div>
+      }
+      @if (profile().data.website) {
+      <div class="user-profile-details">Website: {{ profile().data.website }}</div>
+      }
       }
     </div>
-
     }
 
     <!-- Named content projection for additional controls (like more options button) -->
