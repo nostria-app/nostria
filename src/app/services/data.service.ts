@@ -33,6 +33,19 @@ export class DataService {
     private readonly cache = inject(Cache);
     private readonly relaysService = inject(RelaysService);
 
+    // Map to track pending profile requests to prevent race conditions
+    private pendingProfileRequests = new Map<string, Promise<NostrRecord | undefined>>();
+
+    // Clean up old pending requests periodically
+    constructor() {
+        // Clean up any stale pending requests every 30 seconds
+        setInterval(() => {
+            if (this.pendingProfileRequests.size > 100) {
+                this.logger.warn(`Large number of pending profile requests: ${this.pendingProfileRequests.size}. Consider investigating.`);
+            }
+        }, 30000);
+    }
+
     toRecord(event: Event) {
         return this.utilities.toRecord(event);
     }
@@ -159,17 +172,43 @@ export class DataService {
 
     async getProfile(pubkey: string, refresh: boolean = false): Promise<NostrRecord | undefined> {
         const cacheKey = `metadata-${pubkey}`;
-        let metadata: Event | null = null;
-        let record: NostrRecord | undefined = undefined;
+        
+        // Check if there's already a pending request for this pubkey
+        if (this.pendingProfileRequests.has(pubkey)) {
+            this.logger.debug(`Returning existing pending request for profile: ${pubkey}`);
+            return this.pendingProfileRequests.get(pubkey);
+        }
 
+        // Check cache first
         if (this.cache.has(cacheKey)) {
-            record = this.cache.get<NostrRecord>(cacheKey);
-
+            const record = this.cache.get<NostrRecord>(cacheKey);
             if (record) {
+                // If refresh is requested, trigger background update
+                if (refresh) {
+                    this.refreshProfileInBackground(pubkey, cacheKey);
+                }
                 return record;
             }
         }
 
+        // Create and store the promise to prevent race conditions
+        const profilePromise = this.loadProfile(pubkey, cacheKey, refresh);
+        this.pendingProfileRequests.set(pubkey, profilePromise);
+
+        try {
+            const result = await profilePromise;
+            return result;
+        } finally {
+            // Always clean up the pending request
+            this.pendingProfileRequests.delete(pubkey);
+        }
+    }
+
+    private async loadProfile(pubkey: string, cacheKey: string, refresh: boolean): Promise<NostrRecord | undefined> {
+        let metadata: Event | null = null;
+        let record: NostrRecord | undefined = undefined;
+
+        // Try storage first
         metadata = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Metadata);
 
         if (metadata) {
@@ -188,9 +227,18 @@ export class DataService {
             }
         }
 
+        // Handle background refresh if requested
         if (refresh) {
-            // If refresh is true, we will refresh it in the background.
-            queueMicrotask(async () => {
+            this.refreshProfileInBackground(pubkey, cacheKey);
+        }
+
+        return record;
+    }
+
+    private refreshProfileInBackground(pubkey: string, cacheKey: string): void {
+        // If refresh is true, we will refresh it in the background.
+        queueMicrotask(async () => {
+            try {
                 let fresh = await this.sharedRelayEx.get(pubkey, { authors: [pubkey], kinds: [kinds.Metadata] });
 
                 if (fresh) {
@@ -198,14 +246,10 @@ export class DataService {
                     this.cache.set(cacheKey, freshRecord);
                     await this.storage.saveEvent(fresh);
                 }
-            });
-        }
-
-        if (!metadata) {
-            return undefined;
-        }
-
-        return record;
+            } catch (error) {
+                this.logger.warn(`Failed to refresh profile in background for ${pubkey}:`, error);
+            }
+        });
     }
 
     /** Will read event from local database, if available, or get from relay, and then save to database. */

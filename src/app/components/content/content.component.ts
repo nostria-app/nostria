@@ -1,4 +1,4 @@
-import { Component, Input, ViewChild, ElementRef, AfterViewInit, OnDestroy, computed, effect, inject, signal } from '@angular/core';
+import { Component, Input, ViewChild, ElementRef, AfterViewInit, OnDestroy, computed, effect, inject, signal, untracked } from '@angular/core';
 
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -62,6 +62,13 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
   private _cachedTokens = signal<ContentToken[]>([]);
   private _lastParsedContent = '';
 
+  // Debouncing for content parsing
+  private parseDebounceTimer?: number;
+  private readonly PARSE_DEBOUNCE_TIME = 100; // milliseconds
+
+  // Track if parsing is in progress to prevent overlapping operations
+  private _isParsing = signal<boolean>(false);
+
   // Processed content tokens - returns cached or empty based on visibility
   contentTokens = computed<ContentToken[]>(() => {
     const shouldRender = this._isVisible() || this._hasBeenVisible();
@@ -75,9 +82,16 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
   });
 
   // Social previews for URLs
-  socialPreviews = signal<SocialPreview[]>([]); @Input() set content(value: string) {
+  socialPreviews = signal<SocialPreview[]>([]); 
+  
+  @Input() set content(value: string) {
     const newContent = value || '';
-    this._content.set(newContent);
+    const currentContent = this._content();
+    
+    // Only update if content actually changed
+    if (newContent !== currentContent) {
+      this._content.set(newContent);
+    }
   }
 
   get content() : string {
@@ -86,19 +100,17 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
 
   constructor() {
     // Effect to parse content when it changes and component is visible
-    effect(async () => {
+    effect(() => {
       const shouldRender = this._isVisible() || this._hasBeenVisible();
       const currentContent = this._content() as string;
 
-      if (!shouldRender) {
+      if (!shouldRender || this._isParsing()) {
         return;
       }
 
       // Only reparse if content has actually changed
       if (currentContent !== this._lastParsedContent) {
-        const newTokens = await this.parseContent(currentContent);
-        this._cachedTokens.set(newTokens);
-        this._lastParsedContent = currentContent;
+        this.debouncedParseContent(currentContent);
       }
     });
 
@@ -126,9 +138,45 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
       this.intersectionObserver = null;
     }
 
+    // Clear debounce timer
+    if (this.parseDebounceTimer) {
+      window.clearTimeout(this.parseDebounceTimer);
+    }
+
     // Clean up cached state
     this._cachedTokens.set([]);
     this._lastParsedContent = '';
+
+    // Clear parsing service cache for this content
+    this.parsing.clearNostrUriCache();
+  }
+
+  /**
+   * Debounced content parsing to prevent rapid re-parsing
+   */
+  private debouncedParseContent(content: string): void {
+    // Clear any existing timer
+    if (this.parseDebounceTimer) {
+      window.clearTimeout(this.parseDebounceTimer);
+    }
+
+    // Set a new timer
+    this.parseDebounceTimer = window.setTimeout(async () => {
+      try {
+        this._isParsing.set(true);
+        const newTokens = await this.parseContent(content);
+        
+        // Use untracked to prevent triggering effects during token update
+        untracked(() => {
+          this._cachedTokens.set(newTokens);
+          this._lastParsedContent = content;
+        });
+      } catch (error) {
+        console.error('Error parsing content:', error);
+      } finally {
+        this._isParsing.set(false);
+      }
+    }, this.PARSE_DEBOUNCE_TIME);
   }
 
   private setupIntersectionObserver() {
@@ -280,13 +328,42 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
       }
     }
 
-    // Find Nostr URIs (highest priority)
+    // Find Nostr URIs (highest priority) - collect first, then batch process
+    const nostrMatches: { match: RegExpExecArray, index: number, length: number }[] = [];
     while ((match = nostrRegex.exec(processedContent)) !== null) {
-      const nostrData = await this.parsing.parseNostrUri(match[0]);
+      nostrMatches.push({
+        match,
+        index: match.index,
+        length: match[0].length
+      });
+    }
+
+    // Batch process nostr URIs to avoid sequential awaits
+    const nostrDataPromises = nostrMatches.map(async (nostrMatch) => {
+      try {
+        const nostrData = await this.parsing.parseNostrUri(nostrMatch.match[0]);
+        return {
+          ...nostrMatch,
+          nostrData
+        };
+      } catch (error) {
+        console.warn('Error parsing nostr URI:', nostrMatch.match[0], error);
+        return {
+          ...nostrMatch,
+          nostrData: null
+        };
+      }
+    });
+
+    // Wait for all nostr URIs to be processed
+    const processedNostrMatches = await Promise.all(nostrDataPromises);
+
+    // Add valid nostr matches to the matches array
+    for (const { match, index, length, nostrData } of processedNostrMatches) {
       if (nostrData) {
         matches.push({
-          start: match.index,
-          end: match.index + match[0].length,
+          start: index,
+          end: index + length,
           content: match[0],
           type: 'nostr-mention',
           nostrData

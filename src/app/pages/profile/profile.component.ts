@@ -114,12 +114,15 @@ export class ProfileComponent {
     }
 
     // Whenever profile is edited by user, update the user metadata if it matches the current pubkey
-    effect(async () => {
+    effect(() => {
       const profile = this.accountState.profile();
+      const currentPubkey = this.pubkey();
+      const currentUserMetadata = this.userMetadata();
 
-
-      if (profile?.event.pubkey === this.pubkey() && this.userMetadata()?.event.id != profile?.event.id) {
-        this.userMetadata.set(profile);
+      if (profile?.event.pubkey === currentPubkey && currentUserMetadata?.event.id !== profile?.event.id) {
+        untracked(() => {
+          this.userMetadata.set(profile);
+        });
       }
     });
 
@@ -177,22 +180,33 @@ export class ProfileComponent {
             }
           } else {
             if (!username) {
-              username = await this.username.getUsername(id);
+              const identifier: string = id;
+              this.username.getUsername(id).then((username) => {
+                if (username) {
+                  this.url.updatePathSilently(['/u', username]);
+                }
+                else {
+                  // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.
+                  const encoded = nip19.npubEncode(identifier);
+                  this.url.updatePathSilently(['/p', identifier]);
+                }
+              });
 
-              if (username) {
-                this.url.updatePathSilently(['/u', username]);
-              }
-              else {
-                // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.
-                const encoded = nip19.npubEncode(id);
-                this.url.updatePathSilently(['/p', encoded]);
-              }
+              // username = await this.username.getUsername(id);
+
+              // if (username) {
+              //   this.url.updatePathSilently(['/u', username]);
+              // }
+              // else {
+              //   // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.
+              //   const encoded = nip19.npubEncode(id);
+              //   this.url.updatePathSilently(['/p', encoded]);
+              // }
             }
           }
 
           this.profileState.setCurrentProfilePubkey(id);
           this.pubkey.set(id);
-
 
           // Always attempt to load user profile and check if own profile, regardless of relay status
           untracked(async () => {

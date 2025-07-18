@@ -82,20 +82,25 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
             if (pubkey) {
                 // If the pubkey changed, reset the profile data to force reload
                 if (this.publicKey && this.publicKey !== pubkey) {
-                    this.profile.set(null);
-                }
-
-                this.publicKey = this.pubkey();
-                // console.debug('LOCATION 1:', pubkey);
-                const npub = this.utilities.getNpubFromPubkey(pubkey);
-                this.npub.set(npub);
-
-                // Only load profile data when the component is visible and not scrolling
-                if (this.isVisible() && !this.isScrolling() && !this.profile()) {
                     untracked(() => {
-                        this.debouncedLoadProfileData(pubkey);
+                        this.profile.set(null);
+                        this.isLoading.set(false);
+                        this.error.set('');
+                        this.imageLoadError.set(false);
                     });
                 }
+
+                this.publicKey = pubkey;
+                
+                untracked(() => {
+                    const npub = this.utilities.getNpubFromPubkey(pubkey);
+                    this.npub.set(npub);
+
+                    // Only load profile data when the component is visible and not scrolling
+                    if (this.isVisible() && !this.isScrolling() && !this.profile()) {
+                        this.debouncedLoadProfileData(pubkey);
+                    }
+                });
             }
         });
 
@@ -103,15 +108,17 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
             const event = this.event();
 
             if (event) {
-                this.profile.set({
-                    data: JSON.parse(event.content),
-                    event
+                untracked(() => {
+                    this.profile.set({
+                        data: JSON.parse(event.content),
+                        event
+                    });
+
+                    this.publicKey = event.pubkey;
+
+                    const npub = this.utilities.getNpubFromPubkey(event.pubkey);
+                    this.npub.set(npub);
                 });
-
-                this.publicKey = event.pubkey;
-
-                const npub = this.utilities.getNpubFromPubkey(event.pubkey);
-                this.npub.set(npub);
             }
         });
 
@@ -256,36 +263,46 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
         if (this.profile()) {
             this.logger.debug('Profile data already loaded, skipping reload');
             return;
-        };
+        }
+        
+        // Don't start new request if already loading
         if (this.isLoading()) {
             this.logger.debug('Profile data is already loading, skipping reload');
             return;
-        };
+        }
 
         this.isLoading.set(true);
+        this.error.set('');
 
         try {
-            // Note: isLoading is now set earlier when visibility is detected
             this.logger.debug('Loading profile data for:', npubValue);
-
             this.logger.time('Loading profile data in user profile' + npubValue);
             
-            // const data = await this.sharedRelay.get(npubValue, { authors: [npubValue], kinds: [kinds.Metadata] });
             const data = await this.data.getProfile(npubValue);
             this.logger.timeEnd('Loading profile data in user profile' + npubValue);
 
             this.logger.debug('Profile data loaded:', data);
 
-            // Set profile to an empty object if no data was found
-            // This will distinguish between "not loaded yet" and "loaded but empty"
-            this.profile.set(data || { isEmpty: true });
+            // Only update if we're still loading the same pubkey
+            if (this.publicKey === npubValue) {
+                // Set profile to an empty object if no data was found
+                // This will distinguish between "not loaded yet" and "loaded but empty"
+                this.profile.set(data || { isEmpty: true });
+            }
         } catch (error) {
             this.logger.error('Failed to load profile data:', error);
-            this.error.set('Failed to load profile data:' + error);
-            // Set profile to empty object to indicate we tried loading but failed
-            this.profile.set({ isEmpty: true });
+            
+            // Only update error if we're still loading the same pubkey
+            if (this.publicKey === npubValue) {
+                this.error.set('Failed to load profile data: ' + error);
+                // Set profile to empty object to indicate we tried loading but failed
+                this.profile.set({ isEmpty: true });
+            }
         } finally {
-            this.isLoading.set(false);
+            // Only update loading state if we're still loading the same pubkey
+            if (this.publicKey === npubValue) {
+                this.isLoading.set(false);
+            }
         }
     }
 

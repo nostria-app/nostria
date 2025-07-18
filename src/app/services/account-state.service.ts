@@ -132,7 +132,9 @@ export class AccountStateService {
   }
 
   isFollowing = computed(() => {
-
+    // Return a function that checks if a given pubkey is being followed
+    const following = this.followingList();
+    return (pubkey: string) => following.includes(pubkey);
   });
 
   isCurrentUser(pubkey: string): boolean {
