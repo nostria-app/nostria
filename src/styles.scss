@@ -535,16 +535,18 @@ mat-card-content li {
 
 /* Following count styles */
 .following-count {
-  display: inline-flex;
-  align-items: center;
-  cursor: pointer;
-  padding: 4px 12px 4px 0px;
-  border-radius: 16px;
-  transition: background-color 0.2s;
-  font-weight: 500;
+  // display: inline-flex;
+  // align-items: center;
+  // cursor: pointer;
+  font-size: 0.9rem;
+   padding: 4px 12px 4px 0px;
+  // border-radius: 16px;
+  // transition: background-color 0.2s;
+  // font-weight: 500;
 
   &:hover {
-    background-color: rgba(0, 0, 0, 0.05);
+    // background-color: rgba(0, 0, 0, 0.05);
+    text-decoration: underline;
   }
 }
 
