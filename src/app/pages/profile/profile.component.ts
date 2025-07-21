@@ -449,11 +449,6 @@ export class ProfileComponent {
     this.copyToClipboard(this.getCurrentUrl(), 'profile URL');
   }
 
-  async unfollowUser() {
-    this.logger.debug('Unfollow requested for:', this.pubkey());
-    await this.accountState.unfollow(this.pubkey());
-  }
-
   isFollowing = computed(() => {
     const followingList = this.accountState.followingList();
     return followingList.includes(this.pubkey());
@@ -467,14 +462,6 @@ export class ProfileComponent {
   blockUser(): void {
     this.logger.debug('Block requested for:', this.pubkey());
     // TODO: Implement actual block functionality
-  }
-
-  /**
-   * Follows the user
-   */
-  async followUser() {
-    this.logger.debug('Follow requested for:', this.pubkey());
-    await this.accountState.follow(this.pubkey());
   }
 
   /**

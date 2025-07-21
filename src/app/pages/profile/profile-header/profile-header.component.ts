@@ -121,11 +121,6 @@ export class ProfileHeaderComponent {
         this.loadFavorites();
     }
 
-    unfollowUser(): void {
-        this.logger.debug('Unfollow requested for:', this.currentPubkey());
-        // TODO: Implement actual unfollow functionality
-    }
-
     muteUser(): void {
         const pubkey = this.currentPubkey();
         if (pubkey) {
@@ -138,9 +133,17 @@ export class ProfileHeaderComponent {
         // TODO: Implement actual block functionality
     }
 
-    followUser(): void {
-        this.logger.debug('Follow requested for:', this.currentPubkey());
-        // TODO: Implement actual follow functionality
+    /**
+     * Follows the user
+     */
+    async followUser() {
+        this.logger.debug('Follow requested for:', this.pubkey());
+        await this.accountState.follow(this.pubkey());
+    }
+
+    async unfollowUser() {
+        this.logger.debug('Unfollow requested for:', this.pubkey());
+        await this.accountState.unfollow(this.pubkey());
     }
 
     copyProfileData(): void {
