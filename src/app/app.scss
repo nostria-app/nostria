@@ -66,6 +66,11 @@ mat-sidenav-content {
 
 .sidenav {
   width: 250px;
+  
+  // Adjust for mobile navigation
+  @media (min-width: 599px) {
+    z-index: 0 !important;
+  }
 }
 
 .active-link {
