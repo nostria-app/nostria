@@ -32,6 +32,7 @@ export class ApplicationStateService {
     readonly SETTINGS_KEY = 'nostria-settings';
     readonly WALLETS_KEY = 'nostria-wallets';
     readonly SUBSCRIPTIONS_STORAGE_KEY = 'nostria-subscriptions';
+    readonly USERNAMES_STORAGE_KEY = 'nostria-usernames';
 
     showOfflineWarning = computed(() => !this.isOnline() && !this.offlineDismissed());
     // showOfflineWarning = signal(true);
