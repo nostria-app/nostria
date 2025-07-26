@@ -368,7 +368,8 @@ export class FeedService {
         this.logger.warn('No engaged users found, falling back to recent following');
         // Fallback to first 10 users from following list
         const followingList = this.accountState.followingList();
-        const fallbackUsers = followingList.slice(0, 10);
+        // const fallbackUsers = followingList.slice(0, 10);
+        const fallbackUsers = [...followingList].slice(-10).reverse();
         await this.fetchEventsFromUsers(fallbackUsers, feedData);
         return;
       }
