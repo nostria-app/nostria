@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import { Component, inject, signal, computed, ViewChild, ElementRef, AfterViewInit, OnDestroy } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -18,6 +18,8 @@ import { CommonModule } from '@angular/common';
 import { NostrService } from '../../services/nostr.service';
 import { RelayService } from '../../services/relay.service';
 import { MediaService } from '../../services/media.service';
+import { LocalStorageService } from '../../services/local-storage.service';
+import { AccountStateService } from '../../services/account-state.service';
 import { UnsignedEvent } from 'nostr-tools/pure';
 import { ContentComponent } from '../content/content.component';
 import { Router } from '@angular/router';
@@ -35,6 +37,20 @@ export interface NoteEditorDialogData {
     content: string;
   };
   mentions?: string[]; // Array of pubkeys to mention
+}
+
+interface NoteAutoDraft {
+  content: string;
+  mentions: string[];
+  showPreview: boolean;
+  showAdvancedOptions: boolean;
+  expirationEnabled: boolean;
+  expirationDate: Date | null;
+  expirationTime: string;
+  lastModified: number;
+  // Context data to ensure draft matches current dialog state
+  replyToId?: string;
+  quoteId?: string;
 }
 
 @Component({
@@ -60,18 +76,24 @@ export interface NoteEditorDialogData {
   templateUrl: './note-editor-dialog.component.html',
   styleUrl: './note-editor-dialog.component.scss'
 })
-export class NoteEditorDialogComponent implements AfterViewInit {
+export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
   private dialogRef = inject(MatDialogRef<NoteEditorDialogComponent>);
   data = inject(MAT_DIALOG_DATA) as NoteEditorDialogData;
   private nostrService = inject(NostrService);
   private relayService = inject(RelayService);
   private mediaService = inject(MediaService);
+  private localStorage = inject(LocalStorageService);
+  private accountState = inject(AccountStateService);
   private snackBar = inject(MatSnackBar);
   private sanitizer = inject(DomSanitizer);
   private router = inject(Router);
 
   @ViewChild('contentTextarea') contentTextarea!: ElementRef<HTMLTextAreaElement>;
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
+
+  // Auto-save configuration
+  private readonly AUTO_SAVE_INTERVAL = 2000; // Save every 2 seconds
+  private autoSaveTimer?: ReturnType<typeof setTimeout>;
 
   // Signals for reactive state
   content = signal('');
@@ -161,6 +183,13 @@ export class NoteEditorDialogComponent implements AfterViewInit {
     this.setupPasteHandler();
   }
 
+  ngOnDestroy() {
+    // Clear auto-save timer on destroy
+    if (this.autoSaveTimer) {
+      clearTimeout(this.autoSaveTimer);
+    }
+  }
+
   constructor() {
     // Initialize content with quote if provided
     if (this.data?.quote) {
@@ -174,6 +203,183 @@ export class NoteEditorDialogComponent implements AfterViewInit {
         this.mentions.set([...currentMentions, this.data.replyTo.pubkey]);
       }
     }
+
+    // Load auto-saved draft if available
+    this.loadAutoDraft();
+
+    // Set up auto-save effects
+    this.setupAutoSave();
+  }
+
+  private getAutoDraftKey(): string {
+    const pubkey = this.accountState.pubkey();
+    return `note-auto-draft-${pubkey}`;
+  }
+
+  private getContextKey(): string {
+    // Create a unique key based on the dialog context
+    const replyId = this.data?.replyTo?.id || '';
+    const quoteId = this.data?.quote?.id || '';
+    return `${replyId}-${quoteId}`;
+  }
+
+  private setupAutoSave(): void {
+    // Watch for content changes with less aggressive polling
+    const contentSignal = this.content;
+    let previousContent = contentSignal();
+
+    const checkAndScheduleAutoSave = () => {
+      const currentContent = contentSignal();
+      if (currentContent !== previousContent && currentContent.trim()) {
+        previousContent = currentContent;
+        this.scheduleAutoSave();
+      }
+    };
+
+    // Check for content changes every 2 seconds instead of 500ms
+    setInterval(checkAndScheduleAutoSave, 2000);
+
+    // Check other properties less frequently
+    const mentionsSignal = this.mentions;
+    const expirationEnabledSignal = this.expirationEnabled;
+    const expirationTimeSignal = this.expirationTime;
+
+    let previousMentions = JSON.stringify(mentionsSignal());
+    let previousExpirationEnabled = expirationEnabledSignal();
+    let previousExpirationTime = expirationTimeSignal();
+
+    const checkOtherChanges = () => {
+      const currentMentions = JSON.stringify(mentionsSignal());
+      const currentExpirationEnabled = expirationEnabledSignal();
+      const currentExpirationTime = expirationTimeSignal();
+
+      if (
+        currentMentions !== previousMentions ||
+        currentExpirationEnabled !== previousExpirationEnabled ||
+        currentExpirationTime !== previousExpirationTime
+      ) {
+        previousMentions = currentMentions;
+        previousExpirationEnabled = currentExpirationEnabled;
+        previousExpirationTime = currentExpirationTime;
+        
+        // Only schedule auto-save if there's content
+        if (this.content().trim()) {
+          this.scheduleAutoSave();
+        }
+      }
+    };
+
+    // Check other changes every 5 seconds
+    setInterval(checkOtherChanges, 5000);
+  }
+
+  private scheduleAutoSave(): void {
+    // Clear existing timer
+    if (this.autoSaveTimer) {
+      clearTimeout(this.autoSaveTimer);
+    }
+
+    // Only auto-save if there's meaningful content
+    const content = this.content().trim();
+    if (!content) return;
+
+    // Schedule new auto-save
+    this.autoSaveTimer = setTimeout(() => {
+      this.saveAutoDraft();
+    }, this.AUTO_SAVE_INTERVAL);
+  }
+
+  private saveAutoDraft(): void {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return;
+
+    const content = this.content().trim();
+    if (!content) return;
+
+    const autoDraft: NoteAutoDraft = {
+      content: this.content(),
+      mentions: [...this.mentions()],
+      showPreview: this.showPreview(),
+      showAdvancedOptions: this.showAdvancedOptions(),
+      expirationEnabled: this.expirationEnabled(),
+      expirationDate: this.expirationDate(),
+      expirationTime: this.expirationTime(),
+      lastModified: Date.now(),
+      replyToId: this.data?.replyTo?.id,
+      quoteId: this.data?.quote?.id
+    };
+
+    const key = this.getAutoDraftKey();
+    
+    // Check if this is meaningfully different from the last save
+    const previousDraft = this.localStorage.getObject<NoteAutoDraft>(key);
+    if (previousDraft) {
+      const isSimilar = previousDraft.content === autoDraft.content &&
+                       JSON.stringify(previousDraft.mentions) === JSON.stringify(autoDraft.mentions) &&
+                       previousDraft.expirationEnabled === autoDraft.expirationEnabled &&
+                       previousDraft.expirationTime === autoDraft.expirationTime;
+      
+      // If content is very similar, don't save again (prevents spam)
+      if (isSimilar) return;
+    }
+    
+    this.localStorage.setObject(key, autoDraft);
+    
+    // Silent auto-save, no notification needed
+    console.debug('Note auto-draft saved');
+  }
+
+  private loadAutoDraft(): void {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return;
+
+    const key = this.getAutoDraftKey();
+    const autoDraft = this.localStorage.getObject<NoteAutoDraft>(key);
+    
+    if (autoDraft) {
+      // Check if draft matches current context
+      const currentContext = this.getContextKey();
+      const draftContext = `${autoDraft.replyToId || ''}-${autoDraft.quoteId || ''}`;
+      
+      if (currentContext !== draftContext) {
+        // Context doesn't match, don't load this draft
+        return;
+      }
+      
+      // Check if draft is not too old (2 hours for notes)
+      const twoHoursInMs = 2 * 60 * 60 * 1000;
+      const isExpired = Date.now() - autoDraft.lastModified > twoHoursInMs;
+      
+      if (!isExpired && autoDraft.content.trim()) {
+        // Don't overwrite existing content from quote/reply initialization
+        const existingContent = this.content().trim();
+        const draftHasMoreContent = autoDraft.content.trim().length > existingContent.length;
+        
+        if (draftHasMoreContent) {
+          this.content.set(autoDraft.content);
+          this.mentions.set([...autoDraft.mentions]);
+          this.showPreview.set(autoDraft.showPreview);
+          this.showAdvancedOptions.set(autoDraft.showAdvancedOptions);
+          this.expirationEnabled.set(autoDraft.expirationEnabled);
+          this.expirationDate.set(autoDraft.expirationDate);
+          this.expirationTime.set(autoDraft.expirationTime);
+          
+          // Show restoration message
+          this.snackBar.open('Draft restored', 'Dismiss', { 
+            duration: 3000,
+            panelClass: 'info-snackbar'
+          });
+        }
+      } else if (isExpired) {
+        // Remove expired draft
+        this.clearAutoDraft();
+      }
+    }
+  }
+
+  private clearAutoDraft(): void {
+    const key = this.getAutoDraftKey();
+    this.localStorage.removeItem(key);
   }
 
   async publishNote(): Promise<void> {
@@ -188,6 +394,10 @@ export class NoteEditorDialogComponent implements AfterViewInit {
       
       if (signedEvent) {
         await this.relayService.publish(signedEvent);
+        
+        // Clear auto-draft after successful publish
+        this.clearAutoDraft();
+        
         this.snackBar.open('Note published successfully!', 'Close', { duration: 3000 });
         this.dialogRef.close({ published: true, event: signedEvent });
 
@@ -256,6 +466,19 @@ export class NoteEditorDialogComponent implements AfterViewInit {
   }
 
   cancel(): void {
+    // Check if there's meaningful content before closing
+    const content = this.content().trim();
+    if (content) {
+      // Keep the auto-draft - user might want to continue later
+      this.snackBar.open('Note draft saved automatically', 'Dismiss', { 
+        duration: 3000,
+        panelClass: 'info-snackbar'
+      });
+    } else {
+      // No content, clear any existing draft
+      this.clearAutoDraft();
+    }
+    
     this.dialogRef.close({ published: false });
   }
 

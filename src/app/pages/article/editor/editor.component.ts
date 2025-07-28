@@ -20,6 +20,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { NostrService } from '../../../services/nostr.service';
 import { DataService } from '../../../services/data.service';
 import { RelayService } from '../../../services/relay.service';
+import { LocalStorageService } from '../../../services/local-storage.service';
 import { MatCardModule } from '@angular/material/card';
 import { LayoutService } from '../../../services/layout.service';
 import { AccountStateService } from '../../../services/account-state.service';
@@ -34,6 +35,19 @@ interface ArticleDraft {
   tags: string[];
   publishedAt?: number;
   dTag: string;
+  lastSaved?: number; // Timestamp for auto-save
+}
+
+interface ArticleAutoDraft {
+  title: string;
+  summary: string;
+  image: string;
+  content: string;
+  tags: string[];
+  dTag: string;
+  lastModified: number;
+  autoTitleEnabled: boolean;
+  autoDTagEnabled: boolean;
 }
 
 @Component({
@@ -68,6 +82,11 @@ export class EditorComponent {
   private sanitizer = inject(DomSanitizer);
   private layout = inject(LayoutService);
   private accountState = inject(AccountStateService);
+  private localStorage = inject(LocalStorageService);
+
+  // Auto-save configuration
+  private readonly AUTO_SAVE_INTERVAL = 2000; // Save every 2 seconds
+  private autoSaveTimer?: ReturnType<typeof setTimeout>;
 
   // Editor state
   isLoading = signal(false);
@@ -156,6 +175,7 @@ export class EditorComponent {
 
   // Tag input
   newTag = signal('');
+  
   constructor() {
     // Check if we're editing an existing article
     effect(() => {
@@ -163,16 +183,169 @@ export class EditorComponent {
       if (articleId && typeof articleId === 'string') {
         this.isEditMode.set(true);
         this.loadArticle(articleId);
+      } else {
+        // Load auto-saved draft for new articles
+        this.loadAutoDraft();
       }
     });
+
+    // Auto-save effect - watches for article content changes with debouncing
+    effect(() => {
+      const article = this.article();
+      const pubkey = this.accountState.pubkey();
+      const isEdit = this.isEditMode();
+      
+      // Only auto-save for new articles (not when editing existing ones)
+      // Check if there's meaningful content before scheduling auto-save
+      if (!isEdit && pubkey) {
+        const hasContent = article.title.trim() || 
+                          article.content.trim() || 
+                          article.summary.trim() || 
+                          article.image.trim() ||
+                          article.tags.length > 0;
+        
+        if (hasContent) {
+          this.scheduleAutoSave();
+        }
+      }
+    }, { allowSignalWrites: true });
   }
 
   ngOnInit() {
     setTimeout(() => this.layout.scrollMainContentToTop(), 100);
   }
 
+  ngOnDestroy() {
+    // Clear auto-save timer on destroy
+    if (this.autoSaveTimer) {
+      clearTimeout(this.autoSaveTimer);
+    }
+  }
+
   private generateUniqueId(): string {
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
+  }
+
+  private getAutoDraftKey(): string {
+    const pubkey = this.accountState.pubkey();
+    return `article-auto-draft-${pubkey}`;
+  }
+
+  private scheduleAutoSave(): void {
+    // Clear existing timer
+    if (this.autoSaveTimer) {
+      clearTimeout(this.autoSaveTimer);
+    }
+
+    // Only schedule if there's meaningful content
+    const article = this.article();
+    const hasContent = article.title.trim() || 
+                      article.content.trim() || 
+                      article.summary.trim() || 
+                      article.image.trim() ||
+                      article.tags.length > 0;
+    
+    if (!hasContent) return;
+
+    // Schedule new auto-save
+    this.autoSaveTimer = setTimeout(() => {
+      this.saveAutoDraft();
+    }, this.AUTO_SAVE_INTERVAL);
+  }
+
+  private saveAutoDraft(): void {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey || this.isEditMode()) return;
+
+    const article = this.article();
+    
+    // Check if there's meaningful content
+    const hasContent = article.title.trim() || 
+                      article.content.trim() || 
+                      article.summary.trim() || 
+                      article.image.trim() ||
+                      article.tags.length > 0;
+    
+    if (!hasContent) return;
+
+    const autoDraft: ArticleAutoDraft = {
+      title: article.title,
+      summary: article.summary,
+      image: article.image,
+      content: article.content,
+      tags: [...article.tags],
+      dTag: article.dTag,
+      lastModified: Date.now(),
+      autoTitleEnabled: this.autoTitleEnabled(),
+      autoDTagEnabled: this.autoDTagEnabled()
+    };
+
+    const key = this.getAutoDraftKey();
+    
+    // Check if this is meaningfully different from the last save
+    const previousDraft = this.localStorage.getObject<ArticleAutoDraft>(key);
+    if (previousDraft) {
+      const isSimilar = previousDraft.title === autoDraft.title &&
+                       previousDraft.content === autoDraft.content &&
+                       previousDraft.summary === autoDraft.summary &&
+                       previousDraft.image === autoDraft.image &&
+                       JSON.stringify(previousDraft.tags) === JSON.stringify(autoDraft.tags);
+      
+      // If content is very similar, don't save again (prevents spam)
+      if (isSimilar) return;
+    }
+    
+    this.localStorage.setObject(key, autoDraft);
+    
+    // Only show notification for the first auto-save or significant changes
+    if (!previousDraft) {
+      // Silent auto-save, no notification needed for regular saves
+      console.debug('Article auto-draft saved');
+    }
+  }
+
+  private loadAutoDraft(): void {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return;
+
+    const key = this.getAutoDraftKey();
+    const autoDraft = this.localStorage.getObject<ArticleAutoDraft>(key);
+    
+    if (autoDraft) {
+      // Check if draft is not too old (7 days)
+      const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
+      const isExpired = Date.now() - autoDraft.lastModified > sevenDaysInMs;
+      
+      if (!isExpired) {
+        this.article.set({
+          title: autoDraft.title,
+          summary: autoDraft.summary,
+          image: autoDraft.image,
+          content: autoDraft.content,
+          tags: [...autoDraft.tags],
+          dTag: autoDraft.dTag
+        });
+        
+        this.autoTitleEnabled.set(autoDraft.autoTitleEnabled);
+        this.autoDTagEnabled.set(autoDraft.autoDTagEnabled);
+        
+        // Show restoration message if there's meaningful content
+        if (autoDraft.title.trim() || autoDraft.content.trim() || autoDraft.summary.trim()) {
+          this.snackBar.open('Draft restored from previous session', 'Dismiss', { 
+            duration: 4000,
+            panelClass: 'info-snackbar'
+          });
+        }
+      } else {
+        // Remove expired draft
+        this.clearAutoDraft();
+      }
+    }
+  }
+
+  private clearAutoDraft(): void {
+    const key = this.getAutoDraftKey();
+    this.localStorage.removeItem(key);
   }
 
   async loadArticle(articleId: string): Promise<void> {
@@ -333,6 +506,11 @@ export class EditorComponent {
       this.snackBar.open(`${action} successfully`, 'Close', { duration: 3000 });
 
       if (kind === 30023) {
+        // Clear auto-draft after successful publish
+        if (!this.isEditMode()) {
+          this.clearAutoDraft();
+        }
+        
         // We don't do "note" much, we want URLs that embeds the autor.
         // const note = nip19.noteEncode(signedEvent.id);
         // this.router.navigate(['/e', note]); // Navigate to the published event
@@ -352,9 +530,25 @@ export class EditorComponent {
 
   async publish(): Promise<void> {
     await this.publishArticle(30023);
+    // Clear auto-draft after successful publish
+    if (!this.isEditMode()) {
+      this.clearAutoDraft();
+    }
   }
 
   cancel(): void {
+    // Ask user if they want to keep the auto-draft when canceling
+    const article = this.article();
+    const hasContent = article.title.trim() || article.content.trim() || article.summary.trim();
+    
+    if (!this.isEditMode() && hasContent) {
+      // Keep the auto-draft - user might want to continue later
+      this.snackBar.open('Draft saved automatically. You can continue later.', 'Dismiss', { 
+        duration: 5000,
+        panelClass: 'info-snackbar'
+      });
+    }
+    
     this.router.navigate(['/articles']);
   }
 
@@ -378,8 +572,7 @@ export class EditorComponent {
   updateContent(value: string): void {
     this.article.update(art => ({ ...art, content: value }));
 
-    // If auto-title is enabled and there's a suggested title, apply it
-    // Removed the check for empty title to allow auto-title to update existing titles
+    // If auto-title is enabled and there's a suggested title, apply it silently
     if (this.autoTitleEnabled() && this.suggestedTitle()) {
       this.applyAutoTitle();
     }
@@ -390,18 +583,21 @@ export class EditorComponent {
   }
 
   toggleAutoTitleMode(): void {
+    const wasEnabled = this.autoTitleEnabled();
     this.autoTitleEnabled.update(enabled => !enabled);
-    // Apply auto-title when enabling, regardless of existing title
-    if (this.autoTitleEnabled() && this.suggestedTitle()) {
+    
+    // Apply auto-title when enabling and show notification
+    if (!wasEnabled && this.autoTitleEnabled() && this.suggestedTitle()) {
       this.applyAutoTitle();
+      this.snackBar.open('Auto-title enabled - title updated from content', 'Close', { duration: 3000 });
     }
   }
 
   applyAutoTitle(): void {
     const suggested = this.suggestedTitle();
     if (suggested) {
-      this.updateTitle(suggested);
-      this.snackBar.open('Title updated from content', 'Close', { duration: 2000 });
+      this.article.update(art => ({ ...art, title: suggested }));
+      // Only show notification when manually triggered, not during auto-updates
     }
   }
 
