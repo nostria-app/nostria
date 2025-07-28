@@ -171,7 +171,7 @@ export class App {
     { path: 'messages', label: 'Messages', icon: 'mail', level: 'beta', authenticated: true },
     { path: 'media', label: 'Media', icon: 'photo_library', authenticated: true },
     { path: 'bookmarks', label: 'Bookmarks', icon: 'bookmarks', level: 'preview', authenticated: true },
-    { path: 'badges', label: 'Badges', icon: 'badge', level: 'beta', authenticated: true },
+    // { path: 'badges', label: 'Badges', icon: 'badge', level: 'beta', authenticated: true },
     // { path: 'relays', label: 'Relays', icon: 'dns', showInMobile: false },
     // { path: 'backup', label: 'Backup', icon: 'archive', showInMobile: false },
     { path: 'settings', label: 'Settings', icon: 'settings' },
