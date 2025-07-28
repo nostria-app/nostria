@@ -11,9 +11,13 @@
   }
 </div>
 
-@if (reposts()) {
-  <mat-icon>repeat</mat-icon>
-  {{ reposts().length }}
+@if (app.enabledFeature('beta')) {
+  @if (reposts()) {
+    <button matButton (click)="repostNote()">
+      <mat-icon>repeat</mat-icon>
+      <span>{{ reposts().length }}</span>
+    </button>
+  }
 }
 
 @if (error()) {
