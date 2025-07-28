@@ -36,6 +36,10 @@ app.use(
  * ```
  */
 
+app.use('/.well-known', express.static(join(__dirname, 'public/.well-known'), {
+  dotfiles: 'allow'
+}));
+
 /**
  * Serve static files from /browser
  */
