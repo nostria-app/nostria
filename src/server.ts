@@ -36,7 +36,7 @@ app.use(
  * ```
  */
 
-app.use('/.well-known', express.static(join(__dirname, 'public/.well-known'), {
+app.use('/.well-known', express.static(join(browserDistFolder, 'public/.well-known'), {
   dotfiles: 'allow'
 }));
 
