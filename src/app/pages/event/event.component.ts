@@ -1,4 +1,12 @@
-import { Component, effect, inject, OnInit, signal, TransferState, untracked } from '@angular/core';
+import {
+  Component,
+  effect,
+  inject,
+  OnInit,
+  signal,
+  TransferState,
+  untracked,
+} from '@angular/core';
 import { LayoutService } from '../../services/layout.service';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
@@ -17,7 +25,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { EVENT_STATE_KEY, EventData } from '../../data-resolver';
 
 /** Description of the EventPageComponent
- * 
+ *
  * Events and threads for events are retrieved from the OP's relays.
  * Nostr clients should ensure they post replies and reactions to the OP's relays.
  */
@@ -44,7 +52,7 @@ export interface ThreadedEvent {
   standalone: true,
   imports: [CommonModule, EventComponent, MatIconModule, MatButtonModule],
   templateUrl: './event.component.html',
-  styleUrl: './event.component.scss'
+  styleUrl: './event.component.scss',
 })
 export class EventPageComponent implements OnInit {
   event = signal<Event | undefined>(undefined);
@@ -83,7 +91,6 @@ export class EventPageComponent implements OnInit {
     // Effect to load event when route parameter changes
     effect(async () => {
       if (this.app.initialized() && this.routeParams()) {
-
         // this.item = this.route.snapshot.data['data'];
         // console.log('EventPageComponent initialized with data:', this.route.snapshot);
 
@@ -104,9 +111,7 @@ export class EventPageComponent implements OnInit {
     });
   }
 
-  ngOnInit() {
-
-  }
+  ngOnInit() {}
 
   ngOnDestroy() {
     this.pool?.destroy();
@@ -115,7 +120,11 @@ export class EventPageComponent implements OnInit {
   reactions = signal<Reaction[]>([]);
   reposts = signal<Reposts[]>([]);
 
-  private getEventTags(event: Event): { rootId: string | null; replyId: string | null; pTags: string[] } {
+  private getEventTags(event: Event): {
+    rootId: string | null;
+    replyId: string | null;
+    pTags: string[];
+  } {
     const eTags = event.tags.filter(tag => tag[0] === 'e');
     const pTags = event.tags.filter(tag => tag[0] === 'p').map(tag => tag[1]);
 
@@ -140,7 +149,11 @@ export class EventPageComponent implements OnInit {
     return { rootId, replyId, pTags };
   }
 
-  private buildThreadTree(events: Event[], rootEventId: string, maxDepth: number = 5): ThreadedEvent[] {
+  private buildThreadTree(
+    events: Event[],
+    rootEventId: string,
+    maxDepth: number = 5
+  ): ThreadedEvent[] {
     const eventMap = new Map<string, Event>();
     const childrenMap = new Map<string, Event[]>();
 
@@ -167,12 +180,14 @@ export class EventPageComponent implements OnInit {
           const threadedEvent: ThreadedEvent = {
             event: child,
             replies: [],
-            level
+            level,
           };
 
           // If we're at max depth, check if there are deeper replies
           if (level >= maxDepth - 1) {
-            const hasDeepReplies = childrenMap.has(child.id) && childrenMap.get(child.id)!.length > 0;
+            const hasDeepReplies =
+              childrenMap.has(child.id) &&
+              childrenMap.get(child.id)!.length > 0;
             if (hasDeepReplies) {
               threadedEvent.hasMoreReplies = true;
               threadedEvent.deepestReplyId = child.id;
@@ -190,11 +205,19 @@ export class EventPageComponent implements OnInit {
   }
 
   async loadReplies(eventId: string, pubkey: string) {
-    this.logger.info('loadReplies called with eventId:', eventId, 'pubkey:', pubkey);
+    this.logger.info(
+      'loadReplies called with eventId:',
+      eventId,
+      'pubkey:',
+      pubkey
+    );
     this.logger.info('Current userRelays length:', this.userRelays.length);
 
     if (this.userRelays.length === 0) {
-      this.logger.info('No user relays cached, discovering relays for pubkey:', pubkey);
+      this.logger.info(
+        'No user relays cached, discovering relays for pubkey:',
+        pubkey
+      );
       // We need to discover the event from user's relays.
       const userRelays = await this.data.getUserRelays(pubkey);
       this.userRelays = userRelays;
@@ -202,8 +225,13 @@ export class EventPageComponent implements OnInit {
     }
 
     if (!this.userRelays || this.userRelays.length === 0) {
-      this.logger.info('No user relays found for author when loading replies. userRelays:', this.userRelays);
-      this.error.set('No user relays found for the author when loading replies.');
+      this.logger.info(
+        'No user relays found for author when loading replies. userRelays:',
+        this.userRelays
+      );
+      this.error.set(
+        'No user relays found for the author when loading replies.'
+      );
       return;
     }
 
@@ -211,47 +239,57 @@ export class EventPageComponent implements OnInit {
     const reactionCounts = new Map<string, number>();
     const allReplies: Event[] = [];
 
-    this.pool?.subscribeEose(this.userRelays, {
-      kinds: [kinds.ShortTextNote, kinds.Reaction, kinds.Repost],
-      ['#e']: [eventId],
-    }, {
-      onevent: (event) => {
-        console.log('Received event:', event);
-
-        if (event.kind === kinds.ShortTextNote && event.content) {
-          // Handle text replies
-          console.log('Text reply:', event);
-
-          const existingReply = allReplies.find(reply => reply.id === event.id);
-          if (!existingReply) {
-            allReplies.push(event);
-            this.replies.set([...allReplies]);
-
-            // Build threaded structure with max depth of 4
-            const threaded = this.buildThreadTree(allReplies, eventId, 4);
-            this.threadedReplies.set(threaded);
-          }
-
-        } else if (event.kind === kinds.Reaction && event.content) {
-          // Count each unique reaction emoji
-          const emoji = event.content;
-          reactionCounts.set(emoji, (reactionCounts.get(emoji) || 0) + 1);
-
-          // Convert map to Reaction array and update signal
-          const reactionsArray: Reaction[] = Array.from(reactionCounts.entries()).map(([emoji, count]) => ({
-            emoji,
-            count
-          }));
-
-          this.reactions.set(reactionsArray);
-        } else if (event.kind === kinds.Repost) {
-          this.reposts.update(currentReposts => [...currentReposts, { pubkey: event.pubkey }]);
-        }
+    this.pool?.subscribeEose(
+      this.userRelays,
+      {
+        kinds: [kinds.ShortTextNote, kinds.Reaction, kinds.Repost],
+        ['#e']: [eventId],
       },
-      onclose(reasons) {
-        console.log('CLOSED!!!', reasons);
+      {
+        onevent: event => {
+          console.log('Received event:', event);
+
+          if (event.kind === kinds.ShortTextNote && event.content) {
+            // Handle text replies
+            console.log('Text reply:', event);
+
+            const existingReply = allReplies.find(
+              reply => reply.id === event.id
+            );
+            if (!existingReply) {
+              allReplies.push(event);
+              this.replies.set([...allReplies]);
+
+              // Build threaded structure with max depth of 4
+              const threaded = this.buildThreadTree(allReplies, eventId, 4);
+              this.threadedReplies.set(threaded);
+            }
+          } else if (event.kind === kinds.Reaction && event.content) {
+            // Count each unique reaction emoji
+            const emoji = event.content;
+            reactionCounts.set(emoji, (reactionCounts.get(emoji) || 0) + 1);
+
+            // Convert map to Reaction array and update signal
+            const reactionsArray: Reaction[] = Array.from(
+              reactionCounts.entries()
+            ).map(([emoji, count]) => ({
+              emoji,
+              count,
+            }));
+
+            this.reactions.set(reactionsArray);
+          } else if (event.kind === kinds.Repost) {
+            this.reposts.update(currentReposts => [
+              ...currentReposts,
+              { pubkey: event.pubkey },
+            ]);
+          }
+        },
+        onclose(reasons) {
+          console.log('CLOSED!!!', reasons);
+        },
       }
-    });
+    );
   }
 
   async loadEvent(nevent: string) {
@@ -291,7 +329,10 @@ export class EventPageComponent implements OnInit {
       this.isLoading.set(false);
 
       // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.
-      const encoded = nip19.neventEncode({ author: receivedData.pubkey, id: receivedData.id });
+      const encoded = nip19.neventEncode({
+        author: receivedData.pubkey,
+        id: receivedData.id,
+      });
       this.url.updatePathSilently(['/e', encoded]);
 
       // Scroll to top when article is received from navigation state
@@ -299,7 +340,9 @@ export class EventPageComponent implements OnInit {
 
       await this.loadReplies(receivedData.id, receivedData.pubkey);
     } else {
-      this.logger.info('No cached event, attempting to load from storage or relays');
+      this.logger.info(
+        'No cached event, attempting to load from storage or relays'
+      );
 
       try {
         this.isLoading.set(true);
@@ -307,49 +350,87 @@ export class EventPageComponent implements OnInit {
         let event = await this.data.getEventById(hex);
 
         if (event) {
-          this.logger.info('Loaded article event from storage or relays:', event.event.id);
-          this.logger.debug('Loaded article event from storage or relays:', event);
+          this.logger.info(
+            'Loaded article event from storage or relays:',
+            event.event.id
+          );
+          this.logger.debug(
+            'Loaded article event from storage or relays:',
+            event
+          );
           this.event.set(event.event);
 
           // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.
-          const encoded = nip19.neventEncode({ author: event.event.pubkey, id: event.event.id });
+          const encoded = nip19.neventEncode({
+            author: event.event.pubkey,
+            id: event.event.id,
+          });
           this.url.updatePathSilently(['/e', encoded]);
 
           this.isLoading.set(false);
           await this.loadReplies(event.event.id, event.event.pubkey);
         } else {
-          this.logger.info('Event not found in storage, attempting relay discovery');
+          this.logger.info(
+            'Event not found in storage, attempting relay discovery'
+          );
 
           if (!decoded.data.author) {
-            this.logger.info('No author in decoded data, cannot discover relays');
-            this.error.set('Event not found. There is no pubkey to discover the event from.');
+            this.logger.info(
+              'No author in decoded data, cannot discover relays'
+            );
+            this.error.set(
+              'Event not found. There is no pubkey to discover the event from.'
+            );
             this.isLoading.set(false);
             return;
           }
 
-          this.logger.info('Discovering user relays for author:', decoded.data.author);
+          this.logger.info(
+            'Discovering user relays for author:',
+            decoded.data.author
+          );
           // We need to discover the event from user's relays.
           const userRelays = await this.data.getUserRelays(decoded.data.author);
           this.userRelays = userRelays;
-          this.logger.info('Retrieved user relays from data service:', userRelays);
+          this.logger.info(
+            'Retrieved user relays from data service:',
+            userRelays
+          );
 
           if (!this.userRelays || this.userRelays.length === 0) {
-            this.logger.info('No user relays found, attempting relay discovery via NostrService');
+            this.logger.info(
+              'No user relays found, attempting relay discovery via NostrService'
+            );
             // If the current user is anonymous, we will end up here. Let's discover the user relays.
-            const discoveredRelays = await this.nostrService.discoverRelays(decoded.data.author);
+            const discoveredRelays = await this.nostrService.discoverRelays(
+              decoded.data.author
+            );
             this.userRelays = discoveredRelays.relayUrls;
-            this.logger.info('Discovered relays via NostrService:', discoveredRelays.relayUrls);
+            this.logger.info(
+              'Discovered relays via NostrService:',
+              discoveredRelays.relayUrls
+            );
           }
 
           if (!this.userRelays || this.userRelays.length === 0) {
-            this.logger.info('Still no user relays found after all discovery attempts. userRelays:', this.userRelays);
+            this.logger.info(
+              'Still no user relays found after all discovery attempts. userRelays:',
+              this.userRelays
+            );
             this.error.set('No user relays found for the author.');
             this.isLoading.set(false);
             return;
           }
 
-          this.logger.info('Attempting to fetch event from user relays:', this.userRelays);
-          const event = await this.pool!.get(this.userRelays, { ids: [decoded.data.id] }, { maxWait: 4000 });
+          this.logger.info(
+            'Attempting to fetch event from user relays:',
+            this.userRelays
+          );
+          const event = await this.pool!.get(
+            this.userRelays,
+            { ids: [decoded.data.id] },
+            { maxWait: 4000 }
+          );
 
           if (!event) {
             this.logger.info('Event not found on user relays');
@@ -358,7 +439,10 @@ export class EventPageComponent implements OnInit {
             return;
           }
 
-          this.logger.info('Successfully fetched event from user relays:', event.id);
+          this.logger.info(
+            'Successfully fetched event from user relays:',
+            event.id
+          );
           this.event.set(event);
 
           // We found the event, now we'll discover reactions and replies.
