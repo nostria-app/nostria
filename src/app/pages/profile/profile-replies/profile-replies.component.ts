@@ -30,10 +30,10 @@ import { ContentComponent } from '../../../components/content/content.component'
     MatButtonModule,
     MatSlideToggleModule,
     FormsModule,
-    ContentComponent
+    ContentComponent,
   ],
   templateUrl: './profile-replies.component.html',
-  styleUrl: './profile-replies.component.scss'
+  styleUrl: './profile-replies.component.scss',
 })
 export class ProfileRepliesComponent {
   private route = inject(ActivatedRoute);
@@ -42,7 +42,7 @@ export class ProfileRepliesComponent {
   profileState = inject(ProfileStateService);
   bookmark = inject(BookmarkService);
   error = signal<string | null>(null);
-  
+
   // Options
   showLegacyReplies = signal<boolean>(false);
   filteredReplies = signal<any[]>([]);
@@ -52,14 +52,18 @@ export class ProfileRepliesComponent {
     effect(() => {
       const replies = this.profileState.replies();
       const showLegacy = this.showLegacyReplies();
-      
+
       // Apply filtering based on options
       if (showLegacy) {
         // Show older replies first or apply other legacy filtering logic
-        this.filteredReplies.set([...replies].sort((a, b) => a.event.created_at - b.event.created_at));
+        this.filteredReplies.set(
+          [...replies].sort((a, b) => a.event.created_at - b.event.created_at)
+        );
       } else {
         // Default sorting (newest first)
-        this.filteredReplies.set([...replies].sort((a, b) => b.event.created_at - a.event.created_at));
+        this.filteredReplies.set(
+          [...replies].sort((a, b) => b.event.created_at - a.event.created_at)
+        );
       }
     });
   }

@@ -11,7 +11,7 @@ import { DataService } from './data.service';
 import { UtilitiesService } from './utilities.service';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ProfileStateService {
   private readonly logger = inject(LoggerService);
@@ -119,63 +119,68 @@ export class ProfileStateService {
     }
 
     // TODO: Move this logic into the relay or nostr service.
-    this.relay.pool.subscribeMany(this.relay.relayUrls, [{
-      kinds: [kinds.Contacts],
-      authors: [pubkey],
-    },
-    {
-      kinds: [kinds.ShortTextNote],
-      authors: [pubkey],
-      limit: 30
-    },
-    {
-      kinds: [kinds.LongFormArticle],
-      authors: [pubkey],
-      limit: 30
-    },
-    {
-      kinds: [10063], // BUD-03: User Server List
-      authors: [pubkey],
-      limit: 1
-    },
-    ], {
-      onevent: (evt) => {
-        console.log('Event received', evt);
+    this.relay.pool.subscribeMany(
+      this.relay.relayUrls,
+      [
+        {
+          kinds: [kinds.Contacts],
+          authors: [pubkey],
+        },
+        {
+          kinds: [kinds.ShortTextNote],
+          authors: [pubkey],
+          limit: 30,
+        },
+        {
+          kinds: [kinds.LongFormArticle],
+          authors: [pubkey],
+          limit: 30,
+        },
+        {
+          kinds: [10063], // BUD-03: User Server List
+          authors: [pubkey],
+          limit: 1,
+        },
+      ],
+      {
+        onevent: evt => {
+          console.log('Event received', evt);
 
-        if (evt.kind === kinds.Contacts) {
-          const followingList = this.utilities.getPTagsValuesFromEvent(evt);
-          console.log(followingList);
-          // this.followingList.set(followingList);
-          this.followingList.set(followingList);
-          // If this is the logged on user, also set the account state.
-          // if (this.accountState.pubkey() === pubkey) {
-          //   this.accountState.followingList.set(followingList);
-          // }
+          if (evt.kind === kinds.Contacts) {
+            const followingList = this.utilities.getPTagsValuesFromEvent(evt);
+            console.log(followingList);
+            // this.followingList.set(followingList);
+            this.followingList.set(followingList);
+            // If this is the logged on user, also set the account state.
+            // if (this.accountState.pubkey() === pubkey) {
+            //   this.accountState.followingList.set(followingList);
+            // }
 
-          // this.storage.saveEvent(evt);
+            // this.storage.saveEvent(evt);
 
-          // Now you can use 'this' here
-          // For example: this.handleContacts(evt);
-        } else if (evt.kind === kinds.LongFormArticle) {
-          this.articles.update(articles => [...articles, this.utilities.toRecord(evt)]);
-        } else if (evt.kind === kinds.ShortTextNote) {
-          const record = this.utilities.toRecord(evt);
-          if (this.utilities.isRootPost(evt)) {
-            this.notes.update(events => [...events, record]);
-          } else {
-            this.replies.update(events => [...events, record]);
+            // Now you can use 'this' here
+            // For example: this.handleContacts(evt);
+          } else if (evt.kind === kinds.LongFormArticle) {
+            this.articles.update(articles => [
+              ...articles,
+              this.utilities.toRecord(evt),
+            ]);
+          } else if (evt.kind === kinds.ShortTextNote) {
+            const record = this.utilities.toRecord(evt);
+            if (this.utilities.isRootPost(evt)) {
+              this.notes.update(events => [...events, record]);
+            } else {
+              this.replies.update(events => [...events, record]);
+            }
           }
-        }
-
-
-      },
-      onclose: (reasons) => {
-        console.log('Pool closed', reasons);
-        // Also changed this to an arrow function for consistency
-      },
-    });
+        },
+        onclose: reasons => {
+          console.log('Pool closed', reasons);
+          // Also changed this to an arrow function for consistency
+        },
+      }
+    );
   }
-
 
   /**
    * Load more notes for the current profile
@@ -193,60 +198,68 @@ export class ProfileStateService {
 
     try {
       const currentNotes = this.notes();
-      const oldestTimestamp = beforeTimestamp ||
+      const oldestTimestamp =
+        beforeTimestamp ||
         (currentNotes.length > 0
           ? Math.min(...currentNotes.map(n => n.event.created_at)) - 1
           : Math.floor(Date.now() / 1000));
 
-      this.logger.debug(`Loading more notes for ${pubkey}, before timestamp: ${oldestTimestamp}`);
+      this.logger.debug(
+        `Loading more notes for ${pubkey}, before timestamp: ${oldestTimestamp}`
+      );
 
-      return new Promise<NostrRecord[]>((resolve) => {
+      return new Promise<NostrRecord[]>(resolve => {
         const newNotes: NostrRecord[] = [];
 
-        this.relay!.subscribeEose([{
-          kinds: [kinds.ShortTextNote],
-          authors: [pubkey],
-          until: oldestTimestamp,
-          limit: 10
-        }], (event) => {
+        this.relay!.subscribeEose(
+          [
+            {
+              kinds: [kinds.ShortTextNote],
+              authors: [pubkey],
+              until: oldestTimestamp,
+              limit: 10,
+            },
+          ],
+          event => {
+            foundAnything = true;
 
-          foundAnything = true;
+            // Check if this is a root post (not a reply)
+            const isRootPost = !event.tags.some(tag => tag[0] === 'e');
 
-          // Check if this is a root post (not a reply)
-          const isRootPost = !event.tags.some(tag => tag[0] === 'e');
+            if (isRootPost) {
+              // Create a NostrRecord - assuming this structure based on existing code
+              const record: NostrRecord = {
+                event: event,
+                data: event.content, // Adjust this based on your actual NostrRecord structure
+              };
 
-          if (isRootPost) {
-            // Create a NostrRecord - assuming this structure based on existing code
-            const record: NostrRecord = {
-              event: event,
-              data: event.content // Adjust this based on your actual NostrRecord structure
-            };
+              // Check if we already have this note to avoid duplicates
+              const existingNotes = this.notes();
+              const exists = existingNotes.some(n => n.event.id === event.id);
 
-            // Check if we already have this note to avoid duplicates
-            const existingNotes = this.notes();
-            const exists = existingNotes.some(n => n.event.id === event.id);
-
-            if (!exists) {
-              newNotes.push(record);
+              if (!exists) {
+                newNotes.push(record);
+              }
             }
-          }
-        }, () => {
-          // EOSE callback - subscription finished
-          this.logger.debug(`Loaded ${newNotes.length} more notes`);
+          },
+          () => {
+            // EOSE callback - subscription finished
+            this.logger.debug(`Loaded ${newNotes.length} more notes`);
 
-          // One relay might say there are no more events, but another might have some, so
-          // they will set the flag back to true if we found any new notes.
-          if (!foundAnything) {
-            this.hasMoreNotes.set(false);
-          } else {
-            // Add new notes to the existing ones
-            this.notes.update(existing => [...existing, ...newNotes]);
-            this.hasMoreNotes.set(true);
-          }
+            // One relay might say there are no more events, but another might have some, so
+            // they will set the flag back to true if we found any new notes.
+            if (!foundAnything) {
+              this.hasMoreNotes.set(false);
+            } else {
+              // Add new notes to the existing ones
+              this.notes.update(existing => [...existing, ...newNotes]);
+              this.hasMoreNotes.set(true);
+            }
 
-          this.isLoadingMoreNotes.set(false);
-          resolve(newNotes);
-        });
+            this.isLoadingMoreNotes.set(false);
+            resolve(newNotes);
+          }
+        );
       });
     } catch (error) {
       this.logger.error('Failed to load more notes:', error);

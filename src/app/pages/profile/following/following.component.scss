@@ -67,7 +67,7 @@
   flex-direction: column;
   flex: 1;
   margin-top: 0; /* Ensure no margin at top */
-  
+
   ::ng-deep .mat-mdc-tab-header {
     position: sticky;
     top: 72px; /* Adjust to exactly match the header height */
@@ -75,7 +75,7 @@
     background-color: var(--mat-sidenav-content-background-color, var(--mat-sys-background));
     border-top: none; /* Remove any potential border */
   }
-  
+
   ::ng-deep .mat-mdc-tab-body-wrapper {
     flex-grow: 1;
     overflow-y: auto;
