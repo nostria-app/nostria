@@ -54,6 +54,9 @@ import { MediaPlayerService } from '../../services/media-player.service';
 import { MatDividerModule } from '@angular/material/divider';
 import { ContentComponent } from '../../components/content/content.component';
 import { AgoPipe } from '../../pipes/ago.pipe';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { ApplicationService } from '../../services/application.service';
+import { RepostService } from '../../services/repost.service';
 
 interface NavLink {
   id: string;
@@ -109,6 +112,9 @@ export class FeedsComponent implements OnInit, OnDestroy {
   private url = inject(UrlUpdateService);
   private cdr = inject(ChangeDetectorRef);
   private mediaPlayerService = inject(MediaPlayerService);
+  private repostService = inject(RepostService);
+  private snackBar = inject(MatSnackBar);
+  protected app = inject(ApplicationService);
 
   // UI State Signals
   activeSection = signal<'discover' | 'following' | 'media'>('discover');
@@ -1335,5 +1341,14 @@ export class FeedsComponent implements OnInit, OnDestroy {
       };
       this.mediaPlayerService.enque(mediaItem);
     });
+  }
+
+  async repostNote(event: Event): Promise<void> {
+    const published = await this.repostService.repostNote(event);
+    if (published) {
+      this.snackBar.open('Note reposted successfully!', 'Dismiss', {
+        duration: 3000,
+      });
+    }
   }
 }

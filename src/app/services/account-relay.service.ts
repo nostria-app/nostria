@@ -956,7 +956,7 @@ export class AccountRelayService {
     }
   }
 
-  publish(event: Event) {
+  publish(event: Event): Promise<string>[] | undefined {
     this.logger.debug('Publishing event:', event);
 
     if (!this.pool) {

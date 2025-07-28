@@ -625,9 +625,11 @@
                           <button mat-icon-button>
                             <mat-icon>comment</mat-icon>
                           </button>
-                          <button mat-icon-button>
-                            <mat-icon>repeat</mat-icon>
-                          </button>
+                          @if (app.enabledFeature('beta')) {
+                            <button mat-icon-button (click)="repostNote(event)">
+                              <mat-icon>repeat</mat-icon>
+                            </button>
+                          }
                         </mat-card-actions>
                       </mat-card>
                     }
