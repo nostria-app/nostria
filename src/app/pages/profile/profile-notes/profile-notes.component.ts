@@ -34,10 +34,10 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
     MatSlideToggleModule,
     FormsModule,
     ContentComponent,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
   ],
   templateUrl: './profile-notes.component.html',
-  styleUrl: './profile-notes.component.scss'
+  styleUrl: './profile-notes.component.scss',
 })
 export class ProfileNotesComponent {
   private logger = inject(LoggerService);
@@ -55,12 +55,13 @@ export class ProfileNotesComponent {
     // Effect to handle scroll events from layout service when user scrolls to bottom
     effect(() => {
       // Only react if scroll monitoring is ready to prevent early triggers
-      if (this.layout.scrollMonitoringReady() && 
-          this.layout.scrolledToBottom() && 
-          !this.profileState.isLoadingMoreNotes() &&
-          this.profileState.hasMoreNotes() &&
-          this.profileState.notes().length > 0) {
-        
+      if (
+        this.layout.scrollMonitoringReady() &&
+        this.layout.scrolledToBottom() &&
+        !this.profileState.isLoadingMoreNotes() &&
+        this.profileState.hasMoreNotes() &&
+        this.profileState.notes().length > 0
+      ) {
         this.logger.debug('Scrolled to bottom, loading more notes...');
         this.loadMoreNotes();
       }
@@ -80,11 +81,14 @@ export class ProfileNotesComponent {
 
     try {
       const currentNotes = this.profileState.notes();
-      const oldestTimestamp = currentNotes.length > 0
-        ? Math.min(...currentNotes.map(n => n.event.created_at)) - 1
-        : undefined;
+      const oldestTimestamp =
+        currentNotes.length > 0
+          ? Math.min(...currentNotes.map(n => n.event.created_at)) - 1
+          : undefined;
 
-      this.logger.debug(`Current notes count: ${currentNotes.length}, oldest timestamp: ${oldestTimestamp}`);
+      this.logger.debug(
+        `Current notes count: ${currentNotes.length}, oldest timestamp: ${oldestTimestamp}`
+      );
 
       // Load older notes from the profile state service
       const olderNotes = await this.profileState.loadMoreNotes(oldestTimestamp);
@@ -94,7 +98,6 @@ export class ProfileNotesComponent {
       if (olderNotes.length === 0) {
         this.logger.debug('No more notes available');
       }
-
     } catch (err) {
       this.logger.error('Failed to load more notes', err);
       this.error.set('Failed to load older notes. Please try again.');
