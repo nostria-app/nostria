@@ -108,15 +108,18 @@
       </button>
 
       <mat-menu #copyMenu="matMenu">
-        <button mat-menu-item (click)="layout.copyToClipboard(npub(), 'npub')">
+        <button mat-menu-item (click)="layout.copyToClipboard(event()?.pubkey, 'note')">
           <span>Event ID (note)</span>
         </button>
-        <button mat-menu-item (click)="layout.copyToClipboard(publicKey, 'nprofile')">
+        <button mat-menu-item (click)="layout.copyToClipboard(event()?.pubkey, 'hex')">
+          <span>Event ID (hex)</span>
+        </button>
+        <button mat-menu-item (click)="layout.copyToClipboard(event, 'nevent')">
           <span>Event ID (nevent)</span>
         </button>
-        <!-- <button mat-menu-item (click)="copyProfileData()">
+        <button mat-menu-item (click)="copyEventData()">
           <span>Event Data</span>
-        </button> -->
+        </button>
       </mat-menu>
 
       <mat-menu #menu="matMenu">

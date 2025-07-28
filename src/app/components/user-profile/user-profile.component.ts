@@ -91,7 +91,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
                 }
 
                 this.publicKey = pubkey;
-                
+
                 untracked(() => {
                     const npub = this.utilities.getNpubFromPubkey(pubkey);
                     this.npub.set(npub);
@@ -258,13 +258,17 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
         }
     }
 
+    copyEventData(): void {
+        this.layout.copyToClipboard(this.event()?.content, 'event data');
+    }
+
     private async loadProfileData(npubValue: string): Promise<void> {
         // Don't reload if we already have data
         if (this.profile()) {
             this.logger.debug('Profile data already loaded, skipping reload');
             return;
         }
-        
+
         // Don't start new request if already loading
         if (this.isLoading()) {
             this.logger.debug('Profile data is already loading, skipping reload');
@@ -277,7 +281,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
         try {
             this.logger.debug('Loading profile data for:', npubValue);
             this.logger.time('Loading profile data in user profile' + npubValue);
-            
+
             const data = await this.data.getProfile(npubValue);
             this.logger.timeEnd('Loading profile data in user profile' + npubValue);
 
@@ -291,7 +295,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
             }
         } catch (error) {
             this.logger.error('Failed to load profile data:', error);
-            
+
             // Only update error if we're still loading the same pubkey
             if (this.publicKey === npubValue) {
                 this.error.set('Failed to load profile data: ' + error);

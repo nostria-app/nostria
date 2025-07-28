@@ -462,6 +462,11 @@ export class LayoutService implements OnDestroy {
             text = nip19.neventEncode(eventPointer);
         }
 
+        if (type === 'note') {
+            debugger;
+            text = nip19.noteEncode(text);
+        }
+
         if (type === 'json') {
             text = JSON.stringify(text, null, 2);
         }
