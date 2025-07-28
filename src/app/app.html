@@ -160,10 +160,19 @@
         <span>Media Player</span>
       </button>
       <mat-divider></mat-divider>
-      <button mat-menu-item  routerLink="/calendar">
+      @if (app.enabledFeature('preview')) {
+      <button mat-menu-item routerLink="/calendar">
         <mat-icon>calendar_month</mat-icon>
         <span>Calendar</span>
       </button>
+      }
+      @if (app.enabledFeature('beta')) {
+      <button mat-menu-item routerLink="/badges">
+        <mat-icon>badge</mat-icon>
+        <span>Badges</span>
+      </button>
+      }
+
     </mat-menu>
 
     <button mat-icon-button [class.profile-button-picture]="accountState.profile()?.data?.picture"
@@ -201,7 +210,7 @@
 
   @if (app.initialized()) {
   <!-- Sidenav container now below the toolbar -->
-  <mat-sidenav-container class="sidenav-container" [autosize]="false"> <!-- Side navigation -->
+  <mat-sidenav-container class="sidenav-container" [autosize]="true"> <!-- Side navigation -->
     <mat-sidenav #sidenav class="sidenav no-print"
       [ngClass]="{ 'sidenav-labels': displayLabels(), 'sidenav-small': !displayLabels()  }" [opened]="opened()"
       [mode]="layout.isHandset() ? 'over' : 'side'" [fixedInViewport]="false">
