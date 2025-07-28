@@ -46,7 +46,7 @@ import {
   ColumnDefinition,
 } from '../../services/feeds-collection.service';
 import { MediaItem, NostrRecord } from '../../interfaces';
-import { Event, kinds, UnsignedEvent } from 'nostr-tools';
+import { Event } from 'nostr-tools';
 import { decode } from 'blurhash';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 import { UrlUpdateService } from '../../services/url-update.service';
