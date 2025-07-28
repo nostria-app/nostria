@@ -23,7 +23,7 @@
     border-left: 2px solid var(--mat-sys-outline-variant);
     padding-left: 12px;
     margin-bottom: 1rem;
-    
+
     &:last-child {
         margin-bottom: 0;
     }
@@ -45,11 +45,11 @@
     font-size: 0.875rem;
     color: var(--mat-sys-primary);
     border-color: var(--mat-sys-outline-variant);
-    
+
     &:hover {
         background-color: var(--mat-sys-primary-container);
     }
-    
+
     mat-icon {
         font-size: 1rem;
         width: 1rem;
