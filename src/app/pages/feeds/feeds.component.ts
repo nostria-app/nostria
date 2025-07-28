@@ -30,6 +30,8 @@ import { UserProfileComponent } from '../../components/user-profile/user-profile
 import { UrlUpdateService } from '../../services/url-update.service';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { MatDividerModule } from '@angular/material/divider';
+import { ContentComponent } from '../../components/content/content.component';
+import { AgoPipe } from '../../pipes/ago.pipe';
 
 interface NavLink {
   id: string;
@@ -62,7 +64,9 @@ const DEFAULT_COLUMNS: NavLink[] = [
     MatDialogModule,
     MatProgressSpinnerModule,
     UserProfileComponent,
-    MatDividerModule
+    MatDividerModule,
+    ContentComponent,
+    AgoPipe
   ],
   templateUrl: './feeds.component.html',
   styleUrl: './feeds.component.scss'

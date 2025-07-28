@@ -207,13 +207,12 @@
               @if (columnData && columnEventsData) {
               @for(event of columnEventsData; track event.id) {
               <mat-card class="content-card">
-                <mat-card-header>
-                  <app-user-profile [pubkey]="event.pubkey"><span class="time-label">{{ event.created_at * 1000 |
-                      date:'short' }}</span></app-user-profile>
-                  <!-- <div mat-card-avatar class="avatar"></div>
-                  <mat-card-title>{{ event.pubkey | slice:0:8 }}...</mat-card-title>
-                  <mat-card-subtitle>{{ event.created_at * 1000 | date:'short' }}</mat-card-subtitle> -->
-                </mat-card-header>
+                 <app-user-profile [pubkey]="event.pubkey" view="thread">
+                      <a class="date-link"
+                      [matTooltip]="event.created_at * 1000 | date:'medium'" matTooltipPosition="below">
+                      {{ event.created_at | ago }}
+                    </a>
+                  </app-user-profile>
                 <mat-card-content>
                   <!-- Photos (NIP-68, kind 20) -->
                   @if (event.kind === 20 || columnData.column.type === 'photos') {
@@ -384,6 +383,9 @@
                   <!-- <app-user-profile [event]="event" [pubkey]="event.pubkey"></app-user-profile> -->
                   <app-user-profile [view]="'details'" [event]="event"></app-user-profile>
                   } <!-- Notes (kind 1) and Custom -->
+                  @else if (event.kind === 1) {
+                  <app-content [content]="event.content"></app-content>
+                  }
                   @else {
                   @if (event.content) {
                   <p class="note-content">{{ removeHashtagsFromContent(event.content) }}</p>

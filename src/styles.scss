@@ -423,6 +423,15 @@ mat-card-content li {
   backdrop-filter: blur(3px);
 }
 
+.date-link {
+  font-size: 0.8rem;
+  color: var(--mat-sys-outline);
+}
+
+.date-link:hover {
+  text-decoration: underline;
+}
+
 .dark .loading-overlay {
   background-color: rgba(0, 0, 0, 0.7);
 }
@@ -539,7 +548,7 @@ mat-card-content li {
   // align-items: center;
   // cursor: pointer;
   font-size: 0.9rem;
-   padding: 4px 12px 4px 0px;
+  padding: 4px 12px 4px 0px;
   // border-radius: 16px;
   // transition: background-color 0.2s;
   // font-weight: 500;
@@ -743,6 +752,8 @@ mat-card-content li {
 
 .note-card {
   max-width: 680px;
+  width: 100%;
+  margin: 0;
 }
 
 // Profile link wrapping styles
