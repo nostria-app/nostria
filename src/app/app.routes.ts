@@ -42,6 +42,7 @@ import { GeneralSettingsComponent } from './pages/settings/general/general.compo
 import { Calendar } from './pages/calendar/calendar';
 import { AlgorithmComponent } from './pages/settings/algorithm/algorithm';
 import { RelaysComponent } from './pages/settings/relays/relays.component';
+import { DraftsComponent } from './pages/drafts/drafts.component';
 
 const profileChildren: Routes = [
   {
@@ -121,6 +122,7 @@ export const routes: Routes = [
   { path: 'calendar', component: Calendar, data: { isRoot: true } },
   { path: 'bookmarks', data: { isRoot: true }, loadComponent: () => import('./pages/bookmarks/bookmarks.component').then(m => m.BookmarksComponent), title: 'Bookmarks' },
   { path: 'articles', component: ArticlesComponent, data: { isRoot: true }, title: 'Articles' },
+  { path: 'drafts', component: DraftsComponent, data: { isRoot: true }, title: 'Drafts' },
   { path: 'article/create', component: EditorComponent, title: 'New Article' },
   { path: 'article/edit/:id', component: EditorComponent, title: 'Edit Article' },
   { path: 'a/:id', component: ArticleComponent, title: 'Article', resolve: { data: DataResolver } },
