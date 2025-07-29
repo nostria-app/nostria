@@ -6,6 +6,10 @@
     <mat-progress-bar mode="indeterminate" class="publish-progress"></mat-progress-bar>
   }
   
+  <button mat-icon-button (click)="navigateToDrafts()" matTooltip="View all drafts">
+    <mat-icon>draft</mat-icon>
+  </button>
+  
   <button mat-button (click)="cancel()" [disabled]="isPublishing()">
     <mat-icon>close</mat-icon>
     Cancel
@@ -81,11 +85,7 @@
                     <p class="preview-summary">{{ article().summary }}</p>
                   }
                   @if (article().image) {
-                    <img [src]="article().image" 
-                         [attr.alt]="article().title || 'Article featured image'" 
-                         class="preview-image"
-                         loading="lazy"
-                         [attr.title]="article().title || 'Article featured image'">
+                    <img [src]="article().image" [attr.alt]="article().title || 'Article featured image'" [attr.title]="article().title || 'Article featured image'" class="preview-image" loading="lazy">
                   }
                   <div class="preview-markdown">
                     <div [innerHTML]="markdownHtml()"></div>

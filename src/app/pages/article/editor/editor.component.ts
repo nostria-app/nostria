@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect, computed } from '@angular/core';
+import { Component, inject, signal, effect, computed, untracked } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -26,6 +26,7 @@ import { LayoutService } from '../../../services/layout.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { RichTextEditorComponent } from '../../../components/rich-text-editor/rich-text-editor.component';
 import { nip19 } from 'nostr-tools';
+import { DecodedNaddr } from 'nostr-tools/nip19';
 
 interface ArticleDraft {
   title: string;
@@ -95,6 +96,7 @@ export class EditorComponent {
   selectedTabIndex = signal(0);
   autoTitleEnabled = signal(true);
   autoDTagEnabled = signal(true);
+  isLoadingArticle = signal(false); // Track when we're loading an existing article
 
   // Article data
   article = signal<ArticleDraft>({
@@ -175,17 +177,26 @@ export class EditorComponent {
 
   // Tag input
   newTag = signal('');
-  
+
   constructor() {
     // Check if we're editing an existing article
     effect(() => {
       const articleId = this.route.snapshot.paramMap.get('id');
       if (articleId && typeof articleId === 'string') {
         this.isEditMode.set(true);
-        this.loadArticle(articleId);
+
+        untracked(async () => {
+          await this.loadArticle(articleId);
+        });
       } else {
-        // Load auto-saved draft for new articles
-        this.loadAutoDraft();
+        // Only load auto-saved draft for completely new articles (not editing existing ones)
+        this.isEditMode.set(false);
+        // Defer auto-draft loading to ensure it doesn't interfere with article loading
+        setTimeout(() => {
+          if (!this.isEditMode()) {
+            this.loadAutoDraft();
+          }
+        }, 0);
       }
     });
 
@@ -194,16 +205,20 @@ export class EditorComponent {
       const article = this.article();
       const pubkey = this.accountState.pubkey();
       const isEdit = this.isEditMode();
-      
+      const isLoadingArticle = this.isLoadingArticle();
+
+      // Don't trigger auto-save while loading an existing article
+      if (isLoadingArticle) return;
+
       // Only auto-save for new articles (not when editing existing ones)
       // Check if there's meaningful content before scheduling auto-save
       if (!isEdit && pubkey) {
-        const hasContent = article.title.trim() || 
-                          article.content.trim() || 
-                          article.summary.trim() || 
-                          article.image.trim() ||
-                          article.tags.length > 0;
-        
+        const hasContent = article.title.trim() ||
+          article.content.trim() ||
+          article.summary.trim() ||
+          article.image.trim() ||
+          article.tags.length > 0;
+
         if (hasContent) {
           this.scheduleAutoSave();
         }
@@ -239,12 +254,12 @@ export class EditorComponent {
 
     // Only schedule if there's meaningful content
     const article = this.article();
-    const hasContent = article.title.trim() || 
-                      article.content.trim() || 
-                      article.summary.trim() || 
-                      article.image.trim() ||
-                      article.tags.length > 0;
-    
+    const hasContent = article.title.trim() ||
+      article.content.trim() ||
+      article.summary.trim() ||
+      article.image.trim() ||
+      article.tags.length > 0;
+
     if (!hasContent) return;
 
     // Schedule new auto-save
@@ -258,14 +273,14 @@ export class EditorComponent {
     if (!pubkey || this.isEditMode()) return;
 
     const article = this.article();
-    
+
     // Check if there's meaningful content
-    const hasContent = article.title.trim() || 
-                      article.content.trim() || 
-                      article.summary.trim() || 
-                      article.image.trim() ||
-                      article.tags.length > 0;
-    
+    const hasContent = article.title.trim() ||
+      article.content.trim() ||
+      article.summary.trim() ||
+      article.image.trim() ||
+      article.tags.length > 0;
+
     if (!hasContent) return;
 
     const autoDraft: ArticleAutoDraft = {
@@ -281,22 +296,22 @@ export class EditorComponent {
     };
 
     const key = this.getAutoDraftKey();
-    
+
     // Check if this is meaningfully different from the last save
     const previousDraft = this.localStorage.getObject<ArticleAutoDraft>(key);
     if (previousDraft) {
       const isSimilar = previousDraft.title === autoDraft.title &&
-                       previousDraft.content === autoDraft.content &&
-                       previousDraft.summary === autoDraft.summary &&
-                       previousDraft.image === autoDraft.image &&
-                       JSON.stringify(previousDraft.tags) === JSON.stringify(autoDraft.tags);
-      
+        previousDraft.content === autoDraft.content &&
+        previousDraft.summary === autoDraft.summary &&
+        previousDraft.image === autoDraft.image &&
+        JSON.stringify(previousDraft.tags) === JSON.stringify(autoDraft.tags);
+
       // If content is very similar, don't save again (prevents spam)
       if (isSimilar) return;
     }
-    
+
     this.localStorage.setObject(key, autoDraft);
-    
+
     // Only show notification for the first auto-save or significant changes
     if (!previousDraft) {
       // Silent auto-save, no notification needed for regular saves
@@ -306,16 +321,17 @@ export class EditorComponent {
 
   private loadAutoDraft(): void {
     const pubkey = this.accountState.pubkey();
-    if (!pubkey) return;
+    // Don't load auto-draft when editing existing articles or when currently loading an article
+    if (!pubkey || this.isEditMode() || this.isLoadingArticle()) return;
 
     const key = this.getAutoDraftKey();
     const autoDraft = this.localStorage.getObject<ArticleAutoDraft>(key);
-    
+
     if (autoDraft) {
       // Check if draft is not too old (7 days)
       const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
       const isExpired = Date.now() - autoDraft.lastModified > sevenDaysInMs;
-      
+
       if (!isExpired) {
         this.article.set({
           title: autoDraft.title,
@@ -325,13 +341,13 @@ export class EditorComponent {
           tags: [...autoDraft.tags],
           dTag: autoDraft.dTag
         });
-        
+
         this.autoTitleEnabled.set(autoDraft.autoTitleEnabled);
         this.autoDTagEnabled.set(autoDraft.autoDTagEnabled);
-        
+
         // Show restoration message if there's meaningful content
         if (autoDraft.title.trim() || autoDraft.content.trim() || autoDraft.summary.trim()) {
-          this.snackBar.open('Draft restored from previous session', 'Dismiss', { 
+          this.snackBar.open('Draft restored from previous session', 'Dismiss', {
             duration: 4000,
             panelClass: 'info-snackbar'
           });
@@ -351,7 +367,30 @@ export class EditorComponent {
   async loadArticle(articleId: string): Promise<void> {
     try {
       this.isLoading.set(true);
-      const pubkey = this.accountState.pubkey();
+      this.isLoadingArticle.set(true); // Mark that we're loading an existing article
+
+      let kind = 30023; // Default to article kind
+      let pubkey = this.accountState.pubkey();
+
+      if (articleId.startsWith('naddr')) {
+        const naddr = nip19.decode(articleId) as DecodedNaddr;
+
+        if (naddr.data.kind !== 30023 && naddr.data.kind !== 30024) {
+          this.snackBar.open('Invalid article kind', 'Close', { duration: 3000 });
+          this.router.navigate(['/articles']);
+          return;
+        }
+
+        if (naddr.data.kind) {
+          kind = naddr.data.kind;
+        }
+
+        if (naddr.data.pubkey) {
+          pubkey = naddr.data.pubkey;
+        }
+
+        articleId = naddr.data.identifier;
+      }
 
       if (!pubkey) {
         this.snackBar.open('Please log in to edit articles', 'Close', { duration: 3000 });
@@ -362,7 +401,7 @@ export class EditorComponent {
       // Since we're doing editing here, we'll save and cache locally.
       const record = await this.dataService.getEventByPubkeyAndKindAndReplaceableEvent(
         pubkey,
-        30023,
+        kind,
         articleId,
         {
           cache: true,
@@ -392,6 +431,7 @@ export class EditorComponent {
       this.snackBar.open('Error loading article', 'Close', { duration: 3000 });
     } finally {
       this.isLoading.set(false);
+      this.isLoadingArticle.set(false); // Clear the loading flag
     }
   }
 
@@ -510,7 +550,7 @@ export class EditorComponent {
         if (!this.isEditMode()) {
           this.clearAutoDraft();
         }
-        
+
         // We don't do "note" much, we want URLs that embeds the autor.
         // const note = nip19.noteEncode(signedEvent.id);
         // this.router.navigate(['/e', note]); // Navigate to the published event
@@ -540,16 +580,20 @@ export class EditorComponent {
     // Ask user if they want to keep the auto-draft when canceling
     const article = this.article();
     const hasContent = article.title.trim() || article.content.trim() || article.summary.trim();
-    
+
     if (!this.isEditMode() && hasContent) {
       // Keep the auto-draft - user might want to continue later
-      this.snackBar.open('Draft saved automatically. You can continue later.', 'Dismiss', { 
+      this.snackBar.open('Draft saved automatically. You can continue later.', 'Dismiss', {
         duration: 5000,
         panelClass: 'info-snackbar'
       });
     }
-    
+
     this.router.navigate(['/articles']);
+  }
+
+  navigateToDrafts(): void {
+    this.router.navigate(['/drafts']);
   }
 
   updateTitle(value: string): void {
@@ -585,7 +629,7 @@ export class EditorComponent {
   toggleAutoTitleMode(): void {
     const wasEnabled = this.autoTitleEnabled();
     this.autoTitleEnabled.update(enabled => !enabled);
-    
+
     // Apply auto-title when enabling and show notification
     if (!wasEnabled && this.autoTitleEnabled() && this.suggestedTitle()) {
       this.applyAutoTitle();
