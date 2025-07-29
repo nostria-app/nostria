@@ -422,6 +422,9 @@ export class EditorComponent {
           publishedAt: parseInt(this.getTagValue(tags, 'published_at') || '0') || undefined,
           dTag: this.getTagValue(tags, 'd') || articleId
         });
+
+        // Disable auto-title when editing existing article since title is already established
+        this.autoTitleEnabled.set(false);
       } else {
         this.snackBar.open('Article not found', 'Close', { duration: 3000 });
         this.router.navigate(['/articles']);
