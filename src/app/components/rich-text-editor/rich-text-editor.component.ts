@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, inject, signal, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, Input, Output, EventEmitter, inject, signal, AfterViewInit, ViewChild, ElementRef, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -28,7 +28,7 @@ import { MediaService } from '../../services/media.service';
   templateUrl: './rich-text-editor.component.html',
   styleUrl: './rich-text-editor.component.scss'
 })
-export class RichTextEditorComponent implements AfterViewInit {
+export class RichTextEditorComponent implements AfterViewInit, OnChanges {
   @Input() content: string = '';
   @Output() contentChange = new EventEmitter<string>();
   
@@ -55,6 +55,13 @@ export class RichTextEditorComponent implements AfterViewInit {
     
     // Add paste event listener for clipboard image handling
     this.setupPasteHandler();
+  }
+  
+  ngOnChanges(changes: SimpleChanges) {
+    // React to content input changes after initialization
+    if (changes['content'] && !changes['content'].firstChange) {
+      this.setContent(changes['content'].currentValue || '');
+    }
   }
   
   setContent(content: string) {
