@@ -167,8 +167,6 @@ export class DraftsComponent {
     }
 
     openDraft(draft: Draft): void {
-        debugger;
-        
         // Navigate to article editor with the draft's naddr
         const naddr = nip19.naddrEncode({
             identifier: draft.dTag,
