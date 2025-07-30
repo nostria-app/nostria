@@ -36,6 +36,7 @@ export class StateService implements NostriaService {
   async load() {
     const pubkey = this.accountState.pubkey();
 
+    // This is never called for anonymous accounts.
     await this.discoveryRelay.load();
     await this.accountRelay.setAccount(pubkey);
     await this.accountState.load();
