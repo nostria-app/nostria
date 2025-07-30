@@ -22,6 +22,7 @@ import { UrlUpdateService } from '../../services/url-update.service';
 import { BookmarkService } from '../../services/bookmark.service';
 import { CommonModule } from '@angular/common';
 import { AccountStateService } from '../../services/account-state.service';
+import DOMPurify from 'dompurify';
 
 @Component({
   selector: 'app-article',
@@ -236,11 +237,28 @@ export class ArticleComponent {
     }
 
     try {
+      const washedContent = DOMPurify.sanitize(content);
+
+      // Strip unwanted paragraph tags that might be added by the editor
+      const cleanedContent = washedContent
+        .replace(/<p>/gi, '')   // Remove all opening <p> tags (case-insensitive)
+        .replace(/<\/p>/gi, ''); // Remove all closing </p> tags (case-insensitive)
+
       // First, preprocess content to convert image URLs to markdown image syntax
-      const preprocessedContent = await this.preprocessImageUrls(content);
+      const preprocessedContent = await this.preprocessImageUrls(cleanedContent);
+
+      // Store reference to isImageUrl for use in renderer
+      const isImageUrl = this.isImageUrl.bind(this);
 
       // Create a custom renderer for enhanced image handling
       const renderer = new marked.Renderer();
+
+      // Custom heading renderer to ensure headers are properly rendered
+      renderer.heading = ({ text, depth }: { text: string; depth: number }): string => {
+        const sanitizedText = text.replace(/[<>"']/g, '');
+        const headingId = sanitizedText.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        return `<h${depth} id="${headingId}">${text}</h${depth}>`;
+      };
 
       // Custom image renderer with enhanced attributes and link support
       renderer.image = ({ href, title, text }: { href: string | null; title: string | null; text: string }): string => {
@@ -300,7 +318,7 @@ export class ArticleComponent {
         }
 
         // Check if the link URL itself points to an image (standalone image URLs)
-        if (this.isImageUrl(href)) {
+        if (isImageUrl(href)) {
           // Render as image instead of link
           const sanitizedHref = href.replace(/[<>"']/g, '');
           const sanitizedTitle = title ? title.replace(/[<>"']/g, '') : '';
@@ -326,8 +344,8 @@ export class ArticleComponent {
         return `<a href="${sanitizedHref}" ${sanitizedTitle ? `title="${sanitizedTitle}"` : ''} target="_blank" rel="noopener noreferrer">${text}</a>`;
       };
 
-      // Configure marked with custom renderer and options
-      marked.setOptions({
+      // Configure marked with custom renderer and options for modern marked.js
+      marked.use({
         renderer: renderer,
         gfm: true,
         breaks: true,
