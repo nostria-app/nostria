@@ -15,7 +15,7 @@
     Cancel
   </button>
   
-  <button mat-button (click)="saveDraft()" [disabled]="!isValid() || isPublishing()">
+  <button mat-button (click)="saveDraft()" [disabled]="!isDraftValid() || isPublishing()">
     <mat-icon>save</mat-icon>
     Save Draft
   </button>
