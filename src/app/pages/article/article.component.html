@@ -83,6 +83,13 @@
       <div><span>{{ bookmark | json }}</span></div>
       } -->
 
+      @if (accountState.isCurrentUser(authorPubkey())) {
+      <button mat-button color="primary" routerLink="/article/edit/{{ link }}" title="Edit Article">
+        <mat-icon>edit</mat-icon>
+        Edit
+      </button>
+      }
+
       @if (bookmark.isBookmarked(id(), 'a')) {
       <button mat-button color="primary" title="Remove bookmark" (click)="bookmarkArticle()">
         <mat-icon title="Remove bookmark">bookmark_remove</mat-icon>

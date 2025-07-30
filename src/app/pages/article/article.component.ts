@@ -1,6 +1,6 @@
 import { Component, inject, computed, signal, effect } from '@angular/core';
 import { Event, kinds, nip19 } from 'nostr-tools';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -35,7 +35,8 @@ import { AccountStateService } from '../../services/account-state.service';
     MatProgressSpinnerModule,
     UserProfileComponent,
     DateToggleComponent,
-    CommonModule
+    CommonModule,
+    RouterModule
   ],
   templateUrl: './article.component.html',
   styleUrl: './article.component.scss'
@@ -52,7 +53,8 @@ export class ArticleComponent {
   private parsing = inject(ParsingService);
   private url = inject(UrlUpdateService);
   bookmark = inject(BookmarkService);
-  private accountState = inject(AccountStateService);
+  accountState = inject(AccountStateService);
+  link = '';
 
   event = signal<Event | undefined>(undefined);
   isLoading = signal(false);
@@ -97,6 +99,10 @@ export class ArticleComponent {
     let slug = '';
 
     if (receivedData) {
+
+      const encoded = nip19.naddrEncode({ identifier: receivedData.tags.find(tag => tag[0] === 'd')?.[1] || '', kind: receivedData.kind, pubkey: receivedData.pubkey });
+      this.link = encoded;
+
       this.logger.debug('Received event from navigation state:', receivedData);
       this.event.set(receivedData);
       this.isLoading.set(false);
@@ -104,6 +110,8 @@ export class ArticleComponent {
       setTimeout(() => this.layout.scrollMainContentToTop(), 50);
       return;
     } else if (naddr.startsWith('naddr1')) {
+
+      this.link = naddr;
 
       // Decode the naddr1 parameter using nip19.decode()
       const decoded = this.utilities.decode(naddr);
@@ -128,6 +136,9 @@ export class ArticleComponent {
         // Let's make the URL nicer, TODO add support for replacing with username, for now replace with npub.
         const npub = this.utilities.getNpubFromPubkey(pubkey);
         this.url.updatePathSilently(['/a', npub, slug]);
+
+        const encoded = nip19.naddrEncode({ identifier: slug, kind: kinds.LongFormArticle, pubkey: pubkey });
+        this.link = encoded;
       }
     }
 
