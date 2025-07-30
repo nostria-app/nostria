@@ -125,28 +125,16 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
 
     // More comprehensive markdown to HTML conversion
     let html = markdown
-      // Handle paragraphs (two newlines)
-      .replace(/\n\n/g, '</p><p>')
-      
       // Handle images - convert ![alt](url) to <img> tags (must come before links)
       .replace(/!\[([^\]]*)\]\(([^\)]+)\)/g, '<img src="$2" alt="$1" style="max-width: 100%; height: auto; border-radius: 4px;" />')
       
-      // Handle text formatting - non-greedy to prevent overlapping tags
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/~~(.*?)~~/g, '<del>$1</del>')
-      .replace(/`([^`]+)`/g, '<code>$1</code>')
-      
-      // Handle headings
+      // Handle headings FIRST to avoid paragraph wrapping
       .replace(/^### (.*?)$/gm, '<h3>$1</h3>')
       .replace(/^## (.*?)$/gm, '<h2>$1</h2>')
       .replace(/^# (.*?)$/gm, '<h1>$1</h1>')
       
       // Handle blockquotes
       .replace(/^> (.*?)$/gm, '<blockquote>$1</blockquote>')
-      
-      // Handle links (after images to avoid conflict)
-      .replace(/\[([^\[]+)\]\(([^\)]+)\)/g, '<a href="$2">$1</a>')
       
       // Handle unordered lists - collect consecutive list items
       .replace(/(?:^|\n)- (.*?)(?=\n(?!- )|$)/gs, function(match: string, item: string) {
@@ -158,19 +146,34 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
         return '<ol><li>' + item.trim() + '</li></ol>';
       })
       
+      // Handle text formatting - non-greedy to prevent overlapping tags
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/~~(.*?)~~/g, '<del>$1</del>')
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      
+      // Handle links (after images to avoid conflict)
+      .replace(/\[([^\[]+)\]\(([^\)]+)\)/g, '<a href="$2">$1</a>')
+      
+      // Handle paragraphs more intelligently - only wrap actual paragraph text
+      .replace(/\n\n/g, '</p><p>')
+      
       // Handle remaining single newlines
       .replace(/\n/g, '<br>');
     
-    // Wrap in paragraph if not already
-    if (!html.startsWith('<h1>') && 
-        !html.startsWith('<h2>') && 
-        !html.startsWith('<h3>') && 
-        !html.startsWith('<blockquote>') && 
-        !html.startsWith('<ul>') && 
-        !html.startsWith('<ol>') && 
-        !html.startsWith('<p>')) {
+    // Only wrap in paragraph tags if the content is not already a block element
+    const isBlockElement = html.match(/^<(h[1-6]|blockquote|ul|ol|div|p)\b/);
+    if (!isBlockElement && html.trim()) {
       html = '<p>' + html + '</p>';
     }
+    
+    // Clean up any empty paragraphs or malformed tags
+    html = html
+      .replace(/<p><\/p>/g, '') // Remove empty paragraphs
+      .replace(/<p>(<h[1-6][^>]*>.*?<\/h[1-6]>)<\/p>/gi, '$1') // Remove p tags around headings
+      .replace(/<p>(<blockquote[^>]*>.*?<\/blockquote>)<\/p>/gi, '$1') // Remove p tags around blockquotes
+      .replace(/<p>(<ul[^>]*>.*?<\/ul>)<\/p>/gi, '$1') // Remove p tags around lists
+      .replace(/<p>(<ol[^>]*>.*?<\/ol>)<\/p>/gi, '$1'); // Remove p tags around ordered lists
     
     // Set content safely
     setTimeout(() => {
@@ -188,13 +191,13 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
     // Clean up extra divs and spans that might be inserted by the contenteditable
     html = html.replace(/<div><br><\/div>/g, '\n')
                .replace(/<div>(.*?)<\/div>/g, '\n$1')
-               .replace(/<span>(.*?)<\/span>/g, '$1');
+               .replace(/<span[^>]*>(.*?)<\/span>/gi, '$1');
     
     // Convert HTML to Markdown
     let markdown = html
-      // Handle newlines and paragraphs
+      // Handle newlines and paragraphs - more robust approach
       .replace(/<br\s*\/?>/gi, '\n')
-      .replace(/<p>(.*?)<\/p>/gi, '$1\n\n')
+      .replace(/<p[^>]*>(.*?)<\/p>/gi, '$1\n\n')
       
       // Handle images BEFORE links (images have similar syntax)
       .replace(/<img[^>]+src="([^"]*)"[^>]*alt="([^"]*)"[^>]*>/gi, '![$2]($1)')
@@ -202,35 +205,35 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
       .replace(/<img[^>]+src="([^"]*)"[^>]*>/gi, '![]($1)')
       
       // Handle headings
-      .replace(/<h1>(.*?)<\/h1>/gi, '# $1\n\n')
-      .replace(/<h2>(.*?)<\/h2>/gi, '## $1\n\n')
-      .replace(/<h3>(.*?)<\/h3>/gi, '### $1\n\n')
-      .replace(/<h4>(.*?)<\/h4>/gi, '#### $1\n\n')
-      .replace(/<h5>(.*?)<\/h5>/gi, '##### $1\n\n')
-      .replace(/<h6>(.*?)<\/h6>/gi, '###### $1\n\n')
+      .replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1\n\n')
+      .replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1\n\n')
+      .replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1\n\n')
+      .replace(/<h4[^>]*>(.*?)<\/h4>/gi, '#### $1\n\n')
+      .replace(/<h5[^>]*>(.*?)<\/h5>/gi, '##### $1\n\n')
+      .replace(/<h6[^>]*>(.*?)<\/h6>/gi, '###### $1\n\n')
       
       // Handle text formatting
-      .replace(/<strong>(.*?)<\/strong>/gi, '**$1**')
-      .replace(/<b>(.*?)<\/b>/gi, '**$1**')
-      .replace(/<em>(.*?)<\/em>/gi, '*$1*')
-      .replace(/<i>(.*?)<\/i>/gi, '*$1*')
-      .replace(/<del>(.*?)<\/del>/gi, '~~$1~~')
-      .replace(/<code>(.*?)<\/code>/gi, '`$1`')
+      .replace(/<strong[^>]*>(.*?)<\/strong>/gi, '**$1**')
+      .replace(/<b[^>]*>(.*?)<\/b>/gi, '**$1**')
+      .replace(/<em[^>]*>(.*?)<\/em>/gi, '*$1*')
+      .replace(/<i[^>]*>(.*?)<\/i>/gi, '*$1*')
+      .replace(/<del[^>]*>(.*?)<\/del>/gi, '~~$1~~')
+      .replace(/<code[^>]*>(.*?)<\/code>/gi, '`$1`')
       
       // Handle blockquotes
-      .replace(/<blockquote>(.*?)<\/blockquote>/gi, '> $1\n\n')
+      .replace(/<blockquote[^>]*>(.*?)<\/blockquote>/gi, '> $1\n\n')
       
       // Handle links (after images to avoid conflict)
-      .replace(/<a href="(.*?)">(.*?)<\/a>/gi, '[$2]($1)')
+      .replace(/<a[^>]+href="([^"]*)"[^>]*>(.*?)<\/a>/gi, '[$2]($1)')
       
       // Handle lists - more complex handling needed for nested lists
-      .replace(/<ul>(.*?)<\/ul>/gi, function(match: string, content: string) {
-        const items = content.split(/<li>(.*?)<\/li>/gi).filter((item: string, i: number) => i % 2 === 1);
-        return items.map((item: string) => `- ${item}`).join('\n') + '\n\n';
+      .replace(/<ul[^>]*>(.*?)<\/ul>/gi, function(match: string, content: string) {
+        const items = content.split(/<li[^>]*>(.*?)<\/li>/gi).filter((item: string, i: number) => i % 2 === 1);
+        return items.map((item: string) => `- ${item.trim()}`).join('\n') + '\n\n';
       })
-      .replace(/<ol>(.*?)<\/ol>/gi, function(match: string, content: string) {
-        const items = content.split(/<li>(.*?)<\/li>/gi).filter((item: string, i: number) => i % 2 === 1);
-        return items.map((item: string, i: number) => `${i+1}. ${item}`).join('\n') + '\n\n';
+      .replace(/<ol[^>]*>(.*?)<\/ol>/gi, function(match: string, content: string) {
+        const items = content.split(/<li[^>]*>(.*?)<\/li>/gi).filter((item: string, i: number) => i % 2 === 1);
+        return items.map((item: string, i: number) => `${i+1}. ${item.trim()}`).join('\n') + '\n\n';
       })
       
       // Clean up any remaining HTML entities
@@ -240,9 +243,17 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
       .replace(/&nbsp;/g, ' ')
       .replace(/&quot;/g, '"')
       .replace(/&apos;/g, "'");
-      
-    // Remove any extra blank lines
-    markdown = markdown.replace(/\n\n\n+/g, '\n\n').trim();
+    
+    // CRITICAL: Remove ANY remaining HTML tags that might have slipped through
+    // This is a comprehensive cleanup to ensure no HTML tags remain
+    markdown = markdown.replace(/<[^>]*>/g, '');
+    
+    // Clean up any extra whitespace and blank lines
+    markdown = markdown
+      .replace(/\s+\n/g, '\n') // Remove trailing spaces on lines
+      .replace(/\n\s+/g, '\n') // Remove leading spaces on lines
+      .replace(/\n\n\n+/g, '\n\n') // Replace multiple newlines with double newlines
+      .trim();
     
     return markdown;
   }
