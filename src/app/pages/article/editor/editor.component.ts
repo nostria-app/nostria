@@ -161,6 +161,15 @@ export class EditorComponent {
       art.content.trim().length > 0 &&
       art.dTag.trim().length > 0;
   });
+
+  // Draft validation - more lenient, only requires some content
+  isDraftValid = computed(() => {
+    const art = this.article();
+    return art.title.trim().length > 0 || 
+      art.content.trim().length > 0 || 
+      art.summary.trim().length > 0;
+  });
+
   // Markdown preview
   markdownHtml = computed(() => {
     const content = this.article().content;
@@ -200,30 +209,31 @@ export class EditorComponent {
       }
     });
 
-    // Auto-save effect - watches for article content changes with debouncing
-    effect(() => {
-      const article = this.article();
-      const pubkey = this.accountState.pubkey();
-      const isEdit = this.isEditMode();
-      const isLoadingArticle = this.isLoadingArticle();
+    // Auto-save effect - disabled to prevent cursor jumping issues
+    // Auto-save is now handled directly in the scheduleAutoSave method
+    // effect(() => {
+    //   const article = this.article();
+    //   const pubkey = this.accountState.pubkey();
+    //   const isEdit = this.isEditMode();
+    //   const isLoadingArticle = this.isLoadingArticle();
 
-      // Don't trigger auto-save while loading an existing article
-      if (isLoadingArticle) return;
+    //   // Don't trigger auto-save while loading an existing article or during content updates
+    //   if (isLoadingArticle || this.isUpdatingContent) return;
 
-      // Only auto-save for new articles (not when editing existing ones)
-      // Check if there's meaningful content before scheduling auto-save
-      if (!isEdit && pubkey) {
-        const hasContent = article.title.trim() ||
-          article.content.trim() ||
-          article.summary.trim() ||
-          article.image.trim() ||
-          article.tags.length > 0;
+    //   // Only auto-save for new articles (not when editing existing ones)
+    //   // Check if there's meaningful content before scheduling auto-save
+    //   if (!isEdit && pubkey) {
+    //     const hasContent = article.title.trim() ||
+    //       article.content.trim() ||
+    //       article.summary.trim() ||
+    //       article.image.trim() ||
+    //       article.tags.length > 0;
 
-        if (hasContent) {
-          this.scheduleAutoSave();
-        }
-      }
-    }, { allowSignalWrites: true });
+    //     if (hasContent) {
+    //       this.scheduleAutoSave();
+    //     }
+    //   }
+    // }, { allowSignalWrites: true });
   }
 
   ngOnInit() {
@@ -266,6 +276,20 @@ export class EditorComponent {
     this.autoSaveTimer = setTimeout(() => {
       this.saveAutoDraft();
     }, this.AUTO_SAVE_INTERVAL);
+  }
+
+  private scheduleAutoSaveIfNeeded(): void {
+    const pubkey = this.accountState.pubkey();
+    const isEdit = this.isEditMode();
+    const isLoadingArticle = this.isLoadingArticle();
+
+    // Don't auto-save while loading an existing article
+    if (isLoadingArticle) return;
+
+    // Only auto-save for new articles (not when editing existing ones)
+    if (!isEdit && pubkey) {
+      this.scheduleAutoSave();
+    }
   }
 
   private saveAutoDraft(): void {
@@ -404,8 +428,8 @@ export class EditorComponent {
         kind,
         articleId,
         {
-          cache: true,
-          save: true
+          cache: false,
+          save: false
         }
       );
 
@@ -469,8 +493,8 @@ export class EditorComponent {
   }
 
   async saveDraft(): Promise<void> {
-    if (!this.isValid()) {
-      this.snackBar.open('Please fill in required fields', 'Close', { duration: 3000 });
+    if (!this.isDraftValid()) {
+      this.snackBar.open('Please add some content to save as draft', 'Close', { duration: 3000 });
       return;
     }
 
@@ -478,6 +502,9 @@ export class EditorComponent {
       this.isPublishing.set(true);
       await this.publishArticle(30024); // Draft kind
       this.snackBar.open('Draft saved successfully', 'Close', { duration: 3000 });
+      
+      // Navigate to drafts list after successful save
+      this.router.navigate(['/drafts']);
     } catch (error) {
       console.error('Error saving draft:', error);
       this.snackBar.open('Error saving draft', 'Close', { duration: 3000 });
@@ -487,8 +514,12 @@ export class EditorComponent {
   }
 
   async publishArticle(kind: number = 30023): Promise<void> {
-    if (!this.isValid()) {
+    // Use different validation for drafts vs final articles
+    if (kind === 30023 && !this.isValid()) {
       this.snackBar.open('Please fill in required fields', 'Close', { duration: 3000 });
+      return;
+    } else if (kind === 30024 && !this.isDraftValid()) {
+      this.snackBar.open('Please add some content to save as draft', 'Close', { duration: 3000 });
       return;
     }
 
@@ -502,12 +533,29 @@ export class EditorComponent {
       this.isPublishing.set(true);
       const art = this.article();
 
+      // Ensure dTag has a value, generate one if empty (especially for drafts)
+      let dTag = art.dTag.trim();
+      if (!dTag) {
+        dTag = this.generateUniqueId();
+        this.article.update(a => ({ ...a, dTag }));
+      }
+
       // Build tags array according to NIP-23
       const tags: string[][] = [
-        ['d', art.dTag],
-        ['title', art.title],
-        ['summary', art.summary]
+        ['d', dTag]
       ];
+
+      // Add title and summary if they exist (required for final articles, optional for drafts)
+      if (art.title.trim()) {
+        tags.push(['title', art.title]);
+      } else if (kind === 30023) {
+        // For final articles, we need a title
+        tags.push(['title', 'Untitled']);
+      }
+
+      if (art.summary.trim()) {
+        tags.push(['summary', art.summary]);
+      }
 
       if (art.image) {
         tags.push(['image', art.image]);
@@ -601,32 +649,37 @@ export class EditorComponent {
 
   updateTitle(value: string): void {
     this.article.update(art => ({ ...art, title: value }));
-
-    // If auto-dTag is enabled and there's a suggested dTag, apply it
-    if (this.autoDTagEnabled() && this.suggestedDTag()) {
-      this.applyAutoDTag();
-    }
+    
+    // Schedule auto-save directly instead of relying on effect
+    this.scheduleAutoSaveIfNeeded();
   }
 
   updateSummary(value: string): void {
     this.article.update(art => ({ ...art, summary: value }));
+    
+    // Schedule auto-save directly instead of relying on effect
+    this.scheduleAutoSaveIfNeeded();
   }
 
   updateImage(value: string): void {
     this.article.update(art => ({ ...art, image: value }));
+    
+    // Schedule auto-save directly instead of relying on effect
+    this.scheduleAutoSaveIfNeeded();
   }
 
   updateContent(value: string): void {
     this.article.update(art => ({ ...art, content: value }));
-
-    // If auto-title is enabled and there's a suggested title, apply it silently
-    if (this.autoTitleEnabled() && this.suggestedTitle()) {
-      this.applyAutoTitle();
-    }
+    
+    // Schedule auto-save directly instead of relying on effect
+    this.scheduleAutoSaveIfNeeded();
   }
 
   updateDTag(value: string): void {
     this.article.update(art => ({ ...art, dTag: value }));
+    
+    // Schedule auto-save directly instead of relying on effect
+    this.scheduleAutoSaveIfNeeded();
   }
 
   toggleAutoTitleMode(): void {

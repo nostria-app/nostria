@@ -41,6 +41,7 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
   isUploading = signal(false);
   isDragOver = signal(false);
   private dragCounter = 0;
+  private isInternalChange = false; // Flag to track internal vs external changes
   
   private sanitizer = inject(DomSanitizer);
   private mediaService = inject(MediaService);
@@ -58,10 +59,12 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
   }
   
   ngOnChanges(changes: SimpleChanges) {
-    // React to content input changes after initialization
-    if (changes['content'] && !changes['content'].firstChange) {
+    // Only react to external content changes, not internal ones
+    if (changes['content'] && !changes['content'].firstChange && !this.isInternalChange) {
       this.setContent(changes['content'].currentValue || '');
     }
+    // Reset the flag after processing
+    this.isInternalChange = false;
   }
   
   setContent(content: string) {
@@ -98,19 +101,21 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
   
   onMarkdownContentChange(event: Event) {
     const value = (event.target as HTMLTextAreaElement).value;
+    // Mark this as an internal change to prevent re-rendering
+    this.isInternalChange = true;
     // Update the stored markdown content
     this.markdownContent.set(value);
     // Emit the change event with the raw markdown
     this.contentChange.emit(value);
   }
-  
+
   onRichTextContentChange() {
     const markdown = this.convertRichTextToMarkdown();
+    // Mark this as an internal change to prevent re-rendering
+    this.isInternalChange = true;
     this.markdownContent.set(markdown);
     this.contentChange.emit(markdown);
-  }
-  
-  private renderMarkdownToEditor(markdown: string) {
+  }  private renderMarkdownToEditor(markdown: string) {
     if (!markdown) {
       if (this.editorContent) {
         this.editorContent.nativeElement.innerHTML = '';
