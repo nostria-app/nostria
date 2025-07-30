@@ -624,6 +624,8 @@ export class DiscoveryRelayServiceEx
   private readonly utilities = inject(UtilitiesService);
   private localStorage = inject(LocalStorageService);
   private appState = inject(ApplicationStateService);
+  private initialized = false;
+
   private readonly DEFAULT_BOOTSTRAP_RELAYS = [
     'wss://discovery.eu.nostria.app/',
   ];
@@ -633,6 +635,10 @@ export class DiscoveryRelayServiceEx
   }
 
   async getUserRelayUrls(pubkey: string): Promise<string[]> {
+    if (!this.initialized) {
+      await this.load();
+    }
+
     // Query the Discovery Relays for user relay URLs.
     // Instead of doing duplicate kinds, we will query in order to get the user relay URLs. When the global network has moved
     // away from kind 3 relay lists, this will be more optimal.
@@ -657,6 +663,7 @@ export class DiscoveryRelayServiceEx
     // Load bootstrap relays from local storage or use default ones
     const bootstrapRelays = this.loadDiscoveryRelaysFromStorage();
     this.init(bootstrapRelays);
+    this.initialized = true;
   }
 
   clear() {}
