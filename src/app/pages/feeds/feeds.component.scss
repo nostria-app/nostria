@@ -29,6 +29,7 @@ app-user-profile {
     overflow-y: auto;
     padding: 16px;
   }
+
   // Header styles
   .header-section {
     padding: 1rem;
@@ -45,11 +46,15 @@ app-user-profile {
       display: flex;
       flex-direction: column;
       gap: 1rem;
-      flex: 1;      .feed-selector {
+      flex: 1;
+
+      .feed-selector {
         display: flex;
         align-items: flex-start;
         gap: 1rem;
-        flex-wrap: wrap;.feed-tabs {
+        flex-wrap: wrap;
+
+        .feed-tabs {
           display: flex;
           flex-wrap: wrap;
           gap: 8px;
@@ -94,7 +99,9 @@ app-user-profile {
               }
             }
           }
-        }        .feed-actions {
+        }
+
+        .feed-actions {
           display: flex;
           align-items: center;
           align-self: flex-start;
@@ -142,8 +149,7 @@ app-user-profile {
         height: 3px;
       }
 
-      &::-webkit-scrollbar-thumb {
-      }
+      &::-webkit-scrollbar-thumb {}
 
       .column-selector-button {
         display: flex;
@@ -160,14 +166,10 @@ app-user-profile {
         &.active {
           // background-color: var(--mat-sys-primary);
 
-          mat-icon {
-
-          }
+          mat-icon {}
         }
 
-        &:hover:not(.active) {
-
-        }
+        &:hover:not(.active) {}
 
         &.add-column {
           min-width: 40px;
@@ -213,7 +215,9 @@ app-user-profile {
         flex: 0 0 1px; // Small flex item to help with centering
         padding: 0;
         margin: 0;
-      }      // Column unit - contains both header and content
+      }
+
+      // Column unit - contains both header and content
       .column-unit {
         display: flex;
         flex-direction: column;
@@ -799,8 +803,7 @@ app-user-profile {
           background-color: var(--mat-sys-primary);
         }
 
-        &:hover:not(.active) {
-        }
+        &:hover:not(.active) {}
       }
     }
 
@@ -938,8 +941,7 @@ app-user-profile {
         height: 3px;
       }
 
-      &::-webkit-scrollbar-thumb {
-      }
+      &::-webkit-scrollbar-thumb {}
 
       // Prevent reflow during drag
       &.cdk-drop-list-dragging {
@@ -989,8 +991,7 @@ app-user-profile {
         }
       }
 
-      &:hover:not(.active):not(.add-tab) {
-      }
+      &:hover:not(.active):not(.add-tab) {}
 
       &.add-tab {
         padding: 12px 8px;
@@ -1093,6 +1094,7 @@ app-user-profile {
       from {
         transform: scaleX(0);
       }
+
       to {
         transform: scaleX(1);
       }
@@ -1105,6 +1107,7 @@ app-user-profile {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -1119,9 +1122,11 @@ app-user-profile {
   0% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.05);
   }
+
   100% {
     transform: scale(1);
   }
@@ -1309,7 +1314,9 @@ h1 {
     aspect-ratio: 16/9;
     cursor: pointer;
     overflow: hidden;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;    &:hover {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+    &:hover {
       transform: scale(1.02);
       box-shadow: var(--mat-sys-level2);
 
@@ -1344,7 +1351,9 @@ h1 {
         height: 48px;
         opacity: 0.6;
       }
-    }    .video-play-overlay {
+    }
+
+    .video-play-overlay {
       position: absolute;
       top: 50%;
       left: 50%;
@@ -1590,5 +1599,16 @@ h1 {
         justify-content: center;
       }
     }
+  }
+}
+
+
+@media (max-width: 1023px) {
+  .columns-wrapper {
+    gap: 0 !important;
+  }
+
+  .column-scroll-container {
+    padding: 10px 0 10px 0 !important;
   }
 }
