@@ -42,6 +42,7 @@
     "@tauri-apps/plugin-opener": "^2",
     "blurhash": "^2.0.5",
     "cors": "^2.8.5",
+    "dompurify": "^3.2.6",
     "express": "^5.1.0",
     "idb": "^8.0.3",
     "marked": "^16.1.1",
