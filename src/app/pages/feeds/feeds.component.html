@@ -266,7 +266,6 @@
                   <p>Loading content...</p>
                 </div>
               } @else {
-                <!-- Default placeholder content - replace with actual content -->
                 <div class="column-items">
                   @let columnData =
                     feedService.feedDataReactive().get(column.id);
@@ -275,15 +274,7 @@
                     @for (event of columnEventsData; track event.id) {
                       <mat-card class="content-card">
                         <app-user-profile [pubkey]="event.pubkey" view="thread">
-                          <a
-                            class="date-link"
-                            [matTooltip]="
-                              event.created_at * 1000 | date: 'medium'
-                            "
-                            matTooltipPosition="below"
-                          >
-                            {{ event.created_at | ago }}
-                          </a>
+                          <app-link [event]="event"></app-link>
                         </app-user-profile>
                         <mat-card-content>
                           <!-- Photos (NIP-68, kind 20) -->

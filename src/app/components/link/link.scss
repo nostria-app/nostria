@@ -1,0 +1,14 @@
+.app-link {
+    display: inline-block;
+    word-break: break-all;
+    font-size: 0.8rem;
+    color: var(--mat-sys-outline);
+}
+
+.app-link:hover {
+    text-decoration: underline;
+}
+
+.app-link::visited {
+    color: var(--mat-sys-color-secondary);
+}

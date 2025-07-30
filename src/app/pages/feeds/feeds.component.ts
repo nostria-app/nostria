@@ -53,10 +53,10 @@ import { UrlUpdateService } from '../../services/url-update.service';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { MatDividerModule } from '@angular/material/divider';
 import { ContentComponent } from '../../components/content/content.component';
-import { AgoPipe } from '../../pipes/ago.pipe';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ApplicationService } from '../../services/application.service';
 import { RepostService } from '../../services/repost.service';
+import { Link } from '../../components/link/link';
 
 interface NavLink {
   id: string;
@@ -92,7 +92,7 @@ const DEFAULT_COLUMNS: NavLink[] = [
     UserProfileComponent,
     MatDividerModule,
     ContentComponent,
-    AgoPipe,
+    Link
   ],
   templateUrl: './feeds.component.html',
   styleUrl: './feeds.component.scss',
