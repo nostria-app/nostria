@@ -18,6 +18,7 @@ import { UserMetric } from '../../../interfaces/metrics';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
 import { RouterModule } from '@angular/router';
+import { FavoritesService } from '../../../services/favorites.service';
 
 @Component({
   selector: 'app-algorithm',
@@ -47,11 +48,11 @@ export class AlgorithmComponent implements OnInit {
   private readonly utilities = inject(UtilitiesService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
+  private readonly favoritesService = inject(FavoritesService);
 
   // Data signals
   allMetrics = signal<UserMetric[]>([]);
   topEngagedUsers = signal<UserMetric[]>([]);
-  favoriteUsers = signal<string[]>([]);
   recentlyViewed = signal<UserMetric[]>([]);
   decliningUsers = signal<UserMetric[]>([]);
   
@@ -59,13 +60,16 @@ export class AlgorithmComponent implements OnInit {
   isLoading = signal(false);
   selectedTabIndex = signal(0);
   
+  // Computed signal for template access to favorites
+  favoriteUsers = computed(() => this.favoritesService.favorites());
+  
   // Table columns
   displayedColumns = ['position', 'pubkey', 'name', 'engagementScore', 'viewed', 'liked', 'timeSpent', 'actions'];
   
   // Algorithm stats
   algorithmStats = computed(() => {
     const metrics = this.allMetrics();
-    const favorites = this.favoriteUsers();
+    const favorites = this.favoritesService.favorites();
     
     return {
       totalUsers: metrics.length,
@@ -105,8 +109,7 @@ export class AlgorithmComponent implements OnInit {
       const declining = await this.algorithms.getDeclineingEngagementUsers(20);
       this.decliningUsers.set(declining);
       
-      // Load favorites from localStorage
-      this.loadFavorites();
+      // Favorites are handled by the service automatically
       
     } catch (error) {
       console.error('Error loading algorithm data:', error);
@@ -114,22 +117,6 @@ export class AlgorithmComponent implements OnInit {
     } finally {
       this.isLoading.set(false);
     }
-  }
-
-  private loadFavorites() {
-    const favorites = localStorage.getItem('nostria-favorites');
-    if (favorites) {
-      try {
-        this.favoriteUsers.set(JSON.parse(favorites));
-      } catch (error) {
-        console.error('Error loading favorites:', error);
-        this.favoriteUsers.set([]);
-      }
-    }
-  }
-
-  private saveFavorites() {
-    localStorage.setItem('nostria-favorites', JSON.stringify(this.favoriteUsers()));
   }
 
   async resetUserMetrics(pubkey: string) {
@@ -179,26 +166,19 @@ export class AlgorithmComponent implements OnInit {
   }
 
   toggleFavorite(pubkey: string) {
-    const favorites = this.favoriteUsers();
-    const index = favorites.indexOf(pubkey);
-    
-    if (index > -1) {
-      // Remove from favorites
-      const newFavorites = favorites.filter(f => f !== pubkey);
-      this.favoriteUsers.set(newFavorites);
-      this.snackBar.open('Removed from favorites', 'Close', { duration: 2000 });
-    } else {
-      // Add to favorites
-      const newFavorites = [...favorites, pubkey];
-      this.favoriteUsers.set(newFavorites);
-      this.snackBar.open('Added to favorites', 'Close', { duration: 2000 });
+    const success = this.favoritesService.toggleFavorite(pubkey);
+    if (success) {
+      const isFavorite = this.favoritesService.isFavorite(pubkey);
+      if (isFavorite) {
+        this.snackBar.open('Added to favorites', 'Close', { duration: 2000 });
+      } else {
+        this.snackBar.open('Removed from favorites', 'Close', { duration: 2000 });
+      }
     }
-    
-    this.saveFavorites();
   }
 
   isFavorite(pubkey: string): boolean {
-    return this.favoriteUsers().includes(pubkey);
+    return this.favoritesService.isFavorite(pubkey);
   }
 
   getTruncatedPubkey(pubkey: string): string {

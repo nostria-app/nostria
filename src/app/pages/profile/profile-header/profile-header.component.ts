@@ -29,6 +29,7 @@ import { isNip05, queryProfile } from 'nostr-tools/nip05';
 import { AccountStateService } from '../../../services/account-state.service';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { QrCodeComponent } from '../../../components/qr-code/qr-code.component';
+import { FavoritesService } from '../../../services/favorites.service';
 
 @Component({
   selector: 'app-profile-header',
@@ -59,6 +60,7 @@ export class ProfileHeaderComponent {
   utilities = inject(UtilitiesService);
   layoutService = inject(LayoutService);
   private snackBar = inject(MatSnackBar);
+  private favoritesService = inject(FavoritesService);
 
   // Add signal for QR code visibility
   showQrCode = signal<boolean>(false);
@@ -70,9 +72,6 @@ export class ProfileHeaderComponent {
     valid: boolean;
     status: string;
   }>({ value: '', valid: false, status: '' });
-
-  // Add signal for favorites
-  favoriteUsers = signal<string[]>([]);
 
   currentPubkey = computed(() => {
     return this.profile()?.event.pubkey || this.pubkey();
@@ -104,7 +103,7 @@ export class ProfileHeaderComponent {
   });
 
   isFavorite = computed(() => {
-    return this.favoriteUsers().includes(this.currentPubkey());
+    return this.favoritesService.isFavorite(this.currentPubkey());
   });
 
   constructor() {
@@ -136,7 +135,7 @@ export class ProfileHeaderComponent {
     });
 
     // Load favorites from localStorage
-    this.loadFavorites();
+    // No need to load favorites here as the service handles it automatically
   }
 
   muteUser(): void {
@@ -243,44 +242,18 @@ export class ProfileHeaderComponent {
     this.showProfileQrCode.set(!this.showProfileQrCode());
   }
 
-  private loadFavorites() {
-    const favorites = localStorage.getItem('nostria-favorites');
-    if (favorites) {
-      try {
-        this.favoriteUsers.set(JSON.parse(favorites));
-      } catch (error) {
-        console.error('Error loading favorites:', error);
-        this.favoriteUsers.set([]);
-      }
-    }
-  }
-
-  private saveFavorites() {
-    localStorage.setItem(
-      'nostria-favorites',
-      JSON.stringify(this.favoriteUsers())
-    );
-  }
-
   toggleFavorite(): void {
     const currentPubkey = this.currentPubkey();
     if (!currentPubkey) return;
 
-    const favorites = this.favoriteUsers();
-    const index = favorites.indexOf(currentPubkey);
-
-    if (index > -1) {
-      // Remove from favorites
-      const newFavorites = favorites.filter(f => f !== currentPubkey);
-      this.favoriteUsers.set(newFavorites);
-      this.snackBar.open('Removed from favorites', 'Close', { duration: 2000 });
-    } else {
-      // Add to favorites
-      const newFavorites = [...favorites, currentPubkey];
-      this.favoriteUsers.set(newFavorites);
-      this.snackBar.open('Added to favorites', 'Close', { duration: 2000 });
+    const success = this.favoritesService.toggleFavorite(currentPubkey);
+    if (success) {
+      const isFavorite = this.favoritesService.isFavorite(currentPubkey);
+      if (isFavorite) {
+        this.snackBar.open('Added to favorites', 'Close', { duration: 2000 });
+      } else {
+        this.snackBar.open('Removed from favorites', 'Close', { duration: 2000 });
+      }
     }
-
-    this.saveFavorites();
   }
 }
