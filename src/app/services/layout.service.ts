@@ -640,6 +640,26 @@ export class LayoutService implements OnDestroy {
         });
     }
 
+        // Handler methods for different creation types
+    commentNote(eventId?: string): void {
+        if (!eventId) {
+            return;
+        }
+
+        // Open note editor dialog
+        const dialogRef = this.dialog.open(NoteEditorDialogComponent, {
+            width: '600px',
+            maxWidth: '90vw',
+            data: {} // No reply/quote data for new notes
+        });
+
+        dialogRef.afterClosed().subscribe(result => {
+            if (result?.published) {
+                console.log('Note published successfully:', result.event);
+            }
+        });
+    }
+
     createArticle(): void {
         // Navigate to article creation
         this.router.navigate(['/article/create']);
