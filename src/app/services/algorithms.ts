@@ -3,6 +3,7 @@ import { AccountStateService } from './account-state.service';
 import { StorageService } from './storage.service';
 import { Metrics } from './metrics';
 import { UserMetric } from '../interfaces/metrics';
+import { FavoritesService } from './favorites.service';
 
 @Injectable({
   providedIn: 'root'
@@ -11,6 +12,7 @@ export class Algorithms {
   private readonly accountState = inject(AccountStateService);
   private readonly storage = inject(StorageService);
   private readonly metrics = inject(Metrics);
+  private readonly favoritesService = inject(FavoritesService);
 
   constructor() { }
 
@@ -21,8 +23,8 @@ export class Algorithms {
     // Get metrics for all users we follow
     const followingMetrics = await this.metrics.getUserMetrics(following);
     
-    // Get favorites from localStorage
-    const favorites = this.getFavorites();
+    // Get favorites from the service
+    const favorites = this.favoritesService.favorites();
     
     // Separate favorites from regular users
     const favoriteMetrics = followingMetrics.filter(metric => favorites.includes(metric.pubkey));
@@ -48,25 +50,12 @@ export class Algorithms {
     return combined.slice(0, limit);
   }
 
-  private getFavorites(): string[] {
-    const favorites = localStorage.getItem('nostria-favorites');
-    if (favorites) {
-      try {
-        return JSON.parse(favorites);
-      } catch (error) {
-        console.error('Error loading favorites:', error);
-        return [];
-      }
-    }
-    return [];
-  }
-
   /**
    * Get users most likely to be interested in based on engagement patterns
    */
   async getRecommendedUsers(limit: number = 10): Promise<UserMetric[]> {
     const allMetrics = await this.metrics.getMetrics();
-    const favorites = this.getFavorites();
+    const favorites = this.favoritesService.favorites();
     
     // Filter users with meaningful engagement OR are favorites
     const candidateUsers = allMetrics.filter(metric => {

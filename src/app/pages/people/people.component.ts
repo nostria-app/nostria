@@ -22,6 +22,7 @@ import { AccountStateService } from '../../services/account-state.service';
 import { ApplicationService } from '../../services/application.service';
 import { LocalStorageService } from '../../services/local-storage.service';
 import { Metrics } from '../../services/metrics';
+import { FavoritesService } from '../../services/favorites.service';
 
 // Define filter options interface
 interface FilterOptions {
@@ -67,6 +68,7 @@ export class PeopleComponent {
   private app = inject(ApplicationService);
   private readonly localStorage = inject(LocalStorageService);
   private metrics = inject(Metrics);
+  private favoritesService = inject(FavoritesService);
 
   // People data signals
   people = signal<string[]>([]);
@@ -245,7 +247,7 @@ export class PeopleComponent {
     // Apply favorites filter if enabled
     const activeFilters = this.filters();
     if (activeFilters.favoritesOnly) {
-      const favorites = JSON.parse(this.localStorage.getItem('nostria-favorites') || '[]');
+      const favorites = this.favoritesService.favorites();
       result = result.filter(pubkey => favorites.includes(pubkey));
     }
 
