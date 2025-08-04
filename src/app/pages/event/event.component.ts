@@ -53,7 +53,13 @@ export interface ThreadedEvent {
 @Component({
   selector: 'app-event-page',
   standalone: true,
-  imports: [CommonModule, EventComponent, MatIconModule, MatButtonModule, NoteEditorDialogComponent],
+  imports: [
+    CommonModule,
+    EventComponent,
+    MatIconModule,
+    MatButtonModule,
+    NoteEditorDialogComponent,
+  ],
   templateUrl: './event.component.html',
   styleUrl: './event.component.scss',
 })

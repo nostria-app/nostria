@@ -37,10 +37,10 @@ import { FavoritesService } from '../../../services/favorites.service';
     MatDividerModule,
     MatMenuModule,
     MatTabsModule,
-    RouterModule
+    RouterModule,
   ],
   templateUrl: './algorithm.html',
-  styleUrl: './algorithm.scss'
+  styleUrl: './algorithm.scss',
 })
 export class AlgorithmComponent implements OnInit {
   private readonly metrics = inject(Metrics);
@@ -55,29 +55,45 @@ export class AlgorithmComponent implements OnInit {
   topEngagedUsers = signal<UserMetric[]>([]);
   recentlyViewed = signal<UserMetric[]>([]);
   decliningUsers = signal<UserMetric[]>([]);
-  
+
   // UI state signals
   isLoading = signal(false);
   selectedTabIndex = signal(0);
-  
+
   // Computed signal for template access to favorites
   favoriteUsers = computed(() => this.favoritesService.favorites());
-  
+
   // Table columns
-  displayedColumns = ['position', 'pubkey', 'name', 'engagementScore', 'viewed', 'liked', 'timeSpent', 'actions'];
-  
+  displayedColumns = [
+    'position',
+    'pubkey',
+    'name',
+    'engagementScore',
+    'viewed',
+    'liked',
+    'timeSpent',
+    'actions',
+  ];
+
   // Algorithm stats
   algorithmStats = computed(() => {
     const metrics = this.allMetrics();
     const favorites = this.favoritesService.favorites();
-    
+
     return {
       totalUsers: metrics.length,
       favoriteUsers: favorites.length,
-      activeUsers: metrics.filter(m => m.lastInteraction > Date.now() - (7 * 24 * 60 * 60 * 1000)).length,
-      averageEngagement: metrics.length > 0 
-        ? Math.round(metrics.reduce((sum, m) => sum + (m.engagementScore || 0), 0) / metrics.length * 100) / 100
-        : 0
+      activeUsers: metrics.filter(
+        m => m.lastInteraction > Date.now() - 7 * 24 * 60 * 60 * 1000
+      ).length,
+      averageEngagement:
+        metrics.length > 0
+          ? Math.round(
+              (metrics.reduce((sum, m) => sum + (m.engagementScore || 0), 0) /
+                metrics.length) *
+                100
+            ) / 100
+          : 0,
     };
   });
 
@@ -87,33 +103,34 @@ export class AlgorithmComponent implements OnInit {
 
   async loadData() {
     this.isLoading.set(true);
-    
+
     try {
       // Load all metrics
       const metrics = await this.metrics.getMetrics();
       this.allMetrics.set(metrics);
-      
+
       // Load top engaged users
       const topEngaged = await this.algorithms.getRecommendedUsers(50);
       this.topEngagedUsers.set(topEngaged);
-      
+
       // Load recently viewed users
       const recentlyViewed = await this.metrics.queryMetrics({
         sortBy: 'lastInteraction',
         sortOrder: 'desc',
-        limit: 20
+        limit: 20,
       });
       this.recentlyViewed.set(recentlyViewed);
-      
+
       // Load declining users
       const declining = await this.algorithms.getDeclineingEngagementUsers(20);
       this.decliningUsers.set(declining);
-      
+
       // Favorites are handled by the service automatically
-      
     } catch (error) {
       console.error('Error loading algorithm data:', error);
-      this.snackBar.open('Failed to load algorithm data', 'Close', { duration: 3000 });
+      this.snackBar.open('Failed to load algorithm data', 'Close', {
+        duration: 3000,
+      });
     } finally {
       this.isLoading.set(false);
     }
@@ -125,19 +142,23 @@ export class AlgorithmComponent implements OnInit {
         title: 'Reset User Metrics',
         message: `Are you sure you want to reset all metrics for this user? This action cannot be undone.`,
         confirmText: 'Reset',
-        cancelText: 'Cancel'
-      }
+        cancelText: 'Cancel',
+      },
     });
 
     const result = await dialogRef.afterClosed().toPromise();
     if (result) {
       try {
         await this.metrics.resetUserMetrics(pubkey);
-        this.snackBar.open('User metrics reset successfully', 'Close', { duration: 3000 });
+        this.snackBar.open('User metrics reset successfully', 'Close', {
+          duration: 3000,
+        });
         await this.loadData();
       } catch (error) {
         console.error('Error resetting user metrics:', error);
-        this.snackBar.open('Failed to reset user metrics', 'Close', { duration: 3000 });
+        this.snackBar.open('Failed to reset user metrics', 'Close', {
+          duration: 3000,
+        });
       }
     }
   }
@@ -148,19 +169,23 @@ export class AlgorithmComponent implements OnInit {
         title: 'Reset All Metrics',
         message: `Are you sure you want to reset ALL user metrics? This will permanently delete all engagement data and cannot be undone.`,
         confirmText: 'Reset All',
-        cancelText: 'Cancel'
-      }
+        cancelText: 'Cancel',
+      },
     });
 
     const result = await dialogRef.afterClosed().toPromise();
     if (result) {
       try {
         await this.metrics.resetAllMetrics();
-        this.snackBar.open('All metrics reset successfully', 'Close', { duration: 3000 });
+        this.snackBar.open('All metrics reset successfully', 'Close', {
+          duration: 3000,
+        });
         await this.loadData();
       } catch (error) {
         console.error('Error resetting all metrics:', error);
-        this.snackBar.open('Failed to reset all metrics', 'Close', { duration: 3000 });
+        this.snackBar.open('Failed to reset all metrics', 'Close', {
+          duration: 3000,
+        });
       }
     }
   }
@@ -172,7 +197,9 @@ export class AlgorithmComponent implements OnInit {
       if (isFavorite) {
         this.snackBar.open('Added to favorites', 'Close', { duration: 2000 });
       } else {
-        this.snackBar.open('Removed from favorites', 'Close', { duration: 2000 });
+        this.snackBar.open('Removed from favorites', 'Close', {
+          duration: 2000,
+        });
       }
     }
   }
@@ -199,7 +226,7 @@ export class AlgorithmComponent implements OnInit {
   formatLastInteraction(timestamp: number): string {
     const now = Date.now();
     const diff = now - timestamp;
-    
+
     if (diff < 60000) return 'Just now';
     if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
     if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;

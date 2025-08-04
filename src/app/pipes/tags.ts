@@ -4,7 +4,7 @@ import { DatePipe } from '@angular/common';
 @Pipe({
   name: 'tags',
   standalone: true,
-  pure: true
+  pure: true,
 })
 export class TagsPipe implements PipeTransform {
   private datePipe = new DatePipe('en-US');

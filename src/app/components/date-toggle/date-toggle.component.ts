@@ -6,7 +6,7 @@ import { CommonModule } from '@angular/common';
   selector: 'app-date-toggle',
   imports: [AgoPipe, CommonModule],
   templateUrl: './date-toggle.component.html',
-  styleUrl: './date-toggle.component.scss'
+  styleUrl: './date-toggle.component.scss',
 })
 export class DateToggleComponent {
   date = input<number>(0);

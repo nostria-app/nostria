@@ -5,7 +5,7 @@ export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'none';
 export type FeatureLevel = 'stable' | 'beta' | 'preview';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class LoggerService {
   readonly LOG_LEVEL_KEY = 'nostria-log-level';
@@ -15,11 +15,11 @@ export class LoggerService {
 
   // Log level precedence: debug < info < warn < error < none
   private readonly levelPrecedence: Record<LogLevel, number> = {
-    'debug': 0,
-    'info': 1,
-    'warn': 2,
-    'error': 3,
-    'none': 4
+    debug: 0,
+    info: 1,
+    warn: 2,
+    error: 3,
+    none: 4,
   };
 
   // Current log level - can be changed at runtime
@@ -38,7 +38,9 @@ export class LoggerService {
   private getStoredLogLevel(): LogLevel {
     if (!this.isBrowser()) return 'info'; // Default to info level if not in browser context
 
-    const storedLevel = localStorage.getItem(this.LOG_LEVEL_KEY) as LogLevel | null;
+    const storedLevel = localStorage.getItem(
+      this.LOG_LEVEL_KEY
+    ) as LogLevel | null;
     return storedLevel || 'info'; // Default to info level
   }
 
@@ -57,7 +59,11 @@ export class LoggerService {
     return new Date().toISOString();
   }
 
-  private formatMessage(level: LogLevel, message: any, ...optionalParams: any[]): [string, ...any[]] {
+  private formatMessage(
+    level: LogLevel,
+    message: any,
+    ...optionalParams: any[]
+  ): [string, ...any[]] {
     const timestamp = this.getTimestamp();
     const formattedMessage = `[${timestamp}] [${level.toUpperCase()}] ${message}`;
     return [formattedMessage, ...optionalParams];
@@ -116,7 +122,9 @@ export class LoggerService {
   timeEnd(label: string): void {
     if (this.shouldLog('debug') && this.timers[label]) {
       const duration = performance.now() - this.timers[label];
-      console.log(...this.formatMessage('debug', `${label}: ${duration.toFixed(2)}ms`));
+      console.log(
+        ...this.formatMessage('debug', `${label}: ${duration.toFixed(2)}ms`)
+      );
       delete this.timers[label];
     }
   }

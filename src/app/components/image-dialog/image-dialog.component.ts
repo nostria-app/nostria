@@ -1,6 +1,17 @@
-import { Component, inject, signal, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  ViewChild,
+  ElementRef,
+  AfterViewInit,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatDialogModule, MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+import {
+  MatDialogModule,
+  MAT_DIALOG_DATA,
+  MatDialogRef,
+} from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 
@@ -13,12 +24,12 @@ export interface ImageDialogData {
   standalone: true,
   imports: [CommonModule, MatDialogModule, MatButtonModule, MatIconModule],
   templateUrl: './image-dialog.component.html',
-  styleUrl: './image-dialog.component.scss'
+  styleUrl: './image-dialog.component.scss',
 })
 export class ImageDialogComponent implements AfterViewInit {
   dialogData = inject<ImageDialogData>(MAT_DIALOG_DATA);
   dialogRef = inject(MatDialogRef<ImageDialogComponent>);
-  
+
   @ViewChild('imageElement') imageElement!: ElementRef<HTMLImageElement>;
   @ViewChild('containerElement') containerElement!: ElementRef<HTMLDivElement>;
 
@@ -26,12 +37,12 @@ export class ImageDialogComponent implements AfterViewInit {
   scale = signal(1);
   translateX = signal(0);
   translateY = signal(0);
-  
+
   // Track mouse movement for panning
   isDragging = signal(false);
   lastMouseX = signal(0);
   lastMouseY = signal(0);
-  
+
   ngAfterViewInit() {
     // No-op, but needed for ViewChild
   }
@@ -42,14 +53,14 @@ export class ImageDialogComponent implements AfterViewInit {
   zoomIn(): void {
     this.scale.update(current => Math.min(current + 0.25, 5));
   }
-  
+
   /**
    * Zoom out the image
    */
   zoomOut(): void {
     this.scale.update(current => Math.max(current - 0.25, 0.5));
   }
-  
+
   /**
    * Reset zoom and position
    */
@@ -58,14 +69,14 @@ export class ImageDialogComponent implements AfterViewInit {
     this.translateX.set(0);
     this.translateY.set(0);
   }
-  
+
   /**
    * Close the dialog
    */
   close(): void {
     this.dialogRef.close();
   }
-  
+
   /**
    * Handle mouse or touch down event to start dragging
    */
@@ -74,7 +85,7 @@ export class ImageDialogComponent implements AfterViewInit {
     if (this.scale() <= 1) return;
 
     let clientX: number, clientY: number;
-    
+
     if (event instanceof TouchEvent) {
       event.preventDefault(); // Prevent scrolling on touch devices
       if (event.touches.length !== 1) return;
@@ -86,7 +97,7 @@ export class ImageDialogComponent implements AfterViewInit {
       clientX = event.clientX;
       clientY = event.clientY;
     }
-    
+
     this.isDragging.set(true);
     this.lastMouseX.set(clientX);
     this.lastMouseY.set(clientY);
@@ -100,7 +111,7 @@ export class ImageDialogComponent implements AfterViewInit {
     if (!this.isDragging()) return;
 
     let clientX: number, clientY: number;
-    
+
     if (event instanceof TouchEvent) {
       event.preventDefault();
       if (event.touches.length !== 1) return;
@@ -136,7 +147,11 @@ export class ImageDialogComponent implements AfterViewInit {
     event.preventDefault();
 
     // Only zoom if image is loaded and refs are available
-    if (!this.imageElement?.nativeElement || !this.containerElement?.nativeElement) return;
+    if (
+      !this.imageElement?.nativeElement ||
+      !this.containerElement?.nativeElement
+    )
+      return;
 
     const img = this.imageElement.nativeElement;
     const container = this.containerElement.nativeElement;
@@ -181,7 +196,7 @@ export class ImageDialogComponent implements AfterViewInit {
     this.translateX.update(x => x - offsetX * (nextScale - prevScale));
     this.translateY.update(y => y - offsetY * (nextScale - prevScale));
   }
-  
+
   /**
    * Get transform style based on zoom and pan
    */

@@ -9,7 +9,7 @@ import { UtilitiesService } from './utilities.service';
 import { LoggerService } from './logger.service';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ParsingService {
   data = inject(DataService);
@@ -19,16 +19,24 @@ export class ParsingService {
   logger = inject(LoggerService);
 
   // Cache for parsed nostr URIs to prevent repeated parsing
-  private nostrUriCache = new Map<string, { type: string, data: any, displayName: string } | null>();
-  
-  // Map to track pending nostr URI parsing to prevent race conditions
-  private pendingNostrUriRequests = new Map<string, Promise<{ type: string, data: any, displayName: string } | null>>();
+  private nostrUriCache = new Map<
+    string,
+    { type: string; data: any; displayName: string } | null
+  >();
 
-  constructor() { 
+  // Map to track pending nostr URI parsing to prevent race conditions
+  private pendingNostrUriRequests = new Map<
+    string,
+    Promise<{ type: string; data: any; displayName: string } | null>
+  >();
+
+  constructor() {
     // Clean up cache periodically to prevent memory leaks
     setInterval(() => {
       if (this.nostrUriCache.size > 500) {
-        this.logger.debug(`Parsing service cache size: ${this.nostrUriCache.size}. Consider clearing if too large.`);
+        this.logger.debug(
+          `Parsing service cache size: ${this.nostrUriCache.size}. Consider clearing if too large.`
+        );
         // Optionally clear cache if it gets too large
         if (this.nostrUriCache.size > 1000) {
           this.clearNostrUriCache();
@@ -38,7 +46,9 @@ export class ParsingService {
     }, 60000); // Check every minute
   }
 
-  async parseNostrUri(uri: string): Promise<{ type: string, data: any, displayName: string } | null> {
+  async parseNostrUri(
+    uri: string
+  ): Promise<{ type: string; data: any; displayName: string } | null> {
     // Check cache first
     if (this.nostrUriCache.has(uri)) {
       return this.nostrUriCache.get(uri)!;
@@ -64,7 +74,9 @@ export class ParsingService {
     }
   }
 
-  private async parseNostrUriInternal(uri: string): Promise<{ type: string, data: any, displayName: string } | null> {
+  private async parseNostrUriInternal(
+    uri: string
+  ): Promise<{ type: string; data: any; displayName: string } | null> {
     try {
       // Use the proper nip19 function for decoding nostr URIs
       const decoded = nip19.decodeNostrURI(uri);
@@ -77,8 +89,7 @@ export class ParsingService {
 
       if (decoded.type === 'nprofile') {
         pubkey = (decoded.data as ProfilePointer).pubkey;
-      }
-      else if (decoded.type === 'npub') {
+      } else if (decoded.type === 'npub') {
         pubkey = decoded.data;
       }
 
@@ -86,19 +97,25 @@ export class ParsingService {
         metadata = await this.data.getProfile(pubkey);
 
         if (metadata) {
-          displayName = metadata.data.display_name || metadata.data.name || this.utilities.getTruncatedNpub(pubkey);
+          displayName =
+            metadata.data.display_name ||
+            metadata.data.name ||
+            this.utilities.getTruncatedNpub(pubkey);
         } else {
           // Fallback to truncated pubkey if no metadata found
           displayName = this.utilities.getTruncatedNpub(pubkey);
         }
       } else {
-        displayName = this.getDisplayNameFromNostrUri(decoded.type, decoded.data);
+        displayName = this.getDisplayNameFromNostrUri(
+          decoded.type,
+          decoded.data
+        );
       }
 
       return {
         type: decoded.type,
         data: decoded.data,
-        displayName: displayName
+        displayName: displayName,
       };
     } catch (error) {
       this.logger.warn(`Failed to parse nostr URI: ${uri}`, error);
@@ -145,5 +162,4 @@ export class ParsingService {
   getNostrUriCacheSize(): number {
     return this.nostrUriCache.size;
   }
-
 }

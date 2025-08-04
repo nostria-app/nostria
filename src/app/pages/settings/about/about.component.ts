@@ -22,7 +22,7 @@ interface WebManifest {
   standalone: true,
   imports: [MatCardModule, MatListModule, MatIconModule, MatButtonModule],
   templateUrl: './about.component.html',
-  styleUrl: './about.component.scss'
+  styleUrl: './about.component.scss',
 })
 export class AboutComponent {
   private readonly app = inject(ApplicationService);
@@ -69,9 +69,7 @@ export class AboutComponent {
     return match ? match[0] : null;
   }
 
-  async ngOnInit() {
-
-  }
+  async ngOnInit() {}
 
   private async fetchManifestVersion(): Promise<void> {
     // Skip fetch on server side
@@ -81,7 +79,9 @@ export class AboutComponent {
     }
 
     try {
-      const manifestData = await firstValueFrom(this.http.get<WebManifest>('/manifest.webmanifest'));
+      const manifestData = await firstValueFrom(
+        this.http.get<WebManifest>('/manifest.webmanifest')
+      );
 
       // Check if version exists in the manifest, otherwise fallback
       if (manifestData.version) {

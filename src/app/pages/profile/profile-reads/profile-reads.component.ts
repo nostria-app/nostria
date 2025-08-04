@@ -1,4 +1,11 @@
-import { Component, inject, signal, Input, OnChanges, SimpleChanges } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  Input,
+  OnChanges,
+  SimpleChanges,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, RouterModule } from '@angular/router';
@@ -24,10 +31,10 @@ import { TagsPipe } from '../../../pipes/tags';
     RouterModule,
     MatTooltipModule,
     MatButtonModule,
-    TagsPipe
+    TagsPipe,
   ],
   templateUrl: './profile-reads.component.html',
-  styleUrl: './profile-reads.component.scss'
+  styleUrl: './profile-reads.component.scss',
 })
 export class ProfileReadsComponent implements OnChanges {
   @Input() isVisible = false;
@@ -50,9 +57,12 @@ export class ProfileReadsComponent implements OnChanges {
 
   ngOnChanges(changes: SimpleChanges): void {
     // Check if visibility changed to true
-    if (changes['isVisible'] && 
-        changes['isVisible'].currentValue === true && 
-        (!changes['isVisible'].firstChange || changes['isVisible'].previousValue === false)) {
+    if (
+      changes['isVisible'] &&
+      changes['isVisible'].currentValue === true &&
+      (!changes['isVisible'].firstChange ||
+        changes['isVisible'].previousValue === false)
+    ) {
       this.logger.debug('Profile reads tab became visible, reloading data');
       this.loadReads();
     }
@@ -68,25 +78,19 @@ export class ProfileReadsComponent implements OnChanges {
     // if (!this.isVisible && this.reads().length > 0) {
     //   return;
     // }
-    
     // const pubkey = this.getPubkey();
-    
     // if (!pubkey) {
     //   this.error.set('No pubkey provided');
     //   this.isLoading.set(false);
     //   return;
     // }
-
     // try {
     //   this.isLoading.set(true);
     //   this.error.set(null);
-      
     //   // Mock data for now - would be replaced with actual fetch from NostrService
     //   await new Promise(resolve => setTimeout(resolve, 500));
-
     //   // Set empty array for now
     //   this.reads.set([]);
-      
     //   this.logger.debug('Loaded reads for pubkey:', pubkey);
     // } catch (err) {
     //   this.logger.error('Error loading reads:', err);

@@ -1,6 +1,10 @@
 import { Component, inject, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import {
+  MatDialogModule,
+  MatDialogRef,
+  MAT_DIALOG_DATA,
+} from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -33,7 +37,8 @@ interface RelayPublishResult {
 
 @Component({
   selector: 'app-publish-dialog',
-  standalone: true,  imports: [
+  standalone: true,
+  imports: [
     CommonModule,
     MatDialogModule,
     MatButtonModule,
@@ -44,18 +49,21 @@ interface RelayPublishResult {
     MatIconModule,
     MatProgressSpinnerModule,
     MatListModule,
-    FormsModule
+    FormsModule,
   ],
   templateUrl: './publish-dialog.component.html',
-  styleUrl: './publish-dialog.component.scss'
+  styleUrl: './publish-dialog.component.scss',
 })
 export class PublishDialogComponent {
   private dialogRef = inject(MatDialogRef<PublishDialogComponent>);
-  data: PublishDialogData = inject(MAT_DIALOG_DATA);  private accountRelayService = inject(AccountRelayService);
+  data: PublishDialogData = inject(MAT_DIALOG_DATA);
+  private accountRelayService = inject(AccountRelayService);
   private nostrService = inject(NostrService);
   relayService = inject(RelayService);
 
-  selectedOptions = signal<Set<'account' | 'author' | 'custom'>>(new Set(['account']));
+  selectedOptions = signal<Set<'account' | 'author' | 'custom'>>(
+    new Set(['account'])
+  );
   customRelayInput = signal<string>('');
   customRelays = signal<string[]>([]);
   publishResults = signal<RelayPublishResult[]>([]);
@@ -67,18 +75,18 @@ export class PublishDialogComponent {
     {
       id: 'account',
       label: 'Account Relays',
-      description: 'Publish to your configured account relays'
+      description: 'Publish to your configured account relays',
     },
     {
       id: 'author',
       label: "Author's Relays",
-      description: 'Publish to the original author\'s relays'
+      description: "Publish to the original author's relays",
     },
     {
       id: 'custom',
       label: 'Additional Relays',
-      description: 'Publish to manually specified relays'
-    }
+      description: 'Publish to manually specified relays',
+    },
   ];
 
   constructor() {
@@ -87,7 +95,9 @@ export class PublishDialogComponent {
       if (this.data?.event?.pubkey) {
         this.loadingAuthorRelays.set(true);
         try {
-          const relays = await this.nostrService.getRelays(this.data.event.pubkey);
+          const relays = await this.nostrService.getRelays(
+            this.data.event.pubkey
+          );
           this.authorRelays.set(relays || []);
         } catch (error) {
           console.error('Error loading author relays:', error);
@@ -123,24 +133,27 @@ export class PublishDialogComponent {
   getTargetRelays(): string[] {
     const selectedOptions = this.selectedOptions();
     const allRelays: string[] = [];
-    
+
     if (selectedOptions.has('account')) {
       allRelays.push(...this.relayService.getAccountRelayUrls());
     }
-    
+
     if (selectedOptions.has('author')) {
       allRelays.push(...this.authorRelays());
     }
-    
+
     if (selectedOptions.has('custom')) {
       allRelays.push(...this.customRelays());
     }
-    
+
     // Remove duplicates
     return [...new Set(allRelays)];
   }
 
-  onOptionChange(option: 'account' | 'author' | 'custom', checked: boolean): void {
+  onOptionChange(
+    option: 'account' | 'author' | 'custom',
+    checked: boolean
+  ): void {
     this.selectedOptions.update(options => {
       const newOptions = new Set(options);
       if (checked) {
@@ -158,35 +171,49 @@ export class PublishDialogComponent {
 
   async publish(): Promise<void> {
     const targetRelays = this.getTargetRelays();
-    
+
     if (targetRelays.length === 0) {
       alert('No relays selected for publishing');
       return;
     }
 
     this.isPublishing.set(true);
-    
+
     // Initialize publish results
     const initialResults: RelayPublishResult[] = targetRelays.map(url => ({
       url,
-      status: 'pending'
+      status: 'pending',
     }));
     this.publishResults.set(initialResults);
 
     try {
       // Use the pool to publish to multiple relays
-      const publishPromises = this.accountRelayService.pool.publish(targetRelays, this.data.event);
-      
+      const publishPromises = this.accountRelayService.pool.publish(
+        targetRelays,
+        this.data.event
+      );
+
       // Wait for all publish attempts to complete
-      await Promise.allSettled(publishPromises.map(async (promise, index) => {
-        try {
-          await promise;
-          this.updatePublishResult(targetRelays[index], 'success', 'Published successfully');
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          this.updatePublishResult(targetRelays[index], 'error', errorMessage);
-        }
-      }));
+      await Promise.allSettled(
+        publishPromises.map(async (promise, index) => {
+          try {
+            await promise;
+            this.updatePublishResult(
+              targetRelays[index],
+              'success',
+              'Published successfully'
+            );
+          } catch (error) {
+            const errorMessage =
+              error instanceof Error ? error.message : 'Unknown error';
+            this.updatePublishResult(
+              targetRelays[index],
+              'error',
+              errorMessage
+            );
+          }
+        })
+      );
     } catch (error) {
       console.error('Error during publishing:', error);
     } finally {
@@ -194,12 +221,14 @@ export class PublishDialogComponent {
     }
   }
 
-  private updatePublishResult(url: string, status: 'success' | 'error', message?: string): void {
-    this.publishResults.update(results => 
-      results.map(result => 
-        result.url === url 
-          ? { ...result, status, message }
-          : result
+  private updatePublishResult(
+    url: string,
+    status: 'success' | 'error',
+    message?: string
+  ): void {
+    this.publishResults.update(results =>
+      results.map(result =>
+        result.url === url ? { ...result, status, message } : result
       )
     );
   }

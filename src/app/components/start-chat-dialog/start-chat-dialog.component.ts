@@ -41,10 +41,10 @@ export interface StartChatDialogResult {
     MatDividerModule,
     MatTooltipModule,
     UserProfileComponent,
-    NPubPipe
+    NPubPipe,
   ],
   templateUrl: './start-chat-dialog.component.html',
-  styleUrl: './start-chat-dialog.component.scss'
+  styleUrl: './start-chat-dialog.component.scss',
 })
 export class StartChatDialogComponent {
   private readonly dialogRef = inject(MatDialogRef<StartChatDialogComponent>);
@@ -65,7 +65,7 @@ export class StartChatDialogComponent {
   hasValidNpub = computed(() => {
     const input = this.npubInput().trim();
     if (!input) return false;
-    
+
     try {
       const decoded = nip19.decode(input);
       return decoded.type === 'npub';
@@ -116,21 +116,21 @@ export class StartChatDialogComponent {
     if (!this.hasValidNpub()) return;
 
     this.isDiscoveringRelays.set(true);
-    
+
     try {
       const decoded = nip19.decode(this.npubInput().trim());
       if (decoded.type === 'npub') {
         const pubkey = decoded.data;
-        
+
         // TODO: Implement relay discovery using NIP-65 or NIP-05
         // For now, we'll just validate the pubkey
-        
+
         // Clear search results and selection when using npub input
         this.selectedProfile.set(null);
         this.searchResults.set([]);
-        
+
         console.log('Discovering relays for pubkey:', pubkey);
-        
+
         // Simulate relay discovery delay
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
@@ -156,7 +156,7 @@ export class StartChatDialogComponent {
 
     const result: StartChatDialogResult = {
       pubkey,
-      isLegacy: this.isLegacy()
+      isLegacy: this.isLegacy(),
     };
 
     this.dialogRef.close(result);

@@ -16,7 +16,7 @@ interface SocialPreview {
   selector: 'app-social-preview',
   imports: [MatCardModule, MatProgressSpinnerModule],
   templateUrl: './social-preview.component.html',
-  styleUrl: './social-preview.component.scss'
+  styleUrl: './social-preview.component.scss',
 })
 export class SocialPreviewComponent {
   openGraphService = inject(OpenGraphService);
@@ -40,7 +40,12 @@ export class SocialPreviewComponent {
       return;
     }
 
-    this.preview.update(prev => ({ ...prev, url, loading: true, error: false }));
+    this.preview.update(prev => ({
+      ...prev,
+      url,
+      loading: true,
+      error: false,
+    }));
 
     try {
       const data = await this.openGraphService.getOpenGraphData(url);

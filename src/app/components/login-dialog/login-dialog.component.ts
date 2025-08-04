@@ -1,6 +1,10 @@
 import { Component, inject, signal } from '@angular/core';
 
-import { MatDialogModule, MatDialogRef, MatDialog } from '@angular/material/dialog';
+import {
+  MatDialogModule,
+  MatDialogRef,
+  MatDialog,
+} from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -25,7 +29,7 @@ enum LoginStep {
   EXTENSION_LOADING = 'extension-loading',
   EXISTING_ACCOUNTS = 'existing-accounts',
   NOSTR_CONNECT = 'nostr-connect',
-  PREVIEW = 'preview'
+  PREVIEW = 'preview',
 }
 
 @Component({
@@ -41,10 +45,10 @@ enum LoginStep {
     MatListModule,
     MatProgressSpinnerModule,
     MatTooltipModule,
-    FormsModule
-],
+    FormsModule,
+  ],
   templateUrl: './login-dialog.component.html',
-  styleUrl: './login-dialog.component.scss'
+  styleUrl: './login-dialog.component.scss',
 })
 export class LoginDialogComponent {
   private dialogRef = inject(MatDialogRef<LoginDialogComponent>);
@@ -55,10 +59,10 @@ export class LoginDialogComponent {
 
   // Use signal for the current step
   currentStep = signal<LoginStep>(LoginStep.INITIAL);
-  
+
   // For template access
   LoginStep = LoginStep;
-  
+
   // Expose states as signals
   loading = signal(false);
   extensionError = signal<string | null>(null);
@@ -66,27 +70,31 @@ export class LoginDialogComponent {
   nostrConnectError = signal<string | null>(null);
   nostrConnectLoading = signal<boolean>(false);
   selectedRegionId = signal<string | null>(null);
-  
+
   // Input fields
   nsecKey = '';
-  previewPubkey = 'npub1sg6plzptd64u62a878hep2kev88swjh3tw00gjsfl8f237lmu63q0uf63m'; // jack
-  
+  previewPubkey =
+    'npub1sg6plzptd64u62a878hep2kev88swjh3tw00gjsfl8f237lmu63q0uf63m'; // jack
+
   constructor() {
     this.logger.debug('UnifiedLoginDialogComponent initialized');
   }
-  
+
   // Navigation methods
   goToStep(step: LoginStep): void {
-    this.logger.debug('Changing login step', { from: this.currentStep(), to: step });
+    this.logger.debug('Changing login step', {
+      from: this.currentStep(),
+      to: step,
+    });
     this.currentStep.set(step);
   }
-  
+
   // Initial dialog methods
   startNewAccountFlow(): void {
     this.logger.debug('Starting account creation flow');
     this.goToStep(LoginStep.REGION_SELECTION);
   }
-  
+
   // Region selection methods
   selectRegion(region: Region): void {
     if (region.enabled) {
@@ -95,17 +103,19 @@ export class LoginDialogComponent {
       this.generateNewKey();
     }
   }
-  
+
   // Account generation
   generateNewKey(): void {
-    this.logger.debug('Generating new key', { regionId: this.selectedRegionId() });
+    this.logger.debug('Generating new key', {
+      regionId: this.selectedRegionId(),
+    });
     if (this.selectedRegionId()) {
       this.loading.set(true);
       this.nostrService.generateNewKey(this.selectedRegionId()!);
       this.closeDialog();
     }
   }
-  
+
   // Login dialog methods
   async loginWithExtension(): Promise<void> {
     this.logger.debug('Attempting login with extension');
@@ -118,7 +128,11 @@ export class LoginDialogComponent {
       this.closeDialog();
     } catch (err) {
       this.logger.error('Login with extension failed', err);
-      this.extensionError.set(err instanceof Error ? err.message : 'Unknown error connecting to extension');
+      this.extensionError.set(
+        err instanceof Error
+          ? err.message
+          : 'Unknown error connecting to extension'
+      );
       this.goToStep(LoginStep.LOGIN_OPTIONS);
     }
   }
@@ -146,7 +160,11 @@ export class LoginDialogComponent {
       this.closeDialog();
     } catch (err) {
       this.logger.error('Login with Nostr Connect failed', err);
-      this.nostrConnectError.set(err instanceof Error ? err.message : 'Failed to connect using Nostr Connect');
+      this.nostrConnectError.set(
+        err instanceof Error
+          ? err.message
+          : 'Failed to connect using Nostr Connect'
+      );
       this.nostrConnectLoading.set(false);
     }
   }
@@ -161,7 +179,7 @@ export class LoginDialogComponent {
       maxHeight: '100vh',
       panelClass: 'qr-scan-dialog',
       hasBackdrop: true,
-      disableClose: false
+      disableClose: false,
     });
 
     scanDialogRef.afterClosed().subscribe(async result => {
@@ -172,15 +190,17 @@ export class LoginDialogComponent {
           this.nostrConnectUrl.set(result);
           await this.loginWithNostrConnect();
         } else {
-          this.nostrConnectError.set('Invalid QR code. Expected a Nostr Connect URL.');
+          this.nostrConnectError.set(
+            'Invalid QR code. Expected a Nostr Connect URL.'
+          );
         }
       }
     });
   }
-  
+
   usePreviewAccount(pubkey?: string): void {
     this.logger.debug('Using preview account', { pubkey });
-    
+
     // Use the provided pubkey or the one from the input field
     const keyToUse = pubkey || this.previewPubkey;
     this.nostrService.usePreviewAccount(keyToUse);
@@ -201,7 +221,7 @@ export class LoginDialogComponent {
     // Call the service to remove the account
     this.nostrService.removeAccount(pubkey);
   }
-  
+
   openTermsOfUse(): void {
     this.logger.debug('Opening Terms of Use dialog');
     this.dialog.open(TermsOfUseDialogComponent, {

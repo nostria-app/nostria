@@ -6,25 +6,25 @@ import { NotificationService } from './notification.service';
 import { NotificationType } from './storage.service';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class PwaUpdateService {
   private swUpdate = inject(SwUpdate);
   private logger = inject(LoggerService);
   private notificationService = inject(NotificationService);
-  
+
   // Signal to track if an update is available
   updateAvailable = signal(false);
-  
+
   constructor() {
     this.logger.info('Initializing PwaUpdateService');
-    
+
     // Only proceed if service worker updates are enabled
     if (this.swUpdate.isEnabled) {
       this.logger.debug('Service worker updates are enabled');
       // Initialize the update checking
       this.initializeUpdateChecking();
-      
+
       // Set up effect to handle version change events
       effect(() => {
         if (this.updateAvailable()) {
@@ -36,7 +36,7 @@ export class PwaUpdateService {
       this.logger.warn('Service worker updates are not enabled');
     }
   }
-  
+
   /**
    * Initializes periodic update checking and event listeners
    */
@@ -50,21 +50,24 @@ export class PwaUpdateService {
       .subscribe(event => {
         this.logger.info('New version ready', {
           currentVersion: event.currentVersion,
-          latestVersion: event.latestVersion
+          latestVersion: event.latestVersion,
         });
         this.updateAvailable.set(true);
       });
-    
+
     // Check for updates immediately
     this.checkForUpdate();
-    
+
     // Then check every hour
     this.logger.debug('Setting up hourly update checks');
-    setInterval(() => {
-      this.checkForUpdate();
-    }, 60 * 60 * 1000); // 60 minutes
+    setInterval(
+      () => {
+        this.checkForUpdate();
+      },
+      60 * 60 * 1000
+    ); // 60 minutes
   }
-  
+
   /**
    * Triggers a check for updates
    */
@@ -79,7 +82,7 @@ export class PwaUpdateService {
       }
     }
   }
-  
+
   /**
    * Notifies the user that an update is available
    */
@@ -92,7 +95,7 @@ export class PwaUpdateService {
       () => this.updateApplication()
     );
   }
-  
+
   /**
    * Activates the update and reloads the app
    */
@@ -112,7 +115,9 @@ export class PwaUpdateService {
         );
       }
     } else {
-      this.logger.warn('Cannot update application: update not available or service worker not enabled');
+      this.logger.warn(
+        'Cannot update application: update not available or service worker not enabled'
+      );
     }
   }
 }

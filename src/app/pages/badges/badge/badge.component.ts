@@ -1,4 +1,14 @@
-import { Component, effect, inject, input, signal, Output, EventEmitter, computed, untracked } from '@angular/core';
+import {
+  Component,
+  effect,
+  inject,
+  input,
+  signal,
+  Output,
+  EventEmitter,
+  computed,
+  untracked,
+} from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { NostrService } from '../../../services/nostr.service';
 import { kinds, NostrEvent } from 'nostr-tools';
@@ -24,10 +34,10 @@ export type BadgeLayout = 'vertical' | 'horizontal';
     MatIconModule,
     MatProgressSpinnerModule,
     CommonModule,
-    DatePipe
+    DatePipe,
   ],
   templateUrl: './badge.component.html',
-  styleUrl: './badge.component.scss'
+  styleUrl: './badge.component.scss',
 })
 export class BadgeComponent {
   badge = input<NostrEvent | any | undefined>(undefined);
@@ -80,10 +90,12 @@ export class BadgeComponent {
 
   async parseBadge(event: NostrEvent | any) {
     if (event.slug) {
-      const definition = await this.loadBadgeDefinition(event.pubkey, event.slug);
+      const definition = await this.loadBadgeDefinition(
+        event.pubkey,
+        event.slug
+      );
       this.definition.set(definition);
-    }
-    else if (event.kind === kinds.BadgeDefinition) {
+    } else if (event.kind === kinds.BadgeDefinition) {
       this.definition.set(event);
 
       // const parsedBadge = this.badgeService.parseBadgeDefinition(event);
@@ -100,8 +112,7 @@ export class BadgeComponent {
       // this.image.set(parsedBadge.image || '');
       // this.thumb.set(parsedBadge.thumb || '');
       // this.tags.set(parsedBadge.tags || []);
-    }
-    else if (event.kind === kinds.BadgeAward) {
+    } else if (event.kind === kinds.BadgeAward) {
       const aTag = this.utilities.getATagValueFromEvent(event);
       const values = aTag?.split(':');
 
@@ -133,8 +144,7 @@ export class BadgeComponent {
       const parsedBadge = this.badgeService.parseDefinition(this.definition()!);
       console.log('Parsed Badge:', parsedBadge);
       this.parsed.set(parsedBadge);
-    }
-    else {
+    } else {
       this.error.set('Failed to parse badge data');
     }
   }
@@ -150,7 +160,8 @@ export class BadgeComponent {
   }
 
   async loadBadgeDefinition(pubkey: string, slug: string) {
-    let definition: NostrEvent | null | undefined = this.badgeService.getBadgeDefinition(pubkey, slug);
+    let definition: NostrEvent | null | undefined =
+      this.badgeService.getBadgeDefinition(pubkey, slug);
 
     if (!definition) {
       definition = await this.badgeService.loadBadgeDefinition(pubkey, slug);
@@ -158,5 +169,4 @@ export class BadgeComponent {
 
     return definition;
   }
-
 }

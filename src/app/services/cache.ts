@@ -22,7 +22,7 @@ export interface CacheStats {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class Cache {
   private readonly cache = new Map<string, CacheEntry<any>>();
@@ -30,7 +30,7 @@ export class Cache {
   private readonly defaultOptions: Required<CacheOptions> = {
     maxSize: 100,
     ttl: 5 * 60 * 1000, // 5 minutes
-    persistent: false
+    persistent: false,
   };
 
   // Signals for reactive cache statistics
@@ -39,7 +39,7 @@ export class Cache {
     maxSize: this.defaultOptions.maxSize,
     hits: 0,
     misses: 0,
-    evictions: 0
+    evictions: 0,
   });
 
   public readonly stats = computed(() => this._stats());
@@ -60,7 +60,7 @@ export class Cache {
       value,
       timestamp: now,
       expiresAt: config.persistent ? null : now + config.ttl,
-      lastAccessed: now
+      lastAccessed: now,
     };
 
     // If cache is at max size, remove least recently used item
@@ -88,7 +88,7 @@ export class Cache {
       this.cache.delete(key);
       this.scheduleStatsUpdate({
         size: this.cache.size,
-        misses: this._stats().misses + 1
+        misses: this._stats().misses + 1,
       });
       return undefined;
     }
@@ -127,7 +127,7 @@ export class Cache {
       size: 0,
       hits: 0,
       misses: 0,
-      evictions: 0
+      evictions: 0,
     });
   }
 
@@ -229,7 +229,7 @@ export class Cache {
       this.cache.delete(lruKey);
       this.scheduleStatsUpdate({
         size: this.cache.size,
-        evictions: this._stats().evictions + 1
+        evictions: this._stats().evictions + 1,
       });
     }
   }

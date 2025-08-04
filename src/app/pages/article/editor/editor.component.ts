@@ -1,4 +1,11 @@
-import { Component, inject, signal, effect, computed, untracked } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  effect,
+  computed,
+  untracked,
+} from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -68,17 +75,18 @@ interface ArticleAutoDraft {
     MatCardModule,
     RichTextEditorComponent,
     MatExpansionModule,
-    MatTooltipModule
+    MatTooltipModule,
   ],
   templateUrl: './editor.component.html',
-  styleUrl: './editor.component.scss'
+  styleUrl: './editor.component.scss',
 })
 export class EditorComponent {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private nostrService = inject(NostrService);
   private dataService = inject(DataService);
-  private relayService = inject(RelayService); private snackBar = inject(MatSnackBar);
+  private relayService = inject(RelayService);
+  private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private sanitizer = inject(DomSanitizer);
   private layout = inject(LayoutService);
@@ -105,7 +113,7 @@ export class EditorComponent {
     image: '',
     content: '',
     tags: [],
-    dTag: this.generateUniqueId()
+    dTag: this.generateUniqueId(),
   });
 
   // Auto-title feature
@@ -123,12 +131,12 @@ export class EditorComponent {
 
     // Remove other markdown formatting
     title = title
-      .replace(/\*\*/g, '')  // Bold
-      .replace(/\*/g, '')     // Italic
-      .replace(/\_\_/g, '')   // Bold
-      .replace(/\_/g, '')     // Italic
-      .replace(/\~\~/g, '')   // Strikethrough
-      .replace(/\`/g, '');    // Code
+      .replace(/\*\*/g, '') // Bold
+      .replace(/\*/g, '') // Italic
+      .replace(/\_\_/g, '') // Bold
+      .replace(/\_/g, '') // Italic
+      .replace(/\~\~/g, '') // Strikethrough
+      .replace(/\`/g, ''); // Code
 
     // Limit length
     if (title.length > 100) {
@@ -147,27 +155,31 @@ export class EditorComponent {
     return title
       .toLowerCase()
       .trim()
-      .replace(/\s+/g, '-')          // Replace spaces with dashes
-      .replace(/[^\w\-]+/g, '')       // Remove all non-word chars (except dashes)
-      .replace(/\-\-+/g, '-')         // Replace multiple dashes with single dash
-      .replace(/^-+/, '')             // Trim dashes from start
-      .replace(/-+$/, '');            // Trim dashes from end
+      .replace(/\s+/g, '-') // Replace spaces with dashes
+      .replace(/[^\w\-]+/g, '') // Remove all non-word chars (except dashes)
+      .replace(/\-\-+/g, '-') // Replace multiple dashes with single dash
+      .replace(/^-+/, '') // Trim dashes from start
+      .replace(/-+$/, ''); // Trim dashes from end
   });
 
   // Form validation
   isValid = computed(() => {
     const art = this.article();
-    return art.title.trim().length > 0 &&
+    return (
+      art.title.trim().length > 0 &&
       art.content.trim().length > 0 &&
-      art.dTag.trim().length > 0;
+      art.dTag.trim().length > 0
+    );
   });
 
   // Draft validation - more lenient, only requires some content
   isDraftValid = computed(() => {
     const art = this.article();
-    return art.title.trim().length > 0 || 
-      art.content.trim().length > 0 || 
-      art.summary.trim().length > 0;
+    return (
+      art.title.trim().length > 0 ||
+      art.content.trim().length > 0 ||
+      art.summary.trim().length > 0
+    );
   });
 
   // Markdown preview
@@ -180,7 +192,9 @@ export class EditorComponent {
       return this.sanitizer.bypassSecurityTrustHtml(html as string);
     } catch (error) {
       console.error('Error parsing markdown:', error);
-      return this.sanitizer.bypassSecurityTrustHtml('<p>Error parsing markdown</p>');
+      return this.sanitizer.bypassSecurityTrustHtml(
+        '<p>Error parsing markdown</p>'
+      );
     }
   });
 
@@ -264,7 +278,8 @@ export class EditorComponent {
 
     // Only schedule if there's meaningful content
     const article = this.article();
-    const hasContent = article.title.trim() ||
+    const hasContent =
+      article.title.trim() ||
       article.content.trim() ||
       article.summary.trim() ||
       article.image.trim() ||
@@ -299,7 +314,8 @@ export class EditorComponent {
     const article = this.article();
 
     // Check if there's meaningful content
-    const hasContent = article.title.trim() ||
+    const hasContent =
+      article.title.trim() ||
       article.content.trim() ||
       article.summary.trim() ||
       article.image.trim() ||
@@ -316,7 +332,7 @@ export class EditorComponent {
       dTag: article.dTag,
       lastModified: Date.now(),
       autoTitleEnabled: this.autoTitleEnabled(),
-      autoDTagEnabled: this.autoDTagEnabled()
+      autoDTagEnabled: this.autoDTagEnabled(),
     };
 
     const key = this.getAutoDraftKey();
@@ -324,7 +340,8 @@ export class EditorComponent {
     // Check if this is meaningfully different from the last save
     const previousDraft = this.localStorage.getObject<ArticleAutoDraft>(key);
     if (previousDraft) {
-      const isSimilar = previousDraft.title === autoDraft.title &&
+      const isSimilar =
+        previousDraft.title === autoDraft.title &&
         previousDraft.content === autoDraft.content &&
         previousDraft.summary === autoDraft.summary &&
         previousDraft.image === autoDraft.image &&
@@ -363,18 +380,26 @@ export class EditorComponent {
           image: autoDraft.image,
           content: autoDraft.content,
           tags: [...autoDraft.tags],
-          dTag: autoDraft.dTag
+          dTag: autoDraft.dTag,
         });
 
         this.autoTitleEnabled.set(autoDraft.autoTitleEnabled);
         this.autoDTagEnabled.set(autoDraft.autoDTagEnabled);
 
         // Show restoration message if there's meaningful content
-        if (autoDraft.title.trim() || autoDraft.content.trim() || autoDraft.summary.trim()) {
-          this.snackBar.open('Draft restored from previous session', 'Dismiss', {
-            duration: 4000,
-            panelClass: 'info-snackbar'
-          });
+        if (
+          autoDraft.title.trim() ||
+          autoDraft.content.trim() ||
+          autoDraft.summary.trim()
+        ) {
+          this.snackBar.open(
+            'Draft restored from previous session',
+            'Dismiss',
+            {
+              duration: 4000,
+              panelClass: 'info-snackbar',
+            }
+          );
         }
       } else {
         // Remove expired draft
@@ -400,7 +425,9 @@ export class EditorComponent {
         const naddr = nip19.decode(articleId) as DecodedNaddr;
 
         if (naddr.data.kind !== 30023 && naddr.data.kind !== 30024) {
-          this.snackBar.open('Invalid article kind', 'Close', { duration: 3000 });
+          this.snackBar.open('Invalid article kind', 'Close', {
+            duration: 3000,
+          });
           this.router.navigate(['/articles']);
           return;
         }
@@ -417,21 +444,24 @@ export class EditorComponent {
       }
 
       if (!pubkey) {
-        this.snackBar.open('Please log in to edit articles', 'Close', { duration: 3000 });
+        this.snackBar.open('Please log in to edit articles', 'Close', {
+          duration: 3000,
+        });
         this.router.navigate(['/articles']);
         return;
       }
 
       // Since we're doing editing here, we'll save and cache locally.
-      const record = await this.dataService.getEventByPubkeyAndKindAndReplaceableEvent(
-        pubkey,
-        kind,
-        articleId,
-        {
-          cache: false,
-          save: false
-        }
-      );
+      const record =
+        await this.dataService.getEventByPubkeyAndKindAndReplaceableEvent(
+          pubkey,
+          kind,
+          articleId,
+          {
+            cache: false,
+            save: false,
+          }
+        );
 
       if (record?.event) {
         const event = record.event;
@@ -443,8 +473,10 @@ export class EditorComponent {
           image: this.getTagValue(tags, 'image') || '',
           content: event.content || '',
           tags: tags.filter(tag => tag[0] === 't').map(tag => tag[1]) || [],
-          publishedAt: parseInt(this.getTagValue(tags, 'published_at') || '0') || undefined,
-          dTag: this.getTagValue(tags, 'd') || articleId
+          publishedAt:
+            parseInt(this.getTagValue(tags, 'published_at') || '0') ||
+            undefined,
+          dTag: this.getTagValue(tags, 'd') || articleId,
         });
 
         // Disable auto-title when editing existing article since title is already established
@@ -472,7 +504,7 @@ export class EditorComponent {
     if (tag && !this.article().tags.includes(tag)) {
       this.article.update(art => ({
         ...art,
-        tags: [...art.tags, tag]
+        tags: [...art.tags, tag],
       }));
       this.newTag.set('');
     }
@@ -481,7 +513,7 @@ export class EditorComponent {
   removeTag(tag: string): void {
     this.article.update(art => ({
       ...art,
-      tags: art.tags.filter(t => t !== tag)
+      tags: art.tags.filter(t => t !== tag),
     }));
   }
 
@@ -494,15 +526,19 @@ export class EditorComponent {
 
   async saveDraft(): Promise<void> {
     if (!this.isDraftValid()) {
-      this.snackBar.open('Please add some content to save as draft', 'Close', { duration: 3000 });
+      this.snackBar.open('Please add some content to save as draft', 'Close', {
+        duration: 3000,
+      });
       return;
     }
 
     try {
       this.isPublishing.set(true);
       await this.publishArticle(30024); // Draft kind
-      this.snackBar.open('Draft saved successfully', 'Close', { duration: 3000 });
-      
+      this.snackBar.open('Draft saved successfully', 'Close', {
+        duration: 3000,
+      });
+
       // Navigate to drafts list after successful save
       this.router.navigate(['/drafts']);
     } catch (error) {
@@ -516,16 +552,22 @@ export class EditorComponent {
   async publishArticle(kind: number = 30023): Promise<void> {
     // Use different validation for drafts vs final articles
     if (kind === 30023 && !this.isValid()) {
-      this.snackBar.open('Please fill in required fields', 'Close', { duration: 3000 });
+      this.snackBar.open('Please fill in required fields', 'Close', {
+        duration: 3000,
+      });
       return;
     } else if (kind === 30024 && !this.isDraftValid()) {
-      this.snackBar.open('Please add some content to save as draft', 'Close', { duration: 3000 });
+      this.snackBar.open('Please add some content to save as draft', 'Close', {
+        duration: 3000,
+      });
       return;
     }
 
     const pubkey = this.accountState.pubkey();
     if (!pubkey) {
-      this.snackBar.open('Please log in to publish', 'Close', { duration: 3000 });
+      this.snackBar.open('Please log in to publish', 'Close', {
+        duration: 3000,
+      });
       return;
     }
 
@@ -541,9 +583,7 @@ export class EditorComponent {
       }
 
       // Build tags array according to NIP-23
-      const tags: string[][] = [
-        ['d', dTag]
-      ];
+      const tags: string[][] = [['d', dTag]];
 
       // Add title and summary if they exist (required for final articles, optional for drafts)
       if (art.title.trim()) {
@@ -590,7 +630,7 @@ export class EditorComponent {
       const signedEvent = await this.nostrService.signEvent(event);
       if (!signedEvent) {
         throw new Error('Failed to sign event');
-      }      // Publish to relays
+      } // Publish to relays
       await this.relayService.publish(signedEvent);
 
       const action = kind === 30024 ? 'Draft saved' : 'Article published';
@@ -609,11 +649,15 @@ export class EditorComponent {
         // this.router.navigate(['/e', nevent], { state: { event: signedEvent } }); // Navigate to the published event
 
         // Navigate to the published article
-        this.router.navigate(['/a', pubkey, art.dTag], { state: { event: signedEvent } });
+        this.router.navigate(['/a', pubkey, art.dTag], {
+          state: { event: signedEvent },
+        });
       }
     } catch (error) {
       console.error('Error publishing article:', error);
-      this.snackBar.open('Error publishing article', 'Close', { duration: 3000 });
+      this.snackBar.open('Error publishing article', 'Close', {
+        duration: 3000,
+      });
     } finally {
       this.isPublishing.set(false);
     }
@@ -630,14 +674,19 @@ export class EditorComponent {
   cancel(): void {
     // Ask user if they want to keep the auto-draft when canceling
     const article = this.article();
-    const hasContent = article.title.trim() || article.content.trim() || article.summary.trim();
+    const hasContent =
+      article.title.trim() || article.content.trim() || article.summary.trim();
 
     if (!this.isEditMode() && hasContent) {
       // Keep the auto-draft - user might want to continue later
-      this.snackBar.open('Draft saved automatically. You can continue later.', 'Dismiss', {
-        duration: 5000,
-        panelClass: 'info-snackbar'
-      });
+      this.snackBar.open(
+        'Draft saved automatically. You can continue later.',
+        'Dismiss',
+        {
+          duration: 5000,
+          panelClass: 'info-snackbar',
+        }
+      );
     }
 
     this.router.navigate(['/articles']);
@@ -649,35 +698,35 @@ export class EditorComponent {
 
   updateTitle(value: string): void {
     this.article.update(art => ({ ...art, title: value }));
-    
+
     // Schedule auto-save directly instead of relying on effect
     this.scheduleAutoSaveIfNeeded();
   }
 
   updateSummary(value: string): void {
     this.article.update(art => ({ ...art, summary: value }));
-    
+
     // Schedule auto-save directly instead of relying on effect
     this.scheduleAutoSaveIfNeeded();
   }
 
   updateImage(value: string): void {
     this.article.update(art => ({ ...art, image: value }));
-    
+
     // Schedule auto-save directly instead of relying on effect
     this.scheduleAutoSaveIfNeeded();
   }
 
   updateContent(value: string): void {
     this.article.update(art => ({ ...art, content: value }));
-    
+
     // Schedule auto-save directly instead of relying on effect
     this.scheduleAutoSaveIfNeeded();
   }
 
   updateDTag(value: string): void {
     this.article.update(art => ({ ...art, dTag: value }));
-    
+
     // Schedule auto-save directly instead of relying on effect
     this.scheduleAutoSaveIfNeeded();
   }
@@ -689,7 +738,11 @@ export class EditorComponent {
     // Apply auto-title when enabling and show notification
     if (!wasEnabled && this.autoTitleEnabled() && this.suggestedTitle()) {
       this.applyAutoTitle();
-      this.snackBar.open('Auto-title enabled - title updated from content', 'Close', { duration: 3000 });
+      this.snackBar.open(
+        'Auto-title enabled - title updated from content',
+        'Close',
+        { duration: 3000 }
+      );
     }
   }
 

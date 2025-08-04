@@ -52,7 +52,7 @@ export interface RelayConnection {
     MatExpansionModule,
   ],
   templateUrl: './logs-settings.component.html',
-  styleUrls: ['./logs-settings.component.scss']
+  styleUrls: ['./logs-settings.component.scss'],
 })
 export class LogsSettingsComponent {
   accountState = inject(AccountStateService);
@@ -70,36 +70,37 @@ export class LogsSettingsComponent {
   clusterOutput = signal<RelayClusterOutput[]>([]);
 
   // Computed properties for UI
-  connectedRelays = computed(() => 
+  connectedRelays = computed(() =>
     Array.from(this.relayStats().entries())
       .filter(([_, stats]) => stats.isConnected)
       .sort((a, b) => b[1].eventsReceived - a[1].eventsReceived)
   );
 
-  offlineRelays = computed(() => 
+  offlineRelays = computed(() =>
     Array.from(this.relayStats().entries())
       .filter(([_, stats]) => stats.isOffline)
       .sort((a, b) => b[1].connectionAttempts - a[1].connectionAttempts)
   );
 
-  allRelayStats = computed(() => 
-    Array.from(this.relayStats().entries())
-      .sort((a, b) => {
-        // Sort by connection status first, then by events received
-        if (a[1].isConnected && !b[1].isConnected) return -1;
-        if (!a[1].isConnected && b[1].isConnected) return 1;
-        return b[1].eventsReceived - a[1].eventsReceived;
-      })
+  allRelayStats = computed(() =>
+    Array.from(this.relayStats().entries()).sort((a, b) => {
+      // Sort by connection status first, then by events received
+      if (a[1].isConnected && !b[1].isConnected) return -1;
+      if (!a[1].isConnected && b[1].isConnected) return 1;
+      return b[1].eventsReceived - a[1].eventsReceived;
+    })
   );
 
   constructor() {
     effect(async () => {
       if (this.app.initialized() && this.app.authenticated()) {
         const relaysInfo = await this.storage.getInfoByType('relay');
-        const disabledRelays = relaysInfo.filter((relay: any) => relay.disabled);
+        const disabledRelays = relaysInfo.filter(
+          (relay: any) => relay.disabled
+        );
         this.disabledRelays.set(disabledRelays);
         this.logger.info('Disabled relays:', disabledRelays);
-        
+
         // Generate cluster output
         this.generateClusterOutput();
       }
@@ -114,7 +115,9 @@ export class LogsSettingsComponent {
     relay['disabled'] = false;
     relay['suspendedCount'] = 0;
     await this.storage.updateInfo(relay);
-    this.disabledRelays.update((relays) => relays.filter((r: InfoRecord) => r.key !== relay.key));
+    this.disabledRelays.update(relays =>
+      relays.filter((r: InfoRecord) => r.key !== relay.key)
+    );
   }
 
   /**
@@ -129,7 +132,7 @@ export class LogsSettingsComponent {
       stats.lastConnectionRetry = 0;
       stats.lastSuccessfulConnection = 0;
       // Keep connection status as is
-      
+
       this.logger.info(`Reset statistics for relay: ${relayUrl}`);
     }
   }
@@ -137,7 +140,11 @@ export class LogsSettingsComponent {
   /**
    * Get connection status icon and color
    */
-  getConnectionStatusIcon(stats: RelayStats): { icon: string; color: string; tooltip: string } {
+  getConnectionStatusIcon(stats: RelayStats): {
+    icon: string;
+    color: string;
+    tooltip: string;
+  } {
     if (stats.isConnected) {
       return { icon: 'wifi', color: 'primary', tooltip: 'Connected' };
     } else if (stats.isOffline) {
@@ -152,10 +159,10 @@ export class LogsSettingsComponent {
    */
   formatRelativeTime(timestamp: number): string {
     if (timestamp === 0) return 'Never';
-    
+
     const now = this.utilities.currentDate();
     const diffSeconds = now - timestamp;
-    
+
     if (diffSeconds < 60) return 'Just now';
     if (diffSeconds < 3600) return `${Math.floor(diffSeconds / 60)}m ago`;
     if (diffSeconds < 86400) return `${Math.floor(diffSeconds / 3600)}h ago`;
@@ -182,7 +189,7 @@ export class LogsSettingsComponent {
 
     // Create a map of relay -> users
     const relayToUsers = new Map<string, string[]>();
-    
+
     userRelaysMap.forEach((relays, pubkey) => {
       relays.forEach(relay => {
         if (!relayToUsers.has(relay)) {
@@ -195,31 +202,40 @@ export class LogsSettingsComponent {
     // Generate cluster output for each relay
     relayToUsers.forEach((users, relay) => {
       const stats = relayStatsMap.get(relay);
-      const performanceScore = this.relaysService.getRelayPerformanceScore(relay);
-      
+      const performanceScore =
+        this.relaysService.getRelayPerformanceScore(relay);
+
       // Find connections to other relays
       const sharedWithRelays: RelayConnection[] = [];
-      
+
       relayToUsers.forEach((otherUsers, otherRelay) => {
         if (relay !== otherRelay) {
           const sharedUsers = users.filter(user => otherUsers.includes(user));
           if (sharedUsers.length > 0) {
-            const connectionStrength = Math.round((sharedUsers.length / Math.max(users.length, otherUsers.length)) * 100);
+            const connectionStrength = Math.round(
+              (sharedUsers.length / Math.max(users.length, otherUsers.length)) *
+                100
+            );
             sharedWithRelays.push({
               relay: otherRelay,
               sharedUsers: sharedUsers.length,
-              connectionStrength
+              connectionStrength,
             });
           }
         }
       });
 
       // Sort by connection strength
-      sharedWithRelays.sort((a, b) => b.connectionStrength - a.connectionStrength);
+      sharedWithRelays.sort(
+        (a, b) => b.connectionStrength - a.connectionStrength
+      );
 
-      const connectionStatus: 'connected' | 'offline' | 'unknown' = 
-        stats?.isConnected ? 'connected' : 
-        stats?.isOffline ? 'offline' : 'unknown';
+      const connectionStatus: 'connected' | 'offline' | 'unknown' =
+        stats?.isConnected
+          ? 'connected'
+          : stats?.isOffline
+            ? 'offline'
+            : 'unknown';
 
       clusterData.push({
         relay,
@@ -228,13 +244,13 @@ export class LogsSettingsComponent {
         connectionStatus,
         eventsReceived: stats?.eventsReceived || 0,
         performanceScore,
-        sharedWithRelays: sharedWithRelays.slice(0, 5) // Top 5 connections
+        sharedWithRelays: sharedWithRelays.slice(0, 5), // Top 5 connections
       });
     });
 
     // Sort by user count (most popular relays first)
     clusterData.sort((a, b) => b.userCount - a.userCount);
-    
+
     this.clusterOutput.set(clusterData);
     this.logger.info('Generated cluster output:', clusterData);
   }
@@ -254,12 +270,12 @@ export class LogsSettingsComponent {
     const dataStr = JSON.stringify(clusterData, null, 2);
     const dataBlob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(dataBlob);
-    
+
     const link = document.createElement('a');
     link.href = url;
     link.download = `relay-cluster-data-${new Date().toISOString().split('T')[0]}.json`;
     link.click();
-    
+
     URL.revokeObjectURL(url);
   }
 }

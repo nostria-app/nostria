@@ -1,7 +1,11 @@
 import { Component, Inject, inject, signal } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
-import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import {
+  MAT_DIALOG_DATA,
+  MatDialogModule,
+  MatDialogRef,
+} from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -29,10 +33,10 @@ interface DialogData {
     MatFormFieldModule,
     MatInputModule,
     MatIconModule,
-    MatTooltipModule
-],
+    MatTooltipModule,
+  ],
   templateUrl: './bookmark-category-dialog.component.html',
-  styleUrls: ['./bookmark-category-dialog.component.scss']
+  styleUrls: ['./bookmark-category-dialog.component.scss'],
 })
 export class BookmarkCategoryDialogComponent {
   private logger = inject(LoggerService);
@@ -56,24 +60,29 @@ export class BookmarkCategoryDialogComponent {
     '#ff9800', // Orange
     '#ff5722', // Deep Orange
     '#795548', // Brown
-    '#607d8b'  // Blue Grey
+    '#607d8b', // Blue Grey
   ];
 
   newCategory = {
     name: '',
-    color: this.availableColors[0]
+    color: this.availableColors[0],
   };
 
-  editingCategory: { index: number, name: string, color: string } | null = null;
+  editingCategory: { index: number; name: string; color: string } | null = null;
 
   constructor(
     @Inject(MAT_DIALOG_DATA) public data: DialogData,
     private dialogRef: MatDialogRef<BookmarkCategoryDialogComponent>
   ) {
     // Skip the "All" category which is always fixed
-    const categoriesWithoutAll = data.categories.filter(cat => cat.id !== 'all');
+    const categoriesWithoutAll = data.categories.filter(
+      cat => cat.id !== 'all'
+    );
     this.categories.set(categoriesWithoutAll);
-    this.logger.debug('BookmarkCategoryDialog initialized with categories:', this.categories());
+    this.logger.debug(
+      'BookmarkCategoryDialog initialized with categories:',
+      this.categories()
+    );
   }
 
   addCategory(): void {
@@ -82,7 +91,8 @@ export class BookmarkCategoryDialogComponent {
     }
 
     // Create a simplified ID from the name
-    const id = this.newCategory.name.toLowerCase()
+    const id = this.newCategory.name
+      .toLowerCase()
       .replace(/\s+/g, '-')
       .replace(/[^a-z0-9-]/g, '')
       .substring(0, 20);
@@ -96,7 +106,7 @@ export class BookmarkCategoryDialogComponent {
     const newCategory: BookmarkCategory = {
       id,
       name: this.newCategory.name.trim(),
-      color: this.newCategory.color
+      color: this.newCategory.color,
     };
 
     this.categories.update(categories => [...categories, newCategory]);
@@ -110,7 +120,7 @@ export class BookmarkCategoryDialogComponent {
     this.editingCategory = {
       index,
       name: category.name,
-      color: category.color
+      color: category.color,
     };
     this.logger.debug('Editing category:', category);
   }
@@ -127,17 +137,20 @@ export class BookmarkCategoryDialogComponent {
     this.categories.update(categories => {
       const updated = [...categories];
       const category = updated[this.editingCategory!.index];
-      
+
       updated[this.editingCategory!.index] = {
         ...category,
         name: this.editingCategory!.name.trim(),
-        color: this.editingCategory!.color
+        color: this.editingCategory!.color,
       };
-      
+
       return updated;
     });
 
-    this.logger.debug('Category updated:', this.categories()[this.editingCategory.index]);
+    this.logger.debug(
+      'Category updated:',
+      this.categories()[this.editingCategory.index]
+    );
     this.editingCategory = null;
   }
 
@@ -154,9 +167,9 @@ export class BookmarkCategoryDialogComponent {
     // Add back the "All" category which is always fixed
     const allCategories = [
       { id: 'all', name: 'All', color: '#9c27b0' },
-      ...this.categories()
+      ...this.categories(),
     ];
-    
+
     this.dialogRef.close(allCategories);
     this.logger.debug('Categories saved:', allCategories);
   }

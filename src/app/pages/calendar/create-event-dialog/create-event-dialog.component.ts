@@ -1,7 +1,16 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import {
+  FormBuilder,
+  FormGroup,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
+import {
+  MatDialogModule,
+  MatDialogRef,
+  MAT_DIALOG_DATA,
+} from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
@@ -41,10 +50,10 @@ export interface CreateEventResult {
     MatChipsModule,
     MatSlideToggleModule,
     MatSelectModule,
-    MatNativeDateModule
+    MatNativeDateModule,
   ],
   templateUrl: './create-event-dialog.component.html',
-  styleUrl: './create-event-dialog.component.scss'
+  styleUrl: './create-event-dialog.component.scss',
 })
 export class CreateEventDialogComponent {
   private dialogRef = inject(MatDialogRef<CreateEventDialogComponent>);
@@ -74,7 +83,7 @@ export class CreateEventDialogComponent {
       endTime: [endDate.toTimeString().slice(0, 5)],
       location: ['', Validators.maxLength(300)],
       isAllDay: [false],
-      hashtag: ['']
+      hashtag: [''],
     });
 
     // Watch all-day toggle
@@ -91,7 +100,7 @@ export class CreateEventDialogComponent {
   addHashtag(): void {
     const hashtagControl = this.eventForm.get('hashtag');
     const hashtag = hashtagControl?.value?.trim();
-    
+
     if (hashtag && !this.hashtags().includes(hashtag)) {
       this.hashtags.update(tags => [...tags, hashtag]);
       hashtagControl?.setValue('');
@@ -119,7 +128,7 @@ export class CreateEventDialogComponent {
     try {
       const formValue = this.eventForm.value;
       const isAllDay = formValue.isAllDay;
-      
+
       let eventKind: 31922 | 31923;
       let tags: string[][];
       let startTimestamp: number;
@@ -129,16 +138,20 @@ export class CreateEventDialogComponent {
         // Date-based event (kind 31922)
         eventKind = 31922;
         const startDate = new Date(formValue.startDate);
-        const endDate = formValue.endDate ? new Date(formValue.endDate) : undefined;
-        
+        const endDate = formValue.endDate
+          ? new Date(formValue.endDate)
+          : undefined;
+
         // Format as YYYY-MM-DD
         const startStr = startDate.toISOString().split('T')[0];
-        const endStr = endDate ? endDate.toISOString().split('T')[0] : undefined;
-        
+        const endStr = endDate
+          ? endDate.toISOString().split('T')[0]
+          : undefined;
+
         tags = [
           ['d', this.generateRandomId()],
           ['title', formValue.title],
-          ['start', startStr]
+          ['start', startStr],
         ];
 
         if (endStr && endStr !== startStr) {
@@ -147,20 +160,26 @@ export class CreateEventDialogComponent {
       } else {
         // Time-based event (kind 31923)
         eventKind = 31923;
-        
+
         // Combine date and time
-        const startDateTime = this.combineDateAndTime(formValue.startDate, formValue.startTime);
-        const endDateTime = formValue.endDate && formValue.endTime 
-          ? this.combineDateAndTime(formValue.endDate, formValue.endTime)
-          : undefined;
+        const startDateTime = this.combineDateAndTime(
+          formValue.startDate,
+          formValue.startTime
+        );
+        const endDateTime =
+          formValue.endDate && formValue.endTime
+            ? this.combineDateAndTime(formValue.endDate, formValue.endTime)
+            : undefined;
 
         startTimestamp = Math.floor(startDateTime.getTime() / 1000);
-        endTimestamp = endDateTime ? Math.floor(endDateTime.getTime() / 1000) : undefined;
+        endTimestamp = endDateTime
+          ? Math.floor(endDateTime.getTime() / 1000)
+          : undefined;
 
         tags = [
           ['d', this.generateRandomId()],
           ['title', formValue.title],
-          ['start', startTimestamp.toString()]
+          ['start', startTimestamp.toString()],
         ];
 
         if (endTimestamp) {
@@ -188,7 +207,7 @@ export class CreateEventDialogComponent {
         content: formValue.content || '',
         tags,
         created_at: Math.floor(Date.now() / 1000),
-        pubkey: this.app.accountState.pubkey()!
+        pubkey: this.app.accountState.pubkey()!,
       };
 
       // TODO: Sign the event with the user's private key
@@ -196,24 +215,23 @@ export class CreateEventDialogComponent {
       const signedEvent: Event = {
         ...eventToSign,
         id: '', // This would be generated during signing
-        sig: ''  // This would be the signature
+        sig: '', // This would be the signature
       };
 
       // Calculate the event ID (hash)
       signedEvent.id = getEventHash(signedEvent);
-      
+
       // TODO: Get actual signature - this requires access to the user's private key
       // For now, we'll set a placeholder signature
       signedEvent.sig = 'placeholder_signature_' + Date.now();
-      
+
       console.log('Created calendar event:', signedEvent);
-      
+
       // Publish the event
       await this.accountRelay.publish(signedEvent);
 
       // Close dialog with the result
       this.dialogRef.close({ event: signedEvent } as CreateEventResult);
-
     } catch (error) {
       console.error('Error creating calendar event:', error);
     } finally {
@@ -233,6 +251,9 @@ export class CreateEventDialogComponent {
   }
 
   private generateRandomId(): string {
-    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    return (
+      Math.random().toString(36).substring(2, 15) +
+      Math.random().toString(36).substring(2, 15)
+    );
   }
 }

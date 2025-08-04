@@ -21,7 +21,7 @@ app.use(
     origin: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type'],
-  }),
+  })
 );
 
 /**
@@ -36,9 +36,12 @@ app.use(
  * ```
  */
 
-app.use('/.well-known', express.static(join(browserDistFolder, '.well-known'), {
-  dotfiles: 'allow'
-}));
+app.use(
+  '/.well-known',
+  express.static(join(browserDistFolder, '.well-known'), {
+    dotfiles: 'allow',
+  })
+);
 
 /**
  * Serve static files from /browser
@@ -48,7 +51,7 @@ app.use(
     maxAge: '1y',
     index: false,
     redirect: false,
-  }),
+  })
 );
 
 /**
@@ -57,8 +60,8 @@ app.use(
 app.use((req, res, next) => {
   angularApp
     .handle(req)
-    .then((response) =>
-      response ? writeResponseToNodeResponse(response, res) : next(),
+    .then(response =>
+      response ? writeResponseToNodeResponse(response, res) : next()
     )
     .catch(next);
 });
@@ -69,7 +72,7 @@ app.use((req, res, next) => {
  */
 if (isMainModule(import.meta.url)) {
   const port = process.env['PORT'] || 4000;
-  app.listen(port, (error) => {
+  app.listen(port, error => {
     if (error) {
       throw error;
     }
@@ -252,9 +255,6 @@ export const reqHandler = createNodeRequestHandler(app);
 //  */
 // export const reqHandler = createNodeRequestHandler(app);
 
-
-
-
 // import {
 //   AngularNodeAppEngine,
 //   createNodeRequestHandler,
@@ -304,7 +304,6 @@ export const reqHandler = createNodeRequestHandler(app);
 //  * });
 //  * ```
 //  */
-
 
 // /**
 //  * Function to modify meta tags based on URL path

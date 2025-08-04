@@ -8,12 +8,9 @@ import { LoggerService } from '../../../services/logger.service';
 @Component({
   selector: 'app-profile-photos',
   standalone: true,
-  imports: [
-    CommonModule,
-    MatIconModule
-  ],
+  imports: [CommonModule, MatIconModule],
   templateUrl: './profile-photos.component.html',
-  styleUrl: './profile-photos.component.scss'
+  styleUrl: './profile-photos.component.scss',
 })
 export class ProfilePhotosComponent {
   private route = inject(ActivatedRoute);

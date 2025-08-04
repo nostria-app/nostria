@@ -24,7 +24,7 @@ export class PracticalUrlExamplesComponent {
   selectFeedSilently(feedPath: string): void {
     // Update URL from /f to /f/my-custom-feed without triggering navigation
     this.location.replaceState(`/f/${feedPath}`);
-    
+
     // Your existing feed selection logic continues...
     // this.feedsCollectionService.setActiveFeed(feedId);
     console.log('Feed selected, URL updated silently to:', `/f/${feedPath}`);
@@ -38,9 +38,9 @@ export class PracticalUrlExamplesComponent {
     const currentPath = this.location.path().split('?')[0]; // Get path without query params
     const urlTree = this.router.createUrlTree([], {
       queryParams: { column: columnIndex },
-      queryParamsHandling: 'merge'
+      queryParamsHandling: 'merge',
     });
-    
+
     // This preserves existing query params and only updates/adds the column param
     this.location.replaceState(this.router.serializeUrl(urlTree));
     console.log('Column visibility updated in URL:', columnIndex);
@@ -52,20 +52,20 @@ export class PracticalUrlExamplesComponent {
    */
   updateFiltersInUrl(selectedTags: string[], showAdvanced: boolean): void {
     const queryParams: any = {};
-    
+
     if (selectedTags.length > 0) {
       queryParams.tags = selectedTags.join(',');
     }
-    
+
     if (showAdvanced) {
       queryParams.advanced = 'true';
     }
-    
+
     const urlTree = this.router.createUrlTree([], {
       queryParams,
-      queryParamsHandling: 'merge'
+      queryParamsHandling: 'merge',
     });
-    
+
     this.location.replaceState(this.router.serializeUrl(urlTree));
     console.log('Filters updated in URL:', queryParams);
   }
@@ -76,16 +76,16 @@ export class PracticalUrlExamplesComponent {
    */
   updateViewState(activeSection: string, visibleColumn?: number): void {
     const queryParams: any = { section: activeSection };
-    
+
     if (visibleColumn !== undefined) {
       queryParams.column = visibleColumn;
     }
-    
+
     const urlTree = this.router.createUrlTree([], {
       queryParams,
-      queryParamsHandling: 'merge'
+      queryParamsHandling: 'merge',
     });
-    
+
     this.location.replaceState(this.router.serializeUrl(urlTree));
     console.log('View state updated in URL:', queryParams);
   }
@@ -96,20 +96,20 @@ export class PracticalUrlExamplesComponent {
    */
   restoreStateFromUrl(): void {
     const queryParams = this.route.snapshot.queryParams;
-    
+
     // Restore filters
     if (queryParams['tags']) {
       const tags = queryParams['tags'].split(',');
       // this.selectedTags.set(tags);
       console.log('Restored tags from URL:', tags);
     }
-    
+
     // Restore active section
     if (queryParams['section']) {
       // this.activeSection.set(queryParams['section']);
       console.log('Restored section from URL:', queryParams['section']);
     }
-    
+
     // Restore column visibility
     if (queryParams['column']) {
       const columnIndex = parseInt(queryParams['column'], 10);
@@ -124,14 +124,14 @@ export class PracticalUrlExamplesComponent {
    */
   updateColumnOrderInUrl(newColumnOrder: string[]): void {
     const queryParams = {
-      columnOrder: newColumnOrder.join(',')
+      columnOrder: newColumnOrder.join(','),
     };
-    
+
     const urlTree = this.router.createUrlTree([], {
       queryParams,
-      queryParamsHandling: 'merge'
+      queryParamsHandling: 'merge',
     });
-    
+
     this.location.replaceState(this.router.serializeUrl(urlTree));
     console.log('Column order updated in URL:', newColumnOrder);
   }
@@ -142,16 +142,16 @@ export class PracticalUrlExamplesComponent {
    */
   cleanupUrlParameters(paramsToRemove: string[]): void {
     const currentParams = { ...this.route.snapshot.queryParams };
-    
+
     // Remove specified parameters
     paramsToRemove.forEach(param => {
       delete currentParams[param];
     });
-    
+
     const urlTree = this.router.createUrlTree([], {
-      queryParams: currentParams
+      queryParams: currentParams,
     });
-    
+
     this.location.replaceState(this.router.serializeUrl(urlTree));
     console.log('Cleaned up URL parameters:', paramsToRemove);
   }
@@ -172,21 +172,24 @@ export class PracticalUrlExamplesComponent {
       column: state.columnIndex.toString(),
       filters: state.filters.join(','),
       sort: state.sortBy,
-      view: state.viewMode
+      view: state.viewMode,
     };
-    
+
     // Remove empty parameters
     Object.keys(queryParams).forEach(key => {
-      if (!queryParams[key as keyof typeof queryParams] || queryParams[key as keyof typeof queryParams] === '') {
+      if (
+        !queryParams[key as keyof typeof queryParams] ||
+        queryParams[key as keyof typeof queryParams] === ''
+      ) {
         delete queryParams[key as keyof typeof queryParams];
       }
     });
-    
+
     const urlTree = this.router.createUrlTree([], {
       queryParams,
-      queryParamsHandling: 'replace' // Replace all query params
+      queryParamsHandling: 'replace', // Replace all query params
     });
-    
+
     this.location.replaceState(this.router.serializeUrl(urlTree));
     console.log('Complex state updated in URL:', state);
   }

@@ -2,10 +2,10 @@ import { inject, Injectable } from '@angular/core';
 import { NostrService } from './nostr.service';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class QueueService {
-  constructor() { }
+  constructor() {}
 
   // A queue for publishing Nostr events. Needs to process events in order and wait for signing.
   private queue: (() => Promise<void>)[] = [];
@@ -39,7 +39,7 @@ export class QueueService {
   // Check if the queue is empty
   isEmpty(): boolean {
     return this.queue.length === 0;
-  } 
+  }
 
   // Get the current queue length
   get length(): number {

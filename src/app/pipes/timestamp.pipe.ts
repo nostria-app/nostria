@@ -1,10 +1,10 @@
 import { Pipe, PipeTransform } from '@angular/core';
 import { DatePipe } from '@angular/common';
 
-@Pipe({ 
-  name: 'timestamp', 
+@Pipe({
+  name: 'timestamp',
   standalone: true,
-  pure: true
+  pure: true,
 })
 export class TimestampPipe implements PipeTransform {
   private datePipe = new DatePipe('en-US');

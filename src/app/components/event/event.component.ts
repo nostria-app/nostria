@@ -2,7 +2,7 @@ import { Component, inject, input, signal, effect } from '@angular/core';
 import { DataService } from '../../services/data.service';
 import { Event } from 'nostr-tools';
 import { NostrRecord } from '../../interfaces';
-import { UserProfileComponent } from "../user-profile/user-profile.component";
+import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { LayoutService } from '../../services/layout.service';
 import { ContentComponent } from '../content/content.component';
 import { AgoPipe } from '../../pipes/ago.pipe';
@@ -14,7 +14,10 @@ import { MatMenuModule } from '@angular/material/menu';
 import { AccountRelayService } from '../../services/account-relay.service';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatDialog } from '@angular/material/dialog';
-import { PublishDialogComponent, PublishDialogData } from './publish-dialog/publish-dialog.component';
+import {
+  PublishDialogComponent,
+  PublishDialogData,
+} from './publish-dialog/publish-dialog.component';
 import { ApplicationService } from '../../services/application.service';
 
 @Component({
@@ -28,15 +31,17 @@ import { ApplicationService } from '../../services/application.service';
     MatDividerModule,
     MatButtonModule,
     MatIconModule,
-    MatMenuModule],
+    MatMenuModule,
+  ],
   templateUrl: './event.component.html',
-  styleUrl: './event.component.scss'
+  styleUrl: './event.component.scss',
 })
 export class EventComponent {
   id = input<string | null | undefined>();
   type = input<'e' | 'a' | 'r' | 't'>('e');
   event = input<Event | null | undefined>(null);
-  data = inject(DataService); record = signal<NostrRecord | null>(null);
+  data = inject(DataService);
+  record = signal<NostrRecord | null>(null);
   layout = inject(LayoutService);
   accountRelayService = inject(AccountRelayService);
   dialog = inject(MatDialog);
@@ -69,7 +74,7 @@ export class EventComponent {
             this.record.set(eventData);
             console.log('RECORD:', this.record());
           }
-        };
+        }
       }
     });
   }
@@ -97,13 +102,13 @@ export class EventComponent {
     }
 
     const dialogData: PublishDialogData = {
-      event: event
+      event: event,
     };
 
     this.dialog.open(PublishDialogComponent, {
       data: dialogData,
       width: '600px',
-      disableClose: false
+      disableClose: false,
     });
   }
 }

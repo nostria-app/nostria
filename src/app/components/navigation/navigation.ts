@@ -11,7 +11,7 @@ import { CommonModule } from '@angular/common';
   selector: 'app-navigation',
   imports: [MatButtonModule, MatIconModule, CommonModule],
   templateUrl: './navigation.html',
-  styleUrl: './navigation.scss'
+  styleUrl: './navigation.scss',
 })
 export class NavigationComponent {
   hasState = computed(() => {
@@ -21,15 +21,12 @@ export class NavigationComponent {
   private route = inject(ActivatedRoute);
 
   // Convert route data to signal
-  routeData = toSignal(
-    this.route.data.pipe(
-      map(data => data)
-    ),
-    { initialValue: {} }
-  );
+  routeData = toSignal(this.route.data.pipe(map(data => data)), {
+    initialValue: {},
+  });
 
   isRoot = signal<boolean>(false);
-  
+
   // Touch and hold functionality
   private touchTimer: number | null = null;
   private readonly TOUCH_HOLD_DURATION = 500; // 500ms
@@ -58,7 +55,7 @@ export class NavigationComponent {
   onTouchStart(event: TouchEvent) {
     // Store the start time for duration checking
     (event.target as any).touchStartTime = event.timeStamp;
-    
+
     this.touchTimer = window.setTimeout(() => {
       // Convert touch event to mouse event for context menu
       const touch = event.touches[0];
@@ -66,7 +63,7 @@ export class NavigationComponent {
         clientX: touch.clientX,
         clientY: touch.clientY,
         bubbles: true,
-        cancelable: true
+        cancelable: true,
       });
       this.onRightClick(mouseEvent);
     }, this.TOUCH_HOLD_DURATION);
@@ -77,9 +74,10 @@ export class NavigationComponent {
     if (this.touchTimer) {
       clearTimeout(this.touchTimer);
       this.touchTimer = null;
-      
+
       // If timer was cleared quickly, treat as regular click
-      const touchDuration = event.timeStamp - ((event.target as any).touchStartTime || 0);
+      const touchDuration =
+        event.timeStamp - ((event.target as any).touchStartTime || 0);
       if (touchDuration < this.TOUCH_HOLD_DURATION) {
         event.preventDefault(); // Prevent mouse events
         this.goBack();
@@ -105,8 +103,8 @@ export class NavigationComponent {
           y: event.clientY,
           onItemSelected: (index: number) => {
             this.routeDataService.goToHistoryItem(index);
-          }
-        }
+          },
+        },
       });
       window.dispatchEvent(customEvent);
     }

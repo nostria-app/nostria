@@ -92,7 +92,7 @@ const DEFAULT_COLUMNS: NavLink[] = [
     UserProfileComponent,
     MatDividerModule,
     ContentComponent,
-    Link
+    Link,
   ],
   templateUrl: './feeds.component.html',
   styleUrl: './feeds.component.scss',
