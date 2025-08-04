@@ -54,10 +54,10 @@ type SortOption = 'default' | 'reverse' | 'engagement-asc' | 'engagement-desc';
     RouterModule,
     ScrollingModule,
     UserProfileComponent,
-    MatMenuModule
+    MatMenuModule,
   ],
   templateUrl: './people.component.html',
-  styleUrls: ['./people.component.scss']
+  styleUrls: ['./people.component.scss'],
 })
 export class PeopleComponent {
   private router = inject(Router);
@@ -89,7 +89,7 @@ export class PeopleComponent {
     hasNip05: false,
     hasPicture: false,
     hasBio: false,
-    favoritesOnly: false
+    favoritesOnly: false,
   });
 
   // Sorting options
@@ -114,7 +114,8 @@ export class PeopleComponent {
         const nip05 = metadata.data?.nip05 || '';
         const about = metadata.data?.about || '';
 
-        const searchTerms = `${name} ${displayName} ${nip05} ${about}`.toLowerCase();
+        const searchTerms =
+          `${name} ${displayName} ${nip05} ${about}`.toLowerCase();
         if (!searchTerms.includes(search)) return false;
       }
 
@@ -131,28 +132,32 @@ export class PeopleComponent {
         }
 
         // Apply filters
-        if (activeFilters.hasRelayList &&
-          (!userInfo || userInfo['hasRelayList'] !== true)) {
+        if (
+          activeFilters.hasRelayList &&
+          (!userInfo || userInfo['hasRelayList'] !== true)
+        ) {
           return false;
         }
 
-        if (activeFilters.hasFollowingList &&
-          (!userInfo || userInfo['hasFollowingListRelays'] !== true)) {
+        if (
+          activeFilters.hasFollowingList &&
+          (!userInfo || userInfo['hasFollowingListRelays'] !== true)
+        ) {
           return false;
         }
 
-        if (activeFilters.hasNip05 &&
-          (!metadata.data.nip05)) {
+        if (activeFilters.hasNip05 && !metadata.data.nip05) {
           return false;
         }
 
-        if (activeFilters.hasPicture &&
-          (!metadata.data.picture)) {
+        if (activeFilters.hasPicture && !metadata.data.picture) {
           return false;
         }
 
-        if (activeFilters.hasBio &&
-          (!metadata.data.about || metadata.data.about.trim() === '')) {
+        if (
+          activeFilters.hasBio &&
+          (!metadata.data.about || metadata.data.about.trim() === '')
+        ) {
           return false;
         }
       }
@@ -171,11 +176,16 @@ export class PeopleComponent {
   // Computed item size based on view mode
   itemSize = computed(() => {
     switch (this.viewMode()) {
-      case 'large': return 200;
-      case 'medium': return 150;
-      case 'small': return 100;
-      case 'details': return 72;
-      default: return 150;
+      case 'large':
+        return 200;
+      case 'medium':
+        return 150;
+      case 'small':
+        return 100;
+      case 'details':
+        return 72;
+      default:
+        return 150;
     }
   });
 
@@ -187,9 +197,7 @@ export class PeopleComponent {
 
   constructor() {
     // Initialize search debounce
-    this.searchChanged.pipe(
-      debounceTime(300)
-    ).subscribe(term => {
+    this.searchChanged.pipe(debounceTime(300)).subscribe(term => {
       this.searchTerm.set(term);
     });
 
@@ -218,7 +226,10 @@ export class PeopleComponent {
 
     // Save filters when they change
     effect(() => {
-      this.localStorage.setItem('peopleFilters', JSON.stringify(this.filters()));
+      this.localStorage.setItem(
+        'peopleFilters',
+        JSON.stringify(this.filters())
+      );
     });
 
     // Load sort option from localStorage if available
@@ -256,17 +267,17 @@ export class PeopleComponent {
       case 'default':
         // Keep original order (added order)
         break;
-      
+
       case 'reverse':
         // Reverse the order
         result.reverse();
         break;
-      
+
       case 'engagement-asc':
       case 'engagement-desc':
         // Get metrics for all users
         const userMetrics = new Map<string, number>();
-        
+
         for (const pubkey of result) {
           try {
             const metric = await this.metrics.getUserMetric(pubkey);
@@ -275,11 +286,11 @@ export class PeopleComponent {
             userMetrics.set(pubkey, 0);
           }
         }
-        
+
         result.sort((a, b) => {
           const scoreA = userMetrics.get(a) || 0;
           const scoreB = userMetrics.get(b) || 0;
-          
+
           if (sortOption === 'engagement-asc') {
             return scoreA - scoreB;
           } else {
@@ -376,7 +387,7 @@ export class PeopleComponent {
   toggleFilter(filterName: keyof FilterOptions, event?: Event | any) {
     this.filters.update(current => ({
       ...current,
-      [filterName]: !current[filterName]
+      [filterName]: !current[filterName],
     }));
   }
 
@@ -387,7 +398,7 @@ export class PeopleComponent {
       hasNip05: false,
       hasPicture: false,
       hasBio: false,
-      favoritesOnly: false
+      favoritesOnly: false,
     });
   }
 

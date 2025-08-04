@@ -1,4 +1,12 @@
-import { Component, computed, effect, inject, OnInit, OnDestroy, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  inject,
+  OnInit,
+  OnDestroy,
+  signal,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -18,7 +26,8 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { LoggerService } from '../../../services/logger.service';
 
 @Component({
-  selector: 'app-manage',  imports: [
+  selector: 'app-manage',
+  imports: [
     CommonModule,
     MatCardModule,
     MatCheckboxModule,
@@ -30,10 +39,10 @@ import { LoggerService } from '../../../services/logger.service';
     MatTableModule,
     MatTooltipModule,
     FormsModule,
-    RouterModule
+    RouterModule,
   ],
   templateUrl: './manage.component.html',
-  styleUrl: './manage.component.scss'
+  styleUrl: './manage.component.scss',
 })
 export class NotificationManageComponent implements OnInit, OnDestroy {
   webPush = inject(WebPushService);
@@ -48,13 +57,25 @@ export class NotificationManageComponent implements OnInit, OnDestroy {
 
   // All notification types
   notificationTypes = [
-    { key: UserNotificationType.DIRECT_MESSAGES, label: 'Direct Messages', icon: 'email' },
+    {
+      key: UserNotificationType.DIRECT_MESSAGES,
+      label: 'Direct Messages',
+      icon: 'email',
+    },
     { key: UserNotificationType.REPLIES, label: 'Replies', icon: 'reply' },
-    { key: UserNotificationType.MENTIONS, label: 'Mentions', icon: 'alternate_email' },
+    {
+      key: UserNotificationType.MENTIONS,
+      label: 'Mentions',
+      icon: 'alternate_email',
+    },
     { key: UserNotificationType.REPOSTS, label: 'Reposts', icon: 'repeat' },
     { key: UserNotificationType.ZAPS, label: 'Zaps', icon: 'flash_on' },
     { key: UserNotificationType.NEWS, label: 'News', icon: 'newspaper' },
-    { key: UserNotificationType.APP_UPDATES, label: 'App Updates', icon: 'system_update' }
+    {
+      key: UserNotificationType.APP_UPDATES,
+      label: 'App Updates',
+      icon: 'system_update',
+    },
   ];
 
   // Device preferences state
@@ -63,7 +84,7 @@ export class NotificationManageComponent implements OnInit, OnDestroy {
 
     return devices.map(device => ({
       device,
-      preferences: this.webPush.getDevicePreferences(device.deviceId)
+      preferences: this.webPush.getDevicePreferences(device.deviceId),
     }));
   });
 
@@ -93,19 +114,28 @@ export class NotificationManageComponent implements OnInit, OnDestroy {
     }
   }
 
-  updatePreference(deviceId: string, notificationType: UserNotificationType, enabled: boolean) {
+  updatePreference(
+    deviceId: string,
+    notificationType: UserNotificationType,
+    enabled: boolean
+  ) {
     const currentPrefs = this.webPush.getDevicePreferences(deviceId);
     const updatedPrefs = { ...currentPrefs, [notificationType]: enabled };
     this.webPush.updateDevicePreferences(deviceId, updatedPrefs);
-  }  async saveAllPreferences() {
+  }
+  async saveAllPreferences() {
     this.isSaving.set(true);
     try {
       // Commit temporary preferences to permanent storage and save to server
       await this.webPush.commitPreferences();
-      this.snackBar.open('Preferences saved successfully', 'Close', { duration: 3000 });
+      this.snackBar.open('Preferences saved successfully', 'Close', {
+        duration: 3000,
+      });
     } catch (error) {
       this.logger.error('Failed to save preferences:', error as Error);
-      this.snackBar.open('Failed to save preferences', 'Close', { duration: 3000 });
+      this.snackBar.open('Failed to save preferences', 'Close', {
+        duration: 3000,
+      });
     } finally {
       this.isSaving.set(false);
     }
@@ -124,11 +154,14 @@ export class NotificationManageComponent implements OnInit, OnDestroy {
   }
   // Toggle all notifications for a device
   toggleAllForDevice(deviceId: string, enabled: boolean) {
-    const updatedPrefs = this.notificationTypes.reduce((prefs, type) => {
-      prefs[type.key] = enabled;
-      return prefs;
-    }, {} as Record<UserNotificationType, boolean>);
-    
+    const updatedPrefs = this.notificationTypes.reduce(
+      (prefs, type) => {
+        prefs[type.key] = enabled;
+        return prefs;
+      },
+      {} as Record<UserNotificationType, boolean>
+    );
+
     this.webPush.updateDevicePreferences(deviceId, updatedPrefs);
   }
 

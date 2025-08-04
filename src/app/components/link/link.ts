@@ -9,7 +9,7 @@ import { RouterModule } from '@angular/router';
   selector: 'app-link',
   imports: [MatTooltipModule, DatePipe, AgoPipe, RouterModule],
   templateUrl: './link.html',
-  styleUrl: './link.scss'
+  styleUrl: './link.scss',
 })
 export class Link {
   // Input signal for the Nostr event
@@ -19,14 +19,14 @@ export class Link {
   link = computed(() => {
     const eventData = this.event();
     let prefix = '/e';
-    
+
     if (!eventData) {
       return '';
     }
 
-    const encoded = nip19.neventEncode({ 
-      id: eventData.id, 
-      author: eventData.pubkey 
+    const encoded = nip19.neventEncode({
+      id: eventData.id,
+      author: eventData.pubkey,
     });
 
     if (eventData.kind === 1) {

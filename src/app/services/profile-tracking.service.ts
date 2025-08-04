@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Metrics } from './metrics';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ProfileTrackingService {
   private readonly metrics = inject(Metrics);
@@ -90,13 +90,15 @@ export class ProfileTrackingService {
   /**
    * Track multiple metrics at once for efficiency
    */
-  async trackMultipleMetrics(updates: { pubkey: string; metric: string; increment?: number }[]) {
+  async trackMultipleMetrics(
+    updates: { pubkey: string; metric: string; increment?: number }[]
+  ) {
     for (const update of updates) {
       if (update.pubkey) {
         await this.metrics.updateMetric({
           pubkey: update.pubkey,
           metric: update.metric as any,
-          increment: update.increment || 1
+          increment: update.increment || 1,
         });
       }
     }

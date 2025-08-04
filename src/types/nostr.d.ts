@@ -30,17 +30,17 @@ interface Nip07NostrProvider {
    * Get the user's public key after asking for user consent
    */
   getPublicKey(): Promise<string>;
-  
+
   /**
    * Get the user's profile metadata
    */
   getUserMetadata(): Promise<UserMetadata>;
-  
+
   /**
    * Sign an event with the user's private key
    */
   signEvent(event: Partial<NostrEvent>): Promise<SignEventResponse>;
-  
+
   /**
    * Encrypt a message with NIP-04
    */
@@ -48,7 +48,7 @@ interface Nip07NostrProvider {
     encrypt(pubkey: string, plaintext: string): Promise<string>;
     decrypt(pubkey: string, ciphertext: string): Promise<string>;
   };
-  
+
   /**
    * Encrypt a message with NIP-44
    */

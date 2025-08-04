@@ -11,7 +11,11 @@ import { MatMenuModule } from '@angular/material/menu';
 import { NostrService } from '../../services/nostr.service';
 import { kinds } from 'nostr-tools';
 import { NotificationService } from '../../services/notification.service';
-import { NotificationType, Notification, RelayPublishingNotification } from '../../services/storage.service';
+import {
+  NotificationType,
+  Notification,
+  RelayPublishingNotification,
+} from '../../services/storage.service';
 import { RouterModule } from '@angular/router';
 
 @Component({
@@ -26,10 +30,10 @@ import { RouterModule } from '@angular/router';
     MatTabsModule,
     RelayPublishStatusComponent,
     MatMenuModule,
-    RouterModule
+    RouterModule,
   ],
   templateUrl: './notifications.component.html',
-  styleUrls: ['./notifications.component.scss']
+  styleUrls: ['./notifications.component.scss'],
 })
 export class NotificationsComponent implements OnInit {
   private notificationService = inject(NotificationService);
@@ -49,7 +53,11 @@ export class NotificationsComponent implements OnInit {
     const content = JSON.stringify({});
     const tags = [['d', 'client:notifications:seen']];
 
-    const unsignedEvent = this.nostrService.createEvent(kinds.Application, '', tags);
+    const unsignedEvent = this.nostrService.createEvent(
+      kinds.Application,
+      '',
+      tags
+    );
     const signedEvent = await this.nostrService.signEvent(unsignedEvent);
 
     // We don't want to show in notifications the app settings publishing.
@@ -61,7 +69,7 @@ export class NotificationsComponent implements OnInit {
       const filter = {
         kinds: [kinds.Application],
         '#d': ['client:notifications:seen'],
-        limit: 1
+        limit: 1,
       };
 
       const event = await this.relayService.get(filter);
@@ -118,7 +126,9 @@ export class NotificationsComponent implements OnInit {
     }
   }
 
-  isRelayPublishingNotification(notification: any): notification is RelayPublishingNotification {
+  isRelayPublishingNotification(
+    notification: any
+  ): notification is RelayPublishingNotification {
     return notification.type === NotificationType.RELAY_PUBLISHING;
   }
 }

@@ -23,10 +23,10 @@ import { MediaService } from '../../../services/media.service';
     MatInputModule,
     MatProgressBarModule,
     MatCheckboxModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
   ],
   templateUrl: './media-upload-dialog.component.html',
-  styleUrls: ['./media-upload-dialog.component.scss']
+  styleUrls: ['./media-upload-dialog.component.scss'],
 })
 export class MediaUploadDialogComponent {
   private dialogRef = inject(MatDialogRef<MediaUploadDialogComponent>);
@@ -49,7 +49,7 @@ export class MediaUploadDialogComponent {
 
   constructor() {
     this.uploadForm = this.fb.group({
-      uploadOriginal: [false]
+      uploadOriginal: [false],
     });
 
     // Initialize available servers from the media service
@@ -119,7 +119,7 @@ export class MediaUploadDialogComponent {
         file: this.selectedFile(),
         uploadOriginal: this.uploadForm.value.uploadOriginal,
         servers: this.selectedServers(),
-        isUploading: this.isUploading // Pass the signal to the parent component
+        isUploading: this.isUploading, // Pass the signal to the parent component
       });
     }
   }

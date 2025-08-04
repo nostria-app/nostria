@@ -1,7 +1,17 @@
-
-import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import {
+  MAT_DIALOG_DATA,
+  MatDialogModule,
+  MatDialogRef,
+} from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { RouterModule } from '@angular/router';
@@ -44,15 +54,15 @@ interface RelayInfo {
     MatButtonModule,
     MatProgressSpinnerModule,
     MatSlideToggleModule,
-    RouterModule
-],
+    RouterModule,
+  ],
   template: `
-  @if(adding()) {
-    <h2 mat-dialog-title>Adding Relay</h2>
-  } @else {
-    <h2 mat-dialog-title>Relay Details</h2>
-  }
-    
+    @if (adding()) {
+      <h2 mat-dialog-title>Adding Relay</h2>
+    } @else {
+      <h2 mat-dialog-title>Relay Details</h2>
+    }
+
     <mat-dialog-content>
       @if (loading()) {
         <div class="loading-container">
@@ -61,139 +71,182 @@ interface RelayInfo {
         </div>
       } @else if (error()) {
         <div class="error-container">
-          <p>Unable to fetch relay information: {{error()}}</p>
+          <p>Unable to fetch relay information: {{ error() }}</p>
         </div>
       } @else if (relayInfo()) {
         @if (relayInfo()?.banner) {
           <div class="banner-container">
-            <img [src]="relayInfo()?.banner" alt="Relay Banner" class="relay-banner">
+            <img
+              [src]="relayInfo()?.banner"
+              alt="Relay Banner"
+              class="relay-banner"
+            />
           </div>
         }
 
         <!-- <div class="banner-container">
             <img src="https://image.nostr.build/nostr.build_74ee63e85287e5b3351d757724e57d53d17b9f029bfad7d77dcb913b325727bb.png" alt="Relay Banner" class="relay-banner">
         </div> -->
-        
+
         <div class="relay-header">
           @if (iconUrl()) {
-            <img [src]="iconUrl()" alt="Relay Icon" class="relay-icon" (error)="handleIconError()">
+            <img
+              [src]="iconUrl()"
+              alt="Relay Icon"
+              class="relay-icon"
+              (error)="handleIconError()"
+            />
           }
-          <h3>{{relayInfo()?.name || relayUrl()}}</h3>
+          <h3>{{ relayInfo()?.name || relayUrl() }}</h3>
         </div>
 
         <div class="relay-info">
-          <div class="info-row">
-            <strong>URL:</strong> {{relayUrl()}}
-          </div>
+          <div class="info-row"><strong>URL:</strong> {{ relayUrl() }}</div>
           @if (relayInfo()?.description) {
             <div class="info-row">
-              <strong>Description:</strong> {{relayInfo()?.description}}
+              <strong>Description:</strong> {{ relayInfo()?.description }}
             </div>
           }
           @if (relayInfo()?.contact) {
             <div class="info-row">
-              <strong>Contact:</strong>&nbsp;<a [href]="relayInfo()?.contact" target="_blank" rel="noopener noreferrer">{{relayInfo()?.contact}}</a>
+              <strong>Contact:</strong>&nbsp;<a
+                [href]="relayInfo()?.contact"
+                target="_blank"
+                rel="noopener noreferrer"
+                >{{ relayInfo()?.contact }}</a
+              >
             </div>
           }
           @if (relayInfo()?.posting_policy) {
             <div class="info-row">
-              <strong>Posting Policy:</strong>&nbsp;<a [href]="relayInfo()?.posting_policy" target="_blank" rel="noopener noreferrer">{{relayInfo()?.posting_policy}}</a>
+              <strong>Posting Policy:</strong>&nbsp;<a
+                [href]="relayInfo()?.posting_policy"
+                target="_blank"
+                rel="noopener noreferrer"
+                >{{ relayInfo()?.posting_policy }}</a
+              >
             </div>
           }
           @if (relayInfo()?.privacy_policy) {
             <div class="info-row">
-              <strong>Privacy Policy:</strong>&nbsp;<a [href]="relayInfo()?.privacy_policy" target="_blank" rel="noopener noreferrer">{{relayInfo()?.privacy_policy}}</a>
+              <strong>Privacy Policy:</strong>&nbsp;<a
+                [href]="relayInfo()?.privacy_policy"
+                target="_blank"
+                rel="noopener noreferrer"
+                >{{ relayInfo()?.privacy_policy }}</a
+              >
             </div>
           }
-          <br>
+          <br />
           @if (relayInfo()?.software) {
             <div class="info-row">
-              <strong>Software:</strong> {{relayInfo()?.software}}
+              <strong>Software:</strong> {{ relayInfo()?.software }}
             </div>
           }
           @if (relayInfo()?.version) {
             <div class="info-row">
-              <strong>Software Version:</strong> {{relayInfo()?.version}}
+              <strong>Software Version:</strong> {{ relayInfo()?.version }}
             </div>
           }
-          @if (relayInfo()?.supported_nips && relayInfo()?.supported_nips!.length > 0) {
+          @if (
+            relayInfo()?.supported_nips &&
+            (relayInfo()?.supported_nips)!.length > 0
+          ) {
             <div class="info-row">
-              <strong>Supported NIPs:</strong> {{relayInfo()?.supported_nips!.join(', ')}}
+              <strong>Supported NIPs:</strong>
+              {{ relayInfo()?.supported_nips!.join(', ') }}
             </div>
           }
-          <br>
+          <br />
           <div class="info-row">
-            <strong>Requires Payment:</strong> {{relayInfo()?.limitation?.payment_required ? 'Yes' : 'No'}}
+            <strong>Requires Payment:</strong>
+            {{ relayInfo()?.limitation?.payment_required ? 'Yes' : 'No' }}
           </div>
           @if (relayInfo()?.payments_url) {
             <div class="info-row">
-              <strong>Payment:</strong> {{relayInfo()?.payments_url}}
+              <strong>Payment:</strong> {{ relayInfo()?.payments_url }}
             </div>
           }
           <div class="info-row">
-            <strong>Restricted Writes:</strong> {{relayInfo()?.limitation?.restricted_writes ? 'Yes' : 'No'}}
+            <strong>Restricted Writes:</strong>
+            {{ relayInfo()?.limitation?.restricted_writes ? 'Yes' : 'No' }}
           </div>
           <div class="info-row">
-            <strong>Authentication Required:</strong> {{relayInfo()?.limitation?.auth_required ? 'Yes' : 'No'}}
+            <strong>Authentication Required:</strong>
+            {{ relayInfo()?.limitation?.auth_required ? 'Yes' : 'No' }}
           </div>
-
         </div>
 
         <div class="migration-container">
           <h3>Data Migration</h3>
           @if (layout.premium()) {
             <p>Would you like to migrate your existing data to this relay?</p>
-            <mat-slide-toggle [checked]="migrateData()" (change)="migrateData.set($event.checked)">
+            <mat-slide-toggle
+              [checked]="migrateData()"
+              (change)="migrateData.set($event.checked)"
+            >
               Migrate data to this relay
             </mat-slide-toggle>
           } @else {
             <div class="premium-feature">
               <p>Data migration is a premium feature</p>
-              <button [routerLink]="['/', 'premium']" mat-dialog-close mat-stroked-button color="accent">Upgrade to Premium</button>
+              <button
+                [routerLink]="['/', 'premium']"
+                mat-dialog-close
+                mat-stroked-button
+                color="accent"
+              >
+                Upgrade to Premium
+              </button>
             </div>
           }
         </div>
       }
     </mat-dialog-content>
-    
+
     <mat-dialog-actions align="end">
       @if (adding()) {
         <button mat-button mat-dialog-close>Cancel</button>
-      <button mat-flat-button color="primary" [disabled]="loading()" (click)="confirmAdd()">
-        Add Relay
-      </button>
+        <button
+          mat-flat-button
+          color="primary"
+          [disabled]="loading()"
+          (click)="confirmAdd()"
+        >
+          Add Relay
+        </button>
       } @else {
         <button mat-button mat-dialog-close>Close</button>
       }
-
     </mat-dialog-actions>
   `,
   styles: `
-    .loading-container, .error-container {
+    .loading-container,
+    .error-container {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       padding: 20px;
     }
-    
+
     .relay-info {
       margin-bottom: 24px;
     }
-    
+
     .info-row {
       padding: 2px 0;
     }
-    
+
     .migration-container {
       margin-top: 24px;
       padding-top: 16px;
-      border-top: 1px solid rgba(0,0,0,0.12);
+      border-top: 1px solid rgba(0, 0, 0, 0.12);
     }
-    
+
     .premium-feature {
       padding: 12px;
-      background-color: rgba(0,0,0,0.04);
+      background-color: rgba(0, 0, 0, 0.04);
       border-radius: 4px;
       display: flex;
       align-items: center;
@@ -225,7 +278,7 @@ interface RelayInfo {
       border-radius: 4px;
       box-shadow: var(--mat-sys-level1);
     }
-  `
+  `,
 })
 export class RelayInfoDialogComponent {
   private logger = inject(LoggerService);
@@ -271,15 +324,17 @@ export class RelayInfoDialogComponent {
     this.error.set(null);
 
     try {
-      const httpUrl = url.replace('wss://', 'https://').replace('ws://', 'http://');
+      const httpUrl = url
+        .replace('wss://', 'https://')
+        .replace('ws://', 'http://');
 
       this.logger.info('Fetching relay info', { url: httpUrl });
 
       const response = await fetch(httpUrl, {
         method: 'GET',
         headers: {
-          'Accept': 'application/nostr+json'
-        }
+          Accept: 'application/nostr+json',
+        },
       });
 
       if (!response.ok) {

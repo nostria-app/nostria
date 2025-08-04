@@ -4,7 +4,10 @@ import { kinds, nip98 } from 'nostr-tools';
 import { SwPush } from '@angular/service-worker';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
-import { UserNotificationType, DeviceNotificationPreferences } from './storage.service';
+import {
+  UserNotificationType,
+  DeviceNotificationPreferences,
+} from './storage.service';
 import { environment } from './../../environments/environment';
 import { WebRequest } from './web-request';
 
@@ -28,14 +31,14 @@ export interface Device {
 // }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class WebPushService {
   private server: string = environment.backendUrl;
   private nostr = inject(NostrService);
   accountState = inject(AccountStateService);
   push = inject(SwPush);
-  logger = inject(LoggerService);  // Centralized device management  
+  logger = inject(LoggerService); // Centralized device management
   deviceList = signal<Device[]>([]);
   devicePreferences = signal<DeviceNotificationPreferences[]>([]);
   // Temporary preferences for editing (before saving)
@@ -61,15 +64,21 @@ export class WebPushService {
     }
   }
   // Get device preferences for a specific device (uses temp preferences if available)
-  getDevicePreferences(deviceId: string): Record<UserNotificationType, boolean> {
+  getDevicePreferences(
+    deviceId: string
+  ): Record<UserNotificationType, boolean> {
     // First check temp preferences (for unsaved changes)
-    const tempPreferences = this.tempDevicePreferences().find(pref => pref.deviceId === deviceId);
+    const tempPreferences = this.tempDevicePreferences().find(
+      pref => pref.deviceId === deviceId
+    );
     if (tempPreferences) {
       return tempPreferences.preferences;
     }
 
     // Fall back to saved preferences
-    const preferences = this.devicePreferences().find(pref => pref.deviceId === deviceId);
+    const preferences = this.devicePreferences().find(
+      pref => pref.deviceId === deviceId
+    );
     if (preferences) {
       return preferences.preferences;
     }
@@ -82,14 +91,22 @@ export class WebPushService {
       [UserNotificationType.REPOSTS]: true,
       [UserNotificationType.ZAPS]: true,
       [UserNotificationType.NEWS]: true,
-      [UserNotificationType.APP_UPDATES]: true
+      [UserNotificationType.APP_UPDATES]: true,
     };
   }
   // Update device preferences (temporary, not saved until commitPreferences is called)
-  updateDevicePreferences(deviceId: string, preferences: Record<UserNotificationType, boolean>): void {
+  updateDevicePreferences(
+    deviceId: string,
+    preferences: Record<UserNotificationType, boolean>
+  ): void {
     this.tempDevicePreferences.update(currentPrefs => {
-      const existingIndex = currentPrefs.findIndex(pref => pref.deviceId === deviceId);
-      const newPreference: DeviceNotificationPreferences = { deviceId, preferences };
+      const existingIndex = currentPrefs.findIndex(
+        pref => pref.deviceId === deviceId
+      );
+      const newPreference: DeviceNotificationPreferences = {
+        deviceId,
+        preferences,
+      };
 
       if (existingIndex >= 0) {
         // Update existing temp preferences
@@ -108,7 +125,11 @@ export class WebPushService {
       const prefs = this.devicePreferences();
       const url = `${this.server}api/subscription/settings/${this.accountState.pubkey()}`;
 
-      const response = await this.webRequest.fetchJson(url, { method: 'POST', body: JSON.stringify(prefs) }, { kind: kinds.HTTPAuth });
+      const response = await this.webRequest.fetchJson(
+        url,
+        { method: 'POST', body: JSON.stringify(prefs) },
+        { kind: kinds.HTTPAuth }
+      );
       console.log('Response from savePreferencesToServer:', response);
       // const headers = await this.nostr.getNIP98AuthToken({ url, method: 'POST' });
 
@@ -137,12 +158,16 @@ export class WebPushService {
       //   this.logger.error('Failed to save preferences to localStorage fallback:', storageError);
       // }
     }
-  }  // Load preferences from server (with localStorage fallback)
+  } // Load preferences from server (with localStorage fallback)
   async loadPreferencesFromServer(): Promise<void> {
     try {
       const url = `${this.server}api/subscription/settings/${this.accountState.pubkey()}`;
 
-      const result = await this.webRequest.fetchJson(url, { method: 'GET' }, { kind: kinds.HTTPAuth });
+      const result = await this.webRequest.fetchJson(
+        url,
+        { method: 'GET' },
+        { kind: kinds.HTTPAuth }
+      );
 
       if (result && result.settings) {
         const settings = JSON.parse(result.settings);
@@ -199,7 +224,10 @@ export class WebPushService {
         browser = 'Chrome';
       } else if (userAgent.includes('Firefox')) {
         browser = 'Firefox';
-      } else if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) {
+      } else if (
+        userAgent.includes('Safari') &&
+        !userAgent.includes('Chrome')
+      ) {
         browser = 'Safari';
       } else if (userAgent.includes('Edg')) {
         browser = 'Edge';
@@ -254,7 +282,11 @@ export class WebPushService {
         const url = `${this.server}api/subscription/devices/${this.accountState.pubkey()}`;
         console.log('Fetching devices from:', url);
 
-        const result = await this.webRequest.fetchJson(url, { method: 'GET' }, { kind: kinds.HTTPAuth });
+        const result = await this.webRequest.fetchJson(
+          url,
+          { method: 'GET' },
+          { kind: kinds.HTTPAuth }
+        );
 
         return result.devices || [];
       } catch (error) {
@@ -275,12 +307,15 @@ export class WebPushService {
       const payload: any = {
         title: title,
         body: body,
-        data: data || {}
+        data: data || {},
       };
 
-      const result = await this.webRequest.fetchJson(url, { method: 'POST', body: JSON.stringify(payload) }, { kind: kinds.HTTPAuth });
+      const result = await this.webRequest.fetchJson(
+        url,
+        { method: 'POST', body: JSON.stringify(payload) },
+        { kind: kinds.HTTPAuth }
+      );
       console.log('Response from self notification:', result);
-
     } catch (error) {
       this.logger.error('Failed to send self notification:', error);
     }
@@ -303,20 +338,26 @@ export class WebPushService {
     }
 
     try {
-      const pushSubscription = await this.push.requestSubscription({ serverPublicKey });
-      const subscription = JSON.stringify(pushSubscription); try {
+      const pushSubscription = await this.push.requestSubscription({
+        serverPublicKey,
+      });
+      const subscription = JSON.stringify(pushSubscription);
+      try {
         const url = `${this.server}api/subscription/webpush/${this.accountState.pubkey()}`;
 
-        
         // Parse subscription to add userAgent
         const subscriptionData = JSON.parse(subscription);
         const subscriptionWithUserAgent = {
           ...subscriptionData,
-          userAgent: navigator.userAgent
+          userAgent: navigator.userAgent,
         };
-        
-        const result = await this.webRequest.fetchJson(url, { method: 'POST', body: JSON.stringify(subscriptionWithUserAgent) }, { kind: kinds.HTTPAuth });
-        
+
+        const result = await this.webRequest.fetchJson(
+          url,
+          { method: 'POST', body: JSON.stringify(subscriptionWithUserAgent) },
+          { kind: kinds.HTTPAuth }
+        );
+
         this.logger.info('Push subscription registered successfully', result);
 
         const newDevice = {
@@ -324,7 +365,7 @@ export class WebPushService {
           endpoint: subscriptionData.endpoint,
           created: new Date().toISOString(),
           auth: subscriptionData.keys.auth,
-          userAgent: navigator.userAgent
+          userAgent: navigator.userAgent,
         } as Device;
 
         // Add the device to the signal
@@ -332,7 +373,10 @@ export class WebPushService {
 
         return newDevice;
       } catch (error) {
-        this.logger.error('Failed to register push subscription with server:', error);
+        this.logger.error(
+          'Failed to register push subscription with server:',
+          error
+        );
       }
     } catch (error) {
       this.logger.error('Failed to request push subscription:', error);
@@ -357,17 +401,20 @@ export class WebPushService {
 
     try {
       const url = `${this.server}api/subscription/webpush/${this.accountState.pubkey()}/${deviceId}`;
-    
-       const result = await this.webRequest.fetchJson(url, { method: 'DELETE' }, { kind: kinds.HTTPAuth });
-        
-       console.log('Response from unsubscribe:', result);
+
+      const result = await this.webRequest.fetchJson(
+        url,
+        { method: 'DELETE' },
+        { kind: kinds.HTTPAuth }
+      );
+
+      console.log('Response from unsubscribe:', result);
 
       // Remove the device from the signal
       this.removeDevice(deviceId);
 
       // Single log for successful operation
       this.logger.info('Device unregistered successfully');
-
     } catch (error) {
       this.logger.error('Failed to unregister device:', error);
     }

@@ -23,7 +23,8 @@ export class MediaPlayerService implements OnInitialized {
   utilities = inject(UtilitiesService);
   localStorage = inject(LocalStorageService);
   layout = inject(LayoutService);
-  app = inject(ApplicationService); media = signal<MediaItem[]>([]);
+  app = inject(ApplicationService);
+  media = signal<MediaItem[]>([]);
   audio?: HTMLAudioElement;
   current?: MediaItem;
   index = 0;
@@ -40,7 +41,7 @@ export class MediaPlayerService implements OnInitialized {
     width: 560,
     height: 315,
     isMinimized: false,
-    isMaximized: false
+    isMaximized: false,
   });
 
   // minimized = false;
@@ -118,13 +119,15 @@ export class MediaPlayerService implements OnInitialized {
     let mediaQueue = this.localStorage.getItem(this.MEDIA_STORAGE_KEY);
 
     if (mediaQueue == null || mediaQueue == '' || mediaQueue === 'undefined') {
-      return
+      return;
     }
 
     this.media.set(JSON.parse(mediaQueue) as MediaItem[]);
 
     // Load video window state
-    const windowState = this.localStorage.getItem(this.WINDOW_STATE_STORAGE_KEY);
+    const windowState = this.localStorage.getItem(
+      this.WINDOW_STATE_STORAGE_KEY
+    );
     if (windowState && windowState !== 'undefined') {
       this.videoWindowState.set(JSON.parse(windowState) as VideoWindowState);
     }
@@ -193,12 +196,12 @@ export class MediaPlayerService implements OnInitialized {
     //   horizontalPosition: 'center',
     //   verticalPosition: 'bottom',
     // });
-    this.save()
+    this.save();
   }
 
   dequeue(file: MediaItem) {
     this.media.update(files => {
-      const index = files.findIndex((e) => e === file);
+      const index = files.findIndex(e => e === file);
       if (index === -1) {
         return files;
       }
@@ -212,11 +215,17 @@ export class MediaPlayerService implements OnInitialized {
       return;
     }
 
-    this.localStorage.setItem(this.MEDIA_STORAGE_KEY, JSON.stringify(this.media()));
+    this.localStorage.setItem(
+      this.MEDIA_STORAGE_KEY,
+      JSON.stringify(this.media())
+    );
   }
 
   saveWindowState() {
-    this.localStorage.setItem(this.WINDOW_STATE_STORAGE_KEY, JSON.stringify(this.videoWindowState()));
+    this.localStorage.setItem(
+      this.WINDOW_STATE_STORAGE_KEY,
+      JSON.stringify(this.videoWindowState())
+    );
   }
 
   updateWindowPosition(x: number, y: number) {
@@ -230,7 +239,10 @@ export class MediaPlayerService implements OnInitialized {
   }
 
   minimizeWindow() {
-    this.videoWindowState.update(state => ({ ...state, isMinimized: !state.isMinimized }));
+    this.videoWindowState.update(state => ({
+      ...state,
+      isMinimized: !state.isMinimized,
+    }));
     this.saveWindowState();
   }
 
@@ -238,7 +250,7 @@ export class MediaPlayerService implements OnInitialized {
     this.videoWindowState.update(state => ({
       ...state,
       isMaximized: !state.isMaximized,
-      isMinimized: false
+      isMinimized: false,
     }));
     this.saveWindowState();
   }
@@ -289,7 +301,8 @@ export class MediaPlayerService implements OnInitialized {
         return this._youtubeUrlCache.get(cacheKey)!;
       }
 
-      const regex = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+      const regex =
+        /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
       const match = url.match(regex);
 
       let embedUrl: SafeResourceUrl;
@@ -310,7 +323,6 @@ export class MediaPlayerService implements OnInitialized {
     };
   });
 
-
   async start() {
     if (this.index === -1) {
       this.index = 0;
@@ -327,7 +339,8 @@ export class MediaPlayerService implements OnInitialized {
 
     this.current = file;
 
-    this.layout.showMediaPlayer.set(true); if (file.type === 'YouTube') {
+    this.layout.showMediaPlayer.set(true);
+    if (file.type === 'YouTube') {
       this.videoMode.set(true);
       this.videoUrl.set(undefined);
       const youTubeUrl = this.getYouTubeEmbedUrl()(file.source, 'autoplay=1');
@@ -336,7 +349,10 @@ export class MediaPlayerService implements OnInitialized {
       this.videoMode.set(true);
       this.youtubeUrl.set(undefined);
 
-      console.log('Starting video, videoElement available:', !!this.videoElement);
+      console.log(
+        'Starting video, videoElement available:',
+        !!this.videoElement
+      );
 
       // Set the new video URL first
       this.videoUrl.set(this.utilities.sanitizeUrlAndBypassFrame(file.source));
@@ -360,8 +376,9 @@ export class MediaPlayerService implements OnInitialized {
             this.videoElement?.removeEventListener('canplay', handleCanPlay);
           };
 
-          this.videoElement.addEventListener('canplay', handleCanPlay, { once: true });
-
+          this.videoElement.addEventListener('canplay', handleCanPlay, {
+            once: true,
+          });
         } catch (error) {
           console.error('Error setting up video:', error);
         }
@@ -407,8 +424,8 @@ export class MediaPlayerService implements OnInitialized {
       this.audio.currentTime = 0;
       // Remove event listeners
       this.audio.removeEventListener('ended', this.handleMediaEnded);
-      this.audio.removeEventListener('canplay', () => { });
-      this.audio.removeEventListener('loadeddata', () => { });
+      this.audio.removeEventListener('canplay', () => {});
+      this.audio.removeEventListener('loadeddata', () => {});
     }
 
     // Stop and cleanup video
@@ -417,8 +434,8 @@ export class MediaPlayerService implements OnInitialized {
       this.videoElement.currentTime = 0;
       // Remove event listeners
       this.videoElement.removeEventListener('ended', this.handleMediaEnded);
-      this.videoElement.removeEventListener('canplay', () => { });
-      this.videoElement.removeEventListener('loadeddata', () => { });
+      this.videoElement.removeEventListener('canplay', () => {});
+      this.videoElement.removeEventListener('loadeddata', () => {});
     }
 
     // Clear video URLs to stop any playing videos
@@ -527,13 +544,17 @@ export class MediaPlayerService implements OnInitialized {
     }
 
     // Try to find video element in the footer media player
-    const footerVideo = document.querySelector('.media-player-footer video') as HTMLVideoElement;
+    const footerVideo = document.querySelector(
+      '.media-player-footer video'
+    ) as HTMLVideoElement;
     if (footerVideo) {
       return footerVideo;
     }
 
     // Try to find video element in the video window
-    const windowVideo = document.querySelector('.video-window video') as HTMLVideoElement;
+    const windowVideo = document.querySelector(
+      '.video-window video'
+    ) as HTMLVideoElement;
     if (windowVideo) {
       return windowVideo;
     }

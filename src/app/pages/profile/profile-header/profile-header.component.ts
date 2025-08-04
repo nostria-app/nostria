@@ -252,7 +252,9 @@ export class ProfileHeaderComponent {
       if (isFavorite) {
         this.snackBar.open('Added to favorites', 'Close', { duration: 2000 });
       } else {
-        this.snackBar.open('Removed from favorites', 'Close', { duration: 2000 });
+        this.snackBar.open('Removed from favorites', 'Close', {
+          duration: 2000,
+        });
       }
     }
   }

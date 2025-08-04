@@ -8,11 +8,11 @@ import { ThemeService } from '../../services/theme.service';
   selector: 'app-welcome',
   imports: [MatIconModule, MatButtonModule],
   templateUrl: './welcome.component.html',
-  styleUrl: './welcome.component.scss'
+  styleUrl: './welcome.component.scss',
 })
 export class WelcomeComponent {
   themeService = inject(ThemeService);
-  layout = inject(LayoutService)
+  layout = inject(LayoutService);
   currentOnboardingPage = signal(1);
   totalOnboardingPages = signal(3);
 

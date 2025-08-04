@@ -8,9 +8,8 @@ describe('Navigation', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [Navigation]
-    })
-    .compileComponents();
+      imports: [Navigation],
+    }).compileComponents();
 
     fixture = TestBed.createComponent(Navigation);
     component = fixture.componentInstance;

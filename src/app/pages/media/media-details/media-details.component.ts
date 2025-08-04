@@ -25,10 +25,10 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     MatProgressSpinnerModule,
     MatSnackBarModule,
     TimestampPipe,
-    MatTooltipModule
-],
+    MatTooltipModule,
+  ],
   templateUrl: './media-details.component.html',
-  styleUrls: ['./media-details.component.scss']
+  styleUrls: ['./media-details.component.scss'],
 })
 export class MediaDetailsComponent {
   private route = inject(ActivatedRoute);
@@ -42,7 +42,7 @@ export class MediaDetailsComponent {
   mediaItem = signal<MediaItem | null>(null);
   textContent = signal<string | null>(null);
   textLoading = signal(false);
-  
+
   // Add computed signal for memoized mirror status
   isFullyMirroredStatus = computed(() => {
     const item = this.mediaItem();
@@ -69,13 +69,15 @@ export class MediaDetailsComponent {
 
       const item = await this.mediaService.getFileById(id);
       this.mediaItem.set(item);
-      
+
       // If it's a text file, fetch its content
       if (item && this.isTextFile(item.type)) {
         await this.fetchTextContent(item.url);
       }
     } catch (err) {
-      this.error.set(err instanceof Error ? err.message : 'Failed to load media item');
+      this.error.set(
+        err instanceof Error ? err.message : 'Failed to load media item'
+      );
     } finally {
       this.loading.set(false);
     }
@@ -85,11 +87,11 @@ export class MediaDetailsComponent {
     try {
       this.textLoading.set(true);
       const response = await fetch(url);
-      
+
       if (!response.ok) {
         throw new Error(`Failed to load text content (${response.status})`);
       }
-      
+
       const text = await response.text();
       this.textContent.set(text);
     } catch (error) {
@@ -103,7 +105,7 @@ export class MediaDetailsComponent {
   isTextFile(mimeType: string | null | undefined): boolean {
     // Handle null/undefined type case
     if (!mimeType) return false;
-    
+
     // Check for common text MIME types
     const textMimeTypes = [
       'text/plain',
@@ -114,24 +116,40 @@ export class MediaDetailsComponent {
       'application/xml',
       'text/csv',
       'text/markdown',
-      'application/x-sh'
+      'application/x-sh',
     ];
-    
-    return textMimeTypes.some(type => mimeType.startsWith(type)) ||
-           mimeType.includes('text/') ||
-           // Check extensions for common text file formats
-           this.hasTextFileExtension(mimeType);
+
+    return (
+      textMimeTypes.some(type => mimeType.startsWith(type)) ||
+      mimeType.includes('text/') ||
+      // Check extensions for common text file formats
+      this.hasTextFileExtension(mimeType)
+    );
   }
-  
+
   hasTextFileExtension(mimeType: string): boolean {
     // For files where MIME type may not be correctly set,
     // check URL for common text file extensions
     const item = this.mediaItem();
     if (!item || !item.url) return false;
-    
+
     const url = item.url.toLowerCase();
-    const textExtensions = ['.txt', '.md', '.json', '.xml', '.csv', '.log', '.sh', '.js', '.ts', '.css', '.html', '.yml', '.yaml'];
-    
+    const textExtensions = [
+      '.txt',
+      '.md',
+      '.json',
+      '.xml',
+      '.csv',
+      '.log',
+      '.sh',
+      '.js',
+      '.ts',
+      '.css',
+      '.html',
+      '.yml',
+      '.yaml',
+    ];
+
     return textExtensions.some(ext => url.endsWith(ext));
   }
 
@@ -142,20 +160,20 @@ export class MediaDetailsComponent {
     try {
       // Show loading message
       this.snackBar.open('Preparing download...', '', { duration: 2000 });
-      
+
       // Fetch the file
       const response = await fetch(item.url);
       const blob = await response.blob();
 
       // Get proper filename based on URL or mime type
       const filename = this.getFileName(item);
-      
+
       // Create download link with proper download attribute
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.download = filename;
-      
+
       // Append to document, click, then clean up
       document.body.appendChild(link);
       link.click();
@@ -164,7 +182,9 @@ export class MediaDetailsComponent {
 
       this.snackBar.open('Download started', 'Close', { duration: 3000 });
     } catch (error) {
-      this.snackBar.open('Failed to download media', 'Close', { duration: 3000 });
+      this.snackBar.open('Failed to download media', 'Close', {
+        duration: 3000,
+      });
       console.error('Download error:', error);
     }
   }
@@ -177,11 +197,11 @@ export class MediaDetailsComponent {
       data: {
         mediaUrl: item.url,
         mediaType: item.type,
-        mediaTitle: item.url || 'Media'
+        mediaTitle: item.url || 'Media',
       },
       maxWidth: '100vw',
       maxHeight: '100vh',
-      panelClass: 'media-preview-dialog'
+      panelClass: 'media-preview-dialog',
     });
   }
 
@@ -192,21 +212,26 @@ export class MediaDetailsComponent {
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       data: {
         title: 'Delete Media',
-        message: 'Are you sure you want to delete this media? This action cannot be undone.',
+        message:
+          'Are you sure you want to delete this media? This action cannot be undone.',
         confirmText: 'Delete',
         cancelText: 'Cancel',
-        confirmColor: 'warn'
-      }
+        confirmColor: 'warn',
+      },
     });
 
     const result = await dialogRef.afterClosed().toPromise();
     if (result) {
       try {
         await this.mediaService.deleteFile(item.sha256);
-        this.snackBar.open('Media deleted successfully', 'Close', { duration: 3000 });
+        this.snackBar.open('Media deleted successfully', 'Close', {
+          duration: 3000,
+        });
         this.router.navigate(['/media']);
       } catch (error) {
-        this.snackBar.open('Failed to delete media', 'Close', { duration: 3000 });
+        this.snackBar.open('Failed to delete media', 'Close', {
+          duration: 3000,
+        });
       }
     }
   }
@@ -222,13 +247,19 @@ export class MediaDetailsComponent {
 
     // Don't attempt mirroring if already mirrored to all available servers
     if (this.mediaService.isFullyMirrored(item)) {
-      this.snackBar.open('Media is already mirrored to all your servers', 'Close', { duration: 3000 });
+      this.snackBar.open(
+        'Media is already mirrored to all your servers',
+        'Close',
+        { duration: 3000 }
+      );
       return;
     }
 
     try {
       await this.mediaService.mirrorFile(item.sha256, item.url);
-      this.snackBar.open('Media mirrored successfully', 'Close', { duration: 3000 });
+      this.snackBar.open('Media mirrored successfully', 'Close', {
+        duration: 3000,
+      });
     } catch (error) {
       this.snackBar.open('Failed to mirror media', 'Close', { duration: 3000 });
     }
@@ -252,7 +283,8 @@ export class MediaDetailsComponent {
     // Handle case where type might be null/undefined
     const mimeType = item.type || 'application/octet-stream';
     const extension = mimeType.split('/')[1] || 'file';
-    const baseFileName = item.url?.split('/').pop() || `nostr-media.${extension}`;
+    const baseFileName =
+      item.url?.split('/').pop() || `nostr-media.${extension}`;
 
     // If the URL already has a proper filename with extension, use it
     if (baseFileName.includes('.')) {

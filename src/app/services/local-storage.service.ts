@@ -1,28 +1,35 @@
 import { isPlatformBrowser } from '@angular/common';
-import { Injectable, PLATFORM_ID, computed, inject, signal, DOCUMENT } from '@angular/core';
+import {
+  Injectable,
+  PLATFORM_ID,
+  computed,
+  inject,
+  signal,
+  DOCUMENT,
+} from '@angular/core';
 import { LoggerService } from './logger.service';
 
 /**
  * Service for interacting with browser localStorage with SSR compatibility
  */
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class LocalStorageService {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly document = inject(DOCUMENT);
   private readonly logger = inject(LoggerService);
-  
+
   // Signal to track if we're running in browser (as opposed to server)
   private readonly isBrowser = signal(isPlatformBrowser(this.platformId));
-  
+
   // Memory storage for SSR fallback
   private readonly memoryStore = signal<Record<string, string>>({});
 
   // Computed state that checks if local storage is available
   readonly isAvailable = computed(() => {
     if (!this.isBrowser()) return false;
-    
+
     try {
       const testKey = '___test___';
       localStorage.setItem(testKey, testKey);
@@ -47,7 +54,9 @@ export class LocalStorageService {
         return value;
       } else {
         const value = this.memoryStore()[key] ?? null;
-        this.logger.debug(`Retrieved "${key}" from memory store (SSR or localStorage unavailable)`);
+        this.logger.debug(
+          `Retrieved "${key}" from memory store (SSR or localStorage unavailable)`
+        );
         return value;
       }
     } catch (error) {
@@ -72,9 +81,11 @@ export class LocalStorageService {
         // Update memory store for SSR
         this.memoryStore.update(store => ({
           ...store,
-          [key]: value
+          [key]: value,
         }));
-        this.logger.debug(`Stored "${key}" in memory store (SSR or localStorage unavailable)`);
+        this.logger.debug(
+          `Stored "${key}" in memory store (SSR or localStorage unavailable)`
+        );
         return true;
       }
     } catch (error) {
@@ -100,7 +111,9 @@ export class LocalStorageService {
           const { [key]: removed, ...rest } = store;
           return rest;
         });
-        this.logger.debug(`Removed "${key}" from memory store (SSR or localStorage unavailable)`);
+        this.logger.debug(
+          `Removed "${key}" from memory store (SSR or localStorage unavailable)`
+        );
         return true;
       }
     } catch (error) {
@@ -122,7 +135,9 @@ export class LocalStorageService {
       } else {
         // Clear memory store
         this.memoryStore.set({});
-        this.logger.debug('Cleared memory store (SSR or localStorage unavailable)');
+        this.logger.debug(
+          'Cleared memory store (SSR or localStorage unavailable)'
+        );
         return true;
       }
     } catch (error) {
@@ -173,7 +188,7 @@ export class LocalStorageService {
     try {
       const value = this.getItem(key);
       if (!value) return null;
-      
+
       return JSON.parse(value) as T;
     } catch (error) {
       this.logger.error(`Error retrieving object for "${key}":`, error);

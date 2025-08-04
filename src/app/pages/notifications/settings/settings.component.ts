@@ -28,12 +28,13 @@ import { RouterModule } from '@angular/router';
     MatIconModule,
     MatButtonModule,
     MatProgressSpinnerModule,
-    RouterModule
+    RouterModule,
   ],
   templateUrl: './settings.component.html',
-  styleUrl: './settings.component.scss'
+  styleUrl: './settings.component.scss',
 })
-export class NotificationSettingsComponent {  app = inject(ApplicationService);
+export class NotificationSettingsComponent {
+  app = inject(ApplicationService);
   accountState = inject(AccountStateService);
   nostr = inject(NostrService);
   webPush = inject(WebPushService);
@@ -41,11 +42,11 @@ export class NotificationSettingsComponent {  app = inject(ApplicationService);
   snackBar = inject(MatSnackBar);
   dialog = inject(MatDialog);
   logger = inject(LoggerService);
-  
+
   // Use devices from WebPushService
   devices = this.webPush.deviceList;
   devicesLoaded = this.webPush.devicesLoaded;
-  
+
   currentDevice = signal<Device | null>(null);
   isLoading = signal(true);
 
@@ -60,7 +61,9 @@ export class NotificationSettingsComponent {  app = inject(ApplicationService);
     return Notification.permission; // 'granted', 'denied', or 'default'
   });
 
-  isNotificationEnabled = computed(() => this.notificationPermission() === 'granted');
+  isNotificationEnabled = computed(
+    () => this.notificationPermission() === 'granted'
+  );
 
   // Add this computed signal to get subscription details from native APIs
   subscriptionDetails = computed(() => {
@@ -77,12 +80,12 @@ export class NotificationSettingsComponent {  app = inject(ApplicationService);
     // Only log push status once
     this.logger.debug('Push enabled status:', this.push.isEnabled);
 
-    this.push.messages.subscribe((message) => {
+    this.push.messages.subscribe(message => {
       // This is triggered when a push message is received and the app is active.
       this.logger.info('Push message received:', message);
     });
 
-    this.push.notificationClicks.subscribe((event) => {
+    this.push.notificationClicks.subscribe(event => {
       this.logger.info('Notification clicked:', event);
     });
 
@@ -97,7 +100,8 @@ export class NotificationSettingsComponent {  app = inject(ApplicationService);
           if (this.isNotificationEnabled()) {
             this.logger.info('Notifications is enabled');
 
-            const nativeSubscription = await this.getSubscriptionFromNativeAPI();
+            const nativeSubscription =
+              await this.getSubscriptionFromNativeAPI();
 
             if (nativeSubscription) {
               const subJson = nativeSubscription.toJSON();
@@ -111,8 +115,8 @@ export class NotificationSettingsComponent {  app = inject(ApplicationService);
                 // subscriptionId: btoa(subJson.endpoint || ''), // Create unique ID from endpoint
               } as Device);
             }
-          }          // Also set up Angular's subscription listener for updates
-          this.push.subscription.subscribe((sub) => {
+          } // Also set up Angular's subscription listener for updates
+          this.push.subscription.subscribe(sub => {
             if (!sub) {
               this.currentDevice.set(null);
               return;
@@ -158,7 +162,7 @@ export class NotificationSettingsComponent {  app = inject(ApplicationService);
       deviceId: subJson.keys?.['p256dh'] || '',
       auth: subJson.keys?.['auth'] || '',
       userAgent: navigator.userAgent,
-      created: new Date().toISOString()
+      created: new Date().toISOString(),
     };
   }
 
@@ -183,7 +187,7 @@ export class NotificationSettingsComponent {  app = inject(ApplicationService);
           endpoint: subscriptionJson.endpoint,
           p256dh: subscriptionJson.keys?.['p256dh'],
           auth: subscriptionJson.keys?.['auth'],
-          applicationServerKey: subscription.options?.applicationServerKey
+          applicationServerKey: subscription.options?.applicationServerKey,
         });
 
         return subscription;
@@ -224,7 +228,6 @@ export class NotificationSettingsComponent {  app = inject(ApplicationService);
       this.snackBar.open('Device registered successfully', 'Close', {
         duration: 3000,
       });
-
     } catch (e) {
       this.logger.error('Failed to create subscription:', e);
       this.snackBar.open('Failed to enable notifications', 'Close', {
@@ -238,20 +241,22 @@ export class NotificationSettingsComponent {  app = inject(ApplicationService);
 
   async createLocalNotification() {
     // Only log when notification is actually created
-    if ("Notification" in window && Notification.permission === "granted") {
+    if ('Notification' in window && Notification.permission === 'granted') {
       this.logger.debug('Creating local test notification');
 
-      new Notification("Local test notification",
-        {
-          body: "This is a local notification test!",
-          icon: "/icons/icon-128x128.png",
-        });
+      new Notification('Local test notification', {
+        body: 'This is a local notification test!',
+        icon: '/icons/icon-128x128.png',
+      });
     }
   }
 
   async createRemoteNotification() {
     this.logger.debug('Creating remote test notification');
-    this.webPush.self('Remote test notification', "This is a remote notification test!");
+    this.webPush.self(
+      'Remote test notification',
+      'This is a remote notification test!'
+    );
   }
 
   // async createNotification() {
@@ -298,9 +303,11 @@ export class NotificationSettingsComponent {  app = inject(ApplicationService);
 
   async askPermission() {
     return new Promise(function (resolve, reject) {
-      const permissionResult = Notification.requestPermission(function (result) {
-        resolve(result);
-      });
+      const permissionResult = Notification.requestPermission(
+        function (result) {
+          resolve(result);
+        }
+      );
 
       if (permissionResult) {
         permissionResult.then(resolve, reject);
@@ -321,11 +328,12 @@ export class NotificationSettingsComponent {  app = inject(ApplicationService);
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       data: {
         title: 'Unregister Device',
-        message: 'Are you sure you want to unregister this device? You can always re-enable notifications on your device later.',
+        message:
+          'Are you sure you want to unregister this device? You can always re-enable notifications on your device later.',
         confirmText: 'Unregister',
         cancelText: 'Cancel',
-        confirmColor: 'warn'
-      }
+        confirmColor: 'warn',
+      },
     });
 
     // Wait for user confirmation
@@ -333,7 +341,8 @@ export class NotificationSettingsComponent {  app = inject(ApplicationService);
     if (!confirmed) {
       this.isLoading.set(false);
       return;
-    };    try {
+    }
+    try {
       await this.webPush.unsubscribe(deviceId, endpoint);
 
       // Device is automatically removed from WebPushService deviceList signal
@@ -344,12 +353,11 @@ export class NotificationSettingsComponent {  app = inject(ApplicationService);
       });
 
       // After deletion, perform a check if there is subscription left, if not, remove the device one.
-      this.push.subscription.subscribe((sub) => {
+      this.push.subscription.subscribe(sub => {
         if (!sub) {
           this.currentDevice.set(null);
         }
       });
-
     } catch (error) {
       this.logger.error('Failed to delete device:', error);
       this.snackBar.open('Failed to unregister device', 'Close', {

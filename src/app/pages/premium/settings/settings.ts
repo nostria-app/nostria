@@ -8,9 +8,8 @@ import { DatePipe } from '@angular/common';
   selector: 'app-premium-settings',
   imports: [MatCardModule, MatListModule, DatePipe],
   templateUrl: './settings.html',
-  styleUrl: './settings.scss'
+  styleUrl: './settings.scss',
 })
 export class PremiumSettings {
   accountState = inject(AccountStateService);
-
 }

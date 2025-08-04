@@ -10,12 +10,14 @@ export interface Wallet {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class Wallets {
   localStorage = inject(LocalStorageService);
   appState = inject(ApplicationStateService);
-  wallets = signal<Record<string, Wallet>>(this.localStorage.getObject(this.appState.WALLETS_KEY) || {});
+  wallets = signal<Record<string, Wallet>>(
+    this.localStorage.getObject(this.appState.WALLETS_KEY) || {}
+  );
 
   hasWallets = computed(() => Object.keys(this.wallets()).length > 0);
 
@@ -29,27 +31,27 @@ export class Wallets {
   }
 
   parseConnectionString(connectionString: string) {
-    const { host, pathname, searchParams } = new URL(connectionString)
-    const pubkey = pathname || host
-    const relay = searchParams.getAll('relay')
-    const secret = searchParams.get('secret')
+    const { host, pathname, searchParams } = new URL(connectionString);
+    const pubkey = pathname || host;
+    const relay = searchParams.getAll('relay');
+    const secret = searchParams.get('secret');
 
     if (!pubkey || !relay || !secret) {
-      throw new Error('invalid connection string')
+      throw new Error('invalid connection string');
     }
 
-    return { pubkey, relay, secret }
+    return { pubkey, relay, secret };
   }
 
   addWallet(pubkey: string, connection: string, data: any) {
     const currentWallets = this.wallets();
-    const currentWallet = currentWallets[pubkey] || { 
-      pubkey, 
-      connections: [], 
+    const currentWallet = currentWallets[pubkey] || {
+      pubkey,
+      connections: [],
       data,
-      name: this.generateWalletName(currentWallets)
+      name: this.generateWalletName(currentWallets),
     };
-    
+
     if (!currentWallet.connections.includes(connection)) {
       currentWallet.connections.push(connection);
       this.wallets.set({ ...currentWallets, [pubkey]: currentWallet });

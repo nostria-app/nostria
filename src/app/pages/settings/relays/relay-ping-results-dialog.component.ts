@@ -1,6 +1,10 @@
 import { Component, inject } from '@angular/core';
 
-import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import {
+  MatDialogModule,
+  MatDialogRef,
+  MAT_DIALOG_DATA,
+} from '@angular/material/dialog';
 import { MatTableModule } from '@angular/material/table';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
@@ -26,10 +30,10 @@ export interface RelayPingDialogData {
     MatTableModule,
     MatIconModule,
     MatCardModule,
-    MatDividerModule
-],
+    MatDividerModule,
+  ],
   templateUrl: './relay-ping-results-dialog.component.html',
-  styleUrl: './relay-ping-results-dialog.component.scss'
+  styleUrl: './relay-ping-results-dialog.component.scss',
 })
 export class RelayPingResultsDialogComponent {
   private dialogRef = inject(MatDialogRef<RelayPingResultsDialogComponent>);
@@ -41,7 +45,7 @@ export class RelayPingResultsDialogComponent {
     if (result.isAlreadyAdded) {
       return; // Don't allow re-selecting already added relays
     }
-    
+
     // Close the dialog immediately to avoid expression changed errors
     this.dialogRef.close({ selected: result });
   }

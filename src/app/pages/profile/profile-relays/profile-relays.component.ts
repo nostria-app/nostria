@@ -1,4 +1,14 @@
-import { Component, inject, signal, computed, effect, OnInit, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  computed,
+  effect,
+  OnInit,
+  ViewChild,
+  ElementRef,
+  AfterViewInit,
+} from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { animate, style, transition, trigger } from '@angular/animations';
 import { Location } from '@angular/common';
@@ -22,27 +32,33 @@ import { LoggerService } from '../../../services/logger.service';
     MatListModule,
     MatProgressSpinnerModule,
     MatTabsModule,
-    ScrollingModule
-],
+    ScrollingModule,
+  ],
   templateUrl: './profile-relays.component.html',
   styleUrl: './profile-relays.component.scss',
   animations: [
     trigger('slideInOut', [
       transition(':enter', [
         style({ transform: 'translateY(100%)', opacity: 0 }),
-        animate('300ms ease-out', style({ transform: 'translateY(0)', opacity: 1 }))
+        animate(
+          '300ms ease-out',
+          style({ transform: 'translateY(0)', opacity: 1 })
+        ),
       ]),
       transition(':leave', [
-        animate('300ms ease-in', style({ transform: 'translateY(100%)', opacity: 0 }))
-      ])
+        animate(
+          '300ms ease-in',
+          style({ transform: 'translateY(100%)', opacity: 0 })
+        ),
+      ]),
     ]),
     trigger('profileShrink', [
       transition(':enter', [
         style({ transform: 'scale(1.3)', opacity: 0 }),
-        animate('300ms ease-out', style({ transform: 'scale(1)', opacity: 1 }))
-      ])
-    ])
-  ]
+        animate('300ms ease-out', style({ transform: 'scale(1)', opacity: 1 })),
+      ]),
+    ]),
+  ],
 })
 export class ProfileRelaysComponent {
   private router = inject(Router);
@@ -51,45 +67,43 @@ export class ProfileRelaysComponent {
   layout = inject(LayoutService);
   private logger = inject(LoggerService);
   profileState = inject(ProfileStateService);
-  
+
   @ViewChild('followingContainer') followingContainerRef!: ElementRef;
 
   isLoading = signal(true);
   error = signal<string | null>(null);
   selectedTabIndex = signal(0);
-  
+
   npub = computed(() => this.route.snapshot.parent?.paramMap.get('npub') || '');
   userProfile = signal<any>(null);
-  
+
   // Item size for virtual scrolling (approx. height of each item in pixels)
   readonly itemSize = 72;
-  
+
   // Buffer size determines how many items to render outside viewport
   readonly minBufferPx = 200;
   readonly maxBufferPx = 400;
-  
-  constructor() {
 
-  }
+  constructor() {}
 
   async loadUserProfile(): Promise<void> {
     try {
       setTimeout(() => {
         this.userProfile.set({
           name: 'Example User',
-          picture: 'https://example.com/avatar.jpg'
+          picture: 'https://example.com/avatar.jpg',
         });
       }, 300);
     } catch (err) {
       this.error.set('Failed to load profile');
     }
   }
-  
+
   onTabChanged(tabIndex: number): void {
     this.selectedTabIndex.set(tabIndex);
     // this.scrollToTop();
   }
-  
+
   goBack(): void {
     this.location.back();
   }

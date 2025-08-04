@@ -10,12 +10,13 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { FormsModule } from '@angular/forms';
 import { AccountStateService } from '../../../services/account-state.service';
 import { NostrService } from '../../../services/nostr.service';
-import { UserProfileComponent } from "../../../components/user-profile/user-profile.component";
+import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
 import { SettingsService } from '../../../services/settings.service';
 
 @Component({
   selector: 'app-privacy-settings',
-  standalone: true,  imports: [
+  standalone: true,
+  imports: [
     MatTabsModule,
     MatCardModule,
     MatListModule,
@@ -24,10 +25,10 @@ import { SettingsService } from '../../../services/settings.service';
     MatDividerModule,
     MatCheckboxModule,
     FormsModule,
-    UserProfileComponent
-],
+    UserProfileComponent,
+  ],
   templateUrl: './privacy-settings.component.html',
-  styleUrls: ['./privacy-settings.component.scss']
+  styleUrls: ['./privacy-settings.component.scss'],
 })
 export class PrivacySettingsComponent {
   accountState = inject(AccountStateService);
@@ -58,7 +59,7 @@ export class PrivacySettingsComponent {
     if (!muteList) return [];
     return this.nostrService.getTags(muteList, 'e');
   });
-  
+
   removeMutedItem(type: string, value: string): void {
     // This would need to be implemented to update the mute list
     console.log(`Remove ${type}: ${value}`);
