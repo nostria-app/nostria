@@ -25,6 +25,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { EVENT_STATE_KEY, EventData } from '../../data-resolver';
 import { RepostService } from '../../services/repost.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { NoteEditorDialogComponent } from '../../components/note-editor-dialog/note-editor-dialog.component';
 
 /** Description of the EventPageComponent
  *
@@ -52,7 +53,7 @@ export interface ThreadedEvent {
 @Component({
   selector: 'app-event-page',
   standalone: true,
-  imports: [CommonModule, EventComponent, MatIconModule, MatButtonModule],
+  imports: [CommonModule, EventComponent, MatIconModule, MatButtonModule, NoteEditorDialogComponent],
   templateUrl: './event.component.html',
   styleUrl: './event.component.scss',
 })
