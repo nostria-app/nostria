@@ -40,7 +40,7 @@
             "scripts": [],
             "polyfills": [
               "@angular/localize/init"
-            ],
+            ]
           },
           "configurations": {
             "production": {
@@ -119,11 +119,23 @@
               "@angular/localize/init"
             ]
           }
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": [
+              "src/**/*.ts",
+              "src/**/*.html"
+            ]
+          }
         }
       }
     }
   },
   "cli": {
-    "analytics": false
+    "analytics": false,
+    "schematicCollections": [
+      "angular-eslint"
+    ]
   }
 }
