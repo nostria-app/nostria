@@ -1,30 +1,38 @@
 <h2 mat-dialog-title>Publish Event</h2>
 
-<mat-dialog-content class="publish-dialog-content">  <div class="publish-options">
+<mat-dialog-content class="publish-dialog-content">
+  <div class="publish-options">
     <h3>Select Publishing Targets</h3>
-    
+
     @for (option of publishOptions; track option.id) {
       <div class="publish-option">
-        <mat-checkbox 
+        <mat-checkbox
           [checked]="isOptionSelected(option.id)"
-          (change)="onOptionChange(option.id, $event.checked)">
+          (change)="onOptionChange(option.id, $event.checked)"
+        >
           <div class="option-content">
             <div class="option-label">{{ option.label }}</div>
             <div class="option-description">{{ option.description }}</div>
-            
+
             @if (option.id === 'author' && loadingAuthorRelays()) {
               <mat-spinner diameter="20"></mat-spinner>
             }
-            
+
             @if (option.id === 'author' && !loadingAuthorRelays()) {
               <div class="relay-count">
-                {{ authorRelays().length }} relay{{ authorRelays().length !== 1 ? 's' : '' }} available
+                {{ authorRelays().length }} relay{{
+                  authorRelays().length !== 1 ? 's' : ''
+                }}
+                available
               </div>
             }
-            
+
             @if (option.id === 'account') {
               <div class="relay-count">
-                {{ relayService.getAccountRelayUrls().length }} relay{{ relayService.getAccountRelayUrls().length !== 1 ? 's' : '' }} configured
+                {{ relayService.getAccountRelayUrls().length }} relay{{
+                  relayService.getAccountRelayUrls().length !== 1 ? 's' : ''
+                }}
+                configured
               </div>
             }
           </div>
@@ -36,21 +44,24 @@
   @if (isOptionSelected('custom')) {
     <div class="custom-relays-section">
       <h4>Additional Relays</h4>
-      
-      <div class="add-relay-form">        <mat-form-field appearance="outline" class="relay-input">
+
+      <div class="add-relay-form">
+        <mat-form-field appearance="outline" class="relay-input">
           <mat-label>Relay URL</mat-label>
-          <input 
-            matInput 
+          <input
+            matInput
             [ngModel]="customRelayInput()"
             (ngModelChange)="customRelayInput.set($event)"
             placeholder="wss://relay.example.com"
-            (keyup.enter)="addCustomRelay()">
+            (keyup.enter)="addCustomRelay()"
+          />
         </mat-form-field>
-        <button 
-          mat-raised-button 
-          color="primary" 
+        <button
+          mat-raised-button
+          color="primary"
           (click)="addCustomRelay()"
-          [disabled]="!customRelayInput().trim()">
+          [disabled]="!customRelayInput().trim()"
+        >
           <mat-icon>add</mat-icon>
           Add
         </button>
@@ -109,14 +120,16 @@
       Cancel
     }
   </button>
-  <button 
-    mat-raised-button 
-    color="primary" 
+  <button
+    mat-raised-button
+    color="primary"
     (click)="publish()"
-    [disabled]="!canPublish()">
+    [disabled]="!canPublish()"
+  >
     @if (isPublishing()) {
       <mat-spinner diameter="16"></mat-spinner>
-      Publishing...    } @else {
+      Publishing...
+    } @else {
       @let relayCount = getTargetRelays().length;
       @if (relayCount > 0) {
         Publish to {{ relayCount }} Relay{{ relayCount !== 1 ? 's' : '' }}

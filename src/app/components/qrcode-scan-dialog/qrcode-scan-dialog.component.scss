@@ -45,11 +45,11 @@
   color: white;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  
+
   &:hover {
     background-color: rgba(0, 0, 0, 0.8);
   }
-  
+
   mat-icon {
     color: white;
   }
@@ -72,7 +72,7 @@
   z-index: 15;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  
+
   mat-icon {
     animation: pulse 2s infinite;
   }
@@ -159,7 +159,7 @@
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   margin-bottom: 20px;
-  
+
   mat-icon {
     color: #c62828;
   }
@@ -168,7 +168,7 @@
 .dark .error-message {
   background-color: rgba(93, 26, 29, 0.95);
   color: #ef5350;
-  
+
   mat-icon {
     color: #ef5350;
   }
@@ -183,7 +183,7 @@
   max-width: 90%;
   width: 100%;
   max-width: 400px;
-  
+
   h3 {
     margin: 0 0 16px 0;
     font-size: 16px;
@@ -194,7 +194,7 @@
 
 .dark .camera-selection {
   background-color: rgba(45, 45, 45, 0.95);
-  
+
   h3 {
     color: #fff;
   }
@@ -212,7 +212,7 @@
   align-items: center;
   justify-content: flex-start;
   text-align: left;
-  
+
   mat-icon {
     margin-right: 8px;
   }
@@ -221,14 +221,15 @@
 .retry-section {
   margin-top: 16px;
   text-align: center;
-  
+
   button {
     min-width: 160px;
   }
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
     transform: scale(1);
   }
@@ -244,30 +245,30 @@
     top: 12px;
     right: 12px;
   }
-  
+
   .scanning-indicator {
     top: 60px;
     padding: 10px 20px;
     font-size: 14px;
   }
-  
+
   .camera-controls {
     bottom: 20px;
   }
-  
+
   .camera-info {
     font-size: 12px;
     padding: 6px 12px;
   }
-  
+
   .error-panel {
     padding: 16px;
   }
-  
+
   .camera-selection {
     padding: 16px;
     max-width: 95%;
-    
+
     h3 {
       font-size: 14px;
     }

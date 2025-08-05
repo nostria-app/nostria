@@ -1,118 +1,128 @@
 @let item = parsed();
 
 @if (item) {
-<mat-card [class]="'badge-card ' + layout()">
+  <mat-card [class]="'badge-card ' + layout()">
     @if (layout() === 'vertical') {
-        <mat-card-header>
-            @if (item.thumb) {
-            <img [src]="item.thumb" alt="Badge thumbnail" mat-card-avatar>
-            }
-            
-            @if (error()) {
-                <mat-card-title>{{ error() }}</mat-card-title>
-            } @else {
-                <mat-card-title>{{ item.name }}</mat-card-title>
-            }
-
-            <mat-card-subtitle>
-                @for (type of item.tags; track type) {
-                <span class="badge-type">{{ type }}</span>
-                }
-            </mat-card-subtitle>
-        </mat-card-header>
-
-        @if (item.image) {
-        <img [src]="item.image" alt="Badge image" mat-card-image>
+      <mat-card-header>
+        @if (item.thumb) {
+          <img [src]="item.thumb" alt="Badge thumbnail" mat-card-avatar />
         }
 
-        <mat-card-content>
-            <p>{{ item.description }}</p>
-            
-            @if (issuerName()) {
-            <div class="badge-metadata">
-                <mat-icon>person</mat-icon>
-                <span>Awarded by: {{ issuerName() }}</span>
-            </div>
+        @if (error()) {
+          <mat-card-title>{{ error() }}</mat-card-title>
+        } @else {
+          <mat-card-title>{{ item.name }}</mat-card-title>
+        }
+
+        <mat-card-subtitle>
+          @for (type of item.tags; track type) {
+            <span class="badge-type">{{ type }}</span>
+          }
+        </mat-card-subtitle>
+      </mat-card-header>
+
+      @if (item.image) {
+        <img [src]="item.image" alt="Badge image" mat-card-image />
+      }
+
+      <mat-card-content>
+        <p>{{ item.description }}</p>
+
+        @if (issuerName()) {
+          <div class="badge-metadata">
+            <mat-icon>person</mat-icon>
+            <span>Awarded by: {{ issuerName() }}</span>
+          </div>
+        }
+
+        @if (awardDate()) {
+          <div class="badge-metadata">
+            <mat-icon>calendar_today</mat-icon>
+            <span
+              >Awarded: {{ badge().created_at * 1000 | date: 'medium' }}</span
+            >
+          </div>
+        }
+      </mat-card-content>
+
+      @if (showActions()) {
+        <mat-card-actions align="end">
+          <button mat-button color="primary" (click)="onView($event)">
+            <mat-icon>visibility</mat-icon>
+            View
+          </button>
+          <button
+            mat-raised-button
+            color="accent"
+            [disabled]="isAccepted() || isUpdating()"
+            (click)="onAccept($event)"
+          >
+            @if (isUpdating()) {
+              <mat-spinner diameter="20"></mat-spinner>
+            } @else {
+              <mat-icon>check_circle</mat-icon>
             }
-            
-            @if (awardDate()) {
-            <div class="badge-metadata">
-                <mat-icon>calendar_today</mat-icon>
-                <span>Awarded: {{ badge().created_at * 1000 | date:'medium' }}</span>
+            {{ isAccepted() ? 'Accepted' : 'Accept' }}
+          </button>
+        </mat-card-actions>
+      }
+    }
+
+    @if (layout() === 'horizontal') {
+      <mat-card-content class="badge-card-content">
+        <div class="badge-thumbnail">
+          @if (item.thumb) {
+            <img [src]="item.thumb" alt="Badge thumbnail" />
+          } @else {
+            <div class="placeholder-thumbnail">
+              <mat-icon>military_tech</mat-icon>
             </div>
-            }
-        </mat-card-content>
+          }
+        </div>
+
+        <div class="badge-details">
+          <h3>{{ item.name }}</h3>
+          <p>{{ item.description }}</p>
+
+          @if (issuerName()) {
+            <div class="badge-metadata">
+              <mat-icon>person</mat-icon>
+              <span>Awarded by: {{ issuerName() }}</span>
+            </div>
+          }
+
+          @if (awardDate()) {
+            <div class="badge-metadata">
+              <mat-icon>calendar_today</mat-icon>
+              <span
+                >Awarded: {{ badge().created_at * 1000 | date: 'medium' }}</span
+              >
+            </div>
+          }
+        </div>
 
         @if (showActions()) {
-        <mat-card-actions align="end">
+          <div class="badge-actions">
             <button mat-button color="primary" (click)="onView($event)">
-                <mat-icon>visibility</mat-icon>
-                View
+              <mat-icon>visibility</mat-icon>
+              View
             </button>
-            <button mat-raised-button color="accent" 
-                    [disabled]="isAccepted() || isUpdating()"
-                    (click)="onAccept($event)">
-                @if (isUpdating()) {
+            <button
+              mat-raised-button
+              color="accent"
+              [disabled]="isAccepted() || isUpdating()"
+              (click)="onAccept($event)"
+            >
+              @if (isUpdating()) {
                 <mat-spinner diameter="20"></mat-spinner>
-                } @else {
+              } @else {
                 <mat-icon>check_circle</mat-icon>
-                }
-                {{ isAccepted() ? 'Accepted' : 'Accept' }}
+              }
+              {{ isAccepted() ? 'Accepted' : 'Accept' }}
             </button>
-        </mat-card-actions>
+          </div>
         }
+      </mat-card-content>
     }
-    
-    @if (layout() === 'horizontal') {
-        <mat-card-content class="badge-card-content">
-            <div class="badge-thumbnail">
-                @if (item.thumb) {
-                <img [src]="item.thumb" alt="Badge thumbnail">
-                } @else {
-                <div class="placeholder-thumbnail">
-                    <mat-icon>military_tech</mat-icon>
-                </div>
-                }
-            </div>
-            
-            <div class="badge-details">
-                <h3>{{ item.name }}</h3>
-                <p>{{ item.description }}</p>
-                
-                @if (issuerName()) {
-                <div class="badge-metadata">
-                    <mat-icon>person</mat-icon>
-                    <span>Awarded by: {{ issuerName() }}</span>
-                </div>
-                }
-                
-                @if (awardDate()) {
-                <div class="badge-metadata">
-                    <mat-icon>calendar_today</mat-icon>
-                    <span>Awarded: {{ badge().created_at * 1000 | date:'medium' }}</span>
-                </div>
-                }
-            </div>
-            
-            @if (showActions()) {
-            <div class="badge-actions">
-                <button mat-button color="primary" (click)="onView($event)">
-                    <mat-icon>visibility</mat-icon>
-                    View
-                </button>
-                <button mat-raised-button color="accent" 
-                        [disabled]="isAccepted() || isUpdating()"
-                        (click)="onAccept($event)">
-                    @if (isUpdating()) {
-                    <mat-spinner diameter="20"></mat-spinner>
-                    } @else {
-                    <mat-icon>check_circle</mat-icon>
-                    }
-                    {{ isAccepted() ? 'Accepted' : 'Accept' }}
-                </button>
-            </div>
-            }
-        </mat-card-content>
-    }
-</mat-card>
+  </mat-card>
 }

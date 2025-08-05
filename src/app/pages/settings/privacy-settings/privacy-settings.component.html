@@ -4,12 +4,17 @@
   <section class="sharing-section">
     <h3>Image Cache Service</h3>
     <div class="settings-option">
-      <mat-checkbox [checked]="settingsService.settings().imageCacheEnabled" (change)="toggleImageCache()">
+      <mat-checkbox
+        [checked]="settingsService.settings().imageCacheEnabled"
+        (change)="toggleImageCache()"
+      >
         Enable image cache
       </mat-checkbox>
       <p class="option-description">
-        When enabled, profile images and other images might be using a cache service to improve loading times. Disable if you 
-        want to ensure images are always loaded directly from the source. Disabling this will increase bandwidth usage.
+        When enabled, profile images and other images might be using a cache
+        service to improve loading times. Disable if you want to ensure images
+        are always loaded directly from the source. Disabling this will increase
+        bandwidth usage.
       </p>
     </div>
   </section>
@@ -17,11 +22,15 @@
   <section class="sharing-section">
     <h3>Social Sharing Options</h3>
     <div class="settings-option">
-      <mat-checkbox [checked]="settingsService.settings().socialSharingPreview" (change)="toggleSocialSharingPreview()">
+      <mat-checkbox
+        [checked]="settingsService.settings().socialSharingPreview"
+        (change)="toggleSocialSharingPreview()"
+      >
         Enable social sharing preview
       </mat-checkbox>
       <p class="option-description">
-        When enabled, content previews will be shown for external links shared in posts.
+        When enabled, content previews will be shown for external links shared
+        in posts.
       </p>
     </div>
   </section>
@@ -32,31 +41,34 @@
     <h3>Muted Accounts</h3>
     <div class="muted-section">
       @if (mutedAccounts().length > 0) {
-      <mat-list>
-        @for (pubkey of mutedAccounts(); track pubkey) {
+        <mat-list>
+          @for (pubkey of mutedAccounts(); track pubkey) {
+            <mat-list-item>
+              <span matListItemTitle>
+                <app-user-profile [pubkey]="pubkey"> </app-user-profile>
+              </span>
+              <button
+                mat-icon-button
+                color="warn"
+                (click)="removeMutedItem('account', pubkey)"
+                matListItemMeta
+              >
+                <mat-icon>clear</mat-icon>
+              </button>
+            </mat-list-item>
 
-        <mat-list-item>
-          <span matListItemTitle>
-            <app-user-profile [pubkey]="pubkey">
-            </app-user-profile>
-          </span>
-          <button mat-icon-button color="warn" (click)="removeMutedItem('account', pubkey)" matListItemMeta>
-            <mat-icon>clear</mat-icon>
-          </button>
-        </mat-list-item>
-
-        <!-- <mat-list-item>
+            <!-- <mat-list-item>
           <span matListItemTitle>{{ pubkey }}</span>
           <button mat-icon-button color="warn" (click)="removeMutedItem('account', pubkey)" matListItemMeta>
             <mat-icon>clear</mat-icon>
           </button>
         </mat-list-item> -->
-        <!-- <mat-divider>
+            <!-- <mat-divider>
         </mat-divider> -->
-        }
-      </mat-list>
+          }
+        </mat-list>
       } @else {
-      <p class="empty-state">No muted accounts.</p>
+        <p class="empty-state">No muted accounts.</p>
       }
     </div>
   </section>
@@ -65,19 +77,24 @@
     <h3>Muted Words</h3>
     <div class="muted-section">
       @if (mutedWords().length > 0) {
-      <mat-list>
-        @for (word of mutedWords(); track word) {
-        <mat-list-item>
-          <span matListItemTitle>{{ word }}</span>
-          <button mat-icon-button color="warn" (click)="removeMutedItem('word', word)" matListItemMeta>
-            <mat-icon>clear</mat-icon>
-          </button>
-        </mat-list-item>
-        <mat-divider></mat-divider>
-        }
-      </mat-list>
+        <mat-list>
+          @for (word of mutedWords(); track word) {
+            <mat-list-item>
+              <span matListItemTitle>{{ word }}</span>
+              <button
+                mat-icon-button
+                color="warn"
+                (click)="removeMutedItem('word', word)"
+                matListItemMeta
+              >
+                <mat-icon>clear</mat-icon>
+              </button>
+            </mat-list-item>
+            <mat-divider></mat-divider>
+          }
+        </mat-list>
       } @else {
-      <p class="empty-state">No muted words.</p>
+        <p class="empty-state">No muted words.</p>
       }
     </div>
   </section>
@@ -86,19 +103,24 @@
     <h3>Muted Tags</h3>
     <div class="muted-section">
       @if (mutedTags().length > 0) {
-      <mat-list>
-        @for (tag of mutedTags(); track tag) {
-        <mat-list-item>
-          <span matListItemTitle>#{{ tag }}</span>
-          <button mat-icon-button color="warn" (click)="removeMutedItem('tag', tag)" matListItemMeta>
-            <mat-icon>clear</mat-icon>
-          </button>
-        </mat-list-item>
-        <mat-divider></mat-divider>
-        }
-      </mat-list>
+        <mat-list>
+          @for (tag of mutedTags(); track tag) {
+            <mat-list-item>
+              <span matListItemTitle>#{{ tag }}</span>
+              <button
+                mat-icon-button
+                color="warn"
+                (click)="removeMutedItem('tag', tag)"
+                matListItemMeta
+              >
+                <mat-icon>clear</mat-icon>
+              </button>
+            </mat-list-item>
+            <mat-divider></mat-divider>
+          }
+        </mat-list>
       } @else {
-      <p class="empty-state">No muted tags.</p>
+        <p class="empty-state">No muted tags.</p>
       }
     </div>
   </section>
@@ -107,19 +129,24 @@
     <h3>Muted Threads</h3>
     <div class="muted-section">
       @if (mutedThreads().length > 0) {
-      <mat-list>
-        @for (thread of mutedThreads(); track thread) {
-        <mat-list-item>
-          <span matListItemTitle>{{ thread }}</span>
-          <button mat-icon-button color="warn" (click)="removeMutedItem('thread', thread)" matListItemMeta>
-            <mat-icon>clear</mat-icon>
-          </button>
-        </mat-list-item>
-        <mat-divider></mat-divider>
-        }
-      </mat-list>
+        <mat-list>
+          @for (thread of mutedThreads(); track thread) {
+            <mat-list-item>
+              <span matListItemTitle>{{ thread }}</span>
+              <button
+                mat-icon-button
+                color="warn"
+                (click)="removeMutedItem('thread', thread)"
+                matListItemMeta
+              >
+                <mat-icon>clear</mat-icon>
+              </button>
+            </mat-list-item>
+            <mat-divider></mat-divider>
+          }
+        </mat-list>
       } @else {
-      <p class="empty-state">No muted threads.</p>
+        <p class="empty-state">No muted threads.</p>
       }
     </div>
   </section>

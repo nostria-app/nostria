@@ -11,10 +11,12 @@ The Metrics service provides a comprehensive system for tracking user engagement
 The service tracks the following metrics for each user pubkey:
 
 #### Profile Engagement
+
 - **viewed**: Number of times the profile has been viewed
 - **profileClicks**: Number of times profile link was clicked
 
 #### Content Engagement
+
 - **liked**: Number of posts we have liked by this author
 - **read**: Number of articles by author we have read
 - **replied**: Number of times we replied to this author
@@ -22,15 +24,18 @@ The service tracks the following metrics for each user pubkey:
 - **quoted**: Number of times we quoted this author
 
 #### Interaction Metrics
+
 - **messaged**: Number of direct messages sent to this author
 - **mentioned**: Number of times we mentioned this author
 
 #### Time-based Metrics
+
 - **timeSpent**: Total time spent viewing this author's content (in seconds)
 - **lastInteraction**: Timestamp of last interaction with this author
 - **firstInteraction**: Timestamp of first interaction
 
 #### Derived Metrics
+
 - **averageTimePerView**: Calculated as timeSpent / viewed
 - **engagementScore**: Weighted score based on all interactions
 
@@ -87,7 +92,7 @@ const results = await this.metrics.queryMetrics({
   minLiked: 2,
   sortBy: 'engagementScore',
   sortOrder: 'desc',
-  limit: 20
+  limit: 20,
 });
 ```
 
@@ -98,14 +103,14 @@ const results = await this.metrics.queryMetrics({
 await this.metrics.updateMetric({
   pubkey: 'user-pubkey',
   metric: 'viewed',
-  increment: 1
+  increment: 1,
 });
 
 // Set absolute value
 await this.metrics.updateMetric({
   pubkey: 'user-pubkey',
   metric: 'timeSpent',
-  value: 3600 // 1 hour
+  value: 3600, // 1 hour
 });
 ```
 
@@ -117,19 +122,19 @@ The metrics can be used in the Algorithm service to determine user preferences:
 async calculateProfileViewed(limit: number, ascending: boolean) {
   const following = this.accountState.followingList();
   const allMetrics = await this.metrics.getMetrics();
-  
+
   // Filter metrics for users we follow
-  const followingMetrics = allMetrics.filter(metric => 
+  const followingMetrics = allMetrics.filter(metric =>
     following.includes(metric.pubkey)
   );
-  
+
   // Sort by engagement score
-  const sortedMetrics = followingMetrics.sort((a, b) => 
-    ascending 
+  const sortedMetrics = followingMetrics.sort((a, b) =>
+    ascending
       ? (a.engagementScore || 0) - (b.engagementScore || 0)
       : (b.engagementScore || 0) - (a.engagementScore || 0)
   );
-  
+
   return sortedMetrics.slice(0, limit);
 }
 ```
@@ -139,21 +144,25 @@ async calculateProfileViewed(limit: number, ascending: boolean) {
 Here are some additional metrics that could be easily added for more sophisticated algorithms:
 
 ### Content Quality Metrics
+
 - **bookmarked**: Number of posts bookmarked from this author
 - **shared**: Number of times content was shared outside the app
 - **reportedSpam**: Number of times content was reported as spam (negative metric)
 
 ### Temporal Metrics
+
 - **consecutiveDays**: Number of consecutive days interacting with this author
 - **weeklyInteractions**: Average interactions per week
 - **peakHours**: Hours when most interactions occur
 
 ### Social Metrics
+
 - **mutualConnections**: Number of mutual connections
 - **introducedBy**: Who introduced us to this user
 - **influenceScore**: How much this user influences our actions
 
 ### Behavioral Metrics
+
 - **scrollPastRate**: How often we scroll past their content without engaging
 - **clickThroughRate**: Percentage of views that lead to profile clicks
 - **responseTime**: Average time to respond to their messages

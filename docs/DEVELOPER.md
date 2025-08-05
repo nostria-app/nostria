@@ -8,7 +8,6 @@ This is because sometimes we want to use virtual scrolling and not load the data
 
 For example rendering a list of 1000 badges. We will bind to the <app-badge> component and pass the information we have, but the component will look up the badge definition by itself when it's visible/rendered.
 
-
 ## Account Discovery Process
 
 The logic that attempts to discover a user is as follows:
@@ -16,18 +15,16 @@ The logic that attempts to discover a user is as follows:
 1. Get Relay List from Discovery Relays. Fallback to get Following List from Discovery Relays.
 2. Get metadata from User Relays (only 3 of them).
 
-1. Get Relay List from Account Relays. Fallback to get Following List from Account Relays.
-2. Get metadata from User Relays (only 3 of them).
+3. Get Relay List from Account Relays. Fallback to get Following List from Account Relays.
+4. Get metadata from User Relays (only 3 of them).
 
 If the Relay List/Following List is discovered elsewhere than Discovery Relay, Nostria will publish the Relay List/Following List to the User Relays.
 
 This ensures next user who tries to discover the account will get the Relay List/Following List from the Discovery Relays, and not from the User Relays.
 
-
 ### Fallbacks
 
 There are accounts that do not have a Relay List or Following List, in which case we will try to get the metadata from the Account Relays.
-
 
 ## Services
 
@@ -43,13 +40,12 @@ There are accounts that do not have a Relay List or Following List, in which cas
 - Application Service: Holds initialized signal (combination of storage and nostr initialization).
 - Application State Service: Handles some of the state of the application.
 
-
 # Flow of Article Loading
 
 1. First determine if we only have event id, or if we also have pubkey.
 2. If there is only event ID, we must retrieve article from account relays.
 3. If there is pubkey, we should first attempt to retrieve article from user relays.
-4. Create User Relay Service... 
+4. Create User Relay Service...
 
 - should we keep it alive from previous page (if user just looked at their profile and clicked an article).
 - if this is a reload, we obviously need to re-create.

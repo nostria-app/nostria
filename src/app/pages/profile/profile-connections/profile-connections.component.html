@@ -1,9 +1,7 @@
 <div class="connections-container">
-
   @for (item of profileState.followingList(); track item) {
-    {{ item}} <br>
+    {{ item }} <br />
   }
-
 
   @if (isLoading()) {
     <app-loading-overlay message="Loading connections..."></app-loading-overlay>
@@ -16,12 +14,21 @@
     <div class="tabs-container">
       <!-- Back button styled to look like part of the tabs -->
       <div class="back-button-container">
-        <button mat-button class="back-tab" (click)="goBack()" aria-label="Go back">
+        <button
+          mat-button
+          class="back-tab"
+          (click)="goBack()"
+          aria-label="Go back"
+        >
           <mat-icon>arrow_back</mat-icon>
         </button>
       </div>
 
-      <mat-tab-group animationDuration="300ms" (selectedIndexChange)="onTabChange($event)" class="connections-tabs">
+      <mat-tab-group
+        animationDuration="300ms"
+        (selectedIndexChange)="onTabChange($event)"
+        class="connections-tabs"
+      >
         <!-- Mutual connections tab -->
         <mat-tab>
           <ng-template mat-tab-label>
@@ -39,17 +46,36 @@
             } @else {
               <mat-nav-list class="connection-list">
                 @for (connection of mutuals(); track connection.pubkey) {
-                  <a mat-list-item class="connection-item" (click)="navigateToProfile(connection.pubkey)">
+                  <a
+                    mat-list-item
+                    class="connection-item"
+                    (click)="navigateToProfile(connection.pubkey)"
+                  >
                     <div class="connection-avatar" matListItemAvatar>
                       @if (connection.picture) {
-                        <img [src]="connection.picture" alt="{{ connection.name || connection.npub }} avatar">
+                        <img
+                          [src]="connection.picture"
+                          alt="{{ connection.name || connection.npub }} avatar"
+                        />
                       } @else {
-                        <mat-icon class="default-avatar">account_circle</mat-icon>
+                        <mat-icon class="default-avatar"
+                          >account_circle</mat-icon
+                        >
                       }
                     </div>
-                    <div matListItemTitle class="connection-name">{{ connection.name || connection.npub }}</div>
-                    <div matListItemLine class="connection-npub">{{ connection.npub }}</div>
-                    <button mat-icon-button matListItemMeta color="warn" (click)="unfollowUser(connection.pubkey, $event)" matTooltip="Unfollow">
+                    <div matListItemTitle class="connection-name">
+                      {{ connection.name || connection.npub }}
+                    </div>
+                    <div matListItemLine class="connection-npub">
+                      {{ connection.npub }}
+                    </div>
+                    <button
+                      mat-icon-button
+                      matListItemMeta
+                      color="warn"
+                      (click)="unfollowUser(connection.pubkey, $event)"
+                      matTooltip="Unfollow"
+                    >
                       <mat-icon>person_remove</mat-icon>
                     </button>
                   </a>
@@ -76,22 +102,41 @@
             } @else {
               <mat-nav-list class="connection-list">
                 @for (connection of following(); track connection.pubkey) {
-                  <a mat-list-item class="connection-item" (click)="navigateToProfile(connection.pubkey)">
+                  <a
+                    mat-list-item
+                    class="connection-item"
+                    (click)="navigateToProfile(connection.pubkey)"
+                  >
                     <div class="connection-avatar" matListItemAvatar>
                       @if (connection.picture) {
-                        <img [src]="connection.picture" alt="{{ connection.name || connection.npub }} avatar">
+                        <img
+                          [src]="connection.picture"
+                          alt="{{ connection.name || connection.npub }} avatar"
+                        />
                       } @else {
-                        <mat-icon class="default-avatar">account_circle</mat-icon>
+                        <mat-icon class="default-avatar"
+                          >account_circle</mat-icon
+                        >
                       }
                     </div>
-                    <div matListItemTitle class="connection-name">{{ connection.name || connection.npub }}</div>
-                    <div matListItemLine class="connection-npub">{{ connection.npub }}</div>
+                    <div matListItemTitle class="connection-name">
+                      {{ connection.name || connection.npub }}
+                    </div>
+                    <div matListItemLine class="connection-npub">
+                      {{ connection.npub }}
+                    </div>
                     @if (connection.mutual) {
                       <span class="mutual-badge" matTooltip="Mutual connection">
                         <mat-icon>people</mat-icon>
                       </span>
                     }
-                    <button mat-icon-button matListItemMeta color="warn" (click)="unfollowUser(connection.pubkey, $event)" matTooltip="Unfollow">
+                    <button
+                      mat-icon-button
+                      matListItemMeta
+                      color="warn"
+                      (click)="unfollowUser(connection.pubkey, $event)"
+                      matTooltip="Unfollow"
+                    >
                       <mat-icon>person_remove</mat-icon>
                     </button>
                   </a>
@@ -118,16 +163,29 @@
             } @else {
               <mat-nav-list class="connection-list">
                 @for (connection of followers(); track connection.pubkey) {
-                  <a mat-list-item class="connection-item" (click)="navigateToProfile(connection.pubkey)">
+                  <a
+                    mat-list-item
+                    class="connection-item"
+                    (click)="navigateToProfile(connection.pubkey)"
+                  >
                     <div class="connection-avatar" matListItemAvatar>
                       @if (connection.picture) {
-                        <img [src]="connection.picture" alt="{{ connection.name || connection.npub }} avatar">
+                        <img
+                          [src]="connection.picture"
+                          alt="{{ connection.name || connection.npub }} avatar"
+                        />
                       } @else {
-                        <mat-icon class="default-avatar">account_circle</mat-icon>
+                        <mat-icon class="default-avatar"
+                          >account_circle</mat-icon
+                        >
                       }
                     </div>
-                    <div matListItemTitle class="connection-name">{{ connection.name || connection.npub }}</div>
-                    <div matListItemLine class="connection-npub">{{ connection.npub }}</div>
+                    <div matListItemTitle class="connection-name">
+                      {{ connection.name || connection.npub }}
+                    </div>
+                    <div matListItemLine class="connection-npub">
+                      {{ connection.npub }}
+                    </div>
                     @if (connection.mutual) {
                       <span class="mutual-badge" matTooltip="Mutual connection">
                         <mat-icon>people</mat-icon>
@@ -140,7 +198,7 @@
                         color="primary"
                         (click)="followUser(connection.pubkey, $event)"
                         matTooltip="Follow back"
-                        >
+                      >
                         <mat-icon>person_add</mat-icon>
                       </button>
                     }

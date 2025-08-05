@@ -43,13 +43,13 @@
   align-items: center;
   background-color: var(--mat-primary-300);
   margin-right: 16px;
-      &.list-avatar {
+  &.list-avatar {
     width: 36px;
     height: 36px;
     min-width: 36px;
     margin-right: 0;
     margin-top: 0;
-    
+
     mat-icon {
       font-size: 24px;
       height: 24px;
@@ -57,7 +57,7 @@
       line-height: 24px;
     }
   }
-  
+
   .avatar-placeholder {
     width: 60px;
     height: 60px;
@@ -74,22 +74,23 @@
 
 .account-details {
   flex: 1;
-  
+
   h3 {
     margin: 0 0 4px 0;
     font-size: 18px;
   }
-  
+
   .pubkey {
     margin: 0 0 4px 0;
     color: var(--mat-text-secondary-color);
     font-size: 14px;
-  }    .account-source {
+  }
+  .account-source {
     margin: 0;
     color: var(--mat-text-secondary-color);
     font-size: 14px;
   }
-    .account-npub {
+  .account-npub {
     margin: 0;
     color: var(--mat-text-secondary-color);
     font-size: 12px;
@@ -112,16 +113,16 @@
   padding: 8px 16px;
   height: auto;
   min-height: 64px;
-    
+
   &:hover {
     background-color: rgba(0, 0, 0, 0.04);
   }
-    &.current-account-item {
+  &.current-account-item {
     background-color: rgba(var(--mat-sys-background), 0.08);
     border-left: 4px solid var(--mat-sys-primary);
     padding-left: 14px; // Adjust for the border
     cursor: default;
-    
+
     &:hover {
       background-color: rgba(var(--mat-sys-background), 0.12);
     }
@@ -142,21 +143,22 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  
+
   .account-name {
     font-weight: 500;
     margin: 0;
     padding-right: 80px;
     font-size: 16px;
     margin-bottom: 4px;
-  }  
+  }
   .account-details-container {
     display: flex;
     flex-direction: column;
     gap: 2px;
   }
-  
-  .account-npub, .account-source {
+
+  .account-npub,
+  .account-source {
     margin: 0;
     color: var(--mat-text-secondary-color);
     font-size: 12px;

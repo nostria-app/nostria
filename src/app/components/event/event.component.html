@@ -1,58 +1,79 @@
 @let item = record();
 
 @if (item) {
-<app-user-profile [pubkey]="item.event.pubkey">
-  <a class="date-link" [matTooltip]="item.event.created_at| date:'medium'" matTooltipPosition="below">
-    {{ item.event.created_at| ago }}
-  </a>
+  <app-user-profile [pubkey]="item.event.pubkey">
+    <a
+      class="date-link"
+      [matTooltip]="item.event.created_at | date: 'medium'"
+      matTooltipPosition="below"
+    >
+      {{ item.event.created_at | ago }}
+    </a>
 
-  <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="More options">
-    <mat-icon>more_vert</mat-icon>
-  </button>
-  <mat-menu #menu="matMenu">
-    <button mat-menu-item (click)="layout.copyToClipboard(layout.getCurrentUrl(), 'text')">
-      <mat-icon>link</mat-icon>
-      Copy Note Link
+    <button
+      mat-icon-button
+      [matMenuTriggerFor]="menu"
+      aria-label="More options"
+    >
+      <mat-icon>more_vert</mat-icon>
     </button>
-    <button mat-menu-item (click)="layout.copyToClipboard(item.event.id, 'nevent', item.event.pubkey)">
-      <mat-icon>content_copy</mat-icon>
-      Copy Note ID (nevent)
-    </button>
-    <button mat-menu-item (click)="layout.copyToClipboard(item.event.id, 'hex')">
-      <mat-icon>content_copy</mat-icon>
-      Copy Note ID (hex)
-    </button>
-    <button mat-menu-item (click)="layout.shareEvent(item.event)">
-      <mat-icon>share</mat-icon>
-      Share Event
-    </button>
-    <mat-divider></mat-divider>
-    <button mat-menu-item (click)="layout.copyToClipboard(item.data, 'text')">
-      <mat-icon>content_copy</mat-icon>
-      Copy Note Text
-    </button>
-    <button mat-menu-item (click)="layout.copyToClipboard(item.event, 'json')">
-      <mat-icon>content_copy</mat-icon>
-      Copy Note Data
-    </button>
-    <mat-divider></mat-divider>
-    <button mat-menu-item (click)="publishEvent()">
-      <mat-icon>publish</mat-icon>
-      Publish Event
-    </button>
-    <!-- <button mat-menu-item>
+    <mat-menu #menu="matMenu">
+      <button
+        mat-menu-item
+        (click)="layout.copyToClipboard(layout.getCurrentUrl(), 'text')"
+      >
+        <mat-icon>link</mat-icon>
+        Copy Note Link
+      </button>
+      <button
+        mat-menu-item
+        (click)="
+          layout.copyToClipboard(item.event.id, 'nevent', item.event.pubkey)
+        "
+      >
+        <mat-icon>content_copy</mat-icon>
+        Copy Note ID (nevent)
+      </button>
+      <button
+        mat-menu-item
+        (click)="layout.copyToClipboard(item.event.id, 'hex')"
+      >
+        <mat-icon>content_copy</mat-icon>
+        Copy Note ID (hex)
+      </button>
+      <button mat-menu-item (click)="layout.shareEvent(item.event)">
+        <mat-icon>share</mat-icon>
+        Share Event
+      </button>
+      <mat-divider></mat-divider>
+      <button mat-menu-item (click)="layout.copyToClipboard(item.data, 'text')">
+        <mat-icon>content_copy</mat-icon>
+        Copy Note Text
+      </button>
+      <button
+        mat-menu-item
+        (click)="layout.copyToClipboard(item.event, 'json')"
+      >
+        <mat-icon>content_copy</mat-icon>
+        Copy Note Data
+      </button>
+      <mat-divider></mat-divider>
+      <button mat-menu-item (click)="publishEvent()">
+        <mat-icon>publish</mat-icon>
+        Publish Event
+      </button>
+      <!-- <button mat-menu-item>
       <mat-icon>warning</mat-icon>
       Report Content
     </button> -->
-  </mat-menu>
-
-</app-user-profile>
-<div class="event-content" (click)="openEvent()">
-  <!-- {{ item.event.pubkey}}<br> -->
-  <app-content [content]="item.data"></app-content>
-</div>
+    </mat-menu>
+  </app-user-profile>
+  <div class="event-content" (click)="openEvent()">
+    <!-- {{ item.event.pubkey}}<br> -->
+    <app-content [content]="item.data"></app-content>
+  </div>
 } @else {
-<div class="event-content">
-  <p>Event not found</p>
-</div>
+  <div class="event-content">
+    <p>Event not found</p>
+  </div>
 }

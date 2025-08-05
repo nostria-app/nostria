@@ -18,6 +18,7 @@ This update changes the favorites functionality from being shared across all acc
   - Comprehensive API for managing favorites
 
 **Storage Structure:**
+
 ```typescript
 {
   [pubkey: string]: string[] // Account pubkey -> array of favorite user pubkeys
@@ -25,6 +26,7 @@ This update changes the favorites functionality from being shared across all acc
 ```
 
 **Key Methods:**
+
 - `isFavorite(userPubkey: string): boolean` - Check if user is favorited
 - `addFavorite(userPubkey: string): boolean` - Add user to favorites
 - `removeFavorite(userPubkey: string): boolean` - Remove user from favorites
@@ -34,6 +36,7 @@ This update changes the favorites functionality from being shared across all acc
 ### 2. Updated Components
 
 #### `ProfileHeaderComponent`
+
 **File:** `src/app/pages/profile/profile-header/profile-header.component.ts`
 
 - Replaced direct localStorage access with `FavoritesService`
@@ -41,13 +44,15 @@ This update changes the favorites functionality from being shared across all acc
 - Updated `isFavorite` computed to use the service
 - Simplified `toggleFavorite()` method
 
-#### `PeopleComponent` 
+#### `PeopleComponent`
+
 **File:** `src/app/pages/people/people.component.ts`
 
 - Added `FavoritesService` injection
 - Updated favorites filter to use `favoritesService.favorites()` instead of localStorage
 
 #### `AlgorithmComponent`
+
 **File:** `src/app/pages/settings/algorithm/algorithm.ts`
 
 - Replaced localStorage favorites access with `FavoritesService`
@@ -57,6 +62,7 @@ This update changes the favorites functionality from being shared across all acc
 ### 3. Updated Services
 
 #### `Algorithms`
+
 **File:** `src/app/services/algorithms.ts`
 
 - Added `FavoritesService` injection
@@ -66,6 +72,7 @@ This update changes the favorites functionality from being shared across all acc
 ## Migration Strategy
 
 ### Automatic Migration and Backwards Compatibility
+
 The `FavoritesService` includes robust backwards compatibility handling:
 
 1. **Structure Validation:** On load, validates that stored data matches the expected per-account structure
@@ -74,12 +81,14 @@ The `FavoritesService` includes robust backwards compatibility handling:
 4. **Safe Defaults:** Always falls back to empty favorites rather than crashing
 
 ### Migration Process
+
 1. **Valid New Format:** Loads data normally
 2. **Legacy Array Format:** Migrates array to current account's favorites
 3. **Invalid/Corrupt Data:** Wipes storage and starts with empty favorites
 4. **Parse Errors:** Logs error, wipes storage, and continues with empty state
 
 ### Storage Keys
+
 - **Legacy:** `nostria-favorites` (flat array - migrated automatically)
 - **New:** `nostria-favorites` (object with pubkey keys)
 
@@ -97,6 +106,7 @@ The `FavoritesService` includes robust backwards compatibility handling:
 A test component has been created at `src/app/components/favorites-test/favorites-test.component.ts` for manual testing of the functionality.
 
 ### Test Scenarios
+
 1. **Account Switching:** Verify favorites are isolated per account
 2. **Migration:** Test with legacy favorites data
 3. **CRUD Operations:** Add, remove, toggle favorites
@@ -111,15 +121,15 @@ import { FavoritesService } from './services/favorites.service';
 @Component({...})
 export class MyComponent {
   private favoritesService = inject(FavoritesService);
-  
+
   // Get current account's favorites
   favorites = this.favoritesService.favorites;
-  
+
   // Check if user is favorite
   isUserFavorite(userPubkey: string): boolean {
     return this.favoritesService.isFavorite(userPubkey);
   }
-  
+
   // Toggle favorite status
   toggleUserFavorite(userPubkey: string): void {
     this.favoritesService.toggleFavorite(userPubkey);
@@ -130,6 +140,7 @@ export class MyComponent {
 ## Error Handling
 
 The service includes comprehensive error handling:
+
 - Try-catch blocks around localStorage operations
 - Graceful fallbacks for parsing errors
 - Detailed logging for debugging

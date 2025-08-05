@@ -8,12 +8,26 @@
         <h2>Add New Relay</h2>
 
         <div class="flex-container add-relay-container">
-          <mat-form-field appearance="outline" class="relay-input" subscriptSizing="dynamic">
+          <mat-form-field
+            appearance="outline"
+            class="relay-input"
+            subscriptSizing="dynamic"
+          >
             <mat-label>Relay URL (wss://...)</mat-label>
-            <input matInput placeholder="wss://relay.example.com" [value]="newRelayUrl()"
-              (input)="newRelayUrl.set($any($event.target).value)" (keyup.enter)="addRelay()">
+            <input
+              matInput
+              placeholder="wss://relay.example.com"
+              [value]="newRelayUrl()"
+              (input)="newRelayUrl.set($any($event.target).value)"
+              (keyup.enter)="addRelay()"
+            />
           </mat-form-field>
-          <button mat-flat-button color="primary" class="add-button" (click)="addRelay()">
+          <button
+            mat-flat-button
+            color="primary"
+            class="add-button"
+            (click)="addRelay()"
+          >
             Add Relay
           </button>
         </div>
@@ -21,43 +35,55 @@
         <mat-card>
           <mat-card-header>
             <mat-card-title>User Relays</mat-card-title>
-            <mat-card-subtitle>You have {{relays().length}} relays configured</mat-card-subtitle>
+            <mat-card-subtitle
+              >You have {{ relays().length }} relays
+              configured</mat-card-subtitle
+            >
           </mat-card-header>
           <mat-card-content>
             @if (relays().length === 0) {
-            <div class="text-center py-8 text-gray-500">
-              <p>You don't have any relays configured yet.</p>
-              <p>Add a relay using the input above.</p>
-            </div>
+              <div class="text-center py-8 text-gray-500">
+                <p>You don't have any relays configured yet.</p>
+                <p>Add a relay using the input above.</p>
+              </div>
             } @else {
-            <mat-list>
-              @for (relay of relays(); track relay.url) {
-              <mat-list-item>
-                <div class="relay-item-container">
-                  <div class="status-icon">
-                    <mat-icon [ngClass]="getStatusColor(relay.status)">
-                      {{getStatusIcon(relay.status)}}
-                    </mat-icon>
-                  </div>
-                  <div class="relay-url">
-                    {{formatRelayUrl(relay.url)}}
-                  </div>
-                  <div class="action-buttons">
-                    <button mat-icon-button color="primary" (click)="viewRelayInfo(relay.url)"
-                      aria-label="View relay info">
-                      <mat-icon>info</mat-icon>
-                    </button>
-                    <button mat-icon-button color="warn" (click)="removeRelay(relay)" aria-label="Remove relay">
-                      <mat-icon>delete</mat-icon>
-                    </button>
-                  </div>
-                </div>
-              </mat-list-item>
-              @if(!$last) {
-              <mat-divider></mat-divider>
-              }
-              }
-            </mat-list>
+              <mat-list>
+                @for (relay of relays(); track relay.url) {
+                  <mat-list-item>
+                    <div class="relay-item-container">
+                      <div class="status-icon">
+                        <mat-icon [ngClass]="getStatusColor(relay.status)">
+                          {{ getStatusIcon(relay.status) }}
+                        </mat-icon>
+                      </div>
+                      <div class="relay-url">
+                        {{ formatRelayUrl(relay.url) }}
+                      </div>
+                      <div class="action-buttons">
+                        <button
+                          mat-icon-button
+                          color="primary"
+                          (click)="viewRelayInfo(relay.url)"
+                          aria-label="View relay info"
+                        >
+                          <mat-icon>info</mat-icon>
+                        </button>
+                        <button
+                          mat-icon-button
+                          color="warn"
+                          (click)="removeRelay(relay)"
+                          aria-label="Remove relay"
+                        >
+                          <mat-icon>delete</mat-icon>
+                        </button>
+                      </div>
+                    </div>
+                  </mat-list-item>
+                  @if (!$last) {
+                    <mat-divider></mat-divider>
+                  }
+                }
+              </mat-list>
             }
           </mat-card-content>
         </mat-card>
@@ -73,15 +99,18 @@
           </mat-card-header>
           <mat-card-content>
             <p>
-              Nostria advices Nostr users to not use different relays for Direct Messages. If you want this advanced
-              feature,
-              you can use a different Nostr client that supports it.
+              Nostria advices Nostr users to not use different relays for Direct
+              Messages. If you want this advanced feature, you can use a
+              different Nostr client that supports it.
             </p>
             <p>
-              Click the button below to update your Direct Messages Relays to be the same relays as your User Relays.
+              Click the button below to update your Direct Messages Relays to be
+              the same relays as your User Relays.
             </p>
             <p>
-              <button mat-flat-button (click)="updateDirectMessageRelayList()">Update Direct Message Relay List</button>
+              <button mat-flat-button (click)="updateDirectMessageRelayList()">
+                Update Direct Message Relay List
+              </button>
             </p>
           </mat-card-content>
         </mat-card>
@@ -97,13 +126,17 @@
           </mat-card-header>
           <mat-card-content>
             <p>
-              Your following list contains a list of relays. This is deprecated in the protocol.
+              Your following list contains a list of relays. This is deprecated
+              in the protocol.
             </p>
             <p>
-              We can remove these relays from your following list by clicking the button below.
+              We can remove these relays from your following list by clicking
+              the button below.
             </p>
             <p>
-              <button mat-flat-button (click)="cleanFollowingList()">Remove Relays from Following List</button>
+              <button mat-flat-button (click)="cleanFollowingList()">
+                Remove Relays from Following List
+              </button>
             </p>
           </mat-card-content>
         </mat-card>
@@ -119,18 +152,23 @@
           </mat-card-header>
           <mat-card-content>
             <p>
-              User Relays are used to publish your profile and events for others to discovery.
+              User Relays are used to publish your profile and events for others
+              to discovery.
             </p>
             <p>
-              User Relays is your Home. This is where your data is stored and persisted. It's where other users retrieve
-              your events from. Make sure you choose a relay that you trust and that is reliable.
+              User Relays is your Home. This is where your data is stored and
+              persisted. It's where other users retrieve your events from. Make
+              sure you choose a relay that you trust and that is reliable.
             </p>
             <p>
-              You should normally not need more than four relays. You don't need to pick the most popular relays, other
-              user's will still find you thanks to Discovery Relays.
+              You should normally not need more than four relays. You don't need
+              to pick the most popular relays, other user's will still find you
+              thanks to Discovery Relays.
             </p>
-            <p>When you save User Relays, your Relays List is additionally publishes to the Discovery Relays to help
-              others find you.</p>
+            <p>
+              When you save User Relays, your Relays List is additionally
+              publishes to the Discovery Relays to help others find you.
+            </p>
           </mat-card-content>
         </mat-card>
       </div>
@@ -139,14 +177,18 @@
     <!-- Discovery Relays Tab -->
     <mat-tab label="Discovery Relays">
       <div class="tab-content">
-
         <div class="action-buttons-container">
-          <button mat-flat-button color="accent" class="find-closest-button" (click)="findClosestRelay()"
-            [disabled]="isCheckingRelays()">
+          <button
+            mat-flat-button
+            color="accent"
+            class="find-closest-button"
+            (click)="findClosestRelay()"
+            [disabled]="isCheckingRelays()"
+          >
             <mat-icon>network_check</mat-icon>
             <span>Find Closest Discovery Relay</span>
             @if (isCheckingRelays()) {
-            <mat-icon class="spinning-icon">sync</mat-icon>
+              <mat-icon class="spinning-icon">sync</mat-icon>
             }
           </button>
           <!-- <button mat-flat-button color="primary" class="add-button" (click)="discoveryRelayTest()">
@@ -157,12 +199,26 @@
         <h2>Add Discovery Relay</h2>
 
         <div class="flex-container add-relay-container">
-          <mat-form-field appearance="outline" class="relay-input" subscriptSizing="dynamic">
+          <mat-form-field
+            appearance="outline"
+            class="relay-input"
+            subscriptSizing="dynamic"
+          >
             <mat-label>Relay URL (wss://...)</mat-label>
-            <input matInput placeholder="wss://relay.example.com" [value]="newBootstrapUrl()"
-              (input)="newBootstrapUrl.set($any($event.target).value)" (keyup.enter)="addBootstrapRelay()">
+            <input
+              matInput
+              placeholder="wss://relay.example.com"
+              [value]="newBootstrapUrl()"
+              (input)="newBootstrapUrl.set($any($event.target).value)"
+              (keyup.enter)="addBootstrapRelay()"
+            />
           </mat-form-field>
-          <button mat-flat-button color="primary" class="add-button" (click)="addBootstrapRelay()">
+          <button
+            mat-flat-button
+            color="primary"
+            class="add-button"
+            (click)="addBootstrapRelay()"
+          >
             Add Discovery Relay
           </button>
         </div>
@@ -170,43 +226,53 @@
         <mat-card>
           <mat-card-header>
             <mat-card-title>Discovery Relays</mat-card-title>
-            <mat-card-subtitle>These relays are used for discovery of Relay Lists of users</mat-card-subtitle>
+            <mat-card-subtitle
+              >These relays are used for discovery of Relay Lists of
+              users</mat-card-subtitle
+            >
           </mat-card-header>
           <mat-card-content>
             @if (relay.discoveryRelays.length === 0) {
-            <div class="text-center py-8 text-gray-500">
-              <p>You don't have any bootstrap relays configured.</p>
-              <p>Add a bootstrap relay using the input above.</p>
-            </div>
+              <div class="text-center py-8 text-gray-500">
+                <p>You don't have any bootstrap relays configured.</p>
+                <p>Add a bootstrap relay using the input above.</p>
+              </div>
             } @else {
-            <mat-list>
-              @for (relay of relay.discoveryRelays; track relay) {
-              <mat-list-item>
-                <div class="relay-item-container">
-                  <div class="status-icon">
-                    <mat-icon class="text-blue-500">
-                      dns
-                    </mat-icon>
-                  </div>
-                  <div class="relay-url">
-                    {{formatRelayUrl(relay)}}
-                  </div>
-                  <div class="action-buttons">
-                    <button mat-icon-button color="primary" (click)="viewRelayInfo(relay)" aria-label="View relay info">
-                      <mat-icon>info</mat-icon>
-                    </button>
-                    <button mat-icon-button color="warn" (click)="removeDiscoveryRelay(relay)"
-                      aria-label="Remove bootstrap relay">
-                      <mat-icon>delete</mat-icon>
-                    </button>
-                  </div>
-                </div>
-              </mat-list-item>
-              @if(!$last) {
-              <mat-divider></mat-divider>
-              }
-              }
-            </mat-list>
+              <mat-list>
+                @for (relay of relay.discoveryRelays; track relay) {
+                  <mat-list-item>
+                    <div class="relay-item-container">
+                      <div class="status-icon">
+                        <mat-icon class="text-blue-500"> dns </mat-icon>
+                      </div>
+                      <div class="relay-url">
+                        {{ formatRelayUrl(relay) }}
+                      </div>
+                      <div class="action-buttons">
+                        <button
+                          mat-icon-button
+                          color="primary"
+                          (click)="viewRelayInfo(relay)"
+                          aria-label="View relay info"
+                        >
+                          <mat-icon>info</mat-icon>
+                        </button>
+                        <button
+                          mat-icon-button
+                          color="warn"
+                          (click)="removeDiscoveryRelay(relay)"
+                          aria-label="Remove bootstrap relay"
+                        >
+                          <mat-icon>delete</mat-icon>
+                        </button>
+                      </div>
+                    </div>
+                  </mat-list-item>
+                  @if (!$last) {
+                    <mat-divider></mat-divider>
+                  }
+                }
+              </mat-list>
             }
           </mat-card-content>
         </mat-card>
@@ -223,22 +289,26 @@
           </mat-card-header>
           <mat-card-content>
             <p>
-              Discovery Relays are used to find which relays other Nostr users prefer. Nostria will attempt to retrieve
-              the User Relay list (kind:10002 events) from these relays, not the profile or other events.
+              Discovery Relays are used to find which relays other Nostr users
+              prefer. Nostria will attempt to retrieve the User Relay list
+              (kind:10002 events) from these relays, not the profile or other
+              events.
             </p>
             <p>
-              After a user's preferred relays have been discovered, Nostria connects to the user's preferred relays to
-              retrieve profile, posts, and other events.
+              After a user's preferred relays have been discovered, Nostria
+              connects to the user's preferred relays to retrieve profile,
+              posts, and other events.
             </p>
             <p>
-              You should normally not need more than one or two discovery relays.
+              You should normally not need more than one or two discovery
+              relays.
             </p>
-            <p>When you save Your Relays, they are additionally publishes to these Discovery Relays to help others
-              discover You.</p>
+            <p>
+              When you save Your Relays, they are additionally publishes to
+              these Discovery Relays to help others discover You.
+            </p>
           </mat-card-content>
         </mat-card>
-
-
       </div>
     </mat-tab>
   </mat-tab-group>

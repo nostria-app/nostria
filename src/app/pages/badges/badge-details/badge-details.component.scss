@@ -1,152 +1,154 @@
 .badge-details-container {
-    padding: 24px;
-    max-width: 1400px;
-    margin: 0 auto;
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 .back-button {
-    margin-bottom: 24px;
+  margin-bottom: 24px;
 }
 
 .badge-details {
-    display: flex;
-    gap: 48px;
-    
-    @media (max-width: 960px) {
-        flex-direction: column;
-    }
+  display: flex;
+  gap: 48px;
+
+  @media (max-width: 960px) {
+    flex-direction: column;
+  }
 }
 
 .badge-image {
-    width: 350px;
-    
-    @media (max-width: 960px) {
-        width: 100%;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-    }
-    
-    img {
-        width: 100%;
-        height: auto;
-        border-radius: 8px;
-        box-shadow: var(--mat-sys-level2);
-    }
-    
-    .no-image-placeholder {
-        width: 100%;
-        height: 350px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        // border: 2px dashed rgba(0, 0, 0, 0.12);
-        border-radius: 8px;
-        // color: rgba(0, 0, 0, 0.38);
-        
-        mat-icon {
-            font-size: 48px;
-            height: 48px;
-            width: 48px;
-            margin-bottom: 8px;
-        }
-        
-        p {
-            margin: 0;
-            font-size: 14px;
-        }
-    }
-    
-    .badge-actions {
-        margin-top: 16px;
-        display: flex;
-        gap: 12px;
-    }
-}
+  width: 350px;
 
-.badge-info {
-    flex: 1;
-    
-    h1 {
-        margin-top: 0;
-        margin-bottom: 16px;
-    }
-    
-    mat-card {
-        box-shadow: var(--mat-sys-level1);
-    }
-}
-
-.badge-tags {
+  @media (max-width: 960px) {
+    width: 100%;
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 24px;
-}
+    flex-direction: column;
+    align-items: center;
+  }
 
-.badge-meta {
-    margin-top: 16px;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 16px;
-    
-    h3 {
-        margin-bottom: 4px;
-        // color: rgba(0, 0, 0, 0.7);
-        font-size: 14px;
-    }
-    
-    p {
-        margin: 0;
-        word-break: break-all;
-    }
-}
+  img {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: var(--mat-sys-level2);
+  }
 
-mat-divider {
-    margin: 24px 0;
-}
-
-.issue-badge-form {
-    margin-top: 16px;
-    
-    h3 {
-        margin-bottom: 8px;
-    }
-    
-    p {
-        margin-bottom: 16px;
-        // color: rgba(0, 0, 0, 0.6);
-    }
-    
-    .form-actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: 12px;
-        margin-top: 16px;
-    }
-}
-
-.loading-state, .error-state {
+  .no-image-placeholder {
+    width: 100%;
+    height: 350px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 64px;
-    text-align: center;
-    
-    mat-spinner, mat-icon {
-        margin-bottom: 16px;
-    }
-    
+    // border: 2px dashed rgba(0, 0, 0, 0.12);
+    border-radius: 8px;
+    // color: rgba(0, 0, 0, 0.38);
+
     mat-icon {
-        font-size: 48px;
-        height: 48px;
-        width: 48px;
-        color: #f44336;
+      font-size: 48px;
+      height: 48px;
+      width: 48px;
+      margin-bottom: 8px;
     }
+
+    p {
+      margin: 0;
+      font-size: 14px;
+    }
+  }
+
+  .badge-actions {
+    margin-top: 16px;
+    display: flex;
+    gap: 12px;
+  }
+}
+
+.badge-info {
+  flex: 1;
+
+  h1 {
+    margin-top: 0;
+    margin-bottom: 16px;
+  }
+
+  mat-card {
+    box-shadow: var(--mat-sys-level1);
+  }
+}
+
+.badge-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.badge-meta {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+
+  h3 {
+    margin-bottom: 4px;
+    // color: rgba(0, 0, 0, 0.7);
+    font-size: 14px;
+  }
+
+  p {
+    margin: 0;
+    word-break: break-all;
+  }
+}
+
+mat-divider {
+  margin: 24px 0;
+}
+
+.issue-badge-form {
+  margin-top: 16px;
+
+  h3 {
+    margin-bottom: 8px;
+  }
+
+  p {
+    margin-bottom: 16px;
+    // color: rgba(0, 0, 0, 0.6);
+  }
+
+  .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 16px;
+  }
+}
+
+.loading-state,
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px;
+  text-align: center;
+
+  mat-spinner,
+  mat-icon {
+    margin-bottom: 16px;
+  }
+
+  mat-icon {
+    font-size: 48px;
+    height: 48px;
+    width: 48px;
+    color: #f44336;
+  }
 }
 
 .full-width {
-    width: 100%;
+  width: 100%;
 }

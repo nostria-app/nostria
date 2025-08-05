@@ -1,47 +1,48 @@
 <div>
-    <h2>Local Database</h2>
-    <!-- <p>Statistics and management of cached data</p> -->
+  <h2>Local Database</h2>
+  <!-- <p>Statistics and management of cached data</p> -->
 
-    <div class="stats-container">
-        <div class="stat-item">
-            <div class="stat-value">{{ stats().relaysCount }}</div>
-            <div class="stat-label">Relays</div>
-        </div>
-        <!-- <div class="stat-item">
+  <div class="stats-container">
+    <div class="stat-item">
+      <div class="stat-value">{{ stats().relaysCount }}</div>
+      <div class="stat-label">Relays</div>
+    </div>
+    <!-- <div class="stat-item">
             <div class="stat-value">{{ stats().userMetadataCount }}</div>
             <div class="stat-label">User Profiles</div>
         </div> -->
-        <!-- <div class="stat-item">
+    <!-- <div class="stat-item">
             <div class="stat-value">{{ stats().userRelaysCount }}</div>
             <div class="stat-label">User Relay Lists</div>
         </div> -->
-        <div class="stat-item">
-            <div class="stat-value">{{ formattedSize() }}</div>
-            <div class="stat-label">Total Size</div>
-        </div>
+    <div class="stat-item">
+      <div class="stat-value">{{ formattedSize() }}</div>
+      <div class="stat-label">Total Size</div>
     </div>
+  </div>
 
-    <p class="mb-2">
-        The local database stores relay information, user metadata, and user relay lists to
-        improve performance and reduce network requests.
-    </p>
+  <p class="mb-2">
+    The local database stores relay information, user metadata, and user relay
+    lists to improve performance and reduce network requests.
+  </p>
 
-    <p class="mb-3">
-        Clearing the cache will remove data for all users except the current user.
-        This can help if you're experiencing issues or want to free up space.
-    </p>
+  <p class="mb-3">
+    Clearing the cache will remove data for all users except the current user.
+    This can help if you're experiencing issues or want to free up space.
+  </p>
 
-    @if (isClearing()) {
+  @if (isClearing()) {
     <mat-progress-bar mode="indeterminate"></mat-progress-bar>
-    }
-    <div class="storage-actions">
-        <button mat-button [disabled]="isClearing()" (click)="refreshStats()">
-            <mat-icon>refresh</mat-icon>
-            REFRESH
-        </button>
-        &nbsp;
-        <button mat-flat-button [disabled]="isClearing()" (click)="clearCache()">
-            <mat-icon>delete_sweep</mat-icon>
-            CLEAR CACHE
-        </button>
-    </div>
+  }
+  <div class="storage-actions">
+    <button mat-button [disabled]="isClearing()" (click)="refreshStats()">
+      <mat-icon>refresh</mat-icon>
+      REFRESH
+    </button>
+    &nbsp;
+    <button mat-flat-button [disabled]="isClearing()" (click)="clearCache()">
+      <mat-icon>delete_sweep</mat-icon>
+      CLEAR CACHE
+    </button>
+  </div>
+</div>

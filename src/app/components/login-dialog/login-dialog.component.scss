@@ -90,7 +90,7 @@
   width: 100%;
 
   &::after {
-    content: "";
+    content: '';
     position: absolute;
     top: 0;
     left: 0;
@@ -139,7 +139,7 @@
     .card-text {
       width: 100%; /* Ensure text takes full width */
       text-align: center; /* Center text horizontally */
-      
+
       h3 {
         margin: 0 0 8px;
         font-size: 18px;
@@ -215,11 +215,13 @@
 
 .region-card {
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
   text-align: center;
   padding: 10px;
   box-shadow: var(--mat-sys-level1);
-  
+
   /* Fixed dimensions and flexbox for consistency */
   height: 140px;
   width: 100%;
@@ -493,8 +495,6 @@
   margin: 0;
   padding-bottom: 24px;
 }
-
-
 
 /* Fix for the mat-mdc-raised-button alignment */
 :host ::ng-deep .mat-mdc-raised-button {

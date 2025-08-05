@@ -3,7 +3,7 @@ This is an Angular 20 project, make sure to always use signals and effects. Also
 This project is an Nostr project, that uses nostr-tools library. Make sure you follow the Nostr NIPs protocol definitions. Nostr uses
 timestamp for dates that is in seconds, not milliseconds.
 
-Make sure to use new flow syntax of latest Angular, which is @if instead of *ngIf, @for instead of *ngFor, and @let instead of *ngLet.
+Make sure to use new flow syntax of latest Angular, which is @if instead of *ngIf, @for instead of *ngFor, and @let instead of \*ngLet.
 
 Always use separate file for component (TypeScript), markup (HTML) and styles (SCSS).
 

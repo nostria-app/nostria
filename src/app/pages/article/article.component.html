@@ -1,130 +1,150 @@
 @if (isLoading()) {
-<!-- Loading State -->
-<div class="article-loading">
-  <mat-card>
-    <mat-card-content>
-      <div class="loading-content">
-        <mat-progress-spinner diameter="40" mode="indeterminate"></mat-progress-spinner>
-        <h2>Loading Article...</h2>
-        <p>Please wait while we fetch the content.</p>
-      </div>
-    </mat-card-content>
-  </mat-card>
-</div>
+  <!-- Loading State -->
+  <div class="article-loading">
+    <mat-card>
+      <mat-card-content>
+        <div class="loading-content">
+          <mat-progress-spinner
+            diameter="40"
+            mode="indeterminate"
+          ></mat-progress-spinner>
+          <h2>Loading Article...</h2>
+          <p>Please wait while we fetch the content.</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
 } @else if (error()) {
-<!-- Error State -->
-<div class="article-error">
-  <mat-card>
-    <mat-card-content>
-      <div class="error-content">
-        <mat-icon>error_outline</mat-icon>
-        <h2>Unable to Load Article</h2>
-        <p>{{ error() }}</p>
-        <button mat-raised-button color="primary" (click)="retryLoad()">
-          <mat-icon>refresh</mat-icon>
-          Try Again
-        </button>
-      </div>
-    </mat-card-content>
-  </mat-card>
-</div>
+  <!-- Error State -->
+  <div class="article-error">
+    <mat-card>
+      <mat-card-content>
+        <div class="error-content">
+          <mat-icon>error_outline</mat-icon>
+          <h2>Unable to Load Article</h2>
+          <p>{{ error() }}</p>
+          <button mat-raised-button color="primary" (click)="retryLoad()">
+            <mat-icon>refresh</mat-icon>
+            Try Again
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
 } @else if (event()) {
-<div class="article-container">
-  <!-- Header Section -->
-  <header class="article-header">
-    @if (image()) {
-    <div class="article-hero-image">
-      <img [src]="image()" [alt]="title()" loading="lazy">
-    </div>
-    }
-
-    <div class="article-header-content">
-      <h1 class="article-title">{{ title() || 'Untitled Article' }}</h1>
-
-      @if (summary()) {
-      <p class="article-summary">{{ summary() }}</p>
+  <div class="article-container">
+    <!-- Header Section -->
+    <header class="article-header">
+      @if (image()) {
+        <div class="article-hero-image">
+          <img [src]="image()" [alt]="title()" loading="lazy" />
+        </div>
       }
-      <div class="article-meta">
-        <div class="publish-date">
-          <mat-icon>schedule</mat-icon>
-          <app-date-toggle [date]="publishedAtTimestamp()"></app-date-toggle>
-        </div>
 
-        @if (hashtags().length > 0) {
-        <div class="article-hashtags">
-          <mat-chip-set>
-            @for (hashtag of hashtags(); track hashtag) {
-            <mat-chip highlighted>
-              <!-- <mat-icon matChipAvatar>tag</mat-icon> -->
-              {{ hashtag }}
-            </mat-chip>
-            }
-          </mat-chip-set>
-        </div>
+      <div class="article-header-content">
+        <h1 class="article-title">{{ title() || 'Untitled Article' }}</h1>
+
+        @if (summary()) {
+          <p class="article-summary">{{ summary() }}</p>
         }
+        <div class="article-meta">
+          <div class="publish-date">
+            <mat-icon>schedule</mat-icon>
+            <app-date-toggle [date]="publishedAtTimestamp()"></app-date-toggle>
+          </div>
+
+          @if (hashtags().length > 0) {
+            <div class="article-hashtags">
+              <mat-chip-set>
+                @for (hashtag of hashtags(); track hashtag) {
+                  <mat-chip highlighted>
+                    <!-- <mat-icon matChipAvatar>tag</mat-icon> -->
+                    {{ hashtag }}
+                  </mat-chip>
+                }
+              </mat-chip-set>
+            </div>
+          }
+        </div>
       </div>
-    </div>
-  </header>
+    </header>
 
-  <!-- Author Section -->
-  <section class="article-author">
-    <app-user-profile [pubkey]="authorPubkey()" mode="list"></app-user-profile>
-  </section>
+    <!-- Author Section -->
+    <section class="article-author">
+      <app-user-profile
+        [pubkey]="authorPubkey()"
+        mode="list"
+      ></app-user-profile>
+    </section>
 
-  <main class="article-content">
-    <div class="markdown-content" [innerHTML]="parsedContent()"></div>
-  </main>
+    <main class="article-content">
+      <div class="markdown-content" [innerHTML]="parsedContent()"></div>
+    </main>
 
-  <!-- Footer Actions -->
-  <footer class="article-footer">
-    <div class="article-actions">
-
-      <!-- @for(bookmark of bookmark.bookmarkArticles(); track bookmark.id) {
+    <!-- Footer Actions -->
+    <footer class="article-footer">
+      <div class="article-actions">
+        <!-- @for(bookmark of bookmark.bookmarkArticles(); track bookmark.id) {
       <div><span>{{ bookmark | json }}</span></div>
       } -->
 
-      @if (accountState.isCurrentUser(authorPubkey())) {
-      <button mat-button color="primary" routerLink="/article/edit/{{ link }}" title="Edit Article">
-        <mat-icon>edit</mat-icon>
-        Edit
-      </button>
-      }
+        @if (accountState.isCurrentUser(authorPubkey())) {
+          <button
+            mat-button
+            color="primary"
+            routerLink="/article/edit/{{ link }}"
+            title="Edit Article"
+          >
+            <mat-icon>edit</mat-icon>
+            Edit
+          </button>
+        }
 
-      @if (bookmark.isBookmarked(id(), 'a')) {
-      <button mat-button color="primary" title="Remove bookmark" (click)="bookmarkArticle()">
-        <mat-icon title="Remove bookmark">bookmark_remove</mat-icon>
-        Bookmark
-      </button>
-      } @else {
-      <button mat-button color="primary" title="Add bookmark" (click)="bookmarkArticle()">
-        <mat-icon title="Add bookmark">bookmark_add</mat-icon>
-        Bookmark
-      </button>
-      }
+        @if (bookmark.isBookmarked(id(), 'a')) {
+          <button
+            mat-button
+            color="primary"
+            title="Remove bookmark"
+            (click)="bookmarkArticle()"
+          >
+            <mat-icon title="Remove bookmark">bookmark_remove</mat-icon>
+            Bookmark
+          </button>
+        } @else {
+          <button
+            mat-button
+            color="primary"
+            title="Add bookmark"
+            (click)="bookmarkArticle()"
+          >
+            <mat-icon title="Add bookmark">bookmark_add</mat-icon>
+            Bookmark
+          </button>
+        }
 
-      <button mat-button color="primary" (click)="shareArticle()">
-        <mat-icon>share</mat-icon>
-        Share
-      </button>
+        <button mat-button color="primary" (click)="shareArticle()">
+          <mat-icon>share</mat-icon>
+          Share
+        </button>
 
-      <button mat-button color="primary">
-        <mat-icon>comment</mat-icon>
-        Comment
-      </button>
-    </div>
-  </footer>
-</div>
-} @else {
-<!-- Loading or Empty State -->
-<div class="article-empty-state">
-  <mat-card>
-    <mat-card-content>
-      <div class="empty-state-content">
-        <mat-icon>article</mat-icon>
-        <h2>No Article Selected</h2>
-        <p>Please select an article to view its content.</p>
+        <button mat-button color="primary">
+          <mat-icon>comment</mat-icon>
+          Comment
+        </button>
       </div>
-    </mat-card-content>
-  </mat-card>
-</div>
+    </footer>
+  </div>
+} @else {
+  <!-- Loading or Empty State -->
+  <div class="article-empty-state">
+    <mat-card>
+      <mat-card-content>
+        <div class="empty-state-content">
+          <mat-icon>article</mat-icon>
+          <h2>No Article Selected</h2>
+          <p>Please select an article to view its content.</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
 }

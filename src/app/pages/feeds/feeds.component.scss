@@ -149,7 +149,8 @@ app-user-profile {
         height: 3px;
       }
 
-      &::-webkit-scrollbar-thumb {}
+      &::-webkit-scrollbar-thumb {
+      }
 
       .column-selector-button {
         display: flex;
@@ -161,15 +162,19 @@ app-user-profile {
         background: transparent;
         white-space: nowrap;
         cursor: pointer;
-        transition: background-color 0.2s ease, color 0.2s ease;
+        transition:
+          background-color 0.2s ease,
+          color 0.2s ease;
 
         &.active {
           // background-color: var(--mat-sys-primary);
 
-          mat-icon {}
+          mat-icon {
+          }
         }
 
-        &:hover:not(.active) {}
+        &:hover:not(.active) {
+        }
 
         &.add-column {
           min-width: 40px;
@@ -803,7 +808,8 @@ app-user-profile {
           background-color: var(--mat-sys-primary);
         }
 
-        &:hover:not(.active) {}
+        &:hover:not(.active) {
+        }
       }
     }
 
@@ -941,7 +947,8 @@ app-user-profile {
         height: 3px;
       }
 
-      &::-webkit-scrollbar-thumb {}
+      &::-webkit-scrollbar-thumb {
+      }
 
       // Prevent reflow during drag
       &.cdk-drop-list-dragging {
@@ -958,7 +965,9 @@ app-user-profile {
       display: flex;
       align-items: center;
       white-space: nowrap;
-      transition: background-color 0.2s ease, color 0.2s ease;
+      transition:
+        background-color 0.2s ease,
+        color 0.2s ease;
 
       // Fix width during drag to prevent reflow
       &.cdk-drag {
@@ -991,7 +1000,8 @@ app-user-profile {
         }
       }
 
-      &:hover:not(.active):not(.add-tab) {}
+      &:hover:not(.active):not(.add-tab) {
+      }
 
       &.add-tab {
         padding: 12px 8px;
@@ -1147,7 +1157,8 @@ app-user-profile {
   transition: transform 300ms cubic-bezier(0, 0, 0.2, 1);
 }
 
-.columns-wrapper.cdk-drop-list-dragging .column-unit:not(.cdk-drag-placeholder) {
+.columns-wrapper.cdk-drop-list-dragging
+  .column-unit:not(.cdk-drag-placeholder) {
   transition: transform 300ms cubic-bezier(0, 0, 0.2, 1);
 }
 
@@ -1270,7 +1281,9 @@ h1 {
   height: 100%;
   object-fit: cover;
   border-radius: 8px;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 
   &.main-image {
     cursor: pointer;
@@ -1314,7 +1327,9 @@ h1 {
     aspect-ratio: 16/9;
     cursor: pointer;
     overflow: hidden;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease;
 
     &:hover {
       transform: scale(1.02);
@@ -1601,7 +1616,6 @@ h1 {
     }
   }
 }
-
 
 @media (max-width: 1023px) {
   .columns-wrapper {
