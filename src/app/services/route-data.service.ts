@@ -271,7 +271,7 @@ export class RouteDataService implements OnDestroy {
     const firstSegment = segments[0];
 
     // Handle special cases
-    const titleMap: { [key: string]: string } = {
+    const titleMap: Record<string, string> = {
       settings: 'Settings',
       people: 'People',
       articles: 'Articles',

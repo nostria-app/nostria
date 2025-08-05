@@ -1,4 +1,11 @@
-import { Component, inject, signal, computed, effect } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  computed,
+  effect,
+  OnInit,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -33,7 +40,7 @@ import { MediaService } from '../../../services/media.service';
   templateUrl: './profile-edit.component.html',
   styleUrl: './profile-edit.component.scss',
 })
-export class ProfileEditComponent {
+export class ProfileEditComponent implements OnInit {
   nostr = inject(NostrService);
   storage = inject(StorageService);
   data = inject(DataService);
@@ -125,7 +132,7 @@ export class ProfileEditComponent {
 
     try {
       // We want to be a good Nostr citizen and not delete custom metadata, except for certain deprecated fields.
-      let profile = this.profile();
+      const profile = this.profile();
 
       // Remove deprecated fields NIP-24: https://github.com/nostr-protocol/nips/blob/master/24.md
       delete profile.displayName;

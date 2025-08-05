@@ -1,4 +1,4 @@
-import { Component, inject, Inject } from '@angular/core';
+import { Component, inject, Inject, AfterViewInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import {
@@ -21,7 +21,7 @@ import encodeQR from 'qr';
   templateUrl: './qrcode-dialog.component.html',
   styleUrl: './qrcode-dialog.component.scss',
 })
-export class QRCodeDialogComponent {
+export class QRCodeDialogComponent implements AfterViewInit {
   qrStyle = 'did';
 
   qrValue = '';

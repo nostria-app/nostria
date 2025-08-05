@@ -169,7 +169,7 @@ export class Metrics {
    */
   async getTopUsers(
     metric: keyof UserMetric,
-    limit: number = 10
+    limit = 10
   ): Promise<UserMetric[]> {
     return await this.queryMetrics({
       sortBy: metric,
@@ -181,7 +181,7 @@ export class Metrics {
   /**
    * Get users with highest engagement scores
    */
-  async getTopEngagedUsers(limit: number = 10): Promise<UserMetric[]> {
+  async getTopEngagedUsers(limit = 10): Promise<UserMetric[]> {
     const metrics = await this.getMetrics();
 
     // Calculate engagement scores for all users

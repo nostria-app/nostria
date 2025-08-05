@@ -9,7 +9,7 @@ import { DatePipe } from '@angular/common';
 export class TimestampPipe implements PipeTransform {
   private datePipe = new DatePipe('en-US');
 
-  transform(value: number, format: string = 'medium'): string {
+  transform(value: number, format = 'medium'): string {
     if (value === 0) {
       return '';
     }

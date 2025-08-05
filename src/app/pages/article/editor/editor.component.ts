@@ -5,6 +5,8 @@ import {
   effect,
   computed,
   untracked,
+  OnInit,
+  OnDestroy,
 } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
@@ -80,7 +82,7 @@ interface ArticleAutoDraft {
   templateUrl: './editor.component.html',
   styleUrl: './editor.component.scss',
 })
-export class EditorComponent {
+export class EditorComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private nostrService = inject(NostrService);
@@ -549,7 +551,7 @@ export class EditorComponent {
     }
   }
 
-  async publishArticle(kind: number = 30023): Promise<void> {
+  async publishArticle(kind = 30023): Promise<void> {
     // Use different validation for drafts vs final articles
     if (kind === 30023 && !this.isValid()) {
       this.snackBar.open('Please fill in required fields', 'Close', {

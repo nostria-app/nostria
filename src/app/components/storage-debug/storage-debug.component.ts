@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { StorageService } from '../../services/storage.service';
 import { LoggerService } from '../../services/logger.service';
 import { MatCardModule } from '@angular/material/card';
@@ -116,7 +116,7 @@ import { CommonModule } from '@angular/common';
     `,
   ],
 })
-export class StorageDebugComponent {
+export class StorageDebugComponent implements OnInit {
   storage = inject(StorageService);
   logger = inject(LoggerService);
 

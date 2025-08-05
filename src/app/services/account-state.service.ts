@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal, OnDestroy } from '@angular/core';
 import { Event, kinds, nip19, UnsignedEvent } from 'nostr-tools';
 import { NostrRecord } from '../interfaces';
 import { LocalStorageService } from './local-storage.service';
@@ -23,17 +23,18 @@ interface ProfileProcessingState {
   startedAt: number;
 }
 
-interface ProcessingTracking {
-  [pubkey: string]: {
+type ProcessingTracking = Record<
+  string,
+  {
     profileDiscovery: boolean;
     backupDiscovery: boolean;
-  };
-}
+  }
+>;
 
 @Injectable({
   providedIn: 'root',
 })
-export class AccountStateService {
+export class AccountStateService implements OnDestroy {
   private readonly localStorage = inject(LocalStorageService);
   private readonly appState = inject(ApplicationStateService);
   private readonly accountService = inject(AccountService);
@@ -109,7 +110,7 @@ export class AccountStateService {
 
     // Get the existing following event so we don't loose existing structure.
     // Ensure we keep original 'content' and relays/pet names.
-    let followingEvent = await this.storage.getEventByPubkeyAndKind(
+    const followingEvent = await this.storage.getEventByPubkeyAndKind(
       [account.pubkey],
       3
     );

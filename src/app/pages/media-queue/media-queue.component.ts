@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import {
   AddMediaDialog,
@@ -17,7 +17,7 @@ import { MatButtonModule } from '@angular/material/button';
   templateUrl: './media-queue.component.html',
   styleUrl: './media-queue.component.scss',
 })
-export class MediaQueueComponent {
+export class MediaQueueComponent implements OnInit {
   utilities = inject(UtilitiesService);
   media = inject(MediaPlayerService);
   private dialog = inject(MatDialog);
@@ -55,7 +55,7 @@ export class MediaQueueComponent {
         result.url.indexOf('youtube.com') > -1
       ) {
         const youtubes = [...result.url.matchAll(this.utilities.regexpYouTube)];
-        let youtube = youtubes.map(i => {
+        const youtube = youtubes.map(i => {
           return { url: `https://www.youtube.com/embed/${i[1]}` };
         });
 

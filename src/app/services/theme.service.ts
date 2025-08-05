@@ -148,7 +148,7 @@ export class ThemeService {
     }
 
     // Find the theme-color meta tag
-    let metaThemeColor = this.document.querySelector(
+    const metaThemeColor = this.document.querySelector(
       'meta[name="theme-color"]'
     );
 

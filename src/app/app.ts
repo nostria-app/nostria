@@ -8,6 +8,7 @@ import {
   computed,
   PLATFORM_ID,
   DOCUMENT,
+  OnInit,
 } from '@angular/core';
 import {
   RouterOutlet,
@@ -114,7 +115,7 @@ interface NavItem {
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })
-export class App {
+export class App implements OnInit {
   title = 'Nostria';
   themeService = inject(ThemeService);
   pwaUpdateService = inject(PwaUpdateService);

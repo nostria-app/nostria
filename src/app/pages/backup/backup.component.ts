@@ -126,7 +126,7 @@ export class BackupComponent {
         events: userEvents,
       };
 
-      var zip = new JSZip();
+      const zip = new JSZip();
 
       // Create a ZIP file containing the JSON data
       zip.file('backup.json', JSON.stringify(backupData, null, 2));
@@ -260,7 +260,7 @@ export class BackupComponent {
     }
   }
 
-  private showMessage(message: string, duration: number = 3000): void {
+  private showMessage(message: string, duration = 3000): void {
     this.snackBar.open(message, 'Close', {
       duration: duration,
       horizontalPosition: 'center',

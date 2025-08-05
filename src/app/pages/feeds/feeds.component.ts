@@ -886,7 +886,7 @@ export class FeedsComponent implements OnInit, OnDestroy {
       .filter(Boolean);
   }
 
-  getBlurhash(event: any, imageIndex: number = 0): string | null {
+  getBlurhash(event: any, imageIndex = 0): string | null {
     const imetas = event.tags?.filter((tag: any[]) => tag[0] === 'imeta') || [];
     if (imetas.length <= imageIndex) return null;
 
@@ -897,11 +897,7 @@ export class FeedsComponent implements OnInit, OnDestroy {
     return blurhashIndex > 0 ? imeta[blurhashIndex].substring(9) : null;
   }
 
-  generateBlurhashDataUrl(
-    blurhash: string,
-    width: number = 32,
-    height: number = 32
-  ): string {
+  generateBlurhashDataUrl(blurhash: string, width = 32, height = 32): string {
     try {
       const pixels = decode(blurhash, width, height);
       const canvas = document.createElement('canvas');

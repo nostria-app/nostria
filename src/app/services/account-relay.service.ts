@@ -31,7 +31,7 @@ export abstract class RelayServiceBase {
   // Basic concurrency control for base class
   protected readonly maxConcurrentRequests = 2;
   protected currentRequests = 0;
-  protected requestQueue: Array<() => void> = [];
+  protected requestQueue: (() => void)[] = [];
 
   constructor(pool: SimplePool) {
     this.#pool = pool;
@@ -378,7 +378,7 @@ export class SharedRelayServiceEx {
   // Semaphore for controlling concurrent requests
   private readonly maxConcurrentRequests = 3;
   private currentRequests = 0;
-  private requestQueue: Array<() => void> = [];
+  private requestQueue: (() => void)[] = [];
 
   // Request deduplication cache
   private readonly requestCache = new Map<string, Promise<any>>();
@@ -503,7 +503,7 @@ export class SharedRelayServiceEx {
     timeout: number
   ): Promise<T | null> {
     // Get optimal relays for the user
-    let relayUrls = await this.relaysService.getOptimalUserRelays(pubkey, 3);
+    const relayUrls = await this.relaysService.getOptimalUserRelays(pubkey, 3);
     console.log('relayUrls', relayUrls);
 
     if (relayUrls.length === 0) {
@@ -580,7 +580,7 @@ export class SharedRelayServiceEx {
     filter: any,
     timeout: number
   ): Promise<T[]> {
-    let relayUrls = await this.relaysService.getOptimalUserRelays(pubkey, 3);
+    const relayUrls = await this.relaysService.getOptimalUserRelays(pubkey, 3);
 
     if (relayUrls.length === 0) {
       this.logger.warn('No relays available for query');

@@ -49,7 +49,7 @@ export class UrlUpdateService {
   /**
    * Method 5: Update query parameters only without navigation
    */
-  updateQueryParamsSilently(queryParams: { [key: string]: any }): void {
+  updateQueryParamsSilently(queryParams: Record<string, any>): void {
     const urlTree = this.router.createUrlTree([], {
       queryParams,
       queryParamsHandling: 'merge',
@@ -62,7 +62,7 @@ export class UrlUpdateService {
    */
   updatePathSilently(
     pathSegments: string[],
-    queryParams?: { [key: string]: any }
+    queryParams?: Record<string, any>
   ): void {
     const urlTree = this.router.createUrlTree(pathSegments, { queryParams });
     this.location.replaceState(this.router.serializeUrl(urlTree));

@@ -10,6 +10,8 @@ import {
   afterNextRender,
   AfterViewInit,
   DOCUMENT,
+  OnInit,
+  OnDestroy,
 } from '@angular/core';
 import { LayoutService } from '../../services/layout.service';
 import { ThemeService } from '../../services/theme.service';
@@ -54,7 +56,7 @@ declare global {
   templateUrl: './media-player.component.html',
   styleUrl: './media-player.component.scss',
 })
-export class MediaPlayerComponent implements AfterViewInit {
+export class MediaPlayerComponent implements AfterViewInit, OnInit, OnDestroy {
   private readonly layout = inject(LayoutService);
   private readonly theme = inject(ThemeService);
   private readonly utilities = inject(UtilitiesService);
@@ -330,7 +332,7 @@ export class MediaPlayerComponent implements AfterViewInit {
         result.url.indexOf('youtube.com') > -1
       ) {
         const youtubes = [...result.url.matchAll(this.utilities.regexpYouTube)];
-        let youtube = youtubes.map(i => {
+        const youtube = youtubes.map(i => {
           return { url: `https://www.youtube.com/embed/${i[1]}` };
         });
 

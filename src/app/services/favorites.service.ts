@@ -3,9 +3,7 @@ import { AccountStateService } from './account-state.service';
 import { LocalStorageService } from './local-storage.service';
 import { LoggerService } from './logger.service';
 
-interface FavoritesData {
-  [pubkey: string]: string[]; // pubkey -> array of favorite user pubkeys
-}
+type FavoritesData = Record<string, string[]>;
 
 @Injectable({
   providedIn: 'root',

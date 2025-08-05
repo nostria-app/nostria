@@ -6,6 +6,7 @@ import {
   signal,
   TransferState,
   untracked,
+  OnDestroy,
 } from '@angular/core';
 import { LayoutService } from '../../services/layout.service';
 import { NostrService } from '../../services/nostr.service';
@@ -63,7 +64,7 @@ export interface ThreadedEvent {
   templateUrl: './event.component.html',
   styleUrl: './event.component.scss',
 })
-export class EventPageComponent implements OnInit {
+export class EventPageComponent implements OnInit, OnDestroy {
   event = signal<Event | undefined>(undefined);
   private readonly utilities = inject(UtilitiesService);
   isLoading = signal(false);
@@ -105,7 +106,7 @@ export class EventPageComponent implements OnInit {
         // this.item = this.route.snapshot.data['data'];
         // console.log('EventPageComponent initialized with data:', this.route.snapshot);
 
-        let id = this.routeParams()?.get('id');
+        const id = this.routeParams()?.get('id');
         if (id) {
           // Clean up previous pool if it exists
           if (this.pool) {
@@ -163,7 +164,7 @@ export class EventPageComponent implements OnInit {
   private buildThreadTree(
     events: Event[],
     rootEventId: string,
-    maxDepth: number = 5
+    maxDepth = 5
   ): ThreadedEvent[] {
     const eventMap = new Map<string, Event>();
     const childrenMap = new Map<string, Event[]>();
@@ -182,7 +183,7 @@ export class EventPageComponent implements OnInit {
     });
 
     // Build tree recursively with depth limit
-    const buildNode = (eventId: string, level: number = 0): ThreadedEvent[] => {
+    const buildNode = (eventId: string, level = 0): ThreadedEvent[] => {
       const children = childrenMap.get(eventId) || [];
 
       return children
@@ -358,7 +359,7 @@ export class EventPageComponent implements OnInit {
       try {
         this.isLoading.set(true);
         this.error.set(null);
-        let event = await this.data.getEventById(hex);
+        const event = await this.data.getEventById(hex);
 
         if (event) {
           this.logger.info(

@@ -60,7 +60,7 @@ export class Algorithms {
   /**
    * Get users most likely to be interested in based on engagement patterns
    */
-  async getRecommendedUsers(limit: number = 10): Promise<UserMetric[]> {
+  async getRecommendedUsers(limit = 10): Promise<UserMetric[]> {
     const allMetrics = await this.metrics.getMetrics();
     const favorites = this.favoritesService.favorites();
 
@@ -146,9 +146,7 @@ export class Algorithms {
   /**
    * Get users with declining engagement (might need re-engagement)
    */
-  async getDeclineingEngagementUsers(
-    limit: number = 10
-  ): Promise<UserMetric[]> {
+  async getDeclineingEngagementUsers(limit = 10): Promise<UserMetric[]> {
     const allMetrics = await this.metrics.getMetrics();
 
     const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
@@ -168,14 +166,14 @@ export class Algorithms {
   /**
    * Get users with highest time investment (deep engagement)
    */
-  async getHighTimeInvestmentUsers(limit: number = 10): Promise<UserMetric[]> {
+  async getHighTimeInvestmentUsers(limit = 10): Promise<UserMetric[]> {
     return await this.metrics.getTopUsers('timeSpent', limit);
   }
 
   /**
    * Get users with best engagement rate (quality over quantity)
    */
-  async getBestEngagementRateUsers(limit: number = 10): Promise<UserMetric[]> {
+  async getBestEngagementRateUsers(limit = 10): Promise<UserMetric[]> {
     const allMetrics = await this.metrics.getMetrics();
 
     // Calculate engagement rate (engagement actions / views)

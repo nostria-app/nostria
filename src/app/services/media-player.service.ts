@@ -116,7 +116,7 @@ export class MediaPlayerService implements OnInitialized {
     });
   }
   initialize(): void {
-    let mediaQueue = this.localStorage.getItem(this.MEDIA_STORAGE_KEY);
+    const mediaQueue = this.localStorage.getItem(this.MEDIA_STORAGE_KEY);
 
     if (mediaQueue == null || mediaQueue == '' || mediaQueue === 'undefined') {
       return;

@@ -192,7 +192,7 @@ export class DataService {
 
   async getProfile(
     pubkey: string,
-    refresh: boolean = false
+    refresh = false
   ): Promise<NostrRecord | undefined> {
     const cacheKey = `metadata-${pubkey}`;
 
@@ -274,7 +274,7 @@ export class DataService {
     // If refresh is true, we will refresh it in the background.
     queueMicrotask(async () => {
       try {
-        let fresh = await this.sharedRelayEx.get(pubkey, {
+        const fresh = await this.sharedRelayEx.get(pubkey, {
           authors: [pubkey],
           kinds: [kinds.Metadata],
         });
