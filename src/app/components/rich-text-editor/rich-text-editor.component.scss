@@ -16,7 +16,7 @@
 
   // Hide file input
   .hidden-file-input,
-  input[type="file"] {
+  input[type='file'] {
     display: none;
   }
 
@@ -57,13 +57,13 @@
         margin-left: 8px;
         display: inline-block;
       }
-      
+
       mat-button-toggle-group {
         border: 1px solid var(--mat-sys-outline);
-        
+
         .mat-button-toggle {
           color: var(--mat-sys-on-surface);
-          
+
           &.active {
             background-color: var(--mat-sys-primary-container);
             color: var(--mat-sys-on-primary-container);
@@ -76,7 +76,7 @@
   .editor-content-area {
     flex: 1;
     overflow-y: auto;
-    
+
     .rich-text-content {
       min-height: 400px;
       padding: 16px;
@@ -84,70 +84,74 @@
       font-family: 'Roboto', sans-serif;
       line-height: 1.6;
       color: var(--mat-sys-on-surface);
-      
+
       &:empty:before {
         content: attr(placeholder);
         color: var(--mat-sys-on-surface-variant);
         opacity: 0.6;
       }
-      
+
       // Format styling within editor
-      h1, h2, h3 {
+      h1,
+      h2,
+      h3 {
         color: var(--mat-sys-on-surface);
         margin: 16px 0 8px 0;
       }
-      
+
       h1 {
         font-size: 1.8em;
       }
-      
+
       h2 {
         font-size: 1.5em;
       }
-      
+
       h3 {
         font-size: 1.3em;
       }
-      
+
       p {
         margin: 0 0 16px 0;
       }
-      
+
       code {
         background-color: var(--mat-sys-surface-variant);
         color: var(--mat-sys-on-surface-variant);
         padding: 2px 4px;
         border-radius: 4px;
-        font-family: 'JetBrains Mono', 'Fira Code', 'Monaco', 'Consolas', monospace;
+        font-family:
+          'JetBrains Mono', 'Fira Code', 'Monaco', 'Consolas', monospace;
         display: inline-block;
       }
-      
+
       blockquote {
         border-left: 4px solid var(--mat-sys-primary);
         padding-left: 16px;
         margin: 16px 0;
         color: var(--mat-sys-on-surface-variant);
       }
-      
-      ul, ol {
+
+      ul,
+      ol {
         padding-left: 20px;
         margin: 16px 0;
       }
-      
+
       li {
         margin: 8px 0;
       }
-      
+
       a {
         color: var(--mat-sys-primary);
         text-decoration: none;
-        
+
         &:hover {
           text-decoration: underline;
         }
       }
     }
-    
+
     .markdown-content {
       width: 100%;
       height: 100%;
@@ -158,12 +162,13 @@
       outline: none;
       background-color: var(--mat-sys-surface);
       color: var(--mat-sys-on-surface);
-      font-family: 'JetBrains Mono', 'Fira Code', 'Monaco', 'Consolas', monospace;
+      font-family:
+        'JetBrains Mono', 'Fira Code', 'Monaco', 'Consolas', monospace;
       font-size: 14px;
       line-height: 1.6;
     }
   }
-  
+
   .upload-progress {
     display: flex;
     flex-direction: column;
@@ -171,17 +176,17 @@
     padding: 16px;
     background-color: var(--mat-sys-primary-container);
     color: var(--mat-sys-on-primary-container);
-    
+
     mat-progress-bar {
       width: 100%;
       margin-bottom: 8px;
     }
-    
+
     span {
       font-size: 0.9rem;
     }
   }
-  
+
   .drag-overlay {
     position: absolute;
     top: 0;
@@ -195,20 +200,20 @@
     align-items: center;
     justify-content: center;
     z-index: 10;
-    
+
     .drag-message {
       display: flex;
       flex-direction: column;
       align-items: center;
       color: var(--mat-sys-primary);
-      
+
       mat-icon {
         font-size: 48px;
         width: 48px;
         height: 48px;
         margin-bottom: 16px;
       }
-      
+
       p {
         margin: 0;
         font-size: 1.1rem;
@@ -216,12 +221,12 @@
       }
     }
   }
-  
+
   .markdown-controls {
     display: flex;
     align-items: center;
     gap: 8px;
-    
+
     button {
       &:hover {
         background-color: var(--mat-sys-surface);
@@ -239,12 +244,12 @@
         justify-content: flex-start;
         padding-bottom: 8px;
       }
-      
+
       .editor-mode-toggle {
         width: 100%;
         display: flex;
         justify-content: flex-end;
-        
+
         .toggle-label {
           display: none;
         }

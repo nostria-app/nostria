@@ -96,7 +96,9 @@
   width: 100%;
 }
 
-.loading-container, .error-container, .empty-container {
+.loading-container,
+.error-container,
+.empty-container {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -398,7 +400,6 @@
 
 // Details view
 .details-list {
-
   .person-listitem {
     cursor: pointer;
     border-bottom: 1px solid rgba(var(--mat-sys-primary-text), 0.08);

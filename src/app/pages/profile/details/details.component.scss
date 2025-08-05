@@ -7,7 +7,6 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-
 }
 
 .info-container div {
@@ -31,7 +30,10 @@
   position: sticky;
   top: 0;
   z-index: 3;
-  background-color: var(--mat-sidenav-content-background-color, var(--mat-sys-background));
+  background-color: var(
+    --mat-sidenav-content-background-color,
+    var(--mat-sys-background)
+  );
   margin-bottom: 0;
   /* Ensure no margin at bottom */
 }
@@ -89,7 +91,10 @@
     top: 72px;
     /* Adjust to exactly match the header height */
     z-index: 2;
-    background-color: var(--mat-sidenav-content-background-color, var(--mat-sys-background));
+    background-color: var(
+      --mat-sidenav-content-background-color,
+      var(--mat-sys-background)
+    );
     border-top: none;
     /* Remove any potential border */
   }
@@ -129,7 +134,10 @@
   transition: background-color 0.2s;
 
   &:hover {
-    background-color: var(--mat-surface-hover-state-layer-color, rgba(0, 0, 0, 0.04));
+    background-color: var(
+      --mat-surface-hover-state-layer-color,
+      rgba(0, 0, 0, 0.04)
+    );
   }
 
   &-avatar {

@@ -131,7 +131,6 @@
   height: 100%;
 }
 
-
 .message-preview {
   white-space: nowrap;
   overflow: hidden;
@@ -161,7 +160,6 @@
   position: absolute;
   right: 6px;
 }
-
 
 .message-bubble-container {
   display: flex;
@@ -249,7 +247,6 @@
 
 @media (max-width: 599px) {
   .messages {
-
     // On mobile, make sure full width is used
     .messages-left,
     .messages-right {
@@ -264,8 +261,6 @@
     }
   }
 }
-
-
 
 .chat-encryption-icon {
   position: absolute;

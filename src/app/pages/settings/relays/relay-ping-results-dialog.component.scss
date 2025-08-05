@@ -11,16 +11,16 @@
   cursor: pointer;
   transition: all 0.2s ease;
   width: 100%;
-  
+
   &:hover {
     box-shadow: var(--mat-sys-level2);
     transform: translateY(-2px);
   }
-  
+
   &.fastest {
     border-left: 4px solid var(--mat-sys-primary);
     background-color: rgba(var(--mat-sys-primary-rgb), 0.04);
-    
+
     .fastest-label {
       background-color: var(--mat-sys-primary);
       color: var(--mat-sys-on-primary);
@@ -34,10 +34,10 @@
       margin-left: 8px;
     }
   }
-  
+
   &.already-added {
     opacity: 0.7;
-    background-color: rgba(0,0,0,0.04);
+    background-color: rgba(0, 0, 0, 0.04);
   }
 }
 

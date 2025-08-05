@@ -30,7 +30,7 @@
     height: 80px;
     overflow: hidden;
     position: relative;
-    
+
     .user-banner {
       width: 100%;
       height: 100%;
@@ -46,7 +46,10 @@
     overflow: hidden;
     flex-shrink: 0;
     border: 2px solid;
-    border-color: var(--mat-button-text-label-text-color, var(--mat-sys-primary));
+    border-color: var(
+      --mat-button-text-label-text-color,
+      var(--mat-sys-primary)
+    );
     background-color: var(--mat-card-subtle-surface-color, #e0e0e0);
 
     .user-avatar {
@@ -64,21 +67,27 @@
       justify-content: center;
       color: var(--mat-caption-text-color, #757575);
       font-size: 100%;
-      
+
       &.not-found-avatar {
-        color: var(--mat-warn-color, #f44336); /* Use Material's warning color for not found or error profiles */
+        color: var(
+          --mat-warn-color,
+          #f44336
+        ); /* Use Material's warning color for not found or error profiles */
       }
 
       &.error-avatar {
-        color: var(--mat-warn-color, #be09af); /* Use Material's warning color for not found or error profiles */
+        color: var(
+          --mat-warn-color,
+          #be09af
+        ); /* Use Material's warning color for not found or error profiles */
       }
     }
 
     mat-spinner {
       margin: 0;
     }
-  }  
-  
+  }
+
   .user-profile-content {
     flex: 1;
     min-width: 0; // Enable text truncation
@@ -127,12 +136,11 @@
     flex-shrink: 0;
 
     .user-profile-container {
-      
       padding: 0; // Removed padding
       justify-content: center; // Center the avatar
       width: auto; // Container should only be as wide as its content
     }
-    
+
     .user-profile-avatar {
       width: 256px;
       height: 256px;
@@ -202,7 +210,7 @@
     }
   }
 
-    &.icon {
+  &.icon {
     width: auto; // Changed from 100px to auto
     flex-shrink: 0;
 
@@ -268,21 +276,21 @@
     :hover {
       background-color: var(--mat-sys-secondary-container);
     }
-    
+
     .user-profile-container {
       padding: 16px;
       flex-direction: row;
       align-items: flex-start;
       min-width: 0; // Allow flex item to shrink below its content size
     }
-    
+
     .user-profile-avatar {
       width: 40px;
       height: 40px;
       margin-bottom: 8px;
       flex-shrink: 0; // Prevent avatar from shrinking
     }
-    
+
     .user-profile-content {
       margin-left: 12px; // Add some spacing from avatar
       min-width: 0; // Allow content to shrink and wrap
@@ -307,7 +315,8 @@
       overflow: visible; // Don't hide overflowing text
       text-overflow: unset; // Don't use ellipsis, wrap instead
       word-break: break-all; // Break anywhere for long strings like npub
-      font-family: 'Courier New', monospace; // Use monospace for better readability of codes
+      font-family:
+        'Courier New', monospace; // Use monospace for better readability of codes
       font-size: 12px; // Slightly smaller for long strings
       line-height: 1.4; // Better spacing for wrapped monospace text
     }
@@ -333,7 +342,7 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    
+
     .user-profile-container {
       flex-direction: column;
       height: 100%;
@@ -341,15 +350,15 @@
       position: relative;
       align-items: center;
     }
-    
+
     .user-profile-banner {
       width: 100%;
       height: 80px;
     }
-    
+
     .user-profile-avatar {
       width: 60px;
-      height: 60px; 
+      height: 60px;
       min-height: 60px;
       position: relative;
       margin-top: -30px;
@@ -357,11 +366,11 @@
       z-index: 1;
       margin-bottom: 0; // Removed margin
       background-color: var(--mat-card-subtle-surface-color, #e0e0e0);
-      
+
       /* Fix the flex display issue */
       display: block;
       overflow: hidden;
-      
+
       /* Fix avatar rendering */
       .user-avatar {
         display: block;
@@ -369,7 +378,7 @@
         height: 60px;
         object-fit: cover;
       }
-      
+
       .default-user-avatar {
         font-size: 60px;
         width: 60px;
@@ -378,11 +387,11 @@
         align-items: center;
         justify-content: center;
       }
-      
+
       mat-spinner {
         margin: auto;
       }
-      
+
       &::after {
         content: '';
         position: absolute;
@@ -392,7 +401,7 @@
         border-radius: 50%;
       }
     }
-    
+
     .user-profile-content {
       margin: 0; // Removed all margins
       text-align: center;
@@ -419,7 +428,7 @@
 // Custom tooltip styles
 ::ng-deep .user-profile-tooltip {
   white-space: pre-line; // Preserves line breaks in the tooltip
-  max-width: 250px;     // Limit tooltip width
+  max-width: 250px; // Limit tooltip width
   font-size: 12px;
   line-height: 1.4;
 }
@@ -435,7 +444,7 @@
 }
 
 .user-info-status-bad {
-   background-color: red;
+  background-color: red;
 }
 
 .user-info-status-medium {

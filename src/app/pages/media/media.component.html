@@ -8,7 +8,12 @@
           <span>Uploading...</span>
         </div>
       }
-      <button mat-raised-button color="primary" (click)="openUploadDialog()" [disabled]="mediaService.uploading()">
+      <button
+        mat-raised-button
+        color="primary"
+        (click)="openUploadDialog()"
+        [disabled]="mediaService.uploading()"
+      >
         <mat-icon>upload</mat-icon>
         Upload Media
       </button>
@@ -30,14 +35,36 @@
       <mat-icon color="warn">error</mat-icon>
       <p>{{ mediaService.error() }}</p>
       <div class="error-actions">
-        <button mat-button color="primary" (click)="refreshMedia()">Try Again</button>
+        <button mat-button color="primary" (click)="refreshMedia()">
+          Try Again
+        </button>
         <button mat-button (click)="dismissError()">Dismiss</button>
       </div>
     </div>
   }
 
-  <mat-tab-group [selectedIndex]="activeTab() === 'images' ? 0 : activeTab() === 'videos' ? 1 : activeTab() === 'files' ? 2 : 3" 
-                (selectedIndexChange)="setActiveTab($event === 0 ? 'images' : ($event === 1 ? 'videos' : $event === 2 ? 'files' : 'servers'))">
+  <mat-tab-group
+    [selectedIndex]="
+      activeTab() === 'images'
+        ? 0
+        : activeTab() === 'videos'
+          ? 1
+          : activeTab() === 'files'
+            ? 2
+            : 3
+    "
+    (selectedIndexChange)="
+      setActiveTab(
+        $event === 0
+          ? 'images'
+          : $event === 1
+            ? 'videos'
+            : $event === 2
+              ? 'files'
+              : 'servers'
+      )
+    "
+  >
     <mat-tab>
       <ng-template mat-tab-label>
         <mat-icon class="tab-icon">image</mat-icon>
@@ -47,7 +74,9 @@
         @if (selectedItems().length > 0) {
           <div class="selection-actions">
             <span>{{ selectedItems().length }} item(s) selected</span>
-            <button mat-button color="primary" (click)="clearSelection()">Clear Selection</button>
+            <button mat-button color="primary" (click)="clearSelection()">
+              Clear Selection
+            </button>
             <button mat-button [matMenuTriggerFor]="selectedActionsMenu">
               <mat-icon>more_vert</mat-icon>
               Actions
@@ -69,7 +98,14 @@
           </div>
         } @else {
           <div class="selection-actions">
-            <button mat-button color="primary" (click)="selectAll()" [disabled]="images().length === 0">Select All</button>
+            <button
+              mat-button
+              color="primary"
+              (click)="selectAll()"
+              [disabled]="images().length === 0"
+            >
+              Select All
+            </button>
           </div>
         }
 
@@ -77,25 +113,51 @@
           <div class="empty-state">
             <mat-icon>image</mat-icon>
             <p>No images found in your library</p>
-            <button mat-raised-button color="primary" (click)="openUploadDialog()">Upload Now</button>
+            <button
+              mat-raised-button
+              color="primary"
+              (click)="openUploadDialog()"
+            >
+              Upload Now
+            </button>
           </div>
         } @else {
           <div class="media-grid">
             @for (item of images(); track item.sha256) {
-              <div class="media-card" [class.selected]="isSelected(item.sha256)" (click)="toggleItemSelection(item.sha256)">
+              <div
+                class="media-card"
+                [class.selected]="isSelected(item.sha256)"
+                (click)="toggleItemSelection(item.sha256)"
+              >
                 <div class="media-thumbnail">
                   <div class="selection-indicator">
                     <mat-icon>check_circle</mat-icon>
                   </div>
                   @if (item.mirrors && item.mirrors.length > 0) {
-                    <div class="mirror-badge" [matTooltip]="'Mirrored on ' + item.mirrors.length + ' server(s)'">
+                    <div
+                      class="mirror-badge"
+                      [matTooltip]="
+                        'Mirrored on ' + item.mirrors.length + ' server(s)'
+                      "
+                    >
                       <mat-icon>cloud_done</mat-icon>
-                      <span class="mirror-count">{{ item.mirrors.length }}</span>
+                      <span class="mirror-count">{{
+                        item.mirrors.length
+                      }}</span>
                     </div>
                   }
-                  <img [src]="item.url" [alt]="item.url || 'Image'" (click)="navigateToDetails($event, item)" loading="lazy">
+                  <img
+                    [src]="item.url"
+                    [alt]="item.url || 'Image'"
+                    (click)="navigateToDetails($event, item)"
+                    loading="lazy"
+                  />
                   <div class="video-actions">
-                    <button mat-icon-button [matMenuTriggerFor]="imageMenu" (click)="$event.stopPropagation()">
+                    <button
+                      mat-icon-button
+                      [matMenuTriggerFor]="imageMenu"
+                      (click)="$event.stopPropagation()"
+                    >
                       <mat-icon>more_vert</mat-icon>
                     </button>
                     <mat-menu #imageMenu="matMenu">
@@ -103,15 +165,26 @@
                         <mat-icon>info</mat-icon>
                         <span>Details</span>
                       </button>
-                      <button mat-menu-item (click)="downloadSelected(item.sha256)">
+                      <button
+                        mat-menu-item
+                        (click)="downloadSelected(item.sha256)"
+                      >
                         <mat-icon>download</mat-icon>
                         <span>Download</span>
                       </button>
-                      <button mat-menu-item (click)="mirrorItem(item.sha256, item.url)" [disabled]="isFullyMirrored(item)">
+                      <button
+                        mat-menu-item
+                        (click)="mirrorItem(item.sha256, item.url)"
+                        [disabled]="isFullyMirrored(item)"
+                      >
                         <mat-icon>cloud_upload</mat-icon>
                         <span>Mirror</span>
                       </button>
-                      <button mat-menu-item color="warn" (click)="deleteSelected(item.sha256)">
+                      <button
+                        mat-menu-item
+                        color="warn"
+                        (click)="deleteSelected(item.sha256)"
+                      >
                         <mat-icon color="warn">delete</mat-icon>
                         <span class="delete-text">Delete</span>
                       </button>
@@ -120,7 +193,9 @@
                 </div>
                 <div class="video-info">
                   <span class="video-name">{{ getFileName(item.url) }}</span>
-                  <span class="video-size">{{ formatFileSize(item.size) }}</span>
+                  <span class="video-size">{{
+                    formatFileSize(item.size)
+                  }}</span>
                 </div>
               </div>
             }
@@ -137,7 +212,9 @@
         @if (selectedItems().length > 0) {
           <div class="selection-actions">
             <span>{{ selectedItems().length }} item(s) selected</span>
-            <button mat-button color="primary" (click)="clearSelection()">Clear Selection</button>
+            <button mat-button color="primary" (click)="clearSelection()">
+              Clear Selection
+            </button>
             <button mat-button [matMenuTriggerFor]="selectedActionsMenu">
               <mat-icon>more_vert</mat-icon>
               Actions
@@ -159,7 +236,14 @@
           </div>
         } @else {
           <div class="selection-actions">
-            <button mat-button color="primary" (click)="selectAll()" [disabled]="videos().length === 0">Select All</button>
+            <button
+              mat-button
+              color="primary"
+              (click)="selectAll()"
+              [disabled]="videos().length === 0"
+            >
+              Select All
+            </button>
           </div>
         }
 
@@ -167,30 +251,58 @@
           <div class="empty-state">
             <mat-icon>videocam</mat-icon>
             <p>No videos found in your library</p>
-            <button mat-raised-button color="primary" (click)="openUploadDialog()">Upload Now</button>
+            <button
+              mat-raised-button
+              color="primary"
+              (click)="openUploadDialog()"
+            >
+              Upload Now
+            </button>
           </div>
         } @else {
           <div class="media-grid">
             @for (item of videos(); track item.sha256) {
-              <div class="media-card" [class.selected]="isSelected(item.sha256)" (click)="toggleItemSelection(item.sha256)">
+              <div
+                class="media-card"
+                [class.selected]="isSelected(item.sha256)"
+                (click)="toggleItemSelection(item.sha256)"
+              >
                 <div class="media-thumbnail">
                   <div class="selection-indicator">
                     <mat-icon>check_circle</mat-icon>
                   </div>
                   @if (item.mirrors && item.mirrors.length > 0) {
-                    <div class="mirror-badge" [matTooltip]="'Mirrored on ' + item.mirrors.length + ' server(s)'">
+                    <div
+                      class="mirror-badge"
+                      [matTooltip]="
+                        'Mirrored on ' + item.mirrors.length + ' server(s)'
+                      "
+                    >
                       <mat-icon>cloud_done</mat-icon>
-                      <span class="mirror-count">{{ item.mirrors.length }}</span>
+                      <span class="mirror-count">{{
+                        item.mirrors.length
+                      }}</span>
                     </div>
                   }
                   <div class="video-preview">
-                    <video [src]="item.url" preload="metadata" (click)="navigateToDetails($event, item)"></video>
-                    <div class="play-button" (click)="navigateToDetails($event, item)">
+                    <video
+                      [src]="item.url"
+                      preload="metadata"
+                      (click)="navigateToDetails($event, item)"
+                    ></video>
+                    <div
+                      class="play-button"
+                      (click)="navigateToDetails($event, item)"
+                    >
                       <mat-icon>play_circle_filled</mat-icon>
                     </div>
                   </div>
                   <div class="video-actions">
-                    <button mat-icon-button [matMenuTriggerFor]="videoMenu" (click)="$event.stopPropagation()">
+                    <button
+                      mat-icon-button
+                      [matMenuTriggerFor]="videoMenu"
+                      (click)="$event.stopPropagation()"
+                    >
                       <mat-icon>more_vert</mat-icon>
                     </button>
                     <mat-menu #videoMenu="matMenu">
@@ -198,15 +310,26 @@
                         <mat-icon>info</mat-icon>
                         <span>Details</span>
                       </button>
-                      <button mat-menu-item (click)="downloadSelected(item.sha256)">
+                      <button
+                        mat-menu-item
+                        (click)="downloadSelected(item.sha256)"
+                      >
                         <mat-icon>download</mat-icon>
                         <span>Download</span>
                       </button>
-                      <button mat-menu-item (click)="mirrorItem(item.sha256, item.url)" [disabled]="isFullyMirrored(item)">
+                      <button
+                        mat-menu-item
+                        (click)="mirrorItem(item.sha256, item.url)"
+                        [disabled]="isFullyMirrored(item)"
+                      >
                         <mat-icon>cloud_upload</mat-icon>
                         <span>Mirror</span>
                       </button>
-                      <button mat-menu-item color="warn" (click)="deleteSelected(item.sha256)">
+                      <button
+                        mat-menu-item
+                        color="warn"
+                        (click)="deleteSelected(item.sha256)"
+                      >
                         <mat-icon color="warn">delete</mat-icon>
                         <span class="delete-text">Delete</span>
                       </button>
@@ -215,7 +338,9 @@
                 </div>
                 <div class="video-info">
                   <span class="video-name">{{ getFileName(item.url) }}</span>
-                  <span class="video-size">{{ formatFileSize(item.size) }}</span>
+                  <span class="video-size">{{
+                    formatFileSize(item.size)
+                  }}</span>
                 </div>
               </div>
             }
@@ -232,7 +357,9 @@
         @if (selectedItems().length > 0) {
           <div class="selection-actions">
             <span>{{ selectedItems().length }} item(s) selected</span>
-            <button mat-button color="primary" (click)="clearSelection()">Clear Selection</button>
+            <button mat-button color="primary" (click)="clearSelection()">
+              Clear Selection
+            </button>
             <button mat-button [matMenuTriggerFor]="selectedActionsMenu">
               <mat-icon>more_vert</mat-icon>
               Actions
@@ -254,7 +381,14 @@
           </div>
         } @else {
           <div class="selection-actions">
-            <button mat-button color="primary" (click)="selectAll()" [disabled]="files().length === 0">Select All</button>
+            <button
+              mat-button
+              color="primary"
+              (click)="selectAll()"
+              [disabled]="files().length === 0"
+            >
+              Select All
+            </button>
           </div>
         }
 
@@ -262,7 +396,13 @@
           <div class="empty-state">
             <mat-icon>insert_drive_file</mat-icon>
             <p>No files found in your library</p>
-            <button mat-raised-button color="primary" (click)="openUploadDialog()">Upload Now</button>
+            <button
+              mat-raised-button
+              color="primary"
+              (click)="openUploadDialog()"
+            >
+              Upload Now
+            </button>
           </div>
         } @else {
           <div class="files-table-container">
@@ -273,9 +413,17 @@
                   <mat-icon>check_box_outline_blank</mat-icon>
                 </th>
                 <td mat-cell *matCellDef="let item">
-                  <mat-icon [color]="isSelected(item.sha256) ? 'primary' : ''" 
-                           (click)="$event.stopPropagation(); toggleItemSelection(item.sha256)">
-                    {{isSelected(item.sha256) ? 'check_box' : 'check_box_outline_blank'}}
+                  <mat-icon
+                    [color]="isSelected(item.sha256) ? 'primary' : ''"
+                    (click)="
+                      $event.stopPropagation(); toggleItemSelection(item.sha256)
+                    "
+                  >
+                    {{
+                      isSelected(item.sha256)
+                        ? 'check_box'
+                        : 'check_box_outline_blank'
+                    }}
                   </mat-icon>
                 </td>
               </ng-container>
@@ -283,20 +431,34 @@
               <!-- Name Column -->
               <ng-container matColumnDef="name">
                 <th mat-header-cell *matHeaderCellDef>Name</th>
-                <td mat-cell *matCellDef="let item" class="clickable-cell file-name-column" (click)="navigateToDetails($event, item)">
+                <td
+                  mat-cell
+                  *matCellDef="let item"
+                  class="clickable-cell file-name-column"
+                  (click)="navigateToDetails($event, item)"
+                >
                   <div class="file-name-cell">
                     <mat-icon>insert_drive_file</mat-icon>
-                    <span class="file-name-text">{{ getFileName(item.url) }}</span>
+                    <span class="file-name-text">{{
+                      getFileName(item.url)
+                    }}</span>
                   </div>
                 </td>
               </ng-container>
 
               <!-- Mirrors Column -->
               <ng-container matColumnDef="mirrors">
-                <th mat-header-cell *matHeaderCellDef class="mirrors-column">Mirrors</th>
+                <th mat-header-cell *matHeaderCellDef class="mirrors-column">
+                  Mirrors
+                </th>
                 <td mat-cell *matCellDef="let item" class="mirrors-column">
                   @if (item.mirrors && item.mirrors.length > 0) {
-                    <div class="mirror-indicator" [matTooltip]="'Mirrored on ' + item.mirrors.length + ' server(s)'">
+                    <div
+                      class="mirror-indicator"
+                      [matTooltip]="
+                        'Mirrored on ' + item.mirrors.length + ' server(s)'
+                      "
+                    >
                       <mat-icon>cloud_done</mat-icon>
                       <span>{{ item.mirrors.length }}</span>
                     </div>
@@ -308,21 +470,31 @@
 
               <!-- Type Column -->
               <ng-container matColumnDef="type">
-                <th mat-header-cell *matHeaderCellDef class="responsive-column">Type</th>
-                <td mat-cell *matCellDef="let item" class="responsive-column">{{ item.type || 'Unknown' }}</td>
+                <th mat-header-cell *matHeaderCellDef class="responsive-column">
+                  Type
+                </th>
+                <td mat-cell *matCellDef="let item" class="responsive-column">
+                  {{ item.type || 'Unknown' }}
+                </td>
               </ng-container>
 
               <!-- Size Column -->
               <ng-container matColumnDef="size">
-                <th mat-header-cell *matHeaderCellDef class="responsive-column">Size</th>
-                <td mat-cell *matCellDef="let item" class="responsive-column">{{ formatFileSize(item.size || 0) }}</td>
+                <th mat-header-cell *matHeaderCellDef class="responsive-column">
+                  Size
+                </th>
+                <td mat-cell *matCellDef="let item" class="responsive-column">
+                  {{ formatFileSize(item.size || 0) }}
+                </td>
               </ng-container>
 
               <!-- Uploaded Column -->
               <ng-container matColumnDef="uploaded">
-                <th mat-header-cell *matHeaderCellDef class="responsive-column">Uploaded</th>
+                <th mat-header-cell *matHeaderCellDef class="responsive-column">
+                  Uploaded
+                </th>
                 <td mat-cell *matCellDef="let item" class="responsive-column">
-                  {{ item.uploaded | timestamp:'medium' }}
+                  {{ item.uploaded | timestamp: 'medium' }}
                 </td>
               </ng-container>
 
@@ -330,23 +502,41 @@
               <ng-container matColumnDef="actions">
                 <th mat-header-cell *matHeaderCellDef>Actions</th>
                 <td mat-cell *matCellDef="let item">
-                  <button mat-icon-button [matMenuTriggerFor]="menu" (click)="$event.stopPropagation()">
+                  <button
+                    mat-icon-button
+                    [matMenuTriggerFor]="menu"
+                    (click)="$event.stopPropagation()"
+                  >
                     <mat-icon>more_vert</mat-icon>
                   </button>
                   <mat-menu #menu="matMenu">
-                    <button mat-menu-item (click)="navigateToDetails($event, item)">
+                    <button
+                      mat-menu-item
+                      (click)="navigateToDetails($event, item)"
+                    >
                       <mat-icon>info</mat-icon>
                       <span>Details</span>
                     </button>
-                    <button mat-menu-item (click)="downloadSelected(item.sha256)">
+                    <button
+                      mat-menu-item
+                      (click)="downloadSelected(item.sha256)"
+                    >
                       <mat-icon>download</mat-icon>
                       <span>Download</span>
                     </button>
-                    <button mat-menu-item (click)="mirrorItem(item.sha256, item.url)" [disabled]="isFullyMirrored(item)">
+                    <button
+                      mat-menu-item
+                      (click)="mirrorItem(item.sha256, item.url)"
+                      [disabled]="isFullyMirrored(item)"
+                    >
                       <mat-icon>cloud_upload</mat-icon>
                       <span>Mirror</span>
                     </button>
-                    <button mat-menu-item color="warn" (click)="deleteSelected(item.sha256)">
+                    <button
+                      mat-menu-item
+                      color="warn"
+                      (click)="deleteSelected(item.sha256)"
+                    >
                       <mat-icon color="warn">delete</mat-icon>
                       <span class="delete-text">Delete</span>
                     </button>
@@ -355,8 +545,11 @@
               </ng-container>
 
               <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-              <tr mat-row *matRowDef="let row; columns: displayedColumns;"
-                  [class.selected]="isSelected(row.sha256)"></tr>
+              <tr
+                mat-row
+                *matRowDef="let row; columns: displayedColumns"
+                [class.selected]="isSelected(row.sha256)"
+              ></tr>
             </table>
           </div>
         }
@@ -370,66 +563,105 @@
       <div class="tab-content">
         <div class="server-header">
           <h2>Your Nostr Media Servers</h2>
-          <button mat-raised-button color="primary" (click)="openServerDialog()">
+          <button
+            mat-raised-button
+            color="primary"
+            (click)="openServerDialog()"
+          >
             <mat-icon>add</mat-icon>
             Add Server
           </button>
         </div>
-        
+
         <div class="server-description">
-          <p>Media servers are endpoints that can host your content following the Nostr BUD (Blossom - Blobs stored simply on mediaservers) protocol.</p>
+          <p>
+            Media servers are endpoints that can host your content following the
+            Nostr BUD (Blossom - Blobs stored simply on mediaservers) protocol.
+          </p>
           @if (mediaService.mediaServers().length > 0) {
             <div class="primary-server-info">
-              <strong>Primary server:</strong> The first server in the list is your primary upload server.
-              <span class="primary-note">Drag and drop to reorder servers and change your primary server.</span>
+              <strong>Primary server:</strong> The first server in the list is
+              your primary upload server.
+              <span class="primary-note"
+                >Drag and drop to reorder servers and change your primary
+                server.</span
+              >
             </div>
           }
         </div>
-        
+
         @if (mediaService.mediaServers().length === 0) {
           <div class="empty-state">
             <mat-icon>cloud_off</mat-icon>
             <p>No media servers configured</p>
-            <p class="subtitle">Add servers to store and distribute your media</p>
-            <button mat-raised-button color="primary" (click)="openServerDialog()">Add Your First Server</button>
+            <p class="subtitle">
+              Add servers to store and distribute your media
+            </p>
+            <button
+              mat-raised-button
+              color="primary"
+              (click)="openServerDialog()"
+            >
+              Add Your First Server
+            </button>
           </div>
         } @else {
-          <div cdkDropList class="server-list" (cdkDropListDropped)="reorderServers($event)">
-            @for (server of mediaService.mediaServers(); track server; let i = $index) {
+          <div
+            cdkDropList
+            class="server-list"
+            (cdkDropListDropped)="reorderServers($event)"
+          >
+            @for (
+              server of mediaService.mediaServers();
+              track server;
+              let i = $index
+            ) {
               <mat-card class="server-card" cdkDrag>
                 <div class="drag-handle" cdkDragHandle>
                   <mat-icon>drag_indicator</mat-icon>
                 </div>
-                
+
                 @if (i === 0) {
                   <div class="primary-indicator">
                     <mat-icon>star</mat-icon>
                     <span>Primary</span>
                   </div>
                 }
-                
+
                 <mat-card-header>
                   <mat-icon mat-card-avatar>storage</mat-icon>
                   <mat-card-title>{{ server || server }}</mat-card-title>
                   <mat-card-subtitle>{{ server }}</mat-card-subtitle>
-                  
+
                   <!-- <div class="server-status">
                     <span class="status-badge active">Active</span>
                   </div> -->
                 </mat-card-header>
-                
+
                 <mat-card-content>
                   <!-- ...existing code... -->
                 </mat-card-content>
-                
+
                 <mat-card-actions>
-                  <button mat-button color="primary" (click)="testServer(server)">
+                  <button
+                    mat-button
+                    color="primary"
+                    (click)="testServer(server)"
+                  >
                     <mat-icon>sync</mat-icon> Test Connection
                   </button>
-                  <button mat-button color="primary" (click)="editServer(server)">
+                  <button
+                    mat-button
+                    color="primary"
+                    (click)="editServer(server)"
+                  >
                     <mat-icon>edit</mat-icon> Edit
                   </button>
-                  <button mat-button color="warn" (click)="removeServer(server)">
+                  <button
+                    mat-button
+                    color="warn"
+                    (click)="removeServer(server)"
+                  >
                     <mat-icon>delete</mat-icon> Remove
                   </button>
                 </mat-card-actions>

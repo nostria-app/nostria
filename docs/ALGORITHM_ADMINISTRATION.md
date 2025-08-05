@@ -15,6 +15,7 @@ The Algorithm Administration UI provides comprehensive tools for managing and an
 ### 🎯 **Algorithm Statistics Dashboard**
 
 The main dashboard displays key metrics:
+
 - **Total Users**: Number of users with metrics
 - **Favorites**: Number of users marked as favorites
 - **Active Users**: Users who interacted in the last 7 days
@@ -23,24 +24,28 @@ The main dashboard displays key metrics:
 ### 📊 **User Metrics Tabs**
 
 #### 1. **Top Engaged Users**
+
 - Shows users with highest engagement scores
 - Displays metrics like views, likes, time spent
 - Favorites are highlighted with a star icon
 - Sortable table format with actions menu
 
 #### 2. **Recently Viewed**
+
 - Users you've recently interacted with
 - Shows last interaction timestamp
 - Card-based layout with key metrics
 - Quick favorite/unfavorite buttons
 
 #### 3. **Declining Engagement**
+
 - Users with good engagement but no recent activity
 - Potential re-engagement opportunities
 - Shows engagement score and last interaction
 - Helps identify users to reconnect with
 
 #### 4. **Favorites**
+
 - All users marked as favorites
 - These users always appear at the top of recommendations
 - Easy management interface to add/remove favorites
@@ -50,11 +55,13 @@ The main dashboard displays key metrics:
 The favorites system ensures preferred users always rank at the top:
 
 #### In Profile Header Menu:
+
 - **Add to Favorites**: Star icon (⭐) in profile menu
 - **Remove from Favorites**: Filled star icon in profile menu
 - Visual feedback with snackbar notifications
 
 #### In Algorithm Settings:
+
 - Dedicated favorites tab
 - Bulk management capabilities
 - Visual indicators throughout the interface
@@ -62,11 +69,13 @@ The favorites system ensures preferred users always rank at the top:
 ### 🔄 **Metrics Management**
 
 #### Individual User Actions:
+
 - **Reset Metrics**: Clear all metrics for a specific user
 - **Toggle Favorite**: Add/remove from favorites list
 - **View Details**: See comprehensive metric breakdown
 
 #### Bulk Actions:
+
 - **Reset All Metrics**: Clear all user metrics (with confirmation)
 - **Refresh Data**: Reload all metrics and recalculate scores
 
@@ -75,7 +84,7 @@ The favorites system ensures preferred users always rank at the top:
 The engagement score is calculated using weighted values:
 
 ```typescript
-Engagement Score = 
+Engagement Score =
   (viewed × 1) +
   (profileClicks × 2) +
   (liked × 3) +
@@ -110,11 +119,13 @@ Engagement Score =
 ### 2. **Managing Favorites**
 
 #### From Profile:
+
 1. Visit any user's profile
 2. Click the menu button (⋮) in the profile header
 3. Select "Add to Favorites" or "Remove from Favorites"
 
 #### From Algorithm Settings:
+
 1. Go to the "Favorites" tab
 2. View all current favorites
 3. Remove favorites using the "Remove" button
@@ -129,12 +140,14 @@ Engagement Score =
 ### 4. **Resetting Metrics**
 
 #### Individual User:
+
 1. Find the user in any metrics table
 2. Click the menu button (⋮) in the Actions column
 3. Select "Reset Metrics"
 4. Confirm the action
 
 #### All Users:
+
 1. Click "Reset All Metrics" in the Actions card
 2. Confirm the destructive action
 
@@ -161,6 +174,7 @@ const recommendations = await algorithms.calculateProfileViewed(20, false);
 ### 📱 **Mobile Responsive**
 
 The interface is fully responsive:
+
 - Mobile-optimized tables
 - Touch-friendly interactions
 - Adapted layouts for smaller screens

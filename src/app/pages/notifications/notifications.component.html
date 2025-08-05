@@ -2,7 +2,11 @@
   <div class="page-header">
     <h1>Notifications</h1>
     <div class="header-actions">
-      <button mat-icon-button [matMenuTriggerFor]="optionsMenu" aria-label="Options">
+      <button
+        mat-icon-button
+        [matMenuTriggerFor]="optionsMenu"
+        aria-label="Options"
+      >
         <mat-icon>more_vert</mat-icon>
       </button>
       <mat-menu #optionsMenu="matMenu">
@@ -24,7 +28,11 @@
       <mat-card-header>
         <mat-card-title>Notifications</mat-card-title>
         <div class="spacer"></div>
-        <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="Notification actions">
+        <button
+          mat-icon-button
+          [matMenuTriggerFor]="menu"
+          aria-label="Notification actions"
+        >
           <mat-icon>more_vert</mat-icon>
         </button>
         <mat-menu #menu="matMenu">
@@ -38,7 +46,7 @@
           </button>
         </mat-menu>
       </mat-card-header>
-      
+
       <mat-card-content>
         @if (notifications().length === 0) {
           <div class="empty-notification">
@@ -46,7 +54,11 @@
           </div>
         } @else {
           <div class="notification-list">
-            @for (notification of notifications(); track notification.id; let i = $index) {
+            @for (
+              notification of notifications();
+              track notification.id;
+              let i = $index
+            ) {
               @if (shouldShowSeparator(i, notifications())) {
                 <div class="new-notifications-separator">
                   <mat-divider></mat-divider>
@@ -54,38 +66,51 @@
                   <mat-divider></mat-divider>
                 </div>
               }
-              
-              <div class="notification-item" [class.unread]="!notification.read">
+
+              <div
+                class="notification-item"
+                [class.unread]="!notification.read"
+              >
                 <div class="notification-content">
                   <div class="notification-icon">
                     @if (notification.type === notificationType.SUCCESS) {
                       <mat-icon color="accent">check_circle</mat-icon>
-                    } @else if (notification.type === notificationType.GENERAL) {
+                    } @else if (
+                      notification.type === notificationType.GENERAL
+                    ) {
                       <mat-icon color="primary">info</mat-icon>
-                    } @else if (notification.type === notificationType.WARNING) {
+                    } @else if (
+                      notification.type === notificationType.WARNING
+                    ) {
                       <mat-icon color="warn">warning</mat-icon>
                     } @else if (notification.type === notificationType.ERROR) {
                       <mat-icon color="warn">error</mat-icon>
-                    } @else if (notification.type === notificationType.RELAY_PUBLISHING) {
+                    } @else if (
+                      notification.type === notificationType.RELAY_PUBLISHING
+                    ) {
                       <mat-icon>sync</mat-icon>
                     }
                   </div>
                   <div class="notification-details">
-                    <div class="notification-message">{{ notification.message }}</div>
-                    <div class="notification-time">{{ notification.timestamp | date:'medium' }}</div>
-                    
-                    @if (isRelayPublishingNotification(notification)) {
+                    <div class="notification-message">
+                      {{ notification.message }}
+                    </div>
+                    <div class="notification-time">
+                      {{ notification.timestamp | date: 'medium' }}
+                    </div>
 
-                      <app-relay-publish-status 
-                      [notification]="notification"
-                      (retry)="onRetryPublish($event)">
-                    </app-relay-publish-status>
+                    @if (isRelayPublishingNotification(notification)) {
+                      <app-relay-publish-status
+                        [notification]="notification"
+                        (retry)="onRetryPublish($event)"
+                      >
+                      </app-relay-publish-status>
 
                       <!-- <app-relay-publish-status 
                         [relayStatuses]="notification.relayStatuses" 
                         [compact]="true">
                       </app-relay-publish-status> -->
-                      
+
                       <!-- @if (notification.hasFailures) {
                         <button mat-button color="primary" (click)="onRetryPublish(notification.id)">
                           Retry Failed
@@ -96,11 +121,19 @@
                 </div>
                 <div class="notification-actions">
                   @if (!notification.read) {
-                    <button mat-icon-button (click)="markAsRead(notification.id)" matTooltip="Mark as read">
+                    <button
+                      mat-icon-button
+                      (click)="markAsRead(notification.id)"
+                      matTooltip="Mark as read"
+                    >
                       <mat-icon>visibility</mat-icon>
                     </button>
                   }
-                  <button mat-icon-button (click)="removeNotification(notification.id)" matTooltip="Remove">
+                  <button
+                    mat-icon-button
+                    (click)="removeNotification(notification.id)"
+                    matTooltip="Remove"
+                  >
                     <mat-icon>close</mat-icon>
                   </button>
                 </div>

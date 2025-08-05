@@ -1,11 +1,12 @@
 <div class="app-container" [class.dark-theme]="themeService.darkMode()">
-
   <app-media-player></app-media-player>
   <!-- <app-video-player></app-video-player> -->
 
   <!-- Loading overlay -->
   @if (appState.isLoading()) {
-  <app-loading-overlay [message]="appState.loadingMessage()"></app-loading-overlay>
+  <app-loading-overlay
+    [message]="appState.loadingMessage()"
+  ></app-loading-overlay>
   }
 
   <!-- Success overlay with checkmark -->
@@ -15,30 +16,37 @@
       <span class="success-icon">✓</span>
     </div>
   </div>
-  }
-
-  @if (layout.showWelcomeScreen()) {
+  } @if (layout.showWelcomeScreen()) {
   <app-welcome></app-welcome>
-  }
-
-  @if (app.initialized()) {
+  } @if (app.initialized()) {
   <!-- Top toolbar - now outside and above the sidenav container -->
   <mat-toolbar color="primary" class="app-toolbar no-print">
     @if (!layout.search()) {
-    <button mat-icon-button (click)="toggleSidenav()" aria-label="Toggle sidenav">
+    <button
+      mat-icon-button
+      (click)="toggleSidenav()"
+      aria-label="Toggle sidenav"
+    >
       <mat-icon>menu</mat-icon>
     </button>
-    }
-    @if (!layout.search()) {
+    } @if (!layout.search()) {
     <app-navigation></app-navigation>
     <span class="app-title title-font hide-small">
       {{title}}
       <a [routerLink]="['/beta']" class="beta-indicator">BETA</a>
     </span>
-    } <span class="toolbar-spacer"> @if (layout.search()) {
+    }
+    <span class="toolbar-spacer">
+      @if (layout.search()) {
       <div class="search-container">
-        <input type="search" class="search-input" [(ngModel)]="layout.searchInput"
-          (input)="layout.onSearchInput($event)" (keydown)="onSearchInputKeyDown($event)" placeholder="Search..." />
+        <input
+          type="search"
+          class="search-input"
+          [(ngModel)]="layout.searchInput"
+          (input)="layout.onSearchInput($event)"
+          (keydown)="onSearchInputKeyDown($event)"
+          placeholder="Search..."
+        />
         <app-search-results></app-search-results>
       </div>
       }
@@ -56,51 +64,62 @@
       } @else {
       <mat-icon>search</mat-icon>
       }
-    </button> @if (pwaUpdateService.updateAvailable()) {
-    <button mat-icon-button class="update-button" (click)="pwaUpdateService.updateApplication()"
-      matTooltip="Update ready!" aria-label="Update application">
+    </button>
+    @if (pwaUpdateService.updateAvailable()) {
+    <button
+      mat-icon-button
+      class="update-button"
+      (click)="pwaUpdateService.updateApplication()"
+      matTooltip="Update ready!"
+      aria-label="Update application"
+    >
       <mat-icon class="update-icon">system_update</mat-icon>
     </button>
-    }
-
-    @if (app.authenticated() && accountState.profileProcessingState().isProcessing) {
-    <button mat-icon-button class="profile-cache-button"
+    } @if (app.authenticated() &&
+    accountState.profileProcessingState().isProcessing) {
+    <button
+      mat-icon-button
+      class="profile-cache-button"
       [matTooltip]="'Caching profiles: ' + accountState.processingProgress() + '% (' + accountState.profileProcessingState().processed + '/' + accountState.profileProcessingState().total + ')'"
-      aria-label="Profile caching progress">
+      aria-label="Profile caching progress"
+    >
       <mat-icon class="spinning-icon">cached</mat-icon>
-      <span class="progress-badge">{{ accountState.processingProgress() }}%</span>
+      <span class="progress-badge"
+        >{{ accountState.processingProgress() }}%</span
+      >
     </button>
-    }
-
-    @if (app.authenticated()) {
-    <button class="notification-toolbar" mat-icon-button [matMenuTriggerFor]="menuNotifications">
-      <mat-icon [class.pulsing-icon]="hasActivePendingNotifications()"
-        [matBadge]="unreadNotificationsCount()">notifications</mat-icon>
+    } @if (app.authenticated()) {
+    <button
+      class="notification-toolbar"
+      mat-icon-button
+      [matMenuTriggerFor]="menuNotifications"
+    >
+      <mat-icon
+        [class.pulsing-icon]="hasActivePendingNotifications()"
+        [matBadge]="unreadNotificationsCount()"
+        >notifications</mat-icon
+      >
     </button>
     }
 
     <mat-menu #menuNotifications="matMenu">
       @if (notificationService.notifications().length > 0) {
       <!-- Display last 5 notifications -->
-      @for (notification of notificationService.notifications().slice(0, 5); track notification.id) {
+      @for (notification of notificationService.notifications().slice(0, 5);
+      track notification.id) {
       <button mat-menu-item routerLink="/notifications">
         <mat-icon>
-          @if (notification.type === notificationType.SUCCESS) {
-          check_circle
-          } @else if (notification.type === notificationType.GENERAL) {
-          info
-          } @else if (notification.type === notificationType.WARNING) {
-          warning
-          } @else if (notification.type === notificationType.ERROR) {
-          error
-          } @else if (notification.type === notificationType.RELAY_PUBLISHING) {
-          sync
-          } @else {
-          notifications
-          }
+          @if (notification.type === notificationType.SUCCESS) { check_circle }
+          @else if (notification.type === notificationType.GENERAL) { info }
+          @else if (notification.type === notificationType.WARNING) { warning }
+          @else if (notification.type === notificationType.ERROR) { error }
+          @else if (notification.type === notificationType.RELAY_PUBLISHING) {
+          sync } @else { notifications }
         </mat-icon>
         <span>{{ notification.title }}</span>
-        <div class="notification-details dimmed">{{ notification.timestamp | date:'short' }}</div>
+        <div class="notification-details dimmed">
+          {{ notification.timestamp | date:'short' }}
+        </div>
       </button>
       }
       <mat-divider></mat-divider>
@@ -169,29 +188,32 @@
         <mat-icon>calendar_month</mat-icon>
         <span>Calendar</span>
       </button>
-      }
-      @if (app.enabledFeature('beta')) {
+      } @if (app.enabledFeature('beta')) {
       <button mat-menu-item routerLink="/badges">
         <mat-icon>badge</mat-icon>
         <span>Badges</span>
       </button>
       }
-
     </mat-menu>
 
-    <button mat-icon-button [class.profile-button-picture]="accountState.profile()?.data?.picture"
-      (click)="toggleProfileSidenav()" aria-label="Toggle profile" class="profile-button">
+    <button
+      mat-icon-button
+      [class.profile-button-picture]="accountState.profile()?.data?.picture"
+      (click)="toggleProfileSidenav()"
+      aria-label="Toggle profile"
+      class="profile-button"
+    >
       @if (accountState.profile()?.data?.picture) {
-      <img [src]="accountState.profile()?.data?.picture" class="profile-button-avatar" alt="Profile picture">
-      } @else {
-
-      @if(app.authenticated()) {
+      <img
+        [src]="accountState.profile()?.data?.picture"
+        class="profile-button-avatar"
+        alt="Profile picture"
+      />
+      } @else { @if(app.authenticated()) {
       <mat-icon>account_circle</mat-icon>
       } @else {
       <mat-icon>account_circle_off</mat-icon>
-      }
-
-      }
+      } }
     </button>
   </mat-toolbar>
   }
@@ -205,32 +227,42 @@
       <button mat-icon-button class="dismiss-button" (click)="app.reload()">
         <mat-icon>refresh</mat-icon>
       </button>
-      <button mat-icon-button class="dismiss-button" (click)="appState.dismissOffline()">
+      <button
+        mat-icon-button
+        class="dismiss-button"
+        (click)="appState.dismissOffline()"
+      >
         <mat-icon>close</mat-icon>
       </button>
     </div>
   </div>
-  }
-
-  @if (app.initialized()) {
+  } @if (app.initialized()) {
   <!-- Sidenav container now below the toolbar -->
-  <mat-sidenav-container class="sidenav-container" [autosize]="true"> <!-- Side navigation -->
-    <mat-sidenav #sidenav class="sidenav no-print"
-      [ngClass]="{ 'sidenav-labels': displayLabels(), 'sidenav-small': !displayLabels()  }" [opened]="opened()"
-      [mode]="layout.isHandset() ? 'over' : 'side'" [fixedInViewport]="false">
+  <mat-sidenav-container class="sidenav-container" [autosize]="true">
+    <!-- Side navigation -->
+    <mat-sidenav
+      #sidenav
+      class="sidenav no-print"
+      [ngClass]="{ 'sidenav-labels': displayLabels(), 'sidenav-small': !displayLabels()  }"
+      [opened]="opened()"
+      [mode]="layout.isHandset() ? 'over' : 'side'"
+      [fixedInViewport]="false"
+    >
       <mat-nav-list>
         @for (item of navigationItems(); track $index) {
-        <a mat-list-item [routerLink]="item.action ? undefined : [item.path]" routerLinkActive="active-link"
+        <a
+          mat-list-item
+          [routerLink]="item.action ? undefined : [item.path]"
+          routerLinkActive="active-link"
           [routerLinkActiveOptions]="{exact: true}"
-          (click)="item.action ? item.action() : (layout.isHandset() ? toggleSidenav() : null)">
+          (click)="item.action ? item.action() : (layout.isHandset() ? toggleSidenav() : null)"
+        >
           <mat-icon matListItemIcon>{{item.icon}}</mat-icon>
           @if(displayLabels()) {
           <span class="nav-label">{{item.label}}</span>
           }
         </a>
-        }
-
-        @if (app.authenticated()) {
+        } @if (app.authenticated()) {
         <a mat-list-item (click)="openCreateOptions()">
           <mat-icon matListItemIcon>add</mat-icon>
           @if(displayLabels()) {
@@ -246,48 +278,62 @@
           <mat-icon matListItemIcon>chevron_right</mat-icon>
           }
         </a>
-
       </mat-nav-list>
     </mat-sidenav>
 
-
-    <mat-sidenav #profileSidenav position="end" class="profile-sidenav" mode="over" [fixedInViewport]="true"
-      [fixedTopGap]="0" [fixedBottomGap]="0" [disableClose]="false">
+    <mat-sidenav
+      #profileSidenav
+      position="end"
+      class="profile-sidenav"
+      mode="over"
+      [fixedInViewport]="true"
+      [fixedTopGap]="0"
+      [fixedBottomGap]="0"
+      [disableClose]="false"
+    >
       <!-- <mat-toolbar>
         <span>Profile</span>
         <span class="toolbar-spacer"></span>
         
       </mat-toolbar> -->
       <div class="profile-content">
-        <button class="theme-button" mat-icon-button (click)="themeService.toggleDarkMode()">
+        <button
+          class="theme-button"
+          mat-icon-button
+          (click)="themeService.toggleDarkMode()"
+        >
           @if (themeService.darkMode()) {
           <mat-icon>dark_mode</mat-icon>
           } @else {
           <mat-icon>light_mode</mat-icon>
           }
         </button>
-        <button class="close-button" mat-icon-button (click)="toggleProfileSidenav()">
+        <button
+          class="close-button"
+          mat-icon-button
+          (click)="toggleProfileSidenav()"
+        >
           <mat-icon>close</mat-icon>
         </button>
         <div class="profile-header">
-          @if (accountState.profile(); as metadata) {
-          @if (metadata?.data?.picture) {
+          @if (accountState.profile(); as metadata) { @if
+          (metadata?.data?.picture) {
           <div class="profile-avatar">
-            <img [src]="metadata.data.picture" alt="Profile picture" class="avatar-image">
+            <img
+              [src]="metadata.data.picture"
+              alt="Profile picture"
+              class="avatar-image"
+            />
           </div>
           } @else {
           <div class="profile-avatar">
             <mat-icon class="avatar-icon">account_circle</mat-icon>
           </div>
-          }
-
-          @if(metadata.data.display_name) {
+          } @if(metadata.data.display_name) {
           <h2>{{ metadata.data.display_name }}</h2>
-          }
-          @else if(metadata.data.name) {
+          } @else if(metadata.data.name) {
           <h2>{{ metadata.data.name }}</h2>
-          }
-          @else {
+          } @else {
           <h2>{{ metadata.event.pubkey | npub }}</h2>
           }
 
@@ -300,7 +346,6 @@
           } -->
           } @else {
           <div class="profile-avatar">
-
             @if(app.authenticated()) {
             <mat-icon class="avatar-icon">account_circle</mat-icon>
             } @else {
@@ -309,20 +354,29 @@
           </div>
 
           @if(app.authenticated()) {
-          <h2>{{ accountState.account()?.name || (accountState.pubkey() | npub) }}</h2>
+          <h2>
+            {{ accountState.account()?.name || (accountState.pubkey() | npub) }}
+          </h2>
           } @else {
           <h2>Not logged in</h2>
-          }
-          }
+          } }
         </div>
 
         <mat-nav-list>
           @if(app.authenticated()) {
-          <a mat-list-item [routerLink]="accountState.profilePath()" (click)="toggleProfileSidenav()">
+          <a
+            mat-list-item
+            [routerLink]="accountState.profilePath()"
+            (click)="toggleProfileSidenav()"
+          >
             <mat-icon matListItemIcon>person</mat-icon>
             <span>My Profile</span>
           </a>
-          <a mat-list-item routerLink="/credentials" (click)="toggleProfileSidenav()">
+          <a
+            mat-list-item
+            routerLink="/credentials"
+            (click)="toggleProfileSidenav()"
+          >
             <mat-icon matListItemIcon>key</mat-icon>
             <span>Credentials</span>
           </a>
@@ -335,7 +389,11 @@
             <mat-icon matListItemIcon>person_add</mat-icon>
             <span>Add account</span>
           </a>
-          <a mat-list-item routerLink="/accounts" (click)="toggleProfileSidenav()">
+          <a
+            mat-list-item
+            routerLink="/accounts"
+            (click)="toggleProfileSidenav()"
+          >
             <mat-icon matListItemIcon>manage_accounts</mat-icon>
             <span>Manage accounts</span>
           </a>
@@ -348,14 +406,21 @@
         <!-- Account selection menu -->
         @if (accountState.hasAccounts()) {
         <mat-nav-list class="accounts-list">
-          @for (account of accountState.accounts(); track account.pubkey) {
-          @if (account.pubkey !== accountState.account()?.pubkey) {
-
+          @for (account of accountState.accounts(); track account.pubkey) { @if
+          (account.pubkey !== accountState.account()?.pubkey) {
           @if(accountState.getAccountProfile(account.pubkey); as metadata) {
-          <a mat-list-item (click)="switchAccount(account.pubkey); toggleProfileSidenav();" class="account-item">
+          <a
+            mat-list-item
+            (click)="switchAccount(account.pubkey); toggleProfileSidenav();"
+            class="account-item"
+          >
             @if (metadata.data?.picture; as account) {
             <div class="account-avatar" matListItemIcon>
-              <img [src]="metadata?.data?.picture" alt="Profile picture" class="avatar-image">
+              <img
+                [src]="metadata?.data?.picture"
+                alt="Profile picture"
+                class="avatar-image"
+              />
             </div>
             } @else {
             <div class="account-avatar" matListItemIcon>
@@ -371,20 +436,20 @@
             </span>
           </a>
           } @else {
-          <a mat-list-item (click)="switchAccount(account.pubkey); toggleProfileSidenav();" class="account-item">
+          <a
+            mat-list-item
+            (click)="switchAccount(account.pubkey); toggleProfileSidenav();"
+            class="account-item"
+          >
             <div class="account-avatar" matListItemIcon>
               <mat-icon>account_circle</mat-icon>
             </div>
-            <span matListItemTitle>
-              {{account.pubkey | npub }}
-            </span>
+            <span matListItemTitle> {{account.pubkey | npub }} </span>
             <span matListItemLine class="account-source">
               {{ account.source }} - used {{ account.lastUsed| date:'short' }}
             </span>
           </a>
-          }
-          }
-          }
+          } } }
         </mat-nav-list>
         <!-- <mat-divider></mat-divider> -->
         <!-- <mat-nav-list>
@@ -430,14 +495,24 @@
     </a>
     } -->
 
-    <a mat-button class="mobile-nav-button" [routerLink]="['/']" routerLinkActive="active-link"
-      [routerLinkActiveOptions]="{exact: true}">
+    <a
+      mat-button
+      class="mobile-nav-button"
+      [routerLink]="['/']"
+      routerLinkActive="active-link"
+      [routerLinkActiveOptions]="{exact: true}"
+    >
       <mat-icon>home</mat-icon>
       <div class="mobile-nav-label">Home</div>
     </a>
 
-    <a mat-button class="mobile-nav-button" [routerLink]="['/articles']" routerLinkActive="active-link"
-      [routerLinkActiveOptions]="{exact: true}">
+    <a
+      mat-button
+      class="mobile-nav-button"
+      [routerLink]="['/articles']"
+      routerLinkActive="active-link"
+      [routerLinkActiveOptions]="{exact: true}"
+    >
       <mat-icon>article</mat-icon>
       <div class="mobile-nav-label">Articles</div>
     </a>
@@ -445,8 +520,13 @@
     <!-- FAB button in the middle with circular cut-out -->
     @if (app.authenticated()) {
     <div class="fab-container">
-      <button mat-mini-fab color="primary" class="create-fab" aria-label="Create new content"
-        (click)="openCreateOptions()">
+      <button
+        mat-mini-fab
+        color="primary"
+        class="create-fab"
+        aria-label="Create new content"
+        (click)="openCreateOptions()"
+      >
         <mat-icon>add</mat-icon>
       </button>
     </div>
@@ -462,42 +542,68 @@
     } -->
 
     @if (app.authenticated()) {
-    <a mat-button class="mobile-nav-button" [routerLink]="['/messages']" routerLinkActive="active-link"
-      [routerLinkActiveOptions]="{exact: true}">
+    <a
+      mat-button
+      class="mobile-nav-button"
+      [routerLink]="['/messages']"
+      routerLinkActive="active-link"
+      [routerLinkActiveOptions]="{exact: true}"
+    >
       <mat-icon>mail</mat-icon>
       <div class="mobile-nav-label">Messages</div>
     </a>
 
-    <a mat-button class="mobile-nav-button" [routerLink]="['/p', accountState.pubkey()]" routerLinkActive="active-link"
-      [routerLinkActiveOptions]="{exact: false}">
+    <a
+      mat-button
+      class="mobile-nav-button"
+      [routerLink]="['/p', accountState.pubkey()]"
+      routerLinkActive="active-link"
+      [routerLinkActiveOptions]="{exact: false}"
+    >
       <mat-icon>account_circle</mat-icon>
       <div class="mobile-nav-label">Profile</div>
     </a>
     } @else {
-    <a mat-button class="mobile-nav-button" [routerLink]="['/settings']" routerLinkActive="active-link"
-      [routerLinkActiveOptions]="{exact: true}">
+    <a
+      mat-button
+      class="mobile-nav-button"
+      [routerLink]="['/settings']"
+      routerLinkActive="active-link"
+      [routerLinkActiveOptions]="{exact: true}"
+    >
       <mat-icon>settings</mat-icon>
       <div class="mobile-nav-label">Settings</div>
     </a>
 
-    <a mat-button class="mobile-nav-button" (click)="addAccount()" routerLinkActive="active-link"
-      [routerLinkActiveOptions]="{exact: false}">
+    <a
+      mat-button
+      class="mobile-nav-button"
+      (click)="addAccount()"
+      routerLinkActive="active-link"
+      [routerLinkActiveOptions]="{exact: false}"
+    >
       <mat-icon>person_add</mat-icon>
       <div class="mobile-nav-label">Add account</div>
     </a>
     }
-
   </div>
   }
-
 </div>
 
 <!-- Navigation Context Menu - rendered at app root level -->
 <app-navigation-context-menu></app-navigation-context-menu>
 
 <!-- Global fullscreen video container -->
-<div id="global-fullscreen-container" class="global-fullscreen-video" style="display: none;">
-  <button class="fullscreen-minimize-button" (click)="exitFullscreen()" aria-label="Exit fullscreen">
+<div
+  id="global-fullscreen-container"
+  class="global-fullscreen-video"
+  style="display: none"
+>
+  <button
+    class="fullscreen-minimize-button"
+    (click)="exitFullscreen()"
+    aria-label="Exit fullscreen"
+  >
     <mat-icon>close</mat-icon>
   </button>
 </div>
