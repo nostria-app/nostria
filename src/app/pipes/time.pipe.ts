@@ -17,10 +17,10 @@ export class TimePipe implements PipeTransform {
   }
 
   static time(value: number) {
-    var hours = Math.floor(value / 60 / 60);
-    var minutes = Math.floor(value / 60) - hours * 60;
-    var seconds = value % 60;
-    var formatted =
+    const hours = Math.floor(value / 60 / 60);
+    const minutes = Math.floor(value / 60) - hours * 60;
+    const seconds = value % 60;
+    const formatted =
       hours.toString().padStart(2, '0') +
       ':' +
       minutes.toString().padStart(2, '0') +

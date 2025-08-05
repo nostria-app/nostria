@@ -148,14 +148,14 @@ export class Cache {
   /**
    * Gets all entries with their metadata
    */
-  entries<T>(): Array<[string, CacheEntry<T>]> {
+  entries<T>(): [string, CacheEntry<T>][] {
     return Array.from(this.cache.entries());
   }
 
   /**
    * Sets multiple values at once
    */
-  setMany<T>(entries: Array<[string, T]>, options: CacheOptions = {}): void {
+  setMany<T>(entries: [string, T][], options: CacheOptions = {}): void {
     entries.forEach(([key, value]) => {
       this.set(key, value, options);
     });
@@ -164,7 +164,7 @@ export class Cache {
   /**
    * Gets multiple values at once
    */
-  getMany<T>(keys: string[]): Array<[string, T | undefined]> {
+  getMany<T>(keys: string[]): [string, T | undefined][] {
     return keys.map(key => [key, this.get<T>(key)]);
   }
 

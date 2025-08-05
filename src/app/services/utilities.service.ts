@@ -219,7 +219,7 @@ export class UtilitiesService {
       return [];
     }
 
-    let relayUrls = Object.keys(event.content).map(url => {
+    const relayUrls = Object.keys(event.content).map(url => {
       const wssIndex = url.indexOf('wss://');
       return wssIndex >= 0 ? url.substring(wssIndex) : url;
     });
@@ -235,7 +235,7 @@ export class UtilitiesService {
 
   /** Parses the URLs and cleans up, ensuring only wss:// instances are returned. */
   getRelayUrls(event: Event): string[] {
-    let relayUrls = event.tags
+    const relayUrls = event.tags
       .filter(tag => tag.length >= 2 && tag[0] === 'r')
       .map(tag => {
         const url = tag[1];
@@ -332,7 +332,7 @@ export class UtilitiesService {
   }
 
   getTags(event: Event | UnsignedEvent, tagType: NostrTagKey): string[] {
-    let tags = event.tags
+    const tags = event.tags
       .filter(tag => tag.length >= 2 && tag[0] === tagType)
       .map(tag => tag[1]);
 

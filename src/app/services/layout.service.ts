@@ -47,7 +47,7 @@ export class LayoutService implements OnDestroy {
   isHandset = signal(false);
   isWideScreen = signal(false);
   breakpointObserver = inject(BreakpointObserver);
-  optimalProfilePosition: number = 240;
+  optimalProfilePosition = 240;
   premium = signal(false);
   profileState = inject(ProfileStateService);
   accountStateService = inject(AccountStateService);
@@ -476,7 +476,7 @@ export class LayoutService implements OnDestroy {
     }
   }
 
-  searchInput: string = '';
+  searchInput = '';
 
   private debounceTimer: any;
 
@@ -772,7 +772,7 @@ export class LayoutService implements OnDestroy {
   /**
    * Scrolls an element to the top of the page with smooth animation
    * @param elementSelector CSS selector for the element to scroll
-   */ scrollToTop(elementSelector: string = '.content-wrapper'): void {
+   */ scrollToTop(elementSelector = '.content-wrapper'): void {
     const element = document.querySelector(elementSelector);
     if (element) {
       element.scrollTo({
@@ -870,7 +870,7 @@ export class LayoutService implements OnDestroy {
    */
   scrollToPosition(
     elementSelector: string,
-    offset: number = 0,
+    offset = 0,
     behavior: ScrollBehavior = 'smooth'
   ): void {
     const container = document.querySelector('.content-wrapper');
@@ -1029,11 +1029,7 @@ export class LayoutService implements OnDestroy {
     this.copyToClipboard(url, 'profile URL');
   }
 
-  toast(
-    message: string,
-    duration: number = 3000,
-    panelClass: string = 'success-snackbar'
-  ) {
+  toast(message: string, duration = 3000, panelClass = 'success-snackbar') {
     this.snackBar.open(message, 'Close', {
       duration,
       horizontalPosition: 'center',

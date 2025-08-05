@@ -154,10 +154,7 @@ export class RelaysService {
   /**
    * Get optimal relays for a user with connection preference
    */
-  async getOptimalUserRelays(
-    pubkey: string,
-    limit: number = 5
-  ): Promise<string[]> {
+  async getOptimalUserRelays(pubkey: string, limit = 5): Promise<string[]> {
     let relayUrls = this.getUserRelays(pubkey);
 
     if (relayUrls.length === 0) {

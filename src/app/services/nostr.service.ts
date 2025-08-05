@@ -225,7 +225,7 @@ export class NostrService implements NostriaService {
       }
 
       // Get existing Relay List in storage
-      let relays = await this.storage.getEventByPubkeyAndKind(
+      const relays = await this.storage.getEventByPubkeyAndKind(
         pubkey,
         kinds.RelayList
       );
@@ -983,7 +983,7 @@ export class NostrService implements NostriaService {
    */
   async getMetadataForUser(
     pubkey: string,
-    refresh: boolean = false
+    refresh = false
   ): Promise<NostrRecord | undefined> {
     // Check cache first
     const cachedMetadata = this.accountState.getCachedProfile(pubkey);
@@ -1227,7 +1227,7 @@ export class NostrService implements NostriaService {
         return undefined;
       }
 
-      let metadata = await this.retrieveMetadata(
+      const metadata = await this.retrieveMetadata(
         pubkey,
         selectedRelayUrls,
         info
@@ -1365,7 +1365,7 @@ export class NostrService implements NostriaService {
               followingRelayUrls,
               this.MAX_RELAY_COUNT
             );
-            let metadata = await this.retrieveMetadata(
+            const metadata = await this.retrieveMetadata(
               pubkey,
               selectedRelayUrls,
               info
@@ -1448,7 +1448,7 @@ export class NostrService implements NostriaService {
     }
 
     try {
-      let relayListEvent = await this.relayService.get(
+      const relayListEvent = await this.relayService.get(
         {
           authors: [pubkey],
           kinds: [kinds.RelayList],
@@ -1481,7 +1481,7 @@ export class NostrService implements NostriaService {
           this.MAX_RELAY_COUNT
         );
       } else {
-        let followingEvent = await this.relayService.get({
+        const followingEvent = await this.relayService.get({
           authors: [pubkey],
           kinds: [kinds.Contacts],
         });
@@ -1534,7 +1534,7 @@ export class NostrService implements NostriaService {
       }
 
       try {
-        let metadataEvent = await userPool.get(
+        const metadataEvent = await userPool.get(
           relayUrls,
           {
             authors: [pubkey],
@@ -1715,7 +1715,7 @@ export class NostrService implements NostriaService {
         secret: `${secret?.substring(0, 4)}...`, // Log only prefix for security
       });
 
-      let privateKey = generateSecretKey();
+      const privateKey = generateSecretKey();
 
       const pool = new SimplePool();
       const bunker = new BunkerSigner(privateKey, bunkerParsed!, { pool });
@@ -1963,7 +1963,7 @@ export class NostrService implements NostriaService {
   // }
 
   /** Parses the URLs and cleans up, ensuring only wss:// instances are returned. */
-  getRelayUrlsFromFollowing(event: Event, timeouts: boolean = true): string[] {
+  getRelayUrlsFromFollowing(event: Event, timeouts = true): string[] {
     let relayUrls = this.utilities.getRelayUrlsFromFollowing(event);
 
     // Filter out timed out relays if timeouts parameter is true
@@ -1981,7 +1981,7 @@ export class NostrService implements NostriaService {
   }
 
   /** Parses the URLs and cleans up, ensuring only wss:// instances are returned. */
-  getRelayUrls(event: Event, timeouts: boolean = true): string[] {
+  getRelayUrls(event: Event, timeouts = true): string[] {
     let relayUrls = this.utilities.getRelayUrls(event);
 
     // Filter out timed out relays if timeouts parameter is true
@@ -2010,7 +2010,7 @@ export class NostrService implements NostriaService {
   getTags(
     event: Event | UnsignedEvent,
     tagType: NostrTagKey,
-    timeouts: boolean = false
+    timeouts = false
   ): string[] {
     let tags = event.tags
       .filter(tag => tag.length >= 2 && tag[0] === tagType)

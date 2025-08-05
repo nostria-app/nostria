@@ -28,7 +28,7 @@ interface LogMessage {
   styleUrl: './loading-overlay.component.scss',
 })
 export class LoadingOverlayComponent implements OnInit, OnDestroy {
-  @Input() message: string = 'Loading...';
+  @Input() message = 'Loading...';
 
   private readonly loggerService = inject(LoggerService);
 

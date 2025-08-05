@@ -6,8 +6,8 @@ import { ApiResponse } from '../api/models';
 import { LocalStorageService } from './local-storage.service';
 import { ApplicationStateService } from './application-state.service';
 
-type UsernameByPubkeyMap = { [pubkey: string]: string };
-type PubkeyByUsernameMap = { [username: string]: string };
+type UsernameByPubkeyMap = Record<string, string>;
+type PubkeyByUsernameMap = Record<string, string>;
 
 @Injectable({
   providedIn: 'root',

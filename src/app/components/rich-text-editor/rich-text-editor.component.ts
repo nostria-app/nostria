@@ -41,7 +41,7 @@ import { MediaService } from '../../services/media.service';
   styleUrl: './rich-text-editor.component.scss',
 })
 export class RichTextEditorComponent implements AfterViewInit, OnChanges {
-  @Input() content: string = '';
+  @Input() content = '';
   @Output() contentChange = new EventEmitter<string>();
 
   @ViewChild('editorContent') editorContent!: ElementRef;
@@ -349,7 +349,7 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
     }
   }
 
-  private execCommand(command: string, value: string = '') {
+  private execCommand(command: string, value = '') {
     document.execCommand(command, false, value);
     this.onRichTextContentChange();
   }
@@ -597,7 +597,7 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
     if (!items) return;
 
     let hasImageFile = false;
-    let imageFiles: File[] = [];
+    const imageFiles: File[] = [];
 
     // First pass: check for image files
     for (let i = 0; i < items.length; i++) {

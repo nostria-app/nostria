@@ -119,7 +119,7 @@ export class BookmarkService {
       };
     }
 
-    let bookmarkId = id;
+    const bookmarkId = id;
 
     // Check if the bookmark already exists
     const existingBookmark = this.bookmarks().find(b => b.id === bookmarkId);

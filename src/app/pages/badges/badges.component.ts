@@ -183,7 +183,7 @@ export class BadgesComponent {
       }
 
       // Get current profile badges event or create new one
-      let currentEvent = this.profileBadgesEvent();
+      const currentEvent = this.profileBadgesEvent();
       let tags: string[][] = [];
 
       if (currentEvent) {

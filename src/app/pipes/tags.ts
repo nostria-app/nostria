@@ -9,7 +9,7 @@ import { DatePipe } from '@angular/common';
 export class TagsPipe implements PipeTransform {
   private datePipe = new DatePipe('en-US');
 
-  transform(value: string[][], tag: string = 'published_at'): string {
+  transform(value: string[][], tag = 'published_at'): string {
     if (!value) {
       return '';
     }

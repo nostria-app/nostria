@@ -65,7 +65,7 @@ export class BadgeService implements NostriaService {
   >([]);
   issuedBadges = signal<NostrEvent[]>([]);
   receivedBadges = signal<NostrEvent[]>([]);
-  badgeIssuers = signal<{ [key: string]: any }>({});
+  badgeIssuers = signal<Record<string, any>>({});
 
   // Loading states
   isLoadingAccepted = signal<boolean>(false);
@@ -164,7 +164,7 @@ export class BadgeService implements NostriaService {
       // If the definition is not found on the user's relays, try to fetch from author and then re-publish to user's relays.
       if (!definition) {
         try {
-          let userRelay = await this.userRelayFactory.create(pubkey);
+          const userRelay = await this.userRelayFactory.create(pubkey);
           definition = await userRelay.getEventByPubkeyAndKindAndTag(
             pubkey,
             kinds.BadgeDefinition,
@@ -285,7 +285,7 @@ export class BadgeService implements NostriaService {
   }
 
   private async fetchBadgeIssuers(receivedBadges: NostrEvent[]): Promise<void> {
-    const issuers: { [key: string]: any } = {};
+    const issuers: Record<string, any> = {};
 
     // Get unique issuer pubkeys
     const issuerPubkeys = [

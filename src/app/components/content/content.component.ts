@@ -325,7 +325,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     if (!content) return [];
 
     // Replace line breaks with placeholders
-    let processedContent = content.replace(/\n/g, '##LINEBREAK##');
+    const processedContent = content.replace(/\n/g, '##LINEBREAK##');
 
     // Regex for different types of content - updated to avoid capturing trailing LINEBREAK placeholders
     const urlRegex = /(https?:\/\/[^\s##]+)(?=\s|##LINEBREAK##|$)/g;
@@ -342,7 +342,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     const emojiRegex = /(:[a-zA-Z_]+:)/g;
 
     // Split content and generate tokens
-    let tokens: ContentToken[] = [];
+    const tokens: ContentToken[] = [];
     let lastIndex = 0;
 
     // Find all matches and their positions

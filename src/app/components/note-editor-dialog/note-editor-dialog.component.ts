@@ -758,7 +758,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
     if (!items) return;
 
     let hasImageFile = false;
-    let imageFiles: File[] = [];
+    const imageFiles: File[] = [];
 
     // Check for image files in clipboard
     for (let i = 0; i < items.length; i++) {

@@ -155,7 +155,7 @@ export class ArticleComponent {
       this.error.set(null);
 
       const isNotCurrentUser = !this.accountState.isCurrentUser(pubkey);
-      let event = await this.data.getEventByPubkeyAndKindAndReplaceableEvent(
+      const event = await this.data.getEventByPubkeyAndKindAndReplaceableEvent(
         pubkey,
         kinds.LongFormArticle,
         slug,

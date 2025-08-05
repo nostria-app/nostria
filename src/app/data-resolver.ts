@@ -33,7 +33,7 @@ export class DataResolver implements Resolve<EventData | null> {
 
     const id = route.params['id'];
 
-    let data: EventData = {
+    const data: EventData = {
       title: 'Nostr Event',
       description: 'Loading Nostr event content...',
     };

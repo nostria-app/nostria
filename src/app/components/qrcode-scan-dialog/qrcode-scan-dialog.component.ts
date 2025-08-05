@@ -143,7 +143,7 @@ export class QrcodeScanDialogComponent implements AfterViewInit, OnDestroy {
 
   private async initializeCameraWithRetry(
     video: HTMLVideoElement,
-    maxRetries: number = 3
+    maxRetries = 3
   ): Promise<any> {
     let lastError: Error | null = null;
 

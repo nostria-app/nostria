@@ -521,7 +521,7 @@ export class MediaService implements NostriaService {
         try {
           const url = server.endsWith('/') ? server : `${server}/`;
 
-          let action = this.determineAction(file);
+          const action = this.determineAction(file);
 
           // If the user chose to upload the original file, set the action to 'upload'
           if (uploadOriginal) {

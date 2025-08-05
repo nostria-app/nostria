@@ -217,7 +217,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
   }
 
   async addRelay() {
-    let url = this.parseUrl(this.newRelayUrl());
+    const url = this.parseUrl(this.newRelayUrl());
 
     if (!url) {
       return;
@@ -341,7 +341,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
   }
 
   addBootstrapRelay(): void {
-    let url = this.parseUrl(this.newBootstrapUrl());
+    const url = this.parseUrl(this.newBootstrapUrl());
 
     if (!url) {
       return;
