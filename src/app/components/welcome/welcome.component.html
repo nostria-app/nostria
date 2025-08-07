@@ -161,6 +161,9 @@
                 <div class="profile-info">
                   <h4>{{ profile.name }}</h4>
                   <p class="profile-bio">{{ profile.bio }}</p>
+                  @if (profile.region && profile.interests.includes('regional')) {
+                  <p class="profile-region">📍 {{ profile.region }}</p>
+                  }
                   <div class="profile-interests">
                     @for (interestId of profile.interests; track interestId) {
                     <span class="interest-tag">{{ getInterestName(interestId) }}</span>
