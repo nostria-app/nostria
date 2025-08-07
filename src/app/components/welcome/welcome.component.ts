@@ -76,7 +76,8 @@ export class WelcomeComponent {
     { id: 'food', name: 'Food', icon: 'restaurant' },
     { id: 'travel', name: 'Travel', icon: 'flight' },
     { id: 'fitness', name: 'Fitness', icon: 'fitness_center' },
-    { id: 'politics', name: 'Politics', icon: 'how_to_vote' },
+    { id: 'finance', name: 'Finance', icon: 'account_balance' },
+    { id: 'fashion', name: 'Fashion', icon: 'checkroom' },
   ]);
 
   selectedInterests = signal<string[]>([]);
