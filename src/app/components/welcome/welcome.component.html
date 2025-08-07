@@ -15,21 +15,68 @@
 
     <div class="welcome-content">
       <div class="welcome-content-container">
-        <!-- Screen 1 - Welcome & Region Detection -->
+        <!-- Screen 1 - Welcome & Easy Start -->
         @if (currentOnboardingPage() === 1) {
         <div class="welcome-logo-container">
           <img src="icons/icon.svg" alt="Nostria logo" class="welcome-logo" />
         </div>
         <div>
           <h1>Nostria - Your Social Media</h1>
-          <p class="region-detection">
-            We've connected you to the fastest server in
-            <strong>{{ detectedRegion() }}</strong>.
+          <p class="easy-start-message">
+            Getting started with Nostria is incredibly simple and takes just moments.
+            No complicated setup, no personal information required.
           </p>
           <p>
-            Discover the future of social media with Nostria - Your Social
-            Media.
+            Join thousands of users who have discovered a better way to connect and share ideas
+            in a truly decentralized social network.
           </p>
+        </div>
+        }
+
+        <!-- Screen 2 - Account Created / Region Detection -->
+        @else if (currentOnboardingPage() === 2) {
+        <div class="welcome-logo-container">
+          <div class="key-generation-animation">
+            <mat-icon class="key-icon">vpn_key</mat-icon>
+            <div class="generation-dots">
+              <span></span><span></span><span></span>
+            </div>
+          </div>
+        </div>
+        <div>
+          @if (isDetectingRegion()) {
+          <h1>Discovering your region...</h1>
+          <p>
+            Your account is ready in seconds — no email address, no phone number,
+            no personal details required.
+          </p>
+          <p>
+            With just a few clicks, you now have complete control over your data and privacy.
+            Your account is secured with cryptographic keys that only you control.
+          </p>
+          <div class="region-detection-loading">
+            <mat-icon class="spinning">autorenew</mat-icon>
+            <span>Finding closest region...</span>
+          </div>
+          } @else {
+          <h1>You're all set!</h1>
+          <p>
+            Your account is ready in seconds — no email address, no phone number,
+            no personal details required.
+          </p>
+          <p>
+            With just a few clicks, you now have complete control over your data and privacy.
+            Your account is secured with cryptographic keys that only you control.
+          </p>
+
+          <div class="region-info">
+            <span>Connected to: <strong>{{ detectedRegion() }}</strong></span>
+          </div>
+
+          <button mat-button class="region-change-btn" (click)="toggleRegionSelector()">
+            Change region
+          </button>
+
           @if (showRegionSelector()) {
           <div class="region-selector">
             <h3>Choose your region:</h3>
@@ -42,28 +89,7 @@
             }
           </div>
           }
-        </div>
-        }
 
-        <!-- Screen 2 - Instant Account Creation -->
-        @else if (currentOnboardingPage() === 2) {
-        <div class="welcome-logo-container">
-          <div class="key-generation-animation">
-            <mat-icon class="key-icon">vpn_key</mat-icon>
-            <div class="generation-dots">
-              <span></span><span></span><span></span>
-            </div>
-          </div>
-        </div>
-        <div>
-          <h1>Your secure account is ready</h1>
-          <p>
-            No passwords, no emails — just yours.
-          </p>
-          <p>
-            Your account is secured with cryptographic keys that only you control.
-            This means complete privacy and security for all your communications.
-          </p>
           <button mat-button class="advanced-link" (click)="showAdvancedKey.set(!showAdvancedKey())">
             Advanced: View my key
           </button>
@@ -73,11 +99,67 @@
             <code class="key-display">npub1234...abcd</code>
           </div>
           }
+          }
         </div>
         }
 
-        <!-- Screen 3 - Quick Feature Intro -->
+        <!-- Screen 3 - Profile Setup -->
         @else if (currentOnboardingPage() === 3) {
+        <div class="welcome-logo-container">
+          <div class="profile-setup-avatar">
+            @if (profileImage()) {
+            <img [src]="profileImage()" alt="Profile" class="profile-preview" />
+            } @else {
+            <div class="avatar-placeholder">
+              <mat-icon>add_a_photo</mat-icon>
+            </div>
+            }
+            <input type="file" accept="image/*" (change)="onFileSelected($event)" #fileInput class="hidden-file-input"
+              title="Select profile image" />
+            <button mat-icon-button class="change-photo-btn" (click)="fileInput.click()">
+              <mat-icon>photo_camera</mat-icon>
+            </button>
+          </div>
+        </div>
+        <div>
+          <h1>Let's set up your profile</h1>
+          <p>
+            Let people recognize you with a name and photo.
+            You can always change these later.
+          </p>
+
+          <mat-form-field appearance="outline" class="profile-name-field">
+            <mat-label>What should we call you?</mat-label>
+            <input matInput [(ngModel)]="displayName" placeholder="Display name (optional)" maxlength="50" />
+          </mat-form-field>
+        </div>
+        }
+
+        <!-- Screen 4 - Choose Your Path -->
+        @else if (currentOnboardingPage() === 4) {
+        <div class="welcome-logo-container">
+          <img src="icons/icon.svg" alt="Nostria logo" class="welcome-logo" />
+        </div>
+        <div>
+          <h1>You're ready to explore!</h1>
+          <p>
+            Your profile is all set up. Now you can jump right in and start connecting
+            with others, or learn more about what makes Nostria special.
+          </p>
+
+          <div class="account-ready-actions">
+            <button mat-flat-button (click)="closeWelcomeScreen()" class="get-started-btn">
+              Get started
+            </button>
+            <button mat-button (click)="learnMore()" class="learn-more-btn">
+              Learn more
+            </button>
+          </div>
+        </div>
+        }
+
+        <!-- Screen 5 - Learn More (Feature Intro) -->
+        @else if (currentOnboardingPage() === 5) {
         <div class="welcome-logo-container">
           <img src="icons/icon.svg" alt="Nostria logo" class="welcome-logo" />
         </div>
@@ -116,47 +198,6 @@
           </div>
         </div>
         }
-
-        <!-- Screen 4 - Profile Setup -->
-        @else if (currentOnboardingPage() === 4) {
-        <div class="welcome-logo-container">
-          <div class="profile-setup-avatar">
-            @if (profileImage()) {
-            <img [src]="profileImage()" alt="Profile" class="profile-preview" />
-            } @else {
-            <div class="avatar-placeholder">
-              <mat-icon>add_a_photo</mat-icon>
-            </div>
-            }
-            <input type="file" accept="image/*" (change)="onFileSelected($event)" #fileInput class="hidden-file-input"
-              title="Select profile image" />
-            <button mat-icon-button class="change-photo-btn" (click)="fileInput.click()">
-              <mat-icon>photo_camera</mat-icon>
-            </button>
-          </div>
-        </div>
-        <div>
-          <h1>Let's set up your profile</h1>
-          <p>
-            Let people recognize you with a name and photo.
-            You can always change these later.
-          </p>
-
-          <mat-form-field appearance="outline" class="profile-name-field">
-            <mat-label>What should we call you?</mat-label>
-            <input matInput [(ngModel)]="displayName" placeholder="Display name (optional)" maxlength="50" />
-          </mat-form-field>
-
-          <div class="profile-setup-actions">
-            <button mat-button (click)="skipProfileSetup()">
-              Do this later
-            </button>
-            <button mat-flat-button (click)="completeProfileSetup()">
-              Start Exploring
-            </button>
-          </div>
-        </div>
-        }
       </div>
     </div>
 
@@ -165,24 +206,30 @@
       <div class="welcome-actions">
         @if (currentOnboardingPage() === 1) {
         <button mat-button (click)="closeWelcomeScreen()">Close</button>&nbsp;
-        @if (!showRegionSelector()) {
-        <button mat-button (click)="toggleRegionSelector()">Change region</button>&nbsp;
-        }
-        <button mat-flat-button (click)="nextOnboardingPage()">Continue</button>
+        <button mat-button (click)="showLogin()">Log In</button>&nbsp;
+        <button mat-flat-button (click)="nextOnboardingPage()">Create Account</button>
         }
 
         @if (currentOnboardingPage() === 2) {
+        @if (!isDetectingRegion()) {
         <button mat-button (click)="previousOnboardingPage()">Back</button>&nbsp;
         <button mat-flat-button (click)="nextOnboardingPage()">Continue</button>
         }
+        }
 
         @if (currentOnboardingPage() === 3) {
-        <button mat-button (click)="previousOnboardingPage()">Back</button>&nbsp;
-        <button mat-flat-button (click)="nextOnboardingPage()">Next</button>
+        <button mat-button (click)="skipProfileSetup()">Skip for now</button>&nbsp;
+        <button mat-flat-button (click)="nextOnboardingPage()">Continue</button>
         }
 
         @if (currentOnboardingPage() === 4) {
-        <!-- Actions are handled in the profile setup section -->
+        <button mat-button (click)="previousOnboardingPage()">Back</button>&nbsp;
+        <!-- Actions are handled in the choose your path section -->
+        }
+
+        @if (currentOnboardingPage() === 5) {
+        <button mat-button (click)="currentOnboardingPage.set(4)">Back</button>&nbsp;
+        <button mat-flat-button (click)="closeWelcomeScreen()">Start using Nostria</button>
         }
       </div>
     </div>
