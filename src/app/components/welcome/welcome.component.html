@@ -39,9 +39,11 @@
         <div class="welcome-logo-container">
           <div class="key-generation-animation">
             <mat-icon class="key-icon">vpn_key</mat-icon>
+            @if (isDetectingRegion()) {
             <div class="generation-dots">
               <span></span><span></span><span></span>
             </div>
+            }
           </div>
         </div>
         <div>
