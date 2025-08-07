@@ -51,8 +51,7 @@
             no personal details required.
           </p>
           <p>
-            With just a few clicks, you now have complete control over your data and privacy.
-            Your account is secured with cryptographic keys that only you control.
+            Choosing a region that is close to you, helps ensure faster access and better performance.
           </p>
           <div class="region-detection-loading">
             <mat-icon class="spinning">autorenew</mat-icon>
@@ -65,13 +64,12 @@
             no personal details required.
           </p>
           <p>
-            With just a few clicks, you now have complete control over your data and privacy.
-            Your account is secured with cryptographic keys that only you control.
+            Choosing a region that is close to you, helps ensure faster access and better performance.
           </p>
 
           <div class="region-info">
-            <span>Connected to: <strong>{{ detectedRegion() }}</strong></span>
-          </div>
+            <span>Region: <strong>{{ detectedRegion() }}</strong></span>
+          </div><br>
 
           <button mat-button class="region-change-btn" (click)="toggleRegionSelector()">
             Change region
@@ -135,26 +133,71 @@
         </div>
         }
 
-        <!-- Screen 4 - Choose Your Path -->
+        <!-- Screen 4 - Interests & Follow Suggestions -->
         @else if (currentOnboardingPage() === 4) {
         <div class="welcome-logo-container">
           <img src="icons/icon.svg" alt="Nostria logo" class="welcome-logo" />
         </div>
         <div>
-          <h1>You're ready to explore!</h1>
+          <h1>What interests you?</h1>
           <p>
-            Your profile is all set up. Now you can jump right in and start connecting
-            with others, or learn more about what makes Nostria special.
+            Select topics you're interested in to discover people and content you'll love.
+            You can always change these later.
           </p>
 
-          <div class="account-ready-actions">
-            <button mat-flat-button (click)="closeWelcomeScreen()" class="get-started-btn">
-              Get started
-            </button>
-            <button mat-button (click)="learnMore()" class="learn-more-btn">
-              Learn more
-            </button>
+          <div class="interests-selection">
+            <h3>Pick your interests:</h3>
+            <div class="interests-grid">
+              @for (interest of availableInterests(); track interest.id) {
+              <label class="interest-checkbox">
+                <input type="checkbox" [checked]="selectedInterests().includes(interest.id)"
+                  (change)="toggleInterest(interest.id)" />
+                <span class="interest-label">
+                  <mat-icon>{{ interest.icon }}</mat-icon>
+                  {{ interest.name }}
+                </span>
+              </label>
+              }
+            </div>
           </div>
+
+          @if (selectedInterests().length > 0) {
+          <div class="suggested-follows">
+            <h3>People to follow</h3>
+            <p>Here are some popular creators in your areas of interest:</p>
+
+            <div class="profiles-grid">
+              @for (profile of getSuggestedProfiles(); track profile.id) {
+              <div class="profile-card" [class.following]="followingProfiles().includes(profile.id)">
+                <div class="profile-avatar">
+                  <img [src]="profile.avatar" [alt]="profile.name + ' avatar'" [title]="profile.name" />
+                </div>
+                <div class="profile-info">
+                  <h4>{{ profile.name }}</h4>
+                  <p class="profile-bio">{{ profile.bio }}</p>
+                  <div class="profile-interests">
+                    @for (interestId of profile.interests; track interestId) {
+                    <span class="interest-tag">{{ getInterestName(interestId) }}</span>
+                    }
+                  </div>
+                </div>
+                <button mat-button [class.following-btn]="followingProfiles().includes(profile.id)"
+                  (click)="toggleFollow(profile.id)">
+                  @if (followingProfiles().includes(profile.id)) {
+                  <ng-container>
+                    <mat-icon>check</mat-icon> Following
+                  </ng-container>
+                  } @else {
+                  <ng-container>
+                    <mat-icon>add</mat-icon> Follow
+                  </ng-container>
+                  }
+                </button>
+              </div>
+              }
+            </div>
+          </div>
+          }
         </div>
         }
 
@@ -202,36 +245,48 @@
     </div>
 
     <div class="welcome-footer">
-      <div class="page-indicator">Page {{ currentOnboardingPage() }} of {{ totalOnboardingPages() }}</div>
-      <div class="welcome-actions">
-        @if (currentOnboardingPage() === 1) {
-        <button mat-button (click)="closeWelcomeScreen()">Close</button>&nbsp;
-        <button mat-button (click)="showLogin()">Log In</button>&nbsp;
-        <button mat-flat-button (click)="nextOnboardingPage()">Create Account</button>
-        }
+      @if (currentOnboardingPage() <= 4) { <div class="page-indicator">Page {{ currentOnboardingPage() }} of {{
+        totalOnboardingPages() }}</div>
+    } @else {
+    <div class="page-indicator"></div>
+    }
+    <div class="welcome-actions">
+      @if (currentOnboardingPage() === 1) {
+      <button mat-button (click)="closeWelcomeScreen()">Close</button>&nbsp;
+      <button mat-button (click)="showLogin()">Log In</button>&nbsp;
+      <button mat-flat-button (click)="nextOnboardingPage()">Create Account</button>
+      }
 
-        @if (currentOnboardingPage() === 2) {
-        @if (!isDetectingRegion()) {
-        <button mat-button (click)="previousOnboardingPage()">Back</button>&nbsp;
-        <button mat-flat-button (click)="nextOnboardingPage()">Continue</button>
-        }
-        }
+      @if (currentOnboardingPage() === 2) {
+      @if (!isDetectingRegion()) {
+      <button mat-button (click)="previousOnboardingPage()">Back</button>&nbsp;
+      <button mat-flat-button (click)="nextOnboardingPage()">Continue</button>
+      }
+      }
 
-        @if (currentOnboardingPage() === 3) {
-        <button mat-button (click)="skipProfileSetup()">Skip for now</button>&nbsp;
-        <button mat-flat-button (click)="nextOnboardingPage()">Continue</button>
-        }
+      @if (currentOnboardingPage() === 3) {
+      <button mat-button (click)="previousOnboardingPage()">Back</button>&nbsp;
+      <button mat-button (click)="skipProfileSetup()">Skip for now</button>&nbsp;
+      <button mat-flat-button (click)="nextOnboardingPage()">Continue</button>
+      }
 
-        @if (currentOnboardingPage() === 4) {
-        <button mat-button (click)="previousOnboardingPage()">Back</button>&nbsp;
-        <!-- Actions are handled in the choose your path section -->
+      @if (currentOnboardingPage() === 4) {
+      <button mat-button (click)="previousOnboardingPage()">Back</button>&nbsp;
+      <button mat-button (click)="learnMore()">Learn more</button>&nbsp;
+      <button mat-flat-button (click)="completeOnboarding()">
+        @if (selectedInterests().length === 0) {
+        Skip and get started
+        } @else {
+        Complete setup
         }
+      </button>
+      }
 
-        @if (currentOnboardingPage() === 5) {
-        <button mat-button (click)="currentOnboardingPage.set(4)">Back</button>&nbsp;
-        <button mat-flat-button (click)="closeWelcomeScreen()">Start using Nostria</button>
-        }
-      </div>
+      @if (currentOnboardingPage() === 5) {
+      <button mat-button (click)="currentOnboardingPage.set(4)">Back</button>&nbsp;
+      <button mat-flat-button (click)="closeWelcomeScreen()">Complete setup</button>
+      }
     </div>
   </div>
+</div>
 </div>
