@@ -123,6 +123,19 @@
 @media screen and (max-width: 599px) {
   .welcome-content-container {
     flex-direction: column;
+
+    // Remove width constraints on mobile
+    >div:first-child,
+    > :first-child {
+      width: auto;
+      flex-shrink: 0;
+    }
+
+    >div:last-child,
+    > :last-child {
+      width: auto;
+      flex-shrink: 0;
+    }
   }
 
   .welcome-content {
@@ -134,6 +147,31 @@
 
     p {
       font-size: 1rem;
+    }
+  }
+}
+
+// Ensure profile setup avatar has enough space on medium screens
+@media screen and (min-width: 600px) and (max-width: 960px) {
+  .welcome-content-container {
+
+    // Give more space to the first column when it contains profile setup
+    >div:first-child {
+      width: 40%; // Increase from 30% to 40% for better profile image display
+      min-width: 200px; // Ensure minimum width for avatar
+    }
+
+    >div:last-child {
+      width: 60%; // Adjust second column accordingly
+    }
+  }
+}
+
+// Add specific override for larger screens to ensure profile setup has enough space
+@media screen and (min-width: 961px) {
+  .welcome-content-container {
+    >div:first-child {
+      min-width: 250px; // Ensure adequate space for profile setup on large screens
     }
   }
 }
@@ -564,13 +602,21 @@
   flex-direction: column;
   align-items: center;
   padding: 2rem;
+  width: auto; // Don't inherit width constraints
+  max-width: none; // Don't inherit max-width constraints
+  min-width: 160px; // Ensure minimum width to prevent squeezing
 
   .profile-preview {
     width: 120px;
     height: 120px;
     border-radius: 50%;
     object-fit: cover;
+    object-position: center;
     border: 3px solid var(--mat-sys-outline-variant);
+    flex-shrink: 0; // Prevent squeezing
+    display: block; // Ensure proper display
+    min-width: 120px; // Explicit minimum to prevent any compression
+    min-height: 120px; // Explicit minimum to prevent any compression
   }
 
   .avatar-placeholder {
@@ -582,6 +628,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0; // Prevent squeezing
+    min-width: 120px; // Explicit minimum to prevent any compression
+    min-height: 120px; // Explicit minimum to prevent any compression
 
     mat-icon {
       font-size: 2rem;
