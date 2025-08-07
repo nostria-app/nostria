@@ -23,7 +23,7 @@ export class WelcomeComponent {
   themeService = inject(ThemeService);
   layout = inject(LayoutService);
   currentOnboardingPage = signal(1);
-  totalOnboardingPages = signal(4);
+  totalOnboardingPages = signal(5); // Now 5 screens total
 
   // Profile setup signals
   displayName = signal('');
@@ -31,7 +31,8 @@ export class WelcomeComponent {
   showAdvancedKey = signal(false);
 
   // Region detection signals
-  detectedRegion = signal('United States');
+  isDetectingRegion = signal(true);
+  detectedRegion = signal('');
   showRegionSelector = signal(false);
   availableRegions = signal([
     { name: 'United States', latency: '45ms', flag: '🇺🇸' },
@@ -40,7 +41,7 @@ export class WelcomeComponent {
     { name: 'Canada', latency: '52ms', flag: '🇨🇦' },
   ]);
 
-  // Feature highlights for screen 3
+  // Feature highlights for screen 3 (learn more section)
   features = signal([
     {
       icon: 'security',
@@ -62,6 +63,11 @@ export class WelcomeComponent {
 
   // Add method to navigate to the next onboarding page
   nextOnboardingPage(): void {
+    if (this.currentOnboardingPage() === 1) {
+      // Start region detection when moving to page 2
+      this.startRegionDetection();
+    }
+
     if (this.currentOnboardingPage() < this.totalOnboardingPages()) {
       this.currentOnboardingPage.update(page => page + 1);
     } else {
@@ -77,13 +83,37 @@ export class WelcomeComponent {
     }
   }
 
-  // Method to close the welcome screen
+  // Method to close the welcome screen (Get started)
   closeWelcomeScreen(): void {
-    localStorage.setItem('nostria-welcome', 'false');
-    this.layout.showWelcomeScreen.set(false);
+    this.layout.setWelcomeScreenPreference(false);
   }
 
-  // Region selection methods
+  showLogin(): void {
+    // Close the welcome screen and show the login dialog
+    this.layout.setWelcomeScreenPreference(false);
+    this.layout.showLoginDialog();
+  }
+
+  // Method to continue to learn more section
+  learnMore(): void {
+    this.currentOnboardingPage.set(5);
+  }
+
+  // Region detection methods
+  startRegionDetection(): void {
+    this.isDetectingRegion.set(true);
+    this.showRegionSelector.set(false);
+
+    // Simulate region detection with a delay
+    setTimeout(() => {
+      // In a real app, this would make an API call to detect the closest region
+      const regions = this.availableRegions();
+      const fastestRegion = regions[0]; // For demo, just pick the first one
+      this.detectedRegion.set(fastestRegion.name);
+      this.isDetectingRegion.set(false);
+    }, 2500); // 2.5 seconds simulation
+  }
+
   toggleRegionSelector(): void {
     this.showRegionSelector.update(show => !show);
   }
@@ -120,11 +150,11 @@ export class WelcomeComponent {
   }
 
   skipProfileSetup(): void {
-    this.closeWelcomeScreen();
+    this.nextOnboardingPage(); // Go to choose your path screen
   }
 
   completeProfileSetup(): void {
     // TODO: Save profile data to service
-    this.closeWelcomeScreen();
+    this.nextOnboardingPage(); // Go to choose your path screen
   }
 }
