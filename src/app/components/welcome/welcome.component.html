@@ -21,7 +21,8 @@
           <img src="icons/icon.svg" alt="Nostria logo" class="welcome-logo" />
         </div>
         <div>
-          <h1>Nostria - Your Social Media</h1>
+          <h1>Nostria</h1>
+          <div class="tagline">Your Social Media</div>
           <p class="easy-start-message">
             Getting started with Nostria is incredibly simple and takes just moments.
             No complicated setup, no personal information required.
@@ -67,12 +68,8 @@
             Choosing a region that is close to you, helps ensure faster access and better performance.
           </p>
 
-          <div class="region-info">
-            <span>Region: <strong>{{ detectedRegion() }}</strong></span>
-          </div><br>
-
-          <button mat-button class="region-change-btn" (click)="toggleRegionSelector()">
-            Change region
+          <button mat-button class="region-info-btn" (click)="toggleRegionSelector()">
+            Region: <strong>{{ detectedRegion() }}</strong>
           </button>
 
           @if (showRegionSelector()) {
@@ -85,16 +82,6 @@
               <span class="region-latency">{{ region.latency }}</span>
             </button>
             }
-          </div>
-          }
-
-          <button mat-button class="advanced-link" (click)="showAdvancedKey.set(!showAdvancedKey())">
-            Advanced: View my key
-          </button>
-          @if (showAdvancedKey()) {
-          <div class="advanced-key-info">
-            <p><small>Your public key (shareable):</small></p>
-            <code class="key-display">npub1234...abcd</code>
           </div>
           }
           }
