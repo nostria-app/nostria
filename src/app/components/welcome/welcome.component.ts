@@ -8,6 +8,15 @@ import { FormsModule } from '@angular/forms';
 import { LayoutService } from '../../services/layout.service';
 import { ThemeService } from '../../services/theme.service';
 
+interface SuggestedProfile {
+  id: string;
+  name: string;
+  bio: string;
+  avatar: string;
+  interests: string[];
+  region?: string;
+}
+
 @Component({
   selector: 'app-welcome',
   imports: [
@@ -65,6 +74,7 @@ export class WelcomeComponent {
 
   // Interests and follow suggestions for screen 4
   availableInterests = signal([
+    { id: 'regional', name: 'Regional', icon: 'location_on' },
     { id: 'sports', name: 'Sports', icon: 'sports_soccer' },
     { id: 'academic', name: 'Academic', icon: 'school' },
     { id: 'science', name: 'Science', icon: 'science' },
@@ -78,13 +88,16 @@ export class WelcomeComponent {
     { id: 'fitness', name: 'Fitness', icon: 'fitness_center' },
     { id: 'finance', name: 'Finance', icon: 'account_balance' },
     { id: 'fashion', name: 'Fashion', icon: 'checkroom' },
+    { id: 'architecture', name: 'Architecture', icon: 'architecture' },
+    { id: 'gardening', name: 'Gardening', icon: 'local_florist' },
+    { id: 'photography', name: 'Photography', icon: 'photo_camera' },
   ]);
 
   selectedInterests = signal<string[]>([]);
   followingProfiles = signal<string[]>([]);
 
   // Sample suggested profiles data
-  suggestedProfiles = signal([
+  suggestedProfiles = signal<SuggestedProfile[]>([
     {
       id: 'profile1',
       name: 'Tech Innovator',
@@ -132,6 +145,34 @@ export class WelcomeComponent {
       avatar:
         'https://images.unsplash.com/photo-1519345182560-3f2917c472ef?w=100&h=100&fit=crop&crop=face',
       interests: ['science', 'academic', 'technology'],
+    },
+    // Regional profiles - these will be filtered based on detected region
+    {
+      id: 'regional1',
+      name: 'Local Community Leader',
+      bio: 'Connecting neighbors and building stronger communities',
+      avatar:
+        'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=face',
+      interests: ['regional'],
+      region: 'North America', // Will be dynamically updated
+    },
+    {
+      id: 'regional2',
+      name: 'Regional News Reporter',
+      bio: 'Covering local stories that matter to our community',
+      avatar:
+        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face',
+      interests: ['regional'],
+      region: 'North America', // Will be dynamically updated
+    },
+    {
+      id: 'regional3',
+      name: 'Local Business Owner',
+      bio: 'Supporting the local economy and community growth',
+      avatar:
+        'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop&crop=face',
+      interests: ['regional'],
+      region: 'North America', // Will be dynamically updated
     },
   ]);
 
@@ -249,9 +290,22 @@ export class WelcomeComponent {
     }
 
     // Filter profiles that have at least one matching interest
-    return this.suggestedProfiles().filter(profile =>
+    let filteredProfiles = this.suggestedProfiles().filter(profile =>
       profile.interests.some(interest => selected.includes(interest))
     );
+
+    // For regional profiles, update their region to match detected region and filter
+    if (selected.includes('regional')) {
+      const currentRegion = this.detectedRegion();
+      filteredProfiles = filteredProfiles.map(profile => {
+        if (profile.interests.includes('regional') && profile.region) {
+          return { ...profile, region: currentRegion };
+        }
+        return profile;
+      });
+    }
+
+    return filteredProfiles;
   }
 
   getInterestName(interestId: string): string {
