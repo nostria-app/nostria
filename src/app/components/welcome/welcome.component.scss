@@ -173,6 +173,17 @@
 
 // New styles for updated onboarding flow
 
+// Tagline styling for "Your Social Media"
+.tagline {
+  font-size: 1.5rem;
+  font-weight: 300;
+  color: var(--mat-sys-primary);
+  margin: 0.5rem 0 1.5rem 0;
+  opacity: 0.9;
+  letter-spacing: 0.5px;
+  font-style: italic;
+}
+
 // Easy start message styling
 .easy-start-message {
   background-color: var(--mat-sys-surface-container);
@@ -252,6 +263,28 @@
 
   strong {
     color: var(--mat-sys-on-surface);
+  }
+}
+
+// Region info button (clickable region display)
+.region-info-btn {
+  margin: 1.5rem 0 0.5rem 0;
+  padding: 0.75rem 1.25rem;
+  background-color: var(--mat-sys-surface-container);
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 12px;
+  font-size: 0.875rem;
+  color: var(--mat-sys-on-surface-variant);
+  transition: all 0.2s ease;
+
+  strong {
+    color: var(--mat-sys-on-surface);
+  }
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-high);
+    border-color: var(--mat-sys-outline);
+    box-shadow: var(--mat-sys-level1);
   }
 }
 
