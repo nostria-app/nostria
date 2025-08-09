@@ -57,6 +57,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { ApplicationService } from '../../services/application.service';
 import { RepostService } from '../../services/repost.service';
 import { Link } from '../../components/link/link';
+import { Introduction } from '../../components/introduction/introduction';
 
 interface NavLink {
   id: string;
@@ -93,6 +94,7 @@ const DEFAULT_COLUMNS: NavLink[] = [
     MatDividerModule,
     ContentComponent,
     Link,
+    Introduction,
   ],
   templateUrl: './feeds.component.html',
   styleUrl: './feeds.component.scss',

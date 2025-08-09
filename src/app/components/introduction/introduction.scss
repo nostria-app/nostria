@@ -1,0 +1,226 @@
+.introduction-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 64px); // Account for toolbar height (64px on desktop)
+    padding: 2rem 1rem;
+    background-color: var(--mat-app-background-color);
+
+    // On mobile, toolbar is 56px
+    @media (max-width: 599px) {
+        min-height: calc(100vh - 56px - 56px); // Account for toolbar (56px) + mobile nav (56px)
+    }
+
+    // On tablet/desktop, just account for toolbar
+    @media (min-width: 600px) {
+        min-height: calc(100vh - 64px);
+    }
+}
+
+.introduction-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 1000px;
+    width: 100%;
+    gap: 4rem;
+
+    // Mobile-first: vertical stack (branding first, then actions)
+    flex-direction: column-reverse;
+
+    // Large screens: horizontal layout (actions left, branding right)
+    @media (min-width: 768px) {
+        flex-direction: row;
+        text-align: left;
+    }
+}
+
+.actions-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+    max-width: 400px;
+
+    .action-card {
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: var(--mat-sys-level1);
+        width: 100%;
+        min-height: 100px; // Ensure consistent height
+
+        &:hover {
+            box-shadow: var(--mat-sys-level3);
+            transform: translateY(-2px);
+        }
+
+        &.new-user {
+            background: linear-gradient(135deg, var(--mat-sys-primary-container) 0%, var(--mat-sys-secondary-container) 100%);
+
+            .card-content {
+                color: var(--mat-sys-on-primary-container);
+            }
+        }
+
+        &.login {
+            background-color: var(--mat-sys-surface-container);
+
+            .card-content {
+                color: var(--mat-sys-on-surface);
+            }
+        }
+
+        mat-card-content {
+            padding: 1.5rem;
+            height: 100%; // Ensure content takes full height
+        }
+
+        .card-content {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            height: 100%; // Ensure consistent internal height
+
+            .card-icon {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 48px;
+                height: 48px;
+                flex-shrink: 0; // Prevent icon from shrinking
+                border-radius: 50%;
+                background-color: rgba(255, 255, 255, 0.1);
+
+                mat-icon {
+                    font-size: 24px;
+                    width: 24px;
+                    height: 24px;
+                }
+            }
+
+            .card-text {
+                flex: 1;
+                text-align: left;
+                min-width: 0; // Allow text to wrap if needed
+
+                h3 {
+                    margin: 0 0 0.25rem 0;
+                    font-size: 1.25rem;
+                    line-height: 1.2; // Consistent line height
+                }
+
+                p {
+                    margin: 0;
+                    font-size: 0.9rem;
+                    opacity: 0.8;
+                    line-height: 1.3; // Consistent line height
+                }
+            }
+        }
+    }
+}
+
+.branding-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    flex-shrink: 0;
+
+    .logo-container {
+        margin-bottom: 1.5rem;
+
+        .nostria-logo {
+            width: 120px;
+            height: 120px;
+            border-radius: 20%;
+            // Remove the card-like shadow for a cleaner look
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
+        }
+    }
+
+    .app-title {
+        margin: 0 0 0.5rem 0;
+        font-size: 3rem;
+        color: var(--mat-sys-on-background);
+    }
+
+    .app-slogan {
+        margin: 0;
+        font-size: 1.25rem;
+        color: var(--mat-sys-on-surface-variant);
+    }
+
+    // Large screens: align to right
+    @media (min-width: 768px) {
+        .logo-container .nostria-logo {
+            width: 140px;
+            height: 140px;
+        }
+
+        .app-title {
+            font-size: 3.5rem;
+        }
+
+        .app-slogan {
+            font-size: 1.4rem;
+        }
+    }
+}
+
+// Responsive adjustments
+@media (max-width: 600px) {
+    .introduction-container {
+        padding: 1rem;
+    }
+
+    .introduction-content {
+        gap: 2rem;
+    }
+
+    .branding-section {
+        .logo-container .nostria-logo {
+            width: 100px;
+            height: 100px;
+        }
+
+        .app-title {
+            font-size: 2.5rem;
+        }
+
+        .app-slogan {
+            font-size: 1.1rem;
+        }
+    }
+
+    .actions-section {
+        .action-card {
+            mat-card-content {
+                padding: 1rem;
+            }
+
+            .card-content {
+                .card-icon {
+                    width: 40px;
+                    height: 40px;
+
+                    mat-icon {
+                        font-size: 20px;
+                        width: 20px;
+                        height: 20px;
+                    }
+                }
+
+                .card-text {
+                    h3 {
+                        font-size: 1.1rem;
+                    }
+
+                    p {
+                        font-size: 0.85rem;
+                    }
+                }
+            }
+        }
+    }
+}
