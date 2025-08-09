@@ -200,7 +200,7 @@ export class App implements OnInit {
   });
 
   navItems: NavItem[] = [
-    { path: '', label: 'Feeds', icon: 'stacks', authenticated: true },
+    { path: '', label: 'Feeds', icon: 'stacks', authenticated: false },
     // { path: 'feed', label: 'Feed', icon: 'notes', showInMobile: true },
     {
       path: 'articles',

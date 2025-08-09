@@ -576,6 +576,46 @@ export class LayoutService implements OnDestroy {
     });
   }
 
+  /**
+   * Opens the login dialog with specific step and blur backdrop
+   * @param step - The specific login step to navigate to (optional)
+   */
+  async showLoginDialogWithStep(step?: string): Promise<void> {
+    this.logger.debug('showLoginDialogWithStep called', { step });
+    // Apply the blur class to the document body before opening the dialog
+    document.body.classList.add('blur-backdrop');
+
+    const dialogRef = this.dialog.open(LoginDialogComponent, {
+      disableClose: true,
+    });
+
+    this.logger.debug('Login dialog opened with step', { step });
+
+    // Navigate to specific step after dialog opens if provided
+    if (step) {
+      dialogRef.afterOpened().subscribe(() => {
+        const componentInstance = dialogRef.componentInstance;
+        if (step === 'new-user') {
+          setTimeout(() => {
+            componentInstance.startNewAccountFlow();
+          }, 100);
+        } else if (step === 'login') {
+          setTimeout(() => {
+            componentInstance.goToStep(
+              componentInstance.LoginStep.LOGIN_OPTIONS
+            );
+          }, 100);
+        }
+      });
+    }
+
+    // Handle dialog close
+    dialogRef.afterClosed().subscribe(async () => {
+      this.logger.debug('Login dialog closed');
+      document.body.classList.remove('blur-backdrop');
+    });
+  }
+
   navigateToProfile(npub: string): void {
     this.router.navigate(['/p', npub]);
     setTimeout(() => {
