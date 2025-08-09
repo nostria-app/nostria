@@ -444,9 +444,18 @@
   border-radius: 50%;
   overflow: hidden;
   border: 2px solid var(--mat-sys-outline-variant);
-  transition: border-color 0.3s ease;
+  transition: all 0.3s ease;
+  cursor: pointer;
 
   &:hover {
+    border-color: var(--mat-sys-primary);
+    transform: scale(1.05);
+    box-shadow: var(--mat-sys-level2);
+  }
+
+  &:focus {
+    outline: 2px solid var(--mat-sys-primary);
+    outline-offset: 2px;
     border-color: var(--mat-sys-primary);
   }
 
@@ -464,6 +473,7 @@
     justify-content: center;
     background-color: var(--mat-sys-surface-container);
     color: var(--mat-sys-on-surface-variant);
+    transition: all 0.3s ease;
 
     mat-icon {
       font-size: 32px;
@@ -472,21 +482,9 @@
     }
   }
 
-  .change-photo-btn {
-    position: absolute;
-    bottom: -8px;
-    right: -8px;
-    width: 32px;
-    height: 32px;
-    background-color: var(--mat-sys-primary);
-    color: var(--mat-sys-on-primary);
-    box-shadow: var(--mat-sys-level2);
-
-    mat-icon {
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
-    }
+  &:hover .avatar-placeholder {
+    background-color: var(--mat-sys-surface-container-high);
+    color: var(--mat-sys-primary);
   }
 }
 
