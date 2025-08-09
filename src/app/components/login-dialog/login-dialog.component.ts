@@ -71,6 +71,22 @@ export class LoginDialogComponent {
   nostrConnectLoading = signal<boolean>(false);
   selectedRegionId = signal<string | null>(null);
 
+  // Region discovery signals (similar to welcome component)
+  isDetectingRegion = signal(true);
+  detectedRegion = signal('');
+  showRegionSelector = signal(false);
+  availableRegions = signal([
+    { name: 'United States', latency: '45ms', flag: '🇺🇸', id: 'us' },
+    { name: 'Europe', latency: '78ms', flag: '🇪🇺', id: 'eu' },
+    { name: 'Asia Pacific', latency: '120ms', flag: '🌏', id: 'as' },
+    { name: 'Africa', latency: '85ms', flag: '🌍', id: 'af' },
+    { name: 'South America', latency: '95ms', flag: '🌎', id: 'sa' },
+  ]);
+
+  // Profile setup signals (similar to welcome component)
+  displayName = signal('');
+  profileImage = signal<string | null>(null);
+
   // Input fields
   nsecKey = '';
   previewPubkey =
@@ -93,6 +109,61 @@ export class LoginDialogComponent {
   startNewAccountFlow(): void {
     this.logger.debug('Starting account creation flow');
     this.goToStep(LoginStep.REGION_SELECTION);
+    // Start region detection when entering region selection
+    this.startRegionDetection();
+  }
+
+  // Region detection and selection methods (similar to welcome component)
+  startRegionDetection(): void {
+    this.logger.debug('Starting region detection');
+    this.isDetectingRegion.set(true);
+    this.detectedRegion.set('');
+
+    // Simulate region detection process (you can replace with actual latency testing)
+    setTimeout(() => {
+      // Mock detection logic - find the region with lowest latency
+      const sortedRegions = [...this.availableRegions()].sort(
+        (a, b) => parseInt(a.latency) - parseInt(b.latency)
+      );
+      const bestRegion = sortedRegions[0];
+
+      this.detectedRegion.set(bestRegion.name);
+      this.selectedRegionId.set(bestRegion.id);
+      this.isDetectingRegion.set(false);
+
+      this.logger.debug('Region detection completed', {
+        detectedRegion: bestRegion.name,
+        selectedRegionId: bestRegion.id,
+      });
+    }, 2000); // 2 second delay to show detection process
+  }
+
+  toggleRegionSelector(): void {
+    this.showRegionSelector.set(!this.showRegionSelector());
+  }
+
+  selectRegionManually(region: { name: string; id: string }): void {
+    this.logger.debug('Manual region selection', { region });
+    this.detectedRegion.set(region.name);
+    this.selectedRegionId.set(region.id);
+    this.showRegionSelector.set(false);
+  }
+
+  // Profile setup methods (similar to welcome component)
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files[0]) {
+      const file = input.files[0];
+      const reader = new FileReader();
+
+      reader.onload = e => {
+        const result = e.target?.result as string;
+        this.profileImage.set(result);
+        this.logger.debug('Profile image selected');
+      };
+
+      reader.readAsDataURL(file);
+    }
   }
 
   // Region selection methods
@@ -104,13 +175,22 @@ export class LoginDialogComponent {
     }
   }
 
-  // Account generation
+  // Account generation - now includes profile setup
   generateNewKey(): void {
     this.logger.debug('Generating new key', {
       regionId: this.selectedRegionId(),
+      displayName: this.displayName(),
+      hasProfileImage: !!this.profileImage(),
     });
     if (this.selectedRegionId()) {
       this.loading.set(true);
+
+      // TODO: Pass profile data to the service when it supports it
+      // const profileData = {
+      //   name: this.displayName() || undefined,
+      //   picture: this.profileImage() || undefined,
+      // };
+
       this.nostrService.generateNewKey(this.selectedRegionId()!);
       this.closeDialog();
     }
