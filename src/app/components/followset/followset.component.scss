@@ -1,0 +1,204 @@
+// Followset component styles
+.followset-container {
+    width: 100%;
+}
+
+.followset-header {
+    text-align: center;
+    margin-bottom: 2rem;
+
+    h1 {
+        margin-bottom: 1rem;
+    }
+
+    p {
+        color: var(--mat-sys-on-surface-variant);
+        font-size: 1.1rem;
+    }
+}
+
+// Interests selection styles
+.interests-selection {
+    margin: 2rem 0;
+
+    h3 {
+        margin-bottom: 1rem;
+        color: var(--mat-sys-on-surface);
+        text-align: left;
+    }
+}
+
+.interests-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    width: 100%;
+}
+
+.interest-checkbox {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+
+    input[type="checkbox"] {
+        display: none;
+    }
+
+    .interest-label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1rem;
+        border: 1px solid var(--mat-sys-outline-variant);
+        border-radius: 8px;
+        background-color: var(--mat-sys-surface-container-low);
+        color: var(--mat-sys-on-surface-variant);
+        font-size: 0.875rem;
+        transition: all 0.2s ease;
+        width: 100%;
+
+        mat-icon {
+            font-size: 1.2rem;
+            width: 1.2rem;
+            height: 1.2rem;
+        }
+    }
+
+    input[type="checkbox"]:checked+.interest-label {
+        background-color: var(--mat-sys-primary-container);
+        border-color: var(--mat-sys-primary);
+        color: var(--mat-sys-on-primary-container);
+
+        mat-icon {
+            color: var(--mat-sys-primary);
+        }
+    }
+
+    &:hover .interest-label {
+        background-color: var(--mat-sys-surface-container);
+        border-color: var(--mat-sys-outline);
+    }
+}
+
+// Suggested follows styles
+.suggested-follows {
+    margin: 2rem 0;
+
+    h3 {
+        margin-bottom: 0.5rem;
+        color: var(--mat-sys-on-surface);
+        text-align: left;
+    }
+
+    p {
+        margin-bottom: 1.5rem;
+        color: var(--mat-sys-on-surface-variant);
+        text-align: left;
+    }
+}
+
+.profiles-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.profile-card {
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+    border: 1px solid var(--mat-sys-outline-variant);
+    border-radius: 12px;
+    background-color: var(--mat-sys-surface-container-low);
+    transition: all 0.2s ease;
+
+    &:hover {
+        background-color: var(--mat-sys-surface-container);
+        border-color: var(--mat-sys-outline);
+        box-shadow: var(--mat-sys-level1);
+    }
+
+    &.following {
+        border-color: var(--mat-sys-primary);
+        background-color: var(--mat-sys-primary-container);
+    }
+}
+
+.profile-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+
+    img {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid var(--mat-sys-outline-variant);
+    }
+}
+
+.profile-info {
+    flex: 1;
+    margin-bottom: 1rem;
+
+    h4 {
+        margin: 0 0 0.5rem 0;
+        font-size: 1rem;
+        font-weight: 500;
+        color: var(--mat-sys-on-surface);
+    }
+
+    .profile-bio {
+        font-size: 0.875rem;
+        color: var(--mat-sys-on-surface-variant);
+        margin-bottom: 0.75rem;
+        line-height: 1.4;
+    }
+
+    .profile-region {
+        font-size: 0.8rem;
+        color: var(--mat-sys-primary);
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+    }
+}
+
+.profile-interests {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+.interest-tag {
+    padding: 0.25rem 0.5rem;
+    background-color: var(--mat-sys-secondary-container);
+    color: var(--mat-sys-on-secondary-container);
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.profile-card button {
+    align-self: stretch;
+
+    &.following-btn {
+        background-color: var(--mat-sys-primary);
+        color: var(--mat-sys-on-primary);
+    }
+}
+
+// Get started section styles
+.get-started-section {
+    margin-top: 3rem;
+    text-align: center;
+
+    .get-started-btn {
+        padding: 0.75rem 2rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+}

@@ -26,6 +26,7 @@ nav {
 }
 
 @media (display-mode: window-controls-overlay) {
+
   /** This is for when the app is running in a window with custom title bar controls. */
   .app-container {
     padding-top: env(titlebar-area-height, 33px);
@@ -44,8 +45,7 @@ nav {
   /* Prevent horizontal scrolling */
 
   // Make space for mobile nav when on mobile
-  @media (max-width: 599px) {
-  }
+  @media (max-width: 599px) {}
 }
 
 // Configure mat-sidenav-content to be a flex container
@@ -105,6 +105,7 @@ mat-sidenav-content {
   position: relative;
   display: inline-flex;
   align-items: center;
+  cursor: pointer;
 }
 
 .beta-indicator {
@@ -356,9 +357,7 @@ mat-sidenav-content {
   font-size: 64px;
   height: 64px;
   width: 64px;
-  color: var(
-    --mat-card-title-text-color
-  ); // Changed from fixed white color to theme-dependent variable
+  color: var(--mat-card-title-text-color); // Changed from fixed white color to theme-dependent variable
 }
 
 .profile-header h2 {
@@ -509,8 +508,7 @@ mat-sidenav-content {
   90% {
     opacity: 1;
     transform: scale(1) rotate(360deg);
-    border-color: var(--mat-sys-primary) var(--mat-sys-primary)
-      var(--mat-sys-primary) var(--mat-sys-primary);
+    border-color: var(--mat-sys-primary) var(--mat-sys-primary) var(--mat-sys-primary) var(--mat-sys-primary);
   }
 
   100% {

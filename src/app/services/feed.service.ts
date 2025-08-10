@@ -23,6 +23,8 @@ import {
   UserRelayServiceEx,
 } from './account-relay.service';
 import { Algorithms } from './algorithms';
+import { UserDataFactoryService } from './user-data-factory.service';
+import { UserRelayExFactoryService, UserRelayFactoryService } from './user-relay-factory.service';
 
 export interface FeedData {
   column: ColumnConfig;
@@ -162,6 +164,9 @@ export class FeedService {
   private readonly app = inject(ApplicationService);
   private readonly userRelayEx = inject(UserRelayServiceEx);
   private readonly sharedRelayEx = inject(SharedRelayServiceEx);
+  private readonly userDataFactory = inject(UserDataFactoryService);
+  private readonly userRelayFactory = inject(UserRelayExFactoryService);
+
   private readonly algorithms = inject(Algorithms);
 
   // Signals for feeds and relays
@@ -598,10 +603,11 @@ export class FeedService {
     // Process users in parallel with incremental updates
     const fetchPromises = pubkeys.map(async pubkey => {
       try {
-        await this.userRelayEx.setUser(pubkey);
+        const userRelayEx = await this.userRelayFactory.create(pubkey);
+        // await this.userRelayEx.setUser(pubkey);
 
         // Fetch events older than the last timestamp
-        const events = await this.userRelayEx.getEventsByPubkeyAndKind(
+        const events = await userRelayEx.getEventsByPubkeyAndKind(
           pubkey,
           kinds.ShortTextNote
         );

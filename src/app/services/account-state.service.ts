@@ -187,20 +187,28 @@ export class AccountStateService implements OnDestroy {
     this.profile.set(undefined);
   }
 
-  async follow(pubkey: string) {
+  async follow(pubkeys: string | string[]) {
     const account = this.account();
     if (!account) {
-      console.warn('No account is currently set to follow:', pubkey);
+      console.warn('No account is currently set to follow:', pubkeys);
       return;
     }
 
-    // Check if already following
-    if (this.followingList().includes(pubkey)) {
-      console.log(`Already following ${pubkey}`);
+    // Normalize input to always be an array
+    const pubkeyArray = Array.isArray(pubkeys) ? pubkeys : [pubkeys];
+
+    // Filter out pubkeys that are already being followed
+    const currentFollowing = this.followingList();
+    const newPubkeys = pubkeyArray.filter(
+      pubkey => !currentFollowing.includes(pubkey)
+    );
+
+    if (newPubkeys.length === 0) {
+      console.log('All specified pubkeys are already being followed');
       return;
     }
 
-    // Get the existing following event so we don't loose existing structure.
+    // Get the existing following event so we don't lose existing structure.
     // Ensure we keep original 'content' and relays/pet names.
     let followingEvent: Event | UnsignedEvent | null =
       await this.storage.getEventByPubkeyAndKind([account.pubkey], 3);
@@ -208,35 +216,43 @@ export class AccountStateService implements OnDestroy {
     if (!followingEvent) {
       console.warn(
         'No existing following event found. This might result in overwriting this event on unknown relays.',
-        pubkey
+        newPubkeys
       );
+      // Create new event with all new pubkeys
+      const tags = newPubkeys.map(pubkey => ['p', pubkey]);
       followingEvent = this.utilities.createEvent(
         kinds.Contacts,
         '',
-        [[`p`, pubkey]],
+        tags,
         account.pubkey
       );
     } else {
-      // Add the pubkey from the following list in the event, if not already present
-      if (
-        !followingEvent.tags.some(tag => tag[0] === 'p' && tag[1] === pubkey)
-      ) {
-        followingEvent.tags.push(['p', pubkey]);
-      } else {
-        console.log(`Pubkey ${pubkey} is already in the following list.`);
-        return;
+      // Add all new pubkeys to the following list in the event
+      for (const pubkey of newPubkeys) {
+        if (
+          !followingEvent.tags.some(tag => tag[0] === 'p' && tag[1] === pubkey)
+        ) {
+          followingEvent.tags.push(['p', pubkey]);
+        }
       }
     }
 
-    // Add to following list
-    this.followingList.update(list => [...list, pubkey]);
+    // Add all new pubkeys to following list
+    this.followingList.update(list => [...list, ...newPubkeys]);
 
-    // Publish the event to update the following list
+    // Publish the event to update the following list (single operation)
     try {
       this.publish.set(followingEvent);
-      console.log(`Followed ${pubkey} successfully.`);
+      console.log(
+        `Followed ${newPubkeys.length} pubkey(s) successfully:`,
+        newPubkeys
+      );
     } catch (error) {
-      console.error(`Failed to unfollow ${pubkey}:`, error);
+      console.error(`Failed to follow pubkey(s):`, error);
+      // Rollback the local state if publish failed
+      this.followingList.update(list =>
+        list.filter(pubkey => !newPubkeys.includes(pubkey))
+      );
     }
   }
 

@@ -57,6 +57,14 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { ApplicationService } from '../../services/application.service';
 import { RepostService } from '../../services/repost.service';
 import { Link } from '../../components/link/link';
+import { Introduction } from '../../components/introduction/introduction';
+import {
+  FollowsetComponent,
+  Interest,
+  SuggestedProfile,
+} from '../../components/followset/followset.component';
+import { AccountStateService } from '../../services/account-state.service';
+import { Followset } from '../../services/followset';
 
 interface NavLink {
   id: string;
@@ -93,6 +101,8 @@ const DEFAULT_COLUMNS: NavLink[] = [
     MatDividerModule,
     ContentComponent,
     Link,
+    Introduction,
+    FollowsetComponent,
   ],
   templateUrl: './feeds.component.html',
   styleUrl: './feeds.component.scss',
@@ -115,6 +125,8 @@ export class FeedsComponent implements OnInit, OnDestroy {
   private repostService = inject(RepostService);
   private snackBar = inject(MatSnackBar);
   protected app = inject(ApplicationService);
+  private accountState = inject(AccountStateService);
+  private followsetService = inject(Followset);
 
   // UI State Signals
   activeSection = signal<'discover' | 'following' | 'media'>('discover');
@@ -132,6 +144,22 @@ export class FeedsComponent implements OnInit, OnDestroy {
       return 'one-column-layout';
     }
   });
+
+  // Check if user has an empty following list
+  hasEmptyFollowingList = computed(() => {
+    return this.accountState.followingList().length === 0;
+  });
+
+  // Followset data for new users
+  selectedInterests = signal<string[]>([]);
+  followingProfiles = signal<string[]>([]);
+  detectedRegion = signal('');
+
+  // Available interests - will be populated from starter packs
+  availableInterests = signal<Interest[]>([]);
+
+  // Suggested profiles - will be populated dynamically from starter packs
+  suggestedProfiles = signal<SuggestedProfile[]>([]);
 
   isMobileView = computed(() => {
     const isMobile = this.screenWidth() < 1024;
@@ -476,6 +504,112 @@ export class FeedsComponent implements OnInit, OnDestroy {
   bookmarkContent(event: NostrRecord): void {
     // Implement bookmark functionality
     this.notificationService.notify('Content bookmarked');
+  }
+
+  // Method called when user completes followset onboarding
+  async onFollowsetComplete(data: {
+    selectedInterests: string[];
+    followsToAdd: string[];
+  }): Promise<void> {
+    try {
+      const { selectedInterests, followsToAdd } = data;
+
+      this.logger.debug('Followset onboarding completed', {
+        selectedInterests,
+        followsToAdd,
+      });
+
+      // Get all pubkeys from selected starter packs
+      // const starterPackPubkeys =
+      //   this.followsetService.getPubkeysFromInterests(selectedInterests);
+
+      // REMOVED: For now, we don't want to follow the full starter packs, instead
+      // we use them as "following" lists with suggestions for user to pick.
+
+      // // Follow all selected profiles from the followset
+      // for (const pubkey of followsToAdd) {
+      //   await this.accountState.follow(pubkey);
+      // }
+
+      // Also follow some users from the selected starter packs (limit to avoid spam)
+      // const additionalFollows = starterPackPubkeys
+      //   .filter(pubkey => !followsToAdd.includes(pubkey))
+      //   .slice(0, 10); // Limit to 10 additional follows
+
+      // Follow all selected profiles from the followset in a single batch operation
+      await this.accountState.follow(followsToAdd);
+
+      this.notificationService.notify(
+        `Welcome! Following ${followsToAdd.length} accounts.`
+      );
+
+      // Update local state
+      this.selectedInterests.set(selectedInterests);
+      this.followingProfiles.update(current => [
+        ...new Set([...current, ...followsToAdd]),
+      ]);
+
+      // Reset followset display state
+      this.suggestedProfiles.set([]);
+    } catch (error) {
+      this.logger.error('Failed to complete followset onboarding:', error);
+      this.notificationService.notify(
+        'Error completing setup. Please try again.'
+      );
+    }
+  }
+
+  // Followset interaction methods
+  async toggleInterest(interestId: string): Promise<void> {
+    this.selectedInterests.update(interests => {
+      if (interests.includes(interestId)) {
+        return interests.filter(id => id !== interestId);
+      } else {
+        return [...interests, interestId];
+      }
+    });
+
+    // Fetch suggested profiles based on selected interests
+    await this.updateSuggestedProfiles();
+  }
+
+  /**
+   * Update suggested profiles based on selected interests
+   */
+  private async updateSuggestedProfiles(): Promise<void> {
+    try {
+      const selectedInterests = this.selectedInterests();
+      if (selectedInterests.length === 0) {
+        this.suggestedProfiles.set([]);
+        return;
+      }
+
+      const starterPacks = this.followsetService.starterPacks();
+      const profiles =
+        await this.followsetService.convertStarterPacksToProfiles(
+          starterPacks,
+          selectedInterests
+        );
+
+      this.suggestedProfiles.set(profiles);
+      this.logger.debug(
+        `Updated suggested profiles: ${profiles.length} profiles`
+      );
+    } catch (error) {
+      this.logger.error('Failed to update suggested profiles:', error);
+    }
+  }
+
+  toggleFollow(profileId: string): void {
+    this.followingProfiles.update(profiles => {
+      if (profiles.includes(profileId)) {
+        return profiles.filter(id => id !== profileId);
+      } else {
+        // Add to local state and also to account following
+        this.accountState.follow(profileId);
+        return [...profiles, profileId];
+      }
+    });
   }
 
   selectColumn(index: number): void {
@@ -869,6 +1003,42 @@ export class FeedsComponent implements OnInit, OnDestroy {
     this.logger.debug('FeedsComponent initializing...');
     // Re-establish subscriptions when component loads
     this.feedService.subscribe();
+
+    // Initialize followset data for new users
+    this.initializeFollowsetData();
+  }
+
+  /**
+   * Initialize followset data by fetching starter packs from Nostr
+   */
+  private async initializeFollowsetData(): Promise<void> {
+    try {
+      // Only fetch if user has empty following list
+      if (this.hasEmptyFollowingList()) {
+        this.logger.debug(
+          'User has empty following list, fetching starter packs...'
+        );
+
+        // Fetch starter packs from the followset service
+        const starterPacks = await this.followsetService.fetchStarterPacks();
+
+        if (starterPacks.length > 0) {
+          // Convert starter packs to interests
+          const interests =
+            this.followsetService.convertStarterPacksToInterests(starterPacks);
+          this.availableInterests.set(interests);
+
+          this.logger.debug(
+            `Loaded ${interests.length} interests from starter packs`
+          );
+        } else {
+          this.logger.warn('No starter packs found, using default interests');
+        }
+      }
+    } catch (error) {
+      this.logger.error('Failed to initialize followset data:', error);
+      // Keep default interests if starter pack fetching fails
+    }
   }
 
   ngOnDestroy() {

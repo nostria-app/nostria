@@ -21,19 +21,15 @@
   height: 100%;
   display: flex;
   flex-direction: column; // Stack children vertically
-  background: linear-gradient(
-    to bottom,
-    rgba(218, 196, 255, 0.6),
-    rgba(230, 230, 230, 0.8)
-  );
+  background: linear-gradient(to bottom,
+      rgba(218, 196, 255, 0.6),
+      rgba(230, 230, 230, 0.8));
 }
 
 :host-context(.dark) .welcome-backdrop {
-  background: linear-gradient(
-    to bottom,
-    rgba(126, 87, 194, 0.3),
-    rgba(66, 66, 66, 0.5)
-  );
+  background: linear-gradient(to bottom,
+      rgba(126, 87, 194, 0.3),
+      rgba(66, 66, 66, 0.5));
 }
 
 .welcome-top {
@@ -99,16 +95,33 @@
   padding: 1rem;
 
   // Maintain the existing layout properties for inner content
-  > div:first-child,
+  >div:first-child,
   > :first-child {
     width: 30%;
     flex-shrink: 0;
   }
 
-  > div:last-child,
+  >div:last-child,
   > :last-child {
     width: 70%;
     flex-shrink: 0;
+  }
+}
+
+// Full-width content for interests screen (screen 4)
+.interests-content-full-width {
+  flex: 1;
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  h1,
+  p {
+    text-align: center;
   }
 }
 
@@ -127,6 +140,19 @@
 @media screen and (max-width: 599px) {
   .welcome-content-container {
     flex-direction: column;
+
+    // Remove width constraints on mobile
+    >div:first-child,
+    > :first-child {
+      width: auto;
+      flex-shrink: 0;
+    }
+
+    >div:last-child,
+    > :last-child {
+      width: auto;
+      flex-shrink: 0;
+    }
   }
 
   .welcome-content {
@@ -138,6 +164,31 @@
 
     p {
       font-size: 1rem;
+    }
+  }
+}
+
+// Ensure profile setup avatar has enough space on medium screens
+@media screen and (min-width: 600px) and (max-width: 960px) {
+  .welcome-content-container {
+
+    // Give more space to the first column when it contains profile setup
+    >div:first-child {
+      width: 40%; // Increase from 30% to 40% for better profile image display
+      min-width: 200px; // Ensure minimum width for avatar
+    }
+
+    >div:last-child {
+      width: 60%; // Adjust second column accordingly
+    }
+  }
+}
+
+// Add specific override for larger screens to ensure profile setup has enough space
+@media screen and (min-width: 961px) {
+  .welcome-content-container {
+    >div:first-child {
+      min-width: 250px; // Ensure adequate space for profile setup on large screens
     }
   }
 }
@@ -172,5 +223,649 @@
       margin: 0;
       color: var(--mat-text-secondary-color);
     }
+  }
+}
+
+// New styles for updated onboarding flow
+
+// Tagline styling for "Your Social Media"
+.tagline {
+  font-size: 1.5rem;
+  font-weight: 300;
+  color: var(--mat-sys-primary);
+  margin: 0.5rem 0 1.5rem 0;
+  opacity: 0.9;
+  letter-spacing: 0.5px;
+  font-style: italic;
+}
+
+// Easy start message styling
+.easy-start-message {
+  background-color: var(--mat-sys-surface-container);
+  padding: 1rem;
+  border-radius: 8px;
+  margin: 1rem 0;
+  border-left: 4px solid var(--mat-sys-primary);
+  font-size: 1.1rem;
+}
+
+// Region detection loading (subtle)
+.region-detection-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1rem 0;
+  padding: 0.5rem 1rem;
+  background-color: var(--mat-sys-surface-container);
+  border-radius: 16px;
+  font-size: 0.875rem;
+
+  .spinning {
+    animation: spin 1s linear infinite;
+    color: var(--mat-sys-primary);
+    font-size: 1rem;
+    width: 1rem;
+    height: 1rem;
+  }
+
+  span {
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// Region detection spinner (old - can remove)
+.region-detection-spinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin: 2rem 0;
+  padding: 1rem;
+  background-color: var(--mat-sys-surface-container);
+  border-radius: 8px;
+
+  .spinning {
+    animation: spin 1s linear infinite;
+    color: var(--mat-sys-primary);
+    font-size: 1.5rem;
+  }
+
+  span {
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+// Region info display
+.region-info {
+  display: inline-flex;
+  align-items: center;
+  margin: 1.5rem 0 0.5rem 0;
+  padding: 0.5rem 1rem;
+  background-color: var(--mat-sys-surface-container);
+  border-radius: 12px;
+  font-size: 0.875rem;
+  color: var(--mat-sys-on-surface-variant);
+
+  strong {
+    color: var(--mat-sys-on-surface);
+  }
+}
+
+// Region info button (clickable region display)
+.region-info-btn {
+  margin: 1.5rem 0 0.5rem 0;
+  padding: 0.75rem 1.25rem;
+  background-color: var(--mat-sys-surface-container);
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 12px;
+  font-size: 0.875rem;
+  color: var(--mat-sys-on-surface-variant);
+  transition: all 0.2s ease;
+
+  strong {
+    color: var(--mat-sys-on-surface);
+  }
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-high);
+    border-color: var(--mat-sys-outline);
+    box-shadow: var(--mat-sys-level1);
+  }
+}
+
+// Region change button
+.region-change-btn {
+  margin: 1rem 0 0.5rem 0;
+  color: var(--mat-sys-primary);
+}
+
+// Region selector
+.region-selector {
+  margin-top: 1rem;
+
+  h3 {
+    margin-bottom: 0.5rem;
+  }
+}
+
+.region-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 0.5rem;
+  padding: 0.75rem;
+  text-align: left;
+
+  .region-flag {
+    font-size: 1.5rem;
+    margin-right: 0.5rem;
+  }
+
+  .region-name {
+    flex: 1;
+  }
+
+  .region-latency {
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 0.875rem;
+  }
+}
+
+// Account ready actions
+.account-ready-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 2rem;
+  flex-wrap: wrap;
+
+  .get-started-btn {
+    background-color: var(--mat-sys-primary);
+    color: var(--mat-sys-on-primary);
+    min-width: 140px;
+
+    &:hover {
+      background-color: var(--mat-sys-primary);
+      box-shadow: var(--mat-sys-level2);
+    }
+  }
+
+  .learn-more-btn {
+    min-width: 140px;
+    border: 1px solid var(--mat-sys-outline);
+
+    &:hover {
+      background-color: var(--mat-sys-surface-container);
+    }
+  }
+}
+
+// Region detection styles (keeping for potential future use)
+.region-detection {
+  background-color: var(--mat-sys-surface-container);
+  padding: 1rem;
+  border-radius: 8px;
+  margin: 1rem 0;
+  border-left: 4px solid var(--mat-sys-primary);
+}
+
+.region-selector {
+  margin-top: 1rem;
+
+  h3 {
+    margin-bottom: 0.5rem;
+  }
+}
+
+.region-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 0.5rem;
+  padding: 0.75rem;
+  text-align: left;
+
+  .region-flag {
+    font-size: 1.5rem;
+    margin-right: 0.5rem;
+  }
+
+  .region-name {
+    flex: 1;
+  }
+
+  .region-latency {
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 0.875rem;
+  }
+}
+
+// Key generation animation
+.key-generation-animation {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem;
+
+  .key-icon {
+    font-size: 4rem;
+    width: 4rem;
+    height: 4rem;
+    color: var(--mat-sys-primary);
+    animation: pulse 2s infinite;
+  }
+
+  .generation-dots {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+
+    span {
+      width: 8px;
+      height: 8px;
+      background-color: var(--mat-sys-primary);
+      border-radius: 50%;
+      animation: dot-bounce 1.4s infinite ease-in-out;
+
+      &:nth-child(1) {
+        animation-delay: -0.32s;
+      }
+
+      &:nth-child(2) {
+        animation-delay: -0.16s;
+      }
+    }
+  }
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.1);
+    opacity: 0.7;
+  }
+}
+
+@keyframes dot-bounce {
+
+  0%,
+  80%,
+  100% {
+    transform: scale(0);
+  }
+
+  40% {
+    transform: scale(1);
+  }
+}
+
+// Advanced key info
+.advanced-link {
+  margin-top: 1rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.advanced-key-info {
+  margin-top: 1rem;
+  padding: 1rem;
+  background-color: var(--mat-sys-surface-container);
+  border-radius: 8px;
+
+  .key-display {
+    background-color: var(--mat-sys-surface-container-high);
+    padding: 0.5rem;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.875rem;
+    word-break: break-all;
+    display: block;
+    margin-top: 0.5rem;
+  }
+}
+
+// Feature carousel
+.feature-carousel {
+  margin-top: 2rem;
+
+  .feature-navigation {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 2rem;
+    gap: 1rem;
+
+    .feature-indicators {
+      display: flex;
+      gap: 0.5rem;
+
+      .indicator {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: var(--mat-sys-on-surface-variant);
+        opacity: 0.3;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: none;
+        padding: 0;
+
+        &:hover {
+          opacity: 0.5;
+        }
+
+        &.active {
+          background-color: var(--mat-sys-primary);
+          opacity: 1;
+          transform: scale(1.25);
+        }
+      }
+    }
+  }
+
+  .feature-content {
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .feature-card {
+    text-align: center;
+    padding: 2rem;
+
+    .feature-icon {
+      font-size: 3rem;
+      width: 3rem;
+      height: 3rem;
+      color: var(--mat-sys-primary);
+      margin-bottom: 1rem;
+    }
+
+    h3 {
+      margin: 0 0 1rem 0;
+      color: var(--mat-sys-on-surface);
+    }
+
+    p {
+      margin: 0;
+      color: var(--mat-sys-on-surface-variant);
+      font-size: 1.1rem;
+    }
+  }
+}
+
+// Profile setup styles
+.profile-setup-avatar {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem;
+  width: auto; // Don't inherit width constraints
+  max-width: none; // Don't inherit max-width constraints
+  min-width: 160px; // Ensure minimum width to prevent squeezing
+
+  .profile-preview {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    object-position: center;
+    border: 3px solid var(--mat-sys-outline-variant);
+    flex-shrink: 0; // Prevent squeezing
+    display: block; // Ensure proper display
+    min-width: 120px; // Explicit minimum to prevent any compression
+    min-height: 120px; // Explicit minimum to prevent any compression
+  }
+
+  .avatar-placeholder {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background-color: var(--mat-sys-surface-container);
+    border: 3px dashed var(--mat-sys-outline-variant);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0; // Prevent squeezing
+    min-width: 120px; // Explicit minimum to prevent any compression
+    min-height: 120px; // Explicit minimum to prevent any compression
+
+    mat-icon {
+      font-size: 2rem;
+      width: 2rem;
+      height: 2rem;
+      color: var(--mat-sys-on-surface-variant);
+    }
+  }
+
+  .change-photo-btn {
+    position: absolute;
+    bottom: 1rem;
+    right: calc(50% - 70px);
+    background-color: var(--mat-sys-primary);
+    color: var(--mat-sys-on-primary);
+    box-shadow: var(--mat-sys-level2);
+
+    &:hover {
+      background-color: var(--mat-sys-primary);
+    }
+  }
+}
+
+.profile-name-field {
+  width: 100%;
+  margin: 1rem 0;
+}
+
+.profile-setup-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 2rem;
+}
+
+.hidden-file-input {
+  display: none;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+// Interests selection styles
+.interests-selection {
+  margin: 2rem 0;
+
+  h3 {
+    margin-bottom: 1rem;
+    color: var(--mat-sys-on-surface);
+  }
+}
+
+.interests-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  width: 100%;
+}
+
+.interest-checkbox {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+
+  input[type="checkbox"] {
+    display: none;
+  }
+
+  .interest-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--mat-sys-outline-variant);
+    border-radius: 8px;
+    background-color: var(--mat-sys-surface-container-low);
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    width: 100%;
+
+    mat-icon {
+      font-size: 1.2rem;
+      width: 1.2rem;
+      height: 1.2rem;
+    }
+  }
+
+  input[type="checkbox"]:checked+.interest-label {
+    background-color: var(--mat-sys-primary-container);
+    border-color: var(--mat-sys-primary);
+    color: var(--mat-sys-on-primary-container);
+
+    mat-icon {
+      color: var(--mat-sys-primary);
+    }
+  }
+
+  &:hover .interest-label {
+    background-color: var(--mat-sys-surface-container);
+    border-color: var(--mat-sys-outline);
+  }
+}
+
+// Suggested follows styles
+.suggested-follows {
+  margin: 2rem 0;
+
+  h3 {
+    margin-bottom: 0.5rem;
+    color: var(--mat-sys-on-surface);
+  }
+
+  p {
+    margin-bottom: 1.5rem;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.profiles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.profile-card {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 12px;
+  background-color: var(--mat-sys-surface-container-low);
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container);
+    border-color: var(--mat-sys-outline);
+    box-shadow: var(--mat-sys-level1);
+  }
+
+  &.following {
+    border-color: var(--mat-sys-primary);
+    background-color: var(--mat-sys-primary-container);
+  }
+}
+
+.profile-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+
+  img {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--mat-sys-outline-variant);
+  }
+}
+
+.profile-info {
+  flex: 1;
+  margin-bottom: 1rem;
+
+  h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--mat-sys-on-surface);
+  }
+
+  .profile-bio {
+    font-size: 0.875rem;
+    color: var(--mat-sys-on-surface-variant);
+    margin-bottom: 0.75rem;
+    line-height: 1.4;
+  }
+
+  .profile-region {
+    font-size: 0.8rem;
+    color: var(--mat-sys-primary);
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+  }
+}
+
+.profile-interests {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.interest-tag {
+  padding: 0.25rem 0.5rem;
+  background-color: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.profile-card button {
+  align-self: stretch;
+
+  &.following-btn {
+    background-color: var(--mat-sys-primary);
+    color: var(--mat-sys-on-primary);
   }
 }
