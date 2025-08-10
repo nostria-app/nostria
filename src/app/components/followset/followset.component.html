@@ -27,7 +27,7 @@
 
         <div class="profiles-grid">
             @for (profile of filteredProfiles(); track profile.id) {
-            <div class="profile-card" [class.following]="followingProfiles().includes(profile.id)">
+            <div class="profile-card" [class.following]="displayedFollows().includes(profile.id)">
                 <div class="profile-avatar">
                     <img [src]="profile.avatar" [alt]="profile.name + ' avatar'" [title]="profile.name" />
                 </div>
@@ -43,15 +43,15 @@
                         }
                     </div>
                 </div>
-                <button mat-button [class.following-btn]="followingProfiles().includes(profile.id)"
+                <button mat-button [class.following-btn]="displayedFollows().includes(profile.id)"
                     (click)="toggleFollow(profile.id)">
-                    @if (followingProfiles().includes(profile.id)) {
+                    @if (displayedFollows().includes(profile.id)) {
                     <ng-container>
-                        <mat-icon>check</mat-icon> Following
+                        <mat-icon>check</mat-icon> Selected
                     </ng-container>
                     } @else {
                     <ng-container>
-                        <mat-icon>add</mat-icon> Follow
+                        <mat-icon>add</mat-icon> Select
                     </ng-container>
                     }
                 </button>
@@ -62,8 +62,8 @@
 
     @if (canGetStarted()) {
     <div class="get-started-section">
-        <button mat-raised-button color="primary" (click)="getStarted()" class="get-started-btn">
-            Get Started
+        <button mat-flat-button (click)="getStarted()" class="get-started-btn">
+            Add selected
         </button>
     </div>
     }

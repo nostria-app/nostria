@@ -507,41 +507,51 @@ export class FeedsComponent implements OnInit, OnDestroy {
   }
 
   // Method called when user completes followset onboarding
-  async onFollowsetComplete(): Promise<void> {
+  async onFollowsetComplete(data: {
+    selectedInterests: string[];
+    followsToAdd: string[];
+  }): Promise<void> {
+    debugger;
     try {
-      const selectedInterests = this.selectedInterests();
-      const followingProfiles = this.followingProfiles();
+      const { selectedInterests, followsToAdd } = data;
 
       this.logger.debug('Followset onboarding completed', {
         selectedInterests,
-        followingProfiles,
+        followsToAdd,
       });
 
       // Get all pubkeys from selected starter packs
-      const starterPackPubkeys =
-        this.followsetService.getPubkeysFromInterests(selectedInterests);
+      // const starterPackPubkeys =
+      //   this.followsetService.getPubkeysFromInterests(selectedInterests);
 
-      // Follow all selected profiles from the followset
-      for (const pubkey of followingProfiles) {
-        await this.accountState.follow(pubkey);
-      }
+      // REMOVED: For now, we don't want to follow the full starter packs, instead
+      // we use them as "following" lists with suggestions for user to pick.
+
+      // // Follow all selected profiles from the followset
+      // for (const pubkey of followsToAdd) {
+      //   await this.accountState.follow(pubkey);
+      // }
 
       // Also follow some users from the selected starter packs (limit to avoid spam)
-      const additionalFollows = starterPackPubkeys
-        .filter(pubkey => !followingProfiles.includes(pubkey))
-        .slice(0, 10); // Limit to 10 additional follows
+      // const additionalFollows = starterPackPubkeys
+      //   .filter(pubkey => !followsToAdd.includes(pubkey))
+      //   .slice(0, 10); // Limit to 10 additional follows
 
-      for (const pubkey of additionalFollows) {
+      for (const pubkey of followsToAdd) {
         await this.accountState.follow(pubkey);
       }
 
       this.notificationService.notify(
-        `Welcome! Following ${followingProfiles.length + additionalFollows.length} accounts.`
+        `Welcome! Following ${followsToAdd.length} accounts.`
       );
 
-      // Reset followset state
-      this.selectedInterests.set([]);
-      this.followingProfiles.set([]);
+      // Update local state
+      this.selectedInterests.set(selectedInterests);
+      this.followingProfiles.update(current => [
+        ...new Set([...current, ...followsToAdd]),
+      ]);
+
+      // Reset followset display state
       this.suggestedProfiles.set([]);
     } catch (error) {
       this.logger.error('Failed to complete followset onboarding:', error);

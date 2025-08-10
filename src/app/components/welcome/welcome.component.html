@@ -128,7 +128,7 @@
           <app-followset [availableInterests]="availableInterests()" [suggestedProfiles]="suggestedProfiles()"
             [selectedInterests]="selectedInterests()" [followingProfiles]="followingProfiles()"
             [detectedRegion]="detectedRegion()" (interestToggled)="toggleInterest($event)"
-            (profileToggled)="toggleFollow($event)"></app-followset>
+            (completed)="completeFollowsetSelection($event)"></app-followset>
         </div>
         }
 
