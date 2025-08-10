@@ -381,7 +381,7 @@ export class UserDataService {
     }
 
     if (events.length === 0) {
-      const relayEvents = await this.relay.getEventsByPubkeyAndKind(
+      const relayEvents = await this.userRelayEx.getEventsByPubkeyAndKind(
         pubkey,
         kind
       );

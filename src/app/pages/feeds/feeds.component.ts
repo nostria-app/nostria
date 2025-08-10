@@ -1013,6 +1013,7 @@ export class FeedsComponent implements OnInit, OnDestroy {
    */
   private async initializeFollowsetData(): Promise<void> {
     try {
+      debugger;
       // Only fetch if user has empty following list
       if (this.hasEmptyFollowingList()) {
         this.logger.debug(
@@ -1036,6 +1037,7 @@ export class FeedsComponent implements OnInit, OnDestroy {
         }
       }
     } catch (error) {
+      debugger;
       this.logger.error('Failed to initialize followset data:', error);
       // Keep default interests if starter pack fetching fails
     }

@@ -29,7 +29,6 @@ export class ArticleComponent {
       if (this.pubkey() && this.slug() && this.kind()) {
         this.loading.set(true);
 
-        debugger;
         const dataService = await this.dataFactory.create(this.pubkey());
 
         const eventData =
