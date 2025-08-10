@@ -40,6 +40,7 @@ export class FollowsetComponent {
     // Outputs
     interestToggled = output<string>();
     profileToggled = output<string>();
+    completed = output<void>();
 
     // Internal computed property for filtered profiles
     filteredProfiles = computed(() => {
@@ -69,12 +70,23 @@ export class FollowsetComponent {
         return filteredProfiles;
     });
 
+    // Check if user is ready to get started (has selected interests and at least one follow)
+    canGetStarted = computed(() => {
+        return (
+            this.selectedInterests().length > 0 && this.followingProfiles().length > 0
+        );
+    });
+
     toggleInterest(interestId: string): void {
         this.interestToggled.emit(interestId);
     }
 
     toggleFollow(profileId: string): void {
         this.profileToggled.emit(profileId);
+    }
+
+    getStarted(): void {
+        this.completed.emit();
     }
 
     getInterestName(interestId: string): string {

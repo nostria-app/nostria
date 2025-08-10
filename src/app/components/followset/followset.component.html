@@ -59,5 +59,13 @@
             }
         </div>
     </div>
+
+    @if (canGetStarted()) {
+    <div class="get-started-section">
+        <button mat-raised-button color="primary" (click)="getStarted()" class="get-started-btn">
+            Get Started
+        </button>
+    </div>
+    }
     }
 </div>

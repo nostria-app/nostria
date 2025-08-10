@@ -190,3 +190,15 @@
         color: var(--mat-sys-on-primary);
     }
 }
+
+// Get started section styles
+.get-started-section {
+    margin-top: 3rem;
+    text-align: center;
+
+    .get-started-btn {
+        padding: 0.75rem 2rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+}
