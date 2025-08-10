@@ -86,6 +86,7 @@ export class LoginDialogComponent {
   // Profile setup signals (similar to welcome component)
   displayName = signal('');
   profileImage = signal<string | null>(null);
+  profileImageFile = signal<File | null>(null);
 
   // Input fields
   nsecKey = '';
@@ -176,6 +177,10 @@ export class LoginDialogComponent {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files[0]) {
       const file = input.files[0];
+
+      // Store the actual file for upload
+      this.profileImageFile.set(file);
+
       const reader = new FileReader();
 
       reader.onload = e => {
@@ -207,20 +212,36 @@ export class LoginDialogComponent {
     if (this.selectedRegionId()) {
       this.loading.set(true);
 
-      // TODO: Pass profile data to the service when it supports it
-      // const profileData = {
-      //   name: this.displayName() || undefined,
-      //   picture: this.profileImage() || undefined,
-      // };
+      try {
+        // First generate the new key and set up the account
+        await this.nostrService.generateNewKey(this.selectedRegionId()!);
 
-      await this.nostrService.generateNewKey(this.selectedRegionId()!);
+        // If the user has set a display name and/or profile image, create the profile
+        const displayName = this.displayName();
+        const profileImageFile = this.profileImageFile();
 
-      // If the user has set a display name and/or profile image, make sure
-      // we use the profile service to create an profile event (kind 0) and
-      // publish that to the user relays.
-      this.profileService.updateProfile();
+        if (displayName || profileImageFile) {
+          this.logger.debug('Creating initial profile for new user');
+          const result = await this.profileService.createInitialProfile(
+            displayName || undefined,
+            profileImageFile || undefined
+          );
 
-      this.closeDialog();
+          if (!result.success) {
+            this.logger.error('Failed to create initial profile', result.error);
+            // Don't fail the entire process, just log the error
+            // The user can always edit their profile later
+          } else {
+            this.logger.debug('Initial profile created successfully');
+          }
+        }
+
+        this.closeDialog();
+      } catch (error) {
+        this.logger.error('Failed to generate new key', error);
+        // Handle error appropriately - you might want to show an error message to the user
+        this.loading.set(false);
+      }
     }
   }
 
