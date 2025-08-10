@@ -24,7 +24,10 @@ import {
 } from './account-relay.service';
 import { Algorithms } from './algorithms';
 import { UserDataFactoryService } from './user-data-factory.service';
-import { UserRelayExFactoryService, UserRelayFactoryService } from './user-relay-factory.service';
+import {
+  UserRelayExFactoryService,
+  UserRelayFactoryService,
+} from './user-relay-factory.service';
 
 export interface FeedData {
   column: ColumnConfig;
