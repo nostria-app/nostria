@@ -5,7 +5,6 @@ import {
   MatDialogRef,
   MatDialog,
 } from '@angular/material/dialog';
-import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -19,6 +18,8 @@ import { LoggerService } from '../../services/logger.service';
 import { QrcodeScanDialogComponent } from '../qrcode-scan-dialog/qrcode-scan-dialog.component';
 import { TermsOfUseDialogComponent } from '../terms-of-use-dialog/terms-of-use-dialog.component';
 import { Region, RegionService } from '../../services/region.service';
+import { DiscoveryService, ServerInfo } from '../../services/discovery.service';
+import { MatButtonModule } from '@angular/material/button';
 
 // Define the login steps
 enum LoginStep {
@@ -56,6 +57,7 @@ export class LoginDialogComponent {
   nostrService = inject(NostrService);
   private logger = inject(LoggerService);
   region = inject(RegionService);
+  private discoveryService = inject(DiscoveryService);
 
   // Use signal for the current step
   currentStep = signal<LoginStep>(LoginStep.INITIAL);
@@ -71,17 +73,13 @@ export class LoginDialogComponent {
   nostrConnectLoading = signal<boolean>(false);
   selectedRegionId = signal<string | null>(null);
 
-  // Region discovery signals (similar to welcome component)
+  // Region discovery signals
   isDetectingRegion = signal(true);
   detectedRegion = signal('');
   showRegionSelector = signal(false);
-  availableRegions = signal([
-    { name: 'United States', latency: '45ms', flag: '🇺🇸', id: 'us' },
-    { name: 'Europe', latency: '78ms', flag: '🇪🇺', id: 'eu' },
-    { name: 'Asia Pacific', latency: '120ms', flag: '🌏', id: 'as' },
-    { name: 'Africa', latency: '85ms', flag: '🌍', id: 'af' },
-    { name: 'South America', latency: '95ms', flag: '🌎', id: 'sa' },
-  ]);
+  availableRegions = signal<{ name: string; latency: string; id: string }[]>(
+    []
+  );
 
   // Profile setup signals (similar to welcome component)
   displayName = signal('');
@@ -114,28 +112,50 @@ export class LoginDialogComponent {
   }
 
   // Region detection and selection methods (similar to welcome component)
-  startRegionDetection(): void {
-    this.logger.debug('Starting region detection');
+  async startRegionDetection(): Promise<void> {
     this.isDetectingRegion.set(true);
     this.detectedRegion.set('');
+    this.showRegionSelector.set(false);
 
-    // Simulate region detection process (you can replace with actual latency testing)
-    setTimeout(() => {
-      // Mock detection logic - find the region with lowest latency
-      const sortedRegions = [...this.availableRegions()].sort(
-        (a, b) => parseInt(a.latency) - parseInt(b.latency)
-      );
-      const bestRegion = sortedRegions[0];
+    try {
+      // First trigger the latency check to populate the servers with latency data
+      await this.discoveryService.checkServerLatency();
 
-      this.detectedRegion.set(bestRegion.name);
-      this.selectedRegionId.set(bestRegion.id);
-      this.isDetectingRegion.set(false);
+      // Get all servers sorted by latency
+      const serversWithLatency = this.discoveryService.getServersByLatency();
 
-      this.logger.debug('Region detection completed', {
-        detectedRegion: bestRegion.name,
-        selectedRegionId: bestRegion.id,
+      // Convert ServerInfo to our UI format
+      const regions = serversWithLatency.map((server: ServerInfo) => {
+        const regionId = this.getRegionIdFromServer(server);
+
+        return {
+          name: server.region,
+          latency: `${server.latency || 9999}ms`,
+          id: regionId,
+        };
       });
-    }, 2000); // 2 second delay to show detection process
+
+      this.availableRegions.set(regions);
+
+      // The first server should be the fastest since they're sorted by latency
+      const fastestRegion = regions[0];
+
+      if (fastestRegion) {
+        // Set the detected region and selected region
+        this.detectedRegion.set(fastestRegion.name);
+        this.selectedRegionId.set(fastestRegion.id);
+      }
+
+      // Simulate detection time for better UX (minimum display time)
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      this.isDetectingRegion.set(false);
+    } catch (error) {
+      this.logger.error('Failed to detect region:', error);
+      // Fallback to manual selection
+      this.isDetectingRegion.set(false);
+      this.showRegionSelector.set(true);
+    }
   }
 
   toggleRegionSelector(): void {
@@ -308,6 +328,54 @@ export class LoginDialogComponent {
       width: '600px',
       maxWidth: '90vw',
     });
+  }
+
+  /**
+   * Maps a ServerInfo object to a region ID for the RegionService
+   */
+  private getRegionIdFromServer(server: ServerInfo): string {
+    // Extract region from the server URL or region property
+    const url = server.url.toLowerCase();
+
+    if (
+      url.includes('.eu.') ||
+      server.region.toLowerCase().includes('europe')
+    ) {
+      return 'eu';
+    } else if (
+      url.includes('.us.') ||
+      server.region.toLowerCase().includes('usa')
+    ) {
+      return 'us';
+    } else if (
+      url.includes('.af.') ||
+      server.region.toLowerCase().includes('africa')
+    ) {
+      return 'af';
+    } else if (
+      url.includes('.as.') ||
+      server.region.toLowerCase().includes('asia')
+    ) {
+      return 'as';
+    } else if (
+      url.includes('.sa.') ||
+      server.region.toLowerCase().includes('south america')
+    ) {
+      return 'sa';
+    } else if (
+      url.includes('.au.') ||
+      server.region.toLowerCase().includes('australia')
+    ) {
+      return 'au';
+    } else if (
+      url.includes('.jp.') ||
+      server.region.toLowerCase().includes('japan')
+    ) {
+      return 'jp';
+    }
+
+    // Default fallback
+    return 'us';
   }
 
   closeDialog(): void {

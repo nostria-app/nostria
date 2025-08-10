@@ -46,10 +46,10 @@ export class WelcomeComponent {
   detectedRegion = signal('');
   showRegionSelector = signal(false);
   availableRegions = signal([
-    { name: 'United States', latency: '45ms', flag: '🇺🇸' },
-    { name: 'Europe', latency: '78ms', flag: '🇪🇺' },
-    { name: 'Asia Pacific', latency: '120ms', flag: '🌏' },
-    { name: 'Canada', latency: '52ms', flag: '🇨🇦' },
+    { name: 'United States', latency: '45ms' },
+    { name: 'Europe', latency: '78ms' },
+    { name: 'Asia Pacific', latency: '120ms' },
+    { name: 'Canada', latency: '52ms' },
   ]);
 
   // Feature highlights for screen 3 (learn more section)

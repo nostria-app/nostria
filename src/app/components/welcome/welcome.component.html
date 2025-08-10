@@ -79,7 +79,7 @@
             <h3>Choose your region:</h3>
             @for (region of availableRegions(); track region.name) {
             <button class="region-option" mat-button (click)="selectRegion(region.name)">
-              <span class="region-flag">{{ region.flag }}</span>
+              <mat-icon class="region-flag">travel_explore</mat-icon>
               <span class="region-name">{{ region.name }}</span>
               <span class="region-latency">{{ region.latency }}</span>
             </button>
