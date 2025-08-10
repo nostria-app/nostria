@@ -1,15 +1,13 @@
-import { inject, Injectable } from '@angular/core';
+import { inject } from '@angular/core';
 import { StorageService } from './storage.service';
 import { RelayService } from './relay.service';
 import { NostrRecord } from '../interfaces';
 import { LoggerService } from './logger.service';
 import { Event, kinds } from 'nostr-tools';
-import { UserRelayFactoryService } from './user-relay-factory.service';
+import { UserRelayExFactoryService } from './user-relay-factory.service';
 import { UtilitiesService } from './utilities.service';
 import { Cache, CacheOptions } from './cache';
 import {
-  AccountRelayService,
-  AccountRelayServiceEx,
   DiscoveryRelayServiceEx,
   SharedRelayServiceEx,
   UserRelayServiceEx,
@@ -21,22 +19,18 @@ export interface DataOptions {
   save: boolean; // Whether to save the event to storage
 }
 
-@Injectable({
-  providedIn: 'root',
-})
-export class DataService {
+export class UserDataService {
   private readonly storage = inject(StorageService);
   private readonly relay = inject(RelayService);
-  private readonly accountRelay = inject(AccountRelayService);
-  private readonly userRelayFactory = inject(UserRelayFactoryService);
-  private readonly userRelayEx = inject(UserRelayServiceEx);
+  private readonly userRelayFactory = inject(UserRelayExFactoryService);
   private readonly discoveryRelayEx = inject(DiscoveryRelayServiceEx);
-  private readonly accountRelayEx = inject(AccountRelayServiceEx);
   private readonly sharedRelayEx = inject(SharedRelayServiceEx);
   private readonly logger = inject(LoggerService);
   private readonly utilities = inject(UtilitiesService);
   private readonly cache = inject(Cache);
   private readonly relaysService = inject(RelaysService);
+  private pubkey: string | null = null;
+  private userRelayEx!: UserRelayServiceEx;
 
   // Map to track pending profile requests to prevent race conditions
   private pendingProfileRequests = new Map<
@@ -47,13 +41,20 @@ export class DataService {
   // Clean up old pending requests periodically
   constructor() {
     // Clean up any stale pending requests every 30 seconds
-    setInterval(() => {
-      if (this.pendingProfileRequests.size > 100) {
-        this.logger.warn(
-          `Large number of pending profile requests: ${this.pendingProfileRequests.size}. Consider investigating.`
-        );
-      }
-    }, 30000);
+    // setInterval(() => {
+    //   if (this.pendingProfileRequests.size > 100) {
+    //     this.logger.warn(
+    //       `Large number of pending profile requests: ${this.pendingProfileRequests.size}. Consider investigating.`
+    //     );
+    //   }
+    // }, 30000);
+  }
+
+  async initialize(pubkey: string) {
+    this.pubkey = pubkey;
+
+    this.userRelayEx = await this.userRelayFactory.create(pubkey);
+    this.logger.debug(`UserDataService initialized for pubkey: ${pubkey}`);
   }
 
   toRecord(event: Event) {
@@ -67,7 +68,6 @@ export class DataService {
   async getEventById(
     id: string,
     options?: CacheOptions & DataOptions,
-    userRelays = false
   ): Promise<NostrRecord | null> {
     let event: Event | null = null;
     let record: NostrRecord | undefined = undefined;
@@ -87,13 +87,7 @@ export class DataService {
 
     // If the caller explicitly supplies user relay, don't attempt to user account relay.
     if (!event) {
-      if (userRelays) {
-        // If userRelays is true, we will try to get the event from user relays.
-        event = await this.userRelayEx.getEventById(id);
-      } else {
-        // Try to get the event from the account relay.
-        event = await this.accountRelayEx.getEventById(id);
-      }
+      event = await this.userRelayEx.getEventById(id);
     }
 
     if (!event) {
@@ -113,35 +107,6 @@ export class DataService {
 
     return record;
   }
-
-  // async getEventsById(ids: string[]): Promise<NostrRecord[]> {
-  //     const events = await this.storage.getEventsById(ids);
-
-  //     if (events && events.length > 0) {
-  //         return events.map(event => this.getRecord(event));
-  //     }
-
-  //     const relayEvents = await this.relay.getEventsById(ids);
-
-  //     if (relayEvents && relayEvents.length > 0) {
-  //         for (const event of relayEvents) {
-  //             await this.storage.saveEvent(event);
-  //         }
-
-  //         return relayEvents.map(event => this.getRecord(event));
-  //     }
-
-  //     return [];
-  // }
-
-  // async getUserProfile(pubkey: string, relayUrls: string[], options?: CacheOptions & DataOptions): Promise<NostrRecord | null> {
-
-  //     this.relaysService.getUserRelays(pubkey);
-
-  //     // First get the relays for the user.
-  //     this.sharedRelayEx.get(pubkey, )
-
-  // }
 
   async discoverUserRelays(pubkey: string): Promise<string[]> {
     return this.discoveryRelayEx.getUserRelayUrls(pubkey);
@@ -323,8 +288,7 @@ export class DataService {
 
     // If the caller explicitly supplies user relay, don't attempt to user account relay.
     if (!event) {
-      // Try to get the event from the account relay.
-      event = await this.accountRelayEx.getEventByPubkeyAndKindAndTag(
+      event = await this.userRelayEx.getEventByPubkeyAndKindAndTag(
         pubkey,
         kind,
         { key: 'd', value: dTagValue }
@@ -373,8 +337,8 @@ export class DataService {
 
     // If the caller explicitly supplies user relay, don't attempt to user account relay.
     if (!event) {
-      // Try to get the event from the account relay.
-      event = await this.accountRelayEx.getEventByPubkeyAndKind(pubkey, kind);
+      // If userRelays is true, we will try to get the event from user relays.
+      event = await this.userRelayEx.getEventByPubkeyAndKind(pubkey, kind);
     }
 
     if (!event) {
