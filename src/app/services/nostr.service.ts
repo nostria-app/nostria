@@ -997,7 +997,6 @@ export class NostrService implements NostriaService {
       // If refresh is true, make sure to refresh the metadata in the background.
       if (refresh) {
         setTimeout(async () => {
-          debugger;
           // Profile discovery not done yet, proceed with network discovery
           const metadata = await this.queueMetadataDiscovery(pubkey);
 
@@ -1017,8 +1016,6 @@ export class NostrService implements NostriaService {
       kinds.Metadata
     );
     const records = this.data.toRecords(events);
-
-    debugger;
 
     if (records.length > 0) {
       // Add to cache
@@ -1161,7 +1158,6 @@ export class NostrService implements NostriaService {
     pubkey: string,
     disconnect = true
   ): Promise<Event | undefined | null> {
-    debugger;
     const data = await this.sharedRelay.get(pubkey, {
       authors: [pubkey],
       kinds: [kinds.Metadata],
@@ -1195,7 +1191,7 @@ export class NostrService implements NostriaService {
     // }
 
     info.lastDiscovery = this.currentDate();
-    debugger;
+
     const data = await this.sharedRelay.get(pubkey, {
       authors: [pubkey],
       kinds: [kinds.Metadata],

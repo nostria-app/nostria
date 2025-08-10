@@ -113,7 +113,6 @@ export class FollowsetComponent {
   }
 
   getStarted(): void {
-    debugger;
     // Emit both selected interests and the list of new follows to add
     this.completed.emit({
       selectedInterests: this.selectedInterests(),

@@ -50,7 +50,6 @@ export class ProfileAboutComponent {
   // Load user metadata
   async loadUserMetadata(pubkey: string): Promise<void> {
     try {
-      debugger;
       const metadata = await this.data.getProfile(pubkey);
       // const metadata = await this.nostrService.getMetadataForUser(pubkey);
       this.userMetadata.set(metadata);
