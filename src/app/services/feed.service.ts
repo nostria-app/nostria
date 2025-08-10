@@ -1207,6 +1207,58 @@ export class FeedService {
     this.logger.debug(`Refreshed column: ${columnId}`);
     console.log(`✅ FeedService: Column ${columnId} refreshed successfully`);
   }
+
+  /**
+   * Refresh all columns with 'following' source in the active feed
+   * This should be called after the user's following list changes to reload content
+   */
+  refreshFollowingColumns(): void {
+    console.log(`🔄 FeedService: Refreshing all following columns`);
+    const activeFeedId = this._activeFeedId();
+    if (!activeFeedId) {
+      this.logger.warn('Cannot refresh following columns: no active feed');
+      return;
+    }
+
+    const activeFeed = this.getFeedById(activeFeedId);
+    if (!activeFeed) {
+      this.logger.warn(
+        `Cannot refresh following columns: active feed ${activeFeedId} not found`
+      );
+      return;
+    }
+
+    // Find all columns with 'following' source
+    const followingColumns = activeFeed.columns.filter(
+      column => column.source === 'following'
+    );
+
+    if (followingColumns.length === 0) {
+      this.logger.debug('No following columns found in active feed');
+      console.log(
+        `ℹ️ No following columns to refresh in feed: ${activeFeed.label}`
+      );
+      return;
+    }
+
+    console.log(
+      `📊 Found ${followingColumns.length} following columns to refresh`
+    );
+
+    // Refresh each following column
+    followingColumns.forEach(column => {
+      console.log(
+        `🔄 Refreshing following column: ${column.label} (${column.id})`
+      );
+      this.refreshColumn(column.id);
+    });
+
+    this.logger.debug(`Refreshed ${followingColumns.length} following columns`);
+    console.log(
+      `✅ FeedService: Refreshed ${followingColumns.length} following columns successfully`
+    );
+  }
+
   /**
    * Pause a specific column by closing subscription while preserving events
    */

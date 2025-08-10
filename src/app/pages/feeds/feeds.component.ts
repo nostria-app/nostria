@@ -549,6 +549,9 @@ export class FeedsComponent implements OnInit, OnDestroy {
         ...new Set([...current, ...followsToAdd]),
       ]);
 
+      // Refresh following feeds to load content from newly followed accounts
+      this.feedsCollectionService.refreshFollowingColumns();
+
       // Reset followset display state
       this.suggestedProfiles.set([]);
     } catch (error) {

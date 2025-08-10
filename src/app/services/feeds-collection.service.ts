@@ -332,6 +332,15 @@ export class FeedsCollectionService {
   }
 
   /**
+   * Refresh all following columns in the active feed (delegates to FeedService)
+   * This should be called after the user's following list changes
+   */
+  refreshFollowingColumns(): void {
+    this.feedService.refreshFollowingColumns();
+    this.logger.debug('Refreshed all following columns');
+  }
+
+  /**
    * Pause a specific column (delegates to FeedService)
    */
   pauseColumn(columnId: string): void {
