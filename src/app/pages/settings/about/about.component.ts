@@ -37,10 +37,8 @@ export class AboutComponent implements OnInit {
       this.fetchManifestVersion();
     });
   }
+
   resetIntroduction() {
-    if (this.app.isBrowser()) {
-      localStorage.setItem('nostria-welcome', 'true');
-    }
     this.layout.showWelcomeScreen.set(true);
   }
 
@@ -69,7 +67,7 @@ export class AboutComponent implements OnInit {
     return match ? match[0] : null;
   }
 
-  async ngOnInit() {}
+  async ngOnInit() { }
 
   private async fetchManifestVersion(): Promise<void> {
     // Skip fetch on server side

@@ -537,15 +537,11 @@ export class LayoutService implements OnDestroy {
       });
   }
 
-  showWelcomeScreen = signal<boolean>(
-    this.localStorage.getItem('nostria-welcome') !== 'false'
-  );
+  showWelcomeScreen = signal<boolean>(false);
 
   // Method to update welcome screen preference
   setWelcomeScreenPreference(show: boolean): void {
-    localStorage.setItem('nostria-welcome', show ? 'true' : 'false');
     this.showWelcomeScreen.set(show);
-    this.logger.debug('Welcome screen preference updated', { show });
   }
 
   // Method to show the welcome dialog

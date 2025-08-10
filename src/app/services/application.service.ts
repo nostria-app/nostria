@@ -150,7 +150,6 @@ export class ApplicationService {
       this.appState.PEOPLE_VIEW_MODE,
       this.appState.MEDIA_ACTIVE_TAB,
       this.appState.FEATURE_LEVEL,
-      this.appState.WELCOME,
       this.logger.LOG_LEVEL_KEY,
       this.logger.LOG_OVERLAY_KEY,
       this.theme.THEME_KEY,
