@@ -20,6 +20,7 @@ import { TermsOfUseDialogComponent } from '../terms-of-use-dialog/terms-of-use-d
 import { Region, RegionService } from '../../services/region.service';
 import { DiscoveryService, ServerInfo } from '../../services/discovery.service';
 import { MatButtonModule } from '@angular/material/button';
+import { Profile } from '../../services/profile';
 
 // Define the login steps
 enum LoginStep {
@@ -58,6 +59,7 @@ export class LoginDialogComponent {
   private logger = inject(LoggerService);
   region = inject(RegionService);
   private discoveryService = inject(DiscoveryService);
+  private profileService = inject(Profile);
 
   // Use signal for the current step
   currentStep = signal<LoginStep>(LoginStep.INITIAL);
@@ -196,7 +198,7 @@ export class LoginDialogComponent {
   }
 
   // Account generation - now includes profile setup
-  generateNewKey(): void {
+  async generateNewKey(): Promise<void> {
     this.logger.debug('Generating new key', {
       regionId: this.selectedRegionId(),
       displayName: this.displayName(),
@@ -211,7 +213,13 @@ export class LoginDialogComponent {
       //   picture: this.profileImage() || undefined,
       // };
 
-      this.nostrService.generateNewKey(this.selectedRegionId()!);
+      await this.nostrService.generateNewKey(this.selectedRegionId()!);
+
+      // If the user has set a display name and/or profile image, make sure
+      // we use the profile service to create an profile event (kind 0) and
+      // publish that to the user relays.
+      this.profileService.updateProfile();
+
       this.closeDialog();
     }
   }
