@@ -27,6 +27,7 @@ export interface Relay {
   timeout?: number;
 }
 
+/** THIS IS DEPRECATED! */
 @Injectable({
   providedIn: 'root',
 })
