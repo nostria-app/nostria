@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -7,15 +7,11 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { FormsModule } from '@angular/forms';
 import { LayoutService } from '../../services/layout.service';
 import { ThemeService } from '../../services/theme.service';
-
-interface SuggestedProfile {
-  id: string;
-  name: string;
-  bio: string;
-  avatar: string;
-  interests: string[];
-  region?: string;
-}
+import {
+  FollowsetComponent,
+  type Interest,
+  type SuggestedProfile,
+} from '../followset/followset.component';
 
 @Component({
   selector: 'app-welcome',
@@ -26,6 +22,7 @@ interface SuggestedProfile {
     MatFormFieldModule,
     MatCheckboxModule,
     FormsModule,
+    FollowsetComponent,
   ],
   templateUrl: './welcome.component.html',
   styleUrl: './welcome.component.scss',
@@ -73,7 +70,7 @@ export class WelcomeComponent {
   currentFeatureIndex = signal(0);
 
   // Interests and follow suggestions for screen 4
-  availableInterests = signal([
+  availableInterests = signal<Interest[]>([
     { id: 'regional', name: 'Regional', icon: 'location_on' },
     { id: 'sports', name: 'Sports', icon: 'sports_soccer' },
     { id: 'academic', name: 'Academic', icon: 'school' },
@@ -281,36 +278,6 @@ export class WelcomeComponent {
     } else {
       this.selectedInterests.set([...current, interestId]);
     }
-  }
-
-  getSuggestedProfiles() {
-    const selected = this.selectedInterests();
-    if (selected.length === 0) {
-      return [];
-    }
-
-    // Filter profiles that have at least one matching interest
-    let filteredProfiles = this.suggestedProfiles().filter(profile =>
-      profile.interests.some(interest => selected.includes(interest))
-    );
-
-    // For regional profiles, update their region to match detected region and filter
-    if (selected.includes('regional')) {
-      const currentRegion = this.detectedRegion();
-      filteredProfiles = filteredProfiles.map(profile => {
-        if (profile.interests.includes('regional') && profile.region) {
-          return { ...profile, region: currentRegion };
-        }
-        return profile;
-      });
-    }
-
-    return filteredProfiles;
-  }
-
-  getInterestName(interestId: string): string {
-    const interest = this.availableInterests().find(i => i.id === interestId);
-    return interest?.name || interestId;
   }
 
   toggleFollow(profileId: string): void {
