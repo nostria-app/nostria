@@ -511,7 +511,6 @@ export class FeedsComponent implements OnInit, OnDestroy {
     selectedInterests: string[];
     followsToAdd: string[];
   }): Promise<void> {
-    debugger;
     try {
       const { selectedInterests, followsToAdd } = data;
 
@@ -537,9 +536,8 @@ export class FeedsComponent implements OnInit, OnDestroy {
       //   .filter(pubkey => !followsToAdd.includes(pubkey))
       //   .slice(0, 10); // Limit to 10 additional follows
 
-      for (const pubkey of followsToAdd) {
-        await this.accountState.follow(pubkey);
-      }
+      // Follow all selected profiles from the followset in a single batch operation
+      await this.accountState.follow(followsToAdd);
 
       this.notificationService.notify(
         `Welcome! Following ${followsToAdd.length} accounts.`
