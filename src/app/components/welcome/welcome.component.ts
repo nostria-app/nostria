@@ -280,17 +280,29 @@ export class WelcomeComponent {
     }
   }
 
-  toggleFollow(profileId: string): void {
-    const current = this.followingProfiles();
-    if (current.includes(profileId)) {
-      this.followingProfiles.set(current.filter(id => id !== profileId));
-    } else {
-      this.followingProfiles.set([...current, profileId]);
-    }
+  completeFollowsetSelection(data: {
+    selectedInterests: string[];
+    followsToAdd: string[];
+  }): void {
+    // Update selected interests
+    this.selectedInterests.set(data.selectedInterests);
+
+    // Add new follows to the existing following list
+    const currentFollowing = this.followingProfiles();
+    const newFollowing = [
+      ...new Set([...currentFollowing, ...data.followsToAdd]),
+    ];
+    this.followingProfiles.set(newFollowing);
+
+    // Complete the onboarding process
+    this.completeOnboarding();
   }
 
   completeOnboarding(): void {
     // TODO: Save selected interests and following list to service
+    // This is where you would write the follow list to nostr relays
+    console.log('Selected interests:', this.selectedInterests());
+    console.log('Following profiles:', this.followingProfiles());
     this.closeWelcomeScreen();
   }
 }

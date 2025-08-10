@@ -1,4 +1,4 @@
-import { Component, input, output, computed } from '@angular/core';
+import { Component, input, output, computed, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -19,6 +19,14 @@ export interface SuggestedProfile {
   region?: string;
 }
 
+/**
+ * Followset Component - Interest-based profile discovery and following
+ *
+ * This component allows users to select interests and discover profiles to follow.
+ * Follow actions are aggregated locally and only committed to nostr relays when
+ * the user clicks "Get Started". This prevents spam and allows users to change
+ * their mind before final commitment.
+ */
 @Component({
   selector: 'app-followset',
   imports: [MatIconModule, MatButtonModule, MatCheckboxModule, FormsModule],
@@ -37,10 +45,12 @@ export class FollowsetComponent {
   followingProfiles = input<string[]>([]);
   detectedRegion = input<string>('');
 
+  // Internal state for pending follows (not yet committed)
+  pendingFollows = signal<string[]>([]);
+
   // Outputs
   interestToggled = output<string>();
-  profileToggled = output<string>();
-  completed = output<void>();
+  completed = output<{ selectedInterests: string[]; followsToAdd: string[] }>();
 
   // Internal computed property for filtered profiles
   filteredProfiles = computed(() => {
@@ -70,10 +80,17 @@ export class FollowsetComponent {
     return filteredProfiles;
   });
 
-  // Check if user is ready to get started (has selected interests and at least one follow)
+  // Combined follows - existing follows plus pending follows
+  displayedFollows = computed(() => {
+    const existing = this.followingProfiles();
+    const pending = this.pendingFollows();
+    return [...new Set([...existing, ...pending])];
+  });
+
+  // Check if user is ready to get started (has selected interests and at least one pending follow)
   canGetStarted = computed(() => {
     return (
-      this.selectedInterests().length > 0 && this.followingProfiles().length > 0
+      this.selectedInterests().length > 0 && this.pendingFollows().length > 0
     );
   });
 
@@ -82,11 +99,26 @@ export class FollowsetComponent {
   }
 
   toggleFollow(profileId: string): void {
-    this.profileToggled.emit(profileId);
+    const current = this.pendingFollows();
+    if (current.includes(profileId)) {
+      // Remove from pending follows - user changed their mind
+      this.pendingFollows.set(current.filter(id => id !== profileId));
+    } else {
+      // Add to pending follows (only if not already following)
+      // This will be committed to nostr relays when "Get Started" is clicked
+      if (!this.followingProfiles().includes(profileId)) {
+        this.pendingFollows.set([...current, profileId]);
+      }
+    }
   }
 
   getStarted(): void {
-    this.completed.emit();
+    debugger;
+    // Emit both selected interests and the list of new follows to add
+    this.completed.emit({
+      selectedInterests: this.selectedInterests(),
+      followsToAdd: this.pendingFollows(),
+    });
   }
 
   getInterestName(interestId: string): string {
