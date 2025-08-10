@@ -9,7 +9,7 @@ export interface LocalSettings {
 }
 
 const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
-  menuOpen: true,
+  menuOpen: false,
   menuExpanded: true,
   locale: 'en',
 };
