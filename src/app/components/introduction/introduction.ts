@@ -21,4 +21,8 @@ export class Introduction {
   openLoginFlow(): void {
     this.layout.showLoginDialogWithStep('login');
   }
+
+  showWelcomeDialog(): void {
+    this.layout.showWelcomeDialog();
+  }
 }
