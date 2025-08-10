@@ -1,5 +1,14 @@
 @if (!app.authenticated()) {
 <app-introduction></app-introduction>
+} @else if (hasEmptyFollowingList()) {
+<!-- Show followset component when user has empty following list -->
+<div class="followset-container">
+  <app-followset title="Welcome! Let's get you started" [availableInterests]="availableInterests()"
+    [suggestedProfiles]="suggestedProfiles()" [selectedInterests]="selectedInterests()"
+    [followingProfiles]="followingProfiles()" [detectedRegion]="detectedRegion()"
+    (interestToggled)="toggleInterest($event)" (profileToggled)="toggleFollow($event)"
+    (completed)="onFollowsetComplete()"></app-followset>
+</div>
 } @else {
 <div class="home-container" [ngClass]="columnLayout()">
   <!-- Header Section -->

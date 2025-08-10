@@ -58,6 +58,12 @@ import { ApplicationService } from '../../services/application.service';
 import { RepostService } from '../../services/repost.service';
 import { Link } from '../../components/link/link';
 import { Introduction } from '../../components/introduction/introduction';
+import {
+  FollowsetComponent,
+  Interest,
+  SuggestedProfile,
+} from '../../components/followset/followset.component';
+import { AccountStateService } from '../../services/account-state.service';
 
 interface NavLink {
   id: string;
@@ -95,6 +101,7 @@ const DEFAULT_COLUMNS: NavLink[] = [
     ContentComponent,
     Link,
     Introduction,
+    FollowsetComponent,
   ],
   templateUrl: './feeds.component.html',
   styleUrl: './feeds.component.scss',
@@ -117,6 +124,7 @@ export class FeedsComponent implements OnInit, OnDestroy {
   private repostService = inject(RepostService);
   private snackBar = inject(MatSnackBar);
   protected app = inject(ApplicationService);
+  private accountState = inject(AccountStateService);
 
   // UI State Signals
   activeSection = signal<'discover' | 'following' | 'media'>('discover');
@@ -134,6 +142,73 @@ export class FeedsComponent implements OnInit, OnDestroy {
       return 'one-column-layout';
     }
   });
+
+  // Check if user has an empty following list
+  hasEmptyFollowingList = computed(() => {
+    return this.accountState.followingList().length === 0;
+  });
+
+  // Followset data for new users
+  selectedInterests = signal<string[]>([]);
+  followingProfiles = signal<string[]>([]);
+  detectedRegion = signal('');
+
+  // Available interests for new users
+  availableInterests = signal<Interest[]>([
+    { id: 'regional', name: 'Regional', icon: 'location_on' },
+    { id: 'sports', name: 'Sports', icon: 'sports_soccer' },
+    { id: 'academic', name: 'Academic', icon: 'school' },
+    { id: 'science', name: 'Science', icon: 'science' },
+    { id: 'arts', name: 'Arts', icon: 'palette' },
+    { id: 'bitcoin', name: 'Bitcoin', icon: 'currency_bitcoin' },
+    { id: 'technology', name: 'Technology', icon: 'computer' },
+    { id: 'music', name: 'Music', icon: 'music_note' },
+    { id: 'gaming', name: 'Gaming', icon: 'sports_esports' },
+    { id: 'food', name: 'Food', icon: 'restaurant' },
+    { id: 'travel', name: 'Travel', icon: 'flight' },
+    { id: 'fitness', name: 'Fitness', icon: 'fitness_center' },
+    { id: 'finance', name: 'Finance', icon: 'account_balance' },
+    { id: 'fashion', name: 'Fashion', icon: 'checkroom' },
+    { id: 'architecture', name: 'Architecture', icon: 'architecture' },
+    { id: 'gardening', name: 'Gardening', icon: 'local_florist' },
+    { id: 'photography', name: 'Photography', icon: 'photo_camera' },
+  ]);
+
+  // Sample suggested profiles data
+  suggestedProfiles = signal<SuggestedProfile[]>([
+    {
+      id: 'profile1',
+      name: 'Tech Innovator',
+      bio: 'Building the future of decentralized tech',
+      avatar:
+        'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
+      interests: ['technology', 'bitcoin', 'science'],
+    },
+    {
+      id: 'profile2',
+      name: 'Sports Analyst',
+      bio: 'Breaking down the game, one play at a time',
+      avatar:
+        'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
+      interests: ['sports', 'fitness'],
+    },
+    {
+      id: 'profile3',
+      name: 'Art Curator',
+      bio: 'Discovering emerging artists and timeless classics',
+      avatar:
+        'https://images.unsplash.com/photo-1494790108755-2616b67ade43?w=100&h=100&fit=crop&crop=face',
+      interests: ['arts', 'music'],
+    },
+    {
+      id: 'profile4',
+      name: 'Bitcoin Educator',
+      bio: 'Teaching financial sovereignty through Bitcoin',
+      avatar:
+        'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=100&h=100&fit=crop&crop=face',
+      interests: ['bitcoin', 'technology', 'academic'],
+    },
+  ]);
 
   isMobileView = computed(() => {
     const isMobile = this.screenWidth() < 1024;
@@ -478,6 +553,37 @@ export class FeedsComponent implements OnInit, OnDestroy {
   bookmarkContent(event: NostrRecord): void {
     // Implement bookmark functionality
     this.notificationService.notify('Content bookmarked');
+  }
+
+  // Method called when user completes followset onboarding
+  onFollowsetComplete(): void {
+    // The followset component handles adding follows internally
+    // We just need to refresh the view here
+    console.log('Followset onboarding completed');
+    this.notificationService.notify('Welcome! Your feed is ready.');
+  }
+
+  // Followset interaction methods
+  toggleInterest(interestId: string): void {
+    this.selectedInterests.update(interests => {
+      if (interests.includes(interestId)) {
+        return interests.filter(id => id !== interestId);
+      } else {
+        return [...interests, interestId];
+      }
+    });
+  }
+
+  toggleFollow(profileId: string): void {
+    this.followingProfiles.update(profiles => {
+      if (profiles.includes(profileId)) {
+        return profiles.filter(id => id !== profileId);
+      } else {
+        // Add to local state and also to account following
+        this.accountState.follow(profileId);
+        return [...profiles, profileId];
+      }
+    });
   }
 
   selectColumn(index: number): void {
