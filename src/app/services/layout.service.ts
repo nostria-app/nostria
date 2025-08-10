@@ -548,6 +548,12 @@ export class LayoutService implements OnDestroy {
     this.logger.debug('Welcome screen preference updated', { show });
   }
 
+  // Method to show the welcome dialog
+  showWelcomeDialog(): void {
+    this.logger.debug('Showing welcome dialog');
+    this.showWelcomeScreen.set(true);
+  }
+
   async showLoginDialog(): Promise<void> {
     this.logger.debug('showLoginDialog called');
     // Apply the blur class to the document body before opening the dialog
