@@ -31,7 +31,7 @@
     </button>
     } @if (!layout.search()) {
     <app-navigation></app-navigation>
-    <span class="app-title title-font hide-small">
+    <span class="app-title title-font hide-small" [routerLink]="['/']">
       {{title}}
       <a [routerLink]="['/beta']" class="beta-indicator">BETA</a>
     </span>
