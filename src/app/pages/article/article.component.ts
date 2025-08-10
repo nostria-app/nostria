@@ -23,6 +23,8 @@ import { BookmarkService } from '../../services/bookmark.service';
 import { CommonModule } from '@angular/common';
 import { AccountStateService } from '../../services/account-state.service';
 import DOMPurify from 'dompurify';
+import { UserDataFactoryService } from '../../services/user-data-factory.service';
+import { NostrRecord } from '../../interfaces';
 
 @Component({
   selector: 'app-article',
@@ -48,6 +50,7 @@ export class ArticleComponent {
   private utilities = inject(UtilitiesService);
   private nostrService = inject(NostrService);
   private storageService = inject(StorageService);
+  private readonly userDataFactory = inject(UserDataFactoryService);
   private logger = inject(LoggerService);
   private sanitizer = inject(DomSanitizer);
   private data = inject(DataService);
@@ -155,13 +158,24 @@ export class ArticleComponent {
       this.error.set(null);
 
       const isNotCurrentUser = !this.accountState.isCurrentUser(pubkey);
-      const event = await this.data.getEventByPubkeyAndKindAndReplaceableEvent(
-        pubkey,
-        kinds.LongFormArticle,
-        slug,
-        { save: false, cache: false },
-        isNotCurrentUser
-      );
+      let event: NostrRecord | null = null;
+
+      if (isNotCurrentUser) {
+        const userData = await this.userDataFactory.create(pubkey);
+        event = await userData.getEventByPubkeyAndKindAndReplaceableEvent(
+          pubkey,
+          kinds.LongFormArticle,
+          slug,
+          { save: false, cache: false }
+        );
+      } else {
+        event = await this.data.getEventByPubkeyAndKindAndReplaceableEvent(
+          pubkey,
+          kinds.LongFormArticle,
+          slug,
+          { save: false, cache: false }
+        );
+      }
 
       if (event) {
         this.logger.debug(

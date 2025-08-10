@@ -1,0 +1,288 @@
+import { Injectable, inject, signal } from '@angular/core';
+import { NostrService } from './nostr.service';
+import { RelayService } from './relay.service';
+import { StorageService } from './storage.service';
+import { DataService } from './data.service';
+import { AccountStateService } from './account-state.service';
+import { MediaService } from './media.service';
+import { LoggerService } from './logger.service';
+import { Event } from 'nostr-tools';
+
+/**
+ * Interface for profile data
+ */
+export interface ProfileData {
+  display_name?: string;
+  name?: string;
+  about?: string;
+  picture?: string;
+  banner?: string;
+  website?: string;
+  lud16?: string; // Lightning address
+  lud06?: string; // Lightning address (deprecated)
+  nip05?: string; // Nostr address
+  [key: string]: unknown; // Allow additional custom fields
+}
+
+/**
+ * Interface for profile update options
+ */
+export interface ProfileUpdateOptions {
+  /** Profile data to update */
+  profileData: ProfileData;
+  /** Profile image file to upload (optional) */
+  profileImageFile?: File;
+  /** Banner image file to upload (optional) */
+  bannerImageFile?: File;
+  /** Whether to force upload even if no media servers configured */
+  skipMediaServerCheck?: boolean;
+}
+
+/**
+ * Interface for profile creation result
+ */
+export interface ProfileCreateResult {
+  success: boolean;
+  error?: string;
+  profileEvent?: Event;
+}
+
+/**
+ * Service for managing user profiles
+ * Handles profile creation, updates, and publishing to Nostr relays
+ */
+@Injectable({
+  providedIn: 'root',
+})
+export class Profile {
+  private nostr = inject(NostrService);
+  private relay = inject(RelayService);
+  private storage = inject(StorageService);
+  private data = inject(DataService);
+  private accountState = inject(AccountStateService);
+  private media = inject(MediaService);
+  private logger = inject(LoggerService);
+
+  private isUpdating = signal<boolean>(false);
+
+  /**
+   * Signal indicating if a profile update is in progress
+   */
+  get updating() {
+    return this.isUpdating.asReadonly();
+  }
+
+  /**
+   * Creates or updates a user profile
+   * @param options Profile update options
+   * @returns Promise resolving to the result of the operation
+   */
+  async updateProfile(
+    options: ProfileUpdateOptions
+  ): Promise<ProfileCreateResult> {
+    this.logger.debug('Updating profile', options);
+
+    if (this.isUpdating()) {
+      return { success: false, error: 'Profile update already in progress' };
+    }
+
+    this.isUpdating.set(true);
+
+    try {
+      const profileData = { ...options.profileData };
+
+      // Check if file uploads are needed and media servers are available
+      const needsFileUpload =
+        options.profileImageFile || options.bannerImageFile;
+      if (
+        needsFileUpload &&
+        !options.skipMediaServerCheck &&
+        !this.hasMediaServers()
+      ) {
+        throw new Error(
+          'Media servers are required for file uploads. Please configure media servers first.'
+        );
+      }
+
+      // Handle profile image upload
+      if (options.profileImageFile) {
+        const uploadResult = await this.media.uploadFile(
+          options.profileImageFile,
+          true,
+          this.media.mediaServers()
+        );
+
+        if (!uploadResult.item) {
+          throw new Error(
+            `Failed to upload profile image: ${uploadResult.message || 'Unknown error'}`
+          );
+        }
+
+        profileData.picture = uploadResult.item.url;
+        this.logger.debug('Profile image uploaded', {
+          url: profileData.picture,
+        });
+      }
+
+      // Handle banner upload
+      if (options.bannerImageFile) {
+        const uploadResult = await this.media.uploadFile(
+          options.bannerImageFile,
+          true,
+          this.media.mediaServers()
+        );
+
+        if (!uploadResult.item) {
+          throw new Error(
+            `Failed to upload banner image: ${uploadResult.message || 'Unknown error'}`
+          );
+        }
+
+        profileData.banner = uploadResult.item.url;
+        this.logger.debug('Banner image uploaded', { url: profileData.banner });
+      }
+
+      // Clean the profile data
+      const cleanedProfile = this.cleanProfileData(profileData);
+
+      // Create and publish the profile event
+      const profileEvent = await this.createProfileEvent(cleanedProfile);
+
+      // Publish to relays
+      await this.relay.publish(profileEvent);
+      this.logger.debug('Profile published to relays');
+
+      // Save locally
+      await this.storage.saveEvent(profileEvent);
+      this.logger.debug('Profile saved locally');
+
+      // Update account state
+      const record = this.data.toRecord(profileEvent);
+      this.accountState.addToAccounts(record.event.pubkey, record);
+      this.accountState.addToCache(record.event.pubkey, record);
+
+      // Update the local account name
+      const account = this.accountState.account();
+      if (account) {
+        account.name = cleanedProfile.display_name || cleanedProfile.name || '';
+      }
+
+      // Update the profile signal
+      this.accountState.profile.set(
+        this.accountState.getAccountProfile(record.event.pubkey)
+      );
+
+      this.logger.debug('Profile update completed successfully');
+      return { success: true, profileEvent };
+    } catch (error) {
+      this.logger.error('Failed to update profile', error);
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : 'Unknown error occurred',
+      };
+    } finally {
+      this.isUpdating.set(false);
+    }
+  }
+
+  /**
+   * Creates a basic profile for new users during onboarding
+   * @param displayName Optional display name
+   * @param profileImageFile Optional profile image file
+   * @returns Promise resolving to the result of the operation
+   */
+  async createInitialProfile(
+    displayName?: string,
+    profileImageFile?: File
+  ): Promise<ProfileCreateResult> {
+    this.logger.debug('Creating initial profile', {
+      hasDisplayName: !!displayName,
+      hasProfileImage: !!profileImageFile,
+    });
+
+    // Only create profile if user provided some data
+    if (!displayName && !profileImageFile) {
+      this.logger.debug('No profile data provided, skipping profile creation');
+      return { success: true };
+    }
+
+    const profileData: ProfileData = {};
+
+    if (displayName?.trim()) {
+      profileData.display_name = displayName.trim();
+    }
+
+    return this.updateProfile({
+      profileData,
+      profileImageFile,
+      skipMediaServerCheck: false, // Still require media servers for new profiles
+    });
+  }
+
+  /**
+   * Checks if media servers are configured for file uploads
+   * @returns True if media servers are available
+   */
+  private hasMediaServers(): boolean {
+    return this.media.mediaServers().length > 0;
+  }
+
+  /**
+   * Cleans profile data by removing deprecated and temporary fields
+   * @param profileData Raw profile data
+   * @returns Cleaned profile data
+   */
+  private cleanProfileData(profileData: ProfileData): ProfileData {
+    const cleaned = { ...profileData };
+
+    // Remove deprecated fields according to NIP-24
+    delete cleaned['displayName']; // Use display_name instead
+    delete cleaned['username']; // Use name instead
+
+    // Remove temporary file references and URL fields used by UI
+    delete cleaned['selectedProfileFile'];
+    delete cleaned['selectedBannerFile'];
+    delete cleaned['pictureUrl'];
+    delete cleaned['bannerUrl'];
+
+    // Handle NIP-05 identifier formatting
+    if (cleaned.nip05 && !cleaned.nip05.startsWith('_')) {
+      // If user enters a NIP-05 identifier for root without "_", prepend it
+      cleaned.nip05 = `_${cleaned.nip05}`;
+    }
+
+    // Remove empty string values to keep the profile clean
+    Object.keys(cleaned).forEach(key => {
+      if (cleaned[key] === '') {
+        delete cleaned[key];
+      }
+    });
+
+    return cleaned;
+  }
+
+  /**
+   * Creates a Nostr event for the profile data
+   * @param profileData Cleaned profile data
+   * @returns Signed Nostr event
+   */
+  private async createProfileEvent(profileData: ProfileData): Promise<Event> {
+    // Get existing profile to preserve kind and tags
+    const existingProfile = this.accountState.profile();
+    const kind = existingProfile?.event.kind || 0; // Default to kind 0 for metadata
+    const tags = existingProfile?.event.tags || []; // Default to empty tags array
+
+    // Create unsigned event
+    const unsignedEvent = this.nostr.createEvent(
+      kind,
+      JSON.stringify(profileData),
+      tags
+    );
+
+    // Sign the event
+    const signedEvent = await this.nostr.signEvent(unsignedEvent);
+
+    return signedEvent;
+  }
+}

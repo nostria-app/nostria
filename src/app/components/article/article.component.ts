@@ -4,6 +4,7 @@ import { Event, nip19 } from 'nostr-tools';
 import { NostrRecord } from '../../interfaces';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { LayoutService } from '../../services/layout.service';
+import { UserDataFactoryService } from '../../services/user-data-factory.service';
 
 @Component({
   selector: 'app-article',
@@ -21,17 +22,22 @@ export class ArticleComponent {
   layout = inject(LayoutService);
   loading = signal<boolean>(false);
 
+  dataFactory = inject(UserDataFactoryService);
+
   constructor() {
     effect(async () => {
       if (this.pubkey() && this.slug() && this.kind()) {
         this.loading.set(true);
+
+        debugger;
+        const dataService = await this.dataFactory.create(this.pubkey());
+
         const eventData =
-          await this.data.getEventByPubkeyAndKindAndReplaceableEvent(
+          await dataService.getEventByPubkeyAndKindAndReplaceableEvent(
             this.pubkey(),
             this.kind(),
             this.slug(),
-            undefined,
-            true
+            undefined
           );
         this.record.set(eventData);
         this.loading.set(false);

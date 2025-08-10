@@ -70,7 +70,8 @@
   width: 100%;
 
   @media (min-width: 400px) {
-    grid-template-columns: repeat(2, 1fr); /* Equal width columns */
+    grid-template-columns: repeat(2, 1fr);
+    /* Equal width columns */
   }
 }
 
@@ -86,7 +87,8 @@
   /* Add these properties to ensure equal width */
   display: flex;
   flex: 1;
-  min-width: 0; /* Prevents overflow in flex containers */
+  min-width: 0;
+  /* Prevents overflow in flex containers */
   width: 100%;
 
   &::after {
@@ -120,10 +122,12 @@
   .card-content {
     display: flex;
     flex-direction: column;
-    width: 100%; /* Take full width of container */
+    width: 100%;
+    /* Take full width of container */
     height: 100%;
     align-items: center;
-    justify-content: center; /* Center content vertically */
+    justify-content: center;
+    /* Center content vertically */
 
     mat-icon {
       font-size: 32px;
@@ -137,8 +141,10 @@
     }
 
     .card-text {
-      width: 100%; /* Ensure text takes full width */
-      text-align: center; /* Center text horizontally */
+      width: 100%;
+      /* Ensure text takes full width */
+      text-align: center;
+      /* Center text horizontally */
 
       h3 {
         margin: 0 0 8px;
@@ -146,7 +152,8 @@
         font-weight: 500;
         display: flex;
         align-items: center;
-        justify-content: center; /* Center icon and text */
+        justify-content: center;
+        /* Center icon and text */
       }
 
       p {
@@ -288,6 +295,213 @@
   margin-top: 16px;
   font-size: 14px;
   color: rgba(0, 0, 0, 0.6);
+  text-align: center;
+}
+
+// Region discovery styles (similar to welcome component)
+.region-detection-container {
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.region-detection-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1rem 0;
+  padding: 0.5rem 1rem;
+  background-color: var(--mat-sys-surface-container);
+  border-radius: 16px;
+  font-size: 0.875rem;
+
+  .spinning {
+    animation: spin 1s linear infinite;
+  }
+
+  span {
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.region-info-container {
+  margin: 1.5rem 0;
+  text-align: center;
+}
+
+.region-info-btn {
+  margin: 0;
+  padding: 0.75rem 1.25rem;
+  background-color: var(--mat-sys-surface-container);
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 12px;
+  font-size: 0.875rem;
+  color: var(--mat-sys-on-surface-variant);
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  strong {
+    color: var(--mat-sys-on-surface);
+  }
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-high);
+    border-color: var(--mat-sys-outline);
+  }
+}
+
+.region-selector {
+  margin-top: 1rem;
+  text-align: left;
+
+  h3 {
+    margin-bottom: 1rem;
+    font-size: 1rem;
+    color: var(--mat-sys-on-surface);
+  }
+}
+
+.region-option {
+  display: flex;
+  // align-items:first baseline;
+  // justify-content: space-between;
+  width: 100%;
+  margin-bottom: 0.5rem;
+  padding: 0.75rem;
+  text-align: left;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container);
+  }
+
+  .region-flag {
+    font-size: 1.2rem;
+    margin-right: 0.75rem;
+  }
+
+  .region-name {
+    flex: 1;
+    font-weight: 500;
+  }
+
+  .region-latency {
+    font-size: 0.875rem;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+// Profile setup styles (similar to welcome component)
+.profile-setup-section {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+
+  h3 {
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+    color: var(--mat-sys-on-surface);
+  }
+
+  p {
+    margin-bottom: 1.5rem;
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 0.9rem;
+  }
+}
+
+.profile-setup-form {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+
+  @media (max-width: 500px) {
+    flex-direction: column;
+    align-items: center;
+  }
+}
+
+.profile-avatar-section {
+  flex-shrink: 0;
+}
+
+.profile-setup-avatar {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid var(--mat-sys-outline-variant);
+  transition: all 0.3s ease;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--mat-sys-primary);
+    transform: scale(1.05);
+    box-shadow: var(--mat-sys-level2);
+  }
+
+  &:focus {
+    outline: 2px solid var(--mat-sys-primary);
+    outline-offset: 2px;
+    border-color: var(--mat-sys-primary);
+  }
+
+  .profile-preview {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--mat-sys-surface-container);
+    color: var(--mat-sys-on-surface-variant);
+    transition: all 0.3s ease;
+
+    mat-icon {
+      font-size: 32px;
+      width: 32px;
+      height: 32px;
+    }
+  }
+
+  &:hover .avatar-placeholder {
+    background-color: var(--mat-sys-surface-container-high);
+    color: var(--mat-sys-primary);
+  }
+}
+
+.hidden-file-input {
+  display: none;
+}
+
+.profile-name-section {
+  flex: 1;
+}
+
+.profile-name-field {
+  width: 100%;
+}
+
+.continue-button-container {
+  margin-top: 2rem;
   text-align: center;
 }
 
