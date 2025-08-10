@@ -1007,8 +1007,10 @@ export class FeedsComponent implements OnInit, OnDestroy {
     // Re-establish subscriptions when component loads
     this.feedService.subscribe();
 
-    // Initialize followset data for new users
-    this.initializeFollowsetData();
+    if (this.availableInterests().length === 0) {
+      // Initialize followset data for new users
+      this.initializeFollowsetData();
+    }
   }
 
   /**
@@ -1016,7 +1018,6 @@ export class FeedsComponent implements OnInit, OnDestroy {
    */
   private async initializeFollowsetData(): Promise<void> {
     try {
-      debugger;
       // Only fetch if user has empty following list
       if (this.hasEmptyFollowingList()) {
         this.logger.debug(
