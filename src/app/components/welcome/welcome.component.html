@@ -125,68 +125,10 @@
         <!-- Screen 4 - Interests & Follow Suggestions -->
         @else if (currentOnboardingPage() === 4) {
         <div class="interests-content-full-width">
-          <h1>What interests you?</h1>
-          <p>
-            Select topics you're interested in to discover people and content you'll love.
-            You can always change these later.
-          </p>
-
-          <div class="interests-selection">
-            <h3>Pick your interests:</h3>
-            <div class="interests-grid">
-              @for (interest of availableInterests(); track interest.id) {
-              <label class="interest-checkbox">
-                <input type="checkbox" [checked]="selectedInterests().includes(interest.id)"
-                  (change)="toggleInterest(interest.id)" />
-                <span class="interest-label">
-                  <mat-icon>{{ interest.icon }}</mat-icon>
-                  {{ interest.name }}
-                </span>
-              </label>
-              }
-            </div>
-          </div>
-
-          @if (selectedInterests().length > 0) {
-          <div class="suggested-follows">
-            <h3>People to follow</h3>
-            <p>Here are some popular creators in your areas of interest:</p>
-
-            <div class="profiles-grid">
-              @for (profile of getSuggestedProfiles(); track profile.id) {
-              <div class="profile-card" [class.following]="followingProfiles().includes(profile.id)">
-                <div class="profile-avatar">
-                  <img [src]="profile.avatar" [alt]="profile.name + ' avatar'" [title]="profile.name" />
-                </div>
-                <div class="profile-info">
-                  <h4>{{ profile.name }}</h4>
-                  <p class="profile-bio">{{ profile.bio }}</p>
-                  @if (profile.region && profile.interests.includes('regional')) {
-                  <p class="profile-region">📍 {{ profile.region }}</p>
-                  }
-                  <div class="profile-interests">
-                    @for (interestId of profile.interests; track interestId) {
-                    <span class="interest-tag">{{ getInterestName(interestId) }}</span>
-                    }
-                  </div>
-                </div>
-                <button mat-button [class.following-btn]="followingProfiles().includes(profile.id)"
-                  (click)="toggleFollow(profile.id)">
-                  @if (followingProfiles().includes(profile.id)) {
-                  <ng-container>
-                    <mat-icon>check</mat-icon> Following
-                  </ng-container>
-                  } @else {
-                  <ng-container>
-                    <mat-icon>add</mat-icon> Follow
-                  </ng-container>
-                  }
-                </button>
-              </div>
-              }
-            </div>
-          </div>
-          }
+          <app-followset [availableInterests]="availableInterests()" [suggestedProfiles]="suggestedProfiles()"
+            [selectedInterests]="selectedInterests()" [followingProfiles]="followingProfiles()"
+            [detectedRegion]="detectedRegion()" (interestToggled)="toggleInterest($event)"
+            (profileToggled)="toggleFollow($event)"></app-followset>
         </div>
         }
 
