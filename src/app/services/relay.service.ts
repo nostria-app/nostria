@@ -442,7 +442,6 @@ export class RelayService {
     this.logger.debug('Getting events with filters:', filter);
 
     if (!this.accountPool) {
-      debugger;
       this.logger.error('Cannot get events: account pool is not initialized');
       return null;
     }
@@ -499,7 +498,6 @@ export class RelayService {
     this.logger.debug('Getting events with filters:', filter);
 
     if (!this.accountPool) {
-      debugger;
       this.logger.error('Cannot get events: account pool is not initialized');
       return [];
     }
