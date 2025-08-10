@@ -8,216 +8,65 @@
         <mat-icon>light_mode</mat-icon>
         }
       </button>
-      <button class="welcome-close-button" mat-icon-button (click)="closeWelcomeScreen()">
+      <button class="welcome-close-button" mat-icon-button (click)="skipToEnd()">
         <mat-icon>close</mat-icon>
       </button>
     </div>
 
     <div class="welcome-content">
       <div class="welcome-content-container">
-        <!-- Screen 1 - Welcome & Easy Start -->
-        @if (currentOnboardingPage() === 1) {
-        <div class="welcome-logo-container">
-          <img src="icons/icon.svg" alt="Nostria logo" class="welcome-logo" />
-        </div>
-        <div>
-          <h1>Nostria</h1>
-          <div class="tagline">Your Social Media</div>
-          <p class="easy-start-message">
-            Getting started with Nostria is incredibly simple and takes just moments.
-            No complicated setup, no personal information required.
-          </p>
-          <p>
-            Join thousands of users who have discovered a better way to connect and share ideas
-            in a truly decentralized social network.
-          </p>
-        </div>
-        }
+        @let currentStep = getCurrentStep();
 
-        <!-- Screen 2 - Account Created / Region Detection -->
-        @else if (currentOnboardingPage() === 2) {
+        <!-- Step Icon and Visual -->
         <div class="welcome-logo-container">
-          <div class="key-generation-animation">
-            <mat-icon class="key-icon">vpn_key</mat-icon>
-            @if (isDetectingRegion()) {
-            <div class="generation-dots">
-              <span></span><span></span><span></span>
+          <div class="wizard-step-icon">
+            <mat-icon class="step-icon">{{ currentStep.icon }}</mat-icon>
+          </div>
+        </div>
+
+        <!-- Step Content -->
+        <div class="wizard-step-content">
+          <h1>{{ currentStep.title }}</h1>
+          <div class="step-subtitle">{{ currentStep.subtitle }}</div>
+
+          @for (paragraph of currentStep.content; track $index) {
+          <p>{{ paragraph }}</p>
+          }
+
+          <!-- Features List -->
+          @if (currentStep.features.length > 0) {
+          <div class="step-features">
+            @for (feature of currentStep.features; track feature.icon) {
+            <div class="feature-item">
+              <mat-icon class="feature-icon">{{ feature.icon }}</mat-icon>
+              <span class="feature-text">{{ feature.text }}</span>
             </div>
-            }
-          </div>
-        </div>
-        <div>
-          @if (isDetectingRegion()) {
-          <h1>Discovering your region...</h1>
-          <p>
-            Your account is ready in seconds — no email address, no phone number,
-            no personal details required.
-          </p>
-          <p>
-            Choosing a region that is close to you, helps ensure faster access and better performance.
-          </p>
-          <div class="region-detection-loading">
-            <mat-icon class="spinning">autorenew</mat-icon>
-            <span>Finding closest region...</span>
-          </div>
-          } @else {
-          <h1>You're all set!</h1>
-          <p>
-            Your account is ready in seconds — no email address, no phone number,
-            no personal details required.
-          </p>
-          <p>
-            Choosing a region that is close to you, helps ensure faster access and better performance.
-          </p>
-
-          <button mat-button class="region-info-btn" (click)="toggleRegionSelector()">
-            Region: <strong>{{ detectedRegion() }}</strong>
-          </button>
-
-          @if (showRegionSelector()) {
-          <div class="region-selector">
-            <h3>Choose your region:</h3>
-            @for (region of availableRegions(); track region.name) {
-            <button class="region-option" mat-button (click)="selectRegion(region.name)">
-              <mat-icon class="region-flag">travel_explore</mat-icon>
-              <span class="region-name">{{ region.name }}</span>
-              <span class="region-latency">{{ region.latency }}</span>
-            </button>
             }
           </div>
           }
-          }
         </div>
-        }
-
-        <!-- Screen 3 - Profile Setup -->
-        @else if (currentOnboardingPage() === 3) {
-        <div class="welcome-logo-container">
-          <div class="profile-setup-avatar">
-            @if (profileImage()) {
-            <img [src]="profileImage()" alt="Profile" class="profile-preview" />
-            } @else {
-            <div class="avatar-placeholder">
-              <mat-icon>add_a_photo</mat-icon>
-            </div>
-            }
-            <input type="file" accept="image/*" (change)="onFileSelected($event)" #fileInput class="hidden-file-input"
-              title="Select profile image" />
-            <button mat-icon-button class="change-photo-btn" (click)="fileInput.click()">
-              <mat-icon>photo_camera</mat-icon>
-            </button>
-          </div>
-        </div>
-        <div>
-          <h1>Let's set up your profile</h1>
-          <p>
-            Let people recognize you with a name and photo.
-            You can always change these later.
-          </p>
-
-          <mat-form-field appearance="outline" class="profile-name-field">
-            <mat-label>What should we call you?</mat-label>
-            <input matInput [(ngModel)]="displayName" placeholder="Display name (optional)" maxlength="50" />
-          </mat-form-field>
-        </div>
-        }
-
-        <!-- Screen 4 - Interests & Follow Suggestions -->
-        @else if (currentOnboardingPage() === 4) {
-        <div class="interests-content-full-width">
-          <app-followset [availableInterests]="availableInterests()" [suggestedProfiles]="suggestedProfiles()"
-            [selectedInterests]="selectedInterests()" [followingProfiles]="followingProfiles()"
-            [detectedRegion]="detectedRegion()" (interestToggled)="toggleInterest($event)"
-            (completed)="completeFollowsetSelection($event)"></app-followset>
-        </div>
-        }
-
-        <!-- Screen 5 - Learn More (Feature Intro) -->
-        @else if (currentOnboardingPage() === 5) {
-        <div class="welcome-logo-container">
-          <img src="icons/icon.svg" alt="Nostria logo" class="welcome-logo" />
-        </div>
-        <div>
-          <h1>Why you'll love Nostria</h1>
-          <div class="feature-carousel">
-            <div class="feature-navigation">
-              <button mat-icon-button (click)="previousFeature()" [disabled]="features().length <= 1">
-                <mat-icon>chevron_left</mat-icon>
-              </button>
-              <div class="feature-indicators">
-                @for (feature of features(); track $index) {
-                <button class="indicator" [class.active]="currentFeatureIndex() === $index"
-                  (click)="currentFeatureIndex.set($index)" [attr.aria-label]="'View feature ' + ($index + 1)"
-                  [title]="'View feature ' + ($index + 1)">
-                  <span class="sr-only">Feature {{ $index + 1 }}</span>
-                </button>
-                }
-              </div>
-              <button mat-icon-button (click)="nextFeature()" [disabled]="features().length <= 1">
-                <mat-icon>chevron_right</mat-icon>
-              </button>
-            </div>
-
-            <div class="feature-content">
-              @for (feature of features(); track $index) {
-              @if (currentFeatureIndex() === $index) {
-              <div class="feature-card">
-                <mat-icon class="feature-icon">{{ feature.icon }}</mat-icon>
-                <h3>{{ feature.title }}</h3>
-                <p>{{ feature.description }}</p>
-              </div>
-              }
-              }
-            </div>
-          </div>
-        </div>
-        }
       </div>
     </div>
 
     <div class="welcome-footer">
-      @if (currentOnboardingPage() <= 4) { <div class="page-indicator">Page {{ currentOnboardingPage() }} of {{
-        totalOnboardingPages() }}</div>
-    } @else {
-    <div class="page-indicator"></div>
-    }
-    <div class="welcome-actions">
-      @if (currentOnboardingPage() === 1) {
-      <button mat-button (click)="closeWelcomeScreen()">Close</button>&nbsp;
-      <button mat-button (click)="showLogin()">Log In</button>&nbsp;
-      <button mat-flat-button (click)="nextOnboardingPage()">Create Account</button>
-      }
+      <div class="step-indicator">
+        @if (currentWizardStep() <= totalWizardSteps()) { Step {{ currentWizardStep() }} of {{ totalWizardSteps() }} }
+          </div>
 
-      @if (currentOnboardingPage() === 2) {
-      @if (!isDetectingRegion()) {
-      <button mat-button (click)="previousOnboardingPage()">Back</button>&nbsp;
-      <button mat-flat-button (click)="nextOnboardingPage()">Continue</button>
-      }
-      }
-
-      @if (currentOnboardingPage() === 3) {
-      <button mat-button (click)="previousOnboardingPage()">Back</button>&nbsp;
-      <button mat-button (click)="skipProfileSetup()">Skip for now</button>&nbsp;
-      <button mat-flat-button (click)="nextOnboardingPage()">Continue</button>
-      }
-
-      @if (currentOnboardingPage() === 4) {
-      <button mat-button (click)="previousOnboardingPage()">Back</button>&nbsp;
-      <button mat-button (click)="learnMore()">Learn more</button>&nbsp;
-      <button mat-flat-button (click)="completeOnboarding()">
-        @if (selectedInterests().length === 0) {
-        Skip and get started
-        } @else {
-        Complete setup
-        }
-      </button>
-      }
-
-      @if (currentOnboardingPage() === 5) {
-      <button mat-button (click)="currentOnboardingPage.set(4)">Back</button>&nbsp;
-      <button mat-flat-button (click)="closeWelcomeScreen()">Complete setup</button>
-      }
+          <div class="welcome-actions">
+            @if (currentWizardStep() === 1) {
+            <!-- First step actions -->
+            <button mat-flat-button (click)="nextStep()">Continue</button>
+            } @else if (currentWizardStep() === totalWizardSteps()) {
+            <!-- Last step actions -->
+            <button mat-button (click)="previousStep()">Back</button>&nbsp;
+            <button mat-flat-button (click)="completeWizard()">Start Using Nostria</button>
+            } @else {
+            <!-- Middle steps actions -->
+            <button mat-button (click)="previousStep()">Back</button>&nbsp;
+            <button mat-flat-button (click)="nextStep()">Continue</button>
+            }
+          </div>
+      </div>
     </div>
   </div>
-</div>
-</div>

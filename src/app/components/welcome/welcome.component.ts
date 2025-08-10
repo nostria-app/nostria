@@ -3,15 +3,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatCheckboxModule } from '@angular/material/checkbox';
 import { FormsModule } from '@angular/forms';
 import { LayoutService } from '../../services/layout.service';
 import { ThemeService } from '../../services/theme.service';
-import {
-  FollowsetComponent,
-  type Interest,
-  type SuggestedProfile,
-} from '../followset/followset.component';
 
 @Component({
   selector: 'app-welcome',
@@ -20,9 +14,7 @@ import {
     MatButtonModule,
     MatInputModule,
     MatFormFieldModule,
-    MatCheckboxModule,
     FormsModule,
-    FollowsetComponent,
   ],
   templateUrl: './welcome.component.html',
   styleUrl: './welcome.component.scss',
@@ -30,279 +22,115 @@ import {
 export class WelcomeComponent {
   themeService = inject(ThemeService);
   layout = inject(LayoutService);
-  currentOnboardingPage = signal(1);
-  totalOnboardingPages = signal(4); // Now 4 main steps, learn more is optional
 
-  // Profile setup signals
-  displayName = signal('');
-  profileImage = signal<string | null>(null);
-  showAdvancedKey = signal(false);
+  // Wizard state
+  currentWizardStep = signal(1);
+  totalWizardSteps = signal(4);
 
-  // Region detection signals
-  isDetectingRegion = signal(true);
-  detectedRegion = signal('');
-  showRegionSelector = signal(false);
-  availableRegions = signal([
-    { name: 'United States', latency: '45ms' },
-    { name: 'Europe', latency: '78ms' },
-    { name: 'Asia Pacific', latency: '120ms' },
-    { name: 'Canada', latency: '52ms' },
-  ]);
-
-  // Feature highlights for screen 3 (learn more section)
-  features = signal([
+  // Introduction content for each step
+  wizardSteps = signal([
     {
-      icon: 'security',
-      title: 'Private & Secure',
-      description: 'Only you control your account.',
+      id: 1,
+      icon: 'public',
+      title: 'Welcome to Nostria',
+      subtitle: 'Your Gateway to the Decentralized Web',
+      content: [
+        'Nostria is the easy way to experience Nostr - a decentralized social protocol that puts you in control.',
+        'No central algorithms deciding what you see. No ads. No data harvesting. Just authentic connections.',
+        'Join thousands who have discovered a better way to connect and share ideas.',
+      ],
+      features: [
+        { icon: 'security', text: 'Complete ownership of your data' },
+        { icon: 'groups', text: 'Connect without intermediaries' },
+        { icon: 'block', text: 'Censorship-resistant communication' },
+      ],
     },
     {
-      icon: 'location_on',
-      title: 'Regional Communities',
-      description: 'Connect with people near you.',
+      id: 2,
+      icon: 'hub',
+      title: 'What is Nostr?',
+      subtitle: 'Notes and Other Stuff Transmitted by Relays',
+      content: [
+        'Nostr is a simple, open protocol that enables global, censorship-resistant social media.',
+        "Instead of posting to a single company's servers, your messages are distributed across a network of independent relays.",
+        'You own your identity through cryptographic keys - no account can be banned or deleted by others.',
+      ],
+      features: [
+        { icon: 'vpn_key', text: 'Your keys, your identity' },
+        { icon: 'dns', text: 'Distributed relay network' },
+        { icon: 'language', text: 'Global, open protocol' },
+      ],
     },
     {
-      icon: 'block',
-      title: 'No Passwords, No Ads',
-      description: 'Just conversations.',
-    },
-  ]);
-  currentFeatureIndex = signal(0);
-
-  // Interests and follow suggestions for screen 4
-  availableInterests = signal<Interest[]>([
-    { id: 'regional', name: 'Regional', icon: 'location_on' },
-    { id: 'sports', name: 'Sports', icon: 'sports_soccer' },
-    { id: 'academic', name: 'Academic', icon: 'school' },
-    { id: 'science', name: 'Science', icon: 'science' },
-    { id: 'arts', name: 'Arts', icon: 'palette' },
-    { id: 'bitcoin', name: 'Bitcoin', icon: 'currency_bitcoin' },
-    { id: 'technology', name: 'Technology', icon: 'computer' },
-    { id: 'music', name: 'Music', icon: 'music_note' },
-    { id: 'gaming', name: 'Gaming', icon: 'sports_esports' },
-    { id: 'food', name: 'Food', icon: 'restaurant' },
-    { id: 'travel', name: 'Travel', icon: 'flight' },
-    { id: 'fitness', name: 'Fitness', icon: 'fitness_center' },
-    { id: 'finance', name: 'Finance', icon: 'account_balance' },
-    { id: 'fashion', name: 'Fashion', icon: 'checkroom' },
-    { id: 'architecture', name: 'Architecture', icon: 'architecture' },
-    { id: 'gardening', name: 'Gardening', icon: 'local_florist' },
-    { id: 'photography', name: 'Photography', icon: 'photo_camera' },
-  ]);
-
-  selectedInterests = signal<string[]>([]);
-  followingProfiles = signal<string[]>([]);
-
-  // Sample suggested profiles data
-  suggestedProfiles = signal<SuggestedProfile[]>([
-    {
-      id: 'profile1',
-      name: 'Tech Innovator',
-      bio: 'Building the future of decentralized tech',
-      avatar:
-        'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
-      interests: ['technology', 'bitcoin', 'science'],
+      id: 3,
+      icon: 'star',
+      title: 'Why Choose Nostria?',
+      subtitle: 'Built for Performance and Ease of Use',
+      content: [
+        'Nostria makes Nostr accessible to everyone with an intuitive interface and powerful features.',
+        'We handle the complexity so you can focus on connecting and sharing.',
+        'Our global infrastructure ensures fast, reliable access to the Nostr network from anywhere.',
+      ],
+      features: [
+        { icon: 'speed', text: 'Optimized for global performance' },
+        { icon: 'auto_awesome', text: 'Automatic relay discovery' },
+        { icon: 'devices', text: 'Seamless cross-platform sync' },
+      ],
     },
     {
-      id: 'profile2',
-      name: 'Sports Analyst',
-      bio: 'Breaking down the game, one play at a time',
-      avatar:
-        'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
-      interests: ['sports', 'fitness'],
-    },
-    {
-      id: 'profile3',
-      name: 'Art Curator',
-      bio: 'Discovering emerging artists and timeless classics',
-      avatar:
-        'https://images.unsplash.com/photo-1494790108755-2616b67ade43?w=100&h=100&fit=crop&crop=face',
-      interests: ['arts', 'music'],
-    },
-    {
-      id: 'profile4',
-      name: 'Bitcoin Educator',
-      bio: 'Teaching financial sovereignty through Bitcoin',
-      avatar:
-        'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=100&h=100&fit=crop&crop=face',
-      interests: ['bitcoin', 'technology', 'academic'],
-    },
-    {
-      id: 'profile5',
-      name: 'Travel Blogger',
-      bio: 'Exploring hidden gems around the world',
-      avatar:
-        'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face',
-      interests: ['travel', 'food', 'arts'],
-    },
-    {
-      id: 'profile6',
-      name: 'Science Communicator',
-      bio: 'Making complex science accessible to everyone',
-      avatar:
-        'https://images.unsplash.com/photo-1519345182560-3f2917c472ef?w=100&h=100&fit=crop&crop=face',
-      interests: ['science', 'academic', 'technology'],
-    },
-    // Regional profiles - these will be filtered based on detected region
-    {
-      id: 'regional1',
-      name: 'Local Community Leader',
-      bio: 'Connecting neighbors and building stronger communities',
-      avatar:
-        'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=face',
-      interests: ['regional'],
-      region: 'North America', // Will be dynamically updated
-    },
-    {
-      id: 'regional2',
-      name: 'Regional News Reporter',
-      bio: 'Covering local stories that matter to our community',
-      avatar:
-        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face',
-      interests: ['regional'],
-      region: 'North America', // Will be dynamically updated
-    },
-    {
-      id: 'regional3',
-      name: 'Local Business Owner',
-      bio: 'Supporting the local economy and community growth',
-      avatar:
-        'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop&crop=face',
-      interests: ['regional'],
-      region: 'North America', // Will be dynamically updated
+      id: 4,
+      icon: 'rocket_launch',
+      title: 'Ready to Learn More',
+      subtitle: 'Start your Nostr journey',
+      content: [
+        'You now understand the basics of Nostr and why Nostria is the best way to experience it.',
+        "When you're ready to create your account and start using Nostria, we'll guide you through the simple setup process.",
+        'Welcome to the future of decentralized social networking!',
+      ],
+      features: [
+        { icon: 'school', text: 'Learn as you go' },
+        { icon: 'explore', text: 'Discover communities' },
+        { icon: 'connect_without_contact', text: 'Connect authentically' },
+      ],
     },
   ]);
 
-  // Add method to navigate to the next onboarding page
-  nextOnboardingPage(): void {
-    if (this.currentOnboardingPage() === 1) {
-      // Start region detection when moving to page 2
-      this.startRegionDetection();
-    }
+  // Get current step data
+  getCurrentStep() {
+    const steps = this.wizardSteps();
+    return steps.find(step => step.id === this.currentWizardStep()) || steps[0];
+  }
 
-    if (this.currentOnboardingPage() < this.totalOnboardingPages()) {
-      this.currentOnboardingPage.update(page => page + 1);
+  // Navigation methods
+  nextStep(): void {
+    if (this.currentWizardStep() < this.totalWizardSteps()) {
+      this.currentWizardStep.update(step => step + 1);
     } else {
-      // On the last page, close the welcome screen
-      this.closeWelcomeScreen();
+      this.completeWizard();
     }
   }
 
-  // Add method to navigate to the previous onboarding page
-  previousOnboardingPage(): void {
-    if (this.currentOnboardingPage() > 1) {
-      this.currentOnboardingPage.update(page => page - 1);
+  previousStep(): void {
+    if (this.currentWizardStep() > 1) {
+      this.currentWizardStep.update(step => step - 1);
     }
   }
 
-  // Method to close the welcome screen (Get started)
+  skipToEnd(): void {
+    this.completeWizard();
+  }
+
+  completeWizard(): void {
+    // TODO: Save any profile setup data
+    this.closeWelcomeScreen();
+  }
+
   closeWelcomeScreen(): void {
     this.layout.setWelcomeScreenPreference(false);
   }
 
   showLogin(): void {
-    // Close the welcome screen and show the login dialog
     this.layout.setWelcomeScreenPreference(false);
     this.layout.showLoginDialog();
-  }
-
-  // Method to continue to learn more section
-  learnMore(): void {
-    this.currentOnboardingPage.set(5);
-  }
-
-  // Region detection methods
-  startRegionDetection(): void {
-    this.isDetectingRegion.set(true);
-    this.showRegionSelector.set(false);
-
-    // Simulate region detection with a delay
-    setTimeout(() => {
-      // In a real app, this would make an API call to detect the closest region
-      const regions = this.availableRegions();
-      const fastestRegion = regions[0]; // For demo, just pick the first one
-      this.detectedRegion.set(fastestRegion.name);
-      this.isDetectingRegion.set(false);
-    }, 2500); // 2.5 seconds simulation
-  }
-
-  toggleRegionSelector(): void {
-    this.showRegionSelector.update(show => !show);
-  }
-
-  selectRegion(region: string): void {
-    this.detectedRegion.set(region);
-    this.showRegionSelector.set(false);
-  }
-
-  // Feature carousel methods
-  nextFeature(): void {
-    const nextIndex = (this.currentFeatureIndex() + 1) % this.features().length;
-    this.currentFeatureIndex.set(nextIndex);
-  }
-
-  previousFeature(): void {
-    const prevIndex =
-      this.currentFeatureIndex() === 0
-        ? this.features().length - 1
-        : this.currentFeatureIndex() - 1;
-    this.currentFeatureIndex.set(prevIndex);
-  }
-
-  // Profile setup methods
-  onFileSelected(event: Event): void {
-    const file = (event.target as HTMLInputElement).files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = e => {
-        this.profileImage.set(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  }
-
-  skipProfileSetup(): void {
-    this.nextOnboardingPage(); // Go to choose your path screen
-  }
-
-  completeProfileSetup(): void {
-    // TODO: Save profile data to service
-    this.nextOnboardingPage(); // Go to choose your path screen
-  }
-
-  // Interest and follow suggestion methods
-  toggleInterest(interestId: string): void {
-    const current = this.selectedInterests();
-    if (current.includes(interestId)) {
-      this.selectedInterests.set(current.filter(id => id !== interestId));
-    } else {
-      this.selectedInterests.set([...current, interestId]);
-    }
-  }
-
-  completeFollowsetSelection(data: {
-    selectedInterests: string[];
-    followsToAdd: string[];
-  }): void {
-    // Update selected interests
-    this.selectedInterests.set(data.selectedInterests);
-
-    // Add new follows to the existing following list
-    const currentFollowing = this.followingProfiles();
-    const newFollowing = [
-      ...new Set([...currentFollowing, ...data.followsToAdd]),
-    ];
-    this.followingProfiles.set(newFollowing);
-
-    // Complete the onboarding process
-    this.completeOnboarding();
-  }
-
-  completeOnboarding(): void {
-    // TODO: Save selected interests and following list to service
-    // This is where you would write the follow list to nostr relays
-    console.log('Selected interests:', this.selectedInterests());
-    console.log('Following profiles:', this.followingProfiles());
-    this.closeWelcomeScreen();
   }
 }
