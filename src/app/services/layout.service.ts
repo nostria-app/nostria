@@ -653,12 +653,22 @@ export class LayoutService implements OnDestroy {
       this.openProfile(value);
     } else if (value.startsWith('nprofile')) {
       this.toggleSearch();
-      const decoded = nip19.decode(value).data as ProfilePointer;
-      this.openProfile(decoded.pubkey);
+      try {
+        const decoded = nip19.decode(value).data as ProfilePointer;
+        this.openProfile(decoded.pubkey);
+      } catch (error) {
+        console.warn('Failed to decode nprofile:', value, error);
+        this.toast('Invalid profile format', 3000, 'error-snackbar');
+      }
     } else if (value.startsWith('nevent')) {
       this.toggleSearch();
-      const decoded = nip19.decode(value).data as EventPointer;
-      this.openEvent(value);
+      try {
+        const decoded = nip19.decode(value).data as EventPointer;
+        this.openEvent(value);
+      } catch (error) {
+        console.warn('Failed to decode nevent:', value, error);
+        this.toast('Invalid event format', 3000, 'error-snackbar');
+      }
     } else if (value.includes('@')) {
       // Keep the query set for NIP-05 lookups (already set in onSearchInput)
       // The search service will handle this
@@ -672,10 +682,16 @@ export class LayoutService implements OnDestroy {
       return;
     } else if (value.startsWith('naddr')) {
       this.toggleSearch();
-      const decoded = nip19.decode(value).data as AddressPointer;
+      try {
+        const decoded = nip19.decode(value).data as AddressPointer;
 
-      // If the naddr has a pubkey, we can discover them if not found locally.
-      if (decoded.pubkey) {
+        // If the naddr has a pubkey, we can discover them if not found locally.
+        if (decoded.pubkey) {
+        }
+      } catch (error) {
+        console.warn('Failed to decode naddr:', value, error);
+        this.toast('Invalid address format', 3000, 'error-snackbar');
+        return;
       }
 
       this.openArticle(value);

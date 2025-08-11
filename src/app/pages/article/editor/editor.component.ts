@@ -424,10 +424,20 @@ export class EditorComponent implements OnInit, OnDestroy {
       let pubkey = this.accountState.pubkey();
 
       if (articleId.startsWith('naddr')) {
-        const naddr = nip19.decode(articleId) as DecodedNaddr;
+        let naddr: DecodedNaddr;
+        try {
+          naddr = nip19.decode(articleId) as DecodedNaddr;
 
-        if (naddr.data.kind !== 30023 && naddr.data.kind !== 30024) {
-          this.snackBar.open('Invalid article kind', 'Close', {
+          if (naddr.data.kind !== 30023 && naddr.data.kind !== 30024) {
+            this.snackBar.open('Invalid article kind', 'Close', {
+              duration: 3000,
+            });
+            this.router.navigate(['/articles']);
+            return;
+          }
+        } catch (error) {
+          console.warn('Failed to decode article naddr:', articleId, error);
+          this.snackBar.open('Invalid article address format', 'Close', {
             duration: 3000,
           });
           this.router.navigate(['/articles']);
