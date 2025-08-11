@@ -31,7 +31,7 @@ export class UtilitiesService {
   private readonly platformId = inject(PLATFORM_ID);
   readonly isBrowser = signal(isPlatformBrowser(this.platformId));
 
-  constructor() {}
+  constructor() { }
 
   toRecord(event: Event) {
     return {
@@ -326,9 +326,15 @@ export class UtilitiesService {
       return npub;
     }
 
-    // Convert the hex public key to a Nostr public key (npub)
-    const result = nip19.decode(npub).data;
-    return result as string;
+    try {
+      // Convert the npub to hex public key
+      const result = nip19.decode(npub).data;
+      return result as string;
+    } catch (error) {
+      console.warn('Failed to decode npub:', npub, error);
+      // Return the original string if decoding fails - it might be a raw pubkey
+      return npub;
+    }
   }
 
   getTags(event: Event | UnsignedEvent, tagType: NostrTagKey): string[] {
@@ -373,7 +379,12 @@ export class UtilitiesService {
   }
 
   decode(value: string) {
-    return nip19.decode(value);
+    try {
+      return nip19.decode(value);
+    } catch (error) {
+      console.warn('Failed to decode value:', value, error);
+      throw error; // Re-throw since this is a generic decode method that callers might want to handle
+    }
   }
 
   /** Used to optimize the selection of a few relays from the user's relay list. */
