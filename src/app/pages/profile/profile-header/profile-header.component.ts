@@ -3,17 +3,13 @@ import {
   effect,
   inject,
   input,
-  output,
   signal,
   untracked,
-  ElementRef,
-  OnDestroy,
-  AfterViewInit,
   computed,
 } from '@angular/core';
 
 import { MatIconModule } from '@angular/material/icon';
-import { ActivatedRoute, RouterModule } from '@angular/router';
+import { RouterModule } from '@angular/router';
 import { NostrService } from '../../../services/nostr.service';
 import { LoggerService } from '../../../services/logger.service';
 import { MatListModule } from '@angular/material/list';
@@ -30,6 +26,13 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { QrCodeComponent } from '../../../components/qr-code/qr-code.component';
 import { FavoritesService } from '../../../services/favorites.service';
+import { MatDialog } from '@angular/material/dialog';
+import {
+  PublishDialogComponent,
+  PublishDialogData,
+} from '../../../components/event/publish-dialog/publish-dialog.component';
+import { kinds } from 'nostr-tools';
+import { StorageService } from '../../../services/storage.service';
 
 @Component({
   selector: 'app-profile-header',
@@ -61,6 +64,8 @@ export class ProfileHeaderComponent {
   layoutService = inject(LayoutService);
   private snackBar = inject(MatSnackBar);
   private favoritesService = inject(FavoritesService);
+  private dialog = inject(MatDialog);
+  private storage = inject(StorageService);
 
   // Add signal for QR code visibility
   showQrCode = signal<boolean>(false);
@@ -256,6 +261,100 @@ export class ProfileHeaderComponent {
           duration: 2000,
         });
       }
+    }
+  }
+
+  async publishProfileEvent(): Promise<void> {
+    const currentProfile = this.profile();
+    if (!currentProfile) {
+      this.snackBar.open('Profile not found', 'Close', { duration: 2000 });
+      return;
+    }
+
+    const dialogData: PublishDialogData = {
+      event: currentProfile.event,
+    };
+
+    this.dialog.open(PublishDialogComponent, {
+      data: dialogData,
+      width: '600px',
+      disableClose: false,
+    });
+  }
+
+  async publishRelayListEvent(): Promise<void> {
+    const currentPubkey = this.currentPubkey();
+    if (!currentPubkey) {
+      this.snackBar.open('Profile not found', 'Close', { duration: 2000 });
+      return;
+    }
+
+    try {
+      // Get the relay list event (kind 10002)
+      const relayListEvent = await this.storage.getEventByPubkeyAndKind(
+        currentPubkey,
+        kinds.RelayList
+      );
+
+      if (!relayListEvent) {
+        this.snackBar.open('Relay list not found', 'Close', {
+          duration: 2000,
+        });
+        return;
+      }
+
+      const dialogData: PublishDialogData = {
+        event: relayListEvent,
+      };
+
+      this.dialog.open(PublishDialogComponent, {
+        data: dialogData,
+        width: '600px',
+        disableClose: false,
+      });
+    } catch (error) {
+      this.logger.error('Error getting relay list event:', error);
+      this.snackBar.open('Error loading relay list', 'Close', {
+        duration: 2000,
+      });
+    }
+  }
+
+  async publishFollowingListEvent(): Promise<void> {
+    const currentPubkey = this.currentPubkey();
+    if (!currentPubkey) {
+      this.snackBar.open('Profile not found', 'Close', { duration: 2000 });
+      return;
+    }
+
+    try {
+      // Get the following list event (kind 3)
+      const followingListEvent = await this.storage.getEventByPubkeyAndKind(
+        currentPubkey,
+        kinds.Contacts
+      );
+
+      if (!followingListEvent) {
+        this.snackBar.open('Following list not found', 'Close', {
+          duration: 2000,
+        });
+        return;
+      }
+
+      const dialogData: PublishDialogData = {
+        event: followingListEvent,
+      };
+
+      this.dialog.open(PublishDialogComponent, {
+        data: dialogData,
+        width: '600px',
+        disableClose: false,
+      });
+    } catch (error) {
+      this.logger.error('Error getting following list event:', error);
+      this.snackBar.open('Error loading following list', 'Close', {
+        duration: 2000,
+      });
     }
   }
 }

@@ -70,6 +70,7 @@ export class PublishDialogComponent {
   isPublishing = signal<boolean>(false);
   authorRelays = signal<string[]>([]);
   loadingAuthorRelays = signal<boolean>(false);
+  showJsonView = signal<boolean>(false);
 
   publishOptions: PublishOption[] = [
     {
@@ -239,5 +240,13 @@ export class PublishDialogComponent {
 
   canPublish(): boolean {
     return !this.isPublishing() && this.getTargetRelays().length > 0;
+  }
+
+  toggleJsonView(): void {
+    this.showJsonView.update(show => !show);
+  }
+
+  getEventJson(): string {
+    return JSON.stringify(this.data.event, null, 2);
   }
 }
