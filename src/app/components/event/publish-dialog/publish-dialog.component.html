@@ -104,12 +104,37 @@
     <pre class="json-content">{{ getEventJson() }}</pre>
   </div>
   }
+
+  @if (showRelaysView()) {
+  <div class="relays-view-section">
+    <h4>Target Relays</h4>
+    <div class="relays-list">
+      @if (getTargetRelays().length > 0) {
+      @for (relay of getTargetRelays(); track relay) {
+      <div class="relay-item">
+        <mat-icon>dns</mat-icon>
+        <span class="relay-url">{{ relay }}</span>
+      </div>
+      }
+      } @else {
+      <div class="no-relays">
+        <mat-icon>warning</mat-icon>
+        <span>No relays selected for publishing</span>
+      </div>
+      }
+    </div>
+  </div>
+  }
 </mat-dialog-content>
 
 <mat-dialog-actions align="end">
   <button mat-button (click)="toggleJsonView()">
     <mat-icon>{{ showJsonView() ? 'visibility_off' : 'code' }}</mat-icon>
-    {{ showJsonView() ? 'Hide Event' : 'View Event' }}
+    {{ showJsonView() ? 'Event' : 'Event' }}
+  </button>
+  <button mat-button (click)="toggleRelaysView()">
+    <mat-icon>{{ showRelaysView() ? 'visibility_off' : 'dns' }}</mat-icon>
+    {{ showRelaysView() ? 'Relays' : 'Relays' }}
   </button>
   <button mat-button (click)="close()">
     @if (publishResults().length > 0) {
