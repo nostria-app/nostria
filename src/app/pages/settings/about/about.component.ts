@@ -67,7 +67,7 @@ export class AboutComponent implements OnInit {
     return match ? match[0] : null;
   }
 
-  async ngOnInit() { }
+  async ngOnInit() {}
 
   private async fetchManifestVersion(): Promise<void> {
     // Skip fetch on server side

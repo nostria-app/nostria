@@ -335,7 +335,7 @@ export class AccountRelayServiceEx extends RelayServiceBase {
     this.init(relayUrls);
   }
 
-  clear() { }
+  clear() {}
 }
 
 @Injectable({
@@ -380,7 +380,7 @@ export class SharedRelayServiceEx {
   private readonly requestCache = new Map<string, Promise<any>>();
   private readonly cacheTimeout = 1000; // 1 second cache
 
-  constructor() { }
+  constructor() {}
 
   /**
    * Creates a unique cache key for request deduplication
@@ -615,7 +615,8 @@ export class SharedRelayServiceEx {
 })
 export class DiscoveryRelayServiceEx
   extends RelayServiceBase
-  implements NostriaService {
+  implements NostriaService
+{
   private readonly utilities = inject(UtilitiesService);
   private localStorage = inject(LocalStorageService);
   private appState = inject(ApplicationStateService);
@@ -661,7 +662,7 @@ export class DiscoveryRelayServiceEx
     this.initialized = true;
   }
 
-  clear() { }
+  clear() {}
 
   /**
    * Loads bootstrap relays from local storage

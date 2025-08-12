@@ -6,8 +6,11 @@
           <h3>Profile Image</h3>
           <div class="toggle-container">
             <span>File</span>
-            <mat-slide-toggle [checked]="useProfileImageUrl()" (change)="toggleImageInputMethod('profile')"
-              color="primary">
+            <mat-slide-toggle
+              [checked]="useProfileImageUrl()"
+              (change)="toggleImageInputMethod('profile')"
+              color="primary"
+            >
             </mat-slide-toggle>
             <span>URL</span>
           </div>
@@ -15,34 +18,57 @@
 
         <!-- No media servers warning for file upload mode -->
         @if (!useProfileImageUrl() && !hasMediaServers()) {
-        <div class="media-server-warning">
-          <mat-icon color="warn">warning</mat-icon>
-          <span>You need to configure a media server to upload image files</span>
-          <button mat-flat-button color="primary" type="button" (click)="navigateToMediaSettings()">
-            Configure Media Server
-          </button>
-        </div>
+          <div class="media-server-warning">
+            <mat-icon color="warn">warning</mat-icon>
+            <span
+              >You need to configure a media server to upload image files</span
+            >
+            <button
+              mat-flat-button
+              color="primary"
+              type="button"
+              (click)="navigateToMediaSettings()"
+            >
+              Configure Media Server
+            </button>
+          </div>
         }
 
         @if (!useProfileImageUrl()) {
-        <div class="file-upload">
-          <button mat-stroked-button type="button" (click)="profileImageInput.click()" [disabled]="!hasMediaServers()">
-            <mat-icon>upload</mat-icon>
-            Choose profile image
-          </button>
-          <input #profileImageInput type="file" hidden (change)="onFileSelected($event, 'profile')" accept="image/*" />
-          @if (previewProfileImage()) {
-          <span>File selected</span>
-          }
-        </div>
+          <div class="file-upload">
+            <button
+              mat-stroked-button
+              type="button"
+              (click)="profileImageInput.click()"
+              [disabled]="!hasMediaServers()"
+            >
+              <mat-icon>upload</mat-icon>
+              Choose profile image
+            </button>
+            <input
+              #profileImageInput
+              type="file"
+              hidden
+              (change)="onFileSelected($event, 'profile')"
+              accept="image/*"
+            />
+            @if (previewProfileImage()) {
+              <span>File selected</span>
+            }
+          </div>
         } @else {
-        <mat-form-field appearance="outline" class="input-full-width">
-          <mat-icon matPrefix>image</mat-icon>
-          <mat-label>Profile Image URL</mat-label>
-          <input matInput type="text" [(ngModel)]="pictureUrl" (blur)="onImageUrlChange('profile')"
-            placeholder="https://example.com/image.png" />
-          <mat-icon matSuffix>link</mat-icon>
-        </mat-form-field>
+          <mat-form-field appearance="outline" class="input-full-width">
+            <mat-icon matPrefix>image</mat-icon>
+            <mat-label>Profile Image URL</mat-label>
+            <input
+              matInput
+              type="text"
+              [(ngModel)]="pictureUrl"
+              (blur)="onImageUrlChange('profile')"
+              placeholder="https://example.com/image.png"
+            />
+            <mat-icon matSuffix>link</mat-icon>
+          </mat-form-field>
         }
       </div>
 
@@ -51,7 +77,11 @@
           <h3>Profile Banner</h3>
           <div class="toggle-container">
             <span>File</span>
-            <mat-slide-toggle [checked]="useBannerUrl()" (change)="toggleImageInputMethod('banner')" color="primary">
+            <mat-slide-toggle
+              [checked]="useBannerUrl()"
+              (change)="toggleImageInputMethod('banner')"
+              color="primary"
+            >
             </mat-slide-toggle>
             <span>URL</span>
           </div>
@@ -59,97 +89,145 @@
 
         <!-- No media servers warning for file upload mode -->
         @if (!useBannerUrl() && !hasMediaServers()) {
-        <div class="media-server-warning">
-          <mat-icon color="warn">warning</mat-icon>
-          <span>You need to configure a media server to upload banner files</span>
-          <button mat-flat-button color="primary" type="button" (click)="navigateToMediaSettings()">
-            Configure Media Server
-          </button>
-        </div>
+          <div class="media-server-warning">
+            <mat-icon color="warn">warning</mat-icon>
+            <span
+              >You need to configure a media server to upload banner files</span
+            >
+            <button
+              mat-flat-button
+              color="primary"
+              type="button"
+              (click)="navigateToMediaSettings()"
+            >
+              Configure Media Server
+            </button>
+          </div>
         }
 
         @if (!useBannerUrl()) {
-        <div class="file-upload">
-          <button mat-stroked-button type="button" (click)="profileBannerInput.click()" [disabled]="!hasMediaServers()">
-            <mat-icon>upload</mat-icon>
-            Choose profile banner
-          </button>
-          <input #profileBannerInput type="file" hidden (change)="onFileSelected($event, 'banner')" accept="image/*" />
-          @if (previewBanner()) {
-          <span>File selected</span>
-          }
-        </div>
+          <div class="file-upload">
+            <button
+              mat-stroked-button
+              type="button"
+              (click)="profileBannerInput.click()"
+              [disabled]="!hasMediaServers()"
+            >
+              <mat-icon>upload</mat-icon>
+              Choose profile banner
+            </button>
+            <input
+              #profileBannerInput
+              type="file"
+              hidden
+              (change)="onFileSelected($event, 'banner')"
+              accept="image/*"
+            />
+            @if (previewBanner()) {
+              <span>File selected</span>
+            }
+          </div>
         } @else {
-        <mat-form-field class="input-full-width">
-          <mat-icon matPrefix>image</mat-icon>
-          <mat-label>Profile Banner URL</mat-label>
-          <input matInput type="text" [(ngModel)]="bannerUrl" (blur)="onImageUrlChange('banner')"
-            placeholder="https://example.com/banner.png" />
-          <mat-icon matSuffix>link</mat-icon>
-        </mat-form-field>
+          <mat-form-field class="input-full-width">
+            <mat-icon matPrefix>image</mat-icon>
+            <mat-label>Profile Banner URL</mat-label>
+            <input
+              matInput
+              type="text"
+              [(ngModel)]="bannerUrl"
+              (blur)="onImageUrlChange('banner')"
+              placeholder="https://example.com/banner.png"
+            />
+            <mat-icon matSuffix>link</mat-icon>
+          </mat-form-field>
         }
       </div>
 
       @if (profile()) {
-      <p>
-        <mat-form-field class="input-full-width">
-          <mat-icon matPrefix>badge</mat-icon>
-          <mat-label>Display Name</mat-label>
-          <input matInput type="text" [(ngModel)]="displayName" />
-        </mat-form-field>
-      </p>
-      <p>
-        <mat-form-field class="input-full-width">
-          <mat-icon matPrefix>alternate_email</mat-icon>
-          <mat-label>Name</mat-label>
-          <input matInput type="text" [(ngModel)]="name" />
-        </mat-form-field>
-      </p>
-      <p>
-        <mat-form-field class="input-full-width">
-          <mat-icon matPrefix>help_outline</mat-icon>
-          <mat-label>About</mat-label>
-          <textarea matInput type="text" [(ngModel)]="about" rows="3"></textarea>
-        </mat-form-field>
-      </p>
-      <p>
-        <mat-form-field class="input-full-width">
-          <mat-icon matPrefix>public</mat-icon>
-          <mat-label>Website</mat-label>
-          <input matInput type="text" [(ngModel)]="website" placeholder="https://" />
-        </mat-form-field>
-      </p>
-      <p>
-        <mat-form-field class="input-full-width">
-          <mat-icon matPrefix>how_to_reg</mat-icon>
-          <mat-label>E-mail/Domain Identifier (NIP-05)</mat-label>
-          <input matInput type="text" [(ngModel)]="nip05" placeholder="user@domain.com" />
-        </mat-form-field>
-      </p>
-      <p>
-        <mat-form-field class="input-full-width">
-          <mat-icon matPrefix>currency_bitcoin</mat-icon>
-          <mat-label>Bitcoin Lightning Address</mat-label>
-          <input matInput type="text" [(ngModel)]="lud16" placeholder="user@domain" />
-        </mat-form-field>
-      </p>
-      @if (accountState.profile()) {
-      <p>
-        Last updated: {{ accountState.profile()!.event.created_at | ago }}
-      </p>
-      } @else {
-      <p><em>Creating new profile...</em></p>
-      }
+        <p>
+          <mat-form-field class="input-full-width">
+            <mat-icon matPrefix>badge</mat-icon>
+            <mat-label>Display Name</mat-label>
+            <input matInput type="text" [(ngModel)]="displayName" />
+          </mat-form-field>
+        </p>
+        <p>
+          <mat-form-field class="input-full-width">
+            <mat-icon matPrefix>alternate_email</mat-icon>
+            <mat-label>Name</mat-label>
+            <input matInput type="text" [(ngModel)]="name" />
+          </mat-form-field>
+        </p>
+        <p>
+          <mat-form-field class="input-full-width">
+            <mat-icon matPrefix>help_outline</mat-icon>
+            <mat-label>About</mat-label>
+            <textarea
+              matInput
+              type="text"
+              [(ngModel)]="about"
+              rows="3"
+            ></textarea>
+          </mat-form-field>
+        </p>
+        <p>
+          <mat-form-field class="input-full-width">
+            <mat-icon matPrefix>public</mat-icon>
+            <mat-label>Website</mat-label>
+            <input
+              matInput
+              type="text"
+              [(ngModel)]="website"
+              placeholder="https://"
+            />
+          </mat-form-field>
+        </p>
+        <p>
+          <mat-form-field class="input-full-width">
+            <mat-icon matPrefix>how_to_reg</mat-icon>
+            <mat-label>E-mail/Domain Identifier (NIP-05)</mat-label>
+            <input
+              matInput
+              type="text"
+              [(ngModel)]="nip05"
+              placeholder="user@domain.com"
+            />
+          </mat-form-field>
+        </p>
+        <p>
+          <mat-form-field class="input-full-width">
+            <mat-icon matPrefix>currency_bitcoin</mat-icon>
+            <mat-label>Bitcoin Lightning Address</mat-label>
+            <input
+              matInput
+              type="text"
+              [(ngModel)]="lud16"
+              placeholder="user@domain"
+            />
+          </mat-form-field>
+        </p>
+        @if (accountState.profile()) {
+          <p>
+            Last updated: {{ accountState.profile()!.event.created_at | ago }}
+          </p>
+        } @else {
+          <p><em>Creating new profile...</em></p>
+        }
       }
     </mat-card-content>
 
     <mat-card-footer align="end">
       <button mat-button (click)="cancelEdit()">Cancel</button>&nbsp;
-      <button mat-flat-button [disabled]="loading()" color="primary" (click)="updateMetadata()">
+      <button
+        mat-flat-button
+        [disabled]="loading()"
+        color="primary"
+        (click)="updateMetadata()"
+      >
         @if (loading()) {
-        <mat-spinner diameter="24"></mat-spinner>
+          <mat-spinner diameter="24"></mat-spinner>
         } @else {
-        Save
+          Save
         }
       </button>
     </mat-card-footer>
