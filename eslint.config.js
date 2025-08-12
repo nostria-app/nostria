@@ -74,8 +74,6 @@ module.exports = tseslint.config(
       ...angular.configs.templateRecommended,
       ...angular.configs.templateAccessibility,
     ],
-    "rules": {
-      "linebreak-style": ["error", "unix"]
-    }
+    rules: {}
   }
 );

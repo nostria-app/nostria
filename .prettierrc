@@ -6,5 +6,6 @@
   "bracketSpacing": true,
   "arrowParens": "avoid",
   "printWidth": 80,
-  "endOfLine": "lf"
+  "endOfLine": "auto",
+  "useTabs": false
 }
