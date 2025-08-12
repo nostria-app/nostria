@@ -120,6 +120,35 @@
   }
 }
 
+.json-view-section {
+  margin-top: 24px;
+  padding: 16px;
+  background: var(--mat-sys-surface-container-low);
+  border-radius: 8px;
+  border: 1px solid var(--mat-sys-outline-variant);
+
+  h4 {
+    margin-bottom: 16px;
+    font-weight: 500;
+  }
+
+  .json-content {
+    background: var(--mat-sys-surface-container);
+    border: 1px solid var(--mat-sys-outline-variant);
+    border-radius: 6px;
+    padding: 16px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    color: var(--mat-sys-on-surface);
+    max-height: 300px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    margin: 0;
+  }
+}
+
 mat-dialog-actions {
   padding: 16px 24px;
 
