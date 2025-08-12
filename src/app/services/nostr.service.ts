@@ -2145,6 +2145,17 @@ export class NostrService implements NostriaService {
 
     this.logger.debug('New keypair generated successfully', { pubkey, region });
 
+    // Configure the discovery relay based on the user's region
+    if (region) {
+      const discoveryRelay = this.region.getDiscoveryRelay(region);
+      this.logger.info('Setting discovery relay for new user based on region', {
+        region,
+        discoveryRelay,
+      });
+      await this.relayService.setDiscoveryRelays([discoveryRelay]);
+      this.relayService.saveDiscoveryRelays();
+    }
+
     const relayServerUrl = this.region.getRelayServer(region!, 0);
     const relayTags = this.createTags('r', [relayServerUrl!]);
 
