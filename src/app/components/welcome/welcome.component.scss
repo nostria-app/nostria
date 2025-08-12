@@ -21,15 +21,19 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(to bottom,
-      rgba(218, 196, 255, 0.6),
-      rgba(230, 230, 230, 0.8));
+  background: linear-gradient(
+    to bottom,
+    rgba(218, 196, 255, 0.6),
+    rgba(230, 230, 230, 0.8)
+  );
 }
 
 :host-context(.dark) .welcome-backdrop {
-  background: linear-gradient(to bottom,
-      rgba(126, 87, 194, 0.3),
-      rgba(66, 66, 66, 0.5));
+  background: linear-gradient(
+    to bottom,
+    rgba(126, 87, 194, 0.3),
+    rgba(66, 66, 66, 0.5)
+  );
 }
 
 .welcome-top {
@@ -72,12 +76,12 @@
   padding: 1rem;
 
   // Layout for wizard steps
-  >div:first-child {
+  > div:first-child {
     width: 30%;
     flex-shrink: 0;
   }
 
-  >div:last-child {
+  > div:last-child {
     width: 70%;
     flex-shrink: 0;
   }
@@ -94,7 +98,7 @@
   position: relative;
 }
 
-// Wizard step content  
+// Wizard step content
 .wizard-step-content {
   width: 70%;
   flex-shrink: 0;
@@ -138,7 +142,6 @@
 }
 
 @keyframes gentle-pulse {
-
   0%,
   100% {
     transform: scale(1);
@@ -259,8 +262,8 @@
     flex-direction: column;
     padding: 0.5rem;
 
-    >div:first-child,
-    >div:last-child {
+    > div:first-child,
+    > div:last-child {
       width: 100%;
     }
   }
@@ -315,12 +318,12 @@
 // Medium screen adjustments
 @media screen and (min-width: 600px) and (max-width: 960px) {
   .welcome-content-container {
-    >div:first-child {
+    > div:first-child {
       width: 40%;
       min-width: 200px;
     }
 
-    >div:last-child {
+    > div:last-child {
       width: 60%;
     }
   }
@@ -329,7 +332,7 @@
 // Large screen adjustments
 @media screen and (min-width: 961px) {
   .welcome-content-container {
-    >div:first-child {
+    > div:first-child {
       min-width: 250px;
     }
   }

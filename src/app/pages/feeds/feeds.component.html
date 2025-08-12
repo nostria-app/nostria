@@ -1,80 +1,109 @@
 @if (!app.authenticated()) {
-<app-introduction></app-introduction>
+  <app-introduction></app-introduction>
 } @else if (hasEmptyFollowingList()) {
-<!-- Show followset component when user has empty following list -->
-<div class="followset-container">
-  <app-followset title="Welcome! Let's get you started" [availableInterests]="availableInterests()"
-    [suggestedProfiles]="suggestedProfiles()" [selectedInterests]="selectedInterests()"
-    [followingProfiles]="followingProfiles()" [detectedRegion]="detectedRegion()"
-    (interestToggled)="toggleInterest($event)" (completed)="onFollowsetComplete($event)"></app-followset>
-</div>
+  <!-- Show followset component when user has empty following list -->
+  <div class="followset-container">
+    <app-followset
+      title="Welcome! Let's get you started"
+      [availableInterests]="availableInterests()"
+      [suggestedProfiles]="suggestedProfiles()"
+      [selectedInterests]="selectedInterests()"
+      [followingProfiles]="followingProfiles()"
+      [detectedRegion]="detectedRegion()"
+      (interestToggled)="toggleInterest($event)"
+      (completed)="onFollowsetComplete($event)"
+    ></app-followset>
+  </div>
 } @else {
-<div class="home-container" [ngClass]="columnLayout()">
-  <!-- Header Section -->
-  <header class="header-section">
-    <div class="title-section">
-      <!-- Feed Selector -->
-      <div class="feed-selector">
-        <div class="feed-tabs">
-          @if (isMobileView()) {
-          <button mat-stroked-button [matMenuTriggerFor]="menu">
-            <mat-icon>{{ feedIcon() }}</mat-icon>{{ feedLabel() }}
-          </button>
+  <div class="home-container" [ngClass]="columnLayout()">
+    <!-- Header Section -->
+    <header class="header-section">
+      <div class="title-section">
+        <!-- Feed Selector -->
+        <div class="feed-selector">
+          <div class="feed-tabs">
+            @if (isMobileView()) {
+              <button mat-stroked-button [matMenuTriggerFor]="menu">
+                <mat-icon>{{ feedIcon() }}</mat-icon
+                >{{ feedLabel() }}
+              </button>
 
-          <mat-menu #menu="matMenu">
-            @for (feed of feeds(); track feed.id) {
-            <button mat-menu-item (click)="selectFeed(feed.id)">
-              <mat-icon>{{ feed.icon }}</mat-icon>
-              <span>{{ feed.label }}</span>
-            </button>
+              <mat-menu #menu="matMenu">
+                @for (feed of feeds(); track feed.id) {
+                  <button mat-menu-item (click)="selectFeed(feed.id)">
+                    <mat-icon>{{ feed.icon }}</mat-icon>
+                    <span>{{ feed.label }}</span>
+                  </button>
+                }
+              </mat-menu>
+            } @else {
+              <button
+                mat-icon-button
+                (click)="addNewFeed()"
+                matTooltip="Add feed"
+              >
+                <mat-icon>add</mat-icon>
+              </button>
+
+              @for (feed of feeds(); track feed.id) {
+                <button
+                  class="feed-tab"
+                  mat-button
+                  [class.active]="
+                    feed.id === feedsCollectionService.activeFeedId()
+                  "
+                  (click)="selectFeed(feed.id)"
+                  [matTooltip]="feed.description || feed.label"
+                >
+                  <mat-icon>{{ feed.icon }}</mat-icon>
+                  <span>{{ feed.label }}</span>
+                </button>
+              }
             }
-          </mat-menu>
-          } @else {
-          <button mat-icon-button (click)="addNewFeed()" matTooltip="Add feed">
-            <mat-icon>add</mat-icon>
-          </button>
+          </div>
 
-          @for (feed of feeds(); track feed.id) {
-          <button class="feed-tab" mat-button [class.active]="
-                  feed.id === feedsCollectionService.activeFeedId()
-                " (click)="selectFeed(feed.id)" [matTooltip]="feed.description || feed.label">
-            <mat-icon>{{ feed.icon }}</mat-icon>
-            <span>{{ feed.label }}</span>
-          </button>
-          }
-          }
-        </div>
-
-        <!-- Feed Management Actions -->
-        <div class="feed-actions">
-          <button mat-icon-button [matMenuTriggerFor]="feedMenu" matTooltip="Manage feeds">
-            <mat-icon>more_vert</mat-icon>
-          </button>
-          <mat-menu #feedMenu="matMenu">
-            <button mat-menu-item (click)="addNewFeed()">
-              <mat-icon>add</mat-icon>
-              <span>New Feed</span>
+          <!-- Feed Management Actions -->
+          <div class="feed-actions">
+            <button
+              mat-icon-button
+              [matMenuTriggerFor]="feedMenu"
+              matTooltip="Manage feeds"
+            >
+              <mat-icon>more_vert</mat-icon>
             </button>
-            <button mat-menu-item (click)="editCurrentFeed()" [disabled]="!activeFeed()">
-              <mat-icon>edit</mat-icon>
-              <span>Edit Feed</span>
-            </button>
-            <button mat-menu-item (click)="deleteCurrentFeed()" [disabled]="!activeFeed()">
-              <mat-icon>delete</mat-icon>
-              <span>Delete Feed</span>
-            </button>
-            <mat-divider></mat-divider>
-            <button mat-menu-item routerLink="/settings/algorithm">
-              <mat-icon>model_training</mat-icon>
-              <span>Algorithm</span>
-            </button>
-          </mat-menu>
+            <mat-menu #feedMenu="matMenu">
+              <button mat-menu-item (click)="addNewFeed()">
+                <mat-icon>add</mat-icon>
+                <span>New Feed</span>
+              </button>
+              <button
+                mat-menu-item
+                (click)="editCurrentFeed()"
+                [disabled]="!activeFeed()"
+              >
+                <mat-icon>edit</mat-icon>
+                <span>Edit Feed</span>
+              </button>
+              <button
+                mat-menu-item
+                (click)="deleteCurrentFeed()"
+                [disabled]="!activeFeed()"
+              >
+                <mat-icon>delete</mat-icon>
+                <span>Delete Feed</span>
+              </button>
+              <mat-divider></mat-divider>
+              <button mat-menu-item routerLink="/settings/algorithm">
+                <mat-icon>model_training</mat-icon>
+                <span>Algorithm</span>
+              </button>
+            </mat-menu>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- Replace with menu below -->
-    <!-- @if (isMobileView()) {
+      <!-- Replace with menu below -->
+      <!-- @if (isMobileView()) {
     <div class="column-navigation">
       <div class="column-selector">
         @for (column of columns(); track column.id; let i = $index) {
@@ -87,492 +116,626 @@
     </div>
     } -->
 
-    <div class="header-actions">
-      <!-- <button mat-icon-button (click)="refreshContent()" matTooltip="Refresh content">
+      <div class="header-actions">
+        <!-- <button mat-icon-button (click)="refreshContent()" matTooltip="Refresh content">
         <mat-icon>refresh</mat-icon>
       </button>
       <button mat-icon-button (click)="toggleAdvancedFilters()" matTooltip="Toggle filters">
         <mat-icon>filter_list</mat-icon>
       </button> -->
-      <button mat-icon-button (click)="addNewColumn()" matTooltip="Add column" [disabled]="feeds().length === 0">
-        <mat-icon>add_column_right</mat-icon>
-      </button>
-    </div>
-  </header>
+        <button
+          mat-icon-button
+          (click)="addNewColumn()"
+          matTooltip="Add column"
+          [disabled]="feeds().length === 0"
+        >
+          <mat-icon>add_column_right</mat-icon>
+        </button>
+      </div>
+    </header>
 
-  <!-- Columns Container with Connected Headers and Content -->
-  <div class="columns-container">
-    <!-- Scroll indicators -->
-    @if (!isMobileView() && canScrollLeft()) {
-    <div class="scroll-indicator left" (click)="scrollLeft()">
-      <mat-icon>chevron_left</mat-icon>
-    </div>
-    }
-    @if (!isMobileView() && canScrollRight()) {
-    <div class="scroll-indicator right" (click)="scrollRight()">
-      <mat-icon>chevron_right</mat-icon>
-    </div>
-    }
+    <!-- Columns Container with Connected Headers and Content -->
+    <div class="columns-container">
+      <!-- Scroll indicators -->
+      @if (!isMobileView() && canScrollLeft()) {
+        <div class="scroll-indicator left" (click)="scrollLeft()">
+          <mat-icon>chevron_left</mat-icon>
+        </div>
+      }
+      @if (!isMobileView() && canScrollRight()) {
+        <div class="scroll-indicator right" (click)="scrollRight()">
+          <mat-icon>chevron_right</mat-icon>
+        </div>
+      }
 
-    <div class="columns-wrapper" #columnsWrapper cdkDropList cdkDropListOrientation="horizontal"
-      [cdkDropListData]="columns()" (cdkDropListDropped)="onColumnDrop($event)">
-      <!-- Columns with connected headers and content -->
-      @for (column of columns(); track column.id; let i = $index) {
-      <div class="column-unit" cdkDrag [cdkDragData]="i" [cdkDragDisabled]="columns().length <= 1" [class.visible]="
-            !isMobileView() || (isMobileView() && i === visibleColumnIndex())
-          " [attr.aria-hidden]="isMobileView() && i !== visibleColumnIndex()" (cdkDragStarted)="onDragStarted()"
-        (cdkDragEnded)="onDragEnded()">
-        <!-- Column Header (Connected to its content) -->
-        <div class="column-header">
-          <div class="column-header-content">
-            @if (!isMobileView() && columns().length > 1) {
-            <div class="drag-handle" cdkDragHandle>
-              <mat-icon>drag_indicator</mat-icon>
-            </div>
-            }
+      <div
+        class="columns-wrapper"
+        #columnsWrapper
+        cdkDropList
+        cdkDropListOrientation="horizontal"
+        [cdkDropListData]="columns()"
+        (cdkDropListDropped)="onColumnDrop($event)"
+      >
+        <!-- Columns with connected headers and content -->
+        @for (column of columns(); track column.id; let i = $index) {
+          <div
+            class="column-unit"
+            cdkDrag
+            [cdkDragData]="i"
+            [cdkDragDisabled]="columns().length <= 1"
+            [class.visible]="
+              !isMobileView() || (isMobileView() && i === visibleColumnIndex())
+            "
+            [attr.aria-hidden]="isMobileView() && i !== visibleColumnIndex()"
+            (cdkDragStarted)="onDragStarted()"
+            (cdkDragEnded)="onDragEnded()"
+          >
+            <!-- Column Header (Connected to its content) -->
+            <div class="column-header">
+              <div class="column-header-content">
+                @if (!isMobileView() && columns().length > 1) {
+                  <div class="drag-handle" cdkDragHandle>
+                    <mat-icon>drag_indicator</mat-icon>
+                  </div>
+                }
 
-            @if (!isMobileView()) {
-            <mat-icon>{{ column.icon }}</mat-icon>
-            <span class="column-title">{{ column.label }}</span>
-            } @else {
-            @if (columns().length === 1) {
-            <mat-icon>{{ column.icon }}</mat-icon>
-            <span class="column-title">{{ column.label }}</span>
-            } @else {
-            <button mat-stroked-button [matMenuTriggerFor]="menu">
-              <mat-icon>{{ column.icon }}</mat-icon>
-              {{ column.label }}
-            </button>
-            <mat-menu #menu="matMenu">
-              @for (
-              column of columns();
-              track column.id;
-              let i = $index
-              ) {
-              <button mat-menu-item (click)="selectColumn(i)">
-                <mat-icon>{{ column.icon }}</mat-icon>
-                <span>{{ column.label }}</span>
-              </button>
-              }
-            </mat-menu>
-            }
-            }
+                @if (!isMobileView()) {
+                  <mat-icon>{{ column.icon }}</mat-icon>
+                  <span class="column-title">{{ column.label }}</span>
+                } @else {
+                  @if (columns().length === 1) {
+                    <mat-icon>{{ column.icon }}</mat-icon>
+                    <span class="column-title">{{ column.label }}</span>
+                  } @else {
+                    <button mat-stroked-button [matMenuTriggerFor]="menu">
+                      <mat-icon>{{ column.icon }}</mat-icon>
+                      {{ column.label }}
+                    </button>
+                    <mat-menu #menu="matMenu">
+                      @for (
+                        column of columns();
+                        track column.id;
+                        let i = $index
+                      ) {
+                        <button mat-menu-item (click)="selectColumn(i)">
+                          <mat-icon>{{ column.icon }}</mat-icon>
+                          <span>{{ column.label }}</span>
+                        </button>
+                      }
+                    </mat-menu>
+                  }
+                }
 
-            <div class="column-header-actions">
-              <button mat-icon-button (click)="refreshColumn(column)" matTooltip="Refresh content">
-                <mat-icon>refresh</mat-icon>
-              </button>
-              <!-- <button mat-icon-button (click)="toggleAdvancedFilters()" matTooltip="Toggle filters">
+                <div class="column-header-actions">
+                  <button
+                    mat-icon-button
+                    (click)="refreshColumn(column)"
+                    matTooltip="Refresh content"
+                  >
+                    <mat-icon>refresh</mat-icon>
+                  </button>
+                  <!-- <button mat-icon-button (click)="toggleAdvancedFilters()" matTooltip="Toggle filters">
                 <mat-icon>filter_list</mat-icon>
               </button> -->
-              @if (isColumnPaused(column.id)) {
-              <button mat-icon-button (click)="continueColumn(column)" matTooltip="Resume live feed">
-                <mat-icon>play_circle</mat-icon>
-              </button>
-              } @else {
-              <button mat-icon-button (click)="pauseColumn(column)" matTooltip="Pause the feed">
-                <mat-icon>pause_circle</mat-icon>
-              </button>
-              }
+                  @if (isColumnPaused(column.id)) {
+                    <button
+                      mat-icon-button
+                      (click)="continueColumn(column)"
+                      matTooltip="Resume live feed"
+                    >
+                      <mat-icon>play_circle</mat-icon>
+                    </button>
+                  } @else {
+                    <button
+                      mat-icon-button
+                      (click)="pauseColumn(column)"
+                      matTooltip="Pause the feed"
+                    >
+                      <mat-icon>pause_circle</mat-icon>
+                    </button>
+                  }
 
-              <button mat-icon-button [matMenuTriggerFor]="columnMenu" (click)="$event.stopPropagation()">
-                <mat-icon>more_vert</mat-icon>
-              </button>
-              <mat-menu #columnMenu="matMenu">
-                <button mat-menu-item (click)="editColumn(i)">
-                  <mat-icon>edit</mat-icon>
-                  <span>Edit</span>
-                </button>
-                <button mat-menu-item (click)="removeColumn(i)">
-                  <mat-icon>delete</mat-icon>
-                  <span>Remove</span>
-                </button>
-              </mat-menu>
+                  <button
+                    mat-icon-button
+                    [matMenuTriggerFor]="columnMenu"
+                    (click)="$event.stopPropagation()"
+                  >
+                    <mat-icon>more_vert</mat-icon>
+                  </button>
+                  <mat-menu #columnMenu="matMenu">
+                    <button mat-menu-item (click)="editColumn(i)">
+                      <mat-icon>edit</mat-icon>
+                      <span>Edit</span>
+                    </button>
+                    <button mat-menu-item (click)="removeColumn(i)">
+                      <mat-icon>delete</mat-icon>
+                      <span>Remove</span>
+                    </button>
+                  </mat-menu>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
 
-        <!-- Filters Section -->
-        @if (showAdvancedFilters()) {
-        <div class="filters-section">
-          <h3>Filter by tags</h3>
-          <div class="tag-chips">
-            @for (tag of availableTags(); track tag) {
-            <mat-chip-option [selected]="selectedTags().includes(tag)" (click)="toggleTagFilter(tag)" color="primary">
-              #{{ tag }}
-            </mat-chip-option>
+            <!-- Filters Section -->
+            @if (showAdvancedFilters()) {
+              <div class="filters-section">
+                <h3>Filter by tags</h3>
+                <div class="tag-chips">
+                  @for (tag of availableTags(); track tag) {
+                    <mat-chip-option
+                      [selected]="selectedTags().includes(tag)"
+                      (click)="toggleTagFilter(tag)"
+                      color="primary"
+                    >
+                      #{{ tag }}
+                    </mat-chip-option>
+                  }
+                </div>
+              </div>
             }
-          </div>
-        </div>
-        }
 
-        <!-- Column Content with Individual Scrolling -->
-        <div class="column-content">
-          <div class="column-scroll-container">
-            @if (isLoading() && !columnContentLoaded()[column.id]) {
-            <div class="column-loading">
-              <mat-spinner diameter="40"></mat-spinner>
-              <p>Loading content...</p>
-            </div>
-            } @else {
-            <div class="column-items">
-              @let columnData =
-              feedService.feedDataReactive().get(column.id);
-              @let columnEventsData = columnEvents().get(column.id);
-              @if (columnData && columnEventsData) {
-              @for (event of columnEventsData; track event.id) {
-              <mat-card class="content-card">
-                <app-user-profile [pubkey]="event.pubkey" view="thread">
-                  <app-link [event]="event"></app-link>
-                </app-user-profile>
-                <mat-card-content>
-                  <!-- Photos (NIP-68, kind 20) -->
-                  @if (
-                  event.kind === 20 ||
-                  columnData.column.type === 'photos'
-                  ) {
-                  @if (hasContentWarning(event)) {
-                  <div class="content-warning">
-                    <mat-icon>warning</mat-icon>
-                    <span>{{ getContentWarning(event) }}</span>
+            <!-- Column Content with Individual Scrolling -->
+            <div class="column-content">
+              <div class="column-scroll-container">
+                @if (isLoading() && !columnContentLoaded()[column.id]) {
+                  <div class="column-loading">
+                    <mat-spinner diameter="40"></mat-spinner>
+                    <p>Loading content...</p>
                   </div>
-                  }
-                  @let title = getEventTitle(event);
-                  @if (title) {
-                  <h3 class="media-title">{{ title }}</h3>
-                  }
-                  <div class="photo-gallery">
-                    @for (
-                    imageUrl of getImageUrls(event);
-                    track $index
-                    ) {
-                    @let blurhash = getBlurhash(event, $index);
-                    <div class="photo-container">
-                      @if (blurhash) {
-                      <img [src]="generateBlurhashDataUrl(blurhash)" class="photo-item blurhash-placeholder"
-                        [alt]="getEventAlt(event)" />
-                      }
-                      <img [src]="imageUrl" [alt]="getEventAlt(event)" class="photo-item main-image" loading="lazy"
-                        (load)="onImageLoad($event)" (click)="
-                                      openImageDialog(
-                                        imageUrl,
-                                        getEventAlt(event)
-                                      )
-                                    " />
-                    </div>
-                    }
-                  </div>
-                  @if (event.content) {
-                  <p class="photo-description">
-                    {{ removeHashtagsFromContent(event.content) }}
-                  </p>
-                  }
-                  }
-                  <!-- Videos (NIP-71, kind 21/22) -->
-                  @else if (
-                  event.kind === 21 ||
-                  event.kind === 22 ||
-                  columnData.column.type === 'videos'
-                  ) {
-                  @if (hasContentWarning(event)) {
-                  <div class="content-warning">
-                    <mat-icon>warning</mat-icon>
-                    <span>{{ getContentWarning(event) }}</span>
-                  </div>
-                  }
-                  @let title = getEventTitle(event);
-                  @if (title) {
-                  <h3 class="media-title">{{ title }}</h3>
-                  }
-                  @let videoData = getVideoData(event);
-                  @if (videoData) {
-                  @let videoExpandedKey = 'video_' + event.id;
-                  <div class="video-container">
-                    @if (!videoExpandedStates()[videoExpandedKey]) {
-                    <!-- Video Thumbnail (Initial State) -->
-                    <div class="video-thumbnail-container" (click)="expandVideo(videoExpandedKey)">
-                      @if (
-                      videoData.blurhash && !videoData.thumbnail
-                      ) {
-                      <img [src]="
-                                          generateBlurhashDataUrl(
-                                            videoData.blurhash,
-                                            400,
-                                            225
-                                          )
-                                        " class="video-thumbnail" [alt]="getEventAlt(event)" />
-                      } @else if (videoData.thumbnail) {
-                      <img [src]="videoData.thumbnail" class="video-thumbnail" [alt]="getEventAlt(event)"
-                        loading="lazy" />
-                      } @else {
-                      <div class="video-thumbnail-placeholder">
-                        <mat-icon class="video-placeholder-icon">play_circle_outline</mat-icon>
-                      </div>
-                      }
-
-                      <!-- Play button overlay -->
-                      <div class="video-play-overlay">
-                        <mat-icon class="play-button">play_circle_filled</mat-icon>
-                      </div>
-
-                      @if (videoData.duration) {
-                      <div class="video-duration">
-                        {{ formatDuration(videoData.duration) }}
-                      </div>
-                      }
-                    </div>
-                    } @else {
-                    <!-- Video Player (Expanded State) -->
-                    <div class="video-player-container">
-                      <video controls class="video-player" autoplay [poster]="
-                                        videoData.thumbnail ||
-                                        (videoData.blurhash
-                                          ? generateBlurhashDataUrl(
+                } @else {
+                  <div class="column-items">
+                    @let columnData =
+                      feedService.feedDataReactive().get(column.id);
+                    @let columnEventsData = columnEvents().get(column.id);
+                    @if (columnData && columnEventsData) {
+                      @for (event of columnEventsData; track event.id) {
+                        <mat-card class="content-card">
+                          <app-user-profile
+                            [pubkey]="event.pubkey"
+                            view="thread"
+                          >
+                            <app-link [event]="event"></app-link>
+                          </app-user-profile>
+                          <mat-card-content>
+                            <!-- Photos (NIP-68, kind 20) -->
+                            @if (
+                              event.kind === 20 ||
+                              columnData.column.type === 'photos'
+                            ) {
+                              @if (hasContentWarning(event)) {
+                                <div class="content-warning">
+                                  <mat-icon>warning</mat-icon>
+                                  <span>{{ getContentWarning(event) }}</span>
+                                </div>
+                              }
+                              @let title = getEventTitle(event);
+                              @if (title) {
+                                <h3 class="media-title">{{ title }}</h3>
+                              }
+                              <div class="photo-gallery">
+                                @for (
+                                  imageUrl of getImageUrls(event);
+                                  track $index
+                                ) {
+                                  @let blurhash = getBlurhash(event, $index);
+                                  <div class="photo-container">
+                                    @if (blurhash) {
+                                      <img
+                                        [src]="
+                                          generateBlurhashDataUrl(blurhash)
+                                        "
+                                        class="photo-item blurhash-placeholder"
+                                        [alt]="getEventAlt(event)"
+                                      />
+                                    }
+                                    <img
+                                      [src]="imageUrl"
+                                      [alt]="getEventAlt(event)"
+                                      class="photo-item main-image"
+                                      loading="lazy"
+                                      (load)="onImageLoad($event)"
+                                      (click)="
+                                        openImageDialog(
+                                          imageUrl,
+                                          getEventAlt(event)
+                                        )
+                                      "
+                                    />
+                                  </div>
+                                }
+                              </div>
+                              @if (event.content) {
+                                <p class="photo-description">
+                                  {{ removeHashtagsFromContent(event.content) }}
+                                </p>
+                              }
+                            }
+                            <!-- Videos (NIP-71, kind 21/22) -->
+                            @else if (
+                              event.kind === 21 ||
+                              event.kind === 22 ||
+                              columnData.column.type === 'videos'
+                            ) {
+                              @if (hasContentWarning(event)) {
+                                <div class="content-warning">
+                                  <mat-icon>warning</mat-icon>
+                                  <span>{{ getContentWarning(event) }}</span>
+                                </div>
+                              }
+                              @let title = getEventTitle(event);
+                              @if (title) {
+                                <h3 class="media-title">{{ title }}</h3>
+                              }
+                              @let videoData = getVideoData(event);
+                              @if (videoData) {
+                                @let videoExpandedKey = 'video_' + event.id;
+                                <div class="video-container">
+                                  @if (
+                                    !videoExpandedStates()[videoExpandedKey]
+                                  ) {
+                                    <!-- Video Thumbnail (Initial State) -->
+                                    <div
+                                      class="video-thumbnail-container"
+                                      (click)="expandVideo(videoExpandedKey)"
+                                    >
+                                      @if (
+                                        videoData.blurhash &&
+                                        !videoData.thumbnail
+                                      ) {
+                                        <img
+                                          [src]="
+                                            generateBlurhashDataUrl(
                                               videoData.blurhash,
                                               400,
                                               225
                                             )
-                                          : undefined)
-                                      ">
-                        <source [src]="videoData.url" type="video/mp4" />
-                        Your browser does not support the video
-                        tag.
-                      </video>
-                      <button mat-icon-button class="collapse-video-btn" (click)="collapseVideo(videoExpandedKey)"
-                        matTooltip="Show thumbnail">
-                        <mat-icon>picture_in_picture_alt</mat-icon>
-                      </button>
-                    </div>
-                    }
-                  </div>
-                  }
-                  @if (event.content) {
-                  <p class="video-description">
-                    {{ removeHashtagsFromContent(event.content) }}
-                  </p>
-                  }
-                  }
+                                          "
+                                          class="video-thumbnail"
+                                          [alt]="getEventAlt(event)"
+                                        />
+                                      } @else if (videoData.thumbnail) {
+                                        <img
+                                          [src]="videoData.thumbnail"
+                                          class="video-thumbnail"
+                                          [alt]="getEventAlt(event)"
+                                          loading="lazy"
+                                        />
+                                      } @else {
+                                        <div
+                                          class="video-thumbnail-placeholder"
+                                        >
+                                          <mat-icon
+                                            class="video-placeholder-icon"
+                                            >play_circle_outline</mat-icon
+                                          >
+                                        </div>
+                                      }
 
-                  <!-- Articles (kind 30023) -->
-                  @else if (
-                  event.kind === 30023 ||
-                  columnData.column.type === 'articles'
-                  ) {
-                  @let title = getEventTitle(event);
-                  @if (title) {
-                  <h3 class="article-title">{{ title }}</h3>
-                  }
-                  <div class="article-content">
-                    <p>
-                      {{ event.content | slice: 0 : 300 }}
-                      @if (event.content.length > 300) {
-                      ...
-                      }
-                    </p>
-                  </div>
-                  @if (event.content.length > 300) {
-                  <button mat-button color="primary" class="read-more">
-                    Read More
-                  </button>
-                  }
-                  }
+                                      <!-- Play button overlay -->
+                                      <div class="video-play-overlay">
+                                        <mat-icon class="play-button"
+                                          >play_circle_filled</mat-icon
+                                        >
+                                      </div>
 
-                  <!-- M3U Playlists (kind 32100) -->
-                  @else if (event.kind === 32100) {
-                  @let playlistData = getPlaylistData(event);
-                  @if (playlistData) {
-                  <div class="playlist-container">
-                    <div class="playlist-header">
-                      <mat-icon class="playlist-icon">playlist_play</mat-icon>
-                      <div class="playlist-info">
-                        <h3 class="playlist-title">
-                          {{ playlistData.title }}
-                        </h3>
-                        @if (playlistData.alt) {
-                        <p class="playlist-description">
-                          {{ playlistData.alt }}
-                        </p>
-                        }
-                        <div class="playlist-meta">
-                          <span class="track-count">{{
-                            playlistData.tracks.length
-                            }}
-                            tracks</span>
-                          @if (playlistData.totalDuration) {
-                          <span class="playlist-duration">{{
-                            playlistData.totalDuration
-                            }}</span>
-                          }
-                        </div>
-                      </div>
-                    </div>
-
-                    <div class="playlist-actions">
-                      <button mat-raised-button color="primary" (click)="playPlaylist(playlistData)">
-                        <mat-icon>play_arrow</mat-icon>
-                        Play Playlist
-                      </button>
-                      <button mat-button (click)="addPlaylistToQueue(playlistData)">
-                        <mat-icon>playlist_add</mat-icon>
-                        Add to Queue
-                      </button>
-                      @if (playlistData.url) {
-                      <a mat-icon-button [href]="playlistData.url" target="_blank" rel="noopener noreferrer">
-                        <mat-icon>download</mat-icon>
-                      </a>
-                      }
-                    </div>
-
-                    @if (playlistData.tracks.length > 0) {
-                    <div class="playlist-tracks">
-                      <h4 class="tracks-header">Tracks</h4>
-                      <div class="track-list">
-                        @for (
-                        track of playlistData.tracks.slice(
-                        0,
-                        5
-                        );
-                        track track.url;
-                        let i = $index
-                        ) {
-                        <div class="track-item">
-                          <span class="track-number">{{
-                            i + 1
-                            }}</span>
-                          <div class="track-info">
-                            <span class="track-title">{{
-                              track.title || 'Unknown Track'
-                              }}</span>
-                            @if (track.artist) {
-                            <span class="track-artist">{{
-                              track.artist
-                              }}</span>
+                                      @if (videoData.duration) {
+                                        <div class="video-duration">
+                                          {{
+                                            formatDuration(videoData.duration)
+                                          }}
+                                        </div>
+                                      }
+                                    </div>
+                                  } @else {
+                                    <!-- Video Player (Expanded State) -->
+                                    <div class="video-player-container">
+                                      <video
+                                        controls
+                                        class="video-player"
+                                        autoplay
+                                        [poster]="
+                                          videoData.thumbnail ||
+                                          (videoData.blurhash
+                                            ? generateBlurhashDataUrl(
+                                                videoData.blurhash,
+                                                400,
+                                                225
+                                              )
+                                            : undefined)
+                                        "
+                                      >
+                                        <source
+                                          [src]="videoData.url"
+                                          type="video/mp4"
+                                        />
+                                        Your browser does not support the video
+                                        tag.
+                                      </video>
+                                      <button
+                                        mat-icon-button
+                                        class="collapse-video-btn"
+                                        (click)="
+                                          collapseVideo(videoExpandedKey)
+                                        "
+                                        matTooltip="Show thumbnail"
+                                      >
+                                        <mat-icon
+                                          >picture_in_picture_alt</mat-icon
+                                        >
+                                      </button>
+                                    </div>
+                                  }
+                                </div>
+                              }
+                              @if (event.content) {
+                                <p class="video-description">
+                                  {{ removeHashtagsFromContent(event.content) }}
+                                </p>
+                              }
                             }
-                          </div>
-                        </div>
-                        }
-                        @if (playlistData.tracks.length > 5) {
-                        <div class="track-item more-tracks">
-                          <span class="more-indicator">+{{
-                            playlistData.tracks.length - 5
-                            }}
-                            more tracks</span>
-                        </div>
-                        }
+
+                            <!-- Articles (kind 30023) -->
+                            @else if (
+                              event.kind === 30023 ||
+                              columnData.column.type === 'articles'
+                            ) {
+                              @let title = getEventTitle(event);
+                              @if (title) {
+                                <h3 class="article-title">{{ title }}</h3>
+                              }
+                              <div class="article-content">
+                                <p>
+                                  {{ event.content | slice: 0 : 300 }}
+                                  @if (event.content.length > 300) {
+                                    ...
+                                  }
+                                </p>
+                              </div>
+                              @if (event.content.length > 300) {
+                                <button
+                                  mat-button
+                                  color="primary"
+                                  class="read-more"
+                                >
+                                  Read More
+                                </button>
+                              }
+                            }
+
+                            <!-- M3U Playlists (kind 32100) -->
+                            @else if (event.kind === 32100) {
+                              @let playlistData = getPlaylistData(event);
+                              @if (playlistData) {
+                                <div class="playlist-container">
+                                  <div class="playlist-header">
+                                    <mat-icon class="playlist-icon"
+                                      >playlist_play</mat-icon
+                                    >
+                                    <div class="playlist-info">
+                                      <h3 class="playlist-title">
+                                        {{ playlistData.title }}
+                                      </h3>
+                                      @if (playlistData.alt) {
+                                        <p class="playlist-description">
+                                          {{ playlistData.alt }}
+                                        </p>
+                                      }
+                                      <div class="playlist-meta">
+                                        <span class="track-count"
+                                          >{{
+                                            playlistData.tracks.length
+                                          }}
+                                          tracks</span
+                                        >
+                                        @if (playlistData.totalDuration) {
+                                          <span class="playlist-duration">{{
+                                            playlistData.totalDuration
+                                          }}</span>
+                                        }
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div class="playlist-actions">
+                                    <button
+                                      mat-raised-button
+                                      color="primary"
+                                      (click)="playPlaylist(playlistData)"
+                                    >
+                                      <mat-icon>play_arrow</mat-icon>
+                                      Play Playlist
+                                    </button>
+                                    <button
+                                      mat-button
+                                      (click)="addPlaylistToQueue(playlistData)"
+                                    >
+                                      <mat-icon>playlist_add</mat-icon>
+                                      Add to Queue
+                                    </button>
+                                    @if (playlistData.url) {
+                                      <a
+                                        mat-icon-button
+                                        [href]="playlistData.url"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                      >
+                                        <mat-icon>download</mat-icon>
+                                      </a>
+                                    }
+                                  </div>
+
+                                  @if (playlistData.tracks.length > 0) {
+                                    <div class="playlist-tracks">
+                                      <h4 class="tracks-header">Tracks</h4>
+                                      <div class="track-list">
+                                        @for (
+                                          track of playlistData.tracks.slice(
+                                            0,
+                                            5
+                                          );
+                                          track track.url;
+                                          let i = $index
+                                        ) {
+                                          <div class="track-item">
+                                            <span class="track-number">{{
+                                              i + 1
+                                            }}</span>
+                                            <div class="track-info">
+                                              <span class="track-title">{{
+                                                track.title || 'Unknown Track'
+                                              }}</span>
+                                              @if (track.artist) {
+                                                <span class="track-artist">{{
+                                                  track.artist
+                                                }}</span>
+                                              }
+                                            </div>
+                                          </div>
+                                        }
+                                        @if (playlistData.tracks.length > 5) {
+                                          <div class="track-item more-tracks">
+                                            <span class="more-indicator"
+                                              >+{{
+                                                playlistData.tracks.length - 5
+                                              }}
+                                              more tracks</span
+                                            >
+                                          </div>
+                                        }
+                                      </div>
+                                    </div>
+                                  }
+                                </div>
+                              }
+                            }
+
+                            <!-- Articles (kind 0) -->
+                            @else if (event.kind === 0) {
+                              <!-- <app-user-profile [event]="event" [pubkey]="event.pubkey"></app-user-profile> -->
+                              <app-user-profile
+                                [view]="'details'"
+                                [event]="event"
+                              ></app-user-profile>
+                            }
+                            <!-- Notes (kind 1) and Custom -->
+                            @else if (event.kind === 1) {
+                              <app-content
+                                [content]="event.content"
+                              ></app-content>
+                            } @else {
+                              @if (event.content) {
+                                <p class="note-content">
+                                  {{ removeHashtagsFromContent(event.content) }}
+                                </p>
+                              }
+                            }
+
+                            <!-- Common tags section -->
+                            <div class="tags">
+                              @for (tag of event.tags; track $index) {
+                                @if (tag[0] === 't') {
+                                  <mat-chip class="tag-chip"
+                                    >#{{ tag[1] }}</mat-chip
+                                  >
+                                }
+                              }
+                            </div>
+                          </mat-card-content>
+                          <mat-card-actions>
+                            <button mat-icon-button>
+                              <mat-icon>favorite_border</mat-icon>
+                            </button>
+                            <button mat-icon-button>
+                              <mat-icon>comment</mat-icon>
+                            </button>
+                            @if (app.enabledFeature('beta')) {
+                              <button
+                                mat-icon-button
+                                (click)="repostNote(event)"
+                              >
+                                <mat-icon>repeat</mat-icon>
+                              </button>
+                            }
+                          </mat-card-actions>
+                        </mat-card>
+                      }
+                    } @else {
+                      <div class="no-events">
+                        <p>No events available for this feed</p>
                       </div>
-                    </div>
                     }
                   </div>
-                  }
-                  }
-
-                  <!-- Articles (kind 0) -->
-                  @else if (event.kind === 0) {
-                  <!-- <app-user-profile [event]="event" [pubkey]="event.pubkey"></app-user-profile> -->
-                  <app-user-profile [view]="'details'" [event]="event"></app-user-profile>
-                  }
-                  <!-- Notes (kind 1) and Custom -->
-                  @else if (event.kind === 1) {
-                  <app-content [content]="event.content"></app-content>
-                  } @else {
-                  @if (event.content) {
-                  <p class="note-content">
-                    {{ removeHashtagsFromContent(event.content) }}
-                  </p>
-                  }
-                  }
-
-                  <!-- Common tags section -->
-                  <div class="tags">
-                    @for (tag of event.tags; track $index) {
-                    @if (tag[0] === 't') {
-                    <mat-chip class="tag-chip">#{{ tag[1] }}</mat-chip>
-                    }
-                    }
-                  </div>
-                </mat-card-content>
-                <mat-card-actions>
-                  <button mat-icon-button>
-                    <mat-icon>favorite_border</mat-icon>
-                  </button>
-                  <button mat-icon-button>
-                    <mat-icon>comment</mat-icon>
-                  </button>
-                  @if (app.enabledFeature('beta')) {
-                  <button mat-icon-button (click)="repostNote(event)">
-                    <mat-icon>repeat</mat-icon>
-                  </button>
-                  }
-                </mat-card-actions>
-              </mat-card>
-              }
-              } @else {
-              <div class="no-events">
-                <p>No events available for this feed</p>
+                }
               </div>
-              }
             </div>
-            }
-          </div>
-        </div>
 
-        <!-- Preview for drag operation -->
-        <ng-template cdkDragPreview>
-          <div class="column-drag-preview">
-            <div class="preview-header">
-              <mat-icon>{{ column.icon }}</mat-icon>
-              <span>{{ column.label }}</span>
+            <!-- Preview for drag operation -->
+            <ng-template cdkDragPreview>
+              <div class="column-drag-preview">
+                <div class="preview-header">
+                  <mat-icon>{{ column.icon }}</mat-icon>
+                  <span>{{ column.label }}</span>
+                </div>
+              </div>
+            </ng-template>
+          </div>
+        }
+
+        <!-- Zero state when no feeds are available -->
+        @if (feeds().length === 0) {
+          <div class="empty-columns-state">
+            <div class="empty-state-content">
+              <mat-icon class="empty-state-icon">dynamic_feed</mat-icon>
+              <h2>No feeds added</h2>
+              <p>
+                Create your first feed to start organizing and viewing content
+                from various sources.
+              </p>
+              <button
+                mat-raised-button
+                color="primary"
+                (click)="addNewFeed()"
+                class="add-first-column-btn"
+              >
+                <mat-icon>add</mat-icon>
+                Add Your First Feed
+              </button>
             </div>
           </div>
-        </ng-template>
-      </div>
-      }
+        }
 
-      <!-- Zero state when no feeds are available -->
-      @if (feeds().length === 0) {
-      <div class="empty-columns-state">
-        <div class="empty-state-content">
-          <mat-icon class="empty-state-icon">dynamic_feed</mat-icon>
-          <h2>No feeds added</h2>
-          <p>
-            Create your first feed to start organizing and viewing content
-            from various sources.
-          </p>
-          <button mat-raised-button color="primary" (click)="addNewFeed()" class="add-first-column-btn">
-            <mat-icon>add</mat-icon>
-            Add Your First Feed
-          </button>
-        </div>
-      </div>
-      }
+        <!-- Zero state when no columns are available but feeds exist -->
+        @else if (columns().length === 0) {
+          <div class="empty-columns-state">
+            <div class="empty-state-content">
+              <mat-icon class="empty-state-icon">view_column</mat-icon>
+              <h2>No columns in this feed</h2>
+              <p>
+                Get started by adding your first column to organize and view
+                content.
+              </p>
+              <button
+                mat-raised-button
+                color="primary"
+                (click)="addNewColumn()"
+                class="add-first-column-btn"
+              >
+                <mat-icon>add</mat-icon>
+                Add Your First Column
+              </button>
+            </div>
+          </div>
+        }
 
-      <!-- Zero state when no columns are available but feeds exist -->
-      @else if (columns().length === 0) {
-      <div class="empty-columns-state">
-        <div class="empty-state-content">
-          <mat-icon class="empty-state-icon">view_column</mat-icon>
-          <h2>No columns in this feed</h2>
-          <p>
-            Get started by adding your first column to organize and view
-            content.
-          </p>
-          <button mat-raised-button color="primary" (click)="addNewColumn()" class="add-first-column-btn">
-            <mat-icon>add</mat-icon>
-            Add Your First Column
-          </button>
-        </div>
-      </div>
-      }
-
-      <!-- Add column button -->
-      <!-- @if (!isMobileView()) {
+        <!-- Add column button -->
+        <!-- @if (!isMobileView()) {
       <div class="add-column-button">
         <button mat-mini-fab color="primary" (click)="addNewColumn()" matTooltip="Add new column">
           <mat-icon>add</mat-icon>
         </button>
       </div>
       } -->
+      </div>
     </div>
   </div>
-</div>
 }

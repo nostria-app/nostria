@@ -67,7 +67,7 @@ export class UserDataService {
 
   async getEventById(
     id: string,
-    options?: CacheOptions & DataOptions,
+    options?: CacheOptions & DataOptions
   ): Promise<NostrRecord | null> {
     let event: Event | null = null;
     let record: NostrRecord | undefined = undefined;

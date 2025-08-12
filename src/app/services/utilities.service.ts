@@ -31,7 +31,7 @@ export class UtilitiesService {
   private readonly platformId = inject(PLATFORM_ID);
   readonly isBrowser = signal(isPlatformBrowser(this.platformId));
 
-  constructor() { }
+  constructor() {}
 
   toRecord(event: Event) {
     return {

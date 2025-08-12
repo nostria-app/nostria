@@ -5,125 +5,138 @@
     <h3>Select Publishing Targets</h3>
 
     @for (option of publishOptions; track option.id) {
-    <div class="publish-option">
-      <mat-checkbox [checked]="isOptionSelected(option.id)" (change)="onOptionChange(option.id, $event.checked)">
-        <div class="option-content">
-          <div class="option-label">{{ option.label }}</div>
-          <div class="option-description">{{ option.description }}</div>
+      <div class="publish-option">
+        <mat-checkbox
+          [checked]="isOptionSelected(option.id)"
+          (change)="onOptionChange(option.id, $event.checked)"
+        >
+          <div class="option-content">
+            <div class="option-label">{{ option.label }}</div>
+            <div class="option-description">{{ option.description }}</div>
 
-          @if (option.id === 'author' && loadingAuthorRelays()) {
-          <mat-spinner diameter="20"></mat-spinner>
-          }
+            @if (option.id === 'author' && loadingAuthorRelays()) {
+              <mat-spinner diameter="20"></mat-spinner>
+            }
 
-          @if (option.id === 'author' && !loadingAuthorRelays()) {
-          <div class="relay-count">
-            {{ authorRelays().length }} relay{{
-            authorRelays().length !== 1 ? 's' : ''
-            }}
-            available
+            @if (option.id === 'author' && !loadingAuthorRelays()) {
+              <div class="relay-count">
+                {{ authorRelays().length }} relay{{
+                  authorRelays().length !== 1 ? 's' : ''
+                }}
+                available
+              </div>
+            }
+
+            @if (option.id === 'account') {
+              <div class="relay-count">
+                {{ relayService.getAccountRelayUrls().length }} relay{{
+                  relayService.getAccountRelayUrls().length !== 1 ? 's' : ''
+                }}
+                configured
+              </div>
+            }
           </div>
-          }
-
-          @if (option.id === 'account') {
-          <div class="relay-count">
-            {{ relayService.getAccountRelayUrls().length }} relay{{
-            relayService.getAccountRelayUrls().length !== 1 ? 's' : ''
-            }}
-            configured
-          </div>
-          }
-        </div>
-      </mat-checkbox>
-    </div>
+        </mat-checkbox>
+      </div>
     }
   </div>
 
   @if (isOptionSelected('custom')) {
-  <div class="custom-relays-section">
-    <h4>Additional Relays</h4>
+    <div class="custom-relays-section">
+      <h4>Additional Relays</h4>
 
-    <div class="add-relay-form">
-      <mat-form-field appearance="outline" class="relay-input">
-        <mat-label>Relay URL</mat-label>
-        <input matInput [ngModel]="customRelayInput()" (ngModelChange)="customRelayInput.set($event)"
-          placeholder="wss://relay.example.com" (keyup.enter)="addCustomRelay()" />
-      </mat-form-field>
-      <button mat-raised-button color="primary" (click)="addCustomRelay()" [disabled]="!customRelayInput().trim()">
-        <mat-icon>add</mat-icon>
-        Add
-      </button>
-    </div>
+      <div class="add-relay-form">
+        <mat-form-field appearance="outline" class="relay-input">
+          <mat-label>Relay URL</mat-label>
+          <input
+            matInput
+            [ngModel]="customRelayInput()"
+            (ngModelChange)="customRelayInput.set($event)"
+            placeholder="wss://relay.example.com"
+            (keyup.enter)="addCustomRelay()"
+          />
+        </mat-form-field>
+        <button
+          mat-raised-button
+          color="primary"
+          (click)="addCustomRelay()"
+          [disabled]="!customRelayInput().trim()"
+        >
+          <mat-icon>add</mat-icon>
+          Add
+        </button>
+      </div>
 
-    @if (customRelays().length > 0) {
-    <div class="custom-relays-list">
-      <mat-chip-listbox>
-        @for (relay of customRelays(); track relay) {
-        <mat-chip-option>
-          {{ relay }}
-          <button matChipRemove (click)="removeCustomRelay(relay)">
-            <mat-icon>cancel</mat-icon>
-          </button>
-        </mat-chip-option>
-        }
-      </mat-chip-listbox>
+      @if (customRelays().length > 0) {
+        <div class="custom-relays-list">
+          <mat-chip-listbox>
+            @for (relay of customRelays(); track relay) {
+              <mat-chip-option>
+                {{ relay }}
+                <button matChipRemove (click)="removeCustomRelay(relay)">
+                  <mat-icon>cancel</mat-icon>
+                </button>
+              </mat-chip-option>
+            }
+          </mat-chip-listbox>
+        </div>
+      }
     </div>
-    }
-  </div>
   }
 
   @if (publishResults().length > 0) {
-  <div class="publish-results">
-    <h4>Publish Results</h4>
-    <mat-list>
-      @for (result of publishResults(); track result.url) {
-      <mat-list-item>
-        <div class="result-content">
-          <div class="relay-url">{{ result.url }}</div>
-          <div class="result-status" [ngClass]="'status-' + result.status">
-            @if (result.status === 'pending') {
-            <mat-spinner diameter="16"></mat-spinner>
-            <span>Publishing...</span>
-            } @else if (result.status === 'success') {
-            <mat-icon color="primary">check_circle</mat-icon>
-            <span>Success</span>
-            } @else {
-            <mat-icon color="warn">error</mat-icon>
-            <span>Failed: {{ result.message }}</span>
-            }
-          </div>
-        </div>
-      </mat-list-item>
-      }
-    </mat-list>
-  </div>
+    <div class="publish-results">
+      <h4>Publish Results</h4>
+      <mat-list>
+        @for (result of publishResults(); track result.url) {
+          <mat-list-item>
+            <div class="result-content">
+              <div class="relay-url">{{ result.url }}</div>
+              <div class="result-status" [ngClass]="'status-' + result.status">
+                @if (result.status === 'pending') {
+                  <mat-spinner diameter="16"></mat-spinner>
+                  <span>Publishing...</span>
+                } @else if (result.status === 'success') {
+                  <mat-icon color="primary">check_circle</mat-icon>
+                  <span>Success</span>
+                } @else {
+                  <mat-icon color="warn">error</mat-icon>
+                  <span>Failed: {{ result.message }}</span>
+                }
+              </div>
+            </div>
+          </mat-list-item>
+        }
+      </mat-list>
+    </div>
   }
 
   @if (showJsonView()) {
-  <div class="json-view-section">
-    <h4>Event Data</h4>
-    <pre class="json-content">{{ getEventJson() }}</pre>
-  </div>
+    <div class="json-view-section">
+      <h4>Event Data</h4>
+      <pre class="json-content">{{ getEventJson() }}</pre>
+    </div>
   }
 
   @if (showRelaysView()) {
-  <div class="relays-view-section">
-    <h4>Target Relays</h4>
-    <div class="relays-list">
-      @if (getTargetRelays().length > 0) {
-      @for (relay of getTargetRelays(); track relay) {
-      <div class="relay-item">
-        <mat-icon>dns</mat-icon>
-        <span class="relay-url">{{ relay }}</span>
+    <div class="relays-view-section">
+      <h4>Target Relays</h4>
+      <div class="relays-list">
+        @if (getTargetRelays().length > 0) {
+          @for (relay of getTargetRelays(); track relay) {
+            <div class="relay-item">
+              <mat-icon>dns</mat-icon>
+              <span class="relay-url">{{ relay }}</span>
+            </div>
+          }
+        } @else {
+          <div class="no-relays">
+            <mat-icon>warning</mat-icon>
+            <span>No relays selected for publishing</span>
+          </div>
+        }
       </div>
-      }
-      } @else {
-      <div class="no-relays">
-        <mat-icon>warning</mat-icon>
-        <span>No relays selected for publishing</span>
-      </div>
-      }
     </div>
-  </div>
   }
 </mat-dialog-content>
 
@@ -138,22 +151,27 @@
   </button>
   <button mat-button (click)="close()">
     @if (publishResults().length > 0) {
-    Close
+      Close
     } @else {
-    Cancel
+      Cancel
     }
   </button>
-  <button mat-raised-button color="primary" (click)="publish()" [disabled]="!canPublish()">
+  <button
+    mat-raised-button
+    color="primary"
+    (click)="publish()"
+    [disabled]="!canPublish()"
+  >
     @if (isPublishing()) {
-    <mat-spinner diameter="16"></mat-spinner>
-    Publishing...
+      <mat-spinner diameter="16"></mat-spinner>
+      Publishing...
     } @else {
-    @let relayCount = getTargetRelays().length;
-    @if (relayCount > 0) {
-    Publish to {{ relayCount }} Relay{{ relayCount !== 1 ? 's' : '' }}
-    } @else {
-    Select Publishing Targets
-    }
+      @let relayCount = getTargetRelays().length;
+      @if (relayCount > 0) {
+        Publish to {{ relayCount }} Relay{{ relayCount !== 1 ? 's' : '' }}
+      } @else {
+        Select Publishing Targets
+      }
     }
   </button>
 </mat-dialog-actions>

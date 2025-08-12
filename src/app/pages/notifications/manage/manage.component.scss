@@ -105,10 +105,9 @@
 
 .preferences-header {
   display: grid;
-  grid-template-columns: minmax(150px, 1fr) repeat(
-      7,
-      minmax(60px, 80px)
-    ) minmax(50px, 70px);
+  grid-template-columns:
+    minmax(150px, 1fr) repeat(7, minmax(60px, 80px))
+    minmax(50px, 70px);
   gap: 8px;
   padding: 16px 8px;
   font-weight: 500;
@@ -151,10 +150,9 @@
 
 .device-row {
   display: grid;
-  grid-template-columns: minmax(150px, 1fr) repeat(
-      7,
-      minmax(60px, 80px)
-    ) minmax(50px, 70px);
+  grid-template-columns:
+    minmax(150px, 1fr) repeat(7, minmax(60px, 80px))
+    minmax(50px, 70px);
   gap: 8px;
   padding: 16px 8px;
   align-items: center;
@@ -242,10 +240,9 @@
 @media (max-width: 900px) {
   .preferences-header,
   .device-row {
-    grid-template-columns: minmax(120px, 1fr) repeat(
-        7,
-        minmax(50px, 70px)
-      ) minmax(40px, 60px);
+    grid-template-columns:
+      minmax(120px, 1fr) repeat(7, minmax(50px, 70px))
+      minmax(40px, 60px);
     gap: 6px;
     padding: 12px 4px;
   }
@@ -275,10 +272,9 @@
 
   .preferences-header,
   .device-row {
-    grid-template-columns: minmax(100px, 140px) repeat(
-        7,
-        minmax(45px, 60px)
-      ) minmax(35px, 50px);
+    grid-template-columns:
+      minmax(100px, 140px) repeat(7, minmax(45px, 60px))
+      minmax(35px, 50px);
     gap: 4px;
     padding: 12px 4px;
     min-width: 550px; // Reduced minimum width
