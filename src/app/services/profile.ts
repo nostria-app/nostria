@@ -1,6 +1,5 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { NostrService } from './nostr.service';
-import { RelayService } from './relay.service';
 import { StorageService } from './storage.service';
 import { DataService } from './data.service';
 import { AccountStateService } from './account-state.service';
@@ -35,7 +34,7 @@ export interface ProfileUpdateOptions {
   profileImageFile?: File;
   /** Banner image file to upload (optional) */
   bannerImageFile?: File;
-  /** Whether to force upload even if no media servers configured */
+  /** Whether to skip media server validation and allow profile creation without file uploads */
   skipMediaServerCheck?: boolean;
 }
 
@@ -96,18 +95,21 @@ export class Profile {
       // Check if file uploads are needed and media servers are available
       const needsFileUpload =
         options.profileImageFile || options.bannerImageFile;
-      if (
-        needsFileUpload &&
-        !options.skipMediaServerCheck &&
-        !this.hasMediaServers()
-      ) {
-        throw new Error(
-          'Media servers are required for file uploads. Please configure media servers first.'
-        );
+
+      // If media servers are required but not available, handle gracefully
+      if (needsFileUpload && !options.skipMediaServerCheck) {
+        if (!this.hasMediaServers()) {
+          throw new Error(
+            'Media servers are required for file uploads. Please configure media servers first.'
+          );
+        }
       }
 
-      // Handle profile image upload
-      if (options.profileImageFile) {
+      // Handle profile image upload (only if media servers are available or check is skipped)
+      if (
+        options.profileImageFile &&
+        (options.skipMediaServerCheck || this.hasMediaServers())
+      ) {
         const uploadResult = await this.media.uploadFile(
           options.profileImageFile,
           true,
@@ -126,8 +128,11 @@ export class Profile {
         });
       }
 
-      // Handle banner upload
-      if (options.bannerImageFile) {
+      // Handle banner upload (only if media servers are available or check is skipped)
+      if (
+        options.bannerImageFile &&
+        (options.skipMediaServerCheck || this.hasMediaServers())
+      ) {
         const uploadResult = await this.media.uploadFile(
           options.bannerImageFile,
           true,
@@ -142,6 +147,20 @@ export class Profile {
 
         profileData.banner = uploadResult.item.url;
         this.logger.debug('Banner image uploaded', { url: profileData.banner });
+      }
+
+      // Log if files were skipped due to missing media servers
+      if (options.skipMediaServerCheck) {
+        if (options.profileImageFile && !this.hasMediaServers()) {
+          this.logger.debug(
+            'Profile image upload skipped - no media servers configured'
+          );
+        }
+        if (options.bannerImageFile && !this.hasMediaServers()) {
+          this.logger.debug(
+            'Banner image upload skipped - no media servers configured'
+          );
+        }
       }
 
       // Clean the profile data
@@ -209,6 +228,10 @@ export class Profile {
       return { success: true };
     }
 
+    // Ensure media servers are loaded for new users
+    // During account creation, media servers are already configured by region
+    await this.media.load();
+
     const profileData: ProfileData = {};
 
     if (displayName?.trim()) {
@@ -218,7 +241,7 @@ export class Profile {
     return this.updateProfile({
       profileData,
       profileImageFile,
-      skipMediaServerCheck: false, // Still require media servers for new profiles
+      skipMediaServerCheck: false, // Now that media servers are loaded, we can properly validate
     });
   }
 
