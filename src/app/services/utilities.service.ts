@@ -31,7 +31,7 @@ export class UtilitiesService {
   private readonly platformId = inject(PLATFORM_ID);
   readonly isBrowser = signal(isPlatformBrowser(this.platformId));
 
-  constructor() {}
+  constructor() { }
 
   toRecord(event: Event) {
     return {
@@ -215,11 +215,17 @@ export class UtilitiesService {
   /** Parses the URLs and cleans up, ensuring only wss:// instances are returned. */
   getRelayUrlsFromFollowing(event: Event): string[] {
     // Check if event.content is a string, return empty array if it is
-    if (!event.content || typeof event.content === 'string') {
+    if (!event.content) {
       return [];
     }
 
-    const relayUrls = Object.keys(event.content).map(url => {
+    let content = [];
+
+    if (typeof event.content === 'string') {
+      content = JSON.parse(event.content);
+    }
+
+    const relayUrls = Object.keys(content).map(url => {
       const wssIndex = url.indexOf('wss://');
       return wssIndex >= 0 ? url.substring(wssIndex) : url;
     });
