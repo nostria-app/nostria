@@ -15,11 +15,7 @@ import {
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialogModule } from '@angular/material/dialog';
-import {
-  DomSanitizer,
-  SafeHtml,
-  SafeResourceUrl,
-} from '@angular/platform-browser';
+import { DomSanitizer } from '@angular/platform-browser';
 import { SocialPreviewComponent } from '../social-preview/social-preview.component';
 import { MatDialog } from '@angular/material/dialog';
 import { ImageDialogComponent } from '../image-dialog/image-dialog.component';
@@ -28,6 +24,15 @@ import { UtilitiesService } from '../../services/utilities.service';
 import { Router } from '@angular/router';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { ParsingService } from '../../services/parsing.service';
+
+interface NostrData {
+  type: string;
+  // Narrow known shapes; keep flexible with index signature for unseen fields
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [k: string]: any;
+  displayName: string;
+  data: unknown;
+}
 
 interface ContentToken {
   id: number;
@@ -42,7 +47,7 @@ interface ContentToken {
     | 'nostr-mention'
     | 'emoji';
   content: string;
-  nostrData?: { type: string; data: any; displayName: string };
+  nostrData?: NostrData;
   emoji?: string;
 }
 
@@ -328,7 +333,9 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     const processedContent = content.replace(/\n/g, '##LINEBREAK##');
 
     // Regex for different types of content - updated to avoid capturing trailing LINEBREAK placeholders
-    const urlRegex = /(https?:\/\/[^\s##]+)(?=\s|##LINEBREAK##|$)/g;
+    // URL regex: capture potential trailing punctuation so we can trim logic-smart (e.g. parentheses, commas, periods)
+    const urlRegex =
+      /(https?:\/\/[^\s##)\]\}>]+)(?=\s|##LINEBREAK##|$|[),.;!?:])/g;
     const youtubeRegex =
       /(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})(?=\s|##LINEBREAK##|$)/g;
     const imageRegex =
@@ -351,12 +358,12 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
       end: number;
       content: string;
       type: ContentToken['type'];
-      nostrData?: any;
+      nostrData?: NostrData;
       emoji?: string;
     }[] = [];
 
     // Find emoji codes first (highest priority after nostr)
-    let match: any;
+    let match: RegExpExecArray | null;
     while ((match = emojiRegex.exec(processedContent)) !== null) {
       const emojiCode = match[0];
       const emoji = this.emojiMap[emojiCode];
@@ -464,16 +471,37 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     // Find remaining URLs
     urlRegex.lastIndex = 0;
     while ((match = urlRegex.exec(processedContent)) !== null) {
-      // Check if this URL was already matched as a special type
-      const isSpecialType = matches.some(
-        m => m.start === match.index && m.end === match.index + match[0].length
-      );
+      let rawUrl = match[0];
+      const start = match.index;
 
+      // Trim trailing punctuation that is unlikely part of the URL
+      const trailingPattern = /[)\],;!?.]+$/;
+      while (trailingPattern.test(rawUrl)) {
+        const lastChar = rawUrl.slice(-1);
+        if (lastChar === '/' || lastChar === '#') break; // keep structural chars
+        if (lastChar === ')') {
+          const openCount = (rawUrl.match(/\(/g) || []).length;
+          const closeCount = (rawUrl.match(/\)/g) || []).length;
+          if (closeCount <= openCount) break;
+        }
+        if (lastChar === ']') {
+          const openCount = (rawUrl.match(/\[/g) || []).length;
+          const closeCount = (rawUrl.match(/\]/g) || []).length;
+          if (closeCount <= openCount) break;
+        }
+        rawUrl = rawUrl.slice(0, -1);
+      }
+
+      if (!rawUrl) continue;
+
+      const isSpecialType = matches.some(
+        m => m.start === start && m.end === start + rawUrl.length
+      );
       if (!isSpecialType) {
         matches.push({
-          start: match.index,
-          end: match.index + match[0].length,
-          content: match[0],
+          start,
+          end: start + rawUrl.length,
+          content: rawUrl,
           type: 'url',
         });
       }
@@ -595,11 +623,11 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     this.socialPreviews.set(initialPreviews);
 
     // Load previews for each URL
-    const previewPromises = urls.map(async (url, index) => {
+    const previewPromises = urls.map(async url => {
       try {
         // In a real implementation, you would call an API to fetch the metadata
         // For example, using a service like Open Graph or your own backend API
-        const response = await fetch(
+        await fetch(
           `https://metadata.nostria.app/og?url=${encodeURIComponent(url)}`
         );
 
@@ -679,22 +707,29 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
 
     switch (type) {
       case 'npub':
-      case 'nprofile':
+      case 'nprofile': {
         // Navigate to profile page
-        const pubkey = type === 'npub' ? data : data.pubkey;
+        const record = data as Record<string, unknown>;
+        const pubkey =
+          type === 'npub' ? String(data) : String(record['pubkey'] || '');
         this.router.navigate(['/p', this.utilities.getNpubFromPubkey(pubkey)]);
         break;
+      }
       case 'note':
-      case 'nevent':
+      case 'nevent': {
         // Navigate to event page
-        const eventId = type === 'note' ? data : data.id;
+        const record = data as Record<string, unknown>;
+        const eventId =
+          type === 'note' ? String(data) : String(record['id'] || '');
         this.router.navigate(['/e', eventId]);
         break;
-      case 'naddr':
+      }
+      case 'naddr': {
         // Navigate to address-based event
         const encoded = this.parsing.extractNostrUriIdentifier(token.content);
         this.router.navigate(['/a', encoded]);
         break;
+      }
       default:
         console.warn('Unsupported nostr URI type:', type);
     }
