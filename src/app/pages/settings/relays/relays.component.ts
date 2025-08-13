@@ -71,8 +71,12 @@ export class RelaysComponent implements OnInit, OnDestroy {
   private readonly accountState = inject(AccountStateService);
   private readonly accountRelay = inject(AccountRelayService);
 
+  followingRelayUrls = signal<string[]>([]);
   newRelayUrl = signal('');
   newBootstrapUrl = signal('');
+  // New signals for deprecated following list relay cleanup feature
+  showFollowingRelayCleanup = signal(false);
+  isCleaningFollowingList = signal(false);
 
   // Timer for connection status checking
   private statusCheckTimer: any;
@@ -108,12 +112,99 @@ export class RelaysComponent implements OnInit, OnDestroy {
         });
       }
     });
+    // Effect to re-check following list when active pubkey changes
+    effect(async () => {
+      const pubkey = this.accountState.pubkey();
+      if (pubkey) {
+        await this.checkFollowingListForRelays(pubkey);
+      } else {
+        this.showFollowingRelayCleanup.set(false);
+      }
+    });
   }
 
-  ngOnInit() {}
+  // Async method to detect if contact list (kind 3) contains relay URLs in content
+  private async checkFollowingListForRelays(pubkey: string) {
+    try {
+      const followingEvent = await this.storage.getEventByPubkeyAndKind(
+        pubkey,
+        kinds.Contacts
+      );
+      if (!followingEvent) {
+        this.showFollowingRelayCleanup.set(false);
+        return;
+      }
+      // If content is object (deprecated structure) and utilities can extract relay urls
+      const relayUrls = this.utilities.getRelayUrlsFromFollowing(
+        followingEvent as any
+      );
+
+      this.followingRelayUrls.set(relayUrls);
+
+      const hasRelays = relayUrls.length > 0;
+      this.showFollowingRelayCleanup.set(hasRelays);
+    } catch (err) {
+      this.logger.error('Failed to check following list for relays', err);
+      this.showFollowingRelayCleanup.set(false);
+    }
+  }
+
+  ngOnInit() { }
 
   cleanFollowingList() {
-    alert('Coming soon...');
+    if (this.isCleaningFollowingList()) {
+      return;
+    }
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      this.showMessage('No active account');
+      return;
+    }
+    this.isCleaningFollowingList.set(true);
+
+    (async () => {
+      try {
+        const followingEvent = await this.storage.getEventByPubkeyAndKind(
+          pubkey,
+          kinds.Contacts
+        );
+        if (!followingEvent) {
+          this.showMessage('Following list not found');
+          this.isCleaningFollowingList.set(false);
+          return;
+        }
+
+        // Only proceed if deprecated relay data exists in content (object with relay keys)
+        const relayUrls = this.utilities.getRelayUrlsFromFollowing(
+          followingEvent as any
+        );
+        if (relayUrls.length === 0) {
+          this.showMessage('No deprecated relay entries found');
+          this.showFollowingRelayCleanup.set(false);
+          this.isCleaningFollowingList.set(false);
+          return;
+        }
+
+        // Preserve existing p and other tags; just strip relays from content by setting to empty string
+        const updatedEvent: UnsignedEvent = {
+          pubkey: followingEvent.pubkey,
+          kind: kinds.Contacts,
+          created_at: Math.floor(Date.now() / 1000),
+          tags: [...followingEvent.tags],
+          content: '',
+        };
+        const signed = await this.nostr.signEvent(updatedEvent);
+        await this.relay.publish(signed); // publish to user relays
+        await this.storage.saveEvent(signed);
+        this.showMessage('Deprecated relays removed from following list');
+        this.showFollowingRelayCleanup.set(false);
+      } catch (err) {
+        this.logger.error('Failed cleaning following list', err);
+        this.showMessage('Error removing relays');
+      } finally {
+        this.isCleaningFollowingList.set(false);
+      }
+    })();
   }
 
   ngOnDestroy() {
