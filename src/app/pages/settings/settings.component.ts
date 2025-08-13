@@ -112,29 +112,4 @@ export class SettingsComponent {
         ?.title || 'Settings'
     );
   }
-
-  async loadSettings() {
-    const result = await this.web.fetchJson(
-      `http://localhost:3000/api/settings/${this.accountState.pubkey()}`,
-      { method: 'GET' },
-      { kind: 27235 }
-    );
-    console.log('Loaded settings:', result);
-  }
-
-  async saveSettings() {
-    const settings = {
-      releaseChannel: 'alpha',
-      socialSharing: true,
-    };
-
-    const json = JSON.stringify(settings);
-
-    const result = await this.web.fetchJson(
-      `http://localhost:3000/api/settings/${this.accountState.pubkey()}`,
-      { method: 'POST', body: json },
-      { kind: 27235 }
-    );
-    console.log('Loaded settings:', result);
-  }
 }
