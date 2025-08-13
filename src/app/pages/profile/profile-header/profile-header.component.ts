@@ -18,6 +18,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ProfileStateService } from '../../../services/profile-state.service';
 import { NostrRecord } from '../../../interfaces';
@@ -27,6 +28,9 @@ import { UtilitiesService } from '../../../services/utilities.service';
 import { QrCodeComponent } from '../../../components/qr-code/qr-code.component';
 import { FavoritesService } from '../../../services/favorites.service';
 import { MatDialog } from '@angular/material/dialog';
+import { AccountService } from '../../../api/services';
+import { PublicAccount } from '../../../api/models';
+import { firstValueFrom } from 'rxjs';
 import {
   PublishDialogComponent,
   PublishDialogData,
@@ -45,6 +49,7 @@ import { StorageService } from '../../../services/storage.service';
     RouterModule,
     MatButtonModule,
     MatDividerModule,
+    MatTooltipModule,
     QrCodeComponent,
   ],
   templateUrl: './profile-header.component.html',
@@ -66,6 +71,7 @@ export class ProfileHeaderComponent {
   private favoritesService = inject(FavoritesService);
   private dialog = inject(MatDialog);
   private storage = inject(StorageService);
+  private accountService = inject(AccountService);
 
   // Add signal for QR code visibility
   showQrCode = signal<boolean>(false);
@@ -111,12 +117,29 @@ export class ProfileHeaderComponent {
     return this.favoritesService.isFavorite(this.currentPubkey());
   });
 
+  // Signal to track the premium status
+  premiumTier = signal<string | null>(null);
+
+  // Computed to check if user has premium subscription
+  isPremium = computed(() => {
+    const tier = this.premiumTier();
+    return tier === 'premium' || tier === 'premium_plus';
+  });
+
   constructor() {
     effect(() => {
       const currentPubkey = this.currentPubkey();
       if (currentPubkey) {
         console.debug('LOCATION 4:');
         this.npub.set(this.utilities.getNpubFromPubkey(currentPubkey));
+      }
+    });
+
+    // Add effect to fetch premium status when pubkey changes
+    effect(async () => {
+      const currentPubkey = this.currentPubkey();
+      if (currentPubkey) {
+        await this.fetchPremiumStatus(currentPubkey);
       }
     });
 
@@ -355,6 +378,37 @@ export class ProfileHeaderComponent {
       this.snackBar.open('Error loading following list', 'Close', {
         duration: 2000,
       });
+    }
+  }
+
+  /**
+   * Fetches the premium status for a given pubkey
+   */
+  private async fetchPremiumStatus(pubkey: string): Promise<void> {
+    try {
+      // Check if this is the current user
+      if (this.isOwnProfile()) {
+        // For current user, get tier from account state
+        const subscription = this.accountState.subscription();
+        this.premiumTier.set(subscription?.tier || null);
+      } else {
+        // For other users, fetch public account information
+        const result = await firstValueFrom(
+          this.accountService.getPublicAccount({
+            pubkeyOrUsername: pubkey,
+          })
+        );
+
+        if (result?.result) {
+          const publicAccount: PublicAccount = result.result;
+          this.premiumTier.set(publicAccount?.tier || null);
+        } else {
+          this.premiumTier.set(null);
+        }
+      }
+    } catch (error) {
+      this.logger.debug('Error fetching premium status:', error);
+      this.premiumTier.set(null);
     }
   }
 }

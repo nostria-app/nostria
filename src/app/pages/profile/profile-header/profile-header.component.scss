@@ -18,13 +18,13 @@
   gap: 1.5rem; // Space between the two divs
 
   // First div should always be 168px width
-  > div:first-child {
+  >div:first-child {
     flex: 0 0 168px; // Don't grow or shrink, always 168px
     width: 168px;
   }
 
   // Second div should take remaining space
-  > div:last-child {
+  >div:last-child {
     flex: 1;
   }
 
@@ -57,7 +57,7 @@
     position: initial;
 
     // First div should be fixed at 80px in compact mode
-    > div:first-child {
+    >div:first-child {
       flex: 0 0 80px !important; // Don't grow or shrink, always 80px
       width: 80px !important;
       align-self: auto;
@@ -207,6 +207,33 @@
     animation: pulse 2s infinite;
   }
 
+  .premium-indicator {
+    background: linear-gradient(145deg,
+        #8e44ad,
+        #3498db);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    font-size: 1.5rem;
+    animation: premiumGlow 3s ease-in-out infinite;
+    position: relative;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(145deg, #8e44ad, #3498db);
+      opacity: 0.3;
+      border-radius: 50%;
+      animation: premiumPulse 2s ease-in-out infinite;
+      z-index: -1;
+    }
+  }
+
   // .compact & {
   //     font-size: 18px;
   //     margin-bottom: 4px;
@@ -217,11 +244,44 @@
   0% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.7;
   }
+
   100% {
     opacity: 1;
+  }
+}
+
+@keyframes premiumGlow {
+  0% {
+    filter: brightness(1) hue-rotate(0deg);
+  }
+
+  50% {
+    filter: brightness(1.2) hue-rotate(10deg);
+  }
+
+  100% {
+    filter: brightness(1) hue-rotate(0deg);
+  }
+}
+
+@keyframes premiumPulse {
+  0% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.6;
+    transform: scale(1.1);
+  }
+
+  100% {
+    opacity: 0.3;
+    transform: scale(1);
   }
 }
 
@@ -285,20 +345,6 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  // top: 16px;
-  // right: 16px;
-
-  // .compact & {
-  //     top: auto;
-  //     right: 0;
-  //     background-color: transparent;
-  // }
-}
-
-.profile-menu-button {
-  // Styles for the profile menu button
-  // position: relative;
-  // float: right;
   // top: 16px;
   // right: 16px;
 
