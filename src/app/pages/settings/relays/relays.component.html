@@ -63,6 +63,7 @@
           </mat-card-content>
         </mat-card>
 
+        @if (showUpdateDMRelays()) {
         <mat-card class="info-card">
           <mat-card-header>
             <mat-card-title>
@@ -89,6 +90,7 @@
             </p>
           </mat-card-content>
         </mat-card>
+        }
 
         @if (showFollowingRelayCleanup()) {
         <mat-card class="info-card">
@@ -111,7 +113,8 @@
             </p>
             <p>
               <button mat-flat-button (click)="cleanFollowingList()" [disabled]="isCleaningFollowingList()">
-                @if (isCleaningFollowingList()) {<mat-icon class="spinning-icon">sync</mat-icon>} Remove {{ followingRelayUrls().length }} Relays from
+                @if (isCleaningFollowingList()) {<mat-icon class="spinning-icon">sync</mat-icon>} Remove {{
+                followingRelayUrls().length }} Relays from
                 Following List
               </button>
             </p>
