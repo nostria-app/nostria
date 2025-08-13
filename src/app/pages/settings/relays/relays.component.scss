@@ -157,6 +157,7 @@
   0% {
     transform: rotate(0deg);
   }
+
   100% {
     transform: rotate(360deg);
   }
@@ -165,4 +166,10 @@
 .spinning-icon {
   animation: spin 2s linear infinite;
   margin-left: 8px;
+}
+
+// Card positioning for tooltips
+.user-relays-card,
+.discovery-relays-card {
+  position: relative;
 }

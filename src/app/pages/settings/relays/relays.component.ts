@@ -7,6 +7,8 @@ import {
   OnDestroy,
   untracked,
   computed,
+  ViewChild,
+  TemplateRef,
 } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatListModule } from '@angular/material/list';
@@ -38,6 +40,7 @@ import { UtilitiesService } from '../../../services/utilities.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { AccountRelayService } from '../../../services/account-relay.service';
 import { DataService } from '../../../services/data.service';
+import { InfoTooltipComponent } from '../../../components/info-tooltip/info-tooltip.component';
 
 @Component({
   selector: 'app-relays-page',
@@ -53,6 +56,7 @@ import { DataService } from '../../../services/data.service';
     MatFormFieldModule,
     MatSlideToggleModule,
     MatTabsModule,
+    InfoTooltipComponent,
   ],
   templateUrl: './relays.component.html',
   styleUrl: './relays.component.scss',
@@ -81,6 +85,12 @@ export class RelaysComponent implements OnInit, OnDestroy {
   isCleaningFollowingList = signal(false);
   // Show DM relay update card unless already matching
   showUpdateDMRelays = signal(true);
+
+  // Template references for tooltip content
+  @ViewChild('userRelaysInfoContent')
+  userRelaysInfoContent!: TemplateRef<unknown>;
+  @ViewChild('discoveryRelaysInfoContent')
+  discoveryRelaysInfoContent!: TemplateRef<unknown>;
 
   // Timer for connection status checking
   private statusCheckTimer: any;
