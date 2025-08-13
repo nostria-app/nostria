@@ -5,6 +5,7 @@ import { hexToBytes, bytesToHex } from '@noble/hashes/utils';
 import { Event, nip04, nip44 } from 'nostr-tools';
 import { v2 } from 'nostr-tools/nip44';
 import { UtilitiesService } from './utilities.service';
+import { ExtensionPermissionService } from './extension-permission.service';
 
 export interface EncryptionResult {
   content: string;
@@ -22,7 +23,8 @@ export interface DecryptionResult {
 export class EncryptionService {
   private logger = inject(LoggerService);
   private readonly utilities = inject(UtilitiesService);
-  private accountState = inject(AccountStateService); /**
+  private accountState = inject(AccountStateService);
+  private extensionPermission = inject(ExtensionPermissionService); /**
    * Encrypt a message using NIP-04 (legacy, less secure)
    * Uses AES-256-CBC encryption
    */
@@ -59,6 +61,11 @@ export class EncryptionService {
 
       // Check if we can use the browser extension
       if (account?.source === 'extension' && window.nostr?.nip04) {
+        // Check if permission is granted for extension decryption
+        if (!this.extensionPermission.isExtensionDecryptionPermissionValid()) {
+          throw new Error('Extension decryption permission not granted');
+        }
+
         const decrypted = await window.nostr.nip04.decrypt(pubkey, ciphertext);
         return decrypted;
       }
@@ -70,9 +77,11 @@ export class EncryptionService {
       // Use nostr-tools nip04 decryption
       const privateKeyBytes = hexToBytes(account.privkey);
       return await nip04.decrypt(privateKeyBytes, pubkey, ciphertext);
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.logger.error('Failed to decrypt with NIP-04', error);
-      throw new Error('Decryption failed: ', error.message);
+      throw new Error(
+        `Decryption failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
   /**
@@ -119,6 +128,11 @@ export class EncryptionService {
 
       // Check if we can use the browser extension
       if (account?.source === 'extension' && window.nostr?.nip44) {
+        // Check if permission is granted for extension decryption
+        if (!this.extensionPermission.isExtensionDecryptionPermissionValid()) {
+          throw new Error('Extension decryption permission not granted');
+        }
+
         return await window.nostr.nip44.decrypt(senderPubkey, ciphertext);
       }
 
@@ -134,9 +148,11 @@ export class EncryptionService {
       );
 
       return v2.decrypt(ciphertext, conversationKey);
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.logger.error('Failed to decrypt with NIP-44', error);
-      throw new Error('Decryption failed: ', error.message);
+      throw new Error(
+        `Decryption failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 

@@ -69,6 +69,7 @@ import { UserRelayService } from '../../services/user-relay.service';
 import { AccountRelayService } from '../../services/account-relay.service';
 import { LayoutService } from '../../services/layout.service';
 import { NamePipe } from '../../pipes/name.pipe';
+import { ExtensionPermissionService } from '../../services/extension-permission.service';
 
 // Define interfaces for our DM data structures
 interface Chat {
@@ -153,7 +154,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   readonly utilities = inject(UtilitiesService);
   private readonly accountState = inject(AccountStateService);
   private readonly encryption = inject(EncryptionService);
-  layout = inject(LayoutService); // UI state signals
+  layout = inject(LayoutService);
+  readonly extensionPermission = inject(ExtensionPermissionService); // UI state signals
   isLoading = signal<boolean>(false);
   isLoadingMore = signal<boolean>(false);
   isSending = signal<boolean>(false);
@@ -182,6 +184,40 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   private lastSelectedChatId = signal<string | null>(null);
   // Track if we're currently loading more messages to avoid scrolling
   private isLoadingMoreMessages = signal<boolean>(false);
+
+  // Track if user manually dismissed the banner
+  private bannerDismissed = signal<boolean>(false);
+
+  // Extension decryption banner visibility - computed to be reactive
+  showExtensionDecryptionBanner = computed(() => {
+    const chat = this.selectedChat();
+    const isExtension = this.extensionPermission.isUsingExtension();
+    const hasMessages = this.messages().length > 0;
+    const hasPermission =
+      this.extensionPermission.isExtensionDecryptionPermissionValid();
+    const dismissed = this.bannerDismissed();
+
+    // Only show if:
+    // 1. Using extension account
+    // 2. Has a selected chat
+    // 3. Has messages in the chat
+    // 4. Don't have valid permission
+    // 5. Not manually dismissed
+    const shouldShow =
+      isExtension && chat && hasMessages && !hasPermission && !dismissed;
+
+    if (shouldShow) {
+      this.logger.debug('Extension decryption banner should show', {
+        isExtension,
+        hasChat: !!chat,
+        hasMessages,
+        hasPermission,
+        dismissed,
+      });
+    }
+
+    return shouldShow;
+  });
 
   // Computed helpers
   hasChats = computed(() => this.messaging.sortedChats().length > 0);
@@ -237,6 +273,12 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
             this.messages.set(chatMessages || []);
             this.hasMoreMessages.set(true);
             this.scrollToBottom();
+
+            // Reset banner dismissed state for new chat
+            this.bannerDismissed.set(false);
+
+            // Check if we need to show extension decryption banner
+            this.checkForExtensionDecryptionBanner(chat, chatMessages);
 
             // Re-setup scroll listener for the new chat
             setTimeout(() => {
@@ -395,6 +437,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       this.scrollThrottleTimeout = null;
     }
 
+    // Clean up extension permission service
+    this.extensionPermission.destroy();
+
     // Clean up subscriptions
     if (this.messageSubscription) {
       this.messageSubscription.close();
@@ -413,6 +458,152 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
    */
   private clearDecryptionQueue(): void {
     this.messaging.clearDecryptionQueue();
+  }
+
+  /**
+   * Grant extension decryption permission for 5 minutes
+   */
+  allowExtensionDecryptionFor5Minutes(): void {
+    this.extensionPermission.grantExtensionDecryptionPermission(5);
+
+    // Show success message
+    this.snackBar.open(
+      'Extension decryption enabled for 5 minutes',
+      'Dismiss',
+      {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      }
+    );
+
+    // Trigger decryption of current chat messages
+    const selectedChat = this.selectedChat();
+    if (selectedChat) {
+      // Re-process messages for this chat by refreshing the messages
+      const updatedMessages = this.messaging.getChatMessages(selectedChat.id);
+      this.messages.set(updatedMessages || []);
+    }
+  }
+
+  /**
+   * Dismiss the extension decryption banner
+   */
+  dismissExtensionDecryptionBanner(): void {
+    this.bannerDismissed.set(true);
+  }
+
+  /**
+   * Trigger a single decryption attempt to test extension availability
+   */
+  async triggerSingleDecryptionTest(): Promise<void> {
+    this.logger.debug('Triggering single decryption test');
+
+    const selectedChat = this.selectedChat();
+    if (!selectedChat) {
+      this.logger.warn('No selected chat for decryption test');
+      return;
+    }
+
+    try {
+      // Find the first encrypted message in the chat
+      const chatMessages = this.messaging.getChatMessages(selectedChat.id);
+      const firstEncryptedMessage = chatMessages?.find(
+        msg => msg.content && msg.content.length > 0
+      );
+
+      if (!firstEncryptedMessage) {
+        this.logger.warn('No encrypted messages found for decryption test');
+        return;
+      }
+
+      // Test extension decryption using the service
+      const testSuccessful =
+        await this.extensionPermission.testExtensionDecryption(
+          firstEncryptedMessage.content,
+          firstEncryptedMessage.pubkey
+        );
+
+      if (testSuccessful) {
+        this.snackBar.open(
+          'Extension decryption test successful! You can now allow decryption.',
+          'Dismiss',
+          {
+            duration: 3000,
+            horizontalPosition: 'center',
+            verticalPosition: 'bottom',
+          }
+        );
+      } else {
+        this.snackBar.open(
+          'Extension decryption test failed. Please check your extension.',
+          'Dismiss',
+          {
+            duration: 5000,
+            horizontalPosition: 'center',
+            verticalPosition: 'bottom',
+          }
+        );
+      }
+    } catch (error) {
+      this.logger.error('Failed to trigger decryption test', error);
+      this.snackBar.open(
+        'Failed to test decryption. Please check your extension.',
+        'Dismiss',
+        {
+          duration: 5000,
+          horizontalPosition: 'center',
+          verticalPosition: 'bottom',
+        }
+      );
+    }
+  }
+
+  /**
+   * Check if we should show the extension decryption banner for this chat
+   */
+  private checkForExtensionDecryptionBanner(
+    chat: Chat,
+    chatMessages: DirectMessage[] | null
+  ): void {
+    this.logger.debug('Checking for extension decryption banner', {
+      chatId: chat.id,
+      messageCount: chatMessages?.length || 0,
+      isUsingExtension: this.extensionPermission.isUsingExtension(),
+      hasValidPermission:
+        this.extensionPermission.isExtensionDecryptionPermissionValid(),
+    });
+
+    // Only show for extension accounts
+    if (!this.extensionPermission.isUsingExtension()) {
+      this.logger.debug('Not using extension, banner not needed');
+      return;
+    }
+
+    // Don't show if permission is already granted and valid
+    if (this.extensionPermission.isExtensionDecryptionPermissionValid()) {
+      this.logger.debug(
+        'Extension permission already valid, banner not needed'
+      );
+      return;
+    }
+
+    // Check if there are any encrypted messages
+    const hasEncryptedMessages =
+      chatMessages?.some(msg => msg.content && msg.content.length > 0) ?? false;
+
+    this.logger.debug('Encrypted messages check', {
+      hasEncryptedMessages,
+      sampleMessage: chatMessages?.[0]?.content || 'none',
+    });
+
+    if (hasEncryptedMessages) {
+      this.logger.debug(
+        'Found encrypted messages, banner should show automatically'
+      );
+    } else {
+      this.logger.debug('No encrypted messages found, banner not needed');
+    }
   }
 
   /**
@@ -618,10 +809,10 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         msgs.map(msg =>
           msg.id === pendingId
             ? {
-                ...finalMessage,
-                pending: false,
-                received: true,
-              }
+              ...finalMessage,
+              pending: false,
+              received: true,
+            }
             : msg
         )
       );

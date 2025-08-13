@@ -247,6 +247,7 @@
 
 @media (max-width: 599px) {
   .messages {
+
     // On mobile, make sure full width is used
     .messages-left,
     .messages-right {
@@ -267,4 +268,118 @@
   left: 4px;
   top: 8px;
   font-size: 1.1rem;
+}
+
+// Extension Decryption Banner Styles
+.extension-decryption-banner {
+  padding: 16px;
+  background-color: var(--mat-sys-surface-variant);
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+
+  .banner-card {
+    margin: 0;
+    box-shadow: none;
+    background-color: transparent;
+
+    mat-card-content {
+      padding: 0;
+    }
+  }
+
+  .banner-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+
+    @media (max-width: 768px) {
+      flex-direction: column;
+      gap: 12px;
+    }
+  }
+
+  .banner-icon {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background-color: var(--mat-sys-primary-container);
+    border-radius: 50%;
+
+    mat-icon {
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
+    }
+  }
+
+  .banner-text {
+    flex: 1;
+    min-width: 0;
+
+    h3 {
+      margin: 0 0 8px 0;
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--mat-sys-on-surface);
+    }
+
+    p {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.4;
+      color: var(--mat-sys-on-surface-variant);
+    }
+  }
+
+  .banner-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+
+    @media (max-width: 768px) {
+      width: 100%;
+      justify-content: flex-start;
+      flex-wrap: wrap;
+    }
+
+    button {
+      white-space: nowrap;
+
+      &[mat-stroked-button] {
+        color: var(--mat-sys-primary);
+        border-color: var(--mat-sys-outline);
+      }
+
+      &[mat-raised-button] {
+        background-color: var(--mat-sys-primary);
+        color: var(--mat-sys-on-primary);
+      }
+
+      &[mat-icon-button] {
+        color: var(--mat-sys-on-surface-variant);
+      }
+
+      mat-icon {
+        margin-right: 4px;
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+    }
+  }
+}
+
+// Dark mode adjustments
+.dark {
+  .extension-decryption-banner {
+    background-color: var(--mat-sys-surface-container);
+    border-bottom-color: var(--mat-sys-outline);
+
+    .banner-icon {
+      background-color: var(--mat-sys-primary-container);
+    }
+  }
 }

@@ -14,6 +14,7 @@ import {
 } from 'nostr-tools';
 import { UtilitiesService } from './utilities.service';
 import { EncryptionService } from './encryption.service';
+import { ExtensionPermissionService } from './extension-permission.service';
 import { NostriaService } from '../interfaces';
 import { bytesToHex } from 'nostr-tools/utils';
 
@@ -62,6 +63,7 @@ export class MessagingService implements NostriaService {
   private readonly accountState = inject(AccountStateService);
   readonly utilities = inject(UtilitiesService);
   private readonly encryption = inject(EncryptionService);
+  private readonly extensionPermission = inject(ExtensionPermissionService);
   isLoading = signal<boolean>(false);
   isLoadingMoreChats = signal<boolean>(false);
   hasMoreChats = signal<boolean>(true);
@@ -103,7 +105,7 @@ export class MessagingService implements NostriaService {
   isDecryptingMessages = signal<boolean>(false);
   decryptionQueueLength = signal<number>(0);
 
-  constructor() {}
+  constructor() { }
 
   hasMessage(chatId: string, messageId: string): boolean {
     const chat = this.chatsMap().get(chatId);
@@ -198,7 +200,7 @@ export class MessagingService implements NostriaService {
     this.oldestChatTimestamp.set(null);
   }
 
-  async load() {}
+  async load() { }
 
   async createNip44Message(
     messageText: string,
@@ -708,6 +710,19 @@ export class MessagingService implements NostriaService {
       }
 
       // Use the EncryptionService to decrypt
+      // Check if we're using extension and don't have permission
+      const account = this.accountState.account();
+      if (
+        account?.source === 'extension' &&
+        !this.extensionPermission.isExtensionDecryptionPermissionValid()
+      ) {
+        // Skip decryption if extension permission is not granted
+        this.logger.debug(
+          'Skipping NIP-04 auto-decryption - extension permission not granted'
+        );
+        return null;
+      }
+
       const decryptionResult = await this.encryption.autoDecrypt(
         event.content,
         decryptionPubkey,
@@ -752,6 +767,19 @@ export class MessagingService implements NostriaService {
       // This will handle both browser extension and direct decryption
       let wrappedContent: any;
       try {
+        // Check if we're using extension and don't have permission
+        const account = this.accountState.account();
+        if (
+          account?.source === 'extension' &&
+          !this.extensionPermission.isExtensionDecryptionPermissionValid()
+        ) {
+          // Skip decryption if extension permission is not granted
+          this.logger.debug(
+            'Skipping auto-decryption - extension permission not granted'
+          );
+          return null;
+        }
+
         const decryptionResult = await this.encryption.autoDecrypt(
           wrappedEvent.content,
           wrappedEvent.pubkey,
