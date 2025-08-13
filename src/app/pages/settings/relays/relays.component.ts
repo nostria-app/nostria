@@ -37,6 +37,7 @@ import { ProfileStateService } from '../../../services/profile-state.service';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { AccountRelayService } from '../../../services/account-relay.service';
+import { DataService } from '../../../services/data.service';
 
 @Component({
   selector: 'app-relays-page',
@@ -70,6 +71,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
   private readonly utilities = inject(UtilitiesService);
   private readonly accountState = inject(AccountStateService);
   private readonly accountRelay = inject(AccountRelayService);
+  private readonly data = inject(DataService);
 
   followingRelayUrls = signal<string[]>([]);
   newRelayUrl = signal('');
@@ -77,6 +79,8 @@ export class RelaysComponent implements OnInit, OnDestroy {
   // New signals for deprecated following list relay cleanup feature
   showFollowingRelayCleanup = signal(false);
   isCleaningFollowingList = signal(false);
+  // Show DM relay update card unless already matching
+  showUpdateDMRelays = signal(true);
 
   // Timer for connection status checking
   private statusCheckTimer: any;
@@ -117,8 +121,10 @@ export class RelaysComponent implements OnInit, OnDestroy {
       const pubkey = this.accountState.pubkey();
       if (pubkey) {
         await this.checkFollowingListForRelays(pubkey);
+        await this.checkDirectMessageRelayList(pubkey);
       } else {
         this.showFollowingRelayCleanup.set(false);
+        this.showUpdateDMRelays.set(false);
       }
     });
   }
@@ -146,6 +152,41 @@ export class RelaysComponent implements OnInit, OnDestroy {
     } catch (err) {
       this.logger.error('Failed to check following list for relays', err);
       this.showFollowingRelayCleanup.set(false);
+    }
+  }
+
+  private async checkDirectMessageRelayList(pubkey: string) {
+    try {
+      // Get current user relay list (kind 10002) from storage (already have in memory as this.relay.relays)
+      const userRelayUrls = this.utilities.normalizeRelayUrls(
+        this.relay.relays.map(r => r.url)
+      );
+
+      // Fetch existing DM relay list event (10050)
+      const dmRelayEvent = await this.data.getEventByPubkeyAndKind(
+        pubkey,
+        kinds.DirectMessageRelaysList
+      );
+      if (!dmRelayEvent) {
+        this.showUpdateDMRelays.set(true); // Need to create one
+        return;
+      }
+
+      // Extract relay tag URLs from dmRelayEvent
+      const dmRelayUrls = dmRelayEvent.event.tags
+        .filter(t => t[0] === 'relay' && t[1])
+        .map(t => t[1]);
+      const normalizedDMUrls = this.utilities.normalizeRelayUrls(dmRelayUrls);
+
+      // Compare sets (unordered)
+      const setA = new Set(userRelayUrls);
+      const setB = new Set(normalizedDMUrls);
+      const same = setA.size === setB.size && [...setA].every(u => setB.has(u));
+
+      this.showUpdateDMRelays.set(!same);
+    } catch (err) {
+      this.logger.error('Failed to check DM relay list', err);
+      this.showUpdateDMRelays.set(true);
     }
   }
 
