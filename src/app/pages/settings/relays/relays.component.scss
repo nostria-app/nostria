@@ -7,6 +7,13 @@
   padding: 4px 0;
 }
 
+app-info-tooltip {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 2;
+}
+
 .status-icon {
   display: flex;
   align-items: center;

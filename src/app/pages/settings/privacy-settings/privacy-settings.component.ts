@@ -1,4 +1,10 @@
-import { Component, inject, computed } from '@angular/core';
+import {
+  Component,
+  inject,
+  computed,
+  ViewChild,
+  TemplateRef,
+} from '@angular/core';
 
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatCardModule } from '@angular/material/card';
@@ -12,6 +18,7 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { NostrService } from '../../../services/nostr.service';
 import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
 import { SettingsService } from '../../../services/settings.service';
+import { InfoTooltipComponent } from '../../../components/info-tooltip/info-tooltip.component';
 
 @Component({
   selector: 'app-privacy-settings',
@@ -26,6 +33,7 @@ import { SettingsService } from '../../../services/settings.service';
     MatCheckboxModule,
     FormsModule,
     UserProfileComponent,
+    InfoTooltipComponent,
   ],
   templateUrl: './privacy-settings.component.html',
   styleUrls: ['./privacy-settings.component.scss'],
@@ -34,6 +42,12 @@ export class PrivacySettingsComponent {
   accountState = inject(AccountStateService);
   nostrService = inject(NostrService);
   settingsService = inject(SettingsService);
+
+  // Template references for tooltip content
+  @ViewChild('imageCacheInfoContent')
+  imageCacheInfoContent!: TemplateRef<unknown>;
+  @ViewChild('socialSharingInfoContent')
+  socialSharingInfoContent!: TemplateRef<unknown>;
 
   // Compute muted lists using getTags utility function
   mutedAccounts = computed(() => {
