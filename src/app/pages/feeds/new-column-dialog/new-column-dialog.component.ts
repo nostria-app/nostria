@@ -441,10 +441,6 @@ const NOSTR_KINDS = [
         }
       }
 
-      .full-width {
-        width: 100%;
-      }
-
       .column-type-section {
         h3 {
           margin: 0 0 16px 0;

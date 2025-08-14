@@ -1,8 +1,8 @@
-.algorithm-page {
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
-}
+// .algorithm-page {
+//   padding: 20px;
+//   max-width: 1200px;
+//   margin: 0 auto;
+// }
 
 .page-header {
   margin-bottom: 24px;
@@ -244,9 +244,9 @@
 
 // Mobile responsive styles
 @media (max-width: 768px) {
-  .algorithm-page {
-    padding: 16px;
-  }
+  // .algorithm-page {
+  //   padding: 16px;
+  // }
 
   .stats-grid {
     grid-template-columns: 1fr !important;

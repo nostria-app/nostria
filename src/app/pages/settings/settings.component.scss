@@ -20,10 +20,25 @@ h2 {
   max-width: 1400px;
   margin: 0 auto;
   height: calc(100vh - 100px);
+  position: relative;
 
   @media (max-width: 768px) {
     flex-direction: column;
     height: auto;
+  }
+}
+
+.mobile-close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 10;
+  background-color: rgba(0, 0, 0, 0.1);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+
+  @media (prefers-color-scheme: dark) {
+    background-color: rgba(255, 255, 255, 0.1);
   }
 }
 
@@ -78,10 +93,6 @@ h2 {
       border-top-color: rgba(255, 255, 255, 0.12);
     }
   }
-}
-
-.full-width {
-  width: 100%;
 }
 
 .wipe-data-button {
