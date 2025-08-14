@@ -1,37 +1,43 @@
-import { Component, inject, input, signal, effect } from '@angular/core';
-import { DataService } from '../../services/data.service';
-import { Event } from 'nostr-tools';
-import { NostrRecord } from '../../interfaces';
-import { UserProfileComponent } from '../user-profile/user-profile.component';
-import { LayoutService } from '../../services/layout.service';
-import { ContentComponent } from '../content/content.component';
-import { AgoPipe } from '../../pipes/ago.pipe';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { DatePipe } from '@angular/common';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatMenuModule } from '@angular/material/menu';
-import { AccountRelayService } from '../../services/account-relay.service';
-import { MatDividerModule } from '@angular/material/divider';
-import { MatDialog } from '@angular/material/dialog';
 import {
-  PublishDialogComponent,
-  PublishDialogData,
-} from './publish-dialog/publish-dialog.component';
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { MatDialog } from '@angular/material/dialog';
+import { MatIconModule } from '@angular/material/icon';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { Event, kinds } from 'nostr-tools';
+import { NostrRecord } from '../../interfaces';
+import { AccountRelayService } from '../../services/account-relay.service';
 import { ApplicationService } from '../../services/application.service';
+import { BookmarkService } from '../../services/bookmark.service';
+import { DataService } from '../../services/data.service';
+import { LayoutService } from '../../services/layout.service';
+import { RepostService } from '../../services/repost.service';
+import { ContentComponent } from '../content/content.component';
+import { ReplyButtonComponent } from './reply-button/reply-button.component';
+import { EventHeaderComponent } from './header/header.component';
+import { CommonModule } from '@angular/common';
+
+type EventCardAppearance = 'card' | 'plain';
 
 @Component({
   selector: 'app-event',
   imports: [
-    UserProfileComponent,
+    CommonModule,
+    ReplyButtonComponent,
+    EventHeaderComponent,
     ContentComponent,
-    AgoPipe,
     MatTooltipModule,
-    DatePipe,
-    MatDividerModule,
+    MatCardModule,
     MatButtonModule,
     MatIconModule,
-    MatMenuModule,
   ],
   templateUrl: './event.component.html',
   styleUrl: './event.component.scss',
@@ -40,12 +46,24 @@ export class EventComponent {
   id = input<string | null | undefined>();
   type = input<'e' | 'a' | 'r' | 't'>('e');
   event = input<Event | null | undefined>(null);
+  appearance = input<EventCardAppearance>('plain');
+  repostsCount = input<number>(0);
+  isPlain = computed<boolean>(() => this.appearance() === 'plain');
+
   data = inject(DataService);
   record = signal<NostrRecord | null>(null);
+  bookmark = inject(BookmarkService);
+  repostService = inject(RepostService);
   layout = inject(LayoutService);
   accountRelayService = inject(AccountRelayService);
   dialog = inject(MatDialog);
+  snackBar = inject(MatSnackBar);
   app = inject(ApplicationService);
+  repostedRecord = computed<NostrRecord | null>(() => {
+    const event = this.event();
+    if (!event || event.kind !== kinds.Repost) return null;
+    return this.repostService.decodeRepost(event);
+  });
 
   constructor() {
     effect(() => {
@@ -76,39 +94,6 @@ export class EventComponent {
           }
         }
       }
-    });
-  }
-
-  openEvent(): void {
-    const id = this.id();
-    const type = this.type();
-
-    if (!id) {
-      return;
-    }
-
-    if (type === 'r') {
-      window.open(id, '_blank');
-    } else if (type === 'e') {
-      this.layout.openEvent(id, this.record()?.event);
-    } else if (type === 'a') {
-      this.layout.openArticle(id, this.record()?.event);
-    }
-  }
-  async publishEvent() {
-    const event = this.record()?.event;
-    if (!event) {
-      return;
-    }
-
-    const dialogData: PublishDialogData = {
-      event: event,
-    };
-
-    this.dialog.open(PublishDialogComponent, {
-      data: dialogData,
-      width: '600px',
-      disableClose: false,
     });
   }
 }

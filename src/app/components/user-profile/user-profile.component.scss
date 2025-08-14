@@ -1,6 +1,6 @@
 :host {
   display: block;
-  width: auto; // Changed from 100% to auto to allow fixed widths of parents
+  width: 100%;
 }
 
 .user-profile {
@@ -46,8 +46,10 @@
     overflow: hidden;
     flex-shrink: 0;
     border: 2px solid;
-    border-color: var(--mat-button-text-label-text-color,
-        var(--mat-sys-primary));
+    border-color: var(
+      --mat-button-text-label-text-color,
+      var(--mat-sys-primary)
+    );
     background-color: var(--mat-card-subtle-surface-color, #e0e0e0);
     // Allow touch scrolling to pass through
     touch-action: manipulation;
@@ -75,14 +77,12 @@
       font-size: 100%;
 
       &.not-found-avatar {
-        color: var(--mat-warn-color,
-            #f44336);
+        color: var(--mat-warn-color, #f44336);
         /* Use Material's warning color for not found or error profiles */
       }
 
       &.error-avatar {
-        color: var(--mat-warn-color,
-            #be09af);
+        color: var(--mat-warn-color, #be09af);
         /* Use Material's warning color for not found or error profiles */
       }
     }

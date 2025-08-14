@@ -23,6 +23,7 @@ export class ProfileStateService {
   // Signal to store the current profile's following list
   followingList = signal<string[]>([]);
   notes = signal<NostrRecord[]>([]);
+  reposts = signal<NostrRecord[]>([]);
   replies = signal<NostrRecord[]>([]);
   articles = signal<NostrRecord[]>([]);
   media = signal<NostrRecord[]>([]);
@@ -94,6 +95,7 @@ export class ProfileStateService {
   reset() {
     this.followingList.set([]);
     this.notes.set([]);
+    this.reposts.set([]);
     this.replies.set([]);
     this.articles.set([]);
     this.media.set([]);
@@ -102,7 +104,9 @@ export class ProfileStateService {
 
   // Computed signals for sorted data
   sortedNotes = computed(() =>
-    [...this.notes()].sort((a, b) => b.event.created_at - a.event.created_at)
+    [...this.notes(), ...this.reposts()].sort(
+      (a, b) => b.event.created_at - a.event.created_at
+    )
   );
 
   sortedReplies = computed(() =>
@@ -141,6 +145,11 @@ export class ProfileStateService {
           authors: [pubkey],
           limit: 1,
         },
+        {
+          kinds: [kinds.Repost],
+          authors: [pubkey],
+          limit: 30,
+        },
       ],
       {
         onevent: evt => {
@@ -172,6 +181,11 @@ export class ProfileStateService {
             } else {
               this.replies.update(events => [...events, record]);
             }
+          } else if (evt.kind === kinds.Repost) {
+            this.reposts.update(reposts => [
+              ...reposts,
+              this.utilities.toRecord(evt),
+            ]);
           }
         },
         onclose: reasons => {

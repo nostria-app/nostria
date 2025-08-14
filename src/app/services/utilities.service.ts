@@ -6,6 +6,7 @@ import { hexToBytes } from 'nostr-tools/utils';
 import { ProfilePointer } from 'nostr-tools/nip19';
 import { isPlatformBrowser } from '@angular/common';
 import { NostrTagKey } from '../standardized-tags';
+import { NostrRecord } from '../interfaces';
 
 @Injectable({
   providedIn: 'root',
@@ -31,9 +32,9 @@ export class UtilitiesService {
   private readonly platformId = inject(PLATFORM_ID);
   readonly isBrowser = signal(isPlatformBrowser(this.platformId));
 
-  constructor() { }
+  constructor() {}
 
-  toRecord(event: Event) {
+  toRecord(event: Event): NostrRecord {
     return {
       event,
       data: this.parseContent(event.content),
