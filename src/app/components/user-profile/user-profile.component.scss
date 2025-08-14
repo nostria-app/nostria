@@ -1,6 +1,6 @@
 :host {
   display: block;
-  width: 100%;
+  width: auto; // Changed from 100% to auto to allow fixed widths of parents
 }
 
 .user-profile {
@@ -45,10 +45,8 @@
     overflow: hidden;
     flex-shrink: 0;
     border: 2px solid;
-    border-color: var(
-      --mat-button-text-label-text-color,
-      var(--mat-sys-primary)
-    );
+    border-color: var(--mat-button-text-label-text-color,
+        var(--mat-sys-primary));
     background-color: var(--mat-card-subtle-surface-color, #e0e0e0);
     // Allow touch scrolling to pass through
     touch-action: manipulation;
@@ -98,9 +96,9 @@
     &::before {
       content: attr(data-tooltip);
       position: absolute;
-      bottom: -10px;
+      top: 50%;
       left: 50%;
-      transform: translateX(-50%);
+      transform: translate(-50%, -50%);
       background-color: rgba(0, 0, 0, 0.8);
       color: white;
       padding: 6px 10px;
@@ -121,31 +119,15 @@
       // Prevent tooltip from going off-screen
       @media (max-width: 300px) {
         max-width: 160px;
-        left: 0;
-        transform: none;
+        left: 50%;
+        transform: translate(-50%, -50%);
       }
-    }
-
-    &::after {
-      content: '';
-      position: absolute;
-      bottom: -2px;
-      left: 50%;
-      transform: translateX(-50%);
-      border: 4px solid transparent;
-      border-bottom-color: rgba(0, 0, 0, 0.8);
-      opacity: 0;
-      visibility: hidden;
-      transition: opacity 0.3s, visibility 0.3s;
-      z-index: 1000;
-      pointer-events: none;
     }
 
     // Show tooltip on hover (desktop) - long press for mobile is handled differently
     @media (hover: hover) and (pointer: fine) {
 
-      &:hover::before,
-      &:hover::after {
+      &:hover::before {
         opacity: 1;
         visibility: visible;
       }
@@ -154,16 +136,14 @@
     // For touch devices, show tooltip on focus (when tapped)
     @media (hover: none) {
 
-      &:focus::before,
-      &:focus::after {
+      &:focus::before {
         opacity: 1;
         visibility: visible;
       }
     }
 
     // Show tooltip when temporary class is added (for touch)
-    &.show-tooltip::before,
-    &.show-tooltip::after {
+    &.show-tooltip::before {
       opacity: 1;
       visibility: visible;
     }
