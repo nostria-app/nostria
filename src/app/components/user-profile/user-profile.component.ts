@@ -3,7 +3,6 @@ import {
   effect,
   inject,
   input,
-  output,
   signal,
   untracked,
   ElementRef,
@@ -25,7 +24,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatButtonModule } from '@angular/material/button';
 import { InfoRecord } from '../../services/storage.service';
-import { Event, kinds } from 'nostr-tools';
+import { Event } from 'nostr-tools';
 import { UtilitiesService } from '../../services/utilities.service';
 import { DataService } from '../../services/data.service';
 import { RelaysService } from '../../services/relays.service';
@@ -65,7 +64,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
   npub = signal<string | undefined>(undefined);
   event = input<Event | undefined>(undefined);
   info = input<InfoRecord | undefined>(undefined);
-  profile = signal<any>(null);
+  profile = signal<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
   isLoading = signal(false);
   error = signal<string>('');
   view = input<ViewMode>('list');
@@ -369,10 +368,12 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
       default: // 'list'
         return '40px';
     }
-  } /**
+  }
+
+  /**
    * Handles image load errors by setting the imageLoadError signal to true
    */
-  onImageLoadError(event: globalThis.Event): void {
+  onImageLoadError(): void {
     this.imageLoadError.set(true);
   }
 
@@ -470,15 +471,40 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
    * Handles touch events to allow scrolling when passthrough is enabled
    * @param event The touch event to handle
    */
-  // handleTouchEvent(event: TouchEvent): void {
-  //     // When passthrough is true, allow the event to bubble up for scrolling
-  //     // by not calling preventDefault() or stopPropagation()
-  //     if (this.passthrough()) {
-  //         // For navigating to the profile, we'll use a separate click handler
-  //         return;
-  //     }
+  private touchStartY = 0;
+  private touchStartTime = 0;
+  private hasMoved = false;
 
-  //     // Otherwise, prevent default behavior to allow normal component interaction
-  //     event.stopPropagation();
-  // }
+  handleTouchStart(event: TouchEvent): void {
+    this.touchStartY = event.touches[0].clientY;
+    this.touchStartTime = Date.now();
+    this.hasMoved = false;
+  }
+
+  handleTouchMove(event: TouchEvent): void {
+    // Allow scrolling by not preventing default
+    const currentY = event.touches[0].clientY;
+    const deltaY = Math.abs(currentY - this.touchStartY);
+
+    // If there's significant vertical movement, it's likely a scroll gesture
+    if (deltaY > 10) {
+      this.hasMoved = true;
+    }
+  }
+
+  handleTouchEnd(event: TouchEvent): void {
+    const touchEndTime = Date.now();
+    const touchDuration = touchEndTime - this.touchStartTime;
+
+    // If the touch was brief and there was no significant movement,
+    // treat it as a tap and allow navigation
+    if (!this.hasMoved && touchDuration < 300) {
+      // This is a tap - let the routerLink handle navigation
+      return;
+    }
+
+    // Otherwise, prevent navigation to allow scrolling
+    event.preventDefault();
+    event.stopPropagation();
+  }
 }
