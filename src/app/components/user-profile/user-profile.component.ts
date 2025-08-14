@@ -445,9 +445,13 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
       tooltipText += '[No name]';
     }
 
-    // Add about text if available
+    // Add about text if available (limited to 50 characters)
     if (content.about) {
-      tooltipText += '\n\n' + content.about;
+      const truncatedAbout =
+        content.about.length > 50
+          ? content.about.substring(0, 50) + '...'
+          : content.about;
+      tooltipText += '\n\n' + truncatedAbout;
     }
 
     if (this.imageLoadError()) {
@@ -462,5 +466,23 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
    */
   isProfileNotFound(): boolean {
     return this.profile() && (this.profile().isEmpty || !this.profile().data);
+  }
+
+  /**
+   * Shows tooltip briefly on touch devices without interfering with scrolling
+   */
+  showTooltipOnTouch(event: TouchEvent): void {
+    // Only handle if it's a single touch (not a gesture)
+    if (event.touches.length === 1) {
+      const element = event.currentTarget as HTMLElement;
+
+      // Add a temporary class to show the tooltip
+      element.classList.add('show-tooltip');
+
+      // Remove the class after 2 seconds
+      setTimeout(() => {
+        element.classList.remove('show-tooltip');
+      }, 2000);
+    }
   }
 }

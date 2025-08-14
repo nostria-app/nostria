@@ -23,7 +23,9 @@
     }
 
     <!-- Avatar section - single image element -->
-    <a [routerLink]="['/p', publicKey]" class="user-profile-avatar">
+    <a [routerLink]="['/p', publicKey]" class="user-profile-avatar"
+      [class.has-custom-tooltip]="view() === 'large' || view() === 'medium' || view() === 'small'"
+      [attr.data-tooltip]="getTooltipContent()" (touchstart)="showTooltipOnTouch($event)">
 
       @if (isLoading()) {
       <mat-spinner [diameter]="getSpinnerSize()" color="primary"></mat-spinner>
