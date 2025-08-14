@@ -753,6 +753,14 @@ mat-card-content li {
   border-radius: 8px;
 }
 
+.settings-title {
+  font-size: 40px !important;
+  font-weight: 400 !important;
+  font-family: 'Protest Strike', sans-serif !important;
+  font-optical-sizing: auto !important;
+  font-style: normal !important;
+}
+
 .padding {
   padding: 0.6rem;
 }
@@ -863,6 +871,15 @@ iframe {
   .hide-tiny {
     display: none !important;
   }
+}
+
+.full-width {
+  width: 100%;
+}
+
+.full-width-list {
+  width: 100%;
+  padding: 0;
 }
 
 /* Global fullscreen video container */

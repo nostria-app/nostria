@@ -341,10 +341,6 @@ const FEED_TEMPLATES = [
         }
       }
 
-      .full-width {
-        width: 100%;
-      }
-
       .template-selection {
         h3 {
           margin: 0 0 8px 0;

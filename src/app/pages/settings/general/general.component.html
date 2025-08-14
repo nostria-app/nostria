@@ -1,107 +1,94 @@
-<div class="setting-item">
-  <span i18n="@@settings.dark-mode">Dark Mode</span>
-  <mat-slide-toggle
-    [checked]="themeService.darkMode()"
-    (change)="toggleDarkMode()"
-  >
-  </mat-slide-toggle>
-</div>
+<div class="content-medium">
 
-<div>
-  <h2 i18n="@@settings.language">Language</h2>
-  <p i18n="@@settings.language.description">Select your preferred language</p>
+  <h2>General</h2>
 
-  <mat-form-field appearance="outline" class="full-width">
-    <mat-label i18n="@@settings.language.label">Language</mat-label>
-    <mat-select
-      [ngModel]="localSettings.locale()"
-      (selectionChange)="setLanguage($event.value)"
-    >
-      @for (language of languages; track language.code) {
+  <div class="setting-item">
+    <span i18n="@@settings.dark-mode">Dark Mode</span>
+    <mat-slide-toggle [checked]="themeService.darkMode()" (change)="toggleDarkMode()">
+    </mat-slide-toggle>
+  </div>
+
+  <div>
+    <h2 i18n="@@settings.language">Language</h2>
+    <p i18n="@@settings.language.description">Select your preferred language</p>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label i18n="@@settings.language.label">Language</mat-label>
+      <mat-select [ngModel]="localSettings.locale()" (selectionChange)="setLanguage($event.value)">
+        @for (language of languages; track language.code) {
         <mat-option [value]="language.code">{{ language.name }}</mat-option>
-      }
-    </mat-select>
-  </mat-form-field>
-</div>
+        }
+      </mat-select>
+    </mat-form-field>
+  </div>
 
-<div>
-  <h2 i18n="@@settings.release-channel">
-    Release Channel <mat-icon class="minor-icon">diamond</mat-icon>
-  </h2>
-  <p i18n="@@settings.release-channel.description">
-    Get early access to new features (Premium)
-  </p>
+  <div>
+    <h2 i18n="@@settings.release-channel">
+      Release Channel <mat-icon class="minor-icon">diamond</mat-icon>
+    </h2>
+    <p i18n="@@settings.release-channel.description">
+      Get early access to new features (Premium)
+    </p>
 
-  <mat-form-field appearance="outline" class="full-width">
-    <mat-label i18n="@@settings.feature-level">Feature Level</mat-label>
-    <mat-select
-      [ngModel]="currentFeatureLevel()"
-      (selectionChange)="setFeatureLevel($event.value)"
-    >
-      <mat-option value="stable" i18n="@@settings.feature-level.stable"
-        >Stable</mat-option
-      >
-      <mat-option value="beta" i18n="@@settings.feature-level.beta"
-        >Beta</mat-option
-      >
-      <mat-option value="preview" i18n="@@settings.feature-level.preview"
-        >Preview</mat-option
-      >
-    </mat-select>
-  </mat-form-field>
-</div>
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label i18n="@@settings.feature-level">Feature Level</mat-label>
+      <mat-select [ngModel]="currentFeatureLevel()" (selectionChange)="setFeatureLevel($event.value)">
+        <mat-option value="stable" i18n="@@settings.feature-level.stable">Stable</mat-option>
+        <mat-option value="beta" i18n="@@settings.feature-level.beta">Beta</mat-option>
+        <mat-option value="preview" i18n="@@settings.feature-level.preview">Preview</mat-option>
+      </mat-select>
+    </mat-form-field>
+  </div>
 
-<div>
-  <h2 i18n="@@settings.logging">Logging</h2>
-  <p i18n="@@settings.logging.description">
-    Configure application logging levels
-  </p>
+  <div>
+    <h2 i18n="@@settings.logging">Logging</h2>
+    <p i18n="@@settings.logging.description">
+      Configure application logging levels
+    </p>
 
-  <mat-form-field appearance="outline" class="full-width">
-    <mat-label>Log Level</mat-label>
-    <mat-select
-      [ngModel]="logger.logLevel"
-      (selectionChange)="setLogLevel($event.value)"
-    >
-      <mat-option value="debug">Debug</mat-option>
-      <mat-option value="info">Info</mat-option>
-      <mat-option value="warn">Warning</mat-option>
-      <mat-option value="error">Error</mat-option>
-      <mat-option value="none">None</mat-option>
-    </mat-select>
-  </mat-form-field>
-  <p>
-    @switch (logger.logLevel) {
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Log Level</mat-label>
+      <mat-select [ngModel]="logger.logLevel" (selectionChange)="setLogLevel($event.value)">
+        <mat-option value="debug">Debug</mat-option>
+        <mat-option value="info">Info</mat-option>
+        <mat-option value="warn">Warning</mat-option>
+        <mat-option value="error">Error</mat-option>
+        <mat-option value="none">None</mat-option>
+      </mat-select>
+    </mat-form-field>
+    <p>
+      @switch (logger.logLevel) {
       @case ('debug') {
-        Shows all log messages including detailed debug information.
+      Shows all log messages including detailed debug information.
       }
       @case ('info') {
-        Shows informational messages, warnings and errors.
+      Shows informational messages, warnings and errors.
       }
       @case ('warn') {
-        Shows only warnings and errors.
+      Shows only warnings and errors.
       }
       @case ('error') {
-        Shows only error messages.
+      Shows only error messages.
       }
       @case ('none') {
-        Disables all logging output.
+      Disables all logging output.
       }
-    }
-  </p>
-</div>
-
-<!-- Storage Stats Component -->
-<div class="setting-item">
-  <app-storage-stats class="mb-4"></app-storage-stats>
-</div>
-
-<div class="setting-item danger-zone">
-  <div>
-    <h2>Danger Zone</h2>
-    <p>This will delete all your local app data and reload the application.</p>
+      }
+    </p>
   </div>
-  <button mat-flat-button class="wipe-data-button" (click)="wipeData()">
-    Wipe Data
-  </button>
+
+  <!-- Storage Stats Component -->
+  <div class="setting-item">
+    <app-storage-stats class="mb-4"></app-storage-stats>
+  </div>
+
+  <div class="setting-item danger-zone">
+    <div>
+      <h2>Danger Zone</h2>
+      <p>This will delete all your local app data and reload the application.</p>
+    </div>
+    <button mat-flat-button class="wipe-data-button" (click)="wipeData()">
+      Wipe Data
+    </button>
+  </div>
 </div>
