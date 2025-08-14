@@ -23,12 +23,14 @@ import { RepostService } from '../../services/repost.service';
 import { ContentComponent } from '../content/content.component';
 import { ReplyButtonComponent } from './reply-button/reply-button.component';
 import { EventHeaderComponent } from './header/header.component';
+import { CommonModule } from '@angular/common';
 
 type EventCardAppearance = 'card' | 'plain';
 
 @Component({
   selector: 'app-event',
   imports: [
+    CommonModule,
     ReplyButtonComponent,
     EventHeaderComponent,
     ContentComponent,

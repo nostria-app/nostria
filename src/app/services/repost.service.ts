@@ -53,28 +53,6 @@ export class RepostService {
     };
   }
 
-  // async deleteRepost(event: Event): Promise<boolean> {
-  //   // Create the event
-  //   const unsignedEvent: UnsignedEvent = {
-  //     kind: kinds.EventDeletion,
-  //     created_at: Math.floor(Date.now() / 1000),
-  //     tags: [
-  //       ['e', event.id],
-  //       ['k', String(event.kind)],
-  //     ],
-  //     content: '',
-  //     pubkey: this.accountState.pubkey(),
-  //   };
-
-  //   const published = await this.signAndPublish(unsignedEvent);
-  //   if (published) {
-  //     this.snackBar.open('Note was requested for delete', 'Dismiss', {
-  //       duration: 3000,
-  //     });
-  //   }
-  //   return published;
-  // }
-
   private async signAndPublish(event: UnsignedEvent): Promise<boolean> {
     const signedEvent = await this.nostrService.signEvent(event);
 

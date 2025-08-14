@@ -22,7 +22,6 @@ export class ReplyButtonComponent {
   );
 
   onClick(): void {
-    console.log('!');
     this.layout.commentNote(this.event().id);
   }
 }

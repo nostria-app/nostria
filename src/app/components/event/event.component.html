@@ -40,9 +40,9 @@
         } @else {
           <button
             mat-icon-button
-            (class)="
-              repostService.isReposted(targetItem.event.id) ? 'active' : ''
-            "
+            [ngClass]="{
+              active: repostService.isReposted(targetItem.event.id),
+            }"
             (click)="repostService.repostNote(targetItem.event)"
           >
             <mat-icon>repeat</mat-icon>
