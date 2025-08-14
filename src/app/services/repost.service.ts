@@ -1,8 +1,12 @@
 import { inject, Injectable } from '@angular/core';
-import { AccountStateService } from './account-state.service';
-import { UnsignedEvent, kinds, Event } from 'nostr-tools';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { Event, kinds, UnsignedEvent } from 'nostr-tools';
 import { AccountRelayService } from './account-relay.service';
+import { AccountStateService } from './account-state.service';
 import { NostrService } from './nostr.service';
+import { ProfileStateService } from './profile-state.service';
+import { UtilitiesService } from './utilities.service';
+import { NostrRecord } from '../interfaces';
 
 @Injectable({
   providedIn: 'root',
@@ -11,6 +15,13 @@ export class RepostService {
   private accountState = inject(AccountStateService);
   private nostrService = inject(NostrService);
   private accountRelayService = inject(AccountRelayService);
+  private snackBar = inject(MatSnackBar);
+  private profileService = inject(ProfileStateService);
+  private utilities = inject(UtilitiesService);
+
+  isReposted(eventId: string): boolean {
+    return this.profileService.reposts().some(r => r.event.id === eventId);
+  }
 
   async repostNote(event: Event): Promise<boolean> {
     // Create the event
@@ -25,8 +36,44 @@ export class RepostService {
       pubkey: this.accountState.pubkey(),
     };
 
-    return this.signAndPublish(unsignedEvent);
+    const published = await this.signAndPublish(unsignedEvent);
+    if (published) {
+      this.snackBar.open('Note reposted successfully!', 'Dismiss', {
+        duration: 3000,
+      });
+    }
+    return published;
   }
+
+  decodeRepost(event: Event): NostrRecord {
+    const repostedEvent = this.utilities.parseContent(event.content);
+    return {
+      event: repostedEvent,
+      data: this.utilities.parseContent(repostedEvent.content),
+    };
+  }
+
+  // async deleteRepost(event: Event): Promise<boolean> {
+  //   // Create the event
+  //   const unsignedEvent: UnsignedEvent = {
+  //     kind: kinds.EventDeletion,
+  //     created_at: Math.floor(Date.now() / 1000),
+  //     tags: [
+  //       ['e', event.id],
+  //       ['k', String(event.kind)],
+  //     ],
+  //     content: '',
+  //     pubkey: this.accountState.pubkey(),
+  //   };
+
+  //   const published = await this.signAndPublish(unsignedEvent);
+  //   if (published) {
+  //     this.snackBar.open('Note was requested for delete', 'Dismiss', {
+  //       duration: 3000,
+  //     });
+  //   }
+  //   return published;
+  // }
 
   private async signAndPublish(event: UnsignedEvent): Promise<boolean> {
     const signedEvent = await this.nostrService.signEvent(event);

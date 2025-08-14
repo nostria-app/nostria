@@ -1,77 +1,66 @@
 @let item = record();
+@let targetItem = repostedRecord() || item;
 
-@if (item) {
-  <app-user-profile [pubkey]="item.event.pubkey">
-    <a
-      class="date-link"
-      [matTooltip]="item.event.created_at | date: 'medium'"
-      matTooltipPosition="below"
-    >
-      {{ item.event.created_at | ago }}
-    </a>
+@if (targetItem && item) {
+  <mat-card class="note-card" [class.plain]="isPlain()" appearance="outlined">
+    @if (repostedRecord() !== null) {
+      <mat-card-header class="repost-header">
+        <mat-icon>repeat</mat-icon> Reposted
+      </mat-card-header>
+      <mat-card-content>
+        <mat-card appearance="outlined">
+          <app-event-header
+            [event]="repostService.decodeRepost(item.event).event"
+          ></app-event-header>
+          <mat-card-content>
+            <app-content
+              [content]="repostService.decodeRepost(item.event).data"
+            ></app-content>
+          </mat-card-content>
+        </mat-card>
+      </mat-card-content>
+    } @else {
+      <app-event-header [event]="item.event"></app-event-header>
+      <mat-card-content>
+        <app-content [content]="item.data"></app-content>
+      </mat-card-content>
+    }
+    <mat-card-actions class="note-footer">
+      <app-reply-button [event]="targetItem.event"></app-reply-button>
 
-    <button
-      mat-icon-button
-      [matMenuTriggerFor]="menu"
-      aria-label="More options"
-    >
-      <mat-icon>more_vert</mat-icon>
-    </button>
-    <mat-menu #menu="matMenu">
-      <button
-        mat-menu-item
-        (click)="layout.copyToClipboard(layout.getCurrentUrl(), 'text')"
-      >
-        <mat-icon>link</mat-icon>
-        Copy Note Link
+      @if (app.enabledFeature('beta')) {
+        @if (repostsCount() > 0) {
+          <button
+            mat-button
+            (click)="repostService.repostNote(targetItem.event)"
+          >
+            <mat-icon>repeat</mat-icon>
+            {{ repostsCount() }}
+          </button>
+        } @else {
+          <button
+            mat-icon-button
+            (class)="
+              repostService.isReposted(targetItem.event.id) ? 'active' : ''
+            "
+            (click)="repostService.repostNote(targetItem.event)"
+          >
+            <mat-icon>repeat</mat-icon>
+          </button>
+        }
+      }
+
+      <button mat-icon-button class="note-footer-right">
+        <mat-icon
+          [matTooltip]="bookmark.getBookmarkTooltip(targetItem.event.id)"
+          matTooltipPosition="below"
+          (click)="bookmark.toggleBookmark(targetItem.event.id)"
+        >
+          {{ bookmark.getBookmarkIcon(targetItem.event.id) }}
+        </mat-icon>
       </button>
-      <button
-        mat-menu-item
-        (click)="
-          layout.copyToClipboard(item.event.id, 'nevent', item.event.pubkey)
-        "
-      >
-        <mat-icon>content_copy</mat-icon>
-        Copy Note ID (nevent)
-      </button>
-      <button
-        mat-menu-item
-        (click)="layout.copyToClipboard(item.event.id, 'hex')"
-      >
-        <mat-icon>content_copy</mat-icon>
-        Copy Note ID (hex)
-      </button>
-      <button mat-menu-item (click)="layout.shareEvent(item.event)">
-        <mat-icon>share</mat-icon>
-        Share Event
-      </button>
-      <mat-divider></mat-divider>
-      <button mat-menu-item (click)="layout.copyToClipboard(item.data, 'text')">
-        <mat-icon>content_copy</mat-icon>
-        Copy Note Text
-      </button>
-      <button
-        mat-menu-item
-        (click)="layout.copyToClipboard(item.event, 'json')"
-      >
-        <mat-icon>content_copy</mat-icon>
-        Copy Note Data
-      </button>
-      <mat-divider></mat-divider>
-      <button mat-menu-item (click)="publishEvent()">
-        <mat-icon>publish</mat-icon>
-        Publish Event
-      </button>
-      <!-- <button mat-menu-item>
-      <mat-icon>warning</mat-icon>
-      Report Content
-    </button> -->
-    </mat-menu>
-  </app-user-profile>
-  <div class="event-content" (click)="openEvent()">
-    <!-- {{ item.event.pubkey}}<br> -->
-    <app-content [content]="item.data"></app-content>
-  </div>
+    </mat-card-actions>
+  </mat-card>
 } @else {
   <div class="event-content">
     <p>Event not found</p>

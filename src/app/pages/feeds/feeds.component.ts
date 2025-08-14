@@ -55,7 +55,6 @@ import { MatDividerModule } from '@angular/material/divider';
 import { ContentComponent } from '../../components/content/content.component';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ApplicationService } from '../../services/application.service';
-import { RepostService } from '../../services/repost.service';
 import { Link } from '../../components/link/link';
 import { Introduction } from '../../components/introduction/introduction';
 import {
@@ -65,6 +64,7 @@ import {
 } from '../../components/followset/followset.component';
 import { AccountStateService } from '../../services/account-state.service';
 import { Followset } from '../../services/followset';
+import { RepostService } from '../../services/repost.service';
 
 interface NavLink {
   id: string;
@@ -122,7 +122,7 @@ export class FeedsComponent implements OnInit, OnDestroy {
   private url = inject(UrlUpdateService);
   private cdr = inject(ChangeDetectorRef);
   private mediaPlayerService = inject(MediaPlayerService);
-  private repostService = inject(RepostService);
+  protected repostService = inject(RepostService);
   private snackBar = inject(MatSnackBar);
   protected app = inject(ApplicationService);
   private accountState = inject(AccountStateService);
@@ -1513,14 +1513,5 @@ export class FeedsComponent implements OnInit, OnDestroy {
       };
       this.mediaPlayerService.enque(mediaItem);
     });
-  }
-
-  async repostNote(event: Event): Promise<void> {
-    const published = await this.repostService.repostNote(event);
-    if (published) {
-      this.snackBar.open('Note reposted successfully!', 'Dismiss', {
-        duration: 3000,
-      });
-    }
   }
 }
