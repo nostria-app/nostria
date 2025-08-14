@@ -34,10 +34,10 @@ import { CommonModule } from '@angular/common';
     BadgeComponent,
     MatListModule,
     MatProgressSpinnerModule,
-    CommonModule
+    CommonModule,
   ],
   templateUrl: './badges.component.html',
-  styleUrl: './badges.component.scss'
+  styleUrl: './badges.component.scss',
 })
 export class BadgesComponent {
   private dialog = inject(MatDialog);
@@ -83,19 +83,41 @@ export class BadgesComponent {
   }
 
   // Computed getters for accessing badge service data
-  get accepted() { return this.badgeService.acceptedBadges; }
-  get received() { return this.badgeService.receivedBadges; }
-  get issued() { return this.badgeService.issuedBadges; }
-  get definitions() { return this.badgeService.badgeDefinitions; }
-  get createdDefinitions() { return this.badgeService.createdDefinitions; }
-  get badgeIssuers() { return this.badgeService.badgeIssuers; }
-  get profileBadgesEvent() { return this.badgeService.profileBadgesEvent; }
+  get accepted() {
+    return this.badgeService.acceptedBadges;
+  }
+  get received() {
+    return this.badgeService.receivedBadges;
+  }
+  get issued() {
+    return this.badgeService.issuedBadges;
+  }
+  get definitions() {
+    return this.badgeService.badgeDefinitions;
+  }
+  get createdDefinitions() {
+    return this.badgeService.createdDefinitions;
+  }
+  get badgeIssuers() {
+    return this.badgeService.badgeIssuers;
+  }
+  get profileBadgesEvent() {
+    return this.badgeService.profileBadgesEvent;
+  }
 
   // Loading state getters
-  get isLoadingAccepted() { return this.badgeService.isLoadingAccepted; }
-  get isLoadingReceived() { return this.badgeService.isLoadingReceived; }
-  get isLoadingIssued() { return this.badgeService.isLoadingIssued; }
-  get isLoadingDefinitions() { return this.badgeService.isLoadingDefinitions; }
+  get isLoadingAccepted() {
+    return this.badgeService.isLoadingAccepted;
+  }
+  get isLoadingReceived() {
+    return this.badgeService.isLoadingReceived;
+  }
+  get isLoadingIssued() {
+    return this.badgeService.isLoadingIssued;
+  }
+  get isLoadingDefinitions() {
+    return this.badgeService.isLoadingDefinitions;
+  }
 
   openBadgeEditor(): void {
     this.router.navigate(['/badges/create']);
@@ -104,7 +126,7 @@ export class BadgesComponent {
   viewBadgeDetailsById(id: string, slug: string): void {
     console.log('Viewing badge details:', id, slug);
     this.layout.openBadge(id, undefined, {
-      queryParams: { tab: this.activeTabIndex() }
+      queryParams: { tab: this.activeTabIndex() },
     });
   }
 
@@ -118,7 +140,7 @@ export class BadgesComponent {
     }
 
     this.layout.openBadge(id, badge, {
-      queryParams: { tab: this.activeTabIndex() }
+      queryParams: { tab: this.activeTabIndex() },
     });
   }
 
@@ -128,7 +150,7 @@ export class BadgesComponent {
       relativeTo: this.route,
       queryParams: { tab: index },
       queryParamsHandling: 'merge',
-      replaceUrl: false
+      replaceUrl: false,
     });
   }
 
@@ -161,7 +183,7 @@ export class BadgesComponent {
       }
 
       // Get current profile badges event or create new one
-      let currentEvent = this.profileBadgesEvent();
+      const currentEvent = this.profileBadgesEvent();
       let tags: string[][] = [];
 
       if (currentEvent) {
@@ -171,7 +193,9 @@ export class BadgesComponent {
       }
 
       // Ensure we're not adding duplicate
-      const existingIndex = tags.findIndex(tag => tag[0] === 'a' && tag[1] === aTag);
+      const existingIndex = tags.findIndex(
+        tag => tag[0] === 'a' && tag[1] === aTag
+      );
       if (existingIndex !== -1) {
         return;
       }
@@ -187,7 +211,7 @@ export class BadgesComponent {
         created_at: Math.floor(Date.now() / 1000),
         tags: tags,
         content: '',
-        pubkey: this.accountState.pubkey()
+        pubkey: this.accountState.pubkey(),
       };
 
       // Sign and publish the event
@@ -200,7 +224,6 @@ export class BadgesComponent {
 
       // Reload accepted badges to update the UI
       await this.badgeService.loadAcceptedBadges(this.accountState.pubkey());
-
     } catch (err) {
       console.error('Error accepting badge:', err);
     } finally {

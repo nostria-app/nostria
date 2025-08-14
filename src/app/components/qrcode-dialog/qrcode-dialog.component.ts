@@ -1,23 +1,32 @@
-import { Component, inject, Inject } from '@angular/core';
+import { Component, inject, Inject, AfterViewInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MatButtonToggleChange, MatButtonToggleModule } from '@angular/material/button-toggle';
+import {
+  MatButtonToggleChange,
+  MatButtonToggleModule,
+} from '@angular/material/button-toggle';
 import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import encodeQR from 'qr';
 
 @Component({
   selector: 'app-qrcode-dialog',
-  imports: [MatDialogModule, MatButtonModule, MatButtonToggleModule, FormsModule, MatIconModule],
+  imports: [
+    MatDialogModule,
+    MatButtonModule,
+    MatButtonToggleModule,
+    FormsModule,
+    MatIconModule,
+  ],
   templateUrl: './qrcode-dialog.component.html',
-  styleUrl: './qrcode-dialog.component.scss'
+  styleUrl: './qrcode-dialog.component.scss',
 })
-export class QRCodeDialogComponent {
+export class QRCodeDialogComponent implements AfterViewInit {
   qrStyle = 'did';
 
   qrValue = '';
 
-  constructor(@Inject(MAT_DIALOG_DATA) public data: { did: string }) { }
+  constructor(@Inject(MAT_DIALOG_DATA) public data: { did: string }) {}
 
   ngAfterViewInit() {
     this.generateQR(this.data.did);
@@ -46,7 +55,7 @@ export class QRCodeDialogComponent {
       // Generate QR code as 2D boolean array
       const qrMatrix = encodeQR(data, 'raw', {
         ecc: 'medium',
-        border: 2
+        border: 2,
       });
 
       const qrSize = qrMatrix.length;

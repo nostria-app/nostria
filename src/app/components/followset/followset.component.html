@@ -1,0 +1,84 @@
+<div class="followset-container">
+  <div class="followset-header">
+    <h1>{{ title() }}</h1>
+    <p>{{ description() }}</p>
+  </div>
+
+  <div class="interests-selection">
+    <h3>Pick your interests:</h3>
+    <div class="interests-grid">
+      @for (interest of availableInterests(); track interest.id) {
+        <label class="interest-checkbox">
+          <input
+            type="checkbox"
+            [checked]="selectedInterests().includes(interest.id)"
+            (change)="toggleInterest(interest.id)"
+          />
+          <span class="interest-label">
+            <mat-icon>{{ interest.icon }}</mat-icon>
+            {{ interest.name }}
+          </span>
+        </label>
+      }
+    </div>
+  </div>
+
+  @if (selectedInterests().length > 0) {
+    <div class="suggested-follows">
+      <h3>People to follow</h3>
+      <p>Here are some popular creators in your areas of interest:</p>
+
+      <div class="profiles-grid">
+        @for (profile of filteredProfiles(); track profile.id) {
+          <div
+            class="profile-card"
+            [class.following]="displayedFollows().includes(profile.id)"
+          >
+            <div class="profile-avatar">
+              <img
+                [src]="profile.avatar"
+                [alt]="profile.name + ' avatar'"
+                [title]="profile.name"
+              />
+            </div>
+            <div class="profile-info">
+              <h4>{{ profile.name }}</h4>
+              <p class="profile-bio">{{ profile.bio }}</p>
+              @if (profile.region && profile.interests.includes('regional')) {
+                <p class="profile-region">📍 {{ profile.region }}</p>
+              }
+              <div class="profile-interests">
+                @for (interestId of profile.interests; track interestId) {
+                  <span class="interest-tag">{{
+                    getInterestName(interestId)
+                  }}</span>
+                }
+              </div>
+            </div>
+            <button
+              mat-button
+              [class.following-btn]="displayedFollows().includes(profile.id)"
+              (click)="toggleFollow(profile.id)"
+            >
+              @if (displayedFollows().includes(profile.id)) {
+                <ng-container>
+                  <mat-icon>check</mat-icon> Selected
+                </ng-container>
+              } @else {
+                <ng-container> <mat-icon>add</mat-icon> Select </ng-container>
+              }
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+
+    @if (canGetStarted()) {
+      <div class="get-started-section">
+        <button mat-flat-button (click)="getStarted()" class="get-started-btn">
+          Add selected
+        </button>
+      </div>
+    }
+  }
+</div>

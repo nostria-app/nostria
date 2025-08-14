@@ -5,11 +5,13 @@ The `LayoutService` now provides reactive scroll signals that make it easy for c
 ## Available Signals
 
 ### `scrolledToTop: Signal<boolean>`
+
 - Indicates whether the user has scrolled to the top of the content
 - Useful for implementing pull-to-refresh functionality
 - Updates with a 5px threshold for better UX
 
 ### `scrolledToBottom: Signal<boolean>`
+
 - Indicates whether the user has scrolled to the bottom of the content
 - Perfect for implementing infinite loading/pagination
 - Updates with a 5px threshold for better UX
@@ -37,11 +39,12 @@ export class MyComponent {
 ## Common Patterns
 
 ### 1. Infinite Loading
+
 ```typescript
 export class FeedComponent {
   private layout = inject(LayoutService);
   private loading = signal(false);
-  
+
   constructor() {
     effect(() => {
       if (this.layout.scrolledToBottom() && !this.loading()) {
@@ -49,7 +52,7 @@ export class FeedComponent {
       }
     });
   }
-  
+
   private async loadMorePosts() {
     this.loading.set(true);
     // Load data...
@@ -59,10 +62,11 @@ export class FeedComponent {
 ```
 
 ### 2. Pull to Refresh
+
 ```typescript
 export class RefreshableComponent {
   private layout = inject(LayoutService);
-  
+
   constructor() {
     effect(() => {
       if (this.layout.scrolledToTop()) {
@@ -74,10 +78,11 @@ export class RefreshableComponent {
 ```
 
 ### 3. Conditional UI
+
 ```typescript
 export class NavigationComponent {
   private layout = inject(LayoutService);
-  
+
   showScrollToTop = computed(() => !this.layout.scrolledToTop());
   showLoadMore = computed(() => this.layout.scrolledToBottom());
 }

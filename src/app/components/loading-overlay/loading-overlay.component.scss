@@ -9,7 +9,7 @@
   align-items: center;
   // background-color: rgba(0, 0, 0, 0.7);
   z-index: 5005;
-  
+
   .loading-content {
     display: flex;
     flex-direction: column;
@@ -18,19 +18,19 @@
     border-radius: 8px;
     // background-color: var(--mat-card-background-color, rgba(66, 66, 66, 0.9));
     max-width: 90vw;
-    
+
     .loading-message {
       margin-top: 1rem;
       color: var(--mat-card-foreground-color, white);
       font-size: 1.2rem;
       text-align: center;
     }
-    
+
     .log-messages {
       margin-top: 1.5rem;
       width: 100%;
       max-width: 600px;
-      
+
       .log-message {
         padding: 0.5rem 1rem;
         margin: 0.25rem 0;
@@ -42,50 +42,52 @@
         word-break: break-word;
         opacity: 1;
         transform: translateY(0);
-        transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+        transition:
+          opacity 0.5s ease-out,
+          transform 0.5s ease-out;
         box-shadow: var(--mat-sys-level1);
         display: flex;
         align-items: flex-start;
         gap: 0.5rem;
-        
+
         &.fade-out {
           opacity: 0;
           transform: translateY(-10px);
         }
-        
+
         .log-level {
           font-weight: bold;
           flex-shrink: 0;
           min-width: 60px;
         }
-        
+
         .log-text {
           flex: 1;
           word-wrap: break-word;
         }
-        
+
         // Different colors for different log levels
         &.log-level-debug {
-          border-left: 3px solid #2196F3;
-          
+          border-left: 3px solid #2196f3;
+
           .log-level {
-            color: #2196F3;
+            color: #2196f3;
           }
         }
-        
+
         &.log-level-info {
-          border-left: 3px solid #4CAF50;
-          
+          border-left: 3px solid #4caf50;
+
           .log-level {
-            color: #4CAF50;
+            color: #4caf50;
           }
         }
-        
+
         &.log-level-warn {
-          border-left: 3px solid #FF9800;
-          
+          border-left: 3px solid #ff9800;
+
           .log-level {
-            color: #FF9800;
+            color: #ff9800;
           }
         }
       }

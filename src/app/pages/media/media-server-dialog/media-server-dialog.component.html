@@ -1,19 +1,31 @@
-<h2 mat-dialog-title>{{ isEdit ? 'Edit Media Server' : 'Add Media Server' }}</h2>
+<h2 mat-dialog-title>
+  {{ isEdit ? 'Edit Media Server' : 'Add Media Server' }}
+</h2>
 
 <form [formGroup]="serverForm" (ngSubmit)="onSubmit()">
   <mat-dialog-content>
     <mat-form-field appearance="outline" class="full-width">
       <mat-label>Server URL</mat-label>
-      <input matInput formControlName="url" placeholder="https://example.com/">
+      <input
+        matInput
+        formControlName="url"
+        placeholder="https://example.com/"
+      />
       <mat-hint>HTTPS is recommended for security</mat-hint>
-      @if (serverForm.get('url')?.hasError('required') && serverForm.get('url')?.touched) {
+      @if (
+        serverForm.get('url')?.hasError('required') &&
+        serverForm.get('url')?.touched
+      ) {
         <mat-error>Server URL is required</mat-error>
       }
-      @if (serverForm.get('url')?.hasError('pattern') && serverForm.get('url')?.touched) {
+      @if (
+        serverForm.get('url')?.hasError('pattern') &&
+        serverForm.get('url')?.touched
+      ) {
         <mat-error>Server URL must start with http:// or https://</mat-error>
       }
     </mat-form-field>
-    
+
     <div class="suggested-servers">
       <h3 class="suggested-title">Suggested servers:</h3>
       <mat-chip-listbox [multiple]="false" class="server-chips">
@@ -24,7 +36,7 @@
         }
       </mat-chip-listbox>
     </div>
-    
+
     <!-- <mat-form-field appearance="outline" class="full-width">
       <mat-label>Name (Optional)</mat-label>
       <input matInput formControlName="name" placeholder="My Media Server">
@@ -35,16 +47,20 @@
       <mat-label>Description (Optional)</mat-label>
       <textarea matInput formControlName="description" rows="3"></textarea>
     </mat-form-field> -->
-    
+
     @if (testing()) {
       <div class="test-connection">
         <mat-spinner diameter="24"></mat-spinner>
         <span>Testing connection...</span>
       </div>
     }
-    
+
     @if (testResult) {
-      <div class="connection-result" [class.success]="testResult.success" [class.error]="!testResult.success">
+      <div
+        class="connection-result"
+        [class.success]="testResult.success"
+        [class.error]="!testResult.success"
+      >
         <mat-icon [color]="testResult.success ? 'primary' : 'warn'">
           {{ testResult.success ? 'check_circle' : 'error' }}
         </mat-icon>
@@ -52,9 +68,14 @@
       </div>
     }
   </mat-dialog-content>
-  
+
   <mat-dialog-actions align="end">
-    <button mat-stroked-button type="button" (click)="testConnection()" [disabled]="!serverForm.get('url')?.valid || testing()">
+    <button
+      mat-stroked-button
+      type="button"
+      (click)="testConnection()"
+      [disabled]="!serverForm.get('url')?.valid || testing()"
+    >
       <mat-icon>sync</mat-icon>
       Test Connection
     </button>

@@ -1,7 +1,10 @@
 import { Component, inject, signal } from '@angular/core';
 
-import { MatDialogModule, MatDialogRef, MatDialog } from '@angular/material/dialog';
-import { MatButtonModule } from '@angular/material/button';
+import {
+  MatDialogModule,
+  MatDialogRef,
+  MatDialog,
+} from '@angular/material/dialog';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -15,6 +18,9 @@ import { LoggerService } from '../../services/logger.service';
 import { QrcodeScanDialogComponent } from '../qrcode-scan-dialog/qrcode-scan-dialog.component';
 import { TermsOfUseDialogComponent } from '../terms-of-use-dialog/terms-of-use-dialog.component';
 import { Region, RegionService } from '../../services/region.service';
+import { DiscoveryService, ServerInfo } from '../../services/discovery.service';
+import { MatButtonModule } from '@angular/material/button';
+import { Profile } from '../../services/profile';
 
 // Define the login steps
 enum LoginStep {
@@ -25,7 +31,7 @@ enum LoginStep {
   EXTENSION_LOADING = 'extension-loading',
   EXISTING_ACCOUNTS = 'existing-accounts',
   NOSTR_CONNECT = 'nostr-connect',
-  PREVIEW = 'preview'
+  PREVIEW = 'preview',
 }
 
 @Component({
@@ -41,10 +47,10 @@ enum LoginStep {
     MatListModule,
     MatProgressSpinnerModule,
     MatTooltipModule,
-    FormsModule
-],
+    FormsModule,
+  ],
   templateUrl: './login-dialog.component.html',
-  styleUrl: './login-dialog.component.scss'
+  styleUrl: './login-dialog.component.scss',
 })
 export class LoginDialogComponent {
   private dialogRef = inject(MatDialogRef<LoginDialogComponent>);
@@ -52,13 +58,15 @@ export class LoginDialogComponent {
   nostrService = inject(NostrService);
   private logger = inject(LoggerService);
   region = inject(RegionService);
+  private discoveryService = inject(DiscoveryService);
+  private profileService = inject(Profile);
 
   // Use signal for the current step
   currentStep = signal<LoginStep>(LoginStep.INITIAL);
-  
+
   // For template access
   LoginStep = LoginStep;
-  
+
   // Expose states as signals
   loading = signal(false);
   extensionError = signal<string | null>(null);
@@ -66,27 +74,125 @@ export class LoginDialogComponent {
   nostrConnectError = signal<string | null>(null);
   nostrConnectLoading = signal<boolean>(false);
   selectedRegionId = signal<string | null>(null);
-  
+
+  // Region discovery signals
+  isDetectingRegion = signal(true);
+  detectedRegion = signal('');
+  showRegionSelector = signal(false);
+  availableRegions = signal<{ name: string; latency: string; id: string }[]>(
+    []
+  );
+
+  // Profile setup signals (similar to welcome component)
+  displayName = signal('');
+  profileImage = signal<string | null>(null);
+  profileImageFile = signal<File | null>(null);
+
   // Input fields
   nsecKey = '';
-  previewPubkey = 'npub1sg6plzptd64u62a878hep2kev88swjh3tw00gjsfl8f237lmu63q0uf63m'; // jack
-  
+  previewPubkey =
+    'npub1sg6plzptd64u62a878hep2kev88swjh3tw00gjsfl8f237lmu63q0uf63m'; // jack
+
   constructor() {
     this.logger.debug('UnifiedLoginDialogComponent initialized');
   }
-  
+
   // Navigation methods
   goToStep(step: LoginStep): void {
-    this.logger.debug('Changing login step', { from: this.currentStep(), to: step });
+    this.logger.debug('Changing login step', {
+      from: this.currentStep(),
+      to: step,
+    });
     this.currentStep.set(step);
   }
-  
+
   // Initial dialog methods
   startNewAccountFlow(): void {
     this.logger.debug('Starting account creation flow');
     this.goToStep(LoginStep.REGION_SELECTION);
+    // Start region detection when entering region selection
+    this.startRegionDetection();
   }
-  
+
+  // Region detection and selection methods (similar to welcome component)
+  async startRegionDetection(): Promise<void> {
+    this.isDetectingRegion.set(true);
+    this.detectedRegion.set('');
+    this.showRegionSelector.set(false);
+
+    try {
+      // First trigger the latency check to populate the servers with latency data
+      await this.discoveryService.checkServerLatency();
+
+      // Get all servers sorted by latency
+      const serversWithLatency = this.discoveryService.getServersByLatency();
+
+      // Convert ServerInfo to our UI format
+      const regions = serversWithLatency.map((server: ServerInfo) => {
+        const regionId = this.getRegionIdFromServer(server);
+
+        return {
+          name: server.region,
+          latency: `${server.latency || 9999}ms`,
+          id: regionId,
+        };
+      });
+
+      this.availableRegions.set(regions);
+
+      // The first server should be the fastest since they're sorted by latency
+      const fastestRegion = regions[0];
+
+      if (fastestRegion) {
+        // Set the detected region and selected region
+        this.detectedRegion.set(fastestRegion.name);
+        this.selectedRegionId.set(fastestRegion.id);
+      }
+
+      // Simulate detection time for better UX (minimum display time)
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      this.isDetectingRegion.set(false);
+    } catch (error) {
+      this.logger.error('Failed to detect region:', error);
+      // Fallback to manual selection
+      this.isDetectingRegion.set(false);
+      this.showRegionSelector.set(true);
+    }
+  }
+
+  toggleRegionSelector(): void {
+    this.showRegionSelector.set(!this.showRegionSelector());
+  }
+
+  selectRegionManually(region: { name: string; id: string }): void {
+    this.logger.debug('Manual region selection', { region });
+    this.detectedRegion.set(region.name);
+    this.selectedRegionId.set(region.id);
+    this.showRegionSelector.set(false);
+  }
+
+  // Profile setup methods (similar to welcome component)
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files[0]) {
+      const file = input.files[0];
+
+      // Store the actual file for upload
+      this.profileImageFile.set(file);
+
+      const reader = new FileReader();
+
+      reader.onload = e => {
+        const result = e.target?.result as string;
+        this.profileImage.set(result);
+        this.logger.debug('Profile image selected');
+      };
+
+      reader.readAsDataURL(file);
+    }
+  }
+
   // Region selection methods
   selectRegion(region: Region): void {
     if (region.enabled) {
@@ -95,17 +201,50 @@ export class LoginDialogComponent {
       this.generateNewKey();
     }
   }
-  
-  // Account generation
-  generateNewKey(): void {
-    this.logger.debug('Generating new key', { regionId: this.selectedRegionId() });
+
+  // Account generation - now includes profile setup
+  async generateNewKey(): Promise<void> {
+    this.logger.debug('Generating new key', {
+      regionId: this.selectedRegionId(),
+      displayName: this.displayName(),
+      hasProfileImage: !!this.profileImage(),
+    });
     if (this.selectedRegionId()) {
       this.loading.set(true);
-      this.nostrService.generateNewKey(this.selectedRegionId()!);
-      this.closeDialog();
+
+      try {
+        // First generate the new key and set up the account
+        await this.nostrService.generateNewKey(this.selectedRegionId()!);
+
+        // If the user has set a display name and/or profile image, create the profile
+        const displayName = this.displayName();
+        const profileImageFile = this.profileImageFile();
+
+        if (displayName || profileImageFile) {
+          this.logger.debug('Creating initial profile for new user');
+          const result = await this.profileService.createInitialProfile(
+            displayName || undefined,
+            profileImageFile || undefined
+          );
+
+          if (!result.success) {
+            this.logger.error('Failed to create initial profile', result.error);
+            // Don't fail the entire process, just log the error
+            // The user can always edit their profile later
+          } else {
+            this.logger.debug('Initial profile created successfully');
+          }
+        }
+
+        this.closeDialog();
+      } catch (error) {
+        this.logger.error('Failed to generate new key', error);
+        // Handle error appropriately - you might want to show an error message to the user
+        this.loading.set(false);
+      }
     }
   }
-  
+
   // Login dialog methods
   async loginWithExtension(): Promise<void> {
     this.logger.debug('Attempting login with extension');
@@ -118,7 +257,11 @@ export class LoginDialogComponent {
       this.closeDialog();
     } catch (err) {
       this.logger.error('Login with extension failed', err);
-      this.extensionError.set(err instanceof Error ? err.message : 'Unknown error connecting to extension');
+      this.extensionError.set(
+        err instanceof Error
+          ? err.message
+          : 'Unknown error connecting to extension'
+      );
       this.goToStep(LoginStep.LOGIN_OPTIONS);
     }
   }
@@ -146,7 +289,11 @@ export class LoginDialogComponent {
       this.closeDialog();
     } catch (err) {
       this.logger.error('Login with Nostr Connect failed', err);
-      this.nostrConnectError.set(err instanceof Error ? err.message : 'Failed to connect using Nostr Connect');
+      this.nostrConnectError.set(
+        err instanceof Error
+          ? err.message
+          : 'Failed to connect using Nostr Connect'
+      );
       this.nostrConnectLoading.set(false);
     }
   }
@@ -161,7 +308,7 @@ export class LoginDialogComponent {
       maxHeight: '100vh',
       panelClass: 'qr-scan-dialog',
       hasBackdrop: true,
-      disableClose: false
+      disableClose: false,
     });
 
     scanDialogRef.afterClosed().subscribe(async result => {
@@ -172,15 +319,17 @@ export class LoginDialogComponent {
           this.nostrConnectUrl.set(result);
           await this.loginWithNostrConnect();
         } else {
-          this.nostrConnectError.set('Invalid QR code. Expected a Nostr Connect URL.');
+          this.nostrConnectError.set(
+            'Invalid QR code. Expected a Nostr Connect URL.'
+          );
         }
       }
     });
   }
-  
+
   usePreviewAccount(pubkey?: string): void {
     this.logger.debug('Using preview account', { pubkey });
-    
+
     // Use the provided pubkey or the one from the input field
     const keyToUse = pubkey || this.previewPubkey;
     this.nostrService.usePreviewAccount(keyToUse);
@@ -201,13 +350,61 @@ export class LoginDialogComponent {
     // Call the service to remove the account
     this.nostrService.removeAccount(pubkey);
   }
-  
+
   openTermsOfUse(): void {
     this.logger.debug('Opening Terms of Use dialog');
     this.dialog.open(TermsOfUseDialogComponent, {
       width: '600px',
       maxWidth: '90vw',
     });
+  }
+
+  /**
+   * Maps a ServerInfo object to a region ID for the RegionService
+   */
+  private getRegionIdFromServer(server: ServerInfo): string {
+    // Extract region from the server URL or region property
+    const url = server.url.toLowerCase();
+
+    if (
+      url.includes('.eu.') ||
+      server.region.toLowerCase().includes('europe')
+    ) {
+      return 'eu';
+    } else if (
+      url.includes('.us.') ||
+      server.region.toLowerCase().includes('usa')
+    ) {
+      return 'us';
+    } else if (
+      url.includes('.af.') ||
+      server.region.toLowerCase().includes('africa')
+    ) {
+      return 'af';
+    } else if (
+      url.includes('.as.') ||
+      server.region.toLowerCase().includes('asia')
+    ) {
+      return 'as';
+    } else if (
+      url.includes('.sa.') ||
+      server.region.toLowerCase().includes('south america')
+    ) {
+      return 'sa';
+    } else if (
+      url.includes('.au.') ||
+      server.region.toLowerCase().includes('australia')
+    ) {
+      return 'au';
+    } else if (
+      url.includes('.jp.') ||
+      server.region.toLowerCase().includes('japan')
+    ) {
+      return 'jp';
+    }
+
+    // Default fallback
+    return 'us';
   }
 
   closeDialog(): void {

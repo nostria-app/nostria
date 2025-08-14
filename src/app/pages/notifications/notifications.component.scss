@@ -94,7 +94,7 @@
     background-color: rgba(var(--mat-sys-background), 0.05);
 
     &::after {
-      content: "";
+      content: '';
       position: absolute;
       left: 0;
       top: 0;
@@ -420,8 +420,11 @@
     color: rgba(255, 255, 255, 0.87);
   }
 
-  .empty-container, .error-container, .empty-tab {
-    mat-icon, p {
+  .empty-container,
+  .error-container,
+  .empty-tab {
+    mat-icon,
+    p {
       color: rgba(255, 255, 255, 0.5);
     }
   }

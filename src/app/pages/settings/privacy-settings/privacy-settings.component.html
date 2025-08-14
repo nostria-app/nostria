@@ -1,17 +1,26 @@
-<div class="privacy-settings-container">
+<div class="content-medium">
+
   <h2>Privacy and Safety Settings</h2>
+
+  <section class="sharing-section">
+    <h3>Image Cache Service</h3>
+    <div class="settings-option">
+      <mat-checkbox [checked]="settingsService.settings().imageCacheEnabled" (change)="toggleImageCache()">
+        Enable image cache
+      </mat-checkbox>
+      <app-info-tooltip [content]="imageCacheInfoContent"
+        ariaLabel="Learn about image cache service"></app-info-tooltip>
+    </div>
+  </section>
 
   <section class="sharing-section">
     <h3>Social Sharing Options</h3>
     <div class="settings-option">
-      <mat-checkbox 
-        [checked]="settingsService.settings().socialSharingPreview"
-        (change)="toggleSocialSharingPreview()">
+      <mat-checkbox [checked]="settingsService.settings().socialSharingPreview" (change)="toggleSocialSharingPreview()">
         Enable social sharing preview
       </mat-checkbox>
-      <p class="option-description">
-        When enabled, content previews will be shown for external links shared in posts.
-      </p>
+      <app-info-tooltip [content]="socialSharingInfoContent"
+        ariaLabel="Learn about social sharing preview"></app-info-tooltip>
     </div>
   </section>
 
@@ -23,11 +32,9 @@
       @if (mutedAccounts().length > 0) {
       <mat-list>
         @for (pubkey of mutedAccounts(); track pubkey) {
-
         <mat-list-item>
           <span matListItemTitle>
-            <app-user-profile [pubkey]="pubkey">
-            </app-user-profile>
+            <app-user-profile [pubkey]="pubkey"> </app-user-profile>
           </span>
           <button mat-icon-button color="warn" (click)="removeMutedItem('account', pubkey)" matListItemMeta>
             <mat-icon>clear</mat-icon>
@@ -112,4 +119,43 @@
       }
     </div>
   </section>
+
+  <!-- Template definitions for tooltip content -->
+  <ng-template #imageCacheInfoContent>
+    <mat-card-header>
+      <mat-card-title>
+        <div class="info-title">
+          <mat-icon class="info-icon">cached</mat-icon>
+          Image Cache Service
+        </div>
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <p>
+        When enabled, profile images and other images might be using a cache
+        service to improve loading times.
+      </p>
+      <p>
+        Disable if you want to ensure images are always loaded directly from
+        the source. Disabling this will increase bandwidth usage.
+      </p>
+    </mat-card-content>
+  </ng-template>
+
+  <ng-template #socialSharingInfoContent>
+    <mat-card-header>
+      <mat-card-title>
+        <div class="info-title">
+          <mat-icon class="info-icon">share</mat-icon>
+          Social Sharing Preview
+        </div>
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <p>
+        When enabled, content previews will be shown for external links shared
+        in posts.
+      </p>
+    </mat-card-content>
+  </ng-template>
 </div>

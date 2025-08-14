@@ -16,7 +16,7 @@
     flex-direction: column;
     align-items: center;
   }
-  
+
   @media (min-width: 1200px) {
     // Only use row layout for larger screens where both elements fit side by side
     flex-direction: row;
@@ -46,7 +46,7 @@
   max-width: 680px; // Match the width of note-card for consistency
   margin-bottom: 1.5rem; // Space between options and content
   order: 1; // Always display options at the top except on large screens
-  
+
   @media (min-width: 1200px) {
     // Only use side-by-side layout on large screens
     order: 2;
@@ -119,12 +119,15 @@
 
 .note-items {
   border-top: 1px solid var(--mat-sys-outline);
-  border-left: 1px solid var(--mat-card-outlined-outline-color, var(--mat-sys-outline-variant));
-  border-right: 1px solid var(--mat-card-outlined-outline-color, var(--mat-sys-outline-variant));
+  border-left: 1px solid
+    var(--mat-card-outlined-outline-color, var(--mat-sys-outline-variant));
+  border-right: 1px solid
+    var(--mat-card-outlined-outline-color, var(--mat-sys-outline-variant));
 }
 
 .note-item {
-  border-bottom: 1px solid var(--mat-card-outlined-outline-color, var(--mat-sys-outline-variant));
+  border-bottom: 1px solid
+    var(--mat-card-outlined-outline-color, var(--mat-sys-outline-variant));
   padding: 1rem;
 }
 

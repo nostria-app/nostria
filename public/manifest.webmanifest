@@ -2,7 +2,7 @@
   "name": "Nostria",
   "short_name": "Nostria",
   "id": "app.nostria",
-  "version": "0.1.7",
+  "version": "0.3.0",
   "dir": "auto",
   "lang": "en",
   "theme_color": "#303030",
@@ -22,11 +22,7 @@
       "url": "/?nostr=%s"
     }
   ],
-  "features": [
-    "Cross Platform",
-    "Nostr",
-    "Social Media"
-  ],
+  "features": ["Cross Platform", "Nostr", "Social Media"],
   "categories": ["entertainment", "music", "photo", "productivity", "social"],
   "shortcuts": [
     {
@@ -34,21 +30,30 @@
       "short_name": "Profile",
       "description": "Open the profile page",
       "url": "/p",
-      "icons": [{ "src": "icons/icon-128x128.png", "sizes": "128x128" }, { "src": "icons/icon-96x96.png", "sizes": "96x96" }]
+      "icons": [
+        { "src": "icons/icon-128x128.png", "sizes": "128x128" },
+        { "src": "icons/icon-96x96.png", "sizes": "96x96" }
+      ]
     },
     {
       "name": "Notifications",
       "short_name": "Notifications",
       "description": "Open the notifications",
       "url": "/notifications",
-      "icons": [{ "src": "icons/icon-128x128.png", "sizes": "128x128" }, { "src": "icons/icon-96x96.png", "sizes": "96x96" }]
+      "icons": [
+        { "src": "icons/icon-128x128.png", "sizes": "128x128" },
+        { "src": "icons/icon-96x96.png", "sizes": "96x96" }
+      ]
     },
     {
       "name": "Settings",
       "short_name": "Settings",
       "description": "Open the settings",
       "url": "/settings",
-      "icons": [{ "src": "icons/icon-128x128.png", "sizes": "128x128" }, { "src": "icons/icon-96x96.png", "sizes": "96x96" }]
+      "icons": [
+        { "src": "icons/icon-128x128.png", "sizes": "128x128" },
+        { "src": "icons/icon-96x96.png", "sizes": "96x96" }
+      ]
     }
   ],
   "icons": [

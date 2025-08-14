@@ -1,4 +1,15 @@
-import { Component, ViewChild, ElementRef, computed, effect, inject, signal, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import {
+  Component,
+  ViewChild,
+  ElementRef,
+  computed,
+  effect,
+  inject,
+  signal,
+  OnInit,
+  OnDestroy,
+  ChangeDetectorRef,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Location } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
@@ -11,18 +22,29 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { NostrService } from '../../services/nostr.service';
 import { NotificationService } from '../../services/notification.service';
 import { LayoutService } from '../../services/layout.service';
-import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
+import {
+  CdkDragDrop,
+  DragDropModule,
+  moveItemInArray,
+} from '@angular/cdk/drag-drop';
 import { NewFeedDialogComponent } from './new-feed-dialog/new-feed-dialog.component';
 import { NewColumnDialogComponent } from './new-column-dialog/new-column-dialog.component';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { ConfirmDialogComponent, ConfirmDialogData } from '../../components/confirm-dialog/confirm-dialog.component';
+import {
+  ConfirmDialogComponent,
+  ConfirmDialogData,
+} from '../../components/confirm-dialog/confirm-dialog.component';
 import { ImageDialogComponent } from '../../components/image-dialog/image-dialog.component';
 import { LocalStorageService } from '../../services/local-storage.service';
 import { LoggerService } from '../../services/logger.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FeedService, FeedConfig } from '../../services/feed.service';
-import { FeedsCollectionService, FeedDefinition, ColumnDefinition } from '../../services/feeds-collection.service';
+import {
+  FeedsCollectionService,
+  FeedDefinition,
+  ColumnDefinition,
+} from '../../services/feeds-collection.service';
 import { MediaItem, NostrRecord } from '../../interfaces';
 import { Event } from 'nostr-tools';
 import { decode } from 'blurhash';
@@ -30,6 +52,19 @@ import { UserProfileComponent } from '../../components/user-profile/user-profile
 import { UrlUpdateService } from '../../services/url-update.service';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { MatDividerModule } from '@angular/material/divider';
+import { ContentComponent } from '../../components/content/content.component';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { ApplicationService } from '../../services/application.service';
+import { RepostService } from '../../services/repost.service';
+import { Link } from '../../components/link/link';
+import { Introduction } from '../../components/introduction/introduction';
+import {
+  FollowsetComponent,
+  Interest,
+  SuggestedProfile,
+} from '../../components/followset/followset.component';
+import { AccountStateService } from '../../services/account-state.service';
+import { Followset } from '../../services/followset';
 
 interface NavLink {
   id: string;
@@ -48,7 +83,8 @@ const DEFAULT_COLUMNS: NavLink[] = [
 
 @Component({
   selector: 'app-feeds',
-  standalone: true, imports: [
+  standalone: true,
+  imports: [
     CommonModule,
     MatCardModule,
     MatButtonModule,
@@ -62,12 +98,17 @@ const DEFAULT_COLUMNS: NavLink[] = [
     MatDialogModule,
     MatProgressSpinnerModule,
     UserProfileComponent,
-    MatDividerModule
+    MatDividerModule,
+    ContentComponent,
+    Link,
+    Introduction,
+    FollowsetComponent,
   ],
   templateUrl: './feeds.component.html',
-  styleUrl: './feeds.component.scss'
+  styleUrl: './feeds.component.scss',
 })
-export class FeedsComponent implements OnInit, OnDestroy {  // Services
+export class FeedsComponent implements OnInit, OnDestroy {
+  // Services
   private nostrService = inject(NostrService);
   private notificationService = inject(NotificationService);
   private layoutService = inject(LayoutService);
@@ -81,6 +122,11 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
   private url = inject(UrlUpdateService);
   private cdr = inject(ChangeDetectorRef);
   private mediaPlayerService = inject(MediaPlayerService);
+  private repostService = inject(RepostService);
+  private snackBar = inject(MatSnackBar);
+  protected app = inject(ApplicationService);
+  private accountState = inject(AccountStateService);
+  private followsetService = inject(Followset);
 
   // UI State Signals
   activeSection = signal<'discover' | 'following' | 'media'>('discover');
@@ -99,15 +145,51 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
     }
   });
 
+  // Check if user has an empty following list
+  hasEmptyFollowingList = computed(() => {
+    return this.accountState.followingList().length === 0;
+  });
+
+  // Followset data for new users
+  selectedInterests = signal<string[]>([]);
+  followingProfiles = signal<string[]>([]);
+  detectedRegion = signal('');
+
+  // Available interests - will be populated from starter packs
+  availableInterests = signal<Interest[]>([]);
+
+  // Suggested profiles - will be populated dynamically from starter packs
+  suggestedProfiles = signal<SuggestedProfile[]>([]);
+
   isMobileView = computed(() => {
     const isMobile = this.screenWidth() < 1024;
     return isMobile;
   });
+
+  feedIcon = computed(() => {
+    const activeFeed = this.activeFeed();
+    return activeFeed ? activeFeed.icon : '';
+  });
+
+  feedLabel = computed(() => {
+    const activeFeed = this.activeFeed();
+    return activeFeed ? activeFeed.label : '';
+  });
+
   // Content Signals
   trendingEvents = signal<NostrRecord[]>([]);
   followingEvents = signal<NostrRecord[]>([]);
   mediaEvents = signal<NostrRecord[]>([]);
-  availableTags = signal<string[]>(['nostr', 'bitcoin', 'programming', 'art', 'music', 'photography', 'news', 'sports']);
+  availableTags = signal<string[]>([
+    'nostr',
+    'bitcoin',
+    'programming',
+    'art',
+    'music',
+    'photography',
+    'news',
+    'sports',
+  ]);
 
   // Video expansion state management
   videoExpandedStates = signal<Record<string, boolean>>({});
@@ -144,7 +226,7 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
         event.event.tags.some(tag => tag[0] === 't' && tags.includes(tag[1]))
       );
     }
-  });  // Drag state to prevent unnecessary re-renders during column reordering
+  }); // Drag state to prevent unnecessary re-renders during column reordering
   private isDragging = signal(false);
 
   // Cache to store events during drag operations
@@ -156,13 +238,16 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
     const isDragging = this.isDragging();
     const eventsMap = new Map<string, Event[]>();
 
+    // Get reactive feed data map from service
+    const feedDataMap = this.feedService.feedDataReactive();
+
     columns.forEach(column => {
       if (isDragging) {
         // During drag operations, use cached events to prevent DOM updates
         eventsMap.set(column.id, this._eventCache.get(column.id) || []);
       } else {
-        // Normal operation: get fresh events from service
-        const columnData = this.feedService.data.get(column.id);
+        // Normal operation: get fresh events from reactive service
+        const columnData = feedDataMap.get(column.id);
         const events = columnData?.events() || [];
 
         // Update cache for potential drag operations
@@ -202,10 +287,13 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
 
   // Computed signals for scroll indicators
   canScrollLeft = computed(() => this.scrollPosition() > 0);
+
   canScrollRight = computed(() => {
     const maxScroll = this.maxScroll();
     return maxScroll > 0 && this.scrollPosition() < maxScroll;
-  });  // Computed signal to track which columns are paused (no active subscription)
+  });
+
+  // Computed signal to track which columns are paused (no active subscription)
   pausedColumns = computed(() => {
     const columns = this.columns();
     const feedDataMap = this.feedService.feedDataReactive(); // Use reactive signal instead of regular Map
@@ -228,7 +316,8 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
 
   // Helper method to get pause status for debugging
   getColumnStatus(columnId: string): string {
-    const columnData = this.feedService.data.get(columnId);
+    const feedDataMap = this.feedService.feedDataReactive();
+    const columnData = feedDataMap.get(columnId);
     if (!columnData) return 'not found';
     return columnData.subscription ? 'active' : 'paused';
   }
@@ -413,8 +502,117 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
   }
 
   bookmarkContent(event: NostrRecord): void {
-    // Implement bookmark functionality 
+    // Implement bookmark functionality
     this.notificationService.notify('Content bookmarked');
+  }
+
+  // Method called when user completes followset onboarding
+  async onFollowsetComplete(data: {
+    selectedInterests: string[];
+    followsToAdd: string[];
+  }): Promise<void> {
+    try {
+      const { selectedInterests, followsToAdd } = data;
+
+      this.logger.debug('Followset onboarding completed', {
+        selectedInterests,
+        followsToAdd,
+      });
+
+      // Get all pubkeys from selected starter packs
+      // const starterPackPubkeys =
+      //   this.followsetService.getPubkeysFromInterests(selectedInterests);
+
+      // REMOVED: For now, we don't want to follow the full starter packs, instead
+      // we use them as "following" lists with suggestions for user to pick.
+
+      // // Follow all selected profiles from the followset
+      // for (const pubkey of followsToAdd) {
+      //   await this.accountState.follow(pubkey);
+      // }
+
+      // Also follow some users from the selected starter packs (limit to avoid spam)
+      // const additionalFollows = starterPackPubkeys
+      //   .filter(pubkey => !followsToAdd.includes(pubkey))
+      //   .slice(0, 10); // Limit to 10 additional follows
+
+      // Follow all selected profiles from the followset in a single batch operation
+      await this.accountState.follow(followsToAdd);
+
+      this.notificationService.notify(
+        `Welcome! Following ${followsToAdd.length} accounts.`
+      );
+
+      // Update local state
+      this.selectedInterests.set(selectedInterests);
+      this.followingProfiles.update(current => [
+        ...new Set([...current, ...followsToAdd]),
+      ]);
+
+      // Refresh following feeds to load content from newly followed accounts
+      this.feedsCollectionService.refreshFollowingColumns();
+
+      // Reset followset display state
+      this.suggestedProfiles.set([]);
+    } catch (error) {
+      this.logger.error('Failed to complete followset onboarding:', error);
+      this.notificationService.notify(
+        'Error completing setup. Please try again.'
+      );
+    }
+  }
+
+  // Followset interaction methods
+  async toggleInterest(interestId: string): Promise<void> {
+    this.selectedInterests.update(interests => {
+      if (interests.includes(interestId)) {
+        return interests.filter(id => id !== interestId);
+      } else {
+        return [...interests, interestId];
+      }
+    });
+
+    // Fetch suggested profiles based on selected interests
+    await this.updateSuggestedProfiles();
+  }
+
+  /**
+   * Update suggested profiles based on selected interests
+   */
+  private async updateSuggestedProfiles(): Promise<void> {
+    try {
+      const selectedInterests = this.selectedInterests();
+      if (selectedInterests.length === 0) {
+        this.suggestedProfiles.set([]);
+        return;
+      }
+
+      const starterPacks = this.followsetService.starterPacks();
+      const profiles =
+        await this.followsetService.convertStarterPacksToProfiles(
+          starterPacks,
+          selectedInterests
+        );
+
+      this.suggestedProfiles.set(profiles);
+      this.logger.debug(
+        `Updated suggested profiles: ${profiles.length} profiles`
+      );
+    } catch (error) {
+      this.logger.error('Failed to update suggested profiles:', error);
+    }
+  }
+
+  toggleFollow(profileId: string): void {
+    this.followingProfiles.update(profiles => {
+      if (profiles.includes(profileId)) {
+        return profiles.filter(id => id !== profileId);
+      } else {
+        // Add to local state and also to account following
+        this.accountState.follow(profileId);
+        return [...profiles, profileId];
+      }
+    });
   }
 
   selectColumn(index: number): void {
@@ -436,7 +634,7 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
       setTimeout(() => {
         this.columnContentLoaded.update(loaded => ({
           ...loaded,
-          [columnId]: true
+          [columnId]: true,
         }));
         this.isLoading.set(false);
       }, 1000);
@@ -464,7 +662,8 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
         this.selectColumn(columnCount - 1);
         break;
     }
-  } onColumnDrop(event: CdkDragDrop<ColumnDefinition[]>): void {
+  }
+  onColumnDrop(event: CdkDragDrop<ColumnDefinition[]>): void {
     const previousIndex = event.previousIndex;
     const currentIndex = event.currentIndex;
 
@@ -480,7 +679,10 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
       const columns = [...activeFeed.columns];
       moveItemInArray(columns, previousIndex, currentIndex);
 
-      console.log('📋 Columns reordered:', columns.map(col => `${col.label} (${col.id})`));
+      console.log(
+        '📋 Columns reordered:',
+        columns.map(col => `${col.label} (${col.id})`)
+      );
 
       // Update the actual feed data using the optimized method
       console.log('⚡ Using optimized updateColumnOrder method');
@@ -507,7 +709,10 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
       }
 
       this.notificationService.notify('Column order changed');
-      this.logger.debug('Column order changed', columns.map(col => col.id));
+      this.logger.debug(
+        'Column order changed',
+        columns.map(col => col.id)
+      );
 
       // Let's scroll to ensure the dropped column is visible
       if (!this.isMobileView()) {
@@ -529,8 +734,9 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
 
     // Pre-cache all column events to prevent DOM updates during drag
     const columns = this.columns();
+    const feedDataMap = this.feedService.feedDataReactive();
     columns.forEach(column => {
-      const columnData = this.feedService.data.get(column.id);
+      const columnData = feedDataMap.get(column.id);
       const events = columnData?.events() || [];
       this._eventCache.set(column.id, events);
     });
@@ -555,7 +761,7 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
 
     wrapper.scrollTo({
       left: newPosition,
-      behavior: 'smooth'
+      behavior: 'smooth',
     });
   }
 
@@ -565,19 +771,20 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
     const wrapper = this.columnsWrapper.nativeElement;
     const newPosition = Math.min(
       this.maxScroll(),
-      this.scrollPosition() + 750  // Scroll approximately one column
+      this.scrollPosition() + 750 // Scroll approximately one column
     );
 
     wrapper.scrollTo({
       left: newPosition,
-      behavior: 'smooth'
+      behavior: 'smooth',
     });
   }
   scrollToColumn(index: number): void {
     if (this.isMobileView() || !this.columnsWrapper) return;
 
     const wrapper = this.columnsWrapper.nativeElement;
-    const columnElements = wrapper.querySelectorAll<HTMLElement>('.column-unit');
+    const columnElements =
+      wrapper.querySelectorAll<HTMLElement>('.column-unit');
 
     if (index >= 0 && index < columnElements.length) {
       const columnElement = columnElements[index];
@@ -591,13 +798,13 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
         // Column is to the left of the viewport
         wrapper.scrollTo({
           left: columnLeft - 12, // Account for padding
-          behavior: 'smooth'
+          behavior: 'smooth',
         });
       } else if (columnLeft + columnWidth > currentScroll + wrapperWidth) {
         // Column is to the right of the viewport
         wrapper.scrollTo({
           left: columnLeft + columnWidth - wrapperWidth + 12, // Account for padding
-          behavior: 'smooth'
+          behavior: 'smooth',
         });
       }
     }
@@ -614,8 +821,24 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
       maxWidth: '95vw',
       maxHeight: '90vh',
       data: {
-        icons: ['chat', 'reply_all', 'bookmark', 'image', 'people', 'tag', 'filter_list', 'article', 'video_library', 'music_note', 'photo', 'explore', 'trending_up', 'group', 'public']
-      }
+        icons: [
+          'chat',
+          'reply_all',
+          'bookmark',
+          'image',
+          'people',
+          'tag',
+          'filter_list',
+          'article',
+          'video_library',
+          'music_note',
+          'photo',
+          'explore',
+          'trending_up',
+          'group',
+          'public',
+        ],
+      },
     });
 
     dialogRef.afterClosed().subscribe(result => {
@@ -624,7 +847,7 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
         const updatedFeed = {
           ...activeFeed,
           columns: [...activeFeed.columns, result],
-          updatedAt: Date.now()
+          updatedAt: Date.now(),
         };
 
         this.feedsCollectionService.updateFeed(activeFeed.id, updatedFeed);
@@ -641,10 +864,12 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
 
         this.columnContentLoaded.update(loaded => ({
           ...loaded,
-          [result.id]: false
+          [result.id]: false,
         }));
 
-        this.notificationService.notify(`Column "${result.label}" added to "${activeFeed.label}"`);
+        this.notificationService.notify(
+          `Column "${result.label}" added to "${activeFeed.label}"`
+        );
       }
     });
   }
@@ -662,8 +887,24 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
       maxHeight: '90vh',
       data: {
         column: column,
-        icons: ['chat', 'reply_all', 'bookmark', 'image', 'people', 'tag', 'filter_list', 'article', 'video_library', 'music_note', 'photo', 'explore', 'trending_up', 'group', 'public']
-      }
+        icons: [
+          'chat',
+          'reply_all',
+          'bookmark',
+          'image',
+          'people',
+          'tag',
+          'filter_list',
+          'article',
+          'video_library',
+          'music_note',
+          'photo',
+          'explore',
+          'trending_up',
+          'group',
+          'public',
+        ],
+      },
     });
 
     dialogRef.afterClosed().subscribe(result => {
@@ -675,14 +916,15 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
         const updatedFeed = {
           ...activeFeed,
           columns: updatedColumns,
-          updatedAt: Date.now()
+          updatedAt: Date.now(),
         };
 
         this.feedsCollectionService.updateFeed(activeFeed.id, updatedFeed);
         this.notificationService.notify(`Column "${result.label}" updated`);
       }
     });
-  } removeColumn(index: number): void {
+  }
+  removeColumn(index: number): void {
     const activeFeed = this.activeFeed();
     const columns = this.columns();
 
@@ -696,7 +938,7 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
     const updatedFeed = {
       ...activeFeed,
       columns: updatedColumns,
-      updatedAt: Date.now()
+      updatedAt: Date.now(),
     };
 
     this.feedsCollectionService.updateFeed(activeFeed.id, updatedFeed);
@@ -720,30 +962,43 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
   }
   pauseColumn(column: ColumnDefinition): void {
     console.log('⏸️ Pausing column:', column.label, `(${column.id})`);
-    console.log('📊 Column status before pause:', this.getColumnStatus(column.id));
+    console.log(
+      '📊 Column status before pause:',
+      this.getColumnStatus(column.id)
+    );
     this.feedsCollectionService.pauseColumn(column.id);
     this.notificationService.notify(`Column "${column.label}" paused`);
-    console.log('📊 Column status after pause:', this.getColumnStatus(column.id));
+    console.log(
+      '📊 Column status after pause:',
+      this.getColumnStatus(column.id)
+    );
   }
   continueColumn(column: ColumnDefinition): void {
     console.log('▶️ Continue column:', column.label, `(${column.id})`);
-    console.log('📊 Column status before continue:', this.getColumnStatus(column.id));
+    console.log(
+      '📊 Column status before continue:',
+      this.getColumnStatus(column.id)
+    );
     this.feedsCollectionService.continueColumn(column.id);
-    this.notificationService.notify(`Column "${column.label}" continued`);    console.log('📊 Column status after continue:', this.getColumnStatus(column.id));
+    this.notificationService.notify(`Column "${column.label}" continued`);
+    console.log(
+      '📊 Column status after continue:',
+      this.getColumnStatus(column.id)
+    );
   }
 
   // Video expansion state management methods
   expandVideo(videoKey: string): void {
     this.videoExpandedStates.update(states => ({
       ...states,
-      [videoKey]: true
+      [videoKey]: true,
     }));
   }
 
   collapseVideo(videoKey: string): void {
     this.videoExpandedStates.update(states => ({
       ...states,
-      [videoKey]: false
+      [videoKey]: false,
     }));
   }
 
@@ -751,6 +1006,45 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
     this.logger.debug('FeedsComponent initializing...');
     // Re-establish subscriptions when component loads
     this.feedService.subscribe();
+
+    if (this.availableInterests().length === 0) {
+      // Initialize followset data for new users
+      this.initializeFollowsetData();
+    }
+  }
+
+  /**
+   * Initialize followset data by fetching starter packs from Nostr
+   */
+  private async initializeFollowsetData(): Promise<void> {
+    try {
+      // Only fetch if user has empty following list
+      if (this.hasEmptyFollowingList()) {
+        this.logger.debug(
+          'User has empty following list, fetching starter packs...'
+        );
+
+        // Fetch starter packs from the followset service
+        const starterPacks = await this.followsetService.fetchStarterPacks();
+
+        if (starterPacks.length > 0) {
+          // Convert starter packs to interests
+          const interests =
+            this.followsetService.convertStarterPacksToInterests(starterPacks);
+          this.availableInterests.set(interests);
+
+          this.logger.debug(
+            `Loaded ${interests.length} interests from starter packs`
+          );
+        } else {
+          this.logger.warn('No starter packs found, using default interests');
+        }
+      }
+    } catch (error) {
+      debugger;
+      this.logger.error('Failed to initialize followset data:', error);
+      // Keep default interests if starter pack fetching fails
+    }
   }
 
   ngOnDestroy() {
@@ -768,16 +1062,18 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
       .filter(Boolean);
   }
 
-  getBlurhash(event: any, imageIndex: number = 0): string | null {
+  getBlurhash(event: any, imageIndex = 0): string | null {
     const imetas = event.tags?.filter((tag: any[]) => tag[0] === 'imeta') || [];
     if (imetas.length <= imageIndex) return null;
 
     const imeta = imetas[imageIndex];
-    const blurhashIndex = imeta.findIndex((item: string) => item.startsWith('blurhash '));
+    const blurhashIndex = imeta.findIndex((item: string) =>
+      item.startsWith('blurhash ')
+    );
     return blurhashIndex > 0 ? imeta[blurhashIndex].substring(9) : null;
   }
 
-  generateBlurhashDataUrl(blurhash: string, width: number = 32, height: number = 32): string {
+  generateBlurhashDataUrl(blurhash: string, width = 32, height = 32): string {
     try {
       const pixels = decode(blurhash, width, height);
       const canvas = document.createElement('canvas');
@@ -796,20 +1092,33 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
       return '';
     }
   }
-  getVideoData(event: any): { url: string; thumbnail?: string; duration?: string; blurhash?: string } | null {
+  getVideoData(event: any): {
+    url: string;
+    thumbnail?: string;
+    duration?: string;
+    blurhash?: string;
+  } | null {
     const imetas = event.tags?.filter((tag: any[]) => tag[0] === 'imeta') || [];
     if (imetas.length === 0) return null;
 
     const firstImeta = imetas[0];
-    const urlIndex = firstImeta.findIndex((item: string) => item.startsWith('url '));
-    const imageIndex = firstImeta.findIndex((item: string) => item.startsWith('image '));
-    const blurhashIndex = firstImeta.findIndex((item: string) => item.startsWith('blurhash '));
+    const urlIndex = firstImeta.findIndex((item: string) =>
+      item.startsWith('url ')
+    );
+    const imageIndex = firstImeta.findIndex((item: string) =>
+      item.startsWith('image ')
+    );
+    const blurhashIndex = firstImeta.findIndex((item: string) =>
+      item.startsWith('blurhash ')
+    );
 
     const durationTag = event.tags?.find((tag: any[]) => tag[0] === 'duration');
 
     const videoUrl = urlIndex > 0 ? firstImeta[urlIndex].substring(4) : '';
-    const existingThumbnail = imageIndex > 0 ? firstImeta[imageIndex].substring(6) : undefined;
-    const existingBlurhash = blurhashIndex > 0 ? firstImeta[blurhashIndex].substring(9) : undefined;
+    const existingThumbnail =
+      imageIndex > 0 ? firstImeta[imageIndex].substring(6) : undefined;
+    const existingBlurhash =
+      blurhashIndex > 0 ? firstImeta[blurhashIndex].substring(9) : undefined;
 
     // Generate thumbnail using web service if no existing thumbnail or blurhash
     let generatedThumbnail: string | undefined = existingThumbnail;
@@ -821,7 +1130,7 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
       url: videoUrl,
       thumbnail: generatedThumbnail,
       duration: durationTag ? durationTag[1] : undefined,
-      blurhash: existingBlurhash
+      blurhash: existingBlurhash,
     };
   }
 
@@ -842,15 +1151,22 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
     if (!content) return '';
 
     // Remove hashtags using regex - matches #word patterns
-    return content.replace(/#[a-zA-Z0-9_]+/g, '').replace(/\s+/g, ' ').trim();
+    return content
+      .replace(/#[a-zA-Z0-9_]+/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   hasContentWarning(event: any): boolean {
-    return event.tags?.some((tag: any[]) => tag[0] === 'content-warning') || false;
+    return (
+      event.tags?.some((tag: any[]) => tag[0] === 'content-warning') || false
+    );
   }
 
   getContentWarning(event: any): string {
-    const warningTag = event.tags?.find((tag: any[]) => tag[0] === 'content-warning');
+    const warningTag = event.tags?.find(
+      (tag: any[]) => tag[0] === 'content-warning'
+    );
     return warningTag ? warningTag[1] : '';
   }
 
@@ -864,21 +1180,24 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
       return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     }
     return `${minutes}:${secs.toString().padStart(2, '0')}`;
-  } openImageDialog(imageUrl: string, altText: string): void {
+  }
+  openImageDialog(imageUrl: string, altText: string): void {
     this.dialog.open(ImageDialogComponent, {
       data: { imageUrl },
       maxWidth: '95vw',
       maxHeight: '95vh',
       width: '100%',
       height: '100%',
-      panelClass: 'image-dialog'
+      panelClass: 'image-dialog',
     });
   }
   onImageLoad(event: globalThis.Event): void {
     const img = event.target as HTMLImageElement;
     const container = img.parentElement;
     if (container) {
-      const placeholder = container.querySelector('.blurhash-placeholder') as HTMLImageElement;
+      const placeholder = container.querySelector(
+        '.blurhash-placeholder'
+      ) as HTMLImageElement;
       if (placeholder) {
         placeholder.style.opacity = '0';
         setTimeout(() => {
@@ -907,14 +1226,23 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
 
   /**
    * Add a new feed
-   */  addNewFeed(): void {
+   */ addNewFeed(): void {
     const dialogRef = this.dialog.open(NewFeedDialogComponent, {
       width: '900px',
       maxWidth: '90vw',
       data: {
-        icons: ['dynamic_feed', 'bookmark', 'explore', 'trending_up', 'star', 'favorite', 'rss_feed']
-      }
-    }); dialogRef.afterClosed().subscribe(result => {
+        icons: [
+          'dynamic_feed',
+          'bookmark',
+          'explore',
+          'trending_up',
+          'star',
+          'favorite',
+          'rss_feed',
+        ],
+      },
+    });
+    dialogRef.afterClosed().subscribe(result => {
       if (result) {
         // The dialog returns a FeedConfig, but FeedsCollectionService.addFeed expects FeedDefinition data
         const newFeed = this.feedsCollectionService.addFeed({
@@ -922,7 +1250,7 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
           icon: result.icon,
           description: result.description,
           columns: result.columns,
-          path: result.path
+          path: result.path,
         });
 
         if (newFeed.path) {
@@ -937,7 +1265,7 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
 
   /**
    * Edit the current feed
-   */  editCurrentFeed(): void {
+   */ editCurrentFeed(): void {
     const activeFeed = this.activeFeed();
     if (!activeFeed) return;
 
@@ -945,9 +1273,17 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
       width: '900px',
       maxWidth: '90vw',
       data: {
-        icons: ['dynamic_feed', 'bookmark', 'explore', 'trending_up', 'star', 'favorite', 'rss_feed'],
-        feed: activeFeed
-      }
+        icons: [
+          'dynamic_feed',
+          'bookmark',
+          'explore',
+          'trending_up',
+          'star',
+          'favorite',
+          'rss_feed',
+        ],
+        feed: activeFeed,
+      },
     });
 
     dialogRef.afterClosed().subscribe(result => {
@@ -956,7 +1292,7 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
           label: result.label,
           icon: result.icon,
           description: result.description,
-          path: result.path
+          path: result.path,
         });
       }
     });
@@ -975,15 +1311,15 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
         message: `Are you sure you want to delete the feed "${activeFeed.label}"?`,
         confirmText: 'Delete Feed',
         cancelText: 'Cancel',
-        confirmColor: 'warn'
-      } as ConfirmDialogData
-    }); dialogRef.afterClosed().subscribe(result => {
+        confirmColor: 'warn',
+      } as ConfirmDialogData,
+    });
+    dialogRef.afterClosed().subscribe(result => {
       if (result) {
         this.feedsCollectionService.removeFeed(activeFeed.id);
       }
     });
   }
-
 
   /**
    * Get M3U playlist data from event
@@ -1028,15 +1364,23 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
       alt,
       tracks,
       url: playlistUrl,
-      totalDuration: totalDuration > 0 ? this.formatDuration(totalDuration.toString()) : undefined
+      totalDuration:
+        totalDuration > 0
+          ? this.formatDuration(totalDuration.toString())
+          : undefined,
     };
   }
 
   /**
    * Parse M3U content and extract tracks
    */
-  private parseM3UContent(content: string): { url: string; title?: string; artist?: string }[] {
-    const lines = content.split('\n').map(line => line.trim()).filter(line => line);
+  private parseM3UContent(
+    content: string
+  ): { url: string; title?: string; artist?: string }[] {
+    const lines = content
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line);
     const tracks: { url: string; title?: string; artist?: string }[] = [];
 
     let currentTrack: { url?: string; title?: string; artist?: string } = {};
@@ -1055,15 +1399,24 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
             currentTrack.title = trackInfo.trim();
           }
         }
-      } else if (line.startsWith('http') || line.startsWith('https') || line.endsWith('.mp3') || line.endsWith('.m4a') || line.endsWith('.wav') || line.endsWith('.flac')) {
+      } else if (
+        line.startsWith('http') ||
+        line.startsWith('https') ||
+        line.endsWith('.mp3') ||
+        line.endsWith('.m4a') ||
+        line.endsWith('.wav') ||
+        line.endsWith('.flac')
+      ) {
         // This is a track URL
         currentTrack.url = line;
 
         if (currentTrack.url) {
           tracks.push({
             url: currentTrack.url,
-            title: currentTrack.title || this.extractFilenameFromUrl(currentTrack.url),
-            artist: currentTrack.artist
+            title:
+              currentTrack.title ||
+              this.extractFilenameFromUrl(currentTrack.url),
+            artist: currentTrack.artist,
           });
         }
 
@@ -1076,8 +1429,10 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
         if (currentTrack.url) {
           tracks.push({
             url: currentTrack.url,
-            title: currentTrack.title || this.extractFilenameFromUrl(currentTrack.url),
-            artist: currentTrack.artist
+            title:
+              currentTrack.title ||
+              this.extractFilenameFromUrl(currentTrack.url),
+            artist: currentTrack.artist,
           });
         }
 
@@ -1108,7 +1463,10 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
   /**
    * Play entire M3U playlist
    */
-  playPlaylist(playlistData: { title?: string; tracks: { url: string; title?: string; artist?: string }[] }): void {
+  playPlaylist(playlistData: {
+    title?: string;
+    tracks: { url: string; title?: string; artist?: string }[];
+  }): void {
     console.log('Playing M3U playlist:', playlistData);
 
     if (!playlistData.tracks || playlistData.tracks.length === 0) return;
@@ -1116,13 +1474,13 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
     // Clear current media queue and add all tracks
     this.mediaPlayerService.media.set([]);
     playlistData.tracks.forEach((track, index) => {
-
       let type: 'Music' | 'Podcast' | 'YouTube' | 'Video' = 'Video';
 
       // Extra if the track.url is YouTube, video or music.
       if (track.url.includes('youtube.com') || track.url.includes('youtu.be')) {
         type = 'YouTube';
-      }      const mediaItem: MediaItem = {
+      }
+      const mediaItem: MediaItem = {
         title: track.title || `Track ${index + 1}`,
         artist: track.artist || 'Unknown Artist',
         source: track.url,
@@ -1140,15 +1498,29 @@ export class FeedsComponent implements OnInit, OnDestroy {  // Services
   /**
    * Add playlist to queue
    */
-  addPlaylistToQueue(playlistData: { title?: string; tracks: { url: string; title?: string; artist?: string }[] }): void {
-    if (!playlistData.tracks || playlistData.tracks.length === 0) return; playlistData.tracks.forEach((track, index) => {
+  addPlaylistToQueue(playlistData: {
+    title?: string;
+    tracks: { url: string; title?: string; artist?: string }[];
+  }): void {
+    if (!playlistData.tracks || playlistData.tracks.length === 0) return;
+    playlistData.tracks.forEach((track, index) => {
       const mediaItem: MediaItem = {
         title: track.title || `Track ${index + 1}`,
         artist: track.artist || 'Unknown Artist',
         source: track.url,
         artwork: '',
-        type: 'Video'
-      };      this.mediaPlayerService.enque(mediaItem);
+        type: 'Video',
+      };
+      this.mediaPlayerService.enque(mediaItem);
     });
+  }
+
+  async repostNote(event: Event): Promise<void> {
+    const published = await this.repostService.repostNote(event);
+    if (published) {
+      this.snackBar.open('Note reposted successfully!', 'Dismiss', {
+        duration: 3000,
+      });
+    }
   }
 }

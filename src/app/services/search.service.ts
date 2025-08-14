@@ -5,7 +5,7 @@ import { AccountStateService } from './account-state.service';
 import { NostrRecord } from '../interfaces';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class SearchService {
   layout = inject(LayoutService);
@@ -23,7 +23,12 @@ export class SearchService {
       if (searchValue) {
         // First, search in cached profiles
         const cachedResults = this.accountState.searchProfiles(searchValue);
-        console.log('Cached search results:', cachedResults.length, 'results for query:', searchValue);
+        console.log(
+          'Cached search results:',
+          cachedResults.length,
+          'results for query:',
+          searchValue
+        );
         this.searchResults.set(cachedResults);
 
         // If query looks like an email (NIP-05), also try NIP-05 lookup

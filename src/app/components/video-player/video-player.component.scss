@@ -14,7 +14,7 @@
     width: 100vw !important;
     height: 100vh !important;
     border-radius: 0;
-    
+
     // Respect titlebar area when in overlay mode
     &.overlay-mode {
       top: env(titlebar-area-height, 33px) !important;
@@ -25,7 +25,7 @@
   &.minimized {
     height: 40px !important;
     overflow: hidden;
-    
+
     .video-content {
       display: none;
     }
@@ -96,7 +96,7 @@
 .video-content {
   position: relative;
   height: calc(100% - 40px);
-  
+
   .media-info {
     height: 100%;
     width: 100%;

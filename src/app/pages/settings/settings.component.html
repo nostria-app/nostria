@@ -1,12 +1,9 @@
 <div class="settings-container">
-  <!-- Mobile back button (only shows on mobile when viewing details) -->
+  <!-- Mobile close button (only shows on mobile when viewing details) -->
   @if (isMobile() && showDetails()) {
-  <div class="mobile-header">
-    <button mat-icon-button (click)="goBack()" aria-label="Go back">
-      <mat-icon>arrow_back</mat-icon>
-    </button>
-    <h2 i18n="@@settings.back.title">{{ getTitle() }}</h2>
-  </div>
+  <button mat-icon-button class="mobile-close-btn" (click)="goBack()" aria-label="Close settings">
+    <mat-icon>close</mat-icon>
+  </button>
   }
 
   <!-- Left sidebar with navigation options -->
@@ -15,7 +12,6 @@
     <h1 class="page-title" i18n="@@settings.title">Settings</h1>
     <mat-nav-list>
       @for (section of sections; track section.id) {
-
       @if (section.authenticated && app.authenticated()) {
       <a mat-list-item [class.active]="activeSection() === section.id" (click)="selectSection(section.id)">
         <mat-icon matListItemIcon>{{ section.icon }}</mat-icon>
@@ -27,7 +23,6 @@
         <span matListItemTitle>{{ section.title }}</span>
       </a>
       }
-
       }
     </mat-nav-list>
   </div>
@@ -36,18 +31,7 @@
   <!-- Right content area showing the selected section details -->
   @if (!isMobile() || showDetails()) {
   <div class="settings-content">
-    <mat-card class="settings-card">
-      @if (!isMobile()) {
-      <mat-card-header>
-        <mat-card-title>{{ getTitle() }}</mat-card-title>
-      </mat-card-header>
-      }
-
-      <mat-card-content>
-        <!-- Router outlet for child routes -->
-        <router-outlet></router-outlet>
-      </mat-card-content>
-    </mat-card>
+    <router-outlet></router-outlet>
   </div>
   }
 </div>

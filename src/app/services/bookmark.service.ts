@@ -18,7 +18,7 @@ export interface ArticleBookmark {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class BookmarkService {
   relay = inject(RelayService);
@@ -36,15 +36,27 @@ export class BookmarkService {
   });
 
   bookmarkEvents = computed<any[]>(() => {
-    return this.bookmarkEvent()?.tags.filter(tag => tag[0] === 'e').map(tag => ({ id: tag[1] })) || [];
+    return (
+      this.bookmarkEvent()
+        ?.tags.filter(tag => tag[0] === 'e')
+        .map(tag => ({ id: tag[1] })) || []
+    );
   });
 
   bookmarkArticles = computed<any[]>(() => {
-    return this.bookmarkEvent()?.tags.filter(tag => tag[0] === 'a').map(tag => ({ id: tag[1] })) || [];
+    return (
+      this.bookmarkEvent()
+        ?.tags.filter(tag => tag[0] === 'a')
+        .map(tag => ({ id: tag[1] })) || []
+    );
   });
 
   bookmarkUrls = computed<any[]>(() => {
-    return this.bookmarkEvent()?.tags.filter(tag => tag[0] === 'r').map(tag => ({ id: tag[1] })) || [];
+    return (
+      this.bookmarkEvent()
+        ?.tags.filter(tag => tag[0] === 'r')
+        .map(tag => ({ id: tag[1] })) || []
+    );
   });
 
   constructor() {
@@ -60,17 +72,24 @@ export class BookmarkService {
   }
 
   async initialize() {
-    const bookmarksEvent = await this.relay.get({ authors: [this.accountState.pubkey()!], kinds: [kinds.BookmarkList] });
+    const bookmarksEvent = await this.relay.get({
+      authors: [this.accountState.pubkey()!],
+      kinds: [kinds.BookmarkList],
+    });
     this.bookmarkEvent.set(bookmarksEvent);
   }
 
   // Helper to get the appropriate signal based on bookmark type
   getBookmarkSignal(type: BookmarkType) {
     switch (type) {
-      case 'e': return this.bookmarkEvents;
-      case 'a': return this.bookmarkArticles;
-      case 'r': return this.bookmarkUrls;
-      default: return this.bookmarkEvents; // Default to events
+      case 'e':
+        return this.bookmarkEvents;
+      case 'a':
+        return this.bookmarkArticles;
+      case 'r':
+        return this.bookmarkUrls;
+      default:
+        return this.bookmarkEvents; // Default to events
     }
   }
 
@@ -80,8 +99,8 @@ export class BookmarkService {
     return {
       kind: parseInt(split[0], 10),
       id: split[1],
-      slug: split[2] || ''
-    }
+      slug: split[2] || '',
+    };
   }
 
   async addBookmark(id: string, type: BookmarkType = 'e') {
@@ -96,11 +115,11 @@ export class BookmarkService {
         content: '',
         tags: [],
         id: '',
-        sig: ''
+        sig: '',
       };
     }
 
-    let bookmarkId = id;
+    const bookmarkId = id;
 
     // Check if the bookmark already exists
     const existingBookmark = this.bookmarks().find(b => b.id === bookmarkId);
@@ -108,7 +127,9 @@ export class BookmarkService {
     // If it exists, remove it; if not, add it
     if (existingBookmark) {
       // Remove from the bookmark event tags
-      event.tags = event.tags.filter(tag => !(tag[0] === type && tag[1] === bookmarkId));
+      event.tags = event.tags.filter(
+        tag => !(tag[0] === type && tag[1] === bookmarkId)
+      );
     } else {
       // Add to the bookmark event tags
       event.tags.push([type, bookmarkId]);
@@ -129,12 +150,16 @@ export class BookmarkService {
 
   // Helper method to get tooltip text based on bookmark status
   getBookmarkTooltip(id: string, type: BookmarkType = 'e'): string {
-    return this.bookmarkEvents().find(b => b.id === id) ? 'Remove bookmark' : 'Add bookmark';
+    return this.bookmarkEvents().find(b => b.id === id)
+      ? 'Remove bookmark'
+      : 'Add bookmark';
   }
 
   // Helper method to get icon based on bookmark status
   getBookmarkIcon(id: string, type: BookmarkType = 'e'): string {
-    return this.bookmarkEvents().find(b => b.id === id) ? 'bookmark_remove' : 'bookmark_add';
+    return this.bookmarkEvents().find(b => b.id === id)
+      ? 'bookmark_remove'
+      : 'bookmark_add';
   }
 
   async publish(event: Event) {
@@ -167,12 +192,16 @@ export class BookmarkService {
 
       // Display appropriate notification
       if (failed === 0) {
-        this.snackBar.open(`Bookmarks saved successfully to ${successful} ${successful === 1 ? 'relay' : 'relays'}`, 'Close', {
-          duration: 3000,
-          horizontalPosition: 'center',
-          verticalPosition: 'bottom',
-          panelClass: 'success-snackbar'
-        });
+        this.snackBar.open(
+          `Bookmarks saved successfully to ${successful} ${successful === 1 ? 'relay' : 'relays'}`,
+          'Close',
+          {
+            duration: 3000,
+            horizontalPosition: 'center',
+            verticalPosition: 'bottom',
+            panelClass: 'success-snackbar',
+          }
+        );
       } else {
         this.snackBar.open(
           `Bookmarks saved to ${successful} ${successful === 1 ? 'relay' : 'relays'}, failed on ${failed} ${failed === 1 ? 'relay' : 'relays'}`,
@@ -181,7 +210,8 @@ export class BookmarkService {
             duration: 5000,
             horizontalPosition: 'center',
             verticalPosition: 'bottom',
-            panelClass: failed > successful ? 'error-snackbar' : 'warning-snackbar'
+            panelClass:
+              failed > successful ? 'error-snackbar' : 'warning-snackbar',
           }
         );
       }
@@ -191,7 +221,7 @@ export class BookmarkService {
         duration: 5000,
         horizontalPosition: 'center',
         verticalPosition: 'bottom',
-        panelClass: 'error-snackbar'
+        panelClass: 'error-snackbar',
       });
     }
   }

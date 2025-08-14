@@ -1,4 +1,14 @@
-import { Component, inject, signal, computed, effect, OnInit, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  computed,
+  effect,
+  OnInit,
+  ViewChild,
+  ElementRef,
+  AfterViewInit,
+} from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { animate, style, transition, trigger } from '@angular/animations';
 import { Location } from '@angular/common';
@@ -26,27 +36,33 @@ import { RelayService } from '../../../services/relay.service';
     MatListModule,
     MatProgressSpinnerModule,
     MatTabsModule,
-    ScrollingModule
-],
+    ScrollingModule,
+  ],
   templateUrl: './details.component.html',
   styleUrl: './details.component.scss',
   animations: [
     trigger('slideInOut', [
       transition(':enter', [
         style({ transform: 'translateY(100%)', opacity: 0 }),
-        animate('300ms ease-out', style({ transform: 'translateY(0)', opacity: 1 }))
+        animate(
+          '300ms ease-out',
+          style({ transform: 'translateY(0)', opacity: 1 })
+        ),
       ]),
       transition(':leave', [
-        animate('300ms ease-in', style({ transform: 'translateY(100%)', opacity: 0 }))
-      ])
+        animate(
+          '300ms ease-in',
+          style({ transform: 'translateY(100%)', opacity: 0 })
+        ),
+      ]),
     ]),
     trigger('profileShrink', [
       transition(':enter', [
         style({ transform: 'scale(1.3)', opacity: 0 }),
-        animate('300ms ease-out', style({ transform: 'scale(1)', opacity: 1 }))
-      ])
-    ])
-  ]
+        animate('300ms ease-out', style({ transform: 'scale(1)', opacity: 1 })),
+      ]),
+    ]),
+  ],
 })
 export class DetailsComponent implements OnInit, AfterViewInit {
   private router = inject(Router);
@@ -118,7 +134,10 @@ export class DetailsComponent implements OnInit, AfterViewInit {
   }
 
   async broadcastRelayList() {
-    const event = await this.storage.getEventByPubkeyAndKind(this.npub(), 10002);
+    const event = await this.storage.getEventByPubkeyAndKind(
+      this.npub(),
+      10002
+    );
 
     if (event) {
       console.log('Broadcasting Relay List event:', event);
@@ -140,7 +159,7 @@ export class DetailsComponent implements OnInit, AfterViewInit {
       setTimeout(() => {
         this.userProfile.set({
           name: 'Example User',
-          picture: 'https://example.com/avatar.jpg'
+          picture: 'https://example.com/avatar.jpg',
         });
       }, 300);
     } catch (err) {
@@ -162,7 +181,7 @@ export class DetailsComponent implements OnInit, AfterViewInit {
         id: pubkey,
         npub: pubkey,
         name: `User ${index + 1}`,
-        picture: null
+        picture: null,
       }));
 
       this.followingList.set(followingProfiles);
@@ -179,12 +198,14 @@ export class DetailsComponent implements OnInit, AfterViewInit {
       // In a real app, fetch mutual connections from an API
       // For demo purposes, we'll create mock data
       setTimeout(() => {
-        const mockMutuals = Array(3).fill(0).map((_, index) => ({
-          id: `mutual-${index}`,
-          npub: `mutual-npub-${index}`,
-          name: `Mutual User ${index + 1}`,
-          picture: null
-        }));
+        const mockMutuals = Array(3)
+          .fill(0)
+          .map((_, index) => ({
+            id: `mutual-${index}`,
+            npub: `mutual-npub-${index}`,
+            name: `Mutual User ${index + 1}`,
+            picture: null,
+          }));
 
         this.mutualConnectionsList.set(mockMutuals);
       }, 500);

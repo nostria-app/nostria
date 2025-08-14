@@ -56,10 +56,10 @@ interface BookmarkCategory {
     MatSnackBarModule,
     MatProgressSpinnerModule,
     EventComponent,
-    ArticleComponent
-],
+    ArticleComponent,
+  ],
   templateUrl: './bookmarks.component.html',
-  styleUrl: './bookmarks.component.scss'
+  styleUrl: './bookmarks.component.scss',
 })
 export class BookmarksComponent {
   private logger = inject(LoggerService);
@@ -116,7 +116,7 @@ export class BookmarksComponent {
   categories = signal<BookmarkCategory[]>([
     { id: 'events', name: 'Events', color: '#2196f3' },
     { id: 'articles', name: 'Articles', color: '#4caf50' },
-    { id: 'websites', name: 'Websites', color: '#ff9800' }
+    { id: 'websites', name: 'Websites', color: '#ff9800' },
   ]);
 
   // Current state
@@ -190,7 +190,10 @@ export class BookmarksComponent {
         const parsedCategories = JSON.parse(savedCategories);
         if (Array.isArray(parsedCategories) && parsedCategories.length > 0) {
           this.categories.set(parsedCategories);
-          this.logger.debug('Loaded categories from storage:', parsedCategories);
+          this.logger.debug(
+            'Loaded categories from storage:',
+            parsedCategories
+          );
         }
       } catch (error) {
         this.logger.error('Error parsing saved categories:', error);
@@ -199,7 +202,10 @@ export class BookmarksComponent {
   }
 
   private saveToStorage(): void {
-    this.localStorage.setItem('bookmark_categories', JSON.stringify(this.categories()));
+    this.localStorage.setItem(
+      'bookmark_categories',
+      JSON.stringify(this.categories())
+    );
     this.logger.debug('Categories saved to storage');
   }
 
@@ -211,7 +217,7 @@ export class BookmarksComponent {
   openManageCategories(): void {
     const dialogRef = this.dialog.open(BookmarkCategoryDialogComponent, {
       data: { categories: this.categories() },
-      width: '500px'
+      width: '500px',
     });
 
     dialogRef.afterClosed().subscribe(result => {
@@ -233,7 +239,9 @@ export class BookmarksComponent {
     this.loading.set(true);
     try {
       await this.bookmarkService.addBookmark(url.trim(), 'r');
-      this.snackBar.open('Bookmark added successfully', 'Close', { duration: 3000 });
+      this.snackBar.open('Bookmark added successfully', 'Close', {
+        duration: 3000,
+      });
     } catch (error) {
       this.logger.error('Error adding bookmark:', error);
       this.snackBar.open('Failed to add bookmark', 'Close', { duration: 3000 });
@@ -245,23 +253,33 @@ export class BookmarksComponent {
   editBookmark(bookmark: Bookmark, event: Event): void {
     event.stopPropagation();
     // For now, just show a message - in a full implementation this would open a dialog
-    this.snackBar.open('Edit bookmark functionality - coming soon', 'Close', { duration: 3000 });
+    this.snackBar.open('Edit bookmark functionality - coming soon', 'Close', {
+      duration: 3000,
+    });
   }
 
   async deleteBookmark(bookmark: Bookmark, event: Event): Promise<void> {
     event.stopPropagation();
 
-    if (!confirm(`Are you sure you want to delete this bookmark?\n${bookmark.title}`)) {
+    if (
+      !confirm(
+        `Are you sure you want to delete this bookmark?\n${bookmark.title}`
+      )
+    ) {
       return;
     }
 
     this.loading.set(true);
     try {
       await this.bookmarkService.addBookmark(bookmark.id, bookmark.type); // Toggle removes it
-      this.snackBar.open('Bookmark deleted successfully', 'Close', { duration: 3000 });
+      this.snackBar.open('Bookmark deleted successfully', 'Close', {
+        duration: 3000,
+      });
     } catch (error) {
       this.logger.error('Error deleting bookmark:', error);
-      this.snackBar.open('Failed to delete bookmark', 'Close', { duration: 3000 });
+      this.snackBar.open('Failed to delete bookmark', 'Close', {
+        duration: 3000,
+      });
     } finally {
       this.loading.set(false);
     }
@@ -288,19 +306,27 @@ export class BookmarksComponent {
 
   getBookmarkTypeIcon(type: BookmarkType): string {
     switch (type) {
-      case 'e': return 'event';
-      case 'a': return 'article';
-      case 'r': return 'link';
-      default: return 'bookmark';
+      case 'e':
+        return 'event';
+      case 'a':
+        return 'article';
+      case 'r':
+        return 'link';
+      default:
+        return 'bookmark';
     }
   }
 
   getBookmarkTypeLabel(type: BookmarkType): string {
     switch (type) {
-      case 'e': return 'Event';
-      case 'a': return 'Article';
-      case 'r': return 'Website';
-      default: return 'Bookmark';
+      case 'e':
+        return 'Event';
+      case 'a':
+        return 'Article';
+      case 'r':
+        return 'Website';
+      default:
+        return 'Bookmark';
     }
   }
 }

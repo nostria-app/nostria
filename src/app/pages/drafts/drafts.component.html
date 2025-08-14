@@ -1,0 +1,139 @@
+<div class="drafts-container">
+  <div class="drafts-header">
+    <div class="header-content">
+      <h1>
+        <mat-icon>edit_document</mat-icon>
+        My Drafts
+      </h1>
+      <div class="header-actions">
+        <button mat-raised-button color="primary" (click)="createNewDraft()">
+          <mat-icon>add</mat-icon>
+          New Draft
+        </button>
+        <button
+          mat-icon-button
+          (click)="refreshDrafts()"
+          matTooltip="Refresh drafts"
+        >
+          <mat-icon>refresh</mat-icon>
+        </button>
+      </div>
+    </div>
+
+    @if (availableTags().length > 0) {
+      <div class="tag-filters">
+        <span class="filter-label">Filter by tags:</span>
+        <mat-chip-set>
+          @for (tag of availableTags(); track tag) {
+            <mat-chip
+              (click)="filterByTag(tag)"
+              [class.selected]="selectedTag() === tag"
+              class="tag-chip"
+            >
+              {{ tag }}
+            </mat-chip>
+          }
+          @if (selectedTag()) {
+            <mat-chip (click)="clearTagFilter()" class="clear-filter-chip">
+              <mat-icon>clear</mat-icon>
+              Clear filter
+            </mat-chip>
+          }
+        </mat-chip-set>
+      </div>
+    }
+  </div>
+
+  @if (isLoading()) {
+    <div class="loading-container">
+      <mat-progress-spinner
+        mode="indeterminate"
+        diameter="50"
+      ></mat-progress-spinner>
+      <p>Loading drafts...</p>
+    </div>
+  } @else if (error()) {
+    <div class="error-container">
+      <mat-icon color="warn">error</mat-icon>
+      <p>{{ error() }}</p>
+      <button mat-raised-button (click)="refreshDrafts()">Try Again</button>
+    </div>
+  } @else if (filteredDrafts().length === 0) {
+    <div class="empty-state">
+      @if (selectedTag()) {
+        <mat-icon>filter_list_off</mat-icon>
+        <h2>No drafts found with tag "{{ selectedTag() }}"</h2>
+        <p>Try clearing the filter or selecting a different tag.</p>
+        <button mat-raised-button (click)="clearTagFilter()">
+          Clear Filter
+        </button>
+      } @else {
+        <mat-icon>draft</mat-icon>
+        <h2>No drafts yet</h2>
+        <p>Start writing your first article draft!</p>
+        <button mat-raised-button color="primary" (click)="createNewDraft()">
+          <mat-icon>add</mat-icon>
+          Create Your First Draft
+        </button>
+      }
+    </div>
+  } @else {
+    <div class="drafts-grid">
+      @for (draft of filteredDrafts(); track draft.id) {
+        <mat-card class="draft-card" (click)="openDraft(draft)">
+          <mat-card-header>
+            <mat-card-title>{{ draft.title }}</mat-card-title>
+            <mat-card-subtitle>
+              Last modified {{ draft.lastModified * 1000 | ago }}
+            </mat-card-subtitle>
+            <div class="card-actions">
+              <button
+                mat-icon-button
+                (click)="deleteDraft(draft, $event)"
+                matTooltip="Delete draft"
+                class="delete-button"
+              >
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+          </mat-card-header>
+
+          @if (draft.imageUrl) {
+            <div class="draft-image">
+              <img
+                [src]="draft.imageUrl"
+                alt="{{ draft.title }}"
+                title="{{ draft.title }}"
+              />
+            </div>
+          }
+
+          <mat-card-content>
+            <p class="draft-summary">{{ draft.summary }}</p>
+
+            @if (draft.tags.length > 0) {
+              <div class="draft-tags">
+                <mat-chip-set>
+                  @for (tag of draft.tags; track tag) {
+                    <mat-chip class="tag-chip">{{ tag }}</mat-chip>
+                  }
+                </mat-chip-set>
+              </div>
+            }
+          </mat-card-content>
+
+          <mat-card-actions>
+            <button mat-button (click)="openDraft(draft)">
+              <mat-icon>edit</mat-icon>
+              Continue Writing
+            </button>
+            <span class="spacer"></span>
+            <small class="created-date">
+              Created {{ draft.createdAt * 1000 | ago }}
+            </small>
+          </mat-card-actions>
+        </mat-card>
+      }
+    </div>
+  }
+</div>

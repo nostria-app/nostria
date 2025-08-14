@@ -8,21 +8,25 @@ import { isPlatformBrowser } from '@angular/common';
 import { NostrTagKey } from '../standardized-tags';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class UtilitiesService {
   private sanitizer = inject(DomSanitizer);
   private logger = inject(LoggerService);
 
-  NIP05_REGEX = /^(?:([\w.+-]+)@)?([\w_-]+(\.[\w_-]+)+)$/
-  regexpVideo = /(?:(?:https?)+\:\/\/+[a-zA-Z0-9\/\._-]{1,})+(?:(?:mp4|webm))/gi;
-  regexpImage = /(?:(?:https?)+\:\/\/+[a-zA-Z0-9\/\._-]{1,})+(?:(?:jpe?g|png|gif|webp))/gi;
-  regexpYouTube = /(?:https?:\/\/)?(?:www\.)?youtu\.?be(?:\.com)?\/?.*(?:watch|embed)?(?:.*v=|v\/|\/)([\w-_]+)/gim;
+  NIP05_REGEX = /^(?:([\w.+-]+)@)?([\w_-]+(\.[\w_-]+)+)$/;
+  regexpVideo =
+    /(?:(?:https?)+\:\/\/+[a-zA-Z0-9\/\._-]{1,})+(?:(?:mp4|webm))/gi;
+  regexpImage =
+    /(?:(?:https?)+\:\/\/+[a-zA-Z0-9\/\._-]{1,})+(?:(?:jpe?g|png|gif|webp))/gi;
+  regexpYouTube =
+    /(?:https?:\/\/)?(?:www\.)?youtu\.?be(?:\.com)?\/?.*(?:watch|embed)?(?:.*v=|v\/|\/)([\w-_]+)/gim;
   regexpThisIsTheWay = /(?:thisistheway.gif)/g;
   regexpAlwaysHasBeen = /(?:alwayshasbeen.jpg)/g;
   regexpSpotify = /((http|https?)?(.+?\.?)(open.spotify.com)(.+?\.?)?)/gi;
   regexpTidal = /((http|https?)?(.+?\.?)(tidal.com)(.+?\.?)?)/gi;
-  regexpUrl = /([\w+]+\:\/\/)?([\w\d-]+\.)*[\w-]+[\.\:]\w+([\/\?\=\&\#.]?[\w-]+)*\/?/gi;
+  regexpUrl =
+    /([\w+]+\:\/\/)?([\w\d-]+\.)*[\w-]+[\.\:]\w+([\/\?\=\&\#.]?[\w-]+)*\/?/gi;
 
   private readonly platformId = inject(PLATFORM_ID);
   readonly isBrowser = signal(isPlatformBrowser(this.platformId));
@@ -32,8 +36,8 @@ export class UtilitiesService {
   toRecord(event: Event) {
     return {
       event,
-      data: this.parseContent(event.content)
-    }
+      data: this.parseContent(event.content),
+    };
   }
 
   toRecords(events: Event[]) {
@@ -53,8 +57,10 @@ export class UtilitiesService {
           // Check if it looks like JSON (starts with { or [)
           const trimmedContent = content.trim();
 
-          if ((trimmedContent.startsWith('{') && trimmedContent.endsWith('}')) ||
-            (trimmedContent.startsWith('[') && trimmedContent.endsWith(']'))) {
+          if (
+            (trimmedContent.startsWith('{') && trimmedContent.endsWith('}')) ||
+            (trimmedContent.startsWith('[') && trimmedContent.endsWith(']'))
+          ) {
             // Try parsing it as JSON
             content = JSON.parse(content);
           }
@@ -69,16 +75,16 @@ export class UtilitiesService {
   }
 
   sanitizeJsonString(json: string): string {
-    return json
-      // Specifically handle newlines that appear before closing quotes in JSON values
-      .replace(/\n+"/g, '"')
-      .trim();
+    return (
+      json
+        // Specifically handle newlines that appear before closing quotes in JSON values
+        .replace(/\n+"/g, '"')
+        .trim()
+    );
   }
 
   parseNip05(nip05: string) {
-    return nip05.startsWith('_@')
-      ? nip05.substring(1)
-      : nip05;
+    return nip05.startsWith('_@') ? nip05.substring(1) : nip05;
   }
 
   // Get a-tag value from an event
@@ -183,7 +189,13 @@ export class UtilitiesService {
     let urlLower = url.toLowerCase();
     urlLower = urlLower.split('?')[0]; // Remove the query part.
 
-    if (urlLower.endsWith('jpg') || urlLower.endsWith('jpeg') || urlLower.endsWith('png') || urlLower.endsWith('webp') || urlLower.endsWith('gif')) {
+    if (
+      urlLower.endsWith('jpg') ||
+      urlLower.endsWith('jpeg') ||
+      urlLower.endsWith('png') ||
+      urlLower.endsWith('webp') ||
+      urlLower.endsWith('gif')
+    ) {
       return url;
     }
 
@@ -200,15 +212,20 @@ export class UtilitiesService {
     return clean;
   }
 
-
   /** Parses the URLs and cleans up, ensuring only wss:// instances are returned. */
   getRelayUrlsFromFollowing(event: Event): string[] {
     // Check if event.content is a string, return empty array if it is
-    if (!event.content || typeof event.content === 'string') {
+    if (!event.content) {
       return [];
     }
 
-    let relayUrls = Object.keys(event.content).map(url => {
+    let content = [];
+
+    if (typeof event.content === 'string') {
+      content = JSON.parse(event.content);
+    }
+
+    const relayUrls = Object.keys(content).map(url => {
       const wssIndex = url.indexOf('wss://');
       return wssIndex >= 0 ? url.substring(wssIndex) : url;
     });
@@ -224,7 +241,7 @@ export class UtilitiesService {
 
   /** Parses the URLs and cleans up, ensuring only wss:// instances are returned. */
   getRelayUrls(event: Event): string[] {
-    let relayUrls = event.tags
+    const relayUrls = event.tags
       .filter(tag => tag.length >= 2 && tag[0] === 'r')
       .map(tag => {
         const url = tag[1];
@@ -240,7 +257,6 @@ export class UtilitiesService {
 
     return relayUrls;
   }
-
 
   /** This is an optimization we had to do to ensure that we have more success finding
    * the profile of users. Many users have a lot of relays, many which are long dead and gone.
@@ -259,14 +275,15 @@ export class UtilitiesService {
   ];
 
   normalizeRelayUrls(urls: string[]): string[] {
-    return urls.map(url => this.normalizeRelayUrl(url)).filter(url => url !== '');
+    return urls
+      .map(url => this.normalizeRelayUrl(url))
+      .filter(url => url !== '');
   }
 
-
   /**
- * Normalizes relay URLs by ensuring root URLs have a trailing slash
- * but leaves URLs with paths unchanged
- */
+   * Normalizes relay URLs by ensuring root URLs have a trailing slash
+   * but leaves URLs with paths unchanged
+   */
   normalizeRelayUrl(url: string): string {
     try {
       if (!url.startsWith('ws://') && !url.startsWith('wss://')) {
@@ -315,13 +332,19 @@ export class UtilitiesService {
       return npub;
     }
 
-    // Convert the hex public key to a Nostr public key (npub)
-    const result = nip19.decode(npub).data;
-    return result as string;
+    try {
+      // Convert the npub to hex public key
+      const result = nip19.decode(npub).data;
+      return result as string;
+    } catch (error) {
+      console.warn('Failed to decode npub:', npub, error);
+      // Return the original string if decoding fails - it might be a raw pubkey
+      return npub;
+    }
   }
 
   getTags(event: Event | UnsignedEvent, tagType: NostrTagKey): string[] {
-    let tags = event.tags
+    const tags = event.tags
       .filter(tag => tag.length >= 2 && tag[0] === tagType)
       .map(tag => tag[1]);
 
@@ -341,7 +364,8 @@ export class UtilitiesService {
   }
 
   isHex(value: string) {
-    const isEncoded = value.startsWith('nprofile') ||
+    const isEncoded =
+      value.startsWith('nprofile') ||
       value.startsWith('nevent') ||
       value.startsWith('naddr') ||
       value.startsWith('nsec') ||
@@ -361,7 +385,12 @@ export class UtilitiesService {
   }
 
   decode(value: string) {
-    return nip19.decode(value);
+    try {
+      return nip19.decode(value);
+    } catch (error) {
+      console.warn('Failed to decode value:', value, error);
+      throw error; // Re-throw since this is a generic decode method that callers might want to handle
+    }
   }
 
   /** Used to optimize the selection of a few relays from the user's relay list. */
@@ -389,7 +418,8 @@ export class UtilitiesService {
       try {
         const hostname = new URL(url).hostname;
         const isIp = /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname);
-        const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+        const isLocalhost =
+          hostname === 'localhost' || hostname === '127.0.0.1';
         return isIp || isLocalhost;
       } catch {
         return false;
@@ -397,13 +427,13 @@ export class UtilitiesService {
     };
 
     // 1. First tier: Preferred relays
-    const preferredRelays = normalizedUrls.filter(url =>
-      this.preferredRelays.includes(url) && !isIpOrLocalhost(url)
+    const preferredRelays = normalizedUrls.filter(
+      url => this.preferredRelays.includes(url) && !isIpOrLocalhost(url)
     );
 
     // 2. Second tier: Normal domain relays (not IP or localhost)
-    const normalDomainRelays = normalizedUrls.filter(url =>
-      !this.preferredRelays.includes(url) && !isIpOrLocalhost(url)
+    const normalDomainRelays = normalizedUrls.filter(
+      url => !this.preferredRelays.includes(url) && !isIpOrLocalhost(url)
     );
 
     // 3. Third tier: IP-based and localhost relays
@@ -412,7 +442,11 @@ export class UtilitiesService {
     );
 
     // Combine all three tiers with preferred relays first, then normal domains, then IPs/localhost
-    const sortedRelays = [...preferredRelays, ...normalDomainRelays, ...ipAndLocalhostRelays];
+    const sortedRelays = [
+      ...preferredRelays,
+      ...normalDomainRelays,
+      ...ipAndLocalhostRelays,
+    ];
 
     // Return only up to the requested count
     return sortedRelays.slice(0, count);
@@ -425,9 +459,14 @@ export class UtilitiesService {
   isRootPost(event: Event) {
     // A root post has no 'e' tag (no reply or root reference)
     return !event.tags.some(tag => tag[0] === 'e');
-  };
+  }
 
-  createEvent(kind: number, content: string, tags: string[][], pubkey: string): UnsignedEvent {
+  createEvent(
+    kind: number,
+    content: string,
+    tags: string[][],
+    pubkey: string
+  ): UnsignedEvent {
     const event: UnsignedEvent = {
       kind: kind,
       created_at: this.currentDate(),

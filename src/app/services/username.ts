@@ -1,18 +1,64 @@
-import { inject, Injectable } from '@angular/core';
+import { inject, Injectable, signal } from '@angular/core';
 import { AccountStateService } from './account-state.service';
 import { AccountService } from '../api/services';
 import { firstValueFrom, map } from 'rxjs';
 import { ApiResponse } from '../api/models';
+import { LocalStorageService } from './local-storage.service';
+import { ApplicationStateService } from './application-state.service';
+
+type UsernameByPubkeyMap = Record<string, string>;
+type PubkeyByUsernameMap = Record<string, string>;
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class UsernameService {
+  private readonly localStorage = inject(LocalStorageService);
+  private readonly appState = inject(ApplicationStateService);
   private accountState = inject(AccountStateService);
   private accountService = inject(AccountService);
+  private usernameByKey = signal<UsernameByPubkeyMap>({});
+  private pubkeyByUsername = signal<PubkeyByUsernameMap>({});
 
   constructor() {
+    this.loadUsernamesCache();
+  }
 
+  private loadUsernamesCache() {
+    const data = this.localStorage.getObject<UsernameByPubkeyMap>(
+      this.appState.USERNAMES_STORAGE_KEY
+    );
+
+    console.log('load', data);
+
+    if (data) {
+      this.usernameByKey.set(data);
+
+      // invert the map username → pubkey to pubkey → username
+      const pubkeyByUsername = Object.keys(data).reduce(
+        (acc, username) => ({
+          ...acc,
+          [data[username]]: username,
+        }),
+        {} as PubkeyByUsernameMap
+      );
+      this.pubkeyByUsername.set(pubkeyByUsername);
+    }
+  }
+
+  private saveUsernameToCache(username: string, pubkey: string) {
+    this.usernameByKey.set({
+      ...this.usernameByKey(),
+      [pubkey]: username,
+    });
+    this.pubkeyByUsername.set({
+      ...this.pubkeyByUsername(),
+      [username]: pubkey,
+    });
+    this.localStorage.setObject<UsernameByPubkeyMap>(
+      this.appState.USERNAMES_STORAGE_KEY,
+      this.usernameByKey()
+    );
   }
 
   async getPubkey(username: string): Promise<string> {
@@ -22,18 +68,21 @@ export class UsernameService {
       return sub.pubkey;
     }
 
-    try {
-      let publicProfile = await this.accountService.getPublicAccount({ pubkeyOrUsername: username }).toPromise();
+    const pubkey = this.pubkeyByUsername()[username];
 
-      if (publicProfile && publicProfile.success && publicProfile.result) {
-        return publicProfile.result.pubkey || '';
-      }
+    if (pubkey) return pubkey;
 
-      return '';
-    } catch (e) {
-      console.error('Error fetching public key:', e);
-      return '';
+    const publicProfile = await firstValueFrom(
+      this.accountService.getPublicAccount({ pubkeyOrUsername: username })
+    );
+
+    if (publicProfile && publicProfile.success && publicProfile.result) {
+      const pubkey = publicProfile.result.pubkey || '';
+      this.saveUsernameToCache(username, pubkey);
+      return pubkey;
     }
+
+    return '';
   }
 
   async getUsername(pubkey: string): Promise<string> {
@@ -43,20 +92,22 @@ export class UsernameService {
       return sub.username!;
     }
 
-    try {
-      let username = await this.accountService.getPublicAccount({ pubkeyOrUsername: pubkey }).toPromise();
+    const username = this.usernameByKey()[pubkey];
 
-      if (username && username.success && username.result) {
-        return username.result.username || '';
-      }
+    if (username) return username;
 
-      return '';
-    } catch (e) {
-      console.error('Error fetching username:', e);
-      return '';
+    const publicProfile = await firstValueFrom(
+      this.accountService.getPublicAccount({ pubkeyOrUsername: pubkey })
+    );
+
+    if (publicProfile && publicProfile.success && publicProfile.result) {
+      const username = publicProfile.result.username || '';
+      this.saveUsernameToCache(username, pubkey);
+      return username;
     }
-  }
 
+    return '';
+  }
 
   /**
    * Checks if a username is available:
@@ -68,5 +119,4 @@ export class UsernameService {
   isUsernameAvailable(username: string): Promise<ApiResponse> {
     return firstValueFrom(this.accountService.checkUsername({ username }));
   }
-
 }

@@ -20,21 +20,36 @@ h2 {
   max-width: 1400px;
   margin: 0 auto;
   height: calc(100vh - 100px);
-  
+  position: relative;
+
   @media (max-width: 768px) {
     flex-direction: column;
     height: auto;
   }
 }
 
+.mobile-close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 10;
+  background-color: rgba(0, 0, 0, 0.1);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+
+  @media (prefers-color-scheme: dark) {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+}
+
 .settings-sidebar {
   width: 240px;
   flex-shrink: 0;
-  
+
   @media (max-width: 768px) {
     width: 100%;
   }
-  
+
   .active {
     background-color: rgba(var(--mat-sys-background), 0.1);
     color: var(--mat-sys-primary);
@@ -55,7 +70,7 @@ h2 {
   display: flex;
   align-items: center;
   margin-bottom: 16px;
-  
+
   h2 {
     margin: 0;
     margin-left: 8px;
@@ -68,20 +83,16 @@ h2 {
   align-items: center;
   margin-bottom: 16px;
   padding: 12px 0;
-  
+
   &.danger-zone {
     border-top: 1px solid rgba(0, 0, 0, 0.12);
     padding-top: 24px;
     margin-top: 24px;
-    
+
     @media (prefers-color-scheme: dark) {
       border-top-color: rgba(255, 255, 255, 0.12);
     }
   }
-}
-
-.full-width {
-  width: 100%;
 }
 
 .wipe-data-button {

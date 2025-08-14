@@ -1,6 +1,24 @@
-import { Component, inject, signal, effect, untracked, Inject, PLATFORM_ID, DOCUMENT, computed } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  effect,
+  untracked,
+  Inject,
+  PLATFORM_ID,
+  DOCUMENT,
+  computed,
+} from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { ActivatedRoute, ParamMap, RouterModule, RouterOutlet, Router, NavigationEnd, Data } from '@angular/router';
+import {
+  ActivatedRoute,
+  ParamMap,
+  RouterModule,
+  RouterOutlet,
+  Router,
+  NavigationEnd,
+  Data,
+} from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -10,7 +28,12 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatDialog, MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import {
+  MatDialog,
+  MatDialogModule,
+  MatDialogRef,
+  MAT_DIALOG_DATA,
+} from '@angular/material/dialog';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -23,6 +46,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { Event, kinds, nip19, SimplePool } from 'nostr-tools';
 import { StorageService } from '../../services/storage.service';
 import { ProfileStateService } from '../../services/profile-state.service';
+import { ProfileTrackingService } from '../../services/profile-tracking.service';
 import { LayoutService } from '../../services/layout.service';
 import { ProfileHeaderComponent } from './profile-header/profile-header.component';
 import { ApplicationService } from '../../services/application.service';
@@ -35,6 +59,7 @@ import { DataService } from '../../services/data.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { UrlUpdateService } from '../../services/url-update.service';
 import { UsernameService } from '../../services/username';
+import { Metrics } from '../../services/metrics';
 
 @Component({
   selector: 'app-profile',
@@ -57,10 +82,10 @@ import { UsernameService } from '../../services/username';
     MatMenuModule,
     FormsModule,
     MatFormFieldModule,
-    ProfileHeaderComponent
+    ProfileHeaderComponent,
   ],
   templateUrl: './profile.component.html',
-  styleUrl: './profile.component.scss'
+  styleUrl: './profile.component.scss',
 })
 export class ProfileComponent {
   private data = inject(DataService);
@@ -82,6 +107,8 @@ export class ProfileComponent {
   readonly utilities = inject(UtilitiesService);
   private readonly url = inject(UrlUpdateService);
   private readonly username = inject(UsernameService);
+  private readonly profileTracking = inject(ProfileTrackingService);
+  private readonly metrics = inject(Metrics);
 
   pubkey = signal<string>('');
   userMetadata = signal<NostrRecord | undefined>(undefined);
@@ -112,9 +139,16 @@ export class ProfileComponent {
     // Whenever profile is edited by user, update the user metadata if it matches the current pubkey
     effect(() => {
       const profile = this.accountState.profile();
+      const currentPubkey = this.pubkey();
+      const currentUserMetadata = this.userMetadata();
 
-      if (profile?.event.pubkey === this.pubkey() && this.userMetadata()?.event.id != profile?.event.id) {
-        this.userMetadata.set(profile);
+      if (
+        profile?.event.pubkey === currentPubkey &&
+        currentUserMetadata?.event.id !== profile?.event.id
+      ) {
+        untracked(() => {
+          this.userMetadata.set(profile);
+        });
       }
     });
 
@@ -130,7 +164,7 @@ export class ProfileComponent {
           id = pubkeyForUsername;
           username = this.routeData()?.['data']?.username;
         } else {
-          id = this.routeParams()?.get('id')
+          id = this.routeParams()?.get('id');
         }
 
         if (id) {
@@ -148,40 +182,66 @@ export class ProfileComponent {
             if (username) {
               this.url.updatePathSilently(['/u', username]);
             } else {
-              username = await this.username.getUsername(id);
+              // username = await this.username.getUsername(id);
+              const identifier: string = id;
+              this.username.getUsername(id).then(username => {
+                if (username) {
+                  this.url.updatePathSilently(['/u', username]);
+                } else {
+                  // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.
+                  const encoded = nip19.npubEncode(identifier);
+                  this.url.updatePathSilently(['/p', identifier]);
+                }
+              });
 
-              if (username) {
-                this.url.updatePathSilently(['/u', username]);
-              }
-              else {
-                // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.
-                const encoded = nip19.npubEncode(id);
-                this.url.updatePathSilently(['/p', id]);
-              }
+              // if (username) {
+              //   this.url.updatePathSilently(['/u', username]);
+              // }
+              // else {
+              //   // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.
+              //   const encoded = nip19.npubEncode(id);
+              //   this.url.updatePathSilently(['/p', id]);
+              // }
             }
           } else {
             if (!username) {
-              username = await this.username.getUsername(id);
+              const identifier: string = id;
+              this.username.getUsername(id).then(username => {
+                if (username) {
+                  this.url.updatePathSilently(['/u', username]);
+                } else {
+                  // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.
+                  const encoded = nip19.npubEncode(identifier);
+                  this.url.updatePathSilently(['/p', identifier]);
+                }
+              });
 
-              if (username) {
-                this.url.updatePathSilently(['/u', username]);
-              }
-              else {
-                // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.
-                const encoded = nip19.npubEncode(id);
-                this.url.updatePathSilently(['/p', encoded]);
-              }
+              // username = await this.username.getUsername(id);
+
+              // if (username) {
+              //   this.url.updatePathSilently(['/u', username]);
+              // }
+              // else {
+              //   // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.
+              //   const encoded = nip19.npubEncode(id);
+              //   this.url.updatePathSilently(['/p', encoded]);
+              // }
             }
           }
 
           this.profileState.setCurrentProfilePubkey(id);
           this.pubkey.set(id);
 
-         
-
           // Always attempt to load user profile and check if own profile, regardless of relay status
           untracked(async () => {
             await this.loadUserProfile(this.pubkey());
+
+            await this.metrics.incrementMetric(this.pubkey(), 'viewed');
+
+            // Track profile view (but not for own profile)
+            if (!this.isOwnProfile()) {
+              await this.profileTracking.trackProfileView(this.pubkey());
+            }
           });
 
           // this.userRelay.subscribe([{
@@ -193,8 +253,6 @@ export class ProfileComponent {
           // }, () => {
           //   console.log('FINISHED!!!');
           // });
-
-
         } else {
           this.error.set('No user ID provided');
           this.isLoading.set(false);
@@ -228,11 +286,13 @@ export class ProfileComponent {
   // Helper method to determine if the current route should use compact header
   private shouldUseCompactHeader(url: string): boolean {
     // Check if URL contains these paths that require compact header
-    return url.includes('/following') ||
+    return (
+      url.includes('/following') ||
       url.includes('/about') ||
       url.includes('/details') ||
       url.includes('/relays') ||
-      url.includes('/media');
+      url.includes('/media')
+    );
   }
 
   /**
@@ -240,7 +300,9 @@ export class ProfileComponent {
    * @returns Window object or null if not in browser
    */
   private getWindow(): Window | null {
-    return isPlatformBrowser(this.platformId) ? this.document.defaultView : null;
+    return isPlatformBrowser(this.platformId)
+      ? this.document.defaultView
+      : null;
   }
 
   // private async loadUserData(pubkey: string, disconnect = true): Promise<void> {
@@ -276,20 +338,25 @@ export class ProfileComponent {
 
     try {
       // Try to get from cache first
-      let metadata = await this.nostrService.getMetadataForUser(pubkey, true);
+      const metadata = await this.data.getProfile(pubkey, true);
+      // let metadata = await this.nostrService.getMetadataForUser(pubkey, true);
       this.userMetadata.set(metadata);
 
       if (!metadata) {
         // Don't set an error - allow the profile page to load without metadata
-        this.logger.warn('User profile metadata not found, but continuing to load profile content');
+        this.logger.warn(
+          'User profile metadata not found, but continuing to load profile content'
+        );
       }
 
       // Always scroll and load data, regardless of whether metadata was found
-      setTimeout(() => this.layoutService.scrollToOptimalProfilePosition(), 100);
+      setTimeout(
+        () => this.layoutService.scrollToOptimalProfilePosition(),
+        100
+      );
 
       // Load user data regardless of metadata availability
       // this.loadUserData(pubkey);
-
     } catch (err) {
       this.logger.error('Error loading user profile', err);
       this.error.set('Error loading user profile');
@@ -338,15 +405,20 @@ export class ProfileComponent {
       return;
     }
 
-    navigator.clipboard.writeText(text)
+    navigator.clipboard
+      .writeText(text)
       .then(() => {
         this.logger.debug(`Copied ${type} to clipboard:`, text);
-        this.snackBar.open(`${type.charAt(0).toUpperCase() + type.slice(1)} copied to clipboard`, 'Dismiss', {
-          duration: 3000,
-          horizontalPosition: 'center',
-          verticalPosition: 'bottom',
-          panelClass: 'copy-snackbar'
-        });
+        this.snackBar.open(
+          `${type.charAt(0).toUpperCase() + type.slice(1)} copied to clipboard`,
+          'Dismiss',
+          {
+            duration: 3000,
+            horizontalPosition: 'center',
+            verticalPosition: 'bottom',
+            panelClass: 'copy-snackbar',
+          }
+        );
       })
       .catch(error => {
         this.logger.error('Failed to copy to clipboard:', error);
@@ -354,7 +426,7 @@ export class ProfileComponent {
           duration: 3000,
           horizontalPosition: 'center',
           verticalPosition: 'bottom',
-          panelClass: 'error-snackbar'
+          panelClass: 'error-snackbar',
         });
       });
   }
@@ -379,7 +451,10 @@ export class ProfileComponent {
   copyFollowingList(): void {
     // Placeholder for actual implementation that would fetch the following list
     this.logger.debug('Copy following list requested for:', this.pubkey());
-    this.copyToClipboard('Following list not implemented yet', 'following list');
+    this.copyToClipboard(
+      'Following list not implemented yet',
+      'following list'
+    );
   }
 
   copyRelayList(): void {
@@ -393,15 +468,18 @@ export class ProfileComponent {
     const window = this.getWindow();
 
     if (isPlatformBrowser(this.platformId) && window?.navigator?.share) {
-      window.navigator.share({
-        title: `${this.getFormattedName()}'s Nostr Profile`,
-        text: `Check out ${this.getFormattedName()} on Nostr`,
-        url: this.getCurrentUrl()
-      }).then(() => {
-        this.logger.debug('Profile shared successfully');
-      }).catch((error) => {
-        this.logger.error('Error sharing profile:', error);
-      });
+      window.navigator
+        .share({
+          title: `${this.getFormattedName()}'s Nostr Profile`,
+          text: `Check out ${this.getFormattedName()} on Nostr`,
+          url: this.getCurrentUrl(),
+        })
+        .then(() => {
+          this.logger.debug('Profile shared successfully');
+        })
+        .catch(error => {
+          this.logger.error('Error sharing profile:', error);
+        });
     } else {
       // Fallback if Web Share API is not available
       this.copyToClipboard(this.getCurrentUrl(), 'profile URL');
@@ -410,11 +488,6 @@ export class ProfileComponent {
 
   shareProfileUrl(): void {
     this.copyToClipboard(this.getCurrentUrl(), 'profile URL');
-  }
-
-  async unfollowUser() {
-    this.logger.debug('Unfollow requested for:', this.pubkey());
-    await this.accountState.unfollow(this.pubkey());
   }
 
   isFollowing = computed(() => {
@@ -433,14 +506,6 @@ export class ProfileComponent {
   }
 
   /**
-   * Follows the user
-   */
-  async followUser() {
-    this.logger.debug('Follow requested for:', this.pubkey());
-    await this.accountState.follow(this.pubkey());
-  }
-
-  /**
    * Opens the profile picture in a larger view dialog
    */
   openProfilePicture(): void {
@@ -450,11 +515,11 @@ export class ProfileComponent {
         data: {
           mediaUrl: metadata.data.picture,
           mediaType: 'image',
-          mediaTitle: this.getFormattedName() + ' Profile Picture'
+          mediaTitle: this.getFormattedName() + ' Profile Picture',
         },
         maxWidth: '100vw',
         maxHeight: '100vh',
-        panelClass: 'profile-picture-dialog'
+        panelClass: 'profile-picture-dialog',
       });
 
       this.logger.debug('Opened profile picture dialog');
@@ -469,17 +534,14 @@ export class ProfileComponent {
     //   this.logger.debug('Cannot generate QR code in server environment');
     //   return;
     // }
-
     // const metadata = this.userMetadata();
     // if (!metadata?.data?.lud16) {
     //   this.lightningQrCode.set('');
     //   return;
     // }
-
     // try {
     //   // Format lightning address for QR code
     //   const lightning = metadata.data.lud16;
-
     //   const dataUrl = await QRCode.toDataURL(`lightning:${lightning}`, {
     //     margin: 1,
     //     width: 200,
@@ -488,7 +550,6 @@ export class ProfileComponent {
     //       light: '#FFFFFF'
     //     }
     //   });
-
     //   this.lightningQrCode.set(dataUrl);
     // } catch (err) {
     //   this.logger.error('Error generating QR code:', err);

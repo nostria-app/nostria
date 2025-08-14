@@ -3,7 +3,7 @@ import { Location } from '@angular/common';
 import { Router } from '@angular/router';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class UrlUpdateService {
   private location = inject(Location);
@@ -29,9 +29,9 @@ export class UrlUpdateService {
    * Updates internal router state but doesn't change browser URL
    */
   updateRouterStateSilently(commands: any[], extras?: any): void {
-    this.router.navigate(commands, { 
+    this.router.navigate(commands, {
       ...extras,
-      skipLocationChange: true 
+      skipLocationChange: true,
     });
   }
 
@@ -40,19 +40,19 @@ export class UrlUpdateService {
    * Replaces current URL in history without adding new entry
    */
   replaceCurrentUrl(commands: any[], extras?: any): void {
-    this.router.navigate(commands, { 
+    this.router.navigate(commands, {
       ...extras,
-      replaceUrl: true 
+      replaceUrl: true,
     });
   }
 
   /**
    * Method 5: Update query parameters only without navigation
    */
-  updateQueryParamsSilently(queryParams: { [key: string]: any }): void {
-    const urlTree = this.router.createUrlTree([], { 
+  updateQueryParamsSilently(queryParams: Record<string, any>): void {
+    const urlTree = this.router.createUrlTree([], {
       queryParams,
-      queryParamsHandling: 'merge' 
+      queryParamsHandling: 'merge',
     });
     this.location.replaceState(this.router.serializeUrl(urlTree));
   }
@@ -60,7 +60,10 @@ export class UrlUpdateService {
   /**
    * Method 6: Update specific path segments without navigation
    */
-  updatePathSilently(pathSegments: string[], queryParams?: { [key: string]: any }): void {
+  updatePathSilently(
+    pathSegments: string[],
+    queryParams?: Record<string, any>
+  ): void {
     const urlTree = this.router.createUrlTree(pathSegments, { queryParams });
     this.location.replaceState(this.router.serializeUrl(urlTree));
   }

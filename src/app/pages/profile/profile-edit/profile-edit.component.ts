@@ -1,4 +1,11 @@
-import { Component, inject, signal, computed, effect } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  computed,
+  effect,
+  OnInit,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -16,14 +23,29 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { DataService } from '../../../services/data.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { MediaService } from '../../../services/media.service';
+import {
+  Profile,
+  ProfileData,
+  ProfileUpdateOptions,
+} from '../../../services/profile';
 
 @Component({
   selector: 'app-profile-edit',
-  imports: [MatIconModule, MatButtonModule, MatCardModule, MatFormFieldModule, MatInputModule, FormsModule, AgoPipe, MatProgressSpinnerModule, MatSlideToggleModule],
+  imports: [
+    MatIconModule,
+    MatButtonModule,
+    MatCardModule,
+    MatFormFieldModule,
+    MatInputModule,
+    FormsModule,
+    AgoPipe,
+    MatProgressSpinnerModule,
+    MatSlideToggleModule,
+  ],
   templateUrl: './profile-edit.component.html',
-  styleUrl: './profile-edit.component.scss'
+  styleUrl: './profile-edit.component.scss',
 })
-export class ProfileEditComponent {
+export class ProfileEditComponent implements OnInit {
   nostr = inject(NostrService);
   storage = inject(StorageService);
   data = inject(DataService);
@@ -31,7 +53,8 @@ export class ProfileEditComponent {
   router = inject(Router);
   media = inject(MediaService);
   private snackBar = inject(MatSnackBar);
-  profile = signal<any>(null);
+  private profileService = inject(Profile);
+  profile = signal<ProfileData | null>(null);
   pubkey = '';
   loading = signal<boolean>(false);
   accountState = inject(AccountStateService);
@@ -99,113 +122,148 @@ export class ProfileEditComponent {
         bannerUrl: '',
         website: '',
         lud16: '',
-        nip05: ''
+        nip05: '',
       });
     }
   }
 
   cancelEdit() {
-    this.router.navigate(['/p', this.accountState.pubkey()], { replaceUrl: true });
+    this.router.navigate(['/p', this.pubkey], { replaceUrl: true });
   }
 
-  async updateMetadata() {
+  // Template-safe getters and setters for form fields
+  get pictureUrl(): string {
+    return (this.profile()?.['pictureUrl'] as string) || '';
+  }
+
+  set pictureUrl(value: string) {
+    this.profile.update(p => ({ ...p, pictureUrl: value }));
+  }
+
+  get bannerUrl(): string {
+    return (this.profile()?.['bannerUrl'] as string) || '';
+  }
+
+  set bannerUrl(value: string) {
+    this.profile.update(p => ({ ...p, bannerUrl: value }));
+  }
+
+  get displayName(): string {
+    return this.profile()?.display_name || '';
+  }
+
+  set displayName(value: string) {
+    this.profile.update(p => ({ ...p, display_name: value }));
+  }
+
+  get name(): string {
+    return this.profile()?.name || '';
+  }
+
+  set name(value: string) {
+    this.profile.update(p => ({ ...p, name: value }));
+  }
+
+  get about(): string {
+    return this.profile()?.about || '';
+  }
+
+  set about(value: string) {
+    this.profile.update(p => ({ ...p, about: value }));
+  }
+
+  get website(): string {
+    return this.profile()?.website || '';
+  }
+
+  set website(value: string) {
+    this.profile.update(p => ({ ...p, website: value }));
+  }
+
+  get nip05(): string {
+    return this.profile()?.nip05 || '';
+  }
+
+  set nip05(value: string) {
+    this.profile.update(p => ({ ...p, nip05: value }));
+  }
+
+  get lud16(): string {
+    return this.profile()?.lud16 || '';
+  }
+
+  set lud16(value: string) {
+    this.profile.update(p => ({ ...p, lud16: value }));
+  }
+
+  async updateMetadata(): Promise<void> {
+    if (!this.profile()) {
+      this.snackBar.open('No profile to update', 'Close', { duration: 3000 });
+      return;
+    }
+
     this.loading.set(true);
 
     try {
-      // We want to be a good Nostr citizen and not delete custom metadata, except for certain deprecated fields.
-      let profile = this.profile();
+      const currentProfile = this.profile()!;
 
-      // Remove deprecated fields NIP-24: https://github.com/nostr-protocol/nips/blob/master/24.md
-      delete profile.displayName;
-      delete profile.username;
+      // Create cleaned profile data
+      const profileData: ProfileData = {
+        display_name: currentProfile.display_name || '',
+        name: currentProfile.name || '',
+        about: currentProfile.about || '',
+        picture: currentProfile.picture || '',
+        banner: currentProfile.banner || '',
+        website: currentProfile.website || '',
+        lud16: currentProfile.lud16 || '',
+        nip05: currentProfile.nip05 || '',
+      };
 
-      // Check if file uploads are needed
-      const needsFileUpload = (!this.useProfileImageUrl() && profile.selectedProfileFile) ||
-        (!this.useBannerUrl() && profile.selectedBannerFile);
+      // Create update options
+      const updateOptions: ProfileUpdateOptions = {
+        profileData,
+      };
 
-      if (needsFileUpload && !this.hasMediaServers()) {
-        this.snackBar.open('You need to configure media servers to upload images', 'Configure Now', {
-          duration: 8000
-        }).onAction().subscribe(() => {
-          this.navigateToMediaSettings();
-        });
+      // Add profile image file if selected
+      if (currentProfile['selectedProfileFile']) {
+        updateOptions.profileImageFile = currentProfile[
+          'selectedProfileFile'
+        ] as File;
+      } else if (this.useProfileImageUrl() && currentProfile['pictureUrl']) {
+        // If using URL, set it directly in profileData
+        profileData.picture = currentProfile['pictureUrl'] as string;
+      }
+
+      // Add banner image file if selected
+      if (currentProfile['selectedBannerFile']) {
+        updateOptions.bannerImageFile = currentProfile[
+          'selectedBannerFile'
+        ] as File;
+      } else if (this.useBannerUrl() && currentProfile['bannerUrl']) {
+        // If using URL, set it directly in profileData
+        profileData.banner = currentProfile['bannerUrl'] as string;
+      }
+
+      // Update the profile using the service
+      const result = await this.profileService.updateProfile(updateOptions);
+
+      if (result.success) {
         this.loading.set(false);
-        return;
+        this.router.navigate(['/p', this.accountState.pubkey()], {
+          replaceUrl: true,
+        });
+      } else {
+        throw new Error(result.error || 'Failed to update profile');
       }
-
-      // Handle profile image upload or URL
-      if (profile.selectedProfileFile && !this.useProfileImageUrl()) {
-        const mediaServers = this.media.mediaServers();
-        const uploadResult = await this.media.uploadFile(profile.selectedProfileFile, true, mediaServers);
-
-        if (!uploadResult.item) {
-          throw new Error(`Failed to upload profile image: ${uploadResult.message || 'Unknown error'}`);
-        }
-
-        profile.picture = uploadResult.item.url;
-      } else if (this.useProfileImageUrl() && profile.pictureUrl) {
-        profile.picture = profile.pictureUrl;
-      }
-
-      // Handle banner upload or URL
-      if (profile.selectedBannerFile && !this.useBannerUrl()) {
-        const mediaServers = this.media.mediaServers();
-        const uploadResult = await this.media.uploadFile(profile.selectedBannerFile, true, mediaServers);
-
-        if (!uploadResult.item) {
-          throw new Error(`Failed to upload banner image: ${uploadResult.message || 'Unknown error'}`);
-        }
-
-        profile.banner = uploadResult.item.url;
-      } else if (this.useBannerUrl() && profile.bannerUrl) {
-        profile.banner = profile.bannerUrl;
-      }
-
-      // Clean up temporary file references
-      delete profile.selectedProfileFile;
-      delete profile.selectedBannerFile;
-      delete profile.pictureUrl;
-      delete profile.bannerUrl;
-
-      // Check if user has existing profile
-      const existingProfile = this.accountState.profile();
-      const kind = existingProfile?.event.kind || 0; // Default to kind 0 for metadata
-      const tags = existingProfile?.event.tags || []; // Default to empty tags array
-
-      // If user enters a NIP-05 identifier for root without "_", we must prepend it with "_".
-      if (profile.nip05 && !profile.nip05.startsWith('_')) {
-        profile.nip05 = `_${profile.nip05}`;
-      }
-
-      const unsignedEvent = this.nostr.createEvent(kind, JSON.stringify(profile), tags);
-      const signedEvent = await this.nostr.signEvent(unsignedEvent);
-
-      await this.relay.publish(signedEvent);
-
-      // Saving the event will parse the content back to JSON, the publish above might not be completed yet,
-      // and will fail if we save. So we clone it and save it instead.
-
-      // const clonedEvent = structuredClone(signedEvent);
-      await this.storage.saveEvent(signedEvent);
-
-      const record = this.data.toRecord(signedEvent);
-      this.accountState.addToAccounts(record.event.pubkey, record);
-      this.accountState.addToCache(record.event.pubkey, record);
-
-      // Update the local account profile
-      this.accountState.account()!.name = profile.display_name || profile.name || '';
-
-      // Update the profile signal with the new data
-      this.accountState.profile.set(this.accountState.getAccountProfile(record.event.pubkey));
-
-      this.loading.set(false);
-
-      this.router.navigate(['/p', this.accountState.pubkey()], { replaceUrl: true });
     } catch (error) {
       console.error('Error updating profile:', error);
-      this.snackBar.open(`Failed to update profile: ${error instanceof Error ? error.message : 'Unknown error'}`, 'Close', {
-        duration: 5000
-      });
+      this.snackBar.open(
+        `Failed to update profile: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'Close',
+        {
+          duration: 5000,
+        }
+      );
       this.loading.set(false);
     }
   }
@@ -218,12 +276,14 @@ export class ProfileEditComponent {
 
       // Simple file type validation
       if (!file.type.includes('image/')) {
-        this.snackBar.open('Please select a valid image file', 'Close', { duration: 3000 });
+        this.snackBar.open('Please select a valid image file', 'Close', {
+          duration: 3000,
+        });
         return;
       }
 
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = e => {
         const result = e.target?.result as string;
 
         if (type === 'profile') {
@@ -243,7 +303,7 @@ export class ProfileEditComponent {
   // Handle URL input for images
   onImageUrlChange(type: 'profile' | 'banner'): void {
     if (type === 'profile') {
-      const url = this.profile()?.pictureUrl;
+      const url = this.profile()?.['pictureUrl'] as string;
       if (url && url.trim() !== '') {
         this.previewProfileImage.set(url);
         // Don't update the main picture field here, let updateMetadata handle it
@@ -251,7 +311,7 @@ export class ProfileEditComponent {
         this.previewProfileImage.set(null);
       }
     } else {
-      const url = this.profile()?.bannerUrl;
+      const url = this.profile()?.['bannerUrl'] as string;
       if (url && url.trim() !== '') {
         this.previewBanner.set(url);
         // Don't update the main banner field here, let updateMetadata handle it
@@ -272,7 +332,7 @@ export class ProfileEditComponent {
         this.profile.update(p => ({
           ...p,
           pictureUrl: currentUrl,
-          selectedProfileFile: null
+          selectedProfileFile: null,
         }));
         if (currentUrl) {
           this.previewProfileImage.set(currentUrl);
@@ -281,7 +341,7 @@ export class ProfileEditComponent {
         // Switching to file mode - clear file selection but keep URL for potential switch back
         this.profile.update(p => ({
           ...p,
-          selectedProfileFile: null
+          selectedProfileFile: null,
         }));
         this.previewProfileImage.set(currentUrl || null);
       }
@@ -294,7 +354,7 @@ export class ProfileEditComponent {
         this.profile.update(p => ({
           ...p,
           bannerUrl: currentUrl,
-          selectedBannerFile: null
+          selectedBannerFile: null,
         }));
         if (currentUrl) {
           this.previewBanner.set(currentUrl);
@@ -303,7 +363,7 @@ export class ProfileEditComponent {
         // Switching to file mode - clear file selection but keep URL for potential switch back
         this.profile.update(p => ({
           ...p,
-          selectedBannerFile: null
+          selectedBannerFile: null,
         }));
         this.previewBanner.set(currentUrl || null);
       }

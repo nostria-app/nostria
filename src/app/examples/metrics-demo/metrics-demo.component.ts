@@ -8,7 +8,7 @@ import { UserMetric } from '../../interfaces/metrics';
   template: `
     <div class="metrics-demo">
       <h2>Metrics Service Demo</h2>
-      
+
       <div class="demo-section">
         <h3>Track User Interactions</h3>
         <button (click)="trackProfileView()">Track Profile View</button>
@@ -26,8 +26,14 @@ import { UserMetric } from '../../interfaces/metrics';
             <p><strong>Likes:</strong> {{ currentMetric.liked }}</p>
             <p><strong>Replies:</strong> {{ currentMetric.replied }}</p>
             <p><strong>Time Spent:</strong> {{ currentMetric.timeSpent }}s</p>
-            <p><strong>Engagement Score:</strong> {{ currentMetric.engagementScore }}</p>
-            <p><strong>Average Time per View:</strong> {{ currentMetric.averageTimePerView?.toFixed(2) }}s</p>
+            <p>
+              <strong>Engagement Score:</strong>
+              {{ currentMetric.engagementScore }}
+            </p>
+            <p>
+              <strong>Average Time per View:</strong>
+              {{ currentMetric.averageTimePerView?.toFixed(2) }}s
+            </p>
           </div>
         }
       </div>
@@ -36,9 +42,14 @@ import { UserMetric } from '../../interfaces/metrics';
         <h3>Top Engaged Users</h3>
         @for (user of topUsers; track user.pubkey) {
           <div class="user-metric">
-            <p><strong>{{ user.pubkey.slice(0, 16) }}...</strong></p>
+            <p>
+              <strong>{{ user.pubkey.slice(0, 16) }}...</strong>
+            </p>
             <p>Engagement Score: {{ user.engagementScore }}</p>
-            <p>Views: {{ user.viewed }}, Likes: {{ user.liked }}, Replies: {{ user.replied }}</p>
+            <p>
+              Views: {{ user.viewed }}, Likes: {{ user.liked }}, Replies:
+              {{ user.replied }}
+            </p>
           </div>
         }
       </div>
@@ -51,57 +62,60 @@ import { UserMetric } from '../../interfaces/metrics';
       </div>
     </div>
   `,
-  styles: [`
-    .metrics-demo {
-      padding: 20px;
-      max-width: 800px;
-    }
-    
-    .demo-section {
-      margin-bottom: 30px;
-      padding: 20px;
-      border: 1px solid var(--mat-sys-color-outline);
-      border-radius: 8px;
-    }
-    
-    .demo-section h3 {
-      margin-top: 0;
-      color: var(--mat-sys-color-primary);
-    }
-    
-    .metric-display, .user-metric {
-      background: var(--mat-sys-color-surface-container);
-      padding: 15px;
-      border-radius: 4px;
-      margin: 10px 0;
-    }
-    
-    .user-metric {
-      margin-bottom: 10px;
-    }
-    
-    button {
-      background: var(--mat-sys-color-primary);
-      color: var(--mat-sys-color-on-primary);
-      border: none;
-      padding: 10px 16px;
-      border-radius: 4px;
-      margin: 5px;
-      cursor: pointer;
-    }
-    
-    button:hover {
-      background: var(--mat-sys-color-primary-container);
-      color: var(--mat-sys-color-on-primary-container);
-    }
-  `]
+  styles: [
+    `
+      .metrics-demo {
+        padding: 20px;
+        max-width: 800px;
+      }
+
+      .demo-section {
+        margin-bottom: 30px;
+        padding: 20px;
+        border: 1px solid var(--mat-sys-color-outline);
+        border-radius: 8px;
+      }
+
+      .demo-section h3 {
+        margin-top: 0;
+        color: var(--mat-sys-color-primary);
+      }
+
+      .metric-display,
+      .user-metric {
+        background: var(--mat-sys-color-surface-container);
+        padding: 15px;
+        border-radius: 4px;
+        margin: 10px 0;
+      }
+
+      .user-metric {
+        margin-bottom: 10px;
+      }
+
+      button {
+        background: var(--mat-sys-color-primary);
+        color: var(--mat-sys-color-on-primary);
+        border: none;
+        padding: 10px 16px;
+        border-radius: 4px;
+        margin: 5px;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: var(--mat-sys-color-primary-container);
+        color: var(--mat-sys-color-on-primary-container);
+      }
+    `,
+  ],
 })
 export class MetricsDemoComponent implements OnInit {
   private readonly metrics = inject(Metrics);
-  
+
   // Test user pubkey (in real app, this would come from actual users)
   private readonly testPubkey = 'test-user-pubkey-123';
-  
+
   currentMetric: UserMetric | null = null;
   topUsers: UserMetric[] = [];
 
@@ -145,7 +159,7 @@ export class MetricsDemoComponent implements OnInit {
       'user-bob-pubkey',
       'user-charlie-pubkey',
       'user-diana-pubkey',
-      'user-eve-pubkey'
+      'user-eve-pubkey',
     ];
 
     for (const pubkey of sampleUsers) {

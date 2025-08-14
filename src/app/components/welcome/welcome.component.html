@@ -1,111 +1,84 @@
 <div class="welcome">
-    <div class="welcome-backdrop">
-        <div class="welcome-top">
-            <button class="welcome-theme-button" mat-icon-button (click)="themeService.toggleDarkMode()">
-                @if (themeService.darkMode()) {
-                <mat-icon>dark_mode</mat-icon>
-                } @else {
-                <mat-icon>light_mode</mat-icon>
-                }
-            </button>
-            <button class="welcome-close-button" mat-icon-button (click)="closeWelcomeScreen()">
-                <mat-icon>close</mat-icon>
-            </button>
-        </div>
-
-        <div class="welcome-content">
-            <div class="welcome-content-container">
-                @if (currentOnboardingPage() === 1) {
-                <div class="welcome-logo-container">
-                    <img src="icons/icon.svg" alt="Nostria logo" class="welcome-logo">
-                </div>
-                <div>
-                    <h1>Welcome to Nostria</h1>
-                    <p>
-                        Discover the future of social media with Nostria - Your Social Media.
-                    </p>
-                    <p>Seamlessly manage multiple accounts, connect to any relay, and navigate a sleek, intuitive
-                        interface
-                        designed for
-                        effortless exploration, sharing, and connection. With global scaling, Nostria delivers a stellar
-                        experience
-                        to users everywhere, no matter your location. Amplify your voice, your way!
-                    </p>
-                </div>
-                } @else if (currentOnboardingPage() === 2) {
-                <div class="welcome-logo-container">
-                    <img src="icons/icon.svg" alt="Nostria logo" class="welcome-logo">
-                </div>
-                <div>
-                    <h1>Features highlights</h1>
-                    <div class="feature-highlights">
-                        <div class="feature-item">
-                            <mat-icon>explore</mat-icon>
-                            <div class="feature-text">
-                                <h3>Discovery Relays</h3>
-                                <p>Discovery Relays help you discover everyone on the Nostria network.</p>
-                            </div>
-                        </div>
-
-                        <div class="feature-item">
-                            <mat-icon>photo_library</mat-icon>
-                            <div class="feature-text">
-                                <h3>Media Library</h3>
-                                <p>Easy and powerful media library, manage your media and files.</p>
-                            </div>
-                        </div>
-
-                        <div class="feature-item">
-                            <mat-icon>public</mat-icon>
-                            <div class="feature-text">
-                                <h3>Global Scaling</h3>
-                                <p>Built to scale globally by distributing everyone across many relays.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                } @else if (currentOnboardingPage() === 3) {
-                <div class="welcome-logo-container">
-                    <img src="icons/icon.svg" alt="Nostria logo" class="welcome-logo">
-                </div>
-                <div>
-                    <h1>Help us scale Nostr</h1>
-                    <p>
-                        Sign up for Nostria Premium or Premium+ to help us scale Nostr and keep the lights on.
-                    </p>
-                    <h2>Privacy and Connections</h2>
-                    <p>
-                        Nostria will automatically connect to the relays that user's have announced as their own
-                        user relays.
-                    </p>
-                    <p>
-                        Nostria will automatically publish existing events that are found, to the
-                        Discovery Relays and your User Relays, depending on the type of event.
-                    </p>
-                </div>
-                }
-            </div>
-        </div>
-
-        <div class="welcome-footer">
-            <div class="page-indicator">Page {{currentOnboardingPage() }} of 3</div>
-            <div class="welcome-actions">
-                @if (currentOnboardingPage() === 1) {
-                <button mat-button (click)="closeWelcomeScreen()">Close</button>&nbsp;
-                }
-
-                @if (currentOnboardingPage() > 1 && currentOnboardingPage() < 4) { <button mat-button
-                    (click)="previousOnboardingPage()">Back</button>&nbsp;
-                    }
-
-                    @if (currentOnboardingPage() < 3) { <button mat-flat-button (click)="nextOnboardingPage()">
-                        Next</button>
-                        }
-
-                        @if (currentOnboardingPage() === 3) {
-                        <button mat-flat-button (click)="closeWelcomeScreen()">Get started</button>
-                        }
-            </div>
-        </div>
+  <div class="welcome-backdrop">
+    <div class="welcome-top">
+      <button
+        class="welcome-theme-button"
+        mat-icon-button
+        (click)="themeService.toggleDarkMode()"
+      >
+        @if (themeService.darkMode()) {
+          <mat-icon>dark_mode</mat-icon>
+        } @else {
+          <mat-icon>light_mode</mat-icon>
+        }
+      </button>
+      <button
+        class="welcome-close-button"
+        mat-icon-button
+        (click)="skipToEnd()"
+      >
+        <mat-icon>close</mat-icon>
+      </button>
     </div>
+
+    <div class="welcome-content">
+      <div class="welcome-content-container">
+        @let currentStep = getCurrentStep();
+
+        <!-- Step Icon and Visual -->
+        <div class="welcome-logo-container">
+          <div class="wizard-step-icon">
+            <mat-icon class="step-icon">{{ currentStep.icon }}</mat-icon>
+          </div>
+        </div>
+
+        <!-- Step Content -->
+        <div class="wizard-step-content">
+          <h1>{{ currentStep.title }}</h1>
+          <div class="step-subtitle">{{ currentStep.subtitle }}</div>
+
+          @for (paragraph of currentStep.content; track $index) {
+            <p>{{ paragraph }}</p>
+          }
+
+          <!-- Features List -->
+          @if (currentStep.features.length > 0) {
+            <div class="step-features">
+              @for (feature of currentStep.features; track feature.icon) {
+                <div class="feature-item">
+                  <mat-icon class="feature-icon">{{ feature.icon }}</mat-icon>
+                  <span class="feature-text">{{ feature.text }}</span>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <div class="welcome-footer">
+      <div class="step-indicator">
+        @if (currentWizardStep() <= totalWizardSteps()) {
+          Step {{ currentWizardStep() }} of {{ totalWizardSteps() }}
+        }
+      </div>
+
+      <div class="welcome-actions">
+        @if (currentWizardStep() === 1) {
+          <!-- First step actions -->
+          <button mat-flat-button (click)="nextStep()">Continue</button>
+        } @else if (currentWizardStep() === totalWizardSteps()) {
+          <!-- Last step actions -->
+          <button mat-button (click)="previousStep()">Back</button>&nbsp;
+          <button mat-flat-button (click)="completeWizard()">
+            Start Using Nostria
+          </button>
+        } @else {
+          <!-- Middle steps actions -->
+          <button mat-button (click)="previousStep()">Back</button>&nbsp;
+          <button mat-flat-button (click)="nextStep()">Continue</button>
+        }
+      </div>
+    </div>
+  </div>
 </div>

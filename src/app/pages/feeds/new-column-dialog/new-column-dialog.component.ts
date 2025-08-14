@@ -1,6 +1,10 @@
 import { Component, inject, signal, computed } from '@angular/core';
 
-import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
+import {
+  MatDialogRef,
+  MAT_DIALOG_DATA,
+  MatDialogModule,
+} from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -11,7 +15,13 @@ import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatStepperModule } from '@angular/material/stepper';
 import { MatCardModule } from '@angular/material/card';
 import { MatDividerModule } from '@angular/material/divider';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormControl } from '@angular/forms';
+import {
+  FormBuilder,
+  FormGroup,
+  Validators,
+  ReactiveFormsModule,
+  FormControl,
+} from '@angular/forms';
 import { COMMA, ENTER } from '@angular/cdk/keycodes';
 import { MatChipInputEvent } from '@angular/material/chips';
 import { MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
@@ -54,7 +64,7 @@ const NOSTR_KINDS = [
   { value: 30001, label: 'Categorized Bookmark List (30001)' },
   { value: 30023, label: 'Long-form Content (30023)' },
   { value: 30024, label: 'Draft Long-form Content (30024)' },
-  { value: 30078, label: 'Application-specific Data (30078)' }
+  { value: 30078, label: 'Application-specific Data (30078)' },
 ];
 
 @Component({
@@ -73,8 +83,8 @@ const NOSTR_KINDS = [
     MatCardModule,
     MatDividerModule,
     ReactiveFormsModule,
-    MatButtonToggleModule
-],
+    MatButtonToggleModule,
+  ],
   template: `
     <div class="dialog-container">
       <div class="dialog-header">
@@ -97,10 +107,11 @@ const NOSTR_KINDS = [
                   <h3>Column Type</h3>
                   <div class="column-type-cards">
                     @for (type of columnTypes(); track type.key) {
-                      <mat-card 
-                        class="column-type-card" 
+                      <mat-card
+                        class="column-type-card"
                         [class.selected]="selectedColumnType() === type.key"
-                        (click)="selectColumnType(type.key)">
+                        (click)="selectColumnType(type.key)"
+                      >
                         <mat-card-content>
                           <div class="type-header">
                             <mat-icon>{{ type.icon }}</mat-icon>
@@ -119,13 +130,17 @@ const NOSTR_KINDS = [
                 <div class="basic-fields">
                   <mat-form-field appearance="outline" class="full-width">
                     <mat-label>Column Name</mat-label>
-                    <input matInput formControlName="label" placeholder="My Custom Column">
+                    <input
+                      matInput
+                      formControlName="label"
+                      placeholder="My Custom Column"
+                    />
                     <mat-icon matSuffix>label</mat-icon>
                     @if (columnForm.get('label')?.hasError('required')) {
                       <mat-error>Column name is required</mat-error>
                     }
                   </mat-form-field>
-                  
+
                   <mat-form-field appearance="outline" class="full-width">
                     <mat-label>Icon</mat-label>
                     <mat-select formControlName="icon">
@@ -138,10 +153,10 @@ const NOSTR_KINDS = [
                         </mat-option>
                       }
                     </mat-select>
-                    <mat-icon matSuffix>{{ columnForm.get('icon')?.value || 'widgets' }}</mat-icon>
+                    <mat-icon matSuffix>{{
+                      columnForm.get('icon')?.value || 'widgets'
+                    }}</mat-icon>
                   </mat-form-field>
-                  
-                
                 </div>
               </div>
             </mat-step>
@@ -153,8 +168,10 @@ const NOSTR_KINDS = [
                 <!-- Event Kinds Selection -->
                 <div class="kinds-section">
                   <h3>Event Kinds</h3>
-                  <p class="section-description">Select which types of Nostr events to include in this column</p>
-                  
+                  <p class="section-description">
+                    Select which types of Nostr events to include in this column
+                  </p>
+
                   <mat-form-field class="full-width" appearance="outline">
                     <mat-label>Event Kinds</mat-label>
                     <mat-chip-grid #chipGrid aria-label="Event kinds selection">
@@ -176,7 +193,10 @@ const NOSTR_KINDS = [
                       [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
                       (matChipInputTokenEnd)="addKind($event)"
                     />
-                    <mat-autocomplete #kindAutocomplete="matAutocomplete" (optionSelected)="kindSelected($event)">
+                    <mat-autocomplete
+                      #kindAutocomplete="matAutocomplete"
+                      (optionSelected)="kindSelected($event)"
+                    >
                       @for (kind of filteredKinds(); track kind.value) {
                         <mat-option [value]="kind.value">
                           <strong>{{ kind.value }}</strong> - {{ kind.label }}
@@ -187,15 +207,21 @@ const NOSTR_KINDS = [
                   </mat-form-field>
                 </div>
 
-                 <div class="kinds-section">
+                <div class="kinds-section">
                   <h3>Following or Public</h3>
-                  <p class="section-description">Select which events to include in this column</p>
-                  
-                  <mat-button-toggle-group name="source" formControlName="source">
-                    <mat-button-toggle [disabled]="true" value="following">Following</mat-button-toggle>
+                  <p class="section-description">
+                    Select which events to include in this column
+                  </p>
+
+                  <mat-button-toggle-group
+                    name="source"
+                    formControlName="source"
+                  >
+                    <mat-button-toggle value="following"
+                      >Following</mat-button-toggle
+                    >
                     <mat-button-toggle value="public">Public</mat-button-toggle>
                   </mat-button-toggle-group>
-
                 </div>
               </div>
             </mat-step>
@@ -206,17 +232,24 @@ const NOSTR_KINDS = [
               <div class="step-content">
                 <div class="relay-section">
                   <h3>Relay Source</h3>
-                  <p class="section-description">Choose which relays to use for this column</p>
-                  
+                  <p class="section-description">
+                    Choose which relays to use for this column
+                  </p>
+
                   <mat-form-field appearance="outline" class="full-width">
                     <mat-label>Relay Configuration</mat-label>
-                    <mat-select formControlName="relayConfig" (selectionChange)="onRelayConfigChange($event.value)">
+                    <mat-select
+                      formControlName="relayConfig"
+                      (selectionChange)="onRelayConfigChange($event.value)"
+                    >
                       <mat-option value="user">
                         <div class="relay-option">
                           <mat-icon>person</mat-icon>
                           <div>
                             <div class="option-title">User Relays</div>
-                            <div class="option-description">Use your configured relays</div>
+                            <div class="option-description">
+                              Use your configured relays
+                            </div>
                           </div>
                         </div>
                       </mat-option>
@@ -225,7 +258,9 @@ const NOSTR_KINDS = [
                           <mat-icon>explore</mat-icon>
                           <div>
                             <div class="option-title">Discovery Relays</div>
-                            <div class="option-description">Use discovery and search relays</div>
+                            <div class="option-description">
+                              Use discovery and search relays
+                            </div>
                           </div>
                         </div>
                       </mat-option>
@@ -234,7 +269,9 @@ const NOSTR_KINDS = [
                           <mat-icon>settings</mat-icon>
                           <div>
                             <div class="option-title">Custom Relays</div>
-                            <div class="option-description">Specify custom relay URLs</div>
+                            <div class="option-description">
+                              Specify custom relay URLs
+                            </div>
                           </div>
                         </div>
                       </mat-option>
@@ -247,7 +284,10 @@ const NOSTR_KINDS = [
                       <h4>Custom Relay URLs</h4>
                       <mat-form-field class="full-width" appearance="outline">
                         <mat-label>Custom Relays</mat-label>
-                        <mat-chip-grid #relayChipGrid aria-label="Custom relays">
+                        <mat-chip-grid
+                          #relayChipGrid
+                          aria-label="Custom relays"
+                        >
                           @for (relay of customRelays(); track relay) {
                             <mat-chip-row (removed)="removeCustomRelay(relay)">
                               {{ relay }}
@@ -266,7 +306,9 @@ const NOSTR_KINDS = [
                           (matChipInputTokenEnd)="addCustomRelay($event)"
                         />
                         <mat-icon matSuffix>add_link</mat-icon>
-                        <mat-hint>Enter WebSocket URLs (wss:// or ws://)</mat-hint>
+                        <mat-hint
+                          >Enter WebSocket URLs (wss:// or ws://)</mat-hint
+                        >
                       </mat-form-field>
                     </div>
                   }
@@ -295,342 +337,346 @@ const NOSTR_KINDS = [
           </mat-stepper>
         </form>
       </div>
-      
+
       <div class="dialog-actions" mat-dialog-actions>
         <button mat-button mat-dialog-close type="button">Cancel</button>
-        <button mat-flat-button color="primary" (click)="onSubmit()" [disabled]="!columnForm.valid">
+        <button
+          mat-flat-button
+          color="primary"
+          (click)="onSubmit()"
+          [disabled]="!columnForm.valid"
+        >
           <mat-icon>{{ isEditMode() ? 'save' : 'add' }}</mat-icon>
           {{ isEditMode() ? 'Save Changes' : 'Create Column' }}
         </button>
       </div>
     </div>
   `,
-  styles: [`
-    .dialog-container {
-      // width: 800px;
-      width: 100%;
+  styles: [
+    `
+      .dialog-container {
+        // width: 800px;
+        width: 100%;
 
-      // max-width: 95vw;
-      max-height: 90vh;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    .dialog-header {
-      padding: 24px 24px 16px;
-      border-bottom: 1px solid rgba(0, 0, 0, 0.12);
-      flex-shrink: 0;
-
-      h2 {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin: 0 0 8px 0;
-        font-size: 1.5rem;
-        font-weight: 500;
-      }
-
-      .dialog-subtitle {
-        margin: 0;
-        opacity: 0.7;
-        font-size: 0.875rem;
-      }
-    }
-
-    .dialog-content {
-      flex: 1;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-
-      form {
-        height: 100%;
+        // max-width: 95vw;
+        max-height: 90vh;
         display: flex;
         flex-direction: column;
-      }
-    }
-
-    .column-stepper {
-      flex: 1;
-      overflow: hidden;
-
-      ::ng-deep .mat-stepper-header-position-bottom {
-        order: 2;
-      }
-
-      ::ng-deep .mat-step-text-label {
-        font-weight: 500;
-      }
-
-      ::ng-deep .mat-horizontal-stepper-content {
         overflow: hidden;
       }
-    }
 
-    .step-content {
-      padding: 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 24px;
-      overflow-y: auto;
-      max-height: 50vh;
-    }
-
-    .dialog-actions {
-      padding: 16px 24px;
-      border-top: 1px solid rgba(0, 0, 0, 0.12);
-      display: flex;
-      gap: 12px;
-      justify-content: flex-end;
-      flex-shrink: 0;
-      background-color: var(--mat-app-background-color);
-
-      button {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-    }
-
-    .full-width {
-      width: 100%;
-    }
-
-    .column-type-section {
-      h3 {
-        margin: 0 0 16px 0;
-        font-size: 1.1rem;
-        font-weight: 500;
-      }
-    }
-
-    .column-type-cards {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 12px;
-      align-items: stretch;
-    }
-
-    .column-type-card {
-      cursor: pointer;
-      transition: all 0.2s ease;
-      border: 2px solid transparent;
-      height: 110px;
-      width: 100%;
-      display: flex;
-      flex-direction: column;
-
-      &:hover {
-        transform: translateY(-2px);
-        box-shadow: var(--mat-sys-level2);
-      }
-
-      &.selected {
-        border-color: var(--mat-sys-primary);
-        background-color: rgba(var(--mat-sys-primary-rgb), 0.04);
-      }
-
-      mat-card-content {
-        padding: 12px;
-        text-align: center;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        flex: 1;
-        height: 100%;
-      }
-
-      .type-header {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 6px;
+      .dialog-header {
+        padding: 24px 24px 16px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.12);
         flex-shrink: 0;
 
-        mat-icon {
+        h2 {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin: 0 0 8px 0;
           font-size: 1.5rem;
-          width: 1.5rem;
-          height: 1.5rem;
+          font-weight: 500;
         }
 
-        h4 {
+        .dialog-subtitle {
           margin: 0;
-          font-size: 0.9rem;
+          opacity: 0.7;
+          font-size: 0.875rem;
+        }
+      }
+
+      .dialog-content {
+        flex: 1;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+
+        form {
+          height: 100%;
+          display: flex;
+          flex-direction: column;
+        }
+      }
+
+      .column-stepper {
+        flex: 1;
+        overflow: hidden;
+
+        ::ng-deep .mat-stepper-header-position-bottom {
+          order: 2;
+        }
+
+        ::ng-deep .mat-step-text-label {
           font-weight: 500;
-          height: 1.2em;
+        }
+
+        ::ng-deep .mat-horizontal-stepper-content {
+          overflow: hidden;
+        }
+      }
+
+      .step-content {
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        overflow-y: auto;
+        max-height: 50vh;
+      }
+
+      .dialog-actions {
+        padding: 16px 24px;
+        border-top: 1px solid rgba(0, 0, 0, 0.12);
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+        flex-shrink: 0;
+        background-color: var(--mat-app-background-color);
+
+        button {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+      }
+
+      .column-type-section {
+        h3 {
+          margin: 0 0 16px 0;
+          font-size: 1.1rem;
+          font-weight: 500;
+        }
+      }
+
+      .column-type-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 12px;
+        align-items: stretch;
+      }
+
+      .column-type-card {
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: 2px solid transparent;
+        height: 110px;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+
+        &:hover {
+          transform: translateY(-2px);
+          box-shadow: var(--mat-sys-level2);
+        }
+
+        &.selected {
+          border-color: var(--mat-sys-primary);
+          background-color: rgba(var(--mat-sys-primary-rgb), 0.04);
+        }
+
+        mat-card-content {
+          padding: 12px;
+          text-align: center;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          flex: 1;
+          height: 100%;
+        }
+
+        .type-header {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 6px;
+          flex-shrink: 0;
+
+          mat-icon {
+            font-size: 1.5rem;
+            width: 1.5rem;
+            height: 1.5rem;
+          }
+
+          h4 {
+            margin: 0;
+            font-size: 0.9rem;
+            font-weight: 500;
+            height: 1.2em;
+            line-height: 1.2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+        }
+
+        .type-description {
+          margin: 0;
+          font-size: 0.75rem;
+          opacity: 0.7;
           line-height: 1.2;
+          height: 2.4em;
           display: flex;
           align-items: center;
           justify-content: center;
+          text-align: center;
+          overflow: hidden;
+          flex: 1;
         }
       }
 
-      .type-description {
-        margin: 0;
-        font-size: 0.75rem;
-        opacity: 0.7;
-        line-height: 1.2;
-        height: 2.4em;
+      .basic-fields {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .icon-option {
         display: flex;
         align-items: center;
-        justify-content: center;
-        text-align: center;
-        overflow: hidden;
-        flex: 1;
-      }
-    }
+        gap: 12px;
 
-    .basic-fields {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
+        mat-icon {
+          color: var(--mat-sys-primary);
+        }
 
-    .icon-option {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-
-      mat-icon {
-        color: var(--mat-sys-primary);
+        span {
+          font-weight: 500;
+        }
       }
 
-      span {
-        font-weight: 500;
-      }
-    }
+      .kinds-section,
+      .relay-section {
+        h3,
+        h4 {
+          margin: 0 0 8px 0;
+          font-size: 1.1rem;
+          font-weight: 500;
+        }
 
-    .kinds-section,
-    .relay-section {
-      h3, h4 {
-        margin: 0 0 8px 0;
-        font-size: 1.1rem;
-        font-weight: 500;
-      }
-
-      .section-description {
-        margin: 0 0 16px 0;
-        opacity: 0.7;
-        font-size: 0.875rem;
-      }
-    }
-
-    .custom-relays-section {
-      margin-top: 16px;
-      padding: 16px;
-      border: 1px solid rgba(0, 0, 0, 0.12);
-      border-radius: 8px;
-      background-color: rgba(0, 0, 0, 0.02);
-    }
-
-    .relay-option {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-
-      mat-icon {
-        color: var(--mat-sys-primary);
+        .section-description {
+          margin: 0 0 16px 0;
+          opacity: 0.7;
+          font-size: 0.875rem;
+        }
       }
 
-      .option-title {
-        font-weight: 500;
-        font-size: 0.95rem;
+      .custom-relays-section {
+        margin-top: 16px;
+        padding: 16px;
+        border: 1px solid rgba(0, 0, 0, 0.12);
+        border-radius: 8px;
+        background-color: rgba(0, 0, 0, 0.02);
       }
 
-      .option-description {
-        font-size: 0.8rem;
-        opacity: 0.7;
-      }
-    }
+      .relay-option {
+        display: flex;
+        align-items: center;
+        gap: 12px;
 
-    .relay-preview {
-      margin-top: 16px;
+        mat-icon {
+          color: var(--mat-sys-primary);
+        }
 
-      h4 {
-        margin: 0 0 12px 0;
-        font-size: 0.95rem;
-        font-weight: 500;
-      }
-    }
+        .option-title {
+          font-weight: 500;
+          font-size: 0.95rem;
+        }
 
-    .relay-list {
-      max-height: 120px;
-      overflow-y: auto;
-      border: 1px solid rgba(0, 0, 0, 0.12);
-      border-radius: 4px;
-      background-color: rgba(0, 0, 0, 0.02);
-    }
-
-    .relay-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-
-      &:last-child {
-        border-bottom: none;
+        .option-description {
+          font-size: 0.8rem;
+          opacity: 0.7;
+        }
       }
 
-      .relay-status {
-        font-size: 1rem;
-        width: 1rem;
-        height: 1rem;
-        color: #4caf50;
+      .relay-preview {
+        margin-top: 16px;
+
+        h4 {
+          margin: 0 0 12px 0;
+          font-size: 0.95rem;
+          font-weight: 500;
+        }
       }
 
-      .relay-url {
-        font-family: monospace;
-        font-size: 0.85rem;
+      .relay-list {
+        max-height: 120px;
+        overflow-y: auto;
+        border: 1px solid rgba(0, 0, 0, 0.12);
+        border-radius: 4px;
+        background-color: rgba(0, 0, 0, 0.02);
       }
-    }
 
-    .no-relays {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 16px;
-      justify-content: center;
-      opacity: 0.5;
-
-      mat-icon {
-        color: #ff9800;
-      }
-    }
-
-    .dialog-actions {
-      padding: 16px 24px;
-      border-top: 1px solid rgba(0, 0, 0, 0.12);
-      display: flex;
-      gap: 12px;
-      justify-content: flex-end;
-      flex-shrink: 0;
-      background-color: var(--mat-app-background-color);
-
-      button {
+      .relay-item {
         display: flex;
         align-items: center;
         gap: 8px;
+        padding: 8px 12px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+
+        &:last-child {
+          border-bottom: none;
+        }
+
+        .relay-status {
+          font-size: 1rem;
+          width: 1rem;
+          height: 1rem;
+          color: #4caf50;
+        }
+
+        .relay-url {
+          font-family: monospace;
+          font-size: 0.85rem;
+        }
       }
-    }
 
-    mat-divider {
-      margin: 16px 0;
-    }
+      .no-relays {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 16px;
+        justify-content: center;
+        opacity: 0.5;
 
-    // Improve chip appearance
-    mat-chip-row {
-      font-size: 0.875rem;
-    }
-
-    // Stepper improvements
-    ::ng-deep .mat-stepper-horizontal {
-      .mat-step-header {
-        padding: 8px 24px;
+        mat-icon {
+          color: #ff9800;
+        }
       }
-    }
-  `]
+
+      .dialog-actions {
+        padding: 16px 24px;
+        border-top: 1px solid rgba(0, 0, 0, 0.12);
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+        flex-shrink: 0;
+        background-color: var(--mat-app-background-color);
+
+        button {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+      }
+
+      mat-divider {
+        margin: 16px 0;
+      }
+
+      // Improve chip appearance
+      mat-chip-row {
+        font-size: 0.875rem;
+      }
+
+      // Stepper improvements
+      ::ng-deep .mat-stepper-horizontal {
+        .mat-step-header {
+          padding: 8px 24px;
+        }
+      }
+    `,
+  ],
 })
 export class NewColumnDialogComponent {
   private fb = inject(FormBuilder);
@@ -646,19 +692,19 @@ export class NewColumnDialogComponent {
 
   contentConfigGroup = this.fb.group({
     kinds: [this.data.column?.kinds || []],
-    source: [this.data.column?.source || 'public'] 
+    source: [this.data.column?.source || 'following'],
   });
 
   relayConfigGroup = this.fb.group({
     relayConfig: [this.data.column?.relayConfig || 'user'],
-    customRelays: [this.data.column?.customRelays || []]
+    customRelays: [this.data.column?.customRelays || []],
   });
 
   columnForm = this.fb.group({
     ...this.basicInfoGroup.controls,
     ...this.contentConfigGroup.controls,
     ...this.relayConfigGroup.controls,
-    type: [this.data.column?.type || 'custom']
+    type: [this.data.column?.type || 'custom'],
   });
 
   // Signals and state
@@ -666,7 +712,9 @@ export class NewColumnDialogComponent {
   selectedColumnType = signal<string>(this.data.column?.type || 'custom');
   selectedKinds = signal<number[]>(this.data.column?.kinds || []);
   customRelays = signal<string[]>(this.data.column?.customRelays || []);
-  showCustomRelays = computed(() => this.columnForm.get('relayConfig')?.value === 'custom');
+  showCustomRelays = computed(
+    () => this.columnForm.get('relayConfig')?.value === 'custom'
+  );
 
   // Form controls for chips
   kindInputControl = new FormControl('');
@@ -685,7 +733,8 @@ export class NewColumnDialogComponent {
     const selected = this.selectedKinds();
 
     return this.nostrKinds().filter(kind => {
-      const matchesInput = kind.label.toLowerCase().includes(input) ||
+      const matchesInput =
+        kind.label.toLowerCase().includes(input) ||
         kind.value.toString().includes(input);
       const notSelected = !selected.includes(kind.value);
       return matchesInput && notSelected;
@@ -694,7 +743,9 @@ export class NewColumnDialogComponent {
 
   selectColumnType(typeKey: string): void {
     this.selectedColumnType.set(typeKey);
-    this.columnForm.patchValue({ type: typeKey as 'photos' | 'videos' | 'notes' | 'articles' | 'custom' });
+    this.columnForm.patchValue({
+      type: typeKey as 'photos' | 'videos' | 'notes' | 'articles' | 'custom',
+    });
 
     // Auto-fill based on column type
     const columnType = this.feedService.getFeedType(typeKey as any);
@@ -707,7 +758,7 @@ export class NewColumnDialogComponent {
     if (!this.isEditMode()) {
       this.columnForm.patchValue({
         icon: columnType.icon,
-        label: columnType.label
+        label: columnType.label,
       });
     }
   }
@@ -803,10 +854,11 @@ export class NewColumnDialogComponent {
         source: formValue.source || 'public',
         kinds: this.selectedKinds(),
         relayConfig: formValue.relayConfig as any,
-        customRelays: formValue.relayConfig === 'custom' ? this.customRelays() : undefined,
+        customRelays:
+          formValue.relayConfig === 'custom' ? this.customRelays() : undefined,
         filters: {},
         createdAt: this.data.column?.createdAt || Date.now(),
-        updatedAt: Date.now()
+        updatedAt: Date.now(),
       };
 
       this.dialogRef.close(columnConfig);

@@ -11,13 +11,13 @@
   padding: 8px;
   background-color: var(--mat-sys-color-surface-container-highest);
   border-bottom: 1px solid var(--mat-sys-color-outline-variant);
-  
+
   .zoom-level {
     margin: 0 10px;
     font-size: 14px;
     color: var(--mat-sys-color-on-surface-variant);
   }
-  
+
   .close-button {
     margin-left: auto;
   }
@@ -32,15 +32,15 @@
   position: relative;
   background-color: var(--mat-sys-color-surface-container-lowest);
   user-select: none; /* Prevent text selection during drag */
-  
+
   img {
     max-width: 100%;
     max-height: 100%;
     transition: transform 0.1s ease-out;
-    
+
     &.draggable {
       cursor: grab;
-      
+
       &:active {
         cursor: grabbing;
       }

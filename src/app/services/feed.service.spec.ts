@@ -15,14 +15,30 @@ describe('FeedService', () => {
   let service: FeedService;
 
   // Mock services
-  const mockLocalStorageService = jasmine.createSpyObj('LocalStorageService', ['getItem', 'setItem']);
-  const mockLoggerService = jasmine.createSpyObj('LoggerService', ['log', 'error', 'warn']);
+  const mockLocalStorageService = jasmine.createSpyObj('LocalStorageService', [
+    'getItem',
+    'setItem',
+  ]);
+  const mockLoggerService = jasmine.createSpyObj('LoggerService', [
+    'log',
+    'error',
+    'warn',
+  ]);
   const mockRelayService = jasmine.createSpyObj('RelayService', ['getPool']);
-  const mockApplicationStateService = jasmine.createSpyObj('ApplicationStateService', ['state']);
-  const mockAccountStateService = jasmine.createSpyObj('AccountStateService', ['state']);
+  const mockApplicationStateService = jasmine.createSpyObj(
+    'ApplicationStateService',
+    ['state']
+  );
+  const mockAccountStateService = jasmine.createSpyObj('AccountStateService', [
+    'state',
+  ]);
   const mockDataService = jasmine.createSpyObj('DataService', ['getData']);
-  const mockUtilitiesService = jasmine.createSpyObj('UtilitiesService', ['utils']);
-  const mockApplicationService = jasmine.createSpyObj('ApplicationService', ['app']);
+  const mockUtilitiesService = jasmine.createSpyObj('UtilitiesService', [
+    'utils',
+  ]);
+  const mockApplicationService = jasmine.createSpyObj('ApplicationService', [
+    'app',
+  ]);
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -32,14 +48,17 @@ describe('FeedService', () => {
         { provide: LocalStorageService, useValue: mockLocalStorageService },
         { provide: LoggerService, useValue: mockLoggerService },
         { provide: RelayService, useValue: mockRelayService },
-        { provide: ApplicationStateService, useValue: mockApplicationStateService },
+        {
+          provide: ApplicationStateService,
+          useValue: mockApplicationStateService,
+        },
         { provide: AccountStateService, useValue: mockAccountStateService },
         { provide: DataService, useValue: mockDataService },
         { provide: UtilitiesService, useValue: mockUtilitiesService },
-        { provide: ApplicationService, useValue: mockApplicationService }
-      ]
+        { provide: ApplicationService, useValue: mockApplicationService },
+      ],
     }).compileComponents();
-    
+
     service = TestBed.inject(FeedService);
   });
 

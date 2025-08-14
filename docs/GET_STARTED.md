@@ -48,6 +48,7 @@ npm install
 ```
 
 This will install all the required packages including:
+
 - Angular 20 with signals and effects
 - Angular Material
 - Nostr-tools
@@ -61,6 +62,7 @@ npm start
 ```
 
 Or using the Angular CLI:
+
 ```bash
 ng serve
 ```
@@ -93,14 +95,14 @@ nostria/
 
 ## 🔧 Development Commands
 
-| Command | Description |
-|---------|-------------|
-| `npm start` | Start development server |
-| `npm run build` | Build for production |
-| `npm test` | Run unit tests |
-| `npm run watch` | Build and watch for changes |
+| Command             | Description                             |
+| ------------------- | --------------------------------------- |
+| `npm start`         | Start development server                |
+| `npm run build`     | Build for production                    |
+| `npm test`          | Run unit tests                          |
+| `npm run watch`     | Build and watch for changes             |
 | `npm run tauri dev` | Start Tauri desktop app (requires Rust) |
-| `npm run gen:api` | Generate API client from OpenAPI spec |
+| `npm run gen:api`   | Generate API client from OpenAPI spec   |
 
 ## 🎯 Key Technologies
 
@@ -117,6 +119,7 @@ Nostria is built with modern web technologies:
 ## 📱 Development Features
 
 ### Modern Angular Patterns
+
 - **Signals** instead of traditional reactive forms
 - **Effects** for side effects
 - **Standalone components** (no NgModules)
@@ -124,12 +127,14 @@ Nostria is built with modern web technologies:
 - **Inject function** instead of constructor DI
 
 ### Styling Guidelines
+
 - Global styles in `src/styles.scss`
 - Component-specific styles in component `.scss` files
 - Angular Material design system
 - Custom CSS variables for theming
 
 ### HTTP Requests
+
 - Use `fetch` API instead of HttpClient
 - Async/await pattern preferred
 - Type-safe API calls
@@ -137,7 +142,9 @@ Nostria is built with modern web technologies:
 ## 🔍 Debugging
 
 ### VS Code Configuration
+
 The project includes VS Code tasks for:
+
 - Starting the development server
 - Running tests
 - Building the project
@@ -145,6 +152,7 @@ The project includes VS Code tasks for:
 Access via `Ctrl+Shift+P` → "Tasks: Run Task"
 
 ### Browser DevTools
+
 - **Angular DevTools**: Browser extension for debugging Angular applications
 - **Network Tab**: Monitor API calls and WebSocket connections
 - **Console**: Check for JavaScript errors and logging
@@ -152,11 +160,13 @@ Access via `Ctrl+Shift+P` → "Tasks: Run Task"
 ### Common Issues
 
 1. **Port 4200 already in use**
+
    ```bash
    ng serve --port 4201
    ```
 
 2. **Node modules issues**
+
    ```bash
    rm -rf node_modules package-lock.json
    npm install
@@ -170,11 +180,13 @@ Access via `Ctrl+Shift+P` → "Tasks: Run Task"
 ## 🌐 Environment Setup
 
 ### Development Environment
+
 - Backend API: `http://localhost:3000` (if running backend)
 - Frontend: `http://localhost:4200`
 - Hot reload enabled
 
 ### Environment Files
+
 - `src/environments/environment.ts` - Production
 - `src/environments/environment.development.ts` - Development
 

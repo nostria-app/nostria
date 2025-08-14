@@ -1,6 +1,6 @@
 import { Component, inject, computed, signal, effect } from '@angular/core';
 import { Event, kinds, nip19 } from 'nostr-tools';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -22,6 +22,9 @@ import { UrlUpdateService } from '../../services/url-update.service';
 import { BookmarkService } from '../../services/bookmark.service';
 import { CommonModule } from '@angular/common';
 import { AccountStateService } from '../../services/account-state.service';
+import DOMPurify from 'dompurify';
+import { UserDataFactoryService } from '../../services/user-data-factory.service';
+import { NostrRecord } from '../../interfaces';
 
 @Component({
   selector: 'app-article',
@@ -35,24 +38,28 @@ import { AccountStateService } from '../../services/account-state.service';
     MatProgressSpinnerModule,
     UserProfileComponent,
     DateToggleComponent,
-    CommonModule
+    CommonModule,
+    RouterModule,
   ],
   templateUrl: './article.component.html',
-  styleUrl: './article.component.scss'
+  styleUrl: './article.component.scss',
 })
 export class ArticleComponent {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private utilities = inject(UtilitiesService);
   private nostrService = inject(NostrService);
-  private storageService = inject(StorageService); private logger = inject(LoggerService);
+  private storageService = inject(StorageService);
+  private readonly userDataFactory = inject(UserDataFactoryService);
+  private logger = inject(LoggerService);
   private sanitizer = inject(DomSanitizer);
   private data = inject(DataService);
   private layout = inject(LayoutService);
   private parsing = inject(ParsingService);
   private url = inject(UrlUpdateService);
   bookmark = inject(BookmarkService);
-  private accountState = inject(AccountStateService);
+  accountState = inject(AccountStateService);
+  link = '';
 
   event = signal<Event | undefined>(undefined);
   isLoading = signal(false);
@@ -97,6 +104,13 @@ export class ArticleComponent {
     let slug = '';
 
     if (receivedData) {
+      const encoded = nip19.naddrEncode({
+        identifier: receivedData.tags.find(tag => tag[0] === 'd')?.[1] || '',
+        kind: receivedData.kind,
+        pubkey: receivedData.pubkey,
+      });
+      this.link = encoded;
+
       this.logger.debug('Received event from navigation state:', receivedData);
       this.event.set(receivedData);
       this.isLoading.set(false);
@@ -104,6 +118,7 @@ export class ArticleComponent {
       setTimeout(() => this.layout.scrollMainContentToTop(), 50);
       return;
     } else if (naddr.startsWith('naddr1')) {
+      this.link = naddr;
 
       // Decode the naddr1 parameter using nip19.decode()
       const decoded = this.utilities.decode(naddr);
@@ -120,7 +135,7 @@ export class ArticleComponent {
     } else {
       const slugParam = this.route.snapshot.paramMap.get('slug');
 
-      // If we have slug, the 
+      // If we have slug, the
       if (slugParam) {
         slug = slugParam;
         pubkey = this.utilities.getPubkeyFromNpub(naddr);
@@ -128,6 +143,13 @@ export class ArticleComponent {
         // Let's make the URL nicer, TODO add support for replacing with username, for now replace with npub.
         const npub = this.utilities.getNpubFromPubkey(pubkey);
         this.url.updatePathSilently(['/a', npub, slug]);
+
+        const encoded = nip19.naddrEncode({
+          identifier: slug,
+          kind: kinds.LongFormArticle,
+          pubkey: pubkey,
+        });
+        this.link = encoded;
       }
     }
 
@@ -136,10 +158,30 @@ export class ArticleComponent {
       this.error.set(null);
 
       const isNotCurrentUser = !this.accountState.isCurrentUser(pubkey);
-      let event = await this.data.getEventByPubkeyAndKindAndReplaceableEvent(pubkey, kinds.LongFormArticle, slug, { save: false, cache: false }, isNotCurrentUser);
+      let event: NostrRecord | null = null;
+
+      if (isNotCurrentUser) {
+        const userData = await this.userDataFactory.create(pubkey);
+        event = await userData.getEventByPubkeyAndKindAndReplaceableEvent(
+          pubkey,
+          kinds.LongFormArticle,
+          slug,
+          { save: false, cache: false }
+        );
+      } else {
+        event = await this.data.getEventByPubkeyAndKindAndReplaceableEvent(
+          pubkey,
+          kinds.LongFormArticle,
+          slug,
+          { save: false, cache: false }
+        );
+      }
 
       if (event) {
-        this.logger.debug('Loaded article event from storage or relays:', event);
+        this.logger.debug(
+          'Loaded article event from storage or relays:',
+          event
+        );
         this.event.set(event.event);
         this.isLoading.set(false);
         return;
@@ -176,7 +218,10 @@ export class ArticleComponent {
   publishedAt = computed(() => {
     const ev = this.event();
     if (!ev) return null;
-    const publishedAtTag = this.utilities.getTagValues('published_at', ev.tags)[0];
+    const publishedAtTag = this.utilities.getTagValues(
+      'published_at',
+      ev.tags
+    )[0];
     if (publishedAtTag) {
       return new Date(parseInt(publishedAtTag) * 1000);
     }
@@ -186,7 +231,10 @@ export class ArticleComponent {
   publishedAtTimestamp = computed(() => {
     const ev = this.event();
     if (!ev) return 0;
-    const publishedAtTag = this.utilities.getTagValues('published_at', ev.tags)[0];
+    const publishedAtTag = this.utilities.getTagValues(
+      'published_at',
+      ev.tags
+    )[0];
     if (publishedAtTag) {
       return parseInt(publishedAtTag);
     }
@@ -215,7 +263,7 @@ export class ArticleComponent {
   private _parsedContent = signal<SafeHtml>('');
 
   // Computed property that returns the parsed content signal value
-  parsedContent = computed(() => this._parsedContent());  // Effect to handle async content parsing
+  parsedContent = computed(() => this._parsedContent()); // Effect to handle async content parsing
 
   private parseContentEffect = effect(async () => {
     const content = this.content();
@@ -225,14 +273,49 @@ export class ArticleComponent {
     }
 
     try {
+      const washedContent = DOMPurify.sanitize(content);
+
+      // Strip unwanted paragraph tags that might be added by the editor
+      const cleanedContent = washedContent
+        .replace(/<p>/gi, '') // Remove all opening <p> tags (case-insensitive)
+        .replace(/<\/p>/gi, ''); // Remove all closing </p> tags (case-insensitive)
+
       // First, preprocess content to convert image URLs to markdown image syntax
-      const preprocessedContent = await this.preprocessImageUrls(content);
+      const preprocessedContent =
+        await this.preprocessImageUrls(cleanedContent);
+
+      // Store reference to isImageUrl for use in renderer
+      const isImageUrl = this.isImageUrl.bind(this);
 
       // Create a custom renderer for enhanced image handling
       const renderer = new marked.Renderer();
 
+      // Custom heading renderer to ensure headers are properly rendered
+      renderer.heading = ({
+        text,
+        depth,
+      }: {
+        text: string;
+        depth: number;
+      }): string => {
+        const sanitizedText = text.replace(/[<>"']/g, '');
+        const headingId = sanitizedText
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '');
+        return `<h${depth} id="${headingId}">${text}</h${depth}>`;
+      };
+
       // Custom image renderer with enhanced attributes and link support
-      renderer.image = ({ href, title, text }: { href: string | null; title: string | null; text: string }): string => {
+      renderer.image = ({
+        href,
+        title,
+        text,
+      }: {
+        href: string | null;
+        title: string | null;
+        text: string;
+      }): string => {
         if (!href) return '';
 
         // Sanitize the href URL
@@ -289,7 +372,7 @@ export class ArticleComponent {
         }
 
         // Check if the link URL itself points to an image (standalone image URLs)
-        if (this.isImageUrl(href)) {
+        if (isImageUrl(href)) {
           // Render as image instead of link
           const sanitizedHref = href.replace(/[<>"']/g, '');
           const sanitizedTitle = title ? title.replace(/[<>"']/g, '') : '';
@@ -315,8 +398,8 @@ export class ArticleComponent {
         return `<a href="${sanitizedHref}" ${sanitizedTitle ? `title="${sanitizedTitle}"` : ''} target="_blank" rel="noopener noreferrer">${text}</a>`;
       };
 
-      // Configure marked with custom renderer and options
-      marked.setOptions({
+      // Configure marked with custom renderer and options for modern marked.js
+      marked.use({
         renderer: renderer,
         gfm: true,
         breaks: true,
@@ -327,13 +410,15 @@ export class ArticleComponent {
       const htmlContent = marked.parse(preprocessedContent) as string;
 
       // Sanitize and return safe HTML
-      this._parsedContent.set(this.sanitizer.bypassSecurityTrustHtml(htmlContent));
+      this._parsedContent.set(
+        this.sanitizer.bypassSecurityTrustHtml(htmlContent)
+      );
     } catch (error) {
       this.logger.error('Error parsing markdown:', error);
       // Fallback to plain text
-      this._parsedContent.set(this.sanitizer.bypassSecurityTrustHtml(
-        content.replace(/\n/g, '<br>')
-      ));
+      this._parsedContent.set(
+        this.sanitizer.bypassSecurityTrustHtml(content.replace(/\n/g, '<br>'))
+      );
     }
   });
 
@@ -349,7 +434,7 @@ export class ArticleComponent {
       month: 'long',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   }
 
@@ -408,7 +493,8 @@ export class ArticleComponent {
     const urlWithoutParams = url.split('?')[0].split('#')[0];
 
     // Common image extensions
-    const imageExtensions = /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico|tiff|avif|heic|heif)$/i;
+    const imageExtensions =
+      /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico|tiff|avif|heic|heif)$/i;
 
     // Check file extension
     if (imageExtensions.test(urlWithoutParams)) {
@@ -442,7 +528,7 @@ export class ArticleComponent {
       /cdn\.discordapp\.com.*\.(jpg|jpeg|png|gif|webp)/i,
       /media\.discordapp\.net.*\.(jpg|jpeg|png|gif|webp)/i,
       /.*\.cloudfront\.net.*\.(jpg|jpeg|png|gif|svg|webp)/i,
-      /.*\.amazonaws\.com.*\.(jpg|jpeg|png|gif|svg|webp)/i
+      /.*\.amazonaws\.com.*\.(jpg|jpeg|png|gif|svg|webp)/i,
     ];
 
     return imageHostPatterns.some(pattern => pattern.test(url));
@@ -456,14 +542,19 @@ export class ArticleComponent {
     // Pattern to match standalone URLs that point to images
     // This will match URLs on their own line or URLs not already in markdown syntax
     // Updated to be more careful about existing markdown syntax
-    const standaloneImageUrlPattern = /(?:^|\s)(https?:\/\/[^\s<>"\]]+)(?=\s|$)/gm;
+    const standaloneImageUrlPattern =
+      /(?:^|\s)(https?:\/\/[^\s<>"\]]+)(?=\s|$)/gm;
 
     return content.replace(standaloneImageUrlPattern, (match, url) => {
       // Don't convert if already in markdown image syntax
       const beforeMatch = content.substring(0, content.indexOf(match));
 
       // Check if it's already part of markdown image syntax ![alt](url) or [![alt](url)](link)
-      if (beforeMatch.endsWith('](') || beforeMatch.endsWith('![') || beforeMatch.match(/!\[[^\]]*\]$/)) {
+      if (
+        beforeMatch.endsWith('](') ||
+        beforeMatch.endsWith('![') ||
+        beforeMatch.match(/!\[[^\]]*\]$/)
+      ) {
         return match;
       }
 
@@ -483,7 +574,8 @@ export class ArticleComponent {
   }
   // Helper method to process Nostr tokens and replace them with @username
   private async processNostrTokens(content: string): Promise<string> {
-    const nostrRegex = /(nostr:(?:npub|nprofile|note|nevent|naddr)1[a-zA-Z0-9]+)(?=\s|##LINEBREAK##|$|[^\w])/g;
+    const nostrRegex =
+      /(nostr:(?:npub|nprofile|note|nevent|naddr)1[a-zA-Z0-9]+)(?=\s|##LINEBREAK##|$|[^\w])/g;
 
     // Find all matches first
     const matches = Array.from(content.matchAll(nostrRegex));
@@ -505,27 +597,29 @@ export class ArticleComponent {
                 const npub = this.utilities.getNpubFromPubkey(pubkey);
                 return {
                   original: match[0],
-                  replacement: `<a href="/p/${npub}" class="nostr-mention" data-pubkey="${pubkey}" data-type="profile" title="View @${username}'s profile">@${username}</a>`
+                  replacement: `<a href="/p/${npub}" class="nostr-mention" data-pubkey="${pubkey}" data-type="profile" title="View @${username}'s profile">@${username}</a>`,
                 };
 
               case 'note':
                 // For notes, create a reference link
                 const noteId = nostrData.data;
-                const noteRef = nostrData.displayName || `note${noteId.substring(0, 8)}`;
+                const noteRef =
+                  nostrData.displayName || `note${noteId.substring(0, 8)}`;
                 const noteEncoded = nip19.noteEncode(noteId);
                 return {
                   original: match[0],
-                  replacement: `<a href="/e/${noteEncoded}" class="nostr-reference" data-event-id="${noteId}" data-type="note" title="View note">📝 ${noteRef}</a>`
+                  replacement: `<a href="/e/${noteEncoded}" class="nostr-reference" data-event-id="${noteId}" data-type="note" title="View note">📝 ${noteRef}</a>`,
                 };
 
               case 'nevent':
                 // For events, create a reference link
                 const eventId = nostrData.data?.id || nostrData.data;
-                const eventRef = nostrData.displayName || `event${eventId.substring(0, 8)}`;
+                const eventRef =
+                  nostrData.displayName || `event${eventId.substring(0, 8)}`;
                 const neventEncoded = nip19.neventEncode(nostrData.data);
                 return {
                   original: match[0],
-                  replacement: `<a href="/e/${neventEncoded}" class="nostr-reference" data-event-id="${eventId}" data-type="event" title="View event">📝 ${eventRef}</a>`
+                  replacement: `<a href="/e/${neventEncoded}" class="nostr-reference" data-event-id="${eventId}" data-type="event" title="View event">📝 ${eventRef}</a>`,
                 };
 
               case 'naddr':
@@ -533,30 +627,33 @@ export class ArticleComponent {
                 const identifier = nostrData.data?.identifier || '';
                 const kind = nostrData.data?.kind || '';
                 const authorPubkey = nostrData.data?.pubkey || '';
-                const addrRef = nostrData.displayName || identifier || `${kind}:${authorPubkey.substring(0, 8)}`;
+                const addrRef =
+                  nostrData.displayName ||
+                  identifier ||
+                  `${kind}:${authorPubkey.substring(0, 8)}`;
                 const naddrEncoded = nip19.naddrEncode(nostrData.data);
                 return {
                   original: match[0],
-                  replacement: `<a href="/a/${naddrEncoded}" class="nostr-reference" data-identifier="${identifier}" data-kind="${kind}" data-type="article" title="View article">📄 ${addrRef}</a>`
+                  replacement: `<a href="/a/${naddrEncoded}" class="nostr-reference" data-identifier="${identifier}" data-kind="${kind}" data-type="article" title="View article">📄 ${addrRef}</a>`,
                 };
 
               default:
                 return {
                   original: match[0],
-                  replacement: `<span class="nostr-mention" title="Nostr reference">${nostrData.displayName || match[0]}</span>`
+                  replacement: `<span class="nostr-mention" title="Nostr reference">${nostrData.displayName || match[0]}</span>`,
                 };
             }
           }
 
           return {
             original: match[0],
-            replacement: match[0]
+            replacement: match[0],
           };
         } catch (error) {
           this.logger.error('Error parsing Nostr URI:', error);
           return {
             original: match[0],
-            replacement: match[0]
+            replacement: match[0],
           };
         }
       })

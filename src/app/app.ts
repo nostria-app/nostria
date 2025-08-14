@@ -1,5 +1,21 @@
-import { Component, inject, signal, effect, ViewChild, afterNextRender, computed, PLATFORM_ID, DOCUMENT } from '@angular/core';
-import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
+import {
+  Component,
+  inject,
+  signal,
+  effect,
+  ViewChild,
+  afterNextRender,
+  computed,
+  PLATFORM_ID,
+  DOCUMENT,
+  OnInit,
+} from '@angular/core';
+import {
+  RouterOutlet,
+  RouterLink,
+  RouterLinkActive,
+  Router,
+} from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -9,7 +25,11 @@ import { MatDividerModule } from '@angular/material/divider';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { ThemeService } from './services/theme.service';
 import { PwaUpdateService } from './services/pwa-update.service';
-import { CommonModule, isPlatformBrowser, isPlatformServer } from '@angular/common';
+import {
+  CommonModule,
+  isPlatformBrowser,
+  isPlatformServer,
+} from '@angular/common';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { NostrService } from './services/nostr.service';
@@ -17,7 +37,11 @@ import { LoadingOverlayComponent } from './components/loading-overlay/loading-ov
 import { FeatureLevel, LoggerService } from './services/logger.service';
 import { MatMenuModule } from '@angular/material/menu';
 import { FormGroup, FormsModule } from '@angular/forms';
-import { NotificationType, RelayPublishingNotification, StorageService } from './services/storage.service';
+import {
+  NotificationType,
+  RelayPublishingNotification,
+  StorageService,
+} from './services/storage.service';
 import { NostrEventData, UserMetadata } from './services/storage.service';
 import { LayoutService } from './services/layout.service';
 import { ApplicationStateService } from './services/application-state.service';
@@ -27,11 +51,13 @@ import { ApplicationService } from './services/application.service';
 import { NPubPipe } from './pipes/npub.pipe';
 import { MatBadgeModule } from '@angular/material/badge';
 import { NotificationService } from './services/notification.service';
-import { MatBottomSheet, MatBottomSheetModule } from '@angular/material/bottom-sheet';
+import {
+  MatBottomSheet,
+  MatBottomSheetModule,
+} from '@angular/material/bottom-sheet';
 import { CreateOptionsSheetComponent } from './components/create-options-sheet/create-options-sheet.component';
 import { LoginDialogComponent } from './components/login-dialog/login-dialog.component';
 import { WelcomeComponent } from './components/welcome/welcome.component';
-import { DebugOverlayComponent } from './components/debug-overlay/debug-overlay.component';
 import { SearchService } from './services/search.service';
 import { MediaPlayerComponent } from './components/media-player/media-player.component';
 import { MediaPlayerService } from './services/media-player.service';
@@ -59,7 +85,8 @@ interface NavItem {
 
 @Component({
   selector: 'app-root',
-  standalone: true, imports: [
+  standalone: true,
+  imports: [
     RouterOutlet,
     RouterLink,
     RouterLinkActive,
@@ -76,17 +103,19 @@ interface NavItem {
     LoadingOverlayComponent,
     FormsModule,
     MatFormFieldModule,
-    NPubPipe, MatBadgeModule, MatBottomSheetModule,
+    NPubPipe,
+    MatBadgeModule,
+    MatBottomSheetModule,
     WelcomeComponent,
-    DebugOverlayComponent,
     MediaPlayerComponent,
     SearchResultsComponent,
     NavigationComponent,
-    NavigationContextMenuComponent
-  ], templateUrl: './app.html',
-  styleUrl: './app.scss'
+    NavigationContextMenuComponent,
+  ],
+  templateUrl: './app.html',
+  styleUrl: './app.scss',
 })
-export class App {
+export class App implements OnInit {
   title = 'Nostria';
   themeService = inject(ThemeService);
   pwaUpdateService = inject(PwaUpdateService);
@@ -124,7 +153,9 @@ export class App {
 
   // Computed signal to count unread notifications
   unreadNotificationsCount = computed(() => {
-    return this.notificationService.notifications().filter(notification => !notification.read).length;
+    return this.notificationService
+      .notifications()
+      .filter(notification => !notification.read).length;
   });
 
   // Computed signal to check if there are any active pending notifications
@@ -133,8 +164,12 @@ export class App {
       // Check if it's a RelayPublishingNotification with pending promises
       if (notification.type === NotificationType.RELAY_PUBLISHING) {
         const relayNotification = notification as RelayPublishingNotification;
-        return !relayNotification.complete &&
-          relayNotification.relayPromises?.some(relay => relay.status === 'pending');
+        return (
+          !relayNotification.complete &&
+          relayNotification.relayPromises?.some(
+            relay => relay.status === 'pending'
+          )
+        );
       }
       return false;
     });
@@ -165,19 +200,46 @@ export class App {
   });
 
   navItems: NavItem[] = [
-    { path: '', label: 'Feeds', icon: 'stacks', authenticated: true },
+    { path: '', label: 'Feeds', icon: 'stacks', authenticated: false },
     // { path: 'feed', label: 'Feed', icon: 'notes', showInMobile: true },
-    { path: 'articles', label: 'Articles', icon: 'article', authenticated: true },
+    {
+      path: 'articles',
+      label: 'Articles',
+      icon: 'article',
+      level: 'preview',
+      authenticated: true,
+    },
     // { path: 'podcasts', label: 'Podcasts', icon: 'podcasts', showInMobile: false },
     { path: 'people', label: 'People', icon: 'people', authenticated: true },
-    { path: 'messages', label: 'Messages', icon: 'mail', level: 'beta', authenticated: true },
-    { path: 'media', label: 'Media', icon: 'photo_library', authenticated: true },
-    { path: 'bookmarks', label: 'Bookmarks', icon: 'bookmarks', level: 'preview', authenticated: true },
-    { path: 'badges', label: 'Badges', icon: 'badge', level: 'beta', authenticated: true },
+    {
+      path: 'messages',
+      label: 'Messages',
+      icon: 'mail',
+      authenticated: true,
+    },
+    {
+      path: 'media',
+      label: 'Media',
+      icon: 'photo_library',
+      authenticated: true,
+    },
+    {
+      path: 'bookmarks',
+      label: 'Bookmarks',
+      icon: 'bookmarks',
+      authenticated: true,
+    },
+    // { path: 'badges', label: 'Badges', icon: 'badge', level: 'beta', authenticated: true },
     // { path: 'relays', label: 'Relays', icon: 'dns', showInMobile: false },
     // { path: 'backup', label: 'Backup', icon: 'archive', showInMobile: false },
     { path: 'settings', label: 'Settings', icon: 'settings' },
-    { path: 'premium', label: 'Premium', icon: 'diamond', level: 'preview', authenticated: true, hideOnSubscribed: true },
+    {
+      path: 'premium',
+      label: 'Premium',
+      icon: 'diamond',
+      authenticated: true,
+      hideOnSubscribed: true,
+    },
     // { path: 'about', label: 'About', icon: 'info', showInMobile: true },
     // { path: '', label: 'Logout', icon: 'logout', action: () => this.logout(), showInMobile: false }
   ];
@@ -185,12 +247,17 @@ export class App {
   constructor() {
     this.logger.info('[App] ==> AppComponent constructor started');
     this.logger.debug('[App] Services injection status:');
-    this.logger.debug('[App] - NostrProtocolService injected:', !!this.nostrProtocol);
+    this.logger.debug(
+      '[App] - NostrProtocolService injected:',
+      !!this.nostrProtocol
+    );
     this.logger.debug('[App] - ApplicationService injected:', !!this.app);
     this.logger.debug('[App] - LoggerService injected:', !!this.logger);
 
     if (!this.app.isBrowser()) {
-      this.logger.info('[App] Not in browser environment, skipping browser-specific setup');
+      this.logger.info(
+        '[App] Not in browser environment, skipping browser-specific setup'
+      );
       return;
     }
 
@@ -206,51 +273,84 @@ export class App {
         if (launchParams?.targetURL) {
           this.logger.info('[App] Target URL found in launch params');
           this.logger.info('[App] Target URL:', launchParams.targetURL);
-          this.logger.info('[App] Target URL type:', typeof launchParams.targetURL);
-          this.logger.info('[App] Target URL length:', launchParams.targetURL?.length || 'undefined');
+          this.logger.info(
+            '[App] Target URL type:',
+            typeof launchParams.targetURL
+          );
+          this.logger.info(
+            '[App] Target URL length:',
+            launchParams.targetURL?.length || 'undefined'
+          );
 
           // Handle nostr protocol links
           const url = launchParams.targetURL;
           this.logger.debug('[App] Checking if URL contains nostr parameter');
 
           if (url.includes('nostr=')) {
-            this.logger.info('[App] *** NOSTR PROTOCOL DETECTED IN LAUNCH QUEUE ***');
-            this.logger.info('[App] Processing nostr protocol from launch queue');
+            this.logger.info(
+              '[App] *** NOSTR PROTOCOL DETECTED IN LAUNCH QUEUE ***'
+            );
+            this.logger.info(
+              '[App] Processing nostr protocol from launch queue'
+            );
             this.logger.info('[App] URL with nostr parameter:', url);
 
             try {
               await this.nostrProtocol.handleNostrProtocol(url);
-              this.logger.info('[App] *** NOSTR PROTOCOL HANDLING COMPLETED SUCCESSFULLY ***');
+              this.logger.info(
+                '[App] *** NOSTR PROTOCOL HANDLING COMPLETED SUCCESSFULLY ***'
+              );
             } catch (error) {
               this.logger.error('[App] *** NOSTR PROTOCOL HANDLING FAILED ***');
-              this.logger.error('[App] Launch queue nostr protocol error:', error);
+              this.logger.error(
+                '[App] Launch queue nostr protocol error:',
+                error
+              );
 
               if (error instanceof Error) {
                 this.logger.error('[App] Launch queue error name:', error.name);
-                this.logger.error('[App] Launch queue error message:', error.message);
-                this.logger.error('[App] Launch queue error stack:', error.stack);
+                this.logger.error(
+                  '[App] Launch queue error message:',
+                  error.message
+                );
+                this.logger.error(
+                  '[App] Launch queue error stack:',
+                  error.stack
+                );
               }
             }
           } else {
-            this.logger.debug('[App] No nostr parameter found in launch queue URL');
+            this.logger.debug(
+              '[App] No nostr parameter found in launch queue URL'
+            );
             this.logger.debug('[App] URL content for analysis:', url);
 
             // Check for other patterns that might indicate nostr content
             if (url.includes('nostr')) {
-              this.logger.warn('[App] URL contains "nostr" but not as expected parameter:', url);
+              this.logger.warn(
+                '[App] URL contains "nostr" but not as expected parameter:',
+                url
+              );
             }
           }
         } else {
-          this.logger.warn('[App] LaunchQueue consumer triggered but no targetURL found');
-          this.logger.warn('[App] LaunchParams structure:', Object.keys(launchParams || {}));
+          this.logger.warn(
+            '[App] LaunchQueue consumer triggered but no targetURL found'
+          );
+          this.logger.warn(
+            '[App] LaunchParams structure:',
+            Object.keys(launchParams || {})
+          );
         }
       });
 
       this.logger.info('[App] LaunchQueue consumer setup completed');
     } else {
       this.logger.info('[App] LaunchQueue not available in this environment');
-      this.logger.debug('[App] Window object keys containing "launch":',
-        Object.keys(window).filter(key => key.toLowerCase().includes('launch')));
+      this.logger.debug(
+        '[App] Window object keys containing "launch":',
+        Object.keys(window).filter(key => key.toLowerCase().includes('launch'))
+      );
     }
 
     // Track previous handset state to detect transitions
@@ -282,31 +382,25 @@ export class App {
     });
 
     if (this.app.isBrowser()) {
-
       // Show login dialog if user is not logged in - with debugging
       effect(() => {
         // if (this.app.initialized() && !this.app.authenticated()) {
         //   this.showLoginDialog();
         // }
-
         // const isLoggedIn = this.app.authenticated()
         // const isInitialized = this.app.initialized();
-
         // if (isInitialized && !isLoggedIn) {
         //   this.logger.debug('Showing login dialog');
         //   this.showLoginDialog();
         // } else if (isInitialized && isLoggedIn) {
         //   const user = this.nostrService.activeAccount();
-
         //   // Whenever the user changes, ensure that we have the correct relays
         //   if (user) {
         //     this.logger.debug('User changed, updating relays', { pubkey: user.pubkey });
-
         //     // Data load will happen automatically in nostr service.
         //     //this.dataLoadingService.loadData();
-
         //     // Also load the user metadata for the profile panel
-        //     // this.nostrService.loadAllUsersMetadata().catch(err => 
+        //     // this.nostrService.loadAllUsersMetadata().catch(err =>
         //     //   this.logger.error('Failed to load metadata after user change', err));
         //   } else {
         //     this.logger.debug('No user logged in, not updating relays');
@@ -331,7 +425,6 @@ export class App {
       //     this.accountState.currentProfilePubkey.set(this.nostrService.account()!.pubkey);
       //   }
 
-
       // });
 
       // Additional effect to make sure we have metadata for the current user
@@ -347,8 +440,7 @@ export class App {
       // });
     }
 
-
-    this.logger.debug('AppComponent constructor completed');    // Register a one-time callback after the first render
+    this.logger.debug('AppComponent constructor completed'); // Register a one-time callback after the first render
     afterNextRender(() => {
       this.logger.debug('AppComponent first render completed');
 
@@ -359,10 +451,15 @@ export class App {
 
   async ngOnInit() {
     this.logger.info('[App] ==> ngOnInit started');
-    this.logger.debug('[App] Platform check - isBrowser:', this.app.isBrowser());
+    this.logger.debug(
+      '[App] Platform check - isBrowser:',
+      this.app.isBrowser()
+    );
 
     if (!this.app.isBrowser()) {
-      this.logger.info('[App] Not in browser environment, skipping initialization');
+      this.logger.info(
+        '[App] Not in browser environment, skipping initialization'
+      );
       return;
     }
 
@@ -383,19 +480,24 @@ export class App {
       // Get diagnostic info if there were any issues
       if (!this.storage.initialized()) {
         const diagnostics = await this.storage.getDiagnosticInfo();
-        this.logger.warn('[App] Storage not properly initialized, diagnostic info:', diagnostics);
+        this.logger.warn(
+          '[App] Storage not properly initialized, diagnostic info:',
+          diagnostics
+        );
       }
-
     } catch (error: any) {
       this.logger.error('[App] Storage initialization failed', {
         error: error?.message || 'Unknown error',
-        name: error?.name || 'Unknown'
+        name: error?.name || 'Unknown',
       });
 
       // Get diagnostic information
       try {
         const diagnostics = await this.storage.getDiagnosticInfo();
-        this.logger.error('[App] Storage diagnostic info after failure:', diagnostics);
+        this.logger.error(
+          '[App] Storage diagnostic info after failure:',
+          diagnostics
+        );
 
         // Show user-friendly error message
         this.showStorageError(error, diagnostics);
@@ -404,7 +506,9 @@ export class App {
       }
 
       // Don't completely block the app, continue with limited functionality
-      this.logger.warn('[App] Continuing with limited functionality due to storage failure');
+      this.logger.warn(
+        '[App] Continuing with limited functionality due to storage failure'
+      );
     }
 
     // Check for nostr protocol parameter in current URL
@@ -417,9 +521,11 @@ export class App {
     let errorMessage = 'Storage initialization failed. ';
 
     if (diagnostics.platform.isIOS && diagnostics.platform.isWebView) {
-      errorMessage += 'This appears to be an iOS WebView which may have IndexedDB restrictions. ';
+      errorMessage +=
+        'This appears to be an iOS WebView which may have IndexedDB restrictions. ';
     } else if (diagnostics.isPrivateMode) {
-      errorMessage += 'Private browsing mode detected which may limit storage capabilities. ';
+      errorMessage +=
+        'Private browsing mode detected which may limit storage capabilities. ';
     } else if (!diagnostics.indexedDBSupported) {
       errorMessage += 'IndexedDB is not supported in this browser. ';
     }
@@ -446,7 +552,6 @@ export class App {
     }
   }
 
-
   qrScan() {
     const dialogRef = this.dialog.open(QrcodeScanDialogComponent, {
       data: { did: '' },
@@ -456,10 +561,10 @@ export class App {
       maxHeight: '100vh',
       panelClass: 'qr-scan-dialog',
       hasBackdrop: true,
-      disableClose: false
+      disableClose: false,
     });
 
-    dialogRef.afterClosed().subscribe(async (result) => {
+    dialogRef.afterClosed().subscribe(async result => {
       if (result) {
         console.log('The dialog was closed', result);
         this.layout.toggleSearch();
@@ -476,21 +581,25 @@ export class App {
 
             this.wallets.addWallet(parsed.pubkey, result, {
               relay: parsed.relay,
-              secret: parsed.secret
+              secret: parsed.secret,
             });
 
             this.snackBar.open('Wallet added successfully', 'Dismiss', {
               duration: 3000,
               horizontalPosition: 'center',
-              verticalPosition: 'bottom'
+              verticalPosition: 'bottom',
             });
           } catch (error) {
             console.error('Failed to add wallet:', error);
-            this.snackBar.open('Failed to add wallet. Please check the connection string.', 'Dismiss', {
-              duration: 3000,
-              horizontalPosition: 'center',
-              verticalPosition: 'bottom'
-            });
+            this.snackBar.open(
+              'Failed to add wallet. Please check the connection string.',
+              'Dismiss',
+              {
+                duration: 3000,
+                horizontalPosition: 'center',
+                verticalPosition: 'bottom',
+              }
+            );
           }
         }
       }
@@ -551,7 +660,7 @@ export class App {
       width: '450px',
       maxWidth: '95vw',
       disableClose: true,
-      panelClass: 'welcome-dialog'
+      panelClass: 'welcome-dialog',
     });
   }
 
@@ -566,7 +675,9 @@ export class App {
         event.preventDefault();
         // Focus the search results container after a short delay to ensure it's rendered
         setTimeout(() => {
-          const searchResultsContainer = this.document.querySelector('.search-results') as HTMLElement;
+          const searchResultsContainer = this.document.querySelector(
+            '.search-results'
+          ) as HTMLElement;
           if (searchResultsContainer) {
             searchResultsContainer.focus();
           }
@@ -590,53 +701,79 @@ export class App {
       const currentUrl = window.location.href;
 
       this.logger.info('[App] Current URL:', currentUrl);
-      this.logger.info('[App] Current URL length:', currentUrl?.length || 'undefined');
+      this.logger.info(
+        '[App] Current URL length:',
+        currentUrl?.length || 'undefined'
+      );
       this.logger.debug('[App] Current URL breakdown:', {
         href: window.location.href,
         origin: window.location.origin,
         pathname: window.location.pathname,
         search: window.location.search,
-        hash: window.location.hash
+        hash: window.location.hash,
       });
 
-      this.logger.debug('[App] Checking if current URL contains nostr parameter');
+      this.logger.debug(
+        '[App] Checking if current URL contains nostr parameter'
+      );
 
       if (currentUrl.includes('nostr=')) {
-        this.logger.info('[App] *** NOSTR PARAMETER DETECTED IN CURRENT URL ***');
+        this.logger.info(
+          '[App] *** NOSTR PARAMETER DETECTED IN CURRENT URL ***'
+        );
         this.logger.info('[App] URL with nostr parameter:', currentUrl);
 
         // Extract and log the nostr parameter value
         try {
           const urlObj = new URL(currentUrl);
           const nostrParam = urlObj.searchParams.get('nostr');
-          this.logger.info('[App] Extracted nostr parameter value:', nostrParam);
-          this.logger.debug('[App] All URL parameters:', Array.from(urlObj.searchParams.entries()));
+          this.logger.info(
+            '[App] Extracted nostr parameter value:',
+            nostrParam
+          );
+          this.logger.debug(
+            '[App] All URL parameters:',
+            Array.from(urlObj.searchParams.entries())
+          );
         } catch (urlParseError) {
-          this.logger.error('[App] Failed to parse current URL for parameter extraction:', urlParseError);
+          this.logger.error(
+            '[App] Failed to parse current URL for parameter extraction:',
+            urlParseError
+          );
         }
 
-        this.logger.info('[App] Calling nostr protocol handler for current URL');
+        this.logger.info(
+          '[App] Calling nostr protocol handler for current URL'
+        );
         await this.nostrProtocol.handleNostrProtocol(currentUrl);
-        this.logger.info('[App] *** NOSTR PROTOCOL HANDLING FROM URL COMPLETED ***');
-
+        this.logger.info(
+          '[App] *** NOSTR PROTOCOL HANDLING FROM URL COMPLETED ***'
+        );
       } else {
         this.logger.debug('[App] No nostr parameter found in current URL');
 
         // Check for other nostr-related patterns
         if (currentUrl.includes('nostr')) {
-          this.logger.info('[App] URL contains "nostr" but not as parameter:', currentUrl);
+          this.logger.info(
+            '[App] URL contains "nostr" but not as parameter:',
+            currentUrl
+          );
         }
 
         // Check for direct nostr protocol in hash or other locations
         if (window.location.hash && window.location.hash.includes('nostr')) {
-          this.logger.info('[App] Found nostr reference in URL hash:', window.location.hash);
+          this.logger.info(
+            '[App] Found nostr reference in URL hash:',
+            window.location.hash
+          );
         }
       }
 
       this.logger.info('[App] ==> URL check completed');
-
     } catch (error) {
-      this.logger.error('[App] ==> ERROR: Failed to check for nostr protocol in URL');
+      this.logger.error(
+        '[App] ==> ERROR: Failed to check for nostr protocol in URL'
+      );
       this.logger.error('[App] URL check error:', error);
 
       if (error instanceof Error) {
@@ -648,9 +785,8 @@ export class App {
       this.logger.error('[App] URL check error context:', {
         currentUrl: window?.location?.href || 'unavailable',
         userAgent: navigator?.userAgent || 'unavailable',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     }
   }
-
 }

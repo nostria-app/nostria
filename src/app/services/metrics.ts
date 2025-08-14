@@ -3,12 +3,12 @@ import { StorageService } from './storage.service';
 import { UserMetric, MetricUpdate, MetricQuery } from '../interfaces/metrics';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class Metrics {
   private readonly storage = inject(StorageService);
 
-  constructor() { }
+  constructor() {}
 
   /**
    * Get all metrics from storage
@@ -31,14 +31,14 @@ export class Metrics {
    */
   async getUserMetrics(pubkeys: string[]): Promise<UserMetric[]> {
     const metrics: UserMetric[] = [];
-    
+
     for (const pubkey of pubkeys) {
       const metric = await this.getUserMetric(pubkey);
       if (metric) {
         metrics.push(metric);
       }
     }
-    
+
     return metrics;
   }
 
@@ -63,7 +63,9 @@ export class Metrics {
     }
 
     if (query.minEngagementScore !== undefined) {
-      metrics = metrics.filter(m => (m.engagementScore || 0) >= query.minEngagementScore!);
+      metrics = metrics.filter(
+        m => (m.engagementScore || 0) >= query.minEngagementScore!
+      );
     }
 
     // Sort if specified
@@ -71,7 +73,7 @@ export class Metrics {
       metrics.sort((a, b) => {
         const aValue = a[query.sortBy!] || 0;
         const bValue = b[query.sortBy!] || 0;
-        
+
         if (query.sortOrder === 'desc') {
           return (bValue as number) - (aValue as number);
         } else {
@@ -92,11 +94,17 @@ export class Metrics {
    * Update a metric for a user
    */
   async updateMetric(update: MetricUpdate): Promise<void> {
-    const { pubkey, metric, increment = 1, value, timestamp = Date.now() } = update;
+    const {
+      pubkey,
+      metric,
+      increment = 1,
+      value,
+      timestamp = Date.now(),
+    } = update;
 
     // Get existing metric or create new one
     let existingMetric = await this.getUserMetric(pubkey);
-    
+
     if (!existingMetric) {
       existingMetric = this.createEmptyMetric(pubkey, timestamp);
     }
@@ -107,7 +115,8 @@ export class Metrics {
       (existingMetric as any)[metric] = value;
     } else {
       // Increment by specified amount
-      (existingMetric as any)[metric] = ((existingMetric as any)[metric] || 0) + increment;
+      (existingMetric as any)[metric] =
+        ((existingMetric as any)[metric] || 0) + increment;
     }
 
     // Update interaction timestamps
@@ -115,11 +124,13 @@ export class Metrics {
     existingMetric.updated = timestamp;
 
     // Calculate derived metrics
-    existingMetric.averageTimePerView = existingMetric.viewed > 0 
-      ? existingMetric.timeSpent / existingMetric.viewed 
-      : 0;
+    existingMetric.averageTimePerView =
+      existingMetric.viewed > 0
+        ? existingMetric.timeSpent / existingMetric.viewed
+        : 0;
 
-    existingMetric.engagementScore = this.calculateEngagementScore(existingMetric);
+    existingMetric.engagementScore =
+      this.calculateEngagementScore(existingMetric);
 
     // Save to storage
     await this.saveMetric(existingMetric);
@@ -128,7 +139,17 @@ export class Metrics {
   /**
    * Increment a metric by 1
    */
-  async incrementMetric(pubkey: string, metric: keyof Omit<UserMetric, 'pubkey' | 'updated' | 'firstInteraction' | 'averageTimePerView' | 'engagementScore'>): Promise<void> {
+  async incrementMetric(
+    pubkey: string,
+    metric: keyof Omit<
+      UserMetric,
+      | 'pubkey'
+      | 'updated'
+      | 'firstInteraction'
+      | 'averageTimePerView'
+      | 'engagementScore'
+    >
+  ): Promise<void> {
     await this.updateMetric({ pubkey, metric, increment: 1 });
   }
 
@@ -136,26 +157,33 @@ export class Metrics {
    * Add time spent viewing content for a user
    */
   async addTimeSpent(pubkey: string, timeSpent: number): Promise<void> {
-    await this.updateMetric({ pubkey, metric: 'timeSpent', increment: timeSpent });
+    await this.updateMetric({
+      pubkey,
+      metric: 'timeSpent',
+      increment: timeSpent,
+    });
   }
 
   /**
    * Get top users by a specific metric
    */
-  async getTopUsers(metric: keyof UserMetric, limit: number = 10): Promise<UserMetric[]> {
+  async getTopUsers(
+    metric: keyof UserMetric,
+    limit = 10
+  ): Promise<UserMetric[]> {
     return await this.queryMetrics({
       sortBy: metric,
       sortOrder: 'desc',
-      limit
+      limit,
     });
   }
 
   /**
    * Get users with highest engagement scores
    */
-  async getTopEngagedUsers(limit: number = 10): Promise<UserMetric[]> {
+  async getTopEngagedUsers(limit = 10): Promise<UserMetric[]> {
     const metrics = await this.getMetrics();
-    
+
     // Calculate engagement scores for all users
     metrics.forEach(metric => {
       metric.engagementScore = this.calculateEngagementScore(metric);
@@ -178,7 +206,7 @@ export class Metrics {
    */
   async resetAllMetrics(): Promise<void> {
     const metrics = await this.getMetrics();
-    
+
     for (const metric of metrics) {
       await this.storage.deleteInfoByKeyAndType(metric.pubkey, 'metric');
     }
@@ -203,7 +231,7 @@ export class Metrics {
       averageTimePerView: 0,
       engagementScore: 0,
       firstInteraction: timestamp,
-      updated: timestamp
+      updated: timestamp,
     };
   }
 
@@ -229,7 +257,7 @@ export class Metrics {
       averageTimePerView: record.averageTimePerView || 0,
       engagementScore: record.engagementScore || 0,
       firstInteraction: record.firstInteraction || Date.now(),
-      updated: record.updated || Date.now()
+      updated: record.updated || Date.now(),
     };
   }
 
@@ -245,20 +273,20 @@ export class Metrics {
       quoted: 6,
       messaged: 8,
       mentioned: 4,
-      timeSpent: 0.001 // Per second
+      timeSpent: 0.001, // Per second
     };
 
-    const score = 
-      (metric.viewed * weights.viewed) +
-      (metric.profileClicks * weights.profileClicks) +
-      (metric.liked * weights.liked) +
-      (metric.read * weights.read) +
-      (metric.replied * weights.replied) +
-      (metric.reposted * weights.reposted) +
-      (metric.quoted * weights.quoted) +
-      (metric.messaged * weights.messaged) +
-      (metric.mentioned * weights.mentioned) +
-      (metric.timeSpent * weights.timeSpent);
+    const score =
+      metric.viewed * weights.viewed +
+      metric.profileClicks * weights.profileClicks +
+      metric.liked * weights.liked +
+      metric.read * weights.read +
+      metric.replied * weights.replied +
+      metric.reposted * weights.reposted +
+      metric.quoted * weights.quoted +
+      metric.messaged * weights.messaged +
+      metric.mentioned * weights.mentioned +
+      metric.timeSpent * weights.timeSpent;
 
     return Math.round(score * 100) / 100; // Round to 2 decimal places
   }

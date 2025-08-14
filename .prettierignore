@@ -1,0 +1,22 @@
+# Generated API files
+src/app/api/
+
+# Build outputs
+dist/
+build/
+
+# Dependencies
+node_modules/
+
+# Generated files
+*.gen.ts
+*.generated.ts
+
+# Package files
+*.tgz
+
+# Environment files
+.env*
+
+# Logs
+*.log

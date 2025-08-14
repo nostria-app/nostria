@@ -4,6 +4,7 @@ import { Event, UnsignedEvent } from 'nostr-tools';
 import { ProfileStateService } from './profile-state.service';
 import { RelayService } from './relay.service';
 import { AccountStateService } from './account-state.service';
+import { AccountRelayServiceEx } from './account-relay.service';
 
 export enum PublishTarget {
   Account = 'account',
@@ -12,12 +13,13 @@ export enum PublishTarget {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class PublishQueueService {
   private readonly relay = inject(RelayService);
   private readonly profileState = inject(ProfileStateService);
   private readonly accountState = inject(AccountStateService);
+  private readonly accountRelay = inject(AccountRelayServiceEx);
   private readonly injector = inject(Injector);
 
   // Lazy-loaded service reference
@@ -45,7 +47,7 @@ export class PublishQueueService {
   }
 
   // A queue for publishing Nostr events. Needs to process events in order and wait for signing.
-  private queue: { event: any, target: PublishTarget }[] = [];
+  private queue: { event: any; target: PublishTarget }[] = [];
 
   // Add a task to the queue
   publish(event: UnsignedEvent | Event, target: PublishTarget): void {
@@ -79,12 +81,11 @@ export class PublishQueueService {
           // Lazy load the NostrService when needed
           const nostr = await this.getNostrService();
           const signedEvent = await nostr.signEvent(task.event);
-          await this.nostr.publish(signedEvent);
-        }
-        else if (task.target === PublishTarget.User) {
+          await this.accountRelay.publish(signedEvent);
+          // await this.nostr.publish(signedEvent);
+        } else if (task.target === PublishTarget.User) {
           await this.profileState.relay?.publish(task.event as Event);
-        }
-        else if (task.target === PublishTarget.Discovery) {
+        } else if (task.target === PublishTarget.Discovery) {
           this.relay.publishToDiscoveryRelays(task.event as Event);
         }
 

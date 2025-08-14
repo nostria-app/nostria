@@ -3,7 +3,6 @@
   (touchend)="handleTouchEvent($event)"> -->
 
 <div [ngClass]="['user-profile', view()]">
-
   @if (info()) {
   <div class="user-info-status" [matTooltip]="getInfoTooltip()" [matTooltipClass]="'user-profile-tooltip'">
     @if (this.info()!['hasRelayList']) {
@@ -24,10 +23,12 @@
     }
 
     <!-- Avatar section - single image element -->
-    <a [routerLink]="['/p', publicKey]" class="user-profile-avatar"
-      [matTooltip]="view() === 'large' || view() === 'medium' || view() === 'small' ? getTooltipContent() : ''"
-      [matTooltipClass]="'user-profile-tooltip'" matTooltipPosition="above">
-
+    <a [routerLink]="['/p', publicKey]" class="user-profile-avatar" [matTooltip]="
+        view() === 'large' || view() === 'medium' || view() === 'small'
+          ? getTooltipContent()
+          : ''
+      " [matTooltipClass]="'user-profile-tooltip'" matTooltipPosition="above" (touchstart)="handleTouchStart($event)"
+      (touchmove)="handleTouchMove($event)" (touchend)="handleTouchEnd($event)">
       <!-- <a [routerLink]="['/p', pubkey()]" class="user-profile-avatar"
       [matTooltip]="view() === 'large' || view() === 'medium' || view() === 'small' ? getTooltipContent() : ''"
       [matTooltipClass]="'user-profile-tooltip'" matTooltipPosition="above" (touchstart)="handleTouchEvent($event)"
@@ -36,17 +37,32 @@
       @if (isLoading()) {
       <mat-spinner [diameter]="getSpinnerSize()" color="primary"></mat-spinner>
       } @else if (profile()?.data?.picture && !imageLoadError()) {
-      <img [src]="profile().data.picture" (error)="onImageLoadError($event)" alt="User Avatar" class="user-avatar" />
+      @if (settingsService.settings().imageCacheEnabled) {
+      <img [src]="
+              'https://proxy.eu.nostria.app/api/ImageOptimizeProxy?w=250&h=250&url=' +
+              profile().data.picture
+            " (error)="onImageLoadError()" alt="User Avatar" class="user-avatar" />
       } @else {
-      <mat-icon [ngClass]="['default-user-avatar', 
-                     isProfileNotFound() ? 'not-found-avatar' : '',
-                     imageLoadError() ? 'error-avatar' : '']" [style.font-size]="getDefaultAvatarSize()"
-        [style.height]="getDefaultAvatarSize()" [style.width]="getDefaultAvatarSize()">
-        {{isProfileNotFound() ? 'no_accounts' : 'account_circle'}}
+      <img [src]="profile().data.picture" (error)="onImageLoadError()" alt="User Avatar" class="user-avatar" />
+      }
+      } @else {
+      <mat-icon [ngClass]="[
+            'default-user-avatar',
+            isProfileNotFound() ? 'not-found-avatar' : '',
+            imageLoadError() ? 'error-avatar' : '',
+          ]" [style.font-size]="getDefaultAvatarSize()" [style.height]="getDefaultAvatarSize()"
+        [style.width]="getDefaultAvatarSize()">
+        {{ isProfileNotFound() ? 'no_accounts' : 'account_circle' }}
       </mat-icon>
       }
-    </a> <!-- Content section with conditional rendering based on view -->
-    @if (view() !== 'large' && view() !== 'medium' && view() !== 'small' && view() !== 'icon') {
+    </a>
+    <!-- Content section with conditional rendering based on view -->
+    @if (
+    view() !== 'large' &&
+    view() !== 'medium' &&
+    view() !== 'small' &&
+    view() !== 'icon'
+    ) {
     <div class="user-profile-content">
       <!-- Name section -->
       <a [routerLink]="['/p', publicKey]" class="user-profile-name">
@@ -71,11 +87,33 @@
       }
 
       <!-- About section - only shown in details view -->
-      @if (view() === 'details' && profile() && profile().data && profile().data.about) {
-      <p class="user-profile-about">{{ profile().data.about }}</p>
+      @if (
+      view() === 'details' &&
+      profile() &&
+      profile().data &&
+      profile().data.about
+      ) {
+      <div class="user-profile-about">{{ profile().data.about }}</div>
+      }
+
+      @if (view() === 'details' && profile() && profile().data) {
+      @if (profile().data.nip05) {
+      <div class="user-profile-details">
+        NIP-05: {{ profile().data.nip05 }}
+      </div>
+      }
+      @if (profile().data.lud16) {
+      <div class="user-profile-details">
+        LUD16: {{ profile().data.lud16 }}
+      </div>
+      }
+      @if (profile().data.website) {
+      <div class="user-profile-details">
+        Website: {{ profile().data.website }}
+      </div>
+      }
       }
     </div>
-
     }
 
     <!-- Named content projection for additional controls (like more options button) -->
@@ -83,22 +121,25 @@
       <ng-content></ng-content>
     </div>
 
-    @if (view() ==='thread') {
+    @if (view() === 'thread') {
     <div>
       <button mat-icon-button [matMenuTriggerFor]="menu">
         <mat-icon>more_vert</mat-icon>
       </button>
 
       <mat-menu #copyMenu="matMenu">
-        <button mat-menu-item (click)="layout.copyToClipboard(npub(), 'npub')">
+        <button mat-menu-item (click)="layout.copyToClipboard(event()?.pubkey, 'note')">
           <span>Event ID (note)</span>
         </button>
-        <button mat-menu-item (click)="layout.copyToClipboard(publicKey, 'nprofile')">
+        <button mat-menu-item (click)="layout.copyToClipboard(event()?.pubkey, 'hex')">
+          <span>Event ID (hex)</span>
+        </button>
+        <button mat-menu-item (click)="layout.copyToClipboard(event, 'nevent')">
           <span>Event ID (nevent)</span>
         </button>
-        <!-- <button mat-menu-item (click)="copyProfileData()">
+        <button mat-menu-item (click)="copyEventData()">
           <span>Event Data</span>
-        </button> -->
+        </button>
       </mat-menu>
 
       <mat-menu #menu="matMenu">
@@ -106,8 +147,6 @@
           <mat-icon>content_copy</mat-icon>
           <span>Copy</span>
         </button>
-        <button mat-menu-item>Item 1</button>
-        <button mat-menu-item>Item 2</button>
       </mat-menu>
     </div>
     }

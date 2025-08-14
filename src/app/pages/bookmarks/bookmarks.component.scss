@@ -43,31 +43,31 @@
 
   .filters-container {
     margin-bottom: 24px;
-    
+
     .search-field {
       width: 100%;
       margin-bottom: 16px;
     }
-    
+
     .categories-container {
       .categories-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
         margin-bottom: 12px;
-        
+
         h3 {
           font-size: 16px;
           margin: 0;
         }
       }
-      
+
       .categories-list {
         display: flex;
         flex-wrap: wrap;
         gap: 8px;
         margin-bottom: 16px;
-        
+
         .category-chip {
           padding: 6px 12px;
           border-radius: 20px;
@@ -75,11 +75,11 @@
           font-size: 14px;
           cursor: pointer;
           transition: all 0.2s ease;
-          
+
           &:hover {
             opacity: 0.8;
           }
-          
+
           &.selected {
             box-shadow: var(--mat-sys-level1);
           }
@@ -92,12 +92,12 @@
     // display: grid;
     // grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     // gap: 16px;
-    
+
     .empty-state {
       grid-column: 1 / -1;
       text-align: center;
       padding: 40px 0;
-      
+
       mat-icon {
         font-size: 64px;
         height: 64px;
@@ -105,33 +105,33 @@
         opacity: 0.5;
         margin-bottom: 16px;
       }
-      
+
       p {
         margin: 8px 0;
         opacity: 0.7;
       }
-      
+
       button {
         margin-top: 16px;
       }
     }
-    
+
     .bookmark-card {
       position: relative;
       cursor: pointer;
       transition: all 0.2s ease;
       box-shadow: var(--mat-sys-level0);
       height: 100%;
-      
+
       &:hover {
         box-shadow: var(--mat-sys-level2);
         transform: translateY(-2px);
-        
+
         .bookmark-actions {
           opacity: 1;
         }
       }
-      
+
       mat-card-header {
         padding-bottom: 0;
 
@@ -141,14 +141,14 @@
           align-items: center;
           justify-content: center;
           border-radius: 50%;
-          
+
           mat-icon {
             font-size: 20px;
             width: 20px;
             height: 20px;
           }
         }
-        
+
         mat-card-title {
           font-size: 18px;
           margin-bottom: 4px;
@@ -156,7 +156,7 @@
           overflow: hidden;
           text-overflow: ellipsis;
         }
-        
+
         mat-card-subtitle {
           white-space: nowrap;
           overflow: hidden;
@@ -164,7 +164,7 @@
           margin-bottom: 8px;
         }
       }
-      
+
       mat-card-content {
         .bookmark-description {
           margin-top: 0;
@@ -175,13 +175,13 @@
           overflow: hidden;
           font-size: 14px;
         }
-        
+
         .bookmark-categories {
           display: flex;
           flex-wrap: wrap;
           gap: 6px;
           margin-bottom: 16px;
-          
+
           .category-tag {
             font-size: 12px;
             padding: 2px 8px;
@@ -199,13 +199,13 @@
             white-space: nowrap;
           }
         }
-        
+
         .bookmark-info {
           font-size: 12px;
           color: rgba(0, 0, 0, 0.54);
         }
       }
-      
+
       .bookmark-actions {
         position: absolute;
         top: 8px;
@@ -258,7 +258,7 @@
             }
           }
         }
-        
+
         .bookmark-actions {
           background-color: rgba(30, 30, 30, 0.9);
         }

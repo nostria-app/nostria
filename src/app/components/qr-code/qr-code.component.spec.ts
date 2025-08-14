@@ -10,11 +10,8 @@ describe('QrCodeComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [QrCodeComponent],
-      providers: [
-        provideZonelessChangeDetection()
-      ]
-    })
-    .compileComponents();
+      providers: [provideZonelessChangeDetection()],
+    }).compileComponents();
 
     fixture = TestBed.createComponent(QrCodeComponent);
     component = fixture.componentInstance;
@@ -26,13 +23,13 @@ describe('QrCodeComponent', () => {
 
   it('should generate SVG QR code by default', async () => {
     fixture.componentRef.setInput('qrdata', 'test data');
-    
+
     // In zoneless mode, we need to trigger change detection manually
     fixture.detectChanges();
-    
+
     // Wait for effects to run
     await fixture.whenStable();
-    
+
     expect(component.svgData()).toBeTruthy();
     // Convert SafeHtml to string for testing
     const svgString = component.svgData().toString();
@@ -44,12 +41,12 @@ describe('QrCodeComponent', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     const firstSvg = component.svgData().toString();
-    
+
     fixture.componentRef.setInput('qrdata', 'test data 2');
     fixture.detectChanges();
     await fixture.whenStable();
     const secondSvg = component.svgData().toString();
-    
+
     expect(firstSvg).not.toEqual(secondSvg);
   });
 });

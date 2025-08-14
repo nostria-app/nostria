@@ -9,9 +9,9 @@ export interface LocalSettings {
 }
 
 const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
-  menuOpen: true,
+  menuOpen: false,
   menuExpanded: true,
-  locale: 'en'
+  locale: 'en',
 };
 
 /**
@@ -19,7 +19,7 @@ const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
  * These settings are not synced across devices and are specific to this browser/device
  */
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class LocalSettingsService {
   private readonly localStorage = inject(LocalStorageService);
@@ -36,7 +36,7 @@ export class LocalSettingsService {
 
   constructor() {
     this.loadSettings();
-    
+
     // Auto-save settings whenever they change
     effect(() => {
       const currentSettings = this.settings();
@@ -49,19 +49,24 @@ export class LocalSettingsService {
    */
   private loadSettings(): void {
     try {
-      const stored = this.localStorage.getObject<LocalSettings>(this.STORAGE_KEY);
-      
+      const stored = this.localStorage.getObject<LocalSettings>(
+        this.STORAGE_KEY
+      );
+
       if (stored) {
         // Merge with defaults to ensure all properties exist
         const mergedSettings: LocalSettings = {
           ...DEFAULT_LOCAL_SETTINGS,
-          ...stored
+          ...stored,
         };
-        
+
         this.settings.set(mergedSettings);
         this.logger.debug('Local settings loaded successfully', mergedSettings);
       } else {
-        this.logger.debug('No local settings found, using defaults', DEFAULT_LOCAL_SETTINGS);
+        this.logger.debug(
+          'No local settings found, using defaults',
+          DEFAULT_LOCAL_SETTINGS
+        );
         this.settings.set({ ...DEFAULT_LOCAL_SETTINGS });
       }
     } catch (error) {
@@ -92,7 +97,7 @@ export class LocalSettingsService {
   updateSettings(updates: Partial<LocalSettings>): void {
     this.settings.update(current => ({
       ...current,
-      ...updates
+      ...updates,
     }));
   }
 

@@ -1,4 +1,15 @@
-import { Component, effect, inject, signal, OnInit, OnDestroy, untracked, computed } from '@angular/core';
+import {
+  Component,
+  effect,
+  inject,
+  signal,
+  OnInit,
+  OnDestroy,
+  untracked,
+  computed,
+  ViewChild,
+  TemplateRef,
+} from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
@@ -12,7 +23,10 @@ import { MatDialog } from '@angular/material/dialog';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { RelayInfoDialogComponent } from './relay-info-dialog.component';
-import { RelayPingResultsDialogComponent, PingResult } from './relay-ping-results-dialog.component';
+import {
+  RelayPingResultsDialogComponent,
+  PingResult,
+} from './relay-ping-results-dialog.component';
 import { kinds, SimplePool, UnsignedEvent } from 'nostr-tools';
 import { RelayService, Relay } from '../../../services/relay.service';
 import { NostrService } from '../../../services/nostr.service';
@@ -25,6 +39,8 @@ import { ProfileStateService } from '../../../services/profile-state.service';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { AccountRelayService } from '../../../services/account-relay.service';
+import { DataService } from '../../../services/data.service';
+import { InfoTooltipComponent } from '../../../components/info-tooltip/info-tooltip.component';
 
 @Component({
   selector: 'app-relays-page',
@@ -39,10 +55,11 @@ import { AccountRelayService } from '../../../services/account-relay.service';
     MatInputModule,
     MatFormFieldModule,
     MatSlideToggleModule,
-    MatTabsModule
+    MatTabsModule,
+    InfoTooltipComponent,
   ],
   templateUrl: './relays.component.html',
-  styleUrl: './relays.component.scss'
+  styleUrl: './relays.component.scss',
 })
 export class RelaysComponent implements OnInit, OnDestroy {
   relay = inject(RelayService);
@@ -58,9 +75,22 @@ export class RelaysComponent implements OnInit, OnDestroy {
   private readonly utilities = inject(UtilitiesService);
   private readonly accountState = inject(AccountStateService);
   private readonly accountRelay = inject(AccountRelayService);
+  private readonly data = inject(DataService);
 
+  followingRelayUrls = signal<string[]>([]);
   newRelayUrl = signal('');
   newBootstrapUrl = signal('');
+  // New signals for deprecated following list relay cleanup feature
+  showFollowingRelayCleanup = signal(false);
+  isCleaningFollowingList = signal(false);
+  // Show DM relay update card unless already matching
+  showUpdateDMRelays = signal(true);
+
+  // Template references for tooltip content
+  @ViewChild('userRelaysInfoContent')
+  userRelaysInfoContent!: TemplateRef<unknown>;
+  @ViewChild('discoveryRelaysInfoContent')
+  discoveryRelaysInfoContent!: TemplateRef<unknown>;
 
   // Timer for connection status checking
   private statusCheckTimer: any;
@@ -87,7 +117,6 @@ export class RelaysComponent implements OnInit, OnDestroy {
   constructor() {
     effect(() => {
       if (this.app.authenticated()) {
-
         console.log(this.relay.getUserPool());
         console.log(this.relay.getUserPool()?.listConnectionStatus());
 
@@ -97,14 +126,136 @@ export class RelaysComponent implements OnInit, OnDestroy {
         });
       }
     });
+    // Effect to re-check following list when active pubkey changes
+    effect(async () => {
+      const pubkey = this.accountState.pubkey();
+      if (pubkey) {
+        await this.checkFollowingListForRelays(pubkey);
+        await this.checkDirectMessageRelayList(pubkey);
+      } else {
+        this.showFollowingRelayCleanup.set(false);
+        this.showUpdateDMRelays.set(false);
+      }
+    });
   }
 
-  ngOnInit() {
+  // Async method to detect if contact list (kind 3) contains relay URLs in content
+  private async checkFollowingListForRelays(pubkey: string) {
+    try {
+      const followingEvent = await this.storage.getEventByPubkeyAndKind(
+        pubkey,
+        kinds.Contacts
+      );
+      if (!followingEvent) {
+        this.showFollowingRelayCleanup.set(false);
+        return;
+      }
+      // If content is object (deprecated structure) and utilities can extract relay urls
+      const relayUrls = this.utilities.getRelayUrlsFromFollowing(
+        followingEvent as any
+      );
 
+      this.followingRelayUrls.set(relayUrls);
+
+      const hasRelays = relayUrls.length > 0;
+      this.showFollowingRelayCleanup.set(hasRelays);
+    } catch (err) {
+      this.logger.error('Failed to check following list for relays', err);
+      this.showFollowingRelayCleanup.set(false);
+    }
   }
+
+  private async checkDirectMessageRelayList(pubkey: string) {
+    try {
+      // Get current user relay list (kind 10002) from storage (already have in memory as this.relay.relays)
+      const userRelayUrls = this.utilities.normalizeRelayUrls(
+        this.relay.relays.map(r => r.url)
+      );
+
+      // Fetch existing DM relay list event (10050)
+      const dmRelayEvent = await this.data.getEventByPubkeyAndKind(
+        pubkey,
+        kinds.DirectMessageRelaysList
+      );
+      if (!dmRelayEvent) {
+        this.showUpdateDMRelays.set(true); // Need to create one
+        return;
+      }
+
+      // Extract relay tag URLs from dmRelayEvent
+      const dmRelayUrls = dmRelayEvent.event.tags
+        .filter(t => t[0] === 'relay' && t[1])
+        .map(t => t[1]);
+      const normalizedDMUrls = this.utilities.normalizeRelayUrls(dmRelayUrls);
+
+      // Compare sets (unordered)
+      const setA = new Set(userRelayUrls);
+      const setB = new Set(normalizedDMUrls);
+      const same = setA.size === setB.size && [...setA].every(u => setB.has(u));
+
+      this.showUpdateDMRelays.set(!same);
+    } catch (err) {
+      this.logger.error('Failed to check DM relay list', err);
+      this.showUpdateDMRelays.set(true);
+    }
+  }
+
+  ngOnInit() { }
 
   cleanFollowingList() {
-    alert('Coming soon...');
+    if (this.isCleaningFollowingList()) {
+      return;
+    }
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      this.showMessage('No active account');
+      return;
+    }
+    this.isCleaningFollowingList.set(true);
+
+    (async () => {
+      try {
+        const followingEvent = await this.storage.getEventByPubkeyAndKind(
+          pubkey,
+          kinds.Contacts
+        );
+        if (!followingEvent) {
+          this.showMessage('Following list not found');
+          this.isCleaningFollowingList.set(false);
+          return;
+        }
+
+        // Only proceed if deprecated relay data exists in content (object with relay keys)
+        const relayUrls = this.utilities.getRelayUrlsFromFollowing(
+          followingEvent as any
+        );
+        if (relayUrls.length === 0) {
+          this.showMessage('No deprecated relay entries found');
+          this.showFollowingRelayCleanup.set(false);
+          this.isCleaningFollowingList.set(false);
+          return;
+        }
+
+        // Preserve existing p and other tags; just strip relays from content by setting to empty string
+        const updatedEvent: UnsignedEvent = {
+          pubkey: followingEvent.pubkey,
+          kind: kinds.Contacts,
+          created_at: Math.floor(Date.now() / 1000),
+          tags: [...followingEvent.tags],
+          content: '',
+        };
+        const signed = await this.nostr.signEvent(updatedEvent);
+        await this.relay.publish(signed); // publish to user relays
+        await this.storage.saveEvent(signed);
+        this.showMessage('Deprecated relays removed from following list');
+        this.showFollowingRelayCleanup.set(false);
+      } catch (err) {
+        this.logger.error('Failed cleaning following list', err);
+        this.showMessage('Error removing relays');
+      } finally {
+        this.isCleaningFollowingList.set(false);
+      }
+    })();
   }
 
   ngOnDestroy() {
@@ -145,12 +296,17 @@ export class RelaysComponent implements OnInit, OnDestroy {
   private checkRelayConnectionStatus() {
     const userPool = this.relay.getUserPool();
     if (!userPool) {
-      this.logger.warn('Cannot check relay status: user pool is not initialized');
+      this.logger.warn(
+        'Cannot check relay status: user pool is not initialized'
+      );
       return;
     }
 
     const connectionStatusMap = userPool.listConnectionStatus();
-    this.logger.debug('Retrieved relay connection statuses', connectionStatusMap);
+    this.logger.debug(
+      'Retrieved relay connection statuses',
+      connectionStatusMap
+    );
 
     console.log('SEEN ON!!');
     console.log(userPool.seenOn);
@@ -164,7 +320,9 @@ export class RelaysComponent implements OnInit, OnDestroy {
 
         // Only update if status has changed
         if (relay.status !== newStatus) {
-          this.logger.debug(`Updating relay ${relay.url} status to ${newStatus}`);
+          this.logger.debug(
+            `Updating relay ${relay.url} status to ${newStatus}`
+          );
           this.relay.updateRelayStatus(relay.url, newStatus);
         }
       }
@@ -201,7 +359,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
   }
 
   async addRelay() {
-    let url = this.parseUrl(this.newRelayUrl());
+    const url = this.parseUrl(this.newRelayUrl());
 
     if (!url) {
       return;
@@ -221,12 +379,15 @@ export class RelaysComponent implements OnInit, OnDestroy {
       data: {
         relayUrl: url,
         adding: true,
-      }
+      },
     });
 
     dialogRef.afterClosed().subscribe(async result => {
       if (result?.confirmed) {
-        this.logger.info('Adding new relay', { url, migrateData: result.migrateData });
+        this.logger.info('Adding new relay', {
+          url,
+          migrateData: result.migrateData,
+        });
         this.relay.addRelay(url);
 
         await this.publish();
@@ -249,7 +410,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
       data: {
         relayUrl: relayUrl,
         adding: false, // Set to false to indicate viewing only
-      }
+      },
     });
   }
 
@@ -258,7 +419,6 @@ export class RelaysComponent implements OnInit, OnDestroy {
     this.relay.removeRelay(relay.url);
     await this.publish();
     this.showMessage('Relay removed');
-
   }
 
   async publish() {
@@ -267,7 +427,10 @@ export class RelaysComponent implements OnInit, OnDestroy {
     const relays = this.relay.relays;
     this.logger.debug('User relays being published:', relays);
 
-    const tags = this.nostr.createTags('r', relays.map(relay => relay.url));
+    const tags = this.nostr.createTags(
+      'r',
+      relays.map(relay => relay.url)
+    );
     const relayListEvent = this.nostr.createEvent(kinds.RelayList, '', tags);
 
     this.logger.debug('Created relay list event', relayListEvent);
@@ -277,12 +440,18 @@ export class RelaysComponent implements OnInit, OnDestroy {
 
     // Make sure the relay list is published both to the user's relays and discovery relays.
     const callbacks1 = await this.relay.publish(signedEvent);
-    const callbacks2 = await this.relay.publish(signedEvent, this.relay.discoveryRelays);
+    const callbacks2 = await this.relay.publish(
+      signedEvent,
+      this.relay.discoveryRelays
+    );
 
     // Combine all callbacks into a flat array for tracking
     const allCallbacks = [...(callbacks1 || []), ...(callbacks2 || [])].flat();
 
-    const relayUrls = [...this.relay.relays.map(relay => relay.url), ...this.relay.discoveryRelays];
+    const relayUrls = [
+      ...this.relay.relays.map(relay => relay.url),
+      ...this.relay.discoveryRelays,
+    ];
     this.logger.debug('Publishing to relay URLs:', relayUrls);
 
     // Create a mapping of callbacks to their respective relay URLs
@@ -302,16 +471,19 @@ export class RelaysComponent implements OnInit, OnDestroy {
     });
 
     // Pass the original callback arrays to the notification service
-    this.notifications.addRelayPublishingNotification(signedEvent, callbackRelayMapping);
+    this.notifications.addRelayPublishingNotification(
+      signedEvent,
+      callbackRelayMapping
+    );
 
-    this.relay.getUserPool()
+    this.relay.getUserPool();
 
     await this.storage.saveEvent(signedEvent);
     this.logger.debug('Saved relay list event to storage');
   }
 
   addBootstrapRelay(): void {
-    let url = this.parseUrl(this.newBootstrapUrl());
+    const url = this.parseUrl(this.newBootstrapUrl());
 
     if (!url) {
       return;
@@ -342,21 +514,29 @@ export class RelaysComponent implements OnInit, OnDestroy {
 
   getStatusIcon(status: Relay['status'] | undefined): string {
     switch (status) {
-      case 'connected': return 'check_circle';
-      case 'connecting': return 'hourglass_empty';
-      case 'error': return 'error';
+      case 'connected':
+        return 'check_circle';
+      case 'connecting':
+        return 'hourglass_empty';
+      case 'error':
+        return 'error';
       case 'disconnected':
-      default: return 'cancel'; // Changed from radio_button_unchecked to cancel for more serious look
+      default:
+        return 'cancel'; // Changed from radio_button_unchecked to cancel for more serious look
     }
   }
 
   getStatusColor(status: Relay['status'] | undefined): string {
     switch (status) {
-      case 'connected': return 'text-green-500';
-      case 'connecting': return 'text-yellow-500';
-      case 'error': return 'text-red-500';
+      case 'connected':
+        return 'text-green-500';
+      case 'connecting':
+        return 'text-yellow-500';
+      case 'error':
+        return 'text-red-500';
       case 'disconnected':
-      default: return 'text-orange-500'; // Changed from text-gray-500 to text-orange-500 for more serious look
+      default:
+        return 'text-orange-500'; // Changed from text-gray-500 to text-orange-500 for more serious look
     }
   }
 
@@ -369,12 +549,14 @@ export class RelaysComponent implements OnInit, OnDestroy {
     this.snackBar.open(message, 'Close', {
       duration: 3000,
       horizontalPosition: 'center',
-      verticalPosition: 'bottom'
+      verticalPosition: 'bottom',
     });
   }
 
   async updateDirectMessageRelayList() {
-    const relayUrls = this.relays().map(relay => { return relay.url });
+    const relayUrls = this.relays().map(relay => {
+      return relay.url;
+    });
     const normalizedUrls = this.utilities.normalizeRelayUrls(relayUrls);
     const relayTags = this.nostr.createTags('relay', normalizedUrls);
     const pubkey = this.accountState.pubkey();
@@ -387,7 +569,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
       created_at: Math.floor(Date.now() / 1000),
       kind: kinds.DirectMessageRelaysList,
       tags: relayTags,
-      content: ''
+      content: '',
     };
 
     const signedEvent = await this.nostr.signEvent(relayListEvent);
@@ -396,14 +578,19 @@ export class RelaysComponent implements OnInit, OnDestroy {
 
   async discoveryRelayTest() {
     const relaysUrls = ['ws://localhost:5210'];
-    const pubkey = '17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515';
+    const pubkey =
+      '17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515';
     const pool = new SimplePool();
-    const relayList = await pool.get(relaysUrls, {
-      kinds: [kinds.RelayList],
-      authors: [pubkey],
-    }, {
-      maxWait: 60000
-    });
+    const relayList = await pool.get(
+      relaysUrls,
+      {
+        kinds: [kinds.RelayList],
+        authors: [pubkey],
+      },
+      {
+        maxWait: 60000,
+      }
+    );
 
     console.log(relayList);
 
@@ -413,9 +600,10 @@ export class RelaysComponent implements OnInit, OnDestroy {
       content: '',
       tags: [
         ['r', 'wss://relay.example.com'],
-        ['r', 'wss://another.relay.example.com']
+        ['r', 'wss://another.relay.example.com'],
       ],
-      pubkey: 'eb67f0064b6217d47ae32bdd1286fb89ae6e942a1dcf09c1496febf9609c11e3',
+      pubkey:
+        'eb67f0064b6217d47ae32bdd1286fb89ae6e942a1dcf09c1496febf9609c11e3',
       id: 'b2413a4b148055115bd6a5a4272c69e3690b447e5bedd4c0ffcfdbe8bcd38100',
       sig: 'e52e0fde8c64243d5a0b3013e0bc617037280f1f377c041b535799648a776430f3be13c79192fc0d7d9932deaeed05c35e61eecffc57beb355c6258716402afc',
     };
@@ -430,7 +618,9 @@ export class RelaysComponent implements OnInit, OnDestroy {
 
     // Handle the promises returned from publish
     if (publishPromises && publishPromises.length > 0) {
-      this.logger.info('Publish initiated to discovery relays', { count: publishPromises.length });
+      this.logger.info('Publish initiated to discovery relays', {
+        count: publishPromises.length,
+      });
 
       // Process each promise and map it to its corresponding relay
       publishPromises.forEach((promise, index) => {
@@ -440,16 +630,18 @@ export class RelaysComponent implements OnInit, OnDestroy {
           .then(result => {
             this.logger.info('Successfully published to discovery relay', {
               relay: relayUrl,
-              result
+              result,
             });
             this.showMessage(`Published to ${this.formatRelayUrl(relayUrl)}`);
           })
           .catch(error => {
             this.logger.error('Failed to publish to discovery relay', {
               relay: relayUrl,
-              error: error.message || error
+              error: error.message || error,
             });
-            this.showMessage(`Failed to publish to ${this.formatRelayUrl(relayUrl)}`);
+            this.showMessage(
+              `Failed to publish to ${this.formatRelayUrl(relayUrl)}`
+            );
           });
       });
 
@@ -463,7 +655,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
         this.logger.info('Discovery relay test completed', {
           total: publishPromises.length,
           successful,
-          failed
+          failed,
         });
       } catch (error) {
         this.logger.error('Error when waiting for publish promises', error);
@@ -479,13 +671,16 @@ export class RelaysComponent implements OnInit, OnDestroy {
     this.logger.info('Starting latency check to find closest discovery relay');
 
     // Combine user's discovery relays with known ones, removing duplicates
-    const relaysToCheck = [...new Set([
-      ...this.relay.discoveryRelays,
-      ...this.knownDiscoveryRelays
-    ])];
+    const relaysToCheck = [
+      ...new Set([...this.relay.discoveryRelays, ...this.knownDiscoveryRelays]),
+    ];
 
-    this.logger.debug('Checking relays for latency', { count: relaysToCheck.length });
-    this.showMessage(`Checking ${relaysToCheck.length} discovery relays for latency...`);
+    this.logger.debug('Checking relays for latency', {
+      count: relaysToCheck.length,
+    });
+    this.showMessage(
+      `Checking ${relaysToCheck.length} discovery relays for latency...`
+    );
 
     try {
       // Check latency for all relays
@@ -498,7 +693,9 @@ export class RelaysComponent implements OnInit, OnDestroy {
         .map((result, index) => ({
           url: relaysToCheck[index],
           pingTime: result.status === 'fulfilled' ? result.value : Infinity,
-          isAlreadyAdded: this.relay.discoveryRelays.includes(relaysToCheck[index])
+          isAlreadyAdded: this.relay.discoveryRelays.includes(
+            relaysToCheck[index]
+          ),
         }))
         .filter(result => result.pingTime !== Infinity)
         .sort((a, b) => a.pingTime - b.pingTime);
@@ -515,8 +712,8 @@ export class RelaysComponent implements OnInit, OnDestroy {
       const dialogRef = this.dialog.open(RelayPingResultsDialogComponent, {
         width: '500px',
         data: {
-          results: successfulPings
-        }
+          results: successfulPings,
+        },
       });
 
       dialogRef.afterClosed().subscribe(result => {
@@ -527,7 +724,9 @@ export class RelaysComponent implements OnInit, OnDestroy {
           setTimeout(() => {
             this.relay.addDiscoveryRelay(selectedRelay.url);
             this.relay.saveDiscoveryRelays();
-            this.showMessage(`Added ${this.formatRelayUrl(selectedRelay.url)} to discovery relays`);
+            this.showMessage(
+              `Added ${this.formatRelayUrl(selectedRelay.url)} to discovery relays`
+            );
           }, 0);
         }
       });
@@ -560,7 +759,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
 
           // Send a simple ping message if possible
           try {
-            ws.send(JSON.stringify(["REQ", "ping-check", {}]));
+            ws.send(JSON.stringify(['REQ', 'ping-check', {}]));
           } catch (e) {
             // Ignore errors when sending ping
           }
@@ -570,7 +769,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
           resolve(pingTime);
         };
 
-        ws.onerror = (error) => {
+        ws.onerror = error => {
           clearTimeout(timeout);
           reject(error);
         };

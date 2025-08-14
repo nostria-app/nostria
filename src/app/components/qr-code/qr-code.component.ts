@@ -1,4 +1,13 @@
-import { Component, input, effect, signal, ElementRef, ViewChild, AfterViewInit, inject } from '@angular/core';
+import {
+  Component,
+  input,
+  effect,
+  signal,
+  ElementRef,
+  ViewChild,
+  AfterViewInit,
+  inject,
+} from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import encodeQR from 'qr';
 
@@ -12,15 +21,18 @@ import encodeQR from 'qr';
       <div [innerHTML]="svgData()"></div>
     }
   `,
-  styleUrl: './qr-code.component.scss'
+  styleUrl: './qr-code.component.scss',
 })
 export class QrCodeComponent implements AfterViewInit {
-  @ViewChild('qrCanvas', { static: false }) canvas!: ElementRef<HTMLCanvasElement>;
-  
+  @ViewChild('qrCanvas', { static: false })
+  canvas!: ElementRef<HTMLCanvasElement>;
+
   qrdata = input.required<string>();
   width = input<number>(256);
   height = input<number>();
-  errorCorrectionLevel = input<'low' | 'medium' | 'quartile' | 'high'>('medium');
+  errorCorrectionLevel = input<'low' | 'medium' | 'quartile' | 'high'>(
+    'medium'
+  );
   mode = input<'canvas' | 'svg'>('svg');
   border = input<number>(2);
   svgData = signal<SafeHtml>('');
@@ -68,7 +80,7 @@ export class QrCodeComponent implements AfterViewInit {
     // Generate QR code as 2D boolean array
     const qrMatrix = encodeQR(data, 'raw', {
       ecc: this.errorCorrectionLevel(),
-      border
+      border,
     });
 
     const qrSize = qrMatrix.length;
@@ -102,11 +114,11 @@ export class QrCodeComponent implements AfterViewInit {
   private generateSvgQR() {
     const data = this.qrdata();
     const size = this.width();
-    
+
     const svg = encodeQR(data, 'svg', {
       ecc: this.errorCorrectionLevel(),
       border: this.border(),
-      scale: Math.floor(size / 25) // Approximate scale based on typical QR size
+      scale: Math.floor(size / 25), // Approximate scale based on typical QR size
     });
 
     // Sanitize the SVG data

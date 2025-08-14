@@ -22,7 +22,7 @@ export interface CacheStats {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class Cache {
   private readonly cache = new Map<string, CacheEntry<any>>();
@@ -30,7 +30,7 @@ export class Cache {
   private readonly defaultOptions: Required<CacheOptions> = {
     maxSize: 100,
     ttl: 5 * 60 * 1000, // 5 minutes
-    persistent: false
+    persistent: false,
   };
 
   // Signals for reactive cache statistics
@@ -39,7 +39,7 @@ export class Cache {
     maxSize: this.defaultOptions.maxSize,
     hits: 0,
     misses: 0,
-    evictions: 0
+    evictions: 0,
   });
 
   public readonly stats = computed(() => this._stats());
@@ -60,7 +60,7 @@ export class Cache {
       value,
       timestamp: now,
       expiresAt: config.persistent ? null : now + config.ttl,
-      lastAccessed: now
+      lastAccessed: now,
     };
 
     // If cache is at max size, remove least recently used item
@@ -69,33 +69,33 @@ export class Cache {
     }
 
     this.cache.set(key, entry);
-    this.updateStats({ size: this.cache.size });
+    this.scheduleStatsUpdate({ size: this.cache.size });
   }
 
   /**
    * Gets a value from the cache
    */
-  get<T>(key: string): T | null {
+  get<T>(key: string): T | undefined {
     const entry = this.cache.get(key) as CacheEntry<T> | undefined;
 
     if (!entry) {
-      this.updateStats({ misses: this._stats().misses + 1 });
-      return null;
+      this.scheduleStatsUpdate({ misses: this._stats().misses + 1 });
+      return undefined;
     }
 
     // Check if entry has expired
     if (entry.expiresAt && Date.now() > entry.expiresAt) {
       this.cache.delete(key);
-      this.updateStats({
+      this.scheduleStatsUpdate({
         size: this.cache.size,
-        misses: this._stats().misses + 1
+        misses: this._stats().misses + 1,
       });
-      return null;
+      return undefined;
     }
 
     // Update last accessed time
     entry.lastAccessed = Date.now();
-    this.updateStats({ hits: this._stats().hits + 1 });
+    this.scheduleStatsUpdate({ hits: this._stats().hits + 1 });
 
     return entry.value;
   }
@@ -113,7 +113,7 @@ export class Cache {
   delete(key: string): boolean {
     const deleted = this.cache.delete(key);
     if (deleted) {
-      this.updateStats({ size: this.cache.size });
+      this.scheduleStatsUpdate({ size: this.cache.size });
     }
     return deleted;
   }
@@ -127,7 +127,7 @@ export class Cache {
       size: 0,
       hits: 0,
       misses: 0,
-      evictions: 0
+      evictions: 0,
     });
   }
 
@@ -148,14 +148,14 @@ export class Cache {
   /**
    * Gets all entries with their metadata
    */
-  entries<T>(): Array<[string, CacheEntry<T>]> {
+  entries<T>(): [string, CacheEntry<T>][] {
     return Array.from(this.cache.entries());
   }
 
   /**
    * Sets multiple values at once
    */
-  setMany<T>(entries: Array<[string, T]>, options: CacheOptions = {}): void {
+  setMany<T>(entries: [string, T][], options: CacheOptions = {}): void {
     entries.forEach(([key, value]) => {
       this.set(key, value, options);
     });
@@ -164,7 +164,7 @@ export class Cache {
   /**
    * Gets multiple values at once
    */
-  getMany<T>(keys: string[]): Array<[string, T | null]> {
+  getMany<T>(keys: string[]): [string, T | undefined][] {
     return keys.map(key => [key, this.get<T>(key)]);
   }
 
@@ -183,7 +183,7 @@ export class Cache {
     }
 
     if (removedCount > 0) {
-      this.updateStats({ size: this.cache.size });
+      this.scheduleStatsUpdate({ size: this.cache.size });
     }
 
     return removedCount;
@@ -194,7 +194,7 @@ export class Cache {
    */
   configure(options: Partial<CacheOptions>): void {
     Object.assign(this.defaultOptions, options);
-    this.updateStats({ maxSize: this.defaultOptions.maxSize });
+    this.scheduleStatsUpdate({ maxSize: this.defaultOptions.maxSize });
   }
 
   /**
@@ -227,15 +227,22 @@ export class Cache {
 
     if (lruKey) {
       this.cache.delete(lruKey);
-      this.updateStats({
+      this.scheduleStatsUpdate({
         size: this.cache.size,
-        evictions: this._stats().evictions + 1
+        evictions: this._stats().evictions + 1,
       });
     }
   }
 
   private updateStats(updates: Partial<CacheStats>): void {
     this._stats.update(current => ({ ...current, ...updates }));
+  }
+
+  private scheduleStatsUpdate(updates: Partial<CacheStats>): void {
+    // Use setTimeout to defer the signal update until after the current rendering cycle
+    setTimeout(() => {
+      this.updateStats(updates);
+    }, 0);
   }
 
   private scheduleCleanup(): void {

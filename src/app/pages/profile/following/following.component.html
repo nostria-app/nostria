@@ -1,14 +1,19 @@
 <div class="following-container" @slideInOut #followingContainer>
   <div class="following-header" @profileShrink>
-    <button mat-icon-button class="back-button" (click)="goBack()" aria-label="Back">
+    <button
+      mat-icon-button
+      class="back-button"
+      (click)="goBack()"
+      aria-label="Back"
+    >
       <mat-icon>arrow_back</mat-icon>
     </button>
-    
+
     <div class="profile-mini">
       @if (userProfile(); as profile) {
         <div class="profile-mini-avatar">
           @if (profile.picture) {
-            <img [src]="profile.picture" alt="Profile picture">
+            <img [src]="profile.picture" alt="Profile picture" />
           } @else {
             <mat-icon>account_circle</mat-icon>
           }
@@ -22,8 +27,13 @@
       }
     </div>
   </div>
-  
-  <mat-tab-group class="following-tabs" [selectedIndex]="selectedTabIndex()" (selectedIndexChange)="onTabChanged($event)" animationDuration="300ms">
+
+  <mat-tab-group
+    class="following-tabs"
+    [selectedIndex]="selectedTabIndex()"
+    (selectedIndexChange)="onTabChanged($event)"
+    animationDuration="300ms"
+  >
     <mat-tab class="following-tab" label="Connections">
       <div class="following-content">
         @if (isLoading()) {
@@ -45,11 +55,12 @@
             <p>This user is not following anyone.</p>
           </div>
         } @else {
-          <cdk-virtual-scroll-viewport 
-            class="virtual-scroll-viewport" 
+          <cdk-virtual-scroll-viewport
+            class="virtual-scroll-viewport"
             [itemSize]="itemSize"
-            [minBufferPx]="minBufferPx" 
-            [maxBufferPx]="maxBufferPx">
+            [minBufferPx]="minBufferPx"
+            [maxBufferPx]="maxBufferPx"
+          >
             <mat-list class="full-width-list">
               @for (user of followingList(); track user.id) {
                 <app-user-profile [pubkey]="user.npub"></app-user-profile>
@@ -59,7 +70,7 @@
         }
       </div>
     </mat-tab>
-    
+
     <mat-tab class="following-tab" label="Mutual Connections">
       <div class="following-content">
         @if (mutualConnectionsList().length === 0) {
@@ -68,23 +79,34 @@
             <p>No mutual connections found.</p>
           </div>
         } @else {
-          <cdk-virtual-scroll-viewport 
-            class="virtual-scroll-viewport" 
+          <cdk-virtual-scroll-viewport
+            class="virtual-scroll-viewport"
             [itemSize]="itemSize"
-            [minBufferPx]="minBufferPx" 
-            [maxBufferPx]="maxBufferPx">
+            [minBufferPx]="minBufferPx"
+            [maxBufferPx]="maxBufferPx"
+          >
             <mat-list>
               @for (user of mutualConnectionsList(); track user.id) {
-                <mat-list-item class="following-item" (click)="layout.navigateToProfile(user.npub)">
+                <mat-list-item
+                  class="following-item"
+                  (click)="layout.navigateToProfile(user.npub)"
+                >
                   <div class="following-item-avatar" matListItemAvatar>
                     @if (user.picture) {
-                      <img [src]="user.picture" alt="{{ user.name }}'s profile picture">
+                      <img
+                        [src]="user.picture"
+                        alt="{{ user.name }}'s profile picture"
+                      />
                     } @else {
-                      <mat-icon class="default-user-avatar">account_circle</mat-icon>
+                      <mat-icon class="default-user-avatar"
+                        >account_circle</mat-icon
+                      >
                     }
                   </div>
                   <div matListItemTitle>{{ user.name }}</div>
-                  <div matListItemLine class="following-item-npub">{{ user.npub }}</div>
+                  <div matListItemLine class="following-item-npub">
+                    {{ user.npub }}
+                  </div>
                 </mat-list-item>
               }
             </mat-list>

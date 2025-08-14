@@ -218,7 +218,8 @@
     transform: translateX(-50%);
     border-width: 8px;
     border-style: solid;
-    border-color: transparent transparent var(--mat-card-container-color, white) transparent;
+    border-color: transparent transparent var(--mat-card-container-color, white)
+      transparent;
   }
 }
 
@@ -275,7 +276,10 @@
   // padding-left: 210px; /* Added left padding to align with profile-info */
   display: flex;
   gap: 1rem;
-  transition: opacity 0.3s ease-in-out, max-height 0.3s ease-in-out, margin 0.3s ease-in-out;
+  transition:
+    opacity 0.3s ease-in-out,
+    max-height 0.3s ease-in-out,
+    margin 0.3s ease-in-out;
 
   @media (max-width: 768px) {
     margin: 1rem 1rem 3rem;
@@ -474,7 +478,12 @@
 
   .banner-skeleton {
     height: 300px;
-    background: linear-gradient(90deg, var(--mat-sys-surface-container) 25%, var(--mat-sys-surface-container-high) 50%, var(--mat-sys-surface-container) 75%);
+    background: linear-gradient(
+      90deg,
+      var(--mat-sys-surface-container) 25%,
+      var(--mat-sys-surface-container-high) 50%,
+      var(--mat-sys-surface-container) 75%
+    );
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite;
     border-radius: 0 0 8px 8px;
@@ -509,7 +518,12 @@
       width: 160px;
       height: 160px;
       border-radius: 50%;
-      background: linear-gradient(90deg, var(--mat-sys-surface-container) 25%, var(--mat-sys-surface-container-high) 50%, var(--mat-sys-surface-container) 75%);
+      background: linear-gradient(
+        90deg,
+        var(--mat-sys-surface-container) 25%,
+        var(--mat-sys-surface-container-high) 50%,
+        var(--mat-sys-surface-container) 75%
+      );
       background-size: 200% 100%;
       animation: shimmer 1.5s infinite;
       flex-shrink: 0;
@@ -544,7 +558,12 @@
         height: 32px;
         width: 60%;
         max-width: 300px;
-        background: linear-gradient(90deg, var(--mat-sys-surface-container) 25%, var(--mat-sys-surface-container-high) 50%, var(--mat-sys-surface-container) 75%);
+        background: linear-gradient(
+          90deg,
+          var(--mat-sys-surface-container) 25%,
+          var(--mat-sys-surface-container-high) 50%,
+          var(--mat-sys-surface-container) 75%
+        );
         background-size: 200% 100%;
         animation: shimmer 1.5s infinite;
         border-radius: 4px;
@@ -559,7 +578,12 @@
         height: 20px;
         width: 80%;
         max-width: 400px;
-        background: linear-gradient(90deg, var(--mat-sys-surface-container) 25%, var(--mat-sys-surface-container-high) 50%, var(--mat-sys-surface-container) 75%);
+        background: linear-gradient(
+          90deg,
+          var(--mat-sys-surface-container) 25%,
+          var(--mat-sys-surface-container-high) 50%,
+          var(--mat-sys-surface-container) 75%
+        );
         background-size: 200% 100%;
         animation: shimmer 1.5s infinite;
         border-radius: 4px;
@@ -573,7 +597,12 @@
         height: 60px;
         width: 90%;
         max-width: 500px;
-        background: linear-gradient(90deg, var(--mat-sys-surface-container) 25%, var(--mat-sys-surface-container-high) 50%, var(--mat-sys-surface-container) 75%);
+        background: linear-gradient(
+          90deg,
+          var(--mat-sys-surface-container) 25%,
+          var(--mat-sys-surface-container-high) 50%,
+          var(--mat-sys-surface-container) 75%
+        );
         background-size: 200% 100%;
         animation: shimmer 1.5s infinite;
         border-radius: 4px;
@@ -602,7 +631,12 @@
     .action-button-skeleton {
       height: 36px;
       width: 120px;
-      background: linear-gradient(90deg, var(--mat-sys-surface-container) 25%, var(--mat-sys-surface-container-high) 50%, var(--mat-sys-surface-container) 75%);
+      background: linear-gradient(
+        90deg,
+        var(--mat-sys-surface-container) 25%,
+        var(--mat-sys-surface-container-high) 50%,
+        var(--mat-sys-surface-container) 75%
+      );
       background-size: 200% 100%;
       animation: shimmer 1.5s infinite;
       border-radius: 20px;

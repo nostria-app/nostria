@@ -1,10 +1,12 @@
 <div class="create-event-dialog">
   <div class="dialog-header">
     <h2 mat-dialog-title>Create New Event</h2>
-    <button mat-icon-button 
-            mat-dialog-close 
-            class="close-button"
-            matTooltip="Close">
+    <button
+      mat-icon-button
+      mat-dialog-close
+      class="close-button"
+      matTooltip="Close"
+    >
       <mat-icon>close</mat-icon>
     </button>
   </div>
@@ -14,22 +16,30 @@
       <!-- Title -->
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Event Title</mat-label>
-        <input matInput 
-               formControlName="title" 
-               placeholder="Enter event title"
-               maxlength="200">
-        <mat-hint>{{ eventForm.get('title')?.value?.length || 0 }}/200</mat-hint>
+        <input
+          matInput
+          formControlName="title"
+          placeholder="Enter event title"
+          maxlength="200"
+        />
+        <mat-hint
+          >{{ eventForm.get('title')?.value?.length || 0 }}/200</mat-hint
+        >
         <mat-error>Event title is required</mat-error>
       </mat-form-field>
 
       <!-- Summary -->
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Summary (Optional)</mat-label>
-        <input matInput 
-               formControlName="summary" 
-               placeholder="Brief description of the event"
-               maxlength="500">
-        <mat-hint>{{ eventForm.get('summary')?.value?.length || 0 }}/500</mat-hint>
+        <input
+          matInput
+          formControlName="summary"
+          placeholder="Brief description of the event"
+          maxlength="500"
+        />
+        <mat-hint
+          >{{ eventForm.get('summary')?.value?.length || 0 }}/500</mat-hint
+        >
       </mat-form-field>
 
       <!-- All Day Toggle -->
@@ -45,12 +55,17 @@
           <!-- Start Date -->
           <mat-form-field appearance="outline" class="date-field">
             <mat-label>Start Date</mat-label>
-            <input matInput 
-                   [matDatepicker]="startDatePicker" 
-                   formControlName="startDate"
-                   placeholder="Select start date"
-                   title="Event start date">
-            <mat-datepicker-toggle matIconSuffix [for]="startDatePicker"></mat-datepicker-toggle>
+            <input
+              matInput
+              [matDatepicker]="startDatePicker"
+              formControlName="startDate"
+              placeholder="Select start date"
+              title="Event start date"
+            />
+            <mat-datepicker-toggle
+              matIconSuffix
+              [for]="startDatePicker"
+            ></mat-datepicker-toggle>
             <mat-datepicker #startDatePicker></mat-datepicker>
             <mat-error>Start date is required</mat-error>
           </mat-form-field>
@@ -59,10 +74,12 @@
           @if (!isAllDay()) {
             <mat-form-field appearance="outline" class="time-field">
               <mat-label>Start Time</mat-label>
-              <input matInput 
-                     type="time" 
-                     formControlName="startTime"
-                     placeholder="00:00">
+              <input
+                matInput
+                type="time"
+                formControlName="startTime"
+                placeholder="00:00"
+              />
             </mat-form-field>
           }
         </div>
@@ -71,12 +88,17 @@
           <!-- End Date -->
           <mat-form-field appearance="outline" class="date-field">
             <mat-label>End Date (Optional)</mat-label>
-            <input matInput 
-                   [matDatepicker]="endDatePicker" 
-                   formControlName="endDate"
-                   placeholder="Select end date"
-                   title="Event end date">
-            <mat-datepicker-toggle matIconSuffix [for]="endDatePicker"></mat-datepicker-toggle>
+            <input
+              matInput
+              [matDatepicker]="endDatePicker"
+              formControlName="endDate"
+              placeholder="Select end date"
+              title="Event end date"
+            />
+            <mat-datepicker-toggle
+              matIconSuffix
+              [for]="endDatePicker"
+            ></mat-datepicker-toggle>
             <mat-datepicker #endDatePicker></mat-datepicker>
           </mat-form-field>
 
@@ -84,10 +106,12 @@
           @if (!isAllDay()) {
             <mat-form-field appearance="outline" class="time-field">
               <mat-label>End Time</mat-label>
-              <input matInput 
-                     type="time" 
-                     formControlName="endTime"
-                     placeholder="00:00">
+              <input
+                matInput
+                type="time"
+                formControlName="endTime"
+                placeholder="00:00"
+              />
             </mat-form-field>
           }
         </div>
@@ -96,39 +120,51 @@
       <!-- Location -->
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Location (Optional)</mat-label>
-        <input matInput 
-               formControlName="location" 
-               placeholder="Event location or meeting link"
-               maxlength="300">
+        <input
+          matInput
+          formControlName="location"
+          placeholder="Event location or meeting link"
+          maxlength="300"
+        />
         <mat-icon matPrefix>location_on</mat-icon>
-        <mat-hint>{{ eventForm.get('location')?.value?.length || 0 }}/300</mat-hint>
+        <mat-hint
+          >{{ eventForm.get('location')?.value?.length || 0 }}/300</mat-hint
+        >
       </mat-form-field>
 
       <!-- Description -->
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Description (Optional)</mat-label>
-        <textarea matInput 
-                  formControlName="content" 
-                  placeholder="Detailed description of the event"
-                  rows="4"
-                  maxlength="2000"></textarea>
-        <mat-hint>{{ eventForm.get('content')?.value?.length || 0 }}/2000</mat-hint>
+        <textarea
+          matInput
+          formControlName="content"
+          placeholder="Detailed description of the event"
+          rows="4"
+          maxlength="2000"
+        ></textarea>
+        <mat-hint
+          >{{ eventForm.get('content')?.value?.length || 0 }}/2000</mat-hint
+        >
       </mat-form-field>
 
       <!-- Hashtags -->
       <div class="hashtags-section">
         <mat-form-field appearance="outline" class="hashtag-input">
           <mat-label>Add Hashtags</mat-label>
-          <input matInput 
-                 formControlName="hashtag" 
-                 placeholder="Enter hashtag and press Enter"
-                 (keydown)="onHashtagKeyPress($event)">
+          <input
+            matInput
+            formControlName="hashtag"
+            placeholder="Enter hashtag and press Enter"
+            (keydown)="onHashtagKeyPress($event)"
+          />
           <mat-icon matPrefix>tag</mat-icon>
-          <button mat-icon-button 
-                  matSuffix 
-                  type="button" 
-                  (click)="addHashtag()"
-                  matTooltip="Add hashtag">
+          <button
+            mat-icon-button
+            matSuffix
+            type="button"
+            (click)="addHashtag()"
+            matTooltip="Add hashtag"
+          >
             <mat-icon>add</mat-icon>
           </button>
         </mat-form-field>
@@ -149,17 +185,17 @@
   </div>
 
   <div mat-dialog-actions class="dialog-actions">
-    <button mat-button 
-            (click)="cancel()" 
-            [disabled]="isLoading()">
+    <button mat-button (click)="cancel()" [disabled]="isLoading()">
       Cancel
     </button>
-    
-    <button mat-raised-button 
-            color="primary" 
-            (click)="create()"
-            [disabled]="!eventForm.valid || isLoading()"
-            class="create-button">
+
+    <button
+      mat-raised-button
+      color="primary"
+      (click)="create()"
+      [disabled]="!eventForm.valid || isLoading()"
+      class="create-button"
+    >
       @if (isLoading()) {
         <ng-container>
           <mat-icon class="spinning">sync</mat-icon>

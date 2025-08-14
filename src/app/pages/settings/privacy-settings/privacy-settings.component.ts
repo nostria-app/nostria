@@ -1,4 +1,10 @@
-import { Component, inject, computed } from '@angular/core';
+import {
+  Component,
+  inject,
+  computed,
+  ViewChild,
+  TemplateRef,
+} from '@angular/core';
 
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatCardModule } from '@angular/material/card';
@@ -10,12 +16,14 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { FormsModule } from '@angular/forms';
 import { AccountStateService } from '../../../services/account-state.service';
 import { NostrService } from '../../../services/nostr.service';
-import { UserProfileComponent } from "../../../components/user-profile/user-profile.component";
+import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
 import { SettingsService } from '../../../services/settings.service';
+import { InfoTooltipComponent } from '../../../components/info-tooltip/info-tooltip.component';
 
 @Component({
   selector: 'app-privacy-settings',
-  standalone: true,  imports: [
+  standalone: true,
+  imports: [
     MatTabsModule,
     MatCardModule,
     MatListModule,
@@ -24,15 +32,22 @@ import { SettingsService } from '../../../services/settings.service';
     MatDividerModule,
     MatCheckboxModule,
     FormsModule,
-    UserProfileComponent
-],
+    UserProfileComponent,
+    InfoTooltipComponent,
+  ],
   templateUrl: './privacy-settings.component.html',
-  styleUrls: ['./privacy-settings.component.scss']
+  styleUrls: ['./privacy-settings.component.scss'],
 })
 export class PrivacySettingsComponent {
   accountState = inject(AccountStateService);
   nostrService = inject(NostrService);
   settingsService = inject(SettingsService);
+
+  // Template references for tooltip content
+  @ViewChild('imageCacheInfoContent')
+  imageCacheInfoContent!: TemplateRef<unknown>;
+  @ViewChild('socialSharingInfoContent')
+  socialSharingInfoContent!: TemplateRef<unknown>;
 
   // Compute muted lists using getTags utility function
   mutedAccounts = computed(() => {
@@ -58,7 +73,7 @@ export class PrivacySettingsComponent {
     if (!muteList) return [];
     return this.nostrService.getTags(muteList, 'e');
   });
-  
+
   removeMutedItem(type: string, value: string): void {
     // This would need to be implemented to update the mute list
     console.log(`Remove ${type}: ${value}`);
@@ -68,6 +83,14 @@ export class PrivacySettingsComponent {
   async toggleSocialSharingPreview(): Promise<void> {
     try {
       await this.settingsService.toggleSocialSharingPreview();
+    } catch (error) {
+      console.error('Failed to toggle social sharing preview setting', error);
+    }
+  }
+
+  async toggleImageCache(): Promise<void> {
+    try {
+      await this.settingsService.toggleImageCache();
     } catch (error) {
       console.error('Failed to toggle social sharing preview setting', error);
     }

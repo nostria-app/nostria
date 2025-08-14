@@ -4,14 +4,15 @@
   position: relative;
 }
 
-.empty-state, .error-state {
+.empty-state,
+.error-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   min-height: 200px;
   color: var(--mat-subtitle-text-color, rgba(0, 0, 0, 0.6));
-  
+
   mat-icon {
     font-size: 48px;
     height: 48px;

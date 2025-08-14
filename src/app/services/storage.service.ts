@@ -37,11 +37,14 @@ export interface Nip11Info {
       max_time?: number;
       count?: number;
     };
-    kinds?: Record<number, {
-      max_bytes?: number;
-      max_time?: number;
-      count?: number;
-    }>;
+    kinds?: Record<
+      number,
+      {
+        max_bytes?: number;
+        max_time?: number;
+        count?: number;
+      }
+    >;
   };
   icon?: string;
   last_checked?: number;
@@ -50,8 +53,8 @@ export interface Nip11Info {
 // Interface for raw event data storage
 export interface NostrEventData<T = any> {
   pubkey?: string; // Public key of the user
-  content: Partial<T>;        // Parsed JSON content
-  tags: string[][];    // Original tags array
+  content: Partial<T>; // Parsed JSON content
+  tags: string[][]; // Original tags array
   // raw?: string;        // Optional original JSON string
   updated?: number; // Timestamp of the last update
 }
@@ -67,7 +70,7 @@ export interface UserMetadata {
   lud16?: string;
   banner?: string;
   website?: string;
-  tags?: string[][];  // Add tags field to store event tags
+  tags?: string[][]; // Add tags field to store event tags
   eventData?: NostrEventData; // New field to store full content and tags
   last_updated?: number;
 }
@@ -81,9 +84,9 @@ export interface UserRelays {
 
 // Interface for the dynamic info records
 export interface InfoRecord {
-  key: string;      // URL or hex pubkey
-  type: string;     // 'user', 'relay', 'media', 'server', etc.
-  updated: number;  // Timestamp of last update
+  key: string; // URL or hex pubkey
+  type: string; // 'user', 'relay', 'media', 'server', etc.
+  updated: number; // Timestamp of last update
   compositeKey?: string; // Composite key for storage (key + type)
   [key: string]: any; // Dynamic entries
 }
@@ -100,7 +103,7 @@ export enum NotificationType {
   GENERAL = 'general',
   ERROR = 'error',
   SUCCESS = 'success',
-  WARNING = 'warning'
+  WARNING = 'warning',
 }
 
 // User-facing notification types for push notifications
@@ -111,7 +114,7 @@ export enum UserNotificationType {
   REPOSTS = 'reposts',
   ZAPS = 'zaps',
   NEWS = 'news',
-  APP_UPDATES = 'appupdates'
+  APP_UPDATES = 'appupdates',
 }
 
 // Interface for device notification preferences
@@ -196,14 +199,14 @@ interface NostriaDBSchema extends DBSchema {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class StorageService {
   private readonly logger = inject(LoggerService);
   private readonly utilities = inject(UtilitiesService);
   private db!: IDBPDatabase<NostriaDBSchema>;
   // TODO: Before public release, rename the database to "nostria", then reset the DB_VERSION.
-  private readonly DB_NAME = 'nostria-db-beta2';
+  private readonly DB_NAME = 'nostria-db-beta3';
   private readonly DB_VERSION = 1; // Reset to 0 as the database has been renamed
 
   // Signal to track database initialization status
@@ -221,7 +224,7 @@ export class StorageService {
     isPrivateMode: false,
     quotaInfo: null,
     initializationAttempts: 0,
-    lastError: undefined
+    lastError: undefined,
   });
 
   // Database stats
@@ -238,20 +241,18 @@ export class StorageService {
     // userRelaysCount: 0,
     eventsCount: 0,
     infoCount: 0,
-    estimatedSize: 0
+    estimatedSize: 0,
   });
 
   // Fallback storage using localStorage when IndexedDB fails
   private fallbackStorage = new Map<string, any>();
   useFallbackMode = signal(false);
 
-  constructor() {
-
-  }
+  constructor() {}
 
   async init(): Promise<void> {
     this.logger.info('StorageService.init() called');
-    
+
     if (this.initialized()) {
       this.logger.info('Database already initialized, skipping initialization');
       return;
@@ -259,44 +260,46 @@ export class StorageService {
 
     try {
       this.logger.info('Starting IndexedDB availability check');
-      
+
       // Update storage info
       this.storageInfo.update(info => ({
         ...info,
         isIndexedDBAvailable: 'indexedDB' in window,
         isPrivateMode: this.detectPrivateMode(),
-        initializationAttempts: info.initializationAttempts + 1
+        initializationAttempts: info.initializationAttempts + 1,
       }));
-      
+
       // Check if IndexedDB is available
       if (!('indexedDB' in window)) {
         throw new Error('IndexedDB is not supported in this browser');
       }
 
-      this.logger.info('IndexedDB is available, proceeding with initialization');
-      
+      this.logger.info(
+        'IndexedDB is available, proceeding with initialization'
+      );
+
       // Get quota info
       const quotaInfo = await this.getStorageQuotaInfo();
       this.storageInfo.update(info => ({ ...info, quotaInfo }));
-      
+
       // Initialize the database
       await this.initDatabase();
-      
+
       this.logger.info('StorageService initialization completed successfully');
     } catch (error: any) {
       this.logger.error('StorageService initialization failed', {
         error: error?.message || 'Unknown error',
         name: error?.name || 'Unknown',
         userAgent: navigator.userAgent,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-      
+
       // Update storage info with error
       this.storageInfo.update(info => ({
         ...info,
-        lastError: error?.message || 'Unknown error'
+        lastError: error?.message || 'Unknown error',
       }));
-      
+
       // Still mark as initialized to prevent blocking the app
       this.initialized.set(true);
       throw error; // Re-throw so the app can handle it
@@ -306,12 +309,14 @@ export class StorageService {
   private async initDatabase(): Promise<void> {
     try {
       this.logger.info('Initializing IndexedDB storage');
-      
+
       // Add timeout to prevent hanging
       const initPromise = this.createDatabase();
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => {
-          reject(new Error('IndexedDB initialization timeout after 10 seconds'));
+          reject(
+            new Error('IndexedDB initialization timeout after 10 seconds')
+          );
         }, 10000); // 10 second timeout
       });
 
@@ -329,10 +334,13 @@ export class StorageService {
 
   private async createDatabase(): Promise<IDBPDatabase<NostriaDBSchema>> {
     this.logger.debug('Starting IndexedDB database creation/opening');
-    
+
     return await openDB<NostriaDBSchema>(this.DB_NAME, this.DB_VERSION, {
       upgrade: async (db, oldVersion, newVersion) => {
-        this.logger.info('Creating database schema', { oldVersion, newVersion });
+        this.logger.info('Creating database schema', {
+          oldVersion,
+          newVersion,
+        });
 
         // Create object stores if they don't exist
         if (!db.objectStoreNames.contains('relays')) {
@@ -347,12 +355,18 @@ export class StorageService {
           eventsStore.createIndex('by-pubkey', 'pubkey');
           eventsStore.createIndex('by-created', 'created_at');
           eventsStore.createIndex('by-pubkey-kind', ['pubkey', 'kind']);
-          eventsStore.createIndex('by-pubkey-kind-d-tag', ['pubkey', 'kind', 'dTag']);
+          eventsStore.createIndex('by-pubkey-kind-d-tag', [
+            'pubkey',
+            'kind',
+            'dTag',
+          ]);
           this.logger.debug('Created events object store');
         }
 
         if (!db.objectStoreNames.contains('info')) {
-          const infoStore = db.createObjectStore('info', { keyPath: 'compositeKey' });
+          const infoStore = db.createObjectStore('info', {
+            keyPath: 'compositeKey',
+          });
           infoStore.createIndex('by-type', 'type');
           infoStore.createIndex('by-key', 'key');
           infoStore.createIndex('by-updated', 'updated');
@@ -360,20 +374,28 @@ export class StorageService {
         }
 
         if (!db.objectStoreNames.contains('notifications')) {
-          const notificationsStore = db.createObjectStore('notifications', { keyPath: 'id' });
+          const notificationsStore = db.createObjectStore('notifications', {
+            keyPath: 'id',
+          });
           notificationsStore.createIndex('by-timestamp', 'timestamp');
           this.logger.debug('Created notifications object store');
         }
       },
       blocked: (currentVersion, blockedVersion, event) => {
-        this.logger.warn('IndexedDB upgrade blocked', { currentVersion, blockedVersion });
+        this.logger.warn('IndexedDB upgrade blocked', {
+          currentVersion,
+          blockedVersion,
+        });
       },
       blocking: (currentVersion, blockedVersion, event) => {
-        this.logger.warn('IndexedDB blocking other connections', { currentVersion, blockedVersion });
+        this.logger.warn('IndexedDB blocking other connections', {
+          currentVersion,
+          blockedVersion,
+        });
       },
       terminated: () => {
         this.logger.error('IndexedDB connection terminated unexpectedly');
-      }
+      },
     });
   }
 
@@ -384,7 +406,7 @@ export class StorageService {
       stack: error.stack,
       userAgent: navigator.userAgent,
       isPrivateMode: this.detectPrivateMode(),
-      storageQuota: this.getStorageQuotaInfo()
+      storageQuota: this.getStorageQuotaInfo(),
     });
 
     // Set initialized to false in case of error
@@ -413,7 +435,9 @@ export class StorageService {
         return {
           quota: estimate.quota,
           usage: estimate.usage,
-          available: estimate.quota ? estimate.quota - (estimate.usage || 0) : 'unknown'
+          available: estimate.quota
+            ? estimate.quota - (estimate.usage || 0)
+            : 'unknown',
         };
       }
     } catch (error) {
@@ -424,46 +448,50 @@ export class StorageService {
 
   private async attemptFallbackInitialization(): Promise<void> {
     this.logger.info('Attempting fallback IndexedDB initialization');
-    
+
     try {
       // Try to delete and recreate the database
       this.logger.info('Deleting corrupted database');
       await deleteDB(this.DB_NAME);
-      
+
       // Wait a bit before recreating
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       // Try again with a simplified approach
       this.logger.info('Recreating database with simplified schema');
       this.db = await openDB<NostriaDBSchema>(this.DB_NAME, 1, {
-        upgrade: async (db) => {
+        upgrade: async db => {
           this.logger.info('Creating minimal database schema');
-          
+
           // Create only essential stores
           if (!db.objectStoreNames.contains('events')) {
-            const eventsStore = db.createObjectStore('events', { keyPath: 'id' });
+            const eventsStore = db.createObjectStore('events', {
+              keyPath: 'id',
+            });
             eventsStore.createIndex('by-kind', 'kind');
             eventsStore.createIndex('by-pubkey', 'pubkey');
             this.logger.debug('Created minimal events store');
           }
-        }
+        },
       });
 
       this.logger.info('Fallback IndexedDB initialization successful');
       this.initialized.set(true);
     } catch (fallbackError) {
       this.logger.error('Fallback initialization also failed', fallbackError);
-      
+
       // Final fallback: enable memory-only storage mode
-      this.logger.warn('Enabling memory-only storage mode due to IndexedDB failure');
+      this.logger.warn(
+        'Enabling memory-only storage mode due to IndexedDB failure'
+      );
       this.useFallbackMode.set(true);
       this.initialized.set(true);
-      
+
       // Update storage info
       this.storageInfo.update(info => ({
         ...info,
         lastError: 'Complete IndexedDB failure - using memory storage',
-        initializationAttempts: info.initializationAttempts + 1
+        initializationAttempts: info.initializationAttempts + 1,
       }));
     }
   }
@@ -474,7 +502,10 @@ export class StorageService {
   }
 
   // Parse a composite key back into key and type
-  private parseCompositeKey(compositeKey: string): { key: string, type: string } {
+  private parseCompositeKey(compositeKey: string): {
+    key: string;
+    type: string;
+  } {
     const parts = compositeKey.split('::');
     if (parts.length === 2) {
       return { key: parts[0], type: parts[1] };
@@ -485,19 +516,24 @@ export class StorageService {
 
   // Event classification helper methods
   private isReplaceableEvent(kind: number): boolean {
-    return (kind === 0 || kind === 3 || (kind >= 10000 && kind < 20000));
+    return kind === 0 || kind === 3 || (kind >= 10000 && kind < 20000);
   }
 
   private isRegularEvent(kind: number): boolean {
-    return (kind === 1 || kind === 2 || (kind >= 4 && kind < 45) || (kind >= 1000 && kind < 10000));
+    return (
+      kind === 1 ||
+      kind === 2 ||
+      (kind >= 4 && kind < 45) ||
+      (kind >= 1000 && kind < 10000)
+    );
   }
 
   private isEphemeralEvent(kind: number): boolean {
-    return (kind >= 20000 && kind < 30000);
+    return kind >= 20000 && kind < 30000;
   }
 
   private isParameterizedReplaceableEvent(kind: number): boolean {
-    return (kind >= 30000 && kind < 40000);
+    return kind >= 30000 && kind < 40000;
   }
 
   // Generic event storage methods
@@ -508,7 +544,6 @@ export class StorageService {
 
     try {
       const { kind } = event;
-      
 
       // Handle according to event classification
       if (this.isReplaceableEvent(kind)) {
@@ -525,7 +560,9 @@ export class StorageService {
         }
 
         await this.db.put('events', eventToStore);
-        this.logger.debug(`Saved event to IndexedDB: ${event.id} (kind: ${event.kind})`);
+        this.logger.debug(
+          `Saved event to IndexedDB: ${event.id} (kind: ${event.kind})`
+        );
       }
 
       await this.updateStats();
@@ -548,7 +585,8 @@ export class StorageService {
 
   private async saveReplaceableEvent(event: Event): Promise<void> {
     // For replaceable events, find any existing events from the same pubkey and kind
-    const index = this.db.transaction('events', 'readonly')
+    const index = this.db
+      .transaction('events', 'readonly')
       .store.index('by-pubkey-kind');
 
     const existingEvents = await index.getAll([event.pubkey, event.kind]);
@@ -568,14 +606,20 @@ export class StorageService {
 
         // Add the new event
         await this.db.put('events', event);
-        this.logger.debug(`Replaced older event with newer event ${event.id} (kind: ${event.kind})`);
+        this.logger.debug(
+          `Replaced older event with newer event ${event.id} (kind: ${event.kind})`
+        );
       } else {
-        this.logger.debug(`Skipped saving older replaceable event ${event.id} (kind: ${event.kind})`);
+        this.logger.debug(
+          `Skipped saving older replaceable event ${event.id} (kind: ${event.kind})`
+        );
       }
     } else {
       // No existing event, just add this one
       await this.db.put('events', event);
-      this.logger.debug(`Saved new replaceable event ${event.id} (kind: ${event.kind})`);
+      this.logger.debug(
+        `Saved new replaceable event ${event.id} (kind: ${event.kind})`
+      );
     }
   }
 
@@ -583,7 +627,9 @@ export class StorageService {
     const dTagValue = this.utilities.getDTagValueFromEvent(event);
 
     if (!dTagValue) {
-      this.logger.debug(`Parameterized replaceable event ${event.id} has no d tag, storing as regular event`);
+      this.logger.debug(
+        `Parameterized replaceable event ${event.id} has no d tag, storing as regular event`
+      );
       await this.db.put('events', event);
       return;
     }
@@ -592,10 +638,15 @@ export class StorageService {
     const enhancedEvent: any = { ...event, dTag: dTagValue };
 
     // Find any existing events with the same pubkey, kind, and d-tag
-    const index = this.db.transaction('events', 'readonly')
+    const index = this.db
+      .transaction('events', 'readonly')
       .store.index('by-pubkey-kind-d-tag');
 
-    const existingEvents = await index.getAll([event.pubkey, event.kind, dTagValue]);
+    const existingEvents = await index.getAll([
+      event.pubkey,
+      event.kind,
+      dTagValue,
+    ]);
 
     // Only keep the newest event
     if (existingEvents.length > 0) {
@@ -612,14 +663,20 @@ export class StorageService {
 
         // Add the new event
         await this.db.put('events', enhancedEvent);
-        this.logger.debug(`Replaced older parameterized event with newer event ${event.id} (kind: ${event.kind}, d: ${dTagValue})`);
+        this.logger.debug(
+          `Replaced older parameterized event with newer event ${event.id} (kind: ${event.kind}, d: ${dTagValue})`
+        );
       } else {
-        this.logger.debug(`Skipped saving older parameterized replaceable event ${event.id} (kind: ${event.kind}, d: ${dTagValue})`);
+        this.logger.debug(
+          `Skipped saving older parameterized replaceable event ${event.id} (kind: ${event.kind}, d: ${dTagValue})`
+        );
       }
     } else {
       // No existing event, just add this one
       await this.db.put('events', enhancedEvent);
-      this.logger.debug(`Saved new parameterized replaceable event ${event.id} (kind: ${event.kind}, d: ${dTagValue})`);
+      this.logger.debug(
+        `Saved new parameterized replaceable event ${event.id} (kind: ${event.kind}, d: ${dTagValue})`
+      );
     }
   }
 
@@ -652,7 +709,11 @@ export class StorageService {
         // Handle array of pubkeys
         const allEvents: Event[] = [];
         for (const pk of pubkey) {
-          const events = await this.db.getAllFromIndex('events', 'by-pubkey', pk);
+          const events = await this.db.getAllFromIndex(
+            'events',
+            'by-pubkey',
+            pk
+          );
           allEvents.push(...events);
         }
         return allEvents;
@@ -661,8 +722,13 @@ export class StorageService {
         return await this.db.getAllFromIndex('events', 'by-pubkey', pubkey);
       }
     } catch (error) {
-      const pubkeyDisplay = Array.isArray(pubkey) ? `[multiple keys: ${pubkey.length}]` : pubkey;
-      this.logger.error(`Error getting events by pubkey ${pubkeyDisplay}`, error);
+      const pubkeyDisplay = Array.isArray(pubkey)
+        ? `[multiple keys: ${pubkey.length}]`
+        : pubkey;
+      this.logger.error(
+        `Error getting events by pubkey ${pubkeyDisplay}`,
+        error
+      );
       return [];
     }
   }
@@ -677,7 +743,10 @@ export class StorageService {
     }
   }
 
-  async getEventByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<Event | null> {
+  async getEventByPubkeyAndKind(
+    pubkey: string | string[],
+    kind: number
+  ): Promise<Event | null> {
     const events = await this.getEventsByPubkeyAndKind(pubkey, kind);
 
     if (events && events.length > 0) {
@@ -687,34 +756,57 @@ export class StorageService {
     }
   }
 
-  async getEventsByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<Event[]> {
+  async getEventsByPubkeyAndKind(
+    pubkey: string | string[],
+    kind: number
+  ): Promise<Event[]> {
     try {
       if (Array.isArray(pubkey)) {
         // Handle array of pubkeys
         const allEvents: Event[] = [];
         for (const pk of pubkey) {
-          const events = await this.db.getAllFromIndex('events', 'by-pubkey-kind', [pk, kind]);
+          const events = await this.db.getAllFromIndex(
+            'events',
+            'by-pubkey-kind',
+            [pk, kind]
+          );
           allEvents.push(...events);
         }
         return allEvents;
       } else {
         // Handle single pubkey (original behavior)
-        return await this.db.getAllFromIndex('events', 'by-pubkey-kind', [pubkey, kind]);
+        return await this.db.getAllFromIndex('events', 'by-pubkey-kind', [
+          pubkey,
+          kind,
+        ]);
       }
     } catch (error) {
-      const pubkeyDisplay = Array.isArray(pubkey) ? `[multiple keys: ${pubkey.length}]` : pubkey;
-      this.logger.error(`Error getting events by pubkey ${pubkeyDisplay} and kind ${kind}`, error);
+      const pubkeyDisplay = Array.isArray(pubkey)
+        ? `[multiple keys: ${pubkey.length}]`
+        : pubkey;
+      this.logger.error(
+        `Error getting events by pubkey ${pubkeyDisplay} and kind ${kind}`,
+        error
+      );
       return [];
     }
   }
 
-  async getParameterizedReplaceableEvent(pubkey: string | string[], kind: number, dTagValue: string): Promise<Event | undefined> {
+  async getParameterizedReplaceableEvent(
+    pubkey: string | string[],
+    kind: number,
+    dTagValue: string
+  ): Promise<Event | undefined> {
     try {
       if (Array.isArray(pubkey)) {
         // For arrays, get events from all pubkeys and return the most recent one
         const allEvents: Event[] = [];
         for (const pk of pubkey) {
-          const events = await this.db.getAllFromIndex('events', 'by-pubkey-kind-d-tag', [pk, kind, dTagValue]);
+          const events = await this.db.getAllFromIndex(
+            'events',
+            'by-pubkey-kind-d-tag',
+            [pk, kind, dTagValue]
+          );
           allEvents.push(...events);
         }
 
@@ -725,7 +817,11 @@ export class StorageService {
         return undefined;
       } else {
         // Original behavior for single pubkey
-        const events = await this.db.getAllFromIndex('events', 'by-pubkey-kind-d-tag', [pubkey, kind, dTagValue]);
+        const events = await this.db.getAllFromIndex(
+          'events',
+          'by-pubkey-kind-d-tag',
+          [pubkey, kind, dTagValue]
+        );
         if (events.length > 0) {
           // Return the most recent one
           return events.sort((a, b) => b.created_at - a.created_at)[0];
@@ -733,8 +829,13 @@ export class StorageService {
         return undefined;
       }
     } catch (error) {
-      const pubkeyDisplay = Array.isArray(pubkey) ? `[multiple keys: ${pubkey.length}]` : pubkey;
-      this.logger.error(`Error getting parameterized replaceable event for pubkey ${pubkeyDisplay}, kind ${kind}, and d-tag ${dTagValue}`, error);
+      const pubkeyDisplay = Array.isArray(pubkey)
+        ? `[multiple keys: ${pubkey.length}]`
+        : pubkey;
+      this.logger.error(
+        `Error getting parameterized replaceable event for pubkey ${pubkeyDisplay}, kind ${kind}, and d-tag ${dTagValue}`,
+        error
+      );
       return undefined;
     }
   }
@@ -760,7 +861,7 @@ export class StorageService {
       if (nip11Info) {
         enhancedRelay['nip11'] = {
           ...nip11Info,
-          last_checked: Date.now()
+          last_checked: Date.now(),
         };
       }
 
@@ -791,7 +892,9 @@ export class StorageService {
   //   }
   // }
 
-  async getRelay(url: string): Promise<(Relay & { nip11?: Nip11Info }) | undefined> {
+  async getRelay(
+    url: string
+  ): Promise<(Relay & { nip11?: Nip11Info }) | undefined> {
     try {
       return await this.db.get('relays', url);
     } catch (error) {
@@ -937,7 +1040,11 @@ export class StorageService {
       }
 
       // Get events by pubkey
-      const events = await this.db.getAllFromIndex('events', 'by-pubkey', pubkey);
+      const events = await this.db.getAllFromIndex(
+        'events',
+        'by-pubkey',
+        pubkey
+      );
 
       return events || [];
     } catch (error) {
@@ -952,7 +1059,11 @@ export class StorageService {
    * @param type The type of the info record
    * @param data Additional data to store
    */
-  async saveInfo(key: string, type: 'user' | 'relay' | 'metric', data: Record<string, any>): Promise<void> {
+  async saveInfo(
+    key: string,
+    type: 'user' | 'relay' | 'metric',
+    data: Record<string, any>
+  ): Promise<void> {
     try {
       const compositeKey = this.generateCompositeKey(key, type);
 
@@ -964,15 +1075,20 @@ export class StorageService {
         type,
         compositeKey,
         updated: Date.now(),
-        ...(existingRecord || {}),  // Keep existing data if any
-        ...data  // Override with new data
+        ...(existingRecord || {}), // Keep existing data if any
+        ...data, // Override with new data
       };
 
       await this.db.put('info', infoRecord);
-      this.logger.debug(`Saved info record to IndexedDB: ${key} (type: ${type})`);
+      this.logger.debug(
+        `Saved info record to IndexedDB: ${key} (type: ${type})`
+      );
       await this.updateStats();
     } catch (error) {
-      this.logger.error(`Error saving info record ${key} (type: ${type})`, error);
+      this.logger.error(
+        `Error saving info record ${key} (type: ${type})`,
+        error
+      );
     }
   }
 
@@ -980,10 +1096,15 @@ export class StorageService {
     try {
       record.updated = Date.now();
       await this.db.put('info', record);
-      this.logger.debug(`Updated info record to IndexedDB: ${record.key} (type: ${record.type})`);
+      this.logger.debug(
+        `Updated info record to IndexedDB: ${record.key} (type: ${record.type})`
+      );
       await this.updateStats();
     } catch (error) {
-      this.logger.error(`Error saving info record ${record.key} (type: ${record.type})`, error);
+      this.logger.error(
+        `Error saving info record ${record.key} (type: ${record.type})`,
+        error
+      );
     }
   }
 
@@ -1005,7 +1126,10 @@ export class StorageService {
   /**
    * Get info records by type, optionally filtering by key pattern
    */
-  async getInfoByType(type: string, keyPattern?: string): Promise<InfoRecord[]> {
+  async getInfoByType(
+    type: string,
+    keyPattern?: string
+  ): Promise<InfoRecord[]> {
     try {
       const records = await this.db.getAllFromIndex('info', 'by-type', type);
 
@@ -1040,7 +1164,10 @@ export class StorageService {
       this.logger.debug(`Deleted info record with key ${key} and type ${type}`);
       await this.updateStats();
     } catch (error) {
-      this.logger.error(`Error deleting info record with key ${key} and type ${type}`, error);
+      this.logger.error(
+        `Error deleting info record with key ${key} and type ${type}`,
+        error
+      );
     }
   }
 
@@ -1080,7 +1207,10 @@ export class StorageService {
       // For example, keep media info for better user experience
       const infoRecords = await this.getAllInfo();
       for (const record of infoRecords) {
-        if (record.type !== 'media' && !(record.type === 'user' && record.key === currentUserPubkey)) {
+        if (
+          record.type !== 'media' &&
+          !(record.type === 'user' && record.key === currentUserPubkey)
+        ) {
           await this.deleteInfoByKeyAndType(record.key, record.type);
         }
       }
@@ -1167,7 +1297,7 @@ export class StorageService {
         // userRelaysCount: 0,
         eventsCount: 0,
         infoCount: 0,
-        estimatedSize: 0
+        estimatedSize: 0,
       });
 
       this.logger.info('Database wiped successfully');
@@ -1246,16 +1376,21 @@ export class StorageService {
       initialized: this.initialized(),
       dbConnection: !!this.db,
       platform: {
-        isMobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
+        isMobile:
+          /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+            navigator.userAgent
+          ),
         isIOS: /iPad|iPhone|iPod/.test(navigator.userAgent),
         isAndroid: /Android/.test(navigator.userAgent),
-        isWebView: /(iPhone|iPod|iPad).*AppleWebKit(?!.*Safari)/i.test(navigator.userAgent) ||
-                   /; wv\)/.test(navigator.userAgent)
+        isWebView:
+          /(iPhone|iPod|iPad).*AppleWebKit(?!.*Safari)/i.test(
+            navigator.userAgent
+          ) || /; wv\)/.test(navigator.userAgent),
       },
       storage: {
         localStorage: this.testLocalStorage(),
-        sessionStorage: this.testSessionStorage()
-      }
+        sessionStorage: this.testSessionStorage(),
+      },
     };
 
     this.logger.info('Storage diagnostic info collected', info);
@@ -1294,7 +1429,7 @@ export class StorageService {
       // Try a simple operation
       const tx = this.db.transaction('events', 'readonly');
       await tx.store.count();
-      
+
       this.logger.debug('Storage health check passed');
       return true;
     } catch (error: any) {

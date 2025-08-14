@@ -1,6 +1,18 @@
-import { Injectable, inject, signal, computed, effect, untracked } from '@angular/core';
+import {
+  Injectable,
+  inject,
+  signal,
+  computed,
+  effect,
+  untracked,
+} from '@angular/core';
 import { LoggerService } from './logger.service';
-import { StorageService, Nip11Info, NostrEventData, UserMetadata } from './storage.service';
+import {
+  StorageService,
+  Nip11Info,
+  NostrEventData,
+  UserMetadata,
+} from './storage.service';
 import { Event, kinds, SimplePool } from 'nostr-tools';
 import { ApplicationStateService } from './application-state.service';
 import { NotificationService } from './notification.service';
@@ -15,8 +27,9 @@ export interface Relay {
   timeout?: number;
 }
 
+/** THIS IS DEPRECATED! */
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class RelayService {
   // Default relay timeout duration in milliseconds (10 minute)
@@ -28,7 +41,9 @@ export class RelayService {
   private readonly TIMEOUT_CLEANUP_INTERVAL = 10000;
 
   // Default bootstrap relays
-  private readonly DEFAULT_BOOTSTRAP_RELAYS = ['wss://discovery.eu.nostria.app/'];
+  private readonly DEFAULT_BOOTSTRAP_RELAYS = [
+    'wss://discovery.eu.nostria.app/',
+  ];
 
   private readonly logger = inject(LoggerService);
   private readonly storage = inject(StorageService);
@@ -74,7 +89,9 @@ export class RelayService {
     // When relays change, sync with storage
     effect(() => {
       if (this.relaysChanged()) {
-        this.logger.debug(`Relay effect triggered with ${this.relays.length} relays`);
+        this.logger.debug(
+          `Relay effect triggered with ${this.relays.length} relays`
+        );
 
         if (this.relays.length > 0) {
           this.syncRelaysToStorage(this.relays);
@@ -91,10 +108,15 @@ export class RelayService {
   }
 
   saveDiscoveryRelays() {
-    this.logger.debug(`Saving Discovery Relays with ${this.discoveryRelays.length} relays`);
+    this.logger.debug(
+      `Saving Discovery Relays with ${this.discoveryRelays.length} relays`
+    );
 
     // Save to local storage
-    this.localStorage.setItem(this.appState.DISCOVERY_RELAYS_STORAGE_KEY, JSON.stringify(this.discoveryRelays));
+    this.localStorage.setItem(
+      this.appState.DISCOVERY_RELAYS_STORAGE_KEY,
+      JSON.stringify(this.discoveryRelays)
+    );
   }
 
   createPool() {
@@ -120,7 +142,10 @@ export class RelayService {
 
     // Some user's have "coracle" as their relay URL, which is not a valid relay URL. Disable the relay immediately.
     if (!normalizedUrl) {
-      await this.storage.saveInfo(relayUrl, 'relay', { disabled: true, suspendedCount: 1 });
+      await this.storage.saveInfo(relayUrl, 'relay', {
+        disabled: true,
+        suspendedCount: 1,
+      });
       return;
     }
 
@@ -137,20 +162,32 @@ export class RelayService {
       relayInfo['suspendedCount'] = suspendedCount;
 
       if (suspendedCount >= this.RELAY_TIMEOUT_COUNT) {
-        this.logger.info(`Relay ${normalizedUrl} timed out ${suspendedCount} times, disabling it.`);
-        await this.storage.saveInfo(normalizedUrl, 'relay', { disabled: true, suspendedCount: suspendedCount });
+        this.logger.info(
+          `Relay ${normalizedUrl} timed out ${suspendedCount} times, disabling it.`
+        );
+        await this.storage.saveInfo(normalizedUrl, 'relay', {
+          disabled: true,
+          suspendedCount: suspendedCount,
+        });
         return;
       }
     } else {
-      await this.storage.saveInfo(normalizedUrl, 'relay', { disabled: false, suspendedCount: suspendedCount });
+      await this.storage.saveInfo(normalizedUrl, 'relay', {
+        disabled: false,
+        suspendedCount: suspendedCount,
+      });
     }
 
-    this.logger.info(`Relay ${normalizedUrl} timed out ${suspendedCount} times.`);
+    this.logger.info(
+      `Relay ${normalizedUrl} timed out ${suspendedCount} times.`
+    );
 
     this.logger.debug(`Timeout relay: ${normalizedUrl}`);
 
     // Check if the relay is already in the timeouts array
-    const existingRelay = this.timeouts().find(relay => relay.url === normalizedUrl);
+    const existingRelay = this.timeouts().find(
+      relay => relay.url === normalizedUrl
+    );
     if (existingRelay) {
       this.logger.debug(`Relay ${normalizedUrl} is already timed out`);
       return;
@@ -165,11 +202,13 @@ export class RelayService {
         url: normalizedUrl,
         status: 'disconnected',
         lastUsed: now,
-        timeout: now + this.RELAY_TIMEOUT_DURATION
-      }
+        timeout: now + this.RELAY_TIMEOUT_DURATION,
+      },
     ]);
 
-    this.logger.debug(`Relay ${normalizedUrl} timed out until ${new Date(now + this.RELAY_TIMEOUT_DURATION).toISOString()}`);
+    this.logger.debug(
+      `Relay ${normalizedUrl} timed out until ${new Date(now + this.RELAY_TIMEOUT_DURATION).toISOString()}`
+    );
   }
 
   /**
@@ -180,13 +219,15 @@ export class RelayService {
     const initialCount = this.timeouts.length;
 
     // Filter out expired timeouts
-    this.timeouts.set(this.timeouts().filter(relay => {
-      const isExpired = relay.timeout && relay.timeout < now;
-      if (isExpired) {
-        this.logger.debug(`Timeout expired for relay: ${relay.url}`);
-      }
-      return !isExpired;
-    }));
+    this.timeouts.set(
+      this.timeouts().filter(relay => {
+        const isExpired = relay.timeout && relay.timeout < now;
+        if (isExpired) {
+          this.logger.debug(`Timeout expired for relay: ${relay.url}`);
+        }
+        return !isExpired;
+      })
+    );
 
     const removedCount = initialCount - this.timeouts.length;
     if (removedCount > 0) {
@@ -199,11 +240,15 @@ export class RelayService {
    */
   private loadDiscoveryRelaysFromStorage(): string[] {
     try {
-      const storedRelays = this.localStorage.getItem(this.appState.DISCOVERY_RELAYS_STORAGE_KEY);
+      const storedRelays = this.localStorage.getItem(
+        this.appState.DISCOVERY_RELAYS_STORAGE_KEY
+      );
       if (storedRelays) {
         const parsedRelays = JSON.parse(storedRelays);
         if (Array.isArray(parsedRelays)) {
-          this.logger.debug(`Loaded ${parsedRelays.length} discovery relays from storage`);
+          this.logger.debug(
+            `Loaded ${parsedRelays.length} discovery relays from storage`
+          );
           return parsedRelays;
         }
       }
@@ -218,15 +263,23 @@ export class RelayService {
   }
 
   /**
-  * Generic function to subscribe to Nostr events
-  * @param filters Array of filter objects for the subscription
-  * @param onEvent Callback function that will be called for each event received
-  * @param onEose Callback function that will be called when EOSE (End Of Stored Events) is received
-  * @param relayUrls Optional specific relay URLs to use (defaults to user's relays)
-  * @returns Subscription object with unsubscribe method
-  */
+   * Generic function to subscribe to Nostr events
+   * @param filters Array of filter objects for the subscription
+   * @param onEvent Callback function that will be called for each event received
+   * @param onEose Callback function that will be called when EOSE (End Of Stored Events) is received
+   * @param relayUrls Optional specific relay URLs to use (defaults to user's relays)
+   * @returns Subscription object with unsubscribe method
+   */
   subscribe<T extends Event = Event>(
-    filters: { kinds?: number[], authors?: string[], '#e'?: string[], '#p'?: string[], since?: number, until?: number, limit?: number }[],
+    filters: {
+      kinds?: number[];
+      authors?: string[];
+      '#e'?: string[];
+      '#p'?: string[];
+      since?: number;
+      until?: number;
+      limit?: number;
+    }[],
     onEvent: (event: T) => void,
     onEose?: () => void,
     relayUrls?: string[]
@@ -249,7 +302,7 @@ export class RelayService {
     try {
       // Create the subscription
       const sub = this.accountPool.subscribeMany(urls, filters, {
-        onevent: (evt) => {
+        onevent: evt => {
           this.logger.debug(`Received event of kind ${evt.kind}`);
 
           // Update the lastUsed timestamp for this relay
@@ -272,7 +325,7 @@ export class RelayService {
           // For example: this.handleContacts(evt);
           // }
         },
-        onclose: (reasons) => {
+        onclose: reasons => {
           console.log('Pool closed', reasons);
           // Also changed this to an arrow function for consistency
         },
@@ -295,60 +348,73 @@ export class RelayService {
         close: () => {
           this.logger.debug('Close from events');
           sub.close();
-        }
+        },
       };
     } catch (error) {
       this.logger.error('Error creating subscription', error);
       return {
         close: () => {
           this.logger.debug('Error subscription close called');
-        }
+        },
       };
     }
   }
 
-  async getEventsByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<Event[]> {
+  async getEventsByPubkeyAndKind(
+    pubkey: string | string[],
+    kind: number
+  ): Promise<Event[]> {
     // Check if pubkey is already an array or a single string
     const authors = Array.isArray(pubkey) ? pubkey : [pubkey];
 
     return this.getMany({
       authors,
-      kinds: [kind]
+      kinds: [kind],
     });
   }
 
-  async getEventByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<Event | null> {
+  async getEventByPubkeyAndKind(
+    pubkey: string | string[],
+    kind: number
+  ): Promise<Event | null> {
     // Check if pubkey is already an array or a single string
     const authors = Array.isArray(pubkey) ? pubkey : [pubkey];
 
     return this.get({
       authors,
-      kinds: [kind]
+      kinds: [kind],
     });
   }
 
   async getEventById(id: string): Promise<Event | null> {
     return this.get({
-      ids: [id]
+      ids: [id],
     });
   }
 
-  async getEventsByKindAndPubKeyTag(pubkey: string | string[], kind: number): Promise<Event[]> {
+  async getEventsByKindAndPubKeyTag(
+    pubkey: string | string[],
+    kind: number
+  ): Promise<Event[]> {
     const authors = Array.isArray(pubkey) ? pubkey : [pubkey];
 
     return this.getMany({
-      "#p": authors,
-      kinds: [kind]
+      '#p': authors,
+      kinds: [kind],
     });
   }
 
-  async getEventByPubkeyAndKindAndTag(pubkey: string, kind: number, tag: { key: string, value: string }): Promise<Event | null> {
+  async getEventByPubkeyAndKindAndTag(
+    pubkey: string,
+    kind: number,
+    tag: { key: string; value: string }
+  ): Promise<Event | null> {
     const authors = Array.isArray(pubkey) ? pubkey : [pubkey];
 
     return this.get({
       authors,
       [`#${tag.key}`]: [tag.value],
-      kinds: [kind]
+      kinds: [kind],
     });
   }
 
@@ -360,7 +426,16 @@ export class RelayService {
    * @returns Promise that resolves to an array of events
    */
   async get<T extends Event = Event>(
-    filter: { ids?: string[], kinds?: number[], authors?: string[], '#e'?: string[], '#p'?: string[], since?: number, until?: number, limit?: number },
+    filter: {
+      ids?: string[];
+      kinds?: number[];
+      authors?: string[];
+      '#e'?: string[];
+      '#p'?: string[];
+      since?: number;
+      until?: number;
+      limit?: number;
+    },
     relayUrls?: string[],
     options: { timeout?: number } = {}
   ): Promise<T | null> {
@@ -384,7 +459,9 @@ export class RelayService {
       const timeout = options.timeout || 5000;
 
       // Execute the query
-      const event = await this.accountPool.get(urls, filter, { maxWait: timeout }) as T;
+      const event = (await this.accountPool.get(urls, filter, {
+        maxWait: timeout,
+      })) as T;
 
       this.logger.debug(`Received event from query`, event);
 
@@ -399,14 +476,22 @@ export class RelayService {
   }
 
   /**
-  * Generic function to fetch Nostr events (one-time query)
-  * @param filter Filter for the query
-  * @param relayUrls Optional specific relay URLs to use (defaults to user's relays)
-  * @param options Optional options for the query
-  * @returns Promise that resolves to an array of events
-  */
+   * Generic function to fetch Nostr events (one-time query)
+   * @param filter Filter for the query
+   * @param relayUrls Optional specific relay URLs to use (defaults to user's relays)
+   * @param options Optional options for the query
+   * @returns Promise that resolves to an array of events
+   */
   async getMany<T extends Event = Event>(
-    filter: { kinds?: number[], authors?: string[], '#e'?: string[], '#p'?: string[], since?: number, until?: number, limit?: number },
+    filter: {
+      kinds?: number[];
+      authors?: string[];
+      '#e'?: string[];
+      '#p'?: string[];
+      since?: number;
+      until?: number;
+      limit?: number;
+    },
     relayUrls?: string[],
     options: { timeout?: number } = {}
   ): Promise<T[]> {
@@ -431,14 +516,14 @@ export class RelayService {
 
       // Execute the query
       const events: T[] = [];
-      return new Promise<T[]>((resolve) => {
+      return new Promise<T[]>(resolve => {
         const sub = this.accountPool!.subscribeEose(urls, filter, {
           maxWait: timeout,
-          onevent: (event) => {
+          onevent: event => {
             // Add the received event to our collection
             events.push(event as T);
           },
-          onclose: (reasons) => {
+          onclose: reasons => {
             console.log('Subscriptions closed', reasons);
 
             // When subscription closes, resolve the promise with all collected events
@@ -463,20 +548,19 @@ export class RelayService {
   }
 
   /**
- * Generic function to publish a Nostr event to specified relays
- * @param event The Nostr event to publish
- * @param relayUrls Optional specific relay URLs to use (defaults to user's relays)
- * @param options Optional options for publishing
- * @returns Promise that resolves to an object with status for each relay
- */
-  async publish(
-    event: Event,
-    relayUrls?: string[]
-  ) {
+   * Generic function to publish a Nostr event to specified relays
+   * @param event The Nostr event to publish
+   * @param relayUrls Optional specific relay URLs to use (defaults to user's relays)
+   * @param options Optional options for publishing
+   * @returns Promise that resolves to an object with status for each relay
+   */
+  async publish(event: Event, relayUrls?: string[]) {
     this.logger.debug('Publishing event:', event);
 
     if (!this.accountPool) {
-      this.logger.error('Cannot publish event: account pool is not initialized');
+      this.logger.error(
+        'Cannot publish event: account pool is not initialized'
+      );
       return null;
     }
 
@@ -506,12 +590,12 @@ export class RelayService {
   discoveryPool = new SimplePool();
 
   /**
-* Generic function to publish a Nostr event to specified relays
-* @param event The Nostr event to publish
-* @param relayUrls Optional specific relay URLs to use (defaults to user's relays)
-* @param options Optional options for publishing
-* @returns Promise that resolves to an object with status for each relay
-*/
+   * Generic function to publish a Nostr event to specified relays
+   * @param event The Nostr event to publish
+   * @param relayUrls Optional specific relay URLs to use (defaults to user's relays)
+   * @param options Optional options for publishing
+   * @returns Promise that resolves to an object with status for each relay
+   */
   async publishToDiscoveryRelays(event: Event) {
     // for (const relay of this.discoveryRelays) {
     //   await this.discoveryPool.ensureRelay(relay);
@@ -526,7 +610,10 @@ export class RelayService {
 
     try {
       // Publish the event
-      const publishResults = await this.discoveryPool.publish(this.discoveryRelays, event);
+      const publishResults = await this.discoveryPool.publish(
+        this.discoveryRelays,
+        event
+      );
       this.logger.debug('Publish results:', publishResults);
       await this.layout.showPublishResults(publishResults, 'Relay List');
 
@@ -611,7 +698,7 @@ export class RelayService {
     const relayObjects = relayUrls.map(url => ({
       url,
       status: 'connecting' as const,
-      lastUsed: Date.now()
+      lastUsed: Date.now(),
     }));
 
     // Before storing the relays, make sure that they have / at the end
@@ -691,7 +778,6 @@ export class RelayService {
     // );
   }
 
-
   /**
    * Adds a new relay to the list
    */
@@ -701,7 +787,7 @@ export class RelayService {
     const newRelay: Relay = {
       url,
       status: 'disconnected',
-      lastUsed: Date.now()
+      lastUsed: Date.now(),
     };
 
     this.relays.push(newRelay);
@@ -768,7 +854,9 @@ export class RelayService {
   // }
 
   getRelaysFromRelayEvent(relayEvent: Event): string[] {
-    return relayEvent.tags.filter(tag => tag.length >= 2 && tag[0] === 'r').map(tag => tag[1]);
+    return relayEvent.tags
+      .filter(tag => tag.length >= 2 && tag[0] === 'r')
+      .map(tag => tag[1]);
   }
 
   /**
@@ -782,9 +870,11 @@ export class RelayService {
       const storedRelay = await this.storage.getRelay(relayUrl);
 
       // If we have recent info (less than 24 hours old), use it
-      if (storedRelay?.nip11 &&
+      if (
+        storedRelay?.nip11 &&
         storedRelay.nip11.last_checked &&
-        (Date.now() - storedRelay.nip11.last_checked) < 86400000) {
+        Date.now() - storedRelay.nip11.last_checked < 86400000
+      ) {
         this.logger.debug(`Using cached NIP-11 info for ${relayUrl}`);
         return storedRelay.nip11;
       }
@@ -794,12 +884,14 @@ export class RelayService {
 
       const response = await fetch(`${httpUrl}`, {
         headers: {
-          'Accept': 'application/nostr+json'
-        }
+          Accept: 'application/nostr+json',
+        },
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch NIP-11 info: ${response.status} ${response.statusText}`);
+        throw new Error(
+          `Failed to fetch NIP-11 info: ${response.status} ${response.statusText}`
+        );
       }
 
       const nip11Data = await response.json();
@@ -809,7 +901,7 @@ export class RelayService {
       const relayToSave: Relay = {
         url: relayUrl,
         lastUsed: Date.now(),
-        status: storedRelay?.status || 'disconnected'
+        status: storedRelay?.status || 'disconnected',
       };
 
       await this.storage.saveRelay(relayToSave, nip11Data);

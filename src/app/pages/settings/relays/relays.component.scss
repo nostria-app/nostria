@@ -7,6 +7,13 @@
   padding: 4px 0;
 }
 
+app-info-tooltip {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 2;
+}
+
 .status-icon {
   display: flex;
   align-items: center;
@@ -16,13 +23,13 @@
   height: auto !important;
   min-height: 60px;
   padding: 8px 0;
-  
+
   .relay-url {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     word-break: break-all;
-    
+
     @media (max-width: 768px) {
       max-width: 200px;
     }
@@ -37,7 +44,7 @@
   .relay-item {
     .flex {
       width: 100%;
-      
+
       &.justify-end {
         justify-content: flex-end;
         width: auto; // Don't stretch this container
@@ -72,7 +79,7 @@
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .add-button {
     width: 100%;
     margin-top: 0;
@@ -154,11 +161,22 @@
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .spinning-icon {
   animation: spin 2s linear infinite;
   margin-left: 8px;
+}
+
+// Card positioning for tooltips
+.user-relays-card,
+.discovery-relays-card {
+  position: relative;
 }

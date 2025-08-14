@@ -1,334 +1,401 @@
 .profile-header-container {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
 
-    // &.compact {
-    //     display: flex;
-    //     align-items: center;
-    //     padding: 1rem;
-    // }
+  // &.compact {
+  //     display: flex;
+  //     align-items: center;
+  //     padding: 1rem;
+  // }
 }
 
 .profile-info-container {
-    margin-left: 0.6rem;
-    margin-right: 0.6rem;
-    display: flex;
+  margin-left: 0.6rem;
+  margin-right: 0.6rem;
+  display: flex;
+  flex-direction: row;
+  gap: 1.5rem; // Space between the two divs
+
+  // First div should always be 168px width
+  >div:first-child {
+    flex: 0 0 168px; // Don't grow or shrink, always 168px
+    width: 168px;
+  }
+
+  // Second div should take remaining space
+  >div:last-child {
+    flex: 1;
+  }
+
+  // Switch to vertical layout on smaller screens
+  // @media (max-width: 768px) {
+  //     flex-direction: column;
+  //     position: relative;
+  //     top: -120px;
+  //     // gap: 0;
+
+  //     // First div still maintains 168px width even in vertical layout
+  //     >div:first-child {
+  //         align-self: center; // Center align the div horizontally
+  //         margin: 0 auto; // Alternative centering approach
+  //         top: 0px;
+  //     }
+  // }
+
+  &.mobile {
+    flex-direction: column;
+    gap: 0;
+    align-items: center;
+    top: -60px;
+    position: relative;
+  }
+
+  &.compact {
+    // When compact class is applied
     flex-direction: row;
-    gap: 1.5rem; // Space between the two divs
+    position: initial;
 
-    // First div should always be 168px width
+    // First div should be fixed at 80px in compact mode
     >div:first-child {
-        flex: 0 0 168px; // Don't grow or shrink, always 168px
-        width: 168px;
+      flex: 0 0 80px !important; // Don't grow or shrink, always 80px
+      width: 80px !important;
+      align-self: auto;
+      margin: 0;
+      top: 0;
     }
-
-    // Second div should take remaining space
-    >div:last-child {
-        flex: 1;
-    }
-
-    // Switch to vertical layout on smaller screens
-    // @media (max-width: 768px) {
-    //     flex-direction: column;
-    //     position: relative;
-    //     top: -120px;
-    //     // gap: 0;
-
-    //     // First div still maintains 168px width even in vertical layout
-    //     >div:first-child {
-    //         align-self: center; // Center align the div horizontally
-    //         margin: 0 auto; // Alternative centering approach
-    //         top: 0px;
-    //     }
-    // }
-
-    &.mobile {
-        flex-direction: column;
-        gap: 0;
-        align-items: center;
-        top: -60px;
-        position: relative;
-    }
-
-    &.compact {
-        // When compact class is applied
-        flex-direction: row;
-        position: initial;
-
-        // First div should be fixed at 80px in compact mode
-        >div:first-child {
-            flex: 0 0 80px !important; // Don't grow or shrink, always 80px
-            width: 80px !important;
-            align-self: auto;
-            margin: 0;
-            top: 0;
-        }
-    }
+  }
 }
 
-
-
-
 .profile-banner {
-    width: 100%;
-    height: 320px;
-    background-size: cover;
-    background-position: center;
-    position: relative; // Added to ensure proper positioning of child elements
+  width: 100%;
+  height: 320px;
+  background-size: cover;
+  background-position: center;
+  position: relative; // Added to ensure proper positioning of child elements
 
-    &.clickable {
-        cursor: pointer;
-        transition: transform 0.1s ease;
+  &.clickable {
+    cursor: pointer;
+    transition: transform 0.1s ease;
 
-        &:hover {
-            filter: brightness(1.1);
-        }
-
-        &:active {
-            filter: brightness(0.9);
-        }
+    &:hover {
+      filter: brightness(1.1);
     }
 
-    .compact & {
-        height: 80px;
+    &:active {
+      filter: brightness(0.9);
     }
+  }
+
+  .compact & {
+    height: 80px;
+  }
 }
 
 .profile-avatar {
-    top: -60px;
-    position: relative;
-    width: 168px;
-    height: 168px;
-    border-radius: 50%;
-    border: 4px solid var(--mat-sys-background);
-    overflow: hidden;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 2;
+  top: -60px;
+  position: relative;
+  width: 168px;
+  height: 168px;
+  border-radius: 50%;
+  border: 4px solid var(--mat-sys-background);
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2;
 
-    &.clickable {
-        cursor: pointer;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+  &.clickable {
+    cursor: pointer;
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease;
 
-        &:hover {
-            transform: scale(1.05);
-            box-shadow: var(--mat-sys-level5);
-        }
+    &:hover {
+      transform: scale(1.05);
+      box-shadow: var(--mat-sys-level5);
     }
+  }
 
-    .mobile & {
-        top: 0px;
-    }
+  .mobile & {
+    top: 0px;
+  }
 
-    .compact & {
-        // position: relative;
-        width: 80px !important;
-        height: 80px !important;
-        // left: 0;
-        // bottom: 0;
-        // margin-right: 16px;
-    }
+  .compact & {
+    // position: relative;
+    width: 80px !important;
+    height: 80px !important;
+    // left: 0;
+    // bottom: 0;
+    // margin-right: 16px;
+  }
 
-    // @media (max-width: 768px) {
-    //     width: 140px;
-    //     height: 140px;
-    //     left: 24px;
-    //     bottom: -70px;
-    // }
+  // @media (max-width: 768px) {
+  //     width: 140px;
+  //     height: 140px;
+  //     left: 24px;
+  //     bottom: -70px;
+  // }
 
-    // @media (max-width: 480px) {
-    //     width: 120px;
-    //     height: 120px;
-    //     left: 16px;
-    //     bottom: -60px;
-    // }
+  // @media (max-width: 480px) {
+  //     width: 120px;
+  //     height: 120px;
+  //     left: 16px;
+  //     bottom: -60px;
+  // }
 }
 
 .avatar-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .default-avatar {
-    font-size: 120px;
-    width: 120px;
-    height: 120px;
-    color: var(--mat-divider-color, #ccc);
+  font-size: 120px;
+  width: 120px;
+  height: 120px;
+  color: var(--mat-divider-color, #ccc);
 
-    // .compact & {
-    //     font-size: 60px;
-    //     width: 60px;
-    //     height: 60px;
-    // }
+  // .compact & {
+  //     font-size: 60px;
+  //     width: 60px;
+  //     height: 60px;
+  // }
 }
 
 .profile-info {
-    margin-top: 0.3em;
-    width: 100%;
-    max-width: 100%;
-    overflow: hidden;
+  margin-top: 0.3em;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
 
-    // &.compact {
-    //     margin-top: 0;
-    //     padding: 0;
-    //     flex: 1;
-    // }
+  // &.compact {
+  //     margin-top: 0;
+  //     padding: 0;
+  //     flex: 1;
+  // }
 
-    // @media (max-width: 768px) {}
+  // @media (max-width: 768px) {}
 
-    // @media (max-width: 480px) {}
+  // @media (max-width: 480px) {}
 }
 
 .profile-bio {
-    margin-top: 1rem;
-    white-space: pre-line;
-    max-width: 700px;
+  margin-top: 1rem;
+  white-space: pre-line;
+  max-width: 700px;
 
-    // @media (max-width: 768px) {
-    //   /* Remove auto margins that were centering the bio */
-    //   margin-left: 0.5rem;
-    //   margin-right: 0;
-    // }
+  // @media (max-width: 768px) {
+  //   /* Remove auto margins that were centering the bio */
+  //   margin-left: 0.5rem;
+  //   margin-right: 0;
+  // }
 }
 
 .profile-name {
-    margin-top: 0.4rem;
-    margin-bottom: 8px;
-    font-size: 2rem;
+  margin-top: 0.4rem;
+  margin-bottom: 8px;
+  font-size: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 
-    // .compact & {
-    //     font-size: 18px;
-    //     margin-bottom: 4px;
-    // }
+  .favorite-indicator {
+    color: var(--mat-sys-color-primary);
+    font-size: 1.5rem;
+    animation: pulse 2s infinite;
+  }
+
+  .premium-indicator {
+    background: linear-gradient(145deg,
+        #8e44ad,
+        #3498db);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    font-size: 1.5rem;
+    animation: premiumGlow 3s ease-in-out infinite;
+    position: relative;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(145deg, #8e44ad, #3498db);
+      opacity: 0.3;
+      border-radius: 50%;
+      animation: premiumPulse 2s ease-in-out infinite;
+      z-index: -1;
+    }
+  }
+
+  // .compact & {
+  //     font-size: 18px;
+  //     margin-bottom: 4px;
+  // }
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes premiumGlow {
+  0% {
+    filter: brightness(1) hue-rotate(0deg);
+  }
+
+  50% {
+    filter: brightness(1.2) hue-rotate(10deg);
+  }
+
+  100% {
+    filter: brightness(1) hue-rotate(0deg);
+  }
+}
+
+@keyframes premiumPulse {
+  0% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.6;
+    transform: scale(1.1);
+  }
+
+  100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
 }
 
 .profile-item {
-    display: flex;
-    align-items: center;
-    margin-bottom: 8px;
-    color: var(--mat-hint-color, #757575);
-    width: auto;
-    max-width: 100%;
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  color: var(--mat-hint-color, #757575);
+  width: auto;
+  max-width: 100%;
+  overflow: hidden;
+
+  mat-icon {
+    margin-right: 8px;
+    font-size: 18px;
+    height: 18px;
+    width: 18px;
+    line-height: 18px;
+    flex-shrink: 0;
+    /* Prevent icon from shrinking */
+  }
+
+  span {
+    font-size: 14px;
     overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+    /* Adjusted from calc(100% - 26px) */
+    display: inline-block;
+    /* Added to ensure tooltip aligns properly */
+  }
 
-    mat-icon {
-        margin-right: 8px;
-        font-size: 18px;
-        height: 18px;
-        width: 18px;
-        line-height: 18px;
-        flex-shrink: 0;
-        /* Prevent icon from shrinking */
+  a {
+    color: var(--mat-sys-primary, #1976d2);
+    text-decoration: none;
+    display: inline-block;
+    /* Changed from block to inline-block */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+    /* Changed from width: 100% to max-width: 100% */
+
+    &:hover {
+      text-decoration: underline;
     }
-
-    span {
-        font-size: 14px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        max-width: 100%;
-        /* Adjusted from calc(100% - 26px) */
-        display: inline-block;
-        /* Added to ensure tooltip aligns properly */
-    }
-
-    a {
-        color: var(--mat-sys-primary, #1976d2);
-        text-decoration: none;
-        display: inline-block;
-        /* Changed from block to inline-block */
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        max-width: 100%;
-        /* Changed from width: 100% to max-width: 100% */
-
-        &:hover {
-            text-decoration: underline;
-        }
-    }
+  }
 }
 
 .profile-bio {
-    margin: 16px 0;
-    white-space: pre-wrap;
-    font-size: 14px;
-    line-height: 1.5;
+  margin: 16px 0;
+  white-space: pre-wrap;
+  font-size: 0.9rem;
+  line-height: 1.5;
 }
 
 .profile-menu-actions {
-    position: relative;
-    float: right;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    // top: 16px;
-    // right: 16px;
+  position: relative;
+  float: right;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  // top: 16px;
+  // right: 16px;
 
-    // .compact & {
-    //     top: auto;
-    //     right: 0;
-    //     background-color: transparent;
-    // }
-}
-
-.profile-menu-button {
-    // position: relative;
-    // float: right;
-    // top: 16px;
-    // right: 16px;
-
-    // .compact & {
-    //     top: auto;
-    //     right: 0;
-    //     background-color: transparent;
-    // }
+  // .compact & {
+  //     top: auto;
+  //     right: 0;
+  //     background-color: transparent;
+  // }
 }
 
 .verified-icon {
-    color: var(--mat-sys-primary);
-    // font-size: 18px;
-    // height: 18px;
-    // width: 18px;
-    // margin-left: 4px;
+  color: var(--mat-sys-primary);
+  // font-size: 18px;
+  // height: 18px;
+  // width: 18px;
+  // margin-left: 4px;
 }
 
 .verified-icon-error {
-    color: var(--mat-sys-error);
-    // font-size: 18px;
-    // height: 18px;
-    // width: 18px;
-    // margin-left: 4px;
+  color: var(--mat-sys-error);
+  // font-size: 18px;
+  // height: 18px;
+  // width: 18px;
+  // margin-left: 4px;
 }
 
 .profile-extra-info {
-    display: flex;
-    align-items: center;
+  display: flex;
+  align-items: center;
 }
 
 .inline-error {
-    display: inline-flex;
-    align-items: center;
-    padding: 4px 8px;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
 }
 
 .qr-code-container {
-    position: absolute;
-    z-index: 1000;
-    background: var(--mat-sys-surface);
-    border-radius: 8px;
-    padding: 16px;
-    box-shadow: var(--mat-sys-level3);
-    margin-top: 8px;
+  position: absolute;
+  z-index: 1000;
+  background: var(--mat-sys-surface);
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: var(--mat-sys-level3);
+  margin-top: 8px;
 
-    qrcode {
-        display: block;
-    }
+  qrcode {
+    display: block;
+  }
 }
 
 .lightning-item {
-    cursor: pointer;
+  cursor: pointer;
 }

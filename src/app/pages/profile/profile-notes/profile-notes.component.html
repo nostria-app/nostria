@@ -2,65 +2,82 @@
   <div class="notes-container">
     <div class="notes-list-container">
       @if (isLoading()) {
-      <app-loading-overlay message="Loading notes..."></app-loading-overlay>
+        <app-loading-overlay message="Loading notes..."></app-loading-overlay>
       } @else if (error()) {
-      <div class="error-state">
-        <mat-icon>error</mat-icon>
-        <p>{{ error() }}</p>
-      </div>
+        <div class="error-state">
+          <mat-icon>error</mat-icon>
+          <p>{{ error() }}</p>
+        </div>
       } @else if (profileState.notes().length === 0) {
-      <div class="empty-state">
-        <mat-icon>chat</mat-icon>
-        <p>No notes to display yet</p>
-      </div>
+        <div class="empty-state">
+          <mat-icon>chat</mat-icon>
+          <p>No notes to display yet</p>
+        </div>
       } @else {
-      <div class="notes-list">
-        @for(note of profileState.sortedNotes(); track note.event.id) {
-        <mat-card class="note-card" appearance="outlined">
-          <app-user-profile class="user-profile-thread" view="thread" [pubkey]="profileState.currentProfilePubkey()">
-            <a class="date-link" (click)="layout.openEvent(note.event.id, note.event)" [matTooltip]="note.event.created_at * 1000 | date:'medium'" matTooltipPosition="below">
-              {{ note.event.created_at | ago }}
-            </a>
-          </app-user-profile>
-          <app-content [content]="note.data"></app-content>
-          <!-- <mat-card-content>{{note.content}}</mat-card-content> -->
-          <mat-card-footer class="note-footer">
-            <button mat-icon-button>
-              <mat-icon matTooltip="Reply" matTooltipPosition="below">reply</mat-icon>
-            </button>
-            <button mat-icon-button class="note-footer-right">
-              <mat-icon [matTooltip]="bookmark.getBookmarkTooltip(note.event.id)" matTooltipPosition="below" (click)="bookmark.toggleBookmark(note.event.id)">
-                {{bookmark.getBookmarkIcon(note.event.id)}}
-              </mat-icon>
-            </button>
-          </mat-card-footer>
-        </mat-card> 
-        }
-        
-        <!-- Loading more indicator -->
-        @if (profileState.isLoadingMoreNotes()) {
-        <div class="loading-more-indicator">
-          <mat-spinner diameter="24"></mat-spinner>
-          <p>Loading more notes...</p>
+        <div class="notes-list">
+          @for (note of profileState.sortedNotes(); track note.event.id) {
+            <mat-card class="note-card" appearance="outlined">
+              <app-user-profile
+                class="user-profile-thread"
+                view="thread"
+                [pubkey]="profileState.currentProfilePubkey()"
+              >
+                <a
+                  class="date-link"
+                  (click)="layout.openEvent(note.event.id, note.event)"
+                  [matTooltip]="note.event.created_at * 1000 | date: 'medium'"
+                  matTooltipPosition="below"
+                >
+                  {{ note.event.created_at | ago }}
+                </a>
+              </app-user-profile>
+              <app-content [content]="note.data"></app-content>
+              <!-- <mat-card-content>{{note.content}}</mat-card-content> -->
+              <mat-card-footer class="note-footer">
+                <button mat-icon-button>
+                  <mat-icon matTooltip="Reply" matTooltipPosition="below"
+                    >reply</mat-icon
+                  >
+                </button>
+                <button mat-icon-button class="note-footer-right">
+                  <mat-icon
+                    [matTooltip]="bookmark.getBookmarkTooltip(note.event.id)"
+                    matTooltipPosition="below"
+                    (click)="bookmark.toggleBookmark(note.event.id)"
+                  >
+                    {{ bookmark.getBookmarkIcon(note.event.id) }}
+                  </mat-icon>
+                </button>
+              </mat-card-footer>
+            </mat-card>
+          }
+
+          <!-- Loading more indicator -->
+          @if (profileState.isLoadingMoreNotes()) {
+            <div class="loading-more-indicator">
+              <mat-spinner diameter="24"></mat-spinner>
+              <p>Loading more notes...</p>
+            </div>
+          }
+
+          <!-- No more notes indicator -->
+          @if (
+            !profileState.hasMoreNotes() && profileState.notes().length > 0
+          ) {
+            <div class="no-more-indicator">
+              <mat-icon>inbox</mat-icon>
+              <p>You've reached the end</p>
+            </div>
+          }
         </div>
-        }
-        
-        <!-- No more notes indicator -->
-        @if (!profileState.hasMoreNotes() && profileState.notes().length > 0) {
-        <div class="no-more-indicator">
-          <mat-icon>inbox</mat-icon>
-          <p>You've reached the end</p>
-        </div>
-        }
-      </div>
       }
     </div>
 
     <div class="options-section">
       <h3 class="options-title">Display Options</h3>
       <div class="option-controls">
-        <!-- <mat-slide-toggle 
-          [checked]="showNewestFirst()" 
+        <!-- <mat-slide-toggle
+          [checked]="showNewestFirst()"
           (change)="toggleSortOrder()"
           color="primary">
           Sort by Newest

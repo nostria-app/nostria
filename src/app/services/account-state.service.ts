@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal, OnDestroy } from '@angular/core';
 import { Event, kinds, nip19, UnsignedEvent } from 'nostr-tools';
 import { NostrRecord } from '../interfaces';
 import { LocalStorageService } from './local-storage.service';
@@ -13,11 +13,7 @@ import { HttpContext } from '@angular/common/http';
 import { USE_NIP98 } from './interceptors/nip98Auth';
 import { UtilitiesService } from './utilities.service';
 import { Wallets } from './wallets';
-
-interface ProfileCacheEntry {
-  profile: NostrRecord;
-  cachedAt: number;
-}
+import { Cache } from './cache';
 
 interface ProfileProcessingState {
   isProcessing: boolean;
@@ -27,23 +23,25 @@ interface ProfileProcessingState {
   startedAt: number;
 }
 
-interface ProcessingTracking {
-  [pubkey: string]: {
+type ProcessingTracking = Record<
+  string,
+  {
     profileDiscovery: boolean;
     backupDiscovery: boolean;
-  };
-}
+  }
+>;
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
-export class AccountStateService {
+export class AccountStateService implements OnDestroy {
   private readonly localStorage = inject(LocalStorageService);
   private readonly appState = inject(ApplicationStateService);
   private readonly accountService = inject(AccountService);
   private readonly storage = inject(StorageService);
   private readonly utilities = inject(UtilitiesService);
   private readonly wallets = inject(Wallets);
+  private readonly cache = inject(Cache);
 
   private destroy$ = new Subject<void>();
 
@@ -66,7 +64,7 @@ export class AccountStateService {
   npub = computed(() => {
     if (!this.account()) return '';
     return nip19.npubEncode(this.account()?.pubkey || '');
-  })
+  });
 
   profile = signal<NostrRecord | undefined>(undefined);
 
@@ -112,15 +110,23 @@ export class AccountStateService {
 
     // Get the existing following event so we don't loose existing structure.
     // Ensure we keep original 'content' and relays/pet names.
-    let followingEvent = await this.storage.getEventByPubkeyAndKind([account.pubkey], 3);
+    const followingEvent = await this.storage.getEventByPubkeyAndKind(
+      [account.pubkey],
+      3
+    );
 
     if (!followingEvent) {
-      console.warn('No existing following event found. Cannot unfollow.', pubkey);
+      console.warn(
+        'No existing following event found. Cannot unfollow.',
+        pubkey
+      );
       return;
     }
 
     // Remove the pubkey from the following list in the event
-    followingEvent.tags = followingEvent.tags.filter(tag => !(tag[0] === 'p' && tag[1] === pubkey));
+    followingEvent.tags = followingEvent.tags.filter(
+      tag => !(tag[0] === 'p' && tag[1] === pubkey)
+    );
 
     // Remove from following list
     this.followingList.update(list => list.filter(p => p !== pubkey));
@@ -135,7 +141,9 @@ export class AccountStateService {
   }
 
   isFollowing = computed(() => {
-
+    // Return a function that checks if a given pubkey is being followed
+    const following = this.followingList();
+    return (pubkey: string) => following.includes(pubkey);
   });
 
   isCurrentUser(pubkey: string): boolean {
@@ -179,45 +187,72 @@ export class AccountStateService {
     this.profile.set(undefined);
   }
 
-  async follow(pubkey: string) {
+  async follow(pubkeys: string | string[]) {
     const account = this.account();
     if (!account) {
-      console.warn('No account is currently set to follow:', pubkey);
+      console.warn('No account is currently set to follow:', pubkeys);
       return;
     }
 
-    // Check if already following
-    if (this.followingList().includes(pubkey)) {
-      console.log(`Already following ${pubkey}`);
+    // Normalize input to always be an array
+    const pubkeyArray = Array.isArray(pubkeys) ? pubkeys : [pubkeys];
+
+    // Filter out pubkeys that are already being followed
+    const currentFollowing = this.followingList();
+    const newPubkeys = pubkeyArray.filter(
+      pubkey => !currentFollowing.includes(pubkey)
+    );
+
+    if (newPubkeys.length === 0) {
+      console.log('All specified pubkeys are already being followed');
       return;
     }
 
-    // Get the existing following event so we don't loose existing structure.
+    // Get the existing following event so we don't lose existing structure.
     // Ensure we keep original 'content' and relays/pet names.
-    let followingEvent: Event | UnsignedEvent | null = await this.storage.getEventByPubkeyAndKind([account.pubkey], 3);
+    let followingEvent: Event | UnsignedEvent | null =
+      await this.storage.getEventByPubkeyAndKind([account.pubkey], 3);
 
     if (!followingEvent) {
-      console.warn('No existing following event found. This might result in overwriting this event on unknown relays.', pubkey);
-      followingEvent = this.utilities.createEvent(kinds.Contacts, "", [[`p`, pubkey]], account.pubkey);
+      console.warn(
+        'No existing following event found. This might result in overwriting this event on unknown relays.',
+        newPubkeys
+      );
+      // Create new event with all new pubkeys
+      const tags = newPubkeys.map(pubkey => ['p', pubkey]);
+      followingEvent = this.utilities.createEvent(
+        kinds.Contacts,
+        '',
+        tags,
+        account.pubkey
+      );
     } else {
-      // Add the pubkey from the following list in the event, if not already present
-      if (!followingEvent.tags.some(tag => tag[0] === 'p' && tag[1] === pubkey)) {
-        followingEvent.tags.push(['p', pubkey]);
-      } else {
-        console.log(`Pubkey ${pubkey} is already in the following list.`);
-        return;
+      // Add all new pubkeys to the following list in the event
+      for (const pubkey of newPubkeys) {
+        if (
+          !followingEvent.tags.some(tag => tag[0] === 'p' && tag[1] === pubkey)
+        ) {
+          followingEvent.tags.push(['p', pubkey]);
+        }
       }
     }
 
-    // Add to following list
-    this.followingList.update(list => [...list, pubkey]);
+    // Add all new pubkeys to following list
+    this.followingList.update(list => [...list, ...newPubkeys]);
 
-    // Publish the event to update the following list
+    // Publish the event to update the following list (single operation)
     try {
       this.publish.set(followingEvent);
-      console.log(`Followed ${pubkey} successfully.`);
+      console.log(
+        `Followed ${newPubkeys.length} pubkey(s) successfully:`,
+        newPubkeys
+      );
     } catch (error) {
-      console.error(`Failed to unfollow ${pubkey}:`, error);
+      console.error(`Failed to follow pubkey(s):`, error);
+      // Rollback the local state if publish failed
+      this.followingList.update(list =>
+        list.filter(pubkey => !newPubkeys.includes(pubkey))
+      );
     }
   }
 
@@ -229,7 +264,10 @@ export class AccountStateService {
       const currentFollowingList = this.followingList();
 
       // Check if the lists are different
-      const hasChanged = !this.utilities.arraysEqual(currentFollowingList, followingTags);
+      const hasChanged = !this.utilities.arraysEqual(
+        currentFollowingList,
+        followingTags
+      );
       if (hasChanged) {
         this.followingList.set(followingTags);
         await this.storage.saveEvent(event);
@@ -252,21 +290,31 @@ export class AccountStateService {
   updateAccount(account: NostrUser) {
     // Update lastUsed timestamp
     const allAccounts = this.accounts();
-    const existingAccountIndex = allAccounts.findIndex(u => u.pubkey === account.pubkey);
+    const existingAccountIndex = allAccounts.findIndex(
+      u => u.pubkey === account.pubkey
+    );
 
     if (existingAccountIndex >= 0) {
-      this.accounts.update(u => u.map(existingUser => existingUser.pubkey === account.pubkey ? account : existingUser));
+      this.accounts.update(u =>
+        u.map(existingUser =>
+          existingUser.pubkey === account.pubkey ? account : existingUser
+        )
+      );
     }
   }
 
   loadSubscriptions() {
-    const subscriptions = this.localStorage.getObject<Account[]>(this.appState.SUBSCRIPTIONS_STORAGE_KEY);
+    const subscriptions = this.localStorage.getObject<Account[]>(
+      this.appState.SUBSCRIPTIONS_STORAGE_KEY
+    );
     this.subscriptions.set(subscriptions || []);
   }
 
   addSubscription(account: Account) {
     const currentSubscriptions = this.subscriptions();
-    const existingIndex = currentSubscriptions.findIndex(sub => sub.pubkey === account.pubkey);
+    const existingIndex = currentSubscriptions.findIndex(
+      sub => sub.pubkey === account.pubkey
+    );
 
     if (existingIndex >= 0) {
       // Update existing subscription
@@ -276,7 +324,10 @@ export class AccountStateService {
       currentSubscriptions.push(account);
     }
 
-    this.localStorage.setObject(this.appState.SUBSCRIPTIONS_STORAGE_KEY, currentSubscriptions);
+    this.localStorage.setObject(
+      this.appState.SUBSCRIPTIONS_STORAGE_KEY,
+      currentSubscriptions
+    );
     this.subscriptions.set(currentSubscriptions);
   }
 
@@ -290,14 +341,18 @@ export class AccountStateService {
     const subscription = this.subscription() as any;
 
     // Don't fetch if data is less than 3 days old
-    if (subscription && Date.now() - subscription.retrieved < 3 * 24 * 60 * 60 * 1000) {
+    if (
+      subscription &&
+      Date.now() - subscription.retrieved < 3 * 24 * 60 * 60 * 1000
+    ) {
       return;
     }
 
-    this.accountService.getAccount(pubkey, new HttpContext().set(USE_NIP98, true))
+    this.accountService
+      .getAccount(pubkey, new HttpContext().set(USE_NIP98, true))
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (accountObj) => {
+        next: accountObj => {
           // this.accountSubscription.set(accountObj);
 
           // Create a copy with lastRetrieved property
@@ -306,18 +361,14 @@ export class AccountStateService {
           // Add the subscription to the local storage
           this.addSubscription(accountWithTimestamp);
         },
-        error: (err) => {
+        error: err => {
           console.error('Failed to fetch account:', err);
           // this.accountSubscription.set(undefined);
-        }
+        },
       });
   }
 
   muteList = signal<Event | undefined>(undefined);
-
-  // Profile cache - in-memory cache for quick searches
-  private userProfileCache = signal<Map<string, ProfileCacheEntry>>(new Map());
-  private accountProfileCache = signal<Map<string, ProfileCacheEntry>>(new Map());
 
   // Processing state for toolbar indicator
   profileProcessingState = signal<ProfileProcessingState>({
@@ -325,30 +376,32 @@ export class AccountStateService {
     total: 0,
     processed: 0,
     currentProfile: '',
-    startedAt: 0
+    startedAt: 0,
   });
 
-  // Computed signal for cache access
-  cachedUserProfiles = computed(() => this.userProfileCache());
-  cachedAccountProfiles = computed(() => this.accountProfileCache());
+  // Computed signals for cache access - removed since we can't iterate over injected cache keys
 
   // Computed signal for processing progress
   processingProgress = computed(() => {
     const state = this.profileProcessingState();
     if (state.total === 0) return 0;
     return Math.round((state.processed / state.total) * 100);
-  });// nostr = inject(NostrService);
+  }); // nostr = inject(NostrService);
 
   // Signal to publish event
   publish = signal<Event | UnsignedEvent | undefined>(undefined);
 
   constructor() {
-
+    // Cache configuration is now handled by the injected cache service
   }
 
   // Methods for tracking processing state per account
   private getProcessingTracking(): ProcessingTracking {
-    return this.localStorage.getObject<ProcessingTracking>(this.appState.PROCESSING_STORAGE_KEY) || {};
+    return (
+      this.localStorage.getObject<ProcessingTracking>(
+        this.appState.PROCESSING_STORAGE_KEY
+      ) || {}
+    );
   }
 
   private saveProcessingTracking(tracking: ProcessingTracking): void {
@@ -394,13 +447,21 @@ export class AccountStateService {
   }
 
   // Method to get processing state for debugging
-  getProcessingState(pubkey: string): { profileDiscovery: boolean; backupDiscovery: boolean } {
+  getProcessingState(pubkey: string): {
+    profileDiscovery: boolean;
+    backupDiscovery: boolean;
+  } {
     const tracking = this.getProcessingTracking();
-    return tracking[pubkey] || { profileDiscovery: false, backupDiscovery: false };
+    return (
+      tracking[pubkey] || { profileDiscovery: false, backupDiscovery: false }
+    );
   }
 
   // Method to start processing profiles
-  async startProfileProcessing(pubkeys: string[], nostrService: NostrService): Promise<void> {
+  async startProfileProcessing(
+    pubkeys: string[],
+    dataService: DataService
+  ): Promise<void> {
     // Don't start if already processing
     const currentState = this.profileProcessingState();
     if (currentState.isProcessing) {
@@ -413,37 +474,34 @@ export class AccountStateService {
       total: pubkeys.length,
       processed: 0,
       currentProfile: '',
-      startedAt: Date.now()
+      startedAt: Date.now(),
     });
 
     try {
-      // Get NostrService from the injector to avoid circular dependency
-      // const { NostrService } = await import('./nostr.service');
-      // const nostrService = this.injector.get(NostrService);
-
       // Use parallel processing with the optimized discovery queue
       await Promise.allSettled(
-        pubkeys.map(async (pubkey) => {
+        pubkeys.map(async pubkey => {
           try {
             this.profileProcessingState.update(state => ({
               ...state,
-              currentProfile: pubkey
+              currentProfile: pubkey,
             }));
 
-            const profile = await nostrService.getMetadataForUser(pubkey);
+            const profile = await dataService.getProfile(pubkey);
+
             if (profile) {
               this.addToCache(pubkey, profile);
             }
 
             this.profileProcessingState.update(state => ({
               ...state,
-              processed: state.processed + 1
+              processed: state.processed + 1,
             }));
           } catch (error) {
             console.error(`Failed to cache profile for ${pubkey}:`, error);
             this.profileProcessingState.update(state => ({
               ...state,
-              processed: state.processed + 1
+              processed: state.processed + 1,
             }));
           }
         })
@@ -460,21 +518,21 @@ export class AccountStateService {
           total: 0,
           processed: 0,
           currentProfile: '',
-          startedAt: 0
+          startedAt: 0,
         });
       }
     }
   }
 
-  // Method to add profile to cache
+  // Method to add profile to account cache
   addToAccounts(pubkey: string, profile: NostrRecord): void {
-    const cache = this.accountProfileCache();
-    const existingEntry = cache.get(pubkey);
+    const cacheKey = `metadata-${pubkey}`;
+    const existingProfile = this.cache.get<NostrRecord>(cacheKey);
 
     // Check if profile already exists and is newer
-    if (existingEntry) {
-      // Compare created_at timestamps if available, otherwise use cached timestamp
-      const existingTimestamp = existingEntry.profile.event.created_at || existingEntry.cachedAt;
+    if (existingProfile) {
+      // Compare created_at timestamps if available
+      const existingTimestamp = existingProfile.event.created_at || 0;
       const newTimestamp = profile.event.created_at || Date.now();
 
       // Only update if the new profile is newer
@@ -483,37 +541,19 @@ export class AccountStateService {
       }
     }
 
-    const newCache = new Map(cache);
-
-    newCache.set(pubkey, {
-      profile,
-      cachedAt: Date.now()
-    });
-
-    // Limit cache size to prevent memory issues
-    if (newCache.size > 1000) {
-      // Remove oldest entries
-      const entries = Array.from(newCache.entries());
-      entries.sort((a, b) => a[1].cachedAt - b[1].cachedAt);
-
-      // Keep newest 800 entries
-      const toKeep = entries.slice(-800);
-      newCache.clear();
-      toKeep.forEach(([key, value]) => newCache.set(key, value));
-    }
-
-    this.accountProfileCache.set(newCache);
+    // Add to cache
+    this.cache.set(cacheKey, profile);
   }
 
-  // Method to add profile to cache
+  // Method to add profile to user cache
   addToCache(pubkey: string, profile: NostrRecord): void {
-    const cache = this.userProfileCache();
-    const existingEntry = cache.get(pubkey);
+    const cacheKey = `metadata-${pubkey}`;
+    const existingProfile = this.cache.get<NostrRecord>(cacheKey);
 
     // Check if profile already exists and is newer
-    if (existingEntry) {
-      // Compare created_at timestamps if available, otherwise use cached timestamp
-      const existingTimestamp = existingEntry.profile.event.created_at || existingEntry.cachedAt;
+    if (existingProfile) {
+      // Compare created_at timestamps if available
+      const existingTimestamp = existingProfile.event.created_at || 0;
       const newTimestamp = profile.event.created_at || Date.now();
 
       // Only update if the new profile is newer
@@ -522,26 +562,8 @@ export class AccountStateService {
       }
     }
 
-    const newCache = new Map(cache);
-
-    newCache.set(pubkey, {
-      profile,
-      cachedAt: Date.now()
-    });
-
-    // Limit cache size to prevent memory issues
-    if (newCache.size > 1000) {
-      // Remove oldest entries
-      const entries = Array.from(newCache.entries());
-      entries.sort((a, b) => a[1].cachedAt - b[1].cachedAt);
-
-      // Keep newest 800 entries
-      const toKeep = entries.slice(-800);
-      newCache.clear();
-      toKeep.forEach(([key, value]) => newCache.set(key, value));
-    }
-
-    this.userProfileCache.set(newCache);
+    // Add to cache
+    this.cache.set(cacheKey, profile);
   }
 
   // Method to search cached profiles
@@ -551,13 +573,25 @@ export class AccountStateService {
       return [];
     }
 
-    const cache = this.userProfileCache();
-    console.log('Profile cache size:', cache.size);
+    // Since we can't iterate over cache keys with the injected cache service,
+    // we'll search through the following list and additional known pubkeys
+    const pubkeysToSearch = [...this.followingList()];
+
+    // Also add the current user's pubkey if available
+    const currentPubkey = this.pubkey();
+    if (currentPubkey && !pubkeysToSearch.includes(currentPubkey)) {
+      pubkeysToSearch.push(currentPubkey);
+    }
+
+    console.log('Searching through pubkeys:', pubkeysToSearch.length);
     const results: NostrRecord[] = [];
     const lowercaseQuery = query.toLowerCase();
 
-    for (const [pubkey, entry] of cache.entries()) {
-      const profile = entry.profile;
+    for (const pubkey of pubkeysToSearch) {
+      const cacheKey = `metadata-${pubkey}`;
+      const profile = this.cache.get<NostrRecord>(cacheKey);
+      if (!profile) continue;
+
       const data = profile.data;
 
       // Search in display name, name, about, and nip05
@@ -566,8 +600,10 @@ export class AccountStateService {
         data.name || '',
         data.about || '',
         data.nip05 || '',
-        pubkey
-      ].join(' ').toLowerCase();
+        pubkey,
+      ]
+        .join(' ')
+        .toLowerCase();
 
       if (searchableText.includes(lowercaseQuery)) {
         results.push(profile);
@@ -618,42 +654,24 @@ export class AccountStateService {
   //   this.profileCache.set(newCache);
   // }
 
-  // Method to get cached profile
-
+  // Method to get cached account profile
   getAccountProfile(pubkey: string): NostrRecord | undefined {
-    const cache = this.accountProfileCache();
-    const entry = cache.get(pubkey);
-
-    return entry?.profile;
+    const cacheKey = `metadata-${pubkey}`;
+    return this.cache.get<NostrRecord>(cacheKey) || undefined;
   }
 
   getCachedProfile(pubkey: string): NostrRecord | undefined {
-    const cache = this.userProfileCache();
-    const entry = cache.get(pubkey);
-
-    if (entry) {
-      // Check if cache entry is not too old (24 hours)
-      const maxAge = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
-      if (Date.now() - entry.cachedAt < maxAge) {
-        return entry.profile;
-      } else {
-        // Remove expired entry
-        const newCache = new Map(cache);
-        newCache.delete(pubkey);
-        this.userProfileCache.set(newCache);
-      }
-    }
-
-    return undefined;
-  }
-
-  // Method to clear cache
-  clearProfileCache(): void {
-    this.userProfileCache.set(new Map());
+    // The Cache service handles TTL automatically, so no need to check age manually
+    const cacheKey = `metadata-${pubkey}`;
+    return this.cache.get<NostrRecord>(cacheKey) || undefined;
   }
 
   // Method to load profiles from storage into cache when profile discovery has been done
-  async loadProfilesFromStorageToCache(pubkey: string, dataService: DataService, storageService: StorageService): Promise<void> {
+  async loadProfilesFromStorageToCache(
+    pubkey: string,
+    dataService: DataService,
+    storageService: StorageService
+  ): Promise<void> {
     if (!this.hasProfileDiscoveryBeenDone(pubkey)) {
       return; // Don't load if discovery hasn't been done
     }
@@ -669,11 +687,17 @@ export class AccountStateService {
       // const { StorageService } = await import('./storage.service');
       // const storageService = this.injector.get(StorageService);
 
-      console.log('Loading profiles from storage to cache for account:', pubkey);
+      console.log(
+        'Loading profiles from storage to cache for account:',
+        pubkey
+      );
       console.log('Following list size:', followingList.length);
 
       // Load metadata events from storage for all following users
-      const events = await storageService.getEventsByPubkeyAndKind(followingList, 0); // kind 0 is metadata
+      const events = await storageService.getEventsByPubkeyAndKind(
+        followingList,
+        0
+      ); // kind 0 is metadata
       const records = dataService.toRecords(events);
 
       console.log('Found metadata records in storage:', records.length);
@@ -683,25 +707,14 @@ export class AccountStateService {
         this.addToCache(record.event.pubkey, record);
       }
 
-      console.log('Profile cache populated with', records.length, 'profiles from storage');
+      console.log(
+        'Profile cache populated with',
+        records.length,
+        'profiles from storage'
+      );
     } catch (error) {
       console.error('Failed to load profiles from storage to cache:', error);
     }
-  }
-
-  // Method to get cache stats
-  getCacheStats(): { size: number; oldestEntry: number; newestEntry: number } {
-    const cache = this.userProfileCache();
-    if (cache.size === 0) {
-      return { size: 0, oldestEntry: 0, newestEntry: 0 };
-    }
-
-    const timestamps = Array.from(cache.values()).map(entry => entry.cachedAt);
-    return {
-      size: cache.size,
-      oldestEntry: Math.min(...timestamps),
-      newestEntry: Math.max(...timestamps)
-    };
   }
 
   // Computed signals for different types of mutes

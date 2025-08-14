@@ -15,35 +15,29 @@ interface NavLink {
 @Component({
   selector: 'app-profile-home',
   standalone: true,
-  imports: [
-    MatIconModule,
-    MatTabsModule,
-    RouterModule
-],
+  imports: [MatIconModule, MatTabsModule, RouterModule],
   templateUrl: './profile-home.component.html',
-  styleUrl: './profile-home.component.scss'
+  styleUrl: './profile-home.component.scss',
 })
 export class ProfileHomeComponent {
   private route = inject(ActivatedRoute);
   private nostrService = inject(NostrService);
   private logger = inject(LoggerService);
 
-    // Updated navigation links for the profile tabs
-    navLinks: NavLink[] = [
-      { path: 'notes', label: 'Notes', icon: 'chat' },
-      { path: 'replies', label: 'Replies', icon: 'reply_all' },
-      { path: 'reads', label: 'Articles', icon: 'article' },
-      { path: 'media', label: 'Media', icon: 'image' },
-      // { path: 'about', label: 'About', icon: 'info' },
-      // { path: 'connections', label: 'Connections', icon: 'people' },
-      // { path: 'following', label: 'Following', icon: 'people' }
-    ];
+  // Updated navigation links for the profile tabs
+  navLinks: NavLink[] = [
+    { path: 'notes', label: 'Notes', icon: 'chat' },
+    { path: 'replies', label: 'Replies', icon: 'reply_all' },
+    { path: 'reads', label: 'Articles', icon: 'article' },
+    { path: 'media', label: 'Media', icon: 'image' },
+    // { path: 'about', label: 'About', icon: 'info' },
+    // { path: 'connections', label: 'Connections', icon: 'people' },
+    // { path: 'following', label: 'Following', icon: 'people' }
+  ];
 
   isLinkActive(path: string, isActive: boolean): boolean {
     const firstChild = this.route.firstChild?.snapshot.url[0]?.path ?? '';
-    return (
-      isActive || (path === 'notes' && firstChild === '')
-    );
+    return isActive || (path === 'notes' && firstChild === '');
   }
 
   // We'll get the pubkey from the parent route

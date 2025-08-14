@@ -2,11 +2,11 @@
   <div mat-dialog-title class="dialog-header">
     <span>
       @if (isReply()) {
-      Reply to Note
+        Reply to Note
       } @else if (isQuote()) {
-      Quote Note
+        Quote Note
       } @else {
-      Create Note
+        Create Note
       }
     </span>
     <button mat-icon-button (click)="cancel()" class="close-button">
@@ -14,162 +14,214 @@
     </button>
   </div>
 
-  <div mat-dialog-content class="dialog-content" (dragenter)="onDragEnter($event)" (dragover)="onDragOver($event)"
-    (dragleave)="onDragLeave($event)" (drop)="onDrop($event)" [class.drag-over]="isDragOver()">
-
+  <div
+    mat-dialog-content
+    class="dialog-content"
+    (dragenter)="onDragEnter($event)"
+    (dragover)="onDragOver($event)"
+    (dragleave)="onDragLeave($event)"
+    (drop)="onDrop($event)"
+    [class.drag-over]="isDragOver()"
+  >
     <!-- Drag overlay -->
     @if (isDragOver()) {
-    <div class="drag-overlay">
-      <div class="drag-message">
-        <mat-icon class="drag-icon">cloud_upload</mat-icon>
-        <span>Drop files here to upload</span>
+      <div class="drag-overlay">
+        <div class="drag-message">
+          <mat-icon class="drag-icon">cloud_upload</mat-icon>
+          <span>Drop files here to upload</span>
+        </div>
       </div>
-    </div>
     }
 
     <!-- Upload progress -->
     @if (isUploading()) {
-    <div class="upload-progress">
-      <mat-progress-bar mode="indeterminate"></mat-progress-bar>
-      <span class="upload-text">Uploading files...</span>
-    </div>
+      <div class="upload-progress">
+        <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+        <span class="upload-text">Uploading files...</span>
+      </div>
     }
     <!-- Reply context -->
     @if (isReply()) {
-    <div class="reply-context">
-      <mat-icon class="reply-icon">reply</mat-icon>
-      <span class="reply-text">Replying to note</span>
-    </div>
+      <div class="reply-context">
+        <mat-icon class="reply-icon">reply</mat-icon>
+        <span class="reply-text">Replying to note</span>
+      </div>
     }
 
-    <!-- Quote context --> @if (isQuote()) {
-    <div class="quote-context">
-      <mat-icon class="quote-icon">format_quote</mat-icon>
-      <span class="quote-text">Quoting: "{{ (data.quote?.content || '').slice(0, 100) }}{{ (data.quote?.content ||
-        '').length > 100 ? '...' : '' }}"</span>
-    </div>
+    <!-- Quote context -->
+    @if (isQuote()) {
+      <div class="quote-context">
+        <mat-icon class="quote-icon">format_quote</mat-icon>
+        <span class="quote-text"
+          >Quoting: "{{ (data.quote?.content || '').slice(0, 100)
+          }}{{ (data.quote?.content || '').length > 100 ? '...' : '' }}"</span
+        >
+      </div>
     }
 
     <!-- Content editor with upload actions -->
     <div class="content-editor-section">
       <mat-form-field appearance="outline" class="content-field">
         <mat-label>What's on your mind?</mat-label>
-        <textarea matInput [(ngModel)]="content" placeholder="Write your note..." rows="4" class="content-textarea"
-          #contentTextarea>
+        <textarea
+          matInput
+          [(ngModel)]="content"
+          placeholder="Write your note..."
+          rows="4"
+          class="content-textarea"
+          #contentTextarea
+        >
         </textarea>
-        <mat-hint align="end">
-          {{ characterCount() }} characters
-        </mat-hint>
+        <mat-hint align="end"> {{ characterCount() }} characters </mat-hint>
       </mat-form-field>
 
       <!-- Upload actions -->
       <div class="upload-actions">
-        <button mat-icon-button type="button" (click)="togglePreview()" [color]="showPreview() ? 'primary' : ''"
-          matTooltip="Toggle preview">
-          <mat-icon>{{ showPreview() ? 'visibility_off' : 'visibility' }}</mat-icon>
+        <button
+          mat-icon-button
+          type="button"
+          (click)="togglePreview()"
+          [color]="showPreview() ? 'primary' : ''"
+          matTooltip="Toggle preview"
+        >
+          <mat-icon>{{
+            showPreview() ? 'visibility_off' : 'visibility'
+          }}</mat-icon>
         </button>
-        <button mat-icon-button type="button" (click)="openFileDialog()" [disabled]="isUploading() || isPublishing()"
-          matTooltip="Upload image">
+        <button
+          mat-icon-button
+          type="button"
+          (click)="openFileDialog()"
+          [disabled]="isUploading() || isPublishing()"
+          matTooltip="Upload image"
+        >
           <mat-icon>image</mat-icon>
         </button>
-        <button mat-icon-button type="button" (click)="toggleAdvancedOptions()" [color]="showAdvancedOptions() ? 'primary' : ''"
-          matTooltip="Advanced options">
+        <button
+          mat-icon-button
+          type="button"
+          (click)="toggleAdvancedOptions()"
+          [color]="showAdvancedOptions() ? 'primary' : ''"
+          matTooltip="Advanced options"
+        >
           <mat-icon>settings</mat-icon>
         </button>
       </div>
 
       <!-- Hidden file input -->
-      <input type="file" #fileInput (change)="onFileSelected($event)" accept="image/*" multiple
-        class="hidden-file-input" aria-label="Upload image files">
+      <input
+        type="file"
+        #fileInput
+        (change)="onFileSelected($event)"
+        accept="image/*"
+        multiple
+        class="hidden-file-input"
+        aria-label="Upload image files"
+      />
     </div>
 
     <!-- Advanced Options -->
     @if (showAdvancedOptions()) {
-    <div class="advanced-options-section">
-      <div class="advanced-options-header">
-        <mat-icon class="options-icon">settings</mat-icon>
-        <span class="options-title">Advanced Options</span>
-      </div>
-
-      <!-- Expiration Option -->
-      <div class="option-row">
-        <div class="option-header">
-          <mat-slide-toggle 
-            [checked]="expirationEnabled()" 
-            (change)="onExpirationToggle($event.checked)"
-            color="primary">
-            Expiration
-          </mat-slide-toggle>
-          <span class="option-description">Set an expiration date and time for this note</span>
+      <div class="advanced-options-section">
+        <div class="advanced-options-header">
+          <mat-icon class="options-icon">settings</mat-icon>
+          <span class="options-title">Advanced Options</span>
         </div>
-        
-        @if (expirationEnabled()) {
-        <div class="option-content">
-          <div class="expiration-inputs">
-            <mat-form-field appearance="outline" class="date-field">
-              <mat-label>Expiration Date</mat-label>
-              <input matInput 
-                [matDatepicker]="expirationPicker" 
-                [value]="expirationDate()"
-                (dateInput)="onExpirationDateChange($event.value)"
-                (dateChange)="onExpirationDateChange($event.value)"
-                placeholder="Select date"
-                [min]="minDate()"
-                readonly>
-              <mat-datepicker-toggle matIconSuffix [for]="expirationPicker"></mat-datepicker-toggle>
-              <mat-datepicker #expirationPicker></mat-datepicker>
-            </mat-form-field>
-            
-            <mat-form-field appearance="outline" class="time-field">
-              <mat-label>Expiration Time</mat-label>
-              <input matInput 
-                type="time"
-                [value]="expirationTime()"
-                (input)="onExpirationTimeChange($event)"
-                placeholder="Select time">
-            </mat-form-field>
+
+        <!-- Expiration Option -->
+        <div class="option-row">
+          <div class="option-header">
+            <mat-slide-toggle
+              [checked]="expirationEnabled()"
+              (change)="onExpirationToggle($event.checked)"
+              color="primary"
+            >
+              Expiration
+            </mat-slide-toggle>
+            <span class="option-description"
+              >Set an expiration date and time for this note</span
+            >
           </div>
-          
-          @if (!expirationValidation().valid) {
-          <div class="expiration-error">
-            <mat-icon color="warn">warning</mat-icon>
-            <span>{{ expirationValidation().message }}</span>
-          </div>
+
+          @if (expirationEnabled()) {
+            <div class="option-content">
+              <div class="expiration-inputs">
+                <mat-form-field appearance="outline" class="date-field">
+                  <mat-label>Expiration Date</mat-label>
+                  <input
+                    matInput
+                    [matDatepicker]="expirationPicker"
+                    [value]="expirationDate()"
+                    (dateInput)="onExpirationDateChange($event.value)"
+                    (dateChange)="onExpirationDateChange($event.value)"
+                    placeholder="Select date"
+                    [min]="minDate()"
+                    readonly
+                  />
+                  <mat-datepicker-toggle
+                    matIconSuffix
+                    [for]="expirationPicker"
+                  ></mat-datepicker-toggle>
+                  <mat-datepicker #expirationPicker></mat-datepicker>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="time-field">
+                  <mat-label>Expiration Time</mat-label>
+                  <input
+                    matInput
+                    type="time"
+                    [value]="expirationTime()"
+                    (input)="onExpirationTimeChange($event)"
+                    placeholder="Select time"
+                  />
+                </mat-form-field>
+              </div>
+
+              @if (!expirationValidation().valid) {
+                <div class="expiration-error">
+                  <mat-icon color="warn">warning</mat-icon>
+                  <span>{{ expirationValidation().message }}</span>
+                </div>
+              }
+
+              <mat-hint class="expiration-hint"
+                >Note will be considered expired after this date and
+                time</mat-hint
+              >
+            </div>
           }
-          
-          <mat-hint class="expiration-hint">Note will be considered expired after this date and time</mat-hint>
         </div>
-        }
       </div>
-
-    </div>
     }
 
     <!-- Preview section -->
     @if (showPreview()) {
-    <div class="preview-section">
-      <div class="preview-header">
-        <mat-icon class="preview-icon">visibility</mat-icon>
-        <span class="preview-title">Preview</span>
+      <div class="preview-section">
+        <div class="preview-header">
+          <mat-icon class="preview-icon">visibility</mat-icon>
+          <span class="preview-title">Preview</span>
+        </div>
+        <app-content
+          class="preview-content"
+          [content]="previewContent()"
+        ></app-content>
+        <!-- <div class="preview-content" [innerHTML]="previewContent()"></div> -->
       </div>
-      <app-content class="preview-content" [content]="previewContent()"></app-content>
-      <!-- <div class="preview-content" [innerHTML]="previewContent()"></div> -->
-    </div>
     }
 
     <!-- Mentions -->
     @if (mentions().length > 0) {
-    <div class="mentions-section">
-      <label class="mentions-label">Mentioning:</label>
-      <mat-chip-set class="mentions-chips">
-        @for (mention of mentions(); track mention) {
-        <mat-chip removable (removed)="removeMention(mention)">
-          {{ mention.slice(0, 16) }}...
-          <mat-icon matChipRemove>cancel</mat-icon>
-        </mat-chip>
-        }
-      </mat-chip-set>
-    </div>
+      <div class="mentions-section">
+        <label class="mentions-label">Mentioning:</label>
+        <mat-chip-set class="mentions-chips">
+          @for (mention of mentions(); track mention) {
+            <mat-chip removable (removed)="removeMention(mention)">
+              {{ mention.slice(0, 16) }}...
+              <mat-icon matChipRemove>cancel</mat-icon>
+            </mat-chip>
+          }
+        </mat-chip-set>
+      </div>
     }
 
     <!-- Character limit warning -->
@@ -184,18 +236,24 @@
   <div mat-dialog-actions class="dialog-actions">
     <button mat-button (click)="cancel()" [disabled]="isPublishing()">
       Cancel
-    </button> <button mat-raised-button color="primary" (click)="publishNote()" [disabled]="!canPublish()"
-      class="publish-button">
+    </button>
+
+    <button
+      mat-flat-button
+      (click)="publishNote()"
+      [disabled]="!canPublish()"
+      class="publish-button"
+    >
       @if (isPublishing()) {
-      <ng-container>
-        <mat-icon class="spinning">hourglass_empty</mat-icon>
-        Publishing...
-      </ng-container>
+        <ng-container>
+          <mat-icon class="spinning">hourglass_empty</mat-icon>
+          Publishing...
+        </ng-container>
       } @else {
-      <ng-container>
-        <!-- <mat-icon>send</mat-icon> -->
-        Publish Note
-      </ng-container>
+        <ng-container>
+          <!-- <mat-icon>send</mat-icon> -->
+          Publish Note
+        </ng-container>
       }
     </button>
   </div>

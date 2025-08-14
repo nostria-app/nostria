@@ -3,11 +3,11 @@
   top: 0;
   z-index: 100;
   box-shadow: var(--mat-sys-level2);
-  
+
   .spacer {
     flex: 1;
   }
-  
+
   .publish-progress {
     position: absolute;
     bottom: 0;
@@ -15,10 +15,10 @@
     right: 0;
     height: 2px;
   }
-  
+
   button {
     margin-left: 8px;
-    
+
     mat-icon {
       margin-right: 4px;
     }
@@ -31,7 +31,7 @@
   align-items: center;
   justify-content: center;
   padding: 48px;
-  
+
   p {
     margin-top: 16px;
     color: var(--mat-sys-on-surface-variant);
@@ -42,19 +42,19 @@
   padding: 24px;
   max-width: 1200px;
   margin: 0 auto;
-  
+
   .content-card {
     margin-bottom: 24px;
     box-shadow: var(--mat-sys-level1);
-    
+
     mat-card-header {
       display: flex;
       align-items: center;
-      
+
       .spacer {
         flex: 1;
       }
-      
+
       .auto-title-badge {
         display: flex;
         align-items: center;
@@ -64,7 +64,7 @@
         border-radius: 16px;
         font-size: 0.9rem;
         margin-left: 16px;
-        
+
         mat-icon {
           font-size: 18px;
           width: 18px;
@@ -73,7 +73,7 @@
         }
       }
     }
-    
+
     .suggested-title-bar {
       display: flex;
       align-items: center;
@@ -83,91 +83,87 @@
       padding: 8px 16px;
       margin-bottom: 16px;
       border-radius: 4px;
-      
+
       strong {
         font-weight: 500;
       }
     }
   }
-  
+
   .metadata-panel {
     margin-bottom: 24px;
     box-shadow: var(--mat-sys-level1);
-    
+
     mat-panel-title {
       display: flex;
       align-items: center;
-      
+
       mat-icon {
         margin-right: 8px;
       }
     }
   }
-  
+
   .metadata-form {
     display: flex;
     flex-direction: column;
     gap: 16px;
     padding-top: 16px;
-    
-    .full-width {
-      width: 100%;
-    }
-    
+
     .two-column-layout {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 16px;
-      
+
       @media (max-width: 768px) {
         grid-template-columns: 1fr;
       }
     }
-    
+
     .dTag-field-container {
       display: flex;
       align-items: flex-start;
       gap: 8px;
-      
+
       mat-form-field {
         flex: 1;
       }
-      
+
       .dTag-controls {
         display: flex;
         flex-direction: column;
         gap: 4px;
         margin-top: 8px;
-        
+
         button {
           width: 40px;
           height: 40px;
         }
       }
     }
-    
+
     .tags-section {
       h3 {
         margin: 0 0 16px 0;
         color: var(--mat-sys-on-surface);
       }
-      
+
       .tag-input-container {
         display: flex;
         align-items: flex-start;
         gap: 8px;
-        
+
         .tag-input {
           flex: 1;
         }
       }
-      
+
       .tags-container {
         display: flex;
         flex-wrap: wrap;
         gap: 8px;
         margin-top: 16px;
-        
+
         .tag-chip {
           background-color: var(--mat-sys-primary-container);
           color: var(--mat-sys-on-primary-container);
@@ -175,25 +171,26 @@
       }
     }
   }
-  
+
   .content-tabs {
     .mat-mdc-tab-group {
       --mat-tab-active-indicator-color: var(--mat-sys-primary);
     }
-    
+
     .write-tab {
       padding: 16px 0;
-      
+
       .content-editor {
         width: 100%;
-        
+
         textarea {
-          font-family: 'JetBrains Mono', 'Fira Code', 'Monaco', 'Consolas', monospace;
+          font-family:
+            'JetBrains Mono', 'Fira Code', 'Monaco', 'Consolas', monospace;
           font-size: 14px;
           line-height: 1.6;
         }
       }
-      
+
       .editor-hint {
         display: flex;
         align-items: center;
@@ -201,7 +198,7 @@
         margin-top: 12px;
         color: var(--mat-sys-on-surface-variant);
         font-size: 0.9em;
-        
+
         mat-icon {
           font-size: 18px;
           width: 18px;
@@ -209,10 +206,10 @@
         }
       }
     }
-    
+
     .preview-tab {
       padding: 16px 0;
-      
+
       .preview-content {
         .preview-title {
           color: var(--mat-sys-on-surface);
@@ -220,14 +217,14 @@
           font-size: 2rem;
           line-height: 1.2;
         }
-        
+
         .preview-summary {
           color: var(--mat-sys-on-surface-variant);
           font-size: 1.1rem;
           margin: 0 0 24px 0;
           font-style: italic;
         }
-        
+
         .preview-image {
           width: 100%;
           max-width: 600px;
@@ -236,34 +233,40 @@
           border-radius: 8px;
           box-shadow: var(--mat-sys-level1);
         }
-        
+
         .preview-markdown {
           color: var(--mat-sys-on-surface);
           line-height: 1.7;
-          
+
           // Markdown styling
           ::ng-deep {
-            h1, h2, h3, h4, h5, h6 {
+            h1,
+            h2,
+            h3,
+            h4,
+            h5,
+            h6 {
               color: var(--mat-sys-on-surface);
               margin: 24px 0 16px 0;
-              
+
               &:first-child {
                 margin-top: 0;
               }
             }
-            
+
             p {
               margin: 0 0 16px 0;
             }
-            
+
             code {
               background-color: var(--mat-sys-surface-variant);
               color: var(--mat-sys-on-surface-variant);
               padding: 2px 4px;
               border-radius: 4px;
-              font-family: 'JetBrains Mono', 'Fira Code', 'Monaco', 'Consolas', monospace;
+              font-family:
+                'JetBrains Mono', 'Fira Code', 'Monaco', 'Consolas', monospace;
             }
-            
+
             pre {
               background-color: var(--mat-sys-surface-variant);
               color: var(--mat-sys-on-surface-variant);
@@ -271,56 +274,58 @@
               border-radius: 8px;
               overflow-x: auto;
               margin: 16px 0;
-              
+
               code {
                 background: none;
                 padding: 0;
               }
             }
-            
+
             blockquote {
               border-left: 4px solid var(--mat-sys-primary);
               padding-left: 16px;
               margin: 16px 0;
               color: var(--mat-sys-on-surface-variant);
             }
-            
-            ul, ol {
+
+            ul,
+            ol {
               padding-left: 20px;
               margin: 16px 0;
             }
-            
+
             li {
               margin: 8px 0;
             }
-            
+
             a {
               color: var(--mat-sys-primary);
               text-decoration: none;
-              
+
               &:hover {
                 text-decoration: underline;
               }
             }
-            
+
             img {
               max-width: 100%;
               height: auto;
               border-radius: 8px;
               margin: 16px 0;
             }
-            
+
             table {
               width: 100%;
               border-collapse: collapse;
               margin: 16px 0;
-              
-              th, td {
+
+              th,
+              td {
                 border: 1px solid var(--mat-sys-outline-variant);
                 padding: 8px 12px;
                 text-align: left;
               }
-              
+
               th {
                 background-color: var(--mat-sys-surface-variant);
                 color: var(--mat-sys-on-surface);
@@ -329,7 +334,7 @@
           }
         }
       }
-      
+
       .empty-preview {
         display: flex;
         flex-direction: column;
@@ -337,7 +342,7 @@
         justify-content: center;
         padding: 48px;
         color: var(--mat-sys-on-surface-variant);
-        
+
         mat-icon {
           font-size: 48px;
           width: 48px;
@@ -345,7 +350,7 @@
           margin-bottom: 16px;
           opacity: 0.6;
         }
-        
+
         p {
           margin: 0;
           font-size: 1.1rem;
@@ -359,21 +364,21 @@
 @media (max-width: 768px) {
   .editor-container {
     padding: 16px;
-    
+
     .metadata-card,
     .content-card {
       margin-bottom: 16px;
     }
   }
-  
+
   .editor-toolbar {
     button {
       margin-left: 4px;
-      
+
       .mat-button-wrapper {
         display: flex;
         align-items: center;
-        
+
         mat-icon {
           margin-right: 2px;
         }

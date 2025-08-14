@@ -1,7 +1,3 @@
-.privacy-settings-container {
-  padding: 0;
-}
-
 .settings-card {
   margin-bottom: 16px;
   box-shadow: var(--mat-sys-level1);
@@ -15,10 +11,47 @@
   margin-bottom: 32px;
 }
 
+.sharing-section {
+  margin-bottom: 32px;
+}
+
+.settings-option {
+  display: flex;
+  align-items: center;
+}
+
+.settings-option mat-checkbox {
+  margin-right: 0.2rem;
+}
+
+// .settings-option-row {
+//   display: flex;
+//   align-items: center;
+//   gap: 8px;
+//   width: fit-content;
+//   cursor: default;
+
+//   &:hover {
+//     background-color: transparent !important;
+//     box-shadow: none !important;
+//   }
+// }
+
+// .settings-option-row app-info-tooltip ::ng-deep .info-tooltip-trigger {
+//   position: static !important;
+//   top: unset !important;
+//   right: unset !important;
+//   z-index: unset !important;
+// }
+
+// .settings-option-row app-info-tooltip {
+//   display: flex;
+//   align-items: center;
+// }
+
 h3 {
   margin-top: 16px;
   margin-bottom: 12px;
-  font-weight: 500;
 }
 
 .empty-state {
@@ -32,4 +65,23 @@ mat-list {
   overflow-y: auto;
   border: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: 4px;
+}
+
+.info-title {
+  display: flex;
+  align-items: center;
+}
+
+.info-icon {
+  color: var(--mat-sys-primary);
+  margin-right: 8px;
+}
+
+.mat-mdc-card-content p {
+  margin-bottom: 1rem;
+  color: var(--mat-sys-on-surface);
+}
+
+.mat-mdc-card-content p:last-child {
+  margin-bottom: 0;
 }

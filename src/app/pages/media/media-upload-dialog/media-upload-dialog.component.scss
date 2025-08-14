@@ -26,7 +26,7 @@
   &.dragging {
     border-color: var(--mat-sys-color-primary);
     background-color: var(--mat-sys-color-primary-container);
-    
+
     mat-icon {
       color: var(--mat-sys-color-primary);
       transform: scale(1.2);
@@ -76,7 +76,7 @@
     height: 160px;
     background-color: var(--mat-sys-color-surface-container);
     border-radius: 4px;
-    
+
     mat-icon {
       font-size: 64px;
       height: 64px;
@@ -124,7 +124,7 @@
   padding: 16px;
   background-color: var(--mat-sys-color-surface-container-lowest);
   border-radius: 8px;
-  
+
   p {
     margin: 8px 0 0 0;
     text-align: center;
@@ -132,24 +132,20 @@
   }
 }
 
-.full-width {
-  width: 100%;
-}
-
 .upload-button {
   min-width: 100px;
   position: relative;
-  
+
   .spinner-container {
     display: inline-block;
     vertical-align: middle;
     margin-right: 8px;
-    
+
     mat-spinner {
       display: inline-block;
     }
   }
-  
+
   span {
     vertical-align: middle;
   }
@@ -159,21 +155,21 @@
   margin-top: 16px;
   padding-top: 16px;
   border-top: 1px solid var(--mat-sys-color-outline-variant);
-  
+
   h3 {
     margin: 0 0 8px 0;
     font-size: 14px;
     font-weight: 500;
     color: var(--mat-sys-color-on-surface);
   }
-  
+
   .server-checkboxes {
     display: flex;
     flex-direction: column;
     gap: 8px;
     margin-bottom: 8px;
   }
-  
+
   .server-warning {
     display: flex;
     align-items: center;
@@ -182,12 +178,12 @@
     padding: 8px;
     border-radius: 4px;
     background-color: var(--mat-sys-color-error-container);
-    
+
     span {
       font-size: 14px;
       color: var(--mat-sys-color-on-error-container);
     }
-    
+
     mat-icon {
       font-size: 18px;
       height: 18px;
@@ -202,7 +198,7 @@
   border-radius: 4px;
   background-color: var(--mat-sys-color-surface-container);
   text-align: center;
-  
+
   p {
     margin: 0;
     font-size: 14px;

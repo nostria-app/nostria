@@ -7,11 +7,14 @@ import { NotificationService } from './notification.service';
 import { NostrService } from './nostr.service';
 import { RelayService } from './relay.service';
 import { MessagingService } from './messaging.service';
-import { AccountRelayServiceEx, DiscoveryRelayServiceEx } from './account-relay.service';
+import {
+  AccountRelayServiceEx,
+  DiscoveryRelayServiceEx,
+} from './account-relay.service';
 
 /** Service that handles changing account, will clear and load data in different services. */
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class StateService implements NostriaService {
   accountState = inject(AccountStateService);
@@ -36,6 +39,7 @@ export class StateService implements NostriaService {
   async load() {
     const pubkey = this.accountState.pubkey();
 
+    // This is never called for anonymous accounts.
     await this.discoveryRelay.load();
     await this.accountRelay.setAccount(pubkey);
     await this.accountState.load();

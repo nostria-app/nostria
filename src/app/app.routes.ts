@@ -42,6 +42,7 @@ import { GeneralSettingsComponent } from './pages/settings/general/general.compo
 import { Calendar } from './pages/calendar/calendar';
 import { AlgorithmComponent } from './pages/settings/algorithm/algorithm';
 import { RelaysComponent } from './pages/settings/relays/relays.component';
+import { DraftsComponent } from './pages/drafts/drafts.component';
 
 const profileChildren: Routes = [
   {
@@ -52,21 +53,41 @@ const profileChildren: Routes = [
       { path: 'notes', component: ProfileNotesComponent, title: 'Notes' },
       { path: 'replies', component: ProfileRepliesComponent, title: 'Replies' },
       { path: 'reads', component: ProfileReadsComponent, title: 'Reads' },
-      { path: 'media', component: ProfileMediaComponent, title: 'Media' }
-    ]
+      { path: 'media', component: ProfileMediaComponent, title: 'Media' },
+    ],
   },
-  { path: 'about', component: ProfileAboutComponent, data: { isRoot: true }, title: 'About' },
+  {
+    path: 'about',
+    component: ProfileAboutComponent,
+    data: { isRoot: true },
+    title: 'About',
+  },
   { path: 'edit', component: ProfileEditComponent, title: 'Edit Profile' },
-  { path: 'connections', component: ProfileConnectionsComponent, title: 'Connections' },
+  {
+    path: 'connections',
+    component: ProfileConnectionsComponent,
+    title: 'Connections',
+  },
   { path: 'following', component: FollowingComponent, title: 'Following' },
   { path: 'relays', component: ProfileRelaysComponent, title: 'Relays' },
-  { path: 'details', component: DetailsComponent, title: 'Details' }
+  { path: 'details', component: DetailsComponent, title: 'Details' },
 ];
 
 export const routes: Routes = [
-  { path: '', component: FeedsComponent, data: { isRoot: true }, pathMatch: 'full', title: 'Home' },
+  {
+    path: '',
+    component: FeedsComponent,
+    data: { isRoot: true },
+    pathMatch: 'full',
+    title: 'Home',
+  },
   { path: 'f/:path', component: FeedsComponent, title: 'Feeds' },
-  { path: 'e/:id', component: EventPageComponent, resolve: { data: DataResolver }, title: 'Event' },
+  {
+    path: 'e/:id',
+    component: EventPageComponent,
+    resolve: { data: DataResolver },
+    title: 'Event',
+  },
   { path: 'beta', component: BetaComponent, title: 'Beta' },
   { path: 'relays', component: RelaysComponent, title: 'Relays' },
   {
@@ -75,12 +96,40 @@ export const routes: Routes = [
     title: 'Badges',
     children: [
       { path: '', component: BadgesComponent },
-      { path: 'create', loadComponent: () => import('./pages/badges/badge-editor/badge-editor.component').then(m => m.BadgeEditorComponent), title: 'Create Badge' },
-      { path: 'details/:id', loadComponent: () => import('./pages/badges/badge-details/badge-details.component').then(m => m.BadgeDetailsComponent), title: 'Badge Details' },
-      { path: 'edit/:id', loadComponent: () => import('./pages/badges/badge-editor/badge-editor.component').then(m => m.BadgeEditorComponent), title: 'Edit Badge' }
-    ]
+      {
+        path: 'create',
+        loadComponent: () =>
+          import('./pages/badges/badge-editor/badge-editor.component').then(
+            m => m.BadgeEditorComponent
+          ),
+        title: 'Create Badge',
+      },
+      {
+        path: 'details/:id',
+        loadComponent: () =>
+          import('./pages/badges/badge-details/badge-details.component').then(
+            m => m.BadgeDetailsComponent
+          ),
+        title: 'Badge Details',
+      },
+      {
+        path: 'edit/:id',
+        loadComponent: () =>
+          import('./pages/badges/badge-editor/badge-editor.component').then(
+            m => m.BadgeEditorComponent
+          ),
+        title: 'Edit Badge',
+      },
+    ],
   },
-  { path: 'b/:id', loadComponent: () => import('./pages/badges/badge-details/badge-details.component').then(m => m.BadgeDetailsComponent), title: 'Badge' },
+  {
+    path: 'b/:id',
+    loadComponent: () =>
+      import('./pages/badges/badge-details/badge-details.component').then(
+        m => m.BadgeDetailsComponent
+      ),
+    title: 'Badge',
+  },
 
   // { path: 'messages', component: MessagesComponent },
   {
@@ -91,7 +140,7 @@ export const routes: Routes = [
     children: [
       { path: '', component: MessagesMain },
       { path: ':id', component: MessagesList, title: 'Conversation' },
-    ]
+    ],
   },
 
   {
@@ -101,30 +150,79 @@ export const routes: Routes = [
     title: 'Settings',
     children: [
       { path: '', redirectTo: 'general', pathMatch: 'full' },
-      { path: 'general', component: GeneralSettingsComponent, title: 'General Settings' },
+      {
+        path: 'general',
+        component: GeneralSettingsComponent,
+        title: 'General Settings',
+      },
       { path: 'algorithm', component: AlgorithmComponent, title: 'Algorithm' },
       { path: 'relays', component: RelaysComponent, title: 'Relays' },
-      { path: 'privacy', component: PrivacySettingsComponent, title: 'Privacy & Safety' },
+      {
+        path: 'privacy',
+        component: PrivacySettingsComponent,
+        title: 'Privacy & Safety',
+      },
       { path: 'backup', component: BackupComponent, title: 'Backup' },
       { path: 'premium', component: PremiumSettings, title: 'Premium' },
       { path: 'logs', component: LogsSettingsComponent, title: 'Logs' },
-      { path: 'about', component: AboutComponent, title: 'About' }
-    ]
+      { path: 'about', component: AboutComponent, title: 'About' },
+    ],
   },
   { path: 'media-queue', component: MediaQueueComponent, title: 'Media Queue' },
-  { path: 'notifications', component: NotificationsComponent, title: 'Notifications' },
+  {
+    path: 'notifications',
+    component: NotificationsComponent,
+    title: 'Notifications',
+  },
   { path: 'notifications/settings', component: NotificationSettingsComponent },
   { path: 'notifications/manage', component: NotificationManageComponent },
-  { path: 'credentials', component: CredentialsComponent, data: { isRoot: true } },
+  {
+    path: 'credentials',
+    component: CredentialsComponent,
+    data: { isRoot: true },
+  },
   { path: 'accounts', component: AccountsComponent, data: { isRoot: true } },
   { path: 'about', component: AboutComponent, data: { isRoot: true } },
   { path: 'calendar', component: Calendar, data: { isRoot: true } },
-  { path: 'bookmarks', data: { isRoot: true }, loadComponent: () => import('./pages/bookmarks/bookmarks.component').then(m => m.BookmarksComponent), title: 'Bookmarks' },
-  { path: 'articles', component: ArticlesComponent, data: { isRoot: true }, title: 'Articles' },
+  {
+    path: 'bookmarks',
+    data: { isRoot: true },
+    loadComponent: () =>
+      import('./pages/bookmarks/bookmarks.component').then(
+        m => m.BookmarksComponent
+      ),
+    title: 'Bookmarks',
+  },
+  {
+    path: 'articles',
+    component: ArticlesComponent,
+    data: { isRoot: true },
+    title: 'Articles',
+  },
+  {
+    path: 'drafts',
+    component: DraftsComponent,
+    data: { isRoot: true },
+    title: 'Drafts',
+  },
   { path: 'article/create', component: EditorComponent, title: 'New Article' },
-  { path: 'article/edit/:id', component: EditorComponent, title: 'Edit Article' },
-  { path: 'a/:id', component: ArticleComponent, title: 'Article', resolve: { data: DataResolver } },
-  { path: 'a/:id/:slug', component: ArticleComponent, title: 'Article', resolve: { data: DataResolver } },
+  {
+    path: 'article/edit/:id',
+    component: EditorComponent,
+    title: 'Edit Article',
+  },
+  {
+    path: 'a/:id',
+    component: ArticleComponent,
+    title: 'Article',
+    resolve: { data: DataResolver },
+  },
+  {
+    path: 'a/:id/:slug',
+    component: ArticleComponent,
+    title: 'Article',
+    resolve: { data: DataResolver },
+  },
   {
     path: 'p/:id',
     component: ProfileComponent,
@@ -141,33 +239,55 @@ export const routes: Routes = [
     path: 'premium',
     component: PremiumComponent,
     title: 'Nostria Premium',
-    data: { isRoot: true }
+    data: { isRoot: true },
   },
   {
     path: 'premium/upgrade',
     component: UpgradeComponent,
-    title: 'Upgrade to Premium'
+    title: 'Upgrade to Premium',
   },
-  { path: 'backup', loadComponent: () => import('./pages/backup/backup.component').then(mod => mod.BackupComponent) },
+  {
+    path: 'backup',
+    loadComponent: () =>
+      import('./pages/backup/backup.component').then(
+        mod => mod.BackupComponent
+      ),
+  },
   {
     path: 'media',
     data: { isRoot: true },
     children: [
-      { path: '', loadComponent: () => import('./pages/media/media.component').then(mod => mod.MediaComponent) },
-      { path: 'details/:id', loadComponent: () => import('./pages/media/media-details/media-details.component').then(mod => mod.MediaDetailsComponent) }
+      {
+        path: '',
+        loadComponent: () =>
+          import('./pages/media/media.component').then(
+            mod => mod.MediaComponent
+          ),
+      },
+      {
+        path: 'details/:id',
+        loadComponent: () =>
+          import('./pages/media/media-details/media-details.component').then(
+            mod => mod.MediaDetailsComponent
+          ),
+      },
     ],
   },
   {
     path: 'people',
     data: { isRoot: true },
-    loadComponent: () => import('./pages/people/people.component').then(m => m.PeopleComponent),
-    title: 'People'
+    loadComponent: () =>
+      import('./pages/people/people.component').then(m => m.PeopleComponent),
+    title: 'People',
   },
   {
     path: 'debug/storage',
-    loadComponent: () => import('./components/storage-debug/storage-debug.component').then(mod => mod.StorageDebugComponent),
-    title: 'Storage Debug'
+    loadComponent: () =>
+      import('./components/storage-debug/storage-debug.component').then(
+        mod => mod.StorageDebugComponent
+      ),
+    title: 'Storage Debug',
   },
   { path: 'login', component: LoginDialogComponent },
-  { path: '**', redirectTo: '/' } // Update to redirect to root instead of /home
+  { path: '**', redirectTo: '/' }, // Update to redirect to root instead of /home
 ];

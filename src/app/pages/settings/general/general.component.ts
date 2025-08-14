@@ -7,7 +7,11 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatDialog } from '@angular/material/dialog';
-import { FeatureLevel, LoggerService, LogLevel } from '../../../services/logger.service';
+import {
+  FeatureLevel,
+  LoggerService,
+  LogLevel,
+} from '../../../services/logger.service';
 import { ThemeService } from '../../../services/theme.service';
 import { ApplicationStateService } from '../../../services/application-state.service';
 import { ApplicationService } from '../../../services/application.service';
@@ -31,10 +35,10 @@ interface Language {
     MatIconModule,
     MatSelectModule,
     MatSlideToggleModule,
-    StorageStatsComponent
+    StorageStatsComponent,
   ],
   templateUrl: './general.component.html',
-  styleUrl: './general.component.scss'
+  styleUrl: './general.component.scss',
 })
 export class GeneralSettingsComponent {
   logger = inject(LoggerService);
@@ -52,7 +56,7 @@ export class GeneralSettingsComponent {
     { code: 'ru', name: 'Русский' },
     { code: 'no', name: 'Norsk' },
     { code: 'sw', name: 'Kiswahili' },
-    { code: 'zu', name: 'isiZulu' }
+    { code: 'zu', name: 'isiZulu' },
   ];
 
   setFeatureLevel(level: FeatureLevel): void {
@@ -81,9 +85,10 @@ export class GeneralSettingsComponent {
       width: '400px',
       data: {
         title: 'Confirm Data Deletion',
-        message: 'Are you sure you want to delete all app data? This action cannot be undone.',
-        confirmButtonText: 'Delete All Data'
-      }
+        message:
+          'Are you sure you want to delete all app data? This action cannot be undone.',
+        confirmButtonText: 'Delete All Data',
+      },
     });
 
     dialogRef.afterClosed().subscribe(async confirmed => {

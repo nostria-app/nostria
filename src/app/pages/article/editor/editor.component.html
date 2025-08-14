@@ -1,25 +1,41 @@
 <mat-toolbar class="editor-toolbar">
   <span>{{ isEditMode() ? 'Edit Article' : 'New Article' }}</span>
   <span class="spacer"></span>
-  
+
   @if (isPublishing()) {
-    <mat-progress-bar mode="indeterminate" class="publish-progress"></mat-progress-bar>
+    <mat-progress-bar
+      mode="indeterminate"
+      class="publish-progress"
+    ></mat-progress-bar>
   }
-  
+
+  <button
+    mat-icon-button
+    (click)="navigateToDrafts()"
+    matTooltip="View all drafts"
+  >
+    <mat-icon>edit_document</mat-icon>
+  </button>
+
   <button mat-button (click)="cancel()" [disabled]="isPublishing()">
     <mat-icon>close</mat-icon>
     Cancel
   </button>
-  
-  <button mat-button (click)="saveDraft()" [disabled]="!isValid() || isPublishing()">
+
+  <button
+    mat-button
+    (click)="saveDraft()"
+    [disabled]="!isDraftValid() || isPublishing()"
+  >
     <mat-icon>save</mat-icon>
     Save Draft
   </button>
-  
-  <button mat-raised-button 
-          color="primary" 
-          (click)="publish()" 
-          [disabled]="!isValid() || isPublishing()">
+
+  <button
+    mat-flat-button
+    (click)="publish()"
+    [disabled]="!isValid() || isPublishing()"
+  >
     <mat-icon>publish</mat-icon>
     Publish
   </button>
@@ -43,50 +59,70 @@
           </span>
         }
         <span class="spacer"></span>
-        <button mat-button color="primary" (click)="toggleAutoTitleMode()" matTooltip="Auto-title will continuously update title based on first line of content">
+        <button
+          mat-button
+          color="primary"
+          (click)="toggleAutoTitleMode()"
+          matTooltip="Auto-title will continuously update title based on first line of content"
+        >
           {{ autoTitleEnabled() ? 'Disable' : 'Enable' }} Auto-Title
         </button>
       </mat-card-header>
       <mat-card-content>
         @if (suggestedTitle() && autoTitleEnabled()) {
           <div class="suggested-title-bar">
-            <span>Title: <strong>{{ suggestedTitle() }}</strong></span>
-            <button mat-icon-button 
-                    matTooltip="Apply suggested title" 
-                    (click)="applyAutoTitle()">
+            <span
+              >Title: <strong>{{ suggestedTitle() }}</strong></span
+            >
+            <button
+              mat-icon-button
+              matTooltip="Apply suggested title"
+              (click)="applyAutoTitle()"
+            >
               <mat-icon>check</mat-icon>
             </button>
           </div>
         }
-        
-        <mat-tab-group [(selectedIndex)]="selectedTabIndex" class="content-tabs">
+
+        <mat-tab-group
+          [(selectedIndex)]="selectedTabIndex"
+          class="content-tabs"
+        >
           <mat-tab label="Write">
             <div class="write-tab">
               <app-rich-text-editor
                 [content]="article().content"
-                (contentChange)="updateContent($event)">
+                (contentChange)="updateContent($event)"
+              >
               </app-rich-text-editor>
               <div class="editor-hint">
                 <mat-icon>info</mat-icon>
-                <span>Toggle between Rich Text and Markdown modes using the controls above</span>
+                <span
+                  >Toggle between Rich Text and Markdown modes using the
+                  controls above</span
+                >
               </div>
             </div>
           </mat-tab>
-          
+
           <mat-tab label="Preview">
             <div class="preview-tab">
               @if (article().content.trim()) {
                 <div class="preview-content">
-                  <h1 class="preview-title">{{ article().title || 'Untitled' }}</h1>
+                  <h1 class="preview-title">
+                    {{ article().title || 'Untitled' }}
+                  </h1>
                   @if (article().summary) {
                     <p class="preview-summary">{{ article().summary }}</p>
                   }
                   @if (article().image) {
-                    <img [src]="article().image" 
-                         [attr.alt]="article().title || 'Article featured image'" 
-                         class="preview-image"
-                         loading="lazy"
-                         [attr.title]="article().title || 'Article featured image'">
+                    <img
+                      [src]="article().image"
+                      [attr.alt]="article().title || 'Article featured image'"
+                      [attr.title]="article().title || 'Article featured image'"
+                      class="preview-image"
+                      loading="lazy"
+                    />
                   }
                   <div class="preview-markdown">
                     <div [innerHTML]="markdownHtml()"></div>
@@ -119,62 +155,85 @@
       <div class="metadata-form">
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Title *</mat-label>
-          <input matInput 
-                 [value]="article().title"
-                 (input)="updateTitle($any($event.target).value)"
-                 placeholder="Enter article title"
-                 required
-                 [readonly]="autoTitleEnabled()">
+          <input
+            matInput
+            [value]="article().title"
+            (input)="updateTitle($any($event.target).value)"
+            placeholder="Enter article title"
+            required
+            [readonly]="autoTitleEnabled()"
+          />
           @if (autoTitleEnabled()) {
-            <mat-hint>Auto-title is enabled. Title will update based on content.</mat-hint>
+            <mat-hint
+              >Auto-title is enabled. Title will update based on
+              content.</mat-hint
+            >
           }
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Summary</mat-label>
-          <textarea matInput 
-                    [value]="article().summary"
-                    (input)="updateSummary($any($event.target).value)"
-                    placeholder="Brief description of your article"
-                    rows="3">
+          <textarea
+            matInput
+            [value]="article().summary"
+            (input)="updateSummary($any($event.target).value)"
+            placeholder="Brief description of your article"
+            rows="3"
+          >
           </textarea>
         </mat-form-field>
 
         <div class="two-column-layout">
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Image URL</mat-label>
-            <input matInput 
-                  [value]="article().image"
-                  (input)="updateImage($any($event.target).value)"
-                  placeholder="https://example.com/image.jpg">
+            <input
+              matInput
+              [value]="article().image"
+              (input)="updateImage($any($event.target).value)"
+              placeholder="https://example.com/image.jpg"
+            />
           </mat-form-field>
 
           <div class="dTag-field-container">
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Article ID (d tag) *</mat-label>
-              <input matInput 
-                    [value]="article().dTag"
-                    (input)="updateDTag($any($event.target).value)"
-                    placeholder="unique-article-identifier"
-                    required
-                    [readonly]="autoDTagEnabled()">
+              <input
+                matInput
+                [value]="article().dTag"
+                (input)="updateDTag($any($event.target).value)"
+                placeholder="unique-article-identifier"
+                required
+                [readonly]="autoDTagEnabled()"
+              />
               @if (autoDTagEnabled()) {
-                <mat-hint>Auto-ID is enabled. ID will update based on title.</mat-hint>
+                <mat-hint
+                  >Auto-ID is enabled. ID will update based on title.</mat-hint
+                >
               } @else {
-                <mat-hint>Unique identifier for your article. Used in URLs.</mat-hint>
+                <mat-hint
+                  >Unique identifier for your article. Used in URLs.</mat-hint
+                >
               }
             </mat-form-field>
             <div class="dTag-controls">
-              <button mat-icon-button 
-                      color="primary"
-                      (click)="toggleAutoDTagMode()"
-                      [matTooltip]="autoDTagEnabled() ? 'Disable Auto-ID' : 'Enable Auto-ID'">
-                <mat-icon>{{ autoDTagEnabled() ? 'auto_awesome' : 'auto_awesome_off' }}</mat-icon>
+              <button
+                mat-icon-button
+                color="primary"
+                (click)="toggleAutoDTagMode()"
+                [matTooltip]="
+                  autoDTagEnabled() ? 'Disable Auto-ID' : 'Enable Auto-ID'
+                "
+              >
+                <mat-icon>{{
+                  autoDTagEnabled() ? 'auto_awesome' : 'auto_awesome_off'
+                }}</mat-icon>
               </button>
               @if (suggestedDTag() && autoDTagEnabled()) {
-                <button mat-icon-button 
-                        matTooltip="Apply suggested ID: {{ suggestedDTag() }}" 
-                        (click)="applyAutoDTag()">
+                <button
+                  mat-icon-button
+                  matTooltip="Apply suggested ID: {{ suggestedDTag() }}"
+                  (click)="applyAutoDTag()"
+                >
                   <mat-icon>refresh</mat-icon>
                 </button>
               }
@@ -188,23 +247,31 @@
           <div class="tag-input-container">
             <mat-form-field appearance="outline" class="tag-input">
               <mat-label>Add tag</mat-label>
-              <input matInput 
-                    [value]="newTag()"
-                    (input)="newTag.set($any($event.target).value)"
-                    (keypress)="onTagKeyPress($event)"
-                    placeholder="Enter a tag">
+              <input
+                matInput
+                [value]="newTag()"
+                (input)="newTag.set($any($event.target).value)"
+                (keypress)="onTagKeyPress($event)"
+                placeholder="Enter a tag"
+              />
             </mat-form-field>
-            <button mat-icon-button 
-                    (click)="addTag()" 
-                    [disabled]="!newTag().trim()">
+            <button
+              mat-icon-button
+              (click)="addTag()"
+              [disabled]="!newTag().trim()"
+            >
               <mat-icon>add</mat-icon>
             </button>
           </div>
-          
+
           @if (article().tags.length > 0) {
             <div class="tags-container">
               @for (tag of article().tags; track tag) {
-                <mat-chip class="tag-chip" [removable]="true" (removed)="removeTag(tag)">
+                <mat-chip
+                  class="tag-chip"
+                  [removable]="true"
+                  (removed)="removeTag(tag)"
+                >
                   {{ tag }}
                   <mat-icon matChipRemove>cancel</mat-icon>
                 </mat-chip>

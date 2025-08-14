@@ -33,7 +33,9 @@
   }
 }
 
-.no-devices-card, .preferences-card, .help-card {
+.no-devices-card,
+.preferences-card,
+.help-card {
   box-shadow: var(--mat-sys-level1);
   width: 100%;
   max-width: 100%;
@@ -80,20 +82,20 @@
   overflow-x: auto;
   width: 100%;
   min-width: 0; // Allow shrinking
-  
+
   // Ensure smooth scrolling on mobile
   -webkit-overflow-scrolling: touch;
-  
+
   // Hide scrollbar on webkit browsers for cleaner look
   &::-webkit-scrollbar {
     height: 6px;
   }
-    &::-webkit-scrollbar-track {
+  &::-webkit-scrollbar-track {
     background: var(--mat-sys-surface-variant);
     opacity: 0.1;
     border-radius: 3px;
   }
-  
+
   &::-webkit-scrollbar-thumb {
     background: var(--mat-sys-on-surface-variant);
     opacity: 0.3;
@@ -103,8 +105,11 @@
 
 .preferences-header {
   display: grid;
-  grid-template-columns: minmax(150px, 1fr) repeat(7, minmax(60px, 80px)) minmax(50px, 70px);
-  gap: 8px;  padding: 16px 8px;
+  grid-template-columns:
+    minmax(150px, 1fr) repeat(7, minmax(60px, 80px))
+    minmax(50px, 70px);
+  gap: 8px;
+  padding: 16px 8px;
   font-weight: 500;
   font-size: 14px;
   color: var(--mat-sys-on-surface-variant);
@@ -145,7 +150,9 @@
 
 .device-row {
   display: grid;
-  grid-template-columns: minmax(150px, 1fr) repeat(7, minmax(60px, 80px)) minmax(50px, 70px);
+  grid-template-columns:
+    minmax(150px, 1fr) repeat(7, minmax(60px, 80px))
+    minmax(50px, 70px);
   gap: 8px;
   padding: 16px 8px;
   align-items: center;
@@ -166,7 +173,8 @@
     .device-name {
       font-weight: 500;
       font-size: 14px;
-    }    .device-date {
+    }
+    .device-date {
       font-size: 12px;
       color: var(--mat-sys-on-surface-variant);
     }
@@ -219,7 +227,8 @@
       li {
         margin-bottom: 8px;
         font-size: 14px;
-        line-height: 1.4;        strong {
+        line-height: 1.4;
+        strong {
           color: var(--mat-sys-on-surface);
         }
       }
@@ -231,7 +240,9 @@
 @media (max-width: 900px) {
   .preferences-header,
   .device-row {
-    grid-template-columns: minmax(120px, 1fr) repeat(7, minmax(50px, 70px)) minmax(40px, 60px);
+    grid-template-columns:
+      minmax(120px, 1fr) repeat(7, minmax(50px, 70px))
+      minmax(40px, 60px);
     gap: 6px;
     padding: 12px 4px;
   }
@@ -261,7 +272,9 @@
 
   .preferences-header,
   .device-row {
-    grid-template-columns: minmax(100px, 140px) repeat(7, minmax(45px, 60px)) minmax(35px, 50px);
+    grid-template-columns:
+      minmax(100px, 140px) repeat(7, minmax(45px, 60px))
+      minmax(35px, 50px);
     gap: 4px;
     padding: 12px 4px;
     min-width: 550px; // Reduced minimum width
@@ -278,12 +291,12 @@
 
     span {
       font-size: 9px;
-      line-height: 1.0;
+      line-height: 1;
     }
   }
   .device-info {
     gap: 6px;
-    
+
     .device-details {
       .device-name {
         font-size: 12px;

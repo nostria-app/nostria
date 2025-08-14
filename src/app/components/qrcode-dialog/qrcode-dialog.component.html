@@ -13,7 +13,12 @@
 
   <p class="wrap">
     {{ qrValue }}
-    <button class="copy-button" matTooltip="Copy the identifier" mat-icon-button (click)="copyValue()">
+    <button
+      class="copy-button"
+      matTooltip="Copy the identifier"
+      mat-icon-button
+      (click)="copyValue()"
+    >
       <mat-icon>content_copy</mat-icon>
     </button>
   </p>

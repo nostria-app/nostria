@@ -1,4 +1,5 @@
-.device-list-card, .no-devices-card {
+.device-list-card,
+.no-devices-card {
   margin-bottom: 20px;
   box-shadow: var(--mat-sys-level1);
 }
@@ -25,20 +26,20 @@
   flex-direction: column;
   align-items: center;
   padding: 20px;
-  
+
   mat-icon {
     font-size: 48px;
     height: 48px;
     width: 48px;
     margin-bottom: 16px;
   }
-  
+
   p {
   }
 }
 
 .delete-button {
-  margin-left: auto;  // This pushes the button to the right
+  margin-left: auto; // This pushes the button to the right
 }
 
 // Ensure proper alignment within list items
@@ -82,9 +83,8 @@
   align-items: center;
   justify-content: center;
   padding: 24px;
-  
+
   p {
     margin-top: 16px;
   }
 }
-

@@ -36,16 +36,15 @@ interface FaqItem {
     MatExpansionModule,
     MatDividerModule,
     MatDialogModule,
-    RouterLink
-],
+    RouterLink,
+  ],
   templateUrl: './premium.component.html',
-  styleUrl: './premium.component.scss'
+  styleUrl: './premium.component.scss',
 })
 export class PremiumComponent {
   app = inject(ApplicationService);
   accountState = inject(AccountStateService);
   environment = environment;
 
-  constructor() {
-  }
+  constructor() {}
 }

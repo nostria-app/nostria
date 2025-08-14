@@ -19,8 +19,8 @@ import { LoggerService } from '../../services/logger.service';
     MatIconModule,
     MatDividerModule,
     MatProgressBarModule,
-    MatSnackBarModule
-],
+    MatSnackBarModule,
+  ],
   templateUrl: './storage-stats.component.html',
   styleUrl: './storage-stats.component..scss',
 })
@@ -35,7 +35,7 @@ export class StorageStatsComponent {
     relaysCount: 0,
     // userMetadataCount: 0,
     // userRelaysCount: 0,
-    estimatedSize: 0
+    estimatedSize: 0,
   });
   formattedSize = signal('0 KB');
   // isLoggedIn = signal(false);
@@ -56,7 +56,9 @@ export class StorageStatsComponent {
     // Update the formatted size when stats change
     effect(() => {
       const currentStats = this.stats();
-      this.formattedSize.set(this.storage.formatSize(currentStats.estimatedSize));
+      this.formattedSize.set(
+        this.storage.formatSize(currentStats.estimatedSize)
+      );
     });
   }
 
@@ -79,7 +81,7 @@ export class StorageStatsComponent {
       this.snackBar.open('Cache cleared successfully', 'Close', {
         duration: 3000,
         horizontalPosition: 'center',
-        verticalPosition: 'bottom'
+        verticalPosition: 'bottom',
       });
     } catch (error) {
       this.logger.error('Error clearing cache', error);
@@ -87,7 +89,7 @@ export class StorageStatsComponent {
       this.snackBar.open('Failed to clear cache', 'Close', {
         duration: 3000,
         horizontalPosition: 'center',
-        verticalPosition: 'bottom'
+        verticalPosition: 'bottom',
       });
     } finally {
       this.isClearing.set(false);

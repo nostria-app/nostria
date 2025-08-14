@@ -15,7 +15,7 @@ import { AccountStateService } from '../../services/account-state.service';
 import { MatTabsModule } from '@angular/material/tabs';
 import { Wallets } from '../../services/wallets';
 import { nip47 } from 'nostr-tools';
-import { LN, USD } from "@getalby/sdk";
+import { LN, USD } from '@getalby/sdk';
 
 @Component({
   selector: 'app-credentials',
@@ -29,10 +29,10 @@ import { LN, USD } from "@getalby/sdk";
     MatDividerModule,
     MatTooltipModule,
     MatTabsModule,
-    ReactiveFormsModule
+    ReactiveFormsModule,
   ],
   templateUrl: './credentials.component.html',
-  styleUrl: './credentials.component.scss'
+  styleUrl: './credentials.component.scss',
 })
 export class CredentialsComponent {
   nostrService = inject(NostrService);
@@ -44,7 +44,7 @@ export class CredentialsComponent {
 
   connectionStringControl = new FormControl('', [
     Validators.required,
-    Validators.pattern(/^nostr\+walletconnect:\/\//i)
+    Validators.pattern(/^nostr\+walletconnect:\/\//i),
   ]);
 
   isAddingWallet = signal(false);
@@ -61,14 +61,14 @@ export class CredentialsComponent {
       this.snackBar.open(`${label} copied to clipboard`, 'Dismiss', {
         duration: 3000,
         horizontalPosition: 'center',
-        verticalPosition: 'bottom'
+        verticalPosition: 'bottom',
       });
     } catch (error) {
       console.error('Failed to copy to clipboard:', error);
       this.snackBar.open('Failed to copy to clipboard', 'Dismiss', {
         duration: 3000,
         horizontalPosition: 'center',
-        verticalPosition: 'bottom'
+        verticalPosition: 'bottom',
       });
     }
   }
@@ -99,11 +99,15 @@ export class CredentialsComponent {
 
   async addWallet(): Promise<void> {
     if (this.connectionStringControl.invalid) {
-      this.snackBar.open('Please enter a valid Nostr Wallet Connect connection string', 'Dismiss', {
-        duration: 3000,
-        horizontalPosition: 'center',
-        verticalPosition: 'bottom'
-      });
+      this.snackBar.open(
+        'Please enter a valid Nostr Wallet Connect connection string',
+        'Dismiss',
+        {
+          duration: 3000,
+          horizontalPosition: 'center',
+          verticalPosition: 'bottom',
+        }
+      );
       return;
     }
 
@@ -115,22 +119,26 @@ export class CredentialsComponent {
 
       this.wallets.addWallet(parsed.pubkey, connectionString, {
         relay: parsed.relay,
-        secret: parsed.secret
+        secret: parsed.secret,
       });
 
       this.connectionStringControl.reset();
       this.snackBar.open('Wallet added successfully', 'Dismiss', {
         duration: 3000,
         horizontalPosition: 'center',
-        verticalPosition: 'bottom'
+        verticalPosition: 'bottom',
       });
     } catch (error) {
       console.error('Failed to add wallet:', error);
-      this.snackBar.open('Failed to add wallet. Please check the connection string.', 'Dismiss', {
-        duration: 3000,
-        horizontalPosition: 'center',
-        verticalPosition: 'bottom'
-      });
+      this.snackBar.open(
+        'Failed to add wallet. Please check the connection string.',
+        'Dismiss',
+        {
+          duration: 3000,
+          horizontalPosition: 'center',
+          verticalPosition: 'bottom',
+        }
+      );
     } finally {
       this.isAddingWallet.set(false);
     }
@@ -141,7 +149,7 @@ export class CredentialsComponent {
     this.snackBar.open('Wallet removed successfully', 'Dismiss', {
       duration: 3000,
       horizontalPosition: 'center',
-      verticalPosition: 'bottom'
+      verticalPosition: 'bottom',
     });
   }
 
@@ -158,7 +166,10 @@ export class CredentialsComponent {
     //   console.log('Donation successful');
     // });
 
-    const request = await new LN(wallet.connections[0]).pay("sondreb@npub.cash", USD(0.1));
+    const request = await new LN(wallet.connections[0]).pay(
+      'sondreb@npub.cash',
+      USD(0.1)
+    );
     console.log('Payment request created:', request);
   }
 
@@ -167,7 +178,9 @@ export class CredentialsComponent {
   }
 
   getFirstConnectionString(wallet: any): string {
-    return wallet.connections && wallet.connections.length > 0 ? wallet.connections[0] : '';
+    return wallet.connections && wallet.connections.length > 0
+      ? wallet.connections[0]
+      : '';
   }
 
   startEditingWallet(pubkey: string, currentName: string): void {
@@ -189,7 +202,7 @@ export class CredentialsComponent {
       this.snackBar.open('Wallet name updated successfully', 'Dismiss', {
         duration: 3000,
         horizontalPosition: 'center',
-        verticalPosition: 'bottom'
+        verticalPosition: 'bottom',
       });
       this.cancelEditingWallet();
     }

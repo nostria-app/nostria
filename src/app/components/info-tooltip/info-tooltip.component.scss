@@ -1,0 +1,22 @@
+.info-tooltip-trigger {
+  // position: absolute;
+  // top: 16px;
+  // right: 16px;
+  // z-index: 2;
+
+  mat-icon {
+    opacity: 0.7;
+    font-size: 20px;
+    height: 20px;
+    width: 20px;
+  }
+
+  &:hover mat-icon {
+    opacity: 1;
+  }
+}
+
+// Add margin when there's a premium badge
+:host-context(.has-premium-badge) .info-tooltip-trigger {
+  right: 100px; // Adjust based on premium badge width
+}

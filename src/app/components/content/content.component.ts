@@ -1,9 +1,21 @@
-import { Component, Input, ViewChild, ElementRef, AfterViewInit, OnDestroy, computed, effect, inject, signal } from '@angular/core';
+import {
+  Component,
+  Input,
+  ViewChild,
+  ElementRef,
+  AfterViewInit,
+  OnDestroy,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+} from '@angular/core';
 
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialogModule } from '@angular/material/dialog';
-import { DomSanitizer, SafeHtml, SafeResourceUrl } from '@angular/platform-browser';
+import { DomSanitizer } from '@angular/platform-browser';
 import { SocialPreviewComponent } from '../social-preview/social-preview.component';
 import { MatDialog } from '@angular/material/dialog';
 import { ImageDialogComponent } from '../image-dialog/image-dialog.component';
@@ -13,11 +25,29 @@ import { Router } from '@angular/router';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { ParsingService } from '../../services/parsing.service';
 
+interface NostrData {
+  type: string;
+  // Narrow known shapes; keep flexible with index signature for unseen fields
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [k: string]: any;
+  displayName: string;
+  data: unknown;
+}
+
 interface ContentToken {
   id: number;
-  type: 'text' | 'url' | 'youtube' | 'image' | 'audio' | 'video' | 'linebreak' | 'nostr-mention' | 'emoji';
+  type:
+    | 'text'
+    | 'url'
+    | 'youtube'
+    | 'image'
+    | 'audio'
+    | 'video'
+    | 'linebreak'
+    | 'nostr-mention'
+    | 'emoji';
   content: string;
-  nostrData?: { type: string; data: any; displayName: string };
+  nostrData?: NostrData;
   emoji?: string;
 }
 
@@ -33,9 +63,14 @@ interface SocialPreview {
 @Component({
   selector: 'app-content',
   standalone: true,
-  imports: [MatCardModule, MatProgressSpinnerModule, SocialPreviewComponent, MatDialogModule],
+  imports: [
+    MatCardModule,
+    MatProgressSpinnerModule,
+    SocialPreviewComponent,
+    MatDialogModule,
+  ],
   templateUrl: './content.component.html',
-  styleUrl: './content.component.scss'
+  styleUrl: './content.component.scss',
 })
 export class ContentComponent implements AfterViewInit, OnDestroy {
   readonly media = inject(MediaPlayerService);
@@ -62,6 +97,13 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
   private _cachedTokens = signal<ContentToken[]>([]);
   private _lastParsedContent = '';
 
+  // Debouncing for content parsing
+  private parseDebounceTimer?: number;
+  private readonly PARSE_DEBOUNCE_TIME = 100; // milliseconds
+
+  // Track if parsing is in progress to prevent overlapping operations
+  private _isParsing = signal<boolean>(false);
+
   // Processed content tokens - returns cached or empty based on visibility
   contentTokens = computed<ContentToken[]>(() => {
     const shouldRender = this._isVisible() || this._hasBeenVisible();
@@ -75,30 +117,35 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
   });
 
   // Social previews for URLs
-  socialPreviews = signal<SocialPreview[]>([]); @Input() set content(value: string) {
+  socialPreviews = signal<SocialPreview[]>([]);
+
+  @Input() set content(value: string) {
     const newContent = value || '';
-    this._content.set(newContent);
+    const currentContent = this._content();
+
+    // Only update if content actually changed
+    if (newContent !== currentContent) {
+      this._content.set(newContent);
+    }
   }
 
-  get content() : string {
+  get content(): string {
     return this._content();
   }
 
   constructor() {
     // Effect to parse content when it changes and component is visible
-    effect(async () => {
+    effect(() => {
       const shouldRender = this._isVisible() || this._hasBeenVisible();
       const currentContent = this._content() as string;
 
-      if (!shouldRender) {
+      if (!shouldRender || this._isParsing()) {
         return;
       }
 
       // Only reparse if content has actually changed
       if (currentContent !== this._lastParsedContent) {
-        const newTokens = await this.parseContent(currentContent);
-        this._cachedTokens.set(newTokens);
-        this._lastParsedContent = currentContent;
+        this.debouncedParseContent(currentContent);
       }
     });
 
@@ -126,9 +173,45 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
       this.intersectionObserver = null;
     }
 
+    // Clear debounce timer
+    if (this.parseDebounceTimer) {
+      window.clearTimeout(this.parseDebounceTimer);
+    }
+
     // Clean up cached state
     this._cachedTokens.set([]);
     this._lastParsedContent = '';
+
+    // Clear parsing service cache for this content
+    this.parsing.clearNostrUriCache();
+  }
+
+  /**
+   * Debounced content parsing to prevent rapid re-parsing
+   */
+  private debouncedParseContent(content: string): void {
+    // Clear any existing timer
+    if (this.parseDebounceTimer) {
+      window.clearTimeout(this.parseDebounceTimer);
+    }
+
+    // Set a new timer
+    this.parseDebounceTimer = window.setTimeout(async () => {
+      try {
+        this._isParsing.set(true);
+        const newTokens = await this.parseContent(content);
+
+        // Use untracked to prevent triggering effects during token update
+        untracked(() => {
+          this._cachedTokens.set(newTokens);
+          this._lastParsedContent = content;
+        });
+      } catch (error) {
+        console.error('Error parsing content:', error);
+      } finally {
+        this._isParsing.set(false);
+      }
+    }, this.PARSE_DEBOUNCE_TIME);
   }
 
   private setupIntersectionObserver() {
@@ -151,8 +234,9 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     const options = {
       root: null, // Use viewport as root
       rootMargin: '0px',
-      threshold: 0.1 // 10% of the item visible
-    }; this.intersectionObserver = new IntersectionObserver((entries) => {
+      threshold: 0.1, // 10% of the item visible
+    };
+    this.intersectionObserver = new IntersectionObserver(entries => {
       entries.forEach(entry => {
         const isIntersecting = entry.isIntersecting;
         this._isVisible.set(isIntersecting);
@@ -239,33 +323,47 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     ':purple_circle:': '🟣',
     ':orange_circle:': '🟠',
     ':white_circle:': '⚪',
-    ':black_circle:': '⚫'
+    ':black_circle:': '⚫',
   };
 
   private async parseContent(content: string): Promise<ContentToken[]> {
     if (!content) return [];
 
     // Replace line breaks with placeholders
-    let processedContent = content.replace(/\n/g, '##LINEBREAK##');
+    const processedContent = content.replace(/\n/g, '##LINEBREAK##');
 
     // Regex for different types of content - updated to avoid capturing trailing LINEBREAK placeholders
-    const urlRegex = /(https?:\/\/[^\s##]+)(?=\s|##LINEBREAK##|$)/g;
-    const youtubeRegex = /(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})(?=\s|##LINEBREAK##|$)/g;
-    const imageRegex = /(https?:\/\/[^\s##]+\.(jpg|jpeg|png|gif|webp)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
-    const audioRegex = /(https?:\/\/[^\s##]+\.(mp3|wav|ogg)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
-    const videoRegex = /(https?:\/\/[^\s##]+\.(mp4|webm|mov|avi|wmv|flv|mkv)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
-    const nostrRegex = /(nostr:(?:npub|nprofile|note|nevent|naddr)1[a-zA-Z0-9]+)(?=\s|##LINEBREAK##|$|[^\w])/g;
+    // URL regex: capture potential trailing punctuation so we can trim logic-smart (e.g. parentheses, commas, periods)
+    const urlRegex =
+      /(https?:\/\/[^\s##)\]\}>]+)(?=\s|##LINEBREAK##|$|[),.;!?:])/g;
+    const youtubeRegex =
+      /(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})(?=\s|##LINEBREAK##|$)/g;
+    const imageRegex =
+      /(https?:\/\/[^\s##]+\.(jpg|jpeg|png|gif|webp)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
+    const audioRegex =
+      /(https?:\/\/[^\s##]+\.(mp3|wav|ogg)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
+    const videoRegex =
+      /(https?:\/\/[^\s##]+\.(mp4|webm|mov|avi|wmv|flv|mkv)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
+    const nostrRegex =
+      /(nostr:(?:npub|nprofile|note|nevent|naddr)1[a-zA-Z0-9]+)(?=\s|##LINEBREAK##|$|[^\w])/g;
     const emojiRegex = /(:[a-zA-Z_]+:)/g;
 
     // Split content and generate tokens
-    let tokens: ContentToken[] = [];
+    const tokens: ContentToken[] = [];
     let lastIndex = 0;
 
     // Find all matches and their positions
-    const matches: { start: number, end: number, content: string, type: ContentToken['type'], nostrData?: any, emoji?: string }[] = [];
+    const matches: {
+      start: number;
+      end: number;
+      content: string;
+      type: ContentToken['type'];
+      nostrData?: NostrData;
+      emoji?: string;
+    }[] = [];
 
     // Find emoji codes first (highest priority after nostr)
-    let match: any;
+    let match: RegExpExecArray | null;
     while ((match = emojiRegex.exec(processedContent)) !== null) {
       const emojiCode = match[0];
       const emoji = this.emojiMap[emojiCode];
@@ -275,21 +373,54 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
           end: match.index + match[0].length,
           content: emojiCode,
           type: 'emoji',
-          emoji
+          emoji,
         });
       }
     }
 
-    // Find Nostr URIs (highest priority)
+    // Find Nostr URIs (highest priority) - collect first, then batch process
+    const nostrMatches: {
+      match: RegExpExecArray;
+      index: number;
+      length: number;
+    }[] = [];
     while ((match = nostrRegex.exec(processedContent)) !== null) {
-      const nostrData = await this.parsing.parseNostrUri(match[0]);
+      nostrMatches.push({
+        match,
+        index: match.index,
+        length: match[0].length,
+      });
+    }
+
+    // Batch process nostr URIs to avoid sequential awaits
+    const nostrDataPromises = nostrMatches.map(async nostrMatch => {
+      try {
+        const nostrData = await this.parsing.parseNostrUri(nostrMatch.match[0]);
+        return {
+          ...nostrMatch,
+          nostrData,
+        };
+      } catch (error) {
+        console.warn('Error parsing nostr URI:', nostrMatch.match[0], error);
+        return {
+          ...nostrMatch,
+          nostrData: null,
+        };
+      }
+    });
+
+    // Wait for all nostr URIs to be processed
+    const processedNostrMatches = await Promise.all(nostrDataPromises);
+
+    // Add valid nostr matches to the matches array
+    for (const { match, index, length, nostrData } of processedNostrMatches) {
       if (nostrData) {
         matches.push({
-          start: match.index,
-          end: match.index + match[0].length,
+          start: index,
+          end: index + length,
           content: match[0],
           type: 'nostr-mention',
-          nostrData
+          nostrData,
         });
       }
     }
@@ -300,7 +431,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
         start: match.index,
         end: match.index + match[0].length,
         content: match[0],
-        type: 'youtube'
+        type: 'youtube',
       });
     }
 
@@ -311,7 +442,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
         start: match.index,
         end: match.index + match[0].length,
         content: match[0],
-        type: 'image'
+        type: 'image',
       });
     }
 
@@ -322,7 +453,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
         start: match.index,
         end: match.index + match[0].length,
         content: match[0],
-        type: 'video'
+        type: 'video',
       });
     }
 
@@ -333,22 +464,45 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
         start: match.index,
         end: match.index + match[0].length,
         content: match[0],
-        type: 'audio'
+        type: 'audio',
       });
     }
 
     // Find remaining URLs
     urlRegex.lastIndex = 0;
     while ((match = urlRegex.exec(processedContent)) !== null) {
-      // Check if this URL was already matched as a special type
-      const isSpecialType = matches.some(m => m.start === match.index && m.end === match.index + match[0].length);
+      let rawUrl = match[0];
+      const start = match.index;
 
+      // Trim trailing punctuation that is unlikely part of the URL
+      const trailingPattern = /[)\],;!?.]+$/;
+      while (trailingPattern.test(rawUrl)) {
+        const lastChar = rawUrl.slice(-1);
+        if (lastChar === '/' || lastChar === '#') break; // keep structural chars
+        if (lastChar === ')') {
+          const openCount = (rawUrl.match(/\(/g) || []).length;
+          const closeCount = (rawUrl.match(/\)/g) || []).length;
+          if (closeCount <= openCount) break;
+        }
+        if (lastChar === ']') {
+          const openCount = (rawUrl.match(/\[/g) || []).length;
+          const closeCount = (rawUrl.match(/\]/g) || []).length;
+          if (closeCount <= openCount) break;
+        }
+        rawUrl = rawUrl.slice(0, -1);
+      }
+
+      if (!rawUrl) continue;
+
+      const isSpecialType = matches.some(
+        m => m.start === start && m.end === start + rawUrl.length
+      );
       if (!isSpecialType) {
         matches.push({
-          start: match.index,
-          end: match.index + match[0].length,
-          content: match[0],
-          type: 'url'
+          start,
+          end: start + rawUrl.length,
+          content: rawUrl,
+          type: 'url',
         });
       }
     }
@@ -365,11 +519,15 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
       }
 
       // Add the match as a token with deterministic ID based on position and content
-      const tokenId = this.generateStableTokenId(match.start, match.content, match.type);
+      const tokenId = this.generateStableTokenId(
+        match.start,
+        match.content,
+        match.type
+      );
       const token: ContentToken = {
         id: tokenId,
         type: match.type,
-        content: match.content
+        content: match.content,
       };
 
       if (match.nostrData) {
@@ -393,28 +551,40 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
 
     return tokens;
   }
-  private processTextSegment(segment: string, tokens: ContentToken[], basePosition: number): void {
+  private processTextSegment(
+    segment: string,
+    tokens: ContentToken[],
+    basePosition: number
+  ): void {
     // Process line breaks in text segments
     const parts = segment.split('##LINEBREAK##');
 
     for (let i = 0; i < parts.length; i++) {
       // Only add text token if there's actual content (not empty string)
       if (parts[i].trim()) {
-        const tokenId = this.generateStableTokenId(basePosition + i, parts[i].trim(), 'text');
+        const tokenId = this.generateStableTokenId(
+          basePosition + i,
+          parts[i].trim(),
+          'text'
+        );
         tokens.push({
           id: tokenId,
           type: 'text',
-          content: parts[i].trim()
+          content: parts[i].trim(),
         });
       }
 
       // Add a line break token after each part except the last one
       if (i < parts.length - 1) {
-        const linebreakId = this.generateStableTokenId(basePosition + i, '', 'linebreak');
+        const linebreakId = this.generateStableTokenId(
+          basePosition + i,
+          '',
+          'linebreak'
+        );
         tokens.push({
           id: linebreakId,
           type: 'linebreak',
-          content: ''
+          content: '',
         });
       }
     }
@@ -447,17 +617,19 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     const initialPreviews = urls.map(url => ({
       url,
       loading: true,
-      error: false
+      error: false,
     }));
 
     this.socialPreviews.set(initialPreviews);
 
     // Load previews for each URL
-    const previewPromises = urls.map(async (url, index) => {
+    const previewPromises = urls.map(async url => {
       try {
         // In a real implementation, you would call an API to fetch the metadata
         // For example, using a service like Open Graph or your own backend API
-        const response = await fetch(`https://metadata.nostria.app/og?url=${encodeURIComponent(url)}`);
+        await fetch(
+          `https://metadata.nostria.app/og?url=${encodeURIComponent(url)}`
+        );
 
         // This is a mock response - replace with actual API call
         // const preview = await response.json();
@@ -469,14 +641,14 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
           ...preview,
           url,
           loading: false,
-          error: false
+          error: false,
         };
       } catch (error) {
         console.error(`Failed to load preview for ${url}:`, error);
         return {
           url,
           loading: false,
-          error: true
+          error: true,
         };
       }
     });
@@ -496,19 +668,19 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
       return {
         title: 'YouTube Video Title',
         description: 'This is a YouTube video description',
-        image: 'https://i.ytimg.com/vi/SAMPLE_ID/hqdefault.jpg'
+        image: 'https://i.ytimg.com/vi/SAMPLE_ID/hqdefault.jpg',
       };
     } else if (url.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
       return {
         title: 'Image',
         description: 'Image from the web',
-        image: url
+        image: url,
       };
     } else {
       return {
         title: `Website Title for ${new URL(url).hostname}`,
         description: 'Website description would appear here',
-        image: 'https://via.placeholder.com/300x200?text=Website+Preview'
+        image: 'https://via.placeholder.com/300x200?text=Website+Preview',
       };
     }
   }
@@ -524,7 +696,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
       maxHeight: '95vh',
       width: '100%',
       height: '100%',
-      panelClass: 'image-dialog'
+      panelClass: 'image-dialog',
     });
   }
 
@@ -535,22 +707,29 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
 
     switch (type) {
       case 'npub':
-      case 'nprofile':
+      case 'nprofile': {
         // Navigate to profile page
-        const pubkey = type === 'npub' ? data : data.pubkey;
+        const record = data as Record<string, unknown>;
+        const pubkey =
+          type === 'npub' ? String(data) : String(record['pubkey'] || '');
         this.router.navigate(['/p', this.utilities.getNpubFromPubkey(pubkey)]);
         break;
+      }
       case 'note':
-      case 'nevent':
-        // Navigate to event page  
-        const eventId = type === 'note' ? data : data.id;
+      case 'nevent': {
+        // Navigate to event page
+        const record = data as Record<string, unknown>;
+        const eventId =
+          type === 'note' ? String(data) : String(record['id'] || '');
         this.router.navigate(['/e', eventId]);
         break;
-      case 'naddr':
+      }
+      case 'naddr': {
         // Navigate to address-based event
         const encoded = this.parsing.extractNostrUriIdentifier(token.content);
         this.router.navigate(['/a', encoded]);
         break;
+      }
       default:
         console.warn('Unsupported nostr URI type:', type);
     }
@@ -564,13 +743,17 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
   /**
    * Generate a stable token ID based on position and content
    */
-  private generateStableTokenId(position: number, content: string, type: string): number {
+  private generateStableTokenId(
+    position: number,
+    content: string,
+    type: string
+  ): number {
     // Create a simple hash from position, content, and type
     let hash = 0;
     const str = `${position}-${type}-${content}`;
     for (let i = 0; i < str.length; i++) {
       const char = str.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
+      hash = (hash << 5) - hash + char;
       hash = hash & hash; // Convert to 32-bit integer
     }
     return Math.abs(hash);

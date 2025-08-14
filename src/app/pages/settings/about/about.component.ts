@@ -1,4 +1,4 @@
-import { Component, effect, inject, signal } from '@angular/core';
+import { Component, effect, inject, signal, OnInit } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
@@ -22,9 +22,9 @@ interface WebManifest {
   standalone: true,
   imports: [MatCardModule, MatListModule, MatIconModule, MatButtonModule],
   templateUrl: './about.component.html',
-  styleUrl: './about.component.scss'
+  styleUrl: './about.component.scss',
 })
-export class AboutComponent {
+export class AboutComponent implements OnInit {
   private readonly app = inject(ApplicationService);
   private readonly meta = inject(MetaService);
   private readonly http = inject(HttpClient);
@@ -37,10 +37,8 @@ export class AboutComponent {
       this.fetchManifestVersion();
     });
   }
+
   resetIntroduction() {
-    if (this.app.isBrowser()) {
-      localStorage.setItem('nostria-welcome', 'true');
-    }
     this.layout.showWelcomeScreen.set(true);
   }
 
@@ -69,9 +67,7 @@ export class AboutComponent {
     return match ? match[0] : null;
   }
 
-  async ngOnInit() {
-
-  }
+  async ngOnInit() {}
 
   private async fetchManifestVersion(): Promise<void> {
     // Skip fetch on server side
@@ -81,7 +77,9 @@ export class AboutComponent {
     }
 
     try {
-      const manifestData = await firstValueFrom(this.http.get<WebManifest>('/manifest.webmanifest'));
+      const manifestData = await firstValueFrom(
+        this.http.get<WebManifest>('/manifest.webmanifest')
+      );
 
       // Check if version exists in the manifest, otherwise fallback
       if (manifestData.version) {

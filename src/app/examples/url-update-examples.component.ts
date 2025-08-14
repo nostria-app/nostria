@@ -11,37 +11,59 @@ import { MatCardModule } from '@angular/material/card';
   template: `
     <mat-card>
       <mat-card-header>
-        <mat-card-title>URL Update Examples (No Navigation Events)</mat-card-title>
+        <mat-card-title
+          >URL Update Examples (No Navigation Events)</mat-card-title
+        >
       </mat-card-header>
-      
+
       <mat-card-content>
         <p>Current URL: {{ currentUrl() }}</p>
-        
+
         <div class="button-group">
-          <button mat-raised-button color="primary" (click)="updateWithReplaceState()">
+          <button
+            mat-raised-button
+            color="primary"
+            (click)="updateWithReplaceState()"
+          >
             Update with Location.replaceState()
           </button>
-          
+
           <button mat-raised-button color="primary" (click)="updateWithGo()">
             Update with Location.go()
           </button>
-          
-          <button mat-raised-button color="primary" (click)="updateQueryParams()">
+
+          <button
+            mat-raised-button
+            color="primary"
+            (click)="updateQueryParams()"
+          >
             Update Query Parameters Only
           </button>
-          
-          <button mat-raised-button color="primary" (click)="updatePathSegments()">
+
+          <button
+            mat-raised-button
+            color="primary"
+            (click)="updatePathSegments()"
+          >
             Update Path Segments
           </button>
-          
-          <button mat-raised-button color="primary" (click)="updateWithSkipLocation()">
+
+          <button
+            mat-raised-button
+            color="primary"
+            (click)="updateWithSkipLocation()"
+          >
             Router Navigate (Skip Location Change)
           </button>
-          
-          <button mat-raised-button color="warn" (click)="updateWithReplaceUrl()">
+
+          <button
+            mat-raised-button
+            color="warn"
+            (click)="updateWithReplaceUrl()"
+          >
             Router Navigate (Replace URL)
           </button>
-          
+
           <button mat-raised-button (click)="resetUrl()">
             Reset to Original
           </button>
@@ -49,24 +71,26 @@ import { MatCardModule } from '@angular/material/card';
       </mat-card-content>
     </mat-card>
   `,
-  styles: [`
-    .button-group {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      margin-top: 16px;
-    }
-    
-    .button-group button {
-      align-self: flex-start;
-    }
-  `]
+  styles: [
+    `
+      .button-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 16px;
+      }
+
+      .button-group button {
+        align-self: flex-start;
+      }
+    `,
+  ],
 })
 export class UrlUpdateExamplesComponent {
   private location = inject(Location);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
-  
+
   currentUrl = signal(this.location.path());
   private originalUrl = this.location.path();
 
@@ -85,13 +109,14 @@ export class UrlUpdateExamplesComponent {
    * - Most efficient approach
    */
   updateWithReplaceState(): void {
-    const newUrl = '/example/replacestate?method=replaceState&timestamp=' + Date.now();
+    const newUrl =
+      '/example/replacestate?method=replaceState&timestamp=' + Date.now();
     this.location.replaceState(newUrl);
     console.log('URL updated with replaceState:', newUrl);
   }
 
   /**
-   * Method 2: Location.go() 
+   * Method 2: Location.go()
    * - Updates URL and adds to browser history
    * - No navigation events triggered
    * - User can navigate back with browser back button
@@ -108,18 +133,18 @@ export class UrlUpdateExamplesComponent {
    * - Most useful for state management
    */
   updateQueryParams(): void {
-    const queryParams = { 
+    const queryParams = {
       method: 'queryParams',
       timestamp: Date.now().toString(),
-      filter: 'active'
+      filter: 'active',
     };
-    
-    const urlTree = this.router.createUrlTree([], { 
+
+    const urlTree = this.router.createUrlTree([], {
       queryParams,
       queryParamsHandling: 'merge',
-      relativeTo: this.route
+      relativeTo: this.route,
     });
-    
+
     this.location.replaceState(this.router.serializeUrl(urlTree));
     console.log('Query parameters updated:', queryParams);
   }
@@ -132,7 +157,7 @@ export class UrlUpdateExamplesComponent {
   updatePathSegments(): void {
     const pathSegments = ['example', 'path-segments', 'updated'];
     const queryParams = { method: 'pathSegments', timestamp: Date.now() };
-    
+
     const urlTree = this.router.createUrlTree(pathSegments, { queryParams });
     this.location.replaceState(this.router.serializeUrl(urlTree));
     console.log('Path segments updated:', pathSegments);
@@ -147,7 +172,7 @@ export class UrlUpdateExamplesComponent {
   updateWithSkipLocation(): void {
     this.router.navigate(['/example/skip-location'], {
       queryParams: { method: 'skipLocation', timestamp: Date.now() },
-      skipLocationChange: true
+      skipLocationChange: true,
     });
     console.log('Router navigated with skipLocationChange');
   }
@@ -161,7 +186,7 @@ export class UrlUpdateExamplesComponent {
   updateWithReplaceUrl(): void {
     this.router.navigate(['/example/replace-url'], {
       queryParams: { method: 'replaceUrl', timestamp: Date.now() },
-      replaceUrl: true
+      replaceUrl: true,
     });
     console.log('Router navigated with replaceUrl');
   }

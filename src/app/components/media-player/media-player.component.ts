@@ -1,4 +1,18 @@
-import { Component, ElementRef, inject, signal, effect, input, ViewChild, Renderer2, afterNextRender, AfterViewInit, DOCUMENT } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  inject,
+  signal,
+  effect,
+  input,
+  ViewChild,
+  Renderer2,
+  afterNextRender,
+  AfterViewInit,
+  DOCUMENT,
+  OnInit,
+  OnDestroy,
+} from '@angular/core';
 import { LayoutService } from '../../services/layout.service';
 import { ThemeService } from '../../services/theme.service';
 
@@ -8,7 +22,10 @@ import { MediaPlayerService } from '../../services/media-player.service';
 import { MediaItem } from '../../interfaces';
 import { RouterModule } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
-import { AddMediaDialog, AddMediaDialogData } from '../../pages/media-queue/add-media-dialog/add-media-dialog';
+import {
+  AddMediaDialog,
+  AddMediaDialogData,
+} from '../../pages/media-queue/add-media-dialog/add-media-dialog';
 import { UtilitiesService } from '../../services/utilities.service';
 import { MatSliderModule } from '@angular/material/slider';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
@@ -27,11 +44,19 @@ declare global {
 
 @Component({
   selector: 'app-media-player',
-  imports: [MatButtonModule, MatIconModule, RouterModule, MatSliderModule, ReactiveFormsModule, FormsModule, TimePipe],
+  imports: [
+    MatButtonModule,
+    MatIconModule,
+    RouterModule,
+    MatSliderModule,
+    ReactiveFormsModule,
+    FormsModule,
+    TimePipe,
+  ],
   templateUrl: './media-player.component.html',
-  styleUrl: './media-player.component.scss'
+  styleUrl: './media-player.component.scss',
 })
-export class MediaPlayerComponent implements AfterViewInit {
+export class MediaPlayerComponent implements AfterViewInit, OnInit, OnDestroy {
   private readonly layout = inject(LayoutService);
   private readonly theme = inject(ThemeService);
   private readonly utilities = inject(UtilitiesService);
@@ -43,7 +68,8 @@ export class MediaPlayerComponent implements AfterViewInit {
   expanded = false;
   // maximized = false;
   private readonly renderer = inject(Renderer2);
-  @ViewChild('videoElement', { static: false }) videoElement?: ElementRef<HTMLVideoElement>;
+  @ViewChild('videoElement', { static: false })
+  videoElement?: ElementRef<HTMLVideoElement>;
 
   private originalVideoParent?: HTMLElement;
   private originalVideoNextSibling?: Node | null;
@@ -124,7 +150,10 @@ export class MediaPlayerComponent implements AfterViewInit {
 
   registerVideoElement() {
     if (this.videoElement?.nativeElement) {
-      console.log('Registering video element with service:', this.videoElement.nativeElement);
+      console.log(
+        'Registering video element with service:',
+        this.videoElement.nativeElement
+      );
       this.media.setVideoElement(this.videoElement.nativeElement);
     } else {
       console.log('Video element not available yet');
@@ -147,7 +176,9 @@ export class MediaPlayerComponent implements AfterViewInit {
   }
 
   private updateBackgroundFromThemeColor(): void {
-    const metaThemeColor = this.document.querySelector('meta[name="theme-color"]');
+    const metaThemeColor = this.document.querySelector(
+      'meta[name="theme-color"]'
+    );
     if (metaThemeColor) {
       const themeColor = metaThemeColor.getAttribute('content');
       if (themeColor) {
@@ -182,7 +213,9 @@ export class MediaPlayerComponent implements AfterViewInit {
       }
 
       // Create and setup the media query list
-      this.mediaQueryList = window.matchMedia('(display-mode: window-controls-overlay)');
+      this.mediaQueryList = window.matchMedia(
+        '(display-mode: window-controls-overlay)'
+      );
 
       // Set initial state
       this.layout.overlayMode.set(this.mediaQueryList.matches);
@@ -201,7 +234,9 @@ export class MediaPlayerComponent implements AfterViewInit {
     if (!this.videoElement?.nativeElement) return;
 
     const video = this.videoElement.nativeElement;
-    const globalContainer = this.document.getElementById('global-fullscreen-container');
+    const globalContainer = this.document.getElementById(
+      'global-fullscreen-container'
+    );
 
     if (!globalContainer) return;
 
@@ -223,7 +258,9 @@ export class MediaPlayerComponent implements AfterViewInit {
     if (!this.videoElement?.nativeElement || !this.originalVideoParent) return;
 
     const video = this.videoElement.nativeElement;
-    const globalContainer = this.document.getElementById('global-fullscreen-container');
+    const globalContainer = this.document.getElementById(
+      'global-fullscreen-container'
+    );
 
     // Hide global container
     if (globalContainer) {
@@ -232,7 +269,11 @@ export class MediaPlayerComponent implements AfterViewInit {
 
     // Move video back to original position
     if (this.originalVideoNextSibling) {
-      this.renderer.insertBefore(this.originalVideoParent, video, this.originalVideoNextSibling);
+      this.renderer.insertBefore(
+        this.originalVideoParent,
+        video,
+        this.originalVideoNextSibling
+      );
     } else {
       this.renderer.appendChild(this.originalVideoParent, video);
     }
@@ -260,7 +301,7 @@ export class MediaPlayerComponent implements AfterViewInit {
   ngOnDestroy() {
     // Clean up media query listener
     if (this.mediaQueryList) {
-      this.mediaQueryList.removeEventListener('change', () => { });
+      this.mediaQueryList.removeEventListener('change', () => {});
     }
     this.removeEscapeListener();
 
@@ -286,20 +327,44 @@ export class MediaPlayerComponent implements AfterViewInit {
         return;
       }
 
-      if (result.url.indexOf('youtu.be') > -1 || result.url.indexOf('youtube.com') > -1) {
+      if (
+        result.url.indexOf('youtu.be') > -1 ||
+        result.url.indexOf('youtube.com') > -1
+      ) {
         const youtubes = [...result.url.matchAll(this.utilities.regexpYouTube)];
-        let youtube = youtubes.map((i) => {
+        const youtube = youtubes.map(i => {
           return { url: `https://www.youtube.com/embed/${i[1]}` };
         });
 
         for (let index = 0; index < youtube.length; index++) {
           const youtubeUrl = youtube[index].url;
-          this.media.enque({ artist: '', artwork: '/logos/youtube.png', title: youtubeUrl, source: youtubeUrl, type: 'YouTube' });
+          this.media.enque({
+            artist: '',
+            artwork: '/logos/youtube.png',
+            title: youtubeUrl,
+            source: youtubeUrl,
+            type: 'YouTube',
+          });
         }
-      } else if (result.url.indexOf('.mp4') > -1 || result.url.indexOf('.webm') > -1) {
-        this.media.enque({ artist: '', artwork: '/logos/youtube.png', title: result.url, source: result.url, type: 'Video' });
+      } else if (
+        result.url.indexOf('.mp4') > -1 ||
+        result.url.indexOf('.webm') > -1
+      ) {
+        this.media.enque({
+          artist: '',
+          artwork: '/logos/youtube.png',
+          title: result.url,
+          source: result.url,
+          type: 'Video',
+        });
       } else {
-        this.media.enque({ artist: '', artwork: '', title: result.url, source: result.url, type: 'Music' });
+        this.media.enque({
+          artist: '',
+          artwork: '',
+          title: result.url,
+          source: result.url,
+          type: 'Music',
+        });
       }
     });
 

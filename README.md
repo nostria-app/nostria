@@ -10,7 +10,7 @@ Nostria is accessible as both web app and desktop app.
 
 Web: https://nostria.app
 
-Desktop: https://github.com/sondreb/nostria/releases
+Desktop: https://github.com/nostria-app/nostria/releases
 
 ## Documentation
 
@@ -70,10 +70,10 @@ Here is a list of opinions and decisions made in Nostria:
 - [NIP-65: Relay List Metadata](https://github.com/nostr-protocol/nips/blob/master/65.md) - We are ignoring the READ/WRITE flags for relays and all relays are both read and writes.
 - [NIP-51: Lists](https://github.com/nostr-protocol/nips/blob/master/51.md) - Follow sets (kind:30000) and Relay sets (kind:30002) will not be implemented. They are duplicate functionality and should be ignored.
 - [NIP-96: HTTP File Storage Integration](https://github.com/nostr-protocol/nips/blob/master/96.md) - This is a "duplicate" specification to Blossom, that has more features, but is additionally more complex. It allows metadata to be stored with the blob, but Nostria will not support this protocol. File storage server list (kind:10096) is therefore
-ignored.
-- NIP-58: Badges: Badges should be self-contained on the user's relays. That means both the badge definition and the badge claim should be on the user's relays. This is to ensure that the user has full set of data for their own needs. Maybe Nostria will perform lookup on issuer relays 
-to get updated badge definitions, but this is not a requirement. The user should be able to use the badge without relying on the issuer relay.
-That means that Nostria will publish both the badge definition and the badge claim to the user's relays.
+  ignored.
+- NIP-58: Badges: Badges should be self-contained on the user's relays. That means both the badge definition and the badge claim should be on the user's relays. This is to ensure that the user has full set of data for their own needs. Maybe Nostria will perform lookup on issuer relays
+  to get updated badge definitions, but this is not a requirement. The user should be able to use the badge without relying on the issuer relay.
+  That means that Nostria will publish both the badge definition and the badge claim to the user's relays.
 - NIP-B0: Web Bookmarking. We are not implementing this NIP, as this is something better left to the web browser.
 
 ## Scaling Nostr
@@ -82,7 +82,7 @@ Nostria is designed to help Nostr scale. It is implementing the protocol in a wa
 
 Read more about the journey to scale Nostr globally:
 
-[Scaling Nostr](https://medium.com/@sondreb/scaling-nostr-e50276774367)   
+[Scaling Nostr](https://medium.com/@sondreb/scaling-nostr-e50276774367)  
 [Discover Relays](https://medium.com/@sondreb/discovery-relays-e2b0bd00feec)
 
 ## Recommended IDE Setup
@@ -93,24 +93,28 @@ Read more about the journey to scale Nostr globally:
 
 Clone the repository.
 Install dependencies:
-   ```bash
-   npm install
-   ```
+
+```bash
+npm install
+```
+
 Start the development server:
-   ```bash
-   npm start
-   ```
+
+```bash
+npm start
+```
 
 Alternative if you want to run the desktop app:
-   ```bash
-   npm run tauri dev
-   ```
+
+```bash
+npm run tauri dev
+```
 
 ## Classifications
 
-* Accounts - List of accounts that the user has access to.
-* Account - This is accounts of the user within the app.
-* Users - This is Nostr users. "User" and "Users" refer to Nostr users, not the current user of the app.
+- Accounts - List of accounts that the user has access to.
+- Account - This is accounts of the user within the app.
+- Users - This is Nostr users. "User" and "Users" refer to Nostr users, not the current user of the app.
 
 ## License
 
