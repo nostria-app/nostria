@@ -1,6 +1,10 @@
 <h1></h1>
 
-<app-event [event]="event()"></app-event>
+<app-event
+  [event]="event()"
+  appearance="plain"
+  [repostsCount]="reposts().length"
+></app-event>
 
 <div class="reactions">
   @for (reaction of reactions(); track reaction.emoji) {
@@ -10,20 +14,6 @@
     </div>
   }
 </div>
-
-@if (app.enabledFeature('beta')) {
-  @if (reposts()) {
-    <button matButton (click)="repostNote()">
-      <mat-icon>repeat</mat-icon>
-      <span>{{ reposts().length }}</span>
-    </button>
-  }
-}
-
-<button matButton (click)="layout.commentNote(event()?.id)">
-  <mat-icon>comment</mat-icon>
-  <span>Comment</span>
-</button>
 
 <!-- <app-note-editor-dialog></app-note-editor-dialog> -->
 

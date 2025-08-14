@@ -24,8 +24,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { ApplicationService } from '../../services/application.service';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { EVENT_STATE_KEY, EventData } from '../../data-resolver';
-import { RepostService } from '../../services/repost.service';
-import { MatSnackBar } from '@angular/material/snack-bar';
 import { NoteEditorDialogComponent } from '../../components/note-editor-dialog/note-editor-dialog.component';
 
 /** Description of the EventPageComponent
@@ -84,8 +82,6 @@ export class EventPageComponent implements OnInit, OnDestroy {
   replies = signal<Event[]>([]);
   threadedReplies = signal<ThreadedEvent[]>([]);
   transferState = inject(TransferState);
-  private repostService = inject(RepostService);
-  private snackBar = inject(MatSnackBar);
 
   item!: EventData;
 
@@ -477,16 +473,5 @@ export class EventPageComponent implements OnInit, OnDestroy {
     // Navigate to the specific event to view deeper replies
     const encoded = nip19.neventEncode({ id: eventId });
     this.router.navigate(['/e', encoded]);
-  }
-
-  async repostNote(): Promise<void> {
-    const event = this.event();
-    if (!event) return;
-    const published = await this.repostService.repostNote(event);
-    if (published) {
-      this.snackBar.open('Note reposted successfully!', 'Dismiss', {
-        duration: 3000,
-      });
-    }
   }
 }

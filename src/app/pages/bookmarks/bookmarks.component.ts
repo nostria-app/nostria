@@ -288,10 +288,10 @@ export class BookmarksComponent {
   openBookmark(bookmark: Bookmark): void {
     if (bookmark.type === 'r') {
       window.open(bookmark.url, '_blank');
+    } else if (bookmark.type === 'a') {
+      this.layout.openArticle(bookmark.id);
     } else {
-      // For events and articles, navigate within the app
-      // this.router.navigate([bookmark.url]);
-      this.layout.openEvent(bookmark.id);
+      this.layout.openGenericEvent(bookmark.id);
     }
     this.logger.debug('Opening bookmark:', bookmark.url);
   }
