@@ -19,7 +19,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { MediaPreviewDialogComponent } from '../components/media-preview-dialog/media-preview.component';
-import { Event, nip19 } from 'nostr-tools';
+import { Event, kinds, nip19 } from 'nostr-tools';
 import {
   AddressPointer,
   EventPointer,
@@ -664,7 +664,7 @@ export class LayoutService implements OnDestroy {
       this.toggleSearch();
       try {
         const decoded = nip19.decode(value).data as EventPointer;
-        this.openEvent(value);
+        this.openGenericEvent(value);
       } catch (error) {
         console.warn('Failed to decode nevent:', value, error);
         this.toast('Invalid event format', 3000, 'error-snackbar');
@@ -712,7 +712,15 @@ export class LayoutService implements OnDestroy {
     this.router.navigate(['/p', pubkey]);
   }
 
-  openEvent(naddr: string, event?: Event): void {
+  openEvent(event: Event): void {
+    if (event.kind === kinds.LongFormArticle) {
+      this.openArticle(event.id, event);
+    } else {
+      this.openGenericEvent(event.id, event);
+    }
+  }
+
+  openGenericEvent(naddr: string, event?: Event): void {
     this.router.navigate(['/e', naddr], { state: { event } });
   }
 

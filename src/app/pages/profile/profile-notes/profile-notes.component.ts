@@ -5,35 +5,29 @@ import { RouterModule } from '@angular/router';
 import { LoggerService } from '../../../services/logger.service';
 import { LoadingOverlayComponent } from '../../../components/loading-overlay/loading-overlay.component';
 import { ProfileStateService } from '../../../services/profile-state.service';
-import { MatCardModule } from '@angular/material/card';
-import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { BookmarkService } from '../../../services/bookmark.service';
-import { AgoPipe } from '../../../pipes/ago.pipe';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { FormsModule } from '@angular/forms';
-import { ContentComponent } from '../../../components/content/content.component';
 import { LayoutService } from '../../../services/layout.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { EventComponent } from '../../../components/event/event.component';
 
 @Component({
   selector: 'app-profile-notes',
   standalone: true,
   imports: [
     CommonModule,
+    EventComponent,
     MatIconModule,
     LoadingOverlayComponent,
-    MatCardModule,
-    UserProfileComponent,
     RouterModule,
     MatTooltipModule,
-    AgoPipe,
     MatIconModule,
     MatButtonModule,
     MatSlideToggleModule,
     FormsModule,
-    ContentComponent,
     MatProgressSpinnerModule,
   ],
   templateUrl: './profile-notes.component.html',

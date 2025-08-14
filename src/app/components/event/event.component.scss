@@ -1,3 +1,32 @@
 .event-content {
   cursor: pointer;
 }
+
+.note-card {
+  &.plain {
+    border-radius: 0;
+    border: none;
+  }
+}
+
+.note-footer {
+  display: flex;
+}
+
+.note-footer-right {
+  margin-left: auto;
+}
+
+button.active {
+  color: rgb(52, 152, 219);
+}
+
+.repost-header {
+  font-style: italic;
+  opacity: 0.7;
+
+  mat-icon {
+    font-size: 18px;
+    line-height: 21px;
+  }
+}
