@@ -70,9 +70,6 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
   view = input<ViewMode>('list');
   imageLoadError = signal(false);
 
-  // Control whether touch events should pass through (true) for scrolling or be intercepted (false)
-  passthrough = input<boolean>(false);
-
   // Flag to track if component is visible
   private isVisible = signal(false);
   private intersectionObserver?: IntersectionObserver;
@@ -465,46 +462,5 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
    */
   isProfileNotFound(): boolean {
     return this.profile() && (this.profile().isEmpty || !this.profile().data);
-  }
-
-  /**
-   * Handles touch events to allow scrolling when passthrough is enabled
-   * @param event The touch event to handle
-   */
-  private touchStartY = 0;
-  private touchStartTime = 0;
-  private hasMoved = false;
-
-  handleTouchStart(event: TouchEvent): void {
-    this.touchStartY = event.touches[0].clientY;
-    this.touchStartTime = Date.now();
-    this.hasMoved = false;
-  }
-
-  handleTouchMove(event: TouchEvent): void {
-    // Allow scrolling by not preventing default
-    const currentY = event.touches[0].clientY;
-    const deltaY = Math.abs(currentY - this.touchStartY);
-
-    // If there's significant vertical movement, it's likely a scroll gesture
-    if (deltaY > 10) {
-      this.hasMoved = true;
-    }
-  }
-
-  handleTouchEnd(event: TouchEvent): void {
-    const touchEndTime = Date.now();
-    const touchDuration = touchEndTime - this.touchStartTime;
-
-    // If the touch was brief and there was no significant movement,
-    // treat it as a tap and allow navigation
-    if (!this.hasMoved && touchDuration < 300) {
-      // This is a tap - let the routerLink handle navigation
-      return;
-    }
-
-    // Otherwise, prevent navigation to allow scrolling
-    event.preventDefault();
-    event.stopPropagation();
   }
 }

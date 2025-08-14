@@ -23,6 +23,7 @@
       margin: 0;
       font-size: 1.75rem;
     }
+
     p {
       margin: 0;
       color: rgba(var(--mat-sys-primary-text), 0.6);
@@ -89,7 +90,6 @@
   width: 100%;
   overflow-x: hidden; // Changed back to hidden since we're wrapping items
   touch-action: pan-y; // Enable vertical touch scrolling
-  -webkit-overflow-scrolling: touch; // For better iOS scroll performance
 }
 
 .loading-container,
