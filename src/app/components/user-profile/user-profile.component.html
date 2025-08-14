@@ -23,16 +23,7 @@
     }
 
     <!-- Avatar section - single image element -->
-    <a [routerLink]="['/p', publicKey]" class="user-profile-avatar" [matTooltip]="
-        view() === 'large' || view() === 'medium' || view() === 'small'
-          ? getTooltipContent()
-          : ''
-      " [matTooltipClass]="'user-profile-tooltip'" matTooltipPosition="above" (touchstart)="handleTouchStart($event)"
-      (touchmove)="handleTouchMove($event)" (touchend)="handleTouchEnd($event)">
-      <!-- <a [routerLink]="['/p', pubkey()]" class="user-profile-avatar"
-      [matTooltip]="view() === 'large' || view() === 'medium' || view() === 'small' ? getTooltipContent() : ''"
-      [matTooltipClass]="'user-profile-tooltip'" matTooltipPosition="above" (touchstart)="handleTouchEvent($event)"
-      (touchmove)="handleTouchEvent($event)" (touchend)="handleTouchEvent($event)"> -->
+    <a [routerLink]="['/p', publicKey]" class="user-profile-avatar">
 
       @if (isLoading()) {
       <mat-spinner [diameter]="getSpinnerSize()" color="primary"></mat-spinner>
