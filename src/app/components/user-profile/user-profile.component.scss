@@ -91,6 +91,84 @@
     }
   }
 
+  // Custom tooltip for touch devices (doesn't interfere with scrolling)
+  .user-profile-avatar.has-custom-tooltip {
+    position: relative;
+
+    &::before {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-size: 10px;
+      line-height: 1.3;
+      white-space: pre-line;
+      max-width: 200px;
+      width: max-content;
+      word-wrap: break-word;
+      text-align: center;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s, visibility 0.3s;
+      z-index: 1000;
+      pointer-events: none; // Important: prevents tooltip from blocking touch events
+
+      // Prevent tooltip from going off-screen
+      @media (max-width: 300px) {
+        max-width: 160px;
+        left: 0;
+        transform: none;
+      }
+    }
+
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 4px solid transparent;
+      border-bottom-color: rgba(0, 0, 0, 0.8);
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s, visibility 0.3s;
+      z-index: 1000;
+      pointer-events: none;
+    }
+
+    // Show tooltip on hover (desktop) - long press for mobile is handled differently
+    @media (hover: hover) and (pointer: fine) {
+
+      &:hover::before,
+      &:hover::after {
+        opacity: 1;
+        visibility: visible;
+      }
+    }
+
+    // For touch devices, show tooltip on focus (when tapped)
+    @media (hover: none) {
+
+      &:focus::before,
+      &:focus::after {
+        opacity: 1;
+        visibility: visible;
+      }
+    }
+
+    // Show tooltip when temporary class is added (for touch)
+    &.show-tooltip::before,
+    &.show-tooltip::after {
+      opacity: 1;
+      visibility: visible;
+    }
+  }
+
   .user-profile-content {
     flex: 1;
     min-width: 0; // Enable text truncation
