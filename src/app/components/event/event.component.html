@@ -1,6 +1,5 @@
 @let item = record();
 @let targetItem = repostedRecord() || item;
-@let myRepostItem = myRepost();
 
 @if (targetItem && item) {
   <mat-card class="note-card" [class.plain]="isPlain()" appearance="outlined">
@@ -30,12 +29,8 @@
       <app-reply-button [event]="targetItem.event"></app-reply-button>
 
       @if (app.enabledFeature('beta')) {
-        @if (!!myRepostItem) {
-          <button
-            mat-button
-            class="active"
-            (click)="repostService.deleteRepost(myRepostItem.event)"
-          >
+        @if (!!repostByCurrentAccount()) {
+          <button mat-button class="active" (click)="deleteRepost()">
             <mat-icon>repeat</mat-icon>
             {{ reposts().length }}
           </button>
@@ -46,10 +41,7 @@
           </button>
 
           <mat-menu #menu="matMenu">
-            <button
-              mat-menu-item
-              (click)="repostService.repostNote(targetItem.event)"
-            >
+            <button mat-menu-item (click)="createRepost()">
               <mat-icon>repeat</mat-icon>
               <span>Repost</span>
             </button>

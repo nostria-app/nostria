@@ -471,7 +471,8 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
 
     // Add quote tag (NIP-18)
     if (this.data?.quote) {
-      tags.push(['q', this.data.quote.id, '', this.data.quote.pubkey]);
+      const relay = ''; // TODO: provide relay for the quoted note
+      tags.push(['q', this.data.quote.id, relay, this.data.quote.pubkey]);
     }
 
     // Add mention tags

@@ -72,7 +72,7 @@ export class EventComponent {
     return this.repostService.decodeRepost(event);
   });
 
-  myRepost = computed<NostrRecord | undefined>(() => {
+  repostByCurrentAccount = computed<NostrRecord | undefined>(() => {
     const event = this.event();
     if (!event) return;
     return this.reposts().find(
@@ -128,6 +128,18 @@ export class EventComponent {
       }
     );
     this.reposts.set(reposts);
+  }
+
+  async createRepost() {
+    const repostItem = this.repostByCurrentAccount();
+    if (!repostItem) return;
+    await this.repostService.deleteRepost(repostItem.event);
+  }
+
+  async deleteRepost() {
+    const repostItem = this.repostByCurrentAccount();
+    if (!repostItem) return;
+    await this.repostService.deleteRepost(repostItem.event);
   }
 
   createQuote() {
