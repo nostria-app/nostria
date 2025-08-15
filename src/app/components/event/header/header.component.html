@@ -52,6 +52,12 @@
         Copy Note Data
       </button>
       <mat-divider></mat-divider>
+      @if (isOurEvent()) {
+        <button mat-menu-item (click)="deleteEvent()">
+          <mat-icon>delete</mat-icon>
+          Delete Event
+        </button>
+      }
       <button mat-menu-item (click)="publishEvent()">
         <mat-icon>publish</mat-icon>
         Publish Event

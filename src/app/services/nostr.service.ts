@@ -44,7 +44,10 @@ import { DataService } from './data.service';
 import { UtilitiesService } from './utilities.service';
 import { Tier } from '../api/models';
 import { PublishQueueService, PublishTarget } from './publish-queue';
-import { SharedRelayServiceEx } from './account-relay.service';
+import {
+  AccountRelayService,
+  SharedRelayServiceEx,
+} from './account-relay.service';
 
 export interface NostrUser {
   pubkey: string;
@@ -73,6 +76,7 @@ export interface UserMetadataWithPubkey extends NostrEventData<UserMetadata> {
 export class NostrService implements NostriaService {
   private readonly logger = inject(LoggerService);
   private readonly relayService = inject(RelayService);
+  private readonly accountRelayService = inject(AccountRelayService);
   private readonly storage = inject(StorageService);
   private readonly appState = inject(ApplicationStateService);
   private readonly accountState = inject(AccountStateService);
@@ -898,6 +902,22 @@ export class NostrService implements NostriaService {
     }
 
     return signedEvent as Event;
+  }
+
+  async signAndPublish(event: UnsignedEvent): Promise<boolean> {
+    if (!event) {
+      throw new Error('Event parameter must not be null or undefined.');
+    }
+    const signedEvent = await this.signEvent(event);
+
+    const publishPromises = this.accountRelayService.publish(signedEvent);
+
+    if (publishPromises) {
+      await Promise.allSettled(publishPromises);
+      return true;
+    } else {
+      return false;
+    }
   }
 
   currentDate() {
