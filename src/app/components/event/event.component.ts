@@ -79,7 +79,7 @@ export class EventComponent {
   });
 
   constructor() {
-    effect(async () => {
+    effect(() => {
       const event = this.event();
 
       if (!event) {
