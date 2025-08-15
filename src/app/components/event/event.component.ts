@@ -131,9 +131,9 @@ export class EventComponent {
   }
 
   async createRepost() {
-    const repostItem = this.repostByCurrentAccount();
-    if (!repostItem) return;
-    await this.repostService.deleteRepost(repostItem.event);
+    const event = this.event();
+    if (!event) return;
+    await this.repostService.repostNote(event);
   }
 
   async deleteRepost() {
