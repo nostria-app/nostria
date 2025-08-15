@@ -70,10 +70,10 @@ export class EventComponent {
     return this.repostService.decodeRepost(event);
   });
 
-  isReposted = computed<boolean>(() => {
+  myRepost = computed<NostrRecord | undefined>(() => {
     const event = this.event();
-    if (!event) return false;
-    return this.reposts().some(
+    if (!event) return;
+    return this.reposts().find(
       e => e.event.pubkey === this.accountState.pubkey()
     );
   });
@@ -126,5 +126,16 @@ export class EventComponent {
       }
     );
     this.reposts.set(reposts);
+  }
+
+  async toggleRepost() {
+    const record = this.record();
+    const myRepost = this.myRepost();
+    if (!record) return;
+    if (myRepost) {
+      await this.repostService.deleteRepost(myRepost.event);
+    } else {
+      await this.repostService.repostNote(record.event);
+    }
   }
 }

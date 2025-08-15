@@ -33,9 +33,9 @@
           <button
             mat-button
             [ngClass]="{
-              active: isReposted(),
+              active: !!myRepost(),
             }"
-            (click)="repostService.repostNote(targetItem.event)"
+            (click)="toggleRepost()"
           >
             <mat-icon>repeat</mat-icon>
             {{ reposts().length }}
@@ -44,9 +44,9 @@
           <button
             mat-icon-button
             [ngClass]="{
-              active: isReposted(),
+              active: !!myRepost(),
             }"
-            (click)="repostService.repostNote(targetItem.event)"
+            (click)="toggleRepost()"
           >
             <mat-icon>repeat</mat-icon>
           </button>

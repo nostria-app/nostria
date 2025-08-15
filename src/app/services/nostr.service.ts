@@ -920,6 +920,14 @@ export class NostrService implements NostriaService {
     return event;
   }
 
+  // NIP-09 Deletion Request / Retraction Event
+  createRetractionEvent(eventToRetract: Event): UnsignedEvent {
+    return this.createEvent(kinds.EventDeletion, '', [
+      ['e', eventToRetract.id],
+      ['k', String(eventToRetract.kind)],
+    ]);
+  }
+
   /**
    * Adds or updates an entry in the metadata cache with LRU behavior
    */
