@@ -100,8 +100,8 @@ export class EventHeaderComponent {
       } as ConfirmDialogData,
     });
 
-    const result = await firstValueFrom(dialogRef.afterClosed());
-    if (result) {
+    const confirmedDelete = await firstValueFrom(dialogRef.afterClosed());
+    if (confirmedDelete) {
       const deleteEvent = this.nostrService.createRetractionEvent(event);
 
       const published = await this.nostrService.signAndPublish(deleteEvent);
