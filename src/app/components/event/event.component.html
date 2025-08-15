@@ -29,27 +29,27 @@
       <app-reply-button [event]="targetItem.event"></app-reply-button>
 
       @if (app.enabledFeature('beta')) {
-        @if (reposts().length > 0) {
-          <button
-            mat-button
-            [ngClass]="{
-              active: !!myRepost(),
-            }"
-            (click)="toggleRepost()"
-          >
+        @if (!!repostByCurrentAccount()) {
+          <button mat-button class="active" (click)="deleteRepost()">
             <mat-icon>repeat</mat-icon>
             {{ reposts().length }}
           </button>
         } @else {
-          <button
-            mat-icon-button
-            [ngClass]="{
-              active: !!myRepost(),
-            }"
-            (click)="toggleRepost()"
-          >
+          <button mat-button [matMenuTriggerFor]="menu">
             <mat-icon>repeat</mat-icon>
+            {{ reposts().length }}
           </button>
+
+          <mat-menu #menu="matMenu">
+            <button mat-menu-item (click)="createRepost()">
+              <mat-icon>repeat</mat-icon>
+              <span>Repost</span>
+            </button>
+            <button mat-menu-item (click)="createQuote()">
+              <mat-icon>format_quote</mat-icon>
+              <span>Quote</span>
+            </button>
+          </mat-menu>
         }
       }
 
