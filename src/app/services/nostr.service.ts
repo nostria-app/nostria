@@ -905,6 +905,9 @@ export class NostrService implements NostriaService {
   }
 
   async signAndPublish(event: UnsignedEvent): Promise<boolean> {
+    if (event == null) {
+      throw new Error('Event parameter must not be null or undefined.');
+    }
     const signedEvent = await this.signEvent(event);
 
     const publishPromises = this.accountRelayService.publish(signedEvent);
