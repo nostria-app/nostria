@@ -26,6 +26,7 @@ import { EventHeaderComponent } from './header/header.component';
 import { CommonModule } from '@angular/common';
 import { AccountStateService } from '../../services/account-state.service';
 import { UserDataFactoryService } from '../../services/user-data-factory.service';
+import { MatMenuModule } from '@angular/material/menu';
 
 type EventCardAppearance = 'card' | 'plain';
 
@@ -40,6 +41,7 @@ type EventCardAppearance = 'card' | 'plain';
     MatCardModule,
     MatButtonModule,
     MatIconModule,
+    MatMenuModule,
   ],
   templateUrl: './event.component.html',
   styleUrl: './event.component.scss',
@@ -70,7 +72,7 @@ export class EventComponent {
     return this.repostService.decodeRepost(event);
   });
 
-  myRepost = computed<NostrRecord | undefined>(() => {
+  repostByCurrentAccount = computed<NostrRecord | undefined>(() => {
     const event = this.event();
     if (!event) return;
     return this.reposts().find(
@@ -128,14 +130,27 @@ export class EventComponent {
     this.reposts.set(reposts);
   }
 
-  async toggleRepost() {
-    const record = this.record();
-    const myRepost = this.myRepost();
+  async createRepost() {
+    const repostItem = this.repostByCurrentAccount();
+    if (!repostItem) return;
+    await this.repostService.deleteRepost(repostItem.event);
+  }
+
+  async deleteRepost() {
+    const repostItem = this.repostByCurrentAccount();
+    if (!repostItem) return;
+    await this.repostService.deleteRepost(repostItem.event);
+  }
+
+  createQuote() {
+    const record = this.repostedRecord() || this.record();
     if (!record) return;
-    if (myRepost) {
-      await this.repostService.deleteRepost(myRepost.event);
-    } else {
-      await this.repostService.repostNote(record.event);
-    }
+    this.layout.createNote({
+      quote: {
+        id: record.event.id,
+        pubkey: record.event.pubkey,
+        // TODO: pass relay part of 'q' tag
+      },
+    });
   }
 }

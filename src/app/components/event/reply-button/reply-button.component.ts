@@ -22,6 +22,11 @@ export class ReplyButtonComponent {
   );
 
   onClick(): void {
-    this.layout.commentNote(this.event().id);
+    this.layout.createNote({
+      replyTo: {
+        id: this.event().id,
+        pubkey: this.event().pubkey,
+      },
+    });
   }
 }
