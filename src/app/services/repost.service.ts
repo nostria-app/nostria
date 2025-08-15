@@ -4,7 +4,6 @@ import { Event, kinds, UnsignedEvent } from 'nostr-tools';
 import { AccountRelayService } from './account-relay.service';
 import { AccountStateService } from './account-state.service';
 import { NostrService } from './nostr.service';
-import { ProfileStateService } from './profile-state.service';
 import { UtilitiesService } from './utilities.service';
 import { NostrRecord } from '../interfaces';
 
@@ -16,12 +15,7 @@ export class RepostService {
   private nostrService = inject(NostrService);
   private accountRelayService = inject(AccountRelayService);
   private snackBar = inject(MatSnackBar);
-  private profileService = inject(ProfileStateService);
   private utilities = inject(UtilitiesService);
-
-  isReposted(eventId: string): boolean {
-    return this.profileService.reposts().some(r => r.event.id === eventId);
-  }
 
   async repostNote(event: Event): Promise<boolean> {
     // Create the event

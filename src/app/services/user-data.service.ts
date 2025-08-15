@@ -1,6 +1,5 @@
 import { inject } from '@angular/core';
 import { StorageService } from './storage.service';
-import { RelayService } from './relay.service';
 import { NostrRecord } from '../interfaces';
 import { LoggerService } from './logger.service';
 import { Event, kinds } from 'nostr-tools';
@@ -12,7 +11,6 @@ import {
   SharedRelayServiceEx,
   UserRelayServiceEx,
 } from './account-relay.service';
-import { RelaysService } from './relays.service';
 
 export interface DataOptions {
   cache: boolean; // Whether to use cache
@@ -21,15 +19,12 @@ export interface DataOptions {
 
 export class UserDataService {
   private readonly storage = inject(StorageService);
-  private readonly relay = inject(RelayService);
   private readonly userRelayFactory = inject(UserRelayExFactoryService);
   private readonly discoveryRelayEx = inject(DiscoveryRelayServiceEx);
   private readonly sharedRelayEx = inject(SharedRelayServiceEx);
   private readonly logger = inject(LoggerService);
   private readonly utilities = inject(UtilitiesService);
   private readonly cache = inject(Cache);
-  private readonly relaysService = inject(RelaysService);
-  private pubkey: string | null = null;
   private userRelayEx!: UserRelayServiceEx;
 
   // Map to track pending profile requests to prevent race conditions
@@ -51,8 +46,6 @@ export class UserDataService {
   }
 
   async initialize(pubkey: string) {
-    this.pubkey = pubkey;
-
     this.userRelayEx = await this.userRelayFactory.create(pubkey);
     this.logger.debug(`UserDataService initialized for pubkey: ${pubkey}`);
   }
@@ -384,6 +377,60 @@ export class UserDataService {
       const relayEvents = await this.userRelayEx.getEventsByPubkeyAndKind(
         pubkey,
         kind
+      );
+      if (relayEvents && relayEvents.length > 0) {
+        events = relayEvents;
+      }
+    }
+
+    if (events.length === 0) {
+      return [];
+    }
+
+    records = events.map(event => this.toRecord(event));
+
+    if (options?.cache) {
+      this.cache.set(cacheKey, records, options);
+    }
+
+    if (options?.save) {
+      for (const event of events) {
+        await this.storage.saveEvent(event);
+      }
+    }
+
+    return records;
+  }
+
+  async getEventsByKindAndEventTag(
+    kind: number,
+    eventTag: string,
+    options?: CacheOptions & DataOptions
+  ): Promise<NostrRecord[]> {
+    const cacheKey = `${kind}-${eventTag}-all`;
+    let events: Event[] = [];
+    let records: NostrRecord[] = [];
+
+    if (options?.cache) {
+      const records = this.cache.get<NostrRecord[]>(cacheKey);
+
+      if (records) {
+        return records;
+      }
+    }
+
+    // If the caller explicitly don't want to save, we will not check the storage.
+    if (events.length === 0 && options?.save) {
+      const allEvents = await this.storage.getEventsByKind(kind);
+      events = allEvents.filter(
+        e => this.utilities.getTagValues('#e', e.tags)[0] === eventTag
+      );
+    }
+
+    if (events.length === 0) {
+      const relayEvents = await this.userRelayEx.getEventsByKindAndEventTag(
+        kind,
+        eventTag
       );
       if (relayEvents && relayEvents.length > 0) {
         events = relayEvents;
