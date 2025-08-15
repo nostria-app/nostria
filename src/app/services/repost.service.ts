@@ -48,7 +48,7 @@ export class RepostService {
 
     const published = await this.signAndPublish(deleteEvent);
     if (published) {
-      this.snackBar.open('Repost was requested for delete', 'Dismiss', {
+      this.snackBar.open('Repost deletion was requested', 'Dismiss', {
         duration: 3000,
       });
     }
