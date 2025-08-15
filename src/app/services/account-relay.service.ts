@@ -94,6 +94,18 @@ export abstract class RelayServiceBase {
     });
   }
 
+  async getEventsByKindAndEventTag(
+    kind: number,
+    eventTag: string | string[]
+  ): Promise<Event[]> {
+    const events = Array.isArray(eventTag) ? eventTag : [eventTag];
+
+    return this.getMany({
+      '#e': events,
+      kinds: [kind],
+    });
+  }
+
   async getEventByPubkeyAndKind(
     pubkey: string | string[],
     kind: number
