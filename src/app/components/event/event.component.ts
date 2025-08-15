@@ -79,7 +79,7 @@ export class EventComponent {
   });
 
   constructor() {
-    effect(() => {
+    effect(async () => {
       const event = this.event();
 
       if (!event) {
@@ -114,7 +114,10 @@ export class EventComponent {
   async loadReposts() {
     const record = this.repostedRecord() || this.record();
     if (!record) return;
-    const reposts = await this.data.getEventsByKindAndEventTag(
+    const userDataService = await this.userDataFactory.create(
+      this.accountState.pubkey()
+    );
+    const reposts = await userDataService.getEventsByKindAndEventTag(
       kinds.Repost,
       record.event.id,
       {

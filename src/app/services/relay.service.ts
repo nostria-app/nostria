@@ -404,18 +404,6 @@ export class RelayService {
     });
   }
 
-  async getEventsByKindAndEventTag(
-    kind: number,
-    eventTag: string | string[]
-  ): Promise<Event[]> {
-    const events = Array.isArray(eventTag) ? eventTag : [eventTag];
-
-    return this.getMany({
-      '#e': events,
-      kinds: [kind],
-    });
-  }
-
   async getEventByPubkeyAndKindAndTag(
     pubkey: string,
     kind: number,
