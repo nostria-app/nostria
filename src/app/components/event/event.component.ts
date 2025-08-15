@@ -26,6 +26,7 @@ import { EventHeaderComponent } from './header/header.component';
 import { CommonModule } from '@angular/common';
 import { AccountStateService } from '../../services/account-state.service';
 import { UserDataFactoryService } from '../../services/user-data-factory.service';
+import { MatMenuModule } from '@angular/material/menu';
 
 type EventCardAppearance = 'card' | 'plain';
 
@@ -40,6 +41,7 @@ type EventCardAppearance = 'card' | 'plain';
     MatCardModule,
     MatButtonModule,
     MatIconModule,
+    MatMenuModule,
   ],
   templateUrl: './event.component.html',
   styleUrl: './event.component.scss',
@@ -128,14 +130,15 @@ export class EventComponent {
     this.reposts.set(reposts);
   }
 
-  async toggleRepost() {
-    const record = this.record();
-    const myRepost = this.myRepost();
+  createQuote() {
+    const record = this.repostedRecord() || this.record();
     if (!record) return;
-    if (myRepost) {
-      await this.repostService.deleteRepost(myRepost.event);
-    } else {
-      await this.repostService.repostNote(record.event);
-    }
+    this.layout.createNote({
+      quote: {
+        id: record.event.id,
+        pubkey: record.event.pubkey,
+        // TODO: pass relay part of 'q' tag
+      },
+    });
   }
 }

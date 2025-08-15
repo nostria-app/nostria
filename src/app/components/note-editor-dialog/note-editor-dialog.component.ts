@@ -50,7 +50,7 @@ export interface NoteEditorDialogData {
   quote?: {
     id: string;
     pubkey: string;
-    content: string;
+    content?: string;
   };
   mentions?: string[]; // Array of pubkeys to mention
 }
@@ -212,7 +212,11 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
   constructor() {
     // Initialize content with quote if provided
     if (this.data?.quote) {
-      this.content.set(`\n\nnostr:${this.data.quote.id}`);
+      const nevent = nip19.neventEncode({
+        id: this.data.quote.id,
+        author: this.data.quote.pubkey,
+      });
+      this.content.set(`\n\nnostr:${nevent}`);
     }
 
     // Add reply mentions if this is a reply
@@ -467,7 +471,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
 
     // Add quote tag (NIP-18)
     if (this.data?.quote) {
-      tags.push(['q', this.data.quote.id]);
+      tags.push(['q', this.data.quote.id, '', this.data.quote.pubkey]);
     }
 
     // Add mention tags
