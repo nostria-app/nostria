@@ -1,10 +1,6 @@
 <h1></h1>
 
-<app-event
-  [event]="event()"
-  appearance="plain"
-  [repostsCount]="reposts().length"
-></app-event>
+<app-event [event]="event()" appearance="plain"></app-event>
 
 <div class="reactions">
   @for (reaction of reactions(); track reaction.emoji) {

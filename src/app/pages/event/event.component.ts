@@ -37,10 +37,6 @@ export interface Reaction {
   count: number;
 }
 
-export interface Reposts {
-  pubkey: string;
-}
-
 export interface ThreadedEvent {
   event: Event;
   replies: ThreadedEvent[];
@@ -84,6 +80,7 @@ export class EventPageComponent implements OnInit, OnDestroy {
   transferState = inject(TransferState);
 
   item!: EventData;
+  reactions = signal<Reaction[]>([]);
 
   constructor() {
     // this.item = this.route.snapshot.data['data'];
@@ -124,9 +121,6 @@ export class EventPageComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.pool?.destroy();
   }
-
-  reactions = signal<Reaction[]>([]);
-  reposts = signal<Reposts[]>([]);
 
   private getEventTags(event: Event): {
     rootId: string | null;
@@ -250,7 +244,7 @@ export class EventPageComponent implements OnInit, OnDestroy {
     this.pool?.subscribeEose(
       this.userRelays,
       {
-        kinds: [kinds.ShortTextNote, kinds.Reaction, kinds.Repost],
+        kinds: [kinds.ShortTextNote, kinds.Reaction],
         ['#e']: [eventId],
       },
       {
@@ -286,11 +280,6 @@ export class EventPageComponent implements OnInit, OnDestroy {
             }));
 
             this.reactions.set(reactionsArray);
-          } else if (event.kind === kinds.Repost) {
-            this.reposts.update(currentReposts => [
-              ...currentReposts,
-              { pubkey: event.pubkey },
-            ]);
           }
         },
         onclose(reasons) {

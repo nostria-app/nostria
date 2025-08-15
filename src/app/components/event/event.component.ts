@@ -24,6 +24,8 @@ import { ContentComponent } from '../content/content.component';
 import { ReplyButtonComponent } from './reply-button/reply-button.component';
 import { EventHeaderComponent } from './header/header.component';
 import { CommonModule } from '@angular/common';
+import { AccountStateService } from '../../services/account-state.service';
+import { UserDataFactoryService } from '../../services/user-data-factory.service';
 
 type EventCardAppearance = 'card' | 'plain';
 
@@ -47,7 +49,6 @@ export class EventComponent {
   type = input<'e' | 'a' | 'r' | 't'>('e');
   event = input<Event | null | undefined>(null);
   appearance = input<EventCardAppearance>('plain');
-  repostsCount = input<number>(0);
   isPlain = computed<boolean>(() => this.appearance() === 'plain');
 
   data = inject(DataService);
@@ -59,10 +60,22 @@ export class EventComponent {
   dialog = inject(MatDialog);
   snackBar = inject(MatSnackBar);
   app = inject(ApplicationService);
+  accountState = inject(AccountStateService);
+  userDataFactory = inject(UserDataFactoryService);
+  reposts = signal<NostrRecord[]>([]);
+
   repostedRecord = computed<NostrRecord | null>(() => {
     const event = this.event();
     if (!event || event.kind !== kinds.Repost) return null;
     return this.repostService.decodeRepost(event);
+  });
+
+  isReposted = computed<boolean>(() => {
+    const event = this.event();
+    if (!event) return false;
+    return this.reposts().some(
+      e => e.event.pubkey === this.accountState.pubkey()
+    );
   });
 
   constructor() {
@@ -75,6 +88,7 @@ export class EventComponent {
 
       const record = this.data.toRecord(event);
       this.record.set(record);
+      this.loadReposts();
     });
 
     effect(async () => {
@@ -95,5 +109,19 @@ export class EventComponent {
         }
       }
     });
+  }
+
+  async loadReposts() {
+    const record = this.repostedRecord() || this.record();
+    if (!record) return;
+    const reposts = await this.data.getEventsByKindAndEventTag(
+      kinds.Repost,
+      record.event.id,
+      {
+        save: false,
+        cache: false, // cannot cache until we have stale-while-revalidate strategy implemented
+      }
+    );
+    this.reposts.set(reposts);
   }
 }

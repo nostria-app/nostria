@@ -444,4 +444,58 @@ export class DataService {
 
     return records;
   }
+
+  async getEventsByKindAndEventTag(
+    kind: number,
+    eventTag: string,
+    options?: CacheOptions & DataOptions
+  ): Promise<NostrRecord[]> {
+    const cacheKey = `${kind}-${eventTag}-all`;
+    let events: Event[] = [];
+    let records: NostrRecord[] = [];
+
+    if (options?.cache) {
+      const records = this.cache.get<NostrRecord[]>(cacheKey);
+      // TODO: implement support for stale-while-revalidate strategy
+      if (records) {
+        return records;
+      }
+    }
+
+    // If the caller explicitly don't want to save, we will not check the storage.
+    if (events.length === 0 && options?.save) {
+      const allEvents = await this.storage.getEventsByKind(kind);
+      events = allEvents.filter(
+        e => this.utilities.getTagValues('#e', e.tags)[0] === eventTag
+      );
+    }
+
+    if (events.length === 0) {
+      const relayEvents = await this.relay.getEventsByKindAndEventTag(
+        kind,
+        eventTag
+      );
+      if (relayEvents && relayEvents.length > 0) {
+        events = relayEvents;
+      }
+    }
+
+    if (events.length === 0) {
+      return [];
+    }
+
+    records = events.map(event => this.toRecord(event));
+
+    if (options?.cache) {
+      this.cache.set(cacheKey, records, options);
+    }
+
+    if (options?.save) {
+      for (const event of events) {
+        await this.storage.saveEvent(event);
+      }
+    }
+
+    return records;
+  }
 }
