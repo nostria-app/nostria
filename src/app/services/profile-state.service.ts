@@ -150,6 +150,11 @@ export class ProfileStateService {
           authors: [pubkey],
           limit: 30,
         },
+        {
+          kinds: [kinds.GenericRepost],
+          authors: [pubkey],
+          limit: 30,
+        },
       ],
       {
         onevent: evt => {
@@ -181,7 +186,10 @@ export class ProfileStateService {
             } else {
               this.replies.update(events => [...events, record]);
             }
-          } else if (evt.kind === kinds.Repost) {
+          } else if (
+            evt.kind === kinds.Repost ||
+            evt.kind === kinds.GenericRepost
+          ) {
             this.reposts.update(reposts => [
               ...reposts,
               this.utilities.toRecord(evt),

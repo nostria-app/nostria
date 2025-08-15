@@ -1,10 +1,11 @@
 import { inject, Injectable } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { Event, kinds, UnsignedEvent } from 'nostr-tools';
+import type { Event, UnsignedEvent } from 'nostr-tools';
+import { kinds } from 'nostr-tools';
+import type { NostrRecord } from '../interfaces';
 import { AccountRelayService } from './account-relay.service';
 import { NostrService } from './nostr.service';
 import { UtilitiesService } from './utilities.service';
-import { NostrRecord } from '../interfaces';
 
 @Injectable({
   providedIn: 'root',
@@ -16,14 +17,7 @@ export class RepostService {
   private utilities = inject(UtilitiesService);
 
   async repostNote(event: Event): Promise<boolean> {
-    const repostEvent = this.nostrService.createEvent(
-      kinds.Repost,
-      JSON.stringify(event),
-      [
-        ['e', event.id],
-        ['p', event.pubkey],
-      ]
-    );
+    const repostEvent = this.createRepostEvent(event);
 
     const published = await this.signAndPublish(repostEvent);
     if (published) {
@@ -53,6 +47,27 @@ export class RepostService {
       });
     }
     return published;
+  }
+
+  private createRepostEvent(event: Event): UnsignedEvent {
+    const tags = [
+      ['e', event.id],
+      ['p', event.pubkey],
+    ];
+
+    if (event.kind === kinds.ShortTextNote) {
+      return this.nostrService.createEvent(
+        kinds.Repost,
+        JSON.stringify(event),
+        tags
+      );
+    }
+
+    return this.nostrService.createEvent(
+      kinds.GenericRepost,
+      JSON.stringify(event),
+      [...tags, ['k', String(event.kind)]]
+    );
   }
 
   private async signAndPublish(event: UnsignedEvent): Promise<boolean> {

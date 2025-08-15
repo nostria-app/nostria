@@ -68,7 +68,11 @@ export class EventComponent {
 
   repostedRecord = computed<NostrRecord | null>(() => {
     const event = this.event();
-    if (!event || event.kind !== kinds.Repost) return null;
+    if (
+      !event ||
+      (event.kind !== kinds.Repost && event.kind !== kinds.GenericRepost)
+    )
+      return null;
     return this.repostService.decodeRepost(event);
   });
 
