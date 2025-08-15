@@ -55,6 +55,9 @@ export class RepostService {
       ['p', event.pubkey],
     ];
 
+    // NIP-18 specification: kind:1 events (ShortTextNote) must use kind:6 reposts,
+    // while all other event kinds use kind:16 generic reposts.
+    // See: https://github.com/nostr-protocol/nips/blob/master/18.md
     if (event.kind === kinds.ShortTextNote) {
       return this.nostrService.createEvent(
         kinds.Repost,
