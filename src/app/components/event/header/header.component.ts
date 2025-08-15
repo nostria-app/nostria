@@ -1,3 +1,4 @@
+import { DatePipe } from '@angular/common';
 import {
   Component,
   computed,
@@ -7,30 +8,30 @@ import {
   signal,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { LayoutService } from '../../../services/layout.service';
-import {
-  PublishDialogComponent,
-  PublishDialogData,
-} from '../publish-dialog/publish-dialog.component';
-import { Event } from 'nostr-tools';
+import { MatCardModule } from '@angular/material/card';
 import { MatDialog } from '@angular/material/dialog';
 import { MatDividerModule } from '@angular/material/divider';
-import { NostrRecord } from '../../../interfaces';
-import { DataService } from '../../../services/data.service';
+import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { Event } from 'nostr-tools';
+import { firstValueFrom } from 'rxjs';
+import { NostrRecord } from '../../../interfaces';
 import { AgoPipe } from '../../../pipes/ago.pipe';
-import { DatePipe } from '@angular/common';
-import { UserProfileComponent } from '../../user-profile/user-profile.component';
-import { MatCardModule } from '@angular/material/card';
+import { AccountStateService } from '../../../services/account-state.service';
+import { DataService } from '../../../services/data.service';
+import { LayoutService } from '../../../services/layout.service';
+import { NostrService } from '../../../services/nostr.service';
 import {
   ConfirmDialogComponent,
   ConfirmDialogData,
 } from '../../confirm-dialog/confirm-dialog.component';
-import { NostrService } from '../../../services/nostr.service';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { AccountStateService } from '../../../services/account-state.service';
+import { UserProfileComponent } from '../../user-profile/user-profile.component';
+import {
+  PublishDialogComponent,
+  PublishDialogData,
+} from '../publish-dialog/publish-dialog.component';
 
 @Component({
   selector: 'app-event-header',
@@ -99,18 +100,17 @@ export class EventHeaderComponent {
       } as ConfirmDialogData,
     });
 
-    dialogRef.afterClosed().subscribe(async result => {
-      if (result) {
-        const deleteEvent = this.nostrService.createRetractionEvent(event);
+    const result = await firstValueFrom(dialogRef.afterClosed());
+    if (result) {
+      const deleteEvent = this.nostrService.createRetractionEvent(event);
 
-        const published = await this.nostrService.signAndPublish(deleteEvent);
-        if (published) {
-          this.snackBar.open('Note deletion was requested', 'Dismiss', {
-            duration: 3000,
-          });
-        }
+      const published = await this.nostrService.signAndPublish(deleteEvent);
+      if (published) {
+        this.snackBar.open('Note deletion was requested', 'Dismiss', {
+          duration: 3000,
+        });
       }
-    });
+    }
   }
 
   async publishEvent() {
