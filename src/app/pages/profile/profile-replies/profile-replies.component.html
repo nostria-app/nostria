@@ -9,39 +9,7 @@
       } @else {
         <div class="replies-list">
           @for (note of filteredReplies(); track note.id) {
-            <mat-card class="note-card" appearance="outlined">
-              <app-user-profile
-                class="user-profile-thread"
-                view="thread"
-                [pubkey]="profileState.currentProfilePubkey()"
-              >
-                <a
-                  class="date-link"
-                  [routerLink]="['/e', note.id]"
-                  [matTooltip]="note.created_at * 1000 | date: 'medium'"
-                  matTooltipPosition="below"
-                >
-                  {{ note.created_at | ago }}
-                </a>
-              </app-user-profile>
-              <app-content [content]="note.content"></app-content>
-              <mat-card-footer class="note-footer">
-                <button mat-icon-button>
-                  <mat-icon matTooltip="Reply" matTooltipPosition="below"
-                    >reply</mat-icon
-                  >
-                </button>
-                <button mat-icon-button class="note-footer-right">
-                  <mat-icon
-                    [matTooltip]="bookmark.getBookmarkTooltip(note.id)"
-                    matTooltipPosition="below"
-                    (click)="bookmark.toggleBookmark(note.id)"
-                  >
-                    {{ bookmark.getBookmarkIcon(note.id) }}
-                  </mat-icon>
-                </button>
-              </mat-card-footer>
-            </mat-card>
+            <app-event [event]="note.event" appearance="card"></app-event>
           }
         </div>
       }
