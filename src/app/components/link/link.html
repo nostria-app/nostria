@@ -1,10 +1,7 @@
 @if (link()) {
-<a
-  [routerLink]="link()"
-  matTooltipPosition="below"
-  [matTooltip]="event().created_at * 1000 | date: 'medium'"
-  class="app-link"
->
+<a (click)="navigateToEvent()" (keydown.enter)="navigateToEvent()" (keydown.space)="navigateToEvent()"
+  matTooltipPosition="below" [matTooltip]="event().created_at * 1000 | date: 'medium'" class="app-link" tabindex="0"
+  role="link">
   {{ event().created_at | ago }}
 </a>
 }
