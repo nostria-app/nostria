@@ -93,6 +93,13 @@ export class EventPageComponent implements OnInit, OnDestroy {
       this.transferState.remove(EVENT_STATE_KEY); // optional cleanup
     }
 
+    // Check for router navigation state
+    const navigation = this.router.getCurrentNavigation();
+    if (navigation?.extras.state?.['event']) {
+      console.log('Router state event data:', navigation.extras.state['event']);
+      this.event.set(navigation.extras.state['event'] as Event);
+    }
+
     // Effect to load event when route parameter changes
     effect(async () => {
       if (this.app.initialized() && this.routeParams()) {
@@ -116,7 +123,7 @@ export class EventPageComponent implements OnInit, OnDestroy {
     });
   }
 
-  ngOnInit() {}
+  ngOnInit() { }
 
   ngOnDestroy() {
     this.pool?.destroy();

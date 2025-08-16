@@ -136,6 +136,16 @@ export class ProfileComponent {
       return;
     }
 
+    // Check for router navigation state
+    const navigation = this.router.getCurrentNavigation();
+    if (navigation?.extras.state?.['event']) {
+      console.log(
+        'Router state event data for profile:',
+        navigation.extras.state['event']
+      );
+      // Handle the event data as needed for profile context
+    }
+
     // Whenever profile is edited by user, update the user metadata if it matches the current pubkey
     effect(() => {
       const profile = this.accountState.profile();
