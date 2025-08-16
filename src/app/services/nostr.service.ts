@@ -76,7 +76,7 @@ export interface UserMetadataWithPubkey extends NostrEventData<UserMetadata> {
 export class NostrService implements NostriaService {
   private readonly logger = inject(LoggerService);
   private readonly relayService = inject(RelayService);
-  private readonly accountRelayService = inject(AccountRelayService);
+  private readonly accountRelay = inject(AccountRelayService);
   private readonly storage = inject(StorageService);
   private readonly appState = inject(ApplicationStateService);
   private readonly accountState = inject(AccountStateService);
@@ -910,7 +910,7 @@ export class NostrService implements NostriaService {
     }
     const signedEvent = await this.signEvent(event);
 
-    const publishPromises = this.accountRelayService.publish(signedEvent);
+    const publishPromises = this.accountRelay.publish(signedEvent);
 
     if (publishPromises) {
       await Promise.allSettled(publishPromises);
