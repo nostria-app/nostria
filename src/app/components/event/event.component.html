@@ -29,28 +29,32 @@
       <app-reply-button [event]="targetItem.event"></app-reply-button>
 
       @if (app.enabledFeature('beta')) {
-        @if (!!repostByCurrentAccount()) {
-          <button mat-button class="active" (click)="deleteRepost()">
-            <mat-icon>repeat</mat-icon>
-            {{ reposts().length }}
-          </button>
-        } @else {
-          <button mat-button [matMenuTriggerFor]="menu">
-            <mat-icon>repeat</mat-icon>
-            {{ reposts().length }}
-          </button>
+        <button
+          mat-button
+          [ngClass]="{ active: !!repostByCurrentAccount() }"
+          [matMenuTriggerFor]="menu"
+        >
+          <mat-icon>repeat</mat-icon>
+          {{ reposts().length }}
+        </button>
 
-          <mat-menu #menu="matMenu">
+        <mat-menu #menu="matMenu">
+          @if (!!repostByCurrentAccount()) {
+            <button mat-menu-item (click)="deleteRepost()">
+              <mat-icon>repeat</mat-icon>
+              <span>Undo Repost</span>
+            </button>
+          } @else {
             <button mat-menu-item (click)="createRepost()">
               <mat-icon>repeat</mat-icon>
               <span>Repost</span>
             </button>
-            <button mat-menu-item (click)="createQuote()">
-              <mat-icon>format_quote</mat-icon>
-              <span>Quote</span>
-            </button>
-          </mat-menu>
-        }
+          }
+          <button mat-menu-item (click)="createQuote()">
+            <mat-icon>format_quote</mat-icon>
+            <span>Quote</span>
+          </button>
+        </mat-menu>
       }
 
       <button mat-icon-button class="note-footer-right">
