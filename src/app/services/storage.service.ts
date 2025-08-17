@@ -248,7 +248,7 @@ export class StorageService {
   private fallbackStorage = new Map<string, any>();
   useFallbackMode = signal(false);
 
-  constructor() {}
+  constructor() { }
 
   async init(): Promise<void> {
     this.logger.info('StorageService.init() called');
@@ -705,6 +705,37 @@ export class StorageService {
 
   async getEventsByPubkey(pubkey: string | string[]): Promise<Event[]> {
     try {
+      // Validate pubkey parameter
+      if (!pubkey || (Array.isArray(pubkey) && pubkey.length === 0)) {
+        this.logger.warn(
+          'getEventsByPubkey called with invalid pubkey:',
+          pubkey
+        );
+        return [];
+      }
+
+      if (
+        Array.isArray(pubkey) &&
+        pubkey.some(pk => !pk || pk === 'undefined')
+      ) {
+        this.logger.warn(
+          'getEventsByPubkey called with invalid pubkey in array:',
+          pubkey
+        );
+        return [];
+      }
+
+      if (
+        typeof pubkey === 'string' &&
+        (pubkey === 'undefined' || !pubkey.trim())
+      ) {
+        this.logger.warn(
+          'getEventsByPubkey called with invalid pubkey string:',
+          pubkey
+        );
+        return [];
+      }
+
       if (Array.isArray(pubkey)) {
         // Handle array of pubkeys
         const allEvents: Event[] = [];
@@ -747,6 +778,34 @@ export class StorageService {
     pubkey: string | string[],
     kind: number
   ): Promise<Event | null> {
+    // Validate pubkey parameter
+    if (!pubkey || (Array.isArray(pubkey) && pubkey.length === 0)) {
+      this.logger.warn(
+        'getEventByPubkeyAndKind called with invalid pubkey:',
+        pubkey
+      );
+      return null;
+    }
+
+    if (Array.isArray(pubkey) && pubkey.some(pk => !pk || pk === 'undefined')) {
+      this.logger.warn(
+        'getEventByPubkeyAndKind called with invalid pubkey in array:',
+        pubkey
+      );
+      return null;
+    }
+
+    if (
+      typeof pubkey === 'string' &&
+      (pubkey === 'undefined' || !pubkey.trim())
+    ) {
+      this.logger.warn(
+        'getEventByPubkeyAndKind called with invalid pubkey string:',
+        pubkey
+      );
+      return null;
+    }
+
     const events = await this.getEventsByPubkeyAndKind(pubkey, kind);
 
     if (events && events.length > 0) {
@@ -761,6 +820,37 @@ export class StorageService {
     kind: number
   ): Promise<Event[]> {
     try {
+      // Validate pubkey parameter
+      if (!pubkey || (Array.isArray(pubkey) && pubkey.length === 0)) {
+        this.logger.warn(
+          'getEventsByPubkeyAndKind called with invalid pubkey:',
+          pubkey
+        );
+        return [];
+      }
+
+      if (
+        Array.isArray(pubkey) &&
+        pubkey.some(pk => !pk || pk === 'undefined')
+      ) {
+        this.logger.warn(
+          'getEventsByPubkeyAndKind called with invalid pubkey in array:',
+          pubkey
+        );
+        return [];
+      }
+
+      if (
+        typeof pubkey === 'string' &&
+        (pubkey === 'undefined' || !pubkey.trim())
+      ) {
+        this.logger.warn(
+          'getEventsByPubkeyAndKind called with invalid pubkey string:',
+          pubkey
+        );
+        return [];
+      }
+
       if (Array.isArray(pubkey)) {
         // Handle array of pubkeys
         const allEvents: Event[] = [];
@@ -798,6 +888,37 @@ export class StorageService {
     dTagValue: string
   ): Promise<Event | undefined> {
     try {
+      // Validate pubkey parameter
+      if (!pubkey || (Array.isArray(pubkey) && pubkey.length === 0)) {
+        this.logger.warn(
+          'getParameterizedReplaceableEvent called with invalid pubkey:',
+          pubkey
+        );
+        return undefined;
+      }
+
+      if (
+        Array.isArray(pubkey) &&
+        pubkey.some(pk => !pk || pk === 'undefined')
+      ) {
+        this.logger.warn(
+          'getParameterizedReplaceableEvent called with invalid pubkey in array:',
+          pubkey
+        );
+        return undefined;
+      }
+
+      if (
+        typeof pubkey === 'string' &&
+        (pubkey === 'undefined' || !pubkey.trim())
+      ) {
+        this.logger.warn(
+          'getParameterizedReplaceableEvent called with invalid pubkey string:',
+          pubkey
+        );
+        return undefined;
+      }
+
       if (Array.isArray(pubkey)) {
         // For arrays, get events from all pubkeys and return the most recent one
         const allEvents: Event[] = [];
