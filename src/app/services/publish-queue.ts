@@ -1,10 +1,9 @@
 import { computed, effect, inject, Injectable, Injector } from '@angular/core';
-import { NostrService } from './nostr.service';
 import { Event, UnsignedEvent } from 'nostr-tools';
 import { ProfileStateService } from './profile-state.service';
-import { RelayService } from './relays/relay';
 import { AccountStateService } from './account-state.service';
 import { AccountRelayServiceEx } from './relays/account-relay';
+import { DiscoveryRelayServiceEx } from './relays/discovery-relay';
 
 export enum PublishTarget {
   Account = 'account',
@@ -16,7 +15,7 @@ export enum PublishTarget {
   providedIn: 'root',
 })
 export class PublishQueueService {
-  private readonly relay = inject(RelayService);
+  private readonly discoveryRelay = inject(DiscoveryRelayServiceEx);
   private readonly profileState = inject(ProfileStateService);
   private readonly accountState = inject(AccountStateService);
   private readonly accountRelay = inject(AccountRelayServiceEx);
@@ -86,7 +85,7 @@ export class PublishQueueService {
         } else if (task.target === PublishTarget.User) {
           await this.profileState.relay?.publish(task.event as Event);
         } else if (task.target === PublishTarget.Discovery) {
-          this.relay.publishToDiscoveryRelays(task.event as Event);
+          this.discoveryRelay.publish(task.event as Event);
         }
 
         // Mark this task as processed

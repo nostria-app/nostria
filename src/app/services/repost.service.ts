@@ -3,7 +3,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import type { Event, UnsignedEvent } from 'nostr-tools';
 import { kinds } from 'nostr-tools';
 import type { NostrRecord } from '../interfaces';
-import { AccountRelayService } from './relays/account-relay';
+import { AccountRelayServiceEx } from './relays/account-relay';
 import { NostrService } from './nostr.service';
 import { UtilitiesService } from './utilities.service';
 
@@ -12,7 +12,7 @@ import { UtilitiesService } from './utilities.service';
 })
 export class RepostService {
   private nostrService = inject(NostrService);
-  private accountRelayService = inject(AccountRelayService);
+  private accountRelayService = inject(AccountRelayServiceEx);
   private snackBar = inject(MatSnackBar);
   private utilities = inject(UtilitiesService);
 
