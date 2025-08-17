@@ -24,7 +24,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatButtonModule } from '@angular/material/button';
 import { InfoRecord } from '../../services/storage.service';
-import { Event } from 'nostr-tools';
+import { Event, nip19 } from 'nostr-tools';
 import { UtilitiesService } from '../../services/utilities.service';
 import { DataService } from '../../services/data.service';
 import { RelaysService } from '../../services/relays.service';
@@ -80,6 +80,15 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
   private readonly DEBOUNCE_TIME = 350; // milliseconds
   private readonly SCROLL_CHECK_INTERVAL = 100; // milliseconds
   private scrollCheckTimer?: number;
+
+  npubValue = computed<string>(() => {
+    const pubkey = this.pubkey();
+    if (!pubkey) {
+      return '';
+    }
+
+    return nip19.npubEncode(pubkey);
+  });
 
   constructor() {
     // Set up scroll detection
