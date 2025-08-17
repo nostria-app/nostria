@@ -35,10 +35,15 @@
     }
 
     <!-- Avatar section - single image element -->
-    <a [routerLink]="['/p', npubValue()]" class="user-profile-avatar"
-      [class.has-custom-tooltip]="view() === 'large' || view() === 'medium' || view() === 'small'"
-      [attr.data-tooltip]="getTooltipContent()" (touchstart)="showTooltipOnTouch($event)">
-
+    <a
+      [routerLink]="['/p', npubValue()]"
+      class="user-profile-avatar"
+      [class.has-custom-tooltip]="
+        view() === 'large' || view() === 'medium' || view() === 'small'
+      "
+      [attr.data-tooltip]="getTooltipContent()"
+      (touchstart)="showTooltipOnTouch($event)"
+    >
       @if (isLoading()) {
         <mat-spinner
           [diameter]="getSpinnerSize()"
