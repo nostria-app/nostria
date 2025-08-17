@@ -16,7 +16,6 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AgoPipe } from '../../../pipes/ago.pipe';
 import { NostrService } from '../../../services/nostr.service';
-import { RelayService } from '../../../services/relays/relay';
 import { Router } from '@angular/router';
 import { StorageService } from '../../../services/storage.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -28,6 +27,7 @@ import {
   ProfileData,
   ProfileUpdateOptions,
 } from '../../../services/profile';
+import { AccountRelayServiceEx } from '../../../services/relays/account-relay';
 
 @Component({
   selector: 'app-profile-edit',
@@ -49,7 +49,7 @@ export class ProfileEditComponent implements OnInit {
   nostr = inject(NostrService);
   storage = inject(StorageService);
   data = inject(DataService);
-  relay = inject(RelayService);
+  accountRelay = inject(AccountRelayServiceEx);
   router = inject(Router);
   media = inject(MediaService);
   private snackBar = inject(MatSnackBar);
