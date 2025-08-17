@@ -4,7 +4,6 @@ import {
   signal,
   effect,
   untracked,
-  Inject,
   PLATFORM_ID,
   DOCUMENT,
   computed,
@@ -28,12 +27,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import {
-  MatDialog,
-  MatDialogModule,
-  MatDialogRef,
-  MAT_DIALOG_DATA,
-} from '@angular/material/dialog';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -43,7 +37,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { MatListModule } from '@angular/material/list';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { Event, kinds, nip19, SimplePool } from 'nostr-tools';
+import { nip19 } from 'nostr-tools';
 import { StorageService } from '../../services/storage.service';
 import { ProfileStateService } from '../../services/profile-state.service';
 import { ProfileTrackingService } from '../../services/profile-tracking.service';
@@ -52,8 +46,6 @@ import { ProfileHeaderComponent } from './profile-header/profile-header.componen
 import { ApplicationService } from '../../services/application.service';
 import { MediaPreviewDialogComponent } from '../../components/media-preview-dialog/media-preview.component';
 import { AccountStateService } from '../../services/account-state.service';
-import { UserRelayFactoryService } from '../../services/user-relay-factory.service';
-import { UserRelayService } from '../../services/relays/user-relay';
 import { NostrRecord } from '../../interfaces';
 import { DataService } from '../../services/data.service';
 import { UtilitiesService } from '../../services/utilities.service';

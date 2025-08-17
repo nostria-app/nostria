@@ -1,13 +1,10 @@
 import { Injectable, signal, computed, effect } from '@angular/core';
 import { NostrRecord } from '../interfaces';
 import { inject } from '@angular/core';
-import { NotificationService } from './notification.service';
-import { NotificationType, StorageService } from './storage.service';
-import { UserRelayService } from './relays/user-relay';
-import { kinds } from 'nostr-tools';
+import { UserRelayServiceEx } from './relays/user-relay';
+import { kinds, Event } from 'nostr-tools';
 import { LoggerService } from './logger.service';
-import { UserRelayFactoryService } from './user-relay-factory.service';
-import { DataService } from './data.service';
+import { UserRelayExFactoryService } from './user-relay-factory.service';
 import { UtilitiesService } from './utilities.service';
 
 @Injectable({
@@ -15,10 +12,8 @@ import { UtilitiesService } from './utilities.service';
 })
 export class ProfileStateService {
   private readonly logger = inject(LoggerService);
-  private readonly relayFactory = inject(UserRelayFactoryService);
+  private readonly relayFactory = inject(UserRelayExFactoryService);
   private readonly utilities = inject(UtilitiesService);
-  // private readonly data = inject(DataService);
-  // private readonly storage = inject(StorageService);
 
   // Signal to store the current profile's following list
   followingList = signal<string[]>([]);
@@ -27,8 +22,7 @@ export class ProfileStateService {
   replies = signal<NostrRecord[]>([]);
   articles = signal<NostrRecord[]>([]);
   media = signal<NostrRecord[]>([]);
-  relay: UserRelayService | null = null;
-  // private userRelay: UserRelayService | undefined = undefined;
+  relay: UserRelayServiceEx | null = null;
 
   // Current profile pubkey
   currentProfilePubkey = signal<string>('');
@@ -55,37 +49,7 @@ export class ProfileStateService {
       console.error('Failed to create UserRelay:', err);
       this.logger.error('Failed to create UserRelay:', err);
     }
-
-    // Only subscribe to events if we have a working user relay
-    //   if (this.relay && this.relay.relayUrls.length > 0) {
-    //     this.relay.subscribeEose([{
-    //       kinds: [kinds.ShortTextNote],
-    //       authors: [pubkey],
-    //       limit: 10
-    //     }], (event) => {
-    //       const record = this.data.getRecord(event);
-
-    //       if (this.utilities.isRootPost(event)) {
-    //         this.notes.update(events => [...events, record]);
-    //       } else {
-    //         this.replies.update(events => [...events, record]);
-    //       }
-    //     }, () => {
-    //       console.log('FINISHED!!!');
-    //     });
-    //   } else {
-    //     this.logger.warn('UserRelay has no relay URLs, cannot subscribe to events');
-    //   }
-
-    // } catch (err: any) {
-    //   this.logger.error('Failed to create UserRelay, but continuing with profile load:', err);
-    //   // Don't return here - continue with loading the profile
-    // }
   }
-
-  // setFollowingList(list: string[]): void {
-  //   this.followingList.set(list);
-  // }
 
   setCurrentProfilePubkey(pubkey: string): void {
     this.reset();
@@ -118,13 +82,11 @@ export class ProfileStateService {
   );
 
   async loadUserData(pubkey: string) {
-    if (!this.relay || this.relay.relayUrls.length === 0) {
-      return;
-    }
+    // if (!this.relay || this.relay.relayUrls.length === 0) {
+    //   return;
+    // }
 
-    // TODO: Move this logic into the relay or nostr service.
-    this.relay.pool.subscribeMany(
-      this.relay.relayUrls,
+    this.relay?.subscribeEose(
       [
         {
           kinds: [kinds.Contacts],
@@ -157,50 +119,47 @@ export class ProfileStateService {
           limit: 2,
         },
       ],
-      {
-        onevent: evt => {
-          console.log('Event received', evt);
+      (event: Event) => {
+        console.log('Event received', event);
 
-          if (evt.kind === kinds.Contacts) {
-            const followingList = this.utilities.getPTagsValuesFromEvent(evt);
-            console.log(followingList);
-            // this.followingList.set(followingList);
-            this.followingList.set(followingList);
-            // If this is the logged on user, also set the account state.
-            // if (this.accountState.pubkey() === pubkey) {
-            //   this.accountState.followingList.set(followingList);
-            // }
+        if (event.kind === kinds.Contacts) {
+          const followingList = this.utilities.getPTagsValuesFromEvent(event);
+          console.log(followingList);
+          // this.followingList.set(followingList);
+          this.followingList.set(followingList);
+          // If this is the logged on user, also set the account state.
+          // if (this.accountState.pubkey() === pubkey) {
+          //   this.accountState.followingList.set(followingList);
+          // }
 
-            // this.storage.saveEvent(evt);
+          // this.storage.saveEvent(evt);
 
-            // Now you can use 'this' here
-            // For example: this.handleContacts(evt);
-          } else if (evt.kind === kinds.LongFormArticle) {
-            this.articles.update(articles => [
-              ...articles,
-              this.utilities.toRecord(evt),
-            ]);
-          } else if (evt.kind === kinds.ShortTextNote) {
-            const record = this.utilities.toRecord(evt);
-            if (this.utilities.isRootPost(evt)) {
-              this.notes.update(events => [...events, record]);
-            } else {
-              this.replies.update(events => [...events, record]);
-            }
-          } else if (
-            evt.kind === kinds.Repost ||
-            evt.kind === kinds.GenericRepost
-          ) {
-            this.reposts.update(reposts => [
-              ...reposts,
-              this.utilities.toRecord(evt),
-            ]);
+          // Now you can use 'this' here
+          // For example: this.handleContacts(evt);
+        } else if (event.kind === kinds.LongFormArticle) {
+          this.articles.update(articles => [
+            ...articles,
+            this.utilities.toRecord(event),
+          ]);
+        } else if (event.kind === kinds.ShortTextNote) {
+          const record = this.utilities.toRecord(event);
+          if (this.utilities.isRootPost(event)) {
+            this.notes.update(events => [...events, record]);
+          } else {
+            this.replies.update(events => [...events, record]);
           }
-        },
-        onclose: reasons => {
-          console.log('Pool closed', reasons);
-          // Also changed this to an arrow function for consistency
-        },
+        } else if (
+          event.kind === kinds.Repost ||
+          event.kind === kinds.GenericRepost
+        ) {
+          this.reposts.update(reposts => [
+            ...reposts,
+            this.utilities.toRecord(event),
+          ]);
+        }
+      },
+      () => {
+        console.log('Subscription closed');
       }
     );
   }

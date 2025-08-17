@@ -174,13 +174,14 @@
             Following {{ profileState.followingList().length }}
           </a>
 
-          @if (profileState.relay?.userRelaysFound()) {
+          <!-- @if (profileState.relay?.userRelaysFound()) { -->
+            @if (profileState.relay?.getRelayUrls() && profileState.relay?.getRelayUrls()!.length > 0) {
             <a
               class="following-count"
               [routerLink]="'relays'"
               [queryParamsHandling]="'preserve'"
             >
-              Relays {{ profileState.relay?.relayUrls?.length }}
+              Relays {{ profileState.relay?.getRelayUrls()?.length }}
             </a>
           } @else {
             <span class="inline-error">

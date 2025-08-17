@@ -6,14 +6,7 @@ import {
   effect,
   PLATFORM_ID,
 } from '@angular/core';
-import { NostrService } from './nostr.service';
-import { StorageService } from './storage.service';
-import {
-  NavigationExtras,
-  Router,
-  RouterLink,
-  RouterModule,
-} from '@angular/router';
+import { NavigationExtras, Router } from '@angular/router';
 import { LoggerService } from './logger.service';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -495,7 +488,7 @@ export class LayoutService implements OnDestroy {
     if (type === 'nprofile') {
       const profilePointer: ProfilePointer = {
         pubkey: text,
-        relays: this.profileState.relay?.relayUrls,
+        relays: this.profileState.relay?.getRelayUrls(),
       };
       text = nip19.nprofileEncode(profilePointer);
     }

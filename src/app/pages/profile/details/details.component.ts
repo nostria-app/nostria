@@ -22,7 +22,6 @@ import { ScrollingModule } from '@angular/cdk/scrolling';
 import { ProfileStateService } from '../../../services/profile-state.service';
 import { LayoutService } from '../../../services/layout.service';
 import { LoggerService } from '../../../services/logger.service';
-import { ApplicationStateService } from '../../../services/application-state.service';
 import { ApplicationService } from '../../../services/application.service';
 import { StorageService } from '../../../services/storage.service';
 import { RelayService } from '../../../services/relays/relay';
@@ -128,8 +127,9 @@ export class DetailsComponent implements OnInit, AfterViewInit {
 
     if (event) {
       console.log('Broadcasting metadata event:', event);
-      console.log('Relay URLs:', this.profileState.relay?.relayUrls);
-      await this.relay.publish(event, this.profileState.relay?.relayUrls);
+      // console.log('Relay URLs:', this.profileState.relay?.relayUrls);
+      // await this.relay.publish(event, this.profileState.relay?.relayUrls);
+      await this.relay.publish(event);
     }
   }
 
