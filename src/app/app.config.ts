@@ -23,8 +23,7 @@ import {
   withFetch,
   withInterceptors,
 } from '@angular/common/http';
-import { UserRelayFactoryService } from './services/user-relay-factory.service';
-import { UserRelayService } from './services/relays/user-relay';
+import { UserRelayExFactoryService, UserRelayFactoryService } from './services/user-relay-factory.service';
 import { MatIconRegistry } from '@angular/material/icon';
 import { ApiConfiguration } from './api/api-configuration';
 import { environment } from '../environments/environment';
@@ -90,7 +89,8 @@ export const appConfig: ApplicationConfig = {
       useValue: { appearance: 'outline' },
     },
     UserRelayFactoryService,
-    UserRelayService,
+    UserRelayExFactoryService,
+    // UserRelayService,
     provideZonelessChangeDetection(),
     provideRouter(routes),
     provideAnimations(),
