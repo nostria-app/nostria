@@ -12,6 +12,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Event, kinds } from 'nostr-tools';
 import { NostrRecord } from '../../interfaces';
 import { AccountRelayService } from '../../services/account-relay.service';
@@ -42,6 +43,7 @@ type EventCardAppearance = 'card' | 'plain';
     MatButtonModule,
     MatIconModule,
     MatMenuModule,
+    MatProgressSpinnerModule,
   ],
   templateUrl: './event.component.html',
   styleUrl: './event.component.scss',
@@ -65,6 +67,12 @@ export class EventComponent {
   accountState = inject(AccountStateService);
   eventService = inject(EventService);
   reposts = signal<NostrRecord[]>([]);
+
+  // Loading states
+  isLoadingEvent = signal<boolean>(false);
+  isLoadingThread = signal<boolean>(false);
+  isLoadingReposts = signal<boolean>(false);
+  loadingError = signal<string | null>(null);
 
   repostedRecord = computed<NostrRecord | null>(() => {
     const event = this.event();
@@ -108,9 +116,18 @@ export class EventComponent {
 
         if (type === 'e' || type === 'a') {
           if (eventId) {
-            const eventData = await this.data.getEventById(eventId);
-            this.record.set(eventData);
-            console.log('RECORD:', this.record());
+            this.isLoadingEvent.set(true);
+            this.loadingError.set(null);
+            try {
+              const eventData = await this.data.getEventById(eventId);
+              this.record.set(eventData);
+              console.log('RECORD:', this.record());
+            } catch (error) {
+              console.error('Error loading event:', error);
+              this.loadingError.set('Failed to load event');
+            } finally {
+              this.isLoadingEvent.set(false);
+            }
           }
         }
       }
@@ -124,11 +141,16 @@ export class EventComponent {
     const userPubkey = this.accountState.pubkey();
     if (!userPubkey) return;
 
-    const reposts = await this.eventService.loadReposts(
-      record.event.id,
-      userPubkey
-    );
-    this.reposts.set(reposts);
+    this.isLoadingReposts.set(true);
+    try {
+      const reposts = await this.eventService.loadReposts(
+        record.event.id,
+        userPubkey
+      );
+      this.reposts.set(reposts);
+    } finally {
+      this.isLoadingReposts.set(false);
+    }
   }
 
   async createRepost() {

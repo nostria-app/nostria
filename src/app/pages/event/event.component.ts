@@ -18,6 +18,7 @@ import { EventComponent } from '../../components/event/event.component';
 import { UtilitiesService } from '../../services/utilities.service';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { ApplicationService } from '../../services/application.service';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { EVENT_STATE_KEY, EventData } from '../../data-resolver';
@@ -45,7 +46,13 @@ export interface ThreadedEvent {
 @Component({
   selector: 'app-event-page',
   standalone: true,
-  imports: [CommonModule, EventComponent, MatIconModule, MatButtonModule],
+  imports: [
+    CommonModule,
+    EventComponent,
+    MatIconModule,
+    MatButtonModule,
+    MatProgressSpinnerModule,
+  ],
   templateUrl: './event.component.html',
   styleUrl: './event.component.scss',
 })
