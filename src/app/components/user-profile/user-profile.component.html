@@ -92,7 +92,7 @@
     ) {
       <div class="user-profile-content">
         <!-- Name section -->
-        <a [routerLink]="['/p', publicKey]" class="user-profile-name">
+        <a [routerLink]="['/p', npubValue()]" class="user-profile-name">
           @if (isLoading()) {
             Loading...
           } @else if (profile() && !profile().isEmpty && profile().data) {
