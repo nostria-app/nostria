@@ -1,0 +1,129 @@
+import { Component, computed, input } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { Event } from 'nostr-tools';
+
+@Component({
+  selector: 'app-article-event',
+  standalone: true,
+  imports: [CommonModule, MatButtonModule, MatIconModule],
+  templateUrl: './article-event.component.html',
+  styleUrl: './article-event.component.scss',
+})
+export class ArticleEventComponent {
+  event = input.required<Event>();
+
+  // Article title
+  title = computed(() => {
+    const event = this.event();
+    if (!event) return null;
+
+    return this.getEventTitle(event);
+  });
+
+  // Article summary/description
+  summary = computed(() => {
+    const event = this.event();
+    if (!event) return null;
+
+    const summaryTag = event.tags.find(tag => tag[0] === 'summary');
+    return summaryTag?.[1] || null;
+  });
+
+  // Article content (truncated for preview)
+  content = computed(() => {
+    const event = this.event();
+    if (!event || !event.content) return null;
+
+    return event.content;
+  });
+
+  // Article URL if available
+  articleUrl = computed(() => {
+    const event = this.event();
+    if (!event) return null;
+
+    const urlTag = event.tags.find(tag => tag[0] === 'r' || tag[0] === 'url');
+    return urlTag?.[1] || null;
+  });
+
+  // Published date
+  publishedAt = computed(() => {
+    const event = this.event();
+    if (!event) return null;
+
+    const publishedTag = event.tags.find(tag => tag[0] === 'published_at');
+    if (publishedTag?.[1]) {
+      return new Date(parseInt(publishedTag[1]) * 1000);
+    }
+
+    // Fallback to event created_at
+    return new Date(event.created_at * 1000);
+  });
+
+  // Author information from tags
+  authorName = computed(() => {
+    const event = this.event();
+    if (!event) return null;
+
+    const authorTag = event.tags.find(tag => tag[0] === 'author');
+    return authorTag?.[1] || null;
+  });
+
+  // Content warning check
+  hasContentWarning = computed(() => {
+    const event = this.event();
+    if (!event) return false;
+
+    return event.tags.some(tag => tag[0] === 'content-warning');
+  });
+
+  contentWarning = computed(() => {
+    const event = this.event();
+    if (!event) return null;
+
+    const warningTag = event.tags.find(tag => tag[0] === 'content-warning');
+    return warningTag?.[1] || 'Content may be sensitive';
+  });
+
+  // Tags for categorization
+  articleTags = computed(() => {
+    const event = this.event();
+    if (!event) return [];
+
+    return event.tags
+      .filter(tag => tag[0] === 't')
+      .map(tag => tag[1])
+      .filter(Boolean);
+  });
+
+  // Truncated content for preview
+  previewContent = computed(() => {
+    const content = this.content();
+    if (!content) return null;
+
+    const maxLength = 300;
+    if (content.length <= maxLength) return content;
+
+    return content.slice(0, maxLength) + '...';
+  });
+
+  // Check if content is truncated
+  isContentTruncated = computed(() => {
+    const content = this.content();
+    return content ? content.length > 300 : false;
+  });
+
+  openFullArticle(): void {
+    const url = this.articleUrl();
+    if (url) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  }
+
+  private getEventTitle(event: Event): string | null {
+    const titleTag = event.tags.find(tag => tag[0] === 'title');
+    return titleTag?.[1] || null;
+  }
+}

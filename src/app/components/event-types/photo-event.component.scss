@@ -1,0 +1,119 @@
+// Content warning styles
+.content-warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background-color: rgba(var(--mat-sys-error), 0.1);
+  border-radius: 4px;
+  margin-bottom: 16px;
+  color: var(--mat-sys-error);
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.media-title {
+  margin: 0 0 12px 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--mat-sys-on-surface);
+}
+
+// Photo gallery styles
+.photo-gallery {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 16px;
+
+  &:has(.photo-container:nth-child(1):nth-last-child(1)) {
+    grid-template-columns: 1fr;
+    max-width: 500px;
+  }
+
+  &:has(.photo-container:nth-child(2):nth-last-child(1)) {
+    grid-template-columns: 1fr 1fr;
+    max-width: 600px;
+  }
+
+  &:has(.photo-container:nth-child(3):nth-last-child(1)) {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    max-width: 600px;
+
+    .photo-container:first-child {
+      grid-row: 1 / 3;
+    }
+  }
+
+  &:has(.photo-container:nth-child(4):nth-last-child(1)) {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    max-width: 600px;
+  }
+}
+
+.photo-container {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  min-height: 300px;
+  max-height: 300px;
+  aspect-ratio: 1;
+}
+
+.photo-item {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+
+  &.main-image {
+    cursor: pointer;
+    position: relative;
+    z-index: 2;
+
+    &:hover {
+      transform: scale(1.02);
+      box-shadow: var(--mat-sys-level2);
+    }
+
+    &:focus {
+      outline: 2px solid var(--mat-sys-primary);
+      outline-offset: 2px;
+    }
+  }
+
+  &.blurhash-placeholder {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+    transition: opacity 0.3s ease;
+    filter: blur(1px);
+  }
+}
+
+.photo-description {
+  margin: 12px 0 0 0;
+  line-height: 1.5;
+}
+
+// Responsive adjustments
+@media (max-width: 600px) {
+  .photo-gallery {
+    grid-template-columns: 1fr !important;
+    max-width: 100% !important;
+
+    .photo-container {
+      min-height: 250px;
+      max-height: 250px;
+    }
+  }
+}
