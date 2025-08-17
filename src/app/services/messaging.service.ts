@@ -1,6 +1,5 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { NostrService } from './nostr.service';
-import { RelayService } from './relays/relay';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
 import {
@@ -16,6 +15,7 @@ import { UtilitiesService } from './utilities.service';
 import { EncryptionService } from './encryption.service';
 import { NostriaService } from '../interfaces';
 import { bytesToHex } from 'nostr-tools/utils';
+import { AccountRelayServiceEx } from './relays/account-relay';
 
 // Define interfaces for our DM data structures
 interface Chat {
@@ -57,7 +57,7 @@ interface DecryptionQueueItem {
 })
 export class MessagingService implements NostriaService {
   private nostr = inject(NostrService);
-  private relay = inject(RelayService);
+  private relay = inject(AccountRelayServiceEx);
   private logger = inject(LoggerService);
   private readonly accountState = inject(AccountStateService);
   readonly utilities = inject(UtilitiesService);

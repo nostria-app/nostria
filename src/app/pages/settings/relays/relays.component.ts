@@ -28,7 +28,6 @@ import {
   PingResult,
 } from './relay-ping-results-dialog.component';
 import { kinds, SimplePool, UnsignedEvent } from 'nostr-tools';
-import { RelayService } from '../../../services/relays/relay';
 import { NostrService } from '../../../services/nostr.service';
 import { LoggerService } from '../../../services/logger.service';
 import { LayoutService } from '../../../services/layout.service';
@@ -38,7 +37,7 @@ import { ApplicationService } from '../../../services/application.service';
 import { ProfileStateService } from '../../../services/profile-state.service';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { AccountStateService } from '../../../services/account-state.service';
-import { AccountRelayService } from '../../../services/relays/account-relay';
+import { AccountRelayServiceEx } from '../../../services/relays/account-relay';
 import { DataService } from '../../../services/data.service';
 import { InfoTooltipComponent } from '../../../components/info-tooltip/info-tooltip.component';
 import { Relay } from '../../../services/relays/relay-base';
@@ -63,7 +62,7 @@ import { Relay } from '../../../services/relays/relay-base';
   styleUrl: './relays.component.scss',
 })
 export class RelaysComponent implements OnInit, OnDestroy {
-  relay = inject(RelayService);
+  // relay = inject(RelayService);
   private nostr = inject(NostrService);
   private logger = inject(LoggerService);
   private snackBar = inject(MatSnackBar);
@@ -75,7 +74,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
   private profileState = inject(ProfileStateService);
   private readonly utilities = inject(UtilitiesService);
   private readonly accountState = inject(AccountStateService);
-  private readonly accountRelay = inject(AccountRelayService);
+  private readonly accountRelay = inject(AccountRelayServiceEx);
   private readonly data = inject(DataService);
 
   followingRelayUrls = signal<string[]>([]);
@@ -118,9 +117,6 @@ export class RelaysComponent implements OnInit, OnDestroy {
   constructor() {
     effect(() => {
       if (this.app.authenticated()) {
-        console.log(this.relay.getUserPool());
-        console.log(this.relay.getUserPool()?.listConnectionStatus());
-
         untracked(() => {
           // Start the connection status checking interval
           this.startStatusChecking();
@@ -246,7 +242,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
           content: '',
         };
         const signed = await this.nostr.signEvent(updatedEvent);
-        await this.relay.publish(signed); // publish to user relays
+        await this.accountRelay.publish(signed); // publish to user relays
         await this.storage.saveEvent(signed);
         this.showMessage('Deprecated relays removed from following list');
         this.showFollowingRelayCleanup.set(false);
@@ -295,7 +291,8 @@ export class RelaysComponent implements OnInit, OnDestroy {
    * Check connection status of all relays using the pool's listConnectionStatus method
    */
   private checkRelayConnectionStatus() {
-    const userPool = this.relay.getUserPool();
+    const userPool = this.accountRelay.getPool();
+
     if (!userPool) {
       this.logger.warn(
         'Cannot check relay status: user pool is not initialized'
@@ -313,21 +310,21 @@ export class RelaysComponent implements OnInit, OnDestroy {
     console.log(userPool.seenOn);
 
     // Update the status of each relay in our list
-    this.relay.relays.forEach(relay => {
-      // Check if this relay URL exists in the connection status map
-      if (connectionStatusMap.has(relay.url)) {
-        const isConnected = connectionStatusMap.get(relay.url);
-        const newStatus = isConnected ? 'connected' : 'disconnected';
+    // this.accountRelay.relays.forEach(relay => {
+    //   // Check if this relay URL exists in the connection status map
+    //   if (connectionStatusMap.has(relay.url)) {
+    //     const isConnected = connectionStatusMap.get(relay.url);
+    //     const newStatus = isConnected ? 'connected' : 'disconnected';
 
-        // Only update if status has changed
-        if (relay.status !== newStatus) {
-          this.logger.debug(
-            `Updating relay ${relay.url} status to ${newStatus}`
-          );
-          this.relay.updateRelayStatus(relay.url, newStatus);
-        }
-      }
-    });
+    //     // Only update if status has changed
+    //     if (relay.status !== newStatus) {
+    //       this.logger.debug(
+    //         `Updating relay ${relay.url} status to ${newStatus}`
+    //       );
+    //       this.relay.updateRelayStatus(relay.url, newStatus);
+    //     }
+    //   }
+    // });
   }
 
   parseUrl(relayUrl: string) {
@@ -369,7 +366,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
     this.newRelayUrl.set(url);
 
     // Check if relay already exists
-    if (this.relay.relays.some(relay => relay.url === url)) {
+    if (this.accountRelay.relays.some(relay => relay.url === url)) {
       this.showMessage('This relay is already in your list');
       return;
     }

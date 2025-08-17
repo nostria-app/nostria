@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -6,7 +6,6 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTabsModule } from '@angular/material/tabs';
 import { RelayPublishStatusComponent } from '../../components/relay-publish-status/relay-publish-status.component';
-import { RelayService } from '../../services/relays/relay';
 import { MatMenuModule } from '@angular/material/menu';
 import { NostrService } from '../../services/nostr.service';
 import { kinds } from 'nostr-tools';
@@ -17,6 +16,7 @@ import {
   RelayPublishingNotification,
 } from '../../services/storage.service';
 import { RouterModule } from '@angular/router';
+import { AccountRelayServiceEx } from '../../services/relays/account-relay';
 
 @Component({
   selector: 'app-notifications',
@@ -37,7 +37,7 @@ import { RouterModule } from '@angular/router';
 })
 export class NotificationsComponent implements OnInit {
   private notificationService = inject(NotificationService);
-  private relayService = inject(RelayService);
+  private accountRelay = inject(AccountRelayServiceEx);
   private nostrService = inject(NostrService);
 
   notifications = this.notificationService.notifications;
@@ -61,7 +61,7 @@ export class NotificationsComponent implements OnInit {
     const signedEvent = await this.nostrService.signEvent(unsignedEvent);
 
     // We don't want to show in notifications the app settings publishing.
-    const publishResult = await this.relayService.publish(signedEvent);
+    const publishResult = await this.accountRelay.publish(signedEvent);
   }
 
   async getLastViewedTimestamp(): Promise<void> {
@@ -72,7 +72,7 @@ export class NotificationsComponent implements OnInit {
         limit: 1,
       };
 
-      const event = await this.relayService.get(filter);
+      const event = await this.accountRelay.get(filter);
       if (event) {
         this.lastViewedTimestamp.set(event.created_at * 1000); // Convert to milliseconds
       }
@@ -102,7 +102,7 @@ export class NotificationsComponent implements OnInit {
   async onRetryPublish(notificationId: string): Promise<void> {
     await this.notificationService.retryFailedRelays(
       notificationId,
-      (event, relayUrl) => this.relayService.publishToRelay(event, relayUrl)
+      (event, relayUrl) => this.accountRelay.publishToRelay(event, relayUrl)
     );
   }
 

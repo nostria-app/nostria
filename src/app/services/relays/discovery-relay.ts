@@ -11,8 +11,7 @@ import { kinds, SimplePool } from 'nostr-tools';
 })
 export class DiscoveryRelayServiceEx
   extends RelayServiceBase
-  implements NostriaService
-{
+  implements NostriaService {
   private readonly utilities = inject(UtilitiesService);
   private localStorage = inject(LocalStorageService);
   private appState = inject(ApplicationStateService);
@@ -58,7 +57,47 @@ export class DiscoveryRelayServiceEx
     this.initialized = true;
   }
 
-  clear() {}
+  clear() { }
+
+  /**
+   * Sets discovery relays and persists them to local storage
+   */
+  setDiscoveryRelays(relayUrls: string[]): void {
+    try {
+      // Validate that all URLs are valid relay URLs
+      const validRelays = relayUrls.filter(url => {
+        try {
+          const parsed = new URL(url);
+          return parsed.protocol === 'wss:' || parsed.protocol === 'ws:';
+        } catch {
+          return false;
+        }
+      });
+
+      if (validRelays.length === 0) {
+        this.logger.warn('No valid relay URLs provided, using default relays');
+        this.localStorage.removeItem(
+          this.appState.DISCOVERY_RELAYS_STORAGE_KEY
+        );
+        return;
+      }
+
+      // Save to local storage
+      this.localStorage.setItem(
+        this.appState.DISCOVERY_RELAYS_STORAGE_KEY,
+        JSON.stringify(validRelays)
+      );
+
+      this.logger.debug(
+        `Saved ${validRelays.length} discovery relays to storage`
+      );
+
+      // Reinitialize the service with new relays
+      this.init(validRelays);
+    } catch (error) {
+      this.logger.error('Error saving discovery relays to storage', error);
+    }
+  }
 
   /**
    * Loads bootstrap relays from local storage

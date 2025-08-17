@@ -1,9 +1,9 @@
 import { Injectable, effect, inject, signal } from '@angular/core';
 import { NostrService } from './nostr.service';
-import { RelayService } from './relays/relay';
 import { kinds } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
+import { AccountRelayServiceEx } from './relays/account-relay';
 
 export interface UserSettings {
   socialSharingPreview: boolean;
@@ -22,7 +22,7 @@ const DEFAULT_SETTINGS: UserSettings = {
 export class SettingsService {
   private nostrService = inject(NostrService);
   private accountState = inject(AccountStateService);
-  private relayService = inject(RelayService);
+  private accountRelay = inject(AccountRelayServiceEx);
   private logger = inject(LoggerService);
 
   settings = signal<UserSettings>({ ...DEFAULT_SETTINGS });
@@ -44,7 +44,7 @@ export class SettingsService {
         limit: 1,
       };
 
-      const event = await this.relayService.get(filter);
+      const event = await this.accountRelay.get(filter);
 
       if (event && event.content) {
         try {
@@ -89,7 +89,7 @@ export class SettingsService {
       );
       const signedEvent = await this.nostrService.signEvent(unsignedEvent);
 
-      const publishResult = await this.relayService.publish(signedEvent);
+      const publishResult = await this.accountRelay.publish(signedEvent);
       this.logger.info('Settings published', publishResult);
     } catch (error) {
       this.logger.error('Failed to save settings', error);
