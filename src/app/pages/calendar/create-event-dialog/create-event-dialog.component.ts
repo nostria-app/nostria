@@ -21,9 +21,9 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSelectModule } from '@angular/material/select';
 import { MatNativeDateModule } from '@angular/material/core';
-import { Event, getEventHash, getPublicKey } from 'nostr-tools';
+import { Event, getEventHash } from 'nostr-tools';
 import { ApplicationService } from '../../../services/application.service';
-import { AccountRelayService } from '../../../services/relays/account-relay';
+import { AccountRelayServiceEx } from '../../../services/relays/account-relay';
 
 export interface CreateEventDialogData {
   selectedDate?: Date;
@@ -60,7 +60,7 @@ export class CreateEventDialogComponent {
   private data = inject(MAT_DIALOG_DATA) as CreateEventDialogData;
   private fb = inject(FormBuilder);
   private app = inject(ApplicationService);
-  private accountRelay = inject(AccountRelayService);
+  private accountRelay = inject(AccountRelayServiceEx);
 
   isLoading = signal<boolean>(false);
   isAllDay = signal<boolean>(false);

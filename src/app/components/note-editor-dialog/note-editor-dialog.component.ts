@@ -28,18 +28,17 @@ import {
 } from '@angular/material/core';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
-import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { DomSanitizer } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { NostrService } from '../../services/nostr.service';
-import { RelayService } from '../../services/relays/relay';
 import { MediaService } from '../../services/media.service';
 import { LocalStorageService } from '../../services/local-storage.service';
 import { AccountStateService } from '../../services/account-state.service';
-import { UnsignedEvent } from 'nostr-tools/pure';
 import { ContentComponent } from '../content/content.component';
 import { Router } from '@angular/router';
 import { nip19 } from 'nostr-tools';
+import { AccountRelayServiceEx } from '../../services/relays/account-relay';
 
 export interface NoteEditorDialogData {
   replyTo?: {
@@ -96,7 +95,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
   private dialogRef = inject(MatDialogRef<NoteEditorDialogComponent>);
   data = inject(MAT_DIALOG_DATA) as NoteEditorDialogData;
   private nostrService = inject(NostrService);
-  private relayService = inject(RelayService);
+  private accountRelay = inject(AccountRelayServiceEx);
   private mediaService = inject(MediaService);
   private localStorage = inject(LocalStorageService);
   private accountState = inject(AccountStateService);
@@ -340,7 +339,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
       const isSimilar =
         previousDraft.content === autoDraft.content &&
         JSON.stringify(previousDraft.mentions) ===
-        JSON.stringify(autoDraft.mentions) &&
+          JSON.stringify(autoDraft.mentions) &&
         previousDraft.expirationEnabled === autoDraft.expirationEnabled &&
         previousDraft.expirationTime === autoDraft.expirationTime;
 
@@ -423,7 +422,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
       const signedEvent = await this.nostrService.signEvent(event);
 
       if (signedEvent) {
-        await this.relayService.publish(signedEvent);
+        await this.accountRelay.publish(signedEvent);
 
         // Clear auto-draft after successful publish
         this.clearAutoDraft();
@@ -706,7 +705,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
     } catch (error) {
       this.snackBar.open(
         'Upload failed: ' +
-        (error instanceof Error ? error.message : 'Unknown error'),
+          (error instanceof Error ? error.message : 'Unknown error'),
         'Close',
         { duration: 5000 }
       );

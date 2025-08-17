@@ -18,8 +18,8 @@ import { UnsignedEvent } from 'nostr-tools/pure';
 import { UtilitiesService } from '../../services/utilities.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { LayoutService } from '../../services/layout.service';
-import { RelayService } from '../../services/relays/relay';
 import { CommonModule } from '@angular/common';
+import { AccountRelayServiceEx } from '../../services/relays/account-relay';
 
 @Component({
   selector: 'app-badges',
@@ -44,7 +44,7 @@ export class BadgesComponent {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private readonly app = inject(ApplicationService);
-  private readonly relay = inject(RelayService);
+  private readonly accountRelay = inject(AccountRelayServiceEx);
   private readonly nostr = inject(NostrService);
   private readonly storage = inject(StorageService);
   private readonly badgeService = inject(BadgeService);
@@ -216,7 +216,7 @@ export class BadgesComponent {
 
       // Sign and publish the event
       const signedEvent = await this.nostr.signEvent(unsignedEvent);
-      await this.relay.publish(signedEvent);
+      await this.accountRelay.publish(signedEvent);
       await this.storage.saveEvent(signedEvent);
 
       // Update the badge service state

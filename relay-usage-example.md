@@ -26,13 +26,13 @@ import { RelayServiceBase } from './services/relays/relay-base';
           <li>{{ relay }}</li>
         }
       </ul>
-      
+
       <button (click)="addRelay()">Add Test Relay</button>
       <button (click)="removeRelay()">Remove Test Relay</button>
       <button (click)="updateAllRelays()">Update All Relays</button>
       <button (click)="clearAllRelays()">Clear All Relays</button>
     </div>
-  `
+  `,
 })
 export class ExampleComponent {
   relayService = inject(RelayService); // Your concrete implementation
@@ -42,7 +42,7 @@ export class ExampleComponent {
     effect(() => {
       const relays = this.relayService.relaysModifiedSignal();
       console.log('Relays modified:', relays);
-      
+
       // Here you could persist to localStorage, IndexedDB, etc.
       localStorage.setItem('user-relays', JSON.stringify(relays));
     });
@@ -60,7 +60,7 @@ export class ExampleComponent {
     this.relayService.updateRelays([
       'wss://relay1.example.com',
       'wss://relay2.example.com',
-      'wss://relay3.example.com'
+      'wss://relay3.example.com',
     ]);
   }
 
@@ -73,6 +73,7 @@ export class ExampleComponent {
 ## Available Methods
 
 ### Relay Management
+
 - `addRelay(relayUrl: string)`: Add a relay URL to the list
 - `removeRelay(relayUrl: string)`: Remove a relay URL from the list
 - `updateRelays(relayUrls: string[])`: Replace the entire relay list
@@ -81,6 +82,7 @@ export class ExampleComponent {
 - `getRelayCount()`: Get the number of current relays
 
 ### Signal Access
+
 - `relaysModifiedSignal`: Read-only signal that emits the current relay list when modified
 
 ## Signal Usage for Persistence
@@ -92,10 +94,10 @@ import { effect } from '@angular/core';
 constructor() {
   effect(() => {
     const currentRelays = this.relayService.relaysModifiedSignal();
-    
+
     // Persist to localStorage
     localStorage.setItem('user-relays', JSON.stringify(currentRelays));
-    
+
     // Or persist to IndexedDB, send to server, etc.
     this.persistenceService.saveRelays(currentRelays);
   });

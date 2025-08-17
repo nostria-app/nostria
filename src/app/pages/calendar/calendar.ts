@@ -18,7 +18,6 @@ import { MatDividerModule } from '@angular/material/divider';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Event } from 'nostr-tools';
 import { Router } from '@angular/router';
-import { AccountRelayService } from '../../services/relays/account-relay';
 import { LoggerService } from '../../services/logger.service';
 import { ApplicationService } from '../../services/application.service';
 import {
@@ -31,6 +30,7 @@ import {
   EventDetailsDialogData,
   EventDetailsResult,
 } from './event-details-dialog/event-details-dialog.component';
+import { AccountRelayServiceEx } from '../../services/relays/account-relay';
 
 // Calendar event interfaces based on NIP-52
 interface CalendarEvent {
@@ -102,7 +102,7 @@ interface CalendarCollection {
   styleUrl: './calendar.scss',
 })
 export class Calendar {
-  private accountRelay = inject(AccountRelayService);
+  private accountRelay = inject(AccountRelayServiceEx);
   private logger = inject(LoggerService);
   public app = inject(ApplicationService); // Made public for template access
   private dialog = inject(MatDialog);
