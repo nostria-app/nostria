@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { LoggerService } from './logger.service';
-import { Relay } from './relay.service';
+import { Relay } from './relays/relay-base';
 import { openDB, IDBPDatabase, DBSchema, deleteDB } from 'idb';
 import { Event } from 'nostr-tools';
 import { UtilitiesService } from './utilities.service';

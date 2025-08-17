@@ -28,7 +28,7 @@ import {
   PingResult,
 } from './relay-ping-results-dialog.component';
 import { kinds, SimplePool, UnsignedEvent } from 'nostr-tools';
-import { RelayService, Relay } from '../../../services/relay.service';
+import { RelayService } from '../../../services/relays/relay';
 import { NostrService } from '../../../services/nostr.service';
 import { LoggerService } from '../../../services/logger.service';
 import { LayoutService } from '../../../services/layout.service';
@@ -38,9 +38,10 @@ import { ApplicationService } from '../../../services/application.service';
 import { ProfileStateService } from '../../../services/profile-state.service';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { AccountStateService } from '../../../services/account-state.service';
-import { AccountRelayService } from '../../../services/account-relay.service';
+import { AccountRelayService } from '../../../services/relays/account-relay';
 import { DataService } from '../../../services/data.service';
 import { InfoTooltipComponent } from '../../../components/info-tooltip/info-tooltip.component';
+import { Relay } from '../../../services/relays/relay-base';
 
 @Component({
   selector: 'app-relays-page',
@@ -200,7 +201,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
     }
   }
 
-  ngOnInit() {}
+  ngOnInit() { }
 
   cleanFollowingList() {
     if (this.isCleaningFollowingList()) {

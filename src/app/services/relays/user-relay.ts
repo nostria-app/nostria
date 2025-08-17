@@ -1,31 +1,39 @@
-import {
-  Injectable,
-  inject,
-  signal,
-  computed,
-  effect,
-  untracked,
-} from '@angular/core';
-import { LoggerService } from './logger.service';
-import {
-  StorageService,
-  Nip11Info,
-  NostrEventData,
-  UserMetadata,
-} from './storage.service';
-import { Event, kinds, SimplePool } from 'nostr-tools';
-import { ApplicationStateService } from './application-state.service';
-import { NotificationService } from './notification.service';
-import { LocalStorageService } from './local-storage.service';
-import { NostrService } from './nostr.service';
-import { RelayService } from './relay.service';
-import { AccountRelayService } from './account-relay.service';
+import { Injectable, inject, signal } from '@angular/core';
+import { LoggerService } from '../logger.service';
+import { StorageService } from '../storage.service';
+import { Event, SimplePool } from 'nostr-tools';
+import { ApplicationStateService } from '../application-state.service';
+import { NotificationService } from '../notification.service';
+import { LocalStorageService } from '../local-storage.service';
+import { NostrService } from '../nostr.service';
+import { RelayService } from './relay';
+import { AccountRelayService } from './account-relay';
+import { RelayServiceBase } from './relay-base';
+import { DiscoveryRelayServiceEx } from './discovery-relay';
+import { RelaysService } from './relays';
 
-export interface Relay {
-  url: string;
-  status?: 'connected' | 'disconnected' | 'connecting' | 'error';
-  lastUsed?: number;
-  timeout?: number;
+@Injectable({
+  providedIn: 'root',
+})
+export class UserRelayServiceEx extends RelayServiceBase {
+  private discoveryRelay = inject(DiscoveryRelayServiceEx);
+  private relaysService = inject(RelaysService);
+  private pubkey = '';
+
+  constructor() {
+    super(new SimplePool());
+  }
+
+  async initialize(pubkey: string): Promise<void> {
+    if (this.pubkey === pubkey) {
+      return;
+    }
+
+    this.pubkey = pubkey;
+
+    const relayUrls = await this.discoveryRelay.getUserRelayUrls(pubkey);
+    this.init(relayUrls);
+  }
 }
 
 @Injectable()

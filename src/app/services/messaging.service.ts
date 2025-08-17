@@ -1,6 +1,6 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { NostrService } from './nostr.service';
-import { RelayService } from './relay.service';
+import { RelayService } from './relays/relay';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
 import {
@@ -103,7 +103,7 @@ export class MessagingService implements NostriaService {
   isDecryptingMessages = signal<boolean>(false);
   decryptionQueueLength = signal<number>(0);
 
-  constructor() {}
+  constructor() { }
 
   hasMessage(chatId: string, messageId: string): boolean {
     const chat = this.chatsMap().get(chatId);
@@ -198,7 +198,7 @@ export class MessagingService implements NostriaService {
     this.oldestChatTimestamp.set(null);
   }
 
-  async load() {}
+  async load() { }
 
   async createNip44Message(
     messageText: string,

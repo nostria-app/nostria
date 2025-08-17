@@ -3,7 +3,7 @@ import { provideZonelessChangeDetection } from '@angular/core';
 
 import { MessagingService } from './messaging.service';
 import { NostrService } from './nostr.service';
-import { RelayService } from './relay.service';
+import { RelayService } from './relays/relay';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
 import { UtilitiesService } from './utilities.service';

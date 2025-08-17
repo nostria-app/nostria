@@ -15,7 +15,7 @@ import { kinds, NostrEvent } from 'nostr-tools';
 import { StorageService } from '../../../services/storage.service';
 import { DataService } from '../../../services/data.service';
 import { BadgeService, ParsedBadge } from '../../../services/badge.service';
-import { RelayService } from '../../../services/relay.service';
+import { RelayService } from '../../../services/relays/relay';
 import { UserRelayFactoryService } from '../../../services/user-relay-factory.service';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';

@@ -6,11 +6,9 @@ import { Event, kinds } from 'nostr-tools';
 import { UserRelayExFactoryService } from './user-relay-factory.service';
 import { UtilitiesService } from './utilities.service';
 import { Cache, CacheOptions } from './cache';
-import {
-  DiscoveryRelayServiceEx,
-  SharedRelayServiceEx,
-  UserRelayServiceEx,
-} from './account-relay.service';
+import { DiscoveryRelayServiceEx } from './relays/discovery-relay';
+import { SharedRelayServiceEx } from './relays/shared-relay';
+import { UserRelayServiceEx } from './relays/user-relay';
 
 export interface DataOptions {
   cache: boolean; // Whether to use cache
@@ -102,7 +100,8 @@ export class UserDataService {
   }
 
   async discoverUserRelays(pubkey: string): Promise<string[]> {
-    return this.discoveryRelayEx.getUserRelayUrls(pubkey);
+    const relayUrls = await this.discoveryRelayEx.getUserRelayUrls(pubkey);
+    return Array.isArray(relayUrls) ? relayUrls : [];
   }
 
   async getUserRelays(pubkey: string) {

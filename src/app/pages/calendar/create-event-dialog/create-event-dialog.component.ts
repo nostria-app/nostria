@@ -23,7 +23,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatNativeDateModule } from '@angular/material/core';
 import { Event, getEventHash, getPublicKey } from 'nostr-tools';
 import { ApplicationService } from '../../../services/application.service';
-import { AccountRelayService } from '../../../services/account-relay.service';
+import { AccountRelayService } from '../../../services/relays/account-relay';
 
 export interface CreateEventDialogData {
   selectedDate?: Date;

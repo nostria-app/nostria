@@ -13,8 +13,8 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { AccountStateService } from '../../../services/account-state.service';
 import { NostrService } from '../../../services/nostr.service';
 import { InfoRecord, StorageService } from '../../../services/storage.service';
-import { RelayService } from '../../../services/relay.service';
-import { RelaysService, RelayStats } from '../../../services/relays.service';
+import { RelayService } from '../../../services/relays/relay';
+import { RelaysService, RelayStats } from '../../../services/relays/relays';
 import { ApplicationService } from '../../../services/application.service';
 import { LoggerService } from '../../../services/logger.service';
 import { UtilitiesService } from '../../../services/utilities.service';
@@ -214,7 +214,7 @@ export class LogsSettingsComponent {
           if (sharedUsers.length > 0) {
             const connectionStrength = Math.round(
               (sharedUsers.length / Math.max(users.length, otherUsers.length)) *
-                100
+              100
             );
             sharedWithRelays.push({
               relay: otherRelay,

@@ -3,7 +3,7 @@ import { NostrRecord } from '../interfaces';
 import { inject } from '@angular/core';
 import { NotificationService } from './notification.service';
 import { NotificationType, StorageService } from './storage.service';
-import { UserRelayService } from './user-relay.service';
+import { UserRelayService } from './relays/user-relay';
 import { kinds } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { UserRelayFactoryService } from './user-relay-factory.service';

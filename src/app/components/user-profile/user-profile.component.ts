@@ -27,9 +27,9 @@ import { InfoRecord } from '../../services/storage.service';
 import { Event, nip19 } from 'nostr-tools';
 import { UtilitiesService } from '../../services/utilities.service';
 import { DataService } from '../../services/data.service';
-import { RelaysService } from '../../services/relays.service';
-import { SharedRelayServiceEx } from '../../services/account-relay.service';
+import { RelaysService } from '../../services/relays/relays';
 import { SettingsService } from '../../services/settings.service';
+import { SharedRelayServiceEx } from '../../services/relays/shared-relay';
 
 @Component({
   selector: 'app-user-profile',

@@ -29,7 +29,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTabsModule } from '@angular/material/tabs';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { NostrService } from '../../services/nostr.service';
-import { RelayService, Relay } from '../../services/relay.service';
+import { RelayService } from '../../services/relays/relay';
 import { LoggerService } from '../../services/logger.service';
 import { NotificationService } from '../../services/notification.service';
 import {
@@ -42,19 +42,16 @@ import { UserProfileComponent } from '../../components/user-profile/user-profile
 import { NPubPipe } from '../../pipes/npub.pipe';
 import { TimestampPipe } from '../../pipes/timestamp.pipe';
 import { AgoPipe } from '../../pipes/ago.pipe';
-import { ConfirmDialogComponent } from '../../components/confirm-dialog/confirm-dialog.component';
 import {
   StartChatDialogComponent,
   StartChatDialogResult,
 } from '../../components/start-chat-dialog/start-chat-dialog.component';
 import {
   kinds,
-  SimplePool,
   getPublicKey,
   generateSecretKey,
   finalizeEvent,
   Event as NostrEvent,
-  Filter,
   getEventHash,
 } from 'nostr-tools';
 import { bytesToHex } from '@noble/hashes/utils';
@@ -65,8 +62,8 @@ import { EncryptionService } from '../../services/encryption.service';
 import { DataService } from '../../services/data.service';
 import { MessagingService } from '../../services/messaging.service';
 import { UserRelayFactoryService } from '../../services/user-relay-factory.service';
-import { UserRelayService } from '../../services/user-relay.service';
-import { AccountRelayService } from '../../services/account-relay.service';
+import { UserRelayService } from '../../services/relays/user-relay';
+import { AccountRelayService } from '../../services/relays/account-relay';
 import { LayoutService } from '../../services/layout.service';
 import { NamePipe } from '../../pipes/name.pipe';
 
@@ -618,10 +615,10 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         msgs.map(msg =>
           msg.id === pendingId
             ? {
-                ...finalMessage,
-                pending: false,
-                received: true,
-              }
+              ...finalMessage,
+              pending: false,
+              received: true,
+            }
             : msg
         )
       );

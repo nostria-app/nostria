@@ -1,6 +1,5 @@
 import { Injectable, inject, Injector } from '@angular/core';
-import { UserRelayService } from './user-relay.service';
-import { UserRelayServiceEx } from './account-relay.service';
+import { UserRelayService, UserRelayServiceEx } from './relays/user-relay';
 
 @Injectable({
   providedIn: 'root',

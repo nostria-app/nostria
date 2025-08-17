@@ -16,7 +16,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AgoPipe } from '../../../pipes/ago.pipe';
 import { NostrService } from '../../../services/nostr.service';
-import { RelayService } from '../../../services/relay.service';
+import { RelayService } from '../../../services/relays/relay';
 import { Router } from '@angular/router';
 import { StorageService } from '../../../services/storage.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';

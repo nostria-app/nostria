@@ -18,7 +18,7 @@ import { UnsignedEvent } from 'nostr-tools/pure';
 import { UtilitiesService } from '../../services/utilities.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { LayoutService } from '../../services/layout.service';
-import { RelayService } from '../../services/relay.service';
+import { RelayService } from '../../services/relays/relay';
 import { CommonModule } from '@angular/common';
 
 @Component({

@@ -6,7 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTabsModule } from '@angular/material/tabs';
 import { RelayPublishStatusComponent } from '../../components/relay-publish-status/relay-publish-status.component';
-import { RelayService } from '../../services/relay.service';
+import { RelayService } from '../../services/relays/relay';
 import { MatMenuModule } from '@angular/material/menu';
 import { NostrService } from '../../services/nostr.service';
 import { kinds } from 'nostr-tools';

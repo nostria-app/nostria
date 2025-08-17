@@ -1,31 +1,13 @@
-import {
-  Injectable,
-  inject,
-  signal,
-  computed,
-  effect,
-  untracked,
-} from '@angular/core';
-import { LoggerService } from './logger.service';
-import {
-  StorageService,
-  Nip11Info,
-  NostrEventData,
-  UserMetadata,
-} from './storage.service';
-import { Event, kinds, SimplePool } from 'nostr-tools';
-import { ApplicationStateService } from './application-state.service';
-import { NotificationService } from './notification.service';
-import { LocalStorageService } from './local-storage.service';
-import { LayoutService } from './layout.service';
-import { UtilitiesService } from './utilities.service';
-
-export interface Relay {
-  url: string;
-  status?: 'connected' | 'disconnected' | 'connecting' | 'error';
-  lastUsed?: number;
-  timeout?: number;
-}
+import { Injectable, inject, signal, effect } from '@angular/core';
+import { LoggerService } from '../logger.service';
+import { StorageService, Nip11Info } from '../storage.service';
+import { Event, SimplePool } from 'nostr-tools';
+import { ApplicationStateService } from '../application-state.service';
+import { NotificationService } from '../notification.service';
+import { LocalStorageService } from '../local-storage.service';
+import { LayoutService } from '../layout.service';
+import { UtilitiesService } from '../utilities.service';
+import { Relay } from './relay-base';
 
 /** THIS IS DEPRECATED! */
 @Injectable({
@@ -33,7 +15,6 @@ export interface Relay {
 })
 export class RelayService {
   // Default relay timeout duration in milliseconds (10 minute)
-
   readonly RELAY_TIMEOUT_COUNT = 2;
   readonly RELAY_TIMEOUT_DURATION_MINUTES = 10;
   readonly RELAY_TIMEOUT_DURATION = 60000 * this.RELAY_TIMEOUT_DURATION_MINUTES;
@@ -439,7 +420,6 @@ export class RelayService {
     relayUrls?: string[],
     options: { timeout?: number } = {}
   ): Promise<T | null> {
-
     if (!this.accountPool) {
       this.logger.error('Cannot get events: account pool is not initialized');
       return null;
@@ -496,7 +476,6 @@ export class RelayService {
     relayUrls?: string[],
     options: { timeout?: number } = {}
   ): Promise<T[]> {
-
     if (!this.accountPool) {
       this.logger.error('Cannot get events: account pool is not initialized');
       return [];

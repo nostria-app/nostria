@@ -4,7 +4,7 @@ import { provideZonelessChangeDetection } from '@angular/core';
 import { FeedService } from './feed.service';
 import { LocalStorageService } from './local-storage.service';
 import { LoggerService } from './logger.service';
-import { RelayService } from './relay.service';
+import { RelayService } from './relays/relay';
 import { ApplicationStateService } from './application-state.service';
 import { AccountStateService } from './account-state.service';
 import { DataService } from './data.service';

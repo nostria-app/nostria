@@ -1,6 +1,6 @@
 import { Injectable, effect, inject, signal } from '@angular/core';
 import { NostrService } from './nostr.service';
-import { RelayService } from './relay.service';
+import { RelayService } from './relays/relay';
 import { kinds } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';

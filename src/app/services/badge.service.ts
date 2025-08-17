@@ -1,7 +1,7 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { StorageService } from './storage.service';
 import { NostrService } from './nostr.service';
-import { RelayService } from './relay.service';
+import { RelayService } from './relays/relay';
 import { Event, kinds, NostrEvent } from 'nostr-tools';
 import { UtilitiesService } from './utilities.service';
 import { UserRelayFactoryService } from './user-relay-factory.service';
@@ -98,7 +98,7 @@ export class BadgeService implements NostriaService {
     }
   }
 
-  async load() {}
+  async load() { }
 
   async loadAcceptedBadges(pubkey: string): Promise<void> {
     this.isLoadingAccepted.set(true);

@@ -28,7 +28,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { NostrService } from '../../../services/nostr.service';
 import { DataService } from '../../../services/data.service';
-import { RelayService } from '../../../services/relay.service';
+import { RelayService } from '../../../services/relays/relay';
 import { LocalStorageService } from '../../../services/local-storage.service';
 import { MatCardModule } from '@angular/material/card';
 import { LayoutService } from '../../../services/layout.service';
