@@ -7,42 +7,7 @@
   } @else {
     <div class="reads-list">
       @for (note of profileState.articles(); track note.event.id) {
-        <mat-card class="note-card" appearance="outlined">
-          <app-user-profile
-            class="user-profile-thread"
-            view="thread"
-            [pubkey]="profileState.currentProfilePubkey()"
-          >
-            <a
-              class="date-link"
-              [routerLink]="[
-                '/a',
-                note.event.pubkey,
-                utilities.getDTagValueFromEvent(note.event),
-              ]"
-              matTooltipPosition="below"
-            >
-              {{ note.event.tags | tags: 'published_at' }}
-            </a>
-          </app-user-profile>
-          <mat-card-content>{{ note.data }}</mat-card-content>
-          <mat-card-footer class="note-footer">
-            <button mat-icon-button>
-              <mat-icon matTooltip="Reply" matTooltipPosition="below"
-                >reply</mat-icon
-              >
-            </button>
-            <button mat-icon-button class="note-footer-right">
-              <mat-icon
-                [matTooltip]="bookmark.getBookmarkTooltip(note.event.id, 'a')"
-                matTooltipPosition="below"
-                (click)="bookmark.toggleBookmark(note.event.id)"
-              >
-                {{ bookmark.getBookmarkIcon(note.event.id, 'a') }}
-              </mat-icon>
-            </button>
-          </mat-card-footer>
-        </mat-card>
+        <app-event [event]="note.event" appearance="card"></app-event>
       }
     </div>
   }
