@@ -1,11 +1,4 @@
-import {
-  Injectable,
-  inject,
-  signal,
-  computed,
-  effect,
-  untracked,
-} from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { LoggerService } from '../logger.service';
 import { Event, kinds, SimplePool } from 'nostr-tools';
 import { RelayService } from './relay';
@@ -62,7 +55,7 @@ export class AccountRelayServiceEx extends RelayServiceBase {
     this.init(relayUrls);
   }
 
-  clear() { }
+  clear() {}
 }
 
 @Injectable({
@@ -70,210 +63,10 @@ export class AccountRelayServiceEx extends RelayServiceBase {
 })
 export class AccountRelayService {
   private logger = inject(LoggerService);
-  // private nostr = inject(NostrService);
-  // private appState = inject(ApplicationStateService);
-  // private notification = inject(NotificationService);
-  // private localStorage = inject(LocalStorageService);
   private relay = inject(RelayService);
   userRelaysFound = signal<boolean>(true);
   pool = new SimplePool();
-
-  // Signal to store the relays for the current user (account relays)
-  // private relays = signal<Relay[]>([]);
-  // relays: Relay[] = [];
-
-  // relaysChanged = signal<Relay[]>([]);
-
-  // /** Holds the metadata event for all accounts in the app. */
-  // // accountsMetadata = signal<NostrRecord[]>([]);
-
-  // accountRelays = computed(() => {
-  //     return this.relaysChanged();
-  // });
-
-  // accountRelayUrls = computed(() => {
-  //     return this.accountRelays().map((r) => r.url);
-  // });
-
-  constructor() {
-    // // When relays change, sync with storage
-    // effect(() => {
-    //     if (this.relaysChanged()) {
-    //         this.logger.debug(`Relay effect triggered with ${this.relays.length} relays`);
-    //         if (this.relays.length > 0) {
-    //             this.syncRelaysToStorage(this.relays);
-    //         }
-    //     }
-    // });
-  }
-
-  // /**
-  //  * Clears all relays (used when logging out)
-  //  */
-  // clearRelays(): void {
-  //     this.logger.debug('Clearing all relays');
-  //     this.relays = [];
-  //     this.relaysChanged.set(this.relays);
-  // }
-
-  // /**
-  //  * Adds a new relay to the list
-  //  */
-  // addRelay(url: string): void {
-  //     this.logger.debug(`Adding new relay: ${url}`);
-
-  //     const newRelay: Relay = {
-  //         url,
-  //         status: 'disconnected',
-  //         lastUsed: Date.now()
-  //     };
-
-  //     this.relays.push(newRelay);
-  //     this.relaysChanged.set(this.relays);
-
-  //     // this.relays.update(relays => [...relays, newRelay]);
-  // }
-
-  // /**
-  //  * Sets the list of relays for the current user
-  //  */
-  // setRelays(relayUrls: string[]): void {
-  //     this.logger.debug(`Setting ${relayUrls.length} relays for current account`);
-
-  //     // Convert simple URLs to Relay objects with default properties
-  //     const relayObjects = relayUrls.map(url => ({
-  //         url,
-  //         status: 'connecting' as const,
-  //         lastUsed: Date.now()
-  //     }));
-
-  //     // Before storing the relays, make sure that they have / at the end
-  //     // if they are missing it. This ensures consistency in the relay URLs with SimplePool.
-  //     relayObjects.forEach(relay => {
-  //         if (!relay.url.endsWith('/')) {
-  //             relay.url += '/';
-  //         }
-  //     });
-
-  //     this.relays = relayObjects;
-  //     this.logger.debug('Relays updated successfully');
-  //     this.relaysChanged.set(this.relays);
-  // }
-
-  // /**
-  //  * Gets the user pool
-  //  */
-  // // getUserPool(): SimplePool | null {
-  // //   return this.accountPool;
-  // // }
-
-  // /**
-  //  * Updates the status of a specific relay
-  //  */
-  // updateRelayStatus(url: string, status: Relay['status']): void {
-  //     this.logger.debug(`Updating relay status for ${url} to ${status}`);
-
-  //     const relay = this.relays.find(relay => relay.url === url);
-  //     if (relay) {
-  //         relay.status = status;
-  //         relay.lastUsed = Date.now();
-  //     }
-
-  //     this.relaysChanged.set(this.relays);
-  // }
-
-  // /**
-  //  * Helper method to update the lastUsed timestamp for a relay
-  //  */
-  // private updateRelayLastUsed(url: string): void {
-  //     const relay = this.relays.find(relay => relay.url === url);
-  //     if (relay) {
-  //         relay.lastUsed = Date.now();
-  //     }
-
-  //     // this.relays.update(relays =>
-  //     //   relays.map(relay =>
-  //     //     relay.url === url
-  //     //       ? { ...relay, lastUsed: Date.now() }
-  //     //       : relay
-  //     //   )
-  //     // );
-  // }
-
-  // /**
-  //  * Removes a relay from the list
-  //  */
-  // removeRelay(url: string): void {
-  //     this.logger.debug(`Removing relay: ${url}`);
-
-  //     this.relays = this.relays.filter(relay => relay.url !== url);
-  //     // this.relays.update(relays => relays.filter(relay => relay.url !== url));
-
-  //     this.relaysChanged.set(this.relays);
-  // }
-
-  // /**
-  //  * Saves the current relays to storage for the current user
-  //  */
-  // private async syncRelaysToStorage(relays: Relay[]): Promise<void> {
-  //     try {
-  //         // Save each relay to the storage
-  //         for (const relay of relays) {
-  //             await this.storage.saveRelay(relay);
-  //         }
-
-  //         this.logger.debug(`Synchronized ${relays.length} relays to storage`);
-  //     } catch (error) {
-  //         this.logger.error('Error syncing relays to storage', error);
-  //     }
-  // }
-
   config: any = {};
-  // relayUrls: string[] = [];
-
-  // async initialize(pubkey: string, config?: { customConfig?: any, customRelays?: string[] }) {
-  //     let relayUrls = await this.nostr.getRelays(pubkey);
-
-  //     // If no relays were found, we will fall back to using the account relays. This is especially
-  //     // important when the current logged-on user opens their own profile page and does NOT have
-  //     // any relay list discovered yet.
-  //     if (relayUrls.length === 0) {
-  //         this.logger.warn(`No relays found for user ${pubkey}, falling back to account relays`);
-  //         relayUrls = this.accountRelayUrls();
-  //         this.userRelaysFound.set(false);
-
-  //         // Log additional info for debugging
-  //         this.logger.debug(`Using ${relayUrls.length} account relays as fallback:`, relayUrls);
-  //     } else {
-  //         this.logger.debug(`Found ${relayUrls.length} relays for user ${pubkey}:`, relayUrls);
-  //     }
-
-  //     this.relayUrls = relayUrls;
-  // }
-
-  /**
-   * Sets the user pool
-   */
-  // setAccountPool(pool: SimplePool): void {
-  //     this.pool = pool;
-
-  //     // After setting the user pool, check the online status of the relays
-  //     this.logger.debug('Account pool set, checking relay status...');
-
-  //     const connectionStatuses = this.pool.listConnectionStatus();
-
-  //     // Update relay statuses using a for...of loop
-  //     for (const [url, status] of connectionStatuses) {
-  //         const userRelay = this.accountRelays().find(r => r.url === url);
-
-  //         if (!userRelay) {
-  //             this.logger.warn(`Relay ${url} not found in account relays`);
-  //             continue;
-  //         }
-
-  //         userRelay.status = status ? 'connected' : 'disconnected';
-  //     }
-  // }
 
   async getEventByPubkeyAndKindAndTag(
     pubkey: string,
@@ -455,11 +248,4 @@ export class AccountRelayService {
       };
     }
   }
-
-  // async getEventByPubkeyAndKindAndTag(pubkey: string | string[], kind: number, tag: string[]): Promise<NostrEvent | null> {
-  //     return this.get({
-  //         "#d": pubkey,
-  //         kinds: [kind]
-  //     });
-  // }
 }

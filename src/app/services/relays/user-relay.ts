@@ -10,14 +10,12 @@ import { RelayService } from './relay';
 import { AccountRelayService } from './account-relay';
 import { RelayServiceBase } from './relay-base';
 import { DiscoveryRelayServiceEx } from './discovery-relay';
-import { RelaysService } from './relays';
 
 @Injectable({
   providedIn: 'root',
 })
 export class UserRelayServiceEx extends RelayServiceBase {
   private discoveryRelay = inject(DiscoveryRelayServiceEx);
-  private relaysService = inject(RelaysService);
   private pubkey = '';
 
   constructor() {
@@ -395,11 +393,4 @@ export class UserRelayService {
     this.relayUrls = [];
     this.logger.debug('UserRelayService destroyed');
   }
-
-  // async getEventByPubkeyAndKindAndTag(pubkey: string | string[], kind: number, tag: string[]): Promise<NostrEvent | null> {
-  //     return this.get({
-  //         "#d": pubkey,
-  //         kinds: [kind]
-  //     });
-  // }
 }
