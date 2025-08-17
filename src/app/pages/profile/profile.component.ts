@@ -178,6 +178,14 @@ export class ProfileComponent {
         }
 
         if (id) {
+          // Validate the id parameter before proceeding
+          if (!id || id === 'undefined' || !id.trim()) {
+            this.logger.warn('Profile page opened with invalid id:', id);
+            this.error.set('Invalid profile identifier');
+            this.isLoading.set(false);
+            return;
+          }
+
           this.logger.debug('Profile page opened with pubkey:', id);
 
           // Reset state when loading a new profile
@@ -343,6 +351,14 @@ export class ProfileComponent {
   // }
 
   private async loadUserProfile(pubkey: string): Promise<void> {
+    // Validate pubkey parameter
+    if (!pubkey || pubkey === 'undefined' || !pubkey.trim()) {
+      this.logger.warn('loadUserProfile called with invalid pubkey:', pubkey);
+      this.error.set('Invalid profile identifier');
+      this.isLoading.set(false);
+      return;
+    }
+
     this.isLoading.set(true);
     this.error.set(null);
 

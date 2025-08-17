@@ -151,6 +151,12 @@ export class UserDataService {
     pubkey: string,
     refresh = false
   ): Promise<NostrRecord | undefined> {
+    // Validate pubkey parameter
+    if (!pubkey || pubkey === 'undefined' || !pubkey.trim()) {
+      this.logger.warn('getProfile called with invalid pubkey:', pubkey);
+      return undefined;
+    }
+
     const cacheKey = `metadata-${pubkey}`;
 
     // Check if there's already a pending request for this pubkey
@@ -257,6 +263,15 @@ export class UserDataService {
     dTagValue: string,
     options?: CacheOptions & DataOptions
   ): Promise<NostrRecord | null> {
+    // Validate pubkey parameter
+    if (!pubkey || pubkey === 'undefined' || !pubkey.trim()) {
+      this.logger.warn(
+        'getEventByPubkeyAndKindAndReplaceableEvent called with invalid pubkey:',
+        pubkey
+      );
+      return null;
+    }
+
     const cacheKey = `${pubkey}-${kind}-${dTagValue}`;
     let event: Event | null = null;
     let record: NostrRecord | undefined = undefined;
@@ -311,6 +326,34 @@ export class UserDataService {
     kind: number,
     options?: CacheOptions & DataOptions
   ): Promise<NostrRecord | null> {
+    // Validate pubkey parameter
+    if (!pubkey || (Array.isArray(pubkey) && pubkey.length === 0)) {
+      this.logger.warn(
+        'getEventByPubkeyAndKind called with invalid pubkey:',
+        pubkey
+      );
+      return null;
+    }
+
+    if (Array.isArray(pubkey) && pubkey.some(pk => !pk || pk === 'undefined')) {
+      this.logger.warn(
+        'getEventByPubkeyAndKind called with invalid pubkey in array:',
+        pubkey
+      );
+      return null;
+    }
+
+    if (
+      typeof pubkey === 'string' &&
+      (pubkey === 'undefined' || !pubkey.trim())
+    ) {
+      this.logger.warn(
+        'getEventByPubkeyAndKind called with invalid pubkey string:',
+        pubkey
+      );
+      return null;
+    }
+
     const cacheKey = `${Array.isArray(pubkey) ? pubkey.join(',') : pubkey}-${kind}`;
     let event: Event | null = null;
     let record: NostrRecord | undefined = undefined;
@@ -356,6 +399,34 @@ export class UserDataService {
     kind: number,
     options?: CacheOptions & DataOptions
   ): Promise<NostrRecord[]> {
+    // Validate pubkey parameter
+    if (!pubkey || (Array.isArray(pubkey) && pubkey.length === 0)) {
+      this.logger.warn(
+        'getEventsByPubkeyAndKind called with invalid pubkey:',
+        pubkey
+      );
+      return [];
+    }
+
+    if (Array.isArray(pubkey) && pubkey.some(pk => !pk || pk === 'undefined')) {
+      this.logger.warn(
+        'getEventsByPubkeyAndKind called with invalid pubkey in array:',
+        pubkey
+      );
+      return [];
+    }
+
+    if (
+      typeof pubkey === 'string' &&
+      (pubkey === 'undefined' || !pubkey.trim())
+    ) {
+      this.logger.warn(
+        'getEventsByPubkeyAndKind called with invalid pubkey string:',
+        pubkey
+      );
+      return [];
+    }
+
     const cacheKey = `${Array.isArray(pubkey) ? pubkey.join(',') : pubkey}-${kind}-all`;
     let events: Event[] = [];
     let records: NostrRecord[] = [];
