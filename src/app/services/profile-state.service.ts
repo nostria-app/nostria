@@ -129,16 +129,17 @@ export class ProfileStateService {
         {
           kinds: [kinds.Contacts],
           authors: [pubkey],
+          limit: 1,
         },
         {
           kinds: [kinds.ShortTextNote],
           authors: [pubkey],
-          limit: 30,
+          limit: 5,
         },
         {
           kinds: [kinds.LongFormArticle],
           authors: [pubkey],
-          limit: 30,
+          limit: 3,
         },
         {
           kinds: [10063], // BUD-03: User Server List
@@ -148,12 +149,12 @@ export class ProfileStateService {
         {
           kinds: [kinds.Repost],
           authors: [pubkey],
-          limit: 30,
+          limit: 2,
         },
         {
           kinds: [kinds.GenericRepost],
           authors: [pubkey],
-          limit: 30,
+          limit: 2,
         },
       ],
       {
@@ -239,7 +240,17 @@ export class ProfileStateService {
               kinds: [kinds.ShortTextNote],
               authors: [pubkey],
               until: oldestTimestamp,
-              limit: 10,
+              limit: 5,
+            },
+            {
+              kinds: [kinds.Repost],
+              authors: [pubkey],
+              limit: 5,
+            },
+            {
+              kinds: [kinds.GenericRepost],
+              authors: [pubkey],
+              limit: 5,
             },
           ],
           event => {
