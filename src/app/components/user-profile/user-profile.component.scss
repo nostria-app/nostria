@@ -45,8 +45,10 @@
     overflow: hidden;
     flex-shrink: 0;
     border: 2px solid;
-    border-color: var(--mat-button-text-label-text-color,
-        var(--mat-sys-primary));
+    border-color: var(
+      --mat-button-text-label-text-color,
+      var(--mat-sys-primary)
+    );
     background-color: var(--mat-card-subtle-surface-color, #e0e0e0);
     // Allow touch scrolling to pass through
     touch-action: manipulation;
@@ -112,7 +114,9 @@
       text-align: center;
       opacity: 0;
       visibility: hidden;
-      transition: opacity 0.3s, visibility 0.3s;
+      transition:
+        opacity 0.3s,
+        visibility 0.3s;
       z-index: 1000;
       pointer-events: none; // Important: prevents tooltip from blocking touch events
 
@@ -126,7 +130,6 @@
 
     // Show tooltip on hover (desktop) - long press for mobile is handled differently
     @media (hover: hover) and (pointer: fine) {
-
       &:hover::before {
         opacity: 1;
         visibility: visible;
@@ -135,7 +138,6 @@
 
     // For touch devices, show tooltip on focus (when tapped)
     @media (hover: none) {
-
       &:focus::before {
         opacity: 1;
         visibility: visible;

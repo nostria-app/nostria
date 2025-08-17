@@ -5,7 +5,7 @@
   </div>
 
   <h2>Backup & Restore</h2>
-  
+
   <p class="subtitle">Manage your Nostr data backups</p>
 
   <mat-card>
@@ -47,21 +47,29 @@
         </p>
 
         @if (isSaving()) {
-        <div class="progress-container">
-          <mat-progress-bar mode="determinate" [value]="progress()"></mat-progress-bar>
-          <span class="progress-text">{{ progress().toFixed(0) }}%</span>
-        </div>
+          <div class="progress-container">
+            <mat-progress-bar
+              mode="determinate"
+              [value]="progress()"
+            ></mat-progress-bar>
+            <span class="progress-text">{{ progress().toFixed(0) }}%</span>
+          </div>
         }
       </mat-card-content>
 
       <mat-card-actions>
-        <button mat-flat-button color="primary" [disabled]="isSaving()" (click)="saveBackup()">
+        <button
+          mat-flat-button
+          color="primary"
+          [disabled]="isSaving()"
+          (click)="saveBackup()"
+        >
           <mat-icon>save</mat-icon>
           @if (isSaving()) {
-          <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
-          CREATING BACKUP...
+            <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
+            CREATING BACKUP...
           } @else {
-          SAVE BACKUP
+            SAVE BACKUP
           }
         </button>
       </mat-card-actions>
@@ -81,21 +89,31 @@
         </p>
 
         @if (isImporting()) {
-        <div class="progress-container">
-          <mat-progress-bar mode="determinate" [value]="importProgress()"></mat-progress-bar>
-          <span class="progress-text">{{ importProgress().toFixed(0) }}%</span>
-        </div>
+          <div class="progress-container">
+            <mat-progress-bar
+              mode="determinate"
+              [value]="importProgress()"
+            ></mat-progress-bar>
+            <span class="progress-text"
+              >{{ importProgress().toFixed(0) }}%</span
+            >
+          </div>
         }
       </mat-card-content>
 
       <mat-card-actions>
-        <button mat-flat-button color="accent" [disabled]="isImporting()" (click)="initiateImport()">
+        <button
+          mat-flat-button
+          color="accent"
+          [disabled]="isImporting()"
+          (click)="initiateImport()"
+        >
           <mat-icon>upload_file</mat-icon>
           @if (isImporting()) {
-          <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
-          IMPORTING...
+            <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
+            IMPORTING...
           } @else {
-          IMPORT BACKUP
+            IMPORT BACKUP
           }
         </button>
       </mat-card-actions>
