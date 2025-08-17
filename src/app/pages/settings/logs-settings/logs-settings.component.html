@@ -1,5 +1,4 @@
 <div class="content-medium">
-
   <h2>Logs and debugging</h2>
 
   <!-- Relay Statistics Section -->
@@ -34,7 +33,11 @@
   <section class="mute-section">
     <h3>All Relays ({{ allRelayStats().length }})</h3>
     <div class="relay-actions">
-      <button mat-stroked-button (click)="generateClusterOutput()" color="primary">
+      <button
+        mat-stroked-button
+        (click)="generateClusterOutput()"
+        color="primary"
+      >
         <mat-icon>refresh</mat-icon>
         Refresh Cluster Data
       </button>
@@ -54,69 +57,86 @@
 
       <div class="relay-list">
         @for (relayEntry of allRelayStats(); track relayEntry[0]) {
-        <div class="relay-item">
-          <div class="relay-header">
-            <div class="relay-status">
-              <mat-icon [color]="getConnectionStatusIcon(relayEntry[1]).color"
-                [matTooltip]="getConnectionStatusIcon(relayEntry[1]).tooltip">
-                {{ getConnectionStatusIcon(relayEntry[1]).icon }}
-              </mat-icon>
-              <span class="relay-url">{{ relayEntry[0] }}</span>
-              <a [href]="getWebUrl(relayEntry[0])" target="_blank" rel="noopener noreferrer" class="web-link">
-                <mat-icon>open_in_new</mat-icon>
-              </a>
+          <div class="relay-item">
+            <div class="relay-header">
+              <div class="relay-status">
+                <mat-icon
+                  [color]="getConnectionStatusIcon(relayEntry[1]).color"
+                  [matTooltip]="getConnectionStatusIcon(relayEntry[1]).tooltip"
+                >
+                  {{ getConnectionStatusIcon(relayEntry[1]).icon }}
+                </mat-icon>
+                <span class="relay-url">{{ relayEntry[0] }}</span>
+                <a
+                  [href]="getWebUrl(relayEntry[0])"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="web-link"
+                >
+                  <mat-icon>open_in_new</mat-icon>
+                </a>
+              </div>
+              <div class="relay-actions">
+                <button
+                  mat-icon-button
+                  (click)="resetRelayStats(relayEntry[0])"
+                  matTooltip="Reset statistics for this relay"
+                  color="warn"
+                >
+                  <mat-icon>refresh</mat-icon>
+                </button>
+              </div>
             </div>
-            <div class="relay-actions">
-              <button mat-icon-button (click)="resetRelayStats(relayEntry[0])"
-                matTooltip="Reset statistics for this relay" color="warn">
-                <mat-icon>refresh</mat-icon>
-              </button>
-            </div>
-          </div>
 
-          <div class="relay-stats">
-            <div class="stat-row">
-              <span class="stat-label">Events Received:</span>
-              <span class="stat-value">{{
-                relayEntry[1].eventsReceived
+            <div class="relay-stats">
+              <div class="stat-row">
+                <span class="stat-label">Events Received:</span>
+                <span class="stat-value">{{
+                  relayEntry[1].eventsReceived
                 }}</span>
-            </div>
-            <div class="stat-row">
-              <span class="stat-label">Connection Attempts:</span>
-              <span class="stat-value">{{
-                relayEntry[1].connectionAttempts
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">Connection Attempts:</span>
+                <span class="stat-value">{{
+                  relayEntry[1].connectionAttempts
                 }}</span>
-            </div>
-            <div class="stat-row">
-              <span class="stat-label">Last Retry:</span>
-              <span class="stat-value">{{
-                formatRelativeTime(relayEntry[1].lastConnectionRetry)
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">Last Retry:</span>
+                <span class="stat-value">{{
+                  formatRelativeTime(relayEntry[1].lastConnectionRetry)
                 }}</span>
-            </div>
-            <div class="stat-row">
-              <span class="stat-label">Last Success:</span>
-              <span class="stat-value">{{
-                formatRelativeTime(relayEntry[1].lastSuccessfulConnection)
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">Last Success:</span>
+                <span class="stat-value">{{
+                  formatRelativeTime(relayEntry[1].lastSuccessfulConnection)
                 }}</span>
-            </div>
-            <div class="stat-row">
-              <span class="stat-label">Performance Score:</span>
-              <div class="performance-score">
-                <mat-progress-bar mode="determinate" [value]="
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">Performance Score:</span>
+                <div class="performance-score">
+                  <mat-progress-bar
+                    mode="determinate"
+                    [value]="
                       relaysService.getRelayPerformanceScore(relayEntry[0])
-                    " [color]="
+                    "
+                    [color]="
                       getPerformanceScoreColor(
                         relaysService.getRelayPerformanceScore(relayEntry[0])
                       )
-                    ">
-                </mat-progress-bar>
-                <span class="score-value">{{
-                  relaysService.getRelayPerformanceScore(relayEntry[0])
-                  }}/100</span>
+                    "
+                  >
+                  </mat-progress-bar>
+                  <span class="score-value"
+                    >{{
+                      relaysService.getRelayPerformanceScore(relayEntry[0])
+                    }}/100</span
+                  >
+                </div>
               </div>
             </div>
           </div>
-        </div>
         }
       </div>
     </mat-expansion-panel>
@@ -135,50 +155,60 @@
 
       <div class="cluster-list">
         @for (cluster of clusterOutput(); track cluster.relay) {
-        <div class="cluster-item">
-          <div class="cluster-header">
-            <div class="cluster-relay">
-              <mat-icon [color]="
+          <div class="cluster-item">
+            <div class="cluster-header">
+              <div class="cluster-relay">
+                <mat-icon
+                  [color]="
                     cluster.connectionStatus === 'connected'
                       ? 'primary'
                       : 'warn'
-                  ">
-                {{
-                cluster.connectionStatus === 'connected'
-                ? 'wifi'
-                : 'wifi_off'
-                }}
-              </mat-icon>
-              <span class="relay-url">{{ cluster.relay }}</span>
-              <mat-chip-set>
-                <mat-chip>{{ cluster.userCount }} users</mat-chip>
-                <mat-chip>{{ cluster.eventsReceived }} events</mat-chip>
-                <mat-chip [color]="getPerformanceScoreColor(cluster.performanceScore)">
-                  {{ cluster.performanceScore }}% performance
-                </mat-chip>
-              </mat-chip-set>
+                  "
+                >
+                  {{
+                    cluster.connectionStatus === 'connected'
+                      ? 'wifi'
+                      : 'wifi_off'
+                  }}
+                </mat-icon>
+                <span class="relay-url">{{ cluster.relay }}</span>
+                <mat-chip-set>
+                  <mat-chip>{{ cluster.userCount }} users</mat-chip>
+                  <mat-chip>{{ cluster.eventsReceived }} events</mat-chip>
+                  <mat-chip
+                    [color]="getPerformanceScoreColor(cluster.performanceScore)"
+                  >
+                    {{ cluster.performanceScore }}% performance
+                  </mat-chip>
+                </mat-chip-set>
+              </div>
             </div>
-          </div>
 
-          @if (cluster.sharedWithRelays.length > 0) {
-          <div class="cluster-connections">
-            <h4>Shared with:</h4>
-            @for (
-            connection of cluster.sharedWithRelays;
-            track connection.relay
-            ) {
-            <div class="connection-item">
-              <span class="connection-relay">{{ connection.relay }}</span>
-              <mat-progress-bar mode="determinate" [value]="connection.connectionStrength" color="accent">
-              </mat-progress-bar>
-              <span class="connection-strength">{{ connection.sharedUsers }} users ({{
-                connection.connectionStrength
-                }}%)</span>
-            </div>
+            @if (cluster.sharedWithRelays.length > 0) {
+              <div class="cluster-connections">
+                <h4>Shared with:</h4>
+                @for (
+                  connection of cluster.sharedWithRelays;
+                  track connection.relay
+                ) {
+                  <div class="connection-item">
+                    <span class="connection-relay">{{ connection.relay }}</span>
+                    <mat-progress-bar
+                      mode="determinate"
+                      [value]="connection.connectionStrength"
+                      color="accent"
+                    >
+                    </mat-progress-bar>
+                    <span class="connection-strength"
+                      >{{ connection.sharedUsers }} users ({{
+                        connection.connectionStrength
+                      }}%)</span
+                    >
+                  </div>
+                }
+              </div>
             }
           </div>
-          }
-        </div>
         }
       </div>
     </mat-expansion-panel>
@@ -192,20 +222,29 @@
     </h3>
     <div class="muted-section">
       @if (relay.timeouts()) {
-      <mat-list>
-        @for (relay of relay.timeouts(); track relay.url) {
-        <mat-list-item>
-          <span matListItemTitle>{{ relay.url }} -
-            <a [href]="getWebUrl(relay.url)" target="_blank" rel="noopener noreferrer">View</a></span>
-          <span matListItemSubtitle>Timeout until {{ relay.timeout | date: 'short' }}</span><br />
-          <button mat-icon-button color="warn" matListItemMeta>
-            <mat-icon>clear</mat-icon>
-          </button>
-        </mat-list-item>
-        }
-      </mat-list>
+        <mat-list>
+          @for (relay of relay.timeouts(); track relay.url) {
+            <mat-list-item>
+              <span matListItemTitle
+                >{{ relay.url }} -
+                <a
+                  [href]="getWebUrl(relay.url)"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  >View</a
+                ></span
+              >
+              <span matListItemSubtitle
+                >Timeout until {{ relay.timeout | date: 'short' }}</span
+              ><br />
+              <button mat-icon-button color="warn" matListItemMeta>
+                <mat-icon>clear</mat-icon>
+              </button>
+            </mat-list-item>
+          }
+        </mat-list>
       } @else {
-      <p class="empty-state">No suspended relays.</p>
+        <p class="empty-state">No suspended relays.</p>
       }
     </div>
   </section>
@@ -217,20 +256,34 @@
     </h3>
     <div class="muted-section">
       @if (relay.timeouts()) {
-      <mat-list>
-        @for (relay of disabledRelays(); track relay.key) {
-        <mat-list-item>
-          <span matListItemTitle>{{ relay.key }} -
-            <a [href]="getWebUrl(relay.key)" target="_blank" rel="noopener noreferrer">View</a></span>
-          <span matListItemSubtitle>Disabled {{ relay.updated | date: 'short' }}</span><br />
-          <button mat-icon-button color="warn" matListItemMeta (click)="removeDisabledRelay(relay)">
-            <mat-icon>clear</mat-icon>
-          </button>
-        </mat-list-item>
-        }
-      </mat-list>
+        <mat-list>
+          @for (relay of disabledRelays(); track relay.key) {
+            <mat-list-item>
+              <span matListItemTitle
+                >{{ relay.key }} -
+                <a
+                  [href]="getWebUrl(relay.key)"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  >View</a
+                ></span
+              >
+              <span matListItemSubtitle
+                >Disabled {{ relay.updated | date: 'short' }}</span
+              ><br />
+              <button
+                mat-icon-button
+                color="warn"
+                matListItemMeta
+                (click)="removeDisabledRelay(relay)"
+              >
+                <mat-icon>clear</mat-icon>
+              </button>
+            </mat-list-item>
+          }
+        </mat-list>
       } @else {
-      <p class="empty-state">No disabled relays.</p>
+        <p class="empty-state">No disabled relays.</p>
       }
     </div>
   </section>

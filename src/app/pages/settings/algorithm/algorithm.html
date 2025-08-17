@@ -1,5 +1,4 @@
 <div class="content-medium">
-
   <h2>Algorithm Settings</h2>
 
   <p class="subtitle">
@@ -36,7 +35,9 @@
         <div class="stat-item">
           <mat-icon>favorite</mat-icon>
           <div class="stat-content">
-            <span class="stat-number">{{ algorithmStats().favoriteUsers }}</span>
+            <span class="stat-number"
+              >{{ algorithmStats().favoriteUsers }}</span
+            >
             <span class="stat-label">Favorites</span>
           </div>
         </div>
@@ -50,7 +51,9 @@
         <div class="stat-item">
           <mat-icon>analytics</mat-icon>
           <div class="stat-content">
-            <span class="stat-number">{{ algorithmStats().averageEngagement }}</span>
+            <span class="stat-number"
+              >{{ algorithmStats().averageEngagement }}</span
+            >
             <span class="stat-label">Avg Engagement</span>
           </div>
         </div>
@@ -62,7 +65,9 @@
   <mat-card class="metrics-card">
     <mat-card-header>
       <mat-card-title>User Metrics</mat-card-title>
-      <mat-card-subtitle>View and manage user engagement data</mat-card-subtitle>
+      <mat-card-subtitle
+        >View and manage user engagement data</mat-card-subtitle
+      >
     </mat-card-header>
     <mat-card-content>
       <mat-tab-group [(selectedIndex)]="selectedTabIndex">
@@ -71,13 +76,19 @@
           <div class="tab-content">
             <p>Users with highest engagement scores</p>
             <div class="table-container">
-              <table mat-table [dataSource]="topEngagedUsers()" class="metrics-table">
+              <table
+                mat-table
+                [dataSource]="topEngagedUsers()"
+                class="metrics-table"
+              >
                 <!-- Position Column -->
                 <ng-container matColumnDef="position">
                   <th mat-header-cell *matHeaderCellDef>#</th>
                   <td mat-cell *matCellDef="let element; let i = index">
                     @if (isFavorite(element.pubkey)) {
-                    <mat-icon class="favorite-icon" matTooltip="Favorite">heart_minus</mat-icon>
+                    <mat-icon class="favorite-icon" matTooltip="Favorite"
+                      >heart_minus</mat-icon
+                    >
                     } @else { {{ i + 1 }} }
                   </td>
                 </ng-container>
@@ -87,7 +98,9 @@
                   <th mat-header-cell *matHeaderCellDef>User</th>
                   <td mat-cell *matCellDef="let element">
                     <div class="user-info">
-                      <span class="pubkey">{{ getTruncatedPubkey(element.pubkey) }}</span>
+                      <span class="pubkey"
+                        >{{ getTruncatedPubkey(element.pubkey) }}</span
+                      >
                       @if (isFavorite(element.pubkey)) {
                       <mat-chip color="primary">Favorite</mat-chip>
                       }
@@ -107,7 +120,9 @@
                 <ng-container matColumnDef="engagementScore">
                   <th mat-header-cell *matHeaderCellDef>Score</th>
                   <td mat-cell *matCellDef="let element">
-                    <mat-chip [color]="getEngagementColor(element.engagementScore || 0)">
+                    <mat-chip
+                      [color]="getEngagementColor(element.engagementScore || 0)"
+                    >
                       {{ element.engagementScore || 0 }}
                     </mat-chip>
                   </td>
@@ -145,13 +160,23 @@
                       <mat-icon>more_vert</mat-icon>
                     </button>
                     <mat-menu #userMenu="matMenu">
-                      <button mat-menu-item (click)="toggleFavorite(element.pubkey)">
-                        <mat-icon class="yellow filled">{{ isFavorite(element.pubkey) ? 'heart_minus' :
-                          'heart_plus' }}</mat-icon>
-                        <span>{{ isFavorite(element.pubkey) ? 'Remove from
-                          Favorites' : 'Add to Favorites' }}</span>
+                      <button
+                        mat-menu-item
+                        (click)="toggleFavorite(element.pubkey)"
+                      >
+                        <mat-icon class="yellow filled"
+                          >{{ isFavorite(element.pubkey) ? 'heart_minus' :
+                          'heart_plus' }}</mat-icon
+                        >
+                        <span
+                          >{{ isFavorite(element.pubkey) ? 'Remove from
+                          Favorites' : 'Add to Favorites' }}</span
+                        >
                       </button>
-                      <button mat-menu-item (click)="resetUserMetrics(element.pubkey)">
+                      <button
+                        mat-menu-item
+                        (click)="resetUserMetrics(element.pubkey)"
+                      >
                         <mat-icon>refresh</mat-icon>
                         <span>Reset Metrics</span>
                       </button>
@@ -160,7 +185,10 @@
                 </ng-container>
 
                 <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-                <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+                <tr
+                  mat-row
+                  *matRowDef="let row; columns: displayedColumns;"
+                ></tr>
               </table>
             </div>
           </div>
@@ -180,8 +208,10 @@
                       getTruncatedPubkey(user.pubkey) }}
                     </a>
                   </mat-card-title>
-                  <mat-card-subtitle>{{ formatLastInteraction(user.lastInteraction)
-                    }}</mat-card-subtitle>
+                  <mat-card-subtitle
+                    >{{ formatLastInteraction(user.lastInteraction)
+                    }}</mat-card-subtitle
+                  >
                 </mat-card-header>
                 <mat-card-content>
                   <div class="user-metrics">
@@ -201,8 +231,10 @@
                 </mat-card-content>
                 <mat-card-actions>
                   <button mat-button (click)="toggleFavorite(user.pubkey)">
-                    <mat-icon>{{ isFavorite(user.pubkey) ? 'heart_minus' : 'heart_plus'
-                      }}</mat-icon>
+                    <mat-icon
+                      >{{ isFavorite(user.pubkey) ? 'heart_minus' : 'heart_plus'
+                      }}</mat-icon
+                    >
                     {{ isFavorite(user.pubkey) ? 'Unfavorite' : 'Favorite' }}
                   </button>
                   <button mat-button (click)="resetUserMetrics(user.pubkey)">
@@ -238,12 +270,21 @@
                       <p>Engagement score: {{ user.engagementScore || 0 }}</p>
                     </div>
                     <div class="user-actions">
-                      <button mat-icon-button (click)="toggleFavorite(user.pubkey)"
-                        [matTooltip]="isFavorite(user.pubkey) ? 'Remove from favorites' : 'Add to favorites'">
-                        <mat-icon>{{ isFavorite(user.pubkey) ? 'heart_minus' :
-                          'heart_plus' }}</mat-icon>
+                      <button
+                        mat-icon-button
+                        (click)="toggleFavorite(user.pubkey)"
+                        [matTooltip]="isFavorite(user.pubkey) ? 'Remove from favorites' : 'Add to favorites'"
+                      >
+                        <mat-icon
+                          >{{ isFavorite(user.pubkey) ? 'heart_minus' :
+                          'heart_plus' }}</mat-icon
+                        >
                       </button>
-                      <button mat-icon-button (click)="resetUserMetrics(user.pubkey)" matTooltip="Reset metrics">
+                      <button
+                        mat-icon-button
+                        (click)="resetUserMetrics(user.pubkey)"
+                        matTooltip="Reset metrics"
+                      >
                         <mat-icon>refresh</mat-icon>
                       </button>
                     </div>
