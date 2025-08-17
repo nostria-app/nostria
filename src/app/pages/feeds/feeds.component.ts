@@ -65,6 +65,13 @@ import {
 import { AccountStateService } from '../../services/account-state.service';
 import { Followset } from '../../services/followset';
 import { RepostService } from '../../services/repost.service';
+import { EventComponent } from '../../components/event/event.component';
+import {
+  VideoEventComponent,
+  PhotoEventComponent,
+  ArticleEventComponent,
+  PlaylistEventComponent,
+} from '../../components/event-types';
 
 interface NavLink {
   id: string;
@@ -103,6 +110,11 @@ const DEFAULT_COLUMNS: NavLink[] = [
     Link,
     Introduction,
     FollowsetComponent,
+    EventComponent,
+    VideoEventComponent,
+    PhotoEventComponent,
+    ArticleEventComponent,
+    PlaylistEventComponent,
   ],
   templateUrl: './feeds.component.html',
   styleUrl: './feeds.component.scss',
