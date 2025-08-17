@@ -15,7 +15,7 @@ import {
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialogModule } from '@angular/material/dialog';
-import { DomSanitizer } from '@angular/platform-browser';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { SocialPreviewComponent } from '../social-preview/social-preview.component';
 import { MatDialog } from '@angular/material/dialog';
 import { ImageDialogComponent } from '../image-dialog/image-dialog.component';
@@ -37,18 +37,19 @@ interface NostrData {
 interface ContentToken {
   id: number;
   type:
-    | 'text'
-    | 'url'
-    | 'youtube'
-    | 'image'
-    | 'audio'
-    | 'video'
-    | 'linebreak'
-    | 'nostr-mention'
-    | 'emoji';
+  | 'text'
+  | 'url'
+  | 'youtube'
+  | 'image'
+  | 'audio'
+  | 'video'
+  | 'linebreak'
+  | 'nostr-mention'
+  | 'emoji';
   content: string;
   nostrData?: NostrData;
   emoji?: string;
+  processedUrl?: SafeResourceUrl; // For YouTube embed URLs that are pre-processed
 }
 
 interface SocialPreview {
@@ -360,6 +361,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
       type: ContentToken['type'];
       nostrData?: NostrData;
       emoji?: string;
+      processedUrl?: SafeResourceUrl;
     }[] = [];
 
     // Find emoji codes first (highest priority after nostr)
@@ -427,11 +429,16 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
 
     // Find YouTube URLs
     while ((match = youtubeRegex.exec(processedContent)) !== null) {
+      // Pre-process the YouTube URL to avoid repeated calls in template
+      const youtubeUrl = match[0];
+      const processedUrl = this.media.getYouTubeEmbedUrl()(youtubeUrl);
+
       matches.push({
         start: match.index,
         end: match.index + match[0].length,
-        content: match[0],
+        content: youtubeUrl,
         type: 'youtube',
+        processedUrl: processedUrl,
       });
     }
 
@@ -536,6 +543,10 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
 
       if (match.emoji) {
         token.emoji = match.emoji;
+      }
+
+      if (match.processedUrl) {
+        token.processedUrl = match.processedUrl;
       }
 
       tokens.push(token);
