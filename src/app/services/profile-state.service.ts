@@ -36,6 +36,7 @@ export class ProfileStateService {
       const currentPubkey = this.currentProfilePubkey();
 
       if (currentPubkey) {
+        debugger;
         await this.createRelay(currentPubkey);
         await this.loadUserData(currentPubkey);
       }

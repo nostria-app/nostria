@@ -366,6 +366,9 @@ export abstract class RelayServiceBase {
       const publishResults = this.#pool.publish(urls, event);
       this.logger.debug('Publish results:', publishResults);
 
+      const result1 = await publishResults[0];
+      console.log('Publish result for first relay:', result1);
+
       // Update lastUsed for all relays used in this publish operation
       // urls.forEach(url => this.updateRelayLastUsed(url));
 
@@ -377,12 +380,12 @@ export abstract class RelayServiceBase {
   }
 
   /**
- * Generic function to publish a Nostr event to specified relays
- * @param event The Nostr event to publish
- * @param relayUrls Optional specific relay URLs to use (defaults to user's relays)
- * @param options Optional options for publishing
- * @returns Promise that resolves to an object with status for each relay
- */
+   * Generic function to publish a Nostr event to specified relays
+   * @param event The Nostr event to publish
+   * @param relayUrls Optional specific relay URLs to use (defaults to user's relays)
+   * @param options Optional options for publishing
+   * @returns Promise that resolves to an object with status for each relay
+   */
   async publishToRelay(event: Event, relayUrls: string | string[]) {
     this.logger.debug('Publishing event:', event);
 

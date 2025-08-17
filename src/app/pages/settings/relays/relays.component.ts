@@ -388,7 +388,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
           url,
           migrateData: result.migrateData,
         });
-        this.relay.addRelay(url);
+        this.accountRelay.addRelay(url);
 
         await this.publish();
 

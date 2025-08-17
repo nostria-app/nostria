@@ -16,7 +16,6 @@ import { UpgradeComponent } from './pages/premium/upgrade/upgrade.component';
 import { DetailsComponent } from './pages/profile/details/details.component';
 import { NotificationsComponent } from './pages/notifications/notifications.component';
 import { MessagesComponent } from './pages/messages/messages.component';
-import { ArticlesComponent } from './pages/articles/articles.component';
 import { BadgesComponent } from './pages/badges/badges.component';
 import { ProfileRelaysComponent } from './pages/profile/profile-relays/profile-relays.component';
 import { BetaComponent } from './pages/beta/beta.component';
@@ -193,12 +192,12 @@ export const routes: Routes = [
       ),
     title: 'Bookmarks',
   },
-  {
-    path: 'articles',
-    component: ArticlesComponent,
-    data: { isRoot: true },
-    title: 'Articles',
-  },
+  // {
+  //   path: 'articles',
+  //   component: ArticlesComponent,
+  //   data: { isRoot: true },
+  //   title: 'Articles',
+  // },
   {
     path: 'drafts',
     component: DraftsComponent,

@@ -98,10 +98,8 @@ export class MediaService implements NostriaService {
     // });
   }
 
-  async load() {
-    const userServerList = await this.nostrService.getMediaServers(
-      this.accountState.pubkey()
-    );
+  async load(pubkey: string = this.accountState.pubkey()) {
+    const userServerList = await this.nostrService.getMediaServers(pubkey);
 
     if (userServerList) {
       const servers = this.nostrService.getTags(

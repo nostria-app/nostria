@@ -214,7 +214,11 @@ export class LoginDialogComponent {
 
       try {
         // First generate the new key and set up the account
-        await this.nostrService.generateNewKey(this.selectedRegionId()!);
+        const newUser = await this.nostrService.generateNewKey(
+          this.selectedRegionId()!
+        );
+
+        debugger;
 
         // If the user has set a display name and/or profile image, create the profile
         const displayName = this.displayName();
@@ -223,6 +227,7 @@ export class LoginDialogComponent {
         if (displayName || profileImageFile) {
           this.logger.debug('Creating initial profile for new user');
           const result = await this.profileService.createInitialProfile(
+            newUser.pubkey,
             displayName || undefined,
             profileImageFile || undefined
           );
@@ -235,6 +240,9 @@ export class LoginDialogComponent {
             this.logger.debug('Initial profile created successfully');
           }
         }
+
+        // Perform the set account after we've uploaded the profile.
+        // await this.nostrService.setAccount(newUser);
 
         this.closeDialog();
       } catch (error) {

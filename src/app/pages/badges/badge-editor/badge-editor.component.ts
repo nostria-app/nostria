@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect, computed } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 
 import {
   FormBuilder,
@@ -19,10 +19,10 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { Router } from '@angular/router';
 import { NostrService } from '../../../services/nostr.service';
-import { RelayService } from '../../../services/relays/relay';
 import { kinds } from 'nostr-tools';
 import { MediaService } from '../../../services/media.service';
 import { LayoutService } from '../../../services/layout.service';
+import { AccountRelayServiceEx } from '../../../services/relays/account-relay';
 
 @Component({
   selector: 'app-badge-editor',
@@ -50,7 +50,7 @@ export class BadgeEditorComponent {
   private snackBar = inject(MatSnackBar);
   private router = inject(Router);
   nostr = inject(NostrService);
-  relay = inject(RelayService);
+  accountRelay = inject(AccountRelayServiceEx);
   media = inject(MediaService);
   layout = inject(LayoutService);
 
@@ -318,7 +318,7 @@ export class BadgeEditorComponent {
 
       // Sign and publish the event
       const signedEvent = await this.nostr.signEvent(definitionEvent);
-      const publishResult = await this.relay.publish(signedEvent);
+      const publishResult = await this.accountRelay.publish(signedEvent);
 
       await this.layout.showPublishResults(publishResult, 'Badge');
 

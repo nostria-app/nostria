@@ -766,7 +766,7 @@ export class NostrService implements NostriaService {
       console.log('onEose on account subscription.');
     };
 
-    this.accountSubscription = this.discoveryRelay.subscribe(
+    this.accountSubscription = this.accountRelay.subscribe(
       filters,
       onEvent,
       onEose
@@ -780,7 +780,7 @@ export class NostrService implements NostriaService {
     );
 
     if (!followingEvent) {
-      followingEvent = await this.discoveryRelay.getEventByPubkeyAndKind(
+      followingEvent = await this.accountRelay.getEventByPubkeyAndKind(
         pubkey,
         kinds.Contacts
       );
@@ -790,7 +790,7 @@ export class NostrService implements NostriaService {
       }
     } else {
       // Queue up refresh of this event in the background
-      this.discoveryRelay
+      this.accountRelay
         .getEventByPubkeyAndKind(pubkey, kinds.Contacts)
         .then(async evt => {
           if (evt) {
@@ -812,7 +812,7 @@ export class NostrService implements NostriaService {
     );
 
     if (!muteListEvent) {
-      muteListEvent = await this.discoveryRelay.getEventByPubkeyAndKind(
+      muteListEvent = await this.accountRelay.getEventByPubkeyAndKind(
         pubkey,
         kinds.Mutelist
       );
@@ -822,7 +822,7 @@ export class NostrService implements NostriaService {
       }
     } else {
       // Queue up refresh of this event in the background
-      this.discoveryRelay
+      this.accountRelay
         .getEventByPubkeyAndKind(pubkey, kinds.Mutelist)
         .then(async evt => {
           if (evt) {
@@ -1096,14 +1096,14 @@ export class NostrService implements NostriaService {
     let event = await this.storage.getEventByPubkeyAndKind(pubkey, 10063); // BUD-03: User Server List
 
     if (!event) {
-      event = await this.discoveryRelay.getEventByPubkeyAndKind(pubkey, 10063);
+      event = await this.accountRelay.getEventByPubkeyAndKind(pubkey, 10063);
 
       if (event) {
         this.storage.saveEvent(event as Event);
       }
     } else {
       // Queue up refresh of this event in the background
-      this.discoveryRelay
+      this.accountRelay
         .getEventByPubkeyAndKind(pubkey, 10063)
         .then(newEvent => {
           if (newEvent) {
@@ -1466,7 +1466,7 @@ export class NostrService implements NostriaService {
     }
 
     try {
-      const relayListEvent = await this.discoveryRelay.get(
+      const relayListEvent = await this.accountRelay.get(
         {
           authors: [pubkey],
           kinds: [kinds.RelayList],
@@ -1501,7 +1501,7 @@ export class NostrService implements NostriaService {
           this.MAX_RELAY_COUNT
         );
       } else {
-        const followingEvent = await this.discoveryRelay.get({
+        const followingEvent = await this.accountRelay.get({
           authors: [pubkey],
           kinds: [kinds.Contacts],
         });
@@ -2197,6 +2197,9 @@ export class NostrService implements NostriaService {
     await this.storage.saveEvent(signedEvent);
     await this.discoveryRelay.publish(signedEvent);
 
+    // Initialize the account relay so we can start using it.
+    this.accountRelay.init([relayServerUrl!]);
+
     const mediaServerUrl = this.region.getMediaServer(region!, 0);
     const mediaTags = this.createTags('server', [mediaServerUrl!]);
 
@@ -2211,7 +2214,8 @@ export class NostrService implements NostriaService {
 
     const signedMediaEvent = finalizeEvent(mediaServerEvent, secretKey);
     await this.storage.saveEvent(signedMediaEvent);
-    this.publishQueueService.publish(signedMediaEvent, PublishTarget.Account);
+    await this.accountRelay.publish(signedMediaEvent);
+    // this.publishQueueService.publish(signedMediaEvent, PublishTarget.Account);
 
     const relayDMTags = this.createTags('relay', [relayServerUrl!]);
 
@@ -2226,11 +2230,12 @@ export class NostrService implements NostriaService {
 
     const signedDMEvent = finalizeEvent(relayDMListEvent, secretKey);
     await this.storage.saveEvent(signedDMEvent);
-    this.publishQueueService.publish(signedDMEvent, PublishTarget.Account);
+    await this.accountRelay.publish(signedMediaEvent);
+    // this.publishQueueService.publish(signedDMEvent, PublishTarget.Account);
 
-    // TODO: The media server event should be published to user relays, but we cannot do that yet, implement
-    // a queue for event publishing.
     await this.setAccount(newUser);
+
+    return newUser;
   }
 
   async loginWithExtension(): Promise<void> {

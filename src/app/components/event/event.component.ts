@@ -15,7 +15,6 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Event, kinds } from 'nostr-tools';
 import { NostrRecord } from '../../interfaces';
-import { AccountRelayService } from '../../services/relays/account-relay';
 import { ApplicationService } from '../../services/application.service';
 import { BookmarkService } from '../../services/bookmark.service';
 import { DataService } from '../../services/data.service';
@@ -28,6 +27,7 @@ import { CommonModule } from '@angular/common';
 import { AccountStateService } from '../../services/account-state.service';
 import { MatMenuModule } from '@angular/material/menu';
 import { EventService } from '../../services/event';
+import { AccountRelayServiceEx } from '../../services/relays/account-relay';
 
 type EventCardAppearance = 'card' | 'plain';
 
@@ -60,7 +60,7 @@ export class EventComponent {
   bookmark = inject(BookmarkService);
   repostService = inject(RepostService);
   layout = inject(LayoutService);
-  accountRelayService = inject(AccountRelayService);
+  accountRelay = inject(AccountRelayServiceEx);
   dialog = inject(MatDialog);
   snackBar = inject(MatSnackBar);
   app = inject(ApplicationService);

@@ -214,6 +214,7 @@ export class Profile {
    * @returns Promise resolving to the result of the operation
    */
   async createInitialProfile(
+    pubkey: string,
     displayName?: string,
     profileImageFile?: File
   ): Promise<ProfileCreateResult> {
@@ -230,7 +231,7 @@ export class Profile {
 
     // Ensure media servers are loaded for new users
     // During account creation, media servers are already configured by region
-    await this.media.load();
+    await this.media.load(pubkey);
 
     const profileData: ProfileData = {};
 
