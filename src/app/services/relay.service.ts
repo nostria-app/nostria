@@ -439,7 +439,6 @@ export class RelayService {
     relayUrls?: string[],
     options: { timeout?: number } = {}
   ): Promise<T | null> {
-    this.logger.debug('Getting events with filters:', filter);
 
     if (!this.accountPool) {
       this.logger.error('Cannot get events: account pool is not initialized');
@@ -448,6 +447,8 @@ export class RelayService {
 
     // Use provided relay URLs or default to the user's relays
     const urls = relayUrls || this.getAccountRelayUrls();
+
+    this.logger.debug('Getting events with filters:', filter, urls);
 
     if (urls.length === 0) {
       this.logger.warn('No relays available for query');
@@ -495,7 +496,6 @@ export class RelayService {
     relayUrls?: string[],
     options: { timeout?: number } = {}
   ): Promise<T[]> {
-    this.logger.debug('Getting events with filters:', filter);
 
     if (!this.accountPool) {
       this.logger.error('Cannot get events: account pool is not initialized');
@@ -504,6 +504,8 @@ export class RelayService {
 
     // Use provided relay URLs or default to the user's relays
     const urls = relayUrls || this.getAccountRelayUrls();
+
+    this.logger.debug('Getting events with filters:', filter, urls);
 
     if (urls.length === 0) {
       this.logger.warn('No relays available for query');

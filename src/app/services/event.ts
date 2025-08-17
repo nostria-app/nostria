@@ -6,6 +6,7 @@ import { DataService } from './data.service';
 import { UtilitiesService } from './utilities.service';
 import { NostrService } from './nostr.service';
 import { EventData } from '../data-resolver';
+import { NostrRecord } from '../interfaces';
 
 export interface Reaction {
   emoji: string;
@@ -444,5 +445,43 @@ export class EventService {
       emoji,
       count,
     }));
+  }
+
+  /**
+   * Load reposts for an event by a specific user
+   */
+  async loadReposts(
+    eventId: string,
+    userPubkey: string
+  ): Promise<NostrRecord[]> {
+    this.logger.info(
+      'loadReposts called with eventId:',
+      eventId,
+      'userPubkey:',
+      userPubkey
+    );
+
+    try {
+      const reposts = await this.data.getEventsByKindAndEventTag(
+        kinds.Repost,
+        eventId,
+        userPubkey,
+        {
+          save: false,
+          cache: false, // cannot cache until we have stale-while-revalidate strategy implemented
+        }
+      );
+
+      this.logger.info(
+        'Successfully loaded reposts for event:',
+        eventId,
+        'count:',
+        reposts.length
+      );
+      return reposts;
+    } catch (error) {
+      this.logger.error('Error loading reposts for event:', eventId, error);
+      return [];
+    }
   }
 }

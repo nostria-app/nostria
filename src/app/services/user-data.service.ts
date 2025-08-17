@@ -166,9 +166,9 @@ export class UserDataService {
       const record = this.cache.get<NostrRecord>(cacheKey);
       if (record) {
         // If refresh is requested, trigger background update
-        if (refresh) {
-          this.refreshProfileInBackground(pubkey, cacheKey);
-        }
+        // if (refresh) {
+        //   this.refreshProfileInBackground(pubkey, cacheKey);
+        // }
         return record;
       }
     }
@@ -220,9 +220,9 @@ export class UserDataService {
     }
 
     // Handle background refresh if requested
-    if (refresh) {
-      this.refreshProfileInBackground(pubkey, cacheKey);
-    }
+    // if (refresh) {
+    //   this.refreshProfileInBackground(pubkey, cacheKey);
+    // }
 
     return record;
   }

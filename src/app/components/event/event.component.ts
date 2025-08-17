@@ -25,8 +25,8 @@ import { ReplyButtonComponent } from './reply-button/reply-button.component';
 import { EventHeaderComponent } from './header/header.component';
 import { CommonModule } from '@angular/common';
 import { AccountStateService } from '../../services/account-state.service';
-import { UserDataFactoryService } from '../../services/user-data-factory.service';
 import { MatMenuModule } from '@angular/material/menu';
+import { EventService } from '../../services/event';
 
 type EventCardAppearance = 'card' | 'plain';
 
@@ -63,7 +63,7 @@ export class EventComponent {
   snackBar = inject(MatSnackBar);
   app = inject(ApplicationService);
   accountState = inject(AccountStateService);
-  userDataFactory = inject(UserDataFactoryService);
+  eventService = inject(EventService);
   reposts = signal<NostrRecord[]>([]);
 
   repostedRecord = computed<NostrRecord | null>(() => {
@@ -120,16 +120,13 @@ export class EventComponent {
   async loadReposts() {
     const record = this.repostedRecord() || this.record();
     if (!record) return;
-    const userDataService = await this.userDataFactory.create(
-      this.accountState.pubkey()
-    );
-    const reposts = await userDataService.getEventsByKindAndEventTag(
-      kinds.Repost,
+
+    const userPubkey = this.accountState.pubkey();
+    if (!userPubkey) return;
+
+    const reposts = await this.eventService.loadReposts(
       record.event.id,
-      {
-        save: false,
-        cache: false, // cannot cache until we have stale-while-revalidate strategy implemented
-      }
+      userPubkey
     );
     this.reposts.set(reposts);
   }

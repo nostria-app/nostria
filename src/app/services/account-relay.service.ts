@@ -170,9 +170,13 @@ export abstract class RelayServiceBase {
     },
     options: { timeout?: number } = {}
   ): Promise<T | null> {
-    this.logger.debug('Getting events with filters:', filter);
-
     const urls = this.relayUrls;
+
+    this.logger.debug(
+      'Getting events with filters (account-relay):',
+      filter,
+      urls
+    );
 
     if (urls.length === 0) {
       this.logger.warn('No relays available for query');
@@ -219,10 +223,14 @@ export abstract class RelayServiceBase {
     },
     options: { timeout?: number } = {}
   ): Promise<T[]> {
-    this.logger.debug('Getting events with filters:', filter);
-
     // Use provided relay URLs or default to the user's relays
     const urls = this.relayUrls;
+
+    this.logger.debug(
+      'Getting events with filters (account-relay):',
+      filter,
+      urls
+    );
 
     if (urls.length === 0) {
       this.logger.warn('No relays available for query');
@@ -474,7 +482,7 @@ export class SharedRelayServiceEx {
     },
     options: { timeout?: number } = {}
   ): Promise<T | null> {
-    this.logger.debug('Getting events with filters:', filter);
+    this.logger.debug('Getting events with filters (account-relay):', filter);
 
     // Default timeout is 5 seconds if not specified
     const timeout = options.timeout || 5000;
@@ -548,7 +556,7 @@ export class SharedRelayServiceEx {
     },
     options: { timeout?: number } = {}
   ): Promise<T[]> {
-    this.logger.debug('Getting events with filters:', filter);
+    this.logger.debug('Getting events with filters (account-relay):', filter);
 
     // Default timeout is 5 seconds if not specified
     const timeout = options.timeout || 5000;
@@ -944,7 +952,7 @@ export class AccountRelayService {
     relayUrls?: string[],
     options: { timeout?: number } = {}
   ): Promise<T | null> {
-    this.logger.debug('Getting events with filters:', filter);
+    this.logger.debug('Getting events with filters (account-relay):', filter);
 
     if (!this.pool) {
       this.logger.error('Cannot get events: user pool is not initialized');
