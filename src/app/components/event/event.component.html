@@ -1,75 +1,80 @@
 @let item = record();
 @let targetItem = repostedRecord() || item;
 
-@if (targetItem && item) {
-  <mat-card class="note-card" [class.plain]="isPlain()" appearance="outlined">
-    @if (repostedRecord() !== null) {
-      <mat-card-header class="repost-header">
-        <mat-icon>repeat</mat-icon> Reposted
-      </mat-card-header>
+@if (isLoadingEvent()) {
+<div class="loading-container">
+  <mat-spinner diameter="32"></mat-spinner>
+  <p class="loading-text">Loading event...</p>
+</div>
+} @else if (targetItem && item) {
+<mat-card class="note-card" [class.plain]="isPlain()" appearance="outlined">
+  @if (repostedRecord() !== null) {
+  <mat-card-header class="repost-header">
+    <mat-icon>repeat</mat-icon> Reposted
+  </mat-card-header>
+  <mat-card-content>
+    <mat-card appearance="outlined">
+      <app-event-header [event]="repostService.decodeRepost(item.event).event"></app-event-header>
       <mat-card-content>
-        <mat-card appearance="outlined">
-          <app-event-header
-            [event]="repostService.decodeRepost(item.event).event"
-          ></app-event-header>
-          <mat-card-content>
-            <app-content
-              [content]="repostService.decodeRepost(item.event).data"
-            ></app-content>
-          </mat-card-content>
-        </mat-card>
+        <app-content [content]="repostService.decodeRepost(item.event).data"></app-content>
       </mat-card-content>
-    } @else {
-      <app-event-header [event]="item.event"></app-event-header>
-      <mat-card-content>
-        <app-content [content]="item.data"></app-content>
-      </mat-card-content>
-    }
-    <mat-card-actions class="note-footer">
-      <app-reply-button [event]="targetItem.event"></app-reply-button>
+    </mat-card>
+  </mat-card-content>
+  } @else {
+  <app-event-header [event]="item.event"></app-event-header>
+  <mat-card-content>
+    <app-content [content]="item.data"></app-content>
+  </mat-card-content>
+  }
+  <mat-card-actions class="note-footer">
+    <app-reply-button [event]="targetItem.event"></app-reply-button>
 
-      @if (app.enabledFeature('beta')) {
-        <button
-          mat-button
-          [ngClass]="{ active: !!repostByCurrentAccount() }"
-          [matMenuTriggerFor]="menu"
-        >
-          <mat-icon>repeat</mat-icon>
-          {{ reposts().length }}
-        </button>
-
-        <mat-menu #menu="matMenu">
-          @if (!!repostByCurrentAccount()) {
-            <button mat-menu-item (click)="deleteRepost()">
-              <mat-icon>repeat</mat-icon>
-              <span>Undo Repost</span>
-            </button>
-          } @else {
-            <button mat-menu-item (click)="createRepost()">
-              <mat-icon>repeat</mat-icon>
-              <span>Repost</span>
-            </button>
-          }
-          <button mat-menu-item (click)="createQuote()">
-            <mat-icon>format_quote</mat-icon>
-            <span>Quote</span>
-          </button>
-        </mat-menu>
+    @if (app.enabledFeature('beta')) {
+    <button mat-button [ngClass]="{ active: !!repostByCurrentAccount() }" [matMenuTriggerFor]="menu"
+      [disabled]="isLoadingReposts()">
+      @if (isLoadingReposts()) {
+      <mat-spinner diameter="16"></mat-spinner>
+      } @else {
+      <ng-container>
+        <mat-icon>repeat</mat-icon>
+        {{ reposts().length }}
+      </ng-container>
       }
+    </button>
 
-      <button mat-icon-button class="note-footer-right">
-        <mat-icon
-          [matTooltip]="bookmark.getBookmarkTooltip(targetItem.event.id)"
-          matTooltipPosition="below"
-          (click)="bookmark.toggleBookmark(targetItem.event.id)"
-        >
-          {{ bookmark.getBookmarkIcon(targetItem.event.id) }}
-        </mat-icon>
+    <mat-menu #menu="matMenu">
+      @if (!!repostByCurrentAccount()) {
+      <button mat-menu-item (click)="deleteRepost()">
+        <mat-icon>repeat</mat-icon>
+        <span>Undo Repost</span>
       </button>
-    </mat-card-actions>
-  </mat-card>
-} @else {
-  <div class="event-content">
-    <p>Event not found</p>
-  </div>
+      } @else {
+      <button mat-menu-item (click)="createRepost()">
+        <mat-icon>repeat</mat-icon>
+        <span>Repost</span>
+      </button>
+      }
+      <button mat-menu-item (click)="createQuote()">
+        <mat-icon>format_quote</mat-icon>
+        <span>Quote</span>
+      </button>
+    </mat-menu>
+    }
+
+    <button mat-icon-button class="note-footer-right">
+      <mat-icon [matTooltip]="bookmark.getBookmarkTooltip(targetItem.event.id)" matTooltipPosition="below"
+        (click)="bookmark.toggleBookmark(targetItem.event.id)">
+        {{ bookmark.getBookmarkIcon(targetItem.event.id) }}
+      </mat-icon>
+    </button>
+  </mat-card-actions>
+</mat-card>
+} @else if (id() && !isLoadingEvent()) {
+<div class="event-content">
+  @if (loadingError()) {
+  <p class="error-message">{{ loadingError() }}</p>
+  } @else {
+  <p>Event not found</p>
+  }
+</div>
 }
