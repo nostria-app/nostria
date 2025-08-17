@@ -5,12 +5,10 @@ import { NostriaService } from '../interfaces';
 import { BadgeService } from './badge.service';
 import { NotificationService } from './notification.service';
 import { NostrService } from './nostr.service';
-import { RelayService } from './relay.service';
+import { RelayService } from './relays/relay';
 import { MessagingService } from './messaging.service';
-import {
-  AccountRelayServiceEx,
-  DiscoveryRelayServiceEx,
-} from './account-relay.service';
+import { DiscoveryRelayServiceEx } from './relays/discovery-relay';
+import { AccountRelayServiceEx } from './relays/account-relay';
 
 /** Service that handles changing account, will clear and load data in different services. */
 @Injectable({

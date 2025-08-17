@@ -15,7 +15,7 @@ import { AgoPipe } from '../../pipes/ago.pipe';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
 import { Event, kinds, nip19, NostrEvent } from 'nostr-tools';
-import { RelayService } from '../../services/relay.service';
+import { RelayService } from '../../services/relays/relay';
 import { standardizedTag } from '../../standardized-tags';
 import { ApplicationService } from '../../services/application.service';
 import { UtilitiesService } from '../../services/utilities.service';

@@ -37,7 +37,7 @@ import {
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { RelayService } from '../../services/relay.service';
+import { RelayService } from '../../services/relays/relay';
 import { ApplicationStateService } from '../../services/application-state.service';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatListModule } from '@angular/material/list';
@@ -53,7 +53,7 @@ import { ApplicationService } from '../../services/application.service';
 import { MediaPreviewDialogComponent } from '../../components/media-preview-dialog/media-preview.component';
 import { AccountStateService } from '../../services/account-state.service';
 import { UserRelayFactoryService } from '../../services/user-relay-factory.service';
-import { UserRelayService } from '../../services/user-relay.service';
+import { UserRelayService } from '../../services/relays/user-relay';
 import { NostrRecord } from '../../interfaces';
 import { DataService } from '../../services/data.service';
 import { UtilitiesService } from '../../services/utilities.service';

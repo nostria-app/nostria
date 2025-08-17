@@ -1,7 +1,6 @@
 import {
   Injectable,
   signal,
-  computed,
   effect,
   inject,
   untracked,
@@ -12,12 +11,11 @@ import {
   generateSecretKey,
   getPublicKey,
   UnsignedEvent,
-  VerifiedEvent,
 } from 'nostr-tools/pure';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
 import { nip19, nip98 } from 'nostr-tools';
 import { LoggerService } from './logger.service';
-import { RelayService } from './relay.service';
+import { RelayService } from './relays/relay';
 import {
   NostrEventData,
   StorageService,
@@ -42,12 +40,9 @@ import {
 } from '../interfaces';
 import { DataService } from './data.service';
 import { UtilitiesService } from './utilities.service';
-import { Tier } from '../api/models';
 import { PublishQueueService, PublishTarget } from './publish-queue';
-import {
-  AccountRelayService,
-  SharedRelayServiceEx,
-} from './account-relay.service';
+import { AccountRelayService } from './relays/account-relay';
+import { SharedRelayServiceEx } from './relays/shared-relay';
 
 export interface NostrUser {
   pubkey: string;

@@ -5,7 +5,7 @@ import { NostrService } from './nostr.service';
 import { StorageService } from './storage.service';
 import { LoggerService } from './logger.service';
 import { EventTemplate, finalizeEvent } from 'nostr-tools';
-import { RelayService } from './relay.service';
+import { RelayService } from './relays/relay';
 import { MEDIA_SERVERS_EVENT_KIND, NostriaService } from '../interfaces';
 import {
   NostrTagKey,

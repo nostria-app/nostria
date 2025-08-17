@@ -1,20 +1,17 @@
 import { inject, Injectable } from '@angular/core';
 import { StorageService } from './storage.service';
-import { RelayService } from './relay.service';
+import { RelayService } from './relays/relay';
 import { NostrRecord } from '../interfaces';
 import { LoggerService } from './logger.service';
 import { Event, kinds } from 'nostr-tools';
 import { UserRelayFactoryService } from './user-relay-factory.service';
 import { UtilitiesService } from './utilities.service';
 import { Cache, CacheOptions } from './cache';
-import {
-  AccountRelayService,
-  AccountRelayServiceEx,
-  DiscoveryRelayServiceEx,
-  SharedRelayServiceEx,
-  UserRelayServiceEx,
-} from './account-relay.service';
-import { RelaysService } from './relays.service';
+import { RelaysService } from './relays/relays';
+import { UserRelayServiceEx } from './relays/user-relay';
+import { DiscoveryRelayServiceEx } from './relays/discovery-relay';
+import { SharedRelayServiceEx } from './relays/shared-relay';
+import { AccountRelayService, AccountRelayServiceEx } from './relays/account-relay';
 
 export interface DataOptions {
   cache: boolean; // Whether to use cache

@@ -19,7 +19,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { Router } from '@angular/router';
 import { NostrService } from '../../../services/nostr.service';
-import { RelayService } from '../../../services/relay.service';
+import { RelayService } from '../../../services/relays/relay';
 import { kinds } from 'nostr-tools';
 import { MediaService } from '../../../services/media.service';
 import { LayoutService } from '../../../services/layout.service';

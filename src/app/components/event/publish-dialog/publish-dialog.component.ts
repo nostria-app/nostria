@@ -15,9 +15,9 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatListModule } from '@angular/material/list';
 import { FormsModule } from '@angular/forms';
 import { Event } from 'nostr-tools';
-import { AccountRelayService } from '../../../services/account-relay.service';
+import { AccountRelayService } from '../../../services/relays/account-relay';
 import { NostrService } from '../../../services/nostr.service';
-import { RelayService } from '../../../services/relay.service';
+import { RelayService } from '../../../services/relays/relay';
 
 export interface PublishDialogData {
   event: Event;

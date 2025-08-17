@@ -15,7 +15,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Event, kinds } from 'nostr-tools';
 import { NostrRecord } from '../../interfaces';
-import { AccountRelayService } from '../../services/account-relay.service';
+import { AccountRelayService } from '../../services/relays/account-relay';
 import { ApplicationService } from '../../services/application.service';
 import { BookmarkService } from '../../services/bookmark.service';
 import { DataService } from '../../services/data.service';

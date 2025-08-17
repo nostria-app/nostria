@@ -2,9 +2,9 @@ import { computed, effect, inject, Injectable, Injector } from '@angular/core';
 import { NostrService } from './nostr.service';
 import { Event, UnsignedEvent } from 'nostr-tools';
 import { ProfileStateService } from './profile-state.service';
-import { RelayService } from './relay.service';
+import { RelayService } from './relays/relay';
 import { AccountStateService } from './account-state.service';
-import { AccountRelayServiceEx } from './account-relay.service';
+import { AccountRelayServiceEx } from './relays/account-relay';
 
 export enum PublishTarget {
   Account = 'account',

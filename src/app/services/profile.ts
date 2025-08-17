@@ -6,7 +6,7 @@ import { AccountStateService } from './account-state.service';
 import { MediaService } from './media.service';
 import { LoggerService } from './logger.service';
 import { Event } from 'nostr-tools';
-import { AccountRelayServiceEx } from './account-relay.service';
+import { AccountRelayServiceEx } from './relays/account-relay';
 
 /**
  * Interface for profile data

@@ -32,7 +32,7 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { NostrService } from '../../services/nostr.service';
-import { RelayService } from '../../services/relay.service';
+import { RelayService } from '../../services/relays/relay';
 import { MediaService } from '../../services/media.service';
 import { LocalStorageService } from '../../services/local-storage.service';
 import { AccountStateService } from '../../services/account-state.service';
@@ -340,7 +340,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
       const isSimilar =
         previousDraft.content === autoDraft.content &&
         JSON.stringify(previousDraft.mentions) ===
-          JSON.stringify(autoDraft.mentions) &&
+        JSON.stringify(autoDraft.mentions) &&
         previousDraft.expirationEnabled === autoDraft.expirationEnabled &&
         previousDraft.expirationTime === autoDraft.expirationTime;
 
@@ -706,7 +706,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
     } catch (error) {
       this.snackBar.open(
         'Upload failed: ' +
-          (error instanceof Error ? error.message : 'Unknown error'),
+        (error instanceof Error ? error.message : 'Unknown error'),
         'Close',
         { duration: 5000 }
       );

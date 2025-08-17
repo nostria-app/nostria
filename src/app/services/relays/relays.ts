@@ -1,8 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { SimplePool } from 'nostr-tools';
-import { UtilitiesService } from './utilities.service';
-import { DiscoveryRelayServiceEx } from './account-relay.service';
-import { StorageService } from './storage.service';
+import { UtilitiesService } from '../utilities.service';
+import { StorageService } from '../storage.service';
+import { DiscoveryRelayServiceEx } from './discovery-relay';
 
 export interface RelayStats {
   url: string;

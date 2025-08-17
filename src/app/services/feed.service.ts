@@ -10,24 +10,19 @@ import {
 } from '@angular/core';
 import { LocalStorageService } from './local-storage.service';
 import { LoggerService } from './logger.service';
-import { RelayService } from './relay.service';
-import { Event, kinds, SimplePool } from 'nostr-tools';
+import { RelayService } from './relays/relay';
+import { Event, kinds } from 'nostr-tools';
 import { SubCloser } from 'nostr-tools/abstract-pool';
 import { ApplicationStateService } from './application-state.service';
 import { AccountStateService } from './account-state.service';
 import { DataService } from './data.service';
 import { UtilitiesService } from './utilities.service';
 import { ApplicationService } from './application.service';
-import {
-  SharedRelayServiceEx,
-  UserRelayServiceEx,
-} from './account-relay.service';
 import { Algorithms } from './algorithms';
 import { UserDataFactoryService } from './user-data-factory.service';
-import {
-  UserRelayExFactoryService,
-  UserRelayFactoryService,
-} from './user-relay-factory.service';
+import { UserRelayServiceEx } from './relays/user-relay';
+import { SharedRelayServiceEx } from './relays/shared-relay';
+import { UserRelayExFactoryService } from './user-relay-factory.service';
 
 export interface FeedData {
   column: ColumnConfig;

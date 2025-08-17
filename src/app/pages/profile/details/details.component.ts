@@ -25,7 +25,7 @@ import { LoggerService } from '../../../services/logger.service';
 import { ApplicationStateService } from '../../../services/application-state.service';
 import { ApplicationService } from '../../../services/application.service';
 import { StorageService } from '../../../services/storage.service';
-import { RelayService } from '../../../services/relay.service';
+import { RelayService } from '../../../services/relays/relay';
 
 @Component({
   selector: 'app-following',

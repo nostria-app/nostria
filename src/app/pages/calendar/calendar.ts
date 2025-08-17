@@ -18,7 +18,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { Event } from 'nostr-tools';
 import { Router } from '@angular/router';
-import { AccountRelayService } from '../../services/account-relay.service';
+import { AccountRelayService } from '../../services/relays/account-relay';
 import { LoggerService } from '../../services/logger.service';
 import { ApplicationService } from '../../services/application.service';
 import {

@@ -1,5 +1,5 @@
 import { Injectable, signal, computed, inject, effect } from '@angular/core';
-import { RelayService } from './relay.service';
+import { RelayService } from './relays/relay';
 import { NostrService } from './nostr.service';
 import { ApplicationService } from './application.service';
 import { ApplicationStateService } from './application-state.service';
