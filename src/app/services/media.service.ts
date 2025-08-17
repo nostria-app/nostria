@@ -5,7 +5,6 @@ import { NostrService } from './nostr.service';
 import { StorageService } from './storage.service';
 import { LoggerService } from './logger.service';
 import { EventTemplate, finalizeEvent } from 'nostr-tools';
-import { RelayService } from './relays/relay';
 import { MEDIA_SERVERS_EVENT_KIND, NostriaService } from '../interfaces';
 import {
   NostrTagKey,
@@ -17,6 +16,7 @@ import { bytesToHex } from '@noble/hashes/utils';
 import { ApplicationService } from './application.service';
 import { RegionService } from './region.service';
 import { AccountStateService } from './account-state.service';
+import { AccountRelayServiceEx } from './relays/account-relay';
 
 export interface MediaItem {
   sha256: string; // SHA-256 hash of file (NIP-94)
@@ -42,7 +42,7 @@ export interface NostrEvent {
 })
 export class MediaService implements NostriaService {
   private readonly nostrService = inject(NostrService);
-  readonly relay = inject(RelayService);
+  readonly accountRelay = inject(AccountRelayServiceEx);
   private readonly storage = inject(StorageService);
   private readonly logger = inject(LoggerService);
   private readonly app = inject(ApplicationService);
@@ -190,7 +190,7 @@ export class MediaService implements NostriaService {
     );
 
     if (!mediaServerEvent) {
-      mediaServerEvent = await this.relay.getEventByPubkeyAndKind(
+      mediaServerEvent = await this.accountRelay.getEventByPubkeyAndKind(
         this.accountState.pubkey(),
         MEDIA_SERVERS_EVENT_KIND
       );
@@ -432,7 +432,7 @@ export class MediaService implements NostriaService {
       // Save the event to our storage
       await this.storage.saveEvent(signedEvent);
 
-      const result = await this.relay.publish(signedEvent);
+      const result = await this.accountRelay.publish(signedEvent);
 
       this.logger.info('Media servers published to Nostr', {
         eventId: signedEvent.id,
@@ -1304,7 +1304,7 @@ export class MediaService implements NostriaService {
       );
       const signedEvent = await this.nostrService.signEvent(event);
       await this.storage.saveEvent(signedEvent);
-      await this.relay.publish(signedEvent);
+      await this.accountRelay.publish(signedEvent);
     } catch (error) {
       this.logger.error('Failed to save server order:', error);
       throw new Error('Failed to save server order');

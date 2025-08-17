@@ -924,9 +924,9 @@ export class MessagingService implements NostriaService {
 
         // Set a timeout to prevent hanging
         setTimeout(() => {
-          if (sub) {
-            sub.close();
-          }
+          // if (sub) {
+          //   sub.close();
+          // }
           resolve();
         }, 10000);
       });

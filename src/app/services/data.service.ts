@@ -1,17 +1,16 @@
 import { inject, Injectable } from '@angular/core';
 import { StorageService } from './storage.service';
-import { RelayService } from './relays/relay';
 import { NostrRecord } from '../interfaces';
 import { LoggerService } from './logger.service';
 import { Event, kinds } from 'nostr-tools';
-import { UserRelayFactoryService } from './user-relay-factory.service';
 import { UtilitiesService } from './utilities.service';
 import { Cache, CacheOptions } from './cache';
 import { RelaysService } from './relays/relays';
 import { UserRelayServiceEx } from './relays/user-relay';
 import { DiscoveryRelayServiceEx } from './relays/discovery-relay';
 import { SharedRelayServiceEx } from './relays/shared-relay';
-import { AccountRelayService, AccountRelayServiceEx } from './relays/account-relay';
+import { AccountRelayServiceEx } from './relays/account-relay';
+import { UserRelayExFactoryService } from './user-relay-factory.service';
 
 export interface DataOptions {
   cache: boolean; // Whether to use cache
@@ -23,9 +22,9 @@ export interface DataOptions {
 })
 export class DataService {
   private readonly storage = inject(StorageService);
-  private readonly relay = inject(RelayService);
-  private readonly accountRelay = inject(AccountRelayService);
-  private readonly userRelayFactory = inject(UserRelayFactoryService);
+  // private readonly relay = inject(RelayService);
+  private readonly accountRelay = inject(AccountRelayServiceEx);
+  private readonly userRelayFactory = inject(UserRelayExFactoryService);
   private readonly userRelayEx = inject(UserRelayServiceEx);
   private readonly discoveryRelayEx = inject(DiscoveryRelayServiceEx);
   private readonly accountRelayEx = inject(AccountRelayServiceEx);
@@ -414,7 +413,7 @@ export class DataService {
     }
 
     if (events.length === 0) {
-      const relayEvents = await this.relay.getEventsByPubkeyAndKind(
+      const relayEvents = await this.accountRelay.getEventsByPubkeyAndKind(
         pubkey,
         kind
       );

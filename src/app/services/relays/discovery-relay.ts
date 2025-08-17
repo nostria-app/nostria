@@ -59,6 +59,14 @@ export class DiscoveryRelayServiceEx
 
   clear() { }
 
+  save(relayUrls: string[]) {
+    // Save to local storage
+    this.localStorage.setItem(
+      this.appState.DISCOVERY_RELAYS_STORAGE_KEY,
+      JSON.stringify(relayUrls)
+    );
+  }
+
   /**
    * Sets discovery relays and persists them to local storage
    */
@@ -82,11 +90,13 @@ export class DiscoveryRelayServiceEx
         return;
       }
 
+      this.save(validRelays);
+
       // Save to local storage
-      this.localStorage.setItem(
-        this.appState.DISCOVERY_RELAYS_STORAGE_KEY,
-        JSON.stringify(validRelays)
-      );
+      // this.localStorage.setItem(
+      //   this.appState.DISCOVERY_RELAYS_STORAGE_KEY,
+      //   JSON.stringify(validRelays)
+      // );
 
       this.logger.debug(
         `Saved ${validRelays.length} discovery relays to storage`

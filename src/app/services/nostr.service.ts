@@ -7,7 +7,7 @@ import {
   UnsignedEvent,
 } from 'nostr-tools/pure';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
-import { nip19 } from 'nostr-tools';
+import { nip19, nip98 } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import {
   NostrEventData,
@@ -903,7 +903,7 @@ export class NostrService implements NostriaService {
     }
     const signedEvent = await this.signEvent(event);
 
-    const publishPromises = this.accountRelay.publish(signedEvent);
+    const publishPromises = await this.accountRelay.publish(signedEvent);
 
     if (publishPromises) {
       await Promise.allSettled(publishPromises);
@@ -1547,8 +1547,8 @@ export class NostrService implements NostriaService {
       if (relayUrls.length === 0) {
         usingAccountPool = true;
         info.foundZeroRelaysOnAccountRelays = true;
-        userPool = this.discoveryRelay.getAccountPool();
-        relayUrls = this.discoveryRelay.getAccountRelayUrls();
+        userPool = this.accountRelay.getPool();
+        relayUrls = this.accountRelay.getRelayUrls();
       } else {
         userPool = new SimplePool();
       }
@@ -2562,10 +2562,10 @@ export class NostrService implements NostriaService {
   //   return signedEvent;
   // }
 
-  // async getNIP98AuthToken({ url, method }: { url: string; method: string }) {
-  //   return nip98.getToken(url, method, async e => {
-  //     const event = await this.signEvent(e);
-  //     return event;
-  //   });
-  // }
+  async getNIP98AuthToken({ url, method }: { url: string; method: string }) {
+    return nip98.getToken(url, method, async e => {
+      const event = await this.signEvent(e);
+      return event;
+    });
+  }
 }

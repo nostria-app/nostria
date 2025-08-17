@@ -76,7 +76,7 @@ export class RepostService {
   private async signAndPublish(event: UnsignedEvent): Promise<boolean> {
     const signedEvent = await this.nostrService.signEvent(event);
 
-    const publishPromises = this.accountRelayService.publish(signedEvent);
+    const publishPromises = await this.accountRelayService.publish(signedEvent);
 
     if (publishPromises) {
       await Promise.allSettled(publishPromises);

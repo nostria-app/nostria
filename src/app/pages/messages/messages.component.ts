@@ -29,7 +29,6 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTabsModule } from '@angular/material/tabs';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { NostrService } from '../../services/nostr.service';
-import { RelayService } from '../../services/relays/relay';
 import { LoggerService } from '../../services/logger.service';
 import { NotificationService } from '../../services/notification.service';
 import {
@@ -61,11 +60,11 @@ import { AccountStateService } from '../../services/account-state.service';
 import { EncryptionService } from '../../services/encryption.service';
 import { DataService } from '../../services/data.service';
 import { MessagingService } from '../../services/messaging.service';
-import { UserRelayFactoryService } from '../../services/user-relay-factory.service';
-import { UserRelayService } from '../../services/relays/user-relay';
-import { AccountRelayService } from '../../services/relays/account-relay';
 import { LayoutService } from '../../services/layout.service';
 import { NamePipe } from '../../pipes/name.pipe';
+import { AccountRelayServiceEx } from '../../services/relays/account-relay';
+import { UserRelayExFactoryService } from '../../services/user-relay-factory.service';
+import { UserRelayServiceEx } from '../../services/relays/user-relay';
 
 // Define interfaces for our DM data structures
 interface Chat {
@@ -135,11 +134,11 @@ interface DecryptionQueueItem {
 export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   private data = inject(DataService);
   private nostr = inject(NostrService);
-  private relay = inject(RelayService);
+  // private relay = inject(AccountRelayServiceEx);
   private logger = inject(LoggerService);
   messaging = inject(MessagingService);
   private notifications = inject(NotificationService);
-  private userRelayFactory = inject(UserRelayFactoryService);
+  private userRelayFactory = inject(UserRelayExFactoryService);
   private dialog = inject(MatDialog);
   private storage = inject(StorageService);
   private router = inject(Router);
@@ -159,7 +158,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   isDecryptingMessages = signal<boolean>(false);
   decryptionQueueLength = signal<number>(0);
   selectedTabIndex = signal<number>(0); // 0 = Following, 1 = Others
-  private accountRelayService = inject(AccountRelayService);
+  private accountRelay = inject(AccountRelayServiceEx);
 
   // Data signals
   // chats = signal<Chat[]>([]);
@@ -797,7 +796,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     messageText: string,
     receiverPubkey: string,
     myPubkey: string,
-    userRelay: UserRelayService
+    userRelay: UserRelayServiceEx
   ): Promise<DirectMessage> {
     try {
       // Encrypt the message using NIP-04
@@ -844,7 +843,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     messageText: string,
     receiverPubkey: string,
     myPubkey: string,
-    userRelay: UserRelayService
+    userRelay: UserRelayServiceEx
   ): Promise<DirectMessage> {
     try {
       // Step 1: Create the message (unsigned event) - kind 14
@@ -979,7 +978,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     userRelay: UserRelayService
   ): Promise<void> {
     const promisesUser = userRelay.publish(event);
-    const promisesAccount = this.accountRelayService.publish(event);
+    const promisesAccount = this.accountRelay.publish(event);
 
     // Wait for all publish attempts to complete
     await Promise.allSettled([promisesUser, promisesAccount]);
@@ -996,7 +995,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private async publishToAccountRelays(event: NostrEvent): Promise<void> {
-    const promisesAccount = this.accountRelayService.publish(event);
+    const promisesAccount = this.accountRelay.publish(event);
 
     // Wait for all publish attempts to complete
     await Promise.allSettled([promisesAccount]);

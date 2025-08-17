@@ -10,7 +10,6 @@ import {
 } from '@angular/core';
 import { LocalStorageService } from './local-storage.service';
 import { LoggerService } from './logger.service';
-import { RelayService } from './relays/relay';
 import { Event, kinds } from 'nostr-tools';
 import { SubCloser } from 'nostr-tools/abstract-pool';
 import { ApplicationStateService } from './application-state.service';
@@ -23,6 +22,7 @@ import { UserDataFactoryService } from './user-data-factory.service';
 import { UserRelayServiceEx } from './relays/user-relay';
 import { SharedRelayServiceEx } from './relays/shared-relay';
 import { UserRelayExFactoryService } from './user-relay-factory.service';
+import { AccountRelayServiceEx } from './relays/account-relay';
 
 export interface FeedData {
   column: ColumnConfig;
@@ -154,7 +154,7 @@ const DEFAULT_FEEDS: FeedConfig[] = [
 export class FeedService {
   private readonly localStorageService = inject(LocalStorageService);
   private readonly logger = inject(LoggerService);
-  private readonly relay = inject(RelayService);
+  private readonly accountRelay = inject(AccountRelayServiceEx);
   private readonly appState = inject(ApplicationStateService);
   private readonly accountState = inject(AccountStateService);
   private readonly dataService = inject(DataService);
@@ -341,7 +341,7 @@ export class FeedService {
       await this.loadFollowingFeed(item);
     } else {
       // Subscribe to relay events
-      const sub = this.relay.subscribe([item.filter], event => {
+      const sub = this.accountRelay.subscribe([item.filter], event => {
         // Filter out live events that are muted.
         if (this.accountState.muted(event)) {
           return;
@@ -1317,7 +1317,7 @@ export class FeedService {
       await this.loadFollowingFeed(columnData);
     } else {
       // Subscribe to relay events again
-      const sub = this.relay.subscribe([columnData.filter], event => {
+      const sub = this.accountRelay.subscribe([columnData.filter], event => {
         columnData.events.update(events => [event, ...events]);
         this.logger.debug(`Column event received for ${columnId}:`, event);
       });
