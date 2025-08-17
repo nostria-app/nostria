@@ -19,12 +19,14 @@ import { BookmarkService } from '../../../services/bookmark.service';
 import { MatButtonModule } from '@angular/material/button';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { TagsPipe } from '../../../pipes/tags';
+import { EventComponent } from '../../../components/event/event.component';
 
 @Component({
   selector: 'app-profile-reads',
   standalone: true,
   imports: [
     CommonModule,
+    EventComponent,
     MatIconModule,
     MatCardModule,
     UserProfileComponent,
