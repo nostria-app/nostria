@@ -15,7 +15,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { Event } from 'nostr-tools';
+import { Event, nip19 } from 'nostr-tools';
+import { EventPointer } from 'nostr-tools/nip19';
 import { firstValueFrom } from 'rxjs';
 import { NostrRecord } from '../../../interfaces';
 import { AgoPipe } from '../../../pipes/ago.pipe';
@@ -71,6 +72,19 @@ export class EventHeaderComponent {
     return event.pubkey === this.accountState.pubkey();
   });
 
+  nevent = computed<string>(() => {
+    const event = this.event();
+    if (!event) {
+      return '';
+    }
+
+    const eventPointer: EventPointer = {
+      id: event.id,
+      author: event.pubkey,
+    };
+    return nip19.neventEncode(eventPointer);
+  });
+
   constructor() {
     effect(() => {
       const event = this.event();
@@ -82,6 +96,16 @@ export class EventHeaderComponent {
       const record = this.data.toRecord(event);
       this.record.set(record);
     });
+  }
+
+  openEventWithNevent() {
+    const neventId = this.nevent();
+    if (!neventId) {
+      return;
+    }
+
+    const event = this.event();
+    this.layout.openGenericEvent(neventId, event);
   }
 
   async deleteEvent() {

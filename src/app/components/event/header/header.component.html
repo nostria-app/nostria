@@ -1,33 +1,20 @@
 <mat-card-header>
   <app-user-profile [pubkey]="event().pubkey">
-    <a
-      class="date-link"
-      [matTooltip]="event().created_at * 1000 | date: 'medium'"
-      matTooltipPosition="below"
-      (click)="layout.openEvent(event())"
-    >
+    <a class="date-link" [matTooltip]="event().created_at * 1000 | date: 'medium'" matTooltipPosition="below"
+      tabindex="0" role="button" (click)="openEventWithNevent()" (keyup.enter)="openEventWithNevent()"
+      (keyup.space)="openEventWithNevent()">
       {{ event().created_at | ago }}
     </a>
 
-    <button
-      mat-icon-button
-      [matMenuTriggerFor]="menu"
-      aria-label="More options"
-    >
+    <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="More options">
       <mat-icon>more_vert</mat-icon>
     </button>
     <mat-menu #menu="matMenu">
-      <button
-        mat-menu-item
-        (click)="layout.copyToClipboard(layout.getCurrentUrl(), 'text')"
-      >
+      <button mat-menu-item (click)="layout.copyToClipboard(layout.getCurrentUrl(), 'text')">
         <mat-icon>link</mat-icon>
         Copy Note Link
       </button>
-      <button
-        mat-menu-item
-        (click)="layout.copyToClipboard(event().id, 'nevent', event().pubkey)"
-      >
+      <button mat-menu-item (click)="layout.copyToClipboard(event().id, 'nevent', event().pubkey)">
         <mat-icon>content_copy</mat-icon>
         Copy Note ID (nevent)
       </button>
@@ -40,10 +27,7 @@
         Share Event
       </button>
       <mat-divider></mat-divider>
-      <button
-        mat-menu-item
-        (click)="layout.copyToClipboard(record()?.data, 'text')"
-      >
+      <button mat-menu-item (click)="layout.copyToClipboard(record()?.data, 'text')">
         <mat-icon>content_copy</mat-icon>
         Copy Note Text
       </button>
@@ -53,10 +37,10 @@
       </button>
       <mat-divider></mat-divider>
       @if (isOurEvent()) {
-        <button mat-menu-item (click)="deleteEvent()">
-          <mat-icon>delete</mat-icon>
-          Delete Event
-        </button>
+      <button mat-menu-item (click)="deleteEvent()">
+        <mat-icon>delete</mat-icon>
+        Delete Event
+      </button>
       }
       <button mat-menu-item (click)="publishEvent()">
         <mat-icon>publish</mat-icon>
