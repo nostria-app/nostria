@@ -105,7 +105,7 @@ export class EventHeaderComponent {
     }
 
     const event = this.event();
-    this.layout.openGenericEvent(neventId, event);
+    this.layout.openEvent(neventId, event);
   }
 
   async deleteEvent() {

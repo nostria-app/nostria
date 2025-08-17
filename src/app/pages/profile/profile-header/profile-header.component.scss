@@ -18,13 +18,13 @@
   gap: 1.5rem; // Space between the two divs
 
   // First div should always be 168px width
-  >div:first-child {
+  > div:first-child {
     flex: 0 0 168px; // Don't grow or shrink, always 168px
     width: 168px;
   }
 
   // Second div should take remaining space
-  >div:last-child {
+  > div:last-child {
     flex: 1;
   }
 
@@ -57,7 +57,7 @@
     position: initial;
 
     // First div should be fixed at 80px in compact mode
-    >div:first-child {
+    > div:first-child {
       flex: 0 0 80px !important; // Don't grow or shrink, always 80px
       width: 80px !important;
       align-self: auto;
@@ -208,9 +208,7 @@
   }
 
   .premium-indicator {
-    background: linear-gradient(145deg,
-        #8e44ad,
-        #3498db);
+    background: linear-gradient(145deg, #8e44ad, #3498db);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
