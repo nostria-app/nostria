@@ -208,9 +208,9 @@ export class DataService {
       const record = this.cache.get<NostrRecord>(cacheKey);
       if (record) {
         // If refresh is requested, trigger background update
-        if (refresh) {
-          this.refreshProfileInBackground(pubkey, cacheKey);
-        }
+        // if (refresh) {
+        //   this.refreshProfileInBackground(pubkey, cacheKey);
+        // }
         return record;
       }
     }
@@ -231,7 +231,7 @@ export class DataService {
   private async loadProfile(
     pubkey: string,
     cacheKey: string,
-    refresh: boolean
+    refresh: boolean // eslint-disable-line @typescript-eslint/no-unused-vars
   ): Promise<NostrRecord | undefined> {
     let metadata: Event | null = null;
     let record: NostrRecord | undefined = undefined;
@@ -262,9 +262,9 @@ export class DataService {
     }
 
     // Handle background refresh if requested
-    if (refresh) {
-      this.refreshProfileInBackground(pubkey, cacheKey);
-    }
+    // if (refresh) {
+    //   this.refreshProfileInBackground(pubkey, cacheKey);
+    // }
 
     return record;
   }
@@ -421,6 +421,62 @@ export class DataService {
         pubkey,
         kind
       );
+      if (relayEvents && relayEvents.length > 0) {
+        events = relayEvents;
+      }
+    }
+
+    if (events.length === 0) {
+      return [];
+    }
+
+    records = events.map(event => this.toRecord(event));
+
+    if (options?.cache) {
+      this.cache.set(cacheKey, records, options);
+    }
+
+    if (options?.save) {
+      for (const event of events) {
+        await this.storage.saveEvent(event);
+      }
+    }
+
+    return records;
+  }
+
+  async getEventsByKindAndEventTag(
+    kind: number,
+    eventTag: string,
+    userPubkey: string,
+    options?: CacheOptions & DataOptions
+  ): Promise<NostrRecord[]> {
+    const cacheKey = `${userPubkey}-${kind}-${eventTag}-all`;
+    let events: Event[] = [];
+    let records: NostrRecord[] = [];
+
+    if (options?.cache) {
+      const records = this.cache.get<NostrRecord[]>(cacheKey);
+
+      if (records) {
+        return records;
+      }
+    }
+
+    // If the caller explicitly don't want to save, we will not check the storage.
+    if (events.length === 0 && options?.save) {
+      const allEvents = await this.storage.getEventsByKind(kind);
+      events = allEvents.filter(
+        e => this.utilities.getTagValues('#e', e.tags)[0] === eventTag
+      );
+    }
+
+    if (events.length === 0) {
+      // Use shared relay service to query for events by kind and event tag
+      const relayEvents = await this.sharedRelayEx.getMany(userPubkey, {
+        kinds: [kind],
+        ['#e']: [eventTag],
+      });
       if (relayEvents && relayEvents.length > 0) {
         events = relayEvents;
       }

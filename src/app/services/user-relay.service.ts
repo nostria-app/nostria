@@ -132,7 +132,7 @@ export class UserRelayService {
     relayUrls?: string[],
     options: { timeout?: number } = {}
   ): Promise<T | null> {
-    this.logger.debug('Getting events with filters:', filter);
+    this.logger.debug('Getting events with filters:', filter, this.relayUrls);
 
     if (this.relayUrls.length === 0) {
       this.logger.warn('No relays available for query', filter);
