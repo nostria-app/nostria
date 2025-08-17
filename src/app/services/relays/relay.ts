@@ -26,6 +26,8 @@ export class RelayService {
     'wss://discovery.eu.nostria.app/',
   ];
 
+  discoveryPool = new SimplePool();
+
   private readonly logger = inject(LoggerService);
   private readonly storage = inject(StorageService);
   private readonly appState = inject(ApplicationStateService);
@@ -38,13 +40,9 @@ export class RelayService {
   discoveryRelays: string[] = [];
   private _discoveryRelaysChanged = signal<number>(0);
 
-  // TODO: Allow the user to set their own default relays in the settings?
-  // TODO: Decided on a good default relay list.
   defaultRelays = ['wss://relay.damus.io/', 'wss://relay.primal.net/'];
-  // defaultRelays = signal(this.#defaultRelays);
 
   // Signal to store the relays for the current user (account relays)
-  // private relays = signal<Relay[]>([]);
   relays: Relay[] = [];
 
   relaysChanged = signal<Relay[]>([]);
@@ -54,9 +52,6 @@ export class RelayService {
 
   /** As relays received multiple timeouts, they will eventually be disabled and ignored. */
   disabled = signal<Relay[]>([]);
-
-  // Computed value for public access to relays
-  // userRelays = computed(() => this.relays());
 
   private accountPool: SimplePool | null = null;
 
@@ -568,8 +563,6 @@ export class RelayService {
     }
   }
 
-  discoveryPool = new SimplePool();
-
   /**
    * Generic function to publish a Nostr event to specified relays
    * @param event The Nostr event to publish
@@ -607,22 +600,6 @@ export class RelayService {
       return null;
     }
   }
-
-  /**
-   * Publish an event to multiple relays with status tracking
-   */
-  // async publishWithTracking(event: NostrEvent, relays: string[]): Promise<void> {
-  //   // Create an array of promises for publishing to each relay
-  //   const promises = relays.map(relay => this.publishToRelay(relay, event));
-
-  //   // Create a notification to track publishing status
-  //   this.notificationService.addRelayPublishingNotification(
-  //     event.id,
-  //     event,
-  //     promises,
-  //     relays
-  //   );
-  // }
 
   /**
    * Publish an event to a single relay
@@ -749,14 +726,6 @@ export class RelayService {
     if (relay) {
       relay.lastUsed = Date.now();
     }
-
-    // this.relays.update(relays =>
-    //   relays.map(relay =>
-    //     relay.url === url
-    //       ? { ...relay, lastUsed: Date.now() }
-    //       : relay
-    //   )
-    // );
   }
 
   /**
@@ -790,15 +759,6 @@ export class RelayService {
   }
 
   /**
-   * Clears all relays (used when logging out)
-   */
-  clearRelays(): void {
-    this.logger.debug('Clearing all relays');
-    this.relays = [];
-    this.relaysChanged.set(this.relays);
-  }
-
-  /**
    * Saves the current relays to storage for the current user
    */
   private async syncRelaysToStorage(relays: Relay[]): Promise<void> {
@@ -813,26 +773,6 @@ export class RelayService {
       this.logger.error('Error syncing relays to storage', error);
     }
   }
-
-  /**
-   * Save user relays to storage
-   */
-  // async saveUserRelays(pubkey: string): Promise<void> {
-  //   try {
-  //     const currentRelays = this.relays();
-  //     const relayUrls = currentRelays.map(relay => relay.url);
-
-  //     await this.storage.saveUserRelays({
-  //       pubkey,
-  //       relays: relayUrls,
-  //       updated: Date.now()
-  //     });
-
-  //     this.logger.debug(`Saved ${relayUrls.length} relays for user ${pubkey} to storage`);
-  //   } catch (error) {
-  //     this.logger.error(`Error saving relays for user ${pubkey}`, error);
-  //   }
-  // }
 
   getRelaysFromRelayEvent(relayEvent: Event): string[] {
     return relayEvent.tags
@@ -892,11 +832,6 @@ export class RelayService {
       this.logger.error(`Error fetching NIP-11 info for ${relayUrl}`, error);
       return undefined;
     }
-  }
-
-  public discoveryRelaysChanged() {
-    // Return a copy of the array to ensure change detection works properly
-    return [...this.discoveryRelays];
   }
 
   async setDiscoveryRelays(relays: string[]): Promise<void> {
