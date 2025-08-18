@@ -20,6 +20,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatDialog } from '@angular/material/dialog';
+import { MatDividerModule } from '@angular/material/divider';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { RelayInfoDialogComponent } from './relay-info-dialog.component';
@@ -57,6 +58,7 @@ import { DiscoveryRelayServiceEx } from '../../../services/relays/discovery-rela
     MatFormFieldModule,
     MatSlideToggleModule,
     MatTabsModule,
+    MatDividerModule,
     InfoTooltipComponent,
   ],
   templateUrl: './relays.component.html',
@@ -98,15 +100,19 @@ export class RelaysComponent implements OnInit, OnDestroy {
   private statusCheckTimer: any;
   private readonly STATUS_CHECK_INTERVAL = 30000; // 30 seconds
 
-  // Create a computed signal that depends on both the array and the change flag
+  // Create signals that use the new relaysSignal from the base services
+  userRelays = computed(() => {
+    return this.accountRelay.relaysSignal();
+  });
+
+  discoveryRelays = computed(() => {
+    return this.discoveryRelay.relaysSignal();
+  });
+
+  // Keep the existing computed signal for backward compatibility
   relays = computed(() => {
     return this.accountRelay.relaysModifiedSignal();
   });
-
-  // Update the discoveryRelays computed signal to run in a untracked context
-  // discoveryRelays = computed(() => {
-  //   return this.relay.discoveryRelays.discoveryRelaysChanged();
-  // });
 
   // For closest relay feature
   isCheckingRelays = signal(false);
@@ -199,7 +205,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
     }
   }
 
-  ngOnInit() {}
+  ngOnInit() { }
 
   cleanFollowingList() {
     if (this.isCleaningFollowingList()) {
@@ -311,22 +317,41 @@ export class RelaysComponent implements OnInit, OnDestroy {
     console.log('SEEN ON!!');
     console.log(userPool.seenOn);
 
-    // Update the status of each relay in our list
-    // this.accountRelay.relays.forEach(relay => {
-    //   // Check if this relay URL exists in the connection status map
-    //   if (connectionStatusMap.has(relay.url)) {
-    //     const isConnected = connectionStatusMap.get(relay.url);
-    //     const newStatus = isConnected ? 'connected' : 'disconnected';
+    // Update the status of each relay in our user relays list
+    this.userRelays().forEach(relay => {
+      // Check if this relay URL exists in the connection status map
+      if (connectionStatusMap.has(relay.url)) {
+        const isConnected = connectionStatusMap.get(relay.url);
+        const newStatus = isConnected ? 'connected' : 'disconnected';
 
-    //     // Only update if status has changed
-    //     if (relay.status !== newStatus) {
-    //       this.logger.debug(
-    //         `Updating relay ${relay.url} status to ${newStatus}`
-    //       );
-    //       this.relay.updateRelayStatus(relay.url, newStatus);
-    //     }
-    //   }
-    // });
+        // Only update if status has changed
+        if (relay.status !== newStatus) {
+          this.logger.debug(
+            `Updating relay ${relay.url} status to ${newStatus}`
+          );
+          this.accountRelay.updateRelayStatus(relay.url, newStatus);
+        }
+      }
+    });
+
+    // Also check discovery relays if we have a discovery pool
+    const discoveryPool = this.discoveryRelay.getPool();
+    if (discoveryPool) {
+      const discoveryConnectionStatusMap = discoveryPool.listConnectionStatus();
+      this.discoveryRelays().forEach(relay => {
+        if (discoveryConnectionStatusMap.has(relay.url)) {
+          const isConnected = discoveryConnectionStatusMap.get(relay.url);
+          const newStatus = isConnected ? 'connected' : 'disconnected';
+
+          if (relay.status !== newStatus) {
+            this.logger.debug(
+              `Updating discovery relay ${relay.url} status to ${newStatus}`
+            );
+            this.discoveryRelay.updateRelayStatus(relay.url, newStatus);
+          }
+        }
+      });
+    }
   }
 
   parseUrl(relayUrl: string) {
