@@ -15,10 +15,11 @@ import { AgoPipe } from '../../pipes/ago.pipe';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
 import { AccountStateService } from '../../services/account-state.service';
-import { Event, kinds, nip19 } from 'nostr-tools';
+import { Event, nip19 } from 'nostr-tools';
 import { DataService } from '../../services/data.service';
 import { ApplicationService } from '../../services/application.service';
 import { standardizedTag } from '../../standardized-tags';
+import { AccountRelayServiceEx } from '../../services/relays/account-relay';
 
 interface Draft {
   id: string;
@@ -54,6 +55,7 @@ interface Draft {
 export class DraftsComponent {
   private router = inject(Router);
   private nostrService = inject(NostrService);
+  private accountRelay = inject(AccountRelayServiceEx);
   private logger = inject(LoggerService);
   private snackBar = inject(MatSnackBar);
   private data = inject(DataService);
@@ -213,7 +215,8 @@ export class DraftsComponent {
           ['e', draft.event.id],
         ]);
 
-        await this.nostrService.publish(deleteEvent);
+        const signedEvent = await this.nostrService.signEvent(deleteEvent);
+        await this.accountRelay.publish(signedEvent);
 
         // Remove from local list
         this.drafts.update(drafts => drafts.filter(d => d.id !== draft.id));

@@ -21,6 +21,8 @@ import { Region, RegionService } from '../../services/region.service';
 import { DiscoveryService, ServerInfo } from '../../services/discovery.service';
 import { MatButtonModule } from '@angular/material/button';
 import { Profile } from '../../services/profile';
+import { AccountStateService } from '../../services/account-state.service';
+import { DataService } from '../../services/data.service';
 
 // Define the login steps
 enum LoginStep {
@@ -60,6 +62,8 @@ export class LoginDialogComponent {
   region = inject(RegionService);
   private discoveryService = inject(DiscoveryService);
   private profileService = inject(Profile);
+  private accountState = inject(AccountStateService);
+  private data = inject(DataService);
 
   // Use signal for the current step
   currentStep = signal<LoginStep>(LoginStep.INITIAL);
@@ -214,7 +218,9 @@ export class LoginDialogComponent {
 
       try {
         // First generate the new key and set up the account
-        await this.nostrService.generateNewKey(this.selectedRegionId()!);
+        const newUser = await this.nostrService.generateNewKey(
+          this.selectedRegionId()!
+        );
 
         // If the user has set a display name and/or profile image, create the profile
         const displayName = this.displayName();
@@ -223,6 +229,7 @@ export class LoginDialogComponent {
         if (displayName || profileImageFile) {
           this.logger.debug('Creating initial profile for new user');
           const result = await this.profileService.createInitialProfile(
+            newUser.pubkey,
             displayName || undefined,
             profileImageFile || undefined
           );
@@ -233,8 +240,16 @@ export class LoginDialogComponent {
             // The user can always edit their profile later
           } else {
             this.logger.debug('Initial profile created successfully');
+            if (result.profileEvent) {
+              const metadata = this.data.toRecord(result.profileEvent);
+              this.accountState.addToCache(metadata.event.pubkey, metadata);
+              this.accountState.profile.set(metadata);
+            }
           }
         }
+
+        // Perform the set account after we've uploaded the profile.
+        // await this.nostrService.setAccount(newUser);
 
         this.closeDialog();
       } catch (error) {

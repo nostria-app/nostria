@@ -29,8 +29,8 @@
 
             @if (option.id === 'account') {
               <div class="relay-count">
-                {{ relayService.getAccountRelayUrls().length }} relay{{
-                  relayService.getAccountRelayUrls().length !== 1 ? 's' : ''
+                {{ accountRelay.getRelayUrls().length }} relay{{
+                  accountRelay.getRelayUrls().length !== 1 ? 's' : ''
                 }}
                 configured
               </div>

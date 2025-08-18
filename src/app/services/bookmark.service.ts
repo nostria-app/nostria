@@ -1,5 +1,4 @@
 import { Injectable, signal, computed, inject, effect } from '@angular/core';
-import { RelayService } from './relays/relay';
 import { NostrService } from './nostr.service';
 import { ApplicationService } from './application.service';
 import { ApplicationStateService } from './application-state.service';
@@ -7,6 +6,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { LayoutService } from './layout.service';
 import { Event, kinds } from 'nostr-tools';
 import { AccountStateService } from './account-state.service';
+import { AccountRelayServiceEx } from './relays/account-relay';
 
 // Define bookmark types
 export type BookmarkType = 'e' | 'a' | 'r' | 't';
@@ -21,7 +21,7 @@ export interface ArticleBookmark {
   providedIn: 'root',
 })
 export class BookmarkService {
-  relay = inject(RelayService);
+  accountRelay = inject(AccountRelayServiceEx);
   nostr = inject(NostrService);
   app = inject(ApplicationService);
   appState = inject(ApplicationStateService);
@@ -72,7 +72,7 @@ export class BookmarkService {
   }
 
   async initialize() {
-    const bookmarksEvent = await this.relay.get({
+    const bookmarksEvent = await this.accountRelay.get({
       authors: [this.accountState.pubkey()!],
       kinds: [kinds.BookmarkList],
     });
@@ -178,7 +178,7 @@ export class BookmarkService {
     this.bookmarkEvent.set(signedEvent);
 
     // Publish to relays and get array of promises
-    const publishPromises = await this.relay.publish(signedEvent);
+    const publishPromises = await this.accountRelay.publish(signedEvent);
 
     await this.layout.showPublishResults(publishPromises, 'Bookmark');
 
