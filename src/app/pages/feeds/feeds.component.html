@@ -3,10 +3,18 @@
 } @else if (hasEmptyFollowingList()) {
 <!-- Show followset component when user has empty following list -->
 <div class="followset-container">
+  @if (isLoadingInterests()) {
+  <!-- Show loading indicator while interests are being fetched -->
+  <div class="loading-container">
+    <mat-spinner diameter="40"></mat-spinner>
+    <p>Loading interests...</p>
+  </div>
+  } @else {
   <app-followset title="Welcome! Let's get you started" [availableInterests]="availableInterests()"
     [suggestedProfiles]="suggestedProfiles()" [selectedInterests]="selectedInterests()"
     [followingProfiles]="followingProfiles()" [detectedRegion]="detectedRegion()"
     (interestToggled)="toggleInterest($event)" (completed)="onFollowsetComplete($event)"></app-followset>
+  }
 </div>
 } @else {
 <div class="home-container" [ngClass]="columnLayout()">

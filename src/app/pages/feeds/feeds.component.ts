@@ -171,6 +171,9 @@ export class FeedsComponent implements OnDestroy {
   // Available interests - will be populated from starter packs
   availableInterests = signal<Interest[]>([]);
 
+  // Loading state for available interests
+  isLoadingInterests = signal<boolean>(false);
+
   // Suggested profiles - will be populated dynamically from starter packs
   suggestedProfiles = signal<SuggestedProfile[]>([]);
 
@@ -1042,6 +1045,9 @@ export class FeedsComponent implements OnDestroy {
           'User has empty following list, fetching starter packs...'
         );
 
+        // Set loading state
+        this.isLoadingInterests.set(true);
+
         // Fetch starter packs from the followset service
         const starterPacks = await this.followsetService.fetchStarterPacks();
 
@@ -1062,6 +1068,9 @@ export class FeedsComponent implements OnDestroy {
       debugger;
       this.logger.error('Failed to initialize followset data:', error);
       // Keep default interests if starter pack fetching fails
+    } finally {
+      // Always clear loading state
+      this.isLoadingInterests.set(false);
     }
   }
 
