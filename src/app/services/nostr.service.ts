@@ -2228,7 +2228,7 @@ export class NostrService implements NostriaService {
 
     const signedDMEvent = finalizeEvent(relayDMListEvent, secretKey);
     await this.storage.saveEvent(signedDMEvent);
-    await this.accountRelay.publish(signedMediaEvent);
+    await this.accountRelay.publish(signedDMEvent);
     // this.publishQueueService.publish(signedDMEvent, PublishTarget.Account);
 
     await this.setAccount(newUser);
