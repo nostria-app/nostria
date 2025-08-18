@@ -24,6 +24,7 @@ export abstract class RelayServiceBase {
 
   // Signal to store the relays
   // relays: Relay[] = [];
+  relays = signal<Relay[]>([]);
 
   constructor(pool: SimplePool) {
     this.#pool = pool;
@@ -39,6 +40,7 @@ export abstract class RelayServiceBase {
 
     this.relayUrls = relayUrls;
     this.#pool = new SimplePool();
+    this.updateRelaysSignal();
     this.notifyRelaysModified();
   }
 
@@ -58,12 +60,20 @@ export abstract class RelayServiceBase {
   }
 
   /**
+   * Get the relays signal for subscribing to relay information changes
+   */
+  get relaysSignal(): Signal<Relay[]> {
+    return this.relays.asReadonly();
+  }
+
+  /**
    * Add a relay URL to the existing list
    * @param relayUrl The relay URL to add
    */
   addRelay(relayUrl: string): void {
     if (!this.relayUrls.includes(relayUrl)) {
       this.relayUrls.push(relayUrl);
+      this.updateRelaysSignal();
       this.notifyRelaysModified();
       this.logger.debug('Added relay:', relayUrl);
     }
@@ -77,6 +87,7 @@ export abstract class RelayServiceBase {
     const index = this.relayUrls.indexOf(relayUrl);
     if (index > -1) {
       this.relayUrls.splice(index, 1);
+      this.updateRelaysSignal();
       this.notifyRelaysModified();
       this.logger.debug('Removed relay:', relayUrl);
     }
@@ -88,6 +99,7 @@ export abstract class RelayServiceBase {
    */
   updateRelays(relayUrls: string[]): void {
     this.relayUrls = [...relayUrls];
+    this.updateRelaysSignal();
     this.notifyRelaysModified();
     this.logger.debug('Updated relays:', relayUrls);
   }
@@ -97,6 +109,7 @@ export abstract class RelayServiceBase {
    */
   clearRelays(): void {
     this.relayUrls = [];
+    this.updateRelaysSignal();
     this.notifyRelaysModified();
     this.logger.debug('Cleared all relays');
   }
@@ -121,6 +134,62 @@ export abstract class RelayServiceBase {
    */
   private notifyRelaysModified(): void {
     this.relaysModified.set([...this.relayUrls]);
+  }
+
+  /**
+   * Update the relays signal with current relay information
+   */
+  private updateRelaysSignal(): void {
+    const relayObjects: Relay[] = this.relayUrls.map(url => ({
+      url,
+      status: 'disconnected', // Default status, can be updated by connection monitoring
+      lastUsed: undefined,
+      timeout: undefined,
+    }));
+    this.relays.set(relayObjects);
+  }
+
+  /**
+   * Update the status of a specific relay
+   * @param relayUrl The relay URL
+   * @param status The new status
+   */
+  updateRelayStatus(
+    relayUrl: string,
+    status: 'connected' | 'disconnected' | 'connecting' | 'error'
+  ): void {
+    const currentRelays = this.relays();
+    const updatedRelays = currentRelays.map(relay =>
+      relay.url === relayUrl ? { ...relay, status } : relay
+    );
+    this.relays.set(updatedRelays);
+  }
+
+  /**
+   * Update the lastUsed timestamp of a specific relay
+   * @param relayUrl The relay URL
+   * @param timestamp The timestamp (in seconds, as per Nostr protocol)
+   */
+  updateRelayLastUsed(relayUrl: string, timestamp?: number): void {
+    const currentRelays = this.relays();
+    const lastUsed = timestamp || Math.floor(Date.now() / 1000);
+    const updatedRelays = currentRelays.map(relay =>
+      relay.url === relayUrl ? { ...relay, lastUsed } : relay
+    );
+    this.relays.set(updatedRelays);
+  }
+
+  /**
+   * Update the timeout of a specific relay
+   * @param relayUrl The relay URL
+   * @param timeout The timeout value in milliseconds
+   */
+  updateRelayTimeout(relayUrl: string, timeout: number): void {
+    const currentRelays = this.relays();
+    const updatedRelays = currentRelays.map(relay =>
+      relay.url === relayUrl ? { ...relay, timeout } : relay
+    );
+    this.relays.set(updatedRelays);
   }
 
   /**
@@ -266,6 +335,11 @@ export abstract class RelayServiceBase {
 
       this.logger.debug(`Received event from query`, event);
 
+      // Update lastUsed for all relays used in this query
+      if (event) {
+        urls.forEach(url => this.updateRelayLastUsed(url));
+      }
+
       return event;
     } catch (error) {
       this.logger.error('Error fetching events', error);
@@ -324,6 +398,10 @@ export abstract class RelayServiceBase {
           },
           onclose: reasons => {
             console.log('Subscriptions closed', reasons);
+            // Update lastUsed for all relays used in this query if we received events
+            if (events.length > 0) {
+              urls.forEach(url => this.updateRelayLastUsed(url));
+            }
             resolve(events);
           },
         });
@@ -370,7 +448,7 @@ export abstract class RelayServiceBase {
       console.log('Publish result for first relay:', result1);
 
       // Update lastUsed for all relays used in this publish operation
-      // urls.forEach(url => this.updateRelayLastUsed(url));
+      urls.forEach(url => this.updateRelayLastUsed(url));
 
       return publishResults;
     } catch (error) {
@@ -409,7 +487,7 @@ export abstract class RelayServiceBase {
       this.logger.debug('Publish results:', publishResults);
 
       // Update lastUsed for all relays used in this publish operation
-      // urls.forEach(url => this.updateRelayLastUsed(url));
+      urls.forEach(url => this.updateRelayLastUsed(url));
 
       return publishResults;
     } catch (error) {
@@ -437,8 +515,7 @@ export abstract class RelayServiceBase {
       limit?: number;
     }[],
     onEvent: (event: T) => void,
-    onEose?: () => void,
-    relayUrls?: string[]
+    onEose?: () => void
   ) {
     this.logger.debug('Creating subscription with filters:', filters);
 
@@ -467,8 +544,8 @@ export abstract class RelayServiceBase {
         onevent: evt => {
           this.logger.debug(`Received event of kind ${evt.kind}`);
 
-          // Update the lastUsed timestamp for this relay
-          // this.updateRelayLastUsed(relay);
+          // Update the lastUsed timestamp for all relays (since we don't know which relay sent this event)
+          this.relayUrls.forEach(url => this.updateRelayLastUsed(url));
 
           // Call the provided event handler
           onEvent(evt as T);
@@ -539,8 +616,7 @@ export abstract class RelayServiceBase {
       limit?: number;
     }[],
     onEvent: (event: T) => void,
-    onEose?: () => void,
-    relayUrls?: string[]
+    onEose?: () => void
   ) {
     this.logger.debug('Creating subscription with filters:', filters);
 
@@ -569,8 +645,8 @@ export abstract class RelayServiceBase {
         onevent: evt => {
           this.logger.debug(`Received event of kind ${evt.kind}`);
 
-          // Update the lastUsed timestamp for this relay
-          // this.updateRelayLastUsed(relay);
+          // Update the lastUsed timestamp for all relays (since we don't know which relay sent this event)
+          this.relayUrls.forEach(url => this.updateRelayLastUsed(url));
 
           // Call the provided event handler
           onEvent(evt as T);
