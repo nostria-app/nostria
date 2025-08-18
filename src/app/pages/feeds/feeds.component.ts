@@ -9,6 +9,7 @@ import {
   OnInit,
   OnDestroy,
   ChangeDetectorRef,
+  untracked,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Location } from '@angular/common';
@@ -336,6 +337,21 @@ export class FeedsComponent implements OnInit, OnDestroy {
   constructor() {
     // Initialize data loading
     // this.loadTrendingContent();
+
+    effect(async () => {
+      if (this.app.authenticated()) {
+
+        untracked(async () => {
+          // Re-establish subscriptions when component loads
+          this.feedService.subscribe();
+
+          if (this.availableInterests().length === 0) {
+            // Initialize followset data for new users
+            await this.initializeFollowsetData();
+          }
+        });
+      }
+    });
 
     // Handle route parameters for feed navigation
     effect(() => {
@@ -1015,14 +1031,8 @@ export class FeedsComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    debugger;
     this.logger.debug('FeedsComponent initializing...');
-    // Re-establish subscriptions when component loads
-    this.feedService.subscribe();
-
-    if (this.availableInterests().length === 0) {
-      // Initialize followset data for new users
-      this.initializeFollowsetData();
-    }
   }
 
   /**
