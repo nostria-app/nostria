@@ -141,11 +141,11 @@
 </mat-dialog-content>
 
 <mat-dialog-actions align="end">
-  <button mat-button (click)="toggleJsonView()">
+  <button matButton="outlined" (click)="toggleJsonView()">
     <mat-icon>{{ showJsonView() ? 'visibility_off' : 'code' }}</mat-icon>
     {{ showJsonView() ? 'Event' : 'Event' }}
   </button>
-  <button mat-button (click)="toggleRelaysView()">
+  <button matButton="outlined" (click)="toggleRelaysView()">
     <mat-icon>{{ showRelaysView() ? 'visibility_off' : 'dns' }}</mat-icon>
     {{ showRelaysView() ? 'Relays' : 'Relays' }}
   </button>
@@ -157,8 +157,7 @@
     }
   </button>
   <button
-    mat-raised-button
-    color="primary"
+    mat-flat-button
     (click)="publish()"
     [disabled]="!canPublish()"
   >
