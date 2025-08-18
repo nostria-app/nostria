@@ -3,29 +3,19 @@
   <div class="dialog-header">
     <!-- Show back button for all steps except the initial step -->
     @if (currentStep() !== LoginStep.INITIAL) {
-      <button
-        mat-icon-button
-        class="back-button"
-        (click)="
+    <button mat-icon-button class="back-button" (click)="
           currentStep() === LoginStep.REGION_SELECTION
             ? goToStep(LoginStep.INITIAL)
             : currentStep() === LoginStep.LOGIN_OPTIONS
               ? goToStep(LoginStep.INITIAL)
               : goToStep(LoginStep.LOGIN_OPTIONS)
-        "
-        aria-label="Back"
-      >
-        <mat-icon>arrow_back</mat-icon>
-      </button>
+        " aria-label="Back">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
     } @else {
-      <button
-        mat-icon-button
-        (click)="closeDialog()"
-        class="close-button"
-        aria-label="Close"
-      >
-        <mat-icon>close</mat-icon>
-      </button>
+    <button mat-icon-button (click)="closeDialog()" class="close-button" aria-label="Close">
+      <mat-icon>close</mat-icon>
+    </button>
     }
 
     <img src="icons/icon-128x128.png" alt="Nostria Logo" class="app-icon" />
@@ -33,30 +23,30 @@
     <!-- Dynamic title based on current step -->
     <h2 mat-dialog-title>
       @switch (currentStep()) {
-        @case (LoginStep.INITIAL) {
-          Welcome to Nostria
-        }
-        @case (LoginStep.REGION_SELECTION) {
-          Select Your Region
-        }
-        @case (LoginStep.LOGIN_OPTIONS) {
-          Sign in to Nostria
-        }
-        @case (LoginStep.NSEC_LOGIN) {
-          Sign in with Private Key
-        }
-        @case (LoginStep.NOSTR_CONNECT) {
-          Sign in with Nostr Connect
-        }
-        @case (LoginStep.EXISTING_ACCOUNTS) {
-          Choose an Account
-        }
-        @case (LoginStep.PREVIEW) {
-          Preview Mode
-        }
-        @default {
-          Sign in to Nostria
-        }
+      @case (LoginStep.INITIAL) {
+      Welcome to Nostria
+      }
+      @case (LoginStep.REGION_SELECTION) {
+      Select Your Region
+      }
+      @case (LoginStep.LOGIN_OPTIONS) {
+      Sign in to Nostria
+      }
+      @case (LoginStep.NSEC_LOGIN) {
+      Sign in with Private Key
+      }
+      @case (LoginStep.NOSTR_CONNECT) {
+      Sign in with Nostr Connect
+      }
+      @case (LoginStep.EXISTING_ACCOUNTS) {
+      Choose an Account
+      }
+      @case (LoginStep.PREVIEW) {
+      Preview Mode
+      }
+      @default {
+      Sign in to Nostria
+      }
       }
     </h2>
   </div>
@@ -64,168 +54,136 @@
   <div mat-dialog-content>
     <!-- Step 1: Initial welcome screen (from initial login dialog) -->
     @if (currentStep() === LoginStep.INITIAL) {
-      <p class="dialog-subtitle">Your Social Network</p>
+    <p class="dialog-subtitle">Your Social Network</p>
 
-      <div class="login-options">
-        <mat-card class="login-card new-user" (click)="startNewAccountFlow()">
-          <mat-card-content>
-            <div class="card-content">
-              <div class="card-text">
-                <h3><mat-icon>person_add</mat-icon>New User</h3>
-                <p>Create a new account with two clicks</p>
-              </div>
+    <div class="login-options">
+      <mat-card class="login-card new-user" (click)="startNewAccountFlow()">
+        <mat-card-content>
+          <div class="card-content">
+            <div class="card-text">
+              <h3><mat-icon>person_add</mat-icon>New User</h3>
+              <p>Create a new account with two clicks</p>
             </div>
-          </mat-card-content>
-        </mat-card>
+          </div>
+        </mat-card-content>
+      </mat-card>
 
-        <mat-card
-          class="login-card existing-user"
-          (click)="goToStep(LoginStep.LOGIN_OPTIONS)"
-        >
-          <mat-card-content>
-            <div class="card-content">
-              <div class="card-text">
-                <h3><mat-icon>login</mat-icon>Login</h3>
-                <p>Sign in with your existing account</p>
-              </div>
+      <mat-card class="login-card existing-user" (click)="goToStep(LoginStep.LOGIN_OPTIONS)">
+        <mat-card-content>
+          <div class="card-content">
+            <div class="card-text">
+              <h3><mat-icon>login</mat-icon>Login</h3>
+              <p>Sign in with your existing account</p>
             </div>
-          </mat-card-content>
-        </mat-card>
-      </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
 
-      <div class="terms-of-use-notice">
-        <p>
-          By using Nostria, you agree to our
-          <a href="#" (click)="$event.preventDefault(); openTermsOfUse()"
-            >Terms of Use</a
-          >.
-        </p>
-      </div>
+    <div class="terms-of-use-notice">
+      <p>
+        By using Nostria, you agree to our
+        <a href="#" (click)="$event.preventDefault(); openTermsOfUse()">Terms of Use</a>.
+      </p>
+    </div>
     }
 
     <!-- Step 2: Region selection with discovery (from location selection dialog) -->
     @if (currentStep() === LoginStep.REGION_SELECTION) {
-      @if (isDetectingRegion()) {
-        <p class="dialog-subtitle">Discovering your region...</p>
-        <div class="region-detection-container">
-          <div class="region-detection-loading">
-            <mat-icon class="spinning">autorenew</mat-icon>
-            <span>Finding closest region...</span>
-          </div>
-          <p>
-            Your account is ready in seconds — no email address, no phone
-            number, no personal details required.
-          </p>
-          <p>
-            Choosing a region that is close to you helps ensure faster access
-            and better performance.
-          </p>
-        </div>
-      } @else {
-        <p class="dialog-subtitle">Region detected successfully</p>
+    @if (isDetectingRegion()) {
+    <p class="dialog-subtitle">Discovering your region...</p>
+    <div class="region-detection-container">
+      <div class="region-detection-loading">
+        <mat-icon class="spinning">autorenew</mat-icon>
+        <span>Finding closest region...</span>
+      </div>
+      <p>
+        Your account is ready in seconds — no email address, no phone
+        number, no personal details required.
+      </p>
+      <p>
+        Choosing a region that is close to you helps ensure faster access
+        and better performance.
+      </p>
+    </div>
+    } @else {
+    <p class="dialog-subtitle">Region detected successfully</p>
 
-        <div class="region-info-container">
-          <button
-            mat-button
-            class="region-info-btn"
-            (click)="toggleRegionSelector()"
-          >
-            Region: <strong>{{ detectedRegion() }}</strong>
-            <mat-icon>{{
-              showRegionSelector() ? 'expand_less' : 'expand_more'
-            }}</mat-icon>
-          </button>
+    <div class="region-info-container">
+      <button mat-button class="region-info-btn" (click)="toggleRegionSelector()">
+        Region: <strong>{{ detectedRegion() }}</strong>
+        <mat-icon>{{
+          showRegionSelector() ? 'expand_less' : 'expand_more'
+          }}</mat-icon>
+      </button>
 
-          @if (showRegionSelector()) {
-            <div class="region-selector">
-              <h3>Choose your region:</h3>
-              @for (region of availableRegions(); track region.name) {
-                <button
-                  class="region-option"
-                  mat-button
-                  (click)="selectRegionManually(region)"
-                >
-                  <mat-icon class="region-flag">travel_explore</mat-icon>
-                  <span class="region-name">{{ region.name }}</span
-                  >&nbsp;
-                  <span class="region-latency">{{ region.latency }}</span>
-                </button>
-              }
-            </div>
-          }
-        </div>
-
-        <!-- Profile Setup Section -->
-        <div class="profile-setup-section">
-          <h3>Set up your profile (optional)</h3>
-          <p>
-            Let people recognize you with a name and photo. You can always
-            change these later.
-          </p>
-
-          <div class="profile-setup-form">
-            <div class="profile-avatar-section">
-              <div
-                class="profile-setup-avatar"
-                (click)="fileInput.click()"
-                (keydown.enter)="fileInput.click()"
-                (keydown.space)="fileInput.click()"
-                tabindex="0"
-                role="button"
-                aria-label="Select profile image"
-              >
-                @if (profileImage()) {
-                  <img
-                    [src]="profileImage()"
-                    alt="Profile"
-                    class="profile-preview"
-                  />
-                } @else {
-                  <div class="avatar-placeholder">
-                    <mat-icon>add_a_photo</mat-icon>
-                  </div>
-                }
-                <input
-                  type="file"
-                  accept="image/*"
-                  (change)="onFileSelected($event)"
-                  #fileInput
-                  class="hidden-file-input"
-                  title="Select profile image"
-                />
-              </div>
-            </div>
-
-            <div class="profile-name-section">
-              <mat-form-field appearance="outline" class="profile-name-field">
-                <mat-label>What should we call you?</mat-label>
-                <input
-                  matInput
-                  [ngModel]="displayName()"
-                  (ngModelChange)="displayName.set($event)"
-                  placeholder="Display name (optional)"
-                  maxlength="50"
-                />
-              </mat-form-field>
-            </div>
-          </div>
-        </div>
-
-        <div class="continue-button-container">
-          <button mat-flat-button (click)="generateNewKey()">
-            <mat-icon>arrow_forward</mat-icon>
-            Create Account
-          </button>
-        </div>
+      @if (showRegionSelector()) {
+      <div class="region-selector">
+        <h3>Choose your region:</h3>
+        @for (region of availableRegions(); track region.name) {
+        <button class="region-option" mat-button (click)="selectRegionManually(region)">
+          <mat-icon class="region-flag">travel_explore</mat-icon>
+          <span class="region-name">{{ region.name }}</span>&nbsp;
+          <span class="region-latency">{{ region.latency }}</span>
+        </button>
+        }
+      </div>
       }
+    </div>
+
+    <!-- Profile Setup Section -->
+    <div class="profile-setup-section">
+      <h3>Set up your profile (optional)</h3>
+      <p>
+        Let people recognize you with a name and photo. You can always
+        change these later.
+      </p>
+
+      <div class="profile-setup-form">
+        <div class="profile-avatar-section">
+          <div class="profile-setup-avatar" (click)="fileInput.click()" (keydown.enter)="fileInput.click()"
+            (keydown.space)="fileInput.click()" tabindex="0" role="button" aria-label="Select profile image">
+            @if (profileImage()) {
+            <img [src]="profileImage()" alt="Profile" class="profile-preview" />
+            } @else {
+            <div class="avatar-placeholder">
+              <mat-icon>add_a_photo</mat-icon>
+            </div>
+            }
+            <input type="file" accept="image/*" (change)="onFileSelected($event)" #fileInput class="hidden-file-input"
+              title="Select profile image" />
+          </div>
+        </div>
+
+        <div class="profile-name-section">
+          <mat-form-field appearance="outline" class="profile-name-field">
+            <mat-label>What should we call you?</mat-label>
+            <input matInput [ngModel]="displayName()" (ngModelChange)="displayName.set($event)"
+              placeholder="Display name (optional)" maxlength="50" />
+          </mat-form-field>
+        </div>
+      </div>
+    </div>
+
+    <div class="continue-button-container">
+      <button mat-flat-button (click)="generateNewKey()" [disabled]="loading()">
+        @if (loading()) {
+        <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
+        <span>Creating Account...</span>
+        } @else {
+        <span>Create account</span>
+        }
+      </button>
+    </div>
+    }
     }
 
     <!-- Step 3: Login options (from login dialog) -->
     @if (currentStep() === LoginStep.LOGIN_OPTIONS) {
-      <p class="dialog-subtitle">Choose how to sign in</p>
+    <p class="dialog-subtitle">Choose how to sign in</p>
 
-      <!-- Previous Accounts Section (if accounts exist) -->
-      <!-- @if (nostrService.hasAccounts()) {
+    <!-- Previous Accounts Section (if accounts exist) -->
+    <!-- @if (nostrService.hasAccounts()) {
         <div class="accounts-section">
           <h3 class="section-title">Previous Accounts</h3>
           <div class="accounts-list-container">
@@ -255,232 +213,180 @@
         </div>
       } -->
 
-      <div class="login-options-section">
-        <div class="login-options">
-          <mat-card
-            class="login-card nsec"
-            (click)="goToStep(LoginStep.NSEC_LOGIN)"
-          >
-            <mat-card-content>
-              <div class="card-content">
-                <div class="card-text">
-                  <h3><mat-icon>key</mat-icon>Private Key</h3>
-                  <p>Sign in with your Nostr private key</p>
-                </div>
+    <div class="login-options-section">
+      <div class="login-options">
+        <mat-card class="login-card nsec" (click)="goToStep(LoginStep.NSEC_LOGIN)">
+          <mat-card-content>
+            <div class="card-content">
+              <div class="card-text">
+                <h3><mat-icon>key</mat-icon>Private Key</h3>
+                <p>Sign in with your Nostr private key</p>
               </div>
-            </mat-card-content>
-          </mat-card>
+            </div>
+          </mat-card-content>
+        </mat-card>
 
-          <mat-card class="login-card extension" (click)="loginWithExtension()">
-            <mat-card-content>
-              <div class="card-content">
-                <div class="card-text">
-                  <h3><mat-icon>extension</mat-icon>Extension</h3>
-                  <p>Connect via browser extension</p>
-                </div>
+        <mat-card class="login-card extension" (click)="loginWithExtension()">
+          <mat-card-content>
+            <div class="card-content">
+              <div class="card-text">
+                <h3><mat-icon>extension</mat-icon>Extension</h3>
+                <p>Connect via browser extension</p>
               </div>
-            </mat-card-content>
-          </mat-card>
+            </div>
+          </mat-card-content>
+        </mat-card>
 
-          <mat-card
-            class="login-card connect"
-            (click)="goToStep(LoginStep.NOSTR_CONNECT)"
-          >
-            <mat-card-content>
-              <div class="card-content">
-                <div class="card-text">
-                  <h3><mat-icon>phone_iphone</mat-icon>Remote Key</h3>
-                  <p>Sign in with remote signer</p>
-                </div>
+        <mat-card class="login-card connect" (click)="goToStep(LoginStep.NOSTR_CONNECT)">
+          <mat-card-content>
+            <div class="card-content">
+              <div class="card-text">
+                <h3><mat-icon>phone_iphone</mat-icon>Remote Key</h3>
+                <p>Sign in with remote signer</p>
               </div>
-            </mat-card-content>
-          </mat-card>
+            </div>
+          </mat-card-content>
+        </mat-card>
 
-          <mat-card
-            class="login-card preview"
-            (click)="goToStep(LoginStep.PREVIEW)"
-          >
-            <mat-card-content>
-              <div class="card-content">
-                <div class="card-text">
-                  <h3><mat-icon>visibility</mat-icon>Preview Only</h3>
-                  <p>Use any public key in read-only mode</p>
-                </div>
+        <mat-card class="login-card preview" (click)="goToStep(LoginStep.PREVIEW)">
+          <mat-card-content>
+            <div class="card-content">
+              <div class="card-text">
+                <h3><mat-icon>visibility</mat-icon>Preview Only</h3>
+                <p>Use any public key in read-only mode</p>
               </div>
-            </mat-card-content>
-          </mat-card>
-        </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
       </div>
+    </div>
 
-      @if (extensionError()) {
-        <div class="extension-error">
-          <p>{{ extensionError() }}</p>
-          <p>
-            Make sure you have a Nostr extension installed like Alby or nos2x
-          </p>
-        </div>
-      }
+    @if (extensionError()) {
+    <div class="extension-error">
+      <p>{{ extensionError() }}</p>
+      <p>
+        Make sure you have a Nostr extension installed like Alby or nos2x
+      </p>
+    </div>
+    }
     }
 
     <!-- Extension Loading State -->
     @if (currentStep() === LoginStep.EXTENSION_LOADING) {
-      <div class="loading-content">
-        <mat-spinner diameter="48"></mat-spinner>
-        <p class="loading-text">Connecting to your Nostr extension...</p>
-      </div>
+    <div class="loading-content">
+      <mat-spinner diameter="48"></mat-spinner>
+      <p class="loading-text">Connecting to your Nostr extension...</p>
+    </div>
     }
 
     <!-- NSEC Key Login -->
     @if (currentStep() === LoginStep.NSEC_LOGIN) {
-      <p class="dialog-subtitle">Enter your nsec private key:</p>
+    <p class="dialog-subtitle">Enter your nsec private key:</p>
 
-      <mat-form-field appearance="fill" class="full-width">
-        <mat-label>Private Key (nsec...)</mat-label>
-        <input
-          matInput
-          [(ngModel)]="nsecKey"
-          type="password"
-          placeholder="nsec1..."
-          autocomplete="off"
-          autocorrect="off"
-          spellcheck="false"
-        />
-      </mat-form-field>
+    <mat-form-field appearance="fill" class="full-width">
+      <mat-label>Private Key (nsec...)</mat-label>
+      <input matInput [(ngModel)]="nsecKey" type="password" placeholder="nsec1..." autocomplete="off" autocorrect="off"
+        spellcheck="false" />
+    </mat-form-field>
 
-      <div class="nsec-warning">
-        <p>⚠️ Your private key will be stored locally on your device.</p>
-        <p>
-          This form is configured to try and prevent password managers from
-          saving your key. If your browser suggests to save, reject it.
-        </p>
-      </div>
+    <div class="nsec-warning">
+      <p>⚠️ Your private key will be stored locally on your device.</p>
+      <p>
+        This form is configured to try and prevent password managers from
+        saving your key. If your browser suggests to save, reject it.
+      </p>
+    </div>
 
-      <div class="button-row">
-        <button
-          mat-raised-button
-          color="primary"
-          (click)="loginWithNsec()"
-          [disabled]="!nsecKey"
-        >
-          <mat-icon>login</mat-icon>
-          <span>Login</span>
-        </button>
-      </div>
+    <div class="button-row">
+      <button mat-raised-button color="primary" (click)="loginWithNsec()" [disabled]="!nsecKey">
+        <mat-icon>login</mat-icon>
+        <span>Login</span>
+      </button>
+    </div>
     }
 
     <!-- Nostr Connect -->
     @if (currentStep() === LoginStep.NOSTR_CONNECT) {
-      <p class="dialog-subtitle">Enter your Nostr Connect URL:</p>
+    <p class="dialog-subtitle">Enter your Nostr Connect URL:</p>
 
-      @if (nostrConnectError()) {
-        <div class="extension-error">
-          <p>{{ nostrConnectError() }}</p>
-        </div>
-      }
+    @if (nostrConnectError()) {
+    <div class="extension-error">
+      <p>{{ nostrConnectError() }}</p>
+    </div>
+    }
 
-      <div class="nostr-connect-input-container">
-        <mat-form-field appearance="fill" class="nostr-connect-input">
-          <mat-label>Nostr Connect URL</mat-label>
-          <input
-            matInput
-            [ngModel]="nostrConnectUrl()"
-            (ngModelChange)="nostrConnectUrl.set($event)"
-            placeholder="bunker://..."
-            [disabled]="nostrConnectLoading()"
-            autocomplete="off"
-            autocorrect="off"
-            spellcheck="false"
-          />
-          <mat-hint
-            >Scan QR code from Nostria Signer app to get this URL</mat-hint
-          >
-        </mat-form-field>
+    <div class="nostr-connect-input-container">
+      <mat-form-field appearance="fill" class="nostr-connect-input">
+        <mat-label>Nostr Connect URL</mat-label>
+        <input matInput [ngModel]="nostrConnectUrl()" (ngModelChange)="nostrConnectUrl.set($event)"
+          placeholder="bunker://..." [disabled]="nostrConnectLoading()" autocomplete="off" autocorrect="off"
+          spellcheck="false" />
+        <mat-hint>Scan QR code from Nostria Signer app to get this URL</mat-hint>
+      </mat-form-field>
 
-        <button
-          mat-icon-button
-          class="qr-scan-button"
-          (click)="scanQrCodeForNostrConnect()"
-          [disabled]="nostrConnectLoading()"
-          matTooltip="Scan QR code"
-        >
-          <mat-icon>qr_code_scanner</mat-icon>
-        </button>
-      </div>
+      <button mat-icon-button class="qr-scan-button" (click)="scanQrCodeForNostrConnect()"
+        [disabled]="nostrConnectLoading()" matTooltip="Scan QR code">
+        <mat-icon>qr_code_scanner</mat-icon>
+      </button>
+    </div>
 
-      <div class="nostr-connect-info">
-        <p>
-          Nostr Connect allows you to use your private key from a separate
-          device.
-        </p>
-        <p>
-          Use the Nostria Signer app to approve signing requests without
-          exposing your private key to this browser.
-        </p>
-      </div>
+    <div class="nostr-connect-info">
+      <p>
+        Nostr Connect allows you to use your private key from a separate
+        device.
+      </p>
+      <p>
+        Use the Nostria Signer app to approve signing requests without
+        exposing your private key to this browser.
+      </p>
+    </div>
 
-      <div class="button-row">
-        <button
-          mat-raised-button
-          color="primary"
-          (click)="loginWithNostrConnect()"
-          [disabled]="
+    <div class="button-row">
+      <button mat-raised-button color="primary" (click)="loginWithNostrConnect()" [disabled]="
             !nostrConnectUrl() ||
             nostrConnectUrl().length < 10 ||
             nostrConnectLoading()
-          "
-        >
-          @if (nostrConnectLoading()) {
-            <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
-            <span>Connecting...</span>
-          } @else {
-            <ng-container>
-              <mat-icon>phone_iphone</mat-icon>
-              <span>Connect</span>
-            </ng-container>
-          }
-        </button>
-      </div>
+          ">
+        @if (nostrConnectLoading()) {
+        <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
+        <span>Connecting...</span>
+        } @else {
+        <ng-container>
+          <mat-icon>phone_iphone</mat-icon>
+          <span>Connect</span>
+        </ng-container>
+        }
+      </button>
+    </div>
     }
 
     <!-- Preview Mode -->
     @if (currentStep() === LoginStep.PREVIEW) {
-      <p class="dialog-subtitle">Enter a public key for preview only mode:</p>
+    <p class="dialog-subtitle">Enter a public key for preview only mode:</p>
 
-      <mat-form-field appearance="fill" class="full-width">
-        <mat-label>Public Key (npub...)</mat-label>
-        <input
-          matInput
-          [(ngModel)]="previewPubkey"
-          type="text"
-          placeholder="npub1..."
-          autocomplete="off"
-          autocorrect="off"
-          spellcheck="false"
-        />
-        <mat-hint>You will be able to view content but not interact</mat-hint>
-      </mat-form-field>
+    <mat-form-field appearance="fill" class="full-width">
+      <mat-label>Public Key (npub...)</mat-label>
+      <input matInput [(ngModel)]="previewPubkey" type="text" placeholder="npub1..." autocomplete="off"
+        autocorrect="off" spellcheck="false" />
+      <mat-hint>You will be able to view content but not interact</mat-hint>
+    </mat-form-field>
 
-      <div class="preview-info">
-        <p>
-          Preview mode allows you to browse Nostr content using any public key.
-        </p>
-        <p>
-          You will be able to view posts, profiles, and content but will not be
-          able to interact or post.
-        </p>
-      </div>
+    <div class="preview-info">
+      <p>
+        Preview mode allows you to browse Nostr content using any public key.
+      </p>
+      <p>
+        You will be able to view posts, profiles, and content but will not be
+        able to interact or post.
+      </p>
+    </div>
 
-      <div class="button-row">
-        <button
-          mat-raised-button
-          color="primary"
-          (click)="usePreviewAccount(previewPubkey)"
-          [disabled]="!previewPubkey"
-        >
-          <mat-icon>visibility</mat-icon>
-          <span>Preview Only</span>
-        </button>
-      </div>
+    <div class="button-row">
+      <button mat-raised-button color="primary" (click)="usePreviewAccount(previewPubkey)" [disabled]="!previewPubkey">
+        <mat-icon>visibility</mat-icon>
+        <span>Preview Only</span>
+      </button>
+    </div>
     }
   </div>
 </div>
