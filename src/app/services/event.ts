@@ -7,6 +7,7 @@ import { UtilitiesService } from './utilities.service';
 import { NostrService } from './nostr.service';
 import { EventData } from '../data-resolver';
 import { NostrRecord } from '../interfaces';
+import { DiscoveryRelayServiceEx } from './relays/discovery-relay';
 
 export interface Reaction {
   emoji: string;
@@ -45,6 +46,7 @@ export class EventService {
   private readonly data = inject(DataService);
   private readonly utilities = inject(UtilitiesService);
   private readonly nostrService = inject(NostrService);
+  private readonly discoveryRelay = inject(DiscoveryRelayServiceEx);
 
   /**
    * Parse event tags to extract thread information
@@ -201,13 +203,11 @@ export class EventService {
       this.logger.info(
         'No user relays found, attempting relay discovery via NostrService'
       );
-      const discoveredRelays = await this.nostrService.discoverRelays(
+
+      debugger;
+
+      userRelays = await this.discoveryRelay.getUserRelayUrls(
         decoded.data.author
-      );
-      userRelays = discoveredRelays.relayUrls;
-      this.logger.info(
-        'Discovered relays via NostrService:',
-        discoveredRelays.relayUrls
       );
     }
 
@@ -269,9 +269,9 @@ export class EventService {
         'No user relays cached, discovering relays for pubkey:',
         pubkey
       );
-      const discoveredRelays = await this.nostrService.discoverRelays(pubkey);
-      userRelays = discoveredRelays.relayUrls;
-      this.logger.info('Retrieved user relays from discovery:', userRelays);
+
+      debugger;
+      userRelays = await this.discoveryRelay.getUserRelayUrls(pubkey);
     }
 
     if (!userRelays || userRelays.length === 0) {
@@ -345,10 +345,8 @@ export class EventService {
     let userRelays = await this.data.getUserRelays(event.pubkey);
 
     if (!userRelays || userRelays.length === 0) {
-      const discoveredRelays = await this.nostrService.discoverRelays(
-        event.pubkey
-      );
-      userRelays = discoveredRelays.relayUrls;
+      debugger;
+      userRelays = await this.discoveryRelay.getUserRelayUrls(event.pubkey);
     }
 
     if (!userRelays || userRelays.length === 0) {

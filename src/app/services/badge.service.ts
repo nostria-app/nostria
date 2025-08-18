@@ -1,14 +1,14 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { StorageService } from './storage.service';
 import { NostrService } from './nostr.service';
-import { RelayService } from './relays/relay';
 import { Event, kinds, NostrEvent } from 'nostr-tools';
 import { UtilitiesService } from './utilities.service';
-import { UserRelayFactoryService } from './user-relay-factory.service';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
 import { NostriaService } from '../interfaces';
 import { DataService } from './data.service';
+import { AccountRelayServiceEx } from './relays/account-relay';
+import { UserRelayExFactoryService } from './user-relay-factory.service';
 
 export interface ParsedBadge {
   slug: string;
@@ -37,9 +37,9 @@ interface ParsedReward {
 export class BadgeService implements NostriaService {
   private readonly storage = inject(StorageService);
   private readonly nostr = inject(NostrService);
-  private readonly relay = inject(RelayService);
+  private readonly accountRelay = inject(AccountRelayServiceEx);
   private readonly utilities = inject(UtilitiesService);
-  userRelayFactory = inject(UserRelayFactoryService);
+  userRelayFactory = inject(UserRelayExFactoryService);
   private readonly logger = inject(LoggerService);
   private readonly accountState = inject(AccountStateService);
   private readonly data = inject(DataService);
@@ -98,15 +98,16 @@ export class BadgeService implements NostriaService {
     }
   }
 
-  async load() { }
+  async load() {}
 
   async loadAcceptedBadges(pubkey: string): Promise<void> {
     this.isLoadingAccepted.set(true);
     try {
-      const profileBadgesEvent = await this.relay.getEventByPubkeyAndKind(
-        pubkey,
-        kinds.ProfileBadges
-      );
+      const profileBadgesEvent =
+        await this.accountRelay.getEventByPubkeyAndKind(
+          pubkey,
+          kinds.ProfileBadges
+        );
       console.log('Profile Badges Event:', profileBadgesEvent);
 
       if (profileBadgesEvent) {
@@ -125,7 +126,7 @@ export class BadgeService implements NostriaService {
   async loadIssuedBadges(pubkey: string): Promise<void> {
     this.isLoadingIssued.set(true);
     try {
-      const badgeAwardEvents = await this.relay.getEventsByPubkeyAndKind(
+      const badgeAwardEvents = await this.accountRelay.getEventsByPubkeyAndKind(
         pubkey,
         kinds.BadgeAward
       );
@@ -151,7 +152,7 @@ export class BadgeService implements NostriaService {
     );
 
     if (!definition) {
-      definition = await this.relay.getEventByPubkeyAndKindAndTag(
+      definition = await this.accountRelay.getEventByPubkeyAndKindAndTag(
         pubkey,
         kinds.BadgeDefinition,
         { key: 'd', value: slug }
@@ -233,10 +234,11 @@ export class BadgeService implements NostriaService {
   async loadBadgeDefinitions(pubkey: string): Promise<void> {
     this.isLoadingDefinitions.set(true);
     try {
-      const badgeDefinitionEvents = await this.relay.getEventsByPubkeyAndKind(
-        pubkey,
-        kinds.BadgeDefinition
-      );
+      const badgeDefinitionEvents =
+        await this.accountRelay.getEventsByPubkeyAndKind(
+          pubkey,
+          kinds.BadgeDefinition
+        );
       console.log('badgeDefinitionEvents:', badgeDefinitionEvents);
 
       for (const event of badgeDefinitionEvents) {
@@ -255,10 +257,11 @@ export class BadgeService implements NostriaService {
   async loadReceivedBadges(pubkey: string): Promise<void> {
     this.isLoadingReceived.set(true);
     try {
-      const receivedAwardsEvents = await this.relay.getEventsByKindAndPubKeyTag(
-        pubkey,
-        kinds.BadgeAward
-      );
+      const receivedAwardsEvents =
+        await this.accountRelay.getEventsByKindAndPubKeyTag(
+          pubkey,
+          kinds.BadgeAward
+        );
       console.log('receivedAwardsEvents:', receivedAwardsEvents);
 
       await this.fetchBadgeIssuers(receivedAwardsEvents);

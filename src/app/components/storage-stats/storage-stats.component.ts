@@ -5,7 +5,6 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { StorageService } from '../../services/storage.service';
-
 import { NostrService } from '../../services/nostr.service';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { LoggerService } from '../../services/logger.service';
@@ -75,7 +74,7 @@ export class StorageStatsComponent {
     this.isClearing.set(true);
 
     try {
-      await this.nostr.clearCache();
+      // await this.nostr.clearCache();
       await this.refreshStats();
 
       this.snackBar.open('Cache cleared successfully', 'Close', {

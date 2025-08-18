@@ -13,11 +13,11 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { AccountStateService } from '../../../services/account-state.service';
 import { NostrService } from '../../../services/nostr.service';
 import { InfoRecord, StorageService } from '../../../services/storage.service';
-import { RelayService } from '../../../services/relays/relay';
 import { RelaysService, RelayStats } from '../../../services/relays/relays';
 import { ApplicationService } from '../../../services/application.service';
 import { LoggerService } from '../../../services/logger.service';
 import { UtilitiesService } from '../../../services/utilities.service';
+import { AccountRelayServiceEx } from '../../../services/relays/account-relay';
 
 export interface RelayClusterOutput {
   relay: string;
@@ -58,7 +58,7 @@ export class LogsSettingsComponent {
   accountState = inject(AccountStateService);
   nostr = inject(NostrService);
   storage = inject(StorageService);
-  relay = inject(RelayService);
+  accountRelay = inject(AccountRelayServiceEx);
   relaysService = inject(RelaysService);
   app = inject(ApplicationService);
   logger = inject(LoggerService);

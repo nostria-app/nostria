@@ -5,7 +5,6 @@ import { NostriaService } from '../interfaces';
 import { BadgeService } from './badge.service';
 import { NotificationService } from './notification.service';
 import { NostrService } from './nostr.service';
-import { RelayService } from './relays/relay';
 import { MessagingService } from './messaging.service';
 import { DiscoveryRelayServiceEx } from './relays/discovery-relay';
 import { AccountRelayServiceEx } from './relays/account-relay';
@@ -20,7 +19,7 @@ export class StateService implements NostriaService {
   badge = inject(BadgeService);
   notification = inject(NotificationService);
   nostr = inject(NostrService);
-  relay = inject(RelayService);
+  // relay = inject(RelayService);
   messaging = inject(MessagingService);
   discoveryRelay = inject(DiscoveryRelayServiceEx);
   accountRelay = inject(AccountRelayServiceEx);

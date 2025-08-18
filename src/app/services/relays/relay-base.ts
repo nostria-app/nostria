@@ -1,4 +1,4 @@
-import { inject } from '@angular/core';
+import { inject, signal, Signal } from '@angular/core';
 import { LoggerService } from '../logger.service';
 import { Event, SimplePool } from 'nostr-tools';
 
@@ -14,13 +14,23 @@ export abstract class RelayServiceBase {
   protected relayUrls: string[] = [];
   protected logger = inject(LoggerService);
 
+  // Signal to notify when relays have been modified
+  protected relaysModified = signal<string[]>([]);
+
   // Basic concurrency control for base class
   protected readonly maxConcurrentRequests = 2;
   protected currentRequests = 0;
   protected requestQueue: (() => void)[] = [];
 
+  // Signal to store the relays
+  // relays: Relay[] = [];
+
   constructor(pool: SimplePool) {
     this.#pool = pool;
+  }
+
+  getPool(): SimplePool {
+    return this.#pool;
   }
 
   /** Inits the relay URLs. Make sure URLs are normalized before setting. */
@@ -29,6 +39,7 @@ export abstract class RelayServiceBase {
 
     this.relayUrls = relayUrls;
     this.#pool = new SimplePool();
+    this.notifyRelaysModified();
   }
 
   destroy() {
@@ -37,6 +48,79 @@ export abstract class RelayServiceBase {
 
   getRelayUrls(): string[] {
     return this.relayUrls;
+  }
+
+  /**
+   * Get the relays modified signal for subscribing to changes
+   */
+  get relaysModifiedSignal(): Signal<string[]> {
+    return this.relaysModified.asReadonly();
+  }
+
+  /**
+   * Add a relay URL to the existing list
+   * @param relayUrl The relay URL to add
+   */
+  addRelay(relayUrl: string): void {
+    if (!this.relayUrls.includes(relayUrl)) {
+      this.relayUrls.push(relayUrl);
+      this.notifyRelaysModified();
+      this.logger.debug('Added relay:', relayUrl);
+    }
+  }
+
+  /**
+   * Remove a relay URL from the existing list
+   * @param relayUrl The relay URL to remove
+   */
+  removeRelay(relayUrl: string): void {
+    const index = this.relayUrls.indexOf(relayUrl);
+    if (index > -1) {
+      this.relayUrls.splice(index, 1);
+      this.notifyRelaysModified();
+      this.logger.debug('Removed relay:', relayUrl);
+    }
+  }
+
+  /**
+   * Update the entire relay list
+   * @param relayUrls The new array of relay URLs
+   */
+  updateRelays(relayUrls: string[]): void {
+    this.relayUrls = [...relayUrls];
+    this.notifyRelaysModified();
+    this.logger.debug('Updated relays:', relayUrls);
+  }
+
+  /**
+   * Clear all relays
+   */
+  clearRelays(): void {
+    this.relayUrls = [];
+    this.notifyRelaysModified();
+    this.logger.debug('Cleared all relays');
+  }
+
+  /**
+   * Check if a relay URL exists in the list
+   * @param relayUrl The relay URL to check
+   */
+  hasRelay(relayUrl: string): boolean {
+    return this.relayUrls.includes(relayUrl);
+  }
+
+  /**
+   * Get the count of current relays
+   */
+  getRelayCount(): number {
+    return this.relayUrls.length;
+  }
+
+  /**
+   * Notify subscribers that relays have been modified
+   */
+  private notifyRelaysModified(): void {
+    this.relaysModified.set([...this.relayUrls]);
   }
 
   /**
@@ -232,7 +316,7 @@ export abstract class RelayServiceBase {
       // Execute the query
       const events: T[] = [];
       return new Promise<T[]>(resolve => {
-        const sub = this.#pool!.subscribeEose(urls, filter, {
+        this.#pool!.subscribeEose(urls, filter, {
           maxWait: timeout,
           onevent: event => {
             // Add the received event to our collection
@@ -271,6 +355,48 @@ export abstract class RelayServiceBase {
 
     // Use provided relay URLs or default to the user's relays
     const urls = this.relayUrls;
+
+    if (urls.length === 0) {
+      this.logger.warn('No relays available for publishing');
+      return null;
+    }
+
+    try {
+      // Publish the event
+      const publishResults = this.#pool.publish(urls, event);
+      this.logger.debug('Publish results:', publishResults);
+
+      const result1 = await publishResults[0];
+      console.log('Publish result for first relay:', result1);
+
+      // Update lastUsed for all relays used in this publish operation
+      // urls.forEach(url => this.updateRelayLastUsed(url));
+
+      return publishResults;
+    } catch (error) {
+      this.logger.error('Error publishing event', error);
+      return null;
+    }
+  }
+
+  /**
+   * Generic function to publish a Nostr event to specified relays
+   * @param event The Nostr event to publish
+   * @param relayUrls Optional specific relay URLs to use (defaults to user's relays)
+   * @param options Optional options for publishing
+   * @returns Promise that resolves to an object with status for each relay
+   */
+  async publishToRelay(event: Event, relayUrls: string | string[]) {
+    this.logger.debug('Publishing event:', event);
+
+    if (!this.#pool) {
+      this.logger.error(
+        'Cannot publish event: account pool is not initialized'
+      );
+      return null;
+    }
+
+    const urls = Array.isArray(relayUrls) ? relayUrls : [relayUrls];
 
     if (urls.length === 0) {
       this.logger.warn('No relays available for publishing');

@@ -6,7 +6,6 @@ import {
   signal,
   Output,
   EventEmitter,
-  computed,
   untracked,
 } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
@@ -15,13 +14,13 @@ import { kinds, NostrEvent } from 'nostr-tools';
 import { StorageService } from '../../../services/storage.service';
 import { DataService } from '../../../services/data.service';
 import { BadgeService, ParsedBadge } from '../../../services/badge.service';
-import { RelayService } from '../../../services/relays/relay';
-import { UserRelayFactoryService } from '../../../services/user-relay-factory.service';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { CommonModule, DatePipe } from '@angular/common';
 import { UtilitiesService } from '../../../services/utilities.service';
+import { AccountRelayServiceEx } from '../../../services/relays/account-relay';
+import { UserRelayExFactoryService } from '../../../services/user-relay-factory.service';
 
 export type BadgeLayout = 'vertical' | 'horizontal';
 
@@ -62,8 +61,8 @@ export class BadgeComponent {
   storage = inject(StorageService);
   data = inject(DataService);
   badgeService = inject(BadgeService);
-  relay = inject(RelayService);
-  userRelayFactory = inject(UserRelayFactoryService);
+  relay = inject(AccountRelayServiceEx);
+  userRelayFactory = inject(UserRelayExFactoryService);
 
   // Parsed badge data as signals
   id = signal<string>('');

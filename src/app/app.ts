@@ -202,13 +202,13 @@ export class App implements OnInit {
   navItems: NavItem[] = [
     { path: '', label: 'Feeds', icon: 'stacks', authenticated: false },
     // { path: 'feed', label: 'Feed', icon: 'notes', showInMobile: true },
-    {
-      path: 'articles',
-      label: 'Articles',
-      icon: 'article',
-      level: 'preview',
-      authenticated: true,
-    },
+    // {
+    //   path: 'articles',
+    //   label: 'Articles',
+    //   icon: 'article',
+    //   level: 'preview',
+    //   authenticated: true,
+    // },
     // { path: 'podcasts', label: 'Podcasts', icon: 'podcasts', showInMobile: false },
     { path: 'people', label: 'People', icon: 'people', authenticated: true },
     {

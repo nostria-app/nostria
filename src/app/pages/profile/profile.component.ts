@@ -31,7 +31,6 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { RelayService } from '../../services/relays/relay';
 import { ApplicationStateService } from '../../services/application-state.service';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatListModule } from '@angular/material/list';
@@ -52,6 +51,7 @@ import { UtilitiesService } from '../../services/utilities.service';
 import { UrlUpdateService } from '../../services/url-update.service';
 import { UsernameService } from '../../services/username';
 import { Metrics } from '../../services/metrics';
+import { AccountRelayServiceEx } from '../../services/relays/account-relay';
 
 @Component({
   selector: 'app-profile',
@@ -85,7 +85,7 @@ export class ProfileComponent {
   private router = inject(Router);
   nostrService = inject(NostrService);
   private storage = inject(StorageService);
-  private relayService = inject(RelayService);
+  private relayService = inject(AccountRelayServiceEx);
   private appState = inject(ApplicationStateService);
   private app = inject(ApplicationService);
   private logger = inject(LoggerService);

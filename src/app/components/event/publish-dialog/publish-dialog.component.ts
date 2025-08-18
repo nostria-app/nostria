@@ -15,9 +15,9 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatListModule } from '@angular/material/list';
 import { FormsModule } from '@angular/forms';
 import { Event } from 'nostr-tools';
-import { AccountRelayService } from '../../../services/relays/account-relay';
 import { NostrService } from '../../../services/nostr.service';
-import { RelayService } from '../../../services/relays/relay';
+import { AccountRelayServiceEx } from '../../../services/relays/account-relay';
+import { DiscoveryRelayServiceEx } from '../../../services/relays/discovery-relay';
 
 export interface PublishDialogData {
   event: Event;
@@ -57,9 +57,10 @@ interface RelayPublishResult {
 export class PublishDialogComponent {
   private dialogRef = inject(MatDialogRef<PublishDialogComponent>);
   data: PublishDialogData = inject(MAT_DIALOG_DATA);
-  private accountRelayService = inject(AccountRelayService);
+  accountRelay = inject(AccountRelayServiceEx);
+  private discoveryRelay = inject(DiscoveryRelayServiceEx);
   private nostrService = inject(NostrService);
-  relayService = inject(RelayService);
+  // relayService = inject(RelayService);
 
   selectedOptions = signal<Set<'account' | 'author' | 'custom'>>(
     new Set(['account'])
@@ -97,9 +98,10 @@ export class PublishDialogComponent {
       if (this.data?.event?.pubkey) {
         this.loadingAuthorRelays.set(true);
         try {
-          const relays = await this.nostrService.getRelays(
+          const relays = await this.discoveryRelay.getUserRelayUrls(
             this.data.event.pubkey
           );
+
           this.authorRelays.set(relays || []);
         } catch (error) {
           console.error('Error loading author relays:', error);
@@ -132,12 +134,13 @@ export class PublishDialogComponent {
   removeCustomRelay(relay: string): void {
     this.customRelays.update(relays => relays.filter(r => r !== relay));
   }
+
   getTargetRelays(): string[] {
     const selectedOptions = this.selectedOptions();
     const allRelays: string[] = [];
 
     if (selectedOptions.has('account')) {
-      allRelays.push(...this.relayService.getAccountRelayUrls());
+      allRelays.push(...this.accountRelay.getRelayUrls());
     }
 
     if (selectedOptions.has('author')) {
@@ -189,11 +192,18 @@ export class PublishDialogComponent {
     this.publishResults.set(initialResults);
 
     try {
+      debugger;
+
       // Use the pool to publish to multiple relays
-      const publishPromises = this.accountRelayService.pool.publish(
-        targetRelays,
-        this.data.event
+      const publishPromises = await this.accountRelay.publishToRelay(
+        this.data.event,
+        targetRelays
       );
+
+      if (!publishPromises) {
+        console.error('Error during publishing: No promises returned.');
+        return;
+      }
 
       // Wait for all publish attempts to complete
       await Promise.allSettled(

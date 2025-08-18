@@ -21,14 +21,13 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
-import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { DomSanitizer } from '@angular/platform-browser';
 import { marked } from 'marked';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { NostrService } from '../../../services/nostr.service';
 import { DataService } from '../../../services/data.service';
-import { RelayService } from '../../../services/relays/relay';
 import { LocalStorageService } from '../../../services/local-storage.service';
 import { MatCardModule } from '@angular/material/card';
 import { LayoutService } from '../../../services/layout.service';
@@ -36,6 +35,7 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { RichTextEditorComponent } from '../../../components/rich-text-editor/rich-text-editor.component';
 import { nip19 } from 'nostr-tools';
 import { DecodedNaddr } from 'nostr-tools/nip19';
+import { AccountRelayServiceEx } from '../../../services/relays/account-relay';
 
 interface ArticleDraft {
   title: string;
@@ -87,7 +87,7 @@ export class EditorComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private nostrService = inject(NostrService);
   private dataService = inject(DataService);
-  private relayService = inject(RelayService);
+  private accountRelay = inject(AccountRelayServiceEx);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private sanitizer = inject(DomSanitizer);
@@ -643,7 +643,7 @@ export class EditorComponent implements OnInit, OnDestroy {
       if (!signedEvent) {
         throw new Error('Failed to sign event');
       } // Publish to relays
-      await this.relayService.publish(signedEvent);
+      await this.accountRelay.publish(signedEvent);
 
       const action = kind === 30024 ? 'Draft saved' : 'Article published';
       this.snackBar.open(`${action} successfully`, 'Close', { duration: 3000 });

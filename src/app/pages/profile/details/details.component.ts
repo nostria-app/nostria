@@ -12,7 +12,6 @@ import {
 import { Router, ActivatedRoute } from '@angular/router';
 import { animate, style, transition, trigger } from '@angular/animations';
 import { Location } from '@angular/common';
-
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
@@ -24,7 +23,8 @@ import { LayoutService } from '../../../services/layout.service';
 import { LoggerService } from '../../../services/logger.service';
 import { ApplicationService } from '../../../services/application.service';
 import { StorageService } from '../../../services/storage.service';
-import { RelayService } from '../../../services/relays/relay';
+import { AccountRelayServiceEx } from '../../../services/relays/account-relay';
+import { DiscoveryRelayServiceEx } from '../../../services/relays/discovery-relay';
 
 @Component({
   selector: 'app-following',
@@ -65,7 +65,8 @@ import { RelayService } from '../../../services/relays/relay';
 })
 export class DetailsComponent implements OnInit, AfterViewInit {
   private router = inject(Router);
-  private relay = inject(RelayService);
+  private accountRelay = inject(AccountRelayServiceEx);
+  private discoveryRelay = inject(DiscoveryRelayServiceEx);
   private route = inject(ActivatedRoute);
   private location = inject(Location);
   layout = inject(LayoutService);
@@ -80,9 +81,7 @@ export class DetailsComponent implements OnInit, AfterViewInit {
   error = signal<string | null>(null);
   followingList = signal<any[]>([]);
   mutualConnectionsList = signal<any[]>([]);
-
   selectedTabIndex = signal(0);
-
   npub = computed(() => this.route.snapshot.parent?.paramMap.get('id') || '');
   userProfile = signal<any>(null);
 
@@ -129,7 +128,7 @@ export class DetailsComponent implements OnInit, AfterViewInit {
       console.log('Broadcasting metadata event:', event);
       // console.log('Relay URLs:', this.profileState.relay?.relayUrls);
       // await this.relay.publish(event, this.profileState.relay?.relayUrls);
-      await this.relay.publish(event);
+      await this.accountRelay.publish(event);
     }
   }
 
@@ -141,8 +140,8 @@ export class DetailsComponent implements OnInit, AfterViewInit {
 
     if (event) {
       console.log('Broadcasting Relay List event:', event);
-      console.log('Relay URLs:', this.relay.discoveryRelays);
-      await this.relay.publishToDiscoveryRelays(event);
+      console.log('Relay URLs:', this.discoveryRelay.getRelayUrls());
+      await this.discoveryRelay.publish(event);
     }
   }
 

@@ -1,10 +1,4 @@
-import {
-  Injectable,
-  signal,
-  effect,
-  inject,
-  untracked,
-} from '@angular/core';
+import { Injectable, signal, effect, inject, untracked } from '@angular/core';
 import {
   Event,
   EventTemplate,
@@ -15,7 +9,6 @@ import {
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
 import { nip19, nip98 } from 'nostr-tools';
 import { LoggerService } from './logger.service';
-import { RelayService } from './relays/relay';
 import {
   NostrEventData,
   StorageService,
@@ -41,8 +34,9 @@ import {
 import { DataService } from './data.service';
 import { UtilitiesService } from './utilities.service';
 import { PublishQueueService, PublishTarget } from './publish-queue';
-import { AccountRelayService } from './relays/account-relay';
 import { SharedRelayServiceEx } from './relays/shared-relay';
+import { AccountRelayServiceEx } from './relays/account-relay';
+import { DiscoveryRelayServiceEx } from './relays/discovery-relay';
 
 export interface NostrUser {
   pubkey: string;
@@ -70,8 +64,11 @@ export interface UserMetadataWithPubkey extends NostrEventData<UserMetadata> {
 })
 export class NostrService implements NostriaService {
   private readonly logger = inject(LoggerService);
-  private readonly relayService = inject(RelayService);
-  private readonly accountRelay = inject(AccountRelayService);
+
+  private readonly discoveryRelay = inject(DiscoveryRelayServiceEx);
+  private readonly accountRelay = inject(AccountRelayServiceEx);
+  private readonly sharedRelay = inject(SharedRelayServiceEx);
+
   private readonly storage = inject(StorageService);
   private readonly appState = inject(ApplicationStateService);
   private readonly accountState = inject(AccountStateService);
@@ -80,7 +77,6 @@ export class NostrService implements NostriaService {
   private readonly data = inject(DataService);
   private readonly utilities = inject(UtilitiesService);
   private readonly publishQueueService = inject(PublishQueueService);
-  private readonly sharedRelay = inject(SharedRelayServiceEx);
 
   initialized = signal(false);
   MAX_WAIT_TIME = 2000;
@@ -110,7 +106,8 @@ export class NostrService implements NostriaService {
       const event = this.accountState.publish();
 
       if (event) {
-        await this.publish(event);
+        const signedEvent = await this.sign(event);
+        await this.accountRelay.publish(signedEvent);
       }
 
       untracked(() => {
@@ -214,55 +211,55 @@ export class NostrService implements NostriaService {
 
       // Get the metadata from in-memory if exists.
       // let metadata: NostrRecord | null | undefined = this.accountState.getAccountProfile(pubkey);
-
-      if (this.relayService.discoveryRelays.length === 0) {
-        // We need to ensure that we have Discovery Relay.
-        // If there are no Discovery in local storage, we'll pick it based on the region of the account.
-        const region = account.region || 'eu';
-        const discoveryRelay = this.region.getDiscoveryRelay(region);
-        this.relayService.setDiscoveryRelays([discoveryRelay]);
-      }
+      // if (this.discoveryRelay.discoveryRelays.length === 0) {
+      //   // We need to ensure that we have Discovery Relay.
+      //   // If there are no Discovery in local storage, we'll pick it based on the region of the account.
+      //   const region = account.region || 'eu';
+      //   const discoveryRelay = this.region.getDiscoveryRelay(region);
+      //   this.discoveryRelay.setDiscoveryRelays([discoveryRelay]);
+      // }
 
       // Get existing Relay List in storage
-      const relays = await this.storage.getEventByPubkeyAndKind(
-        pubkey,
-        kinds.RelayList
-      );
-      let relayUrls: string[] = [];
+      // const relays = await this.storage.getEventByPubkeyAndKind(
+      //   pubkey,
+      //   kinds.RelayList
+      // );
+      // let relayUrls: string[] = [];
 
-      if (relays) {
-        relayUrls = this.getRelayUrls(relays, false); // Make sure to pass false to avoid ignoring automatic banned relays
+      // if (relays) {
+      //   relayUrls = this.getRelayUrls(relays, false); // Make sure to pass false to avoid ignoring automatic banned relays
 
-        this.logger.info('Found user relays in storage', { relays });
-        this.appState.loadingMessage.set(
-          'Found your relays in local storage! ✔️'
-        );
-      }
+      //   this.logger.info('Found user relays in storage', { relays });
+      //   this.appState.loadingMessage.set(
+      //     'Found your relays in local storage! ✔️'
+      //   );
+      // }
 
-      if (relayUrls.length === 0) {
-        // We need to discovery the relays of the user.
-        this.logger.info('No relays found in storage, performing discovery', {
-          pubkey,
-        });
-        relayUrls = await this.findRelays(pubkey, info);
-      }
+      // if (relayUrls.length === 0) {
+      //   // We need to discovery the relays of the user.
+      //   this.logger.info('No relays found in storage, performing discovery', {
+      //     pubkey,
+      //   });
+      //   relayUrls = await this.findRelays(pubkey, info);
+      // }
 
       // This will happen if account is brand new. We make a selection based upon their region.
-      if (relayUrls.length === 0) {
-        const relayUrl = this.region.getRelayServer(account.region || 'eu', 0);
-        relayUrls.push(relayUrl!);
-      }
+      // if (relayUrls.length === 0) {
+      //   const relayUrl = this.region.getRelayServer(account.region || 'eu', 0);
+      //   relayUrls.push(relayUrl!);
+      // }
 
       // Store the relays in the relay service
-      this.relayService.setRelays(relayUrls);
+      // this.discoveryRelay.setRelays(relayUrls);
 
-      const accountPool = new SimplePool();
-      accountPool.trackRelays = true;
+      // const accountPool = new SimplePool();
+      // accountPool.trackRelays = true;
 
-      // Attach the userPool to the relay service for further use.
-      this.relayService.setAccountPool(accountPool);
+      // // Attach the userPool to the relay service for further use.
+      // this.discoveryRelay.setAccountPool(accountPool);
 
-      const metadataEvent = await this.relayService.getEventByPubkeyAndKind(
+      // This will fail for brand new accounts, only for existing.
+      const metadataEvent = await this.accountRelay.getEventByPubkeyAndKind(
         pubkey,
         kinds.Metadata
       );
@@ -273,7 +270,6 @@ export class NostrService implements NostriaService {
         metadata = this.data.toRecord(metadataEvent);
 
         this.accountState.addToCache(metadata.event.pubkey, metadata);
-
         this.accountState.profile.set(metadata);
 
         this.logger.info('Found user metadata', { metadata });
@@ -297,7 +293,7 @@ export class NostrService implements NostriaService {
 
       // Schedule a refresh of the relays in the background. For now this won't be reflected until
       // the user refreshes the app.
-      this.relayService
+      this.discoveryRelay
         .getEventByPubkeyAndKind(pubkey, kinds.RelayList)
         .then(async evt => {
           if (evt) {
@@ -398,189 +394,189 @@ export class NostrService implements NostriaService {
   }
 
   /** Get relays for a user, will first read locally and then query the network if not found. */
-  async getRelays(pubkey: string) {
-    // First discovery the relays for the user.
-    let relayUrls: string[] = [];
-    const relayListEvent = await this.storage.getEventByPubkeyAndKind(
-      pubkey,
-      kinds.RelayList
-    );
+  // async getRelays(pubkey: string) {
+  //   // First discovery the relays for the user.
+  //   let relayUrls: string[] = [];
+  //   const relayListEvent = await this.storage.getEventByPubkeyAndKind(
+  //     pubkey,
+  //     kinds.RelayList
+  //   );
 
-    if (relayListEvent) {
-      relayUrls = this.getRelayUrls(relayListEvent, true);
-    }
+  //   if (relayListEvent) {
+  //     relayUrls = this.getRelayUrls(relayListEvent, true);
+  //   }
 
-    const followingEvent = await this.storage.getEventByPubkeyAndKind(
-      pubkey,
-      kinds.Contacts
-    );
+  //   const followingEvent = await this.storage.getEventByPubkeyAndKind(
+  //     pubkey,
+  //     kinds.Contacts
+  //   );
 
-    if (followingEvent) {
-      relayUrls = this.getRelayUrlsFromFollowing(followingEvent, true);
-    }
+  //   if (followingEvent) {
+  //     relayUrls = this.getRelayUrlsFromFollowing(followingEvent, true);
+  //   }
 
-    if (relayUrls.length > 0) {
-      return relayUrls;
-    }
+  //   if (relayUrls.length > 0) {
+  //     return relayUrls;
+  //   }
 
-    const result = await this.discoverRelays(pubkey);
+  //   const result = await this.discoverRelays(pubkey);
 
-    return result.relayUrls;
-  }
+  //   return result.relayUrls;
+  // }
 
   /** Will attempt to discover relays for a pubkey. Will persist the event to database. */
-  async discoverRelays(
-    pubkey: string,
-    persist = false
-  ): Promise<{
-    relayUrls: string[];
-    relayList: boolean;
-    followingList: boolean;
-  }> {
-    // Perform relay discovery for the given pubkey
-    const discoveryPool = new SimplePool();
-    const discoveryRelays = this.relayService.discoveryRelays;
+  // async discoverRelays(
+  //   pubkey: string,
+  //   persist = false
+  // ): Promise<{
+  //   relayUrls: string[];
+  //   relayList: boolean;
+  //   followingList: boolean;
+  // }> {
+  //   // Perform relay discovery for the given pubkey
+  //   const discoveryPool = new SimplePool();
+  //   const discoveryRelays = this.discoveryRelay.discoveryRelays;
 
-    const result = {
-      relayUrls: [] as string[],
-      relayList: false,
-      followingList: false,
-    };
+  //   const result = {
+  //     relayUrls: [] as string[],
+  //     relayList: false,
+  //     followingList: false,
+  //   };
 
-    try {
-      console.log(
-        'Starting relay discovery for pubkey',
-        pubkey,
-        discoveryRelays
-      );
+  //   try {
+  //     console.log(
+  //       'Starting relay discovery for pubkey',
+  //       pubkey,
+  //       discoveryRelays
+  //     );
 
-      discoveryPool.subscribe(
-        discoveryRelays,
-        {
-          kinds: [kinds.RelayList],
-          authors: [pubkey],
-        },
-        {
-          onevent: (event: Event) => {
-            console.log('Received event on discovery relays:', event);
-          },
-        }
-      );
+  //     discoveryPool.subscribe(
+  //       discoveryRelays,
+  //       {
+  //         kinds: [kinds.RelayList],
+  //         authors: [pubkey],
+  //       },
+  //       {
+  //         onevent: (event: Event) => {
+  //           console.log('Received event on discovery relays:', event);
+  //         },
+  //       }
+  //     );
 
-      console.log('Waiting for relay discovery to complete...');
+  //     console.log('Waiting for relay discovery to complete...');
 
-      const relays = await discoveryPool.get(discoveryRelays, {
-        kinds: [kinds.RelayList],
-        authors: [pubkey],
-      });
+  //     const relays = await discoveryPool.get(discoveryRelays, {
+  //       kinds: [kinds.RelayList],
+  //       authors: [pubkey],
+  //     });
 
-      console.log('FOUND ANYTHING', relays);
+  //     console.log('FOUND ANYTHING', relays);
 
-      if (relays) {
-        this.logger.info('Found your relays on network', { relays });
+  //     if (relays) {
+  //       this.logger.info('Found your relays on network', { relays });
 
-        if (persist) {
-          await this.storage.saveEvent(relays);
-        }
+  //       if (persist) {
+  //         await this.storage.saveEvent(relays);
+  //       }
 
-        const relayUrls = this.getRelayUrls(relays, false); // Make sure to pass false to avoid ignoring automatic banned relays
-        this.logger.info(`Found ${relayUrls.length} relays for user`, {
-          relayUrls,
-        });
+  //       const relayUrls = this.getRelayUrls(relays, false); // Make sure to pass false to avoid ignoring automatic banned relays
+  //       this.logger.info(`Found ${relayUrls.length} relays for user`, {
+  //         relayUrls,
+  //       });
 
-        if (relayUrls.length > 0) {
-          result.relayUrls = this.utilities.normalizeRelayUrls(relayUrls);
-          result.relayList = true;
-        }
-      } else {
-        this.logger.warn('No relay list found on discovery relays.');
+  //       if (relayUrls.length > 0) {
+  //         result.relayUrls = this.utilities.normalizeRelayUrls(relayUrls);
+  //         result.relayList = true;
+  //       }
+  //     } else {
+  //       this.logger.warn('No relay list found on discovery relays.');
 
-        // Fallback to metadata discovery if no relay list found.
-        const contacts = await discoveryPool.get(
-          this.relayService.discoveryRelays,
-          {
-            kinds: [kinds.Contacts],
-            authors: [pubkey],
-          }
-        );
+  //       // Fallback to metadata discovery if no relay list found.
+  //       const contacts = await discoveryPool.get(
+  //         this.discoveryRelay.discoveryRelays,
+  //         {
+  //           kinds: [kinds.Contacts],
+  //           authors: [pubkey],
+  //         }
+  //       );
 
-        if (contacts) {
-          if (persist) {
-            this.storage.saveEvent(contacts);
-          }
+  //       if (contacts) {
+  //         if (persist) {
+  //           this.storage.saveEvent(contacts);
+  //         }
 
-          const relayUrls = this.getRelayUrlsFromFollowing(contacts, false);
+  //         const relayUrls = this.getRelayUrlsFromFollowing(contacts, false);
 
-          if (relayUrls.length > 0) {
-            result.relayUrls = this.utilities.normalizeRelayUrls(relayUrls);
-            result.followingList = true;
-          }
-        }
-      }
-    } catch (err) {
-      this.logger.error('Error during relay discovery', err);
-    } finally {
-      discoveryPool.close(discoveryRelays);
-    }
+  //         if (relayUrls.length > 0) {
+  //           result.relayUrls = this.utilities.normalizeRelayUrls(relayUrls);
+  //           result.followingList = true;
+  //         }
+  //       }
+  //     }
+  //   } catch (err) {
+  //     this.logger.error('Error during relay discovery', err);
+  //   } finally {
+  //     discoveryPool.close(discoveryRelays);
+  //   }
 
-    return result;
-  }
+  //   return result;
+  // }
 
-  async findRelays(pubkey: string, info: any) {
-    // Perform relay discovery for the given pubkey
-    const discoveryPool = new SimplePool();
-    const discoveryRelays = this.relayService.discoveryRelays;
+  // async findRelays(pubkey: string, info: any) {
+  //   // Perform relay discovery for the given pubkey
+  //   const discoveryPool = new SimplePool();
+  //   const discoveryRelays = this.discoveryRelay.discoveryRelays;
 
-    const relays = await discoveryPool.get(discoveryRelays, {
-      kinds: [kinds.RelayList],
-      authors: [pubkey],
-    });
+  //   const relays = await discoveryPool.get(discoveryRelays, {
+  //     kinds: [kinds.RelayList],
+  //     authors: [pubkey],
+  //   });
 
-    if (relays) {
-      this.logger.info('Found your relays on network', { relays });
-      await this.storage.saveEvent(relays);
-      const relayUrls = this.getRelayUrls(relays, false); // Make sure to pass false to avoid ignoring automatic banned relays
-      this.logger.info(`Found ${relayUrls.length} relays for user`, {
-        relayUrls,
-      });
+  //   if (relays) {
+  //     this.logger.info('Found your relays on network', { relays });
+  //     await this.storage.saveEvent(relays);
+  //     const relayUrls = this.getRelayUrls(relays, false); // Make sure to pass false to avoid ignoring automatic banned relays
+  //     this.logger.info(`Found ${relayUrls.length} relays for user`, {
+  //       relayUrls,
+  //     });
 
-      if (relayUrls.length > 0) {
-        info.hasRelayList = true;
-        discoveryPool.close(discoveryRelays);
-        return relayUrls;
-      }
-    } else {
-      this.logger.warn('No relay list found on discovery relays.');
+  //     if (relayUrls.length > 0) {
+  //       info.hasRelayList = true;
+  //       discoveryPool.close(discoveryRelays);
+  //       return relayUrls;
+  //     }
+  //   } else {
+  //     this.logger.warn('No relay list found on discovery relays.');
 
-      // Fallback to metadata discovery if no relay list found.
-      const contacts = await discoveryPool.get(
-        this.relayService.discoveryRelays,
-        {
-          kinds: [kinds.Contacts],
-          authors: [pubkey],
-        }
-      );
+  //     // Fallback to metadata discovery if no relay list found.
+  //     const contacts = await discoveryPool.get(
+  //       this.discoveryRelay.discoveryRelays,
+  //       {
+  //         kinds: [kinds.Contacts],
+  //         authors: [pubkey],
+  //       }
+  //     );
 
-      if (contacts) {
-        this.storage.saveEvent(contacts);
-        const relayUrls = this.getRelayUrlsFromFollowing(contacts, false);
+  //     if (contacts) {
+  //       this.storage.saveEvent(contacts);
+  //       const relayUrls = this.getRelayUrlsFromFollowing(contacts, false);
 
-        if (relayUrls.length > 0) {
-          info.hasFollowingListRelays = true;
-          discoveryPool.close(discoveryRelays);
-          return relayUrls;
-        }
-      }
-    }
+  //       if (relayUrls.length > 0) {
+  //         info.hasFollowingListRelays = true;
+  //         discoveryPool.close(discoveryRelays);
+  //         return relayUrls;
+  //       }
+  //     }
+  //   }
 
-    discoveryPool.close(discoveryRelays);
+  //   discoveryPool.close(discoveryRelays);
 
-    return [];
+  //   return [];
 
-    // If there is no relayUrls, set default relays.
-    // const defaultRelays = [...this.relayService.defaultRelays];
-    // return defaultRelays;
-  }
+  //   // If there is no relayUrls, set default relays.
+  //   // const defaultRelays = [...this.relayService.defaultRelays];
+  //   // return defaultRelays;
+  // }
 
   // async loadData(): Promise<void> {
   //   // 1. Get the relays for current account. Perform discovery if needed.
@@ -768,7 +764,7 @@ export class NostrService implements NostriaService {
       console.log('onEose on account subscription.');
     };
 
-    this.accountSubscription = this.relayService.subscribe(
+    this.accountSubscription = this.accountRelay.subscribe(
       filters,
       onEvent,
       onEose
@@ -782,7 +778,7 @@ export class NostrService implements NostriaService {
     );
 
     if (!followingEvent) {
-      followingEvent = await this.relayService.getEventByPubkeyAndKind(
+      followingEvent = await this.accountRelay.getEventByPubkeyAndKind(
         pubkey,
         kinds.Contacts
       );
@@ -792,7 +788,7 @@ export class NostrService implements NostriaService {
       }
     } else {
       // Queue up refresh of this event in the background
-      this.relayService
+      this.accountRelay
         .getEventByPubkeyAndKind(pubkey, kinds.Contacts)
         .then(async evt => {
           if (evt) {
@@ -814,7 +810,7 @@ export class NostrService implements NostriaService {
     );
 
     if (!muteListEvent) {
-      muteListEvent = await this.relayService.getEventByPubkeyAndKind(
+      muteListEvent = await this.accountRelay.getEventByPubkeyAndKind(
         pubkey,
         kinds.Mutelist
       );
@@ -824,7 +820,7 @@ export class NostrService implements NostriaService {
       }
     } else {
       // Queue up refresh of this event in the background
-      this.relayService
+      this.accountRelay
         .getEventByPubkeyAndKind(pubkey, kinds.Mutelist)
         .then(async evt => {
           if (evt) {
@@ -905,7 +901,7 @@ export class NostrService implements NostriaService {
     }
     const signedEvent = await this.signEvent(event);
 
-    const publishPromises = this.accountRelay.publish(signedEvent);
+    const publishPromises = await this.accountRelay.publish(signedEvent);
 
     if (publishPromises) {
       await Promise.allSettled(publishPromises);
@@ -1098,14 +1094,14 @@ export class NostrService implements NostriaService {
     let event = await this.storage.getEventByPubkeyAndKind(pubkey, 10063); // BUD-03: User Server List
 
     if (!event) {
-      event = await this.relayService.getEventByPubkeyAndKind(pubkey, 10063);
+      event = await this.accountRelay.getEventByPubkeyAndKind(pubkey, 10063);
 
       if (event) {
         this.storage.saveEvent(event as Event);
       }
     } else {
       // Queue up refresh of this event in the background
-      this.relayService
+      this.accountRelay
         .getEventByPubkeyAndKind(pubkey, 10063)
         .then(newEvent => {
           if (newEvent) {
@@ -1188,273 +1184,274 @@ export class NostrService implements NostriaService {
     return data;
   }
 
-  async discoverMetadata2(
-    pubkey: string,
-    disconnect = true
-  ): Promise<Event | undefined | null> {
-    this.logger.time('getinfo' + pubkey);
-    let info: any = await this.storage.getInfo(pubkey, 'user');
-    this.logger.timeEnd('getinfo' + pubkey);
+  // async discoverMetadata2(
+  //   pubkey: string,
+  //   disconnect = true
+  // ): Promise<Event | undefined | null> {
+  //   this.logger.time('getinfo' + pubkey);
+  //   let info: any = await this.storage.getInfo(pubkey, 'user');
+  //   this.logger.timeEnd('getinfo' + pubkey);
 
-    if (!info) {
-      info = {};
-    }
+  //   if (!info) {
+  //     info = {};
+  //   }
 
-    // if (info.lastDiscovery && info.lastDiscovery > this.currentDate() - 60) {
-    //   // Skip discovery if it happened in the last 60 seconds
-    //   this.logger.debug('Skipping discovery, last discovery was less than 60 seconds ago', {
-    //     pubkey,
-    //     lastDiscovery: info.lastDiscovery,
-    //     secondsAgo: this.currentDate() - info.lastDiscovery
-    //   });
+  //   // if (info.lastDiscovery && info.lastDiscovery > this.currentDate() - 60) {
+  //   //   // Skip discovery if it happened in the last 60 seconds
+  //   //   this.logger.debug('Skipping discovery, last discovery was less than 60 seconds ago', {
+  //   //     pubkey,
+  //   //     lastDiscovery: info.lastDiscovery,
+  //   //     secondsAgo: this.currentDate() - info.lastDiscovery
+  //   //   });
 
-    //   // Return previously discovered metadata if available
-    //   const metadata = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Metadata);
-    //   return metadata;
-    // }
+  //   //   // Return previously discovered metadata if available
+  //   //   const metadata = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Metadata);
+  //   //   return metadata;
+  //   // }
 
-    info.lastDiscovery = this.currentDate();
+  //   info.lastDiscovery = this.currentDate();
 
-    const data = await this.sharedRelay.get(pubkey, {
-      authors: [pubkey],
-      kinds: [kinds.Metadata],
-    });
+  //   const data = await this.sharedRelay.get(pubkey, {
+  //     authors: [pubkey],
+  //     kinds: [kinds.Metadata],
+  //   });
 
-    // FLOW: Find the user's relays first. Save it.
-    // Connect to their relays and get metadata. Save it.
-    const event = await this.storage.getEventByPubkeyAndKind(
-      pubkey,
-      kinds.RelayList
-    );
+  //   // FLOW: Find the user's relays first. Save it.
+  //   // Connect to their relays and get metadata. Save it.
+  //   const event = await this.storage.getEventByPubkeyAndKind(
+  //     pubkey,
+  //     kinds.RelayList
+  //   );
 
-    // If we already have a relay list, go grab the metadata from it.
-    if (event) {
-      const relayUrls = this.getRelayUrls(event);
-      const selectedRelayUrls = this.utilities.pickOptimalRelays(
-        relayUrls,
-        this.MAX_RELAY_COUNT
-      );
+  //   // If we already have a relay list, go grab the metadata from it.
+  //   if (event) {
+  //     const relayUrls = this.getRelayUrls(event);
+  //     const selectedRelayUrls = this.utilities.pickOptimalRelays(
+  //       relayUrls,
+  //       this.MAX_RELAY_COUNT
+  //     );
 
-      // It can happen that accounts does not have any valid relays, return undefined
-      // and then attempt to look up profile using account relays.
-      if (selectedRelayUrls.length === 0) {
-        this.logger.warn(
-          'No valid relays found in relay list. Unable to find user.'
-        );
-        info.hasNoValidRelays = true;
-        await this.storage.saveInfo(pubkey, 'user', info);
-        return undefined;
-      }
+  //     // It can happen that accounts does not have any valid relays, return undefined
+  //     // and then attempt to look up profile using account relays.
+  //     if (selectedRelayUrls.length === 0) {
+  //       this.logger.warn(
+  //         'No valid relays found in relay list. Unable to find user.'
+  //       );
+  //       info.hasNoValidRelays = true;
+  //       await this.storage.saveInfo(pubkey, 'user', info);
+  //       return undefined;
+  //     }
 
-      const metadata = await this.retrieveMetadata(
-        pubkey,
-        selectedRelayUrls,
-        info
-      );
+  //     const metadata = await this.retrieveMetadata(
+  //       pubkey,
+  //       selectedRelayUrls,
+  //       info
+  //     );
 
-      // Since this is not inside the try/catch, we must save info explicitly here.
-      await this.storage.saveInfo(pubkey, 'user', info);
-      return metadata as Event;
-    } else {
-      const relays = await this.discoveryPool!.get(
-        this.relayService.discoveryRelays,
-        {
-          kinds: [kinds.RelayList],
-          authors: [pubkey],
-        },
-        { maxWait: this.MAX_WAIT_TIME }
-      );
+  //     // Since this is not inside the try/catch, we must save info explicitly here.
+  //     await this.storage.saveInfo(pubkey, 'user', info);
+  //     return metadata as Event;
+  //   } else {
+  //     const relays = await this.discoveryPool!.get(
+  //       this.discoveryRelay.discoveryRelays,
+  //       {
+  //         kinds: [kinds.RelayList],
+  //         authors: [pubkey],
+  //       },
+  //       { maxWait: this.MAX_WAIT_TIME }
+  //     );
 
-      try {
-        if (relays) {
-          await this.storage.saveEvent(relays);
+  //     try {
+  //       if (relays) {
+  //         await this.storage.saveEvent(relays);
 
-          info.foundOnDiscoveryRelays = true;
-          info.hasRelayList = true;
+  //         info.foundOnDiscoveryRelays = true;
+  //         info.hasRelayList = true;
 
-          const relayUrls = this.getRelayUrls(relays);
+  //         const relayUrls = this.getRelayUrls(relays);
 
-          let metadata = null;
+  //         let metadata = null;
 
-          this.logger.debug('Trying to fetch metadata from individual relays', {
-            relayCount: relayUrls.length,
-          });
+  //         this.logger.debug('Trying to fetch metadata from individual relays', {
+  //           relayCount: relayUrls.length,
+  //         });
 
-          const selectedRelayUrls = this.utilities.pickOptimalRelays(
-            relayUrls,
-            this.MAX_RELAY_COUNT
-          );
+  //         const selectedRelayUrls = this.utilities.pickOptimalRelays(
+  //           relayUrls,
+  //           this.MAX_RELAY_COUNT
+  //         );
 
-          if (selectedRelayUrls.length === 0) {
-            this.logger.warn(
-              'No valid relays found in relay list. Unable to find user.'
-            );
-            info.hasNoValidRelays = true;
-            await this.storage.saveInfo(pubkey, 'user', info);
-            return undefined;
-          }
+  //         if (selectedRelayUrls.length === 0) {
+  //           this.logger.warn(
+  //             'No valid relays found in relay list. Unable to find user.'
+  //           );
+  //           info.hasNoValidRelays = true;
+  //           await this.storage.saveInfo(pubkey, 'user', info);
+  //           return undefined;
+  //         }
 
-          metadata = await this.retrieveMetadata(
-            pubkey,
-            selectedRelayUrls,
-            info
-          );
+  //         metadata = await this.retrieveMetadata(
+  //           pubkey,
+  //           selectedRelayUrls,
+  //           info
+  //         );
 
-          if (!metadata) {
-            this.logger.warn(
-              'Failed to retrieve metadata from relay list. Unable to find user.'
-            );
-            return undefined;
-          }
+  //         if (!metadata) {
+  //           this.logger.warn(
+  //             'Failed to retrieve metadata from relay list. Unable to find user.'
+  //           );
+  //           return undefined;
+  //         }
 
-          return metadata as Event;
-        } else {
-          info.hasRelayList = false;
+  //         return metadata as Event;
+  //       } else {
+  //         info.hasRelayList = false;
 
-          const followingEvent = await this.discoveryPool!.get(
-            this.relayService.discoveryRelays,
-            {
-              kinds: [kinds.Contacts],
-              authors: [pubkey],
-            },
-            {
-              maxWait: this.MAX_WAIT_TIME,
-            }
-          );
+  //         const followingEvent = await this.discoveryPool!.get(
+  //           this.discoveryRelay.discoveryRelays,
+  //           {
+  //             kinds: [kinds.Contacts],
+  //             authors: [pubkey],
+  //           },
+  //           {
+  //             maxWait: this.MAX_WAIT_TIME,
+  //           }
+  //         );
 
-          if (followingEvent) {
-            info.foundOnDiscoveryRelays = true;
-            await this.storage.saveEvent(followingEvent);
+  //         if (followingEvent) {
+  //           info.foundOnDiscoveryRelays = true;
+  //           await this.storage.saveEvent(followingEvent);
 
-            // After saving, the .content should be parsed to JSON.
-            console.log('FOLLOWING:', followingEvent);
+  //           // After saving, the .content should be parsed to JSON.
+  //           console.log('FOLLOWING:', followingEvent);
 
-            const followingRelayUrls =
-              this.getRelayUrlsFromFollowing(followingEvent);
+  //           const followingRelayUrls =
+  //             this.getRelayUrlsFromFollowing(followingEvent);
 
-            if (followingRelayUrls.length > 30) {
-            }
+  //           if (followingRelayUrls.length > 30) {
+  //           }
 
-            if (followingRelayUrls.length === 0) {
-              this.logger.warn(
-                'No relays found in following list. User does not have Relay List nor relays in following list.'
-              );
-              this.logger.warn(
-                'Getting metadata from Discovery Relays... not an ideal situation.'
-              );
+  //           if (followingRelayUrls.length === 0) {
+  //             this.logger.warn(
+  //               'No relays found in following list. User does not have Relay List nor relays in following list.'
+  //             );
+  //             this.logger.warn(
+  //               'Getting metadata from Discovery Relays... not an ideal situation.'
+  //             );
 
-              info.hasEmptyFollowingList = true;
+  //             info.hasEmptyFollowingList = true;
 
-              this.logger.warn(
-                'Failed to retrieve following list from discovery relay. Unable to find user.'
-              );
-              return undefined;
+  //             this.logger.warn(
+  //               'Failed to retrieve following list from discovery relay. Unable to find user.'
+  //             );
+  //             return undefined;
 
-              // const metadataFromDiscoveryRelays = await bootstrapPool.get(this.relayService.discoveryRelays, {
-              //   kinds: [kinds.Metadata],
-              //   authors: [pubkey],
-              // });
+  //             // const metadataFromDiscoveryRelays = await bootstrapPool.get(this.relayService.discoveryRelays, {
+  //             //   kinds: [kinds.Metadata],
+  //             //   authors: [pubkey],
+  //             // });
 
-              // if (metadataFromDiscoveryRelays) {
-              //   this.logger.warn('Found metadata on discovery relays.');
-              //   info.metadataFromDiscoveryRelays = true;
-              //   await this.storage.saveEvent(metadataFromDiscoveryRelays);
-              //   await this.storage.saveInfo(pubkey, 'user', info);
-              //   return metadataFromDiscoveryRelays as NostrEvent;
-              // } else {
-              //   this.logger.error('Did not find metadata on discovery relays. Giving up.');
-              //   info.metadataFromDiscoveryRelays = false;
-              //   await this.storage.saveInfo(pubkey, 'user', info);
-              //   return undefined;
-              // }
-            }
+  //             // if (metadataFromDiscoveryRelays) {
+  //             //   this.logger.warn('Found metadata on discovery relays.');
+  //             //   info.metadataFromDiscoveryRelays = true;
+  //             //   await this.storage.saveEvent(metadataFromDiscoveryRelays);
+  //             //   await this.storage.saveInfo(pubkey, 'user', info);
+  //             //   return metadataFromDiscoveryRelays as NostrEvent;
+  //             // } else {
+  //             //   this.logger.error('Did not find metadata on discovery relays. Giving up.');
+  //             //   info.metadataFromDiscoveryRelays = false;
+  //             //   await this.storage.saveInfo(pubkey, 'user', info);
+  //             //   return undefined;
+  //             // }
+  //           }
 
-            // Previously we attempted to get Relay List from the user's relays, but instead we require user's to publish their
-            // latest relay lists to the Discovery relays. This is a more optimal approach.
+  //           // Previously we attempted to get Relay List from the user's relays, but instead we require user's to publish their
+  //           // latest relay lists to the Discovery relays. This is a more optimal approach.
 
-            // Some user's have massive amount of relays, this is completely not needed. Let's grab maximum of 3 and attempt to
-            // get their profile from them. If the profile is not accessible on 3 of them because the relays are dead, they will
-            // eventually be removed from the list returned and next round we will attempt another 3.
+  //           // Some user's have massive amount of relays, this is completely not needed. Let's grab maximum of 3 and attempt to
+  //           // get their profile from them. If the profile is not accessible on 3 of them because the relays are dead, they will
+  //           // eventually be removed from the list returned and next round we will attempt another 3.
 
-            // After some testing, the performance between 1 and 3 seems similar. Using all relays adds a lot of extra time for loading.
+  //           // After some testing, the performance between 1 and 3 seems similar. Using all relays adds a lot of extra time for loading.
 
-            // Filter out any relays that are not reachable
-            // const filteredRelays = this.filterRelayUrls(followingRelayUrls);
-            const selectedRelayUrls = this.utilities.pickOptimalRelays(
-              followingRelayUrls,
-              this.MAX_RELAY_COUNT
-            );
-            const metadata = await this.retrieveMetadata(
-              pubkey,
-              selectedRelayUrls,
-              info
-            );
+  //           // Filter out any relays that are not reachable
+  //           // const filteredRelays = this.filterRelayUrls(followingRelayUrls);
+  //           const selectedRelayUrls = this.utilities.pickOptimalRelays(
+  //             followingRelayUrls,
+  //             this.MAX_RELAY_COUNT
+  //           );
+  //           const metadata = await this.retrieveMetadata(
+  //             pubkey,
+  //             selectedRelayUrls,
+  //             info
+  //           );
 
-            return metadata as Event;
-            // const followingPool = new SimplePool();
-            // const relayList = await followingPool.get(selectedRelayUrls, {
-            //   kinds: [kinds.RelayList],
-            //   authors: [pubkey],
-            // });
+  //           return metadata as Event;
+  //           // const followingPool = new SimplePool();
+  //           // const relayList = await followingPool.get(selectedRelayUrls, {
+  //           //   kinds: [kinds.RelayList],
+  //           //   authors: [pubkey],
+  //           // });
 
-            // A lot of user's have tens of relays, and many old ones. If we can't connect to them, put them into an
-            // const connectionStatuses = followingPool.listConnectionStatus();
-            // const failedRelays = Array.from(connectionStatuses.entries())
-            //   .filter(([_, status]) => status === false)
-            //   .map(([url, _]) => url);
+  //           // A lot of user's have tens of relays, and many old ones. If we can't connect to them, put them into an
+  //           // const connectionStatuses = followingPool.listConnectionStatus();
+  //           // const failedRelays = Array.from(connectionStatuses.entries())
+  //           //   .filter(([_, status]) => status === false)
+  //           //   .map(([url, _]) => url);
 
-            // this.relayService.timeoutRelays(failedRelays);
+  //           // this.relayService.timeoutRelays(failedRelays);
 
-            // if (relayList) {
-            //   followingPool.close(followingRelayUrls);
-            //   await this.storage.saveEvent(relayList);
-            //   const relayListUrls = this.getRelayUrls(relayList);
-            //   console.log('WE FOUND RELAYS!!!!');
+  //           // if (relayList) {
+  //           //   followingPool.close(followingRelayUrls);
+  //           //   await this.storage.saveEvent(relayList);
+  //           //   const relayListUrls = this.getRelayUrls(relayList);
+  //           //   console.log('WE FOUND RELAYS!!!!');
 
-            //   info.hasFollowingListRelays = true;
-            //   await this.storage.saveInfo(pubkey, 'user', info);
+  //           //   info.hasFollowingListRelays = true;
+  //           //   await this.storage.saveInfo(pubkey, 'user', info);
 
-            //   let metadata = null;
-            //   this.logger.debug('Trying to fetch metadata from individual relays', { relayCount: relayListUrls.length });
+  //           //   let metadata = null;
+  //           //   this.logger.debug('Trying to fetch metadata from individual relays', { relayCount: relayListUrls.length });
 
-            //   metadata = await this.retrieveMetadata(pubkey, relayListUrls)
+  //           //   metadata = await this.retrieveMetadata(pubkey, relayListUrls)
 
-            //   // this.currentProfileUserPool = userPool;
-            //   // this.currentProfileRelayUrls = relayUrls;
+  //           //   // this.currentProfileUserPool = userPool;
+  //           //   // this.currentProfileRelayUrls = relayUrls;
 
-            //   // if (disconnect) {
-            //   //   userPool.close(relayUrls);
-            //   // }
+  //           //   // if (disconnect) {
+  //           //   //   userPool.close(relayUrls);
+  //           //   // }
 
-            //   return metadata as NostrEvent;
+  //           //   return metadata as NostrEvent;
 
-            // } else {
-            //   console.log('DID NOT Find relays...');
-            //   // Capitulate and get profile from the following list relays:
-            //   let metadata = await this.retrieveMetadata(pubkey, followingRelayUrls)
+  //           // } else {
+  //           //   console.log('DID NOT Find relays...');
+  //           //   // Capitulate and get profile from the following list relays:
+  //           //   let metadata = await this.retrieveMetadata(pubkey, followingRelayUrls)
 
-            //   followingPool.close(followingRelayUrls);
+  //           //   followingPool.close(followingRelayUrls);
 
-            //   info.hasFollowingListRelays = false;
-            //   info.hasRelayList = false;
-            //   await this.storage.saveInfo(pubkey, 'user', info);
+  //           //   info.hasFollowingListRelays = false;
+  //           //   info.hasRelayList = false;
+  //           //   await this.storage.saveInfo(pubkey, 'user', info);
 
-            //   return metadata as NostrEvent;
-            // }
-          }
-        }
-      } finally {
-        await this.storage.saveInfo(pubkey, 'user', info);
-      }
-    }
+  //           //   return metadata as NostrEvent;
+  //           // }
+  //         }
+  //       }
+  //     } finally {
+  //       await this.storage.saveInfo(pubkey, 'user', info);
+  //     }
+  //   }
 
-    return undefined;
-  }
+  //   return undefined;
+  // }
 
   publishQueue: any[] = [];
 
   /** Used to get Relay List, Following List and Metadata for a user from the account relays. This is a fallback if discovery fails. */
   async discoverMetadataFromAccountRelays(pubkey: string) {
+    debugger;
     // First get the relay list if exists.
     // Second get the following list if exists.
     // Get the metadata from the user's relays, not from the account relays. We truly do not want to fall back to get metadata
@@ -1467,13 +1464,14 @@ export class NostrService implements NostriaService {
     }
 
     try {
-      const relayListEvent = await this.relayService.get(
+      const relayListEvent = await this.accountRelay.get(
         {
           authors: [pubkey],
           kinds: [kinds.RelayList],
-        },
-        undefined,
-        { timeout: this.MAX_WAIT_TIME }
+        }
+        // ,
+        // undefined,
+        // { timeout: this.MAX_WAIT_TIME }
       );
 
       let relayUrls: string[] = [];
@@ -1495,12 +1493,13 @@ export class NostrService implements NostriaService {
         // }
 
         await this.storage.saveEvent(relayListEvent);
+
         relayUrls = this.utilities.pickOptimalRelays(
-          this.getRelayUrls(relayListEvent),
+          this.utilities.getRelayUrls(relayListEvent),
           this.MAX_RELAY_COUNT
         );
       } else {
-        const followingEvent = await this.relayService.get({
+        const followingEvent = await this.accountRelay.get({
           authors: [pubkey],
           kinds: [kinds.Contacts],
         });
@@ -1510,7 +1509,7 @@ export class NostrService implements NostriaService {
           this.logger.debug('Found following event', { followingEvent });
 
           if (relayUrls.length > 0) {
-            info.hasFollwingList = true;
+            info.hasFollowingList = true;
 
             // Make sure we publish Relay List to Discovery Relays if discovered on Account Relays.
             // We must do this before storage.saveEvent, which transforms the content to JSON.
@@ -1519,7 +1518,7 @@ export class NostrService implements NostriaService {
                 'Publishing following list to discovery relays',
                 { followingEvent }
               );
-              await this.relayService.publishToDiscoveryRelays(followingEvent);
+              await this.discoveryRelay.publish(followingEvent);
             } catch (error) {
               this.logger.error(
                 'Failed to publish relay list to discovery relays',
@@ -1529,7 +1528,7 @@ export class NostrService implements NostriaService {
           }
 
           await this.storage.saveEvent(followingEvent);
-          relayUrls = this.getRelayUrlsFromFollowing(followingEvent);
+          relayUrls = this.utilities.getRelayUrlsFromFollowing(followingEvent);
         } else {
           this.logger.warn('No relay list or following event found for user', {
             pubkey,
@@ -1546,8 +1545,8 @@ export class NostrService implements NostriaService {
       if (relayUrls.length === 0) {
         usingAccountPool = true;
         info.foundZeroRelaysOnAccountRelays = true;
-        userPool = this.relayService.getAccountPool();
-        relayUrls = this.relayService.getAccountRelayUrls();
+        userPool = this.accountRelay.getPool();
+        relayUrls = this.accountRelay.getRelayUrls();
       } else {
         userPool = new SimplePool();
       }
@@ -1982,67 +1981,65 @@ export class NostrService implements NostriaService {
   // }
 
   /** Parses the URLs and cleans up, ensuring only wss:// instances are returned. */
-  getRelayUrlsFromFollowing(event: Event, timeouts = true): string[] {
-    let relayUrls = this.utilities.getRelayUrlsFromFollowing(event);
+  // getRelayUrlsFromFollowing(event: Event, timeouts = true): string[] {
+  //   let relayUrls = this.utilities.getRelayUrlsFromFollowing(event);
 
-    // Filter out timed out relays if timeouts parameter is true
-    if (timeouts) {
-      const timedOutRelays = this.relayService
-        .timeouts()
-        .map(relay => relay.url);
-      relayUrls = relayUrls.filter(
-        relay =>
-          !timedOutRelays.includes(this.utilities.normalizeRelayUrl(relay))
-      );
-    }
+  //   // Filter out timed out relays if timeouts parameter is true
+  //   if (timeouts) {
+  //     const timedOutRelays = this.discoveryRelay
+  //       .timeouts()
+  //       .map(relay => relay.url);
+  //     relayUrls = relayUrls.filter(
+  //       relay =>
+  //         !timedOutRelays.includes(this.utilities.normalizeRelayUrl(relay))
+  //     );
+  //   }
 
-    return relayUrls;
-  }
+  //   return relayUrls;
+  // }
 
   /** Parses the URLs and cleans up, ensuring only wss:// instances are returned. */
-  getRelayUrls(event: Event, timeouts = true): string[] {
-    let relayUrls = this.utilities.getRelayUrls(event);
+  // getRelayUrls(event: Event, timeouts = true): string[] {
+  //   let relayUrls = this.utilities.getRelayUrls(event);
 
-    // Filter out timed out relays if timeouts parameter is true
-    if (timeouts) {
-      const timedOutRelays = this.relayService
-        .timeouts()
-        .map(relay => relay.url);
-      relayUrls = relayUrls.filter(
-        relay =>
-          !timedOutRelays.includes(this.utilities.normalizeRelayUrl(relay))
-      );
-    }
+  //   // Filter out timed out relays if timeouts parameter is true
+  //   if (timeouts) {
+  //     const timedOutRelays = this.discoveryRelay
+  //       .timeouts()
+  //       .map(relay => relay.url);
+  //     relayUrls = relayUrls.filter(
+  //       relay =>
+  //         !timedOutRelays.includes(this.utilities.normalizeRelayUrl(relay))
+  //     );
+  //   }
 
-    return relayUrls;
-  }
+  //   return relayUrls;
+  // }
 
-  /** Filters out timed out or banned relays. */
-  filterRelayUrls(relayUrls: string[]): string[] {
-    const timedOutRelays = this.relayService.timeouts().map(relay => relay.url);
-    relayUrls = relayUrls.filter(
-      relay => !timedOutRelays.includes(this.utilities.normalizeRelayUrl(relay))
-    );
-    return relayUrls;
-  }
+  // /** Filters out timed out or banned relays. */
+  // filterRelayUrls(relayUrls: string[]): string[] {
+  //   const timedOutRelays = this.discoveryRelay
+  //     .timeouts()
+  //     .map(relay => relay.url);
+  //   relayUrls = relayUrls.filter(
+  //     relay => !timedOutRelays.includes(this.utilities.normalizeRelayUrl(relay))
+  //   );
+  //   return relayUrls;
+  // }
 
-  getTags(
-    event: Event | UnsignedEvent,
-    tagType: NostrTagKey,
-    timeouts = false
-  ): string[] {
-    let tags = event.tags
+  getTags(event: Event | UnsignedEvent, tagType: NostrTagKey): string[] {
+    const tags = event.tags
       .filter(tag => tag.length >= 2 && tag[0] === tagType)
       .map(tag => tag[1]);
 
     // If this is filtering relay tags ('r') and timeouts is true,
     // filter out the timed out relays
-    if (tagType === 'r' && timeouts) {
-      const timedOutRelays = this.relayService
-        .timeouts()
-        .map(relay => relay.url);
-      tags = tags.filter(url => !timedOutRelays.includes(url));
-    }
+    // if (tagType === 'r' && timeouts) {
+    //   const timedOutRelays = this.discoveryRelay
+    //     .timeouts()
+    //     .map(relay => relay.url);
+    //   tags = tags.filter(url => !timedOutRelays.includes(url));
+    // }
 
     return tags;
   }
@@ -2171,12 +2168,13 @@ export class NostrService implements NostriaService {
     // Configure the discovery relay based on the user's region
     if (region) {
       const discoveryRelay = this.region.getDiscoveryRelay(region);
+
       this.logger.info('Setting discovery relay for new user based on region', {
         region,
         discoveryRelay,
       });
-      await this.relayService.setDiscoveryRelays([discoveryRelay]);
-      this.relayService.saveDiscoveryRelays();
+
+      this.discoveryRelay.setDiscoveryRelays([discoveryRelay]);
     }
 
     const relayServerUrl = this.region.getRelayServer(region!, 0);
@@ -2195,7 +2193,10 @@ export class NostrService implements NostriaService {
 
     // Save locally first, then publish to discovery relays.
     await this.storage.saveEvent(signedEvent);
-    await this.relayService.publishToDiscoveryRelays(signedEvent);
+    await this.discoveryRelay.publish(signedEvent);
+
+    // Initialize the account relay so we can start using it.
+    this.accountRelay.init([relayServerUrl!]);
 
     const mediaServerUrl = this.region.getMediaServer(region!, 0);
     const mediaTags = this.createTags('server', [mediaServerUrl!]);
@@ -2211,7 +2212,8 @@ export class NostrService implements NostriaService {
 
     const signedMediaEvent = finalizeEvent(mediaServerEvent, secretKey);
     await this.storage.saveEvent(signedMediaEvent);
-    this.publishQueueService.publish(signedMediaEvent, PublishTarget.Account);
+    await this.accountRelay.publish(signedMediaEvent);
+    // this.publishQueueService.publish(signedMediaEvent, PublishTarget.Account);
 
     const relayDMTags = this.createTags('relay', [relayServerUrl!]);
 
@@ -2226,11 +2228,12 @@ export class NostrService implements NostriaService {
 
     const signedDMEvent = finalizeEvent(relayDMListEvent, secretKey);
     await this.storage.saveEvent(signedDMEvent);
-    this.publishQueueService.publish(signedDMEvent, PublishTarget.Account);
+    await this.accountRelay.publish(signedDMEvent);
+    // this.publishQueueService.publish(signedDMEvent, PublishTarget.Account);
 
-    // TODO: The media server event should be published to user relays, but we cannot do that yet, implement
-    // a queue for event publishing.
     await this.setAccount(newUser);
+
+    return newUser;
   }
 
   async loginWithExtension(): Promise<void> {
@@ -2256,19 +2259,6 @@ export class NostrService implements NostriaService {
 
       this.logger.debug('Received public key from extension', { pubkey });
 
-      // Get user metadata if available
-      // let name: string | undefined = undefined;
-      // try {
-      //   // Some extensions may provide user metadata like name
-      //   this.logger.debug('Requesting user metadata from extension');
-      //   const userInfo = await window.nostr.getUserMetadata();
-      //   name = userInfo?.name;
-      //   this.logger.debug('Received user metadata', { name });
-      // } catch (error) {
-      //   // Ignore errors for metadata, it's optional
-      //   this.logger.warn('Could not get user metadata from extension', error);
-      // }
-
       // Set the user with the public key from the extension
       const newUser: NostrUser = {
         pubkey,
@@ -2291,14 +2281,6 @@ export class NostrService implements NostriaService {
   async loginWithNsec(nsec: string) {
     try {
       this.logger.info('Attempting to login with nsec');
-
-      // Allow usage of hex and nsec.
-      // Validate and decode the nsec
-      // if (!nsec.startsWith('nsec')) {
-      //   const error = 'Invalid nsec format. Must start with "nsec"';
-      //   this.logger.error(error);
-      //   throw new Error(error);
-      // }
 
       let privkeyHex = '';
       let privkeyArray: Uint8Array;
@@ -2340,6 +2322,7 @@ export class NostrService implements NostriaService {
       throw new Error('Invalid nsec key provided. Please check and try again.');
     }
   }
+
   async usePreviewAccount(customPubkey?: string) {
     this.logger.info('Using preview account', { customPubkey });
 
@@ -2489,20 +2472,20 @@ export class NostrService implements NostriaService {
   /**
    * Clears the cache while preserving current user data
    */
-  async clearCache(): Promise<void> {
-    const currentUser = this.accountState.account();
-    if (!currentUser) {
-      this.logger.warn('Cannot clear cache: No user is logged in');
-      return;
-    }
+  // async clearCache(): Promise<void> {
+  //   const currentUser = this.accountState.account();
+  //   if (!currentUser) {
+  //     this.logger.warn('Cannot clear cache: No user is logged in');
+  //     return;
+  //   }
 
-    try {
-      await this.storage.clearCache(currentUser.pubkey);
-      this.logger.info('Cache cleared successfully');
-    } catch (error) {
-      this.logger.error('Error clearing cache', error);
-    }
-  }
+  //   try {
+  //     await this.storage.clearCache(currentUser.pubkey);
+  //     this.logger.info('Cache cleared successfully');
+  //   } catch (error) {
+  //     this.logger.error('Error clearing cache', error);
+  //   }
+  // }
 
   getIdFromNevent(nevent: string): string {
     try {
@@ -2520,67 +2503,67 @@ export class NostrService implements NostriaService {
     }
   }
 
-  async getEvent(id: string): Promise<Event | undefined> {
-    // First try to get from storage
-    let event = await this.storage.getEventById(id);
+  // async getEvent(id: string): Promise<Event | undefined> {
+  //   // First try to get from storage
+  //   let event = await this.storage.getEventById(id);
 
-    if (event) {
-      return event;
-    }
+  //   if (event) {
+  //     return event;
+  //   }
 
-    // If not in storage, try to fetch from relays
-    try {
-      await this.storage.clearCache(this.accountState.pubkey());
-      this.logger.info('Cache cleared successfully');
+  //   // If not in storage, try to fetch from relays
+  //   try {
+  //     await this.storage.clearCache(this.accountState.pubkey());
+  //     this.logger.info('Cache cleared successfully');
 
-      // TODO: Improve this to discover if needed.
-      const relayUrls = this.relayService.defaultRelays; // .activeRelays();
+  //     // TODO: Improve this to discover if needed.
+  //     const relayUrls = this.discoveryRelay.defaultRelays; // .activeRelays();
 
-      if (!relayUrls.length) {
-        return undefined;
-      }
+  //     if (!relayUrls.length) {
+  //       return undefined;
+  //     }
 
-      const pool = new SimplePool();
-      event = await pool.get(
-        relayUrls,
-        {
-          ids: [id],
-        },
-        {
-          maxWait: 3000,
-        }
-      );
+  //     const pool = new SimplePool();
+  //     event = await pool.get(
+  //       relayUrls,
+  //       {
+  //         ids: [id],
+  //       },
+  //       {
+  //         maxWait: 3000,
+  //       }
+  //     );
 
-      pool.close(relayUrls);
+  //     pool.close(relayUrls);
 
-      if (event) {
-        // Save to storage for future use
-        await this.storage.saveEvent(event);
-        return event;
-      }
-    } catch (error) {
-      this.logger.error('Error clearing cache', error);
-      this.logger.error('Error fetching event:', error);
-    }
+  //     if (event) {
+  //       // Save to storage for future use
+  //       await this.storage.saveEvent(event);
+  //       return event;
+  //     }
+  //   } catch (error) {
+  //     this.logger.error('Error clearing cache', error);
+  //     this.logger.error('Error fetching event:', error);
+  //   }
 
-    return undefined;
-  }
+  //   return undefined;
+  // }
 
-  async publish(event: UnsignedEvent | Event | any) {
-    // Clone the bookmark event and remove id and sig
-    const eventToSign = { ...event };
-    eventToSign.id = '';
-    eventToSign.sig = '';
-    eventToSign.created_at = Math.floor(Date.now() / 1000);
+  // async publish(event: UnsignedEvent | Event | any) {
+  //   // Clone the bookmark event and remove id and sig
+  //   const eventToSign = { ...event };
+  //   eventToSign.id = '';
+  //   eventToSign.sig = '';
+  //   eventToSign.created_at = Math.floor(Date.now() / 1000);
 
-    // Sign the event
-    const signedEvent = await this.signEvent(eventToSign);
+  //   // Sign the event
+  //   const signedEvent = await this.signEvent(eventToSign);
 
-    // Publish to relays and get array of promises
-    const publishPromises = await this.relayService.publish(signedEvent);
+  //   // Publish to relays and get array of promises
+  //   const publishPromises = await this.discoveryRelay.publish(signedEvent);
 
-    return signedEvent;
-  }
+  //   return signedEvent;
+  // }
 
   async getNIP98AuthToken({ url, method }: { url: string; method: string }) {
     return nip98.getToken(url, method, async e => {
