@@ -18,8 +18,10 @@ export class AccountRelayServiceEx extends RelayServiceBase {
     super(new SimplePool());
   }
 
-  async setAccount(pubkey: string) {
-    this.destroy();
+  async setAccount(pubkey: string, destroy = false) {
+    if (destroy) {
+      this.destroy();
+    }
 
     // When the active user is changed, we need to discover their relay urls
     this.logger.debug(`Setting account relays for pubkey: ${pubkey}`);

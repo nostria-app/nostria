@@ -334,13 +334,14 @@ export class FeedsComponent implements OnDestroy {
     if (!columnData) return 'not found';
     return columnData.subscription ? 'active' : 'paused';
   }
+
   constructor() {
     // Initialize data loading
     // this.loadTrendingContent();
 
     effect(async () => {
-      if (this.app.authenticated()) {
-
+      // Whenever account is changed, make sure we reload this data.
+      if (this.accountState.account()) {
         untracked(async () => {
           // Re-establish subscriptions when component loads
           this.feedService.subscribe();

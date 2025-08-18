@@ -192,8 +192,6 @@ export class PublishDialogComponent {
     this.publishResults.set(initialResults);
 
     try {
-      debugger;
-
       // Use the pool to publish to multiple relays
       const publishPromises = await this.accountRelay.publishToRelay(
         this.data.event,

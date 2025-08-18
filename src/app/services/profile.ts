@@ -57,7 +57,7 @@ export interface ProfileCreateResult {
 export class Profile {
   private nostr = inject(NostrService);
   // private relay = inject(RelayService);
-  private relay = inject(AccountRelayServiceEx);
+  private accountRelay = inject(AccountRelayServiceEx);
   private storage = inject(StorageService);
   private data = inject(DataService);
   private accountState = inject(AccountStateService);
@@ -170,7 +170,7 @@ export class Profile {
       const profileEvent = await this.createProfileEvent(cleanedProfile);
 
       // Publish to relays
-      await this.relay.publish(profileEvent);
+      await this.accountRelay.publish(profileEvent);
       this.logger.debug('Profile published to relays');
 
       // Save locally

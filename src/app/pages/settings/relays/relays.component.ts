@@ -88,7 +88,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
   showFollowingRelayCleanup = signal(false);
   isCleaningFollowingList = signal(false);
   // Show DM relay update card unless already matching
-  showUpdateDMRelays = signal(true);
+  showUpdateDMRelays = signal(false);
 
   // Template references for tooltip content
   @ViewChild('userRelaysInfoContent')
