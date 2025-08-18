@@ -251,6 +251,7 @@ export class LoginDialogComponent {
         // Perform the set account after we've uploaded the profile.
         // await this.nostrService.setAccount(newUser);
 
+        this.loading.set(false);
         this.closeDialog();
       } catch (error) {
         this.logger.error('Failed to generate new key', error);
