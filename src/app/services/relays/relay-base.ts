@@ -35,8 +35,10 @@ export abstract class RelayServiceBase {
   }
 
   /** Inits the relay URLs. Make sure URLs are normalized before setting. */
-  init(relayUrls: string[]) {
-    this.destroy();
+  init(relayUrls: string[], destroy = false) {
+    if (destroy) {
+      this.destroy();
+    }
 
     this.relayUrls = relayUrls;
     this.#pool = new SimplePool();
@@ -452,6 +454,7 @@ export abstract class RelayServiceBase {
 
       return publishResults;
     } catch (error) {
+      debugger;
       this.logger.error('Error publishing event', error);
       return null;
     }
@@ -491,6 +494,7 @@ export abstract class RelayServiceBase {
 
       return publishResults;
     } catch (error) {
+      debugger;
       this.logger.error('Error publishing event', error);
       return null;
     }

@@ -2180,6 +2180,9 @@ export class NostrService implements NostriaService {
     const relayServerUrl = this.region.getRelayServer(region!, 0);
     const relayTags = this.createTags('r', [relayServerUrl!]);
 
+    // Initialize the account relay so we can start using it.
+    this.accountRelay.init([relayServerUrl!]);
+
     // Create Relay List event for the new user
     const relayListEvent: UnsignedEvent = {
       pubkey,
@@ -2193,10 +2196,8 @@ export class NostrService implements NostriaService {
 
     // Save locally first, then publish to discovery relays.
     await this.storage.saveEvent(signedEvent);
+    await this.accountRelay.publish(signedEvent);
     await this.discoveryRelay.publish(signedEvent);
-
-    // Initialize the account relay so we can start using it.
-    this.accountRelay.init([relayServerUrl!]);
 
     const mediaServerUrl = this.region.getMediaServer(region!, 0);
     const mediaTags = this.createTags('server', [mediaServerUrl!]);
@@ -2213,7 +2214,6 @@ export class NostrService implements NostriaService {
     const signedMediaEvent = finalizeEvent(mediaServerEvent, secretKey);
     await this.storage.saveEvent(signedMediaEvent);
     await this.accountRelay.publish(signedMediaEvent);
-    // this.publishQueueService.publish(signedMediaEvent, PublishTarget.Account);
 
     const relayDMTags = this.createTags('relay', [relayServerUrl!]);
 
@@ -2229,7 +2229,6 @@ export class NostrService implements NostriaService {
     const signedDMEvent = finalizeEvent(relayDMListEvent, secretKey);
     await this.storage.saveEvent(signedDMEvent);
     await this.accountRelay.publish(signedDMEvent);
-    // this.publishQueueService.publish(signedDMEvent, PublishTarget.Account);
 
     await this.setAccount(newUser);
 
