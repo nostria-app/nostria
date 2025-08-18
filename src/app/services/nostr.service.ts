@@ -258,8 +258,7 @@ export class NostrService implements NostriaService {
       // // Attach the userPool to the relay service for further use.
       // this.discoveryRelay.setAccountPool(accountPool);
 
-      debugger;
-
+      // This will fail for brand new accounts, only for existing.
       const metadataEvent = await this.accountRelay.getEventByPubkeyAndKind(
         pubkey,
         kinds.Metadata
@@ -271,7 +270,6 @@ export class NostrService implements NostriaService {
         metadata = this.data.toRecord(metadataEvent);
 
         this.accountState.addToCache(metadata.event.pubkey, metadata);
-
         this.accountState.profile.set(metadata);
 
         this.logger.info('Found user metadata', { metadata });
