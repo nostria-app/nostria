@@ -120,7 +120,7 @@ const DEFAULT_COLUMNS: NavLink[] = [
   templateUrl: './feeds.component.html',
   styleUrl: './feeds.component.scss',
 })
-export class FeedsComponent implements OnInit, OnDestroy {
+export class FeedsComponent implements OnDestroy {
   // Services
   private nostrService = inject(NostrService);
   private notificationService = inject(NotificationService);
@@ -1028,11 +1028,6 @@ export class FeedsComponent implements OnInit, OnDestroy {
       ...states,
       [videoKey]: false,
     }));
-  }
-
-  ngOnInit() {
-    debugger;
-    this.logger.debug('FeedsComponent initializing...');
   }
 
   /**
