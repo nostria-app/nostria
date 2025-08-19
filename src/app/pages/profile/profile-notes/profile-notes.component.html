@@ -15,7 +15,7 @@
         </div>
       } @else {
         <div class="notes-list">
-          @for (note of profileState.sortedNotes(); track note.event.id) {
+          @for (note of profileState.sortedNotes(); track note.event.id || $index) {
             <app-event [event]="note.event" appearance="card"></app-event>
           }
 

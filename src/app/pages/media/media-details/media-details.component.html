@@ -129,7 +129,7 @@
               <div class="metadata-item">
                 <span class="label">Mirror Servers</span>
                 <div class="mirror-servers-list">
-                  @for (mirror of mediaItem()!.mirrors; track mirror) {
+                  @for (mirror of mediaItem()!.mirrors; track $index) {
                     <div class="mirror-server">
                       <span>{{ mirror }}</span>
                     </div>

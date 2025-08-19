@@ -76,7 +76,7 @@
     <div class="muted-section">
       @if (mutedWords().length > 0) {
         <mat-list>
-          @for (word of mutedWords(); track word) {
+          @for (word of mutedWords(); track $index) {
             <mat-list-item>
               <span matListItemTitle>{{ word }}</span>
               <button
@@ -102,7 +102,7 @@
     <div class="muted-section">
       @if (mutedTags().length > 0) {
         <mat-list>
-          @for (tag of mutedTags(); track tag) {
+          @for (tag of mutedTags(); track $index) {
             <mat-list-item>
               <span matListItemTitle>#{{ tag }}</span>
               <button
@@ -128,7 +128,7 @@
     <div class="muted-section">
       @if (mutedThreads().length > 0) {
         <mat-list>
-          @for (thread of mutedThreads(); track thread) {
+          @for (thread of mutedThreads(); track $index) {
             <mat-list-item>
               <span matListItemTitle>{{ thread }}</span>
               <button

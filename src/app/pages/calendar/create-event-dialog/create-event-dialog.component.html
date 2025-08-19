@@ -172,7 +172,7 @@
         <!-- Display hashtags -->
         @if (hashtags().length > 0) {
           <div class="hashtags-display">
-            @for (hashtag of hashtags(); track hashtag) {
+            @for (hashtag of hashtags(); track $index) {
               <mat-chip removable (removed)="removeHashtag(hashtag)">
                 #{{ hashtag }}
                 <mat-icon matChipRemove>cancel</mat-icon>

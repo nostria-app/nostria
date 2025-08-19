@@ -1,5 +1,5 @@
 <div class="connections-container">
-  @for (item of profileState.followingList(); track item) {
+  @for (item of profileState.followingList(); track $index) {
     {{ item }} <br />
   }
 

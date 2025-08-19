@@ -8,7 +8,7 @@
         </div>
       } @else {
         <div class="replies-list">
-          @for (note of filteredReplies(); track note.id) {
+          @for (note of filteredReplies(); track note.event.id || $index) {
             <app-event [event]="note.event" appearance="card"></app-event>
           }
         </div>

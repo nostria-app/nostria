@@ -24,7 +24,7 @@
       <div class="tag-filters">
         <span class="filter-label">Filter by tags:</span>
         <mat-chip-set>
-          @for (tag of availableTags(); track tag) {
+          @for (tag of availableTags(); track $index) {
             <mat-chip
               (click)="filterByTag(tag)"
               [class.selected]="selectedTag() === tag"
@@ -114,7 +114,7 @@
             @if (draft.tags.length > 0) {
               <div class="draft-tags">
                 <mat-chip-set>
-                  @for (tag of draft.tags; track tag) {
+                  @for (tag of draft.tags; track $index) {
                     <mat-chip class="tag-chip">{{ tag }}</mat-chip>
                   }
                 </mat-chip-set>
