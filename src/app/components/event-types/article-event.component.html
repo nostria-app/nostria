@@ -1,28 +1,30 @@
 @if (hasContentWarning()) {
-<div class="content-warning">
-  <mat-icon>warning</mat-icon>
-  <span>{{ contentWarning() }}</span>
-</div>
+  <div class="content-warning">
+    <mat-icon>warning</mat-icon>
+    <span>{{ contentWarning() }}</span>
+  </div>
 }
 
 <article class="article-container">
   @if (title()) {
-  <h3 class="article-title">{{ title() }}</h3>
+    <h3 class="article-title">{{ title() }}</h3>
   }
 
   @if (authorName() || publishedAt()) {
-  <div class="article-meta">
-    @if (authorName()) {
-    <span class="article-author">{{ authorName() }}</span>
-    }
-    @if (publishedAt()) {
-    <span class="article-date">{{ publishedAt() | date: 'mediumDate' }}</span>
-    }
-  </div>
+    <div class="article-meta">
+      @if (authorName()) {
+        <span class="article-author">{{ authorName() }}</span>
+      }
+      @if (publishedAt()) {
+        <span class="article-date">{{
+          publishedAt() | date: 'mediumDate'
+        }}</span>
+      }
+    </div>
   }
 
   @if (summary()) {
-  <p class="article-summary">{{ summary() }}</p>
+    <p class="article-summary">{{ summary() }}</p>
   }
 
   <div class="article-content">
@@ -30,26 +32,31 @@
   </div>
 
   @if (articleTags().length > 0) {
-  <div class="article-tags">
-    @for (tag of articleTags(); track tag) {
-    <span class="tag-chip">#{{ tag }}</span>
-    }
-  </div>
+    <div class="article-tags">
+      @for (tag of articleTags(); track tag) {
+        <span class="tag-chip">#{{ tag }}</span>
+      }
+    </div>
   }
 
   <div class="article-actions">
     @if (isContentTruncated()) {
-    <button mat-button color="primary" class="read-more">
-      <mat-icon>expand_more</mat-icon>
-      Read More
-    </button>
+      <button mat-button color="primary" class="read-more">
+        <mat-icon>expand_more</mat-icon>
+        Read More
+      </button>
     }
 
     @if (articleUrl()) {
-    <button mat-button color="primary" (click)="openFullArticle()" class="external-link">
-      <mat-icon>open_in_new</mat-icon>
-      Open Article
-    </button>
+      <button
+        mat-button
+        color="primary"
+        (click)="openFullArticle()"
+        class="external-link"
+      >
+        <mat-icon>open_in_new</mat-icon>
+        Open Article
+      </button>
     }
   </div>
 </article>

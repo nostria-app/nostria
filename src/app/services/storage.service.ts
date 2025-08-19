@@ -248,7 +248,7 @@ export class StorageService {
   private fallbackStorage = new Map<string, any>();
   useFallbackMode = signal(false);
 
-  constructor() { }
+  constructor() {}
 
   async init(): Promise<void> {
     this.logger.info('StorageService.init() called');

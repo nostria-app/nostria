@@ -156,11 +156,7 @@
       Cancel
     }
   </button>
-  <button
-    mat-flat-button
-    (click)="publish()"
-    [disabled]="!canPublish()"
-  >
+  <button mat-flat-button (click)="publish()" [disabled]="!canPublish()">
     @if (isPublishing()) {
       <mat-spinner diameter="16"></mat-spinner>
       Publishing...

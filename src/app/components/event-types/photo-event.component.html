@@ -1,31 +1,46 @@
 @if (hasContentWarning()) {
-<div class="content-warning">
-  <mat-icon>warning</mat-icon>
-  <span>{{ contentWarning() }}</span>
-</div>
+  <div class="content-warning">
+    <mat-icon>warning</mat-icon>
+    <span>{{ contentWarning() }}</span>
+  </div>
 }
 
 @if (title()) {
-<h3 class="media-title">{{ title() }}</h3>
+  <h3 class="media-title">{{ title() }}</h3>
 }
 
 <div class="photo-gallery">
   @for (imageUrl of imageUrls(); track $index) {
-  @let blurhash = getBlurhash(event(), $index);
-  <div class="photo-container">
-    @if (blurhash) {
-    <img [src]="generateBlurhashDataUrl(blurhash)" class="photo-item blurhash-placeholder" [alt]="altText()"
-      [title]="altText()" aria-hidden="true" />
-    }
-    <img [src]="imageUrl" [alt]="altText()" [title]="altText()" class="photo-item main-image" loading="lazy"
-      (load)="onImageLoad($event)" (click)="openImageDialog(imageUrl, altText())" tabindex="0" role="button"
-      (keyup.enter)="openImageDialog(imageUrl, altText())" (keyup.space)="openImageDialog(imageUrl, altText())" />
-  </div>
+    @let blurhash = getBlurhash(event(), $index);
+    <div class="photo-container">
+      @if (blurhash) {
+        <img
+          [src]="generateBlurhashDataUrl(blurhash)"
+          class="photo-item blurhash-placeholder"
+          [alt]="altText()"
+          [title]="altText()"
+          aria-hidden="true"
+        />
+      }
+      <img
+        [src]="imageUrl"
+        [alt]="altText()"
+        [title]="altText()"
+        class="photo-item main-image"
+        loading="lazy"
+        (load)="onImageLoad($event)"
+        (click)="openImageDialog(imageUrl, altText())"
+        tabindex="0"
+        role="button"
+        (keyup.enter)="openImageDialog(imageUrl, altText())"
+        (keyup.space)="openImageDialog(imageUrl, altText())"
+      />
+    </div>
   }
 </div>
 
 @if (description()) {
-<p class="photo-description">
-  {{ description() }}
-</p>
+  <p class="photo-description">
+    {{ description() }}
+  </p>
 }

@@ -37,15 +37,15 @@ interface NostrData {
 interface ContentToken {
   id: number;
   type:
-  | 'text'
-  | 'url'
-  | 'youtube'
-  | 'image'
-  | 'audio'
-  | 'video'
-  | 'linebreak'
-  | 'nostr-mention'
-  | 'emoji';
+    | 'text'
+    | 'url'
+    | 'youtube'
+    | 'image'
+    | 'audio'
+    | 'video'
+    | 'linebreak'
+    | 'nostr-mention'
+    | 'emoji';
   content: string;
   nostrData?: NostrData;
   emoji?: string;
