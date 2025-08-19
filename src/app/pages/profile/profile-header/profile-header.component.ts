@@ -270,6 +270,21 @@ export class ProfileHeaderComponent {
     this.showProfileQrCode.set(!this.showProfileQrCode());
   }
 
+  copyNpubToClipboard(): void {
+    const npubValue = this.npub();
+    if (npubValue) {
+      this.layout.copyToClipboard(npubValue, 'npub');
+    }
+  }
+
+  copyLightningAddressToClipboard(): void {
+    const profile = this.profile();
+    const lightningAddress = profile?.data.lud16 || profile?.data.lud06;
+    if (lightningAddress) {
+      this.layout.copyToClipboard(lightningAddress, 'lightning address');
+    }
+  }
+
   toggleFavorite(): void {
     const currentPubkey = this.currentPubkey();
     if (!currentPubkey) return;
