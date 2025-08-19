@@ -8,6 +8,9 @@ import { NostrService } from './nostr.service';
 import { EventData } from '../data-resolver';
 import { NostrRecord } from '../interfaces';
 import { DiscoveryRelayServiceEx } from './relays/discovery-relay';
+import { UserDataFactoryService } from './user-data-factory.service';
+import { Cache } from './cache';
+import { UserDataService } from './user-data.service';
 
 export interface Reaction {
   emoji: string;
@@ -23,6 +26,7 @@ export interface ThreadedEvent {
 }
 
 export interface EventTags {
+  author: string | null;
   rootId: string | null;
   replyId: string | null;
   pTags: string[];
@@ -47,6 +51,8 @@ export class EventService {
   private readonly utilities = inject(UtilitiesService);
   private readonly nostrService = inject(NostrService);
   private readonly discoveryRelay = inject(DiscoveryRelayServiceEx);
+  private readonly userDataFactory = inject(UserDataFactoryService);
+  private readonly cache = inject(Cache);
 
   /**
    * Parse event tags to extract thread information
@@ -57,11 +63,14 @@ export class EventService {
 
     let rootId: string | null = null;
     let replyId: string | null = null;
+    let author: string | null = null;
 
     // Find root tag (NIP-10 marked format)
     const rootTag = eTags.find(tag => tag[3] === 'root');
     if (rootTag) {
       rootId = rootTag[1];
+      // Extract author pubkey from root tag if present (5th element)
+      author = rootTag[4] || null;
     }
 
     // Find reply tag (NIP-10 marked format)
@@ -79,13 +88,17 @@ export class EventService {
         // Single e-tag is both root and reply
         rootId = eTags[0][1];
         replyId = eTags[0][1];
+        // Extract author from the single e-tag if present
+        author = eTags[0][4] || null;
       } else if (eTags.length >= 2) {
         // First e-tag is root in positional format
         rootId = eTags[0][1];
+        // Extract author from the first e-tag if present
+        author = eTags[0][4] || null;
       }
     }
 
-    return { rootId, replyId, pTags };
+    return { author, rootId, replyId, pTags };
   }
 
   /**
@@ -147,10 +160,12 @@ export class EventService {
   }
 
   /**
-   * Load a single event by ID or nevent
+   * Load a single event by ID or nevent using outbox model.
    */
   async loadEvent(nevent: string, item?: EventData): Promise<Event | null> {
     this.logger.info('loadEvent called with nevent:', nevent);
+
+    let userData: UserDataService | undefined;
 
     // Handle hex string input
     if (this.utilities.isHex(nevent)) {
@@ -163,87 +178,138 @@ export class EventService {
     const hex = decoded.data.id;
     this.logger.info('Decoded event ID:', hex, 'Author:', decoded.data.author);
 
+    // If we have an author, we'll create a data factory for it.
+    if (decoded.data.author) {
+      userData = this.cache.get<UserDataService>(
+        'user-data-' + decoded.data.author
+      );
+
+      if (!userData) {
+        userData = await this.userDataFactory.create(decoded.data.author);
+
+        this.cache.set('user-data-' + decoded.data.author, userData, {
+          maxSize: 20,
+          ttl: 1000 * 60,
+        });
+      }
+    }
+
     // Check if we have cached event in item
     if (item?.event && item.event.id === hex) {
       this.logger.info('Using cached event from item');
       return item.event;
     }
 
-    // Try to get from data service first
-    try {
-      const event = await this.data.getEventById(hex);
-      if (event) {
-        this.logger.info(
-          'Loaded event from storage or relays:',
-          event.event.id
-        );
-        return event.event;
+    if (userData) {
+      // Try to get from user data service first
+      try {
+        const event = await userData.getEventById(hex);
+
+        if (event) {
+          this.logger.info(
+            'Loaded event from storage or relays:',
+            event.event.id
+          );
+          return event.event;
+        }
+      } catch (error) {
+        this.logger.error('Error loading event from data service:', error);
       }
-    } catch (error) {
-      this.logger.error('Error loading event from data service:', error);
+    } else {
+      // Try to get from account data service.
+      try {
+        // Attempt to get from account relays.
+        const event = await this.data.getEventById(hex);
+
+        if (event) {
+          this.logger.info(
+            'Loaded event from storage or relays:',
+            event.event.id
+          );
+          return event.event;
+        }
+      } catch (error) {
+        this.logger.error('Error loading event from data service:', error);
+      }
     }
+
+    return null;
+
+    // Try to get from data service first
+    // try {
+    //   const event = await userData.getEventById(hex);
+    //   if (event) {
+    //     this.logger.info(
+    //       'Loaded event from storage or relays:',
+    //       event.event.id
+    //     );
+    //     return event.event;
+    //   }
+    // } catch (error) {
+    //   this.logger.error('Error loading event from data service:', error);
+    // }
 
     // Try to discover from author's relays
-    if (!decoded.data.author) {
-      this.logger.info('No author in decoded data, cannot discover relays');
-      throw new Error(
-        'Event not found. There is no pubkey to discover the event from.'
-      );
-    }
+    // if (!decoded.data.author) {
+    //   this.logger.info('No author in decoded data, cannot discover relays');
+    //   throw new Error(
+    //     'Event not found. There is no pubkey to discover the event from.'
+    //   );
+    // }
 
-    this.logger.info(
-      'Discovering user relays for author:',
-      decoded.data.author
-    );
+    // this.logger.info(
+    //   'Discovering user relays for author:',
+    //   decoded.data.author
+    // );
 
     // Get user relays
-    let userRelays = await this.data.getUserRelays(decoded.data.author);
+    // let userRelays = await this.data.getUserRelays(decoded.data.author);
 
-    if (!userRelays || userRelays.length === 0) {
-      this.logger.info(
-        'No user relays found, attempting relay discovery via NostrService'
-      );
+    // if (!userRelays || userRelays.length === 0) {
+    //   this.logger.info(
+    //     'No user relays found, attempting relay discovery via NostrService'
+    //   );
 
-      debugger;
+    //   debugger;
 
-      userRelays = await this.discoveryRelay.getUserRelayUrls(
-        decoded.data.author
-      );
-    }
+    //   userRelays = await this.discoveryRelay.getUserRelayUrls(
+    //     decoded.data.author
+    //   );
+    // }
 
-    if (!userRelays || userRelays.length === 0) {
-      this.logger.info(
-        'Still no user relays found after all discovery attempts'
-      );
-      throw new Error('No user relays found for the author.');
-    }
+    // if (!userRelays || userRelays.length === 0) {
+    //   this.logger.info(
+    //     'Still no user relays found after all discovery attempts'
+    //   );
+    //   throw new Error('No user relays found for the author.');
+    // }
 
     // Fetch from user relays
-    const pool = new SimplePool();
-    try {
-      this.logger.info(
-        'Attempting to fetch event from user relays:',
-        userRelays
-      );
-      const event = await pool.get(
-        userRelays,
-        { ids: [decoded.data.id] },
-        { maxWait: 4000 }
-      );
+    // const pool = new SimplePool();
+    // try {
+    //   this.logger.info(
+    //     'Attempting to fetch event from user relays:',
+    //     userRelays
+    //   );
+    //   const event = await pool.get(
+    //     userRelays,
+    //     { ids: [decoded.data.id] },
+    //     { maxWait: 4000 }
+    //   );
 
-      if (!event) {
-        this.logger.info('Event not found on user relays');
-        throw new Error('Event not found on user relays.');
-      }
+    //   if (!event) {
+    //     this.logger.info('Event not found on user relays');
+    //     throw new Error('Event not found on user relays.');
+    //   }
 
-      this.logger.info(
-        'Successfully fetched event from user relays:',
-        event.id
-      );
-      return event;
-    } finally {
-      pool.destroy();
-    }
+    //   this.logger.info(
+    //     'Successfully fetched event from user relays:',
+    //     event.id
+    //   );
+    //   return event;
+    // } finally {
+    //   pool.destroy();
+    // }
   }
 
   /**
@@ -251,8 +317,7 @@ export class EventService {
    */
   async loadRepliesAndReactions(
     eventId: string,
-    pubkey: string,
-    existingPool?: SimplePool
+    pubkey: string
   ): Promise<{ replies: Event[]; reactions: Reaction[] }> {
     this.logger.info(
       'loadRepliesAndReactions called with eventId:',
@@ -261,138 +326,145 @@ export class EventService {
       pubkey
     );
 
-    // Get user relays
-    let userRelays = await this.data.getUserRelays(pubkey);
+    let userData = this.cache.get<UserDataService>('user-data-' + pubkey);
 
-    if (!userRelays || userRelays.length === 0) {
-      this.logger.info(
-        'No user relays cached, discovering relays for pubkey:',
-        pubkey
-      );
+    if (!userData) {
+      userData = await this.userDataFactory.create(pubkey);
 
-      debugger;
-      userRelays = await this.discoveryRelay.getUserRelayUrls(pubkey);
+      this.cache.set('user-data-' + pubkey, userData, {
+        maxSize: 20,
+        ttl: 1000 * 60,
+      });
     }
 
-    if (!userRelays || userRelays.length === 0) {
-      this.logger.info('No user relays found for author when loading replies');
-      throw new Error(
-        'No user relays found for the author when loading replies.'
-      );
-    }
-
-    const pool = existingPool || new SimplePool();
-    const reactionCounts = new Map<string, number>();
-    const allReplies: Event[] = [];
-
-    return new Promise(resolve => {
-      const timeout = setTimeout(() => {
-        if (!existingPool) pool.destroy();
-        resolve({
-          replies: allReplies,
-          reactions: this.mapToReactionArray(reactionCounts),
-        });
-      }, 10000); // 10 second timeout
-
-      pool.subscribeEose(
-        userRelays,
+    try {
+      // Load replies (kind 1 events that reference this event)
+      const replyRecords = await userData.getEventsByKindAndEventTag(
+        kinds.ShortTextNote,
+        eventId,
         {
-          kinds: [kinds.ShortTextNote, kinds.Reaction],
-          ['#e']: [eventId],
-        },
-        {
-          onevent: event => {
-            if (event.kind === kinds.ShortTextNote && event.content) {
-              // Handle text replies
-              const existingReply = allReplies.find(
-                reply => reply.id === event.id
-              );
-              if (!existingReply) {
-                allReplies.push(event);
-              }
-            } else if (event.kind === kinds.Reaction && event.content) {
-              // Count reactions
-              const emoji = event.content;
-              reactionCounts.set(emoji, (reactionCounts.get(emoji) || 0) + 1);
-            }
-          },
-          onclose: () => {
-            clearTimeout(timeout);
-            if (!existingPool) pool.destroy();
-            resolve({
-              replies: allReplies,
-              reactions: this.mapToReactionArray(reactionCounts),
-            });
-          },
+          save: false,
+          cache: false,
         }
       );
-    });
+
+      // Load reactions (kind 7 events that reference this event)
+      const reactionRecords = await userData.getEventsByKindAndEventTag(
+        kinds.Reaction,
+        eventId,
+        {
+          save: false,
+          cache: false,
+        }
+      );
+
+      // Extract events from records and filter valid replies
+      const replies = replyRecords
+        .map(record => record.event)
+        .filter(event => event.content && event.content.trim().length > 0);
+
+      // Count reactions by emoji
+      const reactionCounts = new Map<string, number>();
+      reactionRecords.forEach(record => {
+        const event = record.event;
+        if (event.content && event.content.trim()) {
+          const emoji = event.content.trim();
+          reactionCounts.set(emoji, (reactionCounts.get(emoji) || 0) + 1);
+        }
+      });
+
+      const reactions = this.mapToReactionArray(reactionCounts);
+
+      this.logger.info(
+        'Successfully loaded replies and reactions for event:',
+        eventId,
+        'replies:',
+        replies.length,
+        'reactions:',
+        reactions.length
+      );
+
+      return { replies, reactions };
+    } catch (error) {
+      this.logger.error('Error loading replies and reactions:', error);
+      return { replies: [], reactions: [] };
+    }
   }
 
   /**
-   * Load parent events in a thread
+   * Load parent events in a thread using outbox model. Only the initially opened
+   * reply is retrieved from user A relays. Everything else is fetched
+   * from user B relays (root author).
    */
   async loadParentEvents(event: Event): Promise<Event[]> {
     const parents: Event[] = [];
-    const { rootId, replyId } = this.getEventTags(event);
+
+    const {
+      author: initialAuthor,
+      rootId,
+      replyId,
+      pTags,
+    } = this.getEventTags(event);
+
+    let author = initialAuthor;
 
     if (!rootId && !replyId) {
       // This is a root event
       return parents;
     }
 
-    // Get user relays for the event author
-    let userRelays = await this.data.getUserRelays(event.pubkey);
-
-    if (!userRelays || userRelays.length === 0) {
-      debugger;
-      userRelays = await this.discoveryRelay.getUserRelayUrls(event.pubkey);
+    if (!author) {
+      this.logger.warn(
+        'No author found for loading root event. Fallback to attempt using first p-tag.'
+      );
+      author = pTags[0];
     }
 
-    if (!userRelays || userRelays.length === 0) {
-      this.logger.warn('No user relays found for loading parent events');
-      return parents;
-    }
+    let userData: UserDataService | undefined;
 
-    const pool = new SimplePool();
+    userData = this.cache.get<UserDataService>('user-data-' + author);
+
+    if (!userData) {
+      userData = await this.userDataFactory.create(author);
+
+      this.cache.set('user-data-' + author, userData, {
+        maxSize: 20,
+        ttl: 1000 * 60,
+      });
+    }
 
     try {
       // Load immediate parent (reply)
       if (replyId && replyId !== rootId) {
-        const replyEvent = await pool.get(
-          userRelays,
-          { ids: [replyId] },
-          { maxWait: 3000 }
-        );
+        const replyEvent = await userData.getEventById(replyId);
+
         if (replyEvent) {
-          parents.unshift(replyEvent);
+          parents.unshift(replyEvent.event);
 
           // Recursively load parents of the reply
-          const grandParents = await this.loadParentEvents(replyEvent);
+          const grandParents = await this.loadParentEvents(replyEvent.event);
           parents.unshift(...grandParents);
         }
       }
 
       // Load root event if different from reply
       if (rootId && rootId !== replyId) {
-        const rootEvent = await pool.get(
-          userRelays,
-          { ids: [rootId] },
-          { maxWait: 3000 }
-        );
-        if (rootEvent && !parents.find(p => p.id === rootEvent.id)) {
-          parents.unshift(rootEvent);
+        const rootEvent = await userData.getEventById(rootId);
+
+        if (rootEvent && !parents.find(p => p.id === rootEvent.event.id)) {
+          parents.unshift(rootEvent.event);
         }
       }
 
       return parents;
-    } finally {
-      pool.destroy();
+    } catch (error) {
+      console.error('Error loading parent events:', error);
+      return [];
     }
   }
 
   /**
-   * Load a complete thread with parents and children
+   * Load a complete thread with parents and children using outbox model.
    */
   async loadCompleteThread(
     nevent: string,
@@ -459,11 +531,23 @@ export class EventService {
       userPubkey
     );
 
+    let userData: UserDataService | undefined;
+
+    userData = this.cache.get<UserDataService>('user-data-' + userPubkey);
+
+    if (!userData) {
+      userData = await this.userDataFactory.create(userPubkey);
+
+      this.cache.set('user-data-' + userPubkey, userData, {
+        maxSize: 20,
+        ttl: 1000 * 60,
+      });
+    }
+
     try {
-      const reposts = await this.data.getEventsByKindAndEventTag(
+      const reposts = await userData.getEventsByKindAndEventTag(
         kinds.Repost,
         eventId,
-        userPubkey,
         {
           save: false,
           cache: false, // cannot cache until we have stale-while-revalidate strategy implemented

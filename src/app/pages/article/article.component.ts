@@ -25,6 +25,8 @@ import { AccountStateService } from '../../services/account-state.service';
 import DOMPurify from 'dompurify';
 import { UserDataFactoryService } from '../../services/user-data-factory.service';
 import { NostrRecord } from '../../interfaces';
+import { Cache } from '../../services/cache';
+import { UserDataService } from '../../services/user-data.service';
 
 @Component({
   selector: 'app-article',
@@ -57,6 +59,7 @@ export class ArticleComponent {
   private layout = inject(LayoutService);
   private parsing = inject(ParsingService);
   private url = inject(UrlUpdateService);
+  private readonly cache = inject(Cache);
   bookmark = inject(BookmarkService);
   accountState = inject(AccountStateService);
   link = '';
@@ -161,7 +164,12 @@ export class ArticleComponent {
       let event: NostrRecord | null = null;
 
       if (isNotCurrentUser) {
-        const userData = await this.userDataFactory.create(pubkey);
+        let userData = this.cache.get<UserDataService>('user-data-' + pubkey);
+
+        if (!userData) {
+          userData = await this.userDataFactory.create(pubkey);
+        }
+
         event = await userData.getEventByPubkeyAndKindAndReplaceableEvent(
           pubkey,
           kinds.LongFormArticle,

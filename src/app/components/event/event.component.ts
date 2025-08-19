@@ -5,6 +5,7 @@ import {
   inject,
   input,
   signal,
+  untracked,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -103,9 +104,11 @@ export class EventComponent {
         return;
       }
 
-      const record = this.data.toRecord(event);
-      this.record.set(record);
-      this.loadReposts();
+      untracked(async () => {
+        const record = this.data.toRecord(event);
+        this.record.set(record);
+        // await this.loadReposts();
+      });
     });
 
     effect(async () => {

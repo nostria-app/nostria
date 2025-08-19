@@ -4,13 +4,13 @@ import {
   inject,
   signal,
   TransferState,
-  OnDestroy,
+  untracked,
 } from '@angular/core';
 import { LayoutService } from '../../services/layout.service';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
 import { DataService } from '../../services/data.service';
-import { Event, nip19, SimplePool } from 'nostr-tools';
+import { Event, nip19 } from 'nostr-tools';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, ParamMap, Router } from '@angular/router';
 import { UrlUpdateService } from '../../services/url-update.service';
@@ -56,7 +56,7 @@ export interface ThreadedEvent {
   templateUrl: './event.component.html',
   styleUrl: './event.component.scss',
 })
-export class EventPageComponent implements OnDestroy {
+export class EventPageComponent {
   event = signal<Event | undefined>(undefined);
   private readonly utilities = inject(UtilitiesService);
   isLoading = signal(false);
@@ -70,7 +70,6 @@ export class EventPageComponent implements OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   id = signal<string | null>(null);
-  pool: SimplePool | undefined = undefined;
   userRelays: string[] = [];
   app = inject(ApplicationService);
   private routeParams = toSignal<ParamMap>(this.route.paramMap);
@@ -107,27 +106,19 @@ export class EventPageComponent implements OnDestroy {
     }
 
     // Effect to load event when route parameter changes
-    effect(async () => {
+    effect(() => {
       if (this.app.initialized() && this.routeParams()) {
-        const id = this.routeParams()?.get('id');
-        if (id) {
-          // Clean up previous pool if it exists
-          if (this.pool) {
-            this.pool.destroy();
+        untracked(async () => {
+          const id = this.routeParams()?.get('id');
+          if (id) {
+            await this.loadEvent(id);
+
+            // Scroll to top when navigating to a new event
+            setTimeout(() => this.layout.scrollMainContentToTop(), 100);
           }
-
-          this.pool = new SimplePool();
-          await this.loadEvent(id);
-
-          // Scroll to top when navigating to a new event
-          setTimeout(() => this.layout.scrollMainContentToTop(), 100);
-        }
+        });
       }
     });
-  }
-
-  ngOnDestroy() {
-    this.pool?.destroy();
   }
 
   async loadEvent(nevent: string) {
