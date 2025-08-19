@@ -214,7 +214,7 @@ export class LogsSettingsComponent {
           if (sharedUsers.length > 0) {
             const connectionStrength = Math.round(
               (sharedUsers.length / Math.max(users.length, otherUsers.length)) *
-              100
+                100
             );
             sharedWithRelays.push({
               relay: otherRelay,

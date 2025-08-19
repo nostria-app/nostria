@@ -55,7 +55,7 @@ export class AccountRelayServiceEx extends RelayServiceBase {
     this.init(relayUrls);
   }
 
-  clear() { }
+  clear() {}
 }
 
 // @Injectable({

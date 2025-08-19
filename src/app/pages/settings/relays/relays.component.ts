@@ -205,7 +205,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
     }
   }
 
-  ngOnInit() { }
+  ngOnInit() {}
 
   cleanFollowingList() {
     if (this.isCleaningFollowingList()) {

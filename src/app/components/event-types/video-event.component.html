@@ -1,66 +1,93 @@
 @if (hasContentWarning()) {
-<div class="content-warning">
-  <mat-icon>warning</mat-icon>
-  <span>{{ contentWarning() }}</span>
-</div>
+  <div class="content-warning">
+    <mat-icon>warning</mat-icon>
+    <span>{{ contentWarning() }}</span>
+  </div>
 }
 
 @if (title()) {
-<h3 class="media-title">{{ title() }}</h3>
+  <h3 class="media-title">{{ title() }}</h3>
 }
 
 @let videoInfo = videoData();
 @if (videoInfo) {
-<div class="video-container">
-  @if (!isExpanded()) {
-  <!-- Video Thumbnail (Initial State) -->
-  <div class="video-thumbnail-container" tabindex="0" role="button" (click)="expandVideo()"
-    (keyup.enter)="expandVideo()" (keyup.space)="expandVideo()">
-    @if (videoInfo.blurhash && !videoInfo.thumbnail) {
-    <img [src]="generateBlurhashDataUrl(videoInfo.blurhash, 400, 225)" class="video-thumbnail"
-      [alt]="videoInfo.alt || 'Video thumbnail'" [title]="videoInfo.title || 'Video thumbnail'" />
-    } @else if (videoInfo.thumbnail) {
-    <img [src]="videoInfo.thumbnail" class="video-thumbnail" [alt]="videoInfo.alt || 'Video thumbnail'"
-      [title]="videoInfo.title || 'Video thumbnail'" loading="lazy" />
+  <div class="video-container">
+    @if (!isExpanded()) {
+      <!-- Video Thumbnail (Initial State) -->
+      <div
+        class="video-thumbnail-container"
+        tabindex="0"
+        role="button"
+        (click)="expandVideo()"
+        (keyup.enter)="expandVideo()"
+        (keyup.space)="expandVideo()"
+      >
+        @if (videoInfo.blurhash && !videoInfo.thumbnail) {
+          <img
+            [src]="generateBlurhashDataUrl(videoInfo.blurhash, 400, 225)"
+            class="video-thumbnail"
+            [alt]="videoInfo.alt || 'Video thumbnail'"
+            [title]="videoInfo.title || 'Video thumbnail'"
+          />
+        } @else if (videoInfo.thumbnail) {
+          <img
+            [src]="videoInfo.thumbnail"
+            class="video-thumbnail"
+            [alt]="videoInfo.alt || 'Video thumbnail'"
+            [title]="videoInfo.title || 'Video thumbnail'"
+            loading="lazy"
+          />
+        } @else {
+          <div class="video-thumbnail-placeholder">
+            <mat-icon class="video-placeholder-icon"
+              >play_circle_outline</mat-icon
+            >
+          </div>
+        }
+
+        <!-- Play button overlay -->
+        <div class="video-play-overlay">
+          <mat-icon class="play-button">play_circle_filled</mat-icon>
+        </div>
+
+        @if (videoInfo.duration) {
+          <div class="video-duration">
+            {{ formatDuration(videoInfo.duration) }}
+          </div>
+        }
+      </div>
     } @else {
-    <div class="video-thumbnail-placeholder">
-      <mat-icon class="video-placeholder-icon">play_circle_outline</mat-icon>
-    </div>
-    }
-
-    <!-- Play button overlay -->
-    <div class="video-play-overlay">
-      <mat-icon class="play-button">play_circle_filled</mat-icon>
-    </div>
-
-    @if (videoInfo.duration) {
-    <div class="video-duration">
-      {{ formatDuration(videoInfo.duration) }}
-    </div>
-    }
-  </div>
-  } @else {
-  <!-- Video Player (Expanded State) -->
-  <div class="video-player-container">
-    <video controls class="video-player" autoplay [poster]="
+      <!-- Video Player (Expanded State) -->
+      <div class="video-player-container">
+        <video
+          controls
+          class="video-player"
+          autoplay
+          [poster]="
             videoInfo.thumbnail ||
             (videoInfo.blurhash
               ? generateBlurhashDataUrl(videoInfo.blurhash, 400, 225)
               : undefined)
-          ">
-      <source [src]="videoInfo.url" type="video/mp4" />
-      Your browser does not support the video tag.
-    </video>
-    <button mat-icon-button class="collapse-video-btn" (click)="collapseVideo()" matTooltip="Show thumbnail">
-      <mat-icon>picture_in_picture_alt</mat-icon>
-    </button>
+          "
+        >
+          <source [src]="videoInfo.url" type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+        <button
+          mat-icon-button
+          class="collapse-video-btn"
+          (click)="collapseVideo()"
+          matTooltip="Show thumbnail"
+        >
+          <mat-icon>picture_in_picture_alt</mat-icon>
+        </button>
+      </div>
+    }
   </div>
-  }
-</div>
 }
 
 @if (description()) {
-<p class="video-description">
-  {{ description() }}
-</p>
+  <p class="video-description">
+    {{ description() }}
+  </p>
 }
