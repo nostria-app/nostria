@@ -35,7 +35,7 @@ Nostria implements the usage of the Nostr protocol to ensure maximum decentraliz
 - [x] [NIP-07: `window.nostr` capability for web browsers](https://github.com/nostr-protocol/nips/blob/master/07.md)
 - [ ] [NIP-08: Handling Mentions](https://github.com/nostr-protocol/nips/blob/master/08.md)
 - [ ] [NIP-09: Event Deletion](https://github.com/nostr-protocol/nips/blob/master/09.md)
-- [x] [NIP-10: Conventions for clients' use of `e` and `p` tags in text events](https://github.com/nostr-protocol/nips/blob/master/10.md)
+- [x] [NIP-10: Text Notes and Threads](https://github.com/nostr-protocol/nips/blob/master/10.md)
 - [x] [NIP-11: Relay Information Document](https://github.com/nostr-protocol/nips/blob/master/11.md)
 - [ ] [NIP-14: Subject tag in text events](https://github.com/nostr-protocol/nips/blob/master/14.md)
 - [x] [NIP-17: Private Direct Messages](https://github.com/nostr-protocol/nips/blob/master/17.md)
