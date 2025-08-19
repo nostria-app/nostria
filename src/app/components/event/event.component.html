@@ -10,7 +10,16 @@
   <mat-card class="note-card" [class.plain]="isPlain()" appearance="outlined">
     @if (repostedRecord() !== null) {
       <mat-card-header class="repost-header">
-        <mat-icon>repeat</mat-icon> Reposted
+        <mat-icon>repeat</mat-icon>
+        <span>
+          Reposted
+          <span
+            [matTooltip]="item.event.created_at * 1000 | date: 'medium'"
+            matTooltipPosition="below"
+          >
+            {{ item.event.created_at | ago }}
+          </span>
+        </span>
       </mat-card-header>
       <mat-card-content>
         <mat-card appearance="outlined">
