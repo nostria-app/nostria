@@ -3,7 +3,6 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import type { Event, UnsignedEvent } from 'nostr-tools';
 import { kinds } from 'nostr-tools';
 import type { NostrRecord } from '../interfaces';
-import { AccountRelayServiceEx } from './relays/account-relay';
 import { NostrService } from './nostr.service';
 import { UtilitiesService } from './utilities.service';
 
@@ -12,14 +11,13 @@ import { UtilitiesService } from './utilities.service';
 })
 export class RepostService {
   private nostrService = inject(NostrService);
-  private accountRelayService = inject(AccountRelayServiceEx);
   private snackBar = inject(MatSnackBar);
   private utilities = inject(UtilitiesService);
 
   async repostNote(event: Event): Promise<boolean> {
     const repostEvent = this.createRepostEvent(event);
 
-    const published = await this.signAndPublish(repostEvent);
+    const published = await this.nostrService.signAndPublish(repostEvent);
     if (published) {
       this.snackBar.open('Note reposted successfully!', 'Dismiss', {
         duration: 3000,
@@ -40,7 +38,7 @@ export class RepostService {
     // Create the event
     const deleteEvent = this.nostrService.createRetractionEvent(event);
 
-    const published = await this.signAndPublish(deleteEvent);
+    const published = await this.nostrService.signAndPublish(deleteEvent);
     if (published) {
       this.snackBar.open('Repost deletion was requested', 'Dismiss', {
         duration: 3000,
@@ -71,18 +69,5 @@ export class RepostService {
       JSON.stringify(event),
       [...tags, ['k', String(event.kind)]]
     );
-  }
-
-  private async signAndPublish(event: UnsignedEvent): Promise<boolean> {
-    const signedEvent = await this.nostrService.signEvent(event);
-
-    const publishPromises = await this.accountRelayService.publish(signedEvent);
-
-    if (publishPromises) {
-      await Promise.allSettled(publishPromises);
-      return true;
-    } else {
-      return false;
-    }
   }
 }
