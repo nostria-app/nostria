@@ -15,6 +15,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Event, kinds } from 'nostr-tools';
 import { NostrRecord } from '../../interfaces';
+import { AgoPipe } from '../../pipes/ago.pipe';
 import { ApplicationService } from '../../services/application.service';
 import { BookmarkService } from '../../services/bookmark.service';
 import { DataService } from '../../services/data.service';
@@ -23,7 +24,7 @@ import { RepostService } from '../../services/repost.service';
 import { ContentComponent } from '../content/content.component';
 import { ReplyButtonComponent } from './reply-button/reply-button.component';
 import { EventHeaderComponent } from './header/header.component';
-import { CommonModule } from '@angular/common';
+import { CommonModule, DatePipe } from '@angular/common';
 import { AccountStateService } from '../../services/account-state.service';
 import { MatMenuModule } from '@angular/material/menu';
 import { EventService } from '../../services/event';
@@ -34,6 +35,8 @@ type EventCardAppearance = 'card' | 'plain';
 @Component({
   selector: 'app-event',
   imports: [
+    AgoPipe,
+    DatePipe,
     CommonModule,
     ReplyButtonComponent,
     EventHeaderComponent,
