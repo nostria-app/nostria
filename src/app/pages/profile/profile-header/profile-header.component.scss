@@ -18,13 +18,13 @@
   gap: 1.5rem; // Space between the two divs
 
   // First div should always be 168px width
-  > div:first-child {
+  >div:first-child {
     flex: 0 0 168px; // Don't grow or shrink, always 168px
     width: 168px;
   }
 
   // Second div should take remaining space
-  > div:last-child {
+  >div:last-child {
     flex: 1;
   }
 
@@ -57,7 +57,7 @@
     position: initial;
 
     // First div should be fixed at 80px in compact mode
-    > div:first-child {
+    >div:first-child {
       flex: 0 0 80px !important; // Don't grow or shrink, always 80px
       width: 80px !important;
       align-self: auto;
@@ -388,6 +388,17 @@
   padding: 16px;
   box-shadow: var(--mat-sys-level3);
   margin-top: 8px;
+  cursor: pointer;
+  transition: box-shadow 0.2s ease;
+
+  &:hover {
+    box-shadow: var(--mat-sys-level4);
+  }
+
+  &:focus {
+    outline: 2px solid var(--mat-sys-primary);
+    outline-offset: 2px;
+  }
 
   qrcode {
     display: block;
@@ -396,4 +407,36 @@
 
 .lightning-item {
   cursor: pointer;
+
+  span {
+    cursor: pointer;
+    transition: color 0.2s ease;
+
+    &:hover {
+      color: var(--mat-sys-primary);
+    }
+
+    &:focus {
+      outline: 2px solid var(--mat-sys-primary);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+  }
+}
+
+.profile-item.pointer {
+  span {
+    cursor: pointer;
+    transition: color 0.2s ease;
+
+    &:hover {
+      color: var(--mat-sys-primary);
+    }
+
+    &:focus {
+      outline: 2px solid var(--mat-sys-primary);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+  }
 }
