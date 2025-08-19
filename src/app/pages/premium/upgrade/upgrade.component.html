@@ -145,7 +145,7 @@
                 <ul class="feature-list">
                   @for (
                     feature of getFeatureDescriptions(tier);
-                    track feature
+                    track $index
                   ) {
                     <li>{{ feature }}</li>
                   }

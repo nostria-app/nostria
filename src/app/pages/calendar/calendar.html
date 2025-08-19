@@ -134,16 +134,16 @@
       <div class="month-view">
         <!-- Day headers -->
         <div class="day-headers">
-          @for (day of dayNames; track day) {
+          @for (day of dayNames; track $index) {
           <div class="day-header">{{ day }}</div>
           }
         </div>
 
         <!-- Calendar grid -->
         <div class="calendar-grid">
-          @for (week of calendarGrid(); track week) {
+          @for (week of calendarGrid(); track $index) {
           <div class="week-row">
-            @for (date of week; track date) {
+            @for (date of week; track date.getTime()) {
             <div
               class="calendar-day"
               [class.other-month]="!isCurrentMonth(date)"
@@ -207,13 +207,13 @@
 
         <div class="week-grid">
           <!-- Time slots -->
-          @for (hour of hoursArray; track hour) {
+          @for (hour of hoursArray; track $index) {
           <div class="time-slot">
             <div class="time-label">
               {{ hour.toString().padStart(2, '0') }}:00
             </div>
 
-            @for (day of weekDaysArray; track day) {
+            @for (day of weekDaysArray; track $index) {
             <div class="hour-cell" (click)="selectWeekCell(day, hour)">
               <!-- Events for this hour -->
               @for (event of getEventsForWeekHour(day, hour); track event.id) {

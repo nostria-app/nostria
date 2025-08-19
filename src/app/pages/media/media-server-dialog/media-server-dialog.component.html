@@ -29,7 +29,7 @@
     <div class="suggested-servers">
       <h3 class="suggested-title">Suggested servers:</h3>
       <mat-chip-listbox [multiple]="false" class="server-chips">
-        @for (server of suggestedServers(); track server) {
+        @for (server of suggestedServers(); track $index) {
           <mat-chip-option (click)="selectSuggestedServer(server)">
             {{ server.replace('https://', '') }}
           </mat-chip-option>

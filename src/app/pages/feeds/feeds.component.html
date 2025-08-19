@@ -269,7 +269,7 @@
               <div class="filters-section">
                 <h3>Filter by tags</h3>
                 <div class="tag-chips">
-                  @for (tag of availableTags(); track tag) {
+                  @for (tag of availableTags(); track $index) {
                     <mat-chip-option
                       [selected]="selectedTags().includes(tag)"
                       (click)="toggleTagFilter(tag)"

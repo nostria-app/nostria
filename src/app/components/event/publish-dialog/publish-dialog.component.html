@@ -70,7 +70,7 @@
       @if (customRelays().length > 0) {
         <div class="custom-relays-list">
           <mat-chip-listbox>
-            @for (relay of customRelays(); track relay) {
+            @for (relay of customRelays(); track $index) {
               <mat-chip-option>
                 {{ relay }}
                 <button matChipRemove (click)="removeCustomRelay(relay)">
@@ -123,7 +123,7 @@
       <h4>Target Relays</h4>
       <div class="relays-list">
         @if (getTargetRelays().length > 0) {
-          @for (relay of getTargetRelays(); track relay) {
+          @for (relay of getTargetRelays(); track $index) {
             <div class="relay-item">
               <mat-icon>dns</mat-icon>
               <span class="relay-url">{{ relay }}</span>
