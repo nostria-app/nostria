@@ -375,7 +375,7 @@ export class EventService {
   async loadReactions(
     eventId: string,
     pubkey: string,
-    invalidateCache = false,
+    invalidateCache = false
   ): Promise<ReactionEvents> {
     this.logger.info(
       'loadReactions called with eventId:',
@@ -590,7 +590,8 @@ export class EventService {
    */
   async loadReposts(
     eventId: string,
-    userPubkey: string
+    userPubkey: string,
+    invalidateCache = false
   ): Promise<NostrRecord[]> {
     this.logger.info(
       'loadReposts called with eventId:',
@@ -618,7 +619,8 @@ export class EventService {
         eventId,
         {
           save: false,
-          cache: false, // cannot cache until we have stale-while-revalidate strategy implemented
+          cache: true,
+          invalidateCache,
         }
       );
 
