@@ -231,7 +231,7 @@ export class EventComponent {
     const event = this.event();
     if (!event) return;
     const likeEvent = this.likeReaction();
-    if (!!likeEvent) {
+    if (likeEvent) {
       await this.reactionService.deleteReaction(likeEvent.event);
     } else {
       await this.reactionService.addLike(event);
