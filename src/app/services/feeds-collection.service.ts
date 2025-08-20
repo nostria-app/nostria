@@ -205,6 +205,23 @@ export class FeedsCollectionService {
   }
 
   /**
+   * Reset all feeds to defaults (delegates to FeedService)
+   */
+  resetToDefaults(): void {
+    this.feedService.resetToDefaults();
+
+    // Clear active feed ID from local storage
+    this.localStorageService.removeItem(this.ACTIVE_FEED_KEY);
+
+    // Set first default feed as active
+    const defaultFeeds = this.feeds();
+    if (defaultFeeds.length > 0) {
+      this._activeFeedId.set(defaultFeeds[0].id);
+      this.saveActiveFeed();
+    }
+  }
+
+  /**
    * Get feed by ID
    */
   getFeedById(id: string): FeedDefinition | undefined {

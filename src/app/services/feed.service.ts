@@ -1129,6 +1129,26 @@ export class FeedService {
   }
 
   /**
+   * Reset all feeds to default configuration
+   */
+  resetToDefaults(): void {
+    // Unsubscribe from all current feeds
+    const currentFeeds = this._feeds();
+    currentFeeds.forEach(feed => {
+      this.unsubscribeFromFeed(feed.id);
+    });
+
+    // Clear active feed
+    this._activeFeedId.set(null);
+
+    // Reset feeds to defaults
+    this._feeds.set(DEFAULT_FEEDS);
+    this.saveFeeds();
+
+    this.logger.debug('Reset all feeds to defaults');
+  }
+
+  /**
    * Get a feed by ID
    */
   getFeedById(id: string): FeedConfig | undefined {

@@ -71,6 +71,10 @@
               <mat-icon>delete</mat-icon>
               <span>Delete Feed</span>
             </button>
+            <button mat-menu-item (click)="resetFeeds()">
+              <mat-icon>restore</mat-icon>
+              <span>Reset Feeds</span>
+            </button>
             <mat-divider></mat-divider>
             <button mat-menu-item routerLink="/settings/algorithm">
               <mat-icon>model_training</mat-icon>
