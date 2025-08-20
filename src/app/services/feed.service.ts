@@ -37,7 +37,7 @@ export interface ColumnConfig {
   label: string;
   icon: string;
   path?: string;
-  type: 'notes' | 'articles' | 'photos' | 'videos' | 'custom';
+  type: 'notes' | 'articles' | 'photos' | 'videos' | 'music' | 'custom';
   kinds: number[];
   source?: 'following' | 'public';
   relayConfig: 'user' | 'discovery' | 'custom';
@@ -132,13 +132,34 @@ const DEFAULT_FEEDS: FeedConfig[] = [
     description: 'Default feed with articles from following',
     columns: [
       {
-        id: 'notes',
+        id: 'articles',
         label: 'Articles (Following)',
-        icon: 'chat',
+        icon: 'article',
         type: 'articles',
         kinds: [30023],
         source: 'following',
         relayConfig: 'user',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      },
+    ],
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  },
+  {
+    id: 'default-feed-music',
+    label: 'Music',
+    icon: 'library_music',
+    description: 'Discover music playlists from the network',
+    columns: [
+      {
+        id: 'music-playlists',
+        label: 'Music Playlists',
+        icon: 'music_note',
+        type: 'music',
+        kinds: [32100],
+        source: 'public',
+        relayConfig: 'discovery',
         createdAt: Date.now(),
         updatedAt: Date.now(),
       },
@@ -340,7 +361,8 @@ export class FeedService {
     if (column.source === 'following') {
       await this.loadFollowingFeed(item);
     } else {
-      // Subscribe to relay events
+      // Subscribe to relay events using account relay
+      // TODO: Implement proper relay selection based on column.relayConfig
       const sub = this.accountRelay.subscribe([item.filter], event => {
         // Filter out live events that are muted.
         if (this.accountState.muted(event)) {

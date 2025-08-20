@@ -65,6 +65,7 @@ const NOSTR_KINDS = [
   { value: 30023, label: 'Long-form Content (30023)' },
   { value: 30024, label: 'Draft Long-form Content (30024)' },
   { value: 30078, label: 'Application-specific Data (30078)' },
+  { value: 32100, label: 'M3U Playlist (32100)' },
 ];
 
 @Component({
@@ -744,7 +745,13 @@ export class NewColumnDialogComponent {
   selectColumnType(typeKey: string): void {
     this.selectedColumnType.set(typeKey);
     this.columnForm.patchValue({
-      type: typeKey as 'photos' | 'videos' | 'notes' | 'articles' | 'custom',
+      type: typeKey as
+        | 'photos'
+        | 'videos'
+        | 'notes'
+        | 'articles'
+        | 'music'
+        | 'custom',
     });
 
     // Auto-fill based on column type
