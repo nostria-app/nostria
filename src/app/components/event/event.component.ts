@@ -31,7 +31,6 @@ import { MatMenuModule } from '@angular/material/menu';
 import { EventService, ReactionEvents } from '../../services/event';
 import { AccountRelayServiceEx } from '../../services/relays/account-relay';
 import { ReactionService } from '../../services/reaction.service';
-import { NostrService } from '../../services/nostr.service';
 
 type EventCardAppearance = 'card' | 'plain';
 
@@ -66,7 +65,6 @@ export class EventComponent {
   bookmark = inject(BookmarkService);
   repostService = inject(RepostService);
   reactionService = inject(ReactionService);
-  nostrService = inject(NostrService);
   layout = inject(LayoutService);
   accountRelay = inject(AccountRelayServiceEx);
   dialog = inject(MatDialog);
