@@ -487,12 +487,9 @@ export class UserDataService {
       const records = this.cache.get<NostrRecord[]>(cacheKey);
 
       if (records) {
-        console.log('kind', kind, 'cache hit', cacheKey, options);
         return records;
       }
     }
-
-    console.log('kind', kind, 'cache MISS', cacheKey, options);
 
     // If the caller explicitly don't want to save, we will not check the storage.
     if (events.length === 0 && options?.save) {
