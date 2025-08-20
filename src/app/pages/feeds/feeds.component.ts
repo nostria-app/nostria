@@ -1348,6 +1348,26 @@ export class FeedsComponent implements OnDestroy {
     });
   }
 
+  resetFeeds(): void {
+    // Show confirmation dialog with strong warning
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Reset Feeds',
+        message:
+          'Are you sure you want to reset all feeds to defaults? This will permanently delete all your custom feeds and columns. This action cannot be undone.',
+        confirmText: 'Reset Feeds',
+        cancelText: 'Cancel',
+        confirmColor: 'warn',
+      } as ConfirmDialogData,
+    });
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.feedsCollectionService.resetToDefaults();
+        this.notificationService.notify('Feeds have been reset to defaults');
+      }
+    });
+  }
+
   /**
    * Get M3U playlist data from event
    */
