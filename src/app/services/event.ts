@@ -17,6 +17,11 @@ export interface Reaction {
   count: number;
 }
 
+export interface ReactionEvents {
+  events: NostrRecord[];
+  data: Map<string, number>;
+}
+
 export interface ThreadedEvent {
   event: Event;
   replies: ThreadedEvent[];
@@ -340,14 +345,11 @@ export class EventService {
   }
 
   /**
-   * Load replies and reactions for an event
+   * Load replies for an event
    */
-  async loadRepliesAndReactions(
-    eventId: string,
-    pubkey: string
-  ): Promise<{ replies: Event[]; reactions: Reaction[] }> {
+  async loadReplies(eventId: string, pubkey: string): Promise<Event[]> {
     this.logger.info(
-      'loadRepliesAndReactions called with eventId:',
+      'loadReplies called with eventId:',
       eventId,
       'pubkey:',
       pubkey
@@ -375,20 +377,62 @@ export class EventService {
         }
       );
 
+      // Extract events from records and filter valid replies
+      const replies = replyRecords
+        .map(record => record.event)
+        .filter(event => event.content && event.content.trim().length > 0);
+
+      this.logger.info(
+        'Successfully loaded replies for event:',
+        eventId,
+        'replies:',
+        replies.length
+      );
+
+      return replies;
+    } catch (error) {
+      this.logger.error('Error loading replies:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Load reactions for an event
+   */
+  async loadReactions(
+    eventId: string,
+    pubkey: string,
+    invalidateCache = false
+  ): Promise<ReactionEvents> {
+    this.logger.info(
+      'loadReactions called with eventId:',
+      eventId,
+      'pubkey:',
+      pubkey
+    );
+
+    let userData = this.cache.get<UserDataService>('user-data-' + pubkey);
+
+    if (!userData) {
+      userData = await this.userDataFactory.create(pubkey);
+
+      this.cache.set('user-data-' + pubkey, userData, {
+        maxSize: 20,
+        ttl: 1000 * 60,
+      });
+    }
+
+    try {
       // Load reactions (kind 7 events that reference this event)
       const reactionRecords = await userData.getEventsByKindAndEventTag(
         kinds.Reaction,
         eventId,
         {
           save: false,
-          cache: false,
+          cache: true,
+          invalidateCache,
         }
       );
-
-      // Extract events from records and filter valid replies
-      const replies = replyRecords
-        .map(record => record.event)
-        .filter(event => event.content && event.content.trim().length > 0);
 
       // Count reactions by emoji
       const reactionCounts = new Map<string, number>();
@@ -403,19 +447,43 @@ export class EventService {
       const reactions = this.mapToReactionArray(reactionCounts);
 
       this.logger.info(
-        'Successfully loaded replies and reactions for event:',
+        'Successfully loaded reactions for event:',
         eventId,
-        'replies:',
-        replies.length,
         'reactions:',
         reactions.length
       );
 
-      return { replies, reactions };
+      return {
+        events: reactionRecords,
+        data: reactionCounts,
+      };
     } catch (error) {
-      this.logger.error('Error loading replies and reactions:', error);
-      return { replies: [], reactions: [] };
+      this.logger.error('Error loading reactions:', error);
+      return { events: [], data: new Map() };
     }
+  }
+
+  /**
+   * Load replies and reactions for an event
+   * @deprecated Use loadReplies and loadReactions separately
+   */
+  async loadRepliesAndReactions(
+    eventId: string,
+    pubkey: string
+  ): Promise<{ replies: Event[]; reactions: Reaction[] }> {
+    this.logger.info(
+      'loadRepliesAndReactions called with eventId:',
+      eventId,
+      'pubkey:',
+      pubkey
+    );
+
+    const [replies, reactions] = await Promise.all([
+      this.loadReplies(eventId, pubkey),
+      this.loadReactions(eventId, pubkey),
+    ]);
+
+    return { replies, reactions: this.mapToReactionArray(reactions.data) };
   }
 
   /**
@@ -549,7 +617,8 @@ export class EventService {
    */
   async loadReposts(
     eventId: string,
-    userPubkey: string
+    userPubkey: string,
+    invalidateCache = false
   ): Promise<NostrRecord[]> {
     this.logger.info(
       'loadReposts called with eventId:',
@@ -577,7 +646,8 @@ export class EventService {
         eventId,
         {
           save: false,
-          cache: false, // cannot cache until we have stale-while-revalidate strategy implemented
+          cache: true,
+          invalidateCache,
         }
       );
 

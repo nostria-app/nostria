@@ -45,17 +45,20 @@
       @if (app.enabledFeature('beta')) {
         <button
           mat-button
-          [ngClass]="{ active: !!repostByCurrentAccount() }"
+          [ngClass]="{
+            active: !!repostByCurrentAccount(),
+            'only-icon': !reposts().length && !isLoadingReposts(),
+          }"
           [matMenuTriggerFor]="menu"
           [disabled]="isLoadingReposts()"
         >
+          <mat-icon>repeat</mat-icon>
           @if (isLoadingReposts()) {
-            <mat-spinner diameter="16"></mat-spinner>
+            <mat-spinner diameter="18"></mat-spinner>
           } @else {
-            <ng-container>
-              <mat-icon>repeat</mat-icon>
+            @if (reposts().length > 0) {
               {{ reposts().length }}
-            </ng-container>
+            }
           }
         </button>
 
@@ -77,6 +80,24 @@
           </button>
         </mat-menu>
       }
+      <button
+        mat-button
+        [ngClass]="{
+          active: !!likeReaction(),
+          'only-icon': !likes().length && !isLoadingReactions(),
+        }"
+        [disabled]="isLoadingReactions()"
+        (click)="toggleLike()"
+      >
+        <mat-icon>favorite</mat-icon>
+        @if (isLoadingReactions()) {
+          <mat-spinner diameter="18"></mat-spinner>
+        } @else {
+          @if (likes().length > 0) {
+            {{ (likes() || []).length }}
+          }
+        }
+      </button>
 
       <button mat-icon-button class="note-footer-right">
         <mat-icon
