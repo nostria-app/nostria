@@ -1,8 +1,10 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, input, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { Event } from 'nostr-tools';
+import { MediaPlayerService } from '../../services/media-player.service';
+import { MediaItem } from '../../interfaces';
 
 interface PlaylistTrack {
   url: string;
@@ -29,6 +31,9 @@ interface PlaylistData {
 export class PlaylistEventComponent {
   event = input.required<Event>();
 
+  // Inject the media player service
+  private mediaPlayerService = inject(MediaPlayerService);
+
   // Playlist data parsed from the event
   playlistData = computed(() => {
     const event = this.event();
@@ -54,18 +59,85 @@ export class PlaylistEventComponent {
   });
 
   playPlaylist(playlistData: PlaylistData): void {
-    // This would integrate with the media player service
     console.log('Playing playlist:', playlistData.title);
 
-    // For now, just open the first track
-    if (playlistData.tracks.length > 0) {
-      window.open(playlistData.tracks[0].url, '_blank', 'noopener,noreferrer');
+    if (playlistData.tracks.length === 0) {
+      console.warn('No tracks in playlist');
+      return;
+    }
+
+    // Clear current queue and add all tracks
+    this.mediaPlayerService.clearQueue();
+
+    // Convert playlist tracks to MediaItems
+    const mediaItems: MediaItem[] = playlistData.tracks.map((track, index) => ({
+      source: track.url,
+      title: track.title || `Track ${index + 1}`,
+      artist: track.artist || 'Unknown Artist',
+      artwork: '/icons/icon-192x192.png', // Default artwork
+      type: this.getMediaType(track.url),
+    }));
+
+    // Add first track and start playing
+    if (mediaItems.length > 0) {
+      this.mediaPlayerService.play(mediaItems[0]);
+
+      // Add remaining tracks to queue
+      for (let i = 1; i < mediaItems.length; i++) {
+        this.mediaPlayerService.enque(mediaItems[i]);
+      }
     }
   }
 
   addPlaylistToQueue(playlistData: PlaylistData): void {
-    // This would integrate with the media player service
     console.log('Adding playlist to queue:', playlistData.title);
+
+    if (playlistData.tracks.length === 0) {
+      console.warn('No tracks in playlist');
+      return;
+    }
+
+    // Convert playlist tracks to MediaItems and add to queue
+    const mediaItems: MediaItem[] = playlistData.tracks.map((track, index) => ({
+      source: track.url,
+      title: track.title || `Track ${index + 1}`,
+      artist: track.artist || 'Unknown Artist',
+      artwork: '/icons/icon-192x192.png', // Default artwork
+      type: this.getMediaType(track.url),
+    }));
+
+    // Add all tracks to queue
+    mediaItems.forEach(item => {
+      this.mediaPlayerService.enque(item);
+    });
+  }
+
+  private getMediaType(url: string): 'Music' | 'Podcast' | 'YouTube' | 'Video' {
+    if (!url) return 'Music';
+
+    // Check for YouTube URLs
+    if (url.includes('youtube.com') || url.includes('youtu.be')) {
+      return 'YouTube';
+    }
+
+    // Check for video file extensions
+    const videoExtensions = [
+      '.mp4',
+      '.webm',
+      '.ogg',
+      '.avi',
+      '.mov',
+      '.wmv',
+      '.flv',
+      '.mkv',
+    ];
+    const lowercaseUrl = url.toLowerCase();
+    if (videoExtensions.some(ext => lowercaseUrl.includes(ext))) {
+      return 'Video';
+    }
+
+    // Default to Music for music playlists
+    return 'Music';
   }
 
   private getPlaylistData(event: Event): PlaylistData | null {
