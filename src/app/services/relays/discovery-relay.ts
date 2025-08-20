@@ -11,8 +11,7 @@ import { kinds, SimplePool } from 'nostr-tools';
 })
 export class DiscoveryRelayServiceEx
   extends RelayServiceBase
-  implements NostriaService
-{
+  implements NostriaService {
   private readonly utilities = inject(UtilitiesService);
   private localStorage = inject(LocalStorageService);
   private appState = inject(ApplicationStateService);
@@ -58,7 +57,7 @@ export class DiscoveryRelayServiceEx
     this.initialized = true;
   }
 
-  clear() {}
+  clear() { }
 
   save(relayUrls: string[]) {
     // Save to local storage
