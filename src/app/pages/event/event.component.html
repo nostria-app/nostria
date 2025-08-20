@@ -24,14 +24,14 @@
   <!-- Main event -->
   <app-event [event]="event()" appearance="plain"></app-event>
 
-  <div class="reactions">
+  <!-- <div class="reactions">
     @for (reaction of reactions(); track reaction.emoji) {
       <div class="reaction">
         <span class="emoji">{{ reaction.emoji }}</span>
         <span class="count">{{ reaction.count }}</span>
       </div>
     }
-  </div>
+  </div> -->
 
   @if (error()) {
     <div class="warn">
