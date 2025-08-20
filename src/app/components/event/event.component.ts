@@ -124,6 +124,7 @@ export class EventComponent {
         const record = this.data.toRecord(event);
         this.record.set(record);
         this.loadReactions();
+        this.loadReposts();
       });
     });
 
@@ -156,7 +157,7 @@ export class EventComponent {
     });
   }
 
-  async loadReposts() {
+  async loadReposts(invalidateCache = false) {
     const record = this.repostedRecord() || this.record();
     if (!record) return;
 
@@ -167,7 +168,8 @@ export class EventComponent {
     try {
       const reposts = await this.eventService.loadReposts(
         record.event.id,
-        userPubkey
+        userPubkey,
+        invalidateCache
       );
       this.reposts.set(reposts);
     } finally {
@@ -199,12 +201,14 @@ export class EventComponent {
     const event = this.event();
     if (!event) return;
     await this.repostService.repostNote(event);
+    await this.loadReposts(true);
   }
 
   async deleteRepost() {
     const repostItem = this.repostByCurrentAccount();
     if (!repostItem) return;
     await this.repostService.deleteRepost(repostItem.event);
+    await this.loadReposts(true);
   }
 
   createQuote() {
