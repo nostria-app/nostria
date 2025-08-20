@@ -82,14 +82,6 @@ export class EventComponent {
   isLoadingReactions = signal<boolean>(false);
   loadingError = signal<string | null>(null);
 
-  reactionsByCurrentAccount = computed<NostrRecord[] | undefined>(() => {
-    const event = this.event();
-    if (!event) return;
-    return this.reactions().events.filter(
-      r => r.event.pubkey === this.accountState.pubkey()
-    );
-  });
-
   likes = computed<NostrRecord[]>(() => {
     const event = this.event();
     if (!event) return [];
@@ -97,9 +89,9 @@ export class EventComponent {
   });
 
   likeReaction = computed<NostrRecord | undefined>(() => {
-    const myReactions = this.reactionsByCurrentAccount();
+    const myReactions = this.likes();
     if (!myReactions) return;
-    return myReactions.find(r => r.event.content === '+');
+    return myReactions.find(r => r.event.pubkey === this.accountState.pubkey());
   });
 
   repostedRecord = computed<NostrRecord | null>(() => {
