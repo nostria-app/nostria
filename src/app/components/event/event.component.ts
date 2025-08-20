@@ -90,6 +90,12 @@ export class EventComponent {
     );
   });
 
+  likes = computed<NostrRecord[]>(() => {
+    const event = this.event();
+    if (!event) return [];
+    return this.reactions().events.filter(r => r.event.content === '+');
+  });
+
   likeReaction = computed<NostrRecord | undefined>(() => {
     const myReactions = this.reactionsByCurrentAccount();
     if (!myReactions) return;
@@ -177,7 +183,7 @@ export class EventComponent {
     }
   }
 
-  async loadReactions() {
+  async loadReactions(invalidateCache = false) {
     const record = this.record();
     if (!record) return;
 
@@ -188,7 +194,8 @@ export class EventComponent {
     try {
       const reactions = await this.eventService.loadReactions(
         record.event.id,
-        userPubkey
+        userPubkey,
+        invalidateCache
       );
       this.reactions.set(reactions);
     } finally {
@@ -229,6 +236,6 @@ export class EventComponent {
     } else {
       await this.reactionService.addLike(event);
     }
-    await this.loadReactions();
+    await this.loadReactions(true);
   }
 }

@@ -374,7 +374,8 @@ export class EventService {
    */
   async loadReactions(
     eventId: string,
-    pubkey: string
+    pubkey: string,
+    invalidateCache = false,
   ): Promise<ReactionEvents> {
     this.logger.info(
       'loadReactions called with eventId:',
@@ -401,7 +402,8 @@ export class EventService {
         eventId,
         {
           save: false,
-          cache: false,
+          cache: true,
+          invalidateCache,
         }
       );
 
