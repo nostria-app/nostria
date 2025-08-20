@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Event, kinds, nip19, SimplePool } from 'nostr-tools';
+import { Event, kinds, nip19 } from 'nostr-tools';
 import { DecodedNevent } from 'nostr-tools/nip19';
 import { LoggerService } from './logger.service';
 import { DataService } from './data.service';
@@ -30,6 +30,8 @@ export interface EventTags {
   rootId: string | null;
   replyId: string | null;
   pTags: string[];
+  rootRelays: string[];
+  replyRelays: string[];
 }
 
 export interface ThreadData {
@@ -64,6 +66,8 @@ export class EventService {
     let rootId: string | null = null;
     let replyId: string | null = null;
     let author: string | null = null;
+    const rootRelays: string[] = [];
+    const replyRelays: string[] = [];
 
     // Find root tag (NIP-10 marked format)
     const rootTag = eTags.find(tag => tag[3] === 'root');
@@ -71,15 +75,28 @@ export class EventService {
       rootId = rootTag[1];
       // Extract author pubkey from root tag if present (5th element)
       author = rootTag[4] || null;
+      // Extract relay URL from root tag if present (3rd element)
+      if (rootTag[2] && rootTag[2].trim() !== '') {
+        rootRelays.push(rootTag[2]);
+      }
     }
 
     // Find reply tag (NIP-10 marked format)
     const replyTag = eTags.find(tag => tag[3] === 'reply');
     if (replyTag) {
       replyId = replyTag[1];
+      // Extract relay URL from reply tag if present (3rd element)
+      if (replyTag[2] && replyTag[2].trim() !== '') {
+        replyRelays.push(replyTag[2]);
+      }
     } else if (eTags.length > 0 && !rootTag) {
       // Fallback to positional format: assume replying to the last e tag
-      replyId = eTags[eTags.length - 1][1];
+      const lastETag = eTags[eTags.length - 1];
+      replyId = lastETag[1];
+      // Extract relay URL from last e tag if present
+      if (lastETag[2] && lastETag[2].trim() !== '') {
+        replyRelays.push(lastETag[2]);
+      }
     }
 
     // If no marked root but we have e-tags, use positional format
@@ -90,15 +107,25 @@ export class EventService {
         replyId = eTags[0][1];
         // Extract author from the single e-tag if present
         author = eTags[0][4] || null;
+        // Extract relay URL - use for both root and reply
+        if (eTags[0][2] && eTags[0][2].trim() !== '') {
+          const relayUrl = eTags[0][2];
+          rootRelays.push(relayUrl);
+          replyRelays.push(relayUrl);
+        }
       } else if (eTags.length >= 2) {
         // First e-tag is root in positional format
         rootId = eTags[0][1];
         // Extract author from the first e-tag if present
         author = eTags[0][4] || null;
+        // Extract relay URL from first e-tag (root)
+        if (eTags[0][2] && eTags[0][2].trim() !== '') {
+          rootRelays.push(eTags[0][2]);
+        }
       }
     }
 
-    return { author, rootId, replyId, pTags };
+    return { author, rootId, replyId, pTags, rootRelays, replyRelays };
   }
 
   /**
