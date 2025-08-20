@@ -12,6 +12,7 @@ import { UserRelayServiceEx } from './relays/user-relay';
 
 export interface DataOptions {
   cache: boolean; // Whether to use cache
+  invalidateCache?: boolean;
   save: boolean; // Whether to save the event to storage
 }
 
@@ -63,7 +64,7 @@ export class UserDataService {
     let event: Event | null = null;
     let record: NostrRecord | undefined = undefined;
 
-    if (options?.cache) {
+    if (options?.cache && !options?.invalidateCache) {
       record = this.cache.get<NostrRecord>(`${id}`);
 
       if (record) {
@@ -87,7 +88,7 @@ export class UserDataService {
 
     record = this.toRecord(event);
 
-    if (options?.cache) {
+    if (options?.cache || options?.invalidateCache) {
       this.cache.set(`${id}`, record, options);
     }
 
@@ -275,7 +276,7 @@ export class UserDataService {
     let event: Event | null = null;
     let record: NostrRecord | undefined = undefined;
 
-    if (options?.cache) {
+    if (options?.cache && !options?.invalidateCache) {
       record = this.cache.get<NostrRecord>(cacheKey);
 
       if (record) {
@@ -308,7 +309,7 @@ export class UserDataService {
 
     record = this.toRecord(event);
 
-    if (options?.cache) {
+    if (options?.cache || options?.invalidateCache) {
       this.cache.set(cacheKey, record, options);
     }
 
@@ -358,7 +359,7 @@ export class UserDataService {
     let event: Event | null = null;
     let record: NostrRecord | undefined = undefined;
 
-    if (options?.cache) {
+    if (options?.cache && !options?.invalidateCache) {
       record = this.cache.get<NostrRecord>(cacheKey);
 
       if (record) {
@@ -383,7 +384,7 @@ export class UserDataService {
 
     record = this.toRecord(event);
 
-    if (options?.cache) {
+    if (options?.cache || options?.invalidateCache) {
       this.cache.set(cacheKey, record, options);
     }
 
@@ -431,7 +432,7 @@ export class UserDataService {
     let events: Event[] = [];
     let records: NostrRecord[] = [];
 
-    if (options?.cache) {
+    if (options?.cache && !options?.invalidateCache) {
       const records = this.cache.get<NostrRecord[]>(cacheKey);
 
       if (records) {
@@ -460,7 +461,7 @@ export class UserDataService {
 
     records = events.map(event => this.toRecord(event));
 
-    if (options?.cache) {
+    if (options?.cache || options?.invalidateCache) {
       this.cache.set(cacheKey, records, options);
     }
 
@@ -482,7 +483,7 @@ export class UserDataService {
     let events: Event[] = [];
     let records: NostrRecord[] = [];
 
-    if (options?.cache) {
+    if (options?.cache && !options?.invalidateCache) {
       const records = this.cache.get<NostrRecord[]>(cacheKey);
 
       if (records) {
@@ -514,7 +515,7 @@ export class UserDataService {
 
     records = events.map(event => this.toRecord(event));
 
-    if (options?.cache) {
+    if (options?.cache || options?.invalidateCache) {
       this.cache.set(cacheKey, records, options);
     }
 

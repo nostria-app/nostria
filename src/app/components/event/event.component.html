@@ -77,6 +77,17 @@
           </button>
         </mat-menu>
       }
+      <button
+        mat-button
+        [ngClass]="{ active: !!likeReaction(), 'only-icon': !likes().length }"
+        [disabled]="isLoadingReactions()"
+        (click)="toggleLike()"
+      >
+        <mat-icon>favorite</mat-icon>
+        @if (likes().length > 0) {
+          {{ (likes() || []).length }}
+        }
+      </button>
 
       <button mat-icon-button class="note-footer-right">
         <mat-icon

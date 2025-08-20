@@ -28,8 +28,9 @@ import { EventHeaderComponent } from './header/header.component';
 import { CommonModule, DatePipe } from '@angular/common';
 import { AccountStateService } from '../../services/account-state.service';
 import { MatMenuModule } from '@angular/material/menu';
-import { EventService } from '../../services/event';
+import { EventService, ReactionEvents } from '../../services/event';
 import { AccountRelayServiceEx } from '../../services/relays/account-relay';
+import { ReactionService } from '../../services/reaction.service';
 
 type EventCardAppearance = 'card' | 'plain';
 
@@ -63,6 +64,7 @@ export class EventComponent {
   record = signal<NostrRecord | null>(null);
   bookmark = inject(BookmarkService);
   repostService = inject(RepostService);
+  reactionService = inject(ReactionService);
   layout = inject(LayoutService);
   accountRelay = inject(AccountRelayServiceEx);
   dialog = inject(MatDialog);
@@ -71,12 +73,26 @@ export class EventComponent {
   accountState = inject(AccountStateService);
   eventService = inject(EventService);
   reposts = signal<NostrRecord[]>([]);
+  reactions = signal<ReactionEvents>({ events: [], data: new Map() });
 
   // Loading states
   isLoadingEvent = signal<boolean>(false);
   isLoadingThread = signal<boolean>(false);
   isLoadingReposts = signal<boolean>(false);
+  isLoadingReactions = signal<boolean>(false);
   loadingError = signal<string | null>(null);
+
+  likes = computed<NostrRecord[]>(() => {
+    const event = this.event();
+    if (!event) return [];
+    return this.reactions().events.filter(r => r.event.content === '+');
+  });
+
+  likeReaction = computed<NostrRecord | undefined>(() => {
+    const myReactions = this.likes();
+    if (!myReactions) return;
+    return myReactions.find(r => r.event.pubkey === this.accountState.pubkey());
+  });
 
   repostedRecord = computed<NostrRecord | null>(() => {
     const event = this.event();
@@ -107,7 +123,7 @@ export class EventComponent {
       untracked(async () => {
         const record = this.data.toRecord(event);
         this.record.set(record);
-        // await this.loadReposts();
+        this.loadReactions();
       });
     });
 
@@ -159,6 +175,26 @@ export class EventComponent {
     }
   }
 
+  async loadReactions(invalidateCache = false) {
+    const record = this.record();
+    if (!record) return;
+
+    const userPubkey = this.accountState.pubkey();
+    if (!userPubkey) return;
+
+    this.isLoadingReactions.set(true);
+    try {
+      const reactions = await this.eventService.loadReactions(
+        record.event.id,
+        userPubkey,
+        invalidateCache
+      );
+      this.reactions.set(reactions);
+    } finally {
+      this.isLoadingReactions.set(false);
+    }
+  }
+
   async createRepost() {
     const event = this.event();
     if (!event) return;
@@ -181,5 +217,17 @@ export class EventComponent {
         // TODO: pass relay part of 'q' tag
       },
     });
+  }
+
+  async toggleLike() {
+    const event = this.event();
+    if (!event) return;
+    const likeEvent = this.likeReaction();
+    if (likeEvent) {
+      await this.reactionService.deleteReaction(likeEvent.event);
+    } else {
+      await this.reactionService.addLike(event);
+    }
+    await this.loadReactions(true);
   }
 }
