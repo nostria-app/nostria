@@ -486,6 +486,7 @@ export class UserDataService {
       const records = this.cache.get<NostrRecord[]>(cacheKey);
 
       if (records) {
+        console.log('kind', kind, 'cache hit')
         return records;
       }
     }
