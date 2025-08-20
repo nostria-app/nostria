@@ -129,16 +129,27 @@ const DEFAULT_FEEDS: FeedConfig[] = [
     id: 'default-feed-articles',
     label: 'Articles',
     icon: 'dynamic_feed',
-    description: 'Default feed with articles from following',
+    description: 'Articles from following and public network',
     columns: [
       {
-        id: 'articles',
+        id: 'articles-following',
         label: 'Articles (Following)',
-        icon: 'article',
+        icon: 'people',
         type: 'articles',
         kinds: [30023],
         source: 'following',
         relayConfig: 'user',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      },
+      {
+        id: 'articles-public',
+        label: 'Articles (Public)',
+        icon: 'public',
+        type: 'articles',
+        kinds: [30023],
+        source: 'public',
+        relayConfig: 'discovery',
         createdAt: Date.now(),
         updatedAt: Date.now(),
       },
@@ -450,7 +461,7 @@ export class FeedService {
           pubkey,
           {
             authors: [pubkey],
-            kinds: [kinds.ShortTextNote],
+            kinds: feedData.filter.kinds,
             limit: eventsPerUser,
             since: sevenDaysAgo,
           },
@@ -629,7 +640,7 @@ export class FeedService {
         // Fetch events older than the last timestamp
         const events = await userRelayEx.getEventsByPubkeyAndKind(
           pubkey,
-          kinds.ShortTextNote
+          feedData.filter.kinds[0] || kinds.ShortTextNote
         );
 
         if (events.length > 0) {
