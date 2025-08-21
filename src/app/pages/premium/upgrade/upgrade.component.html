@@ -143,10 +143,7 @@
               </mat-card-header>
               <mat-card-content class="fill-card-content">
                 <ul class="feature-list">
-                  @for (
-                    feature of getFeatureDescriptions(tier);
-                    track $index
-                  ) {
+                  @for (feature of getFeatureDescriptions(tier); track $index) {
                     <li>{{ feature }}</li>
                   }
                 </ul>
