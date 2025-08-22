@@ -14,7 +14,7 @@ export class Algorithms {
   private readonly metrics = inject(Metrics);
   private readonly favoritesService = inject(FavoritesService);
 
-  constructor() {}
+  constructor() { }
 
   async calculateProfileViewed(
     limit: number,
@@ -189,5 +189,100 @@ export class Algorithms {
       .sort((a, b) => b.engagementRate - a.engagementRate);
 
     return usersWithRate.slice(0, limit);
+  }
+
+  /**
+   * Get users for article content - uses more lenient criteria since articles are rarer
+   */
+  async getRecommendedUsersForArticles(limit = 20): Promise<UserMetric[]> {
+    const allMetrics = await this.metrics.getMetrics();
+    const favorites = this.favoritesService.favorites();
+    const following = this.accountState.followingList();
+
+    // For articles, use much more lenient criteria
+    const candidateUsers = allMetrics.filter(metric => {
+      const isFavorite = favorites.includes(metric.pubkey);
+      const isFollowing = following.includes(metric.pubkey);
+      const hasAnyEngagement =
+        (metric.engagementScore || 0) > 1 ||
+        metric.viewed > 1 ||
+        metric.read > 0 || // Specifically look for users whose content we've read
+        metric.lastInteraction > Date.now() - 90 * 24 * 60 * 60 * 1000; // 90 days instead of 30
+
+      return isFollowing && (hasAnyEngagement || isFavorite);
+    });
+
+    // Add favorites that don't have metrics yet
+    const metricsPublicKeys = new Set(allMetrics.map(m => m.pubkey));
+    const favoritesWithoutMetrics = favorites.filter(
+      pubkey => !metricsPublicKeys.has(pubkey) && following.includes(pubkey)
+    );
+
+    // Create minimal metrics for favorites without data
+    const favoriteMetrics: UserMetric[] = favoritesWithoutMetrics.map(
+      pubkey => ({
+        pubkey,
+        viewed: 0,
+        profileClicks: 0,
+        liked: 0,
+        read: 0,
+        replied: 0,
+        reposted: 0,
+        quoted: 0,
+        messaged: 0,
+        mentioned: 0,
+        timeSpent: 0,
+        lastInteraction: Date.now(),
+        firstInteraction: Date.now(),
+        updated: Date.now(),
+        engagementScore: 1,
+      })
+    );
+
+    // If we don't have enough candidates, add more from following list
+    const allCandidates = [...candidateUsers, ...favoriteMetrics];
+
+    if (allCandidates.length < limit) {
+      const candidatePubkeys = new Set(allCandidates.map(c => c.pubkey));
+      const additionalUsers = following
+        .filter(pubkey => !candidatePubkeys.has(pubkey))
+        .slice(0, limit - allCandidates.length)
+        .map(pubkey => ({
+          pubkey,
+          viewed: 0,
+          profileClicks: 0,
+          liked: 0,
+          read: 0,
+          replied: 0,
+          reposted: 0,
+          quoted: 0,
+          messaged: 0,
+          mentioned: 0,
+          timeSpent: 0,
+          lastInteraction: Date.now(),
+          firstInteraction: Date.now(),
+          updated: Date.now(),
+          engagementScore: 0.5,
+        }));
+
+      allCandidates.push(...additionalUsers);
+    }
+
+    // Calculate final score with read activity boost for articles
+    const scoredUsers = allCandidates.map(metric => {
+      const baseScore = metric.engagementScore || 0;
+      const favoriteBoost = favorites.includes(metric.pubkey) ? 5 : 0;
+      const readBoost = metric.read * 2; // Boost users whose content we've read
+
+      return {
+        ...metric,
+        finalScore: baseScore + favoriteBoost + readBoost,
+      };
+    });
+
+    // Sort by final score and return
+    return scoredUsers
+      .sort((a, b) => b.finalScore - a.finalScore)
+      .slice(0, limit);
   }
 }
