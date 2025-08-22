@@ -72,6 +72,7 @@ import { NavigationContextMenuComponent } from './components/navigation-context-
 import { nip47 } from 'nostr-tools';
 import { Wallets } from './services/wallets';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { EventService } from './services/event';
 
 interface NavItem {
   path: string;
@@ -138,6 +139,7 @@ export class App implements OnInit {
   nostrProtocol = inject(NostrProtocolService);
   publishQueue = inject(PublishQueueService);
   snackBar = inject(MatSnackBar);
+  eventService = inject(EventService);
   private readonly wallets = inject(Wallets);
   private readonly platform = inject(PLATFORM_ID);
   private readonly document = inject(DOCUMENT);

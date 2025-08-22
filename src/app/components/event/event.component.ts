@@ -214,7 +214,7 @@ export class EventComponent {
   createQuote() {
     const record = this.repostedRecord() || this.record();
     if (!record) return;
-    this.layout.createNote({
+    this.eventService.createNote({
       quote: {
         id: record.event.id,
         pubkey: record.event.pubkey,

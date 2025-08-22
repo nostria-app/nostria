@@ -11,6 +11,11 @@ import { DiscoveryRelayServiceEx } from './relays/discovery-relay';
 import { UserDataFactoryService } from './user-data-factory.service';
 import { Cache } from './cache';
 import { UserDataService } from './user-data.service';
+import {
+  NoteEditorDialogComponent,
+  NoteEditorDialogData,
+} from '../components/note-editor-dialog/note-editor-dialog.component';
+import { MatDialog } from '@angular/material/dialog';
 
 export interface Reaction {
   emoji: string;
@@ -60,6 +65,7 @@ export class EventService {
   private readonly discoveryRelay = inject(DiscoveryRelayServiceEx);
   private readonly userDataFactory = inject(UserDataFactoryService);
   private readonly cache = inject(Cache);
+  private readonly dialog = inject(MatDialog);
 
   /**
    * Parse event tags to extract thread information
@@ -662,5 +668,21 @@ export class EventService {
       this.logger.error('Error loading reposts for event:', eventId, error);
       return [];
     }
+  }
+
+  // Handler methods for different creation types
+  createNote(data: NoteEditorDialogData = {}): void {
+    // Open note editor dialog
+    const dialogRef = this.dialog.open(NoteEditorDialogComponent, {
+      width: '600px',
+      maxWidth: '90vw',
+      data,
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result?.published) {
+        console.log('Note published successfully:', result.event);
+      }
+    });
   }
 }

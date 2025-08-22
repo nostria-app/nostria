@@ -6,9 +6,9 @@
       matTooltipPosition="below"
       tabindex="0"
       role="button"
-      (click)="openEventWithNevent()"
-      (keyup.enter)="openEventWithNevent()"
-      (keyup.space)="openEventWithNevent()"
+      (click)="layout.openEvent(event().id, event())"
+      (keyup.enter)="layout.openEvent(event().id, event())"
+      (keyup.space)="layout.openEvent(event().id, event())"
     >
       {{ event().created_at | ago }}
     </a>
