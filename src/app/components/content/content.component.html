@@ -1,6 +1,6 @@
 <div class="content-container" #contentContainer>
   @if (shouldShowContent()) {
-    <app-note-content [contentTokens]="contentTokens()" />
+    <app-note-content [contentTokens]="contentTokens()"></app-note-content>
 
     @for (mention of eventMentions(); track mention.event.event.id) {
       <mat-card>
@@ -30,7 +30,9 @@
         </mat-card-header>
         <mat-card-content>
           <div class="content-container">
-            <app-note-content [contentTokens]="mention.contentTokens" />
+            <app-note-content
+              [contentTokens]="mention.contentTokens"
+            ></app-note-content>
           </div>
         </mat-card-content>
       </mat-card>
