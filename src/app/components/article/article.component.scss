@@ -1,3 +1,110 @@
+.article-container {
+  width: 100%;
+
+  &.mode-compact {
+    .article-compact {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 16px;
+      border-radius: 8px;
+      background-color: var(--mat-sys-surface-container);
+      transition: all 0.2s ease;
+
+      &.clickable {
+        cursor: pointer;
+
+        &:hover {
+          background-color: var(--mat-sys-surface-container-high);
+          transform: translateY(-1px);
+          box-shadow: var(--mat-sys-level1);
+        }
+
+        &:focus {
+          outline: 2px solid var(--mat-sys-primary);
+          outline-offset: 2px;
+        }
+      }
+
+      .article-title {
+        font-size: 1.125rem;
+        margin: 0;
+        color: var(--mat-sys-on-surface);
+        line-height: 1.4;
+      }
+
+      .article-summary {
+        font-size: 0.875rem;
+        color: var(--mat-sys-on-surface-variant);
+        margin: 0;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      .article-meta {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+
+        mat-chip-set {
+          mat-chip {
+            font-size: 0.75rem;
+            height: 24px;
+          }
+        }
+      }
+    }
+  }
+
+  &.mode-card {
+    .article-card {
+      max-width: 400px;
+      transition: all 0.2s ease;
+
+      &.clickable {
+        cursor: pointer;
+
+        &:hover {
+          transform: translateY(-2px);
+          box-shadow: var(--mat-sys-level2);
+        }
+      }
+
+      .article-meta {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 8px;
+      }
+    }
+  }
+}
+
+.article-loading,
+.article-error {
+  padding: 16px;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+// Legacy styles
 .article-content {
-  cursor: pointer;
+  &.clickable {
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      opacity: 0.8;
+    }
+
+    &:focus {
+      outline: 2px solid var(--mat-sys-primary);
+      outline-offset: 2px;
+    }
+  }
 }
