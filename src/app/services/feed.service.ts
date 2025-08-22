@@ -412,17 +412,37 @@ export class FeedService {
    */
   private async loadFollowingFeed(feedData: FeedData) {
     try {
-      // Get top 10 engaged users from the algorithm
-      const topEngagedUsers = await this.algorithms.getRecommendedUsers(10);
+      // Check if this is an articles feed - use different algorithm
+      const isArticlesFeed = feedData.filter.kinds?.includes(30023);
+
+      this.logger.debug(
+        `Loading following feed - isArticles: ${isArticlesFeed}, kinds: ${JSON.stringify(feedData.filter.kinds)}`
+      );
+
+      // Get recommended users based on content type
+      const topEngagedUsers = isArticlesFeed
+        ? await this.algorithms.getRecommendedUsersForArticles(20)
+        : await this.algorithms.getRecommendedUsers(10);
+
+      this.logger.debug(
+        `Found ${topEngagedUsers.length} engaged users for ${isArticlesFeed ? 'articles' : 'notes'} feed`
+      );
 
       if (topEngagedUsers.length === 0) {
         this.logger.warn(
           'No engaged users found, falling back to recent following'
         );
-        // Fallback to first 10 users from following list
+        // Fallback to users from following list
         const followingList = this.accountState.followingList();
-        // const fallbackUsers = followingList.slice(0, 10);
-        const fallbackUsers = [...followingList].slice(-10).reverse();
+        this.logger.debug(`Following list size: ${followingList.length}`);
+
+        // For articles, use more users since articles are rarer
+        const fallbackCount = isArticlesFeed ? 25 : 10;
+        const fallbackUsers = [...followingList]
+          .slice(-fallbackCount)
+          .reverse();
+
+        this.logger.debug(`Using ${fallbackUsers.length} fallback users`);
         await this.fetchEventsFromUsers(fallbackUsers, feedData);
         return;
       }
@@ -434,7 +454,7 @@ export class FeedService {
       await this.fetchEventsFromUsers(topPubkeys, feedData);
 
       this.logger.debug(
-        `Loaded following feed with ${topPubkeys.length} top engaged users`
+        `Loaded following feed with ${topPubkeys.length} top engaged users${isArticlesFeed ? ' (articles)' : ''}`
       );
     } catch (error) {
       this.logger.error('Error loading following feed:', error);
@@ -446,9 +466,11 @@ export class FeedService {
    * Updates UI incrementally as events are received for better UX
    */
   private async fetchEventsFromUsers(pubkeys: string[], feedData: FeedData) {
-    const eventsPerUser = 5; // Fetch latest 5 events per user
+    const isArticlesFeed = feedData.filter.kinds?.includes(30023);
+    const eventsPerUser = isArticlesFeed ? 10 : 5; // Fetch more events per user for articles
     const now = Math.floor(Date.now() / 1000); // current timestamp in seconds
-    const sevenDaysAgo = now - 7 * 24 * 60 * 60; // subtract 7 days in seconds
+    const daysBack = isArticlesFeed ? 90 : 7; // Look further back for articles
+    const timeCutoff = now - daysBack * 24 * 60 * 60; // subtract days in seconds
 
     const userEventsMap = new Map<string, Event[]>();
     let processedUsers = 0;
@@ -463,7 +485,7 @@ export class FeedService {
             authors: [pubkey],
             kinds: feedData.filter.kinds,
             limit: eventsPerUser,
-            since: sevenDaysAgo,
+            since: timeCutoff,
           },
           { timeout: 2500 }
         );
@@ -604,8 +626,13 @@ export class FeedService {
     }
 
     try {
+      // Check if this is an articles feed
+      const isArticlesFeed = feedData.filter.kinds?.includes(30023);
+
       // Get top engaged users again (they might have changed)
-      const topEngagedUsers = await this.algorithms.getRecommendedUsers(10);
+      const topEngagedUsers = isArticlesFeed
+        ? await this.algorithms.getRecommendedUsersForArticles(20)
+        : await this.algorithms.getRecommendedUsers(10);
       const topPubkeys = topEngagedUsers.map(user => user.pubkey);
 
       // Fetch older events using the lastTimestamp
