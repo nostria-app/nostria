@@ -130,7 +130,11 @@ export class ArticleComponent {
         throw new Error('Invalid article address format');
       }
 
-      const addrData = decoded.data as any;
+      const addrData = decoded.data as {
+        pubkey: string;
+        identifier: string;
+        kind: number;
+      };
       this.logger.debug('Decoded naddr:', addrData);
 
       pubkey = addrData.pubkey;
@@ -281,16 +285,9 @@ export class ArticleComponent {
     }
 
     try {
-      const washedContent = DOMPurify.sanitize(content);
-
-      // Strip unwanted paragraph tags that might be added by the editor
-      const cleanedContent = washedContent
-        .replace(/<p>/gi, '') // Remove all opening <p> tags (case-insensitive)
-        .replace(/<\/p>/gi, ''); // Remove all closing </p> tags (case-insensitive)
-
       // First, preprocess content to convert image URLs to markdown image syntax
-      const preprocessedContent =
-        await this.preprocessImageUrls(cleanedContent);
+      // Do this BEFORE any HTML sanitization since we're working with markdown
+      const preprocessedContent = await this.preprocessImageUrls(content);
 
       // Store reference to isImageUrl for use in renderer
       const isImageUrl = this.isImageUrl.bind(this);
@@ -306,12 +303,15 @@ export class ArticleComponent {
         text: string;
         depth: number;
       }): string => {
-        const sanitizedText = text.replace(/[<>"']/g, '');
-        const headingId = sanitizedText
+        // Process inline markdown in the heading text (bold, italic, etc.)
+        const processedText = marked.parseInline(text) as string;
+        const headingId = text
+          .replace(/\*\*/g, '') // Remove bold markers for ID generation
+          .replace(/\*/g, '') // Remove italic markers for ID generation
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, '-')
           .replace(/^-|-$/g, '');
-        return `<h${depth} id="${headingId}">${text}</h${depth}>`;
+        return `<h${depth} id="${headingId}">${processedText}</h${depth}>`;
       };
 
       // Custom image renderer with enhanced attributes and link support
@@ -346,10 +346,13 @@ export class ArticleComponent {
       };
 
       // Custom link renderer that preserves markdown image links and handles standalone image URLs
-      renderer.link = (link: any): string => {
-        const { href, title, tokens } = link;
-        // Extract text from tokens
-        const text = tokens && tokens.length > 0 ? tokens[0].raw || href : href;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      renderer.link = ({ href, title, tokens }: any): string => {
+        // Extract text from tokens safely
+        const text =
+          tokens && tokens.length > 0 && tokens[0] && tokens[0].raw
+            ? tokens[0].raw
+            : href;
 
         if (!href) return text || '';
 
@@ -417,9 +420,12 @@ export class ArticleComponent {
       // Parse markdown to HTML (marked.parse returns string)
       const htmlContent = marked.parse(preprocessedContent) as string;
 
-      // Sanitize and return safe HTML
+      // Now sanitize the resulting HTML to remove any malicious content
+      const sanitizedHtmlContent = DOMPurify.sanitize(htmlContent);
+
+      // Set the sanitized HTML content
       this._parsedContent.set(
-        this.sanitizer.bypassSecurityTrustHtml(htmlContent)
+        this.sanitizer.bypassSecurityTrustHtml(sanitizedHtmlContent)
       );
     } catch (error) {
       this.logger.error('Error parsing markdown:', error);
@@ -598,7 +604,7 @@ export class ArticleComponent {
             // Generate a user-friendly mention based on the Nostr data type
             switch (nostrData.type) {
               case 'npub':
-              case 'nprofile':
+              case 'nprofile': {
                 // For user profiles, create @username mention with proper link
                 const pubkey = nostrData.data?.pubkey || nostrData.data;
                 const username = nostrData.displayName;
@@ -607,8 +613,9 @@ export class ArticleComponent {
                   original: match[0],
                   replacement: `<a href="/p/${npub}" class="nostr-mention" data-pubkey="${pubkey}" data-type="profile" title="View @${username}'s profile">@${username}</a>`,
                 };
+              }
 
-              case 'note':
+              case 'note': {
                 // For notes, create a reference link
                 const noteId = nostrData.data;
                 const noteRef =
@@ -618,8 +625,9 @@ export class ArticleComponent {
                   original: match[0],
                   replacement: `<a href="/e/${noteEncoded}" class="nostr-reference" data-event-id="${noteId}" data-type="note" title="View note">📝 ${noteRef}</a>`,
                 };
+              }
 
-              case 'nevent':
+              case 'nevent': {
                 // For events, create a reference link
                 const eventId = nostrData.data?.id || nostrData.data;
                 const eventRef =
@@ -629,8 +637,9 @@ export class ArticleComponent {
                   original: match[0],
                   replacement: `<a href="/e/${neventEncoded}" class="nostr-reference" data-event-id="${eventId}" data-type="event" title="View event">📝 ${eventRef}</a>`,
                 };
+              }
 
-              case 'naddr':
+              case 'naddr': {
                 // For addresses (like articles), create a reference link
                 const identifier = nostrData.data?.identifier || '';
                 const kind = nostrData.data?.kind || '';
@@ -644,6 +653,7 @@ export class ArticleComponent {
                   original: match[0],
                   replacement: `<a href="/a/${naddrEncoded}" class="nostr-reference" data-identifier="${identifier}" data-kind="${kind}" data-type="article" title="View article">📄 ${addrRef}</a>`,
                 };
+              }
 
               default:
                 return {
