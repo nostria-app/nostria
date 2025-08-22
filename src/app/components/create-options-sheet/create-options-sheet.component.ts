@@ -3,6 +3,7 @@ import { MatBottomSheetRef } from '@angular/material/bottom-sheet';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { LayoutService } from '../../services/layout.service';
+import { EventService } from '../../services/event';
 
 @Component({
   selector: 'app-create-options-sheet',
@@ -16,10 +17,15 @@ export class CreateOptionsSheetComponent {
     MatBottomSheetRef<CreateOptionsSheetComponent>
   );
   private layout = inject(LayoutService);
+  private eventService = inject(EventService);
 
   // Creation options
   createOptions = [
-    { label: 'Note', icon: 'create', action: () => this.layout.createNote() },
+    {
+      label: 'Note',
+      icon: 'create',
+      action: () => this.eventService.createNote(),
+    },
     {
       label: 'Article',
       icon: 'article',
