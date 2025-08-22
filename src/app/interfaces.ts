@@ -42,4 +42,5 @@ export type ViewMode =
   | 'grid'
   | 'thread'
   | 'icon'
-  | 'compact';
+  | 'compact'
+  | 'card';
