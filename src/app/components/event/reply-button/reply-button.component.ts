@@ -3,7 +3,7 @@ import { Event, kinds } from 'nostr-tools';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { LayoutService } from '../../../services/layout.service';
+import { EventService } from '../../../services/event';
 
 @Component({
   selector: 'app-reply-button',
@@ -13,7 +13,7 @@ import { LayoutService } from '../../../services/layout.service';
   styleUrls: ['./reply-button.component.scss'],
 })
 export class ReplyButtonComponent {
-  private readonly layout = inject(LayoutService);
+  private readonly eventService = inject(EventService);
 
   event = input.required<Event>();
 
@@ -22,7 +22,7 @@ export class ReplyButtonComponent {
   );
 
   onClick(): void {
-    this.layout.createNote({
+    this.eventService.createNote({
       replyTo: {
         id: this.event().id,
         pubkey: this.event().pubkey,
