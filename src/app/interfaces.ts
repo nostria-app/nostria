@@ -41,4 +41,5 @@ export type ViewMode =
   | 'list'
   | 'grid'
   | 'thread'
-  | 'icon';
+  | 'icon'
+  | 'compact';

@@ -371,6 +371,8 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
         return '40px';
       case 'grid':
         return '36px';
+      case 'compact':
+        return '24px';
       default: // 'list'
         return '40px';
     }
