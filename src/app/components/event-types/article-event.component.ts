@@ -1,8 +1,10 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, input, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { Event } from 'nostr-tools';
+import { nip19 } from 'nostr-tools';
+import { LayoutService } from '../../services/layout.service';
 
 @Component({
   selector: 'app-article-event',
@@ -12,7 +14,12 @@ import { Event } from 'nostr-tools';
   styleUrl: './article-event.component.scss',
 })
 export class ArticleEventComponent {
+  private layout = inject(LayoutService);
+
   event = input.required<Event>();
+
+  // Signal to track if content is expanded
+  isExpanded = signal(false);
 
   // Article title
   title = computed(() => {
@@ -103,6 +110,9 @@ export class ArticleEventComponent {
     const content = this.content();
     if (!content) return null;
 
+    // If expanded, show full content
+    if (this.isExpanded()) return content;
+
     const maxLength = 300;
     if (content.length <= maxLength) return content;
 
@@ -115,11 +125,26 @@ export class ArticleEventComponent {
     return content ? content.length > 300 : false;
   });
 
+  expandContent(): void {
+    this.isExpanded.set(!this.isExpanded());
+  }
+
   openFullArticle(): void {
-    const url = this.articleUrl();
-    if (url) {
-      window.open(url, '_blank', 'noopener,noreferrer');
-    }
+    const event = this.event();
+    if (!event) return;
+
+    // Get the article identifier (d tag)
+    const dTag = event.tags.find(tag => tag[0] === 'd')?.[1] || '';
+
+    // Create naddr for the article
+    const naddr = nip19.naddrEncode({
+      identifier: dTag,
+      kind: event.kind,
+      pubkey: event.pubkey,
+    });
+
+    // Navigate to the article page using layout service
+    this.layout.openArticle(naddr, event);
   }
 
   private getEventTitle(event: Event): string | null {
