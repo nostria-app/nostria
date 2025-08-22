@@ -22,10 +22,6 @@ import { ProfileStateService } from './profile-state.service';
 import { LoginDialogComponent } from '../components/login-dialog/login-dialog.component';
 import { NostrRecord } from '../interfaces';
 import { AccountStateService } from './account-state.service';
-import {
-  NoteEditorDialogComponent,
-  NoteEditorDialogData,
-} from '../components/note-editor-dialog/note-editor-dialog.component';
 import { isPlatformBrowser } from '@angular/common';
 import { LocalStorageService } from './local-storage.service';
 
@@ -730,22 +726,6 @@ export class LayoutService implements OnDestroy {
 
   scrollToOptimalProfilePosition() {
     this.scrollToOptimalPosition(this.optimalProfilePosition);
-  }
-
-  // Handler methods for different creation types
-  createNote(data: NoteEditorDialogData = {}): void {
-    // Open note editor dialog
-    const dialogRef = this.dialog.open(NoteEditorDialogComponent, {
-      width: '600px',
-      maxWidth: '90vw',
-      data,
-    });
-
-    dialogRef.afterClosed().subscribe(result => {
-      if (result?.published) {
-        console.log('Note published successfully:', result.event);
-      }
-    });
   }
 
   createArticle(): void {
