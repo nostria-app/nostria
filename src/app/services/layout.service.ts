@@ -704,7 +704,15 @@ export class LayoutService implements OnDestroy {
     this.router.navigate(['/p', pubkey]);
   }
 
-  openEvent(neventId: string, event: Event): void {
+  openEvent(eventId: string, event: Event): void {
+    let neventId = eventId;
+    if (!neventId.startsWith('nevent')) {
+      neventId = nip19.neventEncode({
+        id: event.id,
+        author: event.pubkey,
+        kind: event.kind,
+      });
+    }
     if (event.kind === kinds.LongFormArticle) {
       this.openArticle(neventId, event);
     } else {
