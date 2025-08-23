@@ -142,7 +142,7 @@ export abstract class RelayServiceBase {
    * Update the relays signal with current relay information
    */
   private updateRelaysSignal(): void {
-    const relayObjects: Relay[] = this.relayUrls.map(url => ({
+    const relayObjects: Relay[] = this.relayUrls.map((url) => ({
       url,
       status: 'disconnected', // Default status, can be updated by connection monitoring
       lastUsed: undefined,
@@ -158,11 +158,11 @@ export abstract class RelayServiceBase {
    */
   updateRelayStatus(
     relayUrl: string,
-    status: 'connected' | 'disconnected' | 'connecting' | 'error'
+    status: 'connected' | 'disconnected' | 'connecting' | 'error',
   ): void {
     const currentRelays = this.relays();
-    const updatedRelays = currentRelays.map(relay =>
-      relay.url === relayUrl ? { ...relay, status } : relay
+    const updatedRelays = currentRelays.map((relay) =>
+      relay.url === relayUrl ? { ...relay, status } : relay,
     );
     this.relays.set(updatedRelays);
   }
@@ -175,8 +175,8 @@ export abstract class RelayServiceBase {
   updateRelayLastUsed(relayUrl: string, timestamp?: number): void {
     const currentRelays = this.relays();
     const lastUsed = timestamp || Math.floor(Date.now() / 1000);
-    const updatedRelays = currentRelays.map(relay =>
-      relay.url === relayUrl ? { ...relay, lastUsed } : relay
+    const updatedRelays = currentRelays.map((relay) =>
+      relay.url === relayUrl ? { ...relay, lastUsed } : relay,
     );
     this.relays.set(updatedRelays);
   }
@@ -188,8 +188,8 @@ export abstract class RelayServiceBase {
    */
   updateRelayTimeout(relayUrl: string, timeout: number): void {
     const currentRelays = this.relays();
-    const updatedRelays = currentRelays.map(relay =>
-      relay.url === relayUrl ? { ...relay, timeout } : relay
+    const updatedRelays = currentRelays.map((relay) =>
+      relay.url === relayUrl ? { ...relay, timeout } : relay,
     );
     this.relays.set(updatedRelays);
   }
@@ -198,7 +198,7 @@ export abstract class RelayServiceBase {
    * Acquires a semaphore slot for making a request
    */
   protected async acquireSemaphore(): Promise<void> {
-    return new Promise<void>(resolve => {
+    return new Promise<void>((resolve) => {
       if (this.currentRequests < this.maxConcurrentRequests) {
         this.currentRequests++;
         resolve();
@@ -222,10 +222,7 @@ export abstract class RelayServiceBase {
     }
   }
 
-  async getEventsByPubkeyAndKind(
-    pubkey: string | string[],
-    kind: number
-  ): Promise<Event[]> {
+  async getEventsByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<Event[]> {
     // Check if pubkey is already an array or a single string
     const authors = Array.isArray(pubkey) ? pubkey : [pubkey];
 
@@ -235,10 +232,7 @@ export abstract class RelayServiceBase {
     });
   }
 
-  async getEventsByKindAndEventTag(
-    kind: number,
-    eventTag: string | string[]
-  ): Promise<Event[]> {
+  async getEventsByKindAndEventTag(kind: number, eventTag: string | string[]): Promise<Event[]> {
     const events = Array.isArray(eventTag) ? eventTag : [eventTag];
 
     return this.getMany({
@@ -247,10 +241,7 @@ export abstract class RelayServiceBase {
     });
   }
 
-  async getEventByPubkeyAndKind(
-    pubkey: string | string[],
-    kind: number
-  ): Promise<Event | null> {
+  async getEventByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<Event | null> {
     // Check if pubkey is already an array or a single string
     const authors = Array.isArray(pubkey) ? pubkey : [pubkey];
 
@@ -266,10 +257,7 @@ export abstract class RelayServiceBase {
     });
   }
 
-  async getEventsByKindAndPubKeyTag(
-    pubkey: string | string[],
-    kind: number
-  ): Promise<Event[]> {
+  async getEventsByKindAndPubKeyTag(pubkey: string | string[], kind: number): Promise<Event[]> {
     const authors = Array.isArray(pubkey) ? pubkey : [pubkey];
 
     return this.getMany({
@@ -281,7 +269,7 @@ export abstract class RelayServiceBase {
   async getEventByPubkeyAndKindAndTag(
     pubkey: string,
     kind: number,
-    tag: { key: string; value: string }
+    tag: { key: string; value: string },
   ): Promise<Event | null> {
     const authors = Array.isArray(pubkey) ? pubkey : [pubkey];
 
@@ -309,15 +297,11 @@ export abstract class RelayServiceBase {
       until?: number;
       limit?: number;
     },
-    options: { timeout?: number } = {}
+    options: { timeout?: number } = {},
   ): Promise<T | null> {
     const urls = this.relayUrls;
 
-    this.logger.debug(
-      'Getting events with filters (account-relay):',
-      filter,
-      urls
-    );
+    this.logger.debug('Getting events with filters (account-relay):', filter, urls);
 
     if (urls.length === 0) {
       this.logger.warn('No relays available for query');
@@ -339,7 +323,7 @@ export abstract class RelayServiceBase {
 
       // Update lastUsed for all relays used in this query
       if (event) {
-        urls.forEach(url => this.updateRelayLastUsed(url));
+        urls.forEach((url) => this.updateRelayLastUsed(url));
       }
 
       return event;
@@ -367,16 +351,12 @@ export abstract class RelayServiceBase {
       until?: number;
       limit?: number;
     },
-    options: { timeout?: number } = {}
+    options: { timeout?: number } = {},
   ): Promise<T[]> {
     // Use provided relay URLs or default to the user's relays
     const urls = this.relayUrls;
 
-    this.logger.debug(
-      'Getting events with filters (account-relay):',
-      filter,
-      urls
-    );
+    this.logger.debug('Getting events with filters (account-relay):', filter, urls);
 
     if (urls.length === 0) {
       this.logger.warn('No relays available for query');
@@ -391,18 +371,18 @@ export abstract class RelayServiceBase {
 
       // Execute the query
       const events: T[] = [];
-      return new Promise<T[]>(resolve => {
+      return new Promise<T[]>((resolve) => {
         this.#pool!.subscribeEose(urls, filter, {
           maxWait: timeout,
-          onevent: event => {
+          onevent: (event) => {
             // Add the received event to our collection
             events.push(event as T);
           },
-          onclose: reasons => {
+          onclose: (reasons) => {
             console.log('Subscriptions closed', reasons);
             // Update lastUsed for all relays used in this query if we received events
             if (events.length > 0) {
-              urls.forEach(url => this.updateRelayLastUsed(url));
+              urls.forEach((url) => this.updateRelayLastUsed(url));
             }
             resolve(events);
           },
@@ -427,9 +407,7 @@ export abstract class RelayServiceBase {
     this.logger.debug('Publishing event:', event);
 
     if (!this.#pool) {
-      this.logger.error(
-        'Cannot publish event: account pool is not initialized'
-      );
+      this.logger.error('Cannot publish event: account pool is not initialized');
       return null;
     }
 
@@ -450,7 +428,7 @@ export abstract class RelayServiceBase {
       console.log('Publish result for first relay:', result1);
 
       // Update lastUsed for all relays used in this publish operation
-      urls.forEach(url => this.updateRelayLastUsed(url));
+      urls.forEach((url) => this.updateRelayLastUsed(url));
 
       return publishResults;
     } catch (error) {
@@ -471,9 +449,7 @@ export abstract class RelayServiceBase {
     this.logger.debug('Publishing event:', event);
 
     if (!this.#pool) {
-      this.logger.error(
-        'Cannot publish event: account pool is not initialized'
-      );
+      this.logger.error('Cannot publish event: account pool is not initialized');
       return null;
     }
 
@@ -490,7 +466,7 @@ export abstract class RelayServiceBase {
       this.logger.debug('Publish results:', publishResults);
 
       // Update lastUsed for all relays used in this publish operation
-      urls.forEach(url => this.updateRelayLastUsed(url));
+      urls.forEach((url) => this.updateRelayLastUsed(url));
 
       return publishResults;
     } catch (error) {
@@ -519,7 +495,7 @@ export abstract class RelayServiceBase {
       limit?: number;
     }[],
     onEvent: (event: T) => void,
-    onEose?: () => void
+    onEose?: () => void,
   ) {
     this.logger.debug('Creating subscription with filters:', filters);
 
@@ -545,11 +521,11 @@ export abstract class RelayServiceBase {
     try {
       // Create the subscription
       const sub = this.#pool.subscribeMany(this.relayUrls, filters, {
-        onevent: evt => {
+        onevent: (evt) => {
           this.logger.debug(`Received event of kind ${evt.kind}`);
 
           // Update the lastUsed timestamp for all relays (since we don't know which relay sent this event)
-          this.relayUrls.forEach(url => this.updateRelayLastUsed(url));
+          this.relayUrls.forEach((url) => this.updateRelayLastUsed(url));
 
           // Call the provided event handler
           onEvent(evt as T);
@@ -568,7 +544,7 @@ export abstract class RelayServiceBase {
           // For example: this.handleContacts(evt);
           // }
         },
-        onclose: reasons => {
+        onclose: (reasons) => {
           console.log('Pool closed', reasons);
           if (onEose) {
             this.logger.debug('End of stored events reached');
@@ -620,7 +596,7 @@ export abstract class RelayServiceBase {
       limit?: number;
     }[],
     onEvent: (event: T) => void,
-    onEose?: () => void
+    onEose?: () => void,
   ) {
     this.logger.debug('Creating subscription with filters:', filters);
 
@@ -646,11 +622,11 @@ export abstract class RelayServiceBase {
     try {
       // Create the subscription
       const sub = this.#pool.subscribeManyEose(this.relayUrls, filters, {
-        onevent: evt => {
+        onevent: (evt) => {
           this.logger.debug(`Received event of kind ${evt.kind}`);
 
           // Update the lastUsed timestamp for all relays (since we don't know which relay sent this event)
-          this.relayUrls.forEach(url => this.updateRelayLastUsed(url));
+          this.relayUrls.forEach((url) => this.updateRelayLastUsed(url));
 
           // Call the provided event handler
           onEvent(evt as T);
@@ -669,7 +645,7 @@ export abstract class RelayServiceBase {
           // For example: this.handleContacts(evt);
           // }
         },
-        onclose: reasons => {
+        onclose: (reasons) => {
           console.log('Pool closed', reasons);
           if (onEose) {
             this.logger.debug('End of stored events reached');

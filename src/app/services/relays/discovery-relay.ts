@@ -9,18 +9,13 @@ import { kinds, SimplePool } from 'nostr-tools';
 @Injectable({
   providedIn: 'root',
 })
-export class DiscoveryRelayServiceEx
-  extends RelayServiceBase
-  implements NostriaService
-{
+export class DiscoveryRelayServiceEx extends RelayServiceBase implements NostriaService {
   private readonly utilities = inject(UtilitiesService);
   private localStorage = inject(LocalStorageService);
   private appState = inject(ApplicationStateService);
   private initialized = false;
 
-  private readonly DEFAULT_BOOTSTRAP_RELAYS = [
-    'wss://discovery.eu.nostria.app/',
-  ];
+  private readonly DEFAULT_BOOTSTRAP_RELAYS = ['wss://discovery.eu.nostria.app/'];
 
   constructor() {
     super(new SimplePool());
@@ -64,7 +59,7 @@ export class DiscoveryRelayServiceEx
     // Save to local storage
     this.localStorage.setItem(
       this.appState.DISCOVERY_RELAYS_STORAGE_KEY,
-      JSON.stringify(relayUrls)
+      JSON.stringify(relayUrls),
     );
   }
 
@@ -74,7 +69,7 @@ export class DiscoveryRelayServiceEx
   setDiscoveryRelays(relayUrls: string[]): void {
     try {
       // Validate that all URLs are valid relay URLs
-      const validRelays = relayUrls.filter(url => {
+      const validRelays = relayUrls.filter((url) => {
         try {
           const parsed = new URL(url);
           return parsed.protocol === 'wss:' || parsed.protocol === 'ws:';
@@ -85,9 +80,7 @@ export class DiscoveryRelayServiceEx
 
       if (validRelays.length === 0) {
         this.logger.warn('No valid relay URLs provided, using default relays');
-        this.localStorage.removeItem(
-          this.appState.DISCOVERY_RELAYS_STORAGE_KEY
-        );
+        this.localStorage.removeItem(this.appState.DISCOVERY_RELAYS_STORAGE_KEY);
         return;
       }
 
@@ -99,9 +92,7 @@ export class DiscoveryRelayServiceEx
       //   JSON.stringify(validRelays)
       // );
 
-      this.logger.debug(
-        `Saved ${validRelays.length} discovery relays to storage`
-      );
+      this.logger.debug(`Saved ${validRelays.length} discovery relays to storage`);
 
       // Reinitialize the service with new relays
       this.init(validRelays);
@@ -115,15 +106,11 @@ export class DiscoveryRelayServiceEx
    */
   private loadDiscoveryRelaysFromStorage(): string[] {
     try {
-      const storedRelays = this.localStorage.getItem(
-        this.appState.DISCOVERY_RELAYS_STORAGE_KEY
-      );
+      const storedRelays = this.localStorage.getItem(this.appState.DISCOVERY_RELAYS_STORAGE_KEY);
       if (storedRelays) {
         const parsedRelays = JSON.parse(storedRelays);
         if (Array.isArray(parsedRelays) && parsedRelays.length > 0) {
-          this.logger.debug(
-            `Loaded ${parsedRelays.length} discovery relays from storage`
-          );
+          this.logger.debug(`Loaded ${parsedRelays.length} discovery relays from storage`);
           return parsedRelays;
         }
       }

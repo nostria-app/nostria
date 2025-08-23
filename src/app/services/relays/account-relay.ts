@@ -29,19 +29,13 @@ export class AccountRelayServiceEx extends RelayServiceBase {
     let relayUrls: string[] = [];
 
     // Get the relays URLs from storage, if available.
-    let event = await this.storage.getEventByPubkeyAndKind(
-      pubkey,
-      kinds.RelayList
-    );
+    let event = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
 
     if (event) {
       this.logger.debug(`Found relay list for pubkey ${pubkey} in storage`);
       relayUrls = this.utilities.getRelayUrls(event);
     } else {
-      event = await this.storage.getEventByPubkeyAndKind(
-        pubkey,
-        kinds.Contacts
-      );
+      event = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
 
       if (event) {
         relayUrls = this.utilities.getRelayUrlsFromFollowing(event);
