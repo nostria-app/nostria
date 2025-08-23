@@ -35,7 +35,7 @@ export class SharedRelayServiceEx {
    * Acquires a semaphore slot for making a request
    */
   private async acquireSemaphore(): Promise<void> {
-    return new Promise<void>(resolve => {
+    return new Promise<void>((resolve) => {
       if (this.currentRequests < this.maxConcurrentRequests) {
         this.currentRequests++;
         resolve();
@@ -65,7 +65,7 @@ export class SharedRelayServiceEx {
   private async performRequest<T extends Event = Event>(
     relayUrls: string[],
     filter: any,
-    timeout: number
+    timeout: number,
   ): Promise<T | null> {
     await this.acquireSemaphore();
 
@@ -102,7 +102,7 @@ export class SharedRelayServiceEx {
       until?: number;
       limit?: number;
     },
-    options: { timeout?: number } = {}
+    options: { timeout?: number } = {},
   ): Promise<T | null> {
     this.logger.debug('Getting events with filters (account-relay):', filter);
 
@@ -138,7 +138,7 @@ export class SharedRelayServiceEx {
   private async executeGetRequest<T extends Event = Event>(
     pubkey: string,
     filter: any,
-    timeout: number
+    timeout: number,
   ): Promise<T | null> {
     // Get optimal relays for the user
     const relayUrls = await this.relaysService.getOptimalUserRelays(pubkey, 3);
@@ -176,7 +176,7 @@ export class SharedRelayServiceEx {
       until?: number;
       limit?: number;
     },
-    options: { timeout?: number } = {}
+    options: { timeout?: number } = {},
   ): Promise<T[]> {
     this.logger.debug('Getting events with filters (account-relay):', filter);
 
@@ -193,11 +193,7 @@ export class SharedRelayServiceEx {
     }
 
     // Create the request promise
-    const requestPromise = this.executeGetManyRequest<T>(
-      pubkey,
-      filter,
-      timeout
-    );
+    const requestPromise = this.executeGetManyRequest<T>(pubkey, filter, timeout);
 
     // Cache the promise
     this.requestCache.set(cacheKey, requestPromise);
@@ -216,7 +212,7 @@ export class SharedRelayServiceEx {
   private async executeGetManyRequest<T extends Event = Event>(
     pubkey: string,
     filter: any,
-    timeout: number
+    timeout: number,
   ): Promise<T[]> {
     const relayUrls = await this.relaysService.getOptimalUserRelays(pubkey, 3);
 
@@ -230,14 +226,14 @@ export class SharedRelayServiceEx {
     try {
       // Execute the query
       const events: T[] = [];
-      return new Promise<T[]>(resolve => {
+      return new Promise<T[]>((resolve) => {
         const sub = this.#pool!.subscribeEose(relayUrls, filter, {
           maxWait: timeout,
-          onevent: event => {
+          onevent: (event) => {
             // Add the received event to our collection
             events.push(event as T);
           },
-          onclose: reasons => {
+          onclose: (reasons) => {
             console.log('Subscriptions closed', reasons);
             resolve(events);
           },

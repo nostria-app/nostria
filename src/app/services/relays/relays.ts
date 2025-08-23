@@ -38,7 +38,7 @@ export class RelaysService {
   }
 
   private initializePreferredRelays(): void {
-    this.utilities.preferredRelays.forEach(url => {
+    this.utilities.preferredRelays.forEach((url) => {
       this.addRelay(url);
     });
   }
@@ -138,7 +138,7 @@ export class RelaysService {
     this.userRelays.set(pubkey, normalizedRelays);
 
     // Add these relays to our stats if they don't exist
-    normalizedRelays.forEach(url => this.addRelay(url));
+    normalizedRelays.forEach((url) => this.addRelay(url));
 
     this.updateSignals();
   }
@@ -158,20 +158,14 @@ export class RelaysService {
 
     if (relayUrls.length === 0) {
       // If there are no user relays in memory, let's go discover.
-      const relayListEvent = await this.storage.getEventByPubkeyAndKind(
-        pubkey,
-        10002
-      );
+      const relayListEvent = await this.storage.getEventByPubkeyAndKind(pubkey, 10002);
 
       if (relayListEvent) {
         relayUrls = this.utilities.getRelayUrls(relayListEvent);
       }
 
       if (!relayUrls || relayUrls.length === 0) {
-        const followingEvent = await this.storage.getEventByPubkeyAndKind(
-          pubkey,
-          3
-        );
+        const followingEvent = await this.storage.getEventByPubkeyAndKind(pubkey, 3);
 
         if (followingEvent) {
           relayUrls = this.utilities.getRelayUrlsFromFollowing(followingEvent);
@@ -193,10 +187,7 @@ export class RelaysService {
     }
 
     // Use utilities to filter out bad relays first
-    const validRelays = this.utilities.pickOptimalRelays(
-      relayUrls,
-      relayUrls.length
-    );
+    const validRelays = this.utilities.pickOptimalRelays(relayUrls, relayUrls.length);
 
     // Sort by connection status and performance
     const sortedRelays = validRelays.sort((a, b) => {
@@ -287,8 +278,7 @@ export class RelaysService {
     // Recent successful connection (20% weight)
     if (stats.lastSuccessfulConnection > 0) {
       const now = this.utilities.currentDate();
-      const hoursSinceLastConnection =
-        (now - stats.lastSuccessfulConnection) / 3600;
+      const hoursSinceLastConnection = (now - stats.lastSuccessfulConnection) / 3600;
 
       if (hoursSinceLastConnection < 1) {
         score += 20;
