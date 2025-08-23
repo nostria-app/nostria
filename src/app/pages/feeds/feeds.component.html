@@ -174,7 +174,7 @@
             class="column-unit"
             cdkDrag
             [cdkDragData]="i"
-            [cdkDragDisabled]="columns().length <= 1"
+            [cdkDragDisabled]="isMobileView() || columns().length <= 1"
             [class.visible]="
               !isMobileView() || (isMobileView() && i === visibleColumnIndex())
             "
