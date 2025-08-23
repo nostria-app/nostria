@@ -12,6 +12,7 @@ export class UserRelayServiceEx extends RelayServiceBase {
 
   constructor() {
     super(new SimplePool());
+    this.useOptimizedRelays = true;
   }
 
   async initialize(pubkey: string): Promise<void> {

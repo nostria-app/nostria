@@ -25,6 +25,16 @@ nav {
   position: relative;
 }
 
+.premium-label {
+  opacity: 0.9;
+}
+
+.premium-expires {
+  margin-top: 0.4rem;
+  opacity: 0.7;
+  font-size: 0.8rem;
+}
+
 @media (display-mode: window-controls-overlay) {
   /** This is for when the app is running in a window with custom title bar controls. */
   .app-container {

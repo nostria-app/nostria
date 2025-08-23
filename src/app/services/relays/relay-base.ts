@@ -1,6 +1,7 @@
 import { inject, signal, Signal } from '@angular/core';
 import { LoggerService } from '../logger.service';
 import { Event, SimplePool } from 'nostr-tools';
+import { RelaysService } from './relays';
 
 export interface Relay {
   url: string;
@@ -13,6 +14,8 @@ export abstract class RelayServiceBase {
   #pool!: SimplePool;
   protected relayUrls: string[] = [];
   protected logger = inject(LoggerService);
+  protected relaysService = inject(RelaysService);
+  protected useOptimizedRelays = false;
 
   // Signal to notify when relays have been modified
   protected relaysModified = signal<string[]>([]);
@@ -299,7 +302,11 @@ export abstract class RelayServiceBase {
     },
     options: { timeout?: number } = {},
   ): Promise<T | null> {
-    const urls = this.relayUrls;
+    let urls = this.relayUrls;
+
+    if (this.useOptimizedRelays) {
+      urls = this.relaysService.getOptimalRelays(this.relayUrls);
+    }
 
     this.logger.debug('Getting events with filters (account-relay):', filter, urls);
 
@@ -353,8 +360,11 @@ export abstract class RelayServiceBase {
     },
     options: { timeout?: number } = {},
   ): Promise<T[]> {
-    // Use provided relay URLs or default to the user's relays
-    const urls = this.relayUrls;
+    let urls = this.relayUrls;
+
+    if (this.useOptimizedRelays) {
+      urls = this.relaysService.getOptimalRelays(this.relayUrls);
+    }
 
     this.logger.debug('Getting events with filters (account-relay):', filter, urls);
 
@@ -499,6 +509,12 @@ export abstract class RelayServiceBase {
   ) {
     this.logger.debug('Creating subscription with filters:', filters);
 
+    let urls = this.relayUrls;
+
+    if (this.useOptimizedRelays) {
+      urls = this.relaysService.getOptimalRelays(this.relayUrls);
+    }
+
     if (!this.#pool) {
       this.logger.error('Cannot subscribe: user pool is not initialized');
       return {
@@ -509,7 +525,7 @@ export abstract class RelayServiceBase {
     }
 
     // Use provided relay URLs or default to the user's relays
-    if (this.relayUrls.length === 0) {
+    if (urls.length === 0) {
       this.logger.warn('No relays available for subscription');
       return {
         unsubscribe: () => {
@@ -520,12 +536,12 @@ export abstract class RelayServiceBase {
 
     try {
       // Create the subscription
-      const sub = this.#pool.subscribeMany(this.relayUrls, filters, {
+      const sub = this.#pool.subscribeMany(urls, filters, {
         onevent: (evt) => {
           this.logger.debug(`Received event of kind ${evt.kind}`);
 
           // Update the lastUsed timestamp for all relays (since we don't know which relay sent this event)
-          this.relayUrls.forEach((url) => this.updateRelayLastUsed(url));
+          urls.forEach((url) => this.updateRelayLastUsed(url));
 
           // Call the provided event handler
           onEvent(evt as T);
@@ -600,6 +616,12 @@ export abstract class RelayServiceBase {
   ) {
     this.logger.debug('Creating subscription with filters:', filters);
 
+    let urls = this.relayUrls;
+
+    if (this.useOptimizedRelays) {
+      urls = this.relaysService.getOptimalRelays(this.relayUrls);
+    }
+
     if (!this.#pool) {
       this.logger.error('Cannot subscribe: user pool is not initialized');
       return {
@@ -610,7 +632,7 @@ export abstract class RelayServiceBase {
     }
 
     // Use provided relay URLs or default to the user's relays
-    if (this.relayUrls.length === 0) {
+    if (urls.length === 0) {
       this.logger.warn('No relays available for subscription');
       return {
         unsubscribe: () => {
@@ -621,12 +643,12 @@ export abstract class RelayServiceBase {
 
     try {
       // Create the subscription
-      const sub = this.#pool.subscribeManyEose(this.relayUrls, filters, {
+      const sub = this.#pool.subscribeManyEose(urls, filters, {
         onevent: (evt) => {
           this.logger.debug(`Received event of kind ${evt.kind}`);
 
           // Update the lastUsed timestamp for all relays (since we don't know which relay sent this event)
-          this.relayUrls.forEach((url) => this.updateRelayLastUsed(url));
+          urls.forEach((url) => this.updateRelayLastUsed(url));
 
           // Call the provided event handler
           onEvent(evt as T);

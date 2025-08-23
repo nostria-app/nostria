@@ -22,7 +22,7 @@ export class SharedRelayServiceEx {
   private readonly requestCache = new Map<string, Promise<any>>();
   private readonly cacheTimeout = 1000; // 1 second cache
 
-  constructor() {}
+  constructor() { }
 
   /**
    * Creates a unique cache key for request deduplication
@@ -141,7 +141,9 @@ export class SharedRelayServiceEx {
     timeout: number,
   ): Promise<T | null> {
     // Get optimal relays for the user
-    const relayUrls = await this.relaysService.getOptimalUserRelays(pubkey, 3);
+    let relayUrls = await this.discoveryRelay.getUserRelayUrls(pubkey);
+    relayUrls = this.relaysService.getOptimalRelays(relayUrls, 3);
+
     console.log('relayUrls', relayUrls);
 
     if (relayUrls.length === 0) {
@@ -214,7 +216,8 @@ export class SharedRelayServiceEx {
     filter: any,
     timeout: number,
   ): Promise<T[]> {
-    const relayUrls = await this.relaysService.getOptimalUserRelays(pubkey, 3);
+    let relayUrls = await this.discoveryRelay.getUserRelayUrls(pubkey);
+    relayUrls = this.relaysService.getOptimalRelays(relayUrls, 3);
 
     if (relayUrls.length === 0) {
       this.logger.warn('No relays available for query');

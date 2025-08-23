@@ -1,7 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { UtilitiesService } from '../utilities.service';
 import { StorageService } from '../storage.service';
-import { DiscoveryRelayServiceEx } from './discovery-relay';
 
 export interface RelayStats {
   url: string;
@@ -19,7 +18,6 @@ export interface RelayStats {
 export class RelaysService {
   private utilities = inject(UtilitiesService);
 
-  private readonly discoveryRelay = inject(DiscoveryRelayServiceEx);
   private readonly storage = inject(StorageService);
 
   // Map of relay URL to relay statistics
@@ -153,34 +151,7 @@ export class RelaysService {
   /**
    * Get optimal relays for a user with connection preference
    */
-  async getOptimalUserRelays(pubkey: string, limit = 5): Promise<string[]> {
-    let relayUrls = this.getUserRelays(pubkey);
-
-    if (relayUrls.length === 0) {
-      // If there are no user relays in memory, let's go discover.
-      const relayListEvent = await this.storage.getEventByPubkeyAndKind(pubkey, 10002);
-
-      if (relayListEvent) {
-        relayUrls = this.utilities.getRelayUrls(relayListEvent);
-      }
-
-      if (!relayUrls || relayUrls.length === 0) {
-        const followingEvent = await this.storage.getEventByPubkeyAndKind(pubkey, 3);
-
-        if (followingEvent) {
-          relayUrls = this.utilities.getRelayUrlsFromFollowing(followingEvent);
-        }
-      }
-
-      if (!relayUrls || relayUrls.length === 0) {
-        // If we still don't have any relays, we will try to discover them.
-        relayUrls = await this.discoveryRelay.getUserRelayUrls(pubkey);
-      }
-
-      // Fallback to preferred relays if user has no relays
-      // return this.utilities.pickOptimalRelays(this.utilities.preferredRelays, limit);
-    }
-
+  getOptimalRelays(relayUrls: string[], limit = 5): string[] {
     // We have not discovered any relays for this user, what should we do?
     if (relayUrls.length === 0) {
       relayUrls = this.utilities.preferredRelays.slice(0, limit);
@@ -213,6 +184,70 @@ export class RelaysService {
 
     return sortedRelays.slice(0, limit);
   }
+
+  /**
+   * Get optimal relays for a user with connection preference
+   */
+  // async getOptimalUserRelays(pubkey: string, limit = 5): Promise<string[]> {
+  //   let relayUrls = this.getUserRelays(pubkey);
+
+  //   if (relayUrls.length === 0) {
+  //     // If there are no user relays in memory, let's go discover.
+  //     const relayListEvent = await this.storage.getEventByPubkeyAndKind(pubkey, 10002);
+
+  //     if (relayListEvent) {
+  //       relayUrls = this.utilities.getRelayUrls(relayListEvent);
+  //     }
+
+  //     if (!relayUrls || relayUrls.length === 0) {
+  //       const followingEvent = await this.storage.getEventByPubkeyAndKind(pubkey, 3);
+
+  //       if (followingEvent) {
+  //         relayUrls = this.utilities.getRelayUrlsFromFollowing(followingEvent);
+  //       }
+  //     }
+
+  //     if (!relayUrls || relayUrls.length === 0) {
+  //       // If we still don't have any relays, we will try to discover them.
+  //       relayUrls = await this.discoveryRelay.getUserRelayUrls(pubkey);
+  //     }
+
+  //     // Fallback to preferred relays if user has no relays
+  //     // return this.utilities.pickOptimalRelays(this.utilities.preferredRelays, limit);
+  //   }
+
+  //   // We have not discovered any relays for this user, what should we do?
+  //   if (relayUrls.length === 0) {
+  //     relayUrls = this.utilities.preferredRelays.slice(0, limit);
+  //   }
+
+  //   // Use utilities to filter out bad relays first
+  //   const validRelays = this.utilities.pickOptimalRelays(relayUrls, relayUrls.length);
+
+  //   // Sort by connection status and performance
+  //   const sortedRelays = validRelays.sort((a, b) => {
+  //     const statsA = this.getRelayStats(a);
+  //     const statsB = this.getRelayStats(b);
+
+  //     if (!statsA && !statsB) return 0;
+  //     if (!statsA) return 1;
+  //     if (!statsB) return -1;
+
+  //     // Prefer connected relays
+  //     if (statsA.isConnected && !statsB.isConnected) return -1;
+  //     if (!statsA.isConnected && statsB.isConnected) return 1;
+
+  //     // Prefer relays with more events received
+  //     if (statsA.eventsReceived !== statsB.eventsReceived) {
+  //       return statsB.eventsReceived - statsA.eventsReceived;
+  //     }
+
+  //     // Prefer relays with more recent successful connections
+  //     return statsB.lastSuccessfulConnection - statsA.lastSuccessfulConnection;
+  //   });
+
+  //   return sortedRelays.slice(0, limit);
+  // }
 
   /**
    * Get connected relays
