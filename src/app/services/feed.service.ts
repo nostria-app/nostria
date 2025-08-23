@@ -228,30 +228,6 @@ export class FeedService {
     });
   }
 
-  /**
-   * Load feeds from local storage
-   */
-  private loadFeeds(): void {
-    try {
-      const storedFeeds = this.localStorageService.getObject<FeedConfig[]>(
-        this.appState.FEEDS_STORAGE_KEY
-      );
-      if (storedFeeds && Array.isArray(storedFeeds) && storedFeeds.length > 0) {
-        this._feeds.set(storedFeeds);
-        this.logger.debug('Loaded feeds from storage', storedFeeds);
-      } else {
-        this._feeds.set(DEFAULT_FEEDS);
-        this.saveFeeds();
-        this.logger.debug('No feeds found, using defaults');
-      }
-    } catch (error) {
-      this.logger.error('Error loading feeds from storage:', error);
-      this._feeds.set(DEFAULT_FEEDS);
-      this.saveFeeds();
-    }
-
-    this.subscribe();
-  }
   // Use a signal to track feed data for reactivity
   private readonly _feedData = signal(new Map<string, FeedData>());
   readonly data = new Map<string, FeedData>();
@@ -297,9 +273,7 @@ export class FeedService {
     // Unsubscribe from previous active feed
     if (previousActiveFeedId) {
       this.unsubscribeFromFeed(previousActiveFeedId);
-      this.logger.debug(
-        `Unsubscribed from previous active feed: ${previousActiveFeedId}`
-      );
+      this.logger.debug(`Unsubscribed from previous active feed: ${previousActiveFeedId}`);
     }
 
     // Set new active feed
@@ -329,7 +303,7 @@ export class FeedService {
    */
   private subscribeToFeed(feed: FeedConfig): void {
     // Subscribe to each column in the feed
-    feed.columns.forEach(column => {
+    feed.columns.forEach((column) => {
       this.subscribeToColumn(column);
     });
   }
@@ -374,13 +348,13 @@ export class FeedService {
     } else {
       // Subscribe to relay events using account relay
       // TODO: Implement proper relay selection based on column.relayConfig
-      const sub = this.accountRelay.subscribe([item.filter], event => {
+      const sub = this.accountRelay.subscribe([item.filter], (event) => {
         // Filter out live events that are muted.
         if (this.accountState.muted(event)) {
           return;
         }
 
-        item.events.update(events => [event, ...events]);
+        item.events.update((events) => [event, ...events]);
         this.logger.debug(`Column event received for ${column.id}:`, event);
       });
 
@@ -390,7 +364,7 @@ export class FeedService {
     this.data.set(column.id, item);
 
     // Update the reactive signal
-    this._feedData.update(map => {
+    this._feedData.update((map) => {
       const newMap = new Map(map);
       newMap.set(column.id, item);
       return newMap;
@@ -416,7 +390,7 @@ export class FeedService {
       const isArticlesFeed = feedData.filter.kinds?.includes(30023);
 
       this.logger.debug(
-        `Loading following feed - isArticles: ${isArticlesFeed}, kinds: ${JSON.stringify(feedData.filter.kinds)}`
+        `Loading following feed - isArticles: ${isArticlesFeed}, kinds: ${JSON.stringify(feedData.filter.kinds)}`,
       );
 
       // Get recommended users based on content type
@@ -425,22 +399,18 @@ export class FeedService {
         : await this.algorithms.getRecommendedUsers(10);
 
       this.logger.debug(
-        `Found ${topEngagedUsers.length} engaged users for ${isArticlesFeed ? 'articles' : 'notes'} feed`
+        `Found ${topEngagedUsers.length} engaged users for ${isArticlesFeed ? 'articles' : 'notes'} feed`,
       );
 
       if (topEngagedUsers.length === 0) {
-        this.logger.warn(
-          'No engaged users found, falling back to recent following'
-        );
+        this.logger.warn('No engaged users found, falling back to recent following');
         // Fallback to users from following list
         const followingList = this.accountState.followingList();
         this.logger.debug(`Following list size: ${followingList.length}`);
 
         // For articles, use more users since articles are rarer
         const fallbackCount = isArticlesFeed ? 25 : 10;
-        const fallbackUsers = [...followingList]
-          .slice(-fallbackCount)
-          .reverse();
+        const fallbackUsers = [...followingList].slice(-fallbackCount).reverse();
 
         this.logger.debug(`Using ${fallbackUsers.length} fallback users`);
         await this.fetchEventsFromUsers(fallbackUsers, feedData);
@@ -448,13 +418,13 @@ export class FeedService {
       }
 
       // Extract pubkeys from top engaged users
-      const topPubkeys = topEngagedUsers.map(user => user.pubkey);
+      const topPubkeys = topEngagedUsers.map((user) => user.pubkey);
 
       // Fetch events from these top engaged users
       await this.fetchEventsFromUsers(topPubkeys, feedData);
 
       this.logger.debug(
-        `Loaded following feed with ${topPubkeys.length} top engaged users${isArticlesFeed ? ' (articles)' : ''}`
+        `Loaded following feed with ${topPubkeys.length} top engaged users${isArticlesFeed ? ' (articles)' : ''}`,
       );
     } catch (error) {
       this.logger.error('Error loading following feed:', error);
@@ -477,7 +447,7 @@ export class FeedService {
     const totalUsers = pubkeys.length;
 
     // Process users in parallel but update UI incrementally
-    const fetchPromises = pubkeys.map(async pubkey => {
+    const fetchPromises = pubkeys.map(async (pubkey) => {
       try {
         const events = await this.sharedRelayEx.getMany(
           pubkey,
@@ -487,7 +457,7 @@ export class FeedService {
             limit: eventsPerUser,
             since: timeCutoff,
           },
-          { timeout: 2500 }
+          { timeout: 2500 },
         );
 
         console.log('Events found:', events);
@@ -500,23 +470,13 @@ export class FeedService {
         processedUsers++;
 
         // Update UI incrementally every time we get events from a user
-        this.updateFeedIncremental(
-          userEventsMap,
-          feedData,
-          processedUsers,
-          totalUsers
-        );
+        this.updateFeedIncremental(userEventsMap, feedData, processedUsers, totalUsers);
       } catch (error) {
         this.logger.error(`Error fetching events for user ${pubkey}:`, error);
         processedUsers++;
 
         // Still update UI even if this user failed
-        this.updateFeedIncremental(
-          userEventsMap,
-          feedData,
-          processedUsers,
-          totalUsers
-        );
+        this.updateFeedIncremental(userEventsMap, feedData, processedUsers, totalUsers);
       }
     });
 
@@ -534,7 +494,7 @@ export class FeedService {
     userEventsMap: Map<string, Event[]>,
     feedData: FeedData,
     processedUsers: number,
-    totalUsers: number
+    totalUsers: number,
   ) {
     // debugger;
 
@@ -551,12 +511,10 @@ export class FeedService {
       feedData.events.set(currentEvents);
 
       // Update last timestamp for pagination
-      feedData.lastTimestamp = Math.min(
-        ...currentEvents.map(e => (e.created_at || 0) * 1000)
-      );
+      feedData.lastTimestamp = Math.min(...currentEvents.map((e) => (e.created_at || 0) * 1000));
 
       this.logger.debug(
-        `Incremental update: ${processedUsers}/${totalUsers} users processed, ${currentEvents.length} events`
+        `Incremental update: ${processedUsers}/${totalUsers} users processed, ${currentEvents.length} events`,
       );
     }
   }
@@ -564,10 +522,7 @@ export class FeedService {
   /**
    * Finalize the incremental feed with a final sort and cleanup
    */
-  private finalizeIncrementalFeed(
-    userEventsMap: Map<string, Event[]>,
-    feedData: FeedData
-  ) {
+  private finalizeIncrementalFeed(userEventsMap: Map<string, Event[]>, feedData: FeedData) {
     // Final aggregation and sort
     const finalEvents = this.aggregateAndSortEvents(userEventsMap);
 
@@ -576,13 +531,11 @@ export class FeedService {
 
     // Update last timestamp for pagination
     if (finalEvents.length > 0) {
-      feedData.lastTimestamp = Math.min(
-        ...finalEvents.map(e => (e.created_at || 0) * 1000)
-      );
+      feedData.lastTimestamp = Math.min(...finalEvents.map((e) => (e.created_at || 0) * 1000));
     }
 
     this.logger.debug(
-      `Final update: ${finalEvents.length} total events from ${userEventsMap.size} users`
+      `Final update: ${finalEvents.length} total events from ${userEventsMap.size} users`,
     );
   }
 
@@ -617,11 +570,7 @@ export class FeedService {
    */
   async loadMoreEvents(columnId: string) {
     const feedData = this.data.get(columnId);
-    if (
-      !feedData ||
-      !feedData.column.source ||
-      feedData.column.source !== 'following'
-    ) {
+    if (!feedData || !feedData.column.source || feedData.column.source !== 'following') {
       return;
     }
 
@@ -633,7 +582,7 @@ export class FeedService {
       const topEngagedUsers = isArticlesFeed
         ? await this.algorithms.getRecommendedUsersForArticles(20)
         : await this.algorithms.getRecommendedUsers(10);
-      const topPubkeys = topEngagedUsers.map(user => user.pubkey);
+      const topPubkeys = topEngagedUsers.map((user) => user.pubkey);
 
       // Fetch older events using the lastTimestamp
       await this.fetchOlderEventsFromUsers(topPubkeys, feedData);
@@ -645,10 +594,7 @@ export class FeedService {
   /**
    * Fetch older events for pagination with incremental updates
    */
-  private async fetchOlderEventsFromUsers(
-    pubkeys: string[],
-    feedData: FeedData
-  ) {
+  private async fetchOlderEventsFromUsers(pubkeys: string[], feedData: FeedData) {
     const eventsPerUser = 5;
     const maxAge = 30 * 24 * 60 * 60 * 1000; // 30 days for older content
     const until = Math.floor((feedData.lastTimestamp || Date.now()) / 1000); // Convert to seconds
@@ -659,7 +605,7 @@ export class FeedService {
     const existingEvents = feedData.events(); // Get current events
 
     // Process users in parallel with incremental updates
-    const fetchPromises = pubkeys.map(async pubkey => {
+    const fetchPromises = pubkeys.map(async (pubkey) => {
       try {
         const userRelayEx = await this.userRelayFactory.create(pubkey);
         // await this.userRelayEx.setUser(pubkey);
@@ -667,19 +613,16 @@ export class FeedService {
         // Fetch events older than the last timestamp
         const events = await userRelayEx.getEventsByPubkeyAndKind(
           pubkey,
-          feedData.filter.kinds[0] || kinds.ShortTextNote
+          feedData.filter.kinds[0] || kinds.ShortTextNote,
         );
 
         if (events.length > 0) {
           // Filter events to exclude already loaded ones and ensure they're not too old
           const olderEvents = events
-            .filter(event => {
+            .filter((event) => {
               const eventTime = (event.created_at || 0) * 1000;
               const eventAge = Date.now() - eventTime;
-              return (
-                eventTime < (feedData.lastTimestamp || Date.now()) &&
-                eventAge <= maxAge
-              );
+              return eventTime < (feedData.lastTimestamp || Date.now()) && eventAge <= maxAge;
             })
             .slice(0, eventsPerUser);
 
@@ -696,13 +639,10 @@ export class FeedService {
           feedData,
           existingEvents,
           processedUsers,
-          totalUsers
+          totalUsers,
         );
       } catch (error) {
-        this.logger.error(
-          `Error fetching older events for user ${pubkey}:`,
-          error
-        );
+        this.logger.error(`Error fetching older events for user ${pubkey}:`, error);
         processedUsers++;
 
         // Still update UI even if this user failed
@@ -711,7 +651,7 @@ export class FeedService {
           feedData,
           existingEvents,
           processedUsers,
-          totalUsers
+          totalUsers,
         );
       }
     });
@@ -731,15 +671,12 @@ export class FeedService {
     feedData: FeedData,
     existingEvents: Event[],
     processedUsers: number,
-    totalUsers: number
+    totalUsers: number,
   ) {
     // Only update UI if we have events and either:
     // 1. We've processed at least 2 users (get some initial content quickly)
     // 2. We've processed all users (final update)
-    if (
-      userEventsMap.size === 0 ||
-      (processedUsers < 2 && processedUsers < totalUsers)
-    ) {
+    if (userEventsMap.size === 0 || (processedUsers < 2 && processedUsers < totalUsers)) {
       return;
     }
 
@@ -752,12 +689,10 @@ export class FeedService {
       feedData.events.set(updatedEvents);
 
       // Update last timestamp
-      feedData.lastTimestamp = Math.min(
-        ...olderEvents.map(e => (e.created_at || 0) * 1000)
-      );
+      feedData.lastTimestamp = Math.min(...olderEvents.map((e) => (e.created_at || 0) * 1000));
 
       this.logger.debug(
-        `Pagination incremental update: ${processedUsers}/${totalUsers} users processed, ${olderEvents.length} older events`
+        `Pagination incremental update: ${processedUsers}/${totalUsers} users processed, ${olderEvents.length} older events`,
       );
     }
   }
@@ -768,7 +703,7 @@ export class FeedService {
   private finalizePaginationIncremental(
     userEventsMap: Map<string, Event[]>,
     feedData: FeedData,
-    existingEvents: Event[]
+    existingEvents: Event[],
   ) {
     // Final aggregation and sort of older events
     const finalOlderEvents = this.aggregateAndSortEvents(userEventsMap);
@@ -779,12 +714,10 @@ export class FeedService {
       feedData.events.set(updatedEvents);
 
       // Update last timestamp
-      feedData.lastTimestamp = Math.min(
-        ...finalOlderEvents.map(e => (e.created_at || 0) * 1000)
-      );
+      feedData.lastTimestamp = Math.min(...finalOlderEvents.map((e) => (e.created_at || 0) * 1000));
 
       this.logger.debug(
-        `Final pagination update: ${finalOlderEvents.length} older events from ${userEventsMap.size} users`
+        `Final pagination update: ${finalOlderEvents.length} older events from ${userEventsMap.size} users`,
       );
     }
   } /**
@@ -794,14 +727,12 @@ export class FeedService {
     const feed = this.getFeedById(feedId);
     if (feed && feed.columns) {
       // Unsubscribe from each column in the feed
-      feed.columns.forEach(column => {
+      feed.columns.forEach((column) => {
         this.unsubscribeFromColumn(column.id);
       });
       this.logger.debug(`Unsubscribed from all columns in feed: ${feedId}`);
     } else {
-      this.logger.warn(
-        `Cannot unsubscribe from feed ${feedId}: feed not found or has no columns`
-      );
+      this.logger.warn(`Cannot unsubscribe from feed ${feedId}: feed not found or has no columns`);
     }
   }
   /**
@@ -823,7 +754,7 @@ export class FeedService {
       this.data.delete(columnId);
 
       // Update the reactive signal
-      this._feedData.update(map => {
+      this._feedData.update((map) => {
         const newMap = new Map(map);
         newMap.delete(columnId);
         return newMap;
@@ -843,7 +774,7 @@ export class FeedService {
     // Create a computed signal that aggregates events from all columns in the feed
     return computed(() => {
       const allEvents: Event[] = [];
-      feed.columns.forEach(column => {
+      feed.columns.forEach((column) => {
         const columnData = this.data.get(column.id);
         if (columnData) {
           allEvents.push(...columnData.events());
@@ -851,9 +782,7 @@ export class FeedService {
       });
 
       // Sort events by timestamp (newest first)
-      return allEvents.sort(
-        (a, b) => (b.created_at || 0) - (a.created_at || 0)
-      );
+      return allEvents.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
     });
   }
 
@@ -882,10 +811,8 @@ export class FeedService {
    * Get column information including algorithm status
    */
   getColumnInfo(
-    columnId: string
-  ):
-    | { column: ColumnConfig; isFollowing: boolean; lastTimestamp?: number }
-    | undefined {
+    columnId: string,
+  ): { column: ColumnConfig; isFollowing: boolean; lastTimestamp?: number } | undefined {
     const feedData = this.data.get(columnId);
     if (!feedData) return undefined;
 
@@ -897,10 +824,46 @@ export class FeedService {
   }
 
   unsubscribe() {
-    this.data.forEach(item => item.subscription?.close());
+    this.data.forEach((item) => item.subscription?.close());
     this.data.clear();
     this._feedData.set(new Map());
     this.logger.debug('Unsubscribed from all feed subscriptions');
+  }
+
+  /**
+   * Load feeds from local storage
+   */
+  private loadFeeds(): void {
+    try {
+      const pubkey = this.accountState.pubkey();
+      if (!pubkey) {
+        this.logger.warn('No pubkey found, using defaults');
+        this._feeds.set(DEFAULT_FEEDS);
+        this.saveFeeds();
+        return;
+      }
+      const feedsByAccount = this.localStorageService.getObject<Record<string, FeedConfig[]>>(
+        this.appState.FEEDS_STORAGE_KEY,
+      );
+
+      const storedFeeds = feedsByAccount && feedsByAccount[pubkey];
+      if (storedFeeds && Array.isArray(storedFeeds) && storedFeeds.length > 0) {
+        this._feeds.set(storedFeeds);
+        this.logger.debug('Loaded feeds from storage for pubkey', pubkey, storedFeeds);
+      } else {
+        const feedsByAccount: Record<string, FeedConfig[]> = {};
+        feedsByAccount[pubkey] = DEFAULT_FEEDS;
+        this._feeds.set(DEFAULT_FEEDS);
+        this.saveFeeds();
+        this.logger.debug('No feeds found for pubkey, using defaults', pubkey);
+      }
+    } catch (error) {
+      this.logger.error('Error loading feeds from storage:', error);
+      this._feeds.set(DEFAULT_FEEDS);
+      this.saveFeeds();
+    }
+
+    this.subscribe();
   }
 
   /**
@@ -908,11 +871,21 @@ export class FeedService {
    */
   private saveFeeds(): void {
     try {
-      this.localStorageService.setObject(
-        this.appState.FEEDS_STORAGE_KEY,
-        this._feeds()
-      );
-      this.logger.debug('Saved feeds to storage', this._feeds());
+      const pubkey = this.accountState.pubkey();
+      if (!pubkey) {
+        this.logger.warn('No pubkey found, not saving feeds');
+        return;
+      }
+
+      // Get all feeds by account, update this pubkey's feeds
+      const feedsByAccount =
+        this.localStorageService.getObject<Record<string, FeedConfig[]>>(
+          this.appState.FEEDS_STORAGE_KEY,
+        ) || {};
+
+      feedsByAccount[pubkey] = this._feeds();
+      this.localStorageService.setObject(this.appState.FEEDS_STORAGE_KEY, feedsByAccount);
+      this.logger.debug('Saved feeds to storage for pubkey', pubkey, this._feeds());
     } catch (error) {
       this.logger.error('Error saving feeds to storage:', error);
     }
@@ -969,10 +942,7 @@ export class FeedService {
         user: this._userRelays(),
         discovery: this._discoveryRelays(),
       };
-      this.localStorageService.setObject(
-        this.appState.RELAYS_STORAGE_KEY,
-        relayData
-      );
+      this.localStorageService.setObject(this.appState.RELAYS_STORAGE_KEY, relayData);
       this.logger.debug('Saved relays to storage', relayData);
     } catch (error) {
       this.logger.error('Error saving relays to storage:', error);
@@ -981,9 +951,7 @@ export class FeedService {
   /**
    * Add a new feed
    */
-  addFeed(
-    feedData: Omit<FeedConfig, 'id' | 'createdAt' | 'updatedAt'>
-  ): FeedConfig {
+  addFeed(feedData: Omit<FeedConfig, 'id' | 'createdAt' | 'updatedAt'>): FeedConfig {
     const newFeed: FeedConfig = {
       ...feedData,
       id: `feed-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -991,7 +959,7 @@ export class FeedService {
       updatedAt: Date.now(),
     };
 
-    this._feeds.update(feeds => [...feeds, newFeed]);
+    this._feeds.update((feeds) => [...feeds, newFeed]);
     this.saveFeeds();
 
     // Subscribe to the new feed immediately
@@ -1002,11 +970,8 @@ export class FeedService {
   }
   /**
    * Update an existing feed
-   */ updateFeed(
-    id: string,
-    updates: Partial<Omit<FeedConfig, 'id' | 'createdAt'>>
-  ): boolean {
-    const feedIndex = this._feeds().findIndex(feed => feed.id === id);
+   */ updateFeed(id: string, updates: Partial<Omit<FeedConfig, 'id' | 'createdAt'>>): boolean {
+    const feedIndex = this._feeds().findIndex((feed) => feed.id === id);
     if (feedIndex === -1) {
       this.logger.warn(`Feed with id ${id} not found`);
       return false;
@@ -1020,18 +985,18 @@ export class FeedService {
       const newColumns = updates.columns;
 
       // Check if this is just a column reorder (same column IDs, different positions)
-      const currentColumnIds = new Set(currentColumns.map(col => col.id));
-      const newColumnIds = new Set(newColumns.map(col => col.id));
+      const currentColumnIds = new Set(currentColumns.map((col) => col.id));
+      const newColumnIds = new Set(newColumns.map((col) => col.id));
       const isOnlyReorder =
         currentColumnIds.size === newColumnIds.size &&
-        [...currentColumnIds].every(id => newColumnIds.has(id));
+        [...currentColumnIds].every((id) => newColumnIds.has(id));
 
       if (isOnlyReorder) {
         // This is just a reorder - update columns without touching subscriptions
         console.log(
-          `🔄 FeedService: Detected column reorder for feed ${id} - preserving subscriptions`
+          `🔄 FeedService: Detected column reorder for feed ${id} - preserving subscriptions`,
         );
-        this._feeds.update(feeds => {
+        this._feeds.update((feeds) => {
           const updatedFeeds = [...feeds];
           updatedFeeds[feedIndex] = {
             ...updatedFeeds[feedIndex],
@@ -1043,27 +1008,26 @@ export class FeedService {
       } else {
         // This is actual column addition/removal - manage subscriptions
         console.log(
-          `🔄 FeedService: Detected column changes for feed ${id} - managing subscriptions`
+          `🔄 FeedService: Detected column changes for feed ${id} - managing subscriptions`,
         );
 
         // Find columns that were removed
         const removedColumns = currentColumns.filter(
-          currentCol => !newColumns.some(newCol => newCol.id === currentCol.id)
+          (currentCol) => !newColumns.some((newCol) => newCol.id === currentCol.id),
         );
 
         // Find columns that were added
         const addedColumns = newColumns.filter(
-          newCol =>
-            !currentColumns.some(currentCol => currentCol.id === newCol.id)
+          (newCol) => !currentColumns.some((currentCol) => currentCol.id === newCol.id),
         );
 
         // Unsubscribe only from removed columns
-        removedColumns.forEach(column => {
+        removedColumns.forEach((column) => {
           this.unsubscribeFromColumn(column.id);
         });
 
         // Update the feed configuration first
-        this._feeds.update(feeds => {
+        this._feeds.update((feeds) => {
           const updatedFeeds = [...feeds];
           updatedFeeds[feedIndex] = {
             ...updatedFeeds[feedIndex],
@@ -1074,13 +1038,13 @@ export class FeedService {
         });
 
         // Subscribe to new columns
-        addedColumns.forEach(column => {
+        addedColumns.forEach((column) => {
           this.subscribeToColumn(column);
         });
       }
     } else {
       // For non-column updates, just update the configuration
-      this._feeds.update(feeds => {
+      this._feeds.update((feeds) => {
         const updatedFeeds = [...feeds];
         updatedFeeds[feedIndex] = {
           ...updatedFeeds[feedIndex],
@@ -1102,9 +1066,9 @@ export class FeedService {
     console.log(`🔄 FeedService: Updating column order for feed ${id}`);
     console.log(
       '📋 New column order:',
-      columns.map(col => `${col.label} (${col.id})`)
+      columns.map((col) => `${col.label} (${col.id})`),
     );
-    const feedIndex = this._feeds().findIndex(feed => feed.id === id);
+    const feedIndex = this._feeds().findIndex((feed) => feed.id === id);
     if (feedIndex === -1) {
       this.logger.warn(`Feed with id ${id} not found`);
       console.warn(`❌ Feed ${id} not found`);
@@ -1112,7 +1076,7 @@ export class FeedService {
     }
 
     // Update only the column order directly without triggering subscription logic
-    this._feeds.update(feeds => {
+    this._feeds.update((feeds) => {
       const updatedFeeds = [...feeds];
       updatedFeeds[feedIndex] = {
         ...updatedFeeds[feedIndex],
@@ -1125,11 +1089,9 @@ export class FeedService {
     this.saveFeeds();
     this.logger.debug(
       `Updated column order for feed ${id}`,
-      columns.map(col => col.id)
+      columns.map((col) => col.id),
     );
-    console.log(
-      `✅ FeedService: Column order updated successfully without subscription changes`
-    );
+    console.log(`✅ FeedService: Column order updated successfully without subscription changes`);
     return true;
   }
 
@@ -1143,7 +1105,7 @@ export class FeedService {
     this.unsubscribeFromFeed(id);
 
     // Remove the feed from the list
-    this._feeds.update(feeds => feeds.filter(feed => feed.id !== id));
+    this._feeds.update((feeds) => feeds.filter((feed) => feed.id !== id));
 
     if (this._feeds().length < initialLength) {
       this.saveFeeds();
@@ -1161,7 +1123,7 @@ export class FeedService {
   resetToDefaults(): void {
     // Unsubscribe from all current feeds
     const currentFeeds = this._feeds();
-    currentFeeds.forEach(feed => {
+    currentFeeds.forEach((feed) => {
       this.unsubscribeFromFeed(feed.id);
     });
 
@@ -1179,7 +1141,7 @@ export class FeedService {
    * Get a feed by ID
    */
   getFeedById(id: string): FeedConfig | undefined {
-    return this._feeds().find(feed => feed.id === id);
+    return this._feeds().find((feed) => feed.id === id);
   }
 
   /**
@@ -1188,13 +1150,11 @@ export class FeedService {
   reorderFeeds(newOrder: string[]): void {
     const currentFeeds = this._feeds();
     const reorderedFeeds = newOrder
-      .map(id => currentFeeds.find(feed => feed.id === id))
+      .map((id) => currentFeeds.find((feed) => feed.id === id))
       .filter((feed): feed is FeedConfig => feed !== undefined);
 
     // Add any feeds that weren't in the newOrder array
-    const missingFeeds = currentFeeds.filter(
-      feed => !newOrder.includes(feed.id)
-    );
+    const missingFeeds = currentFeeds.filter((feed) => !newOrder.includes(feed.id));
 
     this._feeds.set([...reorderedFeeds, ...missingFeeds]);
     this.saveFeeds();
@@ -1272,9 +1232,7 @@ export class FeedService {
     }
 
     const column = columnData.column;
-    console.log(
-      `📊 Column found: ${column.label}, unsubscribing and resubscribing...`
-    );
+    console.log(`📊 Column found: ${column.label}, unsubscribing and resubscribing...`);
 
     // Unsubscribe from the column
     this.unsubscribeFromColumn(columnId);
@@ -1300,40 +1258,30 @@ export class FeedService {
 
     const activeFeed = this.getFeedById(activeFeedId);
     if (!activeFeed) {
-      this.logger.warn(
-        `Cannot refresh following columns: active feed ${activeFeedId} not found`
-      );
+      this.logger.warn(`Cannot refresh following columns: active feed ${activeFeedId} not found`);
       return;
     }
 
     // Find all columns with 'following' source
-    const followingColumns = activeFeed.columns.filter(
-      column => column.source === 'following'
-    );
+    const followingColumns = activeFeed.columns.filter((column) => column.source === 'following');
 
     if (followingColumns.length === 0) {
       this.logger.debug('No following columns found in active feed');
-      console.log(
-        `ℹ️ No following columns to refresh in feed: ${activeFeed.label}`
-      );
+      console.log(`ℹ️ No following columns to refresh in feed: ${activeFeed.label}`);
       return;
     }
 
-    console.log(
-      `📊 Found ${followingColumns.length} following columns to refresh`
-    );
+    console.log(`📊 Found ${followingColumns.length} following columns to refresh`);
 
     // Refresh each following column
-    followingColumns.forEach(column => {
-      console.log(
-        `🔄 Refreshing following column: ${column.label} (${column.id})`
-      );
+    followingColumns.forEach((column) => {
+      console.log(`🔄 Refreshing following column: ${column.label} (${column.id})`);
       this.refreshColumn(column.id);
     });
 
     this.logger.debug(`Refreshed ${followingColumns.length} following columns`);
     console.log(
-      `✅ FeedService: Refreshed ${followingColumns.length} following columns successfully`
+      `✅ FeedService: Refreshed ${followingColumns.length} following columns successfully`,
     );
   }
 
@@ -1354,12 +1302,10 @@ export class FeedService {
       columnData.subscription.close();
       columnData.subscription = null;
       this.logger.debug(`Closed subscription for paused column: ${columnId}`);
-      console.log(
-        `⏸️ Subscription closed for column: ${columnData.column.label}`
-      );
+      console.log(`⏸️ Subscription closed for column: ${columnData.column.label}`);
 
       // Update the reactive signal to trigger UI updates
-      this._feedData.update(map => {
+      this._feedData.update((map) => {
         const newMap = new Map(map);
         newMap.set(columnId, columnData);
         return newMap;
@@ -1397,8 +1343,8 @@ export class FeedService {
       await this.loadFollowingFeed(columnData);
     } else {
       // Subscribe to relay events again
-      const sub = this.accountRelay.subscribe([columnData.filter], event => {
-        columnData.events.update(events => [event, ...events]);
+      const sub = this.accountRelay.subscribe([columnData.filter], (event) => {
+        columnData.events.update((events) => [event, ...events]);
         this.logger.debug(`Column event received for ${columnId}:`, event);
       });
 
@@ -1406,7 +1352,7 @@ export class FeedService {
     }
 
     // Update the reactive signal to trigger UI updates
-    this._feedData.update(map => {
+    this._feedData.update((map) => {
       const newMap = new Map(map);
       newMap.set(columnId, columnData);
       return newMap;
