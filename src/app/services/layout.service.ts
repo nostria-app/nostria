@@ -40,7 +40,7 @@ export class LayoutService implements OnDestroy {
   isWideScreen = signal(false);
   breakpointObserver = inject(BreakpointObserver);
   optimalProfilePosition = 240;
-  premium = signal(false);
+  
   profileState = inject(ProfileStateService);
   accountStateService = inject(AccountStateService);
   overlayMode = signal(false);

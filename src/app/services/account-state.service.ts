@@ -42,6 +42,7 @@ export class AccountStateService implements OnDestroy {
   private readonly utilities = inject(UtilitiesService);
   private readonly wallets = inject(Wallets);
   private readonly cache = inject(Cache);
+  premium = signal(false);
 
   private destroy$ = new Subject<void>();
 
@@ -77,6 +78,20 @@ export class AccountStateService implements OnDestroy {
     const subs = this.subscriptions();
     return subs.find((sub) => sub.pubkey === pubkey);
   });
+
+  expiresWhen = computed(() => {
+    const sub = this.subscription();
+    return sub?.expires ? new Date(sub.expires) : null;
+  });
+
+  // expiresSoon = computed(() => {
+  //   const expires = this.expiresWhen();
+  //   if (!expires) return false;
+
+  //   const oneMonthFromNow = new Date();
+  //   oneMonthFromNow.setMonth(oneMonthFromNow.getMonth() + 12);
+  //   return expires < oneMonthFromNow;
+  // });
 
   profilePath = computed(() => {
     const sub = this.subscription();
@@ -310,6 +325,17 @@ export class AccountStateService implements OnDestroy {
 
     const subscription = this.subscription() as any;
 
+    if (subscription) {
+      // Check subscription.expires if the premium has expired or not.
+      if (subscription.expires && Date.now() > subscription.expires) {
+        this.premium.set(false);
+      } else {
+        this.premium.set(true);
+      }
+    } else {
+      this.premium.set(false);
+    }
+
     if (
       subscription &&
       subscription.error &&
@@ -339,13 +365,13 @@ export class AccountStateService implements OnDestroy {
         error: (err) => {
           console.error('Failed to fetch account:', err);
 
-          debugger;
-
-          // Create a copy with lastRetrieved property
-          subscription.retrieved = Date.now();
-          subscription.error = 'Failed to fetch account';
-          // Add the subscription to the local storage
-          this.addSubscription(subscription);
+          if (subscription) {
+            // Create a copy with lastRetrieved property
+            subscription.retrieved = Date.now();
+            subscription.error = 'Failed to fetch account';
+            // Add the subscription to the local storage
+            this.addSubscription(subscription);
+          }
 
           // this.accountSubscription.set(undefined);
         },

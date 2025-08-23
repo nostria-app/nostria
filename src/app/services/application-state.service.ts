@@ -1,12 +1,4 @@
-import {
-  computed,
-  effect,
-  inject,
-  Injectable,
-  PLATFORM_ID,
-  signal,
-  DOCUMENT,
-} from '@angular/core';
+import { computed, effect, inject, Injectable, PLATFORM_ID, signal, DOCUMENT } from '@angular/core';
 import { Router } from '@angular/router';
 import { LoggerService } from './logger.service';
 import { isPlatformBrowser } from '@angular/common';
@@ -41,9 +33,7 @@ export class ApplicationStateService {
   readonly SUBSCRIPTIONS_STORAGE_KEY = 'nostria-subscriptions';
   readonly USERNAMES_STORAGE_KEY = 'nostria-usernames';
 
-  showOfflineWarning = computed(
-    () => !this.isOnline() && !this.offlineDismissed()
-  );
+  showOfflineWarning = computed(() => !this.isOnline() && !this.offlineDismissed());
   // showOfflineWarning = signal(true);
   private offlineDismissed = signal(false);
 
@@ -56,9 +46,7 @@ export class ApplicationStateService {
   }
 
   getWindow(): Window | null {
-    return isPlatformBrowser(this.platformId)
-      ? this.document.defaultView
-      : null;
+    return isPlatformBrowser(this.platformId) ? this.document.defaultView : null;
   }
 
   private setupConnectionListeners(): void {

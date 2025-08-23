@@ -10,12 +10,7 @@ import {
   DOCUMENT,
   OnInit,
 } from '@angular/core';
-import {
-  RouterOutlet,
-  RouterLink,
-  RouterLinkActive,
-  Router,
-} from '@angular/router';
+import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -25,11 +20,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { ThemeService } from './services/theme.service';
 import { PwaUpdateService } from './services/pwa-update.service';
-import {
-  CommonModule,
-  isPlatformBrowser,
-  isPlatformServer,
-} from '@angular/common';
+import { CommonModule, isPlatformBrowser, isPlatformServer } from '@angular/common';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { NostrService } from './services/nostr.service';
@@ -51,10 +42,7 @@ import { ApplicationService } from './services/application.service';
 import { NPubPipe } from './pipes/npub.pipe';
 import { MatBadgeModule } from '@angular/material/badge';
 import { NotificationService } from './services/notification.service';
-import {
-  MatBottomSheet,
-  MatBottomSheetModule,
-} from '@angular/material/bottom-sheet';
+import { MatBottomSheet, MatBottomSheetModule } from '@angular/material/bottom-sheet';
 import { CreateOptionsSheetComponent } from './components/create-options-sheet/create-options-sheet.component';
 import { LoginDialogComponent } from './components/login-dialog/login-dialog.component';
 import { WelcomeComponent } from './components/welcome/welcome.component';
@@ -73,6 +61,7 @@ import { nip47 } from 'nostr-tools';
 import { Wallets } from './services/wallets';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { EventService } from './services/event';
+import { AgoPipe } from './pipes/ago.pipe';
 
 interface NavItem {
   path: string;
@@ -112,6 +101,7 @@ interface NavItem {
     SearchResultsComponent,
     NavigationComponent,
     NavigationContextMenuComponent,
+    AgoPipe
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss',
@@ -155,22 +145,19 @@ export class App implements OnInit {
 
   // Computed signal to count unread notifications
   unreadNotificationsCount = computed(() => {
-    return this.notificationService
-      .notifications()
-      .filter(notification => !notification.read).length;
+    return this.notificationService.notifications().filter((notification) => !notification.read)
+      .length;
   });
 
   // Computed signal to check if there are any active pending notifications
   hasActivePendingNotifications = computed(() => {
-    return this.notificationService.notifications().some(notification => {
+    return this.notificationService.notifications().some((notification) => {
       // Check if it's a RelayPublishingNotification with pending promises
       if (notification.type === NotificationType.RELAY_PUBLISHING) {
         const relayNotification = notification as RelayPublishingNotification;
         return (
           !relayNotification.complete &&
-          relayNotification.relayPromises?.some(
-            relay => relay.status === 'pending'
-          )
+          relayNotification.relayPromises?.some((relay) => relay.status === 'pending')
         );
       }
       return false;
@@ -181,7 +168,7 @@ export class App implements OnInit {
     const subscription = this.accountState.subscription();
     console.log('navigationItems recomputing, subscription:', subscription);
 
-    return this.navItems.filter(item => {
+    return this.navItems.filter((item) => {
       // Filter out items that are not authenticated if user is not logged in
       if (item.authenticated && !this.app.authenticated()) {
         return false;
@@ -249,17 +236,12 @@ export class App implements OnInit {
   constructor() {
     this.logger.info('[App] ==> AppComponent constructor started');
     this.logger.debug('[App] Services injection status:');
-    this.logger.debug(
-      '[App] - NostrProtocolService injected:',
-      !!this.nostrProtocol
-    );
+    this.logger.debug('[App] - NostrProtocolService injected:', !!this.nostrProtocol);
     this.logger.debug('[App] - ApplicationService injected:', !!this.app);
     this.logger.debug('[App] - LoggerService injected:', !!this.logger);
 
     if (!this.app.isBrowser()) {
-      this.logger.info(
-        '[App] Not in browser environment, skipping browser-specific setup'
-      );
+      this.logger.info('[App] Not in browser environment, skipping browser-specific setup');
       return;
     }
 
@@ -275,13 +257,10 @@ export class App implements OnInit {
         if (launchParams?.targetURL) {
           this.logger.info('[App] Target URL found in launch params');
           this.logger.info('[App] Target URL:', launchParams.targetURL);
-          this.logger.info(
-            '[App] Target URL type:',
-            typeof launchParams.targetURL
-          );
+          this.logger.info('[App] Target URL type:', typeof launchParams.targetURL);
           this.logger.info(
             '[App] Target URL length:',
-            launchParams.targetURL?.length || 'undefined'
+            launchParams.targetURL?.length || 'undefined',
           );
 
           // Handle nostr protocol links
@@ -289,60 +268,35 @@ export class App implements OnInit {
           this.logger.debug('[App] Checking if URL contains nostr parameter');
 
           if (url.includes('nostr=')) {
-            this.logger.info(
-              '[App] *** NOSTR PROTOCOL DETECTED IN LAUNCH QUEUE ***'
-            );
-            this.logger.info(
-              '[App] Processing nostr protocol from launch queue'
-            );
+            this.logger.info('[App] *** NOSTR PROTOCOL DETECTED IN LAUNCH QUEUE ***');
+            this.logger.info('[App] Processing nostr protocol from launch queue');
             this.logger.info('[App] URL with nostr parameter:', url);
 
             try {
               await this.nostrProtocol.handleNostrProtocol(url);
-              this.logger.info(
-                '[App] *** NOSTR PROTOCOL HANDLING COMPLETED SUCCESSFULLY ***'
-              );
+              this.logger.info('[App] *** NOSTR PROTOCOL HANDLING COMPLETED SUCCESSFULLY ***');
             } catch (error) {
               this.logger.error('[App] *** NOSTR PROTOCOL HANDLING FAILED ***');
-              this.logger.error(
-                '[App] Launch queue nostr protocol error:',
-                error
-              );
+              this.logger.error('[App] Launch queue nostr protocol error:', error);
 
               if (error instanceof Error) {
                 this.logger.error('[App] Launch queue error name:', error.name);
-                this.logger.error(
-                  '[App] Launch queue error message:',
-                  error.message
-                );
-                this.logger.error(
-                  '[App] Launch queue error stack:',
-                  error.stack
-                );
+                this.logger.error('[App] Launch queue error message:', error.message);
+                this.logger.error('[App] Launch queue error stack:', error.stack);
               }
             }
           } else {
-            this.logger.debug(
-              '[App] No nostr parameter found in launch queue URL'
-            );
+            this.logger.debug('[App] No nostr parameter found in launch queue URL');
             this.logger.debug('[App] URL content for analysis:', url);
 
             // Check for other patterns that might indicate nostr content
             if (url.includes('nostr')) {
-              this.logger.warn(
-                '[App] URL contains "nostr" but not as expected parameter:',
-                url
-              );
+              this.logger.warn('[App] URL contains "nostr" but not as expected parameter:', url);
             }
           }
         } else {
-          this.logger.warn(
-            '[App] LaunchQueue consumer triggered but no targetURL found'
-          );
-          this.logger.warn(
-            '[App] LaunchParams structure:',
-            Object.keys(launchParams || {})
-          );
+          this.logger.warn('[App] LaunchQueue consumer triggered but no targetURL found');
+          this.logger.warn('[App] LaunchParams structure:', Object.keys(launchParams || {}));
         }
       });
 
@@ -351,7 +305,7 @@ export class App implements OnInit {
       this.logger.info('[App] LaunchQueue not available in this environment');
       this.logger.debug(
         '[App] Window object keys containing "launch":',
-        Object.keys(window).filter(key => key.toLowerCase().includes('launch'))
+        Object.keys(window).filter((key) => key.toLowerCase().includes('launch')),
       );
     }
 
@@ -453,15 +407,10 @@ export class App implements OnInit {
 
   async ngOnInit() {
     this.logger.info('[App] ==> ngOnInit started');
-    this.logger.debug(
-      '[App] Platform check - isBrowser:',
-      this.app.isBrowser()
-    );
+    this.logger.debug('[App] Platform check - isBrowser:', this.app.isBrowser());
 
     if (!this.app.isBrowser()) {
-      this.logger.info(
-        '[App] Not in browser environment, skipping initialization'
-      );
+      this.logger.info('[App] Not in browser environment, skipping initialization');
       return;
     }
 
@@ -482,10 +431,7 @@ export class App implements OnInit {
       // Get diagnostic info if there were any issues
       if (!this.storage.initialized()) {
         const diagnostics = await this.storage.getDiagnosticInfo();
-        this.logger.warn(
-          '[App] Storage not properly initialized, diagnostic info:',
-          diagnostics
-        );
+        this.logger.warn('[App] Storage not properly initialized, diagnostic info:', diagnostics);
       }
     } catch (error: any) {
       this.logger.error('[App] Storage initialization failed', {
@@ -496,10 +442,7 @@ export class App implements OnInit {
       // Get diagnostic information
       try {
         const diagnostics = await this.storage.getDiagnosticInfo();
-        this.logger.error(
-          '[App] Storage diagnostic info after failure:',
-          diagnostics
-        );
+        this.logger.error('[App] Storage diagnostic info after failure:', diagnostics);
 
         // Show user-friendly error message
         this.showStorageError(error, diagnostics);
@@ -508,9 +451,7 @@ export class App implements OnInit {
       }
 
       // Don't completely block the app, continue with limited functionality
-      this.logger.warn(
-        '[App] Continuing with limited functionality due to storage failure'
-      );
+      this.logger.warn('[App] Continuing with limited functionality due to storage failure');
     }
 
     // Check for nostr protocol parameter in current URL
@@ -523,11 +464,9 @@ export class App implements OnInit {
     let errorMessage = 'Storage initialization failed. ';
 
     if (diagnostics.platform.isIOS && diagnostics.platform.isWebView) {
-      errorMessage +=
-        'This appears to be an iOS WebView which may have IndexedDB restrictions. ';
+      errorMessage += 'This appears to be an iOS WebView which may have IndexedDB restrictions. ';
     } else if (diagnostics.isPrivateMode) {
-      errorMessage +=
-        'Private browsing mode detected which may limit storage capabilities. ';
+      errorMessage += 'Private browsing mode detected which may limit storage capabilities. ';
     } else if (!diagnostics.indexedDBSupported) {
       errorMessage += 'IndexedDB is not supported in this browser. ';
     }
@@ -566,7 +505,7 @@ export class App implements OnInit {
       disableClose: false,
     });
 
-    dialogRef.afterClosed().subscribe(async result => {
+    dialogRef.afterClosed().subscribe(async (result) => {
       if (result) {
         console.log('The dialog was closed', result);
         this.layout.toggleSearch();
@@ -600,7 +539,7 @@ export class App implements OnInit {
                 duration: 3000,
                 horizontalPosition: 'center',
                 verticalPosition: 'bottom',
-              }
+              },
             );
           }
         }
@@ -678,7 +617,7 @@ export class App implements OnInit {
         // Focus the search results container after a short delay to ensure it's rendered
         setTimeout(() => {
           const searchResultsContainer = this.document.querySelector(
-            '.search-results'
+            '.search-results',
           ) as HTMLElement;
           if (searchResultsContainer) {
             searchResultsContainer.focus();
@@ -703,10 +642,7 @@ export class App implements OnInit {
       const currentUrl = window.location.href;
 
       this.logger.info('[App] Current URL:', currentUrl);
-      this.logger.info(
-        '[App] Current URL length:',
-        currentUrl?.length || 'undefined'
-      );
+      this.logger.info('[App] Current URL length:', currentUrl?.length || 'undefined');
       this.logger.debug('[App] Current URL breakdown:', {
         href: window.location.href,
         origin: window.location.origin,
@@ -715,67 +651,45 @@ export class App implements OnInit {
         hash: window.location.hash,
       });
 
-      this.logger.debug(
-        '[App] Checking if current URL contains nostr parameter'
-      );
+      this.logger.debug('[App] Checking if current URL contains nostr parameter');
 
       if (currentUrl.includes('nostr=')) {
-        this.logger.info(
-          '[App] *** NOSTR PARAMETER DETECTED IN CURRENT URL ***'
-        );
+        this.logger.info('[App] *** NOSTR PARAMETER DETECTED IN CURRENT URL ***');
         this.logger.info('[App] URL with nostr parameter:', currentUrl);
 
         // Extract and log the nostr parameter value
         try {
           const urlObj = new URL(currentUrl);
           const nostrParam = urlObj.searchParams.get('nostr');
-          this.logger.info(
-            '[App] Extracted nostr parameter value:',
-            nostrParam
-          );
-          this.logger.debug(
-            '[App] All URL parameters:',
-            Array.from(urlObj.searchParams.entries())
-          );
+          this.logger.info('[App] Extracted nostr parameter value:', nostrParam);
+          this.logger.debug('[App] All URL parameters:', Array.from(urlObj.searchParams.entries()));
         } catch (urlParseError) {
           this.logger.error(
             '[App] Failed to parse current URL for parameter extraction:',
-            urlParseError
+            urlParseError,
           );
         }
 
-        this.logger.info(
-          '[App] Calling nostr protocol handler for current URL'
-        );
+        this.logger.info('[App] Calling nostr protocol handler for current URL');
         await this.nostrProtocol.handleNostrProtocol(currentUrl);
-        this.logger.info(
-          '[App] *** NOSTR PROTOCOL HANDLING FROM URL COMPLETED ***'
-        );
+        this.logger.info('[App] *** NOSTR PROTOCOL HANDLING FROM URL COMPLETED ***');
       } else {
         this.logger.debug('[App] No nostr parameter found in current URL');
 
         // Check for other nostr-related patterns
         if (currentUrl.includes('nostr')) {
-          this.logger.info(
-            '[App] URL contains "nostr" but not as parameter:',
-            currentUrl
-          );
+          this.logger.info('[App] URL contains "nostr" but not as parameter:', currentUrl);
         }
 
         // Check for direct nostr protocol in hash or other locations
         if (window.location.hash && window.location.hash.includes('nostr')) {
-          this.logger.info(
-            '[App] Found nostr reference in URL hash:',
-            window.location.hash
-          );
+          this.logger.info('[App] Found nostr reference in URL hash:', window.location.hash);
         }
       }
 
       this.logger.info('[App] ==> URL check completed');
     } catch (error) {
-      this.logger.error(
-        '[App] ==> ERROR: Failed to check for nostr protocol in URL'
-      );
+      this.logger.error('[App] ==> ERROR: Failed to check for nostr protocol in URL');
       this.logger.error('[App] URL check error:', error);
 
       if (error instanceof Error) {
