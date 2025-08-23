@@ -47,6 +47,9 @@ import { SharedRelayServiceEx } from '../../services/relays/shared-relay';
   ],
   templateUrl: './user-profile.component.html',
   styleUrl: './user-profile.component.scss',
+  host: {
+    '[style.width]': 'hostWidthAuto() ? "auto" : "100%"',
+  },
 })
 export class UserProfileComponent implements AfterViewInit, OnDestroy {
   private route = inject(ActivatedRoute);
@@ -69,6 +72,12 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
   error = signal<string>('');
   view = input<ViewMode>('list');
   imageLoadError = signal(false);
+
+  /**
+   * If true, the host width will be set to auto instead of 100% (default).
+   * Use this for grid/flow layouts (e.g. in people component).
+   */
+  hostWidthAuto = input<boolean>(false);
 
   // Flag to track if component is visible
   private isVisible = signal(false);
