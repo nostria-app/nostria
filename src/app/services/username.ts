@@ -1,7 +1,7 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { AccountStateService } from './account-state.service';
 import { AccountService } from '../api/services';
-import { firstValueFrom, map } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 import { ApiResponse } from '../api/models';
 import { LocalStorageService } from './local-storage.service';
 import { ApplicationStateService } from './application-state.service';
@@ -26,7 +26,7 @@ export class UsernameService {
 
   private loadUsernamesCache() {
     const data = this.localStorage.getObject<UsernameByPubkeyMap>(
-      this.appState.USERNAMES_STORAGE_KEY
+      this.appState.USERNAMES_STORAGE_KEY,
     );
 
     console.log('load', data);
@@ -40,7 +40,7 @@ export class UsernameService {
           ...acc,
           [data[username]]: username,
         }),
-        {} as PubkeyByUsernameMap
+        {} as PubkeyByUsernameMap,
       );
       this.pubkeyByUsername.set(pubkeyByUsername);
     }
@@ -57,7 +57,7 @@ export class UsernameService {
     });
     this.localStorage.setObject<UsernameByPubkeyMap>(
       this.appState.USERNAMES_STORAGE_KEY,
-      this.usernameByKey()
+      this.usernameByKey(),
     );
   }
 
@@ -73,7 +73,7 @@ export class UsernameService {
     if (pubkey) return pubkey;
 
     const publicProfile = await firstValueFrom(
-      this.accountService.getPublicAccount({ pubkeyOrUsername: username })
+      this.accountService.getPublicAccount({ pubkeyOrUsername: username }),
     );
 
     if (publicProfile && publicProfile.success && publicProfile.result) {
@@ -97,7 +97,7 @@ export class UsernameService {
     if (username) return username;
 
     const publicProfile = await firstValueFrom(
-      this.accountService.getPublicAccount({ pubkeyOrUsername: pubkey })
+      this.accountService.getPublicAccount({ pubkeyOrUsername: pubkey }),
     );
 
     if (publicProfile && publicProfile.success && publicProfile.result) {
