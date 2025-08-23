@@ -1,22 +1,12 @@
-import {
-  Component,
-  computed,
-  effect,
-  inject,
-  input,
-  signal,
-} from '@angular/core';
+import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import {
-  MAT_DIALOG_DATA,
-  MatDialogModule,
-  MatDialogRef,
-} from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { RouterModule } from '@angular/router';
 import { LayoutService } from '../../../services/layout.service';
 import { LoggerService } from '../../../services/logger.service';
+import { AccountStateService } from '../../../services/account-state.service';
 
 export interface RelayDialogData {
   relayUrl: string;
@@ -76,11 +66,7 @@ interface RelayInfo {
       } @else if (relayInfo()) {
         @if (relayInfo()?.banner) {
           <div class="banner-container">
-            <img
-              [src]="relayInfo()?.banner"
-              alt="Relay Banner"
-              class="relay-banner"
-            />
+            <img [src]="relayInfo()?.banner" alt="Relay Banner" class="relay-banner" />
           </div>
         }
 
@@ -103,9 +89,7 @@ interface RelayInfo {
         <div class="relay-info">
           <div class="info-row"><strong>URL:</strong> {{ relayUrl() }}</div>
           @if (relayInfo()?.description) {
-            <div class="info-row">
-              <strong>Description:</strong> {{ relayInfo()?.description }}
-            </div>
+            <div class="info-row"><strong>Description:</strong> {{ relayInfo()?.description }}</div>
           }
           @if (relayInfo()?.contact) {
             <div class="info-row">
@@ -139,19 +123,14 @@ interface RelayInfo {
           }
           <br />
           @if (relayInfo()?.software) {
-            <div class="info-row">
-              <strong>Software:</strong> {{ relayInfo()?.software }}
-            </div>
+            <div class="info-row"><strong>Software:</strong> {{ relayInfo()?.software }}</div>
           }
           @if (relayInfo()?.version) {
             <div class="info-row">
               <strong>Software Version:</strong> {{ relayInfo()?.version }}
             </div>
           }
-          @if (
-            relayInfo()?.supported_nips &&
-            (relayInfo()?.supported_nips)!.length > 0
-          ) {
+          @if (relayInfo()?.supported_nips && (relayInfo()?.supported_nips)!.length > 0) {
             <div class="info-row">
               <strong>Supported NIPs:</strong>
               {{ relayInfo()?.supported_nips!.join(', ') }}
@@ -163,9 +142,7 @@ interface RelayInfo {
             {{ relayInfo()?.limitation?.payment_required ? 'Yes' : 'No' }}
           </div>
           @if (relayInfo()?.payments_url) {
-            <div class="info-row">
-              <strong>Payment:</strong> {{ relayInfo()?.payments_url }}
-            </div>
+            <div class="info-row"><strong>Payment:</strong> {{ relayInfo()?.payments_url }}</div>
           }
           <div class="info-row">
             <strong>Restricted Writes:</strong>
@@ -179,12 +156,9 @@ interface RelayInfo {
 
         <div class="migration-container">
           <h3>Data Migration</h3>
-          @if (layout.premium()) {
+          @if (accountState.premium()) {
             <p>Would you like to migrate your existing data to this relay?</p>
-            <mat-slide-toggle
-              [checked]="migrateData()"
-              (change)="migrateData.set($event.checked)"
-            >
+            <mat-slide-toggle [checked]="migrateData()" (change)="migrateData.set($event.checked)">
               Migrate data to this relay
             </mat-slide-toggle>
           } @else {
@@ -207,12 +181,7 @@ interface RelayInfo {
     <mat-dialog-actions align="end">
       @if (adding()) {
         <button mat-button mat-dialog-close>Cancel</button>
-        <button
-          mat-flat-button
-          color="primary"
-          [disabled]="loading()"
-          (click)="confirmAdd()"
-        >
+        <button mat-flat-button color="primary" [disabled]="loading()" (click)="confirmAdd()">
           Add Relay
         </button>
       } @else {
@@ -284,6 +253,7 @@ export class RelayInfoDialogComponent {
   private logger = inject(LoggerService);
   private dialogRef = inject(MatDialogRef<RelayInfoDialogComponent>);
   layout = inject(LayoutService);
+  accountState = inject(AccountStateService);
 
   private data = inject<RelayDialogData>(MAT_DIALOG_DATA);
   relayUrl = signal(this.data.relayUrl);
@@ -324,9 +294,7 @@ export class RelayInfoDialogComponent {
     this.error.set(null);
 
     try {
-      const httpUrl = url
-        .replace('wss://', 'https://')
-        .replace('ws://', 'http://');
+      const httpUrl = url.replace('wss://', 'https://').replace('ws://', 'http://');
 
       this.logger.info('Fetching relay info', { url: httpUrl });
 
