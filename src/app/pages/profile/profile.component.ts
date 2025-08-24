@@ -278,7 +278,6 @@ export class ProfileComponent {
     // Add effect to monitor router events for sub-route changes
     this.router.events.subscribe((event) => {
       if (event instanceof NavigationEnd) {
-        debugger;
         // Check if current route is one that should use compact header
         const currentUrl = event.urlAfterRedirects;
         const shouldBeCompact = this.shouldUseCompactHeader(currentUrl);
@@ -289,6 +288,11 @@ export class ProfileComponent {
         }
       }
     });
+
+    // Also check the current URL on initial load/reload
+    const currentUrl = this.router.url;
+    const shouldBeCompact = this.shouldUseCompactHeader(currentUrl);
+    this.isCompactHeader.set(shouldBeCompact);
   }
 
   // Helper method to determine if the current route should use compact header
