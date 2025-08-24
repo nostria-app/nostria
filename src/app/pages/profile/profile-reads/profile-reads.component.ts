@@ -1,11 +1,4 @@
-import {
-  Component,
-  inject,
-  signal,
-  Input,
-  OnChanges,
-  SimpleChanges,
-} from '@angular/core';
+import { Component, inject, signal, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, RouterModule } from '@angular/router';
@@ -13,27 +6,23 @@ import { NostrService } from '../../../services/nostr.service';
 import { LoggerService } from '../../../services/logger.service';
 import { ProfileStateService } from '../../../services/profile-state.service';
 import { MatCardModule } from '@angular/material/card';
-import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { BookmarkService } from '../../../services/bookmark.service';
 import { MatButtonModule } from '@angular/material/button';
 import { UtilitiesService } from '../../../services/utilities.service';
-import { TagsPipe } from '../../../pipes/tags';
-import { EventComponent } from '../../../components/event/event.component';
+import { ArticleEventComponent } from '../../../components/event-types';
 
 @Component({
   selector: 'app-profile-reads',
   standalone: true,
   imports: [
     CommonModule,
-    EventComponent,
     MatIconModule,
     MatCardModule,
-    UserProfileComponent,
     RouterModule,
     MatTooltipModule,
     MatButtonModule,
-    TagsPipe,
+    ArticleEventComponent,
   ],
   templateUrl: './profile-reads.component.html',
   styleUrl: './profile-reads.component.scss',
@@ -62,8 +51,7 @@ export class ProfileReadsComponent implements OnChanges {
     if (
       changes['isVisible'] &&
       changes['isVisible'].currentValue === true &&
-      (!changes['isVisible'].firstChange ||
-        changes['isVisible'].previousValue === false)
+      (!changes['isVisible'].firstChange || changes['isVisible'].previousValue === false)
     ) {
       this.logger.debug('Profile reads tab became visible, reloading data');
       this.loadReads();
