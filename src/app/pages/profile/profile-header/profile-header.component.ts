@@ -69,6 +69,22 @@ export class ProfileHeaderComponent {
   showQrCode = signal<boolean>(false);
   showProfileQrCode = signal<boolean>(false);
 
+  // Computed to get website URL with protocol prefix
+  websiteUrl = computed(() => {
+    const website = this.profile()?.data.website;
+    if (!website) {
+      return '';
+    }
+
+    // Check if the website already has a protocol prefix
+    if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(website)) {
+      return website;
+    }
+
+    // If no protocol prefix, add https:// as default
+    return `https://${website}`;
+  });
+
   // Add signal for verified identifier
   verifiedIdentifier = signal<{
     value: string;
