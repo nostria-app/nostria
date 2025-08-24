@@ -1,11 +1,6 @@
 <div class="following-container" @slideInOut #followingContainer>
   <div class="following-header" @profileShrink>
-    <button
-      mat-icon-button
-      class="back-button"
-      (click)="goBack()"
-      aria-label="Back"
-    >
+    <button mat-icon-button class="back-button" (click)="goBack()" aria-label="Back">
       <mat-icon>arrow_back</mat-icon>
     </button>
 
@@ -51,15 +46,13 @@
       }
 
       @if (info()['foundMetadataOnAccountRelays']) {
-        <div>
-          <mat-icon>thumb_down</mat-icon> Found Profile on Account Relays
-        </div>
+        <div><mat-icon>thumb_down</mat-icon> Found Profile on Account Relays</div>
       }
 
       @if (info()['hasEmptyFollowingList']) {
         <div>
-          <mat-icon>thumb_down</mat-icon> Has empty following list and no relay
-          list. Impossible to find profile.
+          <mat-icon>thumb_down</mat-icon> Has empty following list and no relay list. Impossible to
+          find profile.
         </div>
       }
 

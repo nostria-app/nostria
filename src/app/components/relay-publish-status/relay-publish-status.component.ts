@@ -9,10 +9,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { NostrService } from '../../services/nostr.service';
 import { RouterModule } from '@angular/router';
-import {
-  RelayPublishingNotification,
-  RelayPublishPromise,
-} from '../../services/storage.service';
+import { RelayPublishingNotification, RelayPublishPromise } from '../../services/storage.service';
 
 @Component({
   selector: 'app-relay-publish-status',
@@ -37,24 +34,15 @@ export class RelayPublishStatusComponent {
   private nostrService = inject(NostrService);
 
   get successCount(): number {
-    return (
-      this.notification.relayPromises?.filter(rp => rp.status === 'success')
-        .length || 0
-    );
+    return this.notification.relayPromises?.filter((rp) => rp.status === 'success').length || 0;
   }
 
   get failedCount(): number {
-    return (
-      this.notification.relayPromises?.filter(rp => rp.status === 'failed')
-        .length || 0
-    );
+    return this.notification.relayPromises?.filter((rp) => rp.status === 'failed').length || 0;
   }
 
   get pendingCount(): number {
-    return (
-      this.notification.relayPromises?.filter(rp => rp.status === 'pending')
-        .length || 0
-    );
+    return this.notification.relayPromises?.filter((rp) => rp.status === 'pending').length || 0;
   }
 
   get progress(): number {

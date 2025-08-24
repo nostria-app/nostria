@@ -53,11 +53,7 @@ export class NotificationsComponent implements OnInit {
     const content = JSON.stringify({});
     const tags = [['d', 'client:notifications:seen']];
 
-    const unsignedEvent = this.nostrService.createEvent(
-      kinds.Application,
-      '',
-      tags
-    );
+    const unsignedEvent = this.nostrService.createEvent(kinds.Application, '', tags);
     const signedEvent = await this.nostrService.signEvent(unsignedEvent);
 
     // We don't want to show in notifications the app settings publishing.
@@ -100,9 +96,8 @@ export class NotificationsComponent implements OnInit {
   }
 
   async onRetryPublish(notificationId: string): Promise<void> {
-    await this.notificationService.retryFailedRelays(
-      notificationId,
-      (event, relayUrl) => this.accountRelay.publishToRelay(event, relayUrl)
+    await this.notificationService.retryFailedRelays(notificationId, (event, relayUrl) =>
+      this.accountRelay.publishToRelay(event, relayUrl),
     );
   }
 
@@ -126,9 +121,7 @@ export class NotificationsComponent implements OnInit {
     }
   }
 
-  isRelayPublishingNotification(
-    notification: any
-  ): notification is RelayPublishingNotification {
+  isRelayPublishingNotification(notification: any): notification is RelayPublishingNotification {
     return notification.type === NotificationType.RELAY_PUBLISHING;
   }
 }

@@ -107,8 +107,8 @@ getEventsForColumn(columnId: string): Event[] {
 
 ```html
 <!-- Uses computed signal directly instead of method calls -->
-@let columnEventsData = columnEvents().get(column.id); @for(event of
-columnEventsData; track event.id) {
+@let columnEventsData = columnEvents().get(column.id); @for(event of columnEventsData; track
+event.id) {
 ```
 
 ### **Computed Signal Implementation**:
@@ -120,7 +120,7 @@ columnEvents = computed(() => {
   const isDragging = this.isDragging();
   const eventsMap = new Map<string, Event[]>();
 
-  columns.forEach(column => {
+  columns.forEach((column) => {
     if (isDragging) {
       // During drag operations, use cached events to prevent DOM updates
       eventsMap.set(column.id, this._eventCache.get(column.id) || []);
@@ -142,11 +142,7 @@ columnEvents = computed(() => {
 ### **Drag Event Handling**:
 
 ```html
-<div
-  cdkDrag
-  (cdkDragStarted)="onDragStarted()"
-  (cdkDragEnded)="onDragEnded()"
-></div>
+<div cdkDrag (cdkDragStarted)="onDragStarted()" (cdkDragEnded)="onDragEnded()"></div>
 ```
 
 ### **Radical Change Detection Control** ✅ **IMPLEMENTED**:

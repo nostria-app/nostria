@@ -7,28 +7,15 @@
     <div class="error-container">
       <mat-icon color="warn">error</mat-icon>
       <p>{{ error() }}</p>
-      <button
-        mat-stroked-button
-        color="primary"
-        (click)="messaging.loadChats()"
-      >
-        Try Again
-      </button>
+      <button mat-stroked-button color="primary" (click)="messaging.loadChats()">Try Again</button>
     </div>
   } @else {
-    <div
-      class="messages-left"
-      [class.mobile-hidden]="layout.isHandset() && !showMobileList()"
-    >
+    <div class="messages-left" [class.mobile-hidden]="layout.isHandset() && !showMobileList()">
       <div class="message-threads-header">
         <h2>Chats</h2>
         <div class="spacer"></div>
         <div>
-          <button
-            mat-icon-button
-            aria-label="New chat"
-            (click)="startNewChat()"
-          >
+          <button mat-icon-button aria-label="New chat" (click)="startNewChat()">
             <mat-icon>edit</mat-icon>
           </button>
         </div>
@@ -64,18 +51,12 @@
                         <div class="chat-item-content">
                           <div class="chat-avatar">
                             @if (chat.encryptionType === 'nip44') {
-                              <mat-icon
-                                inline="true"
-                                class="chat-encryption-icon"
+                              <mat-icon inline="true" class="chat-encryption-icon"
                                 >shield_lock</mat-icon
                               >
                             }
 
-                            <app-user-profile
-                              [pubkey]="chat.pubkey"
-                              view="icon"
-                              #profileComp
-                            >
+                            <app-user-profile [pubkey]="chat.pubkey" view="icon" #profileComp>
                               <!-- {{ profileComp.profile() }} -->
 
                               <div class="chat-info">
@@ -102,9 +83,7 @@
                                   @if (chat.lastMessage) {
                                     <span class="message-preview">
                                       @if (chat.lastMessage.isOutgoing) {
-                                        <span class="outgoing-prefix"
-                                          >You:
-                                        </span>
+                                        <span class="outgoing-prefix">You: </span>
                                       }
                                       {{ chat.lastMessage.content }}
                                     </span>
@@ -144,11 +123,7 @@
                 <div class="empty-tab-content">
                   <mat-icon>people</mat-icon>
                   <p>No messages from people you follow</p>
-                  <button
-                    mat-flat-button
-                    color="primary"
-                    (click)="startNewChat()"
-                  >
+                  <button mat-flat-button color="primary" (click)="startNewChat()">
                     <mat-icon>add</mat-icon>
                     Start a conversation
                   </button>
@@ -177,9 +152,7 @@
                           </div>
                           <div class="chat-info">
                             <div class="chat-name-row">
-                              <span class="chat-name">{{
-                                chat.pubkey | npub
-                              }}</span>
+                              <span class="chat-name">{{ chat.pubkey | npub }}</span>
                               @if (chat.unreadCount > 0) {
                                 <span
                                   class="unread-badge"
@@ -200,9 +173,7 @@
                                   chat.lastMessage.created_at | ago
                                 }}</span>
                               } @else {
-                                <span class="message-preview empty-message"
-                                  >New conversation</span
-                                >
+                                <span class="message-preview empty-message">New conversation</span>
                               }
                             </div>
                           </div>
@@ -232,11 +203,7 @@
                 <div class="empty-tab-content">
                   <mat-icon>forum</mat-icon>
                   <p>No messages from others</p>
-                  <button
-                    mat-flat-button
-                    color="primary"
-                    (click)="startNewChat()"
-                  >
+                  <button mat-flat-button color="primary" (click)="startNewChat()">
                     <mat-icon>add</mat-icon>
                     Start a conversation
                   </button>
@@ -269,26 +236,16 @@
         }
       </div>
     </div>
-    <div
-      class="messages-right"
-      [class.mobile-hidden]="layout.isHandset() && showMobileList()"
-    >
+    <div class="messages-right" [class.mobile-hidden]="layout.isHandset() && showMobileList()">
       <div class="message-list-header">
         @if (selectedChat()) {
           <div class="chat-header-user">
             @if (layout.isHandset() && !showMobileList()) {
-              <button
-                mat-icon-button
-                class="back-button"
-                (click)="backToList()"
-              >
+              <button mat-icon-button class="back-button" (click)="backToList()">
                 <mat-icon>arrow_back</mat-icon>
               </button>
             }
-            <app-user-profile
-              [pubkey]="selectedChat()!.pubkey"
-              view="thread"
-            ></app-user-profile>
+            <app-user-profile [pubkey]="selectedChat()!.pubkey" view="thread"></app-user-profile>
           </div>
         }
       </div>
@@ -314,10 +271,7 @@
         }
 
         @for (message of messages(); track message.id) {
-          <div
-            class="message-bubble-container"
-            [class.outgoing]="message.isOutgoing"
-          >
+          <div class="message-bubble-container" [class.outgoing]="message.isOutgoing">
             <div
               class="message-bubble"
               [class.outgoing]="message.isOutgoing"
@@ -328,10 +282,7 @@
 
               <div class="message-status">
                 @if (message.pending) {
-                  <mat-spinner
-                    diameter="10"
-                    class="pending-spinner"
-                  ></mat-spinner>
+                  <mat-spinner diameter="10" class="pending-spinner"></mat-spinner>
                 } @else if (message.failed) {
                   <mat-icon class="failed-icon">error_outline</mat-icon>
                 } @else if (message.isOutgoing && message.read) {
@@ -339,18 +290,12 @@
                 } @else if (message.isOutgoing && message.received) {
                   <mat-icon class="received-icon">done</mat-icon>
                 }
-                <span class="message-time">{{
-                  message.created_at | timestamp
-                }}</span>
+                <span class="message-time">{{ message.created_at | timestamp }}</span>
               </div>
             </div>
 
             @if (message.failed) {
-              <button
-                mat-icon-button
-                class="retry-button"
-                (click)="retryMessage(message)"
-              >
+              <button mat-icon-button class="retry-button" (click)="retryMessage(message)">
                 <mat-icon>refresh</mat-icon>
               </button>
             }
@@ -359,11 +304,7 @@
       </div>
       <div class="message-input-container">
         @if (selectedChat()) {
-          <mat-form-field
-            appearance="outline"
-            class="message-input"
-            subscriptSizing="dynamic"
-          >
+          <mat-form-field appearance="outline" class="message-input" subscriptSizing="dynamic">
             <input
               matInput
               [ngModel]="newMessageText()"

@@ -1,11 +1,7 @@
 <div class="notifications-manage-page content-small">
   <div class="page-header">
     <h1>Manage Notifications</h1>
-    <button
-      mat-icon-button
-      routerLink="/notifications/settings"
-      aria-label="Back to settings"
-    >
+    <button mat-icon-button routerLink="/notifications/settings" aria-label="Back to settings">
       <mat-icon>arrow_back</mat-icon>
     </button>
   </div>
@@ -22,14 +18,10 @@
           <mat-icon>devices_off</mat-icon>
           <h3>No devices registered</h3>
           <p>
-            You need to register at least one device for notifications before
-            you can manage preferences.
+            You need to register at least one device for notifications before you can manage
+            preferences.
           </p>
-          <button
-            mat-raised-button
-            color="primary"
-            routerLink="/notifications/settings"
-          >
+          <button mat-raised-button color="primary" routerLink="/notifications/settings">
             Register a device
           </button>
         </div>
@@ -61,19 +53,14 @@
           <mat-divider></mat-divider>
 
           <!-- Device Rows -->
-          @for (
-            devicePref of devicePreferences();
-            track devicePref.device.deviceId
-          ) {
+          @for (devicePref of devicePreferences(); track devicePref.device.deviceId) {
             <div class="device-row">
               <!-- Device Info -->
               <div class="device-info">
                 <mat-icon>smartphone</mat-icon>
                 <div
                   class="device-details"
-                  [matTooltip]="
-                    devicePref.device.userAgent || 'User agent not available'
-                  "
+                  [matTooltip]="devicePref.device.userAgent || 'User agent not available'"
                   matTooltipPosition="above"
                 >
                   <div class="device-name">
@@ -101,11 +88,7 @@
                   <mat-checkbox
                     [checked]="devicePref.preferences[type.key]"
                     (change)="
-                      updatePreference(
-                        devicePref.device.deviceId,
-                        type.key,
-                        $event.checked
-                      )
+                      updatePreference(devicePref.device.deviceId, type.key, $event.checked)
                     "
                     [disabled]="isSaving()"
                     color="primary"
@@ -119,9 +102,7 @@
                 @if (hasAllEnabled(devicePref.device.deviceId)) {
                   <button
                     mat-icon-button
-                    (click)="
-                      toggleAllForDevice(devicePref.device.deviceId, false)
-                    "
+                    (click)="toggleAllForDevice(devicePref.device.deviceId, false)"
                     [disabled]="isSaving()"
                     matTooltip="Disable all notifications"
                     color="primary"
@@ -131,9 +112,7 @@
                 } @else {
                   <button
                     mat-icon-button
-                    (click)="
-                      toggleAllForDevice(devicePref.device.deviceId, true)
-                    "
+                    (click)="toggleAllForDevice(devicePref.device.deviceId, true)"
                     [disabled]="isSaving()"
                     matTooltip="Enable all notifications"
                   >
@@ -179,22 +158,13 @@
           <div>
             <h4>About Notification Types</h4>
             <ul>
-              <li>
-                <strong>Direct Messages:</strong> Private messages sent directly
-                to you
-              </li>
+              <li><strong>Direct Messages:</strong> Private messages sent directly to you</li>
               <li><strong>Replies:</strong> Responses to your posts</li>
-              <li>
-                <strong>Mentions:</strong> When someone mentions you in a post
-              </li>
-              <li>
-                <strong>Reposts:</strong> When someone reposts your content
-              </li>
+              <li><strong>Mentions:</strong> When someone mentions you in a post</li>
+              <li><strong>Reposts:</strong> When someone reposts your content</li>
               <li><strong>Zaps:</strong> Bitcoin lightning tips received</li>
               <li><strong>News:</strong> Important news and announcements</li>
-              <li>
-                <strong>App Updates:</strong> Updates about the Nostria app
-              </li>
+              <li><strong>App Updates:</strong> Updates about the Nostria app</li>
             </ul>
           </div>
         </div>

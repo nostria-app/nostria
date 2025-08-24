@@ -53,9 +53,7 @@ export class OpenGraphService {
       });
 
       if (!response.ok) {
-        throw new Error(
-          `Failed to fetch URL: ${response.status} ${response.statusText}`
-        );
+        throw new Error(`Failed to fetch URL: ${response.status} ${response.statusText}`);
       }
 
       // Parse JSON response instead of HTML
@@ -67,12 +65,8 @@ export class OpenGraphService {
         title: jsonData.title,
         description: jsonData.description,
         image: jsonData.image,
-        imageWidth: jsonData.imageWidth
-          ? parseInt(jsonData.imageWidth, 10)
-          : undefined,
-        imageHeight: jsonData.imageHeight
-          ? parseInt(jsonData.imageHeight, 10)
-          : undefined,
+        imageWidth: jsonData.imageWidth ? parseInt(jsonData.imageWidth, 10) : undefined,
+        imageHeight: jsonData.imageHeight ? parseInt(jsonData.imageHeight, 10) : undefined,
         loading: false,
         error: false,
       };
@@ -92,8 +86,7 @@ export class OpenGraphService {
         url,
         loading: false,
         error: true,
-        errorMessage:
-          error instanceof Error ? error.message : 'Failed to fetch metadata',
+        errorMessage: error instanceof Error ? error.message : 'Failed to fetch metadata',
       };
 
       // Cache the error result too, but with a shorter TTL in a real app
@@ -143,7 +136,7 @@ export class OpenGraphService {
    * Gets OpenGraph data for multiple URLs
    */
   async getMultipleOpenGraphData(urls: string[]): Promise<OpenGraphData[]> {
-    const promises = urls.map(url => this.getOpenGraphData(url));
+    const promises = urls.map((url) => this.getOpenGraphData(url));
     return await Promise.all(promises);
   }
 }

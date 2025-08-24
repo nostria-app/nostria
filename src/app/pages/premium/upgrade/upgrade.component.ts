@@ -1,18 +1,6 @@
-import {
-  Component,
-  effect,
-  inject,
-  signal,
-  OnDestroy,
-  computed,
-} from '@angular/core';
+import { Component, effect, inject, signal, OnDestroy, computed } from '@angular/core';
 
-import {
-  FormsModule,
-  ReactiveFormsModule,
-  FormBuilder,
-  Validators,
-} from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatStepperModule } from '@angular/material/stepper';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -25,15 +13,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import {
-  debounceTime,
-  firstValueFrom,
-  from,
-  of,
-  Subject,
-  switchMap,
-  takeUntil,
-} from 'rxjs';
+import { debounceTime, firstValueFrom, from, of, Subject, switchMap, takeUntil } from 'rxjs';
 import { AccountService, PaymentService } from '../../../api/services';
 import { TierDetails } from '../../../api/models/tier-details';
 import { AccountStateService } from '../../../services/account-state.service';
@@ -102,11 +82,7 @@ export class UpgradeComponent implements OnDestroy {
   usernameFormGroup = this.formBuilder.group({
     username: [
       '',
-      [
-        Validators.required,
-        Validators.minLength(3),
-        Validators.pattern('^[a-zA-Z0-9_]+$'),
-      ],
+      [Validators.required, Validators.minLength(3), Validators.pattern('^[a-zA-Z0-9_]+$')],
     ],
   });
 
@@ -127,19 +103,15 @@ export class UpgradeComponent implements OnDestroy {
   paymentCheckInterval = signal<number | null | any>(null);
   selectedPrice = computed(
     () =>
-      this.selectedTier()?.details?.pricing?.[
-        this.selectedPaymentOption() || 'monthly'
-      ] || { priceCents: 0, currency: 'USD' }
+      this.selectedTier()?.details?.pricing?.[this.selectedPaymentOption() || 'monthly'] || {
+        priceCents: 0,
+        currency: 'USD',
+      },
   );
   selectedTierTill = computed(() => {
     if (!this.selectedTier() || !this.selectedPaymentOption()) return '';
     const validTill =
-      Date.now() +
-      24 *
-        60 *
-        60 *
-        1000 *
-        (this.selectedPaymentOption() === 'quarterly' ? 92 : 365);
+      Date.now() + 24 * 60 * 60 * 1000 * (this.selectedPaymentOption() === 'quarterly' ? 92 : 365);
     const date = new Date(validTill);
     const day = date.getDate().toString().padStart(2, '0');
     const month = date.toLocaleString('en-US', { month: 'long' });
@@ -154,8 +126,8 @@ export class UpgradeComponent implements OnDestroy {
         this.accountService
           .getTiers()
           .pipe(takeUntil(this.destroy$))
-          .subscribe(tiersObj => {
-            const tiers = Object.values(tiersObj).map(tier => {
+          .subscribe((tiersObj) => {
+            const tiers = Object.values(tiersObj).map((tier) => {
               return {
                 key: tier.tier,
                 details: tier,
@@ -179,21 +151,19 @@ export class UpgradeComponent implements OnDestroy {
       ?.valueChanges.pipe(
         takeUntil(this.destroy$),
         debounceTime(300), // Wait 300ms after last keystroke
-        switchMap(value => {
+        switchMap((value) => {
           const trimmedValue = (value || '').trim();
           if (!trimmedValue) {
             return of({ success: true, message: '' });
           }
           this.isCheckingUsername.set(true);
           return from(this.usernameService.isUsernameAvailable(trimmedValue));
-        })
+        }),
       )
       .subscribe(({ success, message }) => {
         this.isCheckingUsername.set(false);
         if (!success) {
-          this.usernameFormGroup
-            .get('username')!
-            .setErrors({ username: message });
+          this.usernameFormGroup.get('username')!.setErrors({ username: message });
           this.usernameFormGroup.get('username')!.markAllAsTouched();
         }
       });
@@ -243,7 +213,7 @@ export class UpgradeComponent implements OnDestroy {
       console.error(
         'No price found for selected tier and payment option ',
         selectedTier.key,
-        selectedPaymentOption
+        selectedPaymentOption,
       );
       return;
     }
@@ -260,9 +230,7 @@ export class UpgradeComponent implements OnDestroy {
         },
       };
 
-      const payment = await firstValueFrom(
-        this.paymentService.createPayment(request)
-      );
+      const payment = await firstValueFrom(this.paymentService.createPayment(request));
 
       this.paymentInvoice.set({
         id: payment.id,
@@ -277,13 +245,9 @@ export class UpgradeComponent implements OnDestroy {
       // Start checking for payment
       this.startPaymentCheck();
     } catch (error) {
-      this.snackBar.open(
-        'Error generating payment invoice. Please try again.',
-        'Close',
-        {
-          duration: 5000,
-        }
-      );
+      this.snackBar.open('Error generating payment invoice. Please try again.', 'Close', {
+        duration: 5000,
+      });
     } finally {
       this.isGeneratingInvoice.set(false);
     }
@@ -306,10 +270,7 @@ export class UpgradeComponent implements OnDestroy {
       const invoice = this.paymentInvoice();
       if (!invoice) return;
       // const minutesToExpiry = Math.round((invoice.expires - Date.now()) / 60000);
-      const minutesToExpiry = Math.max(
-        0,
-        Math.round((invoice.expires - Date.now()) / 60000)
-      );
+      const minutesToExpiry = Math.max(0, Math.round((invoice.expires - Date.now()) / 60000));
       this.invoiceExpiresIn.set(String(minutesToExpiry));
       // If payment completed or expired, stop checking
       if (this.paymentInvoice()?.status !== 'pending') {
@@ -355,7 +316,7 @@ export class UpgradeComponent implements OnDestroy {
       this.paymentService.getPayment({
         paymentId: paymentInvoice.id,
         pubkey: this.accountState.pubkey(),
-      })
+      }),
     );
 
     if (payment.status === 'paid') {
@@ -378,13 +339,9 @@ export class UpgradeComponent implements OnDestroy {
         status: 'expired',
       });
 
-      this.snackBar.open(
-        'Payment invoice has expired. Please generate a new one.',
-        'Ok',
-        {
-          duration: 5000,
-        }
-      );
+      this.snackBar.open('Payment invoice has expired. Please generate a new one.', 'Ok', {
+        duration: 5000,
+      });
     }
   }
 
@@ -399,7 +356,7 @@ export class UpgradeComponent implements OnDestroy {
             username: this.usernameFormGroup.get('username')?.value,
             paymentId: this.paymentInvoice()!.id,
           },
-        })
+        }),
       );
       this.stepComplete.set({
         ...this.stepComplete(),
@@ -410,13 +367,9 @@ export class UpgradeComponent implements OnDestroy {
       this.accountState.changeAccount(this.accountState.account());
 
       // Show success message
-      this.snackBar.open(
-        'Payment successful! Your premium account is now active.',
-        'Great!',
-        {
-          duration: 8000,
-        }
-      );
+      this.snackBar.open('Payment successful! Your premium account is now active.', 'Great!', {
+        duration: 8000,
+      });
 
       // After 2 seconds, proceed to completion step
       setTimeout(() => {
@@ -453,13 +406,9 @@ export class UpgradeComponent implements OnDestroy {
     // Navigate to the home page or another appropriate page
     this.router.navigate(['/']);
 
-    this.snackBar.open(
-      'Welcome to Nostria Premium! Enjoy your new features.',
-      'Thanks!',
-      {
-        duration: 5000,
-      }
-    );
+    this.snackBar.open('Welcome to Nostria Premium! Enjoy your new features.', 'Thanks!', {
+      duration: 5000,
+    });
   }
 
   // Helper methods for template
@@ -488,19 +437,13 @@ export class UpgradeComponent implements OnDestroy {
   // Helper for template: get human-readable features for a tier
   getFeatureDescriptions(tier: TierDisplay): string[] {
     if (!tier.details.entitlements?.features) return [];
-    return tier.details.entitlements.features.map(
-      feature => feature.label || feature.key
-    );
+    return tier.details.entitlements.features.map((feature) => feature.label || feature.key);
   }
 
   // Helper for template: get pricing for a tier and billing period
-  getPricing(
-    tier: TierDetails,
-    period: 'quarterly' | 'yearly'
-  ): PricingDisplay {
+  getPricing(tier: TierDetails, period: 'quarterly' | 'yearly'): PricingDisplay {
     const price = tier.pricing?.[period];
-    if (!price)
-      return { pricePerMonth: '', totalPrice: '', currency: '', period: '' };
+    if (!price) return { pricePerMonth: '', totalPrice: '', currency: '', period: '' };
     return {
       pricePerMonth: price.priceCents
         ? (price.priceCents / 100 / (period === 'yearly' ? 12 : 3)).toFixed(2)

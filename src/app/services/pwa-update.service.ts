@@ -44,10 +44,8 @@ export class PwaUpdateService {
     this.logger.debug('Setting up version update subscription');
     // Subscribe to version ready events
     this.swUpdate.versionUpdates
-      .pipe(
-        filter((evt): evt is VersionReadyEvent => evt.type === 'VERSION_READY')
-      )
-      .subscribe(event => {
+      .pipe(filter((evt): evt is VersionReadyEvent => evt.type === 'VERSION_READY'))
+      .subscribe((event) => {
         this.logger.info('New version ready', {
           currentVersion: event.currentVersion,
           latestVersion: event.latestVersion,
@@ -64,7 +62,7 @@ export class PwaUpdateService {
       () => {
         this.checkForUpdate();
       },
-      60 * 60 * 1000
+      60 * 60 * 1000,
     ); // 60 minutes
   }
 
@@ -92,7 +90,7 @@ export class PwaUpdateService {
       'A new version of the application is available. Click to update now.',
       NotificationType.SUCCESS,
       'Update Now',
-      () => this.updateApplication()
+      () => this.updateApplication(),
     );
   }
 
@@ -111,12 +109,12 @@ export class PwaUpdateService {
         this.notificationService.notify(
           'Update Failed',
           'Failed to activate the update. Please try again.',
-          NotificationType.ERROR
+          NotificationType.ERROR,
         );
       }
     } else {
       this.logger.warn(
-        'Cannot update application: update not available or service worker not enabled'
+        'Cannot update application: update not available or service worker not enabled',
       );
     }
   }

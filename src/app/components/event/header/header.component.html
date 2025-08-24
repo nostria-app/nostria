@@ -13,25 +13,15 @@
       {{ event().created_at | ago }}
     </a>
 
-    <button
-      mat-icon-button
-      [matMenuTriggerFor]="menu"
-      aria-label="More options"
-    >
+    <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="More options">
       <mat-icon>more_vert</mat-icon>
     </button>
     <mat-menu #menu="matMenu">
-      <button
-        mat-menu-item
-        (click)="layout.copyToClipboard(layout.getCurrentUrl(), 'text')"
-      >
+      <button mat-menu-item (click)="layout.copyToClipboard(layout.getCurrentUrl(), 'text')">
         <mat-icon>link</mat-icon>
         Copy Note Link
       </button>
-      <button
-        mat-menu-item
-        (click)="layout.copyToClipboard(event().id, 'nevent', event().pubkey)"
-      >
+      <button mat-menu-item (click)="layout.copyToClipboard(event().id, 'nevent', event().pubkey)">
         <mat-icon>content_copy</mat-icon>
         Copy Note ID (nevent)
       </button>
@@ -44,10 +34,7 @@
         Share Event
       </button>
       <mat-divider></mat-divider>
-      <button
-        mat-menu-item
-        (click)="layout.copyToClipboard(record()?.data, 'text')"
-      >
+      <button mat-menu-item (click)="layout.copyToClipboard(record()?.data, 'text')">
         <mat-icon>content_copy</mat-icon>
         Copy Note Text
       </button>

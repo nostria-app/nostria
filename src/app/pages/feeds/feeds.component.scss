@@ -1181,8 +1181,7 @@ app-user-profile {
   transition: transform 300ms cubic-bezier(0, 0, 0.2, 1);
 }
 
-.columns-wrapper.cdk-drop-list-dragging
-  .column-unit:not(.cdk-drag-placeholder) {
+.columns-wrapper.cdk-drop-list-dragging .column-unit:not(.cdk-drag-placeholder) {
   transition: transform 300ms cubic-bezier(0, 0, 0.2, 1);
 }
 

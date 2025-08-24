@@ -191,9 +191,7 @@
 
             mat-chip {
               --mdc-chip-container-color: var(--mat-sys-secondary-container);
-              --mdc-chip-label-text-color: var(
-                --mat-sys-on-secondary-container
-              );
+              --mdc-chip-label-text-color: var(--mat-sys-on-secondary-container);
             }
           }
         }

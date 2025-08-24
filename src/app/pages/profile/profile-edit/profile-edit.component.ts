@@ -1,11 +1,4 @@
-import {
-  Component,
-  inject,
-  signal,
-  computed,
-  effect,
-  OnInit,
-} from '@angular/core';
+import { Component, inject, signal, computed, effect, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -22,11 +15,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { DataService } from '../../../services/data.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { MediaService } from '../../../services/media.service';
-import {
-  Profile,
-  ProfileData,
-  ProfileUpdateOptions,
-} from '../../../services/profile';
+import { Profile, ProfileData, ProfileUpdateOptions } from '../../../services/profile';
 import { AccountRelayServiceEx } from '../../../services/relays/account-relay';
 
 @Component({
@@ -137,7 +126,7 @@ export class ProfileEditComponent implements OnInit {
   }
 
   set pictureUrl(value: string) {
-    this.profile.update(p => ({ ...p, pictureUrl: value }));
+    this.profile.update((p) => ({ ...p, pictureUrl: value }));
   }
 
   get bannerUrl(): string {
@@ -145,7 +134,7 @@ export class ProfileEditComponent implements OnInit {
   }
 
   set bannerUrl(value: string) {
-    this.profile.update(p => ({ ...p, bannerUrl: value }));
+    this.profile.update((p) => ({ ...p, bannerUrl: value }));
   }
 
   get displayName(): string {
@@ -153,7 +142,7 @@ export class ProfileEditComponent implements OnInit {
   }
 
   set displayName(value: string) {
-    this.profile.update(p => ({ ...p, display_name: value }));
+    this.profile.update((p) => ({ ...p, display_name: value }));
   }
 
   get name(): string {
@@ -161,7 +150,7 @@ export class ProfileEditComponent implements OnInit {
   }
 
   set name(value: string) {
-    this.profile.update(p => ({ ...p, name: value }));
+    this.profile.update((p) => ({ ...p, name: value }));
   }
 
   get about(): string {
@@ -169,7 +158,7 @@ export class ProfileEditComponent implements OnInit {
   }
 
   set about(value: string) {
-    this.profile.update(p => ({ ...p, about: value }));
+    this.profile.update((p) => ({ ...p, about: value }));
   }
 
   get website(): string {
@@ -177,7 +166,7 @@ export class ProfileEditComponent implements OnInit {
   }
 
   set website(value: string) {
-    this.profile.update(p => ({ ...p, website: value }));
+    this.profile.update((p) => ({ ...p, website: value }));
   }
 
   get nip05(): string {
@@ -185,7 +174,7 @@ export class ProfileEditComponent implements OnInit {
   }
 
   set nip05(value: string) {
-    this.profile.update(p => ({ ...p, nip05: value }));
+    this.profile.update((p) => ({ ...p, nip05: value }));
   }
 
   get lud16(): string {
@@ -193,7 +182,7 @@ export class ProfileEditComponent implements OnInit {
   }
 
   set lud16(value: string) {
-    this.profile.update(p => ({ ...p, lud16: value }));
+    this.profile.update((p) => ({ ...p, lud16: value }));
   }
 
   async updateMetadata(): Promise<void> {
@@ -226,9 +215,7 @@ export class ProfileEditComponent implements OnInit {
 
       // Add profile image file if selected
       if (currentProfile['selectedProfileFile']) {
-        updateOptions.profileImageFile = currentProfile[
-          'selectedProfileFile'
-        ] as File;
+        updateOptions.profileImageFile = currentProfile['selectedProfileFile'] as File;
       } else if (this.useProfileImageUrl() && currentProfile['pictureUrl']) {
         // If using URL, set it directly in profileData
         profileData.picture = currentProfile['pictureUrl'] as string;
@@ -236,9 +223,7 @@ export class ProfileEditComponent implements OnInit {
 
       // Add banner image file if selected
       if (currentProfile['selectedBannerFile']) {
-        updateOptions.bannerImageFile = currentProfile[
-          'selectedBannerFile'
-        ] as File;
+        updateOptions.bannerImageFile = currentProfile['selectedBannerFile'] as File;
       } else if (this.useBannerUrl() && currentProfile['bannerUrl']) {
         // If using URL, set it directly in profileData
         profileData.banner = currentProfile['bannerUrl'] as string;
@@ -262,7 +247,7 @@ export class ProfileEditComponent implements OnInit {
         'Close',
         {
           duration: 5000,
-        }
+        },
       );
       this.loading.set(false);
     }
@@ -283,17 +268,17 @@ export class ProfileEditComponent implements OnInit {
       }
 
       const reader = new FileReader();
-      reader.onload = e => {
+      reader.onload = (e) => {
         const result = e.target?.result as string;
 
         if (type === 'profile') {
           this.previewProfileImage.set(result);
           // Store the file for later upload
-          this.profile.update(p => ({ ...p, selectedProfileFile: file }));
+          this.profile.update((p) => ({ ...p, selectedProfileFile: file }));
         } else {
           this.previewBanner.set(result);
           // Store the file for later upload
-          this.profile.update(p => ({ ...p, selectedBannerFile: file }));
+          this.profile.update((p) => ({ ...p, selectedBannerFile: file }));
         }
       };
       reader.readAsDataURL(file);
@@ -325,11 +310,11 @@ export class ProfileEditComponent implements OnInit {
   toggleImageInputMethod(type: 'profile' | 'banner'): void {
     if (type === 'profile') {
       const currentUrl = this.profile()?.picture || '';
-      this.useProfileImageUrl.update(current => !current);
+      this.useProfileImageUrl.update((current) => !current);
 
       if (this.useProfileImageUrl()) {
         // Switching to URL mode - preserve existing URL
-        this.profile.update(p => ({
+        this.profile.update((p) => ({
           ...p,
           pictureUrl: currentUrl,
           selectedProfileFile: null,
@@ -339,7 +324,7 @@ export class ProfileEditComponent implements OnInit {
         }
       } else {
         // Switching to file mode - clear file selection but keep URL for potential switch back
-        this.profile.update(p => ({
+        this.profile.update((p) => ({
           ...p,
           selectedProfileFile: null,
         }));
@@ -347,11 +332,11 @@ export class ProfileEditComponent implements OnInit {
       }
     } else {
       const currentUrl = this.profile()?.banner || '';
-      this.useBannerUrl.update(current => !current);
+      this.useBannerUrl.update((current) => !current);
 
       if (this.useBannerUrl()) {
         // Switching to URL mode - preserve existing URL
-        this.profile.update(p => ({
+        this.profile.update((p) => ({
           ...p,
           bannerUrl: currentUrl,
           selectedBannerFile: null,
@@ -361,7 +346,7 @@ export class ProfileEditComponent implements OnInit {
         }
       } else {
         // Switching to file mode - clear file selection but keep URL for potential switch back
-        this.profile.update(p => ({
+        this.profile.update((p) => ({
           ...p,
           selectedBannerFile: null,
         }));

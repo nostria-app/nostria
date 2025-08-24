@@ -2,12 +2,7 @@
   <div class="queue-header">
     <h2>Media Queue</h2>
     @if (media.media().length > 0) {
-      <button
-        mat-raised-button
-        color="warn"
-        (click)="clearQueue()"
-        matTooltip="Clear entire queue"
-      >
+      <button mat-raised-button color="warn" (click)="clearQueue()" matTooltip="Clear entire queue">
         <mat-icon>clear_all</mat-icon>
         Clear Queue
       </button>

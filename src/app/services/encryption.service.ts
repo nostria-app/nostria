@@ -26,10 +26,7 @@ export class EncryptionService {
    * Encrypt a message using NIP-04 (legacy, less secure)
    * Uses AES-256-CBC encryption
    */
-  async encryptNip04(
-    plaintext: string,
-    recipientPubkey: string
-  ): Promise<string> {
+  async encryptNip04(plaintext: string, recipientPubkey: string): Promise<string> {
     try {
       const account = this.accountState.account();
 
@@ -78,10 +75,7 @@ export class EncryptionService {
   /**
    * Encrypt a message using NIP-44 (modern, secure)
    */
-  async encryptNip44(
-    plaintext: string,
-    recipientPubkey: string
-  ): Promise<string> {
+  async encryptNip44(plaintext: string, recipientPubkey: string): Promise<string> {
     try {
       const account = this.accountState.account();
 
@@ -96,10 +90,7 @@ export class EncryptionService {
 
       // Use nostr-tools nip44 v2 encryption
       const privateKeyBytes = hexToBytes(account.privkey);
-      const conversationKey = v2.utils.getConversationKey(
-        privateKeyBytes,
-        recipientPubkey
-      );
+      const conversationKey = v2.utils.getConversationKey(privateKeyBytes, recipientPubkey);
 
       return v2.encrypt(plaintext, conversationKey);
     } catch (error) {
@@ -110,10 +101,7 @@ export class EncryptionService {
   /**
    * Decrypt a message using NIP-44 (modern, secure)
    */
-  async decryptNip44(
-    ciphertext: string,
-    senderPubkey: string
-  ): Promise<string> {
+  async decryptNip44(ciphertext: string, senderPubkey: string): Promise<string> {
     try {
       const account = this.accountState.account();
 
@@ -128,10 +116,7 @@ export class EncryptionService {
 
       // Use nostr-tools nip44 v2 decryption
       const privateKeyBytes = hexToBytes(account.privkey);
-      const conversationKey = v2.utils.getConversationKey(
-        privateKeyBytes,
-        senderPubkey
-      );
+      const conversationKey = v2.utils.getConversationKey(privateKeyBytes, senderPubkey);
 
       return v2.decrypt(ciphertext, conversationKey);
     } catch (error: any) {
@@ -146,22 +131,16 @@ export class EncryptionService {
   async encryptNip44WithKey(
     plaintext: string,
     privateKeyHex: string,
-    recipientPubkey: string
+    recipientPubkey: string,
   ): Promise<string> {
     try {
       // Use nostr-tools nip44 v2 encryption with the provided private key
       const privateKeyBytes = hexToBytes(privateKeyHex);
-      const conversationKey = v2.utils.getConversationKey(
-        privateKeyBytes,
-        recipientPubkey
-      );
+      const conversationKey = v2.utils.getConversationKey(privateKeyBytes, recipientPubkey);
 
       return v2.encrypt(plaintext, conversationKey);
     } catch (error) {
-      this.logger.error(
-        'Failed to encrypt with NIP-44 using custom key',
-        error
-      );
+      this.logger.error('Failed to encrypt with NIP-44 using custom key', error);
       throw new Error('Encryption failed');
     }
   }
@@ -172,7 +151,7 @@ export class EncryptionService {
   async autoDecrypt(
     ciphertext: string,
     senderPubkey: string,
-    event: Event
+    event: Event,
   ): Promise<DecryptionResult> {
     if (ciphertext.includes('?iv=')) {
       // Fallback to NIP-04 (legacy format with ?iv=)

@@ -13,9 +13,7 @@ import { EventService } from '../../services/event';
   styleUrl: './create-options-sheet.component.scss',
 })
 export class CreateOptionsSheetComponent {
-  private bottomSheetRef = inject(
-    MatBottomSheetRef<CreateOptionsSheetComponent>
-  );
+  private bottomSheetRef = inject(MatBottomSheetRef<CreateOptionsSheetComponent>);
   private layout = inject(LayoutService);
   private eventService = inject(EventService);
 

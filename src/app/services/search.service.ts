@@ -27,7 +27,7 @@ export class SearchService {
           'Cached search results:',
           cachedResults.length,
           'results for query:',
-          searchValue
+          searchValue,
         );
         this.searchResults.set(cachedResults);
 

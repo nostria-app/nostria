@@ -8,11 +8,7 @@
   text-align: center;
   font-size: 2rem;
   margin-bottom: 2rem;
-  background: linear-gradient(
-    90deg,
-    var(--mat-sys-primary),
-    var(--mat-sys-tertiary)
-  );
+  background: linear-gradient(90deg, var(--mat-sys-primary), var(--mat-sys-tertiary));
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;

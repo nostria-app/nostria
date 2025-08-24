@@ -14,15 +14,8 @@ import { importProvidersFrom } from '@angular/core';
 import { DragDropModule } from '@angular/cdk/drag-drop';
 import { routes } from './app.routes';
 import { LoggerService } from './services/logger.service';
-import {
-  provideClientHydration,
-  withEventReplay,
-} from '@angular/platform-browser';
-import {
-  provideHttpClient,
-  withFetch,
-  withInterceptors,
-} from '@angular/common/http';
+import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
+import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { UserRelayExFactoryService } from './services/user-relay-factory.service';
 import { MatIconRegistry } from '@angular/material/icon';
 import { ApiConfiguration } from './api/api-configuration';
@@ -51,8 +44,7 @@ if (typeof window !== 'undefined') {
 // Create a logger for bootstrapping phase
 const bootstrapLogger = {
   log: (message: string) => console.log(`[BOOTSTRAP] ${message}`),
-  error: (message: string, error?: any) =>
-    console.error(`[BOOTSTRAP ERROR] ${message}`, error),
+  error: (message: string, error?: any) => console.error(`[BOOTSTRAP ERROR] ${message}`, error),
 };
 
 bootstrapLogger.log('Configuring application');
@@ -65,7 +57,7 @@ export const appConfig: ApplicationConfig = {
       const initializerFn = ((iconRegistry: MatIconRegistry) => () => {
         const defaultFontSetClasses = iconRegistry.getDefaultFontSetClass();
         const outlinedFontSetClasses = defaultFontSetClasses
-          .filter(fontSetClass => fontSetClass !== 'material-icons')
+          .filter((fontSetClass) => fontSetClass !== 'material-icons')
           .concat(['material-symbols-outlined']);
         iconRegistry.setDefaultFontSetClass(...outlinedFontSetClasses);
       })(inject(MatIconRegistry));

@@ -14,8 +14,6 @@ export class BetaComponent {
 
   constructor() {
     this.meta.setTitle('Beta');
-    this.meta.setDescription(
-      'Information about Nostria beta status and development process'
-    );
+    this.meta.setDescription('Information about Nostria beta status and development process');
   }
 }

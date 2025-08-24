@@ -8,11 +8,7 @@ import {
   AfterViewInit,
   OnDestroy,
 } from '@angular/core';
-import {
-  MAT_DIALOG_DATA,
-  MatDialogRef,
-  MatDialogModule,
-} from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -22,10 +18,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDatepickerModule } from '@angular/material/datepicker';
-import {
-  MatNativeDateModule,
-  provideNativeDateAdapter,
-} from '@angular/material/core';
+import { MatNativeDateModule, provideNativeDateAdapter } from '@angular/material/core';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { DomSanitizer } from '@angular/platform-browser';
@@ -140,8 +133,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
     let expirationValid = true;
     if (this.expirationEnabled()) {
       const expirationDateTime = this.getExpirationDateTime();
-      expirationValid =
-        expirationDateTime !== null && expirationDateTime > new Date();
+      expirationValid = expirationDateTime !== null && expirationDateTime > new Date();
     }
 
     return hasContent && notPublishing && notUploading && expirationValid;
@@ -169,8 +161,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
 
     const content = this.content();
 
-    if (!content.trim())
-      return '<span class="empty-preview">Nothing to preview...</span>';
+    if (!content.trim()) return '<span class="empty-preview">Nothing to preview...</span>';
 
     // const formatted = this.formatPreviewContent(content);
     return content;
@@ -338,8 +329,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
     if (previousDraft) {
       const isSimilar =
         previousDraft.content === autoDraft.content &&
-        JSON.stringify(previousDraft.mentions) ===
-          JSON.stringify(autoDraft.mentions) &&
+        JSON.stringify(previousDraft.mentions) === JSON.stringify(autoDraft.mentions) &&
         previousDraft.expirationEnabled === autoDraft.expirationEnabled &&
         previousDraft.expirationTime === autoDraft.expirationTime;
 
@@ -377,8 +367,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
       if (!isExpired && autoDraft.content.trim()) {
         // Don't overwrite existing content from quote/reply initialization
         const existingContent = this.content().trim();
-        const draftHasMoreContent =
-          autoDraft.content.trim().length > existingContent.length;
+        const draftHasMoreContent = autoDraft.content.trim().length > existingContent.length;
 
         if (draftHasMoreContent) {
           this.content.set(autoDraft.content);
@@ -414,11 +403,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
 
     try {
       const tags = this.buildTags();
-      const event = this.nostrService.createEvent(
-        1,
-        this.content().trim(),
-        tags
-      );
+      const event = this.nostrService.createEvent(1, this.content().trim(), tags);
       const signedEvent = await this.nostrService.signEvent(event);
 
       if (signedEvent) {
@@ -475,7 +460,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
     }
 
     // Add mention tags
-    this.mentions().forEach(pubkey => {
+    this.mentions().forEach((pubkey) => {
       tags.push(['p', pubkey]);
     });
 
@@ -483,9 +468,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
     if (this.expirationEnabled()) {
       const expirationDateTime = this.getExpirationDateTime();
       if (expirationDateTime) {
-        const expirationTimestamp = Math.floor(
-          expirationDateTime.getTime() / 1000
-        );
+        const expirationTimestamp = Math.floor(expirationDateTime.getTime() / 1000);
         tags.push(['expiration', expirationTimestamp.toString()]);
       }
     }
@@ -501,7 +484,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
   }
 
   removeMention(pubkey: string): void {
-    this.mentions.set(this.mentions().filter(p => p !== pubkey));
+    this.mentions.set(this.mentions().filter((p) => p !== pubkey));
   }
 
   cancel(): void {
@@ -523,12 +506,12 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
 
   // Preview functionality
   togglePreview(): void {
-    this.showPreview.update(current => !current);
+    this.showPreview.update((current) => !current);
   }
 
   // Advanced options functionality
   toggleAdvancedOptions(): void {
-    this.showAdvancedOptions.update(current => !current);
+    this.showAdvancedOptions.update((current) => !current);
   }
 
   onExpirationToggle(enabled: boolean): void {
@@ -580,7 +563,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
     // Convert URLs to clickable links
     const withLinks = escaped.replace(
       /(https?:\/\/[^\s]+)/g,
-      '<a href="$1" target="_blank" rel="noopener noreferrer" class="preview-link">$1</a>'
+      '<a href="$1" target="_blank" rel="noopener noreferrer" class="preview-link">$1</a>',
     );
 
     // Convert line breaks to <br> tags
@@ -589,7 +572,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
     // Convert nostr: references to a special format
     const withNostrRefs = withLineBreaks.replace(
       /nostr:([a-zA-Z0-9]+)/g,
-      '<span class="nostr-ref">nostr:$1</span>'
+      '<span class="nostr-ref">nostr:$1</span>',
     );
 
     return withNostrRefs;
@@ -654,12 +637,12 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
       // Load media service if not already loaded
       await this.mediaService.load();
 
-      const uploadPromises = files.map(async file => {
+      const uploadPromises = files.map(async (file) => {
         try {
           const result = await this.mediaService.uploadFile(
             file,
             false,
-            this.mediaService.mediaServers()
+            this.mediaService.mediaServers(),
           );
 
           if (result.status === 'success' && result.item) {
@@ -684,30 +667,25 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
       const results = await Promise.all(uploadPromises);
 
       // Show success/error messages
-      const successful = results.filter(r => r.success);
-      const failed = results.filter(r => !r.success);
+      const successful = results.filter((r) => r.success);
+      const failed = results.filter((r) => !r.success);
 
       if (successful.length > 0) {
-        this.snackBar.open(
-          `${successful.length} file(s) uploaded successfully`,
-          'Close',
-          { duration: 3000 }
-        );
+        this.snackBar.open(`${successful.length} file(s) uploaded successfully`, 'Close', {
+          duration: 3000,
+        });
       }
 
       if (failed.length > 0) {
-        this.snackBar.open(
-          `${failed.length} file(s) failed to upload`,
-          'Close',
-          { duration: 5000 }
-        );
+        this.snackBar.open(`${failed.length} file(s) failed to upload`, 'Close', {
+          duration: 5000,
+        });
       }
     } catch (error) {
       this.snackBar.open(
-        'Upload failed: ' +
-          (error instanceof Error ? error.message : 'Unknown error'),
+        'Upload failed: ' + (error instanceof Error ? error.message : 'Unknown error'),
         'Close',
-        { duration: 5000 }
+        { duration: 5000 },
       );
     } finally {
       this.isUploading.set(false);
@@ -725,13 +703,9 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
 
     // Add spacing around the URL if needed
     const needsSpaceBefore =
-      beforeCursor.length > 0 &&
-      !beforeCursor.endsWith(' ') &&
-      !beforeCursor.endsWith('\n');
+      beforeCursor.length > 0 && !beforeCursor.endsWith(' ') && !beforeCursor.endsWith('\n');
     const needsSpaceAfter =
-      afterCursor.length > 0 &&
-      !afterCursor.startsWith(' ') &&
-      !afterCursor.startsWith('\n');
+      afterCursor.length > 0 && !afterCursor.startsWith(' ') && !afterCursor.startsWith('\n');
 
     const prefix = needsSpaceBefore ? ' ' : '';
     const suffix = needsSpaceAfter ? ' ' : '';
@@ -741,8 +715,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
 
     // Restore cursor position after the inserted URL
     setTimeout(() => {
-      const newCursorPosition =
-        cursorPosition + prefix.length + url.length + suffix.length;
+      const newCursorPosition = cursorPosition + prefix.length + url.length + suffix.length;
       textarea.setSelectionRange(newCursorPosition, newCursorPosition);
       textarea.focus();
     }, 0);
@@ -750,10 +723,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
 
   private setupPasteHandler(): void {
     if (this.contentTextarea) {
-      this.contentTextarea.nativeElement.addEventListener(
-        'paste',
-        this.handlePaste.bind(this)
-      );
+      this.contentTextarea.nativeElement.addEventListener('paste', this.handlePaste.bind(this));
     }
   }
 
@@ -795,8 +765,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
     }
 
     // Additional check by file extension as fallback
-    const imageExtensions =
-      /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico|tiff|avif|heic|heif)$/i;
+    const imageExtensions = /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico|tiff|avif|heic|heif)$/i;
     return imageExtensions.test(file.name);
   }
 }

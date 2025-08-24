@@ -28,8 +28,7 @@ export class NoteContentComponent {
       case 'nprofile': {
         // Navigate to profile page
         const record = data as Record<string, unknown>;
-        const pubkey =
-          type === 'npub' ? String(data) : String(record['pubkey'] || '');
+        const pubkey = type === 'npub' ? String(data) : String(record['pubkey'] || '');
         this.router.navigate(['/p', this.utilities.getNpubFromPubkey(pubkey)]);
         break;
       }

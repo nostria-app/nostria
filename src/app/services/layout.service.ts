@@ -1,11 +1,4 @@
-import {
-  inject,
-  Injectable,
-  signal,
-  OnDestroy,
-  effect,
-  PLATFORM_ID,
-} from '@angular/core';
+import { inject, Injectable, signal, OnDestroy, effect, PLATFORM_ID } from '@angular/core';
 import { NavigationExtras, Router } from '@angular/router';
 import { LoggerService } from './logger.service';
 import { MatDialog } from '@angular/material/dialog';
@@ -13,11 +6,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { MediaPreviewDialogComponent } from '../components/media-preview-dialog/media-preview.component';
 import { Event, kinds, nip19 } from 'nostr-tools';
-import {
-  AddressPointer,
-  EventPointer,
-  ProfilePointer,
-} from 'nostr-tools/nip19';
+import { AddressPointer, EventPointer, ProfilePointer } from 'nostr-tools/nip19';
 import { ProfileStateService } from './profile-state.service';
 import { LoginDialogComponent } from '../components/login-dialog/login-dialog.component';
 import { NostrRecord } from '../interfaces';
@@ -40,7 +29,7 @@ export class LayoutService implements OnDestroy {
   isWideScreen = signal(false);
   breakpointObserver = inject(BreakpointObserver);
   optimalProfilePosition = 240;
-  
+
   profileState = inject(ProfileStateService);
   accountStateService = inject(AccountStateService);
   overlayMode = signal(false);
@@ -125,14 +114,14 @@ export class LayoutService implements OnDestroy {
 
   constructor() {
     // Monitor only mobile devices (not tablets)
-    this.breakpointObserver.observe('(max-width: 599px)').subscribe(result => {
+    this.breakpointObserver.observe('(max-width: 599px)').subscribe((result) => {
       this.logger.debug('Breakpoint observer update', {
         isMobile: result.matches,
       });
       this.isHandset.set(result.matches);
     });
 
-    this.breakpointObserver.observe('(min-width: 1200px)').subscribe(result => {
+    this.breakpointObserver.observe('(min-width: 1200px)').subscribe((result) => {
       this.isWideScreen.set(result.matches);
     });
     effect(() => {
@@ -161,19 +150,14 @@ export class LayoutService implements OnDestroy {
     // this.contentWrapper = matDrawerContent || contentWrapper || undefined;
 
     if (!this.contentWrapper) {
-      this.logger.warn(
-        'Content wrapper not found for scroll monitoring, retrying in 500ms...'
-      );
+      this.logger.warn('Content wrapper not found for scroll monitoring, retrying in 500ms...');
       setTimeout(() => this.initializeScrollMonitoring(), 500);
       return;
     }
 
     this.logger.debug('Initializing scroll monitoring on content wrapper'); // Remove existing listener if any
     if (this.scrollEventListener) {
-      this.contentWrapper.removeEventListener(
-        'scroll',
-        this.scrollEventListener
-      );
+      this.contentWrapper.removeEventListener('scroll', this.scrollEventListener);
     }
 
     // Create scroll handler with immediate and throttled updates
@@ -303,8 +287,7 @@ export class LayoutService implements OnDestroy {
     const threshold = 5;
 
     const calculatedAtTop = scrollTop <= threshold;
-    const calculatedAtBottom =
-      scrollTop + clientHeight >= scrollHeight - threshold;
+    const calculatedAtBottom = scrollTop + clientHeight >= scrollHeight - threshold;
 
     console.log('Scroll Debug State:', {
       scrollTop,
@@ -404,10 +387,7 @@ export class LayoutService implements OnDestroy {
    */
   ngOnDestroy(): void {
     if (this.contentWrapper && this.scrollEventListener) {
-      this.contentWrapper.removeEventListener(
-        'scroll',
-        this.scrollEventListener
-      );
+      this.contentWrapper.removeEventListener('scroll', this.scrollEventListener);
     }
   }
 
@@ -420,9 +400,7 @@ export class LayoutService implements OnDestroy {
 
       // Focus on search input after DOM update
       setTimeout(() => {
-        const searchInput = document.querySelector(
-          '.search-input'
-        ) as HTMLInputElement;
+        const searchInput = document.querySelector('.search-input') as HTMLInputElement;
         if (searchInput) {
           searchInput.focus();
           this.logger.debug('Search input focused');
@@ -472,11 +450,7 @@ export class LayoutService implements OnDestroy {
 
   private debounceTimer: any;
 
-  copyToClipboard(
-    text: any | undefined | null,
-    type: string,
-    author?: string
-  ): void {
+  copyToClipboard(text: any | undefined | null, type: string, author?: string): void {
     if (text === null || text === undefined) {
       return;
     }
@@ -515,10 +489,10 @@ export class LayoutService implements OnDestroy {
             horizontalPosition: 'center',
             verticalPosition: 'bottom',
             panelClass: 'copy-snackbar',
-          }
+          },
         );
       })
-      .catch(error => {
+      .catch((error) => {
         this.logger.error('Failed to copy to clipboard:', error);
         this.snackBar.open('Failed to copy to clipboard', 'Dismiss', {
           duration: 3000,
@@ -595,9 +569,7 @@ export class LayoutService implements OnDestroy {
           }, 100);
         } else if (step === 'login') {
           setTimeout(() => {
-            componentInstance.goToStep(
-              componentInstance.LoginStep.LOGIN_OPTIONS
-            );
+            componentInstance.goToStep(componentInstance.LoginStep.LOGIN_OPTIONS);
           }, 100);
         }
       });
@@ -669,7 +641,7 @@ export class LayoutService implements OnDestroy {
       this.toast(
         'WARNING: You pasted your nsec key. This is a security risk! Please remove it from your clipboard.',
         5000,
-        'error-snackbar'
+        'error-snackbar',
       );
       return;
     } else if (value.startsWith('naddr')) {
@@ -769,15 +741,13 @@ export class LayoutService implements OnDestroy {
 
       this.logger.debug(
         'Scrolled content wrapper to optimal profile view position',
-        scrollPosition
+        scrollPosition,
       );
 
       // Refresh scroll monitoring after programmatic scroll
       setTimeout(() => this.refreshScrollMonitoring(), 300);
     } else {
-      this.logger.error(
-        'Could not find mat-drawer-content element for scrolling'
-      );
+      this.logger.error('Could not find mat-drawer-content element for scrolling');
     }
   }
 
@@ -814,9 +784,7 @@ export class LayoutService implements OnDestroy {
       // Refresh scroll monitoring after programmatic scroll
       setTimeout(() => this.refreshScrollMonitoring(), 300);
     } else {
-      this.logger.error(
-        `Could not find ${elementSelector} element for scrolling`
-      );
+      this.logger.error(`Could not find ${elementSelector} element for scrolling`);
     }
   }
 
@@ -866,7 +834,7 @@ export class LayoutService implements OnDestroy {
   scrollToElement(
     elementSelector: string,
     block: ScrollLogicalPosition = 'start',
-    behavior: ScrollBehavior = 'smooth'
+    behavior: ScrollBehavior = 'smooth',
   ): void {
     const element = document.querySelector(elementSelector);
     if (element) {
@@ -876,9 +844,7 @@ export class LayoutService implements OnDestroy {
       });
       this.logger.debug(`Scrolled ${elementSelector} into view`);
     } else {
-      this.logger.error(
-        `Could not find ${elementSelector} element for scrolling into view`
-      );
+      this.logger.error(`Could not find ${elementSelector} element for scrolling into view`);
 
       // Fallback: try scrolling the parent container
       const contentWrapper = document.querySelector('.content-wrapper');
@@ -898,33 +864,24 @@ export class LayoutService implements OnDestroy {
    * @param offset Optional offset from the element's top (in pixels)
    * @param behavior Scrolling behavior
    */
-  scrollToPosition(
-    elementSelector: string,
-    offset = 0,
-    behavior: ScrollBehavior = 'smooth'
-  ): void {
+  scrollToPosition(elementSelector: string, offset = 0, behavior: ScrollBehavior = 'smooth'): void {
     const container = document.querySelector('.content-wrapper');
     const targetElement = document.querySelector(elementSelector);
 
     if (!container) {
-      this.logger.error(
-        'Could not find .content-wrapper element for scrolling'
-      );
+      this.logger.error('Could not find .content-wrapper element for scrolling');
       return;
     }
 
     if (!targetElement) {
-      this.logger.error(
-        `Could not find target element "${elementSelector}" for scrolling to`
-      );
+      this.logger.error(`Could not find target element "${elementSelector}" for scrolling to`);
       return;
     }
 
     // Calculate the target element's position relative to the container
     const containerRect = container.getBoundingClientRect();
     const targetRect = targetElement.getBoundingClientRect();
-    const relativeTop =
-      targetRect.top - containerRect.top + container.scrollTop + offset;
+    const relativeTop = targetRect.top - containerRect.top + container.scrollTop + offset;
 
     container.scrollTo({
       top: relativeTop,
@@ -932,7 +889,7 @@ export class LayoutService implements OnDestroy {
     });
 
     this.logger.debug(
-      `Scrolled .content-wrapper to show element "${elementSelector}" at position ${relativeTop}`
+      `Scrolled .content-wrapper to show element "${elementSelector}" at position ${relativeTop}`,
     );
   }
 
@@ -945,8 +902,7 @@ export class LayoutService implements OnDestroy {
         data: {
           mediaUrl: profile.data.picture,
           mediaType: 'image',
-          mediaTitle:
-            profile.data.display_name || profile.data.name || 'Profile Picture',
+          mediaTitle: profile.data.display_name || profile.data.name || 'Profile Picture',
         },
         maxWidth: '100vw',
         maxHeight: '100vh',
@@ -1001,7 +957,7 @@ export class LayoutService implements OnDestroy {
         .then(() => {
           this.logger.debug('Event shared successfully');
         })
-        .catch(error => {
+        .catch((error) => {
           this.logger.error('Error sharing profile:', error);
         });
     } else {
@@ -1034,7 +990,7 @@ export class LayoutService implements OnDestroy {
         .then(() => {
           this.logger.debug('Profile shared successfully');
         })
-        .catch(error => {
+        .catch((error) => {
           this.logger.error('Error sharing profile:', error);
         });
     } else {
@@ -1068,16 +1024,13 @@ export class LayoutService implements OnDestroy {
     });
   }
 
-  async showPublishResults(
-    publishPromises: Promise<string>[] | null,
-    itemName: string
-  ) {
+  async showPublishResults(publishPromises: Promise<string>[] | null, itemName: string) {
     try {
       // Wait for all publishing results
       const results = await Promise.all(publishPromises || []);
 
       // Count successes and failures
-      const successful = results.filter(result => result === '').length;
+      const successful = results.filter((result) => result === '').length;
       const failed = results.length - successful;
 
       // Display appropriate notification
@@ -1090,7 +1043,7 @@ export class LayoutService implements OnDestroy {
             horizontalPosition: 'center',
             verticalPosition: 'bottom',
             panelClass: 'success-snackbar',
-          }
+          },
         );
       } else {
         this.snackBar.open(
@@ -1100,9 +1053,8 @@ export class LayoutService implements OnDestroy {
             duration: 5000,
             horizontalPosition: 'center',
             verticalPosition: 'bottom',
-            panelClass:
-              failed > successful ? 'error-snackbar' : 'warning-snackbar',
-          }
+            panelClass: failed > successful ? 'error-snackbar' : 'warning-snackbar',
+          },
         );
       }
     } catch (error) {

@@ -10,10 +10,7 @@ const manifestPath = path.join(__dirname, 'public', 'manofest.webmanifest');
 async function updateVersion() {
   try {
     // Read package.json to get current version
-    const packageJsonContent = await fs.promises.readFile(
-      packageJsonPath,
-      'utf8'
-    );
+    const packageJsonContent = await fs.promises.readFile(packageJsonPath, 'utf8');
     const packageJson = JSON.parse(packageJsonContent);
     const currentVersion = packageJson.version;
 
@@ -30,26 +27,17 @@ async function updateVersion() {
 
     // Update package.json
     packageJson.version = newVersion;
-    await fs.promises.writeFile(
-      packageJsonPath,
-      JSON.stringify(packageJson, null, 2) + '\n'
-    );
+    await fs.promises.writeFile(packageJsonPath, JSON.stringify(packageJson, null, 2) + '\n');
     console.log(`✓ Updated package.json`);
 
     // Update manifest.webmanifest
     packageJson.version = newVersion;
-    await fs.promises.writeFile(
-      manifestPath,
-      JSON.stringify(packageJson, null, 2) + '\n'
-    );
+    await fs.promises.writeFile(manifestPath, JSON.stringify(packageJson, null, 2) + '\n');
     console.log(`✓ Updated package.json`);
 
     // Update Cargo.toml
     let cargoContent = await fs.promises.readFile(cargoTomlPath, 'utf8');
-    cargoContent = cargoContent.replace(
-      /^version\s*=\s*"[^"]*"/m,
-      `version = "${newVersion}"`
-    );
+    cargoContent = cargoContent.replace(/^version\s*=\s*"[^"]*"/m, `version = "${newVersion}"`);
     await fs.promises.writeFile(cargoTomlPath, cargoContent);
     console.log(`✓ Updated src-tauri/Cargo.toml`);
 
@@ -58,10 +46,7 @@ async function updateVersion() {
     const tauriConf = JSON.parse(tauriConfContent);
     if (tauriConf.version) {
       tauriConf.version = newVersion;
-      await fs.promises.writeFile(
-        tauriConfPath,
-        JSON.stringify(tauriConf, null, 2) + '\n'
-      );
+      await fs.promises.writeFile(tauriConfPath, JSON.stringify(tauriConf, null, 2) + '\n');
       console.log(`✓ Updated src-tauri/tauri.conf.json`);
     } else {
       console.warn('⚠️ Could not find version field in tauri.conf.json');

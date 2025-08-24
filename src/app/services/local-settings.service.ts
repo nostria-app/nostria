@@ -49,9 +49,7 @@ export class LocalSettingsService {
    */
   private loadSettings(): void {
     try {
-      const stored = this.localStorage.getObject<LocalSettings>(
-        this.STORAGE_KEY
-      );
+      const stored = this.localStorage.getObject<LocalSettings>(this.STORAGE_KEY);
 
       if (stored) {
         // Merge with defaults to ensure all properties exist
@@ -63,10 +61,7 @@ export class LocalSettingsService {
         this.settings.set(mergedSettings);
         this.logger.debug('Local settings loaded successfully', mergedSettings);
       } else {
-        this.logger.debug(
-          'No local settings found, using defaults',
-          DEFAULT_LOCAL_SETTINGS
-        );
+        this.logger.debug('No local settings found, using defaults', DEFAULT_LOCAL_SETTINGS);
         this.settings.set({ ...DEFAULT_LOCAL_SETTINGS });
       }
     } catch (error) {
@@ -95,7 +90,7 @@ export class LocalSettingsService {
    * Update specific settings
    */
   updateSettings(updates: Partial<LocalSettings>): void {
-    this.settings.update(current => ({
+    this.settings.update((current) => ({
       ...current,
       ...updates,
     }));

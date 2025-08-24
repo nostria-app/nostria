@@ -1,22 +1,14 @@
 <div class="welcome">
   <div class="welcome-backdrop">
     <div class="welcome-top">
-      <button
-        class="welcome-theme-button"
-        mat-icon-button
-        (click)="themeService.toggleDarkMode()"
-      >
+      <button class="welcome-theme-button" mat-icon-button (click)="themeService.toggleDarkMode()">
         @if (themeService.darkMode()) {
           <mat-icon>dark_mode</mat-icon>
         } @else {
           <mat-icon>light_mode</mat-icon>
         }
       </button>
-      <button
-        class="welcome-close-button"
-        mat-icon-button
-        (click)="skipToEnd()"
-      >
+      <button class="welcome-close-button" mat-icon-button (click)="skipToEnd()">
         <mat-icon>close</mat-icon>
       </button>
     </div>
@@ -70,9 +62,7 @@
         } @else if (currentWizardStep() === totalWizardSteps()) {
           <!-- Last step actions -->
           <button mat-button (click)="previousStep()">Back</button>&nbsp;
-          <button mat-flat-button (click)="completeWizard()">
-            Start Using Nostria
-          </button>
+          <button mat-flat-button (click)="completeWizard()">Start Using Nostria</button>
         } @else {
           <!-- Middle steps actions -->
           <button mat-button (click)="previousStep()">Back</button>&nbsp;

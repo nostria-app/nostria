@@ -35,10 +35,7 @@ export class DataService {
   private readonly relaysService = inject(RelaysService);
 
   // Map to track pending profile requests to prevent race conditions
-  private pendingProfileRequests = new Map<
-    string,
-    Promise<NostrRecord | undefined>
-  >();
+  private pendingProfileRequests = new Map<string, Promise<NostrRecord | undefined>>();
 
   // Clean up old pending requests periodically
   constructor() {
@@ -46,7 +43,7 @@ export class DataService {
     setInterval(() => {
       if (this.pendingProfileRequests.size > 100) {
         this.logger.warn(
-          `Large number of pending profile requests: ${this.pendingProfileRequests.size}. Consider investigating.`
+          `Large number of pending profile requests: ${this.pendingProfileRequests.size}. Consider investigating.`,
         );
       }
     }, 30000);
@@ -63,7 +60,7 @@ export class DataService {
   async getEventById(
     id: string,
     options?: CacheOptions & DataOptions,
-    userRelays = false
+    userRelays = false,
   ): Promise<NostrRecord | null> {
     let event: Event | null = null;
     let record: NostrRecord | undefined = undefined;
@@ -145,20 +142,14 @@ export class DataService {
 
   async getUserRelays(pubkey: string) {
     let relayUrls: string[] = [];
-    const relayListEvent = await this.storage.getEventByPubkeyAndKind(
-      pubkey,
-      10002
-    );
+    const relayListEvent = await this.storage.getEventByPubkeyAndKind(pubkey, 10002);
 
     if (relayListEvent) {
       relayUrls = this.utilities.getRelayUrls(relayListEvent);
     }
 
     if (!relayUrls || relayUrls.length === 0) {
-      const followingEvent = await this.storage.getEventByPubkeyAndKind(
-        pubkey,
-        3
-      );
+      const followingEvent = await this.storage.getEventByPubkeyAndKind(pubkey, 3);
       if (followingEvent) {
         relayUrls = this.utilities.getRelayUrlsFromFollowing(followingEvent);
       }
@@ -185,17 +176,12 @@ export class DataService {
     return metadataList;
   }
 
-  async getProfile(
-    pubkey: string,
-    refresh = false
-  ): Promise<NostrRecord | undefined> {
+  async getProfile(pubkey: string, refresh = false): Promise<NostrRecord | undefined> {
     const cacheKey = `metadata-${pubkey}`;
 
     // Check if there's already a pending request for this pubkey
     if (this.pendingProfileRequests.has(pubkey)) {
-      this.logger.debug(
-        `Returning existing pending request for profile: ${pubkey}`
-      );
+      this.logger.debug(`Returning existing pending request for profile: ${pubkey}`);
       return this.pendingProfileRequests.get(pubkey);
     }
 
@@ -227,16 +213,13 @@ export class DataService {
   private async loadProfile(
     pubkey: string,
     cacheKey: string,
-    refresh: boolean // eslint-disable-line @typescript-eslint/no-unused-vars
+    refresh: boolean, // eslint-disable-line @typescript-eslint/no-unused-vars
   ): Promise<NostrRecord | undefined> {
     let metadata: Event | null = null;
     let record: NostrRecord | undefined = undefined;
 
     // Try storage first
-    metadata = await this.storage.getEventByPubkeyAndKind(
-      pubkey,
-      kinds.Metadata
-    );
+    metadata = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Metadata);
 
     if (metadata) {
       record = this.toRecord(metadata);
@@ -280,10 +263,7 @@ export class DataService {
           await this.storage.saveEvent(fresh);
         }
       } catch (error) {
-        this.logger.warn(
-          `Failed to refresh profile in background for ${pubkey}:`,
-          error
-        );
+        this.logger.warn(`Failed to refresh profile in background for ${pubkey}:`, error);
       }
     });
   }
@@ -293,7 +273,7 @@ export class DataService {
     pubkey: string,
     kind: number,
     dTagValue: string,
-    options?: CacheOptions & DataOptions
+    options?: CacheOptions & DataOptions,
   ): Promise<NostrRecord | null> {
     const cacheKey = `${pubkey}-${kind}-${dTagValue}`;
     let event: Event | null = null;
@@ -310,21 +290,16 @@ export class DataService {
     // If the caller explicitly don't want to save, we will not check the storage.
     if (options?.save) {
       event =
-        (await this.storage.getParameterizedReplaceableEvent(
-          pubkey,
-          kind,
-          dTagValue
-        )) || null;
+        (await this.storage.getParameterizedReplaceableEvent(pubkey, kind, dTagValue)) || null;
     }
 
     // If the caller explicitly supplies user relay, don't attempt to user account relay.
     if (!event) {
       // Try to get the event from the account relay.
-      event = await this.accountRelayEx.getEventByPubkeyAndKindAndTag(
-        pubkey,
-        kind,
-        { key: 'd', value: dTagValue }
-      );
+      event = await this.accountRelayEx.getEventByPubkeyAndKindAndTag(pubkey, kind, {
+        key: 'd',
+        value: dTagValue,
+      });
     }
 
     if (!event) {
@@ -348,7 +323,7 @@ export class DataService {
   async getEventByPubkeyAndKind(
     pubkey: string | string[],
     kind: number,
-    options?: CacheOptions & DataOptions
+    options?: CacheOptions & DataOptions,
   ): Promise<NostrRecord | null> {
     const cacheKey = `${Array.isArray(pubkey) ? pubkey.join(',') : pubkey}-${kind}`;
     let event: Event | null = null;
@@ -393,7 +368,7 @@ export class DataService {
   async getEventsByPubkeyAndKind(
     pubkey: string | string[],
     kind: number,
-    options?: CacheOptions & DataOptions
+    options?: CacheOptions & DataOptions,
   ): Promise<NostrRecord[]> {
     const cacheKey = `${Array.isArray(pubkey) ? pubkey.join(',') : pubkey}-${kind}-all`;
     let events: Event[] = [];
@@ -413,10 +388,7 @@ export class DataService {
     }
 
     if (events.length === 0) {
-      const relayEvents = await this.accountRelay.getEventsByPubkeyAndKind(
-        pubkey,
-        kind
-      );
+      const relayEvents = await this.accountRelay.getEventsByPubkeyAndKind(pubkey, kind);
       if (relayEvents && relayEvents.length > 0) {
         events = relayEvents;
       }
@@ -426,7 +398,7 @@ export class DataService {
       return [];
     }
 
-    records = events.map(event => this.toRecord(event));
+    records = events.map((event) => this.toRecord(event));
 
     if (options?.cache) {
       this.cache.set(cacheKey, records, options);
@@ -445,7 +417,7 @@ export class DataService {
     kind: number,
     eventTag: string,
     userPubkey: string,
-    options?: CacheOptions & DataOptions
+    options?: CacheOptions & DataOptions,
   ): Promise<NostrRecord[]> {
     const cacheKey = `${userPubkey}-${kind}-${eventTag}-all`;
     let events: Event[] = [];
@@ -462,9 +434,7 @@ export class DataService {
     // If the caller explicitly don't want to save, we will not check the storage.
     if (events.length === 0 && options?.save) {
       const allEvents = await this.storage.getEventsByKind(kind);
-      events = allEvents.filter(
-        e => this.utilities.getTagValues('#e', e.tags)[0] === eventTag
-      );
+      events = allEvents.filter((e) => this.utilities.getTagValues('#e', e.tags)[0] === eventTag);
     }
 
     if (events.length === 0) {
@@ -482,7 +452,7 @@ export class DataService {
       return [];
     }
 
-    records = events.map(event => this.toRecord(event));
+    records = events.map((event) => this.toRecord(event));
 
     if (options?.cache) {
       this.cache.set(cacheKey, records, options);

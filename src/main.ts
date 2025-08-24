@@ -20,7 +20,7 @@ if (typeof window !== 'undefined') {
 // Init provided language
 initLanguage(appLang)
   .then(() => bootstrapApplication(App, appConfig))
-  .catch(err => {
+  .catch((err) => {
     console.error('[BOOTSTRAP ERROR] Failed to bootstrap application', err);
   });
 
@@ -49,10 +49,7 @@ async function initLanguage(locale: string): Promise<void> {
     const localeModule = await getLocaleModule(locale);
     registerLocaleData(localeModule.default);
   } catch (error) {
-    console.error(
-      `[BOOTSTRAP ERROR] Failed to initialize language ${locale}:`,
-      error
-    );
+    console.error(`[BOOTSTRAP ERROR] Failed to initialize language ${locale}:`, error);
     // Fallback to English if translation loading fails
   }
 }

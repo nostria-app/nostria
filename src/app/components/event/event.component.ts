@@ -1,12 +1,4 @@
-import {
-  Component,
-  computed,
-  effect,
-  inject,
-  input,
-  signal,
-  untracked,
-} from '@angular/core';
+import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog } from '@angular/material/dialog';
@@ -85,31 +77,25 @@ export class EventComponent {
   likes = computed<NostrRecord[]>(() => {
     const event = this.event();
     if (!event) return [];
-    return this.reactions().events.filter(r => r.event.content === '+');
+    return this.reactions().events.filter((r) => r.event.content === '+');
   });
 
   likeReaction = computed<NostrRecord | undefined>(() => {
     const myReactions = this.likes();
     if (!myReactions) return;
-    return myReactions.find(r => r.event.pubkey === this.accountState.pubkey());
+    return myReactions.find((r) => r.event.pubkey === this.accountState.pubkey());
   });
 
   repostedRecord = computed<NostrRecord | null>(() => {
     const event = this.event();
-    if (
-      !event ||
-      (event.kind !== kinds.Repost && event.kind !== kinds.GenericRepost)
-    )
-      return null;
+    if (!event || (event.kind !== kinds.Repost && event.kind !== kinds.GenericRepost)) return null;
     return this.repostService.decodeRepost(event);
   });
 
   repostByCurrentAccount = computed<NostrRecord | undefined>(() => {
     const event = this.event();
     if (!event) return;
-    return this.reposts().find(
-      e => e.event.pubkey === this.accountState.pubkey()
-    );
+    return this.reposts().find((e) => e.event.pubkey === this.accountState.pubkey());
   });
 
   constructor() {
@@ -169,7 +155,7 @@ export class EventComponent {
       const reposts = await this.eventService.loadReposts(
         record.event.id,
         userPubkey,
-        invalidateCache
+        invalidateCache,
       );
       this.reposts.set(reposts);
     } finally {
@@ -189,7 +175,7 @@ export class EventComponent {
       const reactions = await this.eventService.loadReactions(
         record.event.id,
         userPubkey,
-        invalidateCache
+        invalidateCache,
       );
       this.reactions.set(reactions);
     } finally {

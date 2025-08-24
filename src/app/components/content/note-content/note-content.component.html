@@ -6,9 +6,7 @@
   } @else if (token.type === 'emoji') {
     <span class="emoji-token" [title]="token.content">{{ token.emoji }}</span>
   } @else if (token.type === 'url') {
-    <a [href]="token.content" target="_blank" rel="noopener noreferrer">{{
-      token.content
-    }}</a>
+    <a [href]="token.content" target="_blank" rel="noopener noreferrer">{{ token.content }}</a>
   } @else if (token.type === 'youtube') {
     <div class="media-container">
       <iframe
@@ -41,10 +39,7 @@
   } @else if (token.type === 'video') {
     <div class="media-container">
       <video controls>
-        <source
-          [src]="token.content"
-          type="video/{{ getVideoType(token.content) }}"
-        />
+        <source [src]="token.content" type="video/{{ getVideoType(token.content) }}" />
         Your browser does not support the video element.
       </video>
     </div>

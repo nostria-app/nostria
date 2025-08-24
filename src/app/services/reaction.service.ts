@@ -10,14 +10,10 @@ export class ReactionService {
   private nostrService = inject(NostrService);
 
   async addReaction(content: string, event: Event): Promise<boolean> {
-    const reactionEvent = this.nostrService.createEvent(
-      kinds.Reaction,
-      content,
-      [
-        ['e', event.id],
-        ['p', event.pubkey],
-      ]
-    );
+    const reactionEvent = this.nostrService.createEvent(kinds.Reaction, content, [
+      ['e', event.id],
+      ['p', event.pubkey],
+    ]);
 
     return this.nostrService.signAndPublish(reactionEvent);
   }
@@ -31,8 +27,6 @@ export class ReactionService {
   }
 
   async deleteReaction(event: Event): Promise<boolean> {
-    return this.nostrService.signAndPublish(
-      this.nostrService.createRetractionEvent(event)
-    );
+    return this.nostrService.signAndPublish(this.nostrService.createRetractionEvent(event));
   }
 }

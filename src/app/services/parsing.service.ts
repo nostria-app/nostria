@@ -66,7 +66,7 @@ export class ParsingService {
     setInterval(() => {
       if (this.nostrUriCache.size > 500) {
         this.logger.debug(
-          `Parsing service cache size: ${this.nostrUriCache.size}. Consider clearing if too large.`
+          `Parsing service cache size: ${this.nostrUriCache.size}. Consider clearing if too large.`,
         );
         // Optionally clear cache if it gets too large
         if (this.nostrUriCache.size > 1000) {
@@ -78,7 +78,7 @@ export class ParsingService {
   }
 
   async parseNostrUri(
-    uri: string
+    uri: string,
   ): Promise<{ type: string; data: any; displayName: string } | null> {
     // Check cache first
     if (this.nostrUriCache.has(uri)) {
@@ -106,7 +106,7 @@ export class ParsingService {
   }
 
   private async parseNostrUriInternal(
-    uri: string
+    uri: string,
   ): Promise<{ type: string; data: any; displayName: string } | null> {
     try {
       // Use the proper nip19 function for decoding nostr URIs
@@ -137,10 +137,7 @@ export class ParsingService {
           displayName = this.utilities.getTruncatedNpub(pubkey);
         }
       } else {
-        displayName = this.getDisplayNameFromNostrUri(
-          decoded.type,
-          decoded.data
-        );
+        displayName = this.getDisplayNameFromNostrUri(decoded.type, decoded.data);
       }
 
       return {
@@ -276,14 +273,12 @@ export class ParsingService {
 
     // Regex for different types of content - updated to avoid capturing trailing LINEBREAK placeholders
     // URL regex: capture potential trailing punctuation so we can trim logic-smart (e.g. parentheses, commas, periods)
-    const urlRegex =
-      /(https?:\/\/[^\s##)\]\}>]+)(?=\s|##LINEBREAK##|$|[),.;!?:])/g;
+    const urlRegex = /(https?:\/\/[^\s##)\]\}>]+)(?=\s|##LINEBREAK##|$|[),.;!?:])/g;
     const youtubeRegex =
       /(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})(?=\s|##LINEBREAK##|$)/g;
     const imageRegex =
       /(https?:\/\/[^\s##]+\.(jpg|jpeg|png|gif|webp)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
-    const audioRegex =
-      /(https?:\/\/[^\s##]+\.(mp3|wav|ogg)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
+    const audioRegex = /(https?:\/\/[^\s##]+\.(mp3|wav|ogg)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
     const videoRegex =
       /(https?:\/\/[^\s##]+\.(mp4|webm|mov|avi|wmv|flv|mkv)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
     const nostrRegex =
@@ -336,7 +331,7 @@ export class ParsingService {
     }
 
     // Batch process nostr URIs to avoid sequential awaits
-    const nostrDataPromises = nostrMatches.map(async nostrMatch => {
+    const nostrDataPromises = nostrMatches.map(async (nostrMatch) => {
       try {
         const nostrData = await this.parseNostrUri(nostrMatch.match[0]);
         return {
@@ -443,7 +438,7 @@ export class ParsingService {
       if (!rawUrl) continue;
 
       const isSpecialType = matches.some(
-        m => m.start === start && m.end === start + rawUrl.length
+        (m) => m.start === start && m.end === start + rawUrl.length,
       );
       if (!isSpecialType) {
         matches.push({
@@ -467,11 +462,7 @@ export class ParsingService {
       }
 
       // Add the match as a token with deterministic ID based on position and content
-      const tokenId = this.generateStableTokenId(
-        match.start,
-        match.content,
-        match.type
-      );
+      const tokenId = this.generateStableTokenId(match.start, match.content, match.type);
       const token: ContentToken = {
         id: tokenId,
         type: match.type,
@@ -503,22 +494,14 @@ export class ParsingService {
 
     return tokens;
   }
-  private processTextSegment(
-    segment: string,
-    tokens: ContentToken[],
-    basePosition: number
-  ): void {
+  private processTextSegment(segment: string, tokens: ContentToken[], basePosition: number): void {
     // Process line breaks in text segments
     const parts = segment.split('##LINEBREAK##');
 
     for (let i = 0; i < parts.length; i++) {
       // Only add text token if there's actual content (not empty string)
       if (parts[i].trim()) {
-        const tokenId = this.generateStableTokenId(
-          basePosition + i,
-          parts[i].trim(),
-          'text'
-        );
+        const tokenId = this.generateStableTokenId(basePosition + i, parts[i].trim(), 'text');
         tokens.push({
           id: tokenId,
           type: 'text',
@@ -528,11 +511,7 @@ export class ParsingService {
 
       // Add a line break token after each part except the last one
       if (i < parts.length - 1) {
-        const linebreakId = this.generateStableTokenId(
-          basePosition + i,
-          '',
-          'linebreak'
-        );
+        const linebreakId = this.generateStableTokenId(basePosition + i, '', 'linebreak');
         tokens.push({
           id: linebreakId,
           type: 'linebreak',
@@ -545,11 +524,7 @@ export class ParsingService {
   /**
    * Generate a stable token ID based on position and content
    */
-  private generateStableTokenId(
-    position: number,
-    content: string,
-    type: string
-  ): number {
+  private generateStableTokenId(position: number, content: string, type: string): number {
     // Create a simple hash from position, content, and type
     let hash = 0;
     const str = `${position}-${type}-${content}`;

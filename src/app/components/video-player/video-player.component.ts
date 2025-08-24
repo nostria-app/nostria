@@ -1,11 +1,4 @@
-import {
-  Component,
-  inject,
-  signal,
-  effect,
-  ElementRef,
-  viewChild,
-} from '@angular/core';
+import { Component, inject, signal, effect, ElementRef, viewChild } from '@angular/core';
 import { NgClass } from '@angular/common';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { LayoutService } from '../../services/layout.service';
@@ -94,7 +87,7 @@ export class VideoPlayerComponent {
 
       this.media.updateWindowPosition(
         Math.max(0, Math.min(newX, maxX)),
-        Math.max(titlebarHeight, Math.min(newY, maxY))
+        Math.max(titlebarHeight, Math.min(newY, maxY)),
       );
     }
   }
@@ -117,10 +110,7 @@ export class VideoPlayerComponent {
 
   private onResizeMouseUp() {
     this.isResizing.set(false);
-    document.removeEventListener(
-      'mousemove',
-      this.onResizeMouseMove.bind(this)
-    );
+    document.removeEventListener('mousemove', this.onResizeMouseMove.bind(this));
     document.removeEventListener('mouseup', this.onResizeMouseUp.bind(this));
   }
 

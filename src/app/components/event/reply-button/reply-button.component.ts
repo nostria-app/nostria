@@ -17,9 +17,7 @@ export class ReplyButtonComponent {
 
   event = input.required<Event>();
 
-  isLongFormArticle = computed(
-    () => this.event().kind === kinds.LongFormArticle
-  );
+  isLongFormArticle = computed(() => this.event().kind === kinds.LongFormArticle);
 
   onClick(): void {
     this.eventService.createNote({

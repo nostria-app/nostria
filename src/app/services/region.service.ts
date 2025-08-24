@@ -136,7 +136,7 @@ export class RegionService {
   }
 
   getMediaServer(regionId: string, instanceId: number): string | null {
-    const region = this.regions.find(r => r.id === regionId);
+    const region = this.regions.find((r) => r.id === regionId);
     const instance = this.#mediaNames[instanceId];
 
     if (region) {
@@ -147,7 +147,7 @@ export class RegionService {
   }
 
   getRelayServer(regionId: string, instanceId: number): string | null {
-    const region = this.regions.find(r => r.id === regionId);
+    const region = this.regions.find((r) => r.id === regionId);
     const instance = this.#relayNames[instanceId];
 
     if (region) {

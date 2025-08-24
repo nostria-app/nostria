@@ -45,19 +45,11 @@
             @if (isCheckingUsername()) {
               <mat-spinner matSuffix diameter="20"></mat-spinner>
             } @else if (usernameFormGroup.valid) {
-              <mat-icon
-                matSuffix
-                color="primary"
-                matTooltip="Username is available"
+              <mat-icon matSuffix color="primary" matTooltip="Username is available"
                 >check_circle</mat-icon
               >
             } @else {
-              <mat-icon
-                matSuffix
-                color="warn"
-                matTooltip="Username already taken"
-                >error</mat-icon
-              >
+              <mat-icon matSuffix color="warn" matTooltip="Username already taken">error</mat-icon>
             }
 
             @if (usernameFormGroup.get('username')?.hasError('required')) {
@@ -67,9 +59,7 @@
               <mat-error> Username must be at least 3 characters </mat-error>
             }
             @if (usernameFormGroup.get('username')?.hasError('pattern')) {
-              <mat-error>
-                Username must contain only letters, numbers, and underscores
-              </mat-error>
+              <mat-error> Username must contain only letters, numbers, and underscores </mat-error>
             }
             @if (usernameFormGroup.get('username')?.errors?.['username']) {
               <mat-error>
@@ -81,32 +71,26 @@
           <div class="username-info">
             <mat-icon color="primary">info</mat-icon>
             <p>
-              Your username must be at least 3 characters and can only contain
-              letters, numbers, and underscores.
+              Your username must be at least 3 characters and can only contain letters, numbers, and
+              underscores.
             </p>
           </div>
 
           @if (usernameFormGroup.valid) {
             @if ((usernameFormGroup.get('username')?.value)!.length > 0) {
               <div class="username-preview">
-                <span class="username-part">{{
-                  usernameFormGroup.get('username')?.value
-                }}</span>
+                <span class="username-part">{{ usernameFormGroup.get('username')?.value }}</span>
                 <span class="domain-part">&#64;nostria.app</span>
               </div>
 
               <div class="username-preview">
                 <span class="domain-part">https://nostria.app/u/</span>
-                <span class="username-part">{{
-                  usernameFormGroup.get('username')?.value
-                }}</span>
+                <span class="username-part">{{ usernameFormGroup.get('username')?.value }}</span>
               </div>
             }
           } @else {
             <div class="username-preview">
-              <span class="username-part">{{
-                usernameFormGroup.get('username')?.value
-              }}</span>
+              <span class="username-part">{{ usernameFormGroup.get('username')?.value }}</span>
               <span class="domain-part">&nbsp;not available</span>
             </div>
           }
@@ -152,8 +136,7 @@
                     <mat-card
                       class="payment-option-card"
                       [class.selected]="
-                        selectedTier()?.key === tier.key &&
-                        selectedPaymentOption() === 'quarterly'
+                        selectedTier()?.key === tier.key && selectedPaymentOption() === 'quarterly'
                       "
                     >
                       <label>
@@ -165,10 +148,7 @@
                             selectedTier()?.key === tier.key &&
                             selectedPaymentOption() === 'quarterly'
                           "
-                          (change)="
-                            selectedTier.set(tier);
-                            selectedPaymentOption.set('quarterly')
-                          "
+                          (change)="selectedTier.set(tier); selectedPaymentOption.set('quarterly')"
                         />
                         <div class="payment-option-content">
                           <span class="pricing-label">Pay Quarterly</span>
@@ -181,8 +161,7 @@
                             }}/mo</span
                           >
                           <span class="pricing-detail"
-                            >Billed every
-                            {{ tier.pricing.quarterly.period }}</span
+                            >Billed every {{ tier.pricing.quarterly.period }}</span
                           >
                         </div>
                       </label>
@@ -190,8 +169,7 @@
                     <mat-card
                       class="payment-option-card"
                       [class.selected]="
-                        selectedTier()?.key === tier.key &&
-                        selectedPaymentOption() === 'yearly'
+                        selectedTier()?.key === tier.key && selectedPaymentOption() === 'yearly'
                       "
                     >
                       <label>
@@ -200,20 +178,14 @@
                           name="paymentOption-{{ tier.key }}"
                           value="yearly"
                           [checked]="
-                            selectedTier()?.key === tier.key &&
-                            selectedPaymentOption() === 'yearly'
+                            selectedTier()?.key === tier.key && selectedPaymentOption() === 'yearly'
                           "
-                          (change)="
-                            selectedTier.set(tier);
-                            selectedPaymentOption.set('yearly')
-                          "
+                          (change)="selectedTier.set(tier); selectedPaymentOption.set('yearly')"
                         />
                         <div class="payment-option-content">
                           <span class="pricing-label">Pay Yearly</span>
                           <span class="pricing-detail"
-                            ><span class="price-amount"
-                              >${{ tier.pricing.yearly.totalPrice }}</span
-                            >
+                            ><span class="price-amount">${{ tier.pricing.yearly.totalPrice }}</span>
                             {{ tier.pricing.yearly.currency }} &bull; ${{
                               tier.pricing.yearly.pricePerMonth
                             }}/mo</span
@@ -240,13 +212,9 @@
           <div class="payment-summary">
             <h3>Order Summary</h3>
             <div class="summary-row">
+              <span>{{ selectedTier()?.details?.name }} (valid till {{ selectedTierTill() }})</span>
               <span
-                >{{ selectedTier()?.details?.name }} (valid till
-                {{ selectedTierTill() }})</span
-              >
-              <span
-                >{{ (selectedPrice().priceCents || 0) / 100 }}
-                {{ selectedPrice().currency }}</span
+                >{{ (selectedPrice().priceCents || 0) / 100 }} {{ selectedPrice().currency }}</span
               >
             </div>
           </div>
@@ -302,16 +270,14 @@
 
               <div class="invoice-details">
                 <p class="invoice-instruction">
-                  Scan the QR code or copy the payment request below to pay with
-                  your Lightning wallet
+                  Scan the QR code or copy the payment request below to pay with your Lightning
+                  wallet
                 </p>
 
                 <div class="invoice-request">
                   <div class="invoice-text">
                     {{ paymentInvoice()?.invoice?.substring(0, 30) }}...{{
-                      paymentInvoice()?.invoice?.substring(
-                        (paymentInvoice()?.invoice)!.length - 20
-                      )
+                      paymentInvoice()?.invoice?.substring((paymentInvoice()?.invoice)!.length - 20)
                     }}
                   </div>
                   <button
@@ -325,10 +291,7 @@
 
                 <div class="invoice-expiry">
                   <mat-icon>timer</mat-icon>
-                  <span
-                    >This invoice expires in
-                    {{ invoiceExpiresIn() }} minutes</span
-                  >
+                  <span>This invoice expires in {{ invoiceExpiresIn() }} minutes</span>
                 </div>
 
                 <div class="payment-status">
@@ -350,15 +313,8 @@
               <div class="payment-expired">
                 <mat-icon color="warn">error_outline</mat-icon>
                 <h3>Payment Invoice Expired</h3>
-                <p>
-                  The payment invoice has expired. Please generate a new one to
-                  continue.
-                </p>
-                <button
-                  mat-raised-button
-                  color="primary"
-                  (click)="generatePaymentInvoice()"
-                >
+                <p>The payment invoice has expired. Please generate a new one to continue.</p>
+                <button mat-raised-button color="primary" (click)="generatePaymentInvoice()">
                   Generate New Invoice
                 </button>
               </div>
@@ -367,11 +323,7 @@
         }
 
         <div class="step-actions">
-          <button
-            mat-button
-            (click)="resetPayment()"
-            [disabled]="isPaymentCompleted()"
-          >
+          <button mat-button (click)="resetPayment()" [disabled]="isPaymentCompleted()">
             Back
           </button>
         </div>
@@ -384,10 +336,7 @@
         <div class="completion-container">
           <mat-icon class="completion-icon">verified</mat-icon>
           <h2>Welcome to Nostria Premium!</h2>
-          <p>
-            Your premium account is now active. You can now enjoy all premium
-            features.
-          </p>
+          <p>Your premium account is now active. You can now enjoy all premium features.</p>
 
           <div class="premium-features">
             <div class="feature-item">
@@ -396,11 +345,7 @@
                 <h4>Verified Username</h4>
                 <p>
                   Your username
-                  <strong
-                    >{{
-                      usernameFormGroup.get('username')?.value
-                    }}&#64;nostria.app</strong
-                  >
+                  <strong>{{ usernameFormGroup.get('username')?.value }}&#64;nostria.app</strong>
                   is now uniquely yours
                 </p>
               </div>

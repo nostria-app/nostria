@@ -57,17 +57,12 @@ export class RepostService {
     // while all other event kinds use kind:16 generic reposts.
     // See: https://github.com/nostr-protocol/nips/blob/master/18.md
     if (event.kind === kinds.ShortTextNote) {
-      return this.nostrService.createEvent(
-        kinds.Repost,
-        JSON.stringify(event),
-        tags
-      );
+      return this.nostrService.createEvent(kinds.Repost, JSON.stringify(event), tags);
     }
 
-    return this.nostrService.createEvent(
-      kinds.GenericRepost,
-      JSON.stringify(event),
-      [...tags, ['k', String(event.kind)]]
-    );
+    return this.nostrService.createEvent(kinds.GenericRepost, JSON.stringify(event), [
+      ...tags,
+      ['k', String(event.kind)],
+    ]);
   }
 }

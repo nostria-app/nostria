@@ -4,10 +4,7 @@
     <mat-card>
       <mat-card-content>
         <div class="loading-content">
-          <mat-progress-spinner
-            diameter="40"
-            mode="indeterminate"
-          ></mat-progress-spinner>
+          <mat-progress-spinner diameter="40" mode="indeterminate"></mat-progress-spinner>
           <h2>Loading Article...</h2>
           <p>Please wait while we fetch the content.</p>
         </div>
@@ -71,10 +68,7 @@
 
     <!-- Author Section -->
     <section class="article-author">
-      <app-user-profile
-        [pubkey]="authorPubkey()"
-        mode="list"
-      ></app-user-profile>
+      <app-user-profile [pubkey]="authorPubkey()" mode="list"></app-user-profile>
     </section>
 
     <main class="article-content">
@@ -101,22 +95,12 @@
         }
 
         @if (bookmark.isBookmarked(id(), 'a')) {
-          <button
-            mat-button
-            color="primary"
-            title="Remove bookmark"
-            (click)="bookmarkArticle()"
-          >
+          <button mat-button color="primary" title="Remove bookmark" (click)="bookmarkArticle()">
             <mat-icon title="Remove bookmark">bookmark_remove</mat-icon>
             Bookmark
           </button>
         } @else {
-          <button
-            mat-button
-            color="primary"
-            title="Add bookmark"
-            (click)="bookmarkArticle()"
-          >
+          <button mat-button color="primary" title="Add bookmark" (click)="bookmarkArticle()">
             <mat-icon title="Add bookmark">bookmark_add</mat-icon>
             Bookmark
           </button>

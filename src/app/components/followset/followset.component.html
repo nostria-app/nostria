@@ -30,16 +30,9 @@
 
       <div class="profiles-grid">
         @for (profile of filteredProfiles(); track profile.id) {
-          <div
-            class="profile-card"
-            [class.following]="displayedFollows().includes(profile.id)"
-          >
+          <div class="profile-card" [class.following]="displayedFollows().includes(profile.id)">
             <div class="profile-avatar">
-              <img
-                [src]="profile.avatar"
-                [alt]="profile.name + ' avatar'"
-                [title]="profile.name"
-              />
+              <img [src]="profile.avatar" [alt]="profile.name + ' avatar'" [title]="profile.name" />
             </div>
             <div class="profile-info">
               <h4>{{ profile.name }}</h4>
@@ -49,9 +42,7 @@
               }
               <div class="profile-interests">
                 @for (interestId of profile.interests; track interestId) {
-                  <span class="interest-tag">{{
-                    getInterestName(interestId)
-                  }}</span>
+                  <span class="interest-tag">{{ getInterestName(interestId) }}</span>
                 }
               </div>
             </div>
@@ -61,9 +52,7 @@
               (click)="toggleFollow(profile.id)"
             >
               @if (displayedFollows().includes(profile.id)) {
-                <ng-container>
-                  <mat-icon>check</mat-icon> Selected
-                </ng-container>
+                <ng-container> <mat-icon>check</mat-icon> Selected </ng-container>
               } @else {
                 <ng-container> <mat-icon>add</mat-icon> Select </ng-container>
               }
@@ -75,9 +64,7 @@
 
     @if (canGetStarted()) {
       <div class="get-started-section">
-        <button mat-flat-button (click)="getStarted()" class="get-started-btn">
-          Add selected
-        </button>
+        <button mat-flat-button (click)="getStarted()" class="get-started-btn">Add selected</button>
       </div>
     }
   }

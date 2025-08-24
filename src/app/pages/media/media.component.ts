@@ -29,11 +29,7 @@ import { ApplicationService } from '../../services/application.service';
 import { MediaPreviewDialogComponent } from '../../components/media-preview-dialog/media-preview.component';
 import { ConfirmDialogComponent } from '../../components/confirm-dialog/confirm-dialog.component';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import {
-  CdkDragDrop,
-  DragDropModule,
-  moveItemInArray,
-} from '@angular/cdk/drag-drop';
+import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { LocalStorageService } from '../../services/local-storage.service';
 import { AccountStateService } from '../../services/account-state.service';
 
@@ -83,41 +79,25 @@ export class MediaComponent {
   files = signal<MediaItem[]>([]);
 
   // Table columns for files display
-  displayedColumns: string[] = [
-    'select',
-    'name',
-    'mirrors',
-    'type',
-    'size',
-    'uploaded',
-    'actions',
-  ];
+  displayedColumns: string[] = ['select', 'name', 'mirrors', 'type', 'size', 'uploaded', 'actions'];
 
   constructor() {
     // Restore the active tab from localStorage if available
     const savedTab = this.localStorage.getItem(this.appState.MEDIA_ACTIVE_TAB);
-    if (
-      savedTab &&
-      ['images', 'videos', 'files', 'servers'].includes(savedTab)
-    ) {
+    if (savedTab && ['images', 'videos', 'files', 'servers'].includes(savedTab)) {
       this.activeTab.set(savedTab as 'images' | 'videos' | 'files' | 'servers');
     }
 
     // Update filtered lists whenever media items change
     effect(() => {
       const allMedia = this.mediaService.mediaItems();
-      this.images.set(
-        allMedia.filter(item => item.type?.startsWith('image') || false)
-      );
-      this.videos.set(
-        allMedia.filter(item => item.type?.startsWith('video') || false)
-      );
+      this.images.set(allMedia.filter((item) => item.type?.startsWith('image') || false));
+      this.videos.set(allMedia.filter((item) => item.type?.startsWith('video') || false));
       this.files.set(
         allMedia.filter(
-          item =>
-            !item.type ||
-            (!item.type.startsWith('image') && !item.type.startsWith('video'))
-        )
+          (item) =>
+            !item.type || (!item.type.startsWith('image') && !item.type.startsWith('video')),
+        ),
       );
       this.selectedItems.set([]);
     });
@@ -157,7 +137,7 @@ export class MediaComponent {
     // });
 
     // Check for upload query parameter and trigger upload dialog
-    this.route.queryParamMap.subscribe(params => {
+    this.route.queryParamMap.subscribe((params) => {
       const uploadParam = params.get('upload');
       if (uploadParam === 'true') {
         // Remove the query parameter from URL without navigation
@@ -181,7 +161,7 @@ export class MediaComponent {
       disableClose: true, // Prevent dialog from closing while uploading
     });
 
-    dialogRef.afterClosed().subscribe(async result => {
+    dialogRef.afterClosed().subscribe(async (result) => {
       if (result && result.file) {
         try {
           // Set uploading state to true
@@ -191,7 +171,7 @@ export class MediaComponent {
           const uploadResult = await this.mediaService.uploadFile(
             result.file,
             result.uploadOriginal,
-            result.servers
+            result.servers,
           );
 
           // Set the uploading state to false
@@ -199,11 +179,9 @@ export class MediaComponent {
 
           // Handle the result based on status
           if (uploadResult.status === 'duplicate') {
-            this.snackBar.open(
-              'This file already exists in your media library.',
-              'Close',
-              { duration: 3000 }
-            );
+            this.snackBar.open('This file already exists in your media library.', 'Close', {
+              duration: 3000,
+            });
           } else if (uploadResult.status === 'success') {
             this.snackBar.open('Media uploaded successfully', 'Close', {
               duration: 3000,
@@ -231,7 +209,7 @@ export class MediaComponent {
       data: server,
     });
 
-    dialogRef.afterClosed().subscribe(async result => {
+    dialogRef.afterClosed().subscribe(async (result) => {
       if (!result) return;
 
       try {
@@ -248,11 +226,9 @@ export class MediaComponent {
         }
       } catch (error) {
         this.snackBar.open(
-          error instanceof Error
-            ? error.message
-            : 'Failed to save media server',
+          error instanceof Error ? error.message : 'Failed to save media server',
           'Close',
-          { duration: 3000 }
+          { duration: 3000 },
         );
       }
     });
@@ -306,9 +282,7 @@ export class MediaComponent {
     moveItemInArray(newOrder, event.previousIndex, event.currentIndex);
 
     // Check if the order actually changed by comparing arrays
-    const orderChanged = newOrder.some(
-      (server, index) => server !== currentServers[index]
-    );
+    const orderChanged = newOrder.some((server, index) => server !== currentServers[index]);
 
     if (orderChanged) {
       try {
@@ -364,9 +338,9 @@ export class MediaComponent {
   }
 
   toggleItemSelection(sha256: string): void {
-    this.selectedItems.update(items => {
+    this.selectedItems.update((items) => {
       if (items.includes(sha256)) {
-        return items.filter(itemSha256 => itemSha256 !== sha256);
+        return items.filter((itemSha256) => itemSha256 !== sha256);
       } else {
         return [...items, sha256];
       }
@@ -380,7 +354,7 @@ export class MediaComponent {
         : this.activeTab() === 'videos'
           ? this.videos()
           : this.files();
-    this.selectedItems.set(currentMedia.map(item => item.sha256));
+    this.selectedItems.set(currentMedia.map((item) => item.sha256));
   }
 
   clearSelection(): void {
@@ -435,7 +409,7 @@ export class MediaComponent {
         this.snackBar.open(
           `${itemsToDelete.length} ${itemsToDelete.length === 1 ? 'item' : 'items'} deleted`,
           'Close',
-          { duration: 3000 }
+          { duration: 3000 },
         );
         this.selectedItems.set([]);
       } catch (error) {
@@ -459,11 +433,9 @@ export class MediaComponent {
 
     try {
       // Set a status message during download
-      this.snackBar.open(
-        `Starting download of ${itemsToDownload.length} file(s)...`,
-        'Close',
-        { duration: 3000 }
-      );
+      this.snackBar.open(`Starting download of ${itemsToDownload.length} file(s)...`, 'Close', {
+        duration: 3000,
+      });
 
       // For each selected item, fetch and download
       for (const id of itemsToDownload) {
@@ -488,18 +460,16 @@ export class MediaComponent {
             window.URL.revokeObjectURL(url);
 
             // Small delay between downloads to prevent browser issues
-            await new Promise(resolve => setTimeout(resolve, 300));
+            await new Promise((resolve) => setTimeout(resolve, 300));
           } catch (err) {
             console.error(`Failed to download ${item.url}:`, err);
           }
         }
       }
 
-      this.snackBar.open(
-        `Download of ${itemsToDownload.length} file(s) initiated`,
-        'Close',
-        { duration: 3000 }
-      );
+      this.snackBar.open(`Download of ${itemsToDownload.length} file(s) initiated`, 'Close', {
+        duration: 3000,
+      });
     } catch (error) {
       this.snackBar.open('Failed to download some items', 'Close', {
         duration: 3000,
@@ -557,20 +527,16 @@ export class MediaComponent {
         this.snackBar.open(
           `Mirrored ${toMirror.length} file(s), ${alreadyMirrored.length} already fully mirrored`,
           'Close',
-          { duration: 3000 }
+          { duration: 3000 },
         );
       } else if (toMirror.length > 0) {
-        this.snackBar.open(
-          `Mirrored ${toMirror.length} file(s) successfully`,
-          'Close',
-          { duration: 3000 }
-        );
+        this.snackBar.open(`Mirrored ${toMirror.length} file(s) successfully`, 'Close', {
+          duration: 3000,
+        });
       } else if (alreadyMirrored.length > 0) {
-        this.snackBar.open(
-          `All selected files are already fully mirrored`,
-          'Close',
-          { duration: 3000 }
-        );
+        this.snackBar.open(`All selected files are already fully mirrored`, 'Close', {
+          duration: 3000,
+        });
       }
     } catch (error) {
       this.snackBar.open('Failed to mirror some items', 'Close', {
@@ -584,19 +550,13 @@ export class MediaComponent {
     return this.mediaService.isFullyMirrored(item);
   }
 
-  async mirrorItem(
-    sha256: string,
-    url: string,
-    servers?: string[]
-  ): Promise<void> {
+  async mirrorItem(sha256: string, url: string, servers?: string[]): Promise<void> {
     // Don't attempt mirroring if already mirrored to all available servers
     const item = await this.mediaService.getFileById(sha256);
     if (item && this.mediaService.isFullyMirrored(item)) {
-      this.snackBar.open(
-        'Media is already mirrored to all your servers',
-        'Close',
-        { duration: 3000 }
-      );
+      this.snackBar.open('Media is already mirrored to all your servers', 'Close', {
+        duration: 3000,
+      });
       return;
     }
 
@@ -647,11 +607,7 @@ export class MediaComponent {
   }
 
   getMediaTypeIcon(type: string): string {
-    return type === 'image'
-      ? 'image'
-      : type === 'video'
-        ? 'videocam'
-        : 'insert_drive_file';
+    return type === 'image' ? 'image' : type === 'video' ? 'videocam' : 'insert_drive_file';
   }
 
   formatFileSize(bytes: number): string {

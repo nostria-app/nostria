@@ -1,34 +1,16 @@
-import {
-  Component,
-  Input,
-  signal,
-  inject,
-  ViewChild,
-  ElementRef,
-} from '@angular/core';
+import { Component, Input, signal, inject, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
-import {
-  OverlayModule,
-  Overlay,
-  OverlayRef,
-  OverlayPositionBuilder,
-} from '@angular/cdk/overlay';
+import { OverlayModule, Overlay, OverlayRef, OverlayPositionBuilder } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import { TemplateRef } from '@angular/core';
 
 @Component({
   selector: 'app-info-tooltip',
   standalone: true,
-  imports: [
-    CommonModule,
-    MatIconModule,
-    MatButtonModule,
-    MatCardModule,
-    OverlayModule,
-  ],
+  imports: [CommonModule, MatIconModule, MatButtonModule, MatCardModule, OverlayModule],
   template: `
     <button
       #trigger

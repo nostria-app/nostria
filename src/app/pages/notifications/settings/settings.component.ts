@@ -61,9 +61,7 @@ export class NotificationSettingsComponent {
     return Notification.permission; // 'granted', 'denied', or 'default'
   });
 
-  isNotificationEnabled = computed(
-    () => this.notificationPermission() === 'granted'
-  );
+  isNotificationEnabled = computed(() => this.notificationPermission() === 'granted');
 
   // Add this computed signal to get subscription details from native APIs
   subscriptionDetails = computed(() => {
@@ -80,12 +78,12 @@ export class NotificationSettingsComponent {
     // Only log push status once
     this.logger.debug('Push enabled status:', this.push.isEnabled);
 
-    this.push.messages.subscribe(message => {
+    this.push.messages.subscribe((message) => {
       // This is triggered when a push message is received and the app is active.
       this.logger.info('Push message received:', message);
     });
 
-    this.push.notificationClicks.subscribe(event => {
+    this.push.notificationClicks.subscribe((event) => {
       this.logger.info('Notification clicked:', event);
     });
 
@@ -100,8 +98,7 @@ export class NotificationSettingsComponent {
           if (this.isNotificationEnabled()) {
             this.logger.info('Notifications is enabled');
 
-            const nativeSubscription =
-              await this.getSubscriptionFromNativeAPI();
+            const nativeSubscription = await this.getSubscriptionFromNativeAPI();
 
             if (nativeSubscription) {
               const subJson = nativeSubscription.toJSON();
@@ -116,7 +113,7 @@ export class NotificationSettingsComponent {
               } as Device);
             }
           } // Also set up Angular's subscription listener for updates
-          this.push.subscription.subscribe(sub => {
+          this.push.subscription.subscribe((sub) => {
             if (!sub) {
               this.currentDevice.set(null);
               return;
@@ -206,7 +203,7 @@ export class NotificationSettingsComponent {
     }
 
     // Check if the device is enabled remotely
-    return this.devices().some(device => device.deviceId === deviceId);
+    return this.devices().some((device) => device.deviceId === deviceId);
   }
 
   async enableNotifications() {
@@ -253,10 +250,7 @@ export class NotificationSettingsComponent {
 
   async createRemoteNotification() {
     this.logger.debug('Creating remote test notification');
-    this.webPush.self(
-      'Remote test notification',
-      'This is a remote notification test!'
-    );
+    this.webPush.self('Remote test notification', 'This is a remote notification test!');
   }
 
   // async createNotification() {
@@ -303,11 +297,9 @@ export class NotificationSettingsComponent {
 
   async askPermission() {
     return new Promise(function (resolve, reject) {
-      const permissionResult = Notification.requestPermission(
-        function (result) {
-          resolve(result);
-        }
-      );
+      const permissionResult = Notification.requestPermission(function (result) {
+        resolve(result);
+      });
 
       if (permissionResult) {
         permissionResult.then(resolve, reject);
@@ -353,7 +345,7 @@ export class NotificationSettingsComponent {
       });
 
       // After deletion, perform a check if there is subscription left, if not, remove the device one.
-      this.push.subscription.subscribe(sub => {
+      this.push.subscription.subscribe((sub) => {
         if (!sub) {
           this.currentDevice.set(null);
         }

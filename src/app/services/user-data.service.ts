@@ -27,10 +27,7 @@ export class UserDataService {
   private userRelayEx!: UserRelayServiceEx;
 
   // Map to track pending profile requests to prevent race conditions
-  private pendingProfileRequests = new Map<
-    string,
-    Promise<NostrRecord | undefined>
-  >();
+  private pendingProfileRequests = new Map<string, Promise<NostrRecord | undefined>>();
 
   // Clean up old pending requests periodically
   constructor() {
@@ -59,7 +56,7 @@ export class UserDataService {
 
   async getEventById(
     id: string,
-    options?: CacheOptions & DataOptions
+    options?: CacheOptions & DataOptions,
   ): Promise<NostrRecord | null> {
     let event: Event | null = null;
     let record: NostrRecord | undefined = undefined;
@@ -107,20 +104,14 @@ export class UserDataService {
 
   async getUserRelays(pubkey: string) {
     let relayUrls: string[] = [];
-    const relayListEvent = await this.storage.getEventByPubkeyAndKind(
-      pubkey,
-      10002
-    );
+    const relayListEvent = await this.storage.getEventByPubkeyAndKind(pubkey, 10002);
 
     if (relayListEvent) {
       relayUrls = this.utilities.getRelayUrls(relayListEvent);
     }
 
     if (!relayUrls || relayUrls.length === 0) {
-      const followingEvent = await this.storage.getEventByPubkeyAndKind(
-        pubkey,
-        3
-      );
+      const followingEvent = await this.storage.getEventByPubkeyAndKind(pubkey, 3);
       if (followingEvent) {
         relayUrls = this.utilities.getRelayUrlsFromFollowing(followingEvent);
       }
@@ -147,10 +138,7 @@ export class UserDataService {
     return metadataList;
   }
 
-  async getProfile(
-    pubkey: string,
-    refresh = false
-  ): Promise<NostrRecord | undefined> {
+  async getProfile(pubkey: string, refresh = false): Promise<NostrRecord | undefined> {
     // Validate pubkey parameter
     if (!pubkey || pubkey === 'undefined' || !pubkey.trim()) {
       this.logger.warn('getProfile called with invalid pubkey:', pubkey);
@@ -161,9 +149,7 @@ export class UserDataService {
 
     // Check if there's already a pending request for this pubkey
     if (this.pendingProfileRequests.has(pubkey)) {
-      this.logger.debug(
-        `Returning existing pending request for profile: ${pubkey}`
-      );
+      this.logger.debug(`Returning existing pending request for profile: ${pubkey}`);
       return this.pendingProfileRequests.get(pubkey);
     }
 
@@ -195,16 +181,13 @@ export class UserDataService {
   private async loadProfile(
     pubkey: string,
     cacheKey: string,
-    refresh: boolean
+    refresh: boolean,
   ): Promise<NostrRecord | undefined> {
     let metadata: Event | null = null;
     let record: NostrRecord | undefined = undefined;
 
     // Try storage first
-    metadata = await this.storage.getEventByPubkeyAndKind(
-      pubkey,
-      kinds.Metadata
-    );
+    metadata = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Metadata);
 
     if (metadata) {
       record = this.toRecord(metadata);
@@ -248,10 +231,7 @@ export class UserDataService {
           await this.storage.saveEvent(fresh);
         }
       } catch (error) {
-        this.logger.warn(
-          `Failed to refresh profile in background for ${pubkey}:`,
-          error
-        );
+        this.logger.warn(`Failed to refresh profile in background for ${pubkey}:`, error);
       }
     });
   }
@@ -261,13 +241,13 @@ export class UserDataService {
     pubkey: string,
     kind: number,
     dTagValue: string,
-    options?: CacheOptions & DataOptions
+    options?: CacheOptions & DataOptions,
   ): Promise<NostrRecord | null> {
     // Validate pubkey parameter
     if (!pubkey || pubkey === 'undefined' || !pubkey.trim()) {
       this.logger.warn(
         'getEventByPubkeyAndKindAndReplaceableEvent called with invalid pubkey:',
-        pubkey
+        pubkey,
       );
       return null;
     }
@@ -287,20 +267,15 @@ export class UserDataService {
     // If the caller explicitly don't want to save, we will not check the storage.
     if (options?.save) {
       event =
-        (await this.storage.getParameterizedReplaceableEvent(
-          pubkey,
-          kind,
-          dTagValue
-        )) || null;
+        (await this.storage.getParameterizedReplaceableEvent(pubkey, kind, dTagValue)) || null;
     }
 
     // If the caller explicitly supplies user relay, don't attempt to user account relay.
     if (!event) {
-      event = await this.userRelayEx.getEventByPubkeyAndKindAndTag(
-        pubkey,
-        kind,
-        { key: 'd', value: dTagValue }
-      );
+      event = await this.userRelayEx.getEventByPubkeyAndKindAndTag(pubkey, kind, {
+        key: 'd',
+        value: dTagValue,
+      });
     }
 
     if (!event) {
@@ -324,34 +299,22 @@ export class UserDataService {
   async getEventByPubkeyAndKind(
     pubkey: string | string[],
     kind: number,
-    options?: CacheOptions & DataOptions
+    options?: CacheOptions & DataOptions,
   ): Promise<NostrRecord | null> {
     // Validate pubkey parameter
     if (!pubkey || (Array.isArray(pubkey) && pubkey.length === 0)) {
       debugger;
-      this.logger.warn(
-        'getEventByPubkeyAndKind called with invalid pubkey:',
-        pubkey
-      );
+      this.logger.warn('getEventByPubkeyAndKind called with invalid pubkey:', pubkey);
       return null;
     }
 
-    if (Array.isArray(pubkey) && pubkey.some(pk => !pk || pk === 'undefined')) {
-      this.logger.warn(
-        'getEventByPubkeyAndKind called with invalid pubkey in array:',
-        pubkey
-      );
+    if (Array.isArray(pubkey) && pubkey.some((pk) => !pk || pk === 'undefined')) {
+      this.logger.warn('getEventByPubkeyAndKind called with invalid pubkey in array:', pubkey);
       return null;
     }
 
-    if (
-      typeof pubkey === 'string' &&
-      (pubkey === 'undefined' || !pubkey.trim())
-    ) {
-      this.logger.warn(
-        'getEventByPubkeyAndKind called with invalid pubkey string:',
-        pubkey
-      );
+    if (typeof pubkey === 'string' && (pubkey === 'undefined' || !pubkey.trim())) {
+      this.logger.warn('getEventByPubkeyAndKind called with invalid pubkey string:', pubkey);
       return null;
     }
 
@@ -398,33 +361,21 @@ export class UserDataService {
   async getEventsByPubkeyAndKind(
     pubkey: string | string[],
     kind: number,
-    options?: CacheOptions & DataOptions
+    options?: CacheOptions & DataOptions,
   ): Promise<NostrRecord[]> {
     // Validate pubkey parameter
     if (!pubkey || (Array.isArray(pubkey) && pubkey.length === 0)) {
-      this.logger.warn(
-        'getEventsByPubkeyAndKind called with invalid pubkey:',
-        pubkey
-      );
+      this.logger.warn('getEventsByPubkeyAndKind called with invalid pubkey:', pubkey);
       return [];
     }
 
-    if (Array.isArray(pubkey) && pubkey.some(pk => !pk || pk === 'undefined')) {
-      this.logger.warn(
-        'getEventsByPubkeyAndKind called with invalid pubkey in array:',
-        pubkey
-      );
+    if (Array.isArray(pubkey) && pubkey.some((pk) => !pk || pk === 'undefined')) {
+      this.logger.warn('getEventsByPubkeyAndKind called with invalid pubkey in array:', pubkey);
       return [];
     }
 
-    if (
-      typeof pubkey === 'string' &&
-      (pubkey === 'undefined' || !pubkey.trim())
-    ) {
-      this.logger.warn(
-        'getEventsByPubkeyAndKind called with invalid pubkey string:',
-        pubkey
-      );
+    if (typeof pubkey === 'string' && (pubkey === 'undefined' || !pubkey.trim())) {
+      this.logger.warn('getEventsByPubkeyAndKind called with invalid pubkey string:', pubkey);
       return [];
     }
 
@@ -446,10 +397,7 @@ export class UserDataService {
     }
 
     if (events.length === 0) {
-      const relayEvents = await this.userRelayEx.getEventsByPubkeyAndKind(
-        pubkey,
-        kind
-      );
+      const relayEvents = await this.userRelayEx.getEventsByPubkeyAndKind(pubkey, kind);
       if (relayEvents && relayEvents.length > 0) {
         events = relayEvents;
       }
@@ -459,7 +407,7 @@ export class UserDataService {
       return [];
     }
 
-    records = events.map(event => this.toRecord(event));
+    records = events.map((event) => this.toRecord(event));
 
     if (options?.cache || options?.invalidateCache) {
       this.cache.set(cacheKey, records, options);
@@ -477,7 +425,7 @@ export class UserDataService {
   async getEventsByKindAndEventTag(
     kind: number,
     eventTag: string,
-    options?: CacheOptions & DataOptions
+    options?: CacheOptions & DataOptions,
   ): Promise<NostrRecord[]> {
     const cacheKey = `${kind}-${eventTag}-all`;
     let events: Event[] = [];
@@ -494,16 +442,11 @@ export class UserDataService {
     // If the caller explicitly don't want to save, we will not check the storage.
     if (events.length === 0 && options?.save) {
       const allEvents = await this.storage.getEventsByKind(kind);
-      events = allEvents.filter(
-        e => this.utilities.getTagValues('#e', e.tags)[0] === eventTag
-      );
+      events = allEvents.filter((e) => this.utilities.getTagValues('#e', e.tags)[0] === eventTag);
     }
 
     if (events.length === 0) {
-      const relayEvents = await this.userRelayEx.getEventsByKindAndEventTag(
-        kind,
-        eventTag
-      );
+      const relayEvents = await this.userRelayEx.getEventsByKindAndEventTag(kind, eventTag);
       if (relayEvents && relayEvents.length > 0) {
         events = relayEvents;
       }
@@ -513,7 +456,7 @@ export class UserDataService {
       return [];
     }
 
-    records = events.map(event => this.toRecord(event));
+    records = events.map((event) => this.toRecord(event));
 
     if (options?.cache || options?.invalidateCache) {
       this.cache.set(cacheKey, records, options);

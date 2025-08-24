@@ -150,10 +150,7 @@ export class MediaPlayerComponent implements AfterViewInit, OnInit, OnDestroy {
 
   registerVideoElement() {
     if (this.videoElement?.nativeElement) {
-      console.log(
-        'Registering video element with service:',
-        this.videoElement.nativeElement
-      );
+      console.log('Registering video element with service:', this.videoElement.nativeElement);
       this.media.setVideoElement(this.videoElement.nativeElement);
     } else {
       console.log('Video element not available yet');
@@ -176,9 +173,7 @@ export class MediaPlayerComponent implements AfterViewInit, OnInit, OnDestroy {
   }
 
   private updateBackgroundFromThemeColor(): void {
-    const metaThemeColor = this.document.querySelector(
-      'meta[name="theme-color"]'
-    );
+    const metaThemeColor = this.document.querySelector('meta[name="theme-color"]');
     if (metaThemeColor) {
       const themeColor = metaThemeColor.getAttribute('content');
       if (themeColor) {
@@ -213,9 +208,7 @@ export class MediaPlayerComponent implements AfterViewInit, OnInit, OnDestroy {
       }
 
       // Create and setup the media query list
-      this.mediaQueryList = window.matchMedia(
-        '(display-mode: window-controls-overlay)'
-      );
+      this.mediaQueryList = window.matchMedia('(display-mode: window-controls-overlay)');
 
       // Set initial state
       this.layout.overlayMode.set(this.mediaQueryList.matches);
@@ -234,9 +227,7 @@ export class MediaPlayerComponent implements AfterViewInit, OnInit, OnDestroy {
     if (!this.videoElement?.nativeElement) return;
 
     const video = this.videoElement.nativeElement;
-    const globalContainer = this.document.getElementById(
-      'global-fullscreen-container'
-    );
+    const globalContainer = this.document.getElementById('global-fullscreen-container');
 
     if (!globalContainer) return;
 
@@ -258,9 +249,7 @@ export class MediaPlayerComponent implements AfterViewInit, OnInit, OnDestroy {
     if (!this.videoElement?.nativeElement || !this.originalVideoParent) return;
 
     const video = this.videoElement.nativeElement;
-    const globalContainer = this.document.getElementById(
-      'global-fullscreen-container'
-    );
+    const globalContainer = this.document.getElementById('global-fullscreen-container');
 
     // Hide global container
     if (globalContainer) {
@@ -269,11 +258,7 @@ export class MediaPlayerComponent implements AfterViewInit, OnInit, OnDestroy {
 
     // Move video back to original position
     if (this.originalVideoNextSibling) {
-      this.renderer.insertBefore(
-        this.originalVideoParent,
-        video,
-        this.originalVideoNextSibling
-      );
+      this.renderer.insertBefore(this.originalVideoParent, video, this.originalVideoNextSibling);
     } else {
       this.renderer.appendChild(this.originalVideoParent, video);
     }
@@ -327,12 +312,9 @@ export class MediaPlayerComponent implements AfterViewInit, OnInit, OnDestroy {
         return;
       }
 
-      if (
-        result.url.indexOf('youtu.be') > -1 ||
-        result.url.indexOf('youtube.com') > -1
-      ) {
+      if (result.url.indexOf('youtu.be') > -1 || result.url.indexOf('youtube.com') > -1) {
         const youtubes = [...result.url.matchAll(this.utilities.regexpYouTube)];
-        const youtube = youtubes.map(i => {
+        const youtube = youtubes.map((i) => {
           return { url: `https://www.youtube.com/embed/${i[1]}` };
         });
 
@@ -346,10 +328,7 @@ export class MediaPlayerComponent implements AfterViewInit, OnInit, OnDestroy {
             type: 'YouTube',
           });
         }
-      } else if (
-        result.url.indexOf('.mp4') > -1 ||
-        result.url.indexOf('.webm') > -1
-      ) {
+      } else if (result.url.indexOf('.mp4') > -1 || result.url.indexOf('.webm') > -1) {
         this.media.enque({
           artist: '',
           artwork: '/logos/youtube.png',

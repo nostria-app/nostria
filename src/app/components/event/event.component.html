@@ -27,9 +27,7 @@
             [event]="repostService.decodeRepost(item.event).event"
           ></app-event-header>
           <mat-card-content>
-            <app-content
-              [content]="repostService.decodeRepost(item.event).data"
-            ></app-content>
+            <app-content [content]="repostService.decodeRepost(item.event).data"></app-content>
           </mat-card-content>
         </mat-card>
       </mat-card-content>

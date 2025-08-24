@@ -31,10 +31,7 @@ import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
 import { NotificationService } from '../../services/notification.service';
-import {
-  NotificationType,
-  StorageService,
-} from '../../services/storage.service';
+import { NotificationType, StorageService } from '../../services/storage.service';
 import { ApplicationStateService } from '../../services/application-state.service';
 import { LoadingOverlayComponent } from '../../components/loading-overlay/loading-overlay.component';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
@@ -185,16 +182,12 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   // Filtered chats based on selected tab
   followingChats = computed(() => {
     const followingList = this.accountState.followingList();
-    return this.messaging
-      .sortedChats()
-      .filter(item => followingList.includes(item.chat.pubkey));
+    return this.messaging.sortedChats().filter((item) => followingList.includes(item.chat.pubkey));
   });
 
   otherChats = computed(() => {
     const followingList = this.accountState.followingList();
-    return this.messaging
-      .sortedChats()
-      .filter(item => !followingList.includes(item.chat.pubkey));
+    return this.messaging.sortedChats().filter((item) => !followingList.includes(item.chat.pubkey));
   });
 
   filteredChats = computed(() => {
@@ -246,11 +239,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
             // Same chat but check for new messages
             const latestLocalTimestamp =
               currentMessages.length > 0
-                ? Math.max(...currentMessages.map(m => m.created_at))
+                ? Math.max(...currentMessages.map((m) => m.created_at))
                 : 0;
-            const latestChatTimestamp = Math.max(
-              ...chatMessages.map(m => m.created_at)
-            );
+            const latestChatTimestamp = Math.max(...chatMessages.map((m) => m.created_at));
 
             // If the chat has newer messages than what we're showing, update and scroll
             if (latestChatTimestamp > latestLocalTimestamp) {
@@ -267,9 +258,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       if (this.appState.isOnline()) {
         this.error.set(null);
       } else {
-        this.error.set(
-          'You are offline. Messages will be sent when you reconnect.'
-        );
+        this.error.set('You are offline. Messages will be sent when you reconnect.');
       }
     });
 
@@ -286,7 +275,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   ngOnInit(): void {
     // Check for route parameters to start a new chat
-    this.route.queryParams.subscribe(params => {
+    this.route.queryParams.subscribe((params) => {
       const pubkey = params['pubkey'];
       if (pubkey) {
         // Start a new chat with the specified pubkey
@@ -314,9 +303,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   private setupScrollListener(): void {
     const scrollElement = this.messagesWrapper?.nativeElement;
     if (!scrollElement) {
-      this.logger.warn(
-        'Messages wrapper element not found for scroll listener'
-      );
+      this.logger.warn('Messages wrapper element not found for scroll listener');
       return;
     }
 
@@ -350,7 +337,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       const threshold = 100; // pixels from top
 
       this.logger.debug(
-        `Scroll position: ${scrollTop}, threshold: ${threshold}, hasMore: ${this.hasMoreMessages()}, isLoading: ${this.isLoadingMore()}, messages: ${this.messages().length}`
+        `Scroll position: ${scrollTop}, threshold: ${threshold}, hasMore: ${this.hasMoreMessages()}, isLoading: ${this.isLoadingMore()}, messages: ${this.messages().length}`,
       );
 
       if (
@@ -436,21 +423,18 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       const currentMessages = this.messages();
       const oldestTimestamp =
         currentMessages.length > 0
-          ? Math.min(...currentMessages.map(m => m.created_at)) - 1
+          ? Math.min(...currentMessages.map((m) => m.created_at)) - 1
           : undefined;
 
       this.logger.debug(
-        `Current messages count: ${currentMessages.length}, oldest timestamp: ${oldestTimestamp}`
+        `Current messages count: ${currentMessages.length}, oldest timestamp: ${oldestTimestamp}`,
       );
 
       // Store current scroll position to maintain it after loading new messages
       const scrollElement = this.messagesWrapper?.nativeElement;
       const scrollHeight = scrollElement?.scrollHeight || 0;
       const scrollTop = scrollElement?.scrollTop || 0; // Load older messages from the messaging service
-      const olderMessages = await this.messaging.loadMoreMessages(
-        selectedChat.id,
-        oldestTimestamp
-      );
+      const olderMessages = await this.messaging.loadMoreMessages(selectedChat.id, oldestTimestamp);
 
       this.logger.debug(`Loaded ${olderMessages.length} older messages`);
 
@@ -459,9 +443,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       //     this.hasMoreMessages.set(false);
       // } else {
       // Get the updated messages from the messaging service (includes decrypted content)
-      const updatedChatMessages = this.messaging.getChatMessages(
-        selectedChat.id
-      );
+      const updatedChatMessages = this.messaging.getChatMessages(selectedChat.id);
       this.messages.set(updatedChatMessages);
 
       // Restore scroll position after DOM update
@@ -471,7 +453,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
           const heightDiff = newScrollHeight - scrollHeight;
           scrollElement.scrollTop = scrollTop + heightDiff;
           this.logger.debug(
-            `Restored scroll position: ${scrollElement.scrollTop} (diff: ${heightDiff})`
+            `Restored scroll position: ${scrollElement.scrollTop} (diff: ${heightDiff})`,
           );
         }
       }, 50);
@@ -571,13 +553,11 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         pending: true,
         tags: [['p', receiverPubkey]],
         received: false,
-        encryptionType: this.supportsModernEncryption(this.selectedChat()!)
-          ? 'nip44'
-          : 'nip04',
+        encryptionType: this.supportsModernEncryption(this.selectedChat()!) ? 'nip44' : 'nip04',
       };
 
       // Add to the messages immediately so the user sees feedback
-      this.messages.update(msgs => [...msgs, pendingMessage]);
+      this.messages.update((msgs) => [...msgs, pendingMessage]);
 
       // Scroll to bottom for new outgoing messages
       this.scrollToBottom();
@@ -597,7 +577,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
           messageText,
           receiverPubkey,
           myPubkey,
-          userRelay
+          userRelay,
         );
       } else {
         // Use NIP-04 encryption for backwards compatibility
@@ -605,21 +585,21 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
           messageText,
           receiverPubkey,
           myPubkey,
-          userRelay
+          userRelay,
         );
       }
 
       // Success: update the message to remove the pending state
-      this.messages.update(msgs =>
-        msgs.map(msg =>
+      this.messages.update((msgs) =>
+        msgs.map((msg) =>
           msg.id === pendingId
             ? {
                 ...finalMessage,
                 pending: false,
                 received: true,
               }
-            : msg
-        )
+            : msg,
+        ),
       );
 
       // Update the last message for this chat in the chat list
@@ -637,12 +617,10 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       this.logger.error('Failed to send message', err);
 
       // Show error state for the message
-      this.messages.update(msgs =>
-        msgs.map(msg =>
-          msg.id.startsWith('pending-')
-            ? { ...msg, pending: false, failed: true }
-            : msg
-        )
+      this.messages.update((msgs) =>
+        msgs.map((msg) =>
+          msg.id.startsWith('pending-') ? { ...msg, pending: false, failed: true } : msg,
+        ),
       );
 
       this.isSending.set(false);
@@ -663,7 +641,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
    */
   retryMessage(message: DirectMessage): void {
     // Remove the failed message
-    this.messages.update(msgs => msgs.filter(msg => msg.id !== message.id));
+    this.messages.update((msgs) => msgs.filter((msg) => msg.id !== message.id));
 
     // Then set its content to the input field so the user can try again
     this.newMessageText.set(message.content);
@@ -681,13 +659,11 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       autoFocus: true,
     });
 
-    dialogRef
-      .afterClosed()
-      .subscribe((result: StartChatDialogResult | undefined) => {
-        if (result) {
-          this.startChatWithUser(result.pubkey, result.isLegacy);
-        }
-      });
+    dialogRef.afterClosed().subscribe((result: StartChatDialogResult | undefined) => {
+      if (result) {
+        this.startChatWithUser(result.pubkey, result.isLegacy);
+      }
+    });
   }
 
   /**
@@ -796,14 +772,11 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     messageText: string,
     receiverPubkey: string,
     myPubkey: string,
-    userRelay: UserRelayServiceEx
+    userRelay: UserRelayServiceEx,
   ): Promise<DirectMessage> {
     try {
       // Encrypt the message using NIP-04
-      const encryptedContent = await this.encryption.encryptNip04(
-        messageText,
-        receiverPubkey
-      );
+      const encryptedContent = await this.encryption.encryptNip04(messageText, receiverPubkey);
 
       // Create the event
       const event = {
@@ -843,7 +816,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     messageText: string,
     receiverPubkey: string,
     myPubkey: string,
-    userRelay: UserRelayServiceEx
+    userRelay: UserRelayServiceEx,
   ): Promise<DirectMessage> {
     try {
       // Step 1: Create the message (unsigned event) - kind 14
@@ -861,21 +834,14 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       const eventText = JSON.stringify(rumorWithId);
 
       // Step 2: Create the seal (kind 13) - encrypt the rumor with sender's key
-      const sealedContent = await this.encryption.encryptNip44(
-        eventText,
-        receiverPubkey
-      );
+      const sealedContent = await this.encryption.encryptNip44(eventText, receiverPubkey);
 
-      const sealedContent2 = await this.encryption.encryptNip44(
-        eventText,
-        myPubkey
-      );
+      const sealedContent2 = await this.encryption.encryptNip44(eventText, myPubkey);
 
       const sealedMessage = {
         kind: kinds.Seal,
         pubkey: myPubkey,
-        created_at:
-          Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800), // Random timestamp within 2 days
+        created_at: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800), // Random timestamp within 2 days
         tags: [],
         content: sealedContent,
       };
@@ -883,8 +849,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       const sealedMessage2 = {
         kind: kinds.Seal,
         pubkey: myPubkey,
-        created_at:
-          Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800), // Random timestamp within 2 days
+        created_at: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800), // Random timestamp within 2 days
         tags: [],
         content: sealedContent2,
       };
@@ -903,20 +868,19 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       const giftWrapContent = await this.encryption.encryptNip44WithKey(
         JSON.stringify(signedSealedMessage),
         bytesToHex(ephemeralKey),
-        receiverPubkey
+        receiverPubkey,
       );
 
       const giftWrapContent2 = await this.encryption.encryptNip44WithKey(
         JSON.stringify(signedSealedMessage2),
         bytesToHex(ephemeralKey),
-        myPubkey
+        myPubkey,
       );
 
       const giftWrap = {
         kind: kinds.GiftWrap,
         pubkey: ephemeralPubkey,
-        created_at:
-          Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800), // Random timestamp within 2 days
+        created_at: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800), // Random timestamp within 2 days
         tags: [['p', receiverPubkey]],
         content: giftWrapContent,
       };
@@ -924,8 +888,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       const giftWrap2 = {
         kind: kinds.GiftWrap,
         pubkey: ephemeralPubkey,
-        created_at:
-          Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800), // Random timestamp within 2 days
+        created_at: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800), // Random timestamp within 2 days
         tags: [['p', myPubkey]],
         content: giftWrapContent2,
       };
@@ -973,10 +936,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   /**
    * Publish an event to multiple relays
    */
-  private async publishToRelays(
-    event: NostrEvent,
-    userRelay: UserRelayServiceEx
-  ): Promise<void> {
+  private async publishToRelays(event: NostrEvent, userRelay: UserRelayServiceEx): Promise<void> {
     const promisesUser = userRelay.publish(event);
     const promisesAccount = this.accountRelay.publish(event);
 
@@ -986,7 +946,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private async publishToUserRelays(
     event: NostrEvent,
-    userRelay: UserRelayServiceEx
+    userRelay: UserRelayServiceEx,
   ): Promise<void> {
     const promisesUser = userRelay.publish(event);
 
@@ -1004,10 +964,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   /**
    * Start a chat with a specific user
    */
-  private async startChatWithUser(
-    pubkey: string,
-    isLegacy: boolean
-  ): Promise<void> {
+  private async startChatWithUser(pubkey: string, isLegacy: boolean): Promise<void> {
     try {
       // Create a chat ID based on encryption type
       const chatId = isLegacy ? `nip04${pubkey}` : `nip44${pubkey}`;

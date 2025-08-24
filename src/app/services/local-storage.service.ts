@@ -1,12 +1,5 @@
 import { isPlatformBrowser } from '@angular/common';
-import {
-  Injectable,
-  PLATFORM_ID,
-  computed,
-  inject,
-  signal,
-  DOCUMENT,
-} from '@angular/core';
+import { Injectable, PLATFORM_ID, computed, inject, signal, DOCUMENT } from '@angular/core';
 import { LoggerService } from './logger.service';
 
 /**
@@ -54,9 +47,7 @@ export class LocalStorageService {
         return value;
       } else {
         const value = this.memoryStore()[key] ?? null;
-        this.logger.debug(
-          `Retrieved "${key}" from memory store (SSR or localStorage unavailable)`
-        );
+        this.logger.debug(`Retrieved "${key}" from memory store (SSR or localStorage unavailable)`);
         return value;
       }
     } catch (error) {
@@ -79,13 +70,11 @@ export class LocalStorageService {
         return true;
       } else {
         // Update memory store for SSR
-        this.memoryStore.update(store => ({
+        this.memoryStore.update((store) => ({
           ...store,
           [key]: value,
         }));
-        this.logger.debug(
-          `Stored "${key}" in memory store (SSR or localStorage unavailable)`
-        );
+        this.logger.debug(`Stored "${key}" in memory store (SSR or localStorage unavailable)`);
         return true;
       }
     } catch (error) {
@@ -107,13 +96,11 @@ export class LocalStorageService {
         return true;
       } else {
         // Update memory store for SSR
-        this.memoryStore.update(store => {
+        this.memoryStore.update((store) => {
           const { [key]: removed, ...rest } = store;
           return rest;
         });
-        this.logger.debug(
-          `Removed "${key}" from memory store (SSR or localStorage unavailable)`
-        );
+        this.logger.debug(`Removed "${key}" from memory store (SSR or localStorage unavailable)`);
         return true;
       }
     } catch (error) {
@@ -135,9 +122,7 @@ export class LocalStorageService {
       } else {
         // Clear memory store
         this.memoryStore.set({});
-        this.logger.debug(
-          'Cleared memory store (SSR or localStorage unavailable)'
-        );
+        this.logger.debug('Cleared memory store (SSR or localStorage unavailable)');
         return true;
       }
     } catch (error) {

@@ -21,7 +21,7 @@ export class NavigationComponent {
   private route = inject(ActivatedRoute);
 
   // Convert route data to signal
-  routeData = toSignal(this.route.data.pipe(map(data => data)), {
+  routeData = toSignal(this.route.data.pipe(map((data) => data)), {
     initialValue: {},
   });
 
@@ -76,8 +76,7 @@ export class NavigationComponent {
       this.touchTimer = null;
 
       // If timer was cleared quickly, treat as regular click
-      const touchDuration =
-        event.timeStamp - ((event.target as any).touchStartTime || 0);
+      const touchDuration = event.timeStamp - ((event.target as any).touchStartTime || 0);
       if (touchDuration < this.TOUCH_HOLD_DURATION) {
         event.preventDefault(); // Prevent mouse events
         this.goBack();

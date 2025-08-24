@@ -20,9 +20,7 @@
         @if (!useProfileImageUrl() && !hasMediaServers()) {
           <div class="media-server-warning">
             <mat-icon color="warn">warning</mat-icon>
-            <span
-              >You need to configure a media server to upload image files</span
-            >
+            <span>You need to configure a media server to upload image files</span>
             <button
               mat-flat-button
               color="primary"
@@ -91,9 +89,7 @@
         @if (!useBannerUrl() && !hasMediaServers()) {
           <div class="media-server-warning">
             <mat-icon color="warn">warning</mat-icon>
-            <span
-              >You need to configure a media server to upload banner files</span
-            >
+            <span>You need to configure a media server to upload banner files</span>
             <button
               mat-flat-button
               color="primary"
@@ -162,54 +158,32 @@
           <mat-form-field class="input-full-width">
             <mat-icon matPrefix>help_outline</mat-icon>
             <mat-label>About</mat-label>
-            <textarea
-              matInput
-              type="text"
-              [(ngModel)]="about"
-              rows="3"
-            ></textarea>
+            <textarea matInput type="text" [(ngModel)]="about" rows="3"></textarea>
           </mat-form-field>
         </p>
         <p>
           <mat-form-field class="input-full-width">
             <mat-icon matPrefix>public</mat-icon>
             <mat-label>Website</mat-label>
-            <input
-              matInput
-              type="text"
-              [(ngModel)]="website"
-              placeholder="https://"
-            />
+            <input matInput type="text" [(ngModel)]="website" placeholder="https://" />
           </mat-form-field>
         </p>
         <p>
           <mat-form-field class="input-full-width">
             <mat-icon matPrefix>how_to_reg</mat-icon>
             <mat-label>E-mail/Domain Identifier (NIP-05)</mat-label>
-            <input
-              matInput
-              type="text"
-              [(ngModel)]="nip05"
-              placeholder="user@domain.com"
-            />
+            <input matInput type="text" [(ngModel)]="nip05" placeholder="user@domain.com" />
           </mat-form-field>
         </p>
         <p>
           <mat-form-field class="input-full-width">
             <mat-icon matPrefix>currency_bitcoin</mat-icon>
             <mat-label>Bitcoin Lightning Address</mat-label>
-            <input
-              matInput
-              type="text"
-              [(ngModel)]="lud16"
-              placeholder="user@domain"
-            />
+            <input matInput type="text" [(ngModel)]="lud16" placeholder="user@domain" />
           </mat-form-field>
         </p>
         @if (accountState.profile()) {
-          <p>
-            Last updated: {{ accountState.profile()!.event.created_at | ago }}
-          </p>
+          <p>Last updated: {{ accountState.profile()!.event.created_at | ago }}</p>
         } @else {
           <p><em>Creating new profile...</em></p>
         }
@@ -218,12 +192,7 @@
 
     <mat-card-footer align="end">
       <button mat-button (click)="cancelEdit()">Cancel</button>&nbsp;
-      <button
-        mat-flat-button
-        [disabled]="loading()"
-        color="primary"
-        (click)="updateMetadata()"
-      >
+      <button mat-flat-button [disabled]="loading()" color="primary" (click)="updateMetadata()">
         @if (loading()) {
           <mat-spinner diameter="24"></mat-spinner>
         } @else {

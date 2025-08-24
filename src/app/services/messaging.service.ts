@@ -116,18 +116,13 @@ export class MessagingService implements NostriaService {
     const chat = this.chatsMap().get(chatId);
     if (!chat) return [];
 
-    return Array.from(chat.messages.values()).sort(
-      (a, b) => a.created_at - b.created_at
-    ); // Oldest first
+    return Array.from(chat.messages.values()).sort((a, b) => a.created_at - b.created_at); // Oldest first
   }
 
   // Helper method to add a message to a chat (prevents duplicates and updates sorting)
   addMessageToChat(pubkey: string, message: DirectMessage): void {
     const currentMap = this.chatsMap();
-    const chatId =
-      message.encryptionType === 'nip04'
-        ? `${pubkey}-nip04`
-        : `${pubkey}-nip44`;
+    const chatId = message.encryptionType === 'nip04' ? `${pubkey}-nip04` : `${pubkey}-nip44`;
 
     // Create a new Map to ensure signal reactivity
     const newMap = new Map(currentMap);
@@ -159,9 +154,7 @@ export class MessagingService implements NostriaService {
         ...chat,
         messages: updatedMessagesMap,
         lastMessage: this.getLatestMessage(updatedMessagesMap),
-        unreadCount: message.isOutgoing
-          ? chat.unreadCount
-          : chat.unreadCount + 1,
+        unreadCount: message.isOutgoing ? chat.unreadCount : chat.unreadCount + 1,
       };
 
       // Update the chat in the new map
@@ -173,14 +166,10 @@ export class MessagingService implements NostriaService {
   }
 
   // Helper method to get the latest message from a messages map
-  private getLatestMessage(
-    messagesMap: Map<string, DirectMessage>
-  ): DirectMessage | null {
+  private getLatestMessage(messagesMap: Map<string, DirectMessage>): DirectMessage | null {
     if (messagesMap.size === 0) return null;
 
-    return Array.from(messagesMap.values()).sort(
-      (a, b) => b.created_at - a.created_at
-    )[0];
+    return Array.from(messagesMap.values()).sort((a, b) => b.created_at - a.created_at)[0];
   }
 
   clear() {
@@ -200,11 +189,7 @@ export class MessagingService implements NostriaService {
 
   async load() {}
 
-  async createNip44Message(
-    messageText: string,
-    receiverPubkey: string,
-    myPubkey: string
-  ) {
+  async createNip44Message(messageText: string, receiverPubkey: string, myPubkey: string) {
     try {
       // Step 1: Create the message (unsigned event) - kind 14
       const unsignedMessage = {
@@ -222,14 +207,13 @@ export class MessagingService implements NostriaService {
       // Step 2: Create the seal (kind 13) - encrypt the rumor with sender's key
       const sealedContent = await this.encryption.encryptNip44(
         JSON.stringify(rumorWithId),
-        receiverPubkey
+        receiverPubkey,
       );
 
       const sealedMessage = {
         kind: kinds.Seal,
         pubkey: myPubkey,
-        created_at:
-          Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800), // Random timestamp within 2 days
+        created_at: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800), // Random timestamp within 2 days
         tags: [],
         content: sealedContent,
       };
@@ -246,14 +230,13 @@ export class MessagingService implements NostriaService {
       const giftWrapContent = await this.encryption.encryptNip44WithKey(
         JSON.stringify(signedSealedMessage),
         bytesToHex(ephemeralKey),
-        receiverPubkey
+        receiverPubkey,
       );
 
       const giftWrap = {
         kind: kinds.GiftWrap,
         pubkey: ephemeralPubkey,
-        created_at:
-          Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800), // Random timestamp within 2 days
+        created_at: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800), // Random timestamp within 2 days
         tags: [['p', receiverPubkey]],
         content: giftWrapContent,
       };
@@ -267,8 +250,7 @@ export class MessagingService implements NostriaService {
       const giftWrapSelf = {
         kind: kinds.GiftWrap,
         pubkey: ephemeralPubkey,
-        created_at:
-          Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800), // Random timestamp within 2 days
+        created_at: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 172800), // Random timestamp within 2 days
         tags: [['p', myPubkey]],
         content: giftWrapContent,
       };
@@ -323,8 +305,7 @@ export class MessagingService implements NostriaService {
         limit: this.MESSAGE_SIZE,
       }; // Store pubkeys of people who've messaged us
       const chatPubkeys = new Set<string>();
-      let oldestTimestamp =
-        this.oldestChatTimestamp() || Math.floor(Date.now() / 1000);
+      let oldestTimestamp = this.oldestChatTimestamp() || Math.floor(Date.now() / 1000);
 
       // First, look for existing gift-wrapped messages
       const sub = this.relay.subscribe(
@@ -379,8 +360,7 @@ export class MessagingService implements NostriaService {
 
             // If this is outgoing, it means the target is in the tags on the kind 14.
             if (directMessage.isOutgoing) {
-              targetPubkey =
-                this.utilities.getPTagsValuesFromEvent(wrappedevent)[0];
+              targetPubkey = this.utilities.getPTagsValuesFromEvent(wrappedevent)[0];
             }
 
             // Add the message to the chat
@@ -413,10 +393,7 @@ export class MessagingService implements NostriaService {
                   targetPubkey = pTags[0];
                 } else {
                   // No p-tags, we can't unwrap this message
-                  this.logger.warn(
-                    'NIP-04 message has no recipients, ignoring.',
-                    event
-                  );
+                  this.logger.warn('NIP-04 message has no recipients, ignoring.', event);
                   return;
                 }
               }
@@ -445,10 +422,7 @@ export class MessagingService implements NostriaService {
               const unwrappedMessage = await this.unwrapNip04Message(event);
 
               if (!unwrappedMessage) {
-                this.logger.warn(
-                  'Failed to unwrap gift-wrapped message',
-                  event
-                );
+                this.logger.warn('Failed to unwrap gift-wrapped message', event);
                 return;
               }
 
@@ -481,7 +455,7 @@ export class MessagingService implements NostriaService {
           // ...existing code...
 
           this.isLoading.set(false);
-        }
+        },
       );
 
       // Process wrapped events to find unique chat participants
@@ -590,7 +564,7 @@ export class MessagingService implements NostriaService {
   private async queueMessageForDecryption(
     event: NostrEvent,
     type: 'nip04' | 'nip44',
-    senderPubkey: string
+    senderPubkey: string,
   ): Promise<any | null> {
     return new Promise((resolve, reject) => {
       const queueItem: DecryptionQueueItem = {
@@ -605,7 +579,7 @@ export class MessagingService implements NostriaService {
       this.decryptionQueue.push(queueItem);
       this.decryptionQueueLength.set(this.decryptionQueue.length);
       this.logger.debug(
-        `Added message to decryption queue. Queue length: ${this.decryptionQueue.length}`
+        `Added message to decryption queue. Queue length: ${this.decryptionQueue.length}`,
       );
 
       // Start processing if not already processing
@@ -620,7 +594,7 @@ export class MessagingService implements NostriaService {
    */
   clearDecryptionQueue(): void {
     // Reject all pending items
-    this.decryptionQueue.forEach(item => {
+    this.decryptionQueue.forEach((item) => {
       item.reject(new Error('Decryption queue cleared'));
     });
 
@@ -660,7 +634,7 @@ export class MessagingService implements NostriaService {
         this.logger.debug(`Successfully decrypted message ${item.id}`);
 
         // Small delay between processing to prevent overwhelming the user with extension prompts
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
       } catch (error) {
         this.logger.error(`Failed to decrypt message ${item.id}:`, error);
         item.reject(error as Error);
@@ -676,9 +650,7 @@ export class MessagingService implements NostriaService {
   /**
    * Internal unwrap and decrypt a NIP-04 direct message (direct processing)
    */
-  private async unwrapNip04MessageInternal(
-    event: NostrEvent
-  ): Promise<any | null> {
+  private async unwrapNip04MessageInternal(event: NostrEvent): Promise<any | null> {
     const myPubkey = this.accountState.pubkey();
     if (!myPubkey) return null;
 
@@ -690,10 +662,7 @@ export class MessagingService implements NostriaService {
         return null;
       } else if (tags.length > 1) {
         // NIP-04 only supports one recipient, yet some clients have sent DMs with more. Ignore those.
-        this.logger.warn(
-          'NIP-04 message has multiple recipients, ignoring.',
-          event
-        );
+        this.logger.warn('NIP-04 message has multiple recipients, ignoring.', event);
         return null;
       }
 
@@ -711,7 +680,7 @@ export class MessagingService implements NostriaService {
       const decryptionResult = await this.encryption.autoDecrypt(
         event.content,
         decryptionPubkey,
-        event
+        event,
       );
 
       // Return the message with decrypted content
@@ -737,9 +706,7 @@ export class MessagingService implements NostriaService {
 
     try {
       // Check if this message is for us
-      const recipient = wrappedEvent.tags.find(
-        (t: string[]) => t[0] === 'p'
-      )?.[1];
+      const recipient = wrappedEvent.tags.find((t: string[]) => t[0] === 'p')?.[1];
       if (recipient !== myPubkey && wrappedEvent.pubkey !== myPubkey) {
         return null;
       }
@@ -755,7 +722,7 @@ export class MessagingService implements NostriaService {
         const decryptionResult = await this.encryption.autoDecrypt(
           wrappedEvent.content,
           wrappedEvent.pubkey,
-          wrappedEvent
+          wrappedEvent,
         );
         wrappedContent = JSON.parse(decryptionResult.content);
       } catch (err) {
@@ -775,7 +742,7 @@ export class MessagingService implements NostriaService {
           const sealedDecryptionResult = await this.encryption.autoDecrypt(
             wrappedContent.content,
             wrappedContent.pubkey,
-            wrappedEvent
+            wrappedEvent,
           );
           sealedEvent = JSON.parse(sealedDecryptionResult.content);
         } catch (err) {
@@ -785,9 +752,7 @@ export class MessagingService implements NostriaService {
       }
 
       if (wrappedContent.pubkey !== sealedEvent.pubkey) {
-        throw new Error(
-          'Decrypted message pubkey does not match wrapped content pubkey'
-        );
+        throw new Error('Decrypted message pubkey does not match wrapped content pubkey');
       }
 
       // Return the final decrypted message
@@ -803,10 +768,7 @@ export class MessagingService implements NostriaService {
   /**
    * Load more (older) messages for a specific chat
    */
-  async loadMoreMessages(
-    chatId: string,
-    beforeTimestamp?: number
-  ): Promise<DirectMessage[]> {
+  async loadMoreMessages(chatId: string, beforeTimestamp?: number): Promise<DirectMessage[]> {
     const myPubkey = this.accountState.pubkey();
     if (!myPubkey) {
       throw new Error('User not authenticated');
@@ -824,18 +786,16 @@ export class MessagingService implements NostriaService {
       if (currentMessages.length === 0) {
         until = Math.floor(Date.now() / 1000); // Current timestamp
       } else {
-        until = Math.min(...currentMessages.map(m => m.created_at)) - 1;
+        until = Math.min(...currentMessages.map((m) => m.created_at)) - 1;
       }
     }
 
     // Determine which message kinds to fetch based on chat encryption type
     const messageKinds =
-      chat.encryptionType === 'nip04'
-        ? [kinds.EncryptedDirectMessage]
-        : [kinds.GiftWrap];
+      chat.encryptionType === 'nip04' ? [kinds.EncryptedDirectMessage] : [kinds.GiftWrap];
 
     this.logger.debug(
-      `Loading more messages for chat ${chatId}, encryption type: ${chat.encryptionType}, until: ${until}`
+      `Loading more messages for chat ${chatId}, encryption type: ${chat.encryptionType}, until: ${until}`,
     );
 
     // Create filters for both received and sent messages
@@ -919,7 +879,7 @@ export class MessagingService implements NostriaService {
           () => {
             // EOSE callback - end of stored events
             resolve();
-          }
+          },
         );
 
         // Set a timeout to prevent hanging
@@ -931,9 +891,7 @@ export class MessagingService implements NostriaService {
         }, 10000);
       });
 
-      this.logger.debug(
-        `Loaded ${loadedMessages.length} older messages for chat ${chatId}`
-      );
+      this.logger.debug(`Loaded ${loadedMessages.length} older messages for chat ${chatId}`);
       return loadedMessages.sort((a, b) => a.created_at - b.created_at);
     } catch (error) {
       this.logger.error('Failed to load more messages:', error);
@@ -966,9 +924,7 @@ export class MessagingService implements NostriaService {
         return;
       }
 
-      this.logger.debug(
-        `Loading more chats before timestamp: ${oldestTimestamp}`
-      );
+      this.logger.debug(`Loading more chats before timestamp: ${oldestTimestamp}`);
 
       const filterReceived: Filter = {
         kinds: [kinds.GiftWrap, kinds.EncryptedDirectMessage],
@@ -995,17 +951,14 @@ export class MessagingService implements NostriaService {
       const checkCompletion = () => {
         if (eoseReceived && pendingDecryptions === completedDecryptions) {
           this.logger.debug(
-            `Decryption complete. Received: ${messagesReceivedFound}, Sent: ${messagesSentFound}`
+            `Decryption complete. Received: ${messagesReceivedFound}, Sent: ${messagesSentFound}`,
           );
 
           // Update the oldest timestamp for future loads
           this.oldestChatTimestamp.set(newOldestTimestamp);
 
           // If both received and sent messages are below the limit, we assume no more chats
-          if (
-            messagesReceivedFound < this.MESSAGE_SIZE &&
-            messagesSentFound < this.MESSAGE_SIZE
-          ) {
+          if (messagesReceivedFound < this.MESSAGE_SIZE && messagesSentFound < this.MESSAGE_SIZE) {
             this.logger.debug('No more chats available');
             this.hasMoreChats.set(false);
           }
@@ -1032,10 +985,7 @@ export class MessagingService implements NostriaService {
               const wrappedevent = await this.unwrapMessageInternal(event);
 
               if (!wrappedevent) {
-                this.logger.warn(
-                  'Failed to unwrap gift-wrapped message',
-                  event
-                );
+                this.logger.warn('Failed to unwrap gift-wrapped message', event);
                 completedDecryptions++;
                 checkCompletion();
                 return;
@@ -1074,10 +1024,7 @@ export class MessagingService implements NostriaService {
                 if (pTags.length > 0) {
                   targetPubkey = pTags[0];
                 } else {
-                  this.logger.warn(
-                    'NIP-04 message has no recipients, ignoring.',
-                    event
-                  );
+                  this.logger.warn('NIP-04 message has no recipients, ignoring.', event);
                   completedDecryptions++;
                   checkCompletion();
                   return;
@@ -1124,10 +1071,7 @@ export class MessagingService implements NostriaService {
               this.addMessageToChat(targetPubkey, directMessage);
             }
           } catch (error) {
-            this.logger.error(
-              'Error processing message during loadMoreChats:',
-              error
-            );
+            this.logger.error('Error processing message during loadMoreChats:', error);
           } finally {
             // Always increment completed counter and check for completion
             completedDecryptions++;
@@ -1137,11 +1081,11 @@ export class MessagingService implements NostriaService {
         () => {
           // EOSE callback - just mark that we've received all events
           this.logger.debug(
-            `EOSE received. Pending: ${pendingDecryptions}, Completed: ${completedDecryptions}`
+            `EOSE received. Pending: ${pendingDecryptions}, Completed: ${completedDecryptions}`,
           );
           eoseReceived = true;
           checkCompletion();
-        }
+        },
       );
     } catch (err) {
       this.logger.error('Failed to load more chats', err);

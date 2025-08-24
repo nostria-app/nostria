@@ -58,9 +58,7 @@
         --mat-standard-button-toggle-selected-state-background-color: var(
           --mat-sys-primary-container
         );
-        --mat-standard-button-toggle-selected-state-text-color: var(
-          --mat-sys-on-primary-container
-        );
+        --mat-standard-button-toggle-selected-state-text-color: var(--mat-sys-on-primary-container);
       }
 
       .mat-button-toggle {

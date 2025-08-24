@@ -37,7 +37,7 @@ export class FollowsetComponent {
   // Inputs
   title = input<string>('What interests you?');
   description = input<string>(
-    "Select topics you're interested in to discover people and content you'll love. You can always change these later."
+    "Select topics you're interested in to discover people and content you'll love. You can always change these later.",
   );
   availableInterests = input<Interest[]>([]);
   suggestedProfiles = input<SuggestedProfile[]>([]);
@@ -63,13 +63,13 @@ export class FollowsetComponent {
     }
 
     // Filter profiles that have at least one matching interest
-    let filteredProfiles = profiles.filter(profile =>
-      profile.interests.some(interest => selected.includes(interest))
+    let filteredProfiles = profiles.filter((profile) =>
+      profile.interests.some((interest) => selected.includes(interest)),
     );
 
     // For regional profiles, update their region to match detected region
     if (selected.includes('regional')) {
-      filteredProfiles = filteredProfiles.map(profile => {
+      filteredProfiles = filteredProfiles.map((profile) => {
         if (profile.interests.includes('regional') && profile.region) {
           return { ...profile, region: region };
         }
@@ -89,9 +89,7 @@ export class FollowsetComponent {
 
   // Check if user is ready to get started (has selected interests and at least one pending follow)
   canGetStarted = computed(() => {
-    return (
-      this.selectedInterests().length > 0 && this.pendingFollows().length > 0
-    );
+    return this.selectedInterests().length > 0 && this.pendingFollows().length > 0;
   });
 
   toggleInterest(interestId: string): void {
@@ -102,7 +100,7 @@ export class FollowsetComponent {
     const current = this.pendingFollows();
     if (current.includes(profileId)) {
       // Remove from pending follows - user changed their mind
-      this.pendingFollows.set(current.filter(id => id !== profileId));
+      this.pendingFollows.set(current.filter((id) => id !== profileId));
     } else {
       // Add to pending follows (only if not already following)
       // This will be committed to nostr relays when "Get Started" is clicked
@@ -121,7 +119,7 @@ export class FollowsetComponent {
   }
 
   getInterestName(interestId: string): string {
-    const interest = this.availableInterests().find(i => i.id === interestId);
+    const interest = this.availableInterests().find((i) => i.id === interestId);
     return interest?.name || interestId;
   }
 }

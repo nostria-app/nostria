@@ -1,12 +1,4 @@
-import {
-  Component,
-  inject,
-  input,
-  signal,
-  effect,
-  computed,
-  untracked,
-} from '@angular/core';
+import { Component, inject, input, signal, effect, computed, untracked } from '@angular/core';
 import { DataService } from '../../services/data.service';
 import { nip19 } from 'nostr-tools';
 import { NostrRecord, ViewMode } from '../../interfaces';
@@ -116,10 +108,7 @@ export class ArticleComponent {
   publishedAtTimestamp = computed(() => {
     const ev = this.event();
     if (!ev) return 0;
-    const publishedAtTag = this.utilities.getTagValues(
-      'published_at',
-      ev.tags
-    )[0];
+    const publishedAtTag = this.utilities.getTagValues('published_at', ev.tags)[0];
     if (publishedAtTag) {
       return parseInt(publishedAtTag);
     }
@@ -145,9 +134,7 @@ export class ArticleComponent {
       let event: NostrRecord | null = null;
 
       if (isNotCurrentUser) {
-        let userData = this.cache.get<UserDataService>(
-          'user-data-' + this.pubkey()
-        );
+        let userData = this.cache.get<UserDataService>('user-data-' + this.pubkey());
 
         if (!userData) {
           userData = await this.dataFactory.create(this.pubkey());
@@ -157,14 +144,14 @@ export class ArticleComponent {
           this.pubkey(),
           this.kind(),
           this.slug(),
-          { save: false, cache: false }
+          { save: false, cache: false },
         );
       } else {
         event = await this.data.getEventByPubkeyAndKindAndReplaceableEvent(
           this.pubkey(),
           this.kind(),
           this.slug(),
-          { save: false, cache: false }
+          { save: false, cache: false },
         );
       }
 

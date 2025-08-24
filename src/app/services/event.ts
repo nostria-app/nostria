@@ -71,8 +71,8 @@ export class EventService {
    * Parse event tags to extract thread information
    */
   getEventTags(event: Event): EventTags {
-    const eTags = event.tags.filter(tag => tag[0] === 'e');
-    const pTags = event.tags.filter(tag => tag[0] === 'p').map(tag => tag[1]);
+    const eTags = event.tags.filter((tag) => tag[0] === 'e');
+    const pTags = event.tags.filter((tag) => tag[0] === 'p').map((tag) => tag[1]);
 
     let rootId: string | null = null;
     let replyId: string | null = null;
@@ -81,7 +81,7 @@ export class EventService {
     const replyRelays: string[] = [];
 
     // Find root tag (NIP-10 marked format)
-    const rootTag = eTags.find(tag => tag[3] === 'root');
+    const rootTag = eTags.find((tag) => tag[3] === 'root');
     if (rootTag) {
       rootId = rootTag[1];
       // Extract author pubkey from root tag if present (5th element)
@@ -93,7 +93,7 @@ export class EventService {
     }
 
     // Find reply tag (NIP-10 marked format)
-    const replyTag = eTags.find(tag => tag[3] === 'reply');
+    const replyTag = eTags.find((tag) => tag[3] === 'reply');
     if (replyTag) {
       replyId = replyTag[1];
       // Extract relay URL from reply tag if present (3rd element)
@@ -142,16 +142,12 @@ export class EventService {
   /**
    * Build a threaded tree structure from events
    */
-  buildThreadTree(
-    events: Event[],
-    rootEventId: string,
-    maxDepth = 5
-  ): ThreadedEvent[] {
+  buildThreadTree(events: Event[], rootEventId: string, maxDepth = 5): ThreadedEvent[] {
     const eventMap = new Map<string, Event>();
     const childrenMap = new Map<string, Event[]>();
 
     // Build maps
-    events.forEach(event => {
+    events.forEach((event) => {
       eventMap.set(event.id, event);
 
       const { replyId } = this.getEventTags(event);
@@ -169,7 +165,7 @@ export class EventService {
 
       return children
         .sort((a, b) => a.created_at - b.created_at) // Sort by creation time
-        .map(child => {
+        .map((child) => {
           const threadedEvent: ThreadedEvent = {
             event: child,
             replies: [],
@@ -179,8 +175,7 @@ export class EventService {
           // If we're at max depth, check if there are deeper replies
           if (level >= maxDepth - 1) {
             const hasDeepReplies =
-              childrenMap.has(child.id) &&
-              childrenMap.get(child.id)!.length > 0;
+              childrenMap.has(child.id) && childrenMap.get(child.id)!.length > 0;
             if (hasDeepReplies) {
               threadedEvent.hasMoreReplies = true;
               threadedEvent.deepestReplyId = child.id;
@@ -218,9 +213,7 @@ export class EventService {
 
     // If we have an author, we'll create a data factory for it.
     if (decoded.data.author) {
-      userData = this.cache.get<UserDataService>(
-        'user-data-' + decoded.data.author
-      );
+      userData = this.cache.get<UserDataService>('user-data-' + decoded.data.author);
 
       if (!userData) {
         userData = await this.userDataFactory.create(decoded.data.author);
@@ -244,10 +237,7 @@ export class EventService {
         const event = await userData.getEventById(hex);
 
         if (event) {
-          this.logger.info(
-            'Loaded event from storage or relays:',
-            event.event.id
-          );
+          this.logger.info('Loaded event from storage or relays:', event.event.id);
           return event.event;
         }
       } catch (error) {
@@ -260,10 +250,7 @@ export class EventService {
         const event = await this.data.getEventById(hex);
 
         if (event) {
-          this.logger.info(
-            'Loaded event from storage or relays:',
-            event.event.id
-          );
+          this.logger.info('Loaded event from storage or relays:', event.event.id);
           return event.event;
         }
       } catch (error) {
@@ -354,12 +341,7 @@ export class EventService {
    * Load replies for an event
    */
   async loadReplies(eventId: string, pubkey: string): Promise<Event[]> {
-    this.logger.info(
-      'loadReplies called with eventId:',
-      eventId,
-      'pubkey:',
-      pubkey
-    );
+    this.logger.info('loadReplies called with eventId:', eventId, 'pubkey:', pubkey);
 
     let userData = this.cache.get<UserDataService>('user-data-' + pubkey);
 
@@ -374,25 +356,21 @@ export class EventService {
 
     try {
       // Load replies (kind 1 events that reference this event)
-      const replyRecords = await userData.getEventsByKindAndEventTag(
-        kinds.ShortTextNote,
-        eventId,
-        {
-          save: false,
-          cache: false,
-        }
-      );
+      const replyRecords = await userData.getEventsByKindAndEventTag(kinds.ShortTextNote, eventId, {
+        save: false,
+        cache: false,
+      });
 
       // Extract events from records and filter valid replies
       const replies = replyRecords
-        .map(record => record.event)
-        .filter(event => event.content && event.content.trim().length > 0);
+        .map((record) => record.event)
+        .filter((event) => event.content && event.content.trim().length > 0);
 
       this.logger.info(
         'Successfully loaded replies for event:',
         eventId,
         'replies:',
-        replies.length
+        replies.length,
       );
 
       return replies;
@@ -408,14 +386,9 @@ export class EventService {
   async loadReactions(
     eventId: string,
     pubkey: string,
-    invalidateCache = false
+    invalidateCache = false,
   ): Promise<ReactionEvents> {
-    this.logger.info(
-      'loadReactions called with eventId:',
-      eventId,
-      'pubkey:',
-      pubkey
-    );
+    this.logger.info('loadReactions called with eventId:', eventId, 'pubkey:', pubkey);
 
     let userData = this.cache.get<UserDataService>('user-data-' + pubkey);
 
@@ -430,19 +403,15 @@ export class EventService {
 
     try {
       // Load reactions (kind 7 events that reference this event)
-      const reactionRecords = await userData.getEventsByKindAndEventTag(
-        kinds.Reaction,
-        eventId,
-        {
-          save: false,
-          cache: true,
-          invalidateCache,
-        }
-      );
+      const reactionRecords = await userData.getEventsByKindAndEventTag(kinds.Reaction, eventId, {
+        save: false,
+        cache: true,
+        invalidateCache,
+      });
 
       // Count reactions by emoji
       const reactionCounts = new Map<string, number>();
-      reactionRecords.forEach(record => {
+      reactionRecords.forEach((record) => {
         const event = record.event;
         if (event.content && event.content.trim()) {
           const emoji = event.content.trim();
@@ -456,7 +425,7 @@ export class EventService {
         'Successfully loaded reactions for event:',
         eventId,
         'reactions:',
-        reactions.length
+        reactions.length,
       );
 
       return {
@@ -475,14 +444,9 @@ export class EventService {
    */
   async loadRepliesAndReactions(
     eventId: string,
-    pubkey: string
+    pubkey: string,
   ): Promise<{ replies: Event[]; reactions: Reaction[] }> {
-    this.logger.info(
-      'loadRepliesAndReactions called with eventId:',
-      eventId,
-      'pubkey:',
-      pubkey
-    );
+    this.logger.info('loadRepliesAndReactions called with eventId:', eventId, 'pubkey:', pubkey);
 
     const [replies, reactions] = await Promise.all([
       this.loadReplies(eventId, pubkey),
@@ -500,12 +464,7 @@ export class EventService {
   async loadParentEvents(event: Event): Promise<Event[]> {
     const parents: Event[] = [];
 
-    const {
-      author: initialAuthor,
-      rootId,
-      replyId,
-      pTags,
-    } = this.getEventTags(event);
+    const { author: initialAuthor, rootId, replyId, pTags } = this.getEventTags(event);
 
     let author = initialAuthor;
 
@@ -516,7 +475,7 @@ export class EventService {
 
     if (!author) {
       this.logger.warn(
-        'No author found for loading root event. Fallback to attempt using first p-tag.'
+        'No author found for loading root event. Fallback to attempt using first p-tag.',
       );
       author = pTags[0];
     }
@@ -552,7 +511,7 @@ export class EventService {
       if (rootId && rootId !== replyId) {
         const rootEvent = await userData.getEventById(rootId);
 
-        if (rootEvent && !parents.find(p => p.id === rootEvent.event.id)) {
+        if (rootEvent && !parents.find((p) => p.id === rootEvent.event.id)) {
           parents.unshift(rootEvent.event);
         }
       }
@@ -567,10 +526,7 @@ export class EventService {
   /**
    * Load a complete thread with parents and children using outbox model.
    */
-  async loadCompleteThread(
-    nevent: string,
-    item?: EventData
-  ): Promise<ThreadData> {
+  async loadCompleteThread(nevent: string, item?: EventData): Promise<ThreadData> {
     // Load the main event
     const event = await this.loadEvent(nevent, item);
     if (!event) {
@@ -584,15 +540,11 @@ export class EventService {
     const parents = await this.loadParentEvents(event);
 
     // Determine the actual root event
-    const rootEvent =
-      parents.length > 0 ? parents[0] : isThreadRoot ? event : null;
+    const rootEvent = parents.length > 0 ? parents[0] : isThreadRoot ? event : null;
     const threadRootId = rootEvent?.id || event.id;
 
     // Load replies and reactions for the thread root
-    const { replies, reactions } = await this.loadRepliesAndReactions(
-      threadRootId,
-      event.pubkey
-    );
+    const { replies, reactions } = await this.loadRepliesAndReactions(threadRootId, event.pubkey);
 
     // Build threaded structure
     const threadedReplies = this.buildThreadTree(replies, threadRootId, 4);
@@ -624,14 +576,9 @@ export class EventService {
   async loadReposts(
     eventId: string,
     userPubkey: string,
-    invalidateCache = false
+    invalidateCache = false,
   ): Promise<NostrRecord[]> {
-    this.logger.info(
-      'loadReposts called with eventId:',
-      eventId,
-      'userPubkey:',
-      userPubkey
-    );
+    this.logger.info('loadReposts called with eventId:', eventId, 'userPubkey:', userPubkey);
 
     let userData: UserDataService | undefined;
 
@@ -647,22 +594,13 @@ export class EventService {
     }
 
     try {
-      const reposts = await userData.getEventsByKindAndEventTag(
-        kinds.Repost,
-        eventId,
-        {
-          save: false,
-          cache: true,
-          invalidateCache,
-        }
-      );
+      const reposts = await userData.getEventsByKindAndEventTag(kinds.Repost, eventId, {
+        save: false,
+        cache: true,
+        invalidateCache,
+      });
 
-      this.logger.info(
-        'Successfully loaded reposts for event:',
-        eventId,
-        'count:',
-        reposts.length
-      );
+      this.logger.info('Successfully loaded reposts for event:', eventId, 'count:', reposts.length);
       return reposts;
     } catch (error) {
       this.logger.error('Error loading reposts for event:', eventId, error);
@@ -679,7 +617,7 @@ export class EventService {
       data,
     });
 
-    dialogRef.afterClosed().subscribe(result => {
+    dialogRef.afterClosed().subscribe((result) => {
       if (result?.published) {
         console.log('Note published successfully:', result.event);
       }

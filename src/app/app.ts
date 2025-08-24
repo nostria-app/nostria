@@ -101,7 +101,7 @@ interface NavItem {
     SearchResultsComponent,
     NavigationComponent,
     NavigationContextMenuComponent,
-    AgoPipe
+    AgoPipe,
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss',

@@ -8,11 +8,7 @@
 
   <div class="preview-content" [ngClass]="{ 'video-content': isVideo() }">
     @if (isImage()) {
-      <img
-        [src]="data.mediaUrl"
-        [alt]="data.mediaTitle"
-        class="preview-image"
-      />
+      <img [src]="data.mediaUrl" [alt]="data.mediaTitle" class="preview-image" />
     } @else if (isVideo()) {
       <div class="video-container">
         @if (isVideoLoading) {
@@ -33,14 +29,7 @@
       <div class="unsupported-media">
         <mat-icon>broken_image</mat-icon>
         <p>This media type cannot be previewed</p>
-        <a
-          [href]="data.mediaUrl"
-          target="_blank"
-          mat-raised-button
-          color="primary"
-        >
-          Open File
-        </a>
+        <a [href]="data.mediaUrl" target="_blank" mat-raised-button color="primary"> Open File </a>
       </div>
     }
   </div>

@@ -1,10 +1,6 @@
 import { Component, inject, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import {
-  MatDialogModule,
-  MatDialogRef,
-  MAT_DIALOG_DATA,
-} from '@angular/material/dialog';
+import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -62,9 +58,7 @@ export class PublishDialogComponent {
   private nostrService = inject(NostrService);
   // relayService = inject(RelayService);
 
-  selectedOptions = signal<Set<'account' | 'author' | 'custom'>>(
-    new Set(['account'])
-  );
+  selectedOptions = signal<Set<'account' | 'author' | 'custom'>>(new Set(['account']));
   customRelayInput = signal<string>('');
   customRelays = signal<string[]>([]);
   publishResults = signal<RelayPublishResult[]>([]);
@@ -98,9 +92,7 @@ export class PublishDialogComponent {
       if (this.data?.event?.pubkey) {
         this.loadingAuthorRelays.set(true);
         try {
-          const relays = await this.discoveryRelay.getUserRelayUrls(
-            this.data.event.pubkey
-          );
+          const relays = await this.discoveryRelay.getUserRelayUrls(this.data.event.pubkey);
 
           this.authorRelays.set(relays || []);
         } catch (error) {
@@ -120,7 +112,7 @@ export class PublishDialogComponent {
       try {
         const url = new URL(relayUrl);
         if (url.protocol === 'wss:' || url.protocol === 'ws:') {
-          this.customRelays.update(relays => [...relays, relayUrl]);
+          this.customRelays.update((relays) => [...relays, relayUrl]);
           this.customRelayInput.set('');
         } else {
           alert('Please enter a valid WebSocket URL (wss:// or ws://)');
@@ -132,7 +124,7 @@ export class PublishDialogComponent {
   }
 
   removeCustomRelay(relay: string): void {
-    this.customRelays.update(relays => relays.filter(r => r !== relay));
+    this.customRelays.update((relays) => relays.filter((r) => r !== relay));
   }
 
   getTargetRelays(): string[] {
@@ -155,11 +147,8 @@ export class PublishDialogComponent {
     return [...new Set(allRelays)];
   }
 
-  onOptionChange(
-    option: 'account' | 'author' | 'custom',
-    checked: boolean
-  ): void {
-    this.selectedOptions.update(options => {
+  onOptionChange(option: 'account' | 'author' | 'custom', checked: boolean): void {
+    this.selectedOptions.update((options) => {
       const newOptions = new Set(options);
       if (checked) {
         newOptions.add(option);
@@ -185,7 +174,7 @@ export class PublishDialogComponent {
     this.isPublishing.set(true);
 
     // Initialize publish results
-    const initialResults: RelayPublishResult[] = targetRelays.map(url => ({
+    const initialResults: RelayPublishResult[] = targetRelays.map((url) => ({
       url,
       status: 'pending',
     }));
@@ -193,10 +182,7 @@ export class PublishDialogComponent {
 
     try {
       // Use the pool to publish to multiple relays
-      const publishPromises = await this.accountRelay.publishToRelay(
-        this.data.event,
-        targetRelays
-      );
+      const publishPromises = await this.accountRelay.publishToRelay(this.data.event, targetRelays);
 
       if (!publishPromises) {
         console.error('Error during publishing: No promises returned.');
@@ -208,21 +194,12 @@ export class PublishDialogComponent {
         publishPromises.map(async (promise, index) => {
           try {
             await promise;
-            this.updatePublishResult(
-              targetRelays[index],
-              'success',
-              'Published successfully'
-            );
+            this.updatePublishResult(targetRelays[index], 'success', 'Published successfully');
           } catch (error) {
-            const errorMessage =
-              error instanceof Error ? error.message : 'Unknown error';
-            this.updatePublishResult(
-              targetRelays[index],
-              'error',
-              errorMessage
-            );
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            this.updatePublishResult(targetRelays[index], 'error', errorMessage);
           }
-        })
+        }),
       );
     } catch (error) {
       console.error('Error during publishing:', error);
@@ -231,15 +208,9 @@ export class PublishDialogComponent {
     }
   }
 
-  private updatePublishResult(
-    url: string,
-    status: 'success' | 'error',
-    message?: string
-  ): void {
-    this.publishResults.update(results =>
-      results.map(result =>
-        result.url === url ? { ...result, status, message } : result
-      )
+  private updatePublishResult(url: string, status: 'success' | 'error', message?: string): void {
+    this.publishResults.update((results) =>
+      results.map((result) => (result.url === url ? { ...result, status, message } : result)),
     );
   }
 
@@ -252,11 +223,11 @@ export class PublishDialogComponent {
   }
 
   toggleJsonView(): void {
-    this.showJsonView.update(show => !show);
+    this.showJsonView.update((show) => !show);
   }
 
   toggleRelaysView(): void {
-    this.showRelaysView.update(show => !show);
+    this.showRelaysView.update((show) => !show);
   }
 
   getEventJson(): string {

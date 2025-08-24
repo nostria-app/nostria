@@ -45,8 +45,7 @@
     overflow: hidden;
     flex-shrink: 0;
     border: 2px solid;
-    border-color: var(--mat-button-text-label-text-color,
-        var(--mat-sys-primary));
+    border-color: var(--mat-button-text-label-text-color, var(--mat-sys-primary));
     background-color: var(--mat-card-subtle-surface-color, #e0e0e0);
     // Allow touch scrolling to pass through
     touch-action: manipulation;
@@ -402,8 +401,7 @@
       overflow: visible; // Don't hide overflowing text
       text-overflow: unset; // Don't use ellipsis, wrap instead
       word-break: break-all; // Break anywhere for long strings like npub
-      font-family:
-        'Courier New', monospace; // Use monospace for better readability of codes
+      font-family: 'Courier New', monospace; // Use monospace for better readability of codes
       font-size: 12px; // Slightly smaller for long strings
       line-height: 1.4; // Better spacing for wrapped monospace text
     }

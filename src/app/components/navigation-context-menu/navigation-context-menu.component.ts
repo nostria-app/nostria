@@ -1,17 +1,7 @@
-import {
-  Component,
-  OnInit,
-  OnDestroy,
-  Renderer2,
-  inject,
-  signal,
-} from '@angular/core';
+import { Component, OnInit, OnDestroy, Renderer2, inject, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import {
-  NavigationHistoryItem,
-  RouteDataService,
-} from '../../services/route-data.service';
+import { NavigationHistoryItem, RouteDataService } from '../../services/route-data.service';
 import { DOCUMENT } from '@angular/common';
 
 @Component({
@@ -34,10 +24,7 @@ export class NavigationContextMenuComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     // Listen for the custom event from navigation component
-    window.addEventListener(
-      'show-navigation-context-menu',
-      this.handleShowContextMenu.bind(this)
-    );
+    window.addEventListener('show-navigation-context-menu', this.handleShowContextMenu.bind(this));
 
     // Close menu when clicking outside
     this.document.addEventListener('click', this.closeMenu.bind(this));
@@ -46,7 +33,7 @@ export class NavigationContextMenuComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     window.removeEventListener(
       'show-navigation-context-menu',
-      this.handleShowContextMenu.bind(this)
+      this.handleShowContextMenu.bind(this),
     );
     this.document.removeEventListener('click', this.closeMenu.bind(this));
   }

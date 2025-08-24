@@ -75,26 +75,22 @@ export class MetaService {
     if (config.description) this.setDescription(config.description);
 
     // Open Graph
-    if (config.title)
-      this.meta.updateTag({ property: 'og:title', content: config.title });
+    if (config.title) this.meta.updateTag({ property: 'og:title', content: config.title });
     if (config.description)
       this.meta.updateTag({
         property: 'og:description',
         content: config.description,
       });
-    if (config.image)
-      this.meta.updateTag({ property: 'og:image', content: config.image });
+    if (config.image) this.meta.updateTag({ property: 'og:image', content: config.image });
 
     // Twitter Card
-    if (config.title)
-      this.meta.updateTag({ name: 'twitter:title', content: config.title });
+    if (config.title) this.meta.updateTag({ name: 'twitter:title', content: config.title });
     if (config.description)
       this.meta.updateTag({
         name: 'twitter:description',
         content: config.description,
       });
-    if (config.image)
-      this.meta.updateTag({ name: 'twitter:image', content: config.image });
+    if (config.image) this.meta.updateTag({ name: 'twitter:image', content: config.image });
   }
 
   /**
@@ -141,16 +137,11 @@ export class MetaService {
       imageUrl = data.author.profile.picture;
     }
 
-    title =
-      data.author?.profile?.display_name ||
-      data.author?.profile?.name ||
-      'Nostr Event';
+    title = data.author?.profile?.display_name || data.author?.profile?.name || 'Nostr Event';
 
     const fullDescription = data.content || 'No description available';
     description =
-      fullDescription.length > 200
-        ? fullDescription.substring(0, 200) + '...'
-        : fullDescription;
+      fullDescription.length > 200 ? fullDescription.substring(0, 200) + '...' : fullDescription;
 
     this.updateSocialMetadata({
       title: title,

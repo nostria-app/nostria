@@ -39,9 +39,7 @@
           />
         } @else {
           <div class="video-thumbnail-placeholder">
-            <mat-icon class="video-placeholder-icon"
-              >play_circle_outline</mat-icon
-            >
+            <mat-icon class="video-placeholder-icon">play_circle_outline</mat-icon>
           </div>
         }
 
@@ -65,9 +63,7 @@
           autoplay
           [poster]="
             videoInfo.thumbnail ||
-            (videoInfo.blurhash
-              ? generateBlurhashDataUrl(videoInfo.blurhash, 400, 225)
-              : undefined)
+            (videoInfo.blurhash ? generateBlurhashDataUrl(videoInfo.blurhash, 400, 225) : undefined)
           "
         >
           <source [src]="videoInfo.url" type="video/mp4" />

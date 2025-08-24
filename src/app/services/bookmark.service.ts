@@ -32,30 +32,30 @@ export class BookmarkService {
   bookmarkEvent = signal<Event | null>(null);
 
   bookmarks = computed<any[]>(() => {
-    return this.bookmarkEvent()?.tags.map(tag => ({ id: tag[1] })) || [];
+    return this.bookmarkEvent()?.tags.map((tag) => ({ id: tag[1] })) || [];
   });
 
   bookmarkEvents = computed<any[]>(() => {
     return (
       this.bookmarkEvent()
-        ?.tags.filter(tag => tag[0] === 'e')
-        .map(tag => ({ id: tag[1] })) || []
+        ?.tags.filter((tag) => tag[0] === 'e')
+        .map((tag) => ({ id: tag[1] })) || []
     );
   });
 
   bookmarkArticles = computed<any[]>(() => {
     return (
       this.bookmarkEvent()
-        ?.tags.filter(tag => tag[0] === 'a')
-        .map(tag => ({ id: tag[1] })) || []
+        ?.tags.filter((tag) => tag[0] === 'a')
+        .map((tag) => ({ id: tag[1] })) || []
     );
   });
 
   bookmarkUrls = computed<any[]>(() => {
     return (
       this.bookmarkEvent()
-        ?.tags.filter(tag => tag[0] === 'r')
-        .map(tag => ({ id: tag[1] })) || []
+        ?.tags.filter((tag) => tag[0] === 'r')
+        .map((tag) => ({ id: tag[1] })) || []
     );
   });
 
@@ -122,14 +122,12 @@ export class BookmarkService {
     const bookmarkId = id;
 
     // Check if the bookmark already exists
-    const existingBookmark = this.bookmarks().find(b => b.id === bookmarkId);
+    const existingBookmark = this.bookmarks().find((b) => b.id === bookmarkId);
 
     // If it exists, remove it; if not, add it
     if (existingBookmark) {
       // Remove from the bookmark event tags
-      event.tags = event.tags.filter(
-        tag => !(tag[0] === type && tag[1] === bookmarkId)
-      );
+      event.tags = event.tags.filter((tag) => !(tag[0] === type && tag[1] === bookmarkId));
     } else {
       // Add to the bookmark event tags
       event.tags.push([type, bookmarkId]);
@@ -145,21 +143,17 @@ export class BookmarkService {
 
   isBookmarked(id: string, type: BookmarkType = 'e'): boolean {
     const list = this.getBookmarkSignal(type)();
-    return list.find(b => b.id === id);
+    return list.find((b) => b.id === id);
   }
 
   // Helper method to get tooltip text based on bookmark status
   getBookmarkTooltip(id: string, type: BookmarkType = 'e'): string {
-    return this.bookmarkEvents().find(b => b.id === id)
-      ? 'Remove bookmark'
-      : 'Add bookmark';
+    return this.bookmarkEvents().find((b) => b.id === id) ? 'Remove bookmark' : 'Add bookmark';
   }
 
   // Helper method to get icon based on bookmark status
   getBookmarkIcon(id: string, type: BookmarkType = 'e'): string {
-    return this.bookmarkEvents().find(b => b.id === id)
-      ? 'bookmark_remove'
-      : 'bookmark_add';
+    return this.bookmarkEvents().find((b) => b.id === id) ? 'bookmark_remove' : 'bookmark_add';
   }
 
   async publish(event: Event) {
@@ -187,7 +181,7 @@ export class BookmarkService {
       const results = await Promise.all(publishPromises || []);
 
       // Count successes and failures
-      const successful = results.filter(result => result === '').length;
+      const successful = results.filter((result) => result === '').length;
       const failed = results.length - successful;
 
       // Display appropriate notification
@@ -200,7 +194,7 @@ export class BookmarkService {
             horizontalPosition: 'center',
             verticalPosition: 'bottom',
             panelClass: 'success-snackbar',
-          }
+          },
         );
       } else {
         this.snackBar.open(
@@ -210,9 +204,8 @@ export class BookmarkService {
             duration: 5000,
             horizontalPosition: 'center',
             verticalPosition: 'bottom',
-            panelClass:
-              failed > successful ? 'error-snackbar' : 'warning-snackbar',
-          }
+            panelClass: failed > successful ? 'error-snackbar' : 'warning-snackbar',
+          },
         );
       }
     } catch (error) {

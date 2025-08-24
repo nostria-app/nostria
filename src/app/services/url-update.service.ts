@@ -60,10 +60,7 @@ export class UrlUpdateService {
   /**
    * Method 6: Update specific path segments without navigation
    */
-  updatePathSilently(
-    pathSegments: string[],
-    queryParams?: Record<string, any>
-  ): void {
+  updatePathSilently(pathSegments: string[], queryParams?: Record<string, any>): void {
     const urlTree = this.router.createUrlTree(pathSegments, { queryParams });
     this.location.replaceState(this.router.serializeUrl(urlTree));
   }

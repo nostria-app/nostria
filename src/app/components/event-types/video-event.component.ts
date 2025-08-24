@@ -49,14 +49,14 @@ export class VideoEventComponent {
     const event = this.event();
     if (!event) return false;
 
-    return event.tags.some(tag => tag[0] === 'content-warning');
+    return event.tags.some((tag) => tag[0] === 'content-warning');
   });
 
   contentWarning = computed(() => {
     const event = this.event();
     if (!event) return null;
 
-    const warningTag = event.tags.find(tag => tag[0] === 'content-warning');
+    const warningTag = event.tags.find((tag) => tag[0] === 'content-warning');
     return warningTag?.[1] || 'Content may be sensitive';
   });
 
@@ -78,13 +78,13 @@ export class VideoEventComponent {
 
   private getVideoData(event: Event): VideoData | null {
     // Extract video URL from tags
-    const urlTag = event.tags.find(tag => tag[0] === 'url');
-    const imageTag = event.tags.find(tag => tag[0] === 'image');
-    const thumbTag = event.tags.find(tag => tag[0] === 'thumb');
-    const blurhashTag = event.tags.find(tag => tag[0] === 'blurhash');
-    const durationTag = event.tags.find(tag => tag[0] === 'duration');
-    const titleTag = event.tags.find(tag => tag[0] === 'title');
-    const altTag = event.tags.find(tag => tag[0] === 'alt');
+    const urlTag = event.tags.find((tag) => tag[0] === 'url');
+    const imageTag = event.tags.find((tag) => tag[0] === 'image');
+    const thumbTag = event.tags.find((tag) => tag[0] === 'thumb');
+    const blurhashTag = event.tags.find((tag) => tag[0] === 'blurhash');
+    const durationTag = event.tags.find((tag) => tag[0] === 'duration');
+    const titleTag = event.tags.find((tag) => tag[0] === 'title');
+    const altTag = event.tags.find((tag) => tag[0] === 'alt');
 
     if (!urlTag?.[1]) return null;
 
@@ -99,7 +99,7 @@ export class VideoEventComponent {
   }
 
   private getEventTitle(event: Event): string | null {
-    const titleTag = event.tags.find(tag => tag[0] === 'title');
+    const titleTag = event.tags.find((tag) => tag[0] === 'title');
     return titleTag?.[1] || null;
   }
 

@@ -2,17 +2,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: calc(
-    100vh - 64px
-  ); // Account for toolbar height (64px on desktop)
+  min-height: calc(100vh - 64px); // Account for toolbar height (64px on desktop)
   padding: 2rem 1rem;
   background-color: var(--mat-app-background-color);
 
   // On mobile, toolbar is 56px
   @media (max-width: 599px) {
-    min-height: calc(
-      100vh - 56px - 56px
-    ); // Account for toolbar (56px) + mobile nav (56px)
+    min-height: calc(100vh - 56px - 56px); // Account for toolbar (56px) + mobile nav (56px)
   }
 
   // On tablet/desktop, just account for toolbar

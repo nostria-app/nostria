@@ -19,23 +19,17 @@
           <mat-list role="list">
             <div mat-subheader>Your Registered Devices</div>
             @for (device of devices(); track device.deviceId) {
-              <mat-list-item
-                [class.current-device]="
-                  device.deviceId === currentDevice()?.deviceId
-                "
-              >
+              <mat-list-item [class.current-device]="device.deviceId === currentDevice()?.deviceId">
                 <mat-icon matListItemIcon>smartphone</mat-icon>
                 <div matListItemTitle>
                   {{ webPush.getDeviceDisplayName(device) }}
                   @if (device.deviceId === currentDevice()?.deviceId) {
-                    <span class="current-device-indicator"
-                      >(Current Device)</span
-                    >
+                    <span class="current-device-indicator">(Current Device)</span>
                   }
                 </div>
                 <div matListItemLine>
-                  Device ID: {{ device.deviceId | slice: 0 : 8 }}... •
-                  Registered: {{ device.created | date: 'medium' }}
+                  Device ID: {{ device.deviceId | slice: 0 : 8 }}... • Registered:
+                  {{ device.created | date: 'medium' }}
                 </div>
                 <div matListItemMeta>
                   <button
@@ -75,13 +69,11 @@
           Push notifications are not supported on your device.
         } @else {
           @if (!currentDevice()) {
-            <button mat-flat-button (click)="enableNotifications()">
-              Enable notifications
-            </button>
+            <button mat-flat-button (click)="enableNotifications()">Enable notifications</button>
 
             <p>
-              If you decide to block push notifications, you can always enable
-              them later in the browser settings.
+              If you decide to block push notifications, you can always enable them later in the
+              browser settings.
             </p>
           } @else {
             @if (isRemotelyEnabled(currentDevice()?.deviceId)) {
@@ -92,8 +84,8 @@
                 </button>
               </p>
             } @else {
-              Notifications are enabled on this device, but not remotely. You
-              can enable them remotely by clicking the button below.
+              Notifications are enabled on this device, but not remotely. You can enable them
+              remotely by clicking the button below.
               <p>
                 <button mat-flat-button (click)="enableNotifications()">
                   Enable notifications
@@ -120,14 +112,10 @@
         <br /><br />
 
         <p>
-          <button mat-button (click)="createLocalNotification()">
-            Local test notifications
-          </button>
+          <button mat-button (click)="createLocalNotification()">Local test notifications</button>
         </p>
         <p>
-          <button mat-button (click)="createRemoteNotification()">
-            Remote test notifications
-          </button>
+          <button mat-button (click)="createRemoteNotification()">Remote test notifications</button>
         </p>
       </div>
     }

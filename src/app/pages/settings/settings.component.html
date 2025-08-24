@@ -1,12 +1,7 @@
 <div class="settings-container">
   <!-- Mobile close button (only shows on mobile when viewing details) -->
   @if (isMobile() && showDetails()) {
-    <button
-      mat-icon-button
-      class="mobile-close-btn"
-      (click)="goBack()"
-      aria-label="Close settings"
-    >
+    <button mat-icon-button class="mobile-close-btn" (click)="goBack()" aria-label="Close settings">
       <mat-icon>close</mat-icon>
     </button>
   }

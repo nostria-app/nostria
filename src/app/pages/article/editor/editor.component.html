@@ -3,17 +3,10 @@
   <span class="spacer"></span>
 
   @if (isPublishing()) {
-    <mat-progress-bar
-      mode="indeterminate"
-      class="publish-progress"
-    ></mat-progress-bar>
+    <mat-progress-bar mode="indeterminate" class="publish-progress"></mat-progress-bar>
   }
 
-  <button
-    mat-icon-button
-    (click)="navigateToDrafts()"
-    matTooltip="View all drafts"
-  >
+  <button mat-icon-button (click)="navigateToDrafts()" matTooltip="View all drafts">
     <mat-icon>edit_document</mat-icon>
   </button>
 
@@ -22,20 +15,12 @@
     Cancel
   </button>
 
-  <button
-    mat-button
-    (click)="saveDraft()"
-    [disabled]="!isDraftValid() || isPublishing()"
-  >
+  <button mat-button (click)="saveDraft()" [disabled]="!isDraftValid() || isPublishing()">
     <mat-icon>save</mat-icon>
     Save Draft
   </button>
 
-  <button
-    mat-flat-button
-    (click)="publish()"
-    [disabled]="!isValid() || isPublishing()"
-  >
+  <button mat-flat-button (click)="publish()" [disabled]="!isValid() || isPublishing()">
     <mat-icon>publish</mat-icon>
     Publish
   </button>
@@ -74,20 +59,13 @@
             <span
               >Title: <strong>{{ suggestedTitle() }}</strong></span
             >
-            <button
-              mat-icon-button
-              matTooltip="Apply suggested title"
-              (click)="applyAutoTitle()"
-            >
+            <button mat-icon-button matTooltip="Apply suggested title" (click)="applyAutoTitle()">
               <mat-icon>check</mat-icon>
             </button>
           </div>
         }
 
-        <mat-tab-group
-          [(selectedIndex)]="selectedTabIndex"
-          class="content-tabs"
-        >
+        <mat-tab-group [(selectedIndex)]="selectedTabIndex" class="content-tabs">
           <mat-tab label="Write">
             <div class="write-tab">
               <app-rich-text-editor
@@ -97,10 +75,7 @@
               </app-rich-text-editor>
               <div class="editor-hint">
                 <mat-icon>info</mat-icon>
-                <span
-                  >Toggle between Rich Text and Markdown modes using the
-                  controls above</span
-                >
+                <span>Toggle between Rich Text and Markdown modes using the controls above</span>
               </div>
             </div>
           </mat-tab>
@@ -164,10 +139,7 @@
             [readonly]="autoTitleEnabled()"
           />
           @if (autoTitleEnabled()) {
-            <mat-hint
-              >Auto-title is enabled. Title will update based on
-              content.</mat-hint
-            >
+            <mat-hint>Auto-title is enabled. Title will update based on content.</mat-hint>
           }
         </mat-form-field>
 
@@ -206,13 +178,9 @@
                 [readonly]="autoDTagEnabled()"
               />
               @if (autoDTagEnabled()) {
-                <mat-hint
-                  >Auto-ID is enabled. ID will update based on title.</mat-hint
-                >
+                <mat-hint>Auto-ID is enabled. ID will update based on title.</mat-hint>
               } @else {
-                <mat-hint
-                  >Unique identifier for your article. Used in URLs.</mat-hint
-                >
+                <mat-hint>Unique identifier for your article. Used in URLs.</mat-hint>
               }
             </mat-form-field>
             <div class="dTag-controls">
@@ -220,13 +188,9 @@
                 mat-icon-button
                 color="primary"
                 (click)="toggleAutoDTagMode()"
-                [matTooltip]="
-                  autoDTagEnabled() ? 'Disable Auto-ID' : 'Enable Auto-ID'
-                "
+                [matTooltip]="autoDTagEnabled() ? 'Disable Auto-ID' : 'Enable Auto-ID'"
               >
-                <mat-icon>{{
-                  autoDTagEnabled() ? 'auto_awesome' : 'auto_awesome_off'
-                }}</mat-icon>
+                <mat-icon>{{ autoDTagEnabled() ? 'auto_awesome' : 'auto_awesome_off' }}</mat-icon>
               </button>
               @if (suggestedDTag() && autoDTagEnabled()) {
                 <button
@@ -255,11 +219,7 @@
                 placeholder="Enter a tag"
               />
             </mat-form-field>
-            <button
-              mat-icon-button
-              (click)="addTag()"
-              [disabled]="!newTag().trim()"
-            >
+            <button mat-icon-button (click)="addTag()" [disabled]="!newTag().trim()">
               <mat-icon>add</mat-icon>
             </button>
           </div>
@@ -267,11 +227,7 @@
           @if (article().tags.length > 0) {
             <div class="tags-container">
               @for (tag of article().tags; track tag) {
-                <mat-chip
-                  class="tag-chip"
-                  [removable]="true"
-                  (removed)="removeTag(tag)"
-                >
+                <mat-chip class="tag-chip" [removable]="true" (removed)="removeTag(tag)">
                   {{ tag }}
                   <mat-icon matChipRemove>cancel</mat-icon>
                 </mat-chip>

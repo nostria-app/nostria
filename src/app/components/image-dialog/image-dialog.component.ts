@@ -1,17 +1,6 @@
-import {
-  Component,
-  inject,
-  signal,
-  ViewChild,
-  ElementRef,
-  AfterViewInit,
-} from '@angular/core';
+import { Component, inject, signal, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import {
-  MatDialogModule,
-  MAT_DIALOG_DATA,
-  MatDialogRef,
-} from '@angular/material/dialog';
+import { MatDialogModule, MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 
@@ -51,14 +40,14 @@ export class ImageDialogComponent implements AfterViewInit {
    * Zoom in the image
    */
   zoomIn(): void {
-    this.scale.update(current => Math.min(current + 0.25, 5));
+    this.scale.update((current) => Math.min(current + 0.25, 5));
   }
 
   /**
    * Zoom out the image
    */
   zoomOut(): void {
-    this.scale.update(current => Math.max(current - 0.25, 0.5));
+    this.scale.update((current) => Math.max(current - 0.25, 0.5));
   }
 
   /**
@@ -126,8 +115,8 @@ export class ImageDialogComponent implements AfterViewInit {
     const deltaX = clientX - this.lastMouseX();
     const deltaY = clientY - this.lastMouseY();
 
-    this.translateX.update(x => x + deltaX);
-    this.translateY.update(y => y + deltaY);
+    this.translateX.update((x) => x + deltaX);
+    this.translateY.update((y) => y + deltaY);
 
     this.lastMouseX.set(clientX);
     this.lastMouseY.set(clientY);
@@ -147,11 +136,7 @@ export class ImageDialogComponent implements AfterViewInit {
     event.preventDefault();
 
     // Only zoom if image is loaded and refs are available
-    if (
-      !this.imageElement?.nativeElement ||
-      !this.containerElement?.nativeElement
-    )
-      return;
+    if (!this.imageElement?.nativeElement || !this.containerElement?.nativeElement) return;
 
     const img = this.imageElement.nativeElement;
     const container = this.containerElement.nativeElement;
@@ -193,8 +178,8 @@ export class ImageDialogComponent implements AfterViewInit {
     this.scale.set(nextScale);
 
     // Adjust translation to keep the zoom centered at the mouse position
-    this.translateX.update(x => x - offsetX * (nextScale - prevScale));
-    this.translateY.update(y => y - offsetY * (nextScale - prevScale));
+    this.translateX.update((x) => x - offsetX * (nextScale - prevScale));
+    this.translateY.update((y) => y - offsetY * (nextScale - prevScale));
   }
 
   /**

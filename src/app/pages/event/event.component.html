@@ -61,10 +61,7 @@
     }
 
     @if (threadedEvent.hasMoreReplies && threadedEvent.deepestReplyId) {
-      <div
-        class="view-more-replies"
-        [style.margin-left.px]="(threadedEvent.level + 1) * 24"
-      >
+      <div class="view-more-replies" [style.margin-left.px]="(threadedEvent.level + 1) * 24">
         <button
           mat-stroked-button
           class="view-more-button"

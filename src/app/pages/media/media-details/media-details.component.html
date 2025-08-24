@@ -15,17 +15,13 @@
     <div class="error-container">
       <mat-icon color="warn">error</mat-icon>
       <p>{{ error() }}</p>
-      <button mat-button color="primary" (click)="goBack()">
-        Return to Media Library
-      </button>
+      <button mat-button color="primary" (click)="goBack()">Return to Media Library</button>
     </div>
   } @else if (!mediaItem()) {
     <div class="error-container">
       <mat-icon color="warn">error</mat-icon>
       <p>Media item not found</p>
-      <button mat-button color="primary" (click)="goBack()">
-        Return to Media Library
-      </button>
+      <button mat-button color="primary" (click)="goBack()">Return to Media Library</button>
     </div>
   } @else {
     <div class="media-details-content">
@@ -78,9 +74,7 @@
 
       <mat-card class="metadata-card">
         <mat-card-header>
-          <mat-icon mat-card-avatar>{{
-            getMediaIcon(mediaItem()?.type)
-          }}</mat-icon>
+          <mat-icon mat-card-avatar>{{ getMediaIcon(mediaItem()?.type) }}</mat-icon>
           <mat-card-title>File Information</mat-card-title>
         </mat-card-header>
 
@@ -109,18 +103,14 @@
 
             <div class="metadata-item">
               <span class="label">Upload Date</span>
-              <span class="value">{{
-                mediaItem()!.uploaded | timestamp: 'full'
-              }}</span>
+              <span class="value">{{ mediaItem()!.uploaded | timestamp: 'full' }}</span>
             </div>
 
             <mat-divider></mat-divider>
 
             <div class="metadata-item">
               <span class="label">Hosting Server</span>
-              <span class="value">{{
-                getServerFromUrl(mediaItem()!.url)
-              }}</span>
+              <span class="value">{{ getServerFromUrl(mediaItem()!.url) }}</span>
             </div>
 
             @if (mediaItem()!.mirrors && mediaItem()!.mirrors!.length > 0) {

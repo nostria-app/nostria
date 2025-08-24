@@ -47,7 +47,7 @@ export class ProfileMediaComponent {
       this.error.set(null);
 
       // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 800));
+      await new Promise((resolve) => setTimeout(resolve, 800));
 
       // Create mock media data based on pubkey
       const mockMedia = Array.from({ length: 12 }, (_, i) => {

@@ -20,9 +20,7 @@ import { UtilitiesService } from '../../services/utilities.service';
         #searchResultsContainer
       >
         <div class="search-results-header">
-          <span
-            >Found Profiles ({{ searchService.searchResults().length }})</span
-          >
+          <span>Found Profiles ({{ searchService.searchResults().length }})</span>
           <button mat-icon-button (click)="searchService.clearResults()">
             <mat-icon>close</mat-icon>
           </button>
@@ -46,9 +44,7 @@ import { UtilitiesService } from '../../services/utilities.service';
                   class="search-result-avatar"
                 />
               } @else {
-                <mat-icon class="search-result-avatar-icon"
-                  >account_circle</mat-icon
-                >
+                <mat-icon class="search-result-avatar-icon">account_circle</mat-icon>
               }
               <div class="search-result-info">
                 <div class="search-result-name">
@@ -246,9 +242,7 @@ export class SearchResultsComponent {
         if (event.shiftKey) {
           // Shift+Tab should go back to search input
           event.preventDefault();
-          const searchInput = document.querySelector(
-            '.search-input'
-          ) as HTMLInputElement;
+          const searchInput = document.querySelector('.search-input') as HTMLInputElement;
           if (searchInput) {
             searchInput.focus();
           }
@@ -260,10 +254,7 @@ export class SearchResultsComponent {
 
   onContainerFocus() {
     // Set focus to first item if none is focused
-    if (
-      this.focusedIndex() === -1 &&
-      this.searchService.searchResults().length > 0
-    ) {
+    if (this.focusedIndex() === -1 && this.searchService.searchResults().length > 0) {
       this.setFocusedIndex(0);
       this.scrollToFocusedItem();
     }
@@ -287,12 +278,8 @@ export class SearchResultsComponent {
 
     // Use setTimeout to ensure the DOM has updated
     setTimeout(() => {
-      const searchResultsContainer = document.querySelector(
-        '.search-results'
-      ) as HTMLElement;
-      const focusedItem = document.querySelector(
-        '.search-result-item.focused'
-      ) as HTMLElement;
+      const searchResultsContainer = document.querySelector('.search-results') as HTMLElement;
+      const focusedItem = document.querySelector('.search-result-item.focused') as HTMLElement;
 
       if (searchResultsContainer && focusedItem) {
         const containerRect = searchResultsContainer.getBoundingClientRect();
@@ -300,8 +287,7 @@ export class SearchResultsComponent {
 
         // Calculate positions relative to the container
         const containerTop = searchResultsContainer.scrollTop;
-        const containerBottom =
-          containerTop + searchResultsContainer.clientHeight;
+        const containerBottom = containerTop + searchResultsContainer.clientHeight;
 
         // Get the item's position relative to the scrollable container
         const itemTop = focusedItem.offsetTop;

@@ -9,14 +9,8 @@
       <form [formGroup]="badgeForm" (ngSubmit)="publishBadge()" novalidate>
         <mat-form-field class="full-width">
           <mat-label>Badge Name</mat-label>
-          <input
-            matInput
-            formControlName="name"
-            placeholder="Enter badge name"
-          />
-          @if (
-            badgeForm.get('name')?.invalid && badgeForm.get('name')?.touched
-          ) {
+          <input matInput formControlName="name" placeholder="Enter badge name" />
+          @if (badgeForm.get('name')?.invalid && badgeForm.get('name')?.touched) {
             <mat-error> Badge name is required </mat-error>
           }
         </mat-form-field>
@@ -35,10 +29,7 @@
             placeholder="Describe your badge"
             rows="3"
           ></textarea>
-          @if (
-            badgeForm.get('description')?.invalid &&
-            badgeForm.get('description')?.touched
-          ) {
+          @if (badgeForm.get('description')?.invalid && badgeForm.get('description')?.touched) {
             <mat-error> Description is required </mat-error>
           }
         </mat-form-field>
@@ -62,10 +53,7 @@
           @if (!useImageUrl() && !hasMediaServers()) {
             <div class="media-server-warning">
               <mat-icon color="warn">warning</mat-icon>
-              <span
-                >You need to configure a media server to upload image
-                files</span
-              >
+              <span>You need to configure a media server to upload image files</span>
               <button
                 mat-flat-button
                 color="primary"
@@ -111,9 +99,7 @@
               <mat-icon matSuffix>link</mat-icon>
             </mat-form-field>
           }
-          @if (
-            badgeForm.get('image')?.invalid && badgeForm.get('image')?.touched
-          ) {
+          @if (badgeForm.get('image')?.invalid && badgeForm.get('image')?.touched) {
             <mat-error> Badge image is required </mat-error>
           }
         </div>
@@ -137,10 +123,7 @@
           @if (!useThumbnailUrl() && !hasMediaServers()) {
             <div class="media-server-warning">
               <mat-icon color="warn">warning</mat-icon>
-              <span
-                >You need to configure a media server to upload thumbnail
-                files</span
-              >
+              <span>You need to configure a media server to upload thumbnail files</span>
               <button
                 mat-flat-button
                 color="primary"
@@ -225,20 +208,10 @@
 
         <!-- Changed form action buttons to use type="button" and type="submit" appropriately -->
         <div class="form-actions">
-          <button
-            mat-button
-            type="button"
-            (click)="cancel()"
-            [disabled]="isUploading()"
-          >
+          <button mat-button type="button" (click)="cancel()" [disabled]="isUploading()">
             Cancel
           </button>
-          <button
-            mat-flat-button
-            color="primary"
-            type="submit"
-            [disabled]="isUploading()"
-          >
+          <button mat-flat-button color="primary" type="submit" [disabled]="isUploading()">
             Publish Badge Design
           </button>
         </div>
@@ -261,10 +234,7 @@
         <div class="preview-info">
           <h3>{{ badgeForm.get('name')?.value || 'Badge Name' }}</h3>
           <p>
-            {{
-              badgeForm.get('description')?.value ||
-                'Badge description will appear here'
-            }}
+            {{ badgeForm.get('description')?.value || 'Badge description will appear here' }}
           </p>
         </div>
       </div>

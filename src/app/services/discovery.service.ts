@@ -93,9 +93,7 @@ export class DiscoveryService {
   }
 
   getServersByLatency(): ServerInfo[] {
-    return [...this.servers].sort(
-      (a, b) => (a.latency || 9999) - (b.latency || 9999)
-    );
+    return [...this.servers].sort((a, b) => (a.latency || 9999) - (b.latency || 9999));
   }
 
   getAllServers(): ServerInfo[] {

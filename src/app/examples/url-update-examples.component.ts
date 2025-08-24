@@ -11,20 +11,14 @@ import { MatCardModule } from '@angular/material/card';
   template: `
     <mat-card>
       <mat-card-header>
-        <mat-card-title
-          >URL Update Examples (No Navigation Events)</mat-card-title
-        >
+        <mat-card-title>URL Update Examples (No Navigation Events)</mat-card-title>
       </mat-card-header>
 
       <mat-card-content>
         <p>Current URL: {{ currentUrl() }}</p>
 
         <div class="button-group">
-          <button
-            mat-raised-button
-            color="primary"
-            (click)="updateWithReplaceState()"
-          >
+          <button mat-raised-button color="primary" (click)="updateWithReplaceState()">
             Update with Location.replaceState()
           </button>
 
@@ -32,41 +26,23 @@ import { MatCardModule } from '@angular/material/card';
             Update with Location.go()
           </button>
 
-          <button
-            mat-raised-button
-            color="primary"
-            (click)="updateQueryParams()"
-          >
+          <button mat-raised-button color="primary" (click)="updateQueryParams()">
             Update Query Parameters Only
           </button>
 
-          <button
-            mat-raised-button
-            color="primary"
-            (click)="updatePathSegments()"
-          >
+          <button mat-raised-button color="primary" (click)="updatePathSegments()">
             Update Path Segments
           </button>
 
-          <button
-            mat-raised-button
-            color="primary"
-            (click)="updateWithSkipLocation()"
-          >
+          <button mat-raised-button color="primary" (click)="updateWithSkipLocation()">
             Router Navigate (Skip Location Change)
           </button>
 
-          <button
-            mat-raised-button
-            color="warn"
-            (click)="updateWithReplaceUrl()"
-          >
+          <button mat-raised-button color="warn" (click)="updateWithReplaceUrl()">
             Router Navigate (Replace URL)
           </button>
 
-          <button mat-raised-button (click)="resetUrl()">
-            Reset to Original
-          </button>
+          <button mat-raised-button (click)="resetUrl()">Reset to Original</button>
         </div>
       </mat-card-content>
     </mat-card>
@@ -109,8 +85,7 @@ export class UrlUpdateExamplesComponent {
    * - Most efficient approach
    */
   updateWithReplaceState(): void {
-    const newUrl =
-      '/example/replacestate?method=replaceState&timestamp=' + Date.now();
+    const newUrl = '/example/replacestate?method=replaceState&timestamp=' + Date.now();
     this.location.replaceState(newUrl);
     console.log('URL updated with replaceState:', newUrl);
   }

@@ -19,20 +19,8 @@ describe('EventService getEventTags', () => {
         content: 'Test reply',
         sig: 'test-sig',
         tags: [
-          [
-            'e',
-            'root-event-id',
-            'wss://relay1.example.com',
-            'root',
-            'root-author-pubkey',
-          ],
-          [
-            'e',
-            'reply-event-id',
-            'wss://relay2.example.com',
-            'reply',
-            'reply-author-pubkey',
-          ],
+          ['e', 'root-event-id', 'wss://relay1.example.com', 'root', 'root-author-pubkey'],
+          ['e', 'reply-event-id', 'wss://relay2.example.com', 'reply', 'reply-author-pubkey'],
           ['p', 'mention-pubkey'],
         ],
       };
@@ -80,13 +68,7 @@ describe('EventService getEventTags', () => {
         content: 'Test reply',
         sig: 'test-sig',
         tags: [
-          [
-            'e',
-            'parent-event-id',
-            'wss://relay.example.com',
-            '',
-            'parent-author',
-          ],
+          ['e', 'parent-event-id', 'wss://relay.example.com', '', 'parent-author'],
           ['p', 'mention-pubkey'],
         ],
       };

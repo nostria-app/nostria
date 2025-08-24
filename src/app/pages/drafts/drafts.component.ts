@@ -71,8 +71,8 @@ export class DraftsComponent {
   // Extract unique tags from all drafts
   availableTags = computed(() => {
     const tagSet = new Set<string>();
-    this.drafts().forEach(draft => {
-      draft.tags.forEach(tag => tagSet.add(tag));
+    this.drafts().forEach((draft) => {
+      draft.tags.forEach((tag) => tagSet.add(tag));
     });
     return Array.from(tagSet);
   });
@@ -81,7 +81,7 @@ export class DraftsComponent {
   filteredDrafts = computed(() => {
     const tag = this.selectedTag();
     if (!tag) return this.drafts();
-    return this.drafts().filter(draft => draft.tags.includes(tag));
+    return this.drafts().filter((draft) => draft.tags.includes(tag));
   });
 
   constructor() {
@@ -107,37 +107,26 @@ export class DraftsComponent {
       // Get draft events (kind 30024) for the current user
       const draftRecords = await this.data.getEventsByPubkeyAndKind(
         currentAccount.pubkey,
-        30024 // Draft long-form content
+        30024, // Draft long-form content
       );
 
       const drafts: Draft[] = draftRecords
-        .map(record => {
+        .map((record) => {
           try {
             const event = record.event;
             const content = event.content;
 
             // Extract d tag (identifier)
-            const dTagArray = event.tags.find(tag => tag[0] === 'd');
+            const dTagArray = event.tags.find((tag) => tag[0] === 'd');
             const dTag = dTagArray ? dTagArray[1] : '';
 
             // Extract metadata from tags
-            const titleTag = this.nostrService.getTags(
-              event,
-              standardizedTag.title
-            );
-            const imageTag = this.nostrService.getTags(
-              event,
-              standardizedTag.image
-            );
-            const summaryTag = this.nostrService.getTags(
-              event,
-              standardizedTag.summary
-            );
+            const titleTag = this.nostrService.getTags(event, standardizedTag.title);
+            const imageTag = this.nostrService.getTags(event, standardizedTag.image);
+            const summaryTag = this.nostrService.getTags(event, standardizedTag.summary);
 
             // Extract topic tags
-            const topicTags = event.tags
-              .filter(tag => tag[0] === 't')
-              .map(tag => tag[1]);
+            const topicTags = event.tags.filter((tag) => tag[0] === 't').map((tag) => tag[1]);
 
             return {
               id: event.id,
@@ -219,7 +208,7 @@ export class DraftsComponent {
         await this.accountRelay.publish(signedEvent);
 
         // Remove from local list
-        this.drafts.update(drafts => drafts.filter(d => d.id !== draft.id));
+        this.drafts.update((drafts) => drafts.filter((d) => d.id !== draft.id));
 
         this.snackBar.open('Draft deleted successfully', 'Close', {
           duration: 3000,
