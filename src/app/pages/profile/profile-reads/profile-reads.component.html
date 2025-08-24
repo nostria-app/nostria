@@ -1,14 +1,14 @@
 <div class="tab-content">
   @if (profileState.articles().length === 0) {
-    <div class="empty-state">
-      <mat-icon>bookmark</mat-icon>
-      <p>No reads to display yet</p>
-    </div>
+  <div class="empty-state">
+    <mat-icon>bookmark</mat-icon>
+    <p>No reads to display yet</p>
+  </div>
   } @else {
-    <div class="reads-list">
-      @for (note of profileState.articles(); track note.event.id) {
-        <app-event [event]="note.event" appearance="card"></app-event>
-      }
-    </div>
+  <div class="reads-list">
+    @for (note of profileState.articles(); track note.event.id) {
+    <app-article-event [event]="note.event"></app-article-event>
+    }
+  </div>
   }
 </div>
