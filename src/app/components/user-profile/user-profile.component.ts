@@ -166,8 +166,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
         this.info()!['foundMetadataOnUserRelays']
       ) {
         return 'user-info-status-good';
-      } else if (this.info()!['foundMetadataOnAccountRelays'])
-        return 'user-info-status-medium';
+      } else if (this.info()!['foundMetadataOnAccountRelays']) return 'user-info-status-medium';
       else {
         return 'user-info-status-bad';
       }
@@ -239,9 +238,9 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
 
     // Create IntersectionObserver instance
     this.intersectionObserver = new IntersectionObserver(
-      entries => {
+      (entries) => {
         // Update visibility state
-        const isVisible = entries.some(entry => entry.isIntersecting);
+        const isVisible = entries.some((entry) => entry.isIntersecting);
         this.isVisible.set(isVisible);
 
         if (isVisible && !this.isScrolling()) {
@@ -254,7 +253,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
       {
         threshold: 0.1, // Trigger when at least 10% is visible
         root: null, // Use viewport as root
-      }
+      },
     );
 
     // Start observing this component
@@ -402,8 +401,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
     if (info) {
       if (info['hasRelayList']) {
         tooltip = '+1: Has relay list';
-      } else if (info['hasFollowingListRelays'])
-        tooltip = '-1: Has following list relays';
+      } else if (info['hasFollowingListRelays']) tooltip = '-1: Has following list relays';
       else {
         tooltip = '-1: No relay list';
       }
@@ -468,9 +466,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
     // Add about text if available (limited to 50 characters)
     if (content.about) {
       const truncatedAbout =
-        content.about.length > 50
-          ? content.about.substring(0, 50) + '...'
-          : content.about;
+        content.about.length > 50 ? content.about.substring(0, 50) + '...' : content.about;
       tooltipText += '\n\n' + truncatedAbout;
     }
 
