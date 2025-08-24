@@ -18,6 +18,7 @@ export class ArticleEventComponent {
   private layout = inject(LayoutService);
 
   event = input.required<Event>();
+  showAuthor = input<boolean>(true);
 
   // Signal to track if content is expanded
   isExpanded = signal(false);
