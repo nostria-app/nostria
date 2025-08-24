@@ -23,12 +23,14 @@ import { MatMenuModule } from '@angular/material/menu';
 import { EventService, ReactionEvents } from '../../services/event';
 import { AccountRelayServiceEx } from '../../services/relays/account-relay';
 import { ReactionService } from '../../services/reaction.service';
+import { ArticleEventComponent } from '../event-types';
 
 type EventCardAppearance = 'card' | 'plain';
 
 @Component({
   selector: 'app-event',
   imports: [
+    ArticleEventComponent,
     AgoPipe,
     DatePipe,
     CommonModule,

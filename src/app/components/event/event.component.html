@@ -27,14 +27,25 @@
             [event]="repostService.decodeRepost(item.event).event"
           ></app-event-header>
           <mat-card-content>
-            <app-content [content]="repostService.decodeRepost(item.event).data"></app-content>
+            @if (targetItem.event.kind === 30023) {
+              <app-article-event
+                [event]="targetItem.event"
+                [showAuthor]="false"
+              ></app-article-event>
+            } @else {
+              <app-content [content]="repostService.decodeRepost(item.event).data"></app-content>
+            }
           </mat-card-content>
         </mat-card>
       </mat-card-content>
     } @else {
       <app-event-header [event]="item.event"></app-event-header>
       <mat-card-content>
-        <app-content [content]="item.data"></app-content>
+        @if (targetItem.event.kind === 30023) {
+          <app-article-event [event]="targetItem.event" [showAuthor]="false"></app-article-event>
+        } @else {
+          <app-content [content]="item.data"></app-content>
+        }
       </mat-card-content>
     }
     <mat-card-actions class="note-footer">
