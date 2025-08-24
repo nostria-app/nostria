@@ -46,9 +46,5 @@
   } @else if (
     token.type === 'nostr-mention' &&
     (token.nostrData?.type === 'npub' || token.nostrData?.type === 'nprofile')
-  ) {
-    <a class="nostr-mention" (click)="onNostrMentionClick(token)">
-      &#64;{{ token.nostrData?.displayName }}</a
-    >
-  }
+  ) {&nbsp;<a class="nostr-mention" (click)="onNostrMentionClick(token)">&#64;{{ token.nostrData?.displayName }}</a>&nbsp;}
 }
