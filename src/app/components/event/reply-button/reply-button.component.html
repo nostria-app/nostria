@@ -1,7 +1,7 @@
-<button mat-icon-button (click)="onClick()">
-  @if (isLongFormArticle()) {
-    <mat-icon matTooltip="Comment" matTooltipPosition="below">comment</mat-icon>
-  } @else {
+<button mat-icon-button (click)="onClick()" [disabled]="!isReply()">
+  @if (isReply()) {
     <mat-icon matTooltip="Reply" matTooltipPosition="below">reply</mat-icon>
+  } @else {
+    <mat-icon matTooltip="Comment" matTooltipPosition="below">comment</mat-icon>
   }
 </button>

@@ -17,14 +17,19 @@ export class ReplyButtonComponent {
 
   event = input.required<Event>();
 
-  isLongFormArticle = computed(() => this.event().kind === kinds.LongFormArticle);
+  // we use NIP-10 replies for kind:1 and NIP-22 comments for all the other kinds
+  isReply = computed(() => this.event().kind === kinds.ShortTextNote);
 
   onClick(): void {
-    this.eventService.createNote({
-      replyTo: {
-        id: this.event().id,
-        pubkey: this.event().pubkey,
-      },
-    });
+    if (this.event().kind === kinds.ShortTextNote) {
+      this.eventService.createNote({
+        replyTo: {
+          id: this.event().id,
+          pubkey: this.event().pubkey,
+        },
+      });
+    } else {
+      // TODO: create kind:1111 event (NIP-22)
+    }
   }
 }
