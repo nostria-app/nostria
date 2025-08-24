@@ -38,9 +38,7 @@ export class LoggerService {
   private getStoredLogLevel(): LogLevel {
     if (!this.isBrowser()) return 'info'; // Default to info level if not in browser context
 
-    const storedLevel = localStorage.getItem(
-      this.LOG_LEVEL_KEY
-    ) as LogLevel | null;
+    const storedLevel = localStorage.getItem(this.LOG_LEVEL_KEY) as LogLevel | null;
     return storedLevel || 'info'; // Default to info level
   }
 
@@ -122,9 +120,7 @@ export class LoggerService {
   timeEnd(label: string): void {
     if (this.shouldLog('debug') && this.timers[label]) {
       const duration = performance.now() - this.timers[label];
-      console.log(
-        ...this.formatMessage('debug', `${label}: ${duration.toFixed(2)}ms`)
-      );
+      console.log(...this.formatMessage('debug', `${label}: ${duration.toFixed(2)}ms`));
       delete this.timers[label];
     }
   }

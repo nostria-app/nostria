@@ -10,13 +10,13 @@
   </div>
 
   @if (loading()) {
-  <div class="loading-container">
-    <mat-spinner diameter="40"></mat-spinner>
-    <p>Loading bookmarks...</p>
-  </div>
+    <div class="loading-container">
+      <mat-spinner diameter="40"></mat-spinner>
+      <p>Loading bookmarks...</p>
+    </div>
   } @else {
-  <div class="filters-container">
-    <!-- <mat-form-field appearance="outline" class="search-field">
+    <div class="filters-container">
+      <!-- <mat-form-field appearance="outline" class="search-field">
         <mat-label>Search Bookmarks</mat-label>
         <input matInput type="text" [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" placeholder="Search by title, URL, or description" />
         @if (searchQuery()) {
@@ -27,31 +27,34 @@
         <mat-icon matPrefix>search</mat-icon>
       </mat-form-field> -->
 
-    <div class="categories-container">
-      <div class="categories-header">
-        <h3>Categories</h3>
-        <button mat-icon-button (click)="openManageCategories()" matTooltip="Manage Categories">
-          <mat-icon>settings</mat-icon>
-        </button>
-      </div>
-      <div class="categories-list">
-        @for (category of categories(); track category.id) {
-        <div class="category-chip" [class.selected]="selectedCategory() === category.id" [style.background-color]="
-                selectedCategory() === category.id
-                  ? category.color
-                  : 'transparent'
-              " [style.color]="
-                selectedCategory() === category.id ? '#fff' : category.color
-              " [style.border-color]="category.color" (click)="selectCategory(category.id)">
-          {{ category.name }}
+      <div class="categories-container">
+        <div class="categories-header">
+          <h3>Categories</h3>
+          <button mat-icon-button (click)="openManageCategories()" matTooltip="Manage Categories">
+            <mat-icon>settings</mat-icon>
+          </button>
         </div>
-        }
+        <div class="categories-list">
+          @for (category of categories(); track category.id) {
+            <div
+              class="category-chip"
+              [class.selected]="selectedCategory() === category.id"
+              [style.background-color]="
+                selectedCategory() === category.id ? category.color : 'transparent'
+              "
+              [style.color]="selectedCategory() === category.id ? '#fff' : category.color"
+              [style.border-color]="category.color"
+              (click)="selectCategory(category.id)"
+            >
+              {{ category.name }}
+            </div>
+          }
+        </div>
       </div>
     </div>
-  </div>
 
-  <div class="bookmarks-list">
-    <!-- @if (filteredBookmarks().length === 0) {
+    <div class="bookmarks-list">
+      <!-- @if (filteredBookmarks().length === 0) {
     <div class="empty-state">
       <mat-icon>bookmark_border</mat-icon>
       @if (!isLoggedIn()) {
@@ -74,28 +77,31 @@
     </div>
     } @else { -->
 
-    @if (selectedCategory() === 'events') {
-    @for (bookmark of bookmarkService.bookmarkEvents(); track $index) {
-    <app-event [id]="bookmark.id"></app-event>
-    }
-    } @else if (selectedCategory() === 'articles') {
-    @for (
-    bookmark of bookmarkService.bookmarkArticles();
-    track $index
-    ) {
-    @let bm = bookmarkService.parseArticleId(bookmark.id);
-    <app-article [pubkey]="bm.id" [kind]="bm.kind" [slug]="bm.slug" mode="card" [showAuthor]="true"
-      [showMetadata]="true" [showActions]="false" [clickable]="true"></app-article>
-    }
-    } @else if (selectedCategory() === 'urls') {
-    @for (bookmark of bookmarkService.bookmarkUrls(); track $index) {
-    <a [href]="bookmark.id" target="_blank" rel="noopener noreferrer">{{
-      bookmark.id
-      }}</a>
-    }
-    }
+      @if (selectedCategory() === 'events') {
+        @for (bookmark of bookmarkService.bookmarkEvents(); track $index) {
+          <app-event [id]="bookmark.id"></app-event>
+        }
+      } @else if (selectedCategory() === 'articles') {
+        @for (bookmark of bookmarkService.bookmarkArticles(); track $index) {
+          @let bm = bookmarkService.parseArticleId(bookmark.id);
+          <app-article
+            [pubkey]="bm.id"
+            [kind]="bm.kind"
+            [slug]="bm.slug"
+            mode="card"
+            [showAuthor]="true"
+            [showMetadata]="true"
+            [showActions]="false"
+            [clickable]="true"
+          ></app-article>
+        }
+      } @else if (selectedCategory() === 'urls') {
+        @for (bookmark of bookmarkService.bookmarkUrls(); track $index) {
+          <a [href]="bookmark.id" target="_blank" rel="noopener noreferrer">{{ bookmark.id }}</a>
+        }
+      }
 
-    <!-- <mat-card class="bookmark-card" (click)="openBookmark(bookmark)">
+      <!-- <mat-card class="bookmark-card" (click)="openBookmark(bookmark)">
             <mat-card-header>
               <div mat-card-avatar class="bookmark-type-icon">
                 <mat-icon>{{ getBookmarkTypeIcon(bookmark.type) }}</mat-icon>
@@ -134,7 +140,7 @@
               </div>
             }
           </mat-card> -->
-    <!-- } -->
-  </div>
+      <!-- } -->
+    </div>
   }
 </div>

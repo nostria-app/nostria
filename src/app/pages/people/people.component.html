@@ -10,16 +10,32 @@
       <!-- View options -->
       <div class="view-options">
         <mat-button-toggle-group hideSingleSelectionIndicator="true" [value]="viewMode()">
-          <mat-button-toggle value="large" (click)="changeViewMode('large')" matTooltip="Large icons">
+          <mat-button-toggle
+            value="large"
+            (click)="changeViewMode('large')"
+            matTooltip="Large icons"
+          >
             <mat-icon>view_module</mat-icon>
           </mat-button-toggle>
-          <mat-button-toggle value="medium" (click)="changeViewMode('medium')" matTooltip="Medium icons">
+          <mat-button-toggle
+            value="medium"
+            (click)="changeViewMode('medium')"
+            matTooltip="Medium icons"
+          >
             <mat-icon>grid_view</mat-icon>
           </mat-button-toggle>
-          <mat-button-toggle value="small" (click)="changeViewMode('small')" matTooltip="Small icons">
+          <mat-button-toggle
+            value="small"
+            (click)="changeViewMode('small')"
+            matTooltip="Small icons"
+          >
             <mat-icon>apps</mat-icon>
           </mat-button-toggle>
-          <mat-button-toggle value="details" (click)="changeViewMode('details')" matTooltip="Details">
+          <mat-button-toggle
+            value="details"
+            (click)="changeViewMode('details')"
+            matTooltip="Details"
+          >
             <mat-icon>view_list</mat-icon>
           </mat-button-toggle>
         </mat-button-toggle-group>
@@ -34,9 +50,9 @@
         <div class="filter-menu-header" (click)="preventPropagation($event)">
           <span>Filter Options</span>
           @if (hasActiveFilters()) {
-          <button mat-button color="primary" (click)="resetFilters(); preventPropagation($event)">
-            Reset all
-          </button>
+            <button mat-button color="primary" (click)="resetFilters(); preventPropagation($event)">
+              Reset all
+            </button>
           }
         </div>
         <mat-divider></mat-divider>
@@ -63,16 +79,25 @@
 
         <div class="filter-section" (click)="preventPropagation($event)">
           <h3>User Properties</h3>
-          <mat-checkbox [checked]="filters().hasRelayList" (change)="toggleFilter('hasRelayList', $event)"
-            (click)="preventPropagation($event)">
+          <mat-checkbox
+            [checked]="filters().hasRelayList"
+            (change)="toggleFilter('hasRelayList', $event)"
+            (click)="preventPropagation($event)"
+          >
             Use Relay List
           </mat-checkbox>
-          <mat-checkbox [checked]="filters().hasFollowingList" (change)="toggleFilter('hasFollowingList', $event)"
-            (click)="preventPropagation($event)">
+          <mat-checkbox
+            [checked]="filters().hasFollowingList"
+            (change)="toggleFilter('hasFollowingList', $event)"
+            (click)="preventPropagation($event)"
+          >
             Has Following List
           </mat-checkbox>
-          <mat-checkbox [checked]="filters().hasNip05" (change)="toggleFilter('hasNip05', $event)"
-            (click)="preventPropagation($event)">
+          <mat-checkbox
+            [checked]="filters().hasNip05"
+            (change)="toggleFilter('hasNip05', $event)"
+            (click)="preventPropagation($event)"
+          >
             Has Verified NIP-05
           </mat-checkbox>
         </div>
@@ -81,16 +106,25 @@
 
         <div class="filter-section" (click)="preventPropagation($event)">
           <h3>Display</h3>
-          <mat-checkbox [checked]="filters().hasPicture" (change)="toggleFilter('hasPicture', $event)"
-            (click)="preventPropagation($event)">
+          <mat-checkbox
+            [checked]="filters().hasPicture"
+            (change)="toggleFilter('hasPicture', $event)"
+            (click)="preventPropagation($event)"
+          >
             Has Profile Picture
           </mat-checkbox>
-          <mat-checkbox [checked]="filters().hasBio" (change)="toggleFilter('hasBio', $event)"
-            (click)="preventPropagation($event)">
+          <mat-checkbox
+            [checked]="filters().hasBio"
+            (change)="toggleFilter('hasBio', $event)"
+            (click)="preventPropagation($event)"
+          >
             Has Bio
           </mat-checkbox>
-          <mat-checkbox [checked]="filters().favoritesOnly" (change)="toggleFilter('favoritesOnly', $event)"
-            (click)="preventPropagation($event)">
+          <mat-checkbox
+            [checked]="filters().favoritesOnly"
+            (change)="toggleFilter('favoritesOnly', $event)"
+            (click)="preventPropagation($event)"
+          >
             Favorites Only
           </mat-checkbox>
         </div>
@@ -99,12 +133,16 @@
       <!-- Search input -->
       <div class="search-container">
         <mat-icon>search</mat-icon>
-        <input type="text" placeholder="Search people..." [value]="searchTerm()"
-          (input)="updateSearch($any($event.target).value)" />
+        <input
+          type="text"
+          placeholder="Search people..."
+          [value]="searchTerm()"
+          (input)="updateSearch($any($event.target).value)"
+        />
         @if (searchTerm()) {
-        <button mat-icon-button (click)="updateSearch('')">
-          <mat-icon>close</mat-icon>
-        </button>
+          <button mat-icon-button (click)="updateSearch('')">
+            <mat-icon>close</mat-icon>
+          </button>
         }
       </div>
     </div>
@@ -115,48 +153,59 @@
   <!-- Content section -->
   <div class="people-content">
     @if (isLoading()) {
-    <div class="loading-container">
-      <mat-spinner diameter="40"></mat-spinner>
-      <p>Loading people...</p>
-    </div>
+      <div class="loading-container">
+        <mat-spinner diameter="40"></mat-spinner>
+        <p>Loading people...</p>
+      </div>
     } @else if (error()) {
-    <div class="error-container">
-      <mat-icon color="warn">error</mat-icon>
-      <p>{{ error() }}</p>
-    </div>
+      <div class="error-container">
+        <mat-icon color="warn">error</mat-icon>
+        <p>{{ error() }}</p>
+      </div>
     } @else if (sortedPeople().length === 0) {
-    <div class="empty-container">
-      @if (searchTerm()) {
-      <mat-icon>search_off</mat-icon>
-      <p>No results for "{{ searchTerm() }}"</p>
-      <button mat-button color="primary" (click)="updateSearch('')">
-        Clear search
-      </button>
-      } @else {
-      <mat-icon>people_outline</mat-icon>
-      <p>You aren't following anyone yet</p>
-      <button mat-flat-button color="primary" routerLink="/explore">
-        Explore people to follow
-      </button>
-      }
-    </div>
+      <div class="empty-container">
+        @if (searchTerm()) {
+          <mat-icon>search_off</mat-icon>
+          <p>No results for "{{ searchTerm() }}"</p>
+          <button mat-button color="primary" (click)="updateSearch('')">Clear search</button>
+        } @else {
+          <mat-icon>people_outline</mat-icon>
+          <p>You aren't following anyone yet</p>
+          <button mat-flat-button color="primary" routerLink="/explore">
+            Explore people to follow
+          </button>
+        }
+      </div>
     } @else {
-    <cdk-virtual-scroll-viewport class="virtual-scroll-viewport" [itemSize]="itemSize()" [minBufferPx]="minBufferPx"
-      [maxBufferPx]="maxBufferPx">
-      <!-- Apply different container classes based on viewMode() -->
-      <div class="people-container" [ngClass]="{
+      <cdk-virtual-scroll-viewport
+        class="virtual-scroll-viewport"
+        [itemSize]="itemSize()"
+        [minBufferPx]="minBufferPx"
+        [maxBufferPx]="maxBufferPx"
+      >
+        <!-- Apply different container classes based on viewMode() -->
+        <div
+          class="people-container"
+          [ngClass]="{
             'large-grid': viewMode() === 'large' || viewMode() === 'grid',
             'medium-grid': viewMode() === 'medium',
             'small-grid': viewMode() === 'small',
             'details-list': viewMode() === 'details' || viewMode() === 'list',
-          }">
-        @for (pubkey of sortedPeople(); track pubkey) {
-        <!-- {{ userInfoCache().get(pubkey) | json }} -->
-        <app-user-profile [info]="userInfoCache().get(pubkey)" [pubkey]="pubkey" [view]="viewMode()"
-          [hostWidthAuto]="viewMode() === 'large' || viewMode() === 'medium' || viewMode() === 'small'"></app-user-profile>
-        }
-      </div>
-    </cdk-virtual-scroll-viewport>
+          }"
+        >
+          @for (pubkey of sortedPeople(); track pubkey) {
+            <!-- {{ userInfoCache().get(pubkey) | json }} -->
+            <app-user-profile
+              [info]="userInfoCache().get(pubkey)"
+              [pubkey]="pubkey"
+              [view]="viewMode()"
+              [hostWidthAuto]="
+                viewMode() === 'large' || viewMode() === 'medium' || viewMode() === 'small'
+              "
+            ></app-user-profile>
+          }
+        </div>
+      </cdk-virtual-scroll-viewport>
     }
   </div>
 </div>

@@ -30,9 +30,7 @@ export class QrCodeComponent implements AfterViewInit {
   qrdata = input.required<string>();
   width = input<number>(256);
   height = input<number>();
-  errorCorrectionLevel = input<'low' | 'medium' | 'quartile' | 'high'>(
-    'medium'
-  );
+  errorCorrectionLevel = input<'low' | 'medium' | 'quartile' | 'high'>('medium');
   mode = input<'canvas' | 'svg'>('svg');
   border = input<number>(2);
   svgData = signal<SafeHtml>('');
@@ -100,12 +98,7 @@ export class QrCodeComponent implements AfterViewInit {
     for (let y = 0; y < qrSize; y++) {
       for (let x = 0; x < qrSize; x++) {
         if (qrMatrix[y][x]) {
-          ctx.fillRect(
-            offset + x * cellSize,
-            offset + y * cellSize,
-            cellSize,
-            cellSize
-          );
+          ctx.fillRect(offset + x * cellSize, offset + y * cellSize, cellSize, cellSize);
         }
       }
     }

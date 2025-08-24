@@ -72,11 +72,7 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
 
   ngOnChanges(changes: SimpleChanges) {
     // Only react to external content changes, not internal ones
-    if (
-      changes['content'] &&
-      !changes['content'].firstChange &&
-      !this.isInternalChange
-    ) {
+    if (changes['content'] && !changes['content'].firstChange && !this.isInternalChange) {
       this.setContent(changes['content'].currentValue || '');
     }
     // Reset the flag after processing
@@ -105,15 +101,12 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
       this.renderMarkdownToEditor(this.markdownContent());
     }
 
-    this.isRichTextMode.update(mode => !mode);
+    this.isRichTextMode.update((mode) => !mode);
 
     // Set up paste handlers for the newly active editor
     setTimeout(() => {
       if (!this.isRichTextMode() && this.markdownTextarea) {
-        this.markdownTextarea.nativeElement.addEventListener(
-          'paste',
-          this.handlePaste.bind(this)
-        );
+        this.markdownTextarea.nativeElement.addEventListener('paste', this.handlePaste.bind(this));
       }
     }, 100);
   }
@@ -148,7 +141,7 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
       // Handle images - convert ![alt](url) to <img> tags (must come before links)
       .replace(
         /!\[([^\]]*)\]\(([^\)]+)\)/g,
-        '<img src="$2" alt="$1" style="max-width: 100%; height: auto; border-radius: 4px;" />'
+        '<img src="$2" alt="$1" style="max-width: 100%; height: auto; border-radius: 4px;" />',
       )
 
       // Handle headings FIRST to avoid paragraph wrapping
@@ -160,19 +153,16 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
       .replace(/^> (.*?)$/gm, '<blockquote>$1</blockquote>')
 
       // Handle unordered lists - collect consecutive list items
-      .replace(
-        /(?:^|\n)- (.*?)(?=\n(?!- )|$)/gs,
-        function (match: string, item: string) {
-          return '<ul><li>' + item.trim() + '</li></ul>';
-        }
-      )
+      .replace(/(?:^|\n)- (.*?)(?=\n(?!- )|$)/gs, function (match: string, item: string) {
+        return '<ul><li>' + item.trim() + '</li></ul>';
+      })
 
       // Handle ordered lists - collect consecutive list items
       .replace(
         /(?:^|\n)(\d+)\. (.*?)(?=\n(?!\d+\. )|$)/gs,
         function (match: string, num: string, item: string) {
           return '<ol><li>' + item.trim() + '</li></ol>';
-        }
+        },
       )
 
       // Handle text formatting - non-greedy to prevent overlapping tags
@@ -257,30 +247,20 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
       .replace(/<a[^>]+href="([^"]*)"[^>]*>(.*?)<\/a>/gi, '[$2]($1)')
 
       // Handle lists - more complex handling needed for nested lists
-      .replace(
-        /<ul[^>]*>(.*?)<\/ul>/gi,
-        function (match: string, content: string) {
-          const items = content
-            .split(/<li[^>]*>(.*?)<\/li>/gi)
-            .filter((item: string, i: number) => i % 2 === 1);
-          return (
-            items.map((item: string) => `- ${item.trim()}`).join('\n') + '\n\n'
-          );
-        }
-      )
-      .replace(
-        /<ol[^>]*>(.*?)<\/ol>/gi,
-        function (match: string, content: string) {
-          const items = content
-            .split(/<li[^>]*>(.*?)<\/li>/gi)
-            .filter((item: string, i: number) => i % 2 === 1);
-          return (
-            items
-              .map((item: string, i: number) => `${i + 1}. ${item.trim()}`)
-              .join('\n') + '\n\n'
-          );
-        }
-      )
+      .replace(/<ul[^>]*>(.*?)<\/ul>/gi, function (match: string, content: string) {
+        const items = content
+          .split(/<li[^>]*>(.*?)<\/li>/gi)
+          .filter((item: string, i: number) => i % 2 === 1);
+        return items.map((item: string) => `- ${item.trim()}`).join('\n') + '\n\n';
+      })
+      .replace(/<ol[^>]*>(.*?)<\/ol>/gi, function (match: string, content: string) {
+        const items = content
+          .split(/<li[^>]*>(.*?)<\/li>/gi)
+          .filter((item: string, i: number) => i % 2 === 1);
+        return (
+          items.map((item: string, i: number) => `${i + 1}. ${item.trim()}`).join('\n') + '\n\n'
+        );
+      })
 
       // Clean up any remaining HTML entities
       .replace(/&lt;/g, '<')
@@ -413,12 +393,12 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
       // Load media service if not already loaded
       await this.mediaService.load();
 
-      const uploadPromises = files.map(async file => {
+      const uploadPromises = files.map(async (file) => {
         try {
           const result = await this.mediaService.uploadFile(
             file,
             false,
-            this.mediaService.mediaServers()
+            this.mediaService.mediaServers(),
           );
 
           if (result.status === 'success' && result.item) {
@@ -443,30 +423,25 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
       const results = await Promise.all(uploadPromises);
 
       // Show success/error messages
-      const successful = results.filter(r => r.success);
-      const failed = results.filter(r => !r.success);
+      const successful = results.filter((r) => r.success);
+      const failed = results.filter((r) => !r.success);
 
       if (successful.length > 0) {
-        this.snackBar.open(
-          `${successful.length} file(s) uploaded successfully`,
-          'Close',
-          { duration: 3000 }
-        );
+        this.snackBar.open(`${successful.length} file(s) uploaded successfully`, 'Close', {
+          duration: 3000,
+        });
       }
 
       if (failed.length > 0) {
-        this.snackBar.open(
-          `${failed.length} file(s) failed to upload`,
-          'Close',
-          { duration: 5000 }
-        );
+        this.snackBar.open(`${failed.length} file(s) failed to upload`, 'Close', {
+          duration: 5000,
+        });
       }
     } catch (error) {
       this.snackBar.open(
-        'Upload failed: ' +
-          (error instanceof Error ? error.message : 'Unknown error'),
+        'Upload failed: ' + (error instanceof Error ? error.message : 'Unknown error'),
         'Close',
-        { duration: 5000 }
+        { duration: 5000 },
       );
     } finally {
       this.isUploading.set(false);
@@ -475,11 +450,7 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
     return Promise.resolve();
   }
 
-  private insertFileLink(
-    url: string,
-    fileName: string,
-    fileType: string
-  ): void {
+  private insertFileLink(url: string, fileName: string, fileType: string): void {
     const isImage = fileType.startsWith('image/');
     let markdownLink: string;
 
@@ -543,7 +514,7 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
         // Handle images first (before links)
         .replace(
           /!\[([^\]]*)\]\(([^\)]+)\)/g,
-          '<img src="$2" alt="$1" style="max-width: 100%; height: auto; border-radius: 4px;" />'
+          '<img src="$2" alt="$1" style="max-width: 100%; height: auto; border-radius: 4px;" />',
         )
         // Handle links
         .replace(/\[([^\[]+)\]\(([^\)]+)\)/g, '<a href="$2">$1</a>')
@@ -575,19 +546,13 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
   private setupPasteHandler(): void {
     // Add paste handler to rich text editor
     if (this.editorContent) {
-      this.editorContent.nativeElement.addEventListener(
-        'paste',
-        this.handlePaste.bind(this)
-      );
+      this.editorContent.nativeElement.addEventListener('paste', this.handlePaste.bind(this));
     }
 
     // Add paste handler to markdown textarea (will be available when component switches to markdown mode)
     setTimeout(() => {
       if (this.markdownTextarea) {
-        this.markdownTextarea.nativeElement.addEventListener(
-          'paste',
-          this.handlePaste.bind(this)
-        );
+        this.markdownTextarea.nativeElement.addEventListener('paste', this.handlePaste.bind(this));
       }
     }, 100);
   }
@@ -665,8 +630,7 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
     }
 
     // Additional check by file extension as fallback
-    const imageExtensions =
-      /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico|tiff|avif|heic|heif)$/i;
+    const imageExtensions = /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico|tiff|avif|heic|heif)$/i;
     return imageExtensions.test(file.name);
   }
 }

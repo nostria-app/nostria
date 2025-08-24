@@ -190,10 +190,7 @@ export class BookmarksComponent {
         const parsedCategories = JSON.parse(savedCategories);
         if (Array.isArray(parsedCategories) && parsedCategories.length > 0) {
           this.categories.set(parsedCategories);
-          this.logger.debug(
-            'Loaded categories from storage:',
-            parsedCategories
-          );
+          this.logger.debug('Loaded categories from storage:', parsedCategories);
         }
       } catch (error) {
         this.logger.error('Error parsing saved categories:', error);
@@ -202,10 +199,7 @@ export class BookmarksComponent {
   }
 
   private saveToStorage(): void {
-    this.localStorage.setItem(
-      'bookmark_categories',
-      JSON.stringify(this.categories())
-    );
+    this.localStorage.setItem('bookmark_categories', JSON.stringify(this.categories()));
     this.logger.debug('Categories saved to storage');
   }
 
@@ -220,7 +214,7 @@ export class BookmarksComponent {
       width: '500px',
     });
 
-    dialogRef.afterClosed().subscribe(result => {
+    dialogRef.afterClosed().subscribe((result) => {
       if (result) {
         this.categories.set(result);
         this.saveToStorage();
@@ -261,11 +255,7 @@ export class BookmarksComponent {
   async deleteBookmark(bookmark: Bookmark, event: Event): Promise<void> {
     event.stopPropagation();
 
-    if (
-      !confirm(
-        `Are you sure you want to delete this bookmark?\n${bookmark.title}`
-      )
-    ) {
+    if (!confirm(`Are you sure you want to delete this bookmark?\n${bookmark.title}`)) {
       return;
     }
 
@@ -297,7 +287,7 @@ export class BookmarksComponent {
   }
 
   getCategoryById(id: string): BookmarkCategory | undefined {
-    return this.categories().find(category => category.id === id);
+    return this.categories().find((category) => category.id === id);
   }
 
   getFormattedDate(timestamp: number): string {

@@ -28,18 +28,11 @@
           title="Maximize"
         >
           <mat-icon>{{
-            media.videoWindowState().isMaximized
-              ? 'fullscreen_exit'
-              : 'fullscreen'
+            media.videoWindowState().isMaximized ? 'fullscreen_exit' : 'fullscreen'
           }}</mat-icon>
         </button>
 
-        <button
-          mat-icon-button
-          class="control-button close"
-          (click)="onClose()"
-          title="Close"
-        >
+        <button mat-icon-button class="control-button close" (click)="onClose()" title="Close">
           <mat-icon>close</mat-icon>
         </button>
       </div>
@@ -76,10 +69,7 @@
     }
 
     <!-- Resize handle -->
-    @if (
-      !media.videoWindowState().isMaximized &&
-      !media.videoWindowState().isMinimized
-    ) {
+    @if (!media.videoWindowState().isMaximized && !media.videoWindowState().isMinimized) {
       <div class="resize-handle" (mousedown)="onResizeMouseDown($event)">
         <mat-icon>drag_handle</mat-icon>
       </div>

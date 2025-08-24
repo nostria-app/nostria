@@ -1,18 +1,9 @@
 <div [class]="footer() ? 'media-player-footer' : 'media-player'">
   @if (!footer()) {
-    <img
-      class="media-player-icon"
-      src="icons/icon.svg"
-      width="16"
-      height="16"
-    />
+    <img class="media-player-icon" src="icons/icon.svg" width="16" height="16" />
 
     <div class="media-player-controls nodrag">
-      <button
-        matTooltip="Add to playlist"
-        (click)="addTestSong()"
-        mat-icon-button
-      >
+      <button matTooltip="Add to playlist" (click)="addTestSong()" mat-icon-button>
         <mat-icon>playlist_add</mat-icon>
       </button>
 
@@ -28,11 +19,7 @@
         </button>
       }
 
-      <button
-        [disabled]="!media.canPrevious()"
-        (click)="media.previous()"
-        mat-icon-button
-      >
+      <button [disabled]="!media.canPrevious()" (click)="media.previous()" mat-icon-button>
         <mat-icon>skip_previous</mat-icon>
       </button>
 
@@ -46,11 +33,7 @@
         </button>
       }
 
-      <button
-        [disabled]="!media.canNext()"
-        (click)="media.next()"
-        mat-icon-button
-      >
+      <button [disabled]="!media.canNext()" (click)="media.next()" mat-icon-button>
         <mat-icon>skip_next</mat-icon>
       </button>
 
@@ -115,11 +98,7 @@
             >
               <mat-icon>picture_in_picture_alt</mat-icon>
             </button>
-            <button
-              matTooltip="Open in fullscreen"
-              (click)="media.fullscreen()"
-              mat-icon-button
-            >
+            <button matTooltip="Open in fullscreen" (click)="media.fullscreen()" mat-icon-button>
               <mat-icon>tv</mat-icon>
             </button>
           </div>
@@ -144,11 +123,7 @@
       <div class="media-controls">
         <div class="media-controls-container">
           @if (media.current?.type === 'Podcast') {
-            <button
-              matTooltip="Change speed"
-              (click)="media.rate()"
-              mat-icon-button
-            >
+            <button matTooltip="Change speed" (click)="media.rate()" mat-icon-button>
               <mat-icon>speed</mat-icon>
             </button>
           }
@@ -256,19 +231,10 @@
                 </button>
                 } -->
 
-            <button
-              matTooltip="Queue"
-              routerLink="/media-queue"
-              class="hide-small"
-              mat-icon-button
-            >
+            <button matTooltip="Queue" routerLink="/media-queue" class="hide-small" mat-icon-button>
               <mat-icon>queue_music</mat-icon>
             </button>
-            <button
-              matTooltip="Exit Media Player"
-              (click)="media.exit()"
-              mat-icon-button
-            >
+            <button matTooltip="Exit Media Player" (click)="media.exit()" mat-icon-button>
               <mat-icon>close</mat-icon>
             </button>
           </div>
@@ -279,41 +245,22 @@
         <div class="media-audio">
           <div class="media-audio-container">
             @if (media.muted) {
-              <button
-                matTooltip="Mute"
-                class="hide-small"
-                mat-icon-button
-                (click)="media.mute()"
-              >
+              <button matTooltip="Mute" class="hide-small" mat-icon-button (click)="media.mute()">
                 <mat-icon>volume_off</mat-icon>
               </button>
             }
 
             @if (!media.muted) {
-              <button
-                matTooltip="Unmute"
-                class="hide-small"
-                mat-icon-button
-                (click)="media.mute()"
-              >
+              <button matTooltip="Unmute" class="hide-small" mat-icon-button (click)="media.mute()">
                 <mat-icon>volume_up</mat-icon>
               </button>
             }
 
-            <button
-              matTooltip="Queue"
-              routerLink="/media-queue"
-              class="hide-small"
-              mat-icon-button
-            >
+            <button matTooltip="Queue" routerLink="/media-queue" class="hide-small" mat-icon-button>
               <mat-icon>queue_music</mat-icon>
             </button>
 
-            <button
-              matTooltip="Exit Media Player"
-              (click)="media.exit()"
-              mat-icon-button
-            >
+            <button matTooltip="Exit Media Player" (click)="media.exit()" mat-icon-button>
               <mat-icon>close</mat-icon>
             </button>
           </div>

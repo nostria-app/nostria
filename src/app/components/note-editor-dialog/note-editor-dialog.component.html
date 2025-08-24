@@ -84,9 +84,7 @@
           [color]="showPreview() ? 'primary' : ''"
           matTooltip="Toggle preview"
         >
-          <mat-icon>{{
-            showPreview() ? 'visibility_off' : 'visibility'
-          }}</mat-icon>
+          <mat-icon>{{ showPreview() ? 'visibility_off' : 'visibility' }}</mat-icon>
         </button>
         <button
           mat-icon-button
@@ -138,9 +136,7 @@
             >
               Expiration
             </mat-slide-toggle>
-            <span class="option-description"
-              >Set an expiration date and time for this note</span
-            >
+            <span class="option-description">Set an expiration date and time for this note</span>
           </div>
 
           @if (expirationEnabled()) {
@@ -185,8 +181,7 @@
               }
 
               <mat-hint class="expiration-hint"
-                >Note will be considered expired after this date and
-                time</mat-hint
+                >Note will be considered expired after this date and time</mat-hint
               >
             </div>
           }
@@ -201,10 +196,7 @@
           <mat-icon class="preview-icon">visibility</mat-icon>
           <span class="preview-title">Preview</span>
         </div>
-        <app-content
-          class="preview-content"
-          [content]="previewContent()"
-        ></app-content>
+        <app-content class="preview-content" [content]="previewContent()"></app-content>
         <!-- <div class="preview-content" [innerHTML]="previewContent()"></div> -->
       </div>
     }
@@ -234,9 +226,7 @@
   </div>
 
   <div mat-dialog-actions class="dialog-actions">
-    <button mat-button (click)="cancel()" [disabled]="isPublishing()">
-      Cancel
-    </button>
+    <button mat-button (click)="cancel()" [disabled]="isPublishing()">Cancel</button>
 
     <button
       mat-flat-button

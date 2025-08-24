@@ -49,7 +49,7 @@ export class SettingsService {
       if (event && event.content) {
         try {
           const parsedContent = JSON.parse(event.content);
-          this.settings.update(currentSettings => ({
+          this.settings.update((currentSettings) => ({
             ...DEFAULT_SETTINGS,
             ...currentSettings,
             ...parsedContent,
@@ -82,11 +82,7 @@ export class SettingsService {
       const content = JSON.stringify(newSettings);
       const tags = [['d', 'nostria:settings']];
 
-      const unsignedEvent = this.nostrService.createEvent(
-        kinds.Application,
-        content,
-        tags
-      );
+      const unsignedEvent = this.nostrService.createEvent(kinds.Application, content, tags);
       const signedEvent = await this.nostrService.signEvent(unsignedEvent);
 
       const publishResult = await this.accountRelay.publish(signedEvent);

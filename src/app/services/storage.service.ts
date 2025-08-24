@@ -262,7 +262,7 @@ export class StorageService {
       this.logger.info('Starting IndexedDB availability check');
 
       // Update storage info
-      this.storageInfo.update(info => ({
+      this.storageInfo.update((info) => ({
         ...info,
         isIndexedDBAvailable: 'indexedDB' in window,
         isPrivateMode: this.detectPrivateMode(),
@@ -274,13 +274,11 @@ export class StorageService {
         throw new Error('IndexedDB is not supported in this browser');
       }
 
-      this.logger.info(
-        'IndexedDB is available, proceeding with initialization'
-      );
+      this.logger.info('IndexedDB is available, proceeding with initialization');
 
       // Get quota info
       const quotaInfo = await this.getStorageQuotaInfo();
-      this.storageInfo.update(info => ({ ...info, quotaInfo }));
+      this.storageInfo.update((info) => ({ ...info, quotaInfo }));
 
       // Initialize the database
       await this.initDatabase();
@@ -295,7 +293,7 @@ export class StorageService {
       });
 
       // Update storage info with error
-      this.storageInfo.update(info => ({
+      this.storageInfo.update((info) => ({
         ...info,
         lastError: error?.message || 'Unknown error',
       }));
@@ -314,9 +312,7 @@ export class StorageService {
       const initPromise = this.createDatabase();
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => {
-          reject(
-            new Error('IndexedDB initialization timeout after 10 seconds')
-          );
+          reject(new Error('IndexedDB initialization timeout after 10 seconds'));
         }, 10000); // 10 second timeout
       });
 
@@ -355,11 +351,7 @@ export class StorageService {
           eventsStore.createIndex('by-pubkey', 'pubkey');
           eventsStore.createIndex('by-created', 'created_at');
           eventsStore.createIndex('by-pubkey-kind', ['pubkey', 'kind']);
-          eventsStore.createIndex('by-pubkey-kind-d-tag', [
-            'pubkey',
-            'kind',
-            'dTag',
-          ]);
+          eventsStore.createIndex('by-pubkey-kind-d-tag', ['pubkey', 'kind', 'dTag']);
           this.logger.debug('Created events object store');
         }
 
@@ -435,9 +427,7 @@ export class StorageService {
         return {
           quota: estimate.quota,
           usage: estimate.usage,
-          available: estimate.quota
-            ? estimate.quota - (estimate.usage || 0)
-            : 'unknown',
+          available: estimate.quota ? estimate.quota - (estimate.usage || 0) : 'unknown',
         };
       }
     } catch (error) {
@@ -455,12 +445,12 @@ export class StorageService {
       await deleteDB(this.DB_NAME);
 
       // Wait a bit before recreating
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       // Try again with a simplified approach
       this.logger.info('Recreating database with simplified schema');
       this.db = await openDB<NostriaDBSchema>(this.DB_NAME, 1, {
-        upgrade: async db => {
+        upgrade: async (db) => {
           this.logger.info('Creating minimal database schema');
 
           // Create only essential stores
@@ -481,14 +471,12 @@ export class StorageService {
       this.logger.error('Fallback initialization also failed', fallbackError);
 
       // Final fallback: enable memory-only storage mode
-      this.logger.warn(
-        'Enabling memory-only storage mode due to IndexedDB failure'
-      );
+      this.logger.warn('Enabling memory-only storage mode due to IndexedDB failure');
       this.useFallbackMode.set(true);
       this.initialized.set(true);
 
       // Update storage info
-      this.storageInfo.update(info => ({
+      this.storageInfo.update((info) => ({
         ...info,
         lastError: 'Complete IndexedDB failure - using memory storage',
         initializationAttempts: info.initializationAttempts + 1,
@@ -520,12 +508,7 @@ export class StorageService {
   }
 
   private isRegularEvent(kind: number): boolean {
-    return (
-      kind === 1 ||
-      kind === 2 ||
-      (kind >= 4 && kind < 45) ||
-      (kind >= 1000 && kind < 10000)
-    );
+    return kind === 1 || kind === 2 || (kind >= 4 && kind < 45) || (kind >= 1000 && kind < 10000);
   }
 
   private isEphemeralEvent(kind: number): boolean {
@@ -560,9 +543,7 @@ export class StorageService {
         }
 
         await this.db.put('events', eventToStore);
-        this.logger.debug(
-          `Saved event to IndexedDB: ${event.id} (kind: ${event.kind})`
-        );
+        this.logger.debug(`Saved event to IndexedDB: ${event.id} (kind: ${event.kind})`);
       }
 
       await this.updateStats();
@@ -585,9 +566,7 @@ export class StorageService {
 
   private async saveReplaceableEvent(event: Event): Promise<void> {
     // For replaceable events, find any existing events from the same pubkey and kind
-    const index = this.db
-      .transaction('events', 'readonly')
-      .store.index('by-pubkey-kind');
+    const index = this.db.transaction('events', 'readonly').store.index('by-pubkey-kind');
 
     const existingEvents = await index.getAll([event.pubkey, event.kind]);
 
@@ -607,19 +586,17 @@ export class StorageService {
         // Add the new event
         await this.db.put('events', event);
         this.logger.debug(
-          `Replaced older event with newer event ${event.id} (kind: ${event.kind})`
+          `Replaced older event with newer event ${event.id} (kind: ${event.kind})`,
         );
       } else {
         this.logger.debug(
-          `Skipped saving older replaceable event ${event.id} (kind: ${event.kind})`
+          `Skipped saving older replaceable event ${event.id} (kind: ${event.kind})`,
         );
       }
     } else {
       // No existing event, just add this one
       await this.db.put('events', event);
-      this.logger.debug(
-        `Saved new replaceable event ${event.id} (kind: ${event.kind})`
-      );
+      this.logger.debug(`Saved new replaceable event ${event.id} (kind: ${event.kind})`);
     }
   }
 
@@ -628,7 +605,7 @@ export class StorageService {
 
     if (!dTagValue) {
       this.logger.debug(
-        `Parameterized replaceable event ${event.id} has no d tag, storing as regular event`
+        `Parameterized replaceable event ${event.id} has no d tag, storing as regular event`,
       );
       await this.db.put('events', event);
       return;
@@ -638,15 +615,9 @@ export class StorageService {
     const enhancedEvent: any = { ...event, dTag: dTagValue };
 
     // Find any existing events with the same pubkey, kind, and d-tag
-    const index = this.db
-      .transaction('events', 'readonly')
-      .store.index('by-pubkey-kind-d-tag');
+    const index = this.db.transaction('events', 'readonly').store.index('by-pubkey-kind-d-tag');
 
-    const existingEvents = await index.getAll([
-      event.pubkey,
-      event.kind,
-      dTagValue,
-    ]);
+    const existingEvents = await index.getAll([event.pubkey, event.kind, dTagValue]);
 
     // Only keep the newest event
     if (existingEvents.length > 0) {
@@ -664,18 +635,18 @@ export class StorageService {
         // Add the new event
         await this.db.put('events', enhancedEvent);
         this.logger.debug(
-          `Replaced older parameterized event with newer event ${event.id} (kind: ${event.kind}, d: ${dTagValue})`
+          `Replaced older parameterized event with newer event ${event.id} (kind: ${event.kind}, d: ${dTagValue})`,
         );
       } else {
         this.logger.debug(
-          `Skipped saving older parameterized replaceable event ${event.id} (kind: ${event.kind}, d: ${dTagValue})`
+          `Skipped saving older parameterized replaceable event ${event.id} (kind: ${event.kind}, d: ${dTagValue})`,
         );
       }
     } else {
       // No existing event, just add this one
       await this.db.put('events', enhancedEvent);
       this.logger.debug(
-        `Saved new parameterized replaceable event ${event.id} (kind: ${event.kind}, d: ${dTagValue})`
+        `Saved new parameterized replaceable event ${event.id} (kind: ${event.kind}, d: ${dTagValue})`,
       );
     }
   }
@@ -707,32 +678,17 @@ export class StorageService {
     try {
       // Validate pubkey parameter
       if (!pubkey || (Array.isArray(pubkey) && pubkey.length === 0)) {
-        this.logger.warn(
-          'getEventsByPubkey called with invalid pubkey:',
-          pubkey
-        );
+        this.logger.warn('getEventsByPubkey called with invalid pubkey:', pubkey);
         return [];
       }
 
-      if (
-        Array.isArray(pubkey) &&
-        pubkey.some(pk => !pk || pk === 'undefined')
-      ) {
-        this.logger.warn(
-          'getEventsByPubkey called with invalid pubkey in array:',
-          pubkey
-        );
+      if (Array.isArray(pubkey) && pubkey.some((pk) => !pk || pk === 'undefined')) {
+        this.logger.warn('getEventsByPubkey called with invalid pubkey in array:', pubkey);
         return [];
       }
 
-      if (
-        typeof pubkey === 'string' &&
-        (pubkey === 'undefined' || !pubkey.trim())
-      ) {
-        this.logger.warn(
-          'getEventsByPubkey called with invalid pubkey string:',
-          pubkey
-        );
+      if (typeof pubkey === 'string' && (pubkey === 'undefined' || !pubkey.trim())) {
+        this.logger.warn('getEventsByPubkey called with invalid pubkey string:', pubkey);
         return [];
       }
 
@@ -740,11 +696,7 @@ export class StorageService {
         // Handle array of pubkeys
         const allEvents: Event[] = [];
         for (const pk of pubkey) {
-          const events = await this.db.getAllFromIndex(
-            'events',
-            'by-pubkey',
-            pk
-          );
+          const events = await this.db.getAllFromIndex('events', 'by-pubkey', pk);
           allEvents.push(...events);
         }
         return allEvents;
@@ -753,13 +705,8 @@ export class StorageService {
         return await this.db.getAllFromIndex('events', 'by-pubkey', pubkey);
       }
     } catch (error) {
-      const pubkeyDisplay = Array.isArray(pubkey)
-        ? `[multiple keys: ${pubkey.length}]`
-        : pubkey;
-      this.logger.error(
-        `Error getting events by pubkey ${pubkeyDisplay}`,
-        error
-      );
+      const pubkeyDisplay = Array.isArray(pubkey) ? `[multiple keys: ${pubkey.length}]` : pubkey;
+      this.logger.error(`Error getting events by pubkey ${pubkeyDisplay}`, error);
       return [];
     }
   }
@@ -774,36 +721,21 @@ export class StorageService {
     }
   }
 
-  async getEventByPubkeyAndKind(
-    pubkey: string | string[],
-    kind: number
-  ): Promise<Event | null> {
+  async getEventByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<Event | null> {
     // Validate pubkey parameter
     if (!pubkey || (Array.isArray(pubkey) && pubkey.length === 0)) {
       debugger;
-      this.logger.warn(
-        'getEventByPubkeyAndKind called with invalid pubkey:',
-        pubkey
-      );
+      this.logger.warn('getEventByPubkeyAndKind called with invalid pubkey:', pubkey);
       return null;
     }
 
-    if (Array.isArray(pubkey) && pubkey.some(pk => !pk || pk === 'undefined')) {
-      this.logger.warn(
-        'getEventByPubkeyAndKind called with invalid pubkey in array:',
-        pubkey
-      );
+    if (Array.isArray(pubkey) && pubkey.some((pk) => !pk || pk === 'undefined')) {
+      this.logger.warn('getEventByPubkeyAndKind called with invalid pubkey in array:', pubkey);
       return null;
     }
 
-    if (
-      typeof pubkey === 'string' &&
-      (pubkey === 'undefined' || !pubkey.trim())
-    ) {
-      this.logger.warn(
-        'getEventByPubkeyAndKind called with invalid pubkey string:',
-        pubkey
-      );
+    if (typeof pubkey === 'string' && (pubkey === 'undefined' || !pubkey.trim())) {
+      this.logger.warn('getEventByPubkeyAndKind called with invalid pubkey string:', pubkey);
       return null;
     }
 
@@ -816,39 +748,21 @@ export class StorageService {
     }
   }
 
-  async getEventsByPubkeyAndKind(
-    pubkey: string | string[],
-    kind: number
-  ): Promise<Event[]> {
+  async getEventsByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<Event[]> {
     try {
       // Validate pubkey parameter
       if (!pubkey || (Array.isArray(pubkey) && pubkey.length === 0)) {
-        this.logger.warn(
-          'getEventsByPubkeyAndKind called with invalid pubkey:',
-          pubkey
-        );
+        this.logger.warn('getEventsByPubkeyAndKind called with invalid pubkey:', pubkey);
         return [];
       }
 
-      if (
-        Array.isArray(pubkey) &&
-        pubkey.some(pk => !pk || pk === 'undefined')
-      ) {
-        this.logger.warn(
-          'getEventsByPubkeyAndKind called with invalid pubkey in array:',
-          pubkey
-        );
+      if (Array.isArray(pubkey) && pubkey.some((pk) => !pk || pk === 'undefined')) {
+        this.logger.warn('getEventsByPubkeyAndKind called with invalid pubkey in array:', pubkey);
         return [];
       }
 
-      if (
-        typeof pubkey === 'string' &&
-        (pubkey === 'undefined' || !pubkey.trim())
-      ) {
-        this.logger.warn(
-          'getEventsByPubkeyAndKind called with invalid pubkey string:',
-          pubkey
-        );
+      if (typeof pubkey === 'string' && (pubkey === 'undefined' || !pubkey.trim())) {
+        this.logger.warn('getEventsByPubkeyAndKind called with invalid pubkey string:', pubkey);
         return [];
       }
 
@@ -856,29 +770,17 @@ export class StorageService {
         // Handle array of pubkeys
         const allEvents: Event[] = [];
         for (const pk of pubkey) {
-          const events = await this.db.getAllFromIndex(
-            'events',
-            'by-pubkey-kind',
-            [pk, kind]
-          );
+          const events = await this.db.getAllFromIndex('events', 'by-pubkey-kind', [pk, kind]);
           allEvents.push(...events);
         }
         return allEvents;
       } else {
         // Handle single pubkey (original behavior)
-        return await this.db.getAllFromIndex('events', 'by-pubkey-kind', [
-          pubkey,
-          kind,
-        ]);
+        return await this.db.getAllFromIndex('events', 'by-pubkey-kind', [pubkey, kind]);
       }
     } catch (error) {
-      const pubkeyDisplay = Array.isArray(pubkey)
-        ? `[multiple keys: ${pubkey.length}]`
-        : pubkey;
-      this.logger.error(
-        `Error getting events by pubkey ${pubkeyDisplay} and kind ${kind}`,
-        error
-      );
+      const pubkeyDisplay = Array.isArray(pubkey) ? `[multiple keys: ${pubkey.length}]` : pubkey;
+      this.logger.error(`Error getting events by pubkey ${pubkeyDisplay} and kind ${kind}`, error);
       return [];
     }
   }
@@ -886,36 +788,27 @@ export class StorageService {
   async getParameterizedReplaceableEvent(
     pubkey: string | string[],
     kind: number,
-    dTagValue: string
+    dTagValue: string,
   ): Promise<Event | undefined> {
     try {
       // Validate pubkey parameter
       if (!pubkey || (Array.isArray(pubkey) && pubkey.length === 0)) {
-        this.logger.warn(
-          'getParameterizedReplaceableEvent called with invalid pubkey:',
-          pubkey
-        );
+        this.logger.warn('getParameterizedReplaceableEvent called with invalid pubkey:', pubkey);
         return undefined;
       }
 
-      if (
-        Array.isArray(pubkey) &&
-        pubkey.some(pk => !pk || pk === 'undefined')
-      ) {
+      if (Array.isArray(pubkey) && pubkey.some((pk) => !pk || pk === 'undefined')) {
         this.logger.warn(
           'getParameterizedReplaceableEvent called with invalid pubkey in array:',
-          pubkey
+          pubkey,
         );
         return undefined;
       }
 
-      if (
-        typeof pubkey === 'string' &&
-        (pubkey === 'undefined' || !pubkey.trim())
-      ) {
+      if (typeof pubkey === 'string' && (pubkey === 'undefined' || !pubkey.trim())) {
         this.logger.warn(
           'getParameterizedReplaceableEvent called with invalid pubkey string:',
-          pubkey
+          pubkey,
         );
         return undefined;
       }
@@ -924,11 +817,11 @@ export class StorageService {
         // For arrays, get events from all pubkeys and return the most recent one
         const allEvents: Event[] = [];
         for (const pk of pubkey) {
-          const events = await this.db.getAllFromIndex(
-            'events',
-            'by-pubkey-kind-d-tag',
-            [pk, kind, dTagValue]
-          );
+          const events = await this.db.getAllFromIndex('events', 'by-pubkey-kind-d-tag', [
+            pk,
+            kind,
+            dTagValue,
+          ]);
           allEvents.push(...events);
         }
 
@@ -939,11 +832,11 @@ export class StorageService {
         return undefined;
       } else {
         // Original behavior for single pubkey
-        const events = await this.db.getAllFromIndex(
-          'events',
-          'by-pubkey-kind-d-tag',
-          [pubkey, kind, dTagValue]
-        );
+        const events = await this.db.getAllFromIndex('events', 'by-pubkey-kind-d-tag', [
+          pubkey,
+          kind,
+          dTagValue,
+        ]);
         if (events.length > 0) {
           // Return the most recent one
           return events.sort((a, b) => b.created_at - a.created_at)[0];
@@ -951,12 +844,10 @@ export class StorageService {
         return undefined;
       }
     } catch (error) {
-      const pubkeyDisplay = Array.isArray(pubkey)
-        ? `[multiple keys: ${pubkey.length}]`
-        : pubkey;
+      const pubkeyDisplay = Array.isArray(pubkey) ? `[multiple keys: ${pubkey.length}]` : pubkey;
       this.logger.error(
         `Error getting parameterized replaceable event for pubkey ${pubkeyDisplay}, kind ${kind}, and d-tag ${dTagValue}`,
-        error
+        error,
       );
       return undefined;
     }
@@ -1014,9 +905,7 @@ export class StorageService {
   //   }
   // }
 
-  async getRelay(
-    url: string
-  ): Promise<(Relay & { nip11?: Nip11Info }) | undefined> {
+  async getRelay(url: string): Promise<(Relay & { nip11?: Nip11Info }) | undefined> {
     try {
       return await this.db.get('relays', url);
     } catch (error) {
@@ -1162,11 +1051,7 @@ export class StorageService {
       }
 
       // Get events by pubkey
-      const events = await this.db.getAllFromIndex(
-        'events',
-        'by-pubkey',
-        pubkey
-      );
+      const events = await this.db.getAllFromIndex('events', 'by-pubkey', pubkey);
 
       return events || [];
     } catch (error) {
@@ -1184,7 +1069,7 @@ export class StorageService {
   async saveInfo(
     key: string,
     type: 'user' | 'relay' | 'metric',
-    data: Record<string, any>
+    data: Record<string, any>,
   ): Promise<void> {
     try {
       const compositeKey = this.generateCompositeKey(key, type);
@@ -1202,15 +1087,10 @@ export class StorageService {
       };
 
       await this.db.put('info', infoRecord);
-      this.logger.debug(
-        `Saved info record to IndexedDB: ${key} (type: ${type})`
-      );
+      this.logger.debug(`Saved info record to IndexedDB: ${key} (type: ${type})`);
       await this.updateStats();
     } catch (error) {
-      this.logger.error(
-        `Error saving info record ${key} (type: ${type})`,
-        error
-      );
+      this.logger.error(`Error saving info record ${key} (type: ${type})`, error);
     }
   }
 
@@ -1218,15 +1098,10 @@ export class StorageService {
     try {
       record.updated = Date.now();
       await this.db.put('info', record);
-      this.logger.debug(
-        `Updated info record to IndexedDB: ${record.key} (type: ${record.type})`
-      );
+      this.logger.debug(`Updated info record to IndexedDB: ${record.key} (type: ${record.type})`);
       await this.updateStats();
     } catch (error) {
-      this.logger.error(
-        `Error saving info record ${record.key} (type: ${record.type})`,
-        error
-      );
+      this.logger.error(`Error saving info record ${record.key} (type: ${record.type})`, error);
     }
   }
 
@@ -1248,16 +1123,13 @@ export class StorageService {
   /**
    * Get info records by type, optionally filtering by key pattern
    */
-  async getInfoByType(
-    type: string,
-    keyPattern?: string
-  ): Promise<InfoRecord[]> {
+  async getInfoByType(type: string, keyPattern?: string): Promise<InfoRecord[]> {
     try {
       const records = await this.db.getAllFromIndex('info', 'by-type', type);
 
       // If keyPattern is provided, filter the results
       if (keyPattern) {
-        return records.filter(record => record.key.includes(keyPattern));
+        return records.filter((record) => record.key.includes(keyPattern));
       }
 
       return records;
@@ -1286,10 +1158,7 @@ export class StorageService {
       this.logger.debug(`Deleted info record with key ${key} and type ${type}`);
       await this.updateStats();
     } catch (error) {
-      this.logger.error(
-        `Error deleting info record with key ${key} and type ${type}`,
-        error
-      );
+      this.logger.error(`Error deleting info record with key ${key} and type ${type}`, error);
     }
   }
 
@@ -1498,16 +1367,14 @@ export class StorageService {
       initialized: this.initialized(),
       dbConnection: !!this.db,
       platform: {
-        isMobile:
-          /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-            navigator.userAgent
-          ),
+        isMobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+          navigator.userAgent,
+        ),
         isIOS: /iPad|iPhone|iPod/.test(navigator.userAgent),
         isAndroid: /Android/.test(navigator.userAgent),
         isWebView:
-          /(iPhone|iPod|iPad).*AppleWebKit(?!.*Safari)/i.test(
-            navigator.userAgent
-          ) || /; wv\)/.test(navigator.userAgent),
+          /(iPhone|iPod|iPad).*AppleWebKit(?!.*Safari)/i.test(navigator.userAgent) ||
+          /; wv\)/.test(navigator.userAgent),
       },
       storage: {
         localStorage: this.testLocalStorage(),

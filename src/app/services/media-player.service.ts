@@ -125,9 +125,7 @@ export class MediaPlayerService implements OnInitialized {
     this.media.set(JSON.parse(mediaQueue) as MediaItem[]);
 
     // Load video window state
-    const windowState = this.localStorage.getItem(
-      this.WINDOW_STATE_STORAGE_KEY
-    );
+    const windowState = this.localStorage.getItem(this.WINDOW_STATE_STORAGE_KEY);
     if (windowState && windowState !== 'undefined') {
       this.videoWindowState.set(JSON.parse(windowState) as VideoWindowState);
     }
@@ -180,7 +178,7 @@ export class MediaPlayerService implements OnInitialized {
   play(file: MediaItem) {
     this.layout.showMediaPlayer.set(true);
     // this.media.set[];
-    this.media.update(files => [...files, file]);
+    this.media.update((files) => [...files, file]);
 
     // this.stop();
 
@@ -190,7 +188,7 @@ export class MediaPlayerService implements OnInitialized {
   enque(file: MediaItem) {
     // TODO: Clean the file.source URL!
     // this.layout.showMediaPlayer.set(true);
-    this.media.update(files => [...files, file]);
+    this.media.update((files) => [...files, file]);
     // this.snackBar.open('Added to media queue', 'Hide', {
     //   duration: 1500,
     //   horizontalPosition: 'center',
@@ -200,8 +198,8 @@ export class MediaPlayerService implements OnInitialized {
   }
 
   dequeue(file: MediaItem) {
-    this.media.update(files => {
-      const index = files.findIndex(e => e === file);
+    this.media.update((files) => {
+      const index = files.findIndex((e) => e === file);
       if (index === -1) {
         return files;
       }
@@ -215,31 +213,28 @@ export class MediaPlayerService implements OnInitialized {
       return;
     }
 
-    this.localStorage.setItem(
-      this.MEDIA_STORAGE_KEY,
-      JSON.stringify(this.media())
-    );
+    this.localStorage.setItem(this.MEDIA_STORAGE_KEY, JSON.stringify(this.media()));
   }
 
   saveWindowState() {
     this.localStorage.setItem(
       this.WINDOW_STATE_STORAGE_KEY,
-      JSON.stringify(this.videoWindowState())
+      JSON.stringify(this.videoWindowState()),
     );
   }
 
   updateWindowPosition(x: number, y: number) {
-    this.videoWindowState.update(state => ({ ...state, x, y }));
+    this.videoWindowState.update((state) => ({ ...state, x, y }));
     this.saveWindowState();
   }
 
   updateWindowSize(width: number, height: number) {
-    this.videoWindowState.update(state => ({ ...state, width, height }));
+    this.videoWindowState.update((state) => ({ ...state, width, height }));
     this.saveWindowState();
   }
 
   minimizeWindow() {
-    this.videoWindowState.update(state => ({
+    this.videoWindowState.update((state) => ({
       ...state,
       isMinimized: !state.isMinimized,
     }));
@@ -247,7 +242,7 @@ export class MediaPlayerService implements OnInitialized {
   }
 
   maximizeWindow() {
-    this.videoWindowState.update(state => ({
+    this.videoWindowState.update((state) => ({
       ...state,
       isMaximized: !state.isMaximized,
       isMinimized: false,
@@ -301,8 +296,7 @@ export class MediaPlayerService implements OnInitialized {
         return this._youtubeUrlCache.get(cacheKey)!;
       }
 
-      const regex =
-        /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+      const regex = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
       const match = url.match(regex);
 
       let embedUrl: SafeResourceUrl;
@@ -349,10 +343,7 @@ export class MediaPlayerService implements OnInitialized {
       this.videoMode.set(true);
       this.youtubeUrl.set(undefined);
 
-      console.log(
-        'Starting video, videoElement available:',
-        !!this.videoElement
-      );
+      console.log('Starting video, videoElement available:', !!this.videoElement);
 
       // Set the new video URL first
       this.videoUrl.set(this.utilities.sanitizeUrlAndBypassFrame(file.source));
@@ -544,17 +535,13 @@ export class MediaPlayerService implements OnInitialized {
     }
 
     // Try to find video element in the footer media player
-    const footerVideo = document.querySelector(
-      '.media-player-footer video'
-    ) as HTMLVideoElement;
+    const footerVideo = document.querySelector('.media-player-footer video') as HTMLVideoElement;
     if (footerVideo) {
       return footerVideo;
     }
 
     // Try to find video element in the video window
-    const windowVideo = document.querySelector(
-      '.video-window video'
-    ) as HTMLVideoElement;
+    const windowVideo = document.querySelector('.video-window video') as HTMLVideoElement;
     if (windowVideo) {
       return windowVideo;
     }

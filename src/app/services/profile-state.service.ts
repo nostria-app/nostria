@@ -68,17 +68,15 @@ export class ProfileStateService {
 
   // Computed signals for sorted data
   sortedNotes = computed(() =>
-    [...this.notes(), ...this.reposts()].sort(
-      (a, b) => b.event.created_at - a.event.created_at
-    )
+    [...this.notes(), ...this.reposts()].sort((a, b) => b.event.created_at - a.event.created_at),
   );
 
   sortedReplies = computed(() =>
-    [...this.replies()].sort((a, b) => b.event.created_at - a.event.created_at)
+    [...this.replies()].sort((a, b) => b.event.created_at - a.event.created_at),
   );
 
   sortedArticles = computed(() =>
-    [...this.articles()].sort((a, b) => b.event.created_at - a.event.created_at)
+    [...this.articles()].sort((a, b) => b.event.created_at - a.event.created_at),
   );
 
   async loadUserData(pubkey: string) {
@@ -137,30 +135,21 @@ export class ProfileStateService {
           // Now you can use 'this' here
           // For example: this.handleContacts(evt);
         } else if (event.kind === kinds.LongFormArticle) {
-          this.articles.update(articles => [
-            ...articles,
-            this.utilities.toRecord(event),
-          ]);
+          this.articles.update((articles) => [...articles, this.utilities.toRecord(event)]);
         } else if (event.kind === kinds.ShortTextNote) {
           const record = this.utilities.toRecord(event);
           if (this.utilities.isRootPost(event)) {
-            this.notes.update(events => [...events, record]);
+            this.notes.update((events) => [...events, record]);
           } else {
-            this.replies.update(events => [...events, record]);
+            this.replies.update((events) => [...events, record]);
           }
-        } else if (
-          event.kind === kinds.Repost ||
-          event.kind === kinds.GenericRepost
-        ) {
-          this.reposts.update(reposts => [
-            ...reposts,
-            this.utilities.toRecord(event),
-          ]);
+        } else if (event.kind === kinds.Repost || event.kind === kinds.GenericRepost) {
+          this.reposts.update((reposts) => [...reposts, this.utilities.toRecord(event)]);
         }
       },
       () => {
         console.log('Subscription closed');
-      }
+      },
     );
   }
 
@@ -183,14 +172,12 @@ export class ProfileStateService {
       const oldestTimestamp =
         beforeTimestamp ||
         (currentNotes.length > 0
-          ? Math.min(...currentNotes.map(n => n.event.created_at)) - 1
+          ? Math.min(...currentNotes.map((n) => n.event.created_at)) - 1
           : Math.floor(Date.now() / 1000));
 
-      this.logger.debug(
-        `Loading more notes for ${pubkey}, before timestamp: ${oldestTimestamp}`
-      );
+      this.logger.debug(`Loading more notes for ${pubkey}, before timestamp: ${oldestTimestamp}`);
 
-      return new Promise<NostrRecord[]>(resolve => {
+      return new Promise<NostrRecord[]>((resolve) => {
         const newNotes: NostrRecord[] = [];
 
         this.relay!.subscribeEose(
@@ -212,11 +199,11 @@ export class ProfileStateService {
               limit: 5,
             },
           ],
-          event => {
+          (event) => {
             foundAnything = true;
 
             // Check if this is a root post (not a reply)
-            const isRootPost = !event.tags.some(tag => tag[0] === 'e');
+            const isRootPost = !event.tags.some((tag) => tag[0] === 'e');
 
             if (isRootPost) {
               // Create a NostrRecord - assuming this structure based on existing code
@@ -227,7 +214,7 @@ export class ProfileStateService {
 
               // Check if we already have this note to avoid duplicates
               const existingNotes = this.notes();
-              const exists = existingNotes.some(n => n.event.id === event.id);
+              const exists = existingNotes.some((n) => n.event.id === event.id);
 
               if (!exists) {
                 newNotes.push(record);
@@ -244,13 +231,13 @@ export class ProfileStateService {
               this.hasMoreNotes.set(false);
             } else {
               // Add new notes to the existing ones
-              this.notes.update(existing => [...existing, ...newNotes]);
+              this.notes.update((existing) => [...existing, ...newNotes]);
               this.hasMoreNotes.set(true);
             }
 
             this.isLoadingMoreNotes.set(false);
             resolve(newNotes);
-          }
+          },
         );
       });
     } catch (error) {

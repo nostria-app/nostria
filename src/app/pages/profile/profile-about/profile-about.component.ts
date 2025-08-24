@@ -65,7 +65,7 @@ export class ProfileAboutComponent {
       .then(() => {
         this.logger.debug('Npub copied to clipboard');
       })
-      .catch(err => {
+      .catch((err) => {
         this.logger.error('Failed to copy npub to clipboard:', err);
       });
   }

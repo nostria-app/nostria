@@ -55,9 +55,7 @@ export class StorageStatsComponent {
     // Update the formatted size when stats change
     effect(() => {
       const currentStats = this.stats();
-      this.formattedSize.set(
-        this.storage.formatSize(currentStats.estimatedSize)
-      );
+      this.formattedSize.set(this.storage.formatSize(currentStats.estimatedSize));
     });
   }
 

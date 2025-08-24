@@ -1,10 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 
-import {
-  MatDialogModule,
-  MatDialogRef,
-  MatDialog,
-} from '@angular/material/dialog';
+import { MatDialogModule, MatDialogRef, MatDialog } from '@angular/material/dialog';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -83,9 +79,7 @@ export class LoginDialogComponent {
   isDetectingRegion = signal(true);
   detectedRegion = signal('');
   showRegionSelector = signal(false);
-  availableRegions = signal<{ name: string; latency: string; id: string }[]>(
-    []
-  );
+  availableRegions = signal<{ name: string; latency: string; id: string }[]>([]);
 
   // Profile setup signals (similar to welcome component)
   displayName = signal('');
@@ -94,8 +88,7 @@ export class LoginDialogComponent {
 
   // Input fields
   nsecKey = '';
-  previewPubkey =
-    'npub1sg6plzptd64u62a878hep2kev88swjh3tw00gjsfl8f237lmu63q0uf63m'; // jack
+  previewPubkey = 'npub1sg6plzptd64u62a878hep2kev88swjh3tw00gjsfl8f237lmu63q0uf63m'; // jack
 
   constructor() {
     this.logger.debug('UnifiedLoginDialogComponent initialized');
@@ -154,7 +147,7 @@ export class LoginDialogComponent {
       }
 
       // Simulate detection time for better UX (minimum display time)
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise((resolve) => setTimeout(resolve, 1500));
 
       this.isDetectingRegion.set(false);
     } catch (error) {
@@ -187,7 +180,7 @@ export class LoginDialogComponent {
 
       const reader = new FileReader();
 
-      reader.onload = e => {
+      reader.onload = (e) => {
         const result = e.target?.result as string;
         this.profileImage.set(result);
         this.logger.debug('Profile image selected');
@@ -218,9 +211,7 @@ export class LoginDialogComponent {
 
       try {
         // First generate the new key and set up the account
-        const newUser = await this.nostrService.generateNewKey(
-          this.selectedRegionId()!
-        );
+        const newUser = await this.nostrService.generateNewKey(this.selectedRegionId()!);
 
         // If the user has set a display name and/or profile image, create the profile
         const displayName = this.displayName();
@@ -231,7 +222,7 @@ export class LoginDialogComponent {
           const result = await this.profileService.createInitialProfile(
             newUser.pubkey,
             displayName || undefined,
-            profileImageFile || undefined
+            profileImageFile || undefined,
           );
 
           if (!result.success) {
@@ -274,9 +265,7 @@ export class LoginDialogComponent {
     } catch (err) {
       this.logger.error('Login with extension failed', err);
       this.extensionError.set(
-        err instanceof Error
-          ? err.message
-          : 'Unknown error connecting to extension'
+        err instanceof Error ? err.message : 'Unknown error connecting to extension',
       );
       this.goToStep(LoginStep.LOGIN_OPTIONS);
     }
@@ -306,9 +295,7 @@ export class LoginDialogComponent {
     } catch (err) {
       this.logger.error('Login with Nostr Connect failed', err);
       this.nostrConnectError.set(
-        err instanceof Error
-          ? err.message
-          : 'Failed to connect using Nostr Connect'
+        err instanceof Error ? err.message : 'Failed to connect using Nostr Connect',
       );
       this.nostrConnectLoading.set(false);
     }
@@ -327,7 +314,7 @@ export class LoginDialogComponent {
       disableClose: false,
     });
 
-    scanDialogRef.afterClosed().subscribe(async result => {
+    scanDialogRef.afterClosed().subscribe(async (result) => {
       if (result && typeof result === 'string') {
         this.logger.debug('QR scan result:', { result });
 
@@ -335,9 +322,7 @@ export class LoginDialogComponent {
           this.nostrConnectUrl.set(result);
           await this.loginWithNostrConnect();
         } else {
-          this.nostrConnectError.set(
-            'Invalid QR code. Expected a Nostr Connect URL.'
-          );
+          this.nostrConnectError.set('Invalid QR code. Expected a Nostr Connect URL.');
         }
       }
     });
@@ -382,40 +367,19 @@ export class LoginDialogComponent {
     // Extract region from the server URL or region property
     const url = server.url.toLowerCase();
 
-    if (
-      url.includes('.eu.') ||
-      server.region.toLowerCase().includes('europe')
-    ) {
+    if (url.includes('.eu.') || server.region.toLowerCase().includes('europe')) {
       return 'eu';
-    } else if (
-      url.includes('.us.') ||
-      server.region.toLowerCase().includes('usa')
-    ) {
+    } else if (url.includes('.us.') || server.region.toLowerCase().includes('usa')) {
       return 'us';
-    } else if (
-      url.includes('.af.') ||
-      server.region.toLowerCase().includes('africa')
-    ) {
+    } else if (url.includes('.af.') || server.region.toLowerCase().includes('africa')) {
       return 'af';
-    } else if (
-      url.includes('.as.') ||
-      server.region.toLowerCase().includes('asia')
-    ) {
+    } else if (url.includes('.as.') || server.region.toLowerCase().includes('asia')) {
       return 'as';
-    } else if (
-      url.includes('.sa.') ||
-      server.region.toLowerCase().includes('south america')
-    ) {
+    } else if (url.includes('.sa.') || server.region.toLowerCase().includes('south america')) {
       return 'sa';
-    } else if (
-      url.includes('.au.') ||
-      server.region.toLowerCase().includes('australia')
-    ) {
+    } else if (url.includes('.au.') || server.region.toLowerCase().includes('australia')) {
       return 'au';
-    } else if (
-      url.includes('.jp.') ||
-      server.region.toLowerCase().includes('japan')
-    ) {
+    } else if (url.includes('.jp.') || server.region.toLowerCase().includes('japan')) {
       return 'jp';
     }
 

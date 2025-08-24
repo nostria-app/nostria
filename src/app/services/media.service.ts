@@ -6,11 +6,7 @@ import { StorageService } from './storage.service';
 import { LoggerService } from './logger.service';
 import { EventTemplate, finalizeEvent } from 'nostr-tools';
 import { MEDIA_SERVERS_EVENT_KIND, NostriaService } from '../interfaces';
-import {
-  NostrTagKey,
-  standardizedTag,
-  StandardizedTagType,
-} from '../standardized-tags';
+import { NostrTagKey, standardizedTag, StandardizedTagType } from '../standardized-tags';
 import { sha256 } from '@noble/hashes/sha2';
 import { bytesToHex } from '@noble/hashes/utils';
 import { ApplicationService } from './application.service';
@@ -102,19 +98,16 @@ export class MediaService implements NostriaService {
     const userServerList = await this.nostrService.getMediaServers(pubkey);
 
     if (userServerList) {
-      const servers = this.nostrService.getTags(
-        userServerList,
-        standardizedTag.server
-      );
+      const servers = this.nostrService.getTags(userServerList, standardizedTag.server);
       this.setMediaServers(servers);
     } else {
       this.logger.debug(
-        'No media servers found for user. This user might be a Nostria account or any other Nostr user.'
+        'No media servers found for user. This user might be a Nostria account or any other Nostr user.',
       );
 
       if (!this.accountState.account()?.hasActivated) {
         this.logger.debug(
-          'User has not activated their account yet, so we will add regional media servers.'
+          'User has not activated their account yet, so we will add regional media servers.',
         );
 
         const region = this.accountState.account()?.region || 'eu';
@@ -147,7 +140,7 @@ export class MediaService implements NostriaService {
 
   async getFileById(id: string): Promise<MediaItem> {
     const media = this.mediaItems();
-    const item = media.find(m => m.sha256 === id);
+    const item = media.find((m) => m.sha256 === id);
 
     if (!item) {
       throw new Error('Media item not found');
@@ -159,7 +152,7 @@ export class MediaService implements NostriaService {
   // Add implementation for the missing updateMetadata method
   async updateMetadata(
     id: string,
-    metadata: { title?: string; description?: string }
+    metadata: { title?: string; description?: string },
   ): Promise<MediaItem> {
     const response = await fetch(`/api/media/${id}/metadata`, {
       method: 'PUT',
@@ -184,21 +177,18 @@ export class MediaService implements NostriaService {
     // First try to load from localStorage for faster initial load
     let mediaServerEvent = await this.storage.getEventByPubkeyAndKind(
       this.accountState.pubkey(),
-      MEDIA_SERVERS_EVENT_KIND
+      MEDIA_SERVERS_EVENT_KIND,
     );
 
     if (!mediaServerEvent) {
       mediaServerEvent = await this.accountRelay.getEventByPubkeyAndKind(
         this.accountState.pubkey(),
-        MEDIA_SERVERS_EVENT_KIND
+        MEDIA_SERVERS_EVENT_KIND,
       );
     }
 
     if (mediaServerEvent) {
-      const servers = this.nostrService.getTags(
-        mediaServerEvent,
-        standardizedTag.server
-      );
+      const servers = this.nostrService.getTags(mediaServerEvent, standardizedTag.server);
       this._mediaServers.set(servers);
     }
   }
@@ -257,15 +247,11 @@ export class MediaService implements NostriaService {
             }
           }
         } catch (err) {
-          this.logger.error(
-            `Failed to fetch media from server ${server}:`,
-            err
-          );
+          this.logger.error(`Failed to fetch media from server ${server}:`, err);
 
           // Save the first error to display if all servers fail
           if (!firstError) {
-            firstError =
-              err instanceof Error ? err : new Error('Unknown error occurred');
+            firstError = err instanceof Error ? err : new Error('Unknown error occurred');
           }
         }
       }
@@ -281,9 +267,7 @@ export class MediaService implements NostriaService {
       // Update the last fetch timestamp after successful retrieval
       this.lastFetchTime.set(Date.now());
     } catch (err) {
-      this._error.set(
-        err instanceof Error ? err.message : 'Unknown error occurred'
-      );
+      this._error.set(err instanceof Error ? err.message : 'Unknown error occurred');
       this.logger.error('Error fetching media items:', err);
     } finally {
       this.loading.set(false);
@@ -309,14 +293,14 @@ export class MediaService implements NostriaService {
     }
 
     // Check if server already exists
-    const exists = this._mediaServers().some(s => s === normalizedUrl);
+    const exists = this._mediaServers().some((s) => s === normalizedUrl);
 
     if (exists) {
       throw new Error('Server with this URL already exists');
     }
 
     // Add the new server
-    this._mediaServers.update(servers => [...servers, normalizedUrl]);
+    this._mediaServers.update((servers) => [...servers, normalizedUrl]);
 
     // Publish to Nostr
     await this.publishMediaServers();
@@ -331,23 +315,19 @@ export class MediaService implements NostriaService {
 
     // Check if the new normalized URL already exists (excluding the original)
     const existingServers = this._mediaServers();
-    const duplicateExists = existingServers.some(
-      s => s === normalizedUrl && s !== original
-    );
+    const duplicateExists = existingServers.some((s) => s === normalizedUrl && s !== original);
 
     if (duplicateExists) {
       throw new Error('Server with this URL already exists');
     }
 
     // Find and replace the original server
-    const serverIndex = existingServers.findIndex(s => s === original);
+    const serverIndex = existingServers.findIndex((s) => s === original);
 
     if (serverIndex !== -1) {
       // Replace the server at the found index
-      this._mediaServers.update(servers =>
-        servers.map((server, index) =>
-          index === serverIndex ? normalizedUrl : server
-        )
+      this._mediaServers.update((servers) =>
+        servers.map((server, index) => (index === serverIndex ? normalizedUrl : server)),
       );
 
       // Publish to Nostr
@@ -358,17 +338,13 @@ export class MediaService implements NostriaService {
   }
 
   async removeMediaServer(url: string): Promise<void> {
-    this._mediaServers.update(servers =>
-      servers.filter(server => server !== url)
-    );
+    this._mediaServers.update((servers) => servers.filter((server) => server !== url));
 
     // Publish to Nostr
     await this.publishMediaServers();
   }
 
-  async testMediaServer(
-    url: string
-  ): Promise<{ success: boolean; message: string }> {
+  async testMediaServer(url: string): Promise<{ success: boolean; message: string }> {
     try {
       // Normalize URL
       const normalizedUrl = url.endsWith('/') ? url : `${url}/`;
@@ -388,8 +364,7 @@ export class MediaService implements NostriaService {
         if (headResponse.ok) {
           return {
             success: true,
-            message:
-              'Server exists but info endpoint not available. Limited functionality.',
+            message: 'Server exists but info endpoint not available. Limited functionality.',
           };
         }
 
@@ -414,15 +389,11 @@ export class MediaService implements NostriaService {
       const servers = this._mediaServers();
 
       // Create tags array from servers
-      const tags: string[][] = servers.map(server => {
+      const tags: string[][] = servers.map((server) => {
         return ['server', server];
       });
 
-      const event = this.nostrService.createEvent(
-        MEDIA_SERVERS_EVENT_KIND,
-        '',
-        tags
-      );
+      const event = this.nostrService.createEvent(MEDIA_SERVERS_EVENT_KIND, '', tags);
 
       // Sign and publish the event
       const signedEvent = await this.nostrService.signEvent(event);
@@ -436,11 +407,7 @@ export class MediaService implements NostriaService {
         eventId: signedEvent.id,
       });
     } catch (error) {
-      this._error.set(
-        error instanceof Error
-          ? error.message
-          : 'Failed to publish media servers'
-      );
+      this._error.set(error instanceof Error ? error.message : 'Failed to publish media servers');
       this.logger.error('Error publishing media servers:', error);
       throw error;
     } finally {
@@ -469,7 +436,7 @@ export class MediaService implements NostriaService {
   async uploadFile(
     file: File,
     uploadOriginal: boolean,
-    servers: string[]
+    servers: string[],
   ): Promise<{
     item: MediaItem | null;
     status: 'success' | 'duplicate' | 'error';
@@ -496,14 +463,10 @@ export class MediaService implements NostriaService {
         // Check if the existing file was uploaded with the same mode (original or optimized)
         const existingFileUrl = existingFile.url;
         const isExistingOriginal =
-          existingFileUrl.includes('/upload/') ||
-          !existingFileUrl.includes('/media/');
+          existingFileUrl.includes('/upload/') || !existingFileUrl.includes('/media/');
 
         // Only consider it a duplicate if both are original or both are optimized
-        if (
-          (uploadOriginal && isExistingOriginal) ||
-          (!uploadOriginal && !isExistingOriginal)
-        ) {
+        if ((uploadOriginal && isExistingOriginal) || (!uploadOriginal && !isExistingOriginal)) {
           return {
             item: existingFile,
             status: 'duplicate',
@@ -526,11 +489,7 @@ export class MediaService implements NostriaService {
             action.action = 'upload';
           }
 
-          headers = await this.getAuthHeaders(
-            'Upload File',
-            action.action,
-            hash
-          );
+          headers = await this.getAuthHeaders('Upload File', action.action, hash);
 
           headers['X-SHA-256'] = hash;
           headers['X-Content-Type'] = file.type;
@@ -550,7 +509,7 @@ export class MediaService implements NostriaService {
             console.log('Response:', response);
 
             throw new Error(
-              `Upload not allowed on ${server}: Reason: ${reason}, Status: ${headResponse.status}`
+              `Upload not allowed on ${server}: Reason: ${reason}, Status: ${headResponse.status}`,
             );
           }
 
@@ -575,11 +534,11 @@ export class MediaService implements NostriaService {
               if (!uploadOriginal) {
                 if (action.isVideo) {
                   this._error.set(
-                    `${reason}. This might happen because you upload a video file and the server cannot transcode it. Try uploading original instead.`
+                    `${reason}. This might happen because you upload a video file and the server cannot transcode it. Try uploading original instead.`,
                   );
                 } else if (action.isPicture) {
                   this._error.set(
-                    `${reason}. This might happen because you upload a picture file and the server cannot optimize it. Try uploading original instead.`
+                    `${reason}. This might happen because you upload a picture file and the server cannot optimize it. Try uploading original instead.`,
                   );
                 }
               } else {
@@ -590,13 +549,11 @@ export class MediaService implements NostriaService {
             }
 
             if (!reason) {
-              throw new Error(
-                `Failed to upload file on ${server}: ${response.status}`
-              );
+              throw new Error(`Failed to upload file on ${server}: ${response.status}`);
             }
 
             throw new Error(
-              `Failed to upload file on ${server}: Reason: ${reason}, Status: ${headResponse.status}`
+              `Failed to upload file on ${server}: Reason: ${reason}, Status: ${headResponse.status}`,
             );
           }
 
@@ -609,15 +566,14 @@ export class MediaService implements NostriaService {
           }
         } catch (err) {
           if (!firstError) {
-            firstError =
-              err instanceof Error ? err : new Error('Unknown error occurred');
+            firstError = err instanceof Error ? err : new Error('Unknown error occurred');
           }
         }
       }
 
       if (uploadedMedia) {
         // Update the media items list with the new item
-        this._mediaItems.update(items => [...items, uploadedMedia!]);
+        this._mediaItems.update((items) => [...items, uploadedMedia!]);
 
         this.logger.info('File uploaded successfully:', uploadedMedia);
 
@@ -628,19 +584,10 @@ export class MediaService implements NostriaService {
         if (otherServers.length > 0) {
           // If the uploaded file is not original, we need to generate an new auth header because the action is different.
           if (!uploadOriginal) {
-            headers = await this.getAuthHeaders(
-              'Upload File',
-              'upload',
-              uploadedMedia.sha256
-            );
+            headers = await this.getAuthHeaders('Upload File', 'upload', uploadedMedia.sha256);
           }
 
-          await this.mirrorFile(
-            uploadedMedia.sha256,
-            uploadedMedia.url,
-            otherServers,
-            headers
-          );
+          await this.mirrorFile(uploadedMedia.sha256, uploadedMedia.url, otherServers, headers);
         }
 
         return { item: uploadedMedia, status: 'success' };
@@ -650,9 +597,7 @@ export class MediaService implements NostriaService {
         throw new Error('Failed to upload file to any server');
       }
     } catch (err) {
-      this._error.set(
-        err instanceof Error ? err.message : 'Unknown error occurred'
-      );
+      this._error.set(err instanceof Error ? err.message : 'Unknown error occurred');
       this.logger.error('Error uploading file:', err);
       return {
         item: null,
@@ -671,14 +616,14 @@ export class MediaService implements NostriaService {
    */
   getFileByHash(hash: string): MediaItem | null {
     const mediaItems = this._mediaItems();
-    return mediaItems.find(item => item.sha256 === hash) || null;
+    return mediaItems.find((item) => item.sha256 === hash) || null;
   }
 
   otherServers(url: string, servers?: string[]): string[] {
     if (servers && servers.length > 0) {
-      return servers.filter(server => !url.startsWith(server));
+      return servers.filter((server) => !url.startsWith(server));
     } else {
-      return this._mediaServers().filter(server => !url.startsWith(server));
+      return this._mediaServers().filter((server) => !url.startsWith(server));
     }
   }
 
@@ -712,9 +657,7 @@ export class MediaService implements NostriaService {
           });
 
           if (!response.ok) {
-            throw new Error(
-              `Failed to delete file from ${server}: ${response.status}`
-            );
+            throw new Error(`Failed to delete file from ${server}: ${response.status}`);
           }
 
           deleteSuccessful = true;
@@ -722,26 +665,21 @@ export class MediaService implements NostriaService {
           this.logger.error(`Failed to delete from server ${server}:`, err);
 
           if (!firstError) {
-            firstError =
-              err instanceof Error ? err : new Error('Unknown error occurred');
+            firstError = err instanceof Error ? err : new Error('Unknown error occurred');
           }
         }
       }
 
       if (deleteSuccessful) {
         // Remove the deleted item from the media items list
-        this._mediaItems.update(items =>
-          items.filter(item => item.sha256 !== id)
-        );
+        this._mediaItems.update((items) => items.filter((item) => item.sha256 !== id));
       } else if (firstError) {
         throw firstError;
       } else {
         throw new Error('Failed to delete file from any server');
       }
     } catch (err) {
-      this._error.set(
-        err instanceof Error ? err.message : 'Unknown error occurred'
-      );
+      this._error.set(err instanceof Error ? err.message : 'Unknown error occurred');
       this.logger.error('Error deleting file:', err);
       throw err;
     } finally {
@@ -761,11 +699,7 @@ export class MediaService implements NostriaService {
       }
 
       // Generate a single auth header containing all file hashes
-      const headers = await this.getAuthHeaders(
-        'Delete Multiple Files',
-        'delete',
-        ids.join(',')
-      );
+      const headers = await this.getAuthHeaders('Delete Multiple Files', 'delete', ids.join(','));
 
       let failedDeletes = 0;
 
@@ -789,10 +723,7 @@ export class MediaService implements NostriaService {
               break; // Move to next file after successful deletion
             }
           } catch (err) {
-            this.logger.error(
-              `Failed to delete file ${id} from server ${server}:`,
-              err
-            );
+            this.logger.error(`Failed to delete file ${id} from server ${server}:`, err);
           }
         }
 
@@ -803,23 +734,17 @@ export class MediaService implements NostriaService {
 
       // Update the local state by removing all successfully deleted items
       if (failedDeletes < ids.length) {
-        this._mediaItems.update(items =>
-          items.filter(item => !ids.includes(item.sha256))
-        );
+        this._mediaItems.update((items) => items.filter((item) => !ids.includes(item.sha256)));
       }
 
       // If some or all deletions failed, throw an error
       if (failedDeletes === ids.length) {
         throw new Error('Failed to delete any files');
       } else if (failedDeletes > 0) {
-        throw new Error(
-          `Failed to delete ${failedDeletes} out of ${ids.length} files`
-        );
+        throw new Error(`Failed to delete ${failedDeletes} out of ${ids.length} files`);
       }
     } catch (err) {
-      this._error.set(
-        err instanceof Error ? err.message : 'Unknown error occurred'
-      );
+      this._error.set(err instanceof Error ? err.message : 'Unknown error occurred');
       this.logger.error('Error deleting files:', err);
       throw err;
     } finally {
@@ -831,7 +756,7 @@ export class MediaService implements NostriaService {
     sha256: string,
     fileUrl: string,
     servers?: string[],
-    headers?: Record<string, string>
+    headers?: Record<string, string>,
   ): Promise<void> {
     this.loading.set(true);
     this._error.set(null);
@@ -863,7 +788,7 @@ export class MediaService implements NostriaService {
           if (!headResponse.ok) {
             const reason = headResponse.headers.get('x-reason');
             throw new Error(
-              `Mirroring not allowed on ${server}: Reason: ${reason}, Status: ${headResponse.status}`
+              `Mirroring not allowed on ${server}: Reason: ${reason}, Status: ${headResponse.status}`,
             );
           }
 
@@ -879,7 +804,7 @@ export class MediaService implements NostriaService {
           if (!response.ok) {
             const reason = response.headers.get('x-reason');
             throw new Error(
-              `Mirroring not allowed on ${server}: Reason: ${reason}, Status: ${response.status}`
+              `Mirroring not allowed on ${server}: Reason: ${reason}, Status: ${response.status}`,
             );
           }
 
@@ -890,8 +815,8 @@ export class MediaService implements NostriaService {
           const mirrorServerUrl = this.extractServerUrl(mirroredMedia.url);
 
           // Update the media item by adding the mirror URL to its mirrors array
-          this._mediaItems.update(items => {
-            return items.map(item => {
+          this._mediaItems.update((items) => {
+            return items.map((item) => {
               if (item.sha256 === sha256) {
                 // Initialize mirrors array if it doesn't exist
                 if (!item.mirrors) {
@@ -916,8 +841,7 @@ export class MediaService implements NostriaService {
           this.logger.error(`Failed to mirror on server ${server}:`, err);
 
           if (!firstError) {
-            firstError =
-              err instanceof Error ? err : new Error('Unknown error occurred');
+            firstError = err instanceof Error ? err : new Error('Unknown error occurred');
           }
         }
       }
@@ -928,9 +852,7 @@ export class MediaService implements NostriaService {
         throw new Error('Failed to mirror file on any server');
       }
     } catch (err) {
-      this._error.set(
-        err instanceof Error ? err.message : 'Unknown error occurred'
-      );
+      this._error.set(err instanceof Error ? err.message : 'Unknown error occurred');
       this.logger.error('Error mirroring file:', err);
       throw err;
     } finally {
@@ -946,14 +868,10 @@ export class MediaService implements NostriaService {
 
     try {
       // Create a comma-separated string of all file hashes for the auth header
-      const fileHashes = items.map(item => item.sha256).join(',');
+      const fileHashes = items.map((item) => item.sha256).join(',');
 
       // Generate a single auth header for all files
-      const headers = await this.getAuthHeaders(
-        'Mirror Multiple Files',
-        'upload',
-        fileHashes
-      );
+      const headers = await this.getAuthHeaders('Mirror Multiple Files', 'upload', fileHashes);
 
       let mirrorFailures = 0;
 
@@ -999,8 +917,8 @@ export class MediaService implements NostriaService {
             const mirrorServerUrl = this.extractServerUrl(mirroredMedia.url);
 
             // Update the media item's mirrors array
-            this._mediaItems.update(mediaItems => {
-              return mediaItems.map(mediaItem => {
+            this._mediaItems.update((mediaItems) => {
+              return mediaItems.map((mediaItem) => {
                 if (mediaItem.sha256 === item.sha256) {
                   // Initialize mirrors array if needed
                   if (!mediaItem.mirrors) {
@@ -1022,10 +940,7 @@ export class MediaService implements NostriaService {
             mirrorSuccessful = true;
             break; // Move to next item after success
           } catch (err) {
-            this.logger.error(
-              `Failed to mirror ${item.sha256} on server ${server}:`,
-              err
-            );
+            this.logger.error(`Failed to mirror ${item.sha256} on server ${server}:`, err);
           }
         }
 
@@ -1038,14 +953,10 @@ export class MediaService implements NostriaService {
       if (mirrorFailures === items.length) {
         throw new Error('Failed to mirror any files');
       } else if (mirrorFailures > 0) {
-        this._error.set(
-          `Failed to mirror ${mirrorFailures} out of ${items.length} files`
-        );
+        this._error.set(`Failed to mirror ${mirrorFailures} out of ${items.length} files`);
       }
     } catch (err) {
-      this._error.set(
-        err instanceof Error ? err.message : 'Unknown error occurred'
-      );
+      this._error.set(err instanceof Error ? err.message : 'Unknown error occurred');
       this.logger.error('Error mirroring multiple files:', err);
       throw err;
     } finally {
@@ -1109,10 +1020,7 @@ export class MediaService implements NostriaService {
     // }
   }
 
-  private async createSignedEvent(
-    type: string,
-    data: any
-  ): Promise<NostrEvent> {
+  private async createSignedEvent(type: string, data: any): Promise<NostrEvent> {
     // Create event for signing
     const event: Partial<NostrEvent> = {
       kind: 27235, // NIP-94 kind for file metadata
@@ -1175,7 +1083,7 @@ export class MediaService implements NostriaService {
     reason: string,
     action: string | 'list' | 'upload' | 'media' | 'delete' | 'get',
     sha256?: string,
-    skipContentType = false
+    skipContentType = false,
   ): Promise<Record<string, string>> {
     const currentUser = this.accountState.account();
     if (!currentUser) {
@@ -1242,11 +1150,7 @@ export class MediaService implements NostriaService {
     }
 
     // If the item doesn't have mirrors data, consider it not fully mirrored
-    if (
-      !item.mirrors ||
-      !Array.isArray(item.mirrors) ||
-      item.mirrors.length === 0
-    ) {
+    if (!item.mirrors || !Array.isArray(item.mirrors) || item.mirrors.length === 0) {
       return false;
     }
 
@@ -1267,12 +1171,12 @@ export class MediaService implements NostriaService {
       allMirrorUrls.push(item.url);
     }
 
-    const mirrorDomains = allMirrorUrls.map(mirror => extractDomain(mirror));
-    const serverDomains = availableServers.map(server => extractDomain(server));
+    const mirrorDomains = allMirrorUrls.map((mirror) => extractDomain(mirror));
+    const serverDomains = availableServers.map((server) => extractDomain(server));
 
     // Check if all configured media servers are already in the item's mirrors
-    return serverDomains.every(serverDomain =>
-      mirrorDomains.some(mirrorDomain => mirrorDomain === serverDomain)
+    return serverDomains.every((serverDomain) =>
+      mirrorDomains.some((mirrorDomain) => mirrorDomain === serverDomain),
     );
   }
 
@@ -1295,11 +1199,7 @@ export class MediaService implements NostriaService {
       }
 
       // Save the reordered server list
-      const event = this.nostrService.createEvent(
-        MEDIA_SERVERS_EVENT_KIND,
-        '',
-        tags
-      );
+      const event = this.nostrService.createEvent(MEDIA_SERVERS_EVENT_KIND, '', tags);
       const signedEvent = await this.nostrService.signEvent(event);
       await this.storage.saveEvent(signedEvent);
       await this.accountRelay.publish(signedEvent);

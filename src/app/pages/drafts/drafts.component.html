@@ -10,11 +10,7 @@
           <mat-icon>add</mat-icon>
           New Draft
         </button>
-        <button
-          mat-icon-button
-          (click)="refreshDrafts()"
-          matTooltip="Refresh drafts"
-        >
+        <button mat-icon-button (click)="refreshDrafts()" matTooltip="Refresh drafts">
           <mat-icon>refresh</mat-icon>
         </button>
       </div>
@@ -46,10 +42,7 @@
 
   @if (isLoading()) {
     <div class="loading-container">
-      <mat-progress-spinner
-        mode="indeterminate"
-        diameter="50"
-      ></mat-progress-spinner>
+      <mat-progress-spinner mode="indeterminate" diameter="50"></mat-progress-spinner>
       <p>Loading drafts...</p>
     </div>
   } @else if (error()) {
@@ -64,9 +57,7 @@
         <mat-icon>filter_list_off</mat-icon>
         <h2>No drafts found with tag "{{ selectedTag() }}"</h2>
         <p>Try clearing the filter or selecting a different tag.</p>
-        <button mat-raised-button (click)="clearTagFilter()">
-          Clear Filter
-        </button>
+        <button mat-raised-button (click)="clearTagFilter()">Clear Filter</button>
       } @else {
         <mat-icon>draft</mat-icon>
         <h2>No drafts yet</h2>
@@ -100,11 +91,7 @@
 
           @if (draft.imageUrl) {
             <div class="draft-image">
-              <img
-                [src]="draft.imageUrl"
-                alt="{{ draft.title }}"
-                title="{{ draft.title }}"
-              />
+              <img [src]="draft.imageUrl" alt="{{ draft.title }}" title="{{ draft.title }}" />
             </div>
           }
 
@@ -128,9 +115,7 @@
               Continue Writing
             </button>
             <span class="spacer"></span>
-            <small class="created-date">
-              Created {{ draft.createdAt * 1000 | ago }}
-            </small>
+            <small class="created-date"> Created {{ draft.createdAt * 1000 | ago }} </small>
           </mat-card-actions>
         </mat-card>
       }

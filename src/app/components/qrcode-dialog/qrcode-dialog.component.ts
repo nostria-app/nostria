@@ -1,23 +1,14 @@
 import { Component, inject, Inject, AfterViewInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import {
-  MatButtonToggleChange,
-  MatButtonToggleModule,
-} from '@angular/material/button-toggle';
+import { MatButtonToggleChange, MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import encodeQR from 'qr';
 
 @Component({
   selector: 'app-qrcode-dialog',
-  imports: [
-    MatDialogModule,
-    MatButtonModule,
-    MatButtonToggleModule,
-    FormsModule,
-    MatIconModule,
-  ],
+  imports: [MatDialogModule, MatButtonModule, MatButtonToggleModule, FormsModule, MatIconModule],
   templateUrl: './qrcode-dialog.component.html',
   styleUrl: './qrcode-dialog.component.scss',
 })
@@ -76,12 +67,7 @@ export class QRCodeDialogComponent implements AfterViewInit {
       for (let y = 0; y < qrSize; y++) {
         for (let x = 0; x < qrSize; x++) {
           if (qrMatrix[y][x]) {
-            ctx.fillRect(
-              offset + x * cellSize,
-              offset + y * cellSize,
-              cellSize,
-              cellSize
-            );
+            ctx.fillRect(offset + x * cellSize, offset + y * cellSize, cellSize, cellSize);
           }
         }
       }

@@ -49,24 +49,22 @@ export class QrcodeScanDialogComponent implements AfterViewInit, OnDestroy {
         if (error instanceof Error) {
           if (error.name === 'NotAllowedError') {
             this.errorMessage.set(
-              'Camera access denied. Please allow camera permissions and try again.'
+              'Camera access denied. Please allow camera permissions and try again.',
             );
           } else if (error.name === 'NotFoundError') {
-            this.errorMessage.set(
-              'No camera found. Please ensure a camera is connected.'
-            );
+            this.errorMessage.set('No camera found. Please ensure a camera is connected.');
           } else if (error.name === 'NotSupportedError') {
             this.errorMessage.set('Camera not supported in this browser.');
           } else if (error.name === 'NotReadableError') {
             this.errorMessage.set(
-              'Camera is already in use by another application. Close other apps using the camera and try a different camera below.'
+              'Camera is already in use by another application. Close other apps using the camera and try a different camera below.',
             );
           } else {
             this.errorMessage.set(`Camera error: ${error.message}`);
           }
         } else {
           this.errorMessage.set(
-            'Failed to access camera. Please ensure camera permissions are granted.'
+            'Failed to access camera. Please ensure camera permissions are granted.',
           );
         }
 
@@ -89,8 +87,8 @@ export class QrcodeScanDialogComponent implements AfterViewInit, OnDestroy {
       // Get available media devices without initializing a camera
       const devices = await navigator.mediaDevices.enumerateDevices();
       const videoDevices = devices
-        .filter(device => device.kind === 'videoinput')
-        .map(device => ({
+        .filter((device) => device.kind === 'videoinput')
+        .map((device) => ({
           deviceId: device.deviceId,
           label: device.label || `Camera ${devices.indexOf(device) + 1}`,
         }));
@@ -141,10 +139,7 @@ export class QrcodeScanDialogComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  private async initializeCameraWithRetry(
-    video: HTMLVideoElement,
-    maxRetries = 3
-  ): Promise<any> {
+  private async initializeCameraWithRetry(video: HTMLVideoElement, maxRetries = 3): Promise<any> {
     let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -153,17 +148,14 @@ export class QrcodeScanDialogComponent implements AfterViewInit, OnDestroy {
 
         // If this is a retry, wait a bit before trying again
         if (attempt > 1) {
-          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+          await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
         }
 
         const camera = await frontalCamera(video);
         console.log(`Camera initialized successfully on attempt ${attempt}`);
         return camera;
       } catch (error) {
-        console.error(
-          `Camera initialization attempt ${attempt} failed:`,
-          error
-        );
+        console.error(`Camera initialization attempt ${attempt} failed:`, error);
         lastError = error as Error;
 
         // If it's a NotReadableError, try to list available devices and suggest switching
@@ -173,7 +165,7 @@ export class QrcodeScanDialogComponent implements AfterViewInit, OnDestroy {
           // If we have multiple cameras available, don't retry with the same one
           if (this.availableCameras().length > 1 && attempt < maxRetries) {
             console.log(
-              'Multiple cameras available, will try with different camera on next attempt'
+              'Multiple cameras available, will try with different camera on next attempt',
             );
           }
         }
@@ -186,10 +178,7 @@ export class QrcodeScanDialogComponent implements AfterViewInit, OnDestroy {
     }
 
     // If all retries failed, throw the last error
-    throw (
-      lastError ||
-      new Error('Camera initialization failed after multiple attempts')
-    );
+    throw lastError || new Error('Camera initialization failed after multiple attempts');
   }
 
   private startScanning() {
@@ -273,21 +262,17 @@ export class QrcodeScanDialogComponent implements AfterViewInit, OnDestroy {
 
         // Initialize with the existing stream
         this.camera = {
-          readFrame: (canvas: any) =>
-            canvas.drawImage(video, video.videoHeight, video.videoWidth),
+          readFrame: (canvas: any) => canvas.drawImage(video, video.videoHeight, video.videoWidth),
           stop: () => {
-            stream.getTracks().forEach(track => track.stop());
+            stream.getTracks().forEach((track) => track.stop());
             video.srcObject = null;
           },
           listDevices: () => this.listAvailableCameras(),
-          setDevice: (newDeviceId: string) =>
-            this.tryDifferentCamera(newDeviceId),
+          setDevice: (newDeviceId: string) => this.tryDifferentCamera(newDeviceId),
         };
 
         // Update current device
-        const device = this.availableCameras().find(
-          d => d.deviceId === deviceId
-        );
+        const device = this.availableCameras().find((d) => d.deviceId === deviceId);
         if (device) {
           this.currentDevice.set(device);
           this.currentCameraIndex.set(this.availableCameras().indexOf(device));

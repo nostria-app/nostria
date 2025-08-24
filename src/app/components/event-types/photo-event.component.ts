@@ -40,14 +40,14 @@ export class PhotoEventComponent {
     const event = this.event();
     if (!event) return false;
 
-    return event.tags.some(tag => tag[0] === 'content-warning');
+    return event.tags.some((tag) => tag[0] === 'content-warning');
   });
 
   contentWarning = computed(() => {
     const event = this.event();
     if (!event) return null;
 
-    const warningTag = event.tags.find(tag => tag[0] === 'content-warning');
+    const warningTag = event.tags.find((tag) => tag[0] === 'content-warning');
     return warningTag?.[1] || 'Content may be sensitive';
   });
 
@@ -64,7 +64,7 @@ export class PhotoEventComponent {
     const event = this.event();
     if (!event) return 'Photo';
 
-    const altTag = event.tags.find(tag => tag[0] === 'alt');
+    const altTag = event.tags.find((tag) => tag[0] === 'alt');
     return altTag?.[1] || this.getEventTitle(event) || 'Photo';
   });
 
@@ -86,7 +86,7 @@ export class PhotoEventComponent {
   }
 
   getBlurhash(event: Event, imageIndex = 0): string | null {
-    const blurhashTags = event.tags.filter(tag => tag[0] === 'blurhash');
+    const blurhashTags = event.tags.filter((tag) => tag[0] === 'blurhash');
     return blurhashTags[imageIndex]?.[1] || null;
   }
 
@@ -114,19 +114,19 @@ export class PhotoEventComponent {
     const imageUrls: string[] = [];
 
     // Get URLs from 'url' tags (primary images)
-    const urlTags = event.tags.filter(tag => tag[0] === 'url');
-    imageUrls.push(...urlTags.map(tag => tag[1]));
+    const urlTags = event.tags.filter((tag) => tag[0] === 'url');
+    imageUrls.push(...urlTags.map((tag) => tag[1]));
 
     // Get URLs from 'image' tags (alternative images)
-    const imageTags = event.tags.filter(tag => tag[0] === 'image');
-    imageUrls.push(...imageTags.map(tag => tag[1]));
+    const imageTags = event.tags.filter((tag) => tag[0] === 'image');
+    imageUrls.push(...imageTags.map((tag) => tag[1]));
 
     // Remove duplicates
     return [...new Set(imageUrls)];
   }
 
   private getEventTitle(event: Event): string | null {
-    const titleTag = event.tags.find(tag => tag[0] === 'title');
+    const titleTag = event.tags.find((tag) => tag[0] === 'title');
     return titleTag?.[1] || null;
   }
 

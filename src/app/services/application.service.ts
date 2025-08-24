@@ -39,9 +39,7 @@ export class ApplicationService {
   readonly isBrowser = signal(isPlatformBrowser(this.platformId));
 
   /** Check the status on fully initialized, which ensures Nostr, Storage and user is logged in. */
-  initialized = computed(
-    () => this.nostrService.initialized() && this.storage.initialized()
-  );
+  initialized = computed(() => this.nostrService.initialized() && this.storage.initialized());
 
   /** User is "authenticated" if there is any account set. */
   authenticated = computed(() => this.accountState.account() != null);
@@ -86,10 +84,7 @@ export class ApplicationService {
           try {
             // Check if profile discovery has already been done for this account
             if (!this.accountState.hasProfileDiscoveryBeenDone(pubkey)) {
-              await this.accountState.startProfileProcessing(
-                followingList,
-                this.dataService
-              );
+              await this.accountState.startProfileProcessing(followingList, this.dataService);
               this.accountState.markProfileDiscoveryDone(pubkey);
             } else {
               const currentState = this.accountState.profileProcessingState();
@@ -98,7 +93,7 @@ export class ApplicationService {
                 await this.accountState.loadProfilesFromStorageToCache(
                   pubkey,
                   this.dataService,
-                  this.storage
+                  this.storage,
                 );
               }
             }
@@ -113,9 +108,7 @@ export class ApplicationService {
   private getStoredFeatureLevel(): FeatureLevel {
     if (!this.isBrowser()) return 'stable';
 
-    const storedLevel = localStorage.getItem(
-      this.appState.FEATURE_LEVEL
-    ) as FeatureLevel | null;
+    const storedLevel = localStorage.getItem(this.appState.FEATURE_LEVEL) as FeatureLevel | null;
     return storedLevel || 'stable';
   }
 
@@ -124,10 +117,7 @@ export class ApplicationService {
       return true;
     }
 
-    return (
-      this.featurePrecedence[level] <=
-      this.featurePrecedence[this.featureLevel()]
-    );
+    return this.featurePrecedence[level] <= this.featurePrecedence[this.featureLevel()];
   }
 
   reload() {

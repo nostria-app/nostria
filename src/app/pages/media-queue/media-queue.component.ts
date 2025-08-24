@@ -1,9 +1,6 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
-import {
-  AddMediaDialog,
-  AddMediaDialogData,
-} from './add-media-dialog/add-media-dialog';
+import { AddMediaDialog, AddMediaDialogData } from './add-media-dialog/add-media-dialog';
 import { MediaItem } from '../../interfaces';
 import { UtilitiesService } from '../../services/utilities.service';
 import { MediaPlayerService } from '../../services/media-player.service';
@@ -50,12 +47,9 @@ export class MediaQueueComponent implements OnInit {
         return;
       }
 
-      if (
-        result.url.indexOf('youtu.be') > -1 ||
-        result.url.indexOf('youtube.com') > -1
-      ) {
+      if (result.url.indexOf('youtu.be') > -1 || result.url.indexOf('youtube.com') > -1) {
         const youtubes = [...result.url.matchAll(this.utilities.regexpYouTube)];
-        const youtube = youtubes.map(i => {
+        const youtube = youtubes.map((i) => {
           return { url: `https://www.youtube.com/embed/${i[1]}` };
         });
 
@@ -69,10 +63,7 @@ export class MediaQueueComponent implements OnInit {
             type: 'YouTube',
           });
         }
-      } else if (
-        result.url.indexOf('.mp4') > -1 ||
-        result.url.indexOf('.webm') > -1
-      ) {
+      } else if (result.url.indexOf('.mp4') > -1 || result.url.indexOf('.webm') > -1) {
         this.media.enque({
           artist: '',
           artwork: '/logos/youtube.png',

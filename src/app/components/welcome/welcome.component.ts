@@ -9,13 +9,7 @@ import { ThemeService } from '../../services/theme.service';
 
 @Component({
   selector: 'app-welcome',
-  imports: [
-    MatIconModule,
-    MatButtonModule,
-    MatInputModule,
-    MatFormFieldModule,
-    FormsModule,
-  ],
+  imports: [MatIconModule, MatButtonModule, MatInputModule, MatFormFieldModule, FormsModule],
   templateUrl: './welcome.component.html',
   styleUrl: './welcome.component.scss',
 })
@@ -98,13 +92,13 @@ export class WelcomeComponent {
   // Get current step data
   getCurrentStep() {
     const steps = this.wizardSteps();
-    return steps.find(step => step.id === this.currentWizardStep()) || steps[0];
+    return steps.find((step) => step.id === this.currentWizardStep()) || steps[0];
   }
 
   // Navigation methods
   nextStep(): void {
     if (this.currentWizardStep() < this.totalWizardSteps()) {
-      this.currentWizardStep.update(step => step + 1);
+      this.currentWizardStep.update((step) => step + 1);
     } else {
       this.completeWizard();
     }
@@ -112,7 +106,7 @@ export class WelcomeComponent {
 
   previousStep(): void {
     if (this.currentWizardStep() > 1) {
-      this.currentWizardStep.update(step => step - 1);
+      this.currentWizardStep.update((step) => step - 1);
     }
   }
 

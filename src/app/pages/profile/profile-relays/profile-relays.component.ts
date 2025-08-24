@@ -1,11 +1,4 @@
-import {
-  Component,
-  inject,
-  signal,
-  computed,
-  ViewChild,
-  ElementRef,
-} from '@angular/core';
+import { Component, inject, signal, computed, ViewChild, ElementRef } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { animate, style, transition, trigger } from '@angular/animations';
 import { Location } from '@angular/common';
@@ -36,16 +29,10 @@ import { LoggerService } from '../../../services/logger.service';
     trigger('slideInOut', [
       transition(':enter', [
         style({ transform: 'translateY(100%)', opacity: 0 }),
-        animate(
-          '300ms ease-out',
-          style({ transform: 'translateY(0)', opacity: 1 })
-        ),
+        animate('300ms ease-out', style({ transform: 'translateY(0)', opacity: 1 })),
       ]),
       transition(':leave', [
-        animate(
-          '300ms ease-in',
-          style({ transform: 'translateY(100%)', opacity: 0 })
-        ),
+        animate('300ms ease-in', style({ transform: 'translateY(100%)', opacity: 0 })),
       ]),
     ]),
     trigger('profileShrink', [

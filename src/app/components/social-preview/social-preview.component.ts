@@ -40,7 +40,7 @@ export class SocialPreviewComponent {
       return;
     }
 
-    this.preview.update(prev => ({
+    this.preview.update((prev) => ({
       ...prev,
       url,
       loading: true,
@@ -49,7 +49,7 @@ export class SocialPreviewComponent {
 
     try {
       const data = await this.openGraphService.getOpenGraphData(url);
-      this.preview.update(prev => ({
+      this.preview.update((prev) => ({
         ...prev,
         loading: false,
         title: data.title || '',
@@ -57,7 +57,7 @@ export class SocialPreviewComponent {
         image: data.image || '',
       }));
     } catch (error) {
-      this.preview.update(prev => ({ ...prev, loading: false, error: true }));
+      this.preview.update((prev) => ({ ...prev, loading: false, error: true }));
       console.error('Failed to load preview:', error);
     }
   }

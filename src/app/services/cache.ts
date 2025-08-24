@@ -142,7 +142,7 @@ export class Cache {
    * Gets all values in the cache
    */
   values<T>(): T[] {
-    return Array.from(this.cache.values()).map(entry => entry.value);
+    return Array.from(this.cache.values()).map((entry) => entry.value);
   }
 
   /**
@@ -165,7 +165,7 @@ export class Cache {
    * Gets multiple values at once
    */
   getMany<T>(keys: string[]): [string, T | undefined][] {
-    return keys.map(key => [key, this.get<T>(key)]);
+    return keys.map((key) => [key, this.get<T>(key)]);
   }
 
   /**
@@ -235,7 +235,7 @@ export class Cache {
   }
 
   private updateStats(updates: Partial<CacheStats>): void {
-    this._stats.update(current => ({ ...current, ...updates }));
+    this._stats.update((current) => ({ ...current, ...updates }));
   }
 
   private scheduleStatsUpdate(updates: Partial<CacheStats>): void {

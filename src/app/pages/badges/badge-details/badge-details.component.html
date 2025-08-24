@@ -30,11 +30,7 @@
 
         @if (isCreator()) {
           <div class="badge-actions">
-            <button
-              mat-raised-button
-              color="primary"
-              (click)="toggleIssueBadge()"
-            >
+            <button mat-raised-button color="primary" (click)="toggleIssueBadge()">
               <mat-icon>card_giftcard</mat-icon>
               Issue Badge
             </button>
@@ -88,9 +84,7 @@
 
               <div class="issue-badge-form">
                 <h3>Issue Badge to Recipients</h3>
-                <p>
-                  Enter public keys or npubs (one per line or comma-separated)
-                </p>
+                <p>Enter public keys or npubs (one per line or comma-separated)</p>
 
                 <mat-form-field class="full-width">
                   <textarea
@@ -102,14 +96,8 @@
                 </mat-form-field>
 
                 <div class="form-actions">
-                  <button mat-stroked-button (click)="toggleIssueBadge()">
-                    Cancel
-                  </button>
-                  <button
-                    mat-flat-button
-                    color="primary"
-                    (click)="publishBadgeReward()"
-                  >
+                  <button mat-stroked-button (click)="toggleIssueBadge()">Cancel</button>
+                  <button mat-flat-button color="primary" (click)="publishBadgeReward()">
                     Publish Badge Reward
                   </button>
                 </div>

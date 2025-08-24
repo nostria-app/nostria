@@ -1,16 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import {
-  FormBuilder,
-  FormGroup,
-  ReactiveFormsModule,
-  Validators,
-} from '@angular/forms';
-import {
-  MatDialogModule,
-  MatDialogRef,
-  MAT_DIALOG_DATA,
-} from '@angular/material/dialog';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
@@ -87,7 +78,7 @@ export class CreateEventDialogComponent {
     });
 
     // Watch all-day toggle
-    this.eventForm.get('isAllDay')?.valueChanges.subscribe(value => {
+    this.eventForm.get('isAllDay')?.valueChanges.subscribe((value) => {
       this.isAllDay.set(value);
       if (value) {
         // For all-day events, clear time fields
@@ -102,13 +93,13 @@ export class CreateEventDialogComponent {
     const hashtag = hashtagControl?.value?.trim();
 
     if (hashtag && !this.hashtags().includes(hashtag)) {
-      this.hashtags.update(tags => [...tags, hashtag]);
+      this.hashtags.update((tags) => [...tags, hashtag]);
       hashtagControl?.setValue('');
     }
   }
 
   removeHashtag(hashtag: string): void {
-    this.hashtags.update(tags => tags.filter(t => t !== hashtag));
+    this.hashtags.update((tags) => tags.filter((t) => t !== hashtag));
   }
 
   onHashtagKeyPress(event: KeyboardEvent): void {
@@ -138,15 +129,11 @@ export class CreateEventDialogComponent {
         // Date-based event (kind 31922)
         eventKind = 31922;
         const startDate = new Date(formValue.startDate);
-        const endDate = formValue.endDate
-          ? new Date(formValue.endDate)
-          : undefined;
+        const endDate = formValue.endDate ? new Date(formValue.endDate) : undefined;
 
         // Format as YYYY-MM-DD
         const startStr = startDate.toISOString().split('T')[0];
-        const endStr = endDate
-          ? endDate.toISOString().split('T')[0]
-          : undefined;
+        const endStr = endDate ? endDate.toISOString().split('T')[0] : undefined;
 
         tags = [
           ['d', this.generateRandomId()],
@@ -162,19 +149,14 @@ export class CreateEventDialogComponent {
         eventKind = 31923;
 
         // Combine date and time
-        const startDateTime = this.combineDateAndTime(
-          formValue.startDate,
-          formValue.startTime
-        );
+        const startDateTime = this.combineDateAndTime(formValue.startDate, formValue.startTime);
         const endDateTime =
           formValue.endDate && formValue.endTime
             ? this.combineDateAndTime(formValue.endDate, formValue.endTime)
             : undefined;
 
         startTimestamp = Math.floor(startDateTime.getTime() / 1000);
-        endTimestamp = endDateTime
-          ? Math.floor(endDateTime.getTime() / 1000)
-          : undefined;
+        endTimestamp = endDateTime ? Math.floor(endDateTime.getTime() / 1000) : undefined;
 
         tags = [
           ['d', this.generateRandomId()],
@@ -197,7 +179,7 @@ export class CreateEventDialogComponent {
       }
 
       // Add hashtags
-      this.hashtags().forEach(hashtag => {
+      this.hashtags().forEach((hashtag) => {
         tags.push(['t', hashtag]);
       });
 
@@ -252,8 +234,7 @@ export class CreateEventDialogComponent {
 
   private generateRandomId(): string {
     return (
-      Math.random().toString(36).substring(2, 15) +
-      Math.random().toString(36).substring(2, 15)
+      Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
     );
   }
 }

@@ -138,17 +138,17 @@ export class BadgeDetailsComponent {
     const tags = badgeEvent.tags || [];
 
     // Extract information from tags
-    const nameTag = tags.find(tag => tag[0] === 'name');
-    const descTag = tags.find(tag => tag[0] === 'description');
-    const imageTag = tags.find(tag => tag[0] === 'image');
-    const thumbTag = tags.find(tag => tag[0] === 'thumb');
-    const slugTag = tags.find(tag => tag[0] === 'd');
+    const nameTag = tags.find((tag) => tag[0] === 'name');
+    const descTag = tags.find((tag) => tag[0] === 'description');
+    const imageTag = tags.find((tag) => tag[0] === 'image');
+    const thumbTag = tags.find((tag) => tag[0] === 'thumb');
+    const slugTag = tags.find((tag) => tag[0] === 'd');
 
     // Extract additional tags for display (excluding system tags)
     const systemTags = ['name', 'description', 'image', 'thumb', 'd'];
     const displayTags = tags
-      .filter(tag => !systemTags.includes(tag[0]) && tag[1])
-      .map(tag => tag[1]);
+      .filter((tag) => !systemTags.includes(tag[0]) && tag[1])
+      .map((tag) => tag[1]);
 
     return {
       id: badgeEvent.id,
@@ -177,7 +177,7 @@ export class BadgeDetailsComponent {
   }
 
   toggleIssueBadge(): void {
-    this.issuingBadge.update(value => !value);
+    this.issuingBadge.update((value) => !value);
   }
 
   async publishBadgeReward(): Promise<void> {
@@ -201,8 +201,8 @@ export class BadgeDetailsComponent {
       // Parse recipient pubkeys
       const pubkeys = recipients
         .split(/[\s,\n]+/)
-        .map(key => key.trim())
-        .filter(key => key !== '');
+        .map((key) => key.trim())
+        .filter((key) => key !== '');
 
       if (pubkeys.length === 0) {
         this.snackBar.open('No valid recipients found', 'Close', {
@@ -219,11 +219,9 @@ export class BadgeDetailsComponent {
         recipients: pubkeys,
       });
 
-      this.snackBar.open(
-        `Badge awarded to ${pubkeys.length} recipients`,
-        'Close',
-        { duration: 3000 }
-      );
+      this.snackBar.open(`Badge awarded to ${pubkeys.length} recipients`, 'Close', {
+        duration: 3000,
+      });
 
       // Reset form
       this.recipientPubkeys.reset();

@@ -1,10 +1,6 @@
 import { Component, inject, signal, computed } from '@angular/core';
 
-import {
-  MatDialogRef,
-  MAT_DIALOG_DATA,
-  MatDialogModule,
-} from '@angular/material/dialog';
+import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -131,11 +127,7 @@ const NOSTR_KINDS = [
                 <div class="basic-fields">
                   <mat-form-field appearance="outline" class="full-width">
                     <mat-label>Column Name</mat-label>
-                    <input
-                      matInput
-                      formControlName="label"
-                      placeholder="My Custom Column"
-                    />
+                    <input matInput formControlName="label" placeholder="My Custom Column" />
                     <mat-icon matSuffix>label</mat-icon>
                     @if (columnForm.get('label')?.hasError('required')) {
                       <mat-error>Column name is required</mat-error>
@@ -154,9 +146,7 @@ const NOSTR_KINDS = [
                         </mat-option>
                       }
                     </mat-select>
-                    <mat-icon matSuffix>{{
-                      columnForm.get('icon')?.value || 'widgets'
-                    }}</mat-icon>
+                    <mat-icon matSuffix>{{ columnForm.get('icon')?.value || 'widgets' }}</mat-icon>
                   </mat-form-field>
                 </div>
               </div>
@@ -210,17 +200,10 @@ const NOSTR_KINDS = [
 
                 <div class="kinds-section">
                   <h3>Following or Public</h3>
-                  <p class="section-description">
-                    Select which events to include in this column
-                  </p>
+                  <p class="section-description">Select which events to include in this column</p>
 
-                  <mat-button-toggle-group
-                    name="source"
-                    formControlName="source"
-                  >
-                    <mat-button-toggle value="following"
-                      >Following</mat-button-toggle
-                    >
+                  <mat-button-toggle-group name="source" formControlName="source">
+                    <mat-button-toggle value="following">Following</mat-button-toggle>
                     <mat-button-toggle value="public">Public</mat-button-toggle>
                   </mat-button-toggle-group>
                 </div>
@@ -233,9 +216,7 @@ const NOSTR_KINDS = [
               <div class="step-content">
                 <div class="relay-section">
                   <h3>Relay Source</h3>
-                  <p class="section-description">
-                    Choose which relays to use for this column
-                  </p>
+                  <p class="section-description">Choose which relays to use for this column</p>
 
                   <mat-form-field appearance="outline" class="full-width">
                     <mat-label>Relay Configuration</mat-label>
@@ -248,9 +229,7 @@ const NOSTR_KINDS = [
                           <mat-icon>person</mat-icon>
                           <div>
                             <div class="option-title">User Relays</div>
-                            <div class="option-description">
-                              Use your configured relays
-                            </div>
+                            <div class="option-description">Use your configured relays</div>
                           </div>
                         </div>
                       </mat-option>
@@ -259,9 +238,7 @@ const NOSTR_KINDS = [
                           <mat-icon>explore</mat-icon>
                           <div>
                             <div class="option-title">Discovery Relays</div>
-                            <div class="option-description">
-                              Use discovery and search relays
-                            </div>
+                            <div class="option-description">Use discovery and search relays</div>
                           </div>
                         </div>
                       </mat-option>
@@ -270,9 +247,7 @@ const NOSTR_KINDS = [
                           <mat-icon>settings</mat-icon>
                           <div>
                             <div class="option-title">Custom Relays</div>
-                            <div class="option-description">
-                              Specify custom relay URLs
-                            </div>
+                            <div class="option-description">Specify custom relay URLs</div>
                           </div>
                         </div>
                       </mat-option>
@@ -285,10 +260,7 @@ const NOSTR_KINDS = [
                       <h4>Custom Relay URLs</h4>
                       <mat-form-field class="full-width" appearance="outline">
                         <mat-label>Custom Relays</mat-label>
-                        <mat-chip-grid
-                          #relayChipGrid
-                          aria-label="Custom relays"
-                        >
+                        <mat-chip-grid #relayChipGrid aria-label="Custom relays">
                           @for (relay of customRelays(); track relay) {
                             <mat-chip-row (removed)="removeCustomRelay(relay)">
                               {{ relay }}
@@ -307,9 +279,7 @@ const NOSTR_KINDS = [
                           (matChipInputTokenEnd)="addCustomRelay($event)"
                         />
                         <mat-icon matSuffix>add_link</mat-icon>
-                        <mat-hint
-                          >Enter WebSocket URLs (wss:// or ws://)</mat-hint
-                        >
+                        <mat-hint>Enter WebSocket URLs (wss:// or ws://)</mat-hint>
                       </mat-form-field>
                     </div>
                   }
@@ -341,12 +311,7 @@ const NOSTR_KINDS = [
 
       <div class="dialog-actions" mat-dialog-actions>
         <button mat-button mat-dialog-close type="button">Cancel</button>
-        <button
-          mat-flat-button
-          color="primary"
-          (click)="onSubmit()"
-          [disabled]="!columnForm.valid"
-        >
+        <button mat-flat-button color="primary" (click)="onSubmit()" [disabled]="!columnForm.valid">
           <mat-icon>{{ isEditMode() ? 'save' : 'add' }}</mat-icon>
           {{ isEditMode() ? 'Save Changes' : 'Create Column' }}
         </button>
@@ -713,9 +678,7 @@ export class NewColumnDialogComponent {
   selectedColumnType = signal<string>(this.data.column?.type || 'custom');
   selectedKinds = signal<number[]>(this.data.column?.kinds || []);
   customRelays = signal<string[]>(this.data.column?.customRelays || []);
-  showCustomRelays = computed(
-    () => this.columnForm.get('relayConfig')?.value === 'custom'
-  );
+  showCustomRelays = computed(() => this.columnForm.get('relayConfig')?.value === 'custom');
 
   // Form controls for chips
   kindInputControl = new FormControl('');
@@ -733,10 +696,9 @@ export class NewColumnDialogComponent {
     const input = this.kindInputControl.value?.toString().toLowerCase() || '';
     const selected = this.selectedKinds();
 
-    return this.nostrKinds().filter(kind => {
+    return this.nostrKinds().filter((kind) => {
       const matchesInput =
-        kind.label.toLowerCase().includes(input) ||
-        kind.value.toString().includes(input);
+        kind.label.toLowerCase().includes(input) || kind.value.toString().includes(input);
       const notSelected = !selected.includes(kind.value);
       return matchesInput && notSelected;
     });
@@ -745,13 +707,7 @@ export class NewColumnDialogComponent {
   selectColumnType(typeKey: string): void {
     this.selectedColumnType.set(typeKey);
     this.columnForm.patchValue({
-      type: typeKey as
-        | 'photos'
-        | 'videos'
-        | 'notes'
-        | 'articles'
-        | 'music'
-        | 'custom',
+      type: typeKey as 'photos' | 'videos' | 'notes' | 'articles' | 'music' | 'custom',
     });
 
     // Auto-fill based on column type
@@ -771,7 +727,7 @@ export class NewColumnDialogComponent {
   }
 
   getKindLabel(kind: number): string {
-    const kindInfo = this.nostrKinds().find(k => k.value === kind);
+    const kindInfo = this.nostrKinds().find((k) => k.value === kind);
     return kindInfo ? kindInfo.label : `Kind ${kind}`;
   }
 
@@ -780,7 +736,7 @@ export class NewColumnDialogComponent {
     if (value) {
       const kindNumber = parseInt(value, 10);
       if (!isNaN(kindNumber) && !this.selectedKinds().includes(kindNumber)) {
-        this.selectedKinds.update(kinds => [...kinds, kindNumber]);
+        this.selectedKinds.update((kinds) => [...kinds, kindNumber]);
         this.updateKindsForm();
       }
     }
@@ -789,14 +745,14 @@ export class NewColumnDialogComponent {
   }
 
   removeKind(kind: number): void {
-    this.selectedKinds.update(kinds => kinds.filter(k => k !== kind));
+    this.selectedKinds.update((kinds) => kinds.filter((k) => k !== kind));
     this.updateKindsForm();
   }
 
   kindSelected(event: MatAutocompleteSelectedEvent): void {
     const kindValue = event.option.value;
     if (!this.selectedKinds().includes(kindValue)) {
-      this.selectedKinds.update(kinds => [...kinds, kindValue]);
+      this.selectedKinds.update((kinds) => [...kinds, kindValue]);
       this.updateKindsForm();
     }
     this.kindInputControl.setValue('');
@@ -817,7 +773,7 @@ export class NewColumnDialogComponent {
     const value = event.value.trim();
     if (value && this.feedService.validateRelayUrl(value)) {
       if (!this.customRelays().includes(value)) {
-        this.customRelays.update(relays => [...relays, value]);
+        this.customRelays.update((relays) => [...relays, value]);
         this.updateCustomRelaysForm();
       }
     }
@@ -826,7 +782,7 @@ export class NewColumnDialogComponent {
   }
 
   removeCustomRelay(relay: string): void {
-    this.customRelays.update(relays => relays.filter(r => r !== relay));
+    this.customRelays.update((relays) => relays.filter((r) => r !== relay));
     this.updateCustomRelaysForm();
   }
 
@@ -839,9 +795,9 @@ export class NewColumnDialogComponent {
 
     switch (relayConfig) {
       case 'user':
-        return this.feedService.userRelays().map(r => r.url);
+        return this.feedService.userRelays().map((r) => r.url);
       case 'discovery':
-        return this.feedService.discoveryRelays().map(r => r.url);
+        return this.feedService.discoveryRelays().map((r) => r.url);
       case 'custom':
         return this.customRelays();
       default:
@@ -861,8 +817,7 @@ export class NewColumnDialogComponent {
         source: formValue.source || 'public',
         kinds: this.selectedKinds(),
         relayConfig: formValue.relayConfig as any,
-        customRelays:
-          formValue.relayConfig === 'custom' ? this.customRelays() : undefined,
+        customRelays: formValue.relayConfig === 'custom' ? this.customRelays() : undefined,
         filters: {},
         createdAt: this.data.column?.createdAt || Date.now(),
         updatedAt: Date.now(),

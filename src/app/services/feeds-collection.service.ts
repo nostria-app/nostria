@@ -42,13 +42,11 @@ export class FeedsCollectionService {
   private readonly _activeFeedId = signal<string | null>(null);
 
   // Public computed signals that use FeedService as source of truth
-  readonly feeds = computed(() =>
-    this.convertFeedConfigsToDefinitions(this.feedService.feeds())
-  );
+  readonly feeds = computed(() => this.convertFeedConfigsToDefinitions(this.feedService.feeds()));
   readonly activeFeedId = computed(() => this._activeFeedId());
   readonly activeFeed = computed(() => {
     const feedId = this._activeFeedId();
-    return feedId ? this.feeds().find(f => f.id === feedId) : null;
+    return feedId ? this.feeds().find((f) => f.id === feedId) : null;
   });
   constructor() {
     this.loadActiveFeed();
@@ -72,10 +70,8 @@ export class FeedsCollectionService {
   /**
    * Convert FeedConfig to FeedDefinition for UI compatibility
    */
-  private convertFeedConfigsToDefinitions(
-    feedConfigs: FeedConfig[]
-  ): FeedDefinition[] {
-    return feedConfigs.map(config => ({
+  private convertFeedConfigsToDefinitions(feedConfigs: FeedConfig[]): FeedDefinition[] {
+    return feedConfigs.map((config) => ({
       id: config.id,
       label: config.label,
       icon: config.icon,
@@ -107,9 +103,7 @@ export class FeedsCollectionService {
    */
   private loadActiveFeed(): void {
     try {
-      const activeFeedId = this.localStorageService.getItem(
-        this.ACTIVE_FEED_KEY
-      );
+      const activeFeedId = this.localStorageService.getItem(this.ACTIVE_FEED_KEY);
       if (activeFeedId) {
         this._activeFeedId.set(activeFeedId);
       }
@@ -137,9 +131,7 @@ export class FeedsCollectionService {
   /**
    * Add a new feed (delegates to FeedService)
    */
-  addFeed(
-    feedData: Omit<FeedDefinition, 'id' | 'createdAt' | 'updatedAt'>
-  ): FeedDefinition {
+  addFeed(feedData: Omit<FeedDefinition, 'id' | 'createdAt' | 'updatedAt'>): FeedDefinition {
     const feedConfig = this.feedService.addFeed({
       label: feedData.label,
       icon: feedData.icon,
@@ -152,22 +144,16 @@ export class FeedsCollectionService {
   } /**
    * Update a feed (delegates to FeedService)
    */
-  updateFeed(
-    id: string,
-    updates: Partial<Omit<FeedDefinition, 'id' | 'createdAt'>>
-  ): boolean {
+  updateFeed(id: string, updates: Partial<Omit<FeedDefinition, 'id' | 'createdAt'>>): boolean {
     // Only include properties that are actually being updated to avoid overwriting with undefined
     const feedConfig: Partial<Omit<FeedConfig, 'id' | 'createdAt'>> = {};
 
     if (updates.label !== undefined) feedConfig.label = updates.label;
     if (updates.icon !== undefined) feedConfig.icon = updates.icon;
-    if (updates.description !== undefined)
-      feedConfig.description = updates.description;
+    if (updates.description !== undefined) feedConfig.description = updates.description;
     if (updates.path !== undefined) feedConfig.path = updates.path;
-    if (updates.columns !== undefined)
-      feedConfig.columns = updates.columns as ColumnConfig[];
-    if (updates.updatedAt !== undefined)
-      feedConfig.updatedAt = updates.updatedAt;
+    if (updates.columns !== undefined) feedConfig.columns = updates.columns as ColumnConfig[];
+    if (updates.updatedAt !== undefined) feedConfig.updatedAt = updates.updatedAt;
 
     return this.feedService.updateFeed(id, feedConfig);
   }
@@ -176,12 +162,10 @@ export class FeedsCollectionService {
    * This is optimized for drag and drop operations to preserve DOM state
    */
   updateColumnOrder(id: string, columns: ColumnDefinition[]): boolean {
-    console.log(
-      `⚡ FeedsCollectionService: Updating column order for feed ${id}`
-    );
+    console.log(`⚡ FeedsCollectionService: Updating column order for feed ${id}`);
     console.log(
       `📋 New column order:`,
-      columns.map(col => `${col.label} (${col.id})`)
+      columns.map((col) => `${col.label} (${col.id})`),
     );
     return this.feedService.updateColumnOrder(id, columns as ColumnConfig[]);
   }
@@ -195,9 +179,7 @@ export class FeedsCollectionService {
     // If the removed feed was active, clear or set a new active feed
     if (removed && this._activeFeedId() === id) {
       const remainingFeeds = this.feeds();
-      this._activeFeedId.set(
-        remainingFeeds.length > 0 ? remainingFeeds[0].id : null
-      );
+      this._activeFeedId.set(remainingFeeds.length > 0 ? remainingFeeds[0].id : null);
       this.saveActiveFeed();
     }
 
@@ -225,7 +207,7 @@ export class FeedsCollectionService {
    * Get feed by ID
    */
   getFeedById(id: string): FeedDefinition | undefined {
-    return this.feeds().find(feed => feed.id === id);
+    return this.feeds().find((feed) => feed.id === id);
   }
   /**
    * Set the active feed
@@ -252,7 +234,7 @@ export class FeedsCollectionService {
    */
   addColumnToFeed(
     feedId: string,
-    columnData: Omit<ColumnDefinition, 'id' | 'createdAt' | 'updatedAt'>
+    columnData: Omit<ColumnDefinition, 'id' | 'createdAt' | 'updatedAt'>,
   ): boolean {
     const feed = this.getFeedById(feedId);
     if (!feed) {
@@ -284,7 +266,7 @@ export class FeedsCollectionService {
       return false;
     }
 
-    const updatedColumns = feed.columns.filter(col => col.id !== columnId);
+    const updatedColumns = feed.columns.filter((col) => col.id !== columnId);
     return this.updateFeed(feedId, {
       columns: updatedColumns,
       updatedAt: Date.now(),
@@ -297,7 +279,7 @@ export class FeedsCollectionService {
   updateColumnInFeed(
     feedId: string,
     columnId: string,
-    updates: Partial<Omit<ColumnDefinition, 'id' | 'createdAt'>>
+    updates: Partial<Omit<ColumnDefinition, 'id' | 'createdAt'>>,
   ): boolean {
     const feed = this.getFeedById(feedId);
     if (!feed) {
@@ -305,11 +287,9 @@ export class FeedsCollectionService {
       return false;
     }
 
-    const columnIndex = feed.columns.findIndex(col => col.id === columnId);
+    const columnIndex = feed.columns.findIndex((col) => col.id === columnId);
     if (columnIndex === -1) {
-      this.logger.warn(
-        `Column with id ${columnId} not found in feed ${feedId}`
-      );
+      this.logger.warn(`Column with id ${columnId} not found in feed ${feedId}`);
       return false;
     }
 

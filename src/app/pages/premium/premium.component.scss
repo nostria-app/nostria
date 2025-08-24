@@ -56,11 +56,7 @@
   text-align: center;
 
   &.best-value {
-    background: linear-gradient(
-      145deg,
-      rgba(142, 68, 173, 0.1),
-      rgba(52, 152, 219, 0.1)
-    );
+    background: linear-gradient(145deg, rgba(142, 68, 173, 0.1), rgba(52, 152, 219, 0.1));
     border: 1px solid rgba(142, 68, 173, 0.2);
   }
 }
@@ -195,11 +191,7 @@
 
   &.premium {
     border-radius: 8px;
-    background: linear-gradient(
-      145deg,
-      rgba(142, 68, 173, 0.1),
-      rgba(52, 152, 219, 0.1)
-    );
+    background: linear-gradient(145deg, rgba(142, 68, 173, 0.1), rgba(52, 152, 219, 0.1));
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 
     .storage-icon mat-icon {

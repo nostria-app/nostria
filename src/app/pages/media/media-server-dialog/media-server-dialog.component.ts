@@ -8,11 +8,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import {
-  MatDialogModule,
-  MatDialogRef,
-  MAT_DIALOG_DATA,
-} from '@angular/material/dialog';
+import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
@@ -104,8 +100,7 @@ export class MediaServerDialogComponent implements OnInit {
         if (headResponse.ok) {
           this.testResult = {
             success: true,
-            message:
-              'Server exists but info endpoint not available. Limited functionality.',
+            message: 'Server exists but info endpoint not available. Limited functionality.',
           };
         } else {
           this.testResult = {

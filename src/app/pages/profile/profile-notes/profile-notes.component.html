@@ -15,10 +15,7 @@
         </div>
       } @else {
         <div class="notes-list">
-          @for (
-            note of profileState.sortedNotes();
-            track note.event.id || $index
-          ) {
+          @for (note of profileState.sortedNotes(); track note.event.id || $index) {
             <app-event [event]="note.event" appearance="card"></app-event>
           }
 
@@ -31,9 +28,7 @@
           }
 
           <!-- No more notes indicator -->
-          @if (
-            !profileState.hasMoreNotes() && profileState.notes().length > 0
-          ) {
+          @if (!profileState.hasMoreNotes() && profileState.notes().length > 0) {
             <div class="no-more-indicator">
               <mat-icon>inbox</mat-icon>
               <p>You've reached the end</p>

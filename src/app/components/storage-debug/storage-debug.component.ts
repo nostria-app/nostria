@@ -15,9 +15,7 @@ import { CommonModule } from '@angular/common';
       <mat-card>
         <mat-card-header>
           <mat-card-title>Storage Debug Information</mat-card-title>
-          <mat-card-subtitle
-            >Diagnostic information for storage issues</mat-card-subtitle
-          >
+          <mat-card-subtitle>Diagnostic information for storage issues</mat-card-subtitle>
         </mat-card-header>
 
         <mat-card-content>
@@ -58,11 +56,7 @@ import { CommonModule } from '@angular/common';
           </mat-expansion-panel>
 
           <div class="actions-section">
-            <button
-              mat-raised-button
-              color="primary"
-              (click)="runDiagnostics()"
-            >
+            <button mat-raised-button color="primary" (click)="runDiagnostics()">
               Run Diagnostics
             </button>
 
@@ -149,9 +143,7 @@ export class StorageDebugComponent implements OnInit {
   }
 
   async clearStorage() {
-    if (
-      confirm('This will clear all stored data and restart the app. Continue?')
-    ) {
+    if (confirm('This will clear all stored data and restart the app. Continue?')) {
       try {
         await this.storage.wipe();
         window.location.reload();

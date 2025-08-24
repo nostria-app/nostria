@@ -1,11 +1,4 @@
-import {
-  Injectable,
-  PLATFORM_ID,
-  effect,
-  inject,
-  signal,
-  DOCUMENT,
-} from '@angular/core';
+import { Injectable, PLATFORM_ID, effect, inject, signal, DOCUMENT } from '@angular/core';
 import { LoggerService } from './logger.service';
 import { isPlatformBrowser } from '@angular/common';
 import { LocalStorageService } from './local-storage.service';
@@ -45,9 +38,7 @@ export class ThemeService {
       // Run on next tick to ensure we're fully in the browser context
       setTimeout(() => this.initBrowserFeatures(), 0);
     } else {
-      this.logger.debug(
-        'Running in SSR mode, skipping browser-specific initialization'
-      );
+      this.logger.debug('Running in SSR mode, skipping browser-specific initialization');
     }
 
     // Listen for system preference changes
@@ -59,34 +50,28 @@ export class ThemeService {
     //   }
     // });
 
-    this.logger.debug(
-      `Initial theme set to: ${this.darkMode() ? 'dark' : 'light'}`
-    );
+    this.logger.debug(`Initial theme set to: ${this.darkMode() ? 'dark' : 'light'}`);
   }
 
   private async initBrowserFeatures(): Promise<void> {
     try {
       // Initialize media query
-      this.darkThemeMediaQuery = window.matchMedia(
-        '(prefers-color-scheme: dark)'
-      );
+      this.darkThemeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
       // Set initial theme based on saved preference or system preference
       this.darkMode.set(await this.getInitialThemePreference());
 
       // Listen for system preference changes
-      this.darkThemeMediaQuery.addEventListener('change', e => {
+      this.darkThemeMediaQuery.addEventListener('change', (e) => {
         // Only update if user hasn't explicitly set a preference
         if (!this.localStorage.getItem(this.THEME_KEY)) {
-          this.logger.info(
-            `System color scheme changed to ${e.matches ? 'dark' : 'light'}`
-          );
+          this.logger.info(`System color scheme changed to ${e.matches ? 'dark' : 'light'}`);
           this.darkMode.set(e.matches);
         }
       });
 
       this.logger.debug(
-        `Browser initialization complete. Theme: ${this.darkMode() ? 'dark' : 'light'}`
+        `Browser initialization complete. Theme: ${this.darkMode() ? 'dark' : 'light'}`,
       );
     } catch (error) {
       this.logger.error('Error initializing browser features:', error);
@@ -121,7 +106,7 @@ export class ThemeService {
     // Fall back to system preference
     const systemPrefersDark = this.darkThemeMediaQuery?.matches || false;
     this.logger.debug(
-      `No saved theme preference, using system preference: ${systemPrefersDark ? 'dark' : 'light'}`
+      `No saved theme preference, using system preference: ${systemPrefersDark ? 'dark' : 'light'}`,
     );
     return systemPrefersDark;
   }
@@ -148,9 +133,7 @@ export class ThemeService {
     }
 
     // Find the theme-color meta tag
-    const metaThemeColor = this.document.querySelector(
-      'meta[name="theme-color"]'
-    );
+    const metaThemeColor = this.document.querySelector('meta[name="theme-color"]');
 
     // Set the color
     this.logger.debug(`Setting theme-color to: ${color}`);

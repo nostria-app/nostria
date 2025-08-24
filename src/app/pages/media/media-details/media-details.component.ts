@@ -75,9 +75,7 @@ export class MediaDetailsComponent {
         await this.fetchTextContent(item.url);
       }
     } catch (err) {
-      this.error.set(
-        err instanceof Error ? err.message : 'Failed to load media item'
-      );
+      this.error.set(err instanceof Error ? err.message : 'Failed to load media item');
     } finally {
       this.loading.set(false);
     }
@@ -120,7 +118,7 @@ export class MediaDetailsComponent {
     ];
 
     return (
-      textMimeTypes.some(type => mimeType.startsWith(type)) ||
+      textMimeTypes.some((type) => mimeType.startsWith(type)) ||
       mimeType.includes('text/') ||
       // Check extensions for common text file formats
       this.hasTextFileExtension(mimeType)
@@ -150,7 +148,7 @@ export class MediaDetailsComponent {
       '.yaml',
     ];
 
-    return textExtensions.some(ext => url.endsWith(ext));
+    return textExtensions.some((ext) => url.endsWith(ext));
   }
 
   async downloadMedia(): Promise<void> {
@@ -212,8 +210,7 @@ export class MediaDetailsComponent {
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       data: {
         title: 'Delete Media',
-        message:
-          'Are you sure you want to delete this media? This action cannot be undone.',
+        message: 'Are you sure you want to delete this media? This action cannot be undone.',
         confirmText: 'Delete',
         cancelText: 'Cancel',
         confirmColor: 'warn',
@@ -247,11 +244,9 @@ export class MediaDetailsComponent {
 
     // Don't attempt mirroring if already mirrored to all available servers
     if (this.mediaService.isFullyMirrored(item)) {
-      this.snackBar.open(
-        'Media is already mirrored to all your servers',
-        'Close',
-        { duration: 3000 }
-      );
+      this.snackBar.open('Media is already mirrored to all your servers', 'Close', {
+        duration: 3000,
+      });
       return;
     }
 
@@ -283,8 +278,7 @@ export class MediaDetailsComponent {
     // Handle case where type might be null/undefined
     const mimeType = item.type || 'application/octet-stream';
     const extension = mimeType.split('/')[1] || 'file';
-    const baseFileName =
-      item.url?.split('/').pop() || `nostr-media.${extension}`;
+    const baseFileName = item.url?.split('/').pop() || `nostr-media.${extension}`;
 
     // If the URL already has a proper filename with extension, use it
     if (baseFileName.includes('.')) {

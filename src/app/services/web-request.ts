@@ -20,11 +20,7 @@ export class WebRequest {
 
   constructor() {}
 
-  async fetchText(
-    url: string,
-    options?: RequestInit,
-    auth?: AuthenticationInit
-  ): Promise<string> {
+  async fetchText(url: string, options?: RequestInit, auth?: AuthenticationInit): Promise<string> {
     try {
       const response = await this.fetch(url, options, auth);
       return await response.text();
@@ -33,11 +29,7 @@ export class WebRequest {
     }
   }
 
-  async fetchJson(
-    url: string,
-    options?: RequestInit,
-    auth?: AuthenticationInit
-  ): Promise<any> {
+  async fetchJson(url: string, options?: RequestInit, auth?: AuthenticationInit): Promise<any> {
     try {
       if (!options) {
         options = {};
@@ -48,8 +40,7 @@ export class WebRequest {
       }
 
       // Set the Content-Type header to application/json
-      (options.headers as Record<string, string>)['Content-Type'] =
-        'application/json';
+      (options.headers as Record<string, string>)['Content-Type'] = 'application/json';
 
       const response = await this.fetch(url, options, auth);
       return await response.json();
@@ -58,11 +49,7 @@ export class WebRequest {
     }
   }
 
-  async fetch(
-    url: string,
-    options?: RequestInit,
-    auth?: AuthenticationInit
-  ): Promise<Response> {
+  async fetch(url: string, options?: RequestInit, auth?: AuthenticationInit): Promise<Response> {
     try {
       if (auth) {
         // Use NIP-98 authentication if available
@@ -80,8 +67,7 @@ export class WebRequest {
         }
 
         // Set the Authorization header
-        (options.headers as Record<string, string>)['Authorization'] =
-          `Nostr ${authHeader}`;
+        (options.headers as Record<string, string>)['Authorization'] = `Nostr ${authHeader}`;
       }
 
       console.log('WebRequest.fetch', url, options);

@@ -1,13 +1,7 @@
 <div class="qr-dialog-container">
   <mat-dialog-content class="qr-dialog-content">
     <div class="camera-container">
-      <video
-        #videoElement
-        class="camera-video"
-        autoplay
-        playsinline
-        muted
-      ></video>
+      <video #videoElement class="camera-video" autoplay playsinline muted></video>
       <canvas #canvasElement class="camera-overlay"></canvas>
 
       <!-- Floating close button -->
@@ -33,14 +27,10 @@
             [disabled]="!isScanning()"
           >
             <mat-icon>switch_camera</mat-icon>
-            Switch Camera ({{ currentCameraIndex() + 1 }}/{{
-              availableCameras().length
-            }})
+            Switch Camera ({{ currentCameraIndex() + 1 }}/{{ availableCameras().length }})
           </button>
           @if (currentDevice()) {
-            <div class="camera-info">
-              Current: {{ currentDevice()?.label || 'Unknown camera' }}
-            </div>
+            <div class="camera-info">Current: {{ currentDevice()?.label || 'Unknown camera' }}</div>
           }
         </div>
       }
@@ -61,11 +51,7 @@
               @for (camera of availableCameras(); track camera.deviceId) {
                 <button
                   mat-raised-button
-                  [color]="
-                    currentDevice()?.deviceId === camera.deviceId
-                      ? 'primary'
-                      : 'basic'
-                  "
+                  [color]="currentDevice()?.deviceId === camera.deviceId ? 'primary' : 'basic'"
                   (click)="tryDifferentCamera(camera.deviceId)"
                   class="camera-option-button"
                 >

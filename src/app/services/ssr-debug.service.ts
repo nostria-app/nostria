@@ -1,10 +1,4 @@
-import {
-  Injectable,
-  PLATFORM_ID,
-  inject,
-  signal,
-  computed,
-} from '@angular/core';
+import { Injectable, PLATFORM_ID, inject, signal, computed } from '@angular/core';
 import { isPlatformServer } from '@angular/common';
 
 @Injectable({
@@ -51,8 +45,7 @@ export class SsrDebugService {
       isServer: this.isServer(),
       platformId: this.platformId.toString(),
       timestamp: new Date().toISOString(),
-      nodeEnv:
-        typeof process !== 'undefined' ? process.env['NODE_ENV'] : 'browser',
+      nodeEnv: typeof process !== 'undefined' ? process.env['NODE_ENV'] : 'browser',
       memory: typeof process !== 'undefined' ? process.memoryUsage() : null,
     };
   }

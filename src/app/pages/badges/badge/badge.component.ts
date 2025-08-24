@@ -89,10 +89,7 @@ export class BadgeComponent {
 
   async parseBadge(event: NostrEvent | any) {
     if (event.slug) {
-      const definition = await this.loadBadgeDefinition(
-        event.pubkey,
-        event.slug
-      );
+      const definition = await this.loadBadgeDefinition(event.pubkey, event.slug);
       this.definition.set(definition);
     } else if (event.kind === kinds.BadgeDefinition) {
       this.definition.set(event);
@@ -159,8 +156,10 @@ export class BadgeComponent {
   }
 
   async loadBadgeDefinition(pubkey: string, slug: string) {
-    let definition: NostrEvent | null | undefined =
-      this.badgeService.getBadgeDefinition(pubkey, slug);
+    let definition: NostrEvent | null | undefined = this.badgeService.getBadgeDefinition(
+      pubkey,
+      slug,
+    );
 
     if (!definition) {
       definition = await this.badgeService.loadBadgeDefinition(pubkey, slug);

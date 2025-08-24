@@ -2,13 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
-import {
-  RouterModule,
-  RouterOutlet,
-  ActivatedRoute,
-  Router,
-  NavigationEnd,
-} from '@angular/router';
+import { RouterModule, RouterOutlet, ActivatedRoute, Router, NavigationEnd } from '@angular/router';
 import { MatListModule } from '@angular/material/list';
 import { MatDividerModule } from '@angular/material/divider';
 import { filter } from 'rxjs/operators';
@@ -71,20 +65,16 @@ export class SettingsComponent {
 
   constructor() {
     // Check if the screen is mobile-sized
-    this.breakpointObserver
-      .observe(['(max-width: 768px)'])
-      .subscribe(result => {
-        this.isMobile.set(result.matches);
-        this.showDetails.set(!result.matches);
-      });
+    this.breakpointObserver.observe(['(max-width: 768px)']).subscribe((result) => {
+      this.isMobile.set(result.matches);
+      this.showDetails.set(!result.matches);
+    });
 
     // Listen to route changes to update active section
-    this.router.events
-      .pipe(filter(event => event instanceof NavigationEnd))
-      .subscribe(() => {
-        const currentRoute = this.router.url.split('/').pop() || 'general';
-        this.activeSection.set(currentRoute);
-      });
+    this.router.events.pipe(filter((event) => event instanceof NavigationEnd)).subscribe(() => {
+      const currentRoute = this.router.url.split('/').pop() || 'general';
+      this.activeSection.set(currentRoute);
+    });
 
     // Set initial active section
     const currentRoute = this.router.url.split('/').pop() || 'general';
@@ -108,8 +98,7 @@ export class SettingsComponent {
 
   getTitle() {
     return (
-      this.sections.find(section => section.id === this.activeSection())
-        ?.title || 'Settings'
+      this.sections.find((section) => section.id === this.activeSection())?.title || 'Settings'
     );
   }
 }

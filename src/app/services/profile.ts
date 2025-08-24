@@ -78,9 +78,7 @@ export class Profile {
    * @param options Profile update options
    * @returns Promise resolving to the result of the operation
    */
-  async updateProfile(
-    options: ProfileUpdateOptions
-  ): Promise<ProfileCreateResult> {
+  async updateProfile(options: ProfileUpdateOptions): Promise<ProfileCreateResult> {
     this.logger.debug('Updating profile', options);
 
     if (this.isUpdating()) {
@@ -93,32 +91,28 @@ export class Profile {
       const profileData = { ...options.profileData };
 
       // Check if file uploads are needed and media servers are available
-      const needsFileUpload =
-        options.profileImageFile || options.bannerImageFile;
+      const needsFileUpload = options.profileImageFile || options.bannerImageFile;
 
       // If media servers are required but not available, handle gracefully
       if (needsFileUpload && !options.skipMediaServerCheck) {
         if (!this.hasMediaServers()) {
           throw new Error(
-            'Media servers are required for file uploads. Please configure media servers first.'
+            'Media servers are required for file uploads. Please configure media servers first.',
           );
         }
       }
 
       // Handle profile image upload (only if media servers are available or check is skipped)
-      if (
-        options.profileImageFile &&
-        (options.skipMediaServerCheck || this.hasMediaServers())
-      ) {
+      if (options.profileImageFile && (options.skipMediaServerCheck || this.hasMediaServers())) {
         const uploadResult = await this.media.uploadFile(
           options.profileImageFile,
           true,
-          this.media.mediaServers()
+          this.media.mediaServers(),
         );
 
         if (!uploadResult.item) {
           throw new Error(
-            `Failed to upload profile image: ${uploadResult.message || 'Unknown error'}`
+            `Failed to upload profile image: ${uploadResult.message || 'Unknown error'}`,
           );
         }
 
@@ -129,19 +123,16 @@ export class Profile {
       }
 
       // Handle banner upload (only if media servers are available or check is skipped)
-      if (
-        options.bannerImageFile &&
-        (options.skipMediaServerCheck || this.hasMediaServers())
-      ) {
+      if (options.bannerImageFile && (options.skipMediaServerCheck || this.hasMediaServers())) {
         const uploadResult = await this.media.uploadFile(
           options.bannerImageFile,
           true,
-          this.media.mediaServers()
+          this.media.mediaServers(),
         );
 
         if (!uploadResult.item) {
           throw new Error(
-            `Failed to upload banner image: ${uploadResult.message || 'Unknown error'}`
+            `Failed to upload banner image: ${uploadResult.message || 'Unknown error'}`,
           );
         }
 
@@ -152,14 +143,10 @@ export class Profile {
       // Log if files were skipped due to missing media servers
       if (options.skipMediaServerCheck) {
         if (options.profileImageFile && !this.hasMediaServers()) {
-          this.logger.debug(
-            'Profile image upload skipped - no media servers configured'
-          );
+          this.logger.debug('Profile image upload skipped - no media servers configured');
         }
         if (options.bannerImageFile && !this.hasMediaServers()) {
-          this.logger.debug(
-            'Banner image upload skipped - no media servers configured'
-          );
+          this.logger.debug('Banner image upload skipped - no media servers configured');
         }
       }
 
@@ -189,9 +176,7 @@ export class Profile {
       }
 
       // Update the profile signal
-      this.accountState.profile.set(
-        this.accountState.getAccountProfile(record.event.pubkey)
-      );
+      this.accountState.profile.set(this.accountState.getAccountProfile(record.event.pubkey));
 
       this.logger.debug('Profile update completed successfully');
       return { success: true, profileEvent };
@@ -199,8 +184,7 @@ export class Profile {
       this.logger.error('Failed to update profile', error);
       return {
         success: false,
-        error:
-          error instanceof Error ? error.message : 'Unknown error occurred',
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
       };
     } finally {
       this.isUpdating.set(false);
@@ -216,7 +200,7 @@ export class Profile {
   async createInitialProfile(
     pubkey: string,
     displayName?: string,
-    profileImageFile?: File
+    profileImageFile?: File,
   ): Promise<ProfileCreateResult> {
     this.logger.debug('Creating initial profile', {
       hasDisplayName: !!displayName,
@@ -279,7 +263,7 @@ export class Profile {
     }
 
     // Remove empty string values to keep the profile clean
-    Object.keys(cleaned).forEach(key => {
+    Object.keys(cleaned).forEach((key) => {
       if (cleaned[key] === '') {
         delete cleaned[key];
       }
@@ -300,11 +284,7 @@ export class Profile {
     const tags = existingProfile?.event.tags || []; // Default to empty tags array
 
     // Create unsigned event
-    const unsignedEvent = this.nostr.createEvent(
-      kind,
-      JSON.stringify(profileData),
-      tags
-    );
+    const unsignedEvent = this.nostr.createEvent(kind, JSON.stringify(profileData), tags);
 
     // Sign the event
     const signedEvent = await this.nostr.signEvent(unsignedEvent);

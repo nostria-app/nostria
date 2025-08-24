@@ -13,9 +13,7 @@ import { MatCardModule } from '@angular/material/card';
     <mat-card>
       <mat-card-header>
         <mat-card-title>Favorites Test</mat-card-title>
-        <mat-card-subtitle
-          >Current Account: {{ currentAccount }}</mat-card-subtitle
-        >
+        <mat-card-subtitle>Current Account: {{ currentAccount }}</mat-card-subtitle>
       </mat-card-header>
       <mat-card-content>
         <p>Current favorites count: {{ currentFavorites.length }}</p>
@@ -24,15 +22,9 @@ import { MatCardModule } from '@angular/material/card';
         </ul>
 
         <h3>Test Actions</h3>
-        <button mat-button (click)="addTestFavorite()">
-          Add Test Favorite
-        </button>
-        <button mat-button (click)="removeTestFavorite()">
-          Remove Test Favorite
-        </button>
-        <button mat-button (click)="clearAllFavorites()">
-          Clear All Favorites
-        </button>
+        <button mat-button (click)="addTestFavorite()">Add Test Favorite</button>
+        <button mat-button (click)="removeTestFavorite()">Remove Test Favorite</button>
+        <button mat-button (click)="clearAllFavorites()">Clear All Favorites</button>
 
         <h3>Debug Info</h3>
         <p>Total favorites across all accounts: {{ totalFavorites }}</p>

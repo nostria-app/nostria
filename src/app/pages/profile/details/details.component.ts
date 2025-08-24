@@ -43,16 +43,10 @@ import { DiscoveryRelayServiceEx } from '../../../services/relays/discovery-rela
     trigger('slideInOut', [
       transition(':enter', [
         style({ transform: 'translateY(100%)', opacity: 0 }),
-        animate(
-          '300ms ease-out',
-          style({ transform: 'translateY(0)', opacity: 1 })
-        ),
+        animate('300ms ease-out', style({ transform: 'translateY(0)', opacity: 1 })),
       ]),
       transition(':leave', [
-        animate(
-          '300ms ease-in',
-          style({ transform: 'translateY(100%)', opacity: 0 })
-        ),
+        animate('300ms ease-in', style({ transform: 'translateY(100%)', opacity: 0 })),
       ]),
     ]),
     trigger('profileShrink', [
@@ -133,10 +127,7 @@ export class DetailsComponent implements OnInit, AfterViewInit {
   }
 
   async broadcastRelayList() {
-    const event = await this.storage.getEventByPubkeyAndKind(
-      this.npub(),
-      10002
-    );
+    const event = await this.storage.getEventByPubkeyAndKind(this.npub(), 10002);
 
     if (event) {
       console.log('Broadcasting Relay List event:', event);

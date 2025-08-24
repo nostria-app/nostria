@@ -14,12 +14,9 @@ export class Algorithms {
   private readonly metrics = inject(Metrics);
   private readonly favoritesService = inject(FavoritesService);
 
-  constructor() { }
+  constructor() {}
 
-  async calculateProfileViewed(
-    limit: number,
-    ascending: boolean
-  ): Promise<UserMetric[]> {
+  async calculateProfileViewed(limit: number, ascending: boolean): Promise<UserMetric[]> {
     // Get the list of users we follow
     const following = this.accountState.followingList();
 
@@ -30,12 +27,8 @@ export class Algorithms {
     const favorites = this.favoritesService.favorites();
 
     // Separate favorites from regular users
-    const favoriteMetrics = followingMetrics.filter(metric =>
-      favorites.includes(metric.pubkey)
-    );
-    const regularMetrics = followingMetrics.filter(
-      metric => !favorites.includes(metric.pubkey)
-    );
+    const favoriteMetrics = followingMetrics.filter((metric) => favorites.includes(metric.pubkey));
+    const regularMetrics = followingMetrics.filter((metric) => !favorites.includes(metric.pubkey));
 
     // Sort favorites by engagement score (favorites are always at the top)
     const sortedFavorites = favoriteMetrics.sort((a, b) => {
@@ -65,7 +58,7 @@ export class Algorithms {
     const favorites = this.favoritesService.favorites();
 
     // Filter users with meaningful engagement OR are favorites
-    const candidateUsers = allMetrics.filter(metric => {
+    const candidateUsers = allMetrics.filter((metric) => {
       const isFavorite = favorites.includes(metric.pubkey);
       const hasEngagement =
         (metric.engagementScore || 0) > 10 &&
@@ -76,37 +69,33 @@ export class Algorithms {
     });
 
     // Add favorites that don't have metrics yet
-    const metricsPublicKeys = new Set(allMetrics.map(m => m.pubkey));
-    const favoritesWithoutMetrics = favorites.filter(
-      pubkey => !metricsPublicKeys.has(pubkey)
-    );
+    const metricsPublicKeys = new Set(allMetrics.map((m) => m.pubkey));
+    const favoritesWithoutMetrics = favorites.filter((pubkey) => !metricsPublicKeys.has(pubkey));
 
     // Create minimal metrics for favorites without data
-    const favoriteMetrics: UserMetric[] = favoritesWithoutMetrics.map(
-      pubkey => ({
-        pubkey,
-        viewed: 0,
-        profileClicks: 0,
-        liked: 0,
-        read: 0,
-        replied: 0,
-        reposted: 0,
-        quoted: 0,
-        messaged: 0,
-        mentioned: 0,
-        timeSpent: 0,
-        lastInteraction: Date.now(),
-        firstInteraction: Date.now(),
-        updated: Date.now(),
-        engagementScore: 1, // Very small positive score for favorites without metrics
-      })
-    );
+    const favoriteMetrics: UserMetric[] = favoritesWithoutMetrics.map((pubkey) => ({
+      pubkey,
+      viewed: 0,
+      profileClicks: 0,
+      liked: 0,
+      read: 0,
+      replied: 0,
+      reposted: 0,
+      quoted: 0,
+      messaged: 0,
+      mentioned: 0,
+      timeSpent: 0,
+      lastInteraction: Date.now(),
+      firstInteraction: Date.now(),
+      updated: Date.now(),
+      engagementScore: 1, // Very small positive score for favorites without metrics
+    }));
 
     // Combine all candidates
     const allCandidates = [...candidateUsers, ...favoriteMetrics];
 
     // Calculate final score with favorite boost
-    const scoredUsers = allCandidates.map(metric => {
+    const scoredUsers = allCandidates.map((metric) => {
       const baseScore = metric.engagementScore || 0;
       const favoriteBoost = favorites.includes(metric.pubkey) ? 2 : 0; // Small boost for favorites
 
@@ -117,9 +106,7 @@ export class Algorithms {
     });
 
     // Sort by final score and return
-    return scoredUsers
-      .sort((a, b) => b.finalScore - a.finalScore)
-      .slice(0, limit);
+    return scoredUsers.sort((a, b) => b.finalScore - a.finalScore).slice(0, limit);
   }
 
   /**
@@ -153,9 +140,9 @@ export class Algorithms {
 
     // Users who had engagement but haven't interacted recently
     const decliningUsers = allMetrics.filter(
-      metric =>
+      (metric) =>
         (metric.engagementScore || 0) > 20 && // Had good engagement
-        metric.lastInteraction < thirtyDaysAgo // But not recent
+        metric.lastInteraction < thirtyDaysAgo, // But not recent
     );
 
     return decliningUsers
@@ -178,14 +165,13 @@ export class Algorithms {
 
     // Calculate engagement rate (engagement actions / views)
     const usersWithRate = allMetrics
-      .filter(metric => metric.viewed > 0) // Must have views
-      .map(metric => ({
+      .filter((metric) => metric.viewed > 0) // Must have views
+      .map((metric) => ({
         ...metric,
         engagementRate:
-          (metric.liked + metric.replied + metric.reposted + metric.quoted) /
-          metric.viewed,
+          (metric.liked + metric.replied + metric.reposted + metric.quoted) / metric.viewed,
       }))
-      .filter(metric => metric.engagementRate > 0) // Must have some engagement
+      .filter((metric) => metric.engagementRate > 0) // Must have some engagement
       .sort((a, b) => b.engagementRate - a.engagementRate);
 
     return usersWithRate.slice(0, limit);
@@ -200,7 +186,7 @@ export class Algorithms {
     const following = this.accountState.followingList();
 
     // For articles, use much more lenient criteria
-    const candidateUsers = allMetrics.filter(metric => {
+    const candidateUsers = allMetrics.filter((metric) => {
       const isFavorite = favorites.includes(metric.pubkey);
       const isFollowing = following.includes(metric.pubkey);
       const hasAnyEngagement =
@@ -213,41 +199,39 @@ export class Algorithms {
     });
 
     // Add favorites that don't have metrics yet
-    const metricsPublicKeys = new Set(allMetrics.map(m => m.pubkey));
+    const metricsPublicKeys = new Set(allMetrics.map((m) => m.pubkey));
     const favoritesWithoutMetrics = favorites.filter(
-      pubkey => !metricsPublicKeys.has(pubkey) && following.includes(pubkey)
+      (pubkey) => !metricsPublicKeys.has(pubkey) && following.includes(pubkey),
     );
 
     // Create minimal metrics for favorites without data
-    const favoriteMetrics: UserMetric[] = favoritesWithoutMetrics.map(
-      pubkey => ({
-        pubkey,
-        viewed: 0,
-        profileClicks: 0,
-        liked: 0,
-        read: 0,
-        replied: 0,
-        reposted: 0,
-        quoted: 0,
-        messaged: 0,
-        mentioned: 0,
-        timeSpent: 0,
-        lastInteraction: Date.now(),
-        firstInteraction: Date.now(),
-        updated: Date.now(),
-        engagementScore: 1,
-      })
-    );
+    const favoriteMetrics: UserMetric[] = favoritesWithoutMetrics.map((pubkey) => ({
+      pubkey,
+      viewed: 0,
+      profileClicks: 0,
+      liked: 0,
+      read: 0,
+      replied: 0,
+      reposted: 0,
+      quoted: 0,
+      messaged: 0,
+      mentioned: 0,
+      timeSpent: 0,
+      lastInteraction: Date.now(),
+      firstInteraction: Date.now(),
+      updated: Date.now(),
+      engagementScore: 1,
+    }));
 
     // If we don't have enough candidates, add more from following list
     const allCandidates = [...candidateUsers, ...favoriteMetrics];
 
     if (allCandidates.length < limit) {
-      const candidatePubkeys = new Set(allCandidates.map(c => c.pubkey));
+      const candidatePubkeys = new Set(allCandidates.map((c) => c.pubkey));
       const additionalUsers = following
-        .filter(pubkey => !candidatePubkeys.has(pubkey))
+        .filter((pubkey) => !candidatePubkeys.has(pubkey))
         .slice(0, limit - allCandidates.length)
-        .map(pubkey => ({
+        .map((pubkey) => ({
           pubkey,
           viewed: 0,
           profileClicks: 0,
@@ -269,7 +253,7 @@ export class Algorithms {
     }
 
     // Calculate final score with read activity boost for articles
-    const scoredUsers = allCandidates.map(metric => {
+    const scoredUsers = allCandidates.map((metric) => {
       const baseScore = metric.engagementScore || 0;
       const favoriteBoost = favorites.includes(metric.pubkey) ? 5 : 0;
       const readBoost = metric.read * 2; // Boost users whose content we've read
@@ -281,8 +265,6 @@ export class Algorithms {
     });
 
     // Sort by final score and return
-    return scoredUsers
-      .sort((a, b) => b.finalScore - a.finalScore)
-      .slice(0, limit);
+    return scoredUsers.sort((a, b) => b.finalScore - a.finalScore).slice(0, limit);
   }
 }

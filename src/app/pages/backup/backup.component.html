@@ -42,28 +42,20 @@
 
       <mat-card-content>
         <p>
-          Create a backup of all your events and data stored in Nostria. The
-          backup will be saved as a zip file on your device.
+          Create a backup of all your events and data stored in Nostria. The backup will be saved as
+          a zip file on your device.
         </p>
 
         @if (isSaving()) {
           <div class="progress-container">
-            <mat-progress-bar
-              mode="determinate"
-              [value]="progress()"
-            ></mat-progress-bar>
+            <mat-progress-bar mode="determinate" [value]="progress()"></mat-progress-bar>
             <span class="progress-text">{{ progress().toFixed(0) }}%</span>
           </div>
         }
       </mat-card-content>
 
       <mat-card-actions>
-        <button
-          mat-flat-button
-          color="primary"
-          [disabled]="isSaving()"
-          (click)="saveBackup()"
-        >
+        <button mat-flat-button color="primary" [disabled]="isSaving()" (click)="saveBackup()">
           <mat-icon>save</mat-icon>
           @if (isSaving()) {
             <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
@@ -84,19 +76,14 @@
 
       <mat-card-content>
         <p>
-          Import events from a previously created Nostria backup file. This will
-          add any missing events to your local database.
+          Import events from a previously created Nostria backup file. This will add any missing
+          events to your local database.
         </p>
 
         @if (isImporting()) {
           <div class="progress-container">
-            <mat-progress-bar
-              mode="determinate"
-              [value]="importProgress()"
-            ></mat-progress-bar>
-            <span class="progress-text"
-              >{{ importProgress().toFixed(0) }}%</span
-            >
+            <mat-progress-bar mode="determinate" [value]="importProgress()"></mat-progress-bar>
+            <span class="progress-text">{{ importProgress().toFixed(0) }}%</span>
           </div>
         }
       </mat-card-content>
@@ -123,28 +110,19 @@
   <div class="info-section">
     <h2>About Backups</h2>
     <p>
-      Nostria keeps all your data in your browser's local storage. While this
-      provides privacy, it means your data could be lost if you clear your
-      browser data or switch devices.
+      Nostria keeps all your data in your browser's local storage. While this provides privacy, it
+      means your data could be lost if you clear your browser data or switch devices.
     </p>
     <p>
-      Regular backups ensure that you can restore your data when needed. Backups
-      contain all of your events, relay information, and profile data.
+      Regular backups ensure that you can restore your data when needed. Backups contain all of your
+      events, relay information, and profile data.
     </p>
 
     <h3>Important Notes:</h3>
     <ul>
-      <li>
-        Backups <strong>do not</strong> include your private keys for security
-        reasons
-      </li>
-      <li>
-        You should store backup files securely as they contain your public data
-      </li>
-      <li>
-        Importing a backup will not overwrite existing data, only add missing
-        events
-      </li>
+      <li>Backups <strong>do not</strong> include your private keys for security reasons</li>
+      <li>You should store backup files securely as they contain your public data</li>
+      <li>Importing a backup will not overwrite existing data, only add missing events</li>
     </ul>
   </div>
 </div>

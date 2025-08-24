@@ -1,11 +1,4 @@
-import {
-  Component,
-  effect,
-  inject,
-  signal,
-  TransferState,
-  untracked,
-} from '@angular/core';
+import { Component, effect, inject, signal, TransferState, untracked } from '@angular/core';
 import { LayoutService } from '../../services/layout.service';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
@@ -46,13 +39,7 @@ export interface ThreadedEvent {
 @Component({
   selector: 'app-event-page',
   standalone: true,
-  imports: [
-    CommonModule,
-    EventComponent,
-    MatIconModule,
-    MatButtonModule,
-    MatProgressSpinnerModule,
-  ],
+  imports: [CommonModule, EventComponent, MatIconModule, MatButtonModule, MatProgressSpinnerModule],
   templateUrl: './event.component.html',
   styleUrl: './event.component.scss',
 })
@@ -87,10 +74,7 @@ export class EventPageComponent {
     console.log('EventPageComponent initialized with data:', this.item);
 
     if (this.transferState.hasKey(EVENT_STATE_KEY)) {
-      const data = this.transferState.get<EventData | null>(
-        EVENT_STATE_KEY,
-        null
-      );
+      const data = this.transferState.get<EventData | null>(EVENT_STATE_KEY, null);
       console.log('Transferred data:', data);
       if (data) {
         this.item = data;
@@ -129,10 +113,7 @@ export class EventPageComponent {
       this.error.set(null);
 
       // Load complete thread data using the event service
-      const threadData = await this.eventService.loadCompleteThread(
-        nevent,
-        this.item
-      );
+      const threadData = await this.eventService.loadCompleteThread(nevent, this.item);
 
       // Update all the signals with the loaded data
       this.event.set(threadData.event);
@@ -155,9 +136,7 @@ export class EventPageComponent {
       this.logger.info('Successfully loaded thread data for event:', hex);
     } catch (error) {
       this.logger.error('Error loading event:', error);
-      this.error.set(
-        error instanceof Error ? error.message : 'Failed to load event'
-      );
+      this.error.set(error instanceof Error ? error.message : 'Failed to load event');
     } finally {
       this.isLoading.set(false);
       // Scroll to top after loading

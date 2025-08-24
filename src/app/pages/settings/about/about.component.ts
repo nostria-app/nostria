@@ -78,7 +78,7 @@ export class AboutComponent implements OnInit {
 
     try {
       const manifestData = await firstValueFrom(
-        this.http.get<WebManifest>('/manifest.webmanifest')
+        this.http.get<WebManifest>('/manifest.webmanifest'),
       );
 
       // Check if version exists in the manifest, otherwise fallback

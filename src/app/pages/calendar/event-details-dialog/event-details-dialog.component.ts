@@ -1,10 +1,6 @@
 import { Component, Inject, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import {
-  MatDialogModule,
-  MatDialogRef,
-  MAT_DIALOG_DATA,
-} from '@angular/material/dialog';
+import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
@@ -82,11 +78,7 @@ export interface EventDetailsResult {
         </div>
 
         <div class="dialog-actions-header">
-          <button
-            mat-icon-button
-            [matMenuTriggerFor]="actionsMenu"
-            matTooltip="Event actions"
-          >
+          <button mat-icon-button [matMenuTriggerFor]="actionsMenu" matTooltip="Event actions">
             <mat-icon>more_vert</mat-icon>
           </button>
 
@@ -113,11 +105,7 @@ export interface EventDetailsResult {
               </button>
             }
             @if (data.canDelete) {
-              <button
-                mat-menu-item
-                (click)="deleteEvent()"
-                class="delete-option"
-              >
+              <button mat-menu-item (click)="deleteEvent()" class="delete-option">
                 <mat-icon color="warn">delete</mat-icon>
                 <span>Delete Event</span>
               </button>
@@ -133,11 +121,7 @@ export interface EventDetailsResult {
             </button>
           </mat-menu>
 
-          <button
-            mat-icon-button
-            [mat-dialog-close]="{ action: 'close' }"
-            matTooltip="Close"
-          >
+          <button mat-icon-button [mat-dialog-close]="{ action: 'close' }" matTooltip="Close">
             <mat-icon>close</mat-icon>
           </button>
         </div>
@@ -150,10 +134,7 @@ export interface EventDetailsResult {
             <mat-icon class="section-icon">person</mat-icon>
             <div class="host-details">
               <div class="host-label">Hosted by</div>
-              <app-user-profile
-                [pubkey]="data.event.pubkey"
-                view="thread"
-              ></app-user-profile>
+              <app-user-profile [pubkey]="data.event.pubkey" view="thread"></app-user-profile>
             </div>
           </div>
 
@@ -179,9 +160,7 @@ export interface EventDetailsResult {
               @if (data.event.isAllDay) {
                 <div class="time-info">
                   <strong>All day</strong>
-                  <span class="date-info">{{
-                    formatDate(data.event.start)
-                  }}</span>
+                  <span class="date-info">{{ formatDate(data.event.start) }}</span>
                 </div>
               } @else {
                 <div class="time-info">
@@ -189,9 +168,7 @@ export interface EventDetailsResult {
                   @if (data.event.end) {
                     <span> - {{ formatTime(data.event.end) }}</span>
                   }
-                  <span class="date-info">{{
-                    formatDate(data.event.start)
-                  }}</span>
+                  <span class="date-info">{{ formatDate(data.event.start) }}</span>
                 </div>
               }
             </div>
@@ -273,10 +250,7 @@ export interface EventDetailsResult {
                 }
               </mat-icon>
               <div class="rsvp-content">
-                <div
-                  class="rsvp-status"
-                  [class]="'status-' + data.event.status"
-                >
+                <div class="rsvp-status" [class]="'status-' + data.event.status">
                   <span>{{ data.event.status | titlecase }}</span>
                 </div>
               </div>
@@ -286,9 +260,7 @@ export interface EventDetailsResult {
       </div>
 
       <div class="dialog-actions">
-        <button mat-button [mat-dialog-close]="{ action: 'close' }">
-          Close
-        </button>
+        <button mat-button [mat-dialog-close]="{ action: 'close' }">Close</button>
 
         <div class="rsvp-actions">
           <button mat-stroked-button (click)="respondToEvent('declined')">
@@ -317,7 +289,7 @@ export class EventDetailsDialogComponent {
 
   constructor(
     public dialogRef: MatDialogRef<EventDetailsDialogComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: EventDetailsDialogData
+    @Inject(MAT_DIALOG_DATA) public data: EventDetailsDialogData,
   ) {}
 
   get isCurrentUserEvent(): boolean {

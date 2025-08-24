@@ -108,7 +108,7 @@ export class ArticleComponent {
 
     if (receivedData) {
       const encoded = nip19.naddrEncode({
-        identifier: receivedData.tags.find(tag => tag[0] === 'd')?.[1] || '',
+        identifier: receivedData.tags.find((tag) => tag[0] === 'd')?.[1] || '',
         kind: receivedData.kind,
         pubkey: receivedData.pubkey,
       });
@@ -178,22 +178,19 @@ export class ArticleComponent {
           pubkey,
           kinds.LongFormArticle,
           slug,
-          { save: false, cache: false }
+          { save: false, cache: false },
         );
       } else {
         event = await this.data.getEventByPubkeyAndKindAndReplaceableEvent(
           pubkey,
           kinds.LongFormArticle,
           slug,
-          { save: false, cache: false }
+          { save: false, cache: false },
         );
       }
 
       if (event) {
-        this.logger.debug(
-          'Loaded article event from storage or relays:',
-          event
-        );
+        this.logger.debug('Loaded article event from storage or relays:', event);
         this.event.set(event.event);
         this.isLoading.set(false);
         return;
@@ -230,10 +227,7 @@ export class ArticleComponent {
   publishedAt = computed(() => {
     const ev = this.event();
     if (!ev) return null;
-    const publishedAtTag = this.utilities.getTagValues(
-      'published_at',
-      ev.tags
-    )[0];
+    const publishedAtTag = this.utilities.getTagValues('published_at', ev.tags)[0];
     if (publishedAtTag) {
       return new Date(parseInt(publishedAtTag) * 1000);
     }
@@ -243,10 +237,7 @@ export class ArticleComponent {
   publishedAtTimestamp = computed(() => {
     const ev = this.event();
     if (!ev) return 0;
-    const publishedAtTag = this.utilities.getTagValues(
-      'published_at',
-      ev.tags
-    )[0];
+    const publishedAtTag = this.utilities.getTagValues('published_at', ev.tags)[0];
     if (publishedAtTag) {
       return parseInt(publishedAtTag);
     }
@@ -296,13 +287,7 @@ export class ArticleComponent {
       const renderer = new marked.Renderer();
 
       // Custom heading renderer to ensure headers are properly rendered
-      renderer.heading = ({
-        text,
-        depth,
-      }: {
-        text: string;
-        depth: number;
-      }): string => {
+      renderer.heading = ({ text, depth }: { text: string; depth: number }): string => {
         // Process inline markdown in the heading text (bold, italic, etc.)
         const processedText = marked.parseInline(text) as string;
         const headingId = text
@@ -350,9 +335,7 @@ export class ArticleComponent {
       renderer.link = ({ href, title, tokens }: any): string => {
         // Extract text from tokens safely
         const text =
-          tokens && tokens.length > 0 && tokens[0] && tokens[0].raw
-            ? tokens[0].raw
-            : href;
+          tokens && tokens.length > 0 && tokens[0] && tokens[0].raw ? tokens[0].raw : href;
 
         if (!href) return text || '';
 
@@ -424,14 +407,12 @@ export class ArticleComponent {
       const sanitizedHtmlContent = DOMPurify.sanitize(htmlContent);
 
       // Set the sanitized HTML content
-      this._parsedContent.set(
-        this.sanitizer.bypassSecurityTrustHtml(sanitizedHtmlContent)
-      );
+      this._parsedContent.set(this.sanitizer.bypassSecurityTrustHtml(sanitizedHtmlContent));
     } catch (error) {
       this.logger.error('Error parsing markdown:', error);
       // Fallback to plain text
       this._parsedContent.set(
-        this.sanitizer.bypassSecurityTrustHtml(content.replace(/\n/g, '<br>'))
+        this.sanitizer.bypassSecurityTrustHtml(content.replace(/\n/g, '<br>')),
       );
     }
   });
@@ -507,8 +488,7 @@ export class ArticleComponent {
     const urlWithoutParams = url.split('?')[0].split('#')[0];
 
     // Common image extensions
-    const imageExtensions =
-      /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico|tiff|avif|heic|heif)$/i;
+    const imageExtensions = /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico|tiff|avif|heic|heif)$/i;
 
     // Check file extension
     if (imageExtensions.test(urlWithoutParams)) {
@@ -545,7 +525,7 @@ export class ArticleComponent {
       /.*\.amazonaws\.com.*\.(jpg|jpeg|png|gif|svg|webp)/i,
     ];
 
-    return imageHostPatterns.some(pattern => pattern.test(url));
+    return imageHostPatterns.some((pattern) => pattern.test(url));
   }
 
   // Helper method to preprocess content and convert standalone image URLs to markdown images
@@ -556,8 +536,7 @@ export class ArticleComponent {
     // Pattern to match standalone URLs that point to images
     // This will match URLs on their own line or URLs not already in markdown syntax
     // Updated to be more careful about existing markdown syntax
-    const standaloneImageUrlPattern =
-      /(?:^|\s)(https?:\/\/[^\s<>"\]]+)(?=\s|$)/gm;
+    const standaloneImageUrlPattern = /(?:^|\s)(https?:\/\/[^\s<>"\]]+)(?=\s|$)/gm;
 
     return content.replace(standaloneImageUrlPattern, (match, url) => {
       // Don't convert if already in markdown image syntax
@@ -618,8 +597,7 @@ export class ArticleComponent {
               case 'note': {
                 // For notes, create a reference link
                 const noteId = nostrData.data;
-                const noteRef =
-                  nostrData.displayName || `note${noteId.substring(0, 8)}`;
+                const noteRef = nostrData.displayName || `note${noteId.substring(0, 8)}`;
                 const noteEncoded = nip19.noteEncode(noteId);
                 return {
                   original: match[0],
@@ -630,8 +608,7 @@ export class ArticleComponent {
               case 'nevent': {
                 // For events, create a reference link
                 const eventId = nostrData.data?.id || nostrData.data;
-                const eventRef =
-                  nostrData.displayName || `event${eventId.substring(0, 8)}`;
+                const eventRef = nostrData.displayName || `event${eventId.substring(0, 8)}`;
                 const neventEncoded = nip19.neventEncode(nostrData.data);
                 return {
                   original: match[0],
@@ -645,9 +622,7 @@ export class ArticleComponent {
                 const kind = nostrData.data?.kind || '';
                 const authorPubkey = nostrData.data?.pubkey || '';
                 const addrRef =
-                  nostrData.displayName ||
-                  identifier ||
-                  `${kind}:${authorPubkey.substring(0, 8)}`;
+                  nostrData.displayName || identifier || `${kind}:${authorPubkey.substring(0, 8)}`;
                 const naddrEncoded = nip19.naddrEncode(nostrData.data);
                 return {
                   original: match[0],
@@ -674,7 +649,7 @@ export class ArticleComponent {
             replacement: match[0],
           };
         }
-      })
+      }),
     );
 
     // Apply all replacements to the content

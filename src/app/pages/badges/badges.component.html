@@ -94,10 +94,7 @@
         } @else {
           <div class="badges-grid">
             @for (badge of issued(); track badge.id) {
-              <app-badge
-                [badge]="badge"
-                (click)="viewBadgeDetails(badge)"
-              ></app-badge>
+              <app-badge [badge]="badge" (click)="viewBadgeDetails(badge)"></app-badge>
             }
           </div>
         }
@@ -115,21 +112,14 @@
         } @else {
           <div class="badges-grid">
             @for (badge of createdDefinitions(); track badge.id) {
-              <app-badge
-                [badge]="badge"
-                (click)="viewBadgeDetails(badge)"
-              ></app-badge>
+              <app-badge [badge]="badge" (click)="viewBadgeDetails(badge)"></app-badge>
             }
 
             @if (createdDefinitions().length === 0) {
               <div class="no-badges-message">
                 <mat-icon>sentiment_very_dissatisfied</mat-icon>
                 <p>You haven't created any badges yet</p>
-                <button
-                  mat-raised-button
-                  color="accent"
-                  (click)="openBadgeEditor()"
-                >
+                <button mat-raised-button color="accent" (click)="openBadgeEditor()">
                   Create Your First Badge
                 </button>
               </div>

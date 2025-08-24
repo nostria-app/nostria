@@ -4,22 +4,14 @@
       class="profile-banner"
       [class.clickable]="profile()?.data.banner"
       [style.background-image]="
-        profile()?.data.banner
-          ? 'url(' + profile()!.data.banner + ')'
-          : getDefaultBanner()
+        profile()?.data.banner ? 'url(' + profile()!.data.banner + ')' : getDefaultBanner()
       "
       (click)="profile()?.data.banner && layout.openProfileBanner(profile()!)"
-      (keydown.enter)="
-        profile()?.data.banner && layout.openProfileBanner(profile()!)
-      "
-      (keydown.space)="
-        profile()?.data.banner && layout.openProfileBanner(profile()!)
-      "
+      (keydown.enter)="profile()?.data.banner && layout.openProfileBanner(profile()!)"
+      (keydown.space)="profile()?.data.banner && layout.openProfileBanner(profile()!)"
       [tabindex]="profile()?.data.banner ? 0 : -1"
       [attr.role]="profile()?.data.banner ? 'button' : null"
-      [attr.aria-label]="
-        profile()?.data.banner ? 'View full size banner image' : null
-      "
+      [attr.aria-label]="profile()?.data.banner ? 'View full size banner image' : null"
     ></div>
   }
   <div
@@ -32,24 +24,14 @@
       [class.clickable]="profile()?.data.picture"
       [class.mobile]="layoutService.isHandset()"
       (click)="profile()?.data.picture && layout.openProfilePicture(profile()!)"
-      (keydown.enter)="
-        profile()?.data.picture && layout.openProfilePicture(profile()!)
-      "
-      (keydown.space)="
-        profile()?.data.picture && layout.openProfilePicture(profile()!)
-      "
+      (keydown.enter)="profile()?.data.picture && layout.openProfilePicture(profile()!)"
+      (keydown.space)="profile()?.data.picture && layout.openProfilePicture(profile()!)"
       [tabindex]="profile()?.data.picture ? 0 : -1"
       [attr.role]="profile()?.data.picture ? 'button' : null"
-      [attr.aria-label]="
-        profile()?.data.picture ? 'View full size profile picture' : null
-      "
+      [attr.aria-label]="profile()?.data.picture ? 'View full size profile picture' : null"
     >
       @if (profile()?.data.picture) {
-        <img
-          [src]="profile()!.data.picture"
-          alt="Profile picture"
-          class="avatar-image"
-        />
+        <img [src]="profile()!.data.picture" alt="Profile picture" class="avatar-image" />
       } @else {
         <mat-icon class="default-avatar">account_circle</mat-icon>
       }
@@ -58,9 +40,7 @@
     <div class="profile-info" [class.compact]="compact()">
       <div class="profile-menu-actions">
         @if (isOwnProfile()) {
-          <button mat-flat-button routerLink="edit">
-            <mat-icon>edit</mat-icon> Edit Profile
-          </button>
+          <button mat-flat-button routerLink="edit"><mat-icon>edit</mat-icon> Edit Profile</button>
         } @else {
           @if (!isFollowing()) {
             <button mat-flat-button (click)="followUser()">
@@ -72,19 +52,12 @@
                 </button> -->
           }
 
-          <button
-            mat-stroked-button
-            (click)="layoutService.openSendMessage(currentPubkey())"
-          >
+          <button mat-stroked-button (click)="layoutService.openSendMessage(currentPubkey())">
             <mat-icon>message</mat-icon> Message
           </button>
         }
 
-        <button
-          mat-icon-button
-          class="profile-menu-button"
-          [matMenuTriggerFor]="profileMenu"
-        >
+        <button mat-icon-button class="profile-menu-button" [matMenuTriggerFor]="profileMenu">
           <mat-icon>more_vert</mat-icon>
         </button>
       </div>
@@ -99,9 +72,7 @@
           >
         }
         @if (isFavorite()) {
-          <mat-icon class="favorite-indicator" matTooltip="Favorite User"
-            >star</mat-icon
-          >
+          <mat-icon class="favorite-indicator" matTooltip="Favorite User">star</mat-icon>
         }
       </h1>
 
@@ -147,13 +118,9 @@
             @if (verifiedId.valid) {
               <mat-icon class="verified-icon">verified</mat-icon>
             } @else {
-              <mat-icon class="verified-icon verified-icon-error"
-                >verified_off</mat-icon
-              >
+              <mat-icon class="verified-icon verified-icon-error">verified_off</mat-icon>
             }
-            <span [class.strikethrough]="!verifiedId.valid">{{
-              verifiedId.value
-            }}</span>
+            <span [class.strikethrough]="!verifiedId.valid">{{ verifiedId.value }}</span>
           </div>
         }
 
@@ -200,12 +167,9 @@
         <div class="profile-item" title="{{ profile()!.data.website }}">
           <mat-icon>link</mat-icon>
           <span
-            ><a
-              [href]="profile()!.data.website"
-              target="_blank"
-              rel="noopener noreferrer"
-              >{{ profile()!.data.website }}</a
-            ></span
+            ><a [href]="profile()!.data.website" target="_blank" rel="noopener noreferrer">{{
+              profile()!.data.website
+            }}</a></span
           >
         </div>
       }
@@ -216,30 +180,19 @@
 
       <div class="profile-extra-info">
         @if (!compact()) {
-          <a
-            class="following-count"
-            [routerLink]="'following'"
-            [queryParamsHandling]="'preserve'"
-          >
+          <a class="following-count" [routerLink]="'following'" [queryParamsHandling]="'preserve'">
             Following {{ profileState.followingList().length }}
           </a>
 
           <!-- @if (profileState.relay?.userRelaysFound()) { -->
           @if (
-            profileState.relay?.getRelayUrls() &&
-            (profileState.relay?.getRelayUrls())!.length > 0
+            profileState.relay?.getRelayUrls() && (profileState.relay?.getRelayUrls())!.length > 0
           ) {
-            <a
-              class="following-count"
-              [routerLink]="'relays'"
-              [queryParamsHandling]="'preserve'"
-            >
+            <a class="following-count" [routerLink]="'relays'" [queryParamsHandling]="'preserve'">
               Relays {{ profileState.relay?.getRelayUrls()?.length }}
             </a>
           } @else {
-            <span class="inline-error">
-              <mat-icon>error</mat-icon>&nbsp; No relays found!
-            </span>
+            <span class="inline-error"> <mat-icon>error</mat-icon>&nbsp; No relays found! </span>
           }
         }
       </div>
@@ -259,28 +212,19 @@
           }
 
           <button mat-menu-item (click)="toggleFavorite()">
-            <mat-icon>{{
-              isFavorite() ? 'heart_minus' : 'heart_plus'
-            }}</mat-icon>
+            <mat-icon>{{ isFavorite() ? 'heart_minus' : 'heart_plus' }}</mat-icon>
             <span>{{ isFavorite() ? 'Unfavorite' : 'Favorite' }}</span>
           </button>
         }
 
         @if (isOwnProfile()) {
-          <button
-            mat-menu-item
-            routerLink="edit"
-            [queryParamsHandling]="'preserve'"
-          >
+          <button mat-menu-item routerLink="edit" [queryParamsHandling]="'preserve'">
             <mat-icon>edit</mat-icon>
             <span>Edit Profile</span>
           </button>
         }
 
-        <button
-          mat-menu-item
-          (click)="layoutService.openSendMessage(currentPubkey())"
-        >
+        <button mat-menu-item (click)="layoutService.openSendMessage(currentPubkey())">
           <mat-icon>message</mat-icon>
           <span>Message</span>
         </button>
@@ -300,11 +244,7 @@
           <span>Publish Event</span>
         </button>
 
-        <button
-          mat-menu-item
-          routerLink="details"
-          [queryParamsHandling]="'preserve'"
-        >
+        <button mat-menu-item routerLink="details" [queryParamsHandling]="'preserve'">
           <mat-icon>info</mat-icon>
           <span>Details</span>
         </button>
@@ -323,22 +263,13 @@
       </mat-menu>
 
       <mat-menu #copyMenu="matMenu">
-        <button
-          mat-menu-item
-          (click)="layout.copyToClipboard(this.npub(), 'npub')"
-        >
+        <button mat-menu-item (click)="layout.copyToClipboard(this.npub(), 'npub')">
           <span>Identifier (npub)</span>
         </button>
-        <button
-          mat-menu-item
-          (click)="layout.copyToClipboard(this.currentPubkey(), 'hex')"
-        >
+        <button mat-menu-item (click)="layout.copyToClipboard(this.currentPubkey(), 'hex')">
           <span>Identifier (hex)</span>
         </button>
-        <button
-          mat-menu-item
-          (click)="layout.copyToClipboard(this.currentPubkey(), 'nprofile')"
-        >
+        <button mat-menu-item (click)="layout.copyToClipboard(this.currentPubkey(), 'nprofile')">
           <span>Identifier (nprofile)</span>
         </button>
         <button mat-menu-item (click)="copyProfileData()">
@@ -353,10 +284,7 @@
       </mat-menu>
 
       <mat-menu #shareMenu="matMenu">
-        <button
-          mat-menu-item
-          (click)="layout.shareProfile(this.npub(), this.name())"
-        >
+        <button mat-menu-item (click)="layout.shareProfile(this.npub(), this.name())">
           <span>Profile</span>
         </button>
         <button mat-menu-item (click)="layout.shareProfileUrl(this.npub())">

@@ -21,58 +21,30 @@
   <div class="editor-toolbar">
     @if (isRichTextMode()) {
       <div class="formatting-controls">
-        <button
-          mat-icon-button
-          (click)="applyBold()"
-          matTooltip="Bold (Ctrl+B)"
-        >
+        <button mat-icon-button (click)="applyBold()" matTooltip="Bold (Ctrl+B)">
           <mat-icon>format_bold</mat-icon>
         </button>
-        <button
-          mat-icon-button
-          (click)="applyItalic()"
-          matTooltip="Italic (Ctrl+I)"
-        >
+        <button mat-icon-button (click)="applyItalic()" matTooltip="Italic (Ctrl+I)">
           <mat-icon>format_italic</mat-icon>
         </button>
         <mat-divider [vertical]="true"></mat-divider>
-        <button
-          mat-icon-button
-          (click)="applyHeading(1)"
-          matTooltip="Heading 1"
-        >
+        <button mat-icon-button (click)="applyHeading(1)" matTooltip="Heading 1">
           <mat-icon>looks_one</mat-icon>
         </button>
-        <button
-          mat-icon-button
-          (click)="applyHeading(2)"
-          matTooltip="Heading 2"
-        >
+        <button mat-icon-button (click)="applyHeading(2)" matTooltip="Heading 2">
           <mat-icon>looks_two</mat-icon>
         </button>
-        <button
-          mat-icon-button
-          (click)="applyHeading(3)"
-          matTooltip="Heading 3"
-        >
+        <button mat-icon-button (click)="applyHeading(3)" matTooltip="Heading 3">
           <mat-icon>looks_3</mat-icon>
         </button>
         <mat-divider [vertical]="true"></mat-divider>
         <button mat-icon-button (click)="applyQuote()" matTooltip="Quote">
           <mat-icon>format_quote</mat-icon>
         </button>
-        <button
-          mat-icon-button
-          (click)="applyUnorderedList()"
-          matTooltip="Bullet List"
-        >
+        <button mat-icon-button (click)="applyUnorderedList()" matTooltip="Bullet List">
           <mat-icon>format_list_bulleted</mat-icon>
         </button>
-        <button
-          mat-icon-button
-          (click)="applyOrderedList()"
-          matTooltip="Numbered List"
-        >
+        <button mat-icon-button (click)="applyOrderedList()" matTooltip="Numbered List">
           <mat-icon>format_list_numbered</mat-icon>
         </button>
         <mat-divider [vertical]="true"></mat-divider>

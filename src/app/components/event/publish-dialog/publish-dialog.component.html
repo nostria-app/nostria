@@ -20,9 +20,7 @@
 
             @if (option.id === 'author' && !loadingAuthorRelays()) {
               <div class="relay-count">
-                {{ authorRelays().length }} relay{{
-                  authorRelays().length !== 1 ? 's' : ''
-                }}
+                {{ authorRelays().length }} relay{{ authorRelays().length !== 1 ? 's' : '' }}
                 available
               </div>
             }

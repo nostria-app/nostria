@@ -90,9 +90,7 @@ export class ProfileTrackingService {
   /**
    * Track multiple metrics at once for efficiency
    */
-  async trackMultipleMetrics(
-    updates: { pubkey: string; metric: string; increment?: number }[]
-  ) {
+  async trackMultipleMetrics(updates: { pubkey: string; metric: string; increment?: number }[]) {
     for (const update of updates) {
       if (update.pubkey) {
         await this.metrics.updateMetric({

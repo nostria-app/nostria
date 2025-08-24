@@ -19,26 +19,13 @@ describe('FeedService', () => {
     'getItem',
     'setItem',
   ]);
-  const mockLoggerService = jasmine.createSpyObj('LoggerService', [
-    'log',
-    'error',
-    'warn',
-  ]);
+  const mockLoggerService = jasmine.createSpyObj('LoggerService', ['log', 'error', 'warn']);
   const mockRelayService = jasmine.createSpyObj('RelayService', ['getPool']);
-  const mockApplicationStateService = jasmine.createSpyObj(
-    'ApplicationStateService',
-    ['state']
-  );
-  const mockAccountStateService = jasmine.createSpyObj('AccountStateService', [
-    'state',
-  ]);
+  const mockApplicationStateService = jasmine.createSpyObj('ApplicationStateService', ['state']);
+  const mockAccountStateService = jasmine.createSpyObj('AccountStateService', ['state']);
   const mockDataService = jasmine.createSpyObj('DataService', ['getData']);
-  const mockUtilitiesService = jasmine.createSpyObj('UtilitiesService', [
-    'utils',
-  ]);
-  const mockApplicationService = jasmine.createSpyObj('ApplicationService', [
-    'app',
-  ]);
+  const mockUtilitiesService = jasmine.createSpyObj('UtilitiesService', ['utils']);
+  const mockApplicationService = jasmine.createSpyObj('ApplicationService', ['app']);
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({

@@ -10,12 +10,7 @@
         (dragleave)="onDragLeave($event)"
         (drop)="onDrop($event)"
       >
-        <input
-          #fileInput
-          type="file"
-          hidden
-          (change)="onFileSelected($event)"
-        />
+        <input #fileInput type="file" hidden (change)="onFileSelected($event)" />
         <mat-icon>cloud_upload</mat-icon>
         <p>Drag & drop a file here or click to browse</p>
         <!-- <p class="file-types">Supports images and videos</p> -->
@@ -32,12 +27,7 @@
         <div class="file-info">
           <p class="file-name">{{ selectedFile()!.name }}</p>
           <p class="file-size">{{ formatFileSize(selectedFile()!.size) }}</p>
-          <button
-            mat-icon-button
-            color="warn"
-            (click)="clearFile()"
-            [disabled]="isUploading()"
-          >
+          <button mat-icon-button color="warn" (click)="clearFile()" [disabled]="isUploading()">
             <mat-icon>close</mat-icon>
           </button>
         </div>
@@ -45,10 +35,7 @@
 
       <form [formGroup]="uploadForm" class="upload-form">
         @if (showOriginalOption()) {
-          <mat-checkbox
-            formControlName="uploadOriginal"
-            [disabled]="isUploading()"
-          >
+          <mat-checkbox formControlName="uploadOriginal" [disabled]="isUploading()">
             Upload original (no optimization)
           </mat-checkbox>
         }
@@ -57,11 +44,7 @@
           <div class="server-selection">
             <h3>Upload to servers:</h3>
             <div class="server-checkboxes">
-              @for (
-                server of availableServers();
-                track server;
-                let i = $index
-              ) {
+              @for (server of availableServers(); track server; let i = $index) {
                 <mat-checkbox
                   [checked]="isServerSelected(server)"
                   (change)="toggleServerSelection(server)"
@@ -91,16 +74,12 @@
   </div>
 </mat-dialog-content>
 <mat-dialog-actions align="end">
-  <button mat-button (click)="cancel()" [disabled]="isUploading()">
-    Cancel
-  </button>
+  <button mat-button (click)="cancel()" [disabled]="isUploading()">Cancel</button>
   <button
     mat-raised-button
     color="primary"
     [disabled]="
-      !selectedFile() ||
-      isUploading() ||
-      (showServerSelection() && selectedServers().length === 0)
+      !selectedFile() || isUploading() || (showServerSelection() && selectedServers().length === 0)
     "
     (click)="onSubmit()"
     class="upload-button"

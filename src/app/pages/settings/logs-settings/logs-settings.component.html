@@ -33,11 +33,7 @@
   <section class="mute-section">
     <h3>All Relays ({{ allRelayStats().length }})</h3>
     <div class="relay-actions">
-      <button
-        mat-stroked-button
-        (click)="generateClusterOutput()"
-        color="primary"
-      >
+      <button mat-stroked-button (click)="generateClusterOutput()" color="primary">
         <mat-icon>refresh</mat-icon>
         Refresh Cluster Data
       </button>
@@ -91,15 +87,11 @@
             <div class="relay-stats">
               <div class="stat-row">
                 <span class="stat-label">Events Received:</span>
-                <span class="stat-value">{{
-                  relayEntry[1].eventsReceived
-                }}</span>
+                <span class="stat-value">{{ relayEntry[1].eventsReceived }}</span>
               </div>
               <div class="stat-row">
                 <span class="stat-label">Connection Attempts:</span>
-                <span class="stat-value">{{
-                  relayEntry[1].connectionAttempts
-                }}</span>
+                <span class="stat-value">{{ relayEntry[1].connectionAttempts }}</span>
               </div>
               <div class="stat-row">
                 <span class="stat-label">Last Retry:</span>
@@ -118,9 +110,7 @@
                 <div class="performance-score">
                   <mat-progress-bar
                     mode="determinate"
-                    [value]="
-                      relaysService.getRelayPerformanceScore(relayEntry[0])
-                    "
+                    [value]="relaysService.getRelayPerformanceScore(relayEntry[0])"
                     [color]="
                       getPerformanceScoreColor(
                         relaysService.getRelayPerformanceScore(relayEntry[0])
@@ -129,9 +119,7 @@
                   >
                   </mat-progress-bar>
                   <span class="score-value"
-                    >{{
-                      relaysService.getRelayPerformanceScore(relayEntry[0])
-                    }}/100</span
+                    >{{ relaysService.getRelayPerformanceScore(relayEntry[0]) }}/100</span
                   >
                 </div>
               </div>
@@ -158,26 +146,14 @@
           <div class="cluster-item">
             <div class="cluster-header">
               <div class="cluster-relay">
-                <mat-icon
-                  [color]="
-                    cluster.connectionStatus === 'connected'
-                      ? 'primary'
-                      : 'warn'
-                  "
-                >
-                  {{
-                    cluster.connectionStatus === 'connected'
-                      ? 'wifi'
-                      : 'wifi_off'
-                  }}
+                <mat-icon [color]="cluster.connectionStatus === 'connected' ? 'primary' : 'warn'">
+                  {{ cluster.connectionStatus === 'connected' ? 'wifi' : 'wifi_off' }}
                 </mat-icon>
                 <span class="relay-url">{{ cluster.relay }}</span>
                 <mat-chip-set>
                   <mat-chip>{{ cluster.userCount }} users</mat-chip>
                   <mat-chip>{{ cluster.eventsReceived }} events</mat-chip>
-                  <mat-chip
-                    [color]="getPerformanceScoreColor(cluster.performanceScore)"
-                  >
+                  <mat-chip [color]="getPerformanceScoreColor(cluster.performanceScore)">
                     {{ cluster.performanceScore }}% performance
                   </mat-chip>
                 </mat-chip-set>
@@ -187,10 +163,7 @@
             @if (cluster.sharedWithRelays.length > 0) {
               <div class="cluster-connections">
                 <h4>Shared with:</h4>
-                @for (
-                  connection of cluster.sharedWithRelays;
-                  track connection.relay
-                ) {
+                @for (connection of cluster.sharedWithRelays; track connection.relay) {
                   <div class="connection-item">
                     <span class="connection-relay">{{ connection.relay }}</span>
                     <mat-progress-bar

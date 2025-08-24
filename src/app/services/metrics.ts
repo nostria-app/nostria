@@ -15,7 +15,7 @@ export class Metrics {
    */
   async getMetrics(): Promise<UserMetric[]> {
     const records = await this.storage.getInfoByType('metric');
-    return records.map(record => this.mapRecordToMetric(record));
+    return records.map((record) => this.mapRecordToMetric(record));
   }
 
   /**
@@ -50,22 +50,20 @@ export class Metrics {
 
     // Filter by pubkey if specified
     if (query.pubkey) {
-      metrics = metrics.filter(m => m.pubkey === query.pubkey);
+      metrics = metrics.filter((m) => m.pubkey === query.pubkey);
     }
 
     // Filter by minimum values
     if (query.minViewed !== undefined) {
-      metrics = metrics.filter(m => m.viewed >= query.minViewed!);
+      metrics = metrics.filter((m) => m.viewed >= query.minViewed!);
     }
 
     if (query.minLiked !== undefined) {
-      metrics = metrics.filter(m => m.liked >= query.minLiked!);
+      metrics = metrics.filter((m) => m.liked >= query.minLiked!);
     }
 
     if (query.minEngagementScore !== undefined) {
-      metrics = metrics.filter(
-        m => (m.engagementScore || 0) >= query.minEngagementScore!
-      );
+      metrics = metrics.filter((m) => (m.engagementScore || 0) >= query.minEngagementScore!);
     }
 
     // Sort if specified
@@ -94,13 +92,7 @@ export class Metrics {
    * Update a metric for a user
    */
   async updateMetric(update: MetricUpdate): Promise<void> {
-    const {
-      pubkey,
-      metric,
-      increment = 1,
-      value,
-      timestamp = Date.now(),
-    } = update;
+    const { pubkey, metric, increment = 1, value, timestamp = Date.now() } = update;
 
     // Get existing metric or create new one
     let existingMetric = await this.getUserMetric(pubkey);
@@ -115,8 +107,7 @@ export class Metrics {
       (existingMetric as any)[metric] = value;
     } else {
       // Increment by specified amount
-      (existingMetric as any)[metric] =
-        ((existingMetric as any)[metric] || 0) + increment;
+      (existingMetric as any)[metric] = ((existingMetric as any)[metric] || 0) + increment;
     }
 
     // Update interaction timestamps
@@ -125,12 +116,9 @@ export class Metrics {
 
     // Calculate derived metrics
     existingMetric.averageTimePerView =
-      existingMetric.viewed > 0
-        ? existingMetric.timeSpent / existingMetric.viewed
-        : 0;
+      existingMetric.viewed > 0 ? existingMetric.timeSpent / existingMetric.viewed : 0;
 
-    existingMetric.engagementScore =
-      this.calculateEngagementScore(existingMetric);
+    existingMetric.engagementScore = this.calculateEngagementScore(existingMetric);
 
     // Save to storage
     await this.saveMetric(existingMetric);
@@ -143,12 +131,8 @@ export class Metrics {
     pubkey: string,
     metric: keyof Omit<
       UserMetric,
-      | 'pubkey'
-      | 'updated'
-      | 'firstInteraction'
-      | 'averageTimePerView'
-      | 'engagementScore'
-    >
+      'pubkey' | 'updated' | 'firstInteraction' | 'averageTimePerView' | 'engagementScore'
+    >,
   ): Promise<void> {
     await this.updateMetric({ pubkey, metric, increment: 1 });
   }
@@ -167,10 +151,7 @@ export class Metrics {
   /**
    * Get top users by a specific metric
    */
-  async getTopUsers(
-    metric: keyof UserMetric,
-    limit = 10
-  ): Promise<UserMetric[]> {
+  async getTopUsers(metric: keyof UserMetric, limit = 10): Promise<UserMetric[]> {
     return await this.queryMetrics({
       sortBy: metric,
       sortOrder: 'desc',
@@ -185,7 +166,7 @@ export class Metrics {
     const metrics = await this.getMetrics();
 
     // Calculate engagement scores for all users
-    metrics.forEach(metric => {
+    metrics.forEach((metric) => {
       metric.engagementScore = this.calculateEngagementScore(metric);
     });
 

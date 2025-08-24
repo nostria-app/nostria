@@ -71,9 +71,7 @@
           mat-chip {
             --mdc-chip-container-color: var(--mat-sys-primary-container);
             --mdc-chip-label-text-color: var(--mat-sys-on-primary-container);
-            --mdc-chip-with-trailing-icon-trailing-icon-color: var(
-              --mat-sys-on-primary-container
-            );
+            --mdc-chip-with-trailing-icon-trailing-icon-color: var(--mat-sys-on-primary-container);
           }
         }
       }
@@ -89,11 +87,7 @@
     margin-top: 24px;
 
     .create-button {
-      background: linear-gradient(
-        135deg,
-        var(--mat-sys-primary) 0%,
-        var(--mat-sys-secondary) 100%
-      );
+      background: linear-gradient(135deg, var(--mat-sys-primary) 0%, var(--mat-sys-secondary) 100%);
 
       .spinning {
         animation: spin 1s linear infinite;

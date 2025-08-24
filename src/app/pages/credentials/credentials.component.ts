@@ -52,7 +52,7 @@ export class CredentialsComponent {
   editNameControl = new FormControl('', [Validators.required]);
 
   toggleNsecVisibility(): void {
-    this.isNsecVisible.update(current => !current);
+    this.isNsecVisible.update((current) => !current);
   }
 
   async copyToClipboard(text: string, label: string): Promise<void> {
@@ -99,15 +99,11 @@ export class CredentialsComponent {
 
   async addWallet(): Promise<void> {
     if (this.connectionStringControl.invalid) {
-      this.snackBar.open(
-        'Please enter a valid Nostr Wallet Connect connection string',
-        'Dismiss',
-        {
-          duration: 3000,
-          horizontalPosition: 'center',
-          verticalPosition: 'bottom',
-        }
-      );
+      this.snackBar.open('Please enter a valid Nostr Wallet Connect connection string', 'Dismiss', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
       return;
     }
 
@@ -130,15 +126,11 @@ export class CredentialsComponent {
       });
     } catch (error) {
       console.error('Failed to add wallet:', error);
-      this.snackBar.open(
-        'Failed to add wallet. Please check the connection string.',
-        'Dismiss',
-        {
-          duration: 3000,
-          horizontalPosition: 'center',
-          verticalPosition: 'bottom',
-        }
-      );
+      this.snackBar.open('Failed to add wallet. Please check the connection string.', 'Dismiss', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
     } finally {
       this.isAddingWallet.set(false);
     }
@@ -166,10 +158,7 @@ export class CredentialsComponent {
     //   console.log('Donation successful');
     // });
 
-    const request = await new LN(wallet.connections[0]).pay(
-      'sondreb@npub.cash',
-      USD(0.1)
-    );
+    const request = await new LN(wallet.connections[0]).pay('sondreb@npub.cash', USD(0.1));
     console.log('Payment request created:', request);
   }
 
@@ -178,9 +167,7 @@ export class CredentialsComponent {
   }
 
   getFirstConnectionString(wallet: any): string {
-    return wallet.connections && wallet.connections.length > 0
-      ? wallet.connections[0]
-      : '';
+    return wallet.connections && wallet.connections.length > 0 ? wallet.connections[0] : '';
   }
 
   startEditingWallet(pubkey: string, currentName: string): void {

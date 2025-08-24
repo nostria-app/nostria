@@ -48,9 +48,7 @@ export class BadgeService implements NostriaService {
   badgeDefinitions = signal<Event[]>([]);
 
   createdDefinitions = computed(() => {
-    return this.badgeDefinitions().filter(
-      badge => badge.pubkey === this.accountState.pubkey()
-    );
+    return this.badgeDefinitions().filter((badge) => badge.pubkey === this.accountState.pubkey());
   });
 
   profileBadgesEvent = signal<NostrEvent | null>(null);
@@ -74,11 +72,9 @@ export class BadgeService implements NostriaService {
   isLoadingDefinitions = signal<boolean>(false);
 
   getBadgeDefinition(pubkey: string, slug: string): Event | undefined {
-    const badge = this.badgeDefinitions().find(badge => {
+    const badge = this.badgeDefinitions().find((badge) => {
       const tags = badge.tags || [];
-      return tags.some(
-        tag => badge.pubkey === pubkey && tag[0] === 'd' && tag[1] === slug
-      );
+      return tags.some((tag) => badge.pubkey === pubkey && tag[0] === 'd' && tag[1] === slug);
     });
 
     return badge;
@@ -86,8 +82,8 @@ export class BadgeService implements NostriaService {
 
   putBadgeDefinition(badge: Event): void {
     if (badge.kind === kinds.BadgeDefinition) {
-      this.badgeDefinitions.update(badges => {
-        const index = badges.findIndex(b => b.id === badge.id);
+      this.badgeDefinitions.update((badges) => {
+        const index = badges.findIndex((b) => b.id === badge.id);
         if (index !== -1) {
           badges[index] = badge;
         } else {
@@ -103,11 +99,10 @@ export class BadgeService implements NostriaService {
   async loadAcceptedBadges(pubkey: string): Promise<void> {
     this.isLoadingAccepted.set(true);
     try {
-      const profileBadgesEvent =
-        await this.accountRelay.getEventByPubkeyAndKind(
-          pubkey,
-          kinds.ProfileBadges
-        );
+      const profileBadgesEvent = await this.accountRelay.getEventByPubkeyAndKind(
+        pubkey,
+        kinds.ProfileBadges,
+      );
       console.log('Profile Badges Event:', profileBadgesEvent);
 
       if (profileBadgesEvent) {
@@ -128,7 +123,7 @@ export class BadgeService implements NostriaService {
     try {
       const badgeAwardEvents = await this.accountRelay.getEventsByPubkeyAndKind(
         pubkey,
-        kinds.BadgeAward
+        kinds.BadgeAward,
       );
       console.log('badgeAwardsEvent:', badgeAwardEvents);
 
@@ -146,21 +141,15 @@ export class BadgeService implements NostriaService {
 
   /** Attempts to discovery a badge definition. */
   async loadBadgeDefinition(pubkey: string, slug: string) {
-    let definition: NostrEvent | null | undefined = this.getBadgeDefinition(
-      pubkey,
-      slug
-    );
+    let definition: NostrEvent | null | undefined = this.getBadgeDefinition(pubkey, slug);
 
     if (!definition) {
       definition = await this.accountRelay.getEventByPubkeyAndKindAndTag(
         pubkey,
         kinds.BadgeDefinition,
-        { key: 'd', value: slug }
+        { key: 'd', value: slug },
       );
-      console.log(
-        'Badge definition not found in local storage, fetched from relay:',
-        definition
-      );
+      console.log('Badge definition not found in local storage, fetched from relay:', definition);
 
       // If the definition is not found on the user's relays, try to fetch from author and then re-publish to user's relays.
       if (!definition) {
@@ -169,11 +158,11 @@ export class BadgeService implements NostriaService {
           definition = await userRelay.getEventByPubkeyAndKindAndTag(
             pubkey,
             kinds.BadgeDefinition,
-            { key: 'd', value: slug }
+            { key: 'd', value: slug },
           );
           console.log(
             'Badge definition not found on user relays, fetched from author relays:',
-            definition
+            definition,
           );
           userRelay.destroy();
 
@@ -234,11 +223,10 @@ export class BadgeService implements NostriaService {
   async loadBadgeDefinitions(pubkey: string): Promise<void> {
     this.isLoadingDefinitions.set(true);
     try {
-      const badgeDefinitionEvents =
-        await this.accountRelay.getEventsByPubkeyAndKind(
-          pubkey,
-          kinds.BadgeDefinition
-        );
+      const badgeDefinitionEvents = await this.accountRelay.getEventsByPubkeyAndKind(
+        pubkey,
+        kinds.BadgeDefinition,
+      );
       console.log('badgeDefinitionEvents:', badgeDefinitionEvents);
 
       for (const event of badgeDefinitionEvents) {
@@ -257,11 +245,10 @@ export class BadgeService implements NostriaService {
   async loadReceivedBadges(pubkey: string): Promise<void> {
     this.isLoadingReceived.set(true);
     try {
-      const receivedAwardsEvents =
-        await this.accountRelay.getEventsByKindAndPubKeyTag(
-          pubkey,
-          kinds.BadgeAward
-        );
+      const receivedAwardsEvents = await this.accountRelay.getEventsByKindAndPubKeyTag(
+        pubkey,
+        kinds.BadgeAward,
+      );
       console.log('receivedAwardsEvents:', receivedAwardsEvents);
 
       await this.fetchBadgeIssuers(receivedAwardsEvents);
@@ -291,9 +278,7 @@ export class BadgeService implements NostriaService {
     const issuers: Record<string, any> = {};
 
     // Get unique issuer pubkeys
-    const issuerPubkeys = [
-      ...new Set(receivedBadges.map(badge => badge.pubkey)),
-    ];
+    const issuerPubkeys = [...new Set(receivedBadges.map((badge) => badge.pubkey))];
 
     // Fetch metadata for each issuer
     for (const pubkey of issuerPubkeys) {
@@ -317,9 +302,9 @@ export class BadgeService implements NostriaService {
 
   private parseBadgeTags(tags: string[][]): void {
     // Find the 'a' tags
-    const aTags = tags.filter(tag => tag[0] === 'a');
+    const aTags = tags.filter((tag) => tag[0] === 'a');
     // Find the 'e' tags
-    const eTags = tags.filter(tag => tag[0] === 'e');
+    const eTags = tags.filter((tag) => tag[0] === 'e');
 
     // Match them together based on their position
     const pairs = aTags.map((aTag, index) => {
@@ -347,11 +332,11 @@ export class BadgeService implements NostriaService {
 
   isBadgeAccepted(badgeAward: NostrEvent): boolean {
     const badgeATag = this.getBadgeATag(badgeAward);
-    return this.acceptedBadges().some(badge => badge.id === badgeATag);
+    return this.acceptedBadges().some((badge) => badge.id === badgeATag);
   }
 
   getBadgeATag(badgeAward: NostrEvent): string {
-    const aTag = badgeAward.tags.find(tag => tag[0] === 'a');
+    const aTag = badgeAward.tags.find((tag) => tag[0] === 'a');
     return aTag ? aTag[1] : '';
   }
 

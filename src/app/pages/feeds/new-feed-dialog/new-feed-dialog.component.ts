@@ -1,10 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 
-import {
-  MatDialogRef,
-  MAT_DIALOG_DATA,
-  MatDialogModule,
-} from '@angular/material/dialog';
+import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -12,17 +8,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { MatCardModule } from '@angular/material/card';
 import { MatDividerModule } from '@angular/material/divider';
-import {
-  FormBuilder,
-  FormGroup,
-  Validators,
-  ReactiveFormsModule,
-} from '@angular/forms';
-import {
-  FeedService,
-  FeedConfig,
-  ColumnConfig,
-} from '../../../services/feed.service';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { FeedService, FeedConfig, ColumnConfig } from '../../../services/feed.service';
 
 interface DialogData {
   icons: string[];
@@ -130,9 +117,7 @@ const FEED_TEMPLATES = [
           <mat-icon>{{ isEditMode() ? 'edit' : 'stacks' }}</mat-icon>
           {{ isEditMode() ? 'Edit Feed' : 'Create New Feed' }}
         </h2>
-        <p class="dialog-subtitle">
-          Choose a feed template or create a custom feed
-        </p>
+        <p class="dialog-subtitle">Choose a feed template or create a custom feed</p>
       </div>
 
       <div class="dialog-content">
@@ -141,9 +126,7 @@ const FEED_TEMPLATES = [
             <!-- Feed Template Selection -->
             <div class="template-selection">
               <h3>Feed Templates</h3>
-              <p class="section-description">
-                Select a template to get started quickly
-              </p>
+              <p class="section-description">Select a template to get started quickly</p>
 
               <div class="template-cards">
                 @for (template of feedTemplates(); track template.key) {
@@ -163,10 +146,7 @@ const FEED_TEMPLATES = [
                       @if (template.defaultColumns.length > 0) {
                         <div class="template-columns">
                           <span class="columns-label">Includes:</span>
-                          @for (
-                            column of template.defaultColumns;
-                            track $index
-                          ) {
+                          @for (column of template.defaultColumns; track $index) {
                             <span class="column-chip">{{ column.label }}</span>
                           }
                         </div>
@@ -186,11 +166,7 @@ const FEED_TEMPLATES = [
 
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Feed Name</mat-label>
-              <input
-                matInput
-                formControlName="label"
-                placeholder="My Custom Feed"
-              />
+              <input matInput formControlName="label" placeholder="My Custom Feed" />
               <mat-icon matSuffix>label</mat-icon>
               @if (feedForm.get('label')?.hasError('required')) {
                 <mat-error>Feed name is required</mat-error>
@@ -209,18 +185,12 @@ const FEED_TEMPLATES = [
                   </mat-option>
                 }
               </mat-select>
-              <mat-icon matSuffix>{{
-                feedForm.get('icon')?.value || 'dynamic_feed'
-              }}</mat-icon>
+              <mat-icon matSuffix>{{ feedForm.get('icon')?.value || 'dynamic_feed' }}</mat-icon>
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>URL Path (Optional)</mat-label>
-              <input
-                matInput
-                formControlName="path"
-                placeholder="custom-column"
-              />
+              <input matInput formControlName="path" placeholder="custom-column" />
               <mat-hint>URL identifier for this column</mat-hint>
               <mat-icon matSuffix>link</mat-icon>
             </mat-form-field>
@@ -251,17 +221,12 @@ const FEED_TEMPLATES = [
               </p>
 
               <div class="preview-columns">
-                @for (
-                  column of getSelectedTemplateConfig()!.defaultColumns;
-                  track $index
-                ) {
+                @for (column of getSelectedTemplateConfig()!.defaultColumns; track $index) {
                   <div class="preview-column">
                     <mat-icon>{{ column.icon }}</mat-icon>
                     <div class="column-info">
                       <span class="column-name">{{ column.label }}</span>
-                      <span class="column-type">{{
-                        getColumnTypeDescription(column.type)
-                      }}</span>
+                      <span class="column-type">{{ getColumnTypeDescription(column.type) }}</span>
                     </div>
                   </div>
                 }
@@ -273,12 +238,7 @@ const FEED_TEMPLATES = [
 
       <div class="dialog-actions" mat-dialog-actions>
         <button mat-button mat-dialog-close type="button">Cancel</button>
-        <button
-          mat-flat-button
-          color="primary"
-          (click)="onSubmit()"
-          [disabled]="!feedForm.valid"
-        >
+        <button mat-flat-button color="primary" (click)="onSubmit()" [disabled]="!feedForm.valid">
           {{ isEditMode() ? 'Save Changes' : 'Create Feed' }}
         </button>
       </div>
@@ -549,7 +509,7 @@ export class NewFeedDialogComponent {
   }
 
   getSelectedTemplateConfig() {
-    return this.feedTemplates().find(t => t.key === this.selectedTemplate());
+    return this.feedTemplates().find((t) => t.key === this.selectedTemplate());
   }
 
   getColumnTypeDescription(type: string): string {
@@ -570,7 +530,7 @@ export class NewFeedDialogComponent {
 
       // Create default columns based on template
       const defaultColumns: ColumnConfig[] =
-        template?.defaultColumns.map(col => ({
+        template?.defaultColumns.map((col) => ({
           id: crypto.randomUUID(),
           label: col.label,
           icon: col.icon,

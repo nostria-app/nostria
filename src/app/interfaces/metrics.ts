@@ -32,11 +32,7 @@ export interface MetricUpdate {
   pubkey: string;
   metric: keyof Omit<
     UserMetric,
-    | 'pubkey'
-    | 'updated'
-    | 'firstInteraction'
-    | 'averageTimePerView'
-    | 'engagementScore'
+    'pubkey' | 'updated' | 'firstInteraction' | 'averageTimePerView' | 'engagementScore'
   >;
   increment?: number; // Amount to increment (default: 1)
   value?: number; // Absolute value to set

@@ -1,10 +1,4 @@
-import {
-  Component,
-  inject,
-  computed,
-  ViewChild,
-  TemplateRef,
-} from '@angular/core';
+import { Component, inject, computed, ViewChild, TemplateRef } from '@angular/core';
 
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatCardModule } from '@angular/material/card';

@@ -22,9 +22,7 @@
     </mat-card-title>
     <mat-card-subtitle>
       Event ID:
-      <a [routerLink]="['/e', notification.event.id]">{{
-        notification.event.id.substring(0, 8)
-      }}</a
+      <a [routerLink]="['/e', notification.event.id]">{{ notification.event.id.substring(0, 8) }}</a
       >...
     </mat-card-subtitle>
   </mat-card-header>
@@ -36,10 +34,7 @@
     ></mat-progress-bar>
 
     <div class="relays-container">
-      @for (
-        relay of notification.relayPromises;
-        track trackByRelayUrl($index, relay)
-      ) {
+      @for (relay of notification.relayPromises; track trackByRelayUrl($index, relay)) {
         <div
           class="relay-item"
           [class.success]="relay.status === 'success'"
@@ -51,9 +46,7 @@
             @if (relay.status === 'success') {
               <mat-icon class="status-icon success">check_circle</mat-icon>
             } @else if (relay.status === 'failed') {
-              <mat-icon
-                class="status-icon failed"
-                [matTooltip]="relay.error || 'Failed'"
+              <mat-icon class="status-icon failed" [matTooltip]="relay.error || 'Failed'"
                 >error</mat-icon
               >
             } @else {
@@ -66,12 +59,7 @@
   </mat-card-content>
 
   <mat-card-actions align="end">
-    <button
-      mat-button
-      color="primary"
-      (click)="onRetry()"
-      [disabled]="!hasFailures"
-    >
+    <button mat-button color="primary" (click)="onRetry()" [disabled]="!hasFailures">
       <mat-icon>refresh</mat-icon> RETRY FAILED
     </button>
   </mat-card-actions>
