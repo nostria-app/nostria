@@ -8,7 +8,6 @@ import { ProfileRepliesComponent } from './pages/profile/profile-replies/profile
 import { ProfileReadsComponent } from './pages/profile/profile-reads/profile-reads.component';
 import { ProfileMediaComponent } from './pages/profile/profile-media/profile-media.component';
 import { ProfileAboutComponent } from './pages/profile/profile-about/profile-about.component';
-import { ProfileConnectionsComponent } from './pages/profile/profile-connections/profile-connections.component';
 import { FollowingComponent } from './pages/profile/following/following.component';
 import { ProfileHomeComponent } from './pages/profile/profile-home/profile-home.component';
 import { PremiumComponent } from './pages/premium/premium.component';
@@ -62,11 +61,6 @@ const profileChildren: Routes = [
     title: 'About',
   },
   { path: 'edit', component: ProfileEditComponent, title: 'Edit Profile' },
-  {
-    path: 'connections',
-    component: ProfileConnectionsComponent,
-    title: 'Connections',
-  },
   { path: 'following', component: FollowingComponent, title: 'Following' },
   { path: 'relays', component: ProfileRelaysComponent, title: 'Relays' },
   { path: 'details', component: DetailsComponent, title: 'Details' },
