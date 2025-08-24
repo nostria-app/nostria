@@ -23,11 +23,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { NostrService } from '../../services/nostr.service';
 import { NotificationService } from '../../services/notification.service';
 import { LayoutService } from '../../services/layout.service';
-import {
-  CdkDragDrop,
-  DragDropModule,
-  moveItemInArray,
-} from '@angular/cdk/drag-drop';
+import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { NewFeedDialogComponent } from './new-feed-dialog/new-feed-dialog.component';
 import { NewColumnDialogComponent } from './new-column-dialog/new-column-dialog.component';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
@@ -216,8 +212,8 @@ export class FeedsComponent implements OnDestroy {
     if (tags.length === 0) {
       return this.trendingEvents();
     } else {
-      return this.trendingEvents().filter(event =>
-        event.event.tags.some(tag => tag[0] === 't' && tags.includes(tag[1]))
+      return this.trendingEvents().filter((event) =>
+        event.event.tags.some((tag) => tag[0] === 't' && tags.includes(tag[1])),
       );
     }
   });
@@ -227,8 +223,8 @@ export class FeedsComponent implements OnDestroy {
     if (tags.length === 0) {
       return this.followingEvents();
     } else {
-      return this.followingEvents().filter(event =>
-        event.event.tags.some(tag => tag[0] === 't' && tags.includes(tag[1]))
+      return this.followingEvents().filter((event) =>
+        event.event.tags.some((tag) => tag[0] === 't' && tags.includes(tag[1])),
       );
     }
   });
@@ -238,8 +234,8 @@ export class FeedsComponent implements OnDestroy {
     if (tags.length === 0) {
       return this.mediaEvents();
     } else {
-      return this.mediaEvents().filter(event =>
-        event.event.tags.some(tag => tag[0] === 't' && tags.includes(tag[1]))
+      return this.mediaEvents().filter((event) =>
+        event.event.tags.some((tag) => tag[0] === 't' && tags.includes(tag[1])),
       );
     }
   }); // Drag state to prevent unnecessary re-renders during column reordering
@@ -257,7 +253,7 @@ export class FeedsComponent implements OnDestroy {
     // Get reactive feed data map from service
     const feedDataMap = this.feedService.feedDataReactive();
 
-    columns.forEach(column => {
+    columns.forEach((column) => {
       if (isDragging) {
         // During drag operations, use cached events to prevent DOM updates
         eventsMap.set(column.id, this._eventCache.get(column.id) || []);
@@ -315,7 +311,7 @@ export class FeedsComponent implements OnDestroy {
     const feedDataMap = this.feedService.feedDataReactive(); // Use reactive signal instead of regular Map
     const pausedSet = new Set<string>();
 
-    columns.forEach(column => {
+    columns.forEach((column) => {
       const columnData = feedDataMap.get(column.id);
       if (columnData && !columnData.subscription) {
         pausedSet.add(column.id);
@@ -359,12 +355,12 @@ export class FeedsComponent implements OnDestroy {
 
     // Handle route parameters for feed navigation
     effect(() => {
-      this.route.params.subscribe(params => {
+      this.route.params.subscribe((params) => {
         const pathParam = params['path'];
         if (pathParam) {
           // Find feed by path
           const feeds = this.feedsCollectionService.feeds();
-          const targetFeed = feeds.find(feed => feed.path === pathParam);
+          const targetFeed = feeds.find((feed) => feed.path === pathParam);
 
           if (targetFeed) {
             this.feedsCollectionService.setActiveFeed(targetFeed.id);
@@ -501,13 +497,13 @@ export class FeedsComponent implements OnDestroy {
   // }
 
   toggleAdvancedFilters(): void {
-    this.showAdvancedFilters.update(value => !value);
+    this.showAdvancedFilters.update((value) => !value);
   }
 
   toggleTagFilter(tag: string): void {
-    this.selectedTags.update(tags => {
+    this.selectedTags.update((tags) => {
       if (tags.includes(tag)) {
-        return tags.filter(t => t !== tag);
+        return tags.filter((t) => t !== tag);
       } else {
         return [...tags, tag];
       }
@@ -571,15 +567,11 @@ export class FeedsComponent implements OnDestroy {
       // Follow all selected profiles from the followset in a single batch operation
       await this.accountState.follow(followsToAdd);
 
-      this.notificationService.notify(
-        `Welcome! Following ${followsToAdd.length} accounts.`
-      );
+      this.notificationService.notify(`Welcome! Following ${followsToAdd.length} accounts.`);
 
       // Update local state
       this.selectedInterests.set(selectedInterests);
-      this.followingProfiles.update(current => [
-        ...new Set([...current, ...followsToAdd]),
-      ]);
+      this.followingProfiles.update((current) => [...new Set([...current, ...followsToAdd])]);
 
       // Refresh following feeds to load content from newly followed accounts
       this.feedsCollectionService.refreshFollowingColumns();
@@ -588,17 +580,15 @@ export class FeedsComponent implements OnDestroy {
       this.suggestedProfiles.set([]);
     } catch (error) {
       this.logger.error('Failed to complete followset onboarding:', error);
-      this.notificationService.notify(
-        'Error completing setup. Please try again.'
-      );
+      this.notificationService.notify('Error completing setup. Please try again.');
     }
   }
 
   // Followset interaction methods
   async toggleInterest(interestId: string): Promise<void> {
-    this.selectedInterests.update(interests => {
+    this.selectedInterests.update((interests) => {
       if (interests.includes(interestId)) {
-        return interests.filter(id => id !== interestId);
+        return interests.filter((id) => id !== interestId);
       } else {
         return [...interests, interestId];
       }
@@ -620,25 +610,22 @@ export class FeedsComponent implements OnDestroy {
       }
 
       const starterPacks = this.followsetService.starterPacks();
-      const profiles =
-        await this.followsetService.convertStarterPacksToProfiles(
-          starterPacks,
-          selectedInterests
-        );
+      const profiles = await this.followsetService.convertStarterPacksToProfiles(
+        starterPacks,
+        selectedInterests,
+      );
 
       this.suggestedProfiles.set(profiles);
-      this.logger.debug(
-        `Updated suggested profiles: ${profiles.length} profiles`
-      );
+      this.logger.debug(`Updated suggested profiles: ${profiles.length} profiles`);
     } catch (error) {
       this.logger.error('Failed to update suggested profiles:', error);
     }
   }
 
   toggleFollow(profileId: string): void {
-    this.followingProfiles.update(profiles => {
+    this.followingProfiles.update((profiles) => {
       if (profiles.includes(profileId)) {
-        return profiles.filter(id => id !== profileId);
+        return profiles.filter((id) => id !== profileId);
       } else {
         // Add to local state and also to account following
         this.accountState.follow(profileId);
@@ -664,7 +651,7 @@ export class FeedsComponent implements OnDestroy {
 
       // Simulate loading content for this specific column
       setTimeout(() => {
-        this.columnContentLoaded.update(loaded => ({
+        this.columnContentLoaded.update((loaded) => ({
           ...loaded,
           [columnId]: true,
         }));
@@ -713,7 +700,7 @@ export class FeedsComponent implements OnDestroy {
 
       console.log(
         '📋 Columns reordered:',
-        columns.map(col => `${col.label} (${col.id})`)
+        columns.map((col) => `${col.label} (${col.id})`),
       );
 
       // Update the actual feed data using the optimized method
@@ -730,20 +717,20 @@ export class FeedsComponent implements OnDestroy {
           currentIndex >= this.visibleColumnIndex()
         ) {
           // If a column was moved from before the visible one to after it, shift visibility back
-          this.visibleColumnIndex.update(idx => idx - 1);
+          this.visibleColumnIndex.update((idx) => idx - 1);
         } else if (
           previousIndex > this.visibleColumnIndex() &&
           currentIndex <= this.visibleColumnIndex()
         ) {
           // If a column was moved from after the visible one to before it, shift visibility forward
-          this.visibleColumnIndex.update(idx => idx + 1);
+          this.visibleColumnIndex.update((idx) => idx + 1);
         }
       }
 
       this.notificationService.notify('Column order changed');
       this.logger.debug(
         'Column order changed',
-        columns.map(col => col.id)
+        columns.map((col) => col.id),
       );
 
       // Let's scroll to ensure the dropped column is visible
@@ -767,7 +754,7 @@ export class FeedsComponent implements OnDestroy {
     // Pre-cache all column events to prevent DOM updates during drag
     const columns = this.columns();
     const feedDataMap = this.feedService.feedDataReactive();
-    columns.forEach(column => {
+    columns.forEach((column) => {
       const columnData = feedDataMap.get(column.id);
       const events = columnData?.events() || [];
       this._eventCache.set(column.id, events);
@@ -803,7 +790,7 @@ export class FeedsComponent implements OnDestroy {
     const wrapper = this.columnsWrapper.nativeElement;
     const newPosition = Math.min(
       this.maxScroll(),
-      this.scrollPosition() + 750 // Scroll approximately one column
+      this.scrollPosition() + 750, // Scroll approximately one column
     );
 
     wrapper.scrollTo({
@@ -815,8 +802,7 @@ export class FeedsComponent implements OnDestroy {
     if (this.isMobileView() || !this.columnsWrapper) return;
 
     const wrapper = this.columnsWrapper.nativeElement;
-    const columnElements =
-      wrapper.querySelectorAll<HTMLElement>('.column-unit');
+    const columnElements = wrapper.querySelectorAll<HTMLElement>('.column-unit');
 
     if (index >= 0 && index < columnElements.length) {
       const columnElement = columnElements[index];
@@ -873,7 +859,7 @@ export class FeedsComponent implements OnDestroy {
       },
     });
 
-    dialogRef.afterClosed().subscribe(result => {
+    dialogRef.afterClosed().subscribe((result) => {
       if (result && activeFeed) {
         // Add the new column to the current feed
         const updatedFeed = {
@@ -894,14 +880,12 @@ export class FeedsComponent implements OnDestroy {
           }, 100);
         }
 
-        this.columnContentLoaded.update(loaded => ({
+        this.columnContentLoaded.update((loaded) => ({
           ...loaded,
           [result.id]: false,
         }));
 
-        this.notificationService.notify(
-          `Column "${result.label}" added to "${activeFeed.label}"`
-        );
+        this.notificationService.notify(`Column "${result.label}" added to "${activeFeed.label}"`);
       }
     });
   }
@@ -939,7 +923,7 @@ export class FeedsComponent implements OnDestroy {
       },
     });
 
-    dialogRef.afterClosed().subscribe(result => {
+    dialogRef.afterClosed().subscribe((result) => {
       if (result && activeFeed) {
         // Update the specific column in the feed
         const updatedColumns = [...activeFeed.columns];
@@ -980,7 +964,7 @@ export class FeedsComponent implements OnDestroy {
       if (this.visibleColumnIndex() >= updatedColumns.length) {
         this.visibleColumnIndex.set(Math.max(0, updatedColumns.length - 1));
       } else if (this.visibleColumnIndex() > index) {
-        this.visibleColumnIndex.update(idx => idx - 1);
+        this.visibleColumnIndex.update((idx) => idx - 1);
       }
     }
 
@@ -994,41 +978,29 @@ export class FeedsComponent implements OnDestroy {
   }
   pauseColumn(column: ColumnDefinition): void {
     console.log('⏸️ Pausing column:', column.label, `(${column.id})`);
-    console.log(
-      '📊 Column status before pause:',
-      this.getColumnStatus(column.id)
-    );
+    console.log('📊 Column status before pause:', this.getColumnStatus(column.id));
     this.feedsCollectionService.pauseColumn(column.id);
     this.notificationService.notify(`Column "${column.label}" paused`);
-    console.log(
-      '📊 Column status after pause:',
-      this.getColumnStatus(column.id)
-    );
+    console.log('📊 Column status after pause:', this.getColumnStatus(column.id));
   }
   continueColumn(column: ColumnDefinition): void {
     console.log('▶️ Continue column:', column.label, `(${column.id})`);
-    console.log(
-      '📊 Column status before continue:',
-      this.getColumnStatus(column.id)
-    );
+    console.log('📊 Column status before continue:', this.getColumnStatus(column.id));
     this.feedsCollectionService.continueColumn(column.id);
     this.notificationService.notify(`Column "${column.label}" continued`);
-    console.log(
-      '📊 Column status after continue:',
-      this.getColumnStatus(column.id)
-    );
+    console.log('📊 Column status after continue:', this.getColumnStatus(column.id));
   }
 
   // Video expansion state management methods
   expandVideo(videoKey: string): void {
-    this.videoExpandedStates.update(states => ({
+    this.videoExpandedStates.update((states) => ({
       ...states,
       [videoKey]: true,
     }));
   }
 
   collapseVideo(videoKey: string): void {
-    this.videoExpandedStates.update(states => ({
+    this.videoExpandedStates.update((states) => ({
       ...states,
       [videoKey]: false,
     }));
@@ -1041,9 +1013,7 @@ export class FeedsComponent implements OnDestroy {
     try {
       // Only fetch if user has empty following list
       if (this.hasEmptyFollowingList()) {
-        this.logger.debug(
-          'User has empty following list, fetching starter packs...'
-        );
+        this.logger.debug('User has empty following list, fetching starter packs...');
 
         // Set loading state
         this.isLoadingInterests.set(true);
@@ -1053,13 +1023,10 @@ export class FeedsComponent implements OnDestroy {
 
         if (starterPacks.length > 0) {
           // Convert starter packs to interests
-          const interests =
-            this.followsetService.convertStarterPacksToInterests(starterPacks);
+          const interests = this.followsetService.convertStarterPacksToInterests(starterPacks);
           this.availableInterests.set(interests);
 
-          this.logger.debug(
-            `Loaded ${interests.length} interests from starter packs`
-          );
+          this.logger.debug(`Loaded ${interests.length} interests from starter packs`);
         } else {
           this.logger.warn('No starter packs found, using default interests');
         }
@@ -1083,7 +1050,7 @@ export class FeedsComponent implements OnDestroy {
     const imetas = event.tags?.filter((tag: any[]) => tag[0] === 'imeta') || [];
     return imetas
       .map((imeta: string[]) => {
-        const urlIndex = imeta.findIndex(item => item.startsWith('url '));
+        const urlIndex = imeta.findIndex((item) => item.startsWith('url '));
         return urlIndex > 0 ? imeta[urlIndex].substring(4) : null;
       })
       .filter(Boolean);
@@ -1094,9 +1061,7 @@ export class FeedsComponent implements OnDestroy {
     if (imetas.length <= imageIndex) return null;
 
     const imeta = imetas[imageIndex];
-    const blurhashIndex = imeta.findIndex((item: string) =>
-      item.startsWith('blurhash ')
-    );
+    const blurhashIndex = imeta.findIndex((item: string) => item.startsWith('blurhash '));
     return blurhashIndex > 0 ? imeta[blurhashIndex].substring(9) : null;
   }
 
@@ -1129,23 +1094,15 @@ export class FeedsComponent implements OnDestroy {
     if (imetas.length === 0) return null;
 
     const firstImeta = imetas[0];
-    const urlIndex = firstImeta.findIndex((item: string) =>
-      item.startsWith('url ')
-    );
-    const imageIndex = firstImeta.findIndex((item: string) =>
-      item.startsWith('image ')
-    );
-    const blurhashIndex = firstImeta.findIndex((item: string) =>
-      item.startsWith('blurhash ')
-    );
+    const urlIndex = firstImeta.findIndex((item: string) => item.startsWith('url '));
+    const imageIndex = firstImeta.findIndex((item: string) => item.startsWith('image '));
+    const blurhashIndex = firstImeta.findIndex((item: string) => item.startsWith('blurhash '));
 
     const durationTag = event.tags?.find((tag: any[]) => tag[0] === 'duration');
 
     const videoUrl = urlIndex > 0 ? firstImeta[urlIndex].substring(4) : '';
-    const existingThumbnail =
-      imageIndex > 0 ? firstImeta[imageIndex].substring(6) : undefined;
-    const existingBlurhash =
-      blurhashIndex > 0 ? firstImeta[blurhashIndex].substring(9) : undefined;
+    const existingThumbnail = imageIndex > 0 ? firstImeta[imageIndex].substring(6) : undefined;
+    const existingBlurhash = blurhashIndex > 0 ? firstImeta[blurhashIndex].substring(9) : undefined;
 
     // Generate thumbnail using web service if no existing thumbnail or blurhash
     let generatedThumbnail: string | undefined = existingThumbnail;
@@ -1185,15 +1142,11 @@ export class FeedsComponent implements OnDestroy {
   }
 
   hasContentWarning(event: any): boolean {
-    return (
-      event.tags?.some((tag: any[]) => tag[0] === 'content-warning') || false
-    );
+    return event.tags?.some((tag: any[]) => tag[0] === 'content-warning') || false;
   }
 
   getContentWarning(event: any): string {
-    const warningTag = event.tags?.find(
-      (tag: any[]) => tag[0] === 'content-warning'
-    );
+    const warningTag = event.tags?.find((tag: any[]) => tag[0] === 'content-warning');
     return warningTag ? warningTag[1] : '';
   }
 
@@ -1222,9 +1175,7 @@ export class FeedsComponent implements OnDestroy {
     const img = event.target as HTMLImageElement;
     const container = img.parentElement;
     if (container) {
-      const placeholder = container.querySelector(
-        '.blurhash-placeholder'
-      ) as HTMLImageElement;
+      const placeholder = container.querySelector('.blurhash-placeholder') as HTMLImageElement;
       if (placeholder) {
         placeholder.style.opacity = '0';
         setTimeout(() => {
@@ -1238,7 +1189,7 @@ export class FeedsComponent implements OnDestroy {
    */
   selectFeed(feedId: string): void {
     const feeds = this.feedsCollectionService.feeds();
-    const selectedFeed = feeds.find(feed => feed.id === feedId);
+    const selectedFeed = feeds.find((feed) => feed.id === feedId);
 
     // Set the active feed
     this.feedsCollectionService.setActiveFeed(feedId);
@@ -1269,7 +1220,7 @@ export class FeedsComponent implements OnDestroy {
         ],
       },
     });
-    dialogRef.afterClosed().subscribe(result => {
+    dialogRef.afterClosed().subscribe((result) => {
       if (result) {
         // The dialog returns a FeedConfig, but FeedsCollectionService.addFeed expects FeedDefinition data
         const newFeed = this.feedsCollectionService.addFeed({
@@ -1313,7 +1264,7 @@ export class FeedsComponent implements OnDestroy {
       },
     });
 
-    dialogRef.afterClosed().subscribe(result => {
+    dialogRef.afterClosed().subscribe((result) => {
       if (result && activeFeed) {
         this.feedsCollectionService.updateFeed(activeFeed.id, {
           label: result.label,
@@ -1341,7 +1292,7 @@ export class FeedsComponent implements OnDestroy {
         confirmColor: 'warn',
       } as ConfirmDialogData,
     });
-    dialogRef.afterClosed().subscribe(result => {
+    dialogRef.afterClosed().subscribe((result) => {
       if (result) {
         this.feedsCollectionService.removeFeed(activeFeed.id);
       }
@@ -1360,7 +1311,7 @@ export class FeedsComponent implements OnDestroy {
         confirmColor: 'warn',
       } as ConfirmDialogData,
     });
-    dialogRef.afterClosed().subscribe(result => {
+    dialogRef.afterClosed().subscribe((result) => {
       if (result) {
         this.feedsCollectionService.resetToDefaults();
         this.notificationService.notify('Feeds have been reset to defaults');
@@ -1395,7 +1346,7 @@ export class FeedsComponent implements OnDestroy {
       tracks = this.parseM3UContent(m3uContent);
 
       // Calculate total duration if available
-      tracks.forEach(track => {
+      tracks.forEach((track) => {
         if (track.url) {
           // Try to extract duration from M3U metadata if available
           const durationMatch = m3uContent.match(/#EXTINF:(\d+)/);
@@ -1411,23 +1362,18 @@ export class FeedsComponent implements OnDestroy {
       alt,
       tracks,
       url: playlistUrl,
-      totalDuration:
-        totalDuration > 0
-          ? this.formatDuration(totalDuration.toString())
-          : undefined,
+      totalDuration: totalDuration > 0 ? this.formatDuration(totalDuration.toString()) : undefined,
     };
   }
 
   /**
    * Parse M3U content and extract tracks
    */
-  private parseM3UContent(
-    content: string
-  ): { url: string; title?: string; artist?: string }[] {
+  private parseM3UContent(content: string): { url: string; title?: string; artist?: string }[] {
     const lines = content
       .split('\n')
-      .map(line => line.trim())
-      .filter(line => line);
+      .map((line) => line.trim())
+      .filter((line) => line);
     const tracks: { url: string; title?: string; artist?: string }[] = [];
 
     let currentTrack: { url?: string; title?: string; artist?: string } = {};
@@ -1460,9 +1406,7 @@ export class FeedsComponent implements OnDestroy {
         if (currentTrack.url) {
           tracks.push({
             url: currentTrack.url,
-            title:
-              currentTrack.title ||
-              this.extractFilenameFromUrl(currentTrack.url),
+            title: currentTrack.title || this.extractFilenameFromUrl(currentTrack.url),
             artist: currentTrack.artist,
           });
         }
@@ -1476,9 +1420,7 @@ export class FeedsComponent implements OnDestroy {
         if (currentTrack.url) {
           tracks.push({
             url: currentTrack.url,
-            title:
-              currentTrack.title ||
-              this.extractFilenameFromUrl(currentTrack.url),
+            title: currentTrack.title || this.extractFilenameFromUrl(currentTrack.url),
             artist: currentTrack.artist,
           });
         }
