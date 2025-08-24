@@ -1,14 +1,4 @@
-import {
-  Component,
-  inject,
-  signal,
-  computed,
-  effect,
-  OnInit,
-  ViewChild,
-  ElementRef,
-  AfterViewInit,
-} from '@angular/core';
+import { Component, inject, signal, computed, effect, ViewChild, ElementRef } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { animate, style, transition, trigger } from '@angular/animations';
 import { Location } from '@angular/common';
@@ -22,7 +12,20 @@ import { ScrollingModule } from '@angular/cdk/scrolling';
 import { ProfileStateService } from '../../../services/profile-state.service';
 import { LayoutService } from '../../../services/layout.service';
 import { LoggerService } from '../../../services/logger.service';
+import { AccountStateService } from '../../../services/account-state.service';
 import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
+
+interface UserProfile {
+  id: string;
+  npub: string;
+  name: string;
+  picture: string | null;
+}
+
+interface ProfileData {
+  name: string;
+  picture: string | null;
+}
 
 @Component({
   selector: 'app-following',
@@ -42,16 +45,10 @@ import { UserProfileComponent } from '../../../components/user-profile/user-prof
     trigger('slideInOut', [
       transition(':enter', [
         style({ transform: 'translateY(100%)', opacity: 0 }),
-        animate(
-          '300ms ease-out',
-          style({ transform: 'translateY(0)', opacity: 1 })
-        ),
+        animate('300ms ease-out', style({ transform: 'translateY(0)', opacity: 1 })),
       ]),
       transition(':leave', [
-        animate(
-          '300ms ease-in',
-          style({ transform: 'translateY(100%)', opacity: 0 })
-        ),
+        animate('300ms ease-in', style({ transform: 'translateY(100%)', opacity: 0 })),
       ]),
     ]),
     trigger('profileShrink', [
@@ -62,25 +59,39 @@ import { UserProfileComponent } from '../../../components/user-profile/user-prof
     ]),
   ],
 })
-export class FollowingComponent implements OnInit, AfterViewInit {
+export class FollowingComponent {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private location = inject(Location);
   layout = inject(LayoutService);
   private logger = inject(LoggerService);
   profileState = inject(ProfileStateService);
+  private accountState = inject(AccountStateService);
 
   @ViewChild('followingContainer') followingContainerRef!: ElementRef;
 
   isLoading = signal(true);
   error = signal<string | null>(null);
-  followingList = signal<any[]>([]);
-  mutualConnectionsList = signal<any[]>([]);
+  followingList = signal<UserProfile[]>([]);
+
+  // Computed signal for mutual connections
+  mutualConnectionsList = computed(() => {
+    const currentUserFollowing = this.accountState.followingList();
+    const profileFollowing = this.followingList();
+
+    // Find users that both the current user and the profile are following
+    const mutualPubkeys = currentUserFollowing.filter((pubkey) =>
+      profileFollowing.some((user) => user.id === pubkey),
+    );
+
+    // Return the user profiles for mutual connections
+    return profileFollowing.filter((user) => mutualPubkeys.includes(user.id));
+  });
 
   selectedTabIndex = signal(0);
 
   npub = computed(() => this.route.snapshot.parent?.paramMap.get('npub') || '');
-  userProfile = signal<any>(null);
+  userProfile = signal<ProfileData | null>(null);
 
   // Item size for virtual scrolling (approx. height of each item in pixels)
   readonly itemSize = 72;
@@ -96,16 +107,6 @@ export class FollowingComponent implements OnInit, AfterViewInit {
         await this.loadFollowingList(list);
       }
     });
-  }
-
-  ngOnInit(): void {
-    // Call loadMutualConnections to populate mutual connections list
-    this.loadMutualConnections();
-  }
-
-  ngAfterViewInit(): void {
-    // Ensure component is scrolled into view after view initialization
-    // setTimeout(() => this.scrollToTop(), 350);
   }
 
   /**
@@ -124,7 +125,7 @@ export class FollowingComponent implements OnInit, AfterViewInit {
           picture: 'https://example.com/avatar.jpg',
         });
       }, 300);
-    } catch (err) {
+    } catch {
       this.error.set('Failed to load profile');
     }
   }
@@ -151,27 +152,6 @@ export class FollowingComponent implements OnInit, AfterViewInit {
       this.error.set('Failed to load following list');
       this.isLoading.set(false);
       this.logger.error('Error loading following list', err);
-    }
-  }
-
-  async loadMutualConnections(): Promise<void> {
-    try {
-      // In a real app, fetch mutual connections from an API
-      // For demo purposes, we'll create mock data
-      setTimeout(() => {
-        const mockMutuals = Array(3)
-          .fill(0)
-          .map((_, index) => ({
-            id: `mutual-${index}`,
-            npub: `mutual-npub-${index}`,
-            name: `Mutual User ${index + 1}`,
-            picture: null,
-          }));
-
-        this.mutualConnectionsList.set(mockMutuals);
-      }, 500);
-    } catch (err) {
-      this.logger.error('Error loading mutual connections', err);
     }
   }
 
