@@ -1,3 +1,28 @@
+  &.name {
+    width: auto;
+    flex-shrink: 0;
+
+    .user-profile-container {
+      justify-content: flex-start;
+      padding: 0;
+      width: auto;
+    }
+
+    .user-profile-content {
+      margin-left: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .user-profile-name {
+      font-size: 16px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
 :host {
   display: block;
   width: 100%;

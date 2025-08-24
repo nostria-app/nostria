@@ -43,4 +43,5 @@ export type ViewMode =
   | 'thread'
   | 'icon'
   | 'compact'
-  | 'card';
+  | 'card'
+  | 'name';
