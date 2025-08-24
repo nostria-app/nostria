@@ -310,13 +310,6 @@
                           </app-user-profile> -->
                           <!-- <mat-card-content> -->
                             <!-- Photos (NIP-68, kind 20) -->
-
-
-                            <app-user-profile
-                            [pubkey]="event.pubkey"
-                            view="name"></app-user-profile>
-
-
                             @if (
                               event.kind === 20 ||
                               columnData.column.type === 'photos'

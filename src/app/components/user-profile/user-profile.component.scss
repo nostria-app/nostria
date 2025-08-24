@@ -1,28 +1,3 @@
-  &.name {
-    width: auto;
-    flex-shrink: 0;
-
-    .user-profile-container {
-      justify-content: flex-start;
-      padding: 0;
-      width: auto;
-    }
-
-    .user-profile-content {
-      margin-left: 0;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: flex-start;
-    }
-
-    .user-profile-name {
-      font-size: 16px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-  }
 :host {
   display: block;
   width: 100%;
@@ -70,10 +45,8 @@
     overflow: hidden;
     flex-shrink: 0;
     border: 2px solid;
-    border-color: var(
-      --mat-button-text-label-text-color,
-      var(--mat-sys-primary)
-    );
+    border-color: var(--mat-button-text-label-text-color,
+        var(--mat-sys-primary));
     background-color: var(--mat-card-subtle-surface-color, #e0e0e0);
     // Allow touch scrolling to pass through
     touch-action: manipulation;
@@ -569,4 +542,132 @@
   border-radius: 50%;
   width: 24px;
   height: 24px;
+}
+
+.user-profile.name {
+  width: auto;
+  flex-shrink: 0;
+
+  .user-profile-container {
+    justify-content: flex-start;
+    padding: 0;
+    width: auto;
+  }
+
+  .user-profile-content.name-view {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-left: 0;
+    padding: 0;
+    gap: 2px;
+    min-width: 40px;
+  }
+
+  .user-profile-avatar.name-avatar {
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    min-height: 24px;
+    max-width: 24px;
+    max-height: 24px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    border: 2px solid var(--mat-button-text-label-text-color, var(--mat-sys-primary));
+    background-color: var(--mat-card-subtle-surface-color, #e0e0e0);
+    box-sizing: border-box;
+  }
+
+  .user-profile-avatar.name-avatar .user-avatar,
+  .user-profile-avatar.name-avatar .default-user-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .user-profile-name.name-label {
+    font-size: 13px;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
+    max-width: 60px;
+    font-weight: 500;
+    line-height: 1.1;
+  }
+}
+
+.user-profile.tiny {
+  width: auto;
+  flex-shrink: 0;
+
+  .user-profile-container {
+    justify-content: flex-start;
+    padding: 0;
+    width: auto;
+  }
+
+  .user-profile-content.tiny-view {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-left: 0;
+    padding: 0;
+    gap: 2px;
+    min-width: 40px;
+  }
+
+  .user-profile-avatar.name-avatar {
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    min-height: 24px;
+    max-width: 24px;
+    max-height: 24px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    border: 2px solid var(--mat-button-text-label-text-color, var(--mat-sys-primary));
+    background-color: var(--mat-card-subtle-surface-color, #e0e0e0);
+    box-sizing: border-box;
+  }
+
+  .user-profile-avatar.name-avatar .user-avatar,
+  .user-profile-avatar.name-avatar .default-user-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .user-profile-name.name-label {
+    font-size: 13px;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
+    max-width: 70px;
+    font-weight: 500;
+    line-height: 1.1;
+  }
 }
