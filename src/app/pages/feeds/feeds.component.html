@@ -301,14 +301,14 @@
                     @let columnEventsData = columnEvents().get(column.id);
                     @if (columnData && columnEventsData) {
                       @for (event of columnEventsData; track event.id) {
-                        <mat-card class="content-card">
-                          <app-user-profile
+                        <!-- <mat-card class="content-card"> -->
+                          <!-- <app-user-profile
                             [pubkey]="event.pubkey"
                             view="thread"
                           >
                             <app-link [event]="event"></app-link>
-                          </app-user-profile>
-                          <mat-card-content>
+                          </app-user-profile> -->
+                          <!-- <mat-card-content> -->
                             <!-- Photos (NIP-68, kind 20) -->
                             @if (
                               event.kind === 20 ||
@@ -365,8 +365,8 @@
                                 }
                               }
                             </div>
-                          </mat-card-content>
-                          <mat-card-actions>
+                          <!-- </mat-card-content> -->
+                          <!-- <mat-card-actions>
                             <button mat-icon-button>
                               <mat-icon>favorite_border</mat-icon>
                             </button>
@@ -381,8 +381,8 @@
                                 <mat-icon>repeat</mat-icon>
                               </button>
                             }
-                          </mat-card-actions>
-                        </mat-card>
+                          </mat-card-actions> -->
+                        <!-- </mat-card> -->
                       }
                     } @else {
                       <div class="no-events">
