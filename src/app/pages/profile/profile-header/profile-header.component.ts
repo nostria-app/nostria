@@ -1,12 +1,4 @@
-import {
-  Component,
-  effect,
-  inject,
-  input,
-  signal,
-  untracked,
-  computed,
-} from '@angular/core';
+import { Component, effect, inject, input, signal, untracked, computed } from '@angular/core';
 
 import { MatIconModule } from '@angular/material/icon';
 import { RouterModule } from '@angular/router';
@@ -198,10 +190,7 @@ export class ProfileHeaderComponent {
   copyFollowingList(): void {
     // Placeholder for actual implementation that would fetch the following list
     this.logger.debug('Copy following list requested for:', this.pubkey());
-    this.layout.copyToClipboard(
-      'Following list not implemented yet',
-      'following list'
-    );
+    this.layout.copyToClipboard('Following list not implemented yet', 'following list');
   }
 
   copyRelayList(): void {
@@ -236,7 +225,7 @@ export class ProfileHeaderComponent {
           this.logger.warn(
             'NIP-05 profile pubkey mismatch:',
             profile.pubkey,
-            metadata.event.pubkey
+            metadata.event.pubkey,
           );
         }
       }
@@ -331,7 +320,7 @@ export class ProfileHeaderComponent {
       // Get the relay list event (kind 10002)
       const relayListEvent = await this.storage.getEventByPubkeyAndKind(
         currentPubkey,
-        kinds.RelayList
+        kinds.RelayList,
       );
 
       if (!relayListEvent) {
@@ -369,7 +358,7 @@ export class ProfileHeaderComponent {
       // Get the following list event (kind 3)
       const followingListEvent = await this.storage.getEventByPubkeyAndKind(
         currentPubkey,
-        kinds.Contacts
+        kinds.Contacts,
       );
 
       if (!followingListEvent) {
@@ -411,7 +400,7 @@ export class ProfileHeaderComponent {
         const result = await firstValueFrom(
           this.accountService.getPublicAccount({
             pubkeyOrUsername: pubkey,
-          })
+          }),
         );
 
         if (result?.result) {
