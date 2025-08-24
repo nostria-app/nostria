@@ -7,7 +7,12 @@
 
 <article class="article-container">
   @if (title()) {
-  <h3 class="article-title">{{ title() }}</h3>
+  <h3 class="article-title">
+    
+      <app-user-profile class="user-profile-name-right" [hostWidthAuto]="true" [pubkey]="event().pubkey"
+    view="tiny"></app-user-profile>
+    
+    {{ title() }}</h3>
   }
 
   @if (authorName() || publishedAt()) {

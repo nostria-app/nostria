@@ -44,4 +44,5 @@ export type ViewMode =
   | 'icon'
   | 'compact'
   | 'card'
+  | 'tiny'
   | 'name';

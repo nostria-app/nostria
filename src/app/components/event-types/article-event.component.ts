@@ -5,11 +5,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { Event } from 'nostr-tools';
 import { nip19 } from 'nostr-tools';
 import { LayoutService } from '../../services/layout.service';
+import { UserProfileComponent } from '../user-profile/user-profile.component';
 
 @Component({
   selector: 'app-article-event',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule],
+  imports: [CommonModule, MatButtonModule, MatIconModule, UserProfileComponent],
   templateUrl: './article-event.component.html',
   styleUrl: './article-event.component.scss',
 })
@@ -34,7 +35,7 @@ export class ArticleEventComponent {
     const event = this.event();
     if (!event) return null;
 
-    const summaryTag = event.tags.find(tag => tag[0] === 'summary');
+    const summaryTag = event.tags.find((tag) => tag[0] === 'summary');
     return summaryTag?.[1] || null;
   });
 
@@ -51,7 +52,7 @@ export class ArticleEventComponent {
     const event = this.event();
     if (!event) return null;
 
-    const urlTag = event.tags.find(tag => tag[0] === 'r' || tag[0] === 'url');
+    const urlTag = event.tags.find((tag) => tag[0] === 'r' || tag[0] === 'url');
     return urlTag?.[1] || null;
   });
 
@@ -60,7 +61,7 @@ export class ArticleEventComponent {
     const event = this.event();
     if (!event) return null;
 
-    const publishedTag = event.tags.find(tag => tag[0] === 'published_at');
+    const publishedTag = event.tags.find((tag) => tag[0] === 'published_at');
     if (publishedTag?.[1]) {
       return new Date(parseInt(publishedTag[1]) * 1000);
     }
@@ -74,7 +75,7 @@ export class ArticleEventComponent {
     const event = this.event();
     if (!event) return null;
 
-    const authorTag = event.tags.find(tag => tag[0] === 'author');
+    const authorTag = event.tags.find((tag) => tag[0] === 'author');
     return authorTag?.[1] || null;
   });
 
@@ -83,14 +84,14 @@ export class ArticleEventComponent {
     const event = this.event();
     if (!event) return false;
 
-    return event.tags.some(tag => tag[0] === 'content-warning');
+    return event.tags.some((tag) => tag[0] === 'content-warning');
   });
 
   contentWarning = computed(() => {
     const event = this.event();
     if (!event) return null;
 
-    const warningTag = event.tags.find(tag => tag[0] === 'content-warning');
+    const warningTag = event.tags.find((tag) => tag[0] === 'content-warning');
     return warningTag?.[1] || 'Content may be sensitive';
   });
 
@@ -100,8 +101,8 @@ export class ArticleEventComponent {
     if (!event) return [];
 
     return event.tags
-      .filter(tag => tag[0] === 't')
-      .map(tag => tag[1])
+      .filter((tag) => tag[0] === 't')
+      .map((tag) => tag[1])
       .filter(Boolean);
   });
 
@@ -134,7 +135,7 @@ export class ArticleEventComponent {
     if (!event) return;
 
     // Get the article identifier (d tag)
-    const dTag = event.tags.find(tag => tag[0] === 'd')?.[1] || '';
+    const dTag = event.tags.find((tag) => tag[0] === 'd')?.[1] || '';
 
     // Create naddr for the article
     const naddr = nip19.naddrEncode({
@@ -148,7 +149,7 @@ export class ArticleEventComponent {
   }
 
   private getEventTitle(event: Event): string | null {
-    const titleTag = event.tags.find(tag => tag[0] === 'title');
+    const titleTag = event.tags.find((tag) => tag[0] === 'title');
     return titleTag?.[1] || null;
   }
 }
