@@ -131,10 +131,7 @@ export class ProfileComponent {
     // Check for router navigation state
     const navigation = this.router.getCurrentNavigation();
     if (navigation?.extras.state?.['event']) {
-      console.log(
-        'Router state event data for profile:',
-        navigation.extras.state['event']
-      );
+      console.log('Router state event data for profile:', navigation.extras.state['event']);
       // Handle the event data as needed for profile context
     }
 
@@ -194,7 +191,7 @@ export class ProfileComponent {
             } else {
               // username = await this.username.getUsername(id);
               const identifier: string = id;
-              this.username.getUsername(id).then(username => {
+              this.username.getUsername(id).then((username) => {
                 if (username) {
                   this.url.updatePathSilently(['/u', username]);
                 } else {
@@ -216,7 +213,7 @@ export class ProfileComponent {
           } else {
             if (!username) {
               const identifier: string = id;
-              this.username.getUsername(id).then(username => {
+              this.username.getUsername(id).then((username) => {
                 if (username) {
                   this.url.updatePathSilently(['/u', username]);
                 } else {
@@ -279,8 +276,9 @@ export class ProfileComponent {
     });
 
     // Add effect to monitor router events for sub-route changes
-    this.router.events.subscribe(event => {
+    this.router.events.subscribe((event) => {
       if (event instanceof NavigationEnd) {
+        debugger;
         // Check if current route is one that should use compact header
         const currentUrl = event.urlAfterRedirects;
         const shouldBeCompact = this.shouldUseCompactHeader(currentUrl);
@@ -310,9 +308,7 @@ export class ProfileComponent {
    * @returns Window object or null if not in browser
    */
   private getWindow(): Window | null {
-    return isPlatformBrowser(this.platformId)
-      ? this.document.defaultView
-      : null;
+    return isPlatformBrowser(this.platformId) ? this.document.defaultView : null;
   }
 
   // private async loadUserData(pubkey: string, disconnect = true): Promise<void> {
@@ -362,16 +358,11 @@ export class ProfileComponent {
 
       if (!metadata) {
         // Don't set an error - allow the profile page to load without metadata
-        this.logger.warn(
-          'User profile metadata not found, but continuing to load profile content'
-        );
+        this.logger.warn('User profile metadata not found, but continuing to load profile content');
       }
 
       // Always scroll and load data, regardless of whether metadata was found
-      setTimeout(
-        () => this.layoutService.scrollToOptimalProfilePosition(),
-        100
-      );
+      setTimeout(() => this.layoutService.scrollToOptimalProfilePosition(), 100);
 
       // Load user data regardless of metadata availability
       // this.loadUserData(pubkey);
@@ -435,10 +426,10 @@ export class ProfileComponent {
             horizontalPosition: 'center',
             verticalPosition: 'bottom',
             panelClass: 'copy-snackbar',
-          }
+          },
         );
       })
-      .catch(error => {
+      .catch((error) => {
         this.logger.error('Failed to copy to clipboard:', error);
         this.snackBar.open('Failed to copy to clipboard', 'Dismiss', {
           duration: 3000,
@@ -469,10 +460,7 @@ export class ProfileComponent {
   copyFollowingList(): void {
     // Placeholder for actual implementation that would fetch the following list
     this.logger.debug('Copy following list requested for:', this.pubkey());
-    this.copyToClipboard(
-      'Following list not implemented yet',
-      'following list'
-    );
+    this.copyToClipboard('Following list not implemented yet', 'following list');
   }
 
   copyRelayList(): void {
@@ -495,7 +483,7 @@ export class ProfileComponent {
         .then(() => {
           this.logger.debug('Profile shared successfully');
         })
-        .catch(error => {
+        .catch((error) => {
           this.logger.error('Error sharing profile:', error);
         });
     } else {
