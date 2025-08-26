@@ -11,7 +11,6 @@ import {
 import { LocalStorageService } from './local-storage.service';
 import { LoggerService } from './logger.service';
 import { Event, kinds } from 'nostr-tools';
-import { SubCloser } from 'nostr-tools/abstract-pool';
 import { ApplicationStateService } from './application-state.service';
 import { AccountStateService } from './account-state.service';
 import { DataService } from './data.service';
@@ -24,12 +23,20 @@ import { SharedRelayServiceEx } from './relays/shared-relay';
 import { UserRelayExFactoryService } from './user-relay-factory.service';
 import { AccountRelayServiceEx } from './relays/account-relay';
 
-export interface FeedData {
+export interface FeedItem {
   column: ColumnConfig;
-  filter: any;
   events: WritableSignal<Event[]>;
-  subscription: any;
-  lastTimestamp?: number; // Track latest timestamp for pagination
+  filter: {
+    kinds?: number[];
+    authors?: string[];
+    '#e'?: string[];
+    '#p'?: string[];
+    since?: number;
+    until?: number;
+    limit?: number;
+  } | null;
+  lastTimestamp?: number;
+  subscription: { unsubscribe: () => void } | { close: () => void } | null;
 }
 
 export interface ColumnConfig {
@@ -42,7 +49,7 @@ export interface ColumnConfig {
   source?: 'following' | 'public';
   relayConfig: 'account' | 'custom';
   customRelays?: string[];
-  filters?: Record<string, any>;
+  filters?: Record<string, unknown>;
   createdAt: number;
   updatedAt: number;
 }
@@ -229,11 +236,11 @@ export class FeedService {
   }
 
   // Use a signal to track feed data for reactivity
-  private readonly _feedData = signal(new Map<string, FeedData>());
-  readonly data = new Map<string, FeedData>();
+  private readonly _feedData = signal(new Map<string, FeedItem>());
+  readonly data = new Map<string, FeedItem>();
 
   // Public getter to expose reactive feed data map for components
-  get feedDataReactive(): Signal<Map<string, FeedData>> {
+  get feedDataReactive(): Signal<Map<string, FeedItem>> {
     return this._feedData.asReadonly();
   }
 
@@ -262,6 +269,21 @@ export class FeedService {
     }
 
     console.log('Subscribed to feeds:', Array.from(this.data.keys()));
+  }
+
+  /**
+   * Helper method to safely close subscriptions
+   */
+  private closeSubscription(
+    subscription: { unsubscribe: () => void } | { close: () => void } | null,
+  ) {
+    if (subscription) {
+      if ('close' in subscription) {
+        subscription.close();
+      } else if ('unsubscribe' in subscription) {
+        subscription.unsubscribe();
+      }
+    }
   }
 
   /**
@@ -318,11 +340,11 @@ export class FeedService {
       return;
     }
 
-    const item: FeedData = {
+    const item: FeedItem = {
       column,
-      filter: null as any,
+      filter: null,
       events: signal<Event[]>([]),
-      subscription: null as SubCloser | null,
+      subscription: null,
       lastTimestamp: Date.now(), // Initialize with current timestamp
     };
 
@@ -331,14 +353,12 @@ export class FeedService {
       item.filter = {
         limit: 6,
         kinds: column.kinds,
-        // authors: column.relayConfig === 'user' ? this._userRelays().map(r => r.url) : this._discoveryRelays().map(r => r.url),
         ...column.filters,
       };
     } else {
       item.filter = {
         limit: 6,
         kinds: column.kinds,
-        // authors: column.relayConfig === 'user' ? this._userRelays().map(r => r.url) : this._discoveryRelays().map(r => r.url)
       };
     }
 
@@ -346,19 +366,38 @@ export class FeedService {
     if (column.source === 'following') {
       await this.loadFollowingFeed(item);
     } else {
-      // Subscribe to relay events using account relay
-      // TODO: Implement proper relay selection based on column.relayConfig
-      const sub = this.accountRelay.subscribe([item.filter], (event) => {
+      // Choose relay service based on column.relayConfig
+      let relayService: AccountRelayServiceEx | UserRelayServiceEx;
+
+      if (
+        column.relayConfig === 'custom' &&
+        column.customRelays &&
+        column.customRelays.length > 0
+      ) {
+        // Use custom relays for this column
+        this.logger.debug(`Using custom relays for column ${column.id}:`, column.customRelays);
+
+        // Use UserRelayServiceEx and initialize it with custom relays
+        relayService = this.userRelayEx;
+        relayService.init(column.customRelays);
+      } else {
+        // Use account relays (default)
+        this.logger.debug(`Using account relays for column ${column.id}`);
+        relayService = this.accountRelay;
+      }
+
+      // Subscribe to relay events using the selected relay service
+      const sub = relayService.subscribe([item.filter], (event: Event) => {
         // Filter out live events that are muted.
         if (this.accountState.muted(event)) {
           return;
         }
 
-        item.events.update((events) => [event, ...events]);
+        item.events.update((events: Event[]) => [event, ...events]);
         this.logger.debug(`Column event received for ${column.id}:`, event);
       });
 
-      item.subscription = sub as any;
+      item.subscription = sub;
     }
 
     this.data.set(column.id, item);
@@ -384,13 +423,13 @@ export class FeedService {
    * 5. Sorts by creation time with newest first
    * 6. Tracks lastTimestamp for pagination
    */
-  private async loadFollowingFeed(feedData: FeedData) {
+  private async loadFollowingFeed(feedData: FeedItem) {
     try {
       // Check if this is an articles feed - use different algorithm
-      const isArticlesFeed = feedData.filter.kinds?.includes(30023);
+      const isArticlesFeed = feedData.filter?.kinds?.includes(30023);
 
       this.logger.debug(
-        `Loading following feed - isArticles: ${isArticlesFeed}, kinds: ${JSON.stringify(feedData.filter.kinds)}`,
+        `Loading following feed - isArticles: ${isArticlesFeed}, kinds: ${JSON.stringify(feedData.filter?.kinds)}`,
       );
 
       // Get recommended users based on content type
@@ -435,8 +474,8 @@ export class FeedService {
    * Fetch events from a list of users using the outbox model
    * Updates UI incrementally as events are received for better UX
    */
-  private async fetchEventsFromUsers(pubkeys: string[], feedData: FeedData) {
-    const isArticlesFeed = feedData.filter.kinds?.includes(30023);
+  private async fetchEventsFromUsers(pubkeys: string[], feedData: FeedItem) {
+    const isArticlesFeed = feedData.filter?.kinds?.includes(30023);
     const eventsPerUser = isArticlesFeed ? 10 : 5; // Fetch more events per user for articles
     const now = Math.floor(Date.now() / 1000); // current timestamp in seconds
     const daysBack = isArticlesFeed ? 90 : 7; // Look further back for articles
@@ -453,7 +492,7 @@ export class FeedService {
           pubkey,
           {
             authors: [pubkey],
-            kinds: feedData.filter.kinds,
+            kinds: feedData.filter?.kinds,
             limit: eventsPerUser,
             since: timeCutoff,
           },
@@ -492,7 +531,7 @@ export class FeedService {
    */
   private updateFeedIncremental(
     userEventsMap: Map<string, Event[]>,
-    feedData: FeedData,
+    feedData: FeedItem,
     processedUsers: number,
     totalUsers: number,
   ) {
@@ -522,7 +561,7 @@ export class FeedService {
   /**
    * Finalize the incremental feed with a final sort and cleanup
    */
-  private finalizeIncrementalFeed(userEventsMap: Map<string, Event[]>, feedData: FeedData) {
+  private finalizeIncrementalFeed(userEventsMap: Map<string, Event[]>, feedData: FeedItem) {
     // Final aggregation and sort
     const finalEvents = this.aggregateAndSortEvents(userEventsMap);
 
@@ -576,7 +615,7 @@ export class FeedService {
 
     try {
       // Check if this is an articles feed
-      const isArticlesFeed = feedData.filter.kinds?.includes(30023);
+      const isArticlesFeed = feedData.filter?.kinds?.includes(30023);
 
       // Get top engaged users again (they might have changed)
       const topEngagedUsers = isArticlesFeed
@@ -594,10 +633,9 @@ export class FeedService {
   /**
    * Fetch older events for pagination with incremental updates
    */
-  private async fetchOlderEventsFromUsers(pubkeys: string[], feedData: FeedData) {
+  private async fetchOlderEventsFromUsers(pubkeys: string[], feedData: FeedItem) {
     const eventsPerUser = 5;
     const maxAge = 30 * 24 * 60 * 60 * 1000; // 30 days for older content
-    const until = Math.floor((feedData.lastTimestamp || Date.now()) / 1000); // Convert to seconds
 
     const userEventsMap = new Map<string, Event[]>();
     let processedUsers = 0;
@@ -613,7 +651,7 @@ export class FeedService {
         // Fetch events older than the last timestamp
         const events = await userRelayEx.getEventsByPubkeyAndKind(
           pubkey,
-          feedData.filter.kinds[0] || kinds.ShortTextNote,
+          feedData.filter?.kinds?.[0] || kinds.ShortTextNote,
         );
 
         if (events.length > 0) {
@@ -668,7 +706,7 @@ export class FeedService {
    */
   private updatePaginationIncremental(
     userEventsMap: Map<string, Event[]>,
-    feedData: FeedData,
+    feedData: FeedItem,
     existingEvents: Event[],
     processedUsers: number,
     totalUsers: number,
@@ -702,7 +740,7 @@ export class FeedService {
    */
   private finalizePaginationIncremental(
     userEventsMap: Map<string, Event[]>,
-    feedData: FeedData,
+    feedData: FeedItem,
     existingEvents: Event[],
   ) {
     // Final aggregation and sort of older events
@@ -743,7 +781,7 @@ export class FeedService {
     if (columnData) {
       // Close the subscription
       if (columnData.subscription) {
-        columnData.subscription?.close();
+        this.closeSubscription(columnData.subscription);
         this.logger.debug(`Closed subscription for column: ${columnId}`);
       }
 
@@ -824,7 +862,7 @@ export class FeedService {
   }
 
   unsubscribe() {
-    this.data.forEach((item) => item.subscription?.close());
+    this.data.forEach((item) => this.closeSubscription(item.subscription));
     this.data.clear();
     this._feedData.set(new Map());
     this.logger.debug('Unsubscribed from all feed subscriptions');
@@ -1299,7 +1337,7 @@ export class FeedService {
 
     // Close the subscription if it exists
     if (columnData.subscription) {
-      columnData.subscription.close();
+      this.closeSubscription(columnData.subscription);
       columnData.subscription = null;
       this.logger.debug(`Closed subscription for paused column: ${columnId}`);
       console.log(`⏸️ Subscription closed for column: ${columnData.column.label}`);
@@ -1343,12 +1381,15 @@ export class FeedService {
       await this.loadFollowingFeed(columnData);
     } else {
       // Subscribe to relay events again
-      const sub = this.accountRelay.subscribe([columnData.filter], (event) => {
-        columnData.events.update((events) => [event, ...events]);
-        this.logger.debug(`Column event received for ${columnId}:`, event);
-      });
+      const sub = this.accountRelay.subscribe(
+        columnData.filter ? [columnData.filter] : [],
+        (event) => {
+          columnData.events.update((events: Event[]) => [event, ...events]);
+          this.logger.debug(`Column event received for ${columnId}:`, event);
+        },
+      );
 
-      columnData.subscription = sub as any;
+      columnData.subscription = sub;
     }
 
     // Update the reactive signal to trigger UI updates

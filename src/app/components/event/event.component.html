@@ -66,13 +66,17 @@
     @else if (item.event.kind === 30023) {
     <app-article-event [event]="item.event"></app-article-event>
     }
+    @else if (item.event.kind === 3) {
+    This is an following event... rendering coming soon.
+    }
     <!-- M3U Playlists (kind 32100) -->
     @else if (item.event.kind === 32100) {
     <app-playlist-event [event]="targetItem.event"></app-playlist-event>
     }
     <!-- Profile events (kind 0) -->
     @else if (item.event.kind === 0) {
-    <app-user-profile [view]="'details'" [event]="item.event"></app-user-profile>
+    {{ item.data.about }}
+    <!-- <app-user-profile [view]="'details'" [event]="item.event"></app-user-profile> -->
     } @else {
     <app-content [content]="item.data"></app-content>
     }
