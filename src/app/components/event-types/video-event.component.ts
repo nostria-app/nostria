@@ -36,6 +36,14 @@ export class VideoEventComponent {
     return this.getVideoData(event);
   });
 
+  // Computed blurhash data URL for performance
+  blurhashDataUrl = computed(() => {
+    const videoInfo = this.videoData();
+    if (!videoInfo?.blurhash) return null;
+
+    return this.generateBlurhashDataUrl(videoInfo.blurhash, 400, 225);
+  });
+
   // Video title
   title = computed(() => {
     const event = this.event();
@@ -77,25 +85,52 @@ export class VideoEventComponent {
   }
 
   private getVideoData(event: Event): VideoData | null {
-    // Extract video URL from tags
-    const urlTag = event.tags.find((tag) => tag[0] === 'url');
-    const imageTag = event.tags.find((tag) => tag[0] === 'image');
-    const thumbTag = event.tags.find((tag) => tag[0] === 'thumb');
-    const blurhashTag = event.tags.find((tag) => tag[0] === 'blurhash');
-    const durationTag = event.tags.find((tag) => tag[0] === 'duration');
-    const titleTag = event.tags.find((tag) => tag[0] === 'title');
-    const altTag = event.tags.find((tag) => tag[0] === 'alt');
+    // For kind 21 and 22 events (NIP-71), extract video data from 'imeta' tags
+    if (event.kind === 21 || event.kind === 22) {
+      const imetaTags = event.tags.filter((tag) => tag[0] === 'imeta');
 
-    if (!urlTag?.[1]) return null;
+      if (imetaTags.length === 0) return null;
 
-    return {
-      url: urlTag[1],
-      thumbnail: thumbTag?.[1] || imageTag?.[1],
-      blurhash: blurhashTag?.[1],
-      duration: durationTag?.[1] ? parseInt(durationTag[1], 10) : undefined,
-      title: titleTag?.[1],
-      alt: altTag?.[1],
-    };
+      // Use the first imeta tag for primary video data
+      const primaryImeta = imetaTags[0];
+      const parsed = this.parseImetaTag(primaryImeta);
+
+      if (!parsed['url']) return null;
+
+      // Get duration from dedicated duration tag
+      const durationTag = event.tags.find((tag) => tag[0] === 'duration');
+      const altTag = event.tags.find((tag) => tag[0] === 'alt');
+      const titleTag = event.tags.find((tag) => tag[0] === 'title');
+
+      return {
+        url: parsed['url'],
+        thumbnail: parsed['image'],
+        blurhash: parsed['blurhash'],
+        duration: durationTag?.[1] ? parseInt(durationTag[1], 10) : undefined,
+        title: titleTag?.[1],
+        alt: altTag?.[1] || parsed['alt'],
+      };
+    } else {
+      // Fallback for other event types
+      const urlTag = event.tags.find((tag) => tag[0] === 'url');
+      const imageTag = event.tags.find((tag) => tag[0] === 'image');
+      const thumbTag = event.tags.find((tag) => tag[0] === 'thumb');
+      const blurhashTag = event.tags.find((tag) => tag[0] === 'blurhash');
+      const durationTag = event.tags.find((tag) => tag[0] === 'duration');
+      const titleTag = event.tags.find((tag) => tag[0] === 'title');
+      const altTag = event.tags.find((tag) => tag[0] === 'alt');
+
+      if (!urlTag?.[1]) return null;
+
+      return {
+        url: urlTag[1],
+        thumbnail: thumbTag?.[1] || imageTag?.[1],
+        blurhash: blurhashTag?.[1],
+        duration: durationTag?.[1] ? parseInt(durationTag[1], 10) : undefined,
+        title: titleTag?.[1],
+        alt: altTag?.[1],
+      };
+    }
   }
 
   private getEventTitle(event: Event): string | null {
@@ -105,6 +140,25 @@ export class VideoEventComponent {
 
   private removeHashtagsFromContent(content: string): string {
     return content.replace(/#\w+/g, '').trim();
+  }
+
+  private parseImetaTag(imetaTag: string[]): Record<string, string> {
+    const parsed: Record<string, string> = {};
+
+    for (let i = 1; i < imetaTag.length; i++) {
+      const part = imetaTag[i];
+      if (!part) continue;
+
+      // Find the first space to separate key from value
+      const spaceIndex = part.indexOf(' ');
+      if (spaceIndex > 0) {
+        const key = part.substring(0, spaceIndex);
+        const value = part.substring(spaceIndex + 1);
+        parsed[key] = value;
+      }
+    }
+
+    return parsed;
   }
 
   generateBlurhashDataUrl(blurhash: string, width = 400, height = 225): string {
