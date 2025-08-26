@@ -65,8 +65,14 @@
           <h4>Content Source</h4>
           <p class="section-description">Select which events to include in this column</p>
           <mat-button-toggle-group name="source" formControlName="source" class="source-toggle">
-            <mat-button-toggle value="following">Following</mat-button-toggle>
-            <mat-button-toggle value="public">Public</mat-button-toggle>
+            <mat-button-toggle value="following">
+              <mat-icon>people</mat-icon>
+              Following
+            </mat-button-toggle>
+            <mat-button-toggle value="public">
+              <mat-icon>public</mat-icon>
+              Public
+            </mat-button-toggle>
           </mat-button-toggle-group>
         </div>
 
