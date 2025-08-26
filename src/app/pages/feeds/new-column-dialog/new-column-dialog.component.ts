@@ -99,7 +99,8 @@ export class NewColumnDialogComponent {
   selectedColumnType = signal<string>(this.data.column?.type || 'custom');
   selectedKinds = signal<number[]>(this.data.column?.kinds || []);
   customRelays = signal<string[]>(this.data.column?.customRelays || []);
-  showCustomRelays = computed(() => this.columnForm.get('relayConfig')?.value === 'custom');
+  selectedRelayConfig = signal<string>(this.data.column?.relayConfig || 'user');
+  showCustomRelays = computed(() => this.selectedRelayConfig() === 'custom');
 
   // Form controls for chips
   kindInputControl = new FormControl('');
@@ -132,18 +133,21 @@ export class NewColumnDialogComponent {
     });
 
     // Auto-fill based on column type
-    const columnType = this.feedService.getFeedType(typeKey as any);
-    if (columnType && columnType.kinds.length > 0) {
-      this.selectedKinds.set(columnType.kinds);
-      this.columnForm.patchValue({ kinds: columnType.kinds });
-    }
+    const validTypes = ['notes', 'articles', 'photos', 'videos', 'music', 'custom'] as const;
+    if (validTypes.includes(typeKey as (typeof validTypes)[number])) {
+      const columnType = this.feedService.getFeedType(typeKey as (typeof validTypes)[number]);
+      if (columnType && columnType.kinds.length > 0) {
+        this.selectedKinds.set(columnType.kinds);
+        this.columnForm.patchValue({ kinds: columnType.kinds });
+      }
 
-    // Update icon and label if not in edit mode
-    if (!this.isEditMode()) {
-      this.columnForm.patchValue({
-        icon: columnType.icon,
-        label: columnType.label,
-      });
+      // Update icon and label if not in edit mode
+      if (!this.isEditMode()) {
+        this.columnForm.patchValue({
+          icon: columnType.icon,
+          label: columnType.label,
+        });
+      }
     }
   }
 
@@ -184,6 +188,7 @@ export class NewColumnDialogComponent {
   }
 
   onRelayConfigChange(value: string): void {
+    this.selectedRelayConfig.set(value);
     if (value !== 'custom') {
       this.customRelays.set([]);
       this.columnForm.patchValue({ customRelays: [] });
@@ -191,11 +196,18 @@ export class NewColumnDialogComponent {
   }
 
   addCustomRelay(event: MatChipInputEvent): void {
-    const value = event.value.trim();
-    if (value && this.feedService.validateRelayUrl(value)) {
-      if (!this.customRelays().includes(value)) {
-        this.customRelays.update((relays) => [...relays, value]);
-        this.updateCustomRelaysForm();
+    let value = event.value.trim();
+    if (value) {
+      // Automatically add wss:// prefix if not present
+      if (!value.startsWith('wss://') && !value.startsWith('ws://')) {
+        value = 'wss://' + value;
+      }
+
+      if (this.isValidRelayUrl(value)) {
+        if (!this.customRelays().includes(value)) {
+          this.customRelays.update((relays) => [...relays, value]);
+          this.updateCustomRelaysForm();
+        }
       }
     }
     event.chipInput!.clear();
@@ -211,14 +223,21 @@ export class NewColumnDialogComponent {
     this.columnForm.patchValue({ customRelays: this.customRelays() });
   }
 
+  private isValidRelayUrl(url: string): boolean {
+    try {
+      const urlObj = new URL(url);
+      return urlObj.protocol === 'wss:' || urlObj.protocol === 'ws:';
+    } catch {
+      return false;
+    }
+  }
+
   getActiveRelays(): string[] {
-    const relayConfig = this.columnForm.get('relayConfig')?.value;
+    const relayConfig = this.selectedRelayConfig();
 
     switch (relayConfig) {
       case 'user':
         return this.feedService.userRelays().map((r) => r.url);
-      case 'discovery':
-        return this.feedService.discoveryRelays().map((r) => r.url);
       case 'custom':
         return this.customRelays();
       default:
@@ -234,10 +253,10 @@ export class NewColumnDialogComponent {
         id: this.data.column?.id || crypto.randomUUID(),
         label: formValue.label!,
         icon: formValue.icon!,
-        type: formValue.type as any,
+        type: formValue.type as 'photos' | 'videos' | 'notes' | 'articles' | 'music' | 'custom',
         source: formValue.source || 'public',
         kinds: this.selectedKinds(),
-        relayConfig: formValue.relayConfig as any,
+        relayConfig: formValue.relayConfig as 'user' | 'custom',
         customRelays: formValue.relayConfig === 'custom' ? this.customRelays() : undefined,
         filters: {},
         createdAt: this.data.column?.createdAt || Date.now(),
