@@ -25,8 +25,6 @@
         </div>
       </div>
 
-      <mat-divider></mat-divider>
-
       <!-- Basic Information -->
       <div class="section basic-info-section">
         <h3>Basic Information</h3>
@@ -54,27 +52,8 @@
         </div>
       </div>
 
-      <mat-divider></mat-divider>
-
       <!-- Content Configuration -->
       <div class="section content-config-section">
-        <h3>Content Configuration</h3>
-
-        <!-- Following or Public -->
-        <div class="form-group">
-          <h4>Content Source</h4>
-          <p class="section-description">Select which events to include in this column</p>
-          <mat-button-toggle-group name="source" formControlName="source" class="source-toggle">
-            <mat-button-toggle value="following">
-              <mat-icon>people</mat-icon>
-              Following
-            </mat-button-toggle>
-            <mat-button-toggle value="public">
-              <mat-icon>public</mat-icon>
-              Public
-            </mat-button-toggle>
-          </mat-button-toggle-group>
-        </div>
 
         <!-- Event Kinds Selection -->
         <div class="form-group">
@@ -108,9 +87,25 @@
             <mat-icon matSuffix>category</mat-icon>
           </mat-form-field>
         </div>
-      </div>
 
-      <mat-divider></mat-divider>
+        <!-- Following or Public -->
+        <div class="form-group">
+          <h4>Content Source</h4>
+          <p class="section-description">Select source for events to include in this column</p>
+          <mat-button-toggle-group name="source" formControlName="source" class="source-toggle">
+            <mat-button-toggle value="following">
+              <mat-icon>people</mat-icon>
+              Following
+            </mat-button-toggle>
+            <mat-button-toggle value="public">
+              <mat-icon>public</mat-icon>
+              Public
+            </mat-button-toggle>
+          </mat-button-toggle-group>
+        </div>
+
+
+      </div>
 
       <!-- Relay Configuration -->
       <div class="section relay-config-section">
@@ -118,7 +113,6 @@
         <p class="section-description">Choose which relays to use for this column</p>
 
         <div class="form-group">
-          <h4>Relay Type</h4>
           <mat-button-toggle-group name="relayConfig" formControlName="relayConfig" class="relay-toggle"
             (change)="onRelayConfigChange($event.value)">
             <mat-button-toggle value="user">
@@ -156,9 +150,10 @@
         </div>
         }
 
-        <!-- Relay Preview -->
+        @if (showCustomRelays()) {
+        <!-- Relay Preview for Custom Relays -->
         <div class="relay-preview">
-          <h4>Active Relays Preview</h4>
+          <h4>Custom Relays Preview</h4>
           <div class="relay-list">
             @for (relay of getActiveRelays(); track relay) {
             <div class="relay-item">
@@ -169,14 +164,16 @@
             @if (getActiveRelays().length === 0) {
             <div class="no-relays">
               <mat-icon>warning</mat-icon>
-              <span>No relays configured</span>
+              <span>No custom relays configured</span>
             </div>
             }
           </div>
         </div>
+        }
       </div>
     </div>
   </form>
+  <br><br>
 </mat-dialog-content>
 <mat-dialog-actions align="end">
   <button mat-button mat-dialog-close type="button">Cancel</button>
