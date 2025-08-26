@@ -89,6 +89,31 @@
        }
      }
 
+     .form-group {
+       h4 {
+         margin: 0 0 8px 0;
+         font-size: 1rem;
+         font-weight: 500;
+       }
+     }
+
+     .relay-toggle {
+       mat-button-toggle {
+         display: flex;
+         align-items: center;
+         gap: 8px;
+         padding: 8px 16px;
+         min-width: 140px;
+         justify-content: flex-start;
+
+         mat-icon {
+           font-size: 1.2rem;
+           width: 1.2rem;
+           height: 1.2rem;
+         }
+       }
+     }
+
      // Icon selection styles
      ::ng-deep .mat-mdc-option {
        &.icon-option {

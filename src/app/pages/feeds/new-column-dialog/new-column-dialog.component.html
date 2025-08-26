@@ -83,7 +83,7 @@
               @for (kind of selectedKinds(); track kind) {
               <mat-chip-row (removed)="removeKind(kind)">
                 {{ getKindLabel(kind) }}
-                <button matChipRemove>
+                <button matChipRemove type="button">
                   <mat-icon>cancel</mat-icon>
                 </button>
               </mat-chip-row>
@@ -111,30 +111,20 @@
         <h3>Relay Configuration</h3>
         <p class="section-description">Choose which relays to use for this column</p>
 
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Relay Configuration</mat-label>
-          <mat-select formControlName="relayConfig" (selectionChange)="onRelayConfigChange($event.value)">
-            <mat-option value="user">
-              <div class="relay-option">
-                <mat-icon>person</mat-icon>
-                <div>
-                  <div class="option-title">Account Relays</div>
-                  <div class="option-description">Use your configured relays</div>
-                </div>
-              </div>
-            </mat-option>
-            <mat-option value="custom">
-              <div class="relay-option">
-                <mat-icon>settings</mat-icon>
-                <div>
-                  <div class="option-title">Custom Relays</div>
-                  <div class="option-description">Specify custom relay URLs</div>
-                </div>
-              </div>
-            </mat-option>
-          </mat-select>
-          <mat-icon matSuffix>dns</mat-icon>
-        </mat-form-field>
+        <div class="form-group">
+          <h4>Relay Type</h4>
+          <mat-button-toggle-group name="relayConfig" formControlName="relayConfig" class="relay-toggle"
+            (change)="onRelayConfigChange($event.value)">
+            <mat-button-toggle value="user">
+              <mat-icon>person</mat-icon>
+              Account Relays
+            </mat-button-toggle>
+            <mat-button-toggle value="custom">
+              <mat-icon>settings</mat-icon>
+              Custom Relays
+            </mat-button-toggle>
+          </mat-button-toggle-group>
+        </div>
 
         @if (showCustomRelays()) {
         <div class="custom-relays-section">
@@ -145,7 +135,7 @@
               @for (relay of customRelays(); track relay) {
               <mat-chip-row (removed)="removeCustomRelay(relay)">
                 {{ relay }}
-                <button matChipRemove>
+                <button matChipRemove type="button">
                   <mat-icon>cancel</mat-icon>
                 </button>
               </mat-chip-row>
