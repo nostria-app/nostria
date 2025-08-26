@@ -10,7 +10,7 @@ export interface ColumnDefinition {
   path?: string;
   type: 'notes' | 'articles' | 'photos' | 'videos' | 'custom';
   kinds: number[];
-  relayConfig: 'user' | 'discovery' | 'custom';
+  relayConfig: 'account' | 'custom';
   customRelays?: string[];
   filters?: Record<string, any>;
   createdAt: number;
