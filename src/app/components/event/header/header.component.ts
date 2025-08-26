@@ -22,10 +22,6 @@ import {
   ConfirmDialogData,
 } from '../../confirm-dialog/confirm-dialog.component';
 import { UserProfileComponent } from '../../user-profile/user-profile.component';
-import {
-  PublishDialogComponent,
-  PublishDialogData,
-} from '../publish-dialog/publish-dialog.component';
 
 @Component({
   selector: 'app-event-header',
@@ -128,22 +124,5 @@ export class EventHeaderComponent {
         });
       }
     }
-  }
-
-  async publishEvent() {
-    const event = this.event();
-    if (!event) {
-      return;
-    }
-
-    const dialogData: PublishDialogData = {
-      event,
-    };
-
-    this.dialog.open(PublishDialogComponent, {
-      data: dialogData,
-      width: '600px',
-      disableClose: false,
-    });
   }
 }

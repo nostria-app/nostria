@@ -6,6 +6,11 @@ import { Event } from 'nostr-tools';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { MediaItem } from '../../interfaces';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { LayoutService } from '../../services/layout.service';
+import { MatMenuModule } from '@angular/material/menu';
+import { AgoPipe } from '../../pipes/ago.pipe';
+import { MatDividerModule } from '@angular/material/divider';
 
 interface PlaylistTrack {
   url: string;
@@ -25,7 +30,16 @@ interface PlaylistData {
 @Component({
   selector: 'app-playlist-event',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule, UserProfileComponent],
+  imports: [
+    CommonModule,
+    MatButtonModule,
+    MatIconModule,
+    UserProfileComponent,
+    MatTooltipModule,
+    MatMenuModule,
+    AgoPipe,
+    MatDividerModule,
+  ],
   templateUrl: './playlist-event.component.html',
   styleUrl: './playlist-event.component.scss',
 })
@@ -34,6 +48,8 @@ export class PlaylistEventComponent {
 
   // Inject the media player service
   private mediaPlayerService = inject(MediaPlayerService);
+
+  layout = inject(LayoutService);
 
   // Playlist data parsed from the event
   playlistData = computed(() => {
