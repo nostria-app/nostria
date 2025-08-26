@@ -74,6 +74,37 @@
        }
      }
 
+     // Form layout styles
+     .form-row {
+       mat-form-field {
+         &.full-width {
+           flex: 1;
+         }
+
+         &:not(.full-width) {
+           flex: 0 0 auto;
+           min-width: 120px;
+           max-width: 140px;
+         }
+       }
+     }
+
+     // Icon selection styles
+     ::ng-deep .mat-mdc-option {
+       &.icon-option {
+         display: flex;
+         justify-content: center;
+         align-items: center;
+         min-height: 48px;
+
+         mat-icon {
+           font-size: 1.5rem;
+           width: 1.5rem;
+           height: 1.5rem;
+         }
+       }
+     }
+
      .relay-list {
        max-height: 120px;
        overflow-y: auto;
