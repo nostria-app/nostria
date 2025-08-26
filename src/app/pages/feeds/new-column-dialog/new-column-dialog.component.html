@@ -1,233 +1,203 @@
-    <div class="dialog-container">
-      <div class="dialog-header">
-        <h2 mat-dialog-title>
-          <mat-icon>{{ isEditMode() ? 'edit' : 'add_column_right' }}</mat-icon>
-          {{ isEditMode() ? 'Edit Column' : 'Create New Column' }}
-        </h2>
-        <p class="dialog-subtitle">Configure your custom Nostr column</p>
+<h2 mat-dialog-title>
+  <mat-icon>{{ isEditMode() ? 'edit' : 'add_column_right' }}</mat-icon>
+  {{ isEditMode() ? 'Edit Column' : 'Create New Column' }}
+</h2>
+
+<mat-dialog-content class="mat-typography">
+  <form [formGroup]="columnForm" (ngSubmit)="onSubmit()">
+    <div class="settings-container">
+      <!-- Column Type Selection -->
+      <div class="section column-type-section">
+        <h3>Column Type</h3>
+        <div class="column-type-cards">
+          @for (type of columnTypes(); track type.key) {
+          <mat-card class="column-type-card" [class.selected]="selectedColumnType() === type.key"
+            (click)="selectColumnType(type.key)">
+            <mat-card-content>
+              <div class="type-header">
+                <mat-icon>{{ type.icon }}</mat-icon>
+                <h4>{{ type.label }}</h4>
+              </div>
+              <p class="type-description">{{ type.description }}</p>
+            </mat-card-content>
+          </mat-card>
+          }
+        </div>
       </div>
 
-      <div class="dialog-content">
-        <form [formGroup]="columnForm" (ngSubmit)="onSubmit()">
-          <div class="settings-container">
-            <!-- Column Type Selection -->
-            <div class="section column-type-section">
-              <h3>Column Type</h3>
-              <div class="column-type-cards">
-                @for (type of columnTypes(); track type.key) {
-                  <mat-card
-                    class="column-type-card"
-                    [class.selected]="selectedColumnType() === type.key"
-                    (click)="selectColumnType(type.key)"
-                  >
-                    <mat-card-content>
-                      <div class="type-header">
-                        <mat-icon>{{ type.icon }}</mat-icon>
-                        <h4>{{ type.label }}</h4>
-                      </div>
-                      <p class="type-description">{{ type.description }}</p>
-                    </mat-card-content>
-                  </mat-card>
-                }
-              </div>
-            </div>
+      <mat-divider></mat-divider>
 
-            <mat-divider></mat-divider>
+      <!-- Basic Information -->
+      <div class="section basic-info-section">
+        <h3>Basic Information</h3>
+        <div class="form-row">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Column Name</mat-label>
+            <input matInput formControlName="label" placeholder="My Custom Column" />
+            <mat-icon matSuffix>label</mat-icon>
+            @if (columnForm.get('label')?.hasError('required')) {
+            <mat-error>Column name is required</mat-error>
+            }
+          </mat-form-field>
 
-            <!-- Basic Information -->
-            <div class="section basic-info-section">
-              <h3>Basic Information</h3>
-              <div class="form-row">
-                <mat-form-field appearance="outline" class="full-width">
-                  <mat-label>Column Name</mat-label>
-                  <input matInput formControlName="label" placeholder="My Custom Column" />
-                  <mat-icon matSuffix>label</mat-icon>
-                  @if (columnForm.get('label')?.hasError('required')) {
-                    <mat-error>Column name is required</mat-error>
-                  }
-                </mat-form-field>
-
-                <mat-form-field appearance="outline" class="full-width">
-                  <mat-label>Icon</mat-label>
-                  <mat-select formControlName="icon">
-                    @for (icon of data.icons; track icon) {
-                      <mat-option [value]="icon">
-                        <div class="icon-option">
-                          <mat-icon>{{ icon }}</mat-icon>
-                          <span>{{ icon }}</span>
-                        </div>
-                      </mat-option>
-                    }
-                  </mat-select>
-                  <mat-icon matSuffix>{{ columnForm.get('icon')?.value || 'widgets' }}</mat-icon>
-                </mat-form-field>
-              </div>
-            </div>
-
-            <mat-divider></mat-divider>
-
-            <!-- Content Configuration -->
-            <div class="section content-config-section">
-              <h3>Content Configuration</h3>
-
-              <!-- Following or Public -->
-              <div class="form-group">
-                <h4>Content Source</h4>
-                <p class="section-description">Select which events to include in this column</p>
-                <mat-button-toggle-group
-                  name="source"
-                  formControlName="source"
-                  class="source-toggle"
-                >
-                  <mat-button-toggle value="following">Following</mat-button-toggle>
-                  <mat-button-toggle value="public">Public</mat-button-toggle>
-                </mat-button-toggle-group>
-              </div>
-
-              <!-- Event Kinds Selection -->
-              <div class="form-group">
-                <h4>Event Kinds</h4>
-                <p class="section-description">
-                  Select which types of Nostr events to include in this column
-                </p>
-
-                <mat-form-field class="full-width" appearance="outline">
-                  <mat-label>Event Kinds</mat-label>
-                  <mat-chip-grid #chipGrid aria-label="Event kinds selection">
-                    @for (kind of selectedKinds(); track kind) {
-                      <mat-chip-row (removed)="removeKind(kind)">
-                        {{ getKindLabel(kind) }}
-                        <button matChipRemove>
-                          <mat-icon>cancel</mat-icon>
-                        </button>
-                      </mat-chip-row>
-                    }
-                  </mat-chip-grid>
-                  <input
-                    placeholder="Add event kind..."
-                    #kindInput
-                    [formControl]="kindInputControl"
-                    [matChipInputFor]="chipGrid"
-                    [matAutocomplete]="kindAutocomplete"
-                    [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
-                    (matChipInputTokenEnd)="addKind($event)"
-                  />
-                  <mat-autocomplete
-                    #kindAutocomplete="matAutocomplete"
-                    (optionSelected)="kindSelected($event)"
-                  >
-                    @for (kind of filteredKinds(); track kind.value) {
-                      <mat-option [value]="kind.value">
-                        <strong>{{ kind.value }}</strong> - {{ kind.label }}
-                      </mat-option>
-                    }
-                  </mat-autocomplete>
-                  <mat-icon matSuffix>category</mat-icon>
-                </mat-form-field>
-              </div>
-            </div>
-
-            <mat-divider></mat-divider>
-
-            <!-- Relay Configuration -->
-            <div class="section relay-config-section">
-              <h3>Relay Configuration</h3>
-              <p class="section-description">Choose which relays to use for this column</p>
-
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Relay Configuration</mat-label>
-                <mat-select
-                  formControlName="relayConfig"
-                  (selectionChange)="onRelayConfigChange($event.value)"
-                >
-                  <mat-option value="user">
-                    <div class="relay-option">
-                      <mat-icon>person</mat-icon>
-                      <div>
-                        <div class="option-title">User Relays</div>
-                        <div class="option-description">Use your configured relays</div>
-                      </div>
-                    </div>
-                  </mat-option>
-                  <mat-option value="discovery">
-                    <div class="relay-option">
-                      <mat-icon>explore</mat-icon>
-                      <div>
-                        <div class="option-title">Discovery Relays</div>
-                        <div class="option-description">Use discovery and search relays</div>
-                      </div>
-                    </div>
-                  </mat-option>
-                  <mat-option value="custom">
-                    <div class="relay-option">
-                      <mat-icon>settings</mat-icon>
-                      <div>
-                        <div class="option-title">Custom Relays</div>
-                        <div class="option-description">Specify custom relay URLs</div>
-                      </div>
-                    </div>
-                  </mat-option>
-                </mat-select>
-                <mat-icon matSuffix>dns</mat-icon>
-              </mat-form-field>
-
-              @if (showCustomRelays()) {
-                <div class="custom-relays-section">
-                  <h4>Custom Relay URLs</h4>
-                  <mat-form-field class="full-width" appearance="outline">
-                    <mat-label>Custom Relays</mat-label>
-                    <mat-chip-grid #relayChipGrid aria-label="Custom relays">
-                      @for (relay of customRelays(); track relay) {
-                        <mat-chip-row (removed)="removeCustomRelay(relay)">
-                          {{ relay }}
-                          <button matChipRemove>
-                            <mat-icon>cancel</mat-icon>
-                          </button>
-                        </mat-chip-row>
-                      }
-                    </mat-chip-grid>
-                    <input
-                      placeholder="wss://relay.example.com"
-                      #relayInput
-                      [formControl]="relayInputControl"
-                      [matChipInputFor]="relayChipGrid"
-                      [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
-                      (matChipInputTokenEnd)="addCustomRelay($event)"
-                    />
-                    <mat-icon matSuffix>add_link</mat-icon>
-                    <mat-hint>Enter WebSocket URLs (wss:// or ws://)</mat-hint>
-                  </mat-form-field>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Icon</mat-label>
+            <mat-select formControlName="icon">
+              @for (icon of data.icons; track icon) {
+              <mat-option [value]="icon">
+                <div class="icon-option">
+                  <mat-icon>{{ icon }}</mat-icon>
+                  <span>{{ icon }}</span>
                 </div>
+              </mat-option>
               }
-
-              <!-- Relay Preview -->
-              <div class="relay-preview">
-                <h4>Active Relays Preview</h4>
-                <div class="relay-list">
-                  @for (relay of getActiveRelays(); track relay) {
-                    <div class="relay-item">
-                      <mat-icon class="relay-status">wifi</mat-icon>
-                      <span class="relay-url">{{ relay }}</span>
-                    </div>
-                  }
-                  @if (getActiveRelays().length === 0) {
-                    <div class="no-relays">
-                      <mat-icon>warning</mat-icon>
-                      <span>No relays configured</span>
-                    </div>
-                  }
-                </div>
-              </div>
-            </div>
-          </div>
-        </form>
+            </mat-select>
+            <mat-icon matSuffix>{{ columnForm.get('icon')?.value || 'widgets' }}</mat-icon>
+          </mat-form-field>
+        </div>
       </div>
 
-      <div class="dialog-actions" mat-dialog-actions>
-        <button mat-button mat-dialog-close type="button">Cancel</button>
-        <button mat-flat-button color="primary" (click)="onSubmit()" [disabled]="!columnForm.valid">
-          <mat-icon>{{ isEditMode() ? 'save' : 'add' }}</mat-icon>
-          {{ isEditMode() ? 'Save Changes' : 'Create Column' }}
-        </button>
+      <mat-divider></mat-divider>
+
+      <!-- Content Configuration -->
+      <div class="section content-config-section">
+        <h3>Content Configuration</h3>
+
+        <!-- Following or Public -->
+        <div class="form-group">
+          <h4>Content Source</h4>
+          <p class="section-description">Select which events to include in this column</p>
+          <mat-button-toggle-group name="source" formControlName="source" class="source-toggle">
+            <mat-button-toggle value="following">Following</mat-button-toggle>
+            <mat-button-toggle value="public">Public</mat-button-toggle>
+          </mat-button-toggle-group>
+        </div>
+
+        <!-- Event Kinds Selection -->
+        <div class="form-group">
+          <h4>Event Kinds</h4>
+          <p class="section-description">
+            Select which types of Nostr events to include in this column
+          </p>
+
+          <mat-form-field class="full-width" appearance="outline">
+            <mat-label>Event Kinds</mat-label>
+            <mat-chip-grid #chipGrid aria-label="Event kinds selection">
+              @for (kind of selectedKinds(); track kind) {
+              <mat-chip-row (removed)="removeKind(kind)">
+                {{ getKindLabel(kind) }}
+                <button matChipRemove>
+                  <mat-icon>cancel</mat-icon>
+                </button>
+              </mat-chip-row>
+              }
+            </mat-chip-grid>
+            <input placeholder="Add event kind..." #kindInput [formControl]="kindInputControl"
+              [matChipInputFor]="chipGrid" [matAutocomplete]="kindAutocomplete"
+              [matChipInputSeparatorKeyCodes]="separatorKeysCodes" (matChipInputTokenEnd)="addKind($event)" />
+            <mat-autocomplete #kindAutocomplete="matAutocomplete" (optionSelected)="kindSelected($event)">
+              @for (kind of filteredKinds(); track kind.value) {
+              <mat-option [value]="kind.value">
+                <strong>{{ kind.value }}</strong> - {{ kind.label }}
+              </mat-option>
+              }
+            </mat-autocomplete>
+            <mat-icon matSuffix>category</mat-icon>
+          </mat-form-field>
+        </div>
+      </div>
+
+      <mat-divider></mat-divider>
+
+      <!-- Relay Configuration -->
+      <div class="section relay-config-section">
+        <h3>Relay Configuration</h3>
+        <p class="section-description">Choose which relays to use for this column</p>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Relay Configuration</mat-label>
+          <mat-select formControlName="relayConfig" (selectionChange)="onRelayConfigChange($event.value)">
+            <mat-option value="user">
+              <div class="relay-option">
+                <mat-icon>person</mat-icon>
+                <div>
+                  <div class="option-title">User Relays</div>
+                  <div class="option-description">Use your configured relays</div>
+                </div>
+              </div>
+            </mat-option>
+            <mat-option value="discovery">
+              <div class="relay-option">
+                <mat-icon>explore</mat-icon>
+                <div>
+                  <div class="option-title">Discovery Relays</div>
+                  <div class="option-description">Use discovery and search relays</div>
+                </div>
+              </div>
+            </mat-option>
+            <mat-option value="custom">
+              <div class="relay-option">
+                <mat-icon>settings</mat-icon>
+                <div>
+                  <div class="option-title">Custom Relays</div>
+                  <div class="option-description">Specify custom relay URLs</div>
+                </div>
+              </div>
+            </mat-option>
+          </mat-select>
+          <mat-icon matSuffix>dns</mat-icon>
+        </mat-form-field>
+
+        @if (showCustomRelays()) {
+        <div class="custom-relays-section">
+          <h4>Custom Relay URLs</h4>
+          <mat-form-field class="full-width" appearance="outline">
+            <mat-label>Custom Relays</mat-label>
+            <mat-chip-grid #relayChipGrid aria-label="Custom relays">
+              @for (relay of customRelays(); track relay) {
+              <mat-chip-row (removed)="removeCustomRelay(relay)">
+                {{ relay }}
+                <button matChipRemove>
+                  <mat-icon>cancel</mat-icon>
+                </button>
+              </mat-chip-row>
+              }
+            </mat-chip-grid>
+            <input placeholder="wss://relay.example.com" #relayInput [formControl]="relayInputControl"
+              [matChipInputFor]="relayChipGrid" [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
+              (matChipInputTokenEnd)="addCustomRelay($event)" />
+            <mat-icon matSuffix>add_link</mat-icon>
+            <mat-hint>Enter WebSocket URLs (wss:// or ws://)</mat-hint>
+          </mat-form-field>
+        </div>
+        }
+
+        <!-- Relay Preview -->
+        <div class="relay-preview">
+          <h4>Active Relays Preview</h4>
+          <div class="relay-list">
+            @for (relay of getActiveRelays(); track relay) {
+            <div class="relay-item">
+              <mat-icon class="relay-status">wifi</mat-icon>
+              <span class="relay-url">{{ relay }}</span>
+            </div>
+            }
+            @if (getActiveRelays().length === 0) {
+            <div class="no-relays">
+              <mat-icon>warning</mat-icon>
+              <span>No relays configured</span>
+            </div>
+            }
+          </div>
+        </div>
       </div>
     </div>
+  </form>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button mat-dialog-close type="button">Cancel</button>
+  <button mat-flat-button color="primary" cdkFocusInitial (click)="onSubmit()" [disabled]="!columnForm.valid">
+    <mat-icon>{{ isEditMode() ? 'save' : 'add' }}</mat-icon>
+    {{ isEditMode() ? 'Save Changes' : 'Create Column' }}
+  </button>
+</mat-dialog-actions>
