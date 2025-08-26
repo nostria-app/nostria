@@ -13,6 +13,7 @@ import { NostrRecord } from '../interfaces';
 import { AccountStateService } from './account-state.service';
 import { isPlatformBrowser } from '@angular/common';
 import { LocalStorageService } from './local-storage.service';
+import { PublishDialogComponent, PublishDialogData } from '../components/publish-dialog/publish-dialog.component';
 
 @Injectable({
   providedIn: 'root',
@@ -508,6 +509,22 @@ export class LayoutService implements OnDestroy {
   // Method to update welcome screen preference
   setWelcomeScreenPreference(show: boolean): void {
     this.showWelcomeScreen.set(show);
+  }
+
+  async publishEvent(event: Event) {
+    if (!event) {
+      return;
+    }
+
+    const dialogData: PublishDialogData = {
+      event,
+    };
+
+    this.dialog.open(PublishDialogComponent, {
+      data: dialogData,
+      width: '600px',
+      disableClose: false,
+    });
   }
 
   // Method to show the welcome dialog

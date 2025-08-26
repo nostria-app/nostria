@@ -26,7 +26,7 @@ import { firstValueFrom } from 'rxjs';
 import {
   PublishDialogComponent,
   PublishDialogData,
-} from '../../../components/event/publish-dialog/publish-dialog.component';
+} from '../../../components/publish-dialog/publish-dialog.component';
 import { kinds } from 'nostr-tools';
 import { StorageService } from '../../../services/storage.service';
 
