@@ -22,12 +22,6 @@
     <mat-card appearance="outlined">
       <app-event-header [event]="repostService.decodeRepost(item.event).event"></app-event-header>
       <mat-card-content>
-
-        {{item.event}} || {{item.event.kind}} ||
-
-        {{ targetItem.event.kind}} ||
-
-
         @if (targetItem.event.kind === 20) {
         <app-photo-event [event]="targetItem.event"></app-photo-event>
         }
@@ -58,10 +52,6 @@
   } @else {
   <app-event-header [event]="item.event"></app-event-header>
   <mat-card-content>
-
-||{{item.event.kind}}||
-
-
     @if (item.event.kind === 20) {
     <app-photo-event [event]="item.event"></app-photo-event>
     }

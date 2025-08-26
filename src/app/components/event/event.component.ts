@@ -117,8 +117,11 @@ export class EventComponent {
       untracked(async () => {
         const record = this.data.toRecord(event);
         this.record.set(record);
-        this.loadReactions();
-        this.loadReposts();
+
+        if (record.event.kind == kinds.ShortTextNote) {
+          this.loadReactions();
+          this.loadReposts();
+        }
       });
     });
 
