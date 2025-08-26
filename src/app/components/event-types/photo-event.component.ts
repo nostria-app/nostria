@@ -27,6 +27,21 @@ export class PhotoEventComponent {
     return this.getImageUrls(event);
   });
 
+  // Computed blurhashes for all images
+  blurhashes = computed(() => {
+    const event = this.event();
+    if (!event) return [];
+
+    const imageUrls = this.imageUrls();
+    return imageUrls.map((_, index) => this.getBlurhash(event, index));
+  });
+
+  // Computed blurhash data URLs for performance
+  blurhashDataUrls = computed(() => {
+    const blurhashes = this.blurhashes();
+    return blurhashes.map((blurhash) => (blurhash ? this.generateBlurhashDataUrl(blurhash) : null));
+  });
+
   // Photo title
   title = computed(() => {
     const event = this.event();
@@ -59,13 +74,19 @@ export class PhotoEventComponent {
     return this.removeHashtagsFromContent(event.content);
   });
 
-  // Alt text for accessibility
-  altText = computed(() => {
+  // Alt text for accessibility (per image)
+  altTexts = computed(() => {
     const event = this.event();
-    if (!event) return 'Photo';
+    if (!event) return [];
 
-    const altTag = event.tags.find((tag) => tag[0] === 'alt');
-    return altTag?.[1] || this.getEventTitle(event) || 'Photo';
+    const imageUrls = this.imageUrls();
+    return imageUrls.map((_, index) => this.getAltText(event, index));
+  });
+
+  // Legacy single alt text for backward compatibility
+  altText = computed(() => {
+    const altTexts = this.altTexts();
+    return altTexts[0] || 'Photo';
   });
 
   openImageDialog(imageUrl: string, alt: string): void {
@@ -86,8 +107,22 @@ export class PhotoEventComponent {
   }
 
   getBlurhash(event: Event, imageIndex = 0): string | null {
-    const blurhashTags = event.tags.filter((tag) => tag[0] === 'blurhash');
-    return blurhashTags[imageIndex]?.[1] || null;
+    // For kind 20 events (NIP-68), get blurhash from 'imeta' tags
+    if (event.kind === 20) {
+      const imetaTags = event.tags.filter((tag) => tag[0] === 'imeta');
+      const targetImeta = imetaTags[imageIndex];
+
+      if (targetImeta) {
+        const parsed = this.parseImetaTag(targetImeta);
+        return parsed['blurhash'] || null;
+      }
+
+      return null;
+    } else {
+      // Fallback for other event types
+      const blurhashTags = event.tags.filter((tag) => tag[0] === 'blurhash');
+      return blurhashTags[imageIndex]?.[1] || null;
+    }
   }
 
   generateBlurhashDataUrl(blurhash: string, width = 400, height = 400): string {
@@ -113,13 +148,26 @@ export class PhotoEventComponent {
   private getImageUrls(event: Event): string[] {
     const imageUrls: string[] = [];
 
-    // Get URLs from 'url' tags (primary images)
-    const urlTags = event.tags.filter((tag) => tag[0] === 'url');
-    imageUrls.push(...urlTags.map((tag) => tag[1]));
+    // For kind 20 events (NIP-68), get URLs from 'imeta' tags
+    if (event.kind === 20) {
+      const imetaTags = event.tags.filter((tag) => tag[0] === 'imeta');
 
-    // Get URLs from 'image' tags (alternative images)
-    const imageTags = event.tags.filter((tag) => tag[0] === 'image');
-    imageUrls.push(...imageTags.map((tag) => tag[1]));
+      for (const imetaTag of imetaTags) {
+        const parsed = this.parseImetaTag(imetaTag);
+        if (parsed['url']) {
+          imageUrls.push(parsed['url']);
+        }
+      }
+    } else {
+      // Fallback for other event types
+      // Get URLs from 'url' tags (primary images)
+      const urlTags = event.tags.filter((tag) => tag[0] === 'url');
+      imageUrls.push(...urlTags.map((tag) => tag[1]));
+
+      // Get URLs from 'image' tags (alternative images)
+      const imageTags = event.tags.filter((tag) => tag[0] === 'image');
+      imageUrls.push(...imageTags.map((tag) => tag[1]));
+    }
 
     // Remove duplicates
     return [...new Set(imageUrls)];
@@ -130,7 +178,44 @@ export class PhotoEventComponent {
     return titleTag?.[1] || null;
   }
 
+  private getAltText(event: Event, imageIndex = 0): string {
+    // For kind 20 events, try to get alt text from the specific imeta tag
+    if (event.kind === 20) {
+      const imetaTags = event.tags.filter((tag) => tag[0] === 'imeta');
+      const targetImeta = imetaTags[imageIndex];
+      if (targetImeta) {
+        const parsed = this.parseImetaTag(targetImeta);
+        if (parsed['alt']) {
+          return parsed['alt'];
+        }
+      }
+    }
+
+    // Fallback to regular alt tag or title
+    const altTag = event.tags.find((tag) => tag[0] === 'alt');
+    return altTag?.[1] || this.getEventTitle(event) || 'Photo';
+  }
+
   private removeHashtagsFromContent(content: string): string {
     return content.replace(/#\w+/g, '').trim();
+  }
+
+  private parseImetaTag(imetaTag: string[]): Record<string, string> {
+    const parsed: Record<string, string> = {};
+
+    for (let i = 1; i < imetaTag.length; i++) {
+      const part = imetaTag[i];
+      if (!part) continue;
+
+      // Find the first space to separate key from value
+      const spaceIndex = part.indexOf(' ');
+      if (spaceIndex > 0) {
+        const key = part.substring(0, spaceIndex);
+        const value = part.substring(spaceIndex + 1);
+        parsed[key] = value;
+      }
+    }
+
+    return parsed;
   }
 }
