@@ -1,306 +1,120 @@
-     .dialog-container {
-        width: 100%;
-        display: flex;
-        flex-direction: column;
-        overflow: auto;
-      }
+     .column-type-cards {
+       display: grid;
+       grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+       gap: 12px;
+       align-items: stretch;
+     }
 
-      .dialog-header {
-        padding: 24px 24px 16px;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.12);
-        flex-shrink: 0;
+     .column-type-card {
+       cursor: pointer;
+       transition: all 0.2s ease;
+       border: 2px solid transparent;
+       height: 110px;
+       width: 100%;
+       display: flex;
+       flex-direction: column;
 
-        h2 {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          margin: 0 0 8px 0;
-          font-size: 1.5rem;
-          font-weight: 500;
-        }
+       &:hover {
+         transform: translateY(-2px);
+         box-shadow: var(--mat-sys-level2);
+       }
 
-        .dialog-subtitle {
-          margin: 0;
-          opacity: 0.7;
-          font-size: 0.875rem;
-        }
-      }
+       &.selected {
+         border-color: var(--mat-sys-primary);
+         background-color: rgba(var(--mat-sys-primary-rgb), 0.04);
+       }
 
-      .dialog-content {
-        flex: 1;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
+       mat-card-content {
+         padding: 12px;
+         text-align: center;
+         display: flex;
+         flex-direction: column;
+         justify-content: space-between;
+         flex: 1;
+         height: 100%;
+       }
 
-        form {
-          height: 100%;
-          display: flex;
-          flex-direction: column;
-        }
-      }
+       .type-header {
+         display: flex;
+         flex-direction: column;
+         align-items: center;
+         gap: 6px;
+         flex-shrink: 0;
 
-      .settings-container {
-        padding: 24px;
-        display: flex;
-        flex-direction: column;
-        gap: 32px;
-        overflow-y: auto;
-        flex: 1;
-      }
+         mat-icon {
+           font-size: 1.5rem;
+           width: 1.5rem;
+           height: 1.5rem;
+         }
 
-      .section {
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
+         h4 {
+           margin: 0;
+           font-size: 0.9rem;
+           font-weight: 500;
+           height: 1.2em;
+           line-height: 1.2;
+           display: flex;
+           align-items: center;
+           justify-content: center;
+         }
+       }
 
-        h3 {
-          margin: 0 0 8px 0;
-          font-size: 1.25rem;
-          font-weight: 500;
-          color: var(--mat-sys-primary);
-        }
+       .type-description {
+         margin: 0;
+         font-size: 0.75rem;
+         opacity: 0.7;
+         line-height: 1.2;
+         height: 2.4em;
+         display: flex;
+         align-items: center;
+         justify-content: center;
+         text-align: center;
+         overflow: hidden;
+         flex: 1;
+       }
+     }
 
-        h4 {
-          margin: 0 0 8px 0;
-          font-size: 1.1rem;
-          font-weight: 500;
-        }
+     .relay-list {
+       max-height: 120px;
+       overflow-y: auto;
+       border: 1px solid rgba(0, 0, 0, 0.12);
+       border-radius: 4px;
+       background-color: rgba(0, 0, 0, 0.02);
+     }
 
-        .section-description {
-          margin: 0 0 16px 0;
-          opacity: 0.7;
-          font-size: 0.875rem;
-        }
-      }
+     .relay-item {
+       display: flex;
+       align-items: center;
+       gap: 8px;
+       padding: 8px 12px;
+       border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 
-      .form-row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 16px;
-        align-items: start;
+       &:last-child {
+         border-bottom: none;
+       }
 
-        @media (max-width: 600px) {
-          grid-template-columns: 1fr;
-        }
-      }
+       .relay-status {
+         font-size: 1rem;
+         width: 1rem;
+         height: 1rem;
+         color: #4caf50;
+       }
 
-      .form-group {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-      }
+       .relay-url {
+         font-family: monospace;
+         font-size: 0.85rem;
+       }
+     }
 
-      .column-type-cards {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 12px;
-        align-items: stretch;
-      }
+     .no-relays {
+       display: flex;
+       align-items: center;
+       gap: 8px;
+       padding: 16px;
+       justify-content: center;
+       opacity: 0.5;
 
-      .column-type-card {
-        cursor: pointer;
-        transition: all 0.2s ease;
-        border: 2px solid transparent;
-        height: 110px;
-        width: 100%;
-        display: flex;
-        flex-direction: column;
-
-        &:hover {
-          transform: translateY(-2px);
-          box-shadow: var(--mat-sys-level2);
-        }
-
-        &.selected {
-          border-color: var(--mat-sys-primary);
-          background-color: rgba(var(--mat-sys-primary-rgb), 0.04);
-        }
-
-        mat-card-content {
-          padding: 12px;
-          text-align: center;
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-          flex: 1;
-          height: 100%;
-        }
-
-        .type-header {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 6px;
-          flex-shrink: 0;
-
-          mat-icon {
-            font-size: 1.5rem;
-            width: 1.5rem;
-            height: 1.5rem;
-          }
-
-          h4 {
-            margin: 0;
-            font-size: 0.9rem;
-            font-weight: 500;
-            height: 1.2em;
-            line-height: 1.2;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          }
-        }
-
-        .type-description {
-          margin: 0;
-          font-size: 0.75rem;
-          opacity: 0.7;
-          line-height: 1.2;
-          height: 2.4em;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          text-align: center;
-          overflow: hidden;
-          flex: 1;
-        }
-      }
-
-      .icon-option {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-
-        mat-icon {
-          color: var(--mat-sys-primary);
-        }
-
-        span {
-          font-weight: 500;
-        }
-      }
-
-      .source-toggle {
-        mat-button-toggle {
-          flex: 1;
-        }
-      }
-
-      .custom-relays-section {
-        margin-top: 16px;
-        padding: 16px;
-        border: 1px solid rgba(0, 0, 0, 0.12);
-        border-radius: 8px;
-        background-color: rgba(0, 0, 0, 0.02);
-
-        h4 {
-          margin: 0 0 12px 0;
-          font-size: 0.95rem;
-          font-weight: 500;
-        }
-      }
-
-      .relay-option {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-
-        mat-icon {
-          color: var(--mat-sys-primary);
-        }
-
-        .option-title {
-          font-weight: 500;
-          font-size: 0.95rem;
-        }
-
-        .option-description {
-          font-size: 0.8rem;
-          opacity: 0.7;
-        }
-      }
-
-      .relay-preview {
-        margin-top: 16px;
-
-        h4 {
-          margin: 0 0 12px 0;
-          font-size: 0.95rem;
-          font-weight: 500;
-        }
-      }
-
-      .relay-list {
-        max-height: 120px;
-        overflow-y: auto;
-        border: 1px solid rgba(0, 0, 0, 0.12);
-        border-radius: 4px;
-        background-color: rgba(0, 0, 0, 0.02);
-      }
-
-      .relay-item {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 12px;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-
-        &:last-child {
-          border-bottom: none;
-        }
-
-        .relay-status {
-          font-size: 1rem;
-          width: 1rem;
-          height: 1rem;
-          color: #4caf50;
-        }
-
-        .relay-url {
-          font-family: monospace;
-          font-size: 0.85rem;
-        }
-      }
-
-      .no-relays {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 16px;
-        justify-content: center;
-        opacity: 0.5;
-
-        mat-icon {
-          color: #ff9800;
-        }
-      }
-
-      .dialog-actions {
-        padding: 16px 24px;
-        border-top: 1px solid rgba(0, 0, 0, 0.12);
-        display: flex;
-        gap: 12px;
-        justify-content: flex-end;
-        flex-shrink: 0;
-        background-color: var(--mat-app-background-color);
-
-        button {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-      }
-
-      mat-divider {
-        margin: 0;
-      }
-
-      // Improve chip appearance
-      mat-chip-row {
-        font-size: 0.875rem;
-      }
-
-      // Full width form fields
-      .full-width {
-        width: 100%;
-      }
+       mat-icon {
+         color: #ff9800;
+       }
+     }
