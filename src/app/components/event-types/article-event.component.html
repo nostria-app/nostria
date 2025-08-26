@@ -8,15 +8,14 @@
 <article class="article-container">
   @if (title()) {
     <h3 class="article-title">
-      @if (showAuthor()) {
+      <!-- @if (showAuthor()) {
         <app-user-profile
           class="user-profile-name-right"
           [hostWidthAuto]="true"
           [pubkey]="event().pubkey"
           view="tiny"
         ></app-user-profile>
-      }
-
+      } -->
       {{ title() }}
     </h3>
   }

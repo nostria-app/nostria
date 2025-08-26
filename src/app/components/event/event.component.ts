@@ -23,7 +23,8 @@ import { MatMenuModule } from '@angular/material/menu';
 import { EventService, ReactionEvents } from '../../services/event';
 import { AccountRelayServiceEx } from '../../services/relays/account-relay';
 import { ReactionService } from '../../services/reaction.service';
-import { ArticleEventComponent } from '../event-types';
+import { ArticleEventComponent, PhotoEventComponent, PlaylistEventComponent, VideoEventComponent } from '../event-types';
+import { UserProfileComponent } from '../user-profile/user-profile.component';
 
 type EventCardAppearance = 'card' | 'plain';
 
@@ -43,6 +44,11 @@ type EventCardAppearance = 'card' | 'plain';
     MatIconModule,
     MatMenuModule,
     MatProgressSpinnerModule,
+    PhotoEventComponent,
+    VideoEventComponent,
+    ArticleEventComponent,
+    PlaylistEventComponent,
+    UserProfileComponent,
   ],
   templateUrl: './event.component.html',
   styleUrl: './event.component.scss',
