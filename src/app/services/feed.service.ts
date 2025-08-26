@@ -99,7 +99,7 @@ const COLUMN_TYPES = {
     label: 'Custom',
     icon: 'tune',
     kinds: [],
-    description: 'Custom configuration with specific event kinds',
+    description: 'Custom configuration',
   },
 };
 
