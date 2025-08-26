@@ -53,14 +53,14 @@ const FEED_TEMPLATES = [
         icon: 'timeline',
         type: 'notes',
         kinds: [1], // Text notes
-        relayConfig: 'user',
+        relayConfig: 'account',
       },
       {
         label: 'Updates',
         icon: 'update',
         type: 'notes',
         kinds: [0], // Metadata updates
-        relayConfig: 'user',
+        relayConfig: 'account',
       },
     ],
   },

@@ -89,7 +89,7 @@ export class NewColumnDialogComponent {
     icon: [this.data.column?.icon || 'chat'],
     kinds: [this.data.column?.kinds || []],
     source: [this.data.column?.source || 'following'],
-    relayConfig: [this.data.column?.relayConfig || 'user'],
+    relayConfig: [this.data.column?.relayConfig || 'account'],
     customRelays: [this.data.column?.customRelays || []],
     type: [this.data.column?.type || 'custom'],
   });
@@ -99,7 +99,7 @@ export class NewColumnDialogComponent {
   selectedColumnType = signal<string>(this.data.column?.type || 'custom');
   selectedKinds = signal<number[]>(this.data.column?.kinds || []);
   customRelays = signal<string[]>(this.data.column?.customRelays || []);
-  selectedRelayConfig = signal<string>(this.data.column?.relayConfig || 'user');
+  selectedRelayConfig = signal<string>(this.data.column?.relayConfig || 'account');
   showCustomRelays = computed(() => this.selectedRelayConfig() === 'custom');
 
   // Form controls for chips
@@ -236,7 +236,7 @@ export class NewColumnDialogComponent {
     const relayConfig = this.selectedRelayConfig();
 
     switch (relayConfig) {
-      case 'user':
+      case 'account':
         return this.feedService.userRelays().map((r) => r.url);
       case 'custom':
         return this.customRelays();
@@ -256,7 +256,7 @@ export class NewColumnDialogComponent {
         type: formValue.type as 'photos' | 'videos' | 'notes' | 'articles' | 'music' | 'custom',
         source: formValue.source || 'public',
         kinds: this.selectedKinds(),
-        relayConfig: formValue.relayConfig as 'user' | 'custom',
+        relayConfig: formValue.relayConfig as 'account' | 'custom',
         customRelays: formValue.relayConfig === 'custom' ? this.customRelays() : undefined,
         filters: {},
         createdAt: this.data.column?.createdAt || Date.now(),

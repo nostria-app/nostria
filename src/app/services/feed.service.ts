@@ -40,7 +40,7 @@ export interface ColumnConfig {
   type: 'notes' | 'articles' | 'photos' | 'videos' | 'music' | 'custom';
   kinds: number[];
   source?: 'following' | 'public';
-  relayConfig: 'user' | 'discovery' | 'custom';
+  relayConfig: 'account' | 'custom';
   customRelays?: string[];
   filters?: Record<string, any>;
   createdAt: number;
@@ -117,7 +117,7 @@ const DEFAULT_FEEDS: FeedConfig[] = [
         type: 'notes',
         kinds: [1],
         source: 'following',
-        relayConfig: 'user',
+        relayConfig: 'account',
         createdAt: Date.now(),
         updatedAt: Date.now(),
       },
@@ -138,7 +138,7 @@ const DEFAULT_FEEDS: FeedConfig[] = [
         type: 'articles',
         kinds: [30023],
         source: 'following',
-        relayConfig: 'user',
+        relayConfig: 'account',
         createdAt: Date.now(),
         updatedAt: Date.now(),
       },
@@ -149,7 +149,7 @@ const DEFAULT_FEEDS: FeedConfig[] = [
         type: 'articles',
         kinds: [30023],
         source: 'public',
-        relayConfig: 'discovery',
+        relayConfig: 'account',
         createdAt: Date.now(),
         updatedAt: Date.now(),
       },
@@ -170,7 +170,7 @@ const DEFAULT_FEEDS: FeedConfig[] = [
         type: 'music',
         kinds: [32100],
         source: 'public',
-        relayConfig: 'discovery',
+        relayConfig: 'account',
         createdAt: Date.now(),
         updatedAt: Date.now(),
       },
