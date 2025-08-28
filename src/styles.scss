@@ -1050,3 +1050,16 @@ app-media-queue .media-list mat-list {
 .user-profile-name-right {
   float: right;
 }
+
+.mat-mdc-button:not(:disabled).active {
+  color: rgb(52, 152, 219);
+}
+
+.mat-mdc-button.only-icon {
+  min-width: 40px;
+  padding: 0;
+
+  .mat-icon {
+    margin: 0;
+  }
+}
