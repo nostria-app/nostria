@@ -1,6 +1,9 @@
 # Generated API files
 src/app/api/
 
+# Tauri Rust source code
+src-tauri/
+
 # Build outputs
 dist/
 build/
