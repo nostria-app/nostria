@@ -21,7 +21,7 @@ import { RegionService } from './region.service';
 import { MEDIA_SERVERS_EVENT_KIND, NostriaService, NostrRecord } from '../interfaces';
 import { DataService } from './data.service';
 import { UtilitiesService } from './utilities.service';
-import { PublishQueueService, PublishTarget } from './publish-queue';
+import { PublishQueueService } from './publish-queue';
 import { SharedRelayServiceEx } from './relays/shared-relay';
 import { AccountRelayServiceEx } from './relays/account-relay';
 import { DiscoveryRelayServiceEx } from './relays/discovery-relay';

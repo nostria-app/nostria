@@ -67,11 +67,17 @@
     <app-article-event [event]="item.event"></app-article-event>
     }
     @else if (item.event.kind === 3) {
-    This is an following event... rendering coming soon.
+    <div class="following-event">
+      <mat-icon>people</mat-icon>
+      <span>Following {{ followingCount() }} accounts</span>
+    </div>
     }
     <!-- M3U Playlists (kind 32100) -->
     @else if (item.event.kind === 32100) {
     <app-playlist-event [event]="targetItem.event"></app-playlist-event>
+    }
+    @else if (item.event.kind === 8) {
+      <app-badge [badge]="targetItem.event"></app-badge>
     }
     <!-- Profile events (kind 0) -->
     @else if (item.event.kind === 0) {
@@ -82,7 +88,12 @@
     }
   </mat-card-content>
   }
+
+
+
   <mat-card-actions class="note-footer">
+
+    @if (item.event.kind === 1) {
     <app-reply-button [event]="targetItem.event"></app-reply-button>
 
     @if (app.enabledFeature('beta')) {
@@ -131,6 +142,7 @@
       }
       }
     </button>
+    }
 
     <button mat-icon-button class="note-footer-right">
       <mat-icon [matTooltip]="bookmark.getBookmarkTooltip(targetItem.event.id)" matTooltipPosition="below"
@@ -139,6 +151,7 @@
       </mat-icon>
     </button>
   </mat-card-actions>
+
 </mat-card>
 } @else if (id() && !isLoadingEvent()) {
 <div class="event-content">

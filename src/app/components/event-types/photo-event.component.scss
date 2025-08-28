@@ -27,7 +27,7 @@
 .photo-gallery {
   display: grid;
   gap: 8px;
-  margin-bottom: 16px;
+  margin: 1rem 0rem;
 
   &:has(.photo-container:nth-child(1):nth-last-child(1)) {
     grid-template-columns: 1fr;
