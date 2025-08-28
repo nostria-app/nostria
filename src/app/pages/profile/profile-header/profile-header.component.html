@@ -164,10 +164,14 @@
       }
 
       @if (!compact() && profile()?.data.website) {
-          <div class="profile-item" title="{{ websiteUrl() }}">
-        <mat-icon>link</mat-icon>
-        <span><a [href]="websiteUrl()" target="_blank" rel="noopener noreferrer">{{ profile()!.data.website }}</a></span>
-      </div>
+        <div class="profile-item" title="{{ websiteUrl() }}">
+          <mat-icon>link</mat-icon>
+          <span
+            ><a [href]="websiteUrl()" target="_blank" rel="noopener noreferrer">{{
+              profile()!.data.website
+            }}</a></span
+          >
+        </div>
       }
 
       @if (!compact() && profile()?.data.about) {
