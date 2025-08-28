@@ -13,8 +13,38 @@
   margin: 16px 0;
 }
 
+.replies-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 24px 16px;
+  margin: 16px 0;
+  opacity: 0.8;
+}
+
 .loading-text {
   margin: 0;
+}
+
+// Progressive loading animations
+.parent-events {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.replies-section {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .parent-events {

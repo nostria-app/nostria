@@ -1,28 +1,37 @@
-@if (isLoading()) {
+@if (isLoading() && !event()) {
   <div class="thread-loading">
     <mat-spinner diameter="32"></mat-spinner>
     <p class="loading-text">Loading thread...</p>
   </div>
 } @else {
   <!-- Display parent events in thread (if any) -->
-  @if (parentEvents().length > 0) {
+  @if (parentEvents().length > 0 || isLoadingParents()) {
     <div class="parent-events">
-      <h3>Thread Context</h3>
-      @for (parentEvent of parentEvents(); track parentEvent.id) {
-        <div class="parent-event">
-          <app-event [event]="parentEvent" appearance="plain"></app-event>
+      @if (isLoadingParents()) {
+        <div class="replies-loading">
+          <mat-spinner diameter="20"></mat-spinner>
+          <p class="loading-text">Loading thread context...</p>
+        </div>
+      } @else {
+        <h3>Thread Context</h3>
+        @for (parentEvent of parentEvents(); track parentEvent.id) {
+          <div class="parent-event">
+            <app-event [event]="parentEvent" appearance="plain"></app-event>
+          </div>
+        }
+        <div class="thread-indicator">
+          <hr />
+          <span>Reply below</span>
+          <hr />
         </div>
       }
-      <div class="thread-indicator">
-        <hr />
-        <span>Reply below</span>
-        <hr />
-      </div>
     </div>
   }
 
   <!-- Main event -->
-  <app-event [event]="event()" appearance="plain"></app-event>
+  @if (event()) {
+    <app-event [event]="event()" appearance="plain"></app-event>
+  }
 
   <!-- <div class="reactions">
     @for (reaction of reactions(); track reaction.emoji) {
@@ -40,11 +49,18 @@
   }
 
   <div class="replies-section">
-    @for (threadedEvent of threadedReplies(); track threadedEvent.event.id) {
-      <ng-container
-        [ngTemplateOutlet]="replyTemplate"
-        [ngTemplateOutletContext]="{ threadedEvent: threadedEvent }"
-      ></ng-container>
+    @if (threadedReplies().length === 0 && isLoadingReplies()) {
+      <div class="replies-loading">
+        <mat-spinner diameter="20"></mat-spinner>
+        <p class="loading-text">Loading replies...</p>
+      </div>
+    } @else {
+      @for (threadedEvent of threadedReplies(); track threadedEvent.event.id) {
+        <ng-container
+          [ngTemplateOutlet]="replyTemplate"
+          [ngTemplateOutletContext]="{ threadedEvent: threadedEvent }"
+        ></ng-container>
+      }
     }
   </div>
 }

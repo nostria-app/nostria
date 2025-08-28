@@ -561,6 +561,136 @@ export class EventService {
   }
 
   /**
+   * Load a thread progressively, yielding data as it becomes available
+   */
+  async *loadThreadProgressively(
+    nevent: string,
+    item?: EventData,
+  ): AsyncGenerator<Partial<ThreadData>, ThreadData> {
+    // First, load the main event
+    const event = await this.loadEvent(nevent, item);
+    if (!event) {
+      throw new Error('Event not found');
+    }
+
+    const { rootId, replyId } = this.getEventTags(event);
+    const isThreadRoot = !rootId && !replyId;
+
+    // Yield the main event immediately
+    yield {
+      event,
+      replies: [],
+      threadedReplies: [],
+      reactions: [],
+      parents: [],
+      isThreadRoot,
+      rootEvent: null,
+    };
+
+    // Load parent events in the background
+    const parentsPromise = this.loadParentEvents(event);
+
+    // Start loading replies and reactions for the current event initially
+    const currentEventRepliesPromise = this.loadReplies(event.id, event.pubkey);
+    const currentEventReactionsPromise = this.loadReactions(event.id, event.pubkey);
+
+    // Wait for parents first and yield updated data
+    try {
+      const parents = await parentsPromise;
+      const rootEvent = parents.length > 0 ? parents[0] : isThreadRoot ? event : null;
+      const actualThreadRootId = rootEvent?.id || event.id;
+
+      // Yield with parent events
+      yield {
+        event,
+        replies: [],
+        threadedReplies: [],
+        reactions: [],
+        parents,
+        isThreadRoot,
+        rootEvent,
+      };
+
+      // Determine which replies to use based on thread structure
+      let finalRepliesPromise = currentEventRepliesPromise;
+      let finalReactionsPromise = currentEventReactionsPromise;
+
+      // If this event is part of a larger thread, load replies for the root
+      if (actualThreadRootId !== event.id) {
+        finalRepliesPromise = this.loadReplies(
+          actualThreadRootId,
+          rootEvent?.pubkey || event.pubkey,
+        );
+        finalReactionsPromise = this.loadReactions(
+          actualThreadRootId,
+          rootEvent?.pubkey || event.pubkey,
+        );
+      }
+
+      // Load replies and yield them as soon as available
+      const replies = await finalRepliesPromise;
+      const threadedReplies = this.buildThreadTree(replies, actualThreadRootId, 4);
+
+      yield {
+        event,
+        replies,
+        threadedReplies,
+        reactions: [],
+        parents,
+        isThreadRoot,
+        rootEvent,
+      };
+
+      // Finally wait for reactions and yield complete data
+      const reactions = await finalReactionsPromise;
+      const finalData: ThreadData = {
+        event,
+        replies,
+        threadedReplies,
+        reactions: this.mapToReactionArray(reactions.data),
+        parents,
+        isThreadRoot,
+        rootEvent,
+      };
+
+      return finalData;
+    } catch (error) {
+      this.logger.error('Error in progressive thread loading:', error);
+
+      // Try to at least load replies for the current event
+      try {
+        const replies = await currentEventRepliesPromise;
+        const threadedReplies = this.buildThreadTree(replies, event.id, 4);
+
+        const finalData: ThreadData = {
+          event,
+          replies,
+          threadedReplies,
+          reactions: [],
+          parents: [],
+          isThreadRoot,
+          rootEvent: isThreadRoot ? event : null,
+        };
+
+        return finalData;
+      } catch {
+        // Return minimal data if everything fails
+        const finalData: ThreadData = {
+          event,
+          replies: [],
+          threadedReplies: [],
+          reactions: [],
+          parents: [],
+          isThreadRoot,
+          rootEvent: isThreadRoot ? event : null,
+        };
+
+        return finalData;
+      }
+    }
+  }
+
+  /**
    * Convert reaction map to array format
    */
   private mapToReactionArray(reactionCounts: Map<string, number>): Reaction[] {
