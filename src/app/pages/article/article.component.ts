@@ -1,6 +1,6 @@
-import { Component, inject, computed, signal, effect } from '@angular/core';
+import { Component, inject, computed, signal, effect, OnDestroy } from '@angular/core';
 import { Event, kinds, nip19 } from 'nostr-tools';
-import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule, ParamMap } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -27,6 +27,7 @@ import { UserDataFactoryService } from '../../services/user-data-factory.service
 import { NostrRecord } from '../../interfaces';
 import { Cache } from '../../services/cache';
 import { UserDataService } from '../../services/user-data.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-article',
@@ -46,7 +47,7 @@ import { UserDataService } from '../../services/user-data.service';
   templateUrl: './article.component.html',
   styleUrl: './article.component.scss',
 })
-export class ArticleComponent {
+export class ArticleComponent implements OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private utilities = inject(UtilitiesService);
@@ -64,6 +65,8 @@ export class ArticleComponent {
   accountState = inject(AccountStateService);
   link = '';
 
+  private routeSubscription?: Subscription;
+
   event = signal<Event | undefined>(undefined);
   isLoading = signal(false);
   error = signal<string | null>(null);
@@ -73,15 +76,19 @@ export class ArticleComponent {
       return;
     }
 
-    // Effect to load article when route parameter changes
-    effect(() => {
-      const addrParam = this.route.snapshot.paramMap.get('id');
+    // Subscribe to route parameter changes
+    this.routeSubscription = this.route.paramMap.subscribe((params) => {
+      const addrParam = params.get('id');
       if (addrParam) {
-        this.loadArticle(addrParam);
+        this.loadArticle(addrParam, params);
         // Scroll to top when navigating to a new article
         setTimeout(() => this.layout.scrollMainContentToTop(), 100);
       }
     });
+  }
+
+  ngOnDestroy(): void {
+    this.routeSubscription?.unsubscribe();
   }
 
   bookmarkArticle() {
@@ -100,7 +107,7 @@ export class ArticleComponent {
     return this.utilities.getTagValues('d', ev.tags)[0] || '';
   });
 
-  async loadArticle(naddr: string): Promise<void> {
+  async loadArticle(naddr: string, params?: ParamMap): Promise<void> {
     const receivedData = history.state.event as Event | undefined;
 
     let pubkey = '';
@@ -140,7 +147,7 @@ export class ArticleComponent {
       pubkey = addrData.pubkey;
       slug = decoded.data.identifier;
     } else {
-      const slugParam = this.route.snapshot.paramMap.get('slug');
+      const slugParam = params?.get('slug') || this.route.snapshot.paramMap.get('slug');
 
       // If we have slug, the
       if (slugParam) {
