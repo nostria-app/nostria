@@ -25,6 +25,7 @@ export class SleepModeService implements OnDestroy {
   private readonly userRelay = inject(UserRelayServiceEx);
 
   // Sleep mode configuration
+  private readonly SLEEP_DETECTION_ENABLED = false; // Hard-coded flag to enable/disable sleep detection
   private readonly SLEEP_DELAY_MS = 1 * 30 * 1000; // 2 minutes
   // private readonly SLEEP_DELAY_MS = 1 * 60 * 1000; // 2 minutes
   private readonly STORAGE_KEY = 'nostria-sleep-mode';
@@ -51,7 +52,7 @@ export class SleepModeService implements OnDestroy {
   private visibilityEventListener: (() => void) | null = null;
 
   constructor() {
-    if (isPlatformBrowser(this.platformId)) {
+    if (isPlatformBrowser(this.platformId) && this.SLEEP_DETECTION_ENABLED) {
       this.initializeVisibilityListener();
       this.loadSleepModeState();
     }
@@ -255,6 +256,10 @@ export class SleepModeService implements OnDestroy {
    * Manually activate sleep mode
    */
   activateManually(): void {
+    if (!this.SLEEP_DETECTION_ENABLED) {
+      this.logger.debug('[SleepMode] Sleep detection is disabled, ignoring manual activation');
+      return;
+    }
     this.activateSleepMode('manual');
   }
 
@@ -264,6 +269,13 @@ export class SleepModeService implements OnDestroy {
   hideWakeupOverlay(): void {
     this.showWakeupOverlay.set(false);
     this.state.update((state) => ({ ...state, showWakeupOverlay: false }));
+  }
+
+  /**
+   * Check if sleep detection is enabled
+   */
+  isSleepDetectionEnabled(): boolean {
+    return this.SLEEP_DETECTION_ENABLED;
   }
 
   /**
