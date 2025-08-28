@@ -23,8 +23,14 @@ import { MatMenuModule } from '@angular/material/menu';
 import { EventService, ReactionEvents } from '../../services/event';
 import { AccountRelayServiceEx } from '../../services/relays/account-relay';
 import { ReactionService } from '../../services/reaction.service';
-import { ArticleEventComponent, PhotoEventComponent, PlaylistEventComponent, VideoEventComponent } from '../event-types';
+import {
+  ArticleEventComponent,
+  PhotoEventComponent,
+  PlaylistEventComponent,
+  VideoEventComponent,
+} from '../event-types';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
+import { BadgeComponent } from '../../pages/badges/badge/badge.component';
 
 type EventCardAppearance = 'card' | 'plain';
 
@@ -49,6 +55,7 @@ type EventCardAppearance = 'card' | 'plain';
     ArticleEventComponent,
     PlaylistEventComponent,
     UserProfileComponent,
+    BadgeComponent,
   ],
   templateUrl: './event.component.html',
   styleUrl: './event.component.scss',
@@ -104,6 +111,14 @@ export class EventComponent {
     const event = this.event();
     if (!event) return;
     return this.reposts().find((e) => e.event.pubkey === this.accountState.pubkey());
+  });
+
+  followingCount = computed<number>(() => {
+    const record = this.record();
+    if (!record || record.event.kind !== 3) return 0;
+
+    // Count the "p" tags in the event
+    return record.event.tags.filter((tag) => tag[0] === 'p').length;
   });
 
   constructor() {
