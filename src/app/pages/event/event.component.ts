@@ -47,6 +47,8 @@ export class EventPageComponent {
   event = signal<Event | undefined>(undefined);
   private readonly utilities = inject(UtilitiesService);
   isLoading = signal(false);
+  isLoadingParents = signal(false);
+  isLoadingReplies = signal(false);
   error = signal<string | null>(null);
   layout = inject(LayoutService);
   nostrService = inject(NostrService);
@@ -110,35 +112,77 @@ export class EventPageComponent {
 
     try {
       this.isLoading.set(true);
+      this.isLoadingParents.set(true);
+      this.isLoadingReplies.set(true);
       this.error.set(null);
 
-      // Load complete thread data using the event service
-      const threadData = await this.eventService.loadCompleteThread(nevent, this.item);
+      // Reset state
+      this.parentEvents.set([]);
+      this.replies.set([]);
+      this.threadedReplies.set([]);
+      this.reactions.set([]);
 
-      // Update all the signals with the loaded data
-      this.event.set(threadData.event);
-      this.replies.set(threadData.replies);
-      this.threadedReplies.set(threadData.threadedReplies);
-      this.reactions.set(threadData.reactions);
-      this.parentEvents.set(threadData.parents);
-      this.threadData.set(threadData);
+      // Use progressive loading to show content as it becomes available
+      const progressiveLoader = this.eventService.loadThreadProgressively(nevent, this.item);
 
-      const hex = threadData.event.id;
-      this.id.set(hex);
+      for await (const partialData of progressiveLoader) {
+        // Update signals with partial data as it becomes available
+        if (partialData.event) {
+          this.event.set(partialData.event);
+          const hex = partialData.event.id;
+          this.id.set(hex);
 
-      // Update URL with proper nevent encoding
-      const encoded = nip19.neventEncode({
-        author: threadData.event.pubkey,
-        id: threadData.event.id,
-      });
-      this.url.updatePathSilently(['/e', encoded]);
+          // Update URL with proper nevent encoding
+          const encoded = nip19.neventEncode({
+            author: partialData.event.pubkey,
+            id: partialData.event.id,
+          });
+          this.url.updatePathSilently(['/e', encoded]);
 
-      this.logger.info('Successfully loaded thread data for event:', hex);
+          // Hide main loading spinner once we have the main event
+          this.isLoading.set(false);
+        }
+
+        if (partialData.parents !== undefined) {
+          this.parentEvents.set(partialData.parents);
+          this.isLoadingParents.set(false);
+        }
+
+        if (partialData.replies !== undefined) {
+          this.replies.set(partialData.replies);
+        }
+
+        if (partialData.threadedReplies !== undefined) {
+          this.threadedReplies.set(partialData.threadedReplies);
+          this.isLoadingReplies.set(false);
+        }
+
+        if (partialData.reactions !== undefined) {
+          this.reactions.set(partialData.reactions);
+        }
+
+        // Update threadData with current state
+        this.threadData.set({
+          event: partialData.event!,
+          replies: partialData.replies || [],
+          threadedReplies: partialData.threadedReplies || [],
+          reactions: partialData.reactions || [],
+          parents: partialData.parents || [],
+          isThreadRoot: partialData.isThreadRoot || false,
+          rootEvent: partialData.rootEvent || null,
+        });
+      }
+
+      this.logger.info('Successfully completed progressive loading for event:', this.id());
     } catch (error) {
       this.logger.error('Error loading event:', error);
       this.error.set(error instanceof Error ? error.message : 'Failed to load event');
     } finally {
+      // Ensure all loading states are cleared
       this.isLoading.set(false);
+      this.isLoadingParents.set(false);
+      this.isLoadingReplies.set(false);
+      
       // Scroll to top after loading
       setTimeout(() => this.layout.scrollMainContentToTop(), 100);
     }
