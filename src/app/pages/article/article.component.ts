@@ -330,10 +330,8 @@ export class ArticleComponent implements OnDestroy {
           class="article-image" 
           loading="lazy"
           decoding="async"
-          onload="this.style.opacity='1'"
-          onerror="this.style.opacity='1'; this.style.border='1px solid var(--mat-sys-error)'; this.alt='Failed to load image: ${sanitizedAlt}'"
           onclick="window.open('${sanitizedHref}', '_blank')"
-          style="opacity: 0; transition: opacity 0.3s ease-in-out; cursor: pointer;"
+          style="cursor: pointer;"
         />`;
       };
 
@@ -365,9 +363,7 @@ export class ArticleComponent implements OnDestroy {
               class="article-image linked-image" 
               loading="lazy"
               decoding="async"
-              onload="this.style.opacity='1'"
-              onerror="this.style.opacity='1'; this.style.border='1px solid var(--mat-sys-error)'; this.alt='Failed to load image: ${sanitizedAlt}'"
-              style="opacity: 0; transition: opacity 0.3s ease-in-out; cursor: pointer;"
+              style="cursor: pointer;"
             />
           </a>`;
         }
@@ -386,10 +382,8 @@ export class ArticleComponent implements OnDestroy {
             class="article-image" 
             loading="lazy"
             decoding="async"
-            onload="this.style.opacity='1'"
-            onerror="this.style.opacity='1'; this.style.border='1px solid var(--mat-sys-error)'; this.alt='Failed to load image: ${sanitizedAlt}'"
             onclick="window.open('${sanitizedHref}', '_blank')"
-            style="opacity: 0; transition: opacity 0.3s ease-in-out; cursor: pointer;"
+            style="cursor: pointer;"
           />`;
         }
 
