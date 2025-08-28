@@ -62,6 +62,8 @@ import { Wallets } from './services/wallets';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { EventService } from './services/event';
 import { AgoPipe } from './pipes/ago.pipe';
+import { SleepModeService } from './services/sleep-mode.service';
+import { SleepModeOverlayComponent } from './components/sleep-mode-overlay/sleep-mode-overlay.component';
 
 interface NavItem {
   path: string;
@@ -101,6 +103,7 @@ interface NavItem {
     SearchResultsComponent,
     NavigationComponent,
     NavigationContextMenuComponent,
+    SleepModeOverlayComponent,
     AgoPipe,
   ],
   templateUrl: './app.html',
@@ -128,6 +131,7 @@ export class App implements OnInit {
   state = inject(StateService);
   nostrProtocol = inject(NostrProtocolService);
   publishQueue = inject(PublishQueueService);
+  sleepModeService = inject(SleepModeService);
   snackBar = inject(MatSnackBar);
   eventService = inject(EventService);
   private readonly wallets = inject(Wallets);

@@ -9,7 +9,7 @@ import {
 } from '@angular/core';
 import { NostrService } from './nostr.service';
 import { StorageService } from './storage.service';
-import { Router, RouterLink, RouterModule } from '@angular/router';
+import { Router } from '@angular/router';
 import { FeatureLevel, LoggerService } from './logger.service';
 import { ApplicationStateService } from './application-state.service';
 import { ThemeService } from './theme.service';
@@ -19,6 +19,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { AccountStateService } from './account-state.service';
 import { DataService } from './data.service';
 import { BadgeService } from './badge.service';
+import { SleepModeService } from './sleep-mode.service';
 
 @Injectable({
   providedIn: 'root',
@@ -31,6 +32,7 @@ export class ApplicationService {
   appState = inject(ApplicationStateService);
   accountState = inject(AccountStateService);
   badgeService = inject(BadgeService);
+  sleepModeService = inject(SleepModeService);
   theme = inject(ThemeService);
   notificationService = inject(NotificationService);
   dataService = inject(DataService);
