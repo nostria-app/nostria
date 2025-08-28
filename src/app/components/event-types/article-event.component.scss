@@ -29,6 +29,29 @@
   font-weight: 600;
   line-height: 1.4;
   color: var(--mat-sys-on-surface);
+
+  &.clickable {
+    cursor: pointer;
+    transition: color 0.2s ease, transform 0.1s ease;
+    outline: none;
+    border-radius: 4px;
+    padding: 4px;
+    margin: -4px;
+
+    &:hover {
+      color: var(--mat-sys-primary);
+      transform: translateY(-1px);
+    }
+
+    &:focus {
+      outline: 2px solid var(--mat-sys-primary);
+      outline-offset: 2px;
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+  }
 }
 
 .article-meta {

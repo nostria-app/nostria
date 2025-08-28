@@ -1,38 +1,32 @@
 @if (hasContentWarning()) {
-  <div class="content-warning">
-    <mat-icon>warning</mat-icon>
-    <span>{{ contentWarning() }}</span>
-  </div>
+<div class="content-warning">
+  <mat-icon>warning</mat-icon>
+  <span>{{ contentWarning() }}</span>
+</div>
 }
 
 <article class="article-container">
+
   @if (title()) {
-    <h3 class="article-title">
-      <!-- @if (showAuthor()) {
-        <app-user-profile
-          class="user-profile-name-right"
-          [hostWidthAuto]="true"
-          [pubkey]="event().pubkey"
-          view="tiny"
-        ></app-user-profile>
-      } -->
-      {{ title() }}
-    </h3>
+  <h3 class="article-title clickable" (click)="openFullArticle()" (keydown.enter)="openFullArticle()"
+    (keydown.space)="openFullArticle()" tabindex="0" role="button" [attr.aria-label]="'Open article: ' + title()">
+    {{ title() }}
+  </h3>
   }
 
   @if (authorName() || publishedAt()) {
-    <div class="article-meta">
-      @if (authorName()) {
-        <span class="article-author">{{ authorName() }}</span>
-      }
-      @if (publishedAt()) {
-        <span class="article-date">{{ publishedAt() | date: 'mediumDate' }}</span>
-      }
-    </div>
+  <div class="article-meta">
+    @if (authorName()) {
+    <span class="article-author">{{ authorName() }}</span>
+    }
+    @if (publishedAt()) {
+    <span class="article-date">{{ publishedAt() | date: 'mediumDate' }}</span>
+    }
+  </div>
   }
 
   @if (summary()) {
-    <p class="article-summary">{{ summary() }}</p>
+  <p class="article-summary">{{ summary() }}</p>
   }
 
   <div class="article-content">
@@ -40,19 +34,19 @@
   </div>
 
   @if (articleTags().length > 0) {
-    <div class="article-tags">
-      @for (tag of articleTags(); track tag) {
-        <span class="tag-chip">#{{ tag }}</span>
-      }
-    </div>
+  <div class="article-tags">
+    @for (tag of articleTags(); track tag) {
+    <span class="tag-chip">#{{ tag }}</span>
+    }
+  </div>
   }
 
   <div class="article-actions">
     @if (isContentTruncated()) {
-      <button mat-button color="primary" class="read-more" (click)="expandContent()">
-        <mat-icon>{{ isExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
-        {{ isExpanded() ? 'Show Less' : 'Read More' }}
-      </button>
+    <button mat-button color="primary" class="read-more" (click)="expandContent()">
+      <mat-icon>{{ isExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
+      {{ isExpanded() ? 'Show Less' : 'Read More' }}
+    </button>
     }
 
     <button mat-button color="primary" (click)="openFullArticle()" class="open-article">
