@@ -9,7 +9,12 @@ import { SleepModeService } from '../../services/sleep-mode.service';
   selector: 'app-sleep-mode-overlay',
   template: `
     <div class="sleep-mode-overlay" [class.active]="sleepModeService.showWakeupOverlay()">
-      <div class="overlay-backdrop" (click)="onBackdropClick()"></div>
+      <div
+        class="overlay-backdrop"
+        tabindex="0"
+        (click)="onBackdropClick()"
+        (keydown)="onBackdropKeydown($event)"
+      ></div>
       <div class="overlay-content">
         <mat-card class="wakeup-card">
           <mat-card-header>
@@ -17,7 +22,7 @@ import { SleepModeService } from '../../services/sleep-mode.service';
             <mat-card-title>App was sleeping</mat-card-title>
             <mat-card-subtitle>
               Connection paused for
-              {{ sleepModeService.getFormattedSleepDuration() }} to save resources
+              {{ sleepModeService.formattedDuration() }} to save resources
             </mat-card-subtitle>
           </mat-card-header>
 
@@ -29,11 +34,11 @@ import { SleepModeService } from '../../services/sleep-mode.service';
           </mat-card-content>
 
           <mat-card-actions align="end">
-            <button mat-button (click)="onDismiss()" color="primary">
+            <button mat-button (click)="onDismiss()">
               <mat-icon>close</mat-icon>
               Later
             </button>
-            <button mat-raised-button (click)="onContinue()" color="primary">
+            <button mat-flat-button (click)="onContinue()">
               <mat-icon>refresh</mat-icon>
               Continue
             </button>
@@ -139,5 +144,12 @@ export class SleepModeOverlayComponent {
   onBackdropClick(): void {
     // Allow clicking backdrop to dismiss
     this.onDismiss();
+  }
+
+  onBackdropKeydown(event: KeyboardEvent): void {
+    // Allow Escape key to dismiss
+    if (event.key === 'Escape') {
+      this.onDismiss();
+    }
   }
 }

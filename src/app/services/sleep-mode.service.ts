@@ -25,7 +25,8 @@ export class SleepModeService implements OnDestroy {
   private readonly userRelay = inject(UserRelayServiceEx);
 
   // Sleep mode configuration
-  private readonly SLEEP_DELAY_MS = 1 * 60 * 1000; // 2 minutes
+  private readonly SLEEP_DELAY_MS = 1 * 30 * 1000; // 2 minutes
+  // private readonly SLEEP_DELAY_MS = 1 * 60 * 1000; // 2 minutes
   private readonly STORAGE_KEY = 'nostria-sleep-mode';
 
   // State signals
@@ -39,10 +40,14 @@ export class SleepModeService implements OnDestroy {
   readonly isActive = signal(false);
   readonly showWakeupOverlay = signal(false);
 
+  // Signal for formatted duration that updates every second when active
+  readonly formattedDuration = signal('0s');
+
   // Private state
   private isHidden = false;
   private hiddenAt = 0;
   private sleepTimer: number | null = null;
+  private durationUpdateTimer: number | null = null;
   private visibilityEventListener: (() => void) | null = null;
 
   constructor() {
@@ -143,6 +148,9 @@ export class SleepModeService implements OnDestroy {
       this.isActive.set(true);
       this.saveSleepModeState();
 
+      // Start updating the formatted duration every second
+      this.startDurationUpdates();
+
       this.logger.info('[SleepMode] Sleep mode activated successfully');
     } catch (error) {
       this.logger.error('[SleepMode] Error activating sleep mode:', error);
@@ -206,6 +214,9 @@ export class SleepModeService implements OnDestroy {
       this.showWakeupOverlay.set(false);
       this.saveSleepModeState();
 
+      // Stop updating the formatted duration
+      this.stopDurationUpdates();
+
       this.logger.info('[SleepMode] Successfully woken up from sleep mode');
     } catch (error) {
       this.logger.error('[SleepMode] Error waking up from sleep mode:', error);
@@ -253,6 +264,43 @@ export class SleepModeService implements OnDestroy {
   hideWakeupOverlay(): void {
     this.showWakeupOverlay.set(false);
     this.state.update((state) => ({ ...state, showWakeupOverlay: false }));
+  }
+
+  /**
+   * Start updating the formatted duration every second
+   */
+  private startDurationUpdates(): void {
+    // Update immediately
+    this.updateFormattedDuration();
+
+    // Then update every second
+    this.durationUpdateTimer = window.setInterval(() => {
+      this.updateFormattedDuration();
+    }, 1000);
+  }
+
+  /**
+   * Stop updating the formatted duration
+   */
+  private stopDurationUpdates(): void {
+    if (this.durationUpdateTimer) {
+      clearInterval(this.durationUpdateTimer);
+      this.durationUpdateTimer = null;
+    }
+    // Reset to initial value
+    this.formattedDuration.set('0s');
+  }
+
+  /**
+   * Update the formatted duration signal
+   */
+  private updateFormattedDuration(): void {
+    const duration = this.getSleepDuration();
+    const minutes = Math.floor(duration / 60000);
+    const seconds = Math.floor((duration % 60000) / 1000);
+
+    const formatted = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+    this.formattedDuration.set(formatted);
   }
 
   /**
@@ -305,6 +353,7 @@ export class SleepModeService implements OnDestroy {
         if (state.isActive) {
           this.state.set(state);
           this.isActive.set(true);
+          this.startDurationUpdates(); // Start duration updates for restored sleep mode
           this.logger.debug('[SleepMode] Restored sleep mode state from storage');
         }
       }
@@ -323,6 +372,10 @@ export class SleepModeService implements OnDestroy {
 
     if (this.sleepTimer) {
       clearTimeout(this.sleepTimer);
+    }
+
+    if (this.durationUpdateTimer) {
+      clearInterval(this.durationUpdateTimer);
     }
   }
 }
