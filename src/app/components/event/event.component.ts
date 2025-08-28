@@ -19,7 +19,6 @@ import { ReplyButtonComponent } from './reply-button/reply-button.component';
 import { EventHeaderComponent } from './header/header.component';
 import { CommonModule, DatePipe } from '@angular/common';
 import { AccountStateService } from '../../services/account-state.service';
-import { MatMenuModule } from '@angular/material/menu';
 import { EventService, ReactionEvents } from '../../services/event';
 import { AccountRelayServiceEx } from '../../services/relays/account-relay';
 import { ReactionService } from '../../services/reaction.service';
@@ -31,6 +30,7 @@ import {
 } from '../event-types';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { BadgeComponent } from '../../pages/badges/badge/badge.component';
+import { RepostButtonComponent } from './repost-button/repost-button.component';
 
 type EventCardAppearance = 'card' | 'plain';
 
@@ -42,13 +42,13 @@ type EventCardAppearance = 'card' | 'plain';
     DatePipe,
     CommonModule,
     ReplyButtonComponent,
+    RepostButtonComponent,
     EventHeaderComponent,
     ContentComponent,
     MatTooltipModule,
     MatCardModule,
     MatButtonModule,
     MatIconModule,
-    MatMenuModule,
     MatProgressSpinnerModule,
     PhotoEventComponent,
     VideoEventComponent,
@@ -79,13 +79,11 @@ export class EventComponent {
   app = inject(ApplicationService);
   accountState = inject(AccountStateService);
   eventService = inject(EventService);
-  reposts = signal<NostrRecord[]>([]);
   reactions = signal<ReactionEvents>({ events: [], data: new Map() });
 
   // Loading states
   isLoadingEvent = signal<boolean>(false);
   isLoadingThread = signal<boolean>(false);
-  isLoadingReposts = signal<boolean>(false);
   isLoadingReactions = signal<boolean>(false);
   loadingError = signal<string | null>(null);
 
@@ -105,12 +103,6 @@ export class EventComponent {
     const event = this.event();
     if (!event || (event.kind !== kinds.Repost && event.kind !== kinds.GenericRepost)) return null;
     return this.repostService.decodeRepost(event);
-  });
-
-  repostByCurrentAccount = computed<NostrRecord | undefined>(() => {
-    const event = this.event();
-    if (!event) return;
-    return this.reposts().find((e) => e.event.pubkey === this.accountState.pubkey());
   });
 
   followingCount = computed<number>(() => {
@@ -135,7 +127,6 @@ export class EventComponent {
 
         if (record.event.kind == kinds.ShortTextNote) {
           this.loadReactions();
-          this.loadReposts();
         }
       });
     });
@@ -169,26 +160,6 @@ export class EventComponent {
     });
   }
 
-  async loadReposts(invalidateCache = false) {
-    const record = this.repostedRecord() || this.record();
-    if (!record) return;
-
-    const userPubkey = this.accountState.pubkey();
-    if (!userPubkey) return;
-
-    this.isLoadingReposts.set(true);
-    try {
-      const reposts = await this.eventService.loadReposts(
-        record.event.id,
-        userPubkey,
-        invalidateCache,
-      );
-      this.reposts.set(reposts);
-    } finally {
-      this.isLoadingReposts.set(false);
-    }
-  }
-
   async loadReactions(invalidateCache = false) {
     const record = this.record();
     if (!record) return;
@@ -207,32 +178,6 @@ export class EventComponent {
     } finally {
       this.isLoadingReactions.set(false);
     }
-  }
-
-  async createRepost() {
-    const event = this.event();
-    if (!event) return;
-    await this.repostService.repostNote(event);
-    await this.loadReposts(true);
-  }
-
-  async deleteRepost() {
-    const repostItem = this.repostByCurrentAccount();
-    if (!repostItem) return;
-    await this.repostService.deleteRepost(repostItem.event);
-    await this.loadReposts(true);
-  }
-
-  createQuote() {
-    const record = this.repostedRecord() || this.record();
-    if (!record) return;
-    this.eventService.createNote({
-      quote: {
-        id: record.event.id,
-        pubkey: record.event.pubkey,
-        // TODO: pass relay part of 'q' tag
-      },
-    });
   }
 
   async toggleLike() {

@@ -45,19 +45,6 @@
   margin-left: auto;
 }
 
-button.active {
-  color: rgb(52, 152, 219);
-}
-
-button.only-icon {
-  min-width: 40px;
-  padding: 0;
-
-  .mat-icon {
-    margin: 0;
-  }
-}
-
 .repost-header {
   font-style: italic;
   opacity: 0.7;
