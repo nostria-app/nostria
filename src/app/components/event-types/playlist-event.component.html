@@ -1,72 +1,78 @@
 @if (hasContentWarning()) {
-<div class="content-warning">
-  <mat-icon>warning</mat-icon>
-  <span>{{ contentWarning() }}</span>
-</div>
+  <div class="content-warning">
+    <mat-icon>warning</mat-icon>
+    <span>{{ contentWarning() }}</span>
+  </div>
 }
 
 @let playlist = playlistData();
 @if (playlist) {
-<div class="playlist-container">
-  <!-- <app-user-profile class="user-profile-name-right" [hostWidthAuto]="true" [pubkey]="event().pubkey"
+  <div class="playlist-container">
+    <!-- <app-user-profile class="user-profile-name-right" [hostWidthAuto]="true" [pubkey]="event().pubkey"
     view="tiny"></app-user-profile> -->
-  <div class="playlist-header">
-    <mat-icon class="playlist-icon">playlist_play</mat-icon>
-    <div class="playlist-info">
-      <h3 class="playlist-title">{{ playlist.title }}</h3>
-      @if (playlist.alt) {
-      <p class="playlist-description">{{ playlist.alt }}</p>
-      }
-      <div class="playlist-meta">
-        <span class="track-count">{{ playlist.tracks.length }} tracks</span>
-        @if (playlist.totalDuration) {
-        <span class="playlist-duration">{{ playlist.totalDuration }}</span>
+    <div class="playlist-header">
+      <mat-icon class="playlist-icon">playlist_play</mat-icon>
+      <div class="playlist-info">
+        <h3 class="playlist-title">{{ playlist.title }}</h3>
+        @if (playlist.alt) {
+          <p class="playlist-description">{{ playlist.alt }}</p>
         }
-      </div>
-    </div>
-  </div>
-
-  <div class="playlist-actions">
-    <button mat-flat-button color="primary" (click)="playPlaylist(playlist)">
-      <mat-icon>play_arrow</mat-icon>
-      Play Playlist
-    </button>
-    <button mat-button (click)="addPlaylistToQueue(playlist)">
-      <mat-icon>playlist_add</mat-icon>
-      Add to Queue
-    </button>
-    @if (playlist.url) {
-    <a mat-icon-button [href]="playlist.url" target="_blank" rel="noopener noreferrer" title="Download playlist">
-      <mat-icon>download</mat-icon>
-    </a>
-    }
-  </div>
-
-  @if (playlist.tracks.length > 0) {
-  <div class="playlist-tracks">
-    <h4 class="tracks-header">Tracks</h4>
-    <div class="track-list">
-      @for (track of playlist.tracks.slice(0, 5); track track.url; let i = $index) {
-      <div class="track-item">
-        <span class="track-number">{{ i + 1 }}</span>
-        <div class="track-info">
-          <span class="track-title">{{ track.title || 'Unknown Track' }}</span>
-          @if (track.artist) {
-          <span class="track-artist">{{ track.artist }}</span>
+        <div class="playlist-meta">
+          <span class="track-count">{{ playlist.tracks.length }} tracks</span>
+          @if (playlist.totalDuration) {
+            <span class="playlist-duration">{{ playlist.totalDuration }}</span>
           }
         </div>
-        @if (track.duration) {
-        <span class="track-duration">{{ track.duration }}</span>
-        }
       </div>
-      }
-      @if (playlist.tracks.length > 5) {
-      <div class="track-item more-tracks">
-        <span class="more-indicator"> +{{ playlist.tracks.length - 5 }} more tracks </span>
-      </div>
+    </div>
+
+    <div class="playlist-actions">
+      <button mat-flat-button color="primary" (click)="playPlaylist(playlist)">
+        <mat-icon>play_arrow</mat-icon>
+        Play Playlist
+      </button>
+      <button mat-button (click)="addPlaylistToQueue(playlist)">
+        <mat-icon>playlist_add</mat-icon>
+        Add to Queue
+      </button>
+      @if (playlist.url) {
+        <a
+          mat-icon-button
+          [href]="playlist.url"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Download playlist"
+        >
+          <mat-icon>download</mat-icon>
+        </a>
       }
     </div>
+
+    @if (playlist.tracks.length > 0) {
+      <div class="playlist-tracks">
+        <h4 class="tracks-header">Tracks</h4>
+        <div class="track-list">
+          @for (track of playlist.tracks.slice(0, 5); track track.url; let i = $index) {
+            <div class="track-item">
+              <span class="track-number">{{ i + 1 }}</span>
+              <div class="track-info">
+                <span class="track-title">{{ track.title || 'Unknown Track' }}</span>
+                @if (track.artist) {
+                  <span class="track-artist">{{ track.artist }}</span>
+                }
+              </div>
+              @if (track.duration) {
+                <span class="track-duration">{{ track.duration }}</span>
+              }
+            </div>
+          }
+          @if (playlist.tracks.length > 5) {
+            <div class="track-item more-tracks">
+              <span class="more-indicator"> +{{ playlist.tracks.length - 5 }} more tracks </span>
+            </div>
+          }
+        </div>
+      </div>
+    }
   </div>
-  }
-</div>
 }
