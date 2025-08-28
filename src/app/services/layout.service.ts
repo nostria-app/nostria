@@ -13,7 +13,10 @@ import { NostrRecord } from '../interfaces';
 import { AccountStateService } from './account-state.service';
 import { isPlatformBrowser } from '@angular/common';
 import { LocalStorageService } from './local-storage.service';
-import { PublishDialogComponent, PublishDialogData } from '../components/publish-dialog/publish-dialog.component';
+import {
+  PublishDialogComponent,
+  PublishDialogData,
+} from '../components/publish-dialog/publish-dialog.component';
 
 @Injectable({
   providedIn: 'root',

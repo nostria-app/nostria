@@ -32,7 +32,9 @@
 
   &.clickable {
     cursor: pointer;
-    transition: color 0.2s ease, transform 0.1s ease;
+    transition:
+      color 0.2s ease,
+      transform 0.1s ease;
     outline: none;
     border-radius: 4px;
     padding: 4px;
