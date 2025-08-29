@@ -14,6 +14,7 @@ import { Event } from 'nostr-tools';
 import { NostrService } from '../../services/nostr.service';
 import { AccountRelayServiceEx } from '../../services/relays/account-relay';
 import { DiscoveryRelayServiceEx } from '../../services/relays/discovery-relay';
+import { UtilitiesService } from '../../services/utilities.service';
 
 export interface PublishDialogData {
   event: Event;
@@ -56,6 +57,7 @@ export class PublishDialogComponent {
   accountRelay = inject(AccountRelayServiceEx);
   private discoveryRelay = inject(DiscoveryRelayServiceEx);
   private nostrService = inject(NostrService);
+  private utilities = inject(UtilitiesService);
   // relayService = inject(RelayService);
 
   selectedOptions = signal<Set<'account' | 'author' | 'custom'>>(new Set(['account']));
@@ -105,21 +107,50 @@ export class PublishDialogComponent {
     });
   }
 
-  addCustomRelay(): void {
-    const relayUrl = this.customRelayInput().trim();
-    if (relayUrl && !this.customRelays().includes(relayUrl)) {
-      // Basic URL validation
-      try {
-        const url = new URL(relayUrl);
-        if (url.protocol === 'wss:' || url.protocol === 'ws:') {
-          this.customRelays.update((relays) => [...relays, relayUrl]);
-          this.customRelayInput.set('');
-        } else {
-          alert('Please enter a valid WebSocket URL (wss:// or ws://)');
-        }
-      } catch {
-        alert('Please enter a valid URL');
+  parseRelayUrl(relayUrl: string): string | null {
+    let url = relayUrl.trim();
+
+    if (!url) {
+      return null;
+    }
+
+    // Check if the URL has a valid protocol
+    if (!url.startsWith('wss://') && !url.startsWith('ws://')) {
+      // Default to wss:// if no protocol is specified
+      url = `wss://${url}`;
+    }
+
+    // Only append trailing slash if there's no path component (just domain)
+    try {
+      const parsedUrl = new URL(url);
+      if (parsedUrl.pathname === '/') {
+        url = url.endsWith('/') ? url : `${url}/`;
       }
+    } catch {
+      return null;
+    }
+
+    return url;
+  }
+
+  addCustomRelay(): void {
+    const relayInput = this.customRelayInput().trim();
+    if (!relayInput) {
+      return;
+    }
+
+    const normalizedUrl = this.parseRelayUrl(relayInput);
+
+    if (!normalizedUrl) {
+      alert('Please enter a valid relay URL');
+      return;
+    }
+
+    if (!this.customRelays().includes(normalizedUrl)) {
+      this.customRelays.update((relays) => [...relays, normalizedUrl]);
+      this.customRelayInput.set('');
+    } else {
+      alert('This relay is already in the list');
     }
   }
 
