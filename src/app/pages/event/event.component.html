@@ -1,39 +1,66 @@
 @if (isLoading() && !event()) {
-  <div class="thread-loading">
-    <mat-spinner diameter="32"></mat-spinner>
-    <p class="loading-text">Loading thread...</p>
-  </div>
+<div class="thread-loading">
+  <mat-spinner diameter="32"></mat-spinner>
+  <p class="loading-text">Loading thread...</p>
+</div>
 } @else {
-  <!-- Display parent events in thread (if any) -->
-  @if (parentEvents().length > 0 || isLoadingParents()) {
-    <div class="parent-events">
-      @if (isLoadingParents()) {
-        <div class="replies-loading">
-          <mat-spinner diameter="20"></mat-spinner>
-          <p class="loading-text">Loading thread context...</p>
-        </div>
-      } @else {
-        <h3>Thread Context</h3>
-        @for (parentEvent of parentEvents(); track parentEvent.id) {
-          <div class="parent-event">
-            <app-event [event]="parentEvent" appearance="plain"></app-event>
-          </div>
-        }
-        <div class="thread-indicator">
-          <hr />
-          <span>Reply below</span>
-          <hr />
-        </div>
-      }
-    </div>
-  }
+<!-- Loading indicator for parent events when they're still loading -->
+@if (isLoadingParents()) {
+<div class="parent-events">
+  <div class="section-loading">
+    <mat-spinner diameter="16"></mat-spinner>
+    <p class="loading-text">Loading thread context...</p>
+  </div>
+</div>
+}
 
-  <!-- Main event -->
-  @if (event()) {
-    <app-event [event]="event()" appearance="plain"></app-event>
+<!-- Display parent events in thread (if any) -->
+@if (parentEvents().length > 0) {
+<div class="parent-events">
+  <h3>Thread Context</h3>
+  @for (parentEvent of parentEvents(); track parentEvent.id) {
+  <div class="parent-event">
+    <app-event [event]="parentEvent" appearance="plain"></app-event>
+  </div>
   }
+  <div class="thread-indicator">
+    <hr />
+    <span>Reply below</span>
+    <hr />
+  </div>
+</div>
+}
 
-  <!-- <div class="reactions">
+<!-- Main event -->
+@if (event()) {
+<app-event [event]="event()" appearance="plain"></app-event>
+}
+
+<!-- Loading status indicator - shows what's still loading -->
+@if (isLoadingParents() || isLoadingReplies()) {
+<div class="loading-status">
+  @if (isLoadingParents()) {
+  <div class="status-item">
+    <mat-spinner diameter="14"></mat-spinner>
+    <span>Loading thread context...</span>
+  </div>
+  }
+  @if (isLoadingReplies()) {
+  <div class="status-item">
+    <mat-spinner diameter="14"></mat-spinner>
+    <span>Loading replies...</span>
+  </div>
+  }
+</div>
+} @else if (event() && !isLoading() && showCompletionStatus()) {
+<!-- Show completion status briefly -->
+<div class="completion-status">
+  <mat-icon>check_circle</mat-icon>
+  <span>Thread loaded</span>
+</div>
+}
+
+<!-- <div class="reactions">
     @for (reaction of reactions(); track reaction.emoji) {
       <div class="reaction">
         <span class="emoji">{{ reaction.emoji }}</span>
@@ -42,27 +69,25 @@
     }
   </div> -->
 
-  @if (error()) {
-    <div class="warn">
-      {{ error() }}
-    </div>
-  }
+@if (error()) {
+<div class="warn">
+  {{ error() }}
+</div>
+}
 
-  <div class="replies-section">
-    @if (threadedReplies().length === 0 && isLoadingReplies()) {
-      <div class="replies-loading">
-        <mat-spinner diameter="20"></mat-spinner>
-        <p class="loading-text">Loading replies...</p>
-      </div>
-    } @else {
-      @for (threadedEvent of threadedReplies(); track threadedEvent.event.id) {
-        <ng-container
-          [ngTemplateOutlet]="replyTemplate"
-          [ngTemplateOutletContext]="{ threadedEvent: threadedEvent }"
-        ></ng-container>
-      }
-    }
+<div class="replies-section">
+  @if (threadedReplies().length === 0 && isLoadingReplies()) {
+  <div class="replies-loading">
+    <mat-spinner diameter="20"></mat-spinner>
+    <p class="loading-text">Loading replies...</p>
   </div>
+  } @else {
+  @for (threadedEvent of threadedReplies(); track threadedEvent.event.id) {
+  <ng-container [ngTemplateOutlet]="replyTemplate"
+    [ngTemplateOutletContext]="{ threadedEvent: threadedEvent }"></ng-container>
+  }
+  }
+</div>
 }
 
 <ng-template #replyTemplate let-threadedEvent="threadedEvent">
@@ -70,23 +95,17 @@
     <app-event [event]="threadedEvent.event"></app-event>
 
     @for (childReply of threadedEvent.replies; track childReply.event.id) {
-      <ng-container
-        [ngTemplateOutlet]="replyTemplate"
-        [ngTemplateOutletContext]="{ threadedEvent: childReply }"
-      ></ng-container>
+    <ng-container [ngTemplateOutlet]="replyTemplate"
+      [ngTemplateOutletContext]="{ threadedEvent: childReply }"></ng-container>
     }
 
     @if (threadedEvent.hasMoreReplies && threadedEvent.deepestReplyId) {
-      <div class="view-more-replies" [style.margin-left.px]="(threadedEvent.level + 1) * 24">
-        <button
-          mat-stroked-button
-          class="view-more-button"
-          (click)="onViewMoreReplies(threadedEvent.deepestReplyId!)"
-        >
-          <mat-icon>expand_more</mat-icon>
-          View more replies
-        </button>
-      </div>
+    <div class="view-more-replies" [style.margin-left.px]="(threadedEvent.level + 1) * 24">
+      <button mat-stroked-button class="view-more-button" (click)="onViewMoreReplies(threadedEvent.deepestReplyId!)">
+        <mat-icon>expand_more</mat-icon>
+        View more replies
+      </button>
+    </div>
     }
   </div>
 </ng-template>

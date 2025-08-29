@@ -1,4 +1,12 @@
-import { Component, effect, inject, signal, TransferState, untracked } from '@angular/core';
+import {
+  Component,
+  effect,
+  inject,
+  signal,
+  TransferState,
+  untracked,
+  computed,
+} from '@angular/core';
 import { LayoutService } from '../../services/layout.service';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
@@ -16,6 +24,7 @@ import { ApplicationService } from '../../services/application.service';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { EVENT_STATE_KEY, EventData } from '../../data-resolver';
 import { EventService, ThreadData } from '../../services/event';
+import { Title } from '@angular/platform-browser';
 
 /** Description of the EventPageComponent
  *
@@ -67,9 +76,17 @@ export class EventPageComponent {
   transferState = inject(TransferState);
   parentEvents = signal<Event[]>([]);
   threadData = signal<ThreadData | null>(null);
+  private titleService = inject(Title);
 
   item!: EventData;
   reactions = signal<Reaction[]>([]);
+
+  // Computed signal to track if anything is still loading
+  isAnyLoading = computed(
+    () => this.isLoading() || this.isLoadingParents() || this.isLoadingReplies(),
+  );
+
+  showCompletionStatus = signal(false);
 
   constructor() {
     // this.item = this.route.snapshot.data['data'];
@@ -105,6 +122,19 @@ export class EventPageComponent {
         });
       }
     });
+
+    // Effect to update document title with loading indicator
+    effect(() => {
+      const isLoading = this.isAnyLoading();
+      const event = this.event();
+
+      if (event) {
+        const baseTitle = `Note by ${event.pubkey.slice(0, 8)}... - Nostria`;
+        this.titleService.setTitle(isLoading ? `⏳ ${baseTitle}` : baseTitle);
+      } else if (isLoading) {
+        this.titleService.setTitle('⏳ Loading... - Nostria');
+      }
+    });
   }
 
   async loadEvent(nevent: string) {
@@ -115,6 +145,7 @@ export class EventPageComponent {
       this.isLoadingParents.set(true);
       this.isLoadingReplies.set(true);
       this.error.set(null);
+      this.showCompletionStatus.set(false);
 
       // Reset state
       this.parentEvents.set([]);
@@ -182,7 +213,13 @@ export class EventPageComponent {
       this.isLoading.set(false);
       this.isLoadingParents.set(false);
       this.isLoadingReplies.set(false);
-      
+
+      // Show completion status briefly
+      if (this.event()) {
+        this.showCompletionStatus.set(true);
+        setTimeout(() => this.showCompletionStatus.set(false), 3000);
+      }
+
       // Scroll to top after loading
       setTimeout(() => this.layout.scrollMainContentToTop(), 100);
     }
