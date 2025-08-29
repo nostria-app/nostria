@@ -11,12 +11,6 @@ html {
   --scrollbar-thumb: #c1c1c1;
   --scrollbar-thumb-hover: #a1a1a1;
 
-  // Dialog and card colors for light theme
-  // --mat-card-title-text-color: rgba(0, 0, 0, 0.87);
-  // --mat-card-subtitle-text-color: rgba(0, 0, 0, 0.6);
-  // --mat-subtitle-text-color: rgba(0, 0, 0, 0.7);
-  // --mat-card-container-color: white;
-
   @include mat.theme(
     (
       color: (
@@ -39,12 +33,6 @@ html {
   --scrollbar-track: #424242;
   --scrollbar-thumb: #686868;
   --scrollbar-thumb-hover: #7e7e7e;
-
-  // Dialog and card colors for dark theme
-  // --mat-card-title-text-color: rgba(255, 255, 255, 0.87);
-  // --mat-card-subtitle-text-color: rgba(255, 255, 255, 0.7);
-  // --mat-subtitle-text-color: rgba(255, 255, 255, 0.7);
-  // --mat-card-container-color: #424242;
 
   @include mat.theme(
     (
@@ -290,38 +278,8 @@ body {
 }
 
 .dark {
-  // --mat-toolbar-container-background-color: #424242;
-  // --mat-toolbar-container-text-color: white;
-
-  // background-color: #303030;
   color: white;
-
-  // .mat-drawer {
-  //   background-color: #424242;
-  //   color: white;
-  // }
-
-  .mat-drawer-container {
-    // background-color: #303030;
-    // color: white;
-  }
-
-  .mat-mdc-card {
-    // background-color: #424242;
-    // color: white;
-  }
 }
-
-// Common card styling
-// .mat-mdc-card {
-//   margin-bottom: 16px;
-// }
-
-// Dark theme material card styles
-// .dark .mat-mdc-card {
-//   background-color: var(--mat-card-container-color);
-//   color: var(--mat-card-title-text-color);
-// }
 
 // Material dialog in dark mode
 .dark .mat-mdc-dialog-container {
@@ -563,17 +521,10 @@ mat-card-content li {
 
 /* Following count styles */
 .following-count {
-  // display: inline-flex;
-  // align-items: center;
-  // cursor: pointer;
   font-size: 0.9rem;
   padding: 4px 12px 4px 0px;
-  // border-radius: 16px;
-  // transition: background-color 0.2s;
-  // font-weight: 500;
 
   &:hover {
-    // background-color: rgba(0, 0, 0, 0.05);
     text-decoration: underline;
   }
 }
@@ -836,23 +787,6 @@ iframe {
     box-shadow: var(--mat-sys-level1);
   }
 }
-
-/* Image dialog styles */
-// .image-dialog {
-//   .mat-mdc-dialog-container .mdc-dialog__surface {
-//     border-radius: 8px;
-//     overflow: hidden;
-//     background-color: white;
-//   }
-// }
-
-/* Welcome dialog styles */
-// .welcome-dialog {
-//   .mat-mdc-dialog-container .mdc-dialog__surface {
-//     border-radius: 16px;
-//     overflow: hidden;
-//   }
-// }
 
 .minor-icon {
   color: var(--mat-sys-on-surface-variant);
