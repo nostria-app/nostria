@@ -12,6 +12,8 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { EventService } from '../../../services/event';
 import { RepostService } from '../../../services/repost.service';
 
+type ViewMode = 'icon' | 'full';
+
 @Component({
   selector: 'app-repost-button',
   standalone: true,
@@ -35,6 +37,7 @@ export class RepostButtonComponent {
   reposts = signal<NostrRecord[]>([]);
 
   event = input.required<Event>();
+  view = input<ViewMode>('icon');
 
   repostByCurrentAccount = computed<NostrRecord | undefined>(() => {
     const event = this.event();
@@ -51,9 +54,7 @@ export class RepostButtonComponent {
       }
 
       untracked(async () => {
-        if (event.kind === kinds.ShortTextNote) {
-          this.loadReposts();
-        }
+        this.loadReposts();
       });
     });
   }
@@ -93,23 +94,15 @@ export class RepostButtonComponent {
 
     this.isLoadingReposts.set(true);
     try {
-      const reposts = await this.eventService.loadReposts(event.id, userPubkey, invalidateCache);
+      const reposts = await this.eventService.loadReposts(
+        event.id,
+        event.kind,
+        userPubkey,
+        invalidateCache,
+      );
       this.reposts.set(reposts);
     } finally {
       this.isLoadingReposts.set(false);
-    }
-  }
-
-  onClick(): void {
-    if (this.event().kind === kinds.ShortTextNote) {
-      this.eventService.createNote({
-        replyTo: {
-          id: this.event().id,
-          pubkey: this.event().pubkey,
-        },
-      });
-    } else {
-      // TODO: create kind:1111 event (NIP-22)
     }
   }
 }
