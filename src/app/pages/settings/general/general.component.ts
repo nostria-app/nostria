@@ -6,6 +6,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatSliderModule } from '@angular/material/slider';
 import { MatDialog } from '@angular/material/dialog';
 import { FeatureLevel, LoggerService, LogLevel } from '../../../services/logger.service';
 import { ThemeService } from '../../../services/theme.service';
@@ -32,6 +33,7 @@ interface Language {
     MatIconModule,
     MatSelectModule,
     MatSlideToggleModule,
+    MatSliderModule,
     StorageStatsComponent,
   ],
   templateUrl: './general.component.html',
@@ -76,6 +78,11 @@ export class GeneralSettingsComponent {
     if (this.app.isBrowser()) {
       window.location.reload();
     }
+  }
+
+  setMaxRelaysPerUser(event: { value: number }): void {
+    const value = event.value;
+    this.localSettings.setMaxRelaysPerUser(value);
   }
 
   wipeData(): void {

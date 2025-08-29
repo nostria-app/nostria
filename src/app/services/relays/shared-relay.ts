@@ -142,7 +142,7 @@ export class SharedRelayServiceEx {
   ): Promise<T | null> {
     // Get optimal relays for the user
     let relayUrls = await this.discoveryRelay.getUserRelayUrls(pubkey);
-    relayUrls = this.relaysService.getOptimalRelays(relayUrls, 3);
+    relayUrls = this.relaysService.getOptimalRelays(relayUrls);
 
     console.log('relayUrls', relayUrls);
 
@@ -217,7 +217,7 @@ export class SharedRelayServiceEx {
     timeout: number,
   ): Promise<T[]> {
     let relayUrls = await this.discoveryRelay.getUserRelayUrls(pubkey);
-    relayUrls = this.relaysService.getOptimalRelays(relayUrls, 3);
+    relayUrls = this.relaysService.getOptimalRelays(relayUrls);
 
     if (relayUrls.length === 0) {
       this.logger.warn('No relays available for query');

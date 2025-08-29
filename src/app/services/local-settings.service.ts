@@ -6,12 +6,14 @@ export interface LocalSettings {
   menuOpen: boolean;
   menuExpanded: boolean;
   locale: string;
+  maxRelaysPerUser: number;
 }
 
 const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
   menuOpen: false,
   menuExpanded: true,
   locale: 'en',
+  maxRelaysPerUser: 3,
 };
 
 /**
@@ -33,6 +35,7 @@ export class LocalSettingsService {
   readonly menuOpen = computed(() => this.settings().menuOpen);
   readonly menuExpanded = computed(() => this.settings().menuExpanded);
   readonly locale = computed(() => this.settings().locale);
+  readonly maxRelaysPerUser = computed(() => this.settings().maxRelaysPerUser);
 
   constructor() {
     this.loadSettings();
@@ -115,6 +118,13 @@ export class LocalSettingsService {
    */
   setLocale(locale: string): void {
     this.updateSettings({ locale });
+  }
+
+  /**
+   * Set max relays per user
+   */
+  setMaxRelaysPerUser(maxRelaysPerUser: number): void {
+    this.updateSettings({ maxRelaysPerUser });
   }
 
   /**
