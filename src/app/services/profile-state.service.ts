@@ -119,12 +119,12 @@ export class ProfileStateService {
         {
           kinds: [kinds.ShortTextNote],
           authors: [pubkey],
-          limit: 5,
+          limit: 20,
         },
         {
           kinds: [kinds.LongFormArticle],
           authors: [pubkey],
-          limit: 3,
+          limit: 5,
         },
         {
           kinds: [10063], // BUD-03: User Server List
@@ -134,12 +134,12 @@ export class ProfileStateService {
         {
           kinds: [kinds.Repost],
           authors: [pubkey],
-          limit: 2,
+          limit: 5,
         },
         {
           kinds: [kinds.GenericRepost],
           authors: [pubkey],
-          limit: 2,
+          limit: 5,
         },
       ],
       (event: Event) => {

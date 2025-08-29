@@ -84,9 +84,6 @@ export class ProfileComponent {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   nostrService = inject(NostrService);
-  private storage = inject(StorageService);
-  private relayService = inject(AccountRelayService);
-  private appState = inject(ApplicationStateService);
   private app = inject(ApplicationService);
   private logger = inject(LoggerService);
   private snackBar = inject(MatSnackBar);
@@ -201,15 +198,6 @@ export class ProfileComponent {
                     this.url.updatePathSilently(['/p', identifier]);
                   }
                 });
-
-                // if (username) {
-                //   this.url.updatePathSilently(['/u', username]);
-                // }
-                // else {
-                //   // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.
-                //   const encoded = nip19.npubEncode(id);
-                //   this.url.updatePathSilently(['/p', id]);
-                // }
               }
             } else {
               if (!username) {
@@ -223,17 +211,6 @@ export class ProfileComponent {
                     this.url.updatePathSilently(['/p', identifier]);
                   }
                 });
-
-                // username = await this.username.getUsername(id);
-
-                // if (username) {
-                //   this.url.updatePathSilently(['/u', username]);
-                // }
-                // else {
-                //   // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.
-                //   const encoded = nip19.npubEncode(id);
-                //   this.url.updatePathSilently(['/p', encoded]);
-                // }
               }
             }
 
@@ -263,29 +240,11 @@ export class ProfileComponent {
             if (!this.isOwnProfile()) {
               await this.profileTracking.trackProfileView(this.pubkey());
             }
-
-            // this.userRelay.subscribe([{
-            //   kinds: [kinds.ShortTextNote],
-            //   authors: [id],
-            //   limit: 30
-            // }], (event) => {
-            //   this.profileState.replies.update(events => [...events, event]);
-            // }, () => {
-            //   console.log('FINISHED!!!');
-            // });
           } else {
             this.error.set('No user ID provided');
             this.isLoading.set(false);
           }
         });
-      }
-    });
-
-    // Add an effect to generate QR code when showing it and the profile changes
-    effect(() => {
-      // Only generate QR code if the lightning address exists and the QR popover is shown
-      if (this.showLightningQR() && this.userMetadata()?.data?.lud16) {
-        this.generateLightningQRCode();
       }
     });
 
@@ -350,33 +309,6 @@ export class ProfileComponent {
   private getWindow(): Window | null {
     return isPlatformBrowser(this.platformId) ? this.document.defaultView : null;
   }
-
-  // private async loadUserData(pubkey: string, disconnect = true): Promise<void> {
-  //   if (!this.userRelay) {
-  //     this.logger.warn('UserRelay service not available, cannot load user data');
-  //     return;
-  //   }
-
-  //   if (this.userRelay.relayUrls.length === 0) {
-  //     this.logger.warn('No relay URLs available for user, cannot load user data');
-  //     return;
-  //   }
-
-  //   await this.profileState.loadUserData();
-
-  //   // if (!this.nostrService.currentProfileUserPool) {
-  //   //   this.nostrService.currentProfileUserPool = new SimplePool();
-  //   // }
-
-  //   // let relays = await this.nostrService.getRelaysForUser(pubkey, disconnect);
-  //   // if (!relays) {
-  //   //   return this.error.set('No relays found for this user');
-  //   // }
-
-  //   // let relayUrls = this.nostrService.getRelayUrls(relays);
-  //   // this.nostrService.currentProfileRelayUrls = relayUrls;
-  //   // const pool = this.nostrService.currentProfileUserPool;
-  // }
 
   private async loadUserProfile(pubkey: string): Promise<void> {
     // Validate pubkey parameter
@@ -570,37 +502,6 @@ export class ProfileComponent {
 
       this.logger.debug('Opened profile picture dialog');
     }
-  }
-
-  /**
-   * Generates a QR code for the user's lightning address and stores it in the lightningQrCode signal
-   */
-  async generateLightningQRCode(): Promise<void> {
-    // if (!isPlatformBrowser(this.platformId)) {
-    //   this.logger.debug('Cannot generate QR code in server environment');
-    //   return;
-    // }
-    // const metadata = this.userMetadata();
-    // if (!metadata?.data?.lud16) {
-    //   this.lightningQrCode.set('');
-    //   return;
-    // }
-    // try {
-    //   // Format lightning address for QR code
-    //   const lightning = metadata.data.lud16;
-    //   const dataUrl = await QRCode.toDataURL(`lightning:${lightning}`, {
-    //     margin: 1,
-    //     width: 200,
-    //     color: {
-    //       dark: '#000000',
-    //       light: '#FFFFFF'
-    //     }
-    //   });
-    //   this.lightningQrCode.set(dataUrl);
-    // } catch (err) {
-    //   this.logger.error('Error generating QR code:', err);
-    //   this.lightningQrCode.set('');
-    // }
   }
 
   /**
