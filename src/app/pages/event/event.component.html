@@ -33,7 +33,7 @@
 
 <!-- Main event -->
 @if (event()) {
-<app-event [event]="event()" appearance="plain"></app-event>
+<app-event [event]="event()" appearance="plain" [navigationDisabled]="true"></app-event>
 }
 
 <!-- Loading status indicator - shows what's still loading -->

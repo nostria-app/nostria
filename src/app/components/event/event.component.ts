@@ -66,6 +66,7 @@ export class EventComponent {
   type = input<'e' | 'a' | 'r' | 't'>('e');
   event = input<Event | null | undefined>(null);
   appearance = input<EventCardAppearance>('plain');
+  navigationDisabled = input<boolean>(false);
   isPlain = computed<boolean>(() => this.appearance() === 'plain');
 
   data = inject(DataService);
@@ -263,6 +264,11 @@ export class EventComponent {
   }
 
   onCardClick(event: MouseEvent) {
+    // Don't navigate if navigation is explicitly disabled
+    if (this.navigationDisabled()) {
+      return;
+    }
+
     // Don't navigate if this event is currently selected/displayed
     if (this.isCurrentlySelected()) {
       return;
@@ -273,7 +279,7 @@ export class EventComponent {
 
     // Check if the click is on an interactive element or its children
     const isInteractiveElement = target.closest(
-      'img, button, a, mat-menu, [mat-menu-trigger-for], [tabindex], input, textarea, select, .user-profile-avatar, .user-profile-name, .date-link',
+      'img, button, a, mat-menu, [mat-menu-trigger-for], input, textarea, select, .user-profile-avatar, .user-profile-name, .date-link',
     );
 
     if (isInteractiveElement) {

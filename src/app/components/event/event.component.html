@@ -7,8 +7,8 @@
   <p class="loading-text">Loading event...</p>
 </div>
 } @else if (targetItem && item) {
-<mat-card class="note-card" [class.plain]="isPlain()" [class.selected]="isCurrentlySelected()" appearance="outlined"
-  [attr.tabindex]="isCurrentlySelected() ? null : 0" [style.cursor]="isCurrentlySelected() ? 'auto' : 'pointer'"
+<mat-card class="note-card" [class.plain]="isPlain()" [class.selected]="isCurrentlySelected() || navigationDisabled()" appearance="outlined"
+  [attr.tabindex]="isCurrentlySelected() || navigationDisabled() ? null : 0" [style.cursor]="isCurrentlySelected() || navigationDisabled() ? 'auto' : 'pointer'"
   (click)="onCardClick($event)">
   @if (repostedRecord() !== null) {
   <mat-card-header class="repost-header">
