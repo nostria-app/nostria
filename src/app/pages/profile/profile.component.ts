@@ -119,6 +119,9 @@ export class ProfileComponent {
   // private userRelayFactory = inject(UserRelayFactoryService);
   // private userRelay: UserRelayService | undefined = undefined;
 
+  // Track the previous profile pubkey to detect actual profile changes
+  private previousProfilePubkey: string | null = null;
+
   constructor() {
     if (!this.app.isBrowser()) {
       console.warn('Profile component can only be used in browser context');
@@ -222,6 +225,9 @@ export class ProfileComponent {
             this.profileState.setCurrentProfilePubkey(id);
             this.pubkey.set(id);
 
+            // Update the tracked profile pubkey for router change detection
+            this.previousProfilePubkey = id;
+
             // If it's the same profile, always force reload to ensure fresh data after navigation
             if (isSameProfile) {
               this.logger.debug('Same profile detected, forcing reload to ensure fresh data');
@@ -263,24 +269,40 @@ export class ProfileComponent {
         // Check if we're navigating to a profile route
         const isProfileRoute = currentUrl.match(/^\/(p|u)\//);
         if (isProfileRoute) {
-          // Small delay to ensure component is ready
-          setTimeout(() => {
-            const currentPubkey = this.pubkey();
-            const profileStatePubkey = this.profileState.pubkey();
+          // Extract the profile ID from the URL
+          const profileMatch = currentUrl.match(/^\/(p|u)\/([^/]+)/);
+          const urlProfileId = profileMatch ? profileMatch[2] : null;
 
-            debugger;
-            // If we have a pubkey and it matches the profile state, but we don't have data, reload
-            if (currentPubkey && currentPubkey === profileStatePubkey) {
-              const hasFollowingData = this.profileState.followingList().length > 0;
-              const hasNotesData = this.profileState.notes().length > 0;
+          // Only trigger reload logic if the profile ID actually changed
+          if (urlProfileId && urlProfileId !== this.previousProfilePubkey) {
+            this.logger.debug(
+              'Profile changed from',
+              this.previousProfilePubkey,
+              'to',
+              urlProfileId,
+            );
+            this.previousProfilePubkey = urlProfileId;
 
-              // If we don't have data, force a reload
-              if (!hasFollowingData && !hasNotesData) {
-                this.logger.debug('No profile data found after navigation, forcing reload');
-                this.profileState.reloadCurrentProfile();
+            // Small delay to ensure component is ready
+            setTimeout(() => {
+              const currentPubkey = this.pubkey();
+              const profileStatePubkey = this.profileState.pubkey();
+
+              // If we have a pubkey and it matches the profile state, but we don't have data, reload
+              if (currentPubkey && currentPubkey === profileStatePubkey) {
+                const hasFollowingData = this.profileState.followingList().length > 0;
+                const hasNotesData = this.profileState.notes().length > 0;
+
+                // If we don't have data, force a reload
+                if (!hasFollowingData && !hasNotesData) {
+                  this.logger.debug('No profile data found after navigation, forcing reload');
+                  this.profileState.reloadCurrentProfile();
+                }
               }
-            }
-          }, 100);
+            }, 100);
+          } else {
+            this.logger.debug('Profile tab change detected, no reload needed');
+          }
         }
       }
     });
