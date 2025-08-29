@@ -258,8 +258,6 @@ export class ProfileStateService {
     this.isLoadingMoreNotes.set(true);
     const pubkey = this.pubkey();
 
-    let foundAnything = false;
-
     try {
       const currentNotes = this.notes();
       const oldestTimestamp =
@@ -293,8 +291,6 @@ export class ProfileStateService {
             },
           ],
           (event) => {
-            foundAnything = true;
-
             // Handle different event types
             if (event.kind === kinds.ShortTextNote) {
               // Check if this is a root post (not a reply)
@@ -336,9 +332,8 @@ export class ProfileStateService {
             // EOSE callback - subscription finished
             this.logger.debug(`Loaded ${newNotes.length} more notes`);
 
-            // One relay might say there are no more events, but another might have some, so
-            // they will set the flag back to true if we found any new notes.
-            if (!foundAnything) {
+            // Check if we actually got new notes, not just any events
+            if (newNotes.length === 0) {
               this.hasMoreNotes.set(false);
             } else {
               // Add new notes to the existing ones with final deduplication check
@@ -350,9 +345,16 @@ export class ProfileStateService {
                 console.log(
                   `Adding ${filtered.length} new notes (${newNotes.length - filtered.length} duplicates filtered)`,
                 );
+
+                // Only keep hasMoreNotes true if we actually added new notes
+                if (filtered.length === 0) {
+                  this.hasMoreNotes.set(false);
+                } else {
+                  this.hasMoreNotes.set(true);
+                }
+
                 return [...existing, ...filtered];
               });
-              this.hasMoreNotes.set(true);
             }
 
             this.isLoadingMoreNotes.set(false);

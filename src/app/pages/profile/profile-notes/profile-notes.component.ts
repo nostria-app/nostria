@@ -66,8 +66,8 @@ export class ProfileNotesComponent {
    * Load more notes (older notes)
    */
   async loadMoreNotes(): Promise<void> {
-    if (this.profileState.isLoadingMoreNotes()) {
-      this.logger.debug('Already loading more notes, skipping');
+    if (this.profileState.isLoadingMoreNotes() || !this.profileState.hasMoreNotes()) {
+      this.logger.debug('Already loading more notes or no more notes available, skipping');
       return;
     }
 

@@ -215,7 +215,6 @@ export class ProfileComponent {
             }
 
             // Check if this is the same profile being reloaded (e.g., browser back)
-            debugger;
             const currentProfilePubkey = this.profileState.pubkey();
             const isSameProfile = currentProfilePubkey === id;
 
