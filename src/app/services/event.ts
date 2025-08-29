@@ -705,6 +705,7 @@ export class EventService {
    */
   async loadReposts(
     eventId: string,
+    eventKind: number,
     userPubkey: string,
     invalidateCache = false,
   ): Promise<NostrRecord[]> {
@@ -723,8 +724,10 @@ export class EventService {
       });
     }
 
+    const repostKind = eventKind === kinds.ShortTextNote ? kinds.Repost : kinds.GenericRepost;
+
     try {
-      const reposts = await userData.getEventsByKindAndEventTag(kinds.Repost, eventId, {
+      const reposts = await userData.getEventsByKindAndEventTag(repostKind, eventId, {
         save: false,
         cache: true,
         invalidateCache,
