@@ -155,106 +155,106 @@ export class ProfileComponent {
     effect(async () => {
       // Only proceed if app is initialized and route params are available
       if (this.app.initialized() && this.routeParams() && this.routeData()) {
-        let id, username;
+        untracked(async () => {
+          let id, username;
 
-        // Check if component renders /u/username and we have pubkey resolved from username
-        const pubkeyForUsername = this.routeData()?.['data']?.id;
-        if (pubkeyForUsername) {
-          id = pubkeyForUsername;
-          username = this.routeData()?.['data']?.username;
-        } else {
-          id = this.routeParams()?.get('id');
-        }
-
-        if (id) {
-          // Validate the id parameter before proceeding
-          if (!id || id === 'undefined' || !id.trim()) {
-            this.logger.warn('Profile page opened with invalid id:', id);
-            this.error.set('Invalid profile identifier');
-            this.isLoading.set(false);
-            return;
-          }
-
-          this.logger.debug('Profile page opened with pubkey:', id);
-
-          // Reset state when loading a new profile
-          this.userMetadata.set(undefined);
-          this.lightningQrCode.set('');
-          this.error.set(null);
-
-          if (id.startsWith('npub')) {
-            id = this.utilities.getPubkeyFromNpub(id);
-
-            // First update URL to have npub in URL.
-            if (username) {
-              this.url.updatePathSilently(['/u', username]);
-            } else {
-              // username = await this.username.getUsername(id);
-              const identifier: string = id;
-              this.username.getUsername(id).then((username) => {
-                if (username) {
-                  this.url.updatePathSilently(['/u', username]);
-                } else {
-                  // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.
-                  const encoded = nip19.npubEncode(identifier);
-                  this.url.updatePathSilently(['/p', identifier]);
-                }
-              });
-
-              // if (username) {
-              //   this.url.updatePathSilently(['/u', username]);
-              // }
-              // else {
-              //   // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.
-              //   const encoded = nip19.npubEncode(id);
-              //   this.url.updatePathSilently(['/p', id]);
-              // }
-            }
+          // Check if component renders /u/username and we have pubkey resolved from username
+          const pubkeyForUsername = this.routeData()?.['data']?.id;
+          if (pubkeyForUsername) {
+            id = pubkeyForUsername;
+            username = this.routeData()?.['data']?.username;
           } else {
-            if (!username) {
-              const identifier: string = id;
-              this.username.getUsername(id).then((username) => {
-                if (username) {
-                  this.url.updatePathSilently(['/u', username]);
-                } else {
-                  // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.
-                  const encoded = nip19.npubEncode(identifier);
-                  this.url.updatePathSilently(['/p', identifier]);
-                }
-              });
+            id = this.routeParams()?.get('id');
+          }
 
-              // username = await this.username.getUsername(id);
-
-              // if (username) {
-              //   this.url.updatePathSilently(['/u', username]);
-              // }
-              // else {
-              //   // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.
-              //   const encoded = nip19.npubEncode(id);
-              //   this.url.updatePathSilently(['/p', encoded]);
-              // }
+          if (id) {
+            // Validate the id parameter before proceeding
+            if (!id || id === 'undefined' || !id.trim()) {
+              this.logger.warn('Profile page opened with invalid id:', id);
+              this.error.set('Invalid profile identifier');
+              this.isLoading.set(false);
+              return;
             }
-          }
 
-          // Check if this is the same profile being reloaded (e.g., browser back)
-          const currentProfilePubkey = this.profileState.currentProfilePubkey();
-          const isSameProfile = currentProfilePubkey === id;
+            this.logger.debug('Profile page opened with pubkey:', id);
 
-          // Always set the profile pubkey first
-          this.profileState.setCurrentProfilePubkey(id);
-          this.pubkey.set(id);
+            // Reset state when loading a new profile
+            this.userMetadata.set(undefined);
+            this.lightningQrCode.set('');
+            this.error.set(null);
 
-          // If it's the same profile, always force reload to ensure fresh data after navigation
-          if (isSameProfile) {
-            this.logger.debug('Same profile detected, forcing reload to ensure fresh data');
-            // Use a small delay to ensure the component is fully ready
-            setTimeout(() => {
-              this.profileState.reloadCurrentProfile();
-            }, 50);
-          }
+            if (id.startsWith('npub')) {
+              id = this.utilities.getPubkeyFromNpub(id);
 
-          // Always attempt to load user profile and check if own profile, regardless of relay status
-          untracked(async () => {
+              // First update URL to have npub in URL.
+              if (username) {
+                this.url.updatePathSilently(['/u', username]);
+              } else {
+                // username = await this.username.getUsername(id);
+                const identifier: string = id;
+                this.username.getUsername(id).then((username) => {
+                  if (username) {
+                    this.url.updatePathSilently(['/u', username]);
+                  } else {
+                    // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.
+                    const encoded = nip19.npubEncode(identifier);
+                    this.url.updatePathSilently(['/p', identifier]);
+                  }
+                });
+
+                // if (username) {
+                //   this.url.updatePathSilently(['/u', username]);
+                // }
+                // else {
+                //   // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.
+                //   const encoded = nip19.npubEncode(id);
+                //   this.url.updatePathSilently(['/p', id]);
+                // }
+              }
+            } else {
+              if (!username) {
+                const identifier: string = id;
+                this.username.getUsername(id).then((username) => {
+                  if (username) {
+                    this.url.updatePathSilently(['/u', username]);
+                  } else {
+                    // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.
+                    const encoded = nip19.npubEncode(identifier);
+                    this.url.updatePathSilently(['/p', identifier]);
+                  }
+                });
+
+                // username = await this.username.getUsername(id);
+
+                // if (username) {
+                //   this.url.updatePathSilently(['/u', username]);
+                // }
+                // else {
+                //   // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.
+                //   const encoded = nip19.npubEncode(id);
+                //   this.url.updatePathSilently(['/p', encoded]);
+                // }
+              }
+            }
+
+            // Check if this is the same profile being reloaded (e.g., browser back)
+            const currentProfilePubkey = this.profileState.currentProfilePubkey();
+            const isSameProfile = currentProfilePubkey === id;
+
+            // Always set the profile pubkey first
+            this.profileState.setCurrentProfilePubkey(id);
+            this.pubkey.set(id);
+
+            // If it's the same profile, always force reload to ensure fresh data after navigation
+            if (isSameProfile) {
+              this.logger.debug('Same profile detected, forcing reload to ensure fresh data');
+              // Use a small delay to ensure the component is fully ready
+              setTimeout(() => {
+                this.profileState.reloadCurrentProfile();
+              }, 50);
+            }
+
+            // Always attempt to load user profile and check if own profile, regardless of relay status
             await this.loadUserProfile(this.pubkey());
 
             await this.metrics.incrementMetric(this.pubkey(), 'viewed');
@@ -263,21 +263,21 @@ export class ProfileComponent {
             if (!this.isOwnProfile()) {
               await this.profileTracking.trackProfileView(this.pubkey());
             }
-          });
 
-          // this.userRelay.subscribe([{
-          //   kinds: [kinds.ShortTextNote],
-          //   authors: [id],
-          //   limit: 30
-          // }], (event) => {
-          //   this.profileState.replies.update(events => [...events, event]);
-          // }, () => {
-          //   console.log('FINISHED!!!');
-          // });
-        } else {
-          this.error.set('No user ID provided');
-          this.isLoading.set(false);
-        }
+            // this.userRelay.subscribe([{
+            //   kinds: [kinds.ShortTextNote],
+            //   authors: [id],
+            //   limit: 30
+            // }], (event) => {
+            //   this.profileState.replies.update(events => [...events, event]);
+            // }, () => {
+            //   console.log('FINISHED!!!');
+            // });
+          } else {
+            this.error.set('No user ID provided');
+            this.isLoading.set(false);
+          }
+        });
       }
     });
 

@@ -1,4 +1,4 @@
-import { Injectable, signal, computed, effect } from '@angular/core';
+import { Injectable, signal, computed, effect, untracked } from '@angular/core';
 import { NostrRecord } from '../interfaces';
 import { inject } from '@angular/core';
 import { UserRelayServiceEx } from './relays/user-relay';
@@ -37,12 +37,15 @@ export class ProfileStateService {
   constructor() {
     effect(async () => {
       const currentPubkey = this.currentProfilePubkey();
+
       // Include reloadTrigger to ensure effect runs when we force reload
       this.reloadTrigger();
 
       if (currentPubkey) {
-        await this.createRelay(currentPubkey);
-        await this.loadUserData(currentPubkey);
+        untracked(async () => {
+          await this.createRelay(currentPubkey);
+          await this.loadUserData(currentPubkey);
+        });
       }
     });
   }

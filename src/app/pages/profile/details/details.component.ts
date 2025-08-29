@@ -25,6 +25,7 @@ import { ApplicationService } from '../../../services/application.service';
 import { StorageService } from '../../../services/storage.service';
 import { AccountRelayServiceEx } from '../../../services/relays/account-relay';
 import { DiscoveryRelayServiceEx } from '../../../services/relays/discovery-relay';
+import { kinds } from 'nostr-tools';
 
 @Component({
   selector: 'app-following',
@@ -127,7 +128,7 @@ export class DetailsComponent implements OnInit, AfterViewInit {
   }
 
   async broadcastRelayList() {
-    const event = await this.storage.getEventByPubkeyAndKind(this.npub(), 10002);
+    const event = await this.storage.getEventByPubkeyAndKind(this.npub(), kinds.RelayList);
 
     if (event) {
       console.log('Broadcasting Relay List event:', event);

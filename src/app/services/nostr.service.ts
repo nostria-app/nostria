@@ -1401,6 +1401,7 @@ export class NostrService implements NostriaService {
     }
 
     try {
+      debugger;
       const relayListEvent = await this.accountRelay.get(
         {
           authors: [pubkey],
@@ -1783,6 +1784,7 @@ export class NostrService implements NostriaService {
     }
 
     // Not in cache, get from storage
+    debugger;
     const events = await this.storage.getEventsByPubkeyAndKind(pubkey, kinds.RelayList);
     if (events.length > 0) {
       // Add to cache
@@ -1848,6 +1850,7 @@ export class NostrService implements NostriaService {
 
   async getAccountsRelays() {
     const pubkeys = this.accountState.accounts().map((user) => user.pubkey);
+
     const relays = await this.storage.getEventsByPubkeyAndKind(pubkeys, kinds.RelayList);
     return relays;
   }
@@ -2079,6 +2082,7 @@ export class NostrService implements NostriaService {
     // Initialize the account relay so we can start using it.
     this.accountRelay.init([relayServerUrl!]);
 
+    debugger;
     // Create Relay List event for the new user
     const relayListEvent: UnsignedEvent = {
       pubkey,
