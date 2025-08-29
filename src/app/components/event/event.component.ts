@@ -21,7 +21,7 @@ import { EventHeaderComponent } from './header/header.component';
 import { CommonModule, DatePipe } from '@angular/common';
 import { AccountStateService } from '../../services/account-state.service';
 import { EventService, ReactionEvents } from '../../services/event';
-import { AccountRelayServiceEx } from '../../services/relays/account-relay';
+import { AccountRelayService } from '../../services/relays/account-relay';
 import { ReactionService } from '../../services/reaction.service';
 import {
   ArticleEventComponent,
@@ -75,7 +75,7 @@ export class EventComponent {
   repostService = inject(RepostService);
   reactionService = inject(ReactionService);
   layout = inject(LayoutService);
-  accountRelay = inject(AccountRelayServiceEx);
+  accountRelay = inject(AccountRelayService);
   dialog = inject(MatDialog);
   snackBar = inject(MatSnackBar);
   app = inject(ApplicationService);

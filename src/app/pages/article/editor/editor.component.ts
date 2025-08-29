@@ -35,7 +35,7 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { RichTextEditorComponent } from '../../../components/rich-text-editor/rich-text-editor.component';
 import { nip19 } from 'nostr-tools';
 import { DecodedNaddr } from 'nostr-tools/nip19';
-import { AccountRelayServiceEx } from '../../../services/relays/account-relay';
+import { AccountRelayService } from '../../../services/relays/account-relay';
 
 interface ArticleDraft {
   title: string;
@@ -87,7 +87,7 @@ export class EditorComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private nostrService = inject(NostrService);
   private dataService = inject(DataService);
-  private accountRelay = inject(AccountRelayServiceEx);
+  private accountRelay = inject(AccountRelayService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private sanitizer = inject(DomSanitizer);

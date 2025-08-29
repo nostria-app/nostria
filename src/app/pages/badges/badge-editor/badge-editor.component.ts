@@ -22,7 +22,7 @@ import { NostrService } from '../../../services/nostr.service';
 import { kinds } from 'nostr-tools';
 import { MediaService } from '../../../services/media.service';
 import { LayoutService } from '../../../services/layout.service';
-import { AccountRelayServiceEx } from '../../../services/relays/account-relay';
+import { AccountRelayService } from '../../../services/relays/account-relay';
 
 @Component({
   selector: 'app-badge-editor',
@@ -50,7 +50,7 @@ export class BadgeEditorComponent {
   private snackBar = inject(MatSnackBar);
   private router = inject(Router);
   nostr = inject(NostrService);
-  accountRelay = inject(AccountRelayServiceEx);
+  accountRelay = inject(AccountRelayService);
   media = inject(MediaService);
   layout = inject(LayoutService);
 

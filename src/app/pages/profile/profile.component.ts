@@ -51,7 +51,7 @@ import { UtilitiesService } from '../../services/utilities.service';
 import { UrlUpdateService } from '../../services/url-update.service';
 import { UsernameService } from '../../services/username';
 import { Metrics } from '../../services/metrics';
-import { AccountRelayServiceEx } from '../../services/relays/account-relay';
+import { AccountRelayService } from '../../services/relays/account-relay';
 
 @Component({
   selector: 'app-profile',
@@ -85,7 +85,7 @@ export class ProfileComponent {
   private router = inject(Router);
   nostrService = inject(NostrService);
   private storage = inject(StorageService);
-  private relayService = inject(AccountRelayServiceEx);
+  private relayService = inject(AccountRelayService);
   private appState = inject(ApplicationStateService);
   private app = inject(ApplicationService);
   private logger = inject(LoggerService);

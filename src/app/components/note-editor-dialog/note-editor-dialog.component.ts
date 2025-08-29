@@ -31,7 +31,7 @@ import { AccountStateService } from '../../services/account-state.service';
 import { ContentComponent } from '../content/content.component';
 import { Router } from '@angular/router';
 import { nip19 } from 'nostr-tools';
-import { AccountRelayServiceEx } from '../../services/relays/account-relay';
+import { AccountRelayService } from '../../services/relays/account-relay';
 
 export interface NoteEditorDialogData {
   replyTo?: {
@@ -88,7 +88,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
   private dialogRef = inject(MatDialogRef<NoteEditorDialogComponent>);
   data = inject(MAT_DIALOG_DATA) as NoteEditorDialogData;
   private nostrService = inject(NostrService);
-  private accountRelay = inject(AccountRelayServiceEx);
+  private accountRelay = inject(AccountRelayService);
   private mediaService = inject(MediaService);
   private localStorage = inject(LocalStorageService);
   private accountState = inject(AccountStateService);

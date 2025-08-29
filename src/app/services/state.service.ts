@@ -6,8 +6,8 @@ import { BadgeService } from './badge.service';
 import { NotificationService } from './notification.service';
 import { NostrService } from './nostr.service';
 import { MessagingService } from './messaging.service';
-import { DiscoveryRelayServiceEx } from './relays/discovery-relay';
-import { AccountRelayServiceEx } from './relays/account-relay';
+import { DiscoveryRelayService } from './relays/discovery-relay';
+import { AccountRelayService } from './relays/account-relay';
 
 /** Service that handles changing account, will clear and load data in different services. */
 @Injectable({
@@ -21,8 +21,8 @@ export class StateService implements NostriaService {
   nostr = inject(NostrService);
   // relay = inject(RelayService);
   messaging = inject(MessagingService);
-  discoveryRelay = inject(DiscoveryRelayServiceEx);
-  accountRelay = inject(AccountRelayServiceEx);
+  discoveryRelay = inject(DiscoveryRelayService);
+  accountRelay = inject(AccountRelayService);
 
   constructor() {
     effect(async () => {

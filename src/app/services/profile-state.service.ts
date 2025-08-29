@@ -1,7 +1,7 @@
 import { Injectable, signal, computed, effect, untracked } from '@angular/core';
 import { NostrRecord } from '../interfaces';
 import { inject } from '@angular/core';
-import { UserRelayServiceEx } from './relays/user-relay';
+import { UserRelayService } from './relays/user-relay';
 import { kinds, Event } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { UserRelayExFactoryService } from './user-relay-factory.service';
@@ -22,7 +22,7 @@ export class ProfileStateService {
   replies = signal<NostrRecord[]>([]);
   articles = signal<NostrRecord[]>([]);
   media = signal<NostrRecord[]>([]);
-  relay: UserRelayServiceEx | null = null;
+  relay: UserRelayService | null = null;
 
   // Current profile pubkey
   currentProfilePubkey = signal<string>('');

@@ -9,7 +9,7 @@ import { bytesToHex } from '@noble/hashes/utils';
 import { ApplicationService } from './application.service';
 import { RegionService } from './region.service';
 import { AccountStateService } from './account-state.service';
-import { AccountRelayServiceEx } from './relays/account-relay';
+import { AccountRelayService } from './relays/account-relay';
 
 export interface MediaItem {
   sha256: string; // SHA-256 hash of file (NIP-94)
@@ -35,7 +35,7 @@ export interface NostrEvent {
 })
 export class MediaService implements NostriaService {
   private readonly nostrService = inject(NostrService);
-  readonly accountRelay = inject(AccountRelayServiceEx);
+  readonly accountRelay = inject(AccountRelayService);
   private readonly storage = inject(StorageService);
   private readonly logger = inject(LoggerService);
   private readonly app = inject(ApplicationService);

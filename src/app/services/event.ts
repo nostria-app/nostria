@@ -7,7 +7,7 @@ import { UtilitiesService } from './utilities.service';
 import { NostrService } from './nostr.service';
 import { EventData } from '../data-resolver';
 import { NostrRecord } from '../interfaces';
-import { DiscoveryRelayServiceEx } from './relays/discovery-relay';
+import { DiscoveryRelayService } from './relays/discovery-relay';
 import { UserDataFactoryService } from './user-data-factory.service';
 import { Cache } from './cache';
 import { UserDataService } from './user-data.service';
@@ -62,7 +62,7 @@ export class EventService {
   private readonly data = inject(DataService);
   private readonly utilities = inject(UtilitiesService);
   private readonly nostrService = inject(NostrService);
-  private readonly discoveryRelay = inject(DiscoveryRelayServiceEx);
+  private readonly discoveryRelay = inject(DiscoveryRelayService);
   private readonly userDataFactory = inject(UserDataFactoryService);
   private readonly cache = inject(Cache);
   private readonly dialog = inject(MatDialog);

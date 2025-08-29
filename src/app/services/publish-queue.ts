@@ -2,8 +2,8 @@ import { computed, effect, inject, Injectable, Injector } from '@angular/core';
 import { Event, UnsignedEvent } from 'nostr-tools';
 import { ProfileStateService } from './profile-state.service';
 import { AccountStateService } from './account-state.service';
-import { AccountRelayServiceEx } from './relays/account-relay';
-import { DiscoveryRelayServiceEx } from './relays/discovery-relay';
+import { AccountRelayService } from './relays/account-relay';
+import { DiscoveryRelayService } from './relays/discovery-relay';
 
 export enum PublishTarget {
   Account = 'account',
@@ -15,10 +15,10 @@ export enum PublishTarget {
   providedIn: 'root',
 })
 export class PublishQueueService {
-  private readonly discoveryRelay = inject(DiscoveryRelayServiceEx);
+  private readonly discoveryRelay = inject(DiscoveryRelayService);
   private readonly profileState = inject(ProfileStateService);
   private readonly accountState = inject(AccountStateService);
-  private readonly accountRelay = inject(AccountRelayServiceEx);
+  private readonly accountRelay = inject(AccountRelayService);
   private readonly injector = inject(Injector);
 
   // Lazy-loaded service reference

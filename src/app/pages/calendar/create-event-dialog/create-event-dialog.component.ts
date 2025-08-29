@@ -14,7 +14,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatNativeDateModule } from '@angular/material/core';
 import { Event, getEventHash } from 'nostr-tools';
 import { ApplicationService } from '../../../services/application.service';
-import { AccountRelayServiceEx } from '../../../services/relays/account-relay';
+import { AccountRelayService } from '../../../services/relays/account-relay';
 
 export interface CreateEventDialogData {
   selectedDate?: Date;
@@ -51,7 +51,7 @@ export class CreateEventDialogComponent {
   private data = inject(MAT_DIALOG_DATA) as CreateEventDialogData;
   private fb = inject(FormBuilder);
   private app = inject(ApplicationService);
-  private accountRelay = inject(AccountRelayServiceEx);
+  private accountRelay = inject(AccountRelayService);
 
   isLoading = signal<boolean>(false);
   isAllDay = signal<boolean>(false);

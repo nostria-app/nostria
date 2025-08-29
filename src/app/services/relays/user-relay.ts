@@ -1,13 +1,13 @@
 import { Injectable, inject } from '@angular/core';
 import { SimplePool } from 'nostr-tools';
-import { RelayServiceBase } from './relay-base';
-import { DiscoveryRelayServiceEx } from './discovery-relay';
+import { RelayServiceBase } from './relay';
+import { DiscoveryRelayService } from './discovery-relay';
 
 @Injectable({
   providedIn: 'root',
 })
-export class UserRelayServiceEx extends RelayServiceBase {
-  private discoveryRelay = inject(DiscoveryRelayServiceEx);
+export class UserRelayService extends RelayServiceBase {
+  private discoveryRelay = inject(DiscoveryRelayService);
   private pubkey = '';
 
   constructor() {

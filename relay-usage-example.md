@@ -14,7 +14,7 @@ The updated `RelayServiceBase` now supports editing relays after initialization 
 
 ```typescript
 import { Component, effect, inject } from '@angular/core';
-import { RelayServiceBase } from './services/relays/relay-base';
+import { RelayServiceBase } from './services/relays/relay';
 
 @Component({
   selector: 'app-example',

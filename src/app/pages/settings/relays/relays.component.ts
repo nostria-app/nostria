@@ -35,11 +35,11 @@ import { ApplicationService } from '../../../services/application.service';
 import { ProfileStateService } from '../../../services/profile-state.service';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { AccountStateService } from '../../../services/account-state.service';
-import { AccountRelayServiceEx } from '../../../services/relays/account-relay';
+import { AccountRelayService } from '../../../services/relays/account-relay';
 import { DataService } from '../../../services/data.service';
 import { InfoTooltipComponent } from '../../../components/info-tooltip/info-tooltip.component';
-import { Relay } from '../../../services/relays/relay-base';
-import { DiscoveryRelayServiceEx } from '../../../services/relays/discovery-relay';
+import { Relay } from '../../../services/relays/relay';
+import { DiscoveryRelayService } from '../../../services/relays/discovery-relay';
 
 @Component({
   selector: 'app-relays-page',
@@ -74,8 +74,8 @@ export class RelaysComponent implements OnInit, OnDestroy {
   private profileState = inject(ProfileStateService);
   private readonly utilities = inject(UtilitiesService);
   private readonly accountState = inject(AccountStateService);
-  private readonly accountRelay = inject(AccountRelayServiceEx);
-  private readonly discoveryRelay = inject(DiscoveryRelayServiceEx);
+  private readonly accountRelay = inject(AccountRelayService);
+  private readonly discoveryRelay = inject(DiscoveryRelayService);
   private readonly data = inject(DataService);
 
   followingRelayUrls = signal<string[]>([]);
@@ -197,7 +197,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
     }
   }
 
-  ngOnInit() {}
+  ngOnInit() { }
 
   cleanFollowingList() {
     if (this.isCleaningFollowingList()) {

@@ -2,16 +2,16 @@ import { Injectable, inject } from '@angular/core';
 import { kinds, SimplePool } from 'nostr-tools';
 import { UtilitiesService } from '../utilities.service';
 import { StorageService } from '../storage.service';
-import { RelayServiceBase } from './relay-base';
-import { DiscoveryRelayServiceEx } from './discovery-relay';
+import { RelayServiceBase } from './relay';
+import { DiscoveryRelayService } from './discovery-relay';
 
 @Injectable({
   providedIn: 'root',
 })
-export class AccountRelayServiceEx extends RelayServiceBase {
+export class AccountRelayService extends RelayServiceBase {
   private storage = inject(StorageService);
   private utilities = inject(UtilitiesService);
-  private discoveryRelay = inject(DiscoveryRelayServiceEx);
+  private discoveryRelay = inject(DiscoveryRelayService);
 
   constructor() {
     // TODO: We always create a new instance here that will be immediately destroyed by setAccount.

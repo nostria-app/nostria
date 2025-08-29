@@ -30,7 +30,7 @@ import {
   EventDetailsDialogData,
   EventDetailsResult,
 } from './event-details-dialog/event-details-dialog.component';
-import { AccountRelayServiceEx } from '../../services/relays/account-relay';
+import { AccountRelayService } from '../../services/relays/account-relay';
 
 // Calendar event interfaces based on NIP-52
 interface CalendarEvent {
@@ -102,7 +102,7 @@ interface CalendarCollection {
   styleUrl: './calendar.scss',
 })
 export class Calendar {
-  private accountRelay = inject(AccountRelayServiceEx);
+  private accountRelay = inject(AccountRelayService);
   private logger = inject(LoggerService);
   public app = inject(ApplicationService); // Made public for template access
   private dialog = inject(MatDialog);

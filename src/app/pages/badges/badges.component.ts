@@ -19,7 +19,7 @@ import { UtilitiesService } from '../../services/utilities.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { LayoutService } from '../../services/layout.service';
 import { CommonModule } from '@angular/common';
-import { AccountRelayServiceEx } from '../../services/relays/account-relay';
+import { AccountRelayService } from '../../services/relays/account-relay';
 
 @Component({
   selector: 'app-badges',
@@ -44,7 +44,7 @@ export class BadgesComponent {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private readonly app = inject(ApplicationService);
-  private readonly accountRelay = inject(AccountRelayServiceEx);
+  private readonly accountRelay = inject(AccountRelayService);
   private readonly nostr = inject(NostrService);
   private readonly storage = inject(StorageService);
   private readonly badgeService = inject(BadgeService);

@@ -16,7 +16,7 @@ import { DataService } from '../../../services/data.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { MediaService } from '../../../services/media.service';
 import { Profile, ProfileData, ProfileUpdateOptions } from '../../../services/profile';
-import { AccountRelayServiceEx } from '../../../services/relays/account-relay';
+import { AccountRelayService } from '../../../services/relays/account-relay';
 
 @Component({
   selector: 'app-profile-edit',
@@ -38,7 +38,7 @@ export class ProfileEditComponent implements OnInit {
   nostr = inject(NostrService);
   storage = inject(StorageService);
   data = inject(DataService);
-  accountRelay = inject(AccountRelayServiceEx);
+  accountRelay = inject(AccountRelayService);
   router = inject(Router);
   media = inject(MediaService);
   private snackBar = inject(MatSnackBar);
