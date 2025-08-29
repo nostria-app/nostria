@@ -6,6 +6,7 @@
   }"
   [matMenuTriggerFor]="menu"
   [disabled]="isLoadingReposts()"
+  (click)="$event.stopPropagation()"
 >
   <mat-icon>repeat</mat-icon>
   @if (isLoadingReposts()) {
