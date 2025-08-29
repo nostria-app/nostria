@@ -157,16 +157,54 @@ export class ProfileStateService {
           // Now you can use 'this' here
           // For example: this.handleContacts(evt);
         } else if (event.kind === kinds.LongFormArticle) {
-          this.articles.update((articles) => [...articles, this.utilities.toRecord(event)]);
+          const record = this.utilities.toRecord(event);
+          // Check for duplicates before adding
+          this.articles.update((articles) => {
+            const exists = articles.some((a) => a.event.id === event.id);
+            if (exists) {
+              console.log('Duplicate article event prevented:', event.id);
+              return articles;
+            }
+            console.log('Adding new article:', event.id);
+            return [...articles, record];
+          });
         } else if (event.kind === kinds.ShortTextNote) {
           const record = this.utilities.toRecord(event);
           if (this.utilities.isRootPost(event)) {
-            this.notes.update((events) => [...events, record]);
+            // Check for duplicates before adding to notes
+            this.notes.update((events) => {
+              const exists = events.some((n) => n.event.id === event.id);
+              if (exists) {
+                console.log('Duplicate note event prevented:', event.id);
+                return events;
+              }
+              console.log('Adding new note:', event.id);
+              return [...events, record];
+            });
           } else {
-            this.replies.update((events) => [...events, record]);
+            // Check for duplicates before adding to replies
+            this.replies.update((events) => {
+              const exists = events.some((r) => r.event.id === event.id);
+              if (exists) {
+                console.log('Duplicate reply event prevented:', event.id);
+                return events;
+              }
+              console.log('Adding new reply:', event.id);
+              return [...events, record];
+            });
           }
         } else if (event.kind === kinds.Repost || event.kind === kinds.GenericRepost) {
-          this.reposts.update((reposts) => [...reposts, this.utilities.toRecord(event)]);
+          const record = this.utilities.toRecord(event);
+          // Check for duplicates before adding to reposts
+          this.reposts.update((reposts) => {
+            const exists = reposts.some((r) => r.event.id === event.id);
+            if (exists) {
+              console.log('Duplicate repost event prevented:', event.id);
+              return reposts;
+            }
+            console.log('Adding new repost:', event.id);
+            return [...reposts, record];
+          });
         }
       },
       () => {
@@ -224,22 +262,40 @@ export class ProfileStateService {
           (event) => {
             foundAnything = true;
 
-            // Check if this is a root post (not a reply)
-            const isRootPost = !event.tags.some((tag) => tag[0] === 'e');
+            // Handle different event types
+            if (event.kind === kinds.ShortTextNote) {
+              // Check if this is a root post (not a reply)
+              const isRootPost = !event.tags.some((tag) => tag[0] === 'e');
 
-            if (isRootPost) {
-              // Create a NostrRecord - assuming this structure based on existing code
+              if (isRootPost) {
+                // Create a NostrRecord
+                const record: NostrRecord = {
+                  event: event,
+                  data: event.content,
+                };
+
+                // Check if we already have this note to avoid duplicates
+                const existingNotes = this.notes();
+                const exists = existingNotes.some((n) => n.event.id === event.id);
+
+                if (!exists) {
+                  newNotes.push(record);
+                }
+              }
+            } else if (event.kind === kinds.Repost || event.kind === kinds.GenericRepost) {
+              // Handle reposts
               const record: NostrRecord = {
                 event: event,
-                data: event.content, // Adjust this based on your actual NostrRecord structure
+                data: event.content,
               };
 
-              // Check if we already have this note to avoid duplicates
-              const existingNotes = this.notes();
-              const exists = existingNotes.some((n) => n.event.id === event.id);
+              // Check if we already have this repost to avoid duplicates
+              const existingReposts = this.reposts();
+              const exists = existingReposts.some((r) => r.event.id === event.id);
 
               if (!exists) {
-                newNotes.push(record);
+                // Add to reposts directly since loadMoreNotes is for notes, but we should handle reposts too
+                this.reposts.update((existing) => [...existing, record]);
               }
             }
           },
@@ -252,8 +308,17 @@ export class ProfileStateService {
             if (!foundAnything) {
               this.hasMoreNotes.set(false);
             } else {
-              // Add new notes to the existing ones
-              this.notes.update((existing) => [...existing, ...newNotes]);
+              // Add new notes to the existing ones with final deduplication check
+              this.notes.update((existing) => {
+                const filtered = newNotes.filter(
+                  (newNote) =>
+                    !existing.some((existingNote) => existingNote.event.id === newNote.event.id),
+                );
+                console.log(
+                  `Adding ${filtered.length} new notes (${newNotes.length - filtered.length} duplicates filtered)`,
+                );
+                return [...existing, ...filtered];
+              });
               this.hasMoreNotes.set(true);
             }
 
