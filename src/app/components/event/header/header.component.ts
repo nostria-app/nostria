@@ -97,6 +97,12 @@ export class EventHeaderComponent {
     this.layout.openEvent(neventId, event);
   }
 
+  openEventAndStopPropagation(event: MouseEvent) {
+    event.stopPropagation();
+    const currentEvent = this.event();
+    this.layout.openEvent(currentEvent.id, currentEvent);
+  }
+
   async deleteEvent() {
     const event = this.event();
     if (!event) {
