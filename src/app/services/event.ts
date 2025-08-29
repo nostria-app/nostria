@@ -546,12 +546,19 @@ export class EventService {
     // Load replies and reactions for the thread root
     const { replies, reactions } = await this.loadRepliesAndReactions(threadRootId, event.pubkey);
 
-    // Build threaded structure
-    const threadedReplies = this.buildThreadTree(replies, threadRootId, 4);
+    // Filter out parent events from replies to avoid duplication
+    const parentEventIds = new Set(parents.map((p) => p.id));
+    // Also exclude the current event itself from replies
+    parentEventIds.add(event.id);
+
+    const filteredReplies = replies.filter((reply) => !parentEventIds.has(reply.id));
+
+    // Build threaded structure starting from the current event
+    const threadedReplies = this.buildThreadTree(filteredReplies, event.id, 4);
 
     return {
       event,
-      replies,
+      replies: filteredReplies,
       threadedReplies,
       reactions,
       parents,
@@ -629,11 +636,20 @@ export class EventService {
 
       // Load replies and yield them as soon as available
       const replies = await finalRepliesPromise;
-      const threadedReplies = this.buildThreadTree(replies, actualThreadRootId, 4);
+
+      // Only filter out parent events and current event from the flat replies list
+      const parentEventIds = new Set(parents.map((p) => p.id));
+      parentEventIds.add(event.id);
+
+      const filteredReplies = replies.filter((reply) => !parentEventIds.has(reply.id));
+
+      // Build thread tree starting from the current event, not the thread root
+      // This will show replies TO the current event and its descendants
+      const threadedReplies = this.buildThreadTree(filteredReplies, event.id, 4);
 
       yield {
         event,
-        replies,
+        replies: filteredReplies,
         threadedReplies,
         reactions: [],
         parents,
@@ -645,7 +661,7 @@ export class EventService {
       const reactions = await finalReactionsPromise;
       const finalData: ThreadData = {
         event,
-        replies,
+        replies: filteredReplies,
         threadedReplies,
         reactions: this.mapToReactionArray(reactions.data),
         parents,
@@ -660,11 +676,14 @@ export class EventService {
       // Try to at least load replies for the current event
       try {
         const replies = await currentEventRepliesPromise;
-        const threadedReplies = this.buildThreadTree(replies, event.id, 4);
+
+        // Filter out the current event from replies
+        const filteredReplies = replies.filter((reply) => reply.id !== event.id);
+        const threadedReplies = this.buildThreadTree(filteredReplies, event.id, 4);
 
         const finalData: ThreadData = {
           event,
-          replies,
+          replies: filteredReplies,
           threadedReplies,
           reactions: [],
           parents: [],
