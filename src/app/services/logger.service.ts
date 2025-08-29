@@ -23,7 +23,6 @@ export class LoggerService {
   };
 
   // Current log level - can be changed at runtime
-  // logLevel = signal<LogLevel>(this.getStoredLogLevel());
   logLevel: LogLevel = 'info';
   logOverlay = false;
   lastDebug = '';

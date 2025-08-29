@@ -23,7 +23,7 @@ import { environment } from '../environments/environment';
 import { nip98AuthInterceptor } from './services/interceptors/nip98Auth';
 import { MAT_FORM_FIELD_DEFAULT_OPTIONS } from '@angular/material/form-field';
 
-let appLang = 'en'; // Default language
+let appLang = 'en';
 
 if (typeof window !== 'undefined') {
   const settings = localStorage.getItem('nostria-settings');
@@ -81,7 +81,6 @@ export const appConfig: ApplicationConfig = {
       useValue: { appearance: 'outline' },
     },
     UserRelayExFactoryService,
-    // UserRelayService,
     provideZonelessChangeDetection(),
     provideRouter(routes),
     provideAnimations(),

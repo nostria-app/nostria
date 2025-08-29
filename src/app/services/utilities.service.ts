@@ -3,7 +3,6 @@ import { DomSanitizer } from '@angular/platform-browser';
 import { Event, nip19, UnsignedEvent } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { hexToBytes } from 'nostr-tools/utils';
-import { ProfilePointer } from 'nostr-tools/nip19';
 import { isPlatformBrowser } from '@angular/common';
 import { NostrTagKey } from '../standardized-tags';
 import { NostrRecord } from '../interfaces';
@@ -228,12 +227,6 @@ export class UtilitiesService {
       return wssIndex >= 0 ? url.substring(wssIndex) : url;
     });
 
-    // Filter out timed out relays if timeouts parameter is true
-    // if (timeouts) {
-    //   const timedOutRelays = this.relayService.timeouts().map(relay => relay.url);
-    //   relayUrls = relayUrls.filter(relay => !timedOutRelays.includes(this.relayService.normalizeRelayUrl(relay)));
-    // }
-
     return relayUrls;
   }
 
@@ -246,12 +239,6 @@ export class UtilitiesService {
         const wssIndex = url.indexOf('wss://');
         return wssIndex >= 0 ? url.substring(wssIndex) : url;
       });
-
-    // Filter out timed out relays if timeouts parameter is true
-    // if (timeouts) {
-    //   const timedOutRelays = this.relayService.timeouts().map(relay => relay.url);
-    //   relayUrls = relayUrls.filter(relay => !timedOutRelays.includes(this.relayService.normalizeRelayUrl(relay)));
-    // }
 
     return relayUrls;
   }

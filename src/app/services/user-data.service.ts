@@ -29,18 +29,6 @@ export class UserDataService {
   // Map to track pending profile requests to prevent race conditions
   private pendingProfileRequests = new Map<string, Promise<NostrRecord | undefined>>();
 
-  // Clean up old pending requests periodically
-  constructor() {
-    // Clean up any stale pending requests every 30 seconds
-    // setInterval(() => {
-    //   if (this.pendingProfileRequests.size > 100) {
-    //     this.logger.warn(
-    //       `Large number of pending profile requests: ${this.pendingProfileRequests.size}. Consider investigating.`
-    //     );
-    //   }
-    // }, 30000);
-  }
-
   async initialize(pubkey: string) {
     this.userRelayEx = await this.userRelayFactory.create(pubkey);
     this.logger.debug(`UserDataService initialized for pubkey: ${pubkey}`);
@@ -158,10 +146,6 @@ export class UserDataService {
     if (this.cache.has(cacheKey)) {
       const record = this.cache.get<NostrRecord>(cacheKey);
       if (record) {
-        // If refresh is requested, trigger background update
-        // if (refresh) {
-        //   this.refreshProfileInBackground(pubkey, cacheKey);
-        // }
         return record;
       }
     }
@@ -208,11 +192,6 @@ export class UserDataService {
         await this.storage.saveEvent(metadata);
       }
     }
-
-    // Handle background refresh if requested
-    // if (refresh) {
-    //   this.refreshProfileInBackground(pubkey, cacheKey);
-    // }
 
     return record;
   }

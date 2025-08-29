@@ -1,7 +1,6 @@
 import { computed, effect, inject, Injectable, signal } from '@angular/core';
 import { LocalStorageService } from './local-storage.service';
 import { ApplicationStateService } from './application-state.service';
-import { nip47 } from 'nostr-tools';
 
 export interface Wallet {
   pubkey: string;

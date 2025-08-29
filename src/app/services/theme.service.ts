@@ -13,7 +13,6 @@ export class ThemeService {
   private readonly document = inject(DOCUMENT);
   private darkThemeMediaQuery: MediaQueryList | null = null;
 
-  // private readonly darkThemeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
   private readonly logger = inject(LoggerService);
   private localStorage = inject(LocalStorageService);
 
@@ -40,15 +39,6 @@ export class ThemeService {
     } else {
       this.logger.debug('Running in SSR mode, skipping browser-specific initialization');
     }
-
-    // Listen for system preference changes
-    // this.darkThemeMediaQuery.addEventListener('change', e => {
-    //   // Only update if user hasn't explicitly set a preference
-    //   if (!this.localStorage.getItem(this.THEME_KEY)) {
-    //     this.logger.info(`System color scheme changed to ${e.matches ? 'dark' : 'light'}`);
-    //     this.darkMode.set(e.matches);
-    //   }
-    // });
 
     this.logger.debug(`Initial theme set to: ${this.darkMode() ? 'dark' : 'light'}`);
   }

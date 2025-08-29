@@ -2,7 +2,6 @@ import { Injectable, inject } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
 import { firstValueFrom } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
-import { Event, nip19 } from 'nostr-tools';
 import { environment } from '../../environments/environment';
 
 export interface MetadataResponse {

@@ -44,10 +44,6 @@ export class MediaPlayerService implements OnInitialized {
     isMaximized: false,
   });
 
-  // minimized = false;
-  // previousWidth = 800;
-  // previousHeight = 600;
-
   // Convert to computed signals
   canPrevious = computed(() => this.index > 0);
   canNext = computed(() => this.index < this.media().length - 1);
@@ -115,6 +111,7 @@ export class MediaPlayerService implements OnInitialized {
       }
     });
   }
+
   initialize(): void {
     const mediaQueue = this.localStorage.getItem(this.MEDIA_STORAGE_KEY);
 
@@ -189,11 +186,6 @@ export class MediaPlayerService implements OnInitialized {
     // TODO: Clean the file.source URL!
     // this.layout.showMediaPlayer.set(true);
     this.media.update((files) => [...files, file]);
-    // this.snackBar.open('Added to media queue', 'Hide', {
-    //   duration: 1500,
-    //   horizontalPosition: 'center',
-    //   verticalPosition: 'bottom',
-    // });
     this.save();
   }
 
@@ -207,6 +199,7 @@ export class MediaPlayerService implements OnInitialized {
     });
     this.save();
   }
+
   async save() {
     if (this.media().length === 0) {
       this.localStorage.removeItem(this.MEDIA_STORAGE_KEY);
@@ -415,8 +408,8 @@ export class MediaPlayerService implements OnInitialized {
       this.audio.currentTime = 0;
       // Remove event listeners
       this.audio.removeEventListener('ended', this.handleMediaEnded);
-      this.audio.removeEventListener('canplay', () => {});
-      this.audio.removeEventListener('loadeddata', () => {});
+      this.audio.removeEventListener('canplay', () => { });
+      this.audio.removeEventListener('loadeddata', () => { });
     }
 
     // Stop and cleanup video
@@ -425,8 +418,8 @@ export class MediaPlayerService implements OnInitialized {
       this.videoElement.currentTime = 0;
       // Remove event listeners
       this.videoElement.removeEventListener('ended', this.handleMediaEnded);
-      this.videoElement.removeEventListener('canplay', () => {});
-      this.videoElement.removeEventListener('loadeddata', () => {});
+      this.videoElement.removeEventListener('canplay', () => { });
+      this.videoElement.removeEventListener('loadeddata', () => { });
     }
 
     // Clear video URLs to stop any playing videos

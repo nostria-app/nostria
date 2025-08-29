@@ -1,12 +1,9 @@
-import { Injectable, effect, inject, signal } from '@angular/core';
-import { toObservable, toSignal } from '@angular/core/rxjs-interop';
-import { BehaviorSubject } from 'rxjs';
+import { Injectable, inject, signal } from '@angular/core';
 import { NostrService } from './nostr.service';
 import { StorageService } from './storage.service';
 import { LoggerService } from './logger.service';
-import { EventTemplate, finalizeEvent } from 'nostr-tools';
 import { MEDIA_SERVERS_EVENT_KIND, NostriaService } from '../interfaces';
-import { NostrTagKey, standardizedTag, StandardizedTagType } from '../standardized-tags';
+import { standardizedTag } from '../standardized-tags';
 import { sha256 } from '@noble/hashes/sha2';
 import { bytesToHex } from '@noble/hashes/utils';
 import { ApplicationService } from './application.service';
@@ -60,39 +57,6 @@ export class MediaService implements NostriaService {
   readonly mediaItems = this._mediaItems.asReadonly();
   readonly error = this._error.asReadonly();
   readonly mediaServers = this._mediaServers.asReadonly();
-
-  constructor() {
-    // Initial loading of media items
-    // this.getFiles();
-    // Load saved media servers
-    // this.loadMediaServers();
-    // effect(async () => {
-    //   if (this.accountState.accountChanging()) {
-    //     this.clear();
-    //     const userServerList = await this.nostrService.getMediaServers(this.accountState.pubkey());
-    //     if (userServerList) {
-    //       const servers = this.nostrService.getTags(userServerList, standardizedTag.server);
-    //       this.setMediaServers(servers);
-    //     } else {
-    //       this.logger.debug('No media servers found for user. This user might be a Nostria account or any other Nostr user.');
-    //       if (!this.accountState.account()?.hasActivated) {
-    //         this.logger.debug('User has not activated their account yet, so we will add regional media servers.');
-    //         const region = this.accountState.account()?.region || 'eu';
-    //         const mediaServerUrl = this.region.getMediaServer(region, 0);
-    //         this.setMediaServers([mediaServerUrl!]);
-    //       }
-    //     }
-    //     if (this.mediaServers().length > 0) {
-    //       // Only fetch files if it's been more than 10 minutes since last fetch
-    //       const tenMinutesInMs = 10 * 60 * 1000; // 10 minutes in milliseconds
-    //       const currentTime = Date.now();
-    //       const lastFetchTime = this.getLastFetchTime(); if (currentTime - lastFetchTime > tenMinutesInMs) {
-    //         await this.getFiles();
-    //       }
-    //     }
-    //   }
-    // });
-  }
 
   async load(pubkey: string = this.accountState.pubkey()) {
     const userServerList = await this.nostrService.getMediaServers(pubkey);
@@ -1018,65 +982,6 @@ export class MediaService implements NostriaService {
     // } finally {
     //   this._loading.set(false);
     // }
-  }
-
-  private async createSignedEvent(type: string, data: any): Promise<NostrEvent> {
-    // Create event for signing
-    const event: Partial<NostrEvent> = {
-      kind: 27235, // NIP-94 kind for file metadata
-      created_at: Math.floor(Date.now() / 1000),
-      tags: [
-        ['x', type],
-        ['sha256', data.sha256 || ''],
-      ],
-      content: JSON.stringify(data),
-    };
-
-    // Add appropriate tags based on NIP-94
-    if (data.title) {
-      event.tags?.push(['title', data.title]);
-    }
-
-    if (data.description) {
-      event.tags?.push(['description', data.description]);
-    }
-
-    return await this.signEvent(event);
-  }
-
-  private async signEvent(event: Partial<NostrEvent>): Promise<NostrEvent> {
-    const currentUser = this.accountState.account();
-    if (!currentUser) {
-      throw new Error('User not logged in');
-    }
-
-    // Try to use window.nostr (NIP-07) if available and user is using extension
-    // if (window.nostr && currentUser.source === 'extension') {
-    //   return await window.nostr.signEvent(event);
-    // }
-
-    // Use nostr-tools if we have the private key
-    if (currentUser.privkey) {
-      // Import finalizeEvent & getPublicKey dynamically to avoid circular dependencies
-      const { finalizeEvent } = await import('nostr-tools/pure');
-      const { getPublicKey } = await import('nostr-tools/pure');
-      const { hexToBytes } = await import('@noble/hashes/utils');
-
-      // Convert hex private key to bytes
-      const privateKeyBytes = hexToBytes(currentUser.privkey);
-
-      // Verify the private key corresponds to our pubkey
-      const derivedPubkey = getPublicKey(privateKeyBytes);
-      if (derivedPubkey !== currentUser.pubkey) {
-        throw new Error('Private key does not match public key');
-      }
-
-      // Finalize the event with our private key
-      return finalizeEvent(event as EventTemplate, privateKeyBytes);
-    }
-
-    // For preview/remote accounts, we can't sign
-    throw new Error('Cannot sign event: no private key available');
   }
 
   private async getAuthHeaders(
