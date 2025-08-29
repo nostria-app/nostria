@@ -190,6 +190,11 @@
   &:last-child {
     margin-bottom: 0;
   }
+
+  app-event {
+    padding-bottom: 0.4rem;
+    margin-bottom: 0.4rem;
+  }
 }
 
 .nested-reply {
