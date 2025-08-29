@@ -27,6 +27,9 @@ export class ProfileStateService {
   // Current profile pubkey
   currentProfilePubkey = signal<string>('');
 
+  // Signal to force reload even with same pubkey
+  private reloadTrigger = signal<number>(0);
+
   // Loading states
   isLoadingMoreNotes = signal<boolean>(false);
   hasMoreNotes = signal<boolean>(true);
@@ -34,6 +37,8 @@ export class ProfileStateService {
   constructor() {
     effect(async () => {
       const currentPubkey = this.currentProfilePubkey();
+      // Include reloadTrigger to ensure effect runs when we force reload
+      this.reloadTrigger();
 
       if (currentPubkey) {
         await this.createRelay(currentPubkey);
@@ -54,6 +59,23 @@ export class ProfileStateService {
   setCurrentProfilePubkey(pubkey: string): void {
     this.reset();
     this.currentProfilePubkey.set(pubkey);
+  }
+
+  // Force reload of profile data even if pubkey is the same
+  forceReloadProfileData(pubkey: string): void {
+    this.reset();
+    this.currentProfilePubkey.set(pubkey);
+    // Trigger the reload by incrementing the reload trigger
+    this.reloadTrigger.update((val) => val + 1);
+  }
+
+  // Reload current profile data
+  reloadCurrentProfile(): void {
+    const currentPubkey = this.currentProfilePubkey();
+    if (currentPubkey) {
+      console.log('ProfileStateService: Reloading current profile data for', currentPubkey);
+      this.forceReloadProfileData(currentPubkey);
+    }
   }
 
   reset() {
