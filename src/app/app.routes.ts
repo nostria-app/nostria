@@ -123,8 +123,6 @@ export const routes: Routes = [
       ),
     title: 'Badge',
   },
-
-  // { path: 'messages', component: MessagesComponent },
   {
     path: 'messages',
     component: MessagesComponent,
@@ -184,12 +182,6 @@ export const routes: Routes = [
       import('./pages/bookmarks/bookmarks.component').then((m) => m.BookmarksComponent),
     title: 'Bookmarks',
   },
-  // {
-  //   path: 'articles',
-  //   component: ArticlesComponent,
-  //   data: { isRoot: true },
-  //   title: 'Articles',
-  // },
   {
     path: 'drafts',
     component: DraftsComponent,

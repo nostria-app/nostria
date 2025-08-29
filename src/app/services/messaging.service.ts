@@ -103,7 +103,7 @@ export class MessagingService implements NostriaService {
   isDecryptingMessages = signal<boolean>(false);
   decryptionQueueLength = signal<number>(0);
 
-  constructor() {}
+  constructor() { }
 
   hasMessage(chatId: string, messageId: string): boolean {
     const chat = this.chatsMap().get(chatId);
@@ -187,7 +187,7 @@ export class MessagingService implements NostriaService {
     this.oldestChatTimestamp.set(null);
   }
 
-  async load() {}
+  async load() { }
 
   async createNip44Message(messageText: string, receiverPubkey: string, myPubkey: string) {
     try {
@@ -457,90 +457,6 @@ export class MessagingService implements NostriaService {
           this.isLoading.set(false);
         },
       );
-
-      // Process wrapped events to find unique chat participants
-      // if (wrappedEvents && wrappedEvents.length > 0) {
-      //     for (const event of wrappedEvents) {
-      //         // Add the sender to our chat list if not us
-      //         if (event.pubkey !== myPubkey) {
-      //             chatPubkeys.add(event.pubkey);
-      //         }
-
-      //         // Look for 'p' tags for recipients other than ourselves
-      //         const pTags = event.tags.filter(tag => tag[0] === 'p');
-      //         for (const tag of pTags) {
-      //             const pubkey = tag[1];
-      //             if (pubkey !== myPubkey) {
-      //                 chatPubkeys.add(pubkey);
-      //             }
-      //         }
-      //     }
-      // }
-
-      // Also add chats from our outgoing messages
-      // const ourMessages = await this.relay.getAccountPool()?.subscribe(this.relay.getAccountRelayUrls(), {
-      //     kinds: [kinds.GiftWrap, kinds.EncryptedDirectMessage],
-      //     authors: [myPubkey],
-      //     limit: 100
-      // }, {
-      //     maxWait: 5000,
-      //     label: 'loadChats', onevent: async (event: NostrEvent) => {
-      //         if (event.kind == kinds.EncryptedDirectMessage) {
-      //             const unwrappedMessage = await this.unwrapNip04Message(event);
-      //             if (unwrappedMessage) {
-      //                 // Look for 'p' tags for recipients other than ourselves
-      //                 const pTags = event.tags.filter(tag => tag[0] === 'p');
-      //                 for (const tag of pTags) {
-      //                     const pubkey = tag[1];
-      //                     if (pubkey !== myPubkey) {
-      //                         chatPubkeys.add(pubkey);
-      //                     }
-      //                 }
-      //             }
-      //         }
-
-      //         // Handle outgoing wrapped events
-      //         if (event.kind === kinds.GiftWrap) {
-      //             const pTags = event.tags.filter(tag => tag[0] === 'p');
-      //             for (const tag of pTags) {
-      //                 const pubkey = tag[1];
-      //                 if (pubkey !== myPubkey) {
-      //                     chatPubkeys.add(pubkey);
-      //                 }
-      //             }
-      //         }
-      //     }, onclose: () => {
-      //         console.log('End of data for outgoing messages.');
-
-      //         // Final update: create chats list from all collected pubkeys
-      //         const finalChatsList: Chat[] = Array.from(chatPubkeys).map(pubkey => ({
-      //             id: pubkey, // Using pubkey as chat ID
-      //             pubkey,
-      //             unreadCount: 0,
-      //             lastMessage: null
-      //         }));
-
-      //         // Sort chats (will be updated with last messages later)
-      //         const finalSortedChats = finalChatsList.sort((a, b) => {
-      //             const aTime = a.lastMessage?.created_at || 0;
-      //             const bTime = b.lastMessage?.created_at || 0;
-      //             return bTime - aTime; // Most recent first
-      //         });
-
-      //         this.chats.set(finalSortedChats);
-
-      //         // For each chat, fetch the latest message
-      //         for (const chat of finalSortedChats) {
-      //             this.fetchLatestMessageForChat(chat.pubkey);
-      //         }
-      //     }
-      // });
-
-      // if (ourMessages && ourMessages.length > 0) {
-      //     for (const event of ourMessages) {
-
-      //     }
-      // }
 
       // Convert to array of Chat objects
     } catch (err) {

@@ -156,15 +156,6 @@
           <mat-icon>settings</mat-icon>
           <span>Notification settings</span>
         </button>
-
-        <!-- <button mat-menu-item (click)="app.wipe()">
-        <mat-icon>delete</mat-icon>
-        <span>Reset All Data (Wipe)</span>
-      </button> -->
-        <!-- <button mat-menu-item routerLink="/notifications">
-        <mat-icon>settings</mat-icon>
-        <span>Notification Settings</span>
-      </button> -->
       </mat-menu>
 
       <button mat-icon-button [matMenuTriggerFor]="menuApps">
@@ -307,11 +298,7 @@
         [fixedBottomGap]="0"
         [disableClose]="false"
       >
-        <!-- <mat-toolbar>
-        <span>Profile</span>
-        <span class="toolbar-spacer"></span>
 
-      </mat-toolbar> -->
         <div class="profile-content">
           <button class="theme-button" mat-icon-button (click)="themeService.toggleDarkMode()">
             @if (themeService.darkMode()) {
@@ -342,13 +329,6 @@
                 <h2>{{ metadata.event.pubkey | npub }}</h2>
               }
 
-              <!-- @if (metadata.content.nip05) {
-          <span class="nip05-identifier">{{ metadata.content.nip05.startsWith('_@') ?
-            metadata.content.nip05.substring(1) : metadata.content.nip05 }}</span>
-          } -->
-              <!-- @if (metadata.content.about) {
-          <p class="user-about">{{ metadata.content.about }}</p>
-          } -->
             } @else {
               <div class="profile-avatar">
                 @if (app.authenticated()) {
@@ -369,14 +349,9 @@
 
             @if (accountState.premium()) {
               <span class="premium-label">Premium</span>
-
-              <!-- Warn if the subscription expires in a month. -->
-              <!-- @if (accountState.expiresSoon()) { -->
-              <!-- Show only date and day in the expires date. -->
               <div class="premium-expires">
                 Expires {{ accountState.expiresWhen() | date: 'MMM d' }}
               </div>
-              <!-- } -->
             } @else {
               <span class="premium-label">Free</span>
             }
@@ -397,10 +372,7 @@
                 <span>Credentials</span>
               </a>
             }
-            <!-- <a mat-list-item routerLink="/settings" (click)="layout.isHandset() ? toggleProfileSidenav() : null">
-            <mat-icon matListItemIcon>settings</mat-icon>
-            <span>Settings</span>
-          </a> -->
+
             <a mat-list-item (click)="addAccount(); toggleProfileSidenav()">
               <mat-icon matListItemIcon>person_add</mat-icon>
               <span>Add account</span>
@@ -409,10 +381,7 @@
               <mat-icon matListItemIcon>manage_accounts</mat-icon>
               <span>Manage accounts</span>
             </a>
-            <!-- <a mat-list-item (click)="logout(); toggleProfileSidenav()">
-            <mat-icon matListItemIcon>logout</mat-icon>
-            <span>Sign out</span>
-          </a> -->
+
           </mat-nav-list>
           <mat-divider></mat-divider>
           <!-- Account selection menu -->
@@ -468,13 +437,6 @@
                 }
               }
             </mat-nav-list>
-            <!-- <mat-divider></mat-divider> -->
-            <!-- <mat-nav-list>
-          <a mat-list-item routerLink="/about" (click)="layout.isHandset() ? toggleProfileSidenav() : null">
-            <mat-icon matListItemIcon>info</mat-icon>
-            <span>About</span>
-          </a>
-        </mat-nav-list> -->
           }
         </div>
       </mat-sidenav>
@@ -492,25 +454,9 @@
     </mat-sidenav-container>
   }
 
-  <!-- Desktop FAB button (only visible when not in handset mode) -->
-  <!-- @if (!layout.isHandset() && app.authenticated()) {
-  <button mat-mini-fab color="primary" class="desktop-create-fab no-print" aria-label="Create new content"
-    (click)="openCreateOptions()">
-    <mat-icon>add</mat-icon>
-  </button>
-  } -->
-
   <!-- Mobile navigation footer - now outside of sidenav container -->
   @if (layout.isHandset()) {
     <div class="mobile-nav no-print">
-      <!-- First two navigation items -->
-      <!-- @for (item of navItemsMobile.slice(0, 2); track $index) {
-    <a mat-button class="mobile-nav-button" [routerLink]="item.action ? undefined : [item.path]"
-      routerLinkActive="active-link2" (click)="item.action ? item.action() : null">
-      <mat-icon>{{item.icon}}</mat-icon>
-      <div class="mobile-nav-label">{{item.label}}</div>
-    </a>
-    } -->
 
       <a
         mat-button
@@ -548,15 +494,6 @@
           </button>
         </div>
       }
-
-      <!-- Last two navigation items -->
-      <!-- @for (item of navItemsMobile.slice(2); track $index) {
-    <a mat-button class="mobile-nav-button" [routerLink]="item.action ? undefined : [item.path]"
-      routerLinkActive="active-link2" (click)="item.action ? item.action() : null">
-      <mat-icon>{{item.icon}}</mat-icon>
-      <div class="mobile-nav-label">{{item.label}}</div>
-    </a>
-    } -->
 
       @if (app.authenticated()) {
         <a
@@ -607,7 +544,6 @@
   }
 </div>
 
-<!-- Navigation Context Menu - rendered at app root level -->
 <app-navigation-context-menu></app-navigation-context-menu>
 
 <!-- Global fullscreen video container -->

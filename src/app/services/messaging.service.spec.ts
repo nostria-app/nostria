@@ -3,13 +3,13 @@ import { provideZonelessChangeDetection } from '@angular/core';
 
 import { MessagingService } from './messaging.service';
 import { NostrService } from './nostr.service';
-import { RelayService } from './relays/relay';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
 import { UtilitiesService } from './utilities.service';
 import { EncryptionService } from './encryption.service';
 import { finalizeEvent, generateSecretKey, getEventHash, getPublicKey, kinds } from 'nostr-tools';
 import { v2 } from 'nostr-tools/nip44';
+import { AccountRelayServiceEx } from './relays/account-relay';
 
 describe('MessagingService', () => {
   let service: MessagingService;
@@ -28,7 +28,7 @@ describe('MessagingService', () => {
         provideZonelessChangeDetection(),
         MessagingService,
         { provide: NostrService, useValue: mockNostrService },
-        { provide: RelayService, useValue: mockRelayService },
+        { provide: AccountRelayServiceEx, useValue: mockRelayService },
         { provide: LoggerService, useValue: mockLoggerService },
         { provide: AccountStateService, useValue: mockAccountStateService },
         { provide: UtilitiesService, useValue: mockUtilitiesService },

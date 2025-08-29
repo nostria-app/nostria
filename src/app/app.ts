@@ -1,7 +1,6 @@
 import {
   Component,
   inject,
-  signal,
   effect,
   ViewChild,
   afterNextRender,
@@ -15,25 +14,23 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSidenavModule, MatSidenav } from '@angular/material/sidenav';
-import { MatListModule, MatSelectionListChange } from '@angular/material/list';
+import { MatListModule } from '@angular/material/list';
 import { MatDividerModule } from '@angular/material/divider';
-import { BreakpointObserver } from '@angular/cdk/layout';
 import { ThemeService } from './services/theme.service';
 import { PwaUpdateService } from './services/pwa-update.service';
-import { CommonModule, isPlatformBrowser, isPlatformServer } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { NostrService } from './services/nostr.service';
 import { LoadingOverlayComponent } from './components/loading-overlay/loading-overlay.component';
 import { FeatureLevel, LoggerService } from './services/logger.service';
 import { MatMenuModule } from '@angular/material/menu';
-import { FormGroup, FormsModule } from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 import {
   NotificationType,
   RelayPublishingNotification,
   StorageService,
 } from './services/storage.service';
-import { NostrEventData, UserMetadata } from './services/storage.service';
 import { LayoutService } from './services/layout.service';
 import { ApplicationStateService } from './services/application-state.service';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -57,7 +54,6 @@ import { StateService } from './services/state.service';
 import { PublishQueueService } from './services/publish-queue';
 import { NavigationComponent } from './components/navigation/navigation';
 import { NavigationContextMenuComponent } from './components/navigation-context-menu/navigation-context-menu.component';
-import { nip47 } from 'nostr-tools';
 import { Wallets } from './services/wallets';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { EventService } from './services/event';

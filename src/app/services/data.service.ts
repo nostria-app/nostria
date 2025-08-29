@@ -22,9 +22,7 @@ export interface DataOptions {
 })
 export class DataService {
   private readonly storage = inject(StorageService);
-  // private readonly relay = inject(RelayService);
   private readonly accountRelay = inject(AccountRelayServiceEx);
-  private readonly userRelayFactory = inject(UserRelayExFactoryService);
   private readonly userRelayEx = inject(UserRelayServiceEx);
   private readonly discoveryRelayEx = inject(DiscoveryRelayServiceEx);
   private readonly accountRelayEx = inject(AccountRelayServiceEx);
@@ -32,7 +30,6 @@ export class DataService {
   private readonly logger = inject(LoggerService);
   private readonly utilities = inject(UtilitiesService);
   private readonly cache = inject(Cache);
-  private readonly relaysService = inject(RelaysService);
 
   // Map to track pending profile requests to prevent race conditions
   private pendingProfileRequests = new Map<string, Promise<NostrRecord | undefined>>();
@@ -107,35 +104,6 @@ export class DataService {
     return record;
   }
 
-  // async getEventsById(ids: string[]): Promise<NostrRecord[]> {
-  //     const events = await this.storage.getEventsById(ids);
-
-  //     if (events && events.length > 0) {
-  //         return events.map(event => this.getRecord(event));
-  //     }
-
-  //     const relayEvents = await this.relay.getEventsById(ids);
-
-  //     if (relayEvents && relayEvents.length > 0) {
-  //         for (const event of relayEvents) {
-  //             await this.storage.saveEvent(event);
-  //         }
-
-  //         return relayEvents.map(event => this.getRecord(event));
-  //     }
-
-  //     return [];
-  // }
-
-  // async getUserProfile(pubkey: string, relayUrls: string[], options?: CacheOptions & DataOptions): Promise<NostrRecord | null> {
-
-  //     this.relaysService.getUserRelays(pubkey);
-
-  //     // First get the relays for the user.
-  //     this.sharedRelayEx.get(pubkey, )
-
-  // }
-
   async discoverUserRelays(pubkey: string): Promise<string[]> {
     return this.discoveryRelayEx.getUserRelayUrls(pubkey);
   }
@@ -189,10 +157,6 @@ export class DataService {
     if (this.cache.has(cacheKey)) {
       const record = this.cache.get<NostrRecord>(cacheKey);
       if (record) {
-        // If refresh is requested, trigger background update
-        // if (refresh) {
-        //   this.refreshProfileInBackground(pubkey, cacheKey);
-        // }
         return record;
       }
     }
@@ -239,11 +203,6 @@ export class DataService {
         await this.storage.saveEvent(metadata);
       }
     }
-
-    // Handle background refresh if requested
-    // if (refresh) {
-    //   this.refreshProfileInBackground(pubkey, cacheKey);
-    // }
 
     return record;
   }

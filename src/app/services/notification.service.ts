@@ -74,25 +74,6 @@ export class NotificationService {
   }
 
   /**
-   * Persist all notifications to storage
-   */
-  // private async persistNotifications(): Promise<void> {
-  //   try {
-  //     const currentNotifications = this._notifications();
-  //     this.logger.debug(`Persisting ${currentNotifications.length} notifications to storage`);
-
-  //     // Clear existing notifications and save all current ones
-  //     // await this.storage.clearAllNotifications();
-
-  //     for (const notification of currentNotifications) {
-  //       await this.storage.saveNotification(notification);
-  //     }
-  //   } catch (error) {
-  //     this.logger.error('Failed to persist notifications to storage', error);
-  //   }
-  // }
-
-  /**
    * Add a new relay publishing notification
    */
   addRelayPublishingNotification(

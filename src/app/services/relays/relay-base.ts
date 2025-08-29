@@ -545,20 +545,6 @@ export abstract class RelayServiceBase {
 
           // Call the provided event handler
           onEvent(evt as T);
-
-          // console.log('Event received', evt);
-
-          // if (evt.kind === kinds.Contacts) {
-          //   const followingList = this.storage.getPTagsValues(evt);
-          //   console.log(followingList);
-          // this.followingList.set(followingList);
-          // this.profileState.followingList.set(followingList);
-
-          // this.storage.saveEvent(evt);
-
-          // Now you can use 'this' here
-          // For example: this.handleContacts(evt);
-          // }
         },
         onclose: (reasons) => {
           console.log('Pool closed', reasons);
@@ -652,20 +638,6 @@ export abstract class RelayServiceBase {
 
           // Call the provided event handler
           onEvent(evt as T);
-
-          // console.log('Event received', evt);
-
-          // if (evt.kind === kinds.Contacts) {
-          //   const followingList = this.storage.getPTagsValues(evt);
-          //   console.log(followingList);
-          // this.followingList.set(followingList);
-          // this.profileState.followingList.set(followingList);
-
-          // this.storage.saveEvent(evt);
-
-          // Now you can use 'this' here
-          // For example: this.handleContacts(evt);
-          // }
         },
         onclose: (reasons) => {
           console.log('Pool closed', reasons);

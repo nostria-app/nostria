@@ -102,9 +102,4 @@ export class PublishQueueService {
       this.queue.splice(processedIndices[i], 1);
     }
   }
-
-  // Clear the queue
-  // clear(): void {
-  //   this.queue = [];
-  // }
 }

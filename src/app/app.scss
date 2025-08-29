@@ -43,10 +43,6 @@ nav {
   }
 }
 
-// .app-toolbar {
-//   z-index: 2;
-// }
-
 .sidenav-container {
   flex: 1;
   overflow: auto;
@@ -69,10 +65,6 @@ mat-sidenav-content {
     padding-bottom: 56px; // Height of mobile nav
   }
 }
-
-// .mobile-view {
-//   height: calc(100vh - 56px); // Reverted back to 56px
-// }
 
 .sidenav {
   width: 250px;
@@ -160,14 +152,6 @@ mat-sidenav-content {
   // Remove fixed height since we're using flexbox now
 }
 
-// mat-drawer-content mat-sidenav-content {
-//   height: calc(100dvh - 156px); // Adjusted for mobile nav height
-// }
-
-// mat-nav-list .mat-icon {
-//   margin-right: 12px;
-// }
-
 // Mobile navigation footer
 .mobile-nav {
   position: fixed;
@@ -176,8 +160,6 @@ mat-sidenav-content {
   right: 0;
 
   width: 100%;
-  // background-color: white;
-  // border-top: 1px solid rgba(0, 0, 0, 0.12);
   display: flex;
   justify-content: space-around;
   z-index: 1000;
@@ -187,7 +169,6 @@ mat-sidenav-content {
   justify-content: space-around;
   align-items: center;
   box-shadow: var(--mat-sys-level3);
-  // border-top: 1px solid rgba(0, 0, 0, 0.12);
 }
 
 .mobile-nav a {
@@ -196,20 +177,19 @@ mat-sidenav-content {
 
 .dark .mobile-nav {
   background-color: #424242;
-  // border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .mobile-nav-button {
   flex: 1;
   display: flex;
   flex-direction: column;
-  align-items: center; // Center items horizontally
+  align-items: center;
   justify-content: center;
   padding: 0;
   min-width: unset;
   line-height: normal;
   height: 100%;
-  text-align: center; // Ensure text is centered
+  text-align: center;
 }
 
 .mobile-nav-button .mat-icon {
@@ -217,8 +197,8 @@ mat-sidenav-content {
   height: 22px;
   width: 22px;
   margin-bottom: 2px;
-  display: block; // Make icon a block element
-  margin-left: auto; // Center the icon horizontally
+  display: block;
+  margin-left: auto;
   margin-right: auto;
 }
 
@@ -230,14 +210,9 @@ mat-sidenav-content {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
-  display: block; // Make label a block element
-  width: 100%; // Full width to ensure centering
+  display: block;
+  width: 100%;
   padding: 0 2px;
-  /* Add small padding to prevent text from touching edges */
-}
-
-.dark .mobile-nav {
-  // border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .mobile-nav-button {
@@ -257,7 +232,6 @@ mat-sidenav-content {
   margin-top: 2px;
 }
 
-/* FAB button container */
 .fab-container {
   position: relative;
   width: 56px;
@@ -266,7 +240,6 @@ mat-sidenav-content {
   justify-content: center;
 }
 
-/* The FAB button */
 .create-fab {
   position: absolute;
   bottom: 24px;
@@ -275,13 +248,11 @@ mat-sidenav-content {
   box-shadow: var(--mat-sys-level4);
 }
 
-// Profile sidenav styles
 .apps-sidenav {
   width: 300px;
   max-width: 90vw;
 }
 
-// Animation for the profile sidenav
 .apps-sidenav.mat-drawer {
   transition: transform 0.3s ease-in-out;
 }
@@ -290,7 +261,6 @@ mat-sidenav-content {
   margin-top: 2.4rem;
 }
 
-// Profile sidenav styles
 .profile-sidenav {
   width: 300px;
   max-width: 90vw;
@@ -306,7 +276,6 @@ mat-sidenav-content {
 // Ensure the sidenav container doesn't resize when profile sidenav opens
 .sidenav-container.mat-sidenav-container {
   transform: none !important;
-  // z-index: 1000; // Ensure container has proper stacking context
 
   // Prevent content from shifting when right sidenav opens
   .mat-sidenav-content {
@@ -401,7 +370,6 @@ mat-sidenav-content {
 }
 
 .sidenav-small {
-  // width: var(--mat-sidenav-container-width, 48px);
   width: 56px;
 }
 
@@ -428,7 +396,6 @@ mat-sidenav-content {
 
 .account-icon {
   color: var(--mat-sys-primary);
-  // margin-right: 12px;
 }
 
 .account-name {
@@ -438,7 +405,6 @@ mat-sidenav-content {
   text-overflow: ellipsis;
 }
 
-// Account list styles
 .accounts-list {
   margin-top: 8px;
   margin-bottom: 8px;
@@ -637,12 +603,6 @@ mat-sidenav-content {
 
 .pulsing-icon {
   animation: pulse 1.5s infinite ease-in-out;
-}
-
-.menu-create-button {
-  // box-shadow: var(--mat-sys-level4);
-  // color: var(--mat-sys-primary-container);
-  // margin-left: 8px;
 }
 
 .desktop-create-fab {

@@ -160,14 +160,6 @@ export class EncryptionService {
         // Sometimes the ciphertext might have a prefix like "Echo: ".
         ciphertext = ciphertext.replace('Echo: ', '');
 
-        // const pTags = this.utilities.getPTagsValuesFromEvent(event);
-        // if (pTags && pTags.length > 0) {
-        //   // If we have p-tags, use the first one as the sender's public key
-        //   const receiverPubkey = pTags[0];
-        //   if (receiverPubkey === "fa984bd7dbb282f07e16e7ae87b26a2a7b9b90b7246a44771f0cf5ae58018f52") {
-        //   }
-        // }
-
         const content = await this.decryptNip04(ciphertext, senderPubkey);
         return { content, algorithm: 'nip04' };
       } catch (error) {

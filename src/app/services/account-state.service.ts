@@ -5,9 +5,9 @@ import { LocalStorageService } from './local-storage.service';
 import { ApplicationStateService } from './application-state.service';
 import { DataService } from './data.service';
 import { StorageService } from './storage.service';
-import { NostrService, NostrUser } from './nostr.service';
+import { NostrUser } from './nostr.service';
 import { AccountService } from '../api/services';
-import { Account, Feature, Tier } from '../api/models';
+import { Account, Feature } from '../api/models';
 import { Subject, takeUntil } from 'rxjs';
 import { HttpContext } from '@angular/common/http';
 import { USE_NIP98 } from './interceptors/nip98Auth';
@@ -83,15 +83,6 @@ export class AccountStateService implements OnDestroy {
     const sub = this.subscription();
     return sub?.expires ? new Date(sub.expires) : null;
   });
-
-  // expiresSoon = computed(() => {
-  //   const expires = this.expiresWhen();
-  //   if (!expires) return false;
-
-  //   const oneMonthFromNow = new Date();
-  //   oneMonthFromNow.setMonth(oneMonthFromNow.getMonth() + 12);
-  //   return expires < oneMonthFromNow;
-  // });
 
   profilePath = computed(() => {
     const sub = this.subscription();
@@ -631,32 +622,6 @@ export class AccountStateService implements OnDestroy {
     });
   }
 
-  // setCachedProfiles(profiles: NostrRecord[]): void {
-  //   const cache = this.profileCache();
-  //   const newCache = new Map(cache);
-
-  //   profiles.forEach(profile => {
-  //     newCache.set(profile.event.pubkey, {
-  //       profile,
-  //       cachedAt: Date.now()
-  //     });
-  //   });
-
-  //   // Limit cache size to prevent memory issues
-  //   if (newCache.size > 1000) {
-  //     // Remove oldest entries
-  //     const entries = Array.from(newCache.entries());
-  //     entries.sort((a, b) => a[1].cachedAt - b[1].cachedAt);
-
-  //     // Keep newest 800 entries
-  //     const toKeep = entries.slice(-800);
-  //     newCache.clear();
-  //     toKeep.forEach(([key, value]) => newCache.set(key, value));
-  //   }
-
-  //   this.profileCache.set(newCache);
-  // }
-
   // Method to get cached account profile
   getAccountProfile(pubkey: string): NostrRecord | undefined {
     const cacheKey = `metadata-${pubkey}`;
@@ -684,11 +649,6 @@ export class AccountStateService implements OnDestroy {
       if (followingList.length === 0) {
         return; // No following list to load profiles for
       }
-
-      // const { DataService } = await import('./data.service');
-      // const dataService = this.injector.get(DataService);
-      // const { StorageService } = await import('./storage.service');
-      // const storageService = this.injector.get(StorageService);
 
       console.log('Loading profiles from storage to cache for account:', pubkey);
       console.log('Following list size:', followingList.length);
@@ -766,14 +726,7 @@ export class AccountStateService implements OnDestroy {
     this.updateMuteList(currentMuteList);
 
     this.publish.set(currentMuteList);
-
-    // await this.saveMuteList(currentMuteList);
   }
-
-  // async saveMuteList(muteList: Event) {
-  //   const event = await this.nostr.publish(muteList);
-  //   this.updateMuteList(event);
-  // }
 
   // Add a method to clean up subscriptions if needed
   ngOnDestroy(): void {

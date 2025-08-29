@@ -42,8 +42,6 @@ export class LayoutService implements OnDestroy {
   readonly isBrowser = signal(isPlatformBrowser(this.platformId));
   localStorage = inject(LocalStorageService);
 
-  // Scroll event signals
-
   /**
    * Signal that indicates whether the content wrapper is scrolled to the top
    *

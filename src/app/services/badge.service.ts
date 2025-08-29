@@ -353,49 +353,6 @@ export class BadgeService implements NostriaService {
     return this.getBadgeDefinition(pubkey, slug);
   }
 
-  // parseBadgeDefinition(event: NostrEvent) {
-  //     if (!event || !event.tags) {
-  //         return;
-  //     }
-
-  //     const parsedBadge: Partial<ParsedBadge> = {
-  //         tags: []
-  //     };
-
-  //     // Parse each tag based on its identifier
-  //     for (const tag of event.tags) {
-  //         if (tag.length >= 2) {
-  //             const [key, value] = tag;
-
-  //             switch (key) {
-  //                 case 'd':
-  //                     parsedBadge.slug = value;
-  //                     break;
-  //                 case 'description':
-  //                     parsedBadge.description = value;
-  //                     break;
-  //                 case 'name':
-  //                     parsedBadge.name = value;
-  //                     break;
-  //                 case 'image':
-  //                     parsedBadge.image = value;
-  //                     break;
-  //                 case 'thumb':
-  //                     parsedBadge.thumb = value;
-  //                     break;
-  //                 case 't':
-  //                     // Accumulate types in an array
-  //                     if (parsedBadge.tags) {
-  //                         parsedBadge.tags.push(value);
-  //                     }
-  //                     break;
-  //             }
-  //         }
-  //     }
-
-  //     return parsedBadge;
-  // }
-
   parseDefinition(event: NostrEvent): ParsedBadge {
     // Early return with complete fallback object
     if (!event?.tags?.length) {
@@ -440,32 +397,6 @@ export class BadgeService implements NostriaService {
       tags: tagValues,
     };
   }
-
-  // getBadgeInfo(badgeAward: NostrEvent): ParsedBadge {
-  //     const aTag = this.getBadgeATag(badgeAward);
-  //     const badgeDefinition = this.getBadgeDefinitionByATag(aTag);
-
-  //     if (!badgeDefinition) {
-  //         return {
-  //             name: 'Unknown Badge',
-  //             description: 'Badge definition not found',
-  //             image: '',
-  //             thumb: ''
-  //         };
-  //     }
-
-  //     const nameTag = badgeDefinition.tags.find(tag => tag[0] === 'name');
-  //     const descTag = badgeDefinition.tags.find(tag => tag[0] === 'description');
-  //     const imageTag = badgeDefinition.tags.find(tag => tag[0] === 'image');
-  //     const thumbTag = badgeDefinition.tags.find(tag => tag[0] === 'thumb');
-
-  //     return {
-  //         name: nameTag ? nameTag[1] : 'Unnamed Badge',
-  //         description: descTag ? descTag[1] : 'No description',
-  //         image: imageTag ? imageTag[1] : '',
-  //         thumb: thumbTag ? thumbTag[1] : (imageTag ? imageTag[1] : '')
-  //     };
-  // }
 
   clear(): void {
     this.badgeDefinitions.set([]);

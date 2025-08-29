@@ -14,8 +14,6 @@ export class Algorithms {
   private readonly metrics = inject(Metrics);
   private readonly favoritesService = inject(FavoritesService);
 
-  constructor() {}
-
   async calculateProfileViewed(limit: number, ascending: boolean): Promise<UserMetric[]> {
     // Get the list of users we follow
     const following = this.accountState.followingList();

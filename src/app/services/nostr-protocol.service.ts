@@ -10,8 +10,6 @@ export class NostrProtocolService {
   private readonly router = inject(Router);
   private readonly logger = inject(LoggerService);
 
-  constructor() {}
-
   /**
    * Handles nostr protocol URLs by parsing the URI and navigating to the appropriate route
    */

@@ -1,6 +1,6 @@
-import { inject, Injectable, isDevMode, signal } from '@angular/core';
+import { inject, Injectable, signal } from '@angular/core';
 import { NostrService } from './nostr.service';
-import { kinds, nip98 } from 'nostr-tools';
+import { kinds } from 'nostr-tools';
 import { SwPush } from '@angular/service-worker';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
@@ -17,31 +17,21 @@ export interface Device {
   userAgent?: string;
 }
 
-// export interface Device {
-//   deviceId: string;
-//   endpoint: string;
-//   // lastUpdated: string;
-//   // createdAt: string;
-//   auth?: string;
-//   // subscriptionId?: string;
-//   userAgent?: string;
-// }
-
 @Injectable({
   providedIn: 'root',
 })
 export class WebPushService {
   private server: string = environment.backendUrl;
-  private nostr = inject(NostrService);
   accountState = inject(AccountStateService);
   push = inject(SwPush);
-  logger = inject(LoggerService); // Centralized device management
+  logger = inject(LoggerService);
   deviceList = signal<Device[]>([]);
   devicePreferences = signal<DeviceNotificationPreferences[]>([]);
   // Temporary preferences for editing (before saving)
   tempDevicePreferences = signal<DeviceNotificationPreferences[]>([]);
   devicesLoaded = signal(false);
   webRequest = inject(WebRequest);
+
   constructor() {
     // Load preferences from server/storage on service initialization
     this.loadPreferencesFromServer();
@@ -120,32 +110,9 @@ export class WebPushService {
         { kind: kinds.HTTPAuth },
       );
       console.log('Response from savePreferencesToServer:', response);
-      // const headers = await this.nostr.getNIP98AuthToken({ url, method: 'POST' });
-
-      // const response = await fetch(url, {
-      //   method: 'POST',
-      //   headers: {
-      //     ...headers,
-      //     'Content-Type': 'application/json'
-      //   },
-      //   body: JSON.stringify(prefs)
-      // });
-
-      // if (!response.ok) {
-      //   throw new Error(`Failed to save preferences: ${response.status}`);
-      // }
-
       this.logger.info('Device notification preferences saved successfully');
     } catch (error) {
       this.logger.error('Failed to save preferences to server:', error);
-      // Fallback to localStorage if server fails
-      // try {
-      //   const prefs = this.devicePreferences();
-      //   localStorage.setItem('device-notification-preferences', JSON.stringify(prefs));
-      //   this.logger.info('Preferences saved to localStorage as fallback');
-      // } catch (storageError) {
-      //   this.logger.error('Failed to save preferences to localStorage fallback:', storageError);
-      // }
     }
   } // Load preferences from server (with localStorage fallback)
   async loadPreferencesFromServer(): Promise<void> {
@@ -223,41 +190,6 @@ export class WebPushService {
     // Fallback to device ID if no userAgent
     return `Device ${device.deviceId.slice(0, 8)}...`;
   }
-
-  /** Implements the NIP-98 HTTP Auth */
-  // private async getAuthHeaders(url: string, method: string | 'GET' | 'PUT' | 'POST' | 'DELETE' | 'PATCH', sha256?: string): Promise<Record<string, string>> {
-  //   const currentUser = this.accountState.account();
-  //   if (!currentUser) {
-  //     throw new Error('User not logged in');
-  //   }
-
-  //   const headers: Record<string, string> = {};
-
-  //   // Don't attempt to add auth headers if the user is using the preview account
-  //   if (currentUser.source !== 'preview') {
-  //     const tags = [
-  //       ['u', url],
-  //       ["method", method]
-  //     ];
-
-  //     if (sha256) {
-  //       tags.push(['payload', sha256]);
-  //     }
-
-  //     const authEvent = this.nostr.createEvent(kinds.HTTPAuth, '', tags);
-  //     const signedEvent = await this.nostr.signEvent(authEvent);
-
-  //     if (!signedEvent) {
-  //       throw new Error('Failed to sign event for authorization headers');
-  //     }
-
-  //     // Convert signed event to base64 string for Authorization header
-  //     const base64Event = btoa(JSON.stringify(signedEvent));
-  //     headers['Authorization'] = `Nostr ${base64Event}`
-  //   }
-
-  //   return headers;
-  // }
 
   async devices(deviceId?: string): Promise<Device[]> {
     try {

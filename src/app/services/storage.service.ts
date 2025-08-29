@@ -865,9 +865,6 @@ export class StorageService {
 
   async saveRelay(relay: Relay, nip11Info?: Nip11Info): Promise<void> {
     try {
-      // Create a deep clone of the relay object to avoid modifying the original
-      // const relayClone = structuredClone(relay);
-
       // Create a new object with the clone as the base
       const enhancedRelay: any = { ...relay };
 
@@ -885,25 +882,6 @@ export class StorageService {
       this.logger.error(`Error saving relay ${relay.url}`, error);
     }
   }
-
-  // async saveRelay(relay: Relay, nip11Info?: Nip11Info): Promise<void> {
-  //   try {
-  //     const enhancedRelay: any = { ...relay };
-
-  //     if (nip11Info) {
-  //       enhancedRelay['nip11'] = {
-  //         ...nip11Info,
-  //         last_checked: Date.now()
-  //       };
-  //     }
-
-  //     await this.db.put('relays', enhancedRelay);
-  //     this.logger.debug(`Saved relay to IndexedDB: ${relay.url}`);
-  //     // await this.updateStats();
-  //   } catch (error) {
-  //     this.logger.error(`Error saving relay ${relay.url}`, error);
-  //   }
-  // }
 
   async getRelay(url: string): Promise<(Relay & { nip11?: Nip11Info }) | undefined> {
     try {
@@ -932,117 +910,6 @@ export class StorageService {
       this.logger.error(`Error deleting relay ${url}`, error);
     }
   }
-
-  // async saveUserRelays(userRelays: UserRelays): Promise<void> {
-  //   try {
-  //     const enhancedUserRelays = {
-  //       ...userRelays,
-  //       updated: Date.now()
-  //     };
-
-  //     await this.db.put('userRelays', enhancedUserRelays);
-  //     this.logger.debug(`Saved user relays to IndexedDB: ${userRelays.pubkey}`);
-  //     await this.updateStats();
-  //   } catch (error) {
-  //     this.logger.error(`Error saving user relays for ${userRelays.pubkey}`, error);
-  //   }
-  // }
-
-  // async getUserRelays(pubkey: string | string[]): Promise<UserRelays | UserRelays[] | undefined> {
-  //   try {
-  //     if (Array.isArray(pubkey)) {
-  //       // Handle array of pubkeys
-  //       const results: UserRelays[] = [];
-  //       for (const pk of pubkey) {
-  //         const relays = await this.db.get('userRelays', pk);
-  //         if (relays) {
-  //           results.push(relays);
-  //         }
-  //       }
-  //       return results.length > 0 ? results : undefined;
-  //     } else {
-  //       // Handle single pubkey (original behavior)
-  //       return await this.db.get('userRelays', pubkey);
-  //     }
-  //   } catch (error) {
-  //     const pubkeyDisplay = Array.isArray(pubkey) ? `[multiple keys: ${pubkey.length}]` : pubkey;
-  //     this.logger.error(`Error getting user relays for ${pubkeyDisplay}`, error);
-  //     return undefined;
-  //   }
-  // }
-
-  // async getAllUserRelays(): Promise<UserRelays[]> {
-  //   try {
-  //     return await this.db.getAll('userRelays');
-  //   } catch (error) {
-  //     this.logger.error('Error getting all user relays', error);
-  //     return [];
-  //   }
-  // }
-
-  // async deleteUserRelays(pubkey: string | string[]): Promise<void> {
-  //   try {
-  //     if (Array.isArray(pubkey)) {
-  //       // Handle array of pubkeys
-  //       for (const pk of pubkey) {
-  //         await this.db.delete('userRelays', pk);
-  //       }
-  //       this.logger.debug(`Deleted user relays for multiple pubkeys: ${pubkey.length}`);
-  //     } else {
-  //       // Handle single pubkey (original behavior)
-  //       await this.db.delete('userRelays', pubkey);
-  //       this.logger.debug(`Deleted user relays from IndexedDB: ${pubkey}`);
-  //     }
-  //     await this.updateStats();
-  //   } catch (error) {
-  //     const pubkeyDisplay = Array.isArray(pubkey) ? `[multiple keys: ${pubkey.length}]` : pubkey;
-  //     this.logger.error(`Error deleting user relays for ${pubkeyDisplay}`, error);
-  //   }
-  // }
-
-  // async saveUserMetadata(pubkey: string, metadata: NostrEventData<UserMetadata>): Promise<void> {
-  //   try {
-  //     const enhancedMetadata = {
-  //       ...metadata,
-  //       pubkey,
-  //       updated: Date.now()
-  //     };
-
-  //     await this.db.put('userMetadata', enhancedMetadata);
-  //     this.logger.debug(`Saved user metadata to IndexedDB: ${pubkey}`);
-  //     await this.updateStats();
-  //   } catch (error) {
-  //     this.logger.error(`Error saving user metadata for ${pubkey}`, error);
-  //   }
-  // }
-
-  // async getUserMetadata(pubkey: string): Promise<NostrEventData<UserMetadata> | undefined> {
-  //   try {
-  //     return await this.db.get('userMetadata', pubkey);
-  //   } catch (error) {
-  //     this.logger.error(`Error getting user metadata for ${pubkey}`, error);
-  //     return undefined;
-  //   }
-  // }
-
-  // async getAllUserMetadata(): Promise<NostrEventData<UserMetadata>[]> {
-  //   try {
-  //     return await this.db.getAll('userMetadata');
-  //   } catch (error) {
-  //     this.logger.error('Error getting all user metadata', error);
-  //     return [];
-  //   }
-  // }
-
-  // async deleteUserMetadata(pubkey: string): Promise<void> {
-  //   try {
-  //     await this.db.delete('userMetadata', pubkey);
-  //     this.logger.debug(`Deleted user metadata from IndexedDB: ${pubkey}`);
-  //     await this.updateStats();
-  //   } catch (error) {
-  //     this.logger.error(`Error deleting user metadata for ${pubkey}`, error);
-  //   }
-  // }
 
   async getUserEvents(pubkey: string): Promise<Event[]> {
     try {

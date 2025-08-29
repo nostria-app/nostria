@@ -46,9 +46,6 @@ export class ApplicationService {
   /** User is "authenticated" if there is any account set. */
   authenticated = computed(() => this.accountState.account() != null);
 
-  /** Used to check if both initialized and authenticated. Used to wait for both conditions. */
-  // initializedAndAuthenticated = computed(() => this.initialized() && this.authenticated());
-
   featureLevel = signal<FeatureLevel>(this.getStoredFeatureLevel());
 
   private readonly featurePrecedence: Record<FeatureLevel, number> = {
@@ -60,18 +57,6 @@ export class ApplicationService {
   previousPubKey = '';
 
   constructor() {
-    // Set up effect to load notifications when app is initialized and authenticated
-    // effect(async () => {
-    //     // For reasons unable to figure out,
-    //     // this is triggered twice on app start.
-    //     let pubkey = this.accountState.pubkey();
-
-    //     if (pubkey && pubkey !== this.previousPubKey) {
-    //         this.previousPubKey = pubkey;
-    //         await this.loadAppData();
-    //     }
-    // });
-
     effect(async () => {
       const followingList = this.accountState.followingList();
       // const initialize = this.appState.

@@ -22,8 +22,6 @@ export class SharedRelayServiceEx {
   private readonly requestCache = new Map<string, Promise<any>>();
   private readonly cacheTimeout = 1000; // 1 second cache
 
-  constructor() {}
-
   /**
    * Creates a unique cache key for request deduplication
    */
