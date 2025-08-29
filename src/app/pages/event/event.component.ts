@@ -135,6 +135,21 @@ export class EventPageComponent {
         this.titleService.setTitle('⏳ Loading... - Nostria');
       }
     });
+
+    // Effect to scroll to main event when parent events are loaded
+    effect(() => {
+      const isLoadingParents = this.isLoadingParents();
+      const parentEvents = this.parentEvents();
+      const event = this.event();
+
+      // If parent events have finished loading and we have parent events and a main event
+      if (!isLoadingParents && parentEvents.length > 0 && event) {
+        // Delay to ensure DOM is updated
+        setTimeout(() => {
+          this.scrollToMainEvent();
+        }, 300);
+      }
+    });
   }
 
   async loadEvent(nevent: string) {
@@ -225,9 +240,28 @@ export class EventPageComponent {
     }
   }
 
-  onViewMoreReplies(data: any): void {
+  /**
+   * Scrolls to the main event after thread context has been loaded
+   */
+  private scrollToMainEvent(): void {
+    const mainEventElement = document.getElementById('main-event');
+    if (mainEventElement) {
+      mainEventElement.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+        inline: 'nearest',
+      });
+    }
+  }
+
+  onViewMoreReplies(data: ThreadedEvent): void {
     // Navigate to the specific event to view deeper replies
-    const encoded = nip19.neventEncode({ id: data.deepestReplyId, author: data.event.pubkey });
-    this.router.navigate(['/e', encoded]);
+    if (data.deepestReplyId) {
+      const encoded = nip19.neventEncode({ id: data.deepestReplyId, author: data.event.pubkey });
+      this.router.navigate(['/e', encoded]);
+    } else {
+      const encoded = nip19.neventEncode({ id: data.event.id, author: data.event.pubkey });
+      this.router.navigate(['/e', encoded]);
+    }
   }
 }

@@ -33,7 +33,9 @@
 
   <!-- Main event -->
   @if (event()) {
-    <app-event [event]="event()" appearance="plain"></app-event>
+    <div id="main-event">
+      <app-event [event]="event()" appearance="plain" [navigationDisabled]="true"></app-event>
+    </div>
   }
 
   <!-- Loading status indicator - shows what's still loading -->
