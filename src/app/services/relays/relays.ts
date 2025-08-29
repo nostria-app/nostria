@@ -1,6 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { UtilitiesService } from '../utilities.service';
 import { StorageService } from '../storage.service';
+import { LocalSettingsService } from '../local-settings.service';
 
 export interface RelayStats {
   url: string;
@@ -22,6 +23,8 @@ export class RelaysService {
 
   // Map of relay URL to relay statistics
   private relayStats = new Map<string, RelayStats>();
+
+  private readonly settings = inject(LocalSettingsService);
 
   // Map of user public keys to their relay URLs
   private userRelays = new Map<string, string[]>();
@@ -151,7 +154,7 @@ export class RelaysService {
   /**
    * Get optimal relays for a user with connection preference
    */
-  getOptimalRelays(relayUrls: string[], limit = 5): string[] {
+  getOptimalRelays(relayUrls: string[], limit = this.settings.maxRelaysPerUser()): string[] {
     // We have not discovered any relays for this user, what should we do?
     if (relayUrls.length === 0) {
       relayUrls = this.utilities.preferredRelays.slice(0, limit);

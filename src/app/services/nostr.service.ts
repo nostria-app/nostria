@@ -25,6 +25,7 @@ import { PublishQueueService } from './publish-queue';
 import { SharedRelayServiceEx } from './relays/shared-relay';
 import { AccountRelayServiceEx } from './relays/account-relay';
 import { DiscoveryRelayServiceEx } from './relays/discovery-relay';
+import { LocalSettingsService } from './local-settings.service';
 
 export interface NostrUser {
   pubkey: string;
@@ -65,11 +66,11 @@ export class NostrService implements NostriaService {
   private readonly data = inject(DataService);
   private readonly utilities = inject(UtilitiesService);
   private readonly publishQueueService = inject(PublishQueueService);
+  private readonly settings = inject(LocalSettingsService);
 
   initialized = signal(false);
   MAX_WAIT_TIME = 2000;
   MAX_WAIT_TIME_METADATA = 2500;
-  MAX_RELAY_COUNT = 2;
   dataLoaded = false;
 
   // account = signal<NostrUser | null>(null);
@@ -1434,7 +1435,7 @@ export class NostrService implements NostriaService {
 
         relayUrls = this.utilities.pickOptimalRelays(
           this.utilities.getRelayUrls(relayListEvent),
-          this.MAX_RELAY_COUNT,
+          this.settings.maxRelaysPerUser(),
         );
       } else {
         const followingEvent = await this.accountRelay.get({
