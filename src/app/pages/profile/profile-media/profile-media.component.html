@@ -1,22 +1,52 @@
 <div class="tab-content">
   @if (isLoading()) {
-    <app-loading-overlay message="Loading media..."></app-loading-overlay>
+  <app-loading-overlay message="Loading media..."></app-loading-overlay>
   } @else if (error()) {
-    <div class="error-state">
-      <mat-icon>error</mat-icon>
-      <p>{{ error() }}</p>
-    </div>
+  <div class="error-state">
+    <mat-icon>error</mat-icon>
+    <p>{{ error() }}</p>
+  </div>
   } @else if (media().length === 0) {
-    <div class="empty-state">
-      <mat-icon>image</mat-icon>
-      <p>No media to display yet</p>
-    </div>
+  <div class="empty-state">
+    <mat-icon>image</mat-icon>
+    <p>No media to display yet</p>
+  </div>
   } @else {
-    <div class="media-grid">
-      <!-- Media will be displayed here in a grid -->
-      <mat-grid-list cols="3" rowHeight="1:1">
-        <!-- Images will appear here -->
-      </mat-grid-list>
-    </div>
+  <div class="media-grid">
+    <mat-grid-list cols="3" rowHeight="1:1">
+      @for (mediaItem of media(); track mediaItem.event.id) {
+      <mat-grid-tile>
+        <div class="media-item">
+          <!-- Display media content based on event kind -->
+          @if (mediaItem.event.kind === 20) {
+          <!-- Picture/Image -->
+          <img [src]="getMediaUrl(mediaItem)" [alt]="getMediaDescription(mediaItem)" class="media-image"
+            loading="lazy" />
+          <div class="media-overlay">
+            <mat-icon>image</mat-icon>
+          </div>
+          } @else if (mediaItem.event.kind === 21) {
+          <!-- Video -->
+          <video [src]="getMediaUrl(mediaItem)" class="media-video" preload="metadata" muted>
+            <img [src]="getVideoThumbnail(mediaItem)" [alt]="getMediaDescription(mediaItem)" class="media-image" />
+          </video>
+          <div class="media-overlay">
+            <mat-icon>play_circle</mat-icon>
+          </div>
+          } @else {
+          <!-- Other media types (kind 22) -->
+          <div class="media-placeholder">
+            <mat-icon>attachment</mat-icon>
+            <span>{{ getMediaDescription(mediaItem) }}</span>
+          </div>
+          <div class="media-overlay">
+            <mat-icon>file_present</mat-icon>
+          </div>
+          }
+        </div>
+      </mat-grid-tile>
+      }
+    </mat-grid-list>
+  </div>
   }
 </div>
