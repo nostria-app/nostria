@@ -1,28 +1,34 @@
-<button mat-button [ngClass]="{
+<button
+  mat-button
+  [ngClass]="{
     active: !!repostByCurrentAccount(),
     'only-icon': !reposts().length && !isLoadingReposts(),
-  }" [matMenuTriggerFor]="menu" [disabled]="isLoadingReposts()" (click)="$event.stopPropagation()">
+  }"
+  [matMenuTriggerFor]="menu"
+  [disabled]="isLoadingReposts()"
+  (click)="$event.stopPropagation()"
+>
   <mat-icon>repeat</mat-icon>
   @if (isLoadingReposts()) {
-  <mat-spinner diameter="18"></mat-spinner>
+    <mat-spinner diameter="18"></mat-spinner>
   } @else {
-  @if (reposts().length > 0) {
-  {{ reposts().length }}
-  }
+    @if (reposts().length > 0) {
+      {{ reposts().length }}
+    }
   }
 </button>
 
 <mat-menu #menu="matMenu">
   @if (!!repostByCurrentAccount()) {
-  <button mat-menu-item (click)="deleteRepost()">
-    <mat-icon>repeat</mat-icon>
-    <span>Undo Repost</span>
-  </button>
+    <button mat-menu-item (click)="deleteRepost()">
+      <mat-icon>repeat</mat-icon>
+      <span>Undo Repost</span>
+    </button>
   } @else {
-  <button mat-menu-item (click)="createRepost()">
-    <mat-icon>repeat</mat-icon>
-    <span>Repost</span>
-  </button>
+    <button mat-menu-item (click)="createRepost()">
+      <mat-icon>repeat</mat-icon>
+      <span>Repost</span>
+    </button>
   }
   <button mat-menu-item (click)="createQuote()">
     <mat-icon>format_quote</mat-icon>
