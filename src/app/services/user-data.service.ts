@@ -104,7 +104,8 @@ export class UserDataService {
 
   async getUserRelays(pubkey: string) {
     let relayUrls: string[] = [];
-    const relayListEvent = await this.storage.getEventByPubkeyAndKind(pubkey, 10002);
+
+    const relayListEvent = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
 
     if (relayListEvent) {
       relayUrls = this.utilities.getRelayUrls(relayListEvent);
