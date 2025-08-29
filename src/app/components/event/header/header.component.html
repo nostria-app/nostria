@@ -1,12 +1,24 @@
 <mat-card-header>
   <app-user-profile [pubkey]="event().pubkey">
-    <a class="date-link" [matTooltip]="event().created_at * 1000 | date: 'medium'" matTooltipPosition="below"
-      tabindex="0" role="button" (click)="openEventAndStopPropagation($event)"
-      (keyup.enter)="layout.openEvent(event().id, event())" (keyup.space)="layout.openEvent(event().id, event())">
+    <a
+      class="date-link"
+      [matTooltip]="event().created_at * 1000 | date: 'medium'"
+      matTooltipPosition="below"
+      tabindex="0"
+      role="button"
+      (click)="openEventAndStopPropagation($event)"
+      (keyup.enter)="layout.openEvent(event().id, event())"
+      (keyup.space)="layout.openEvent(event().id, event())"
+    >
       {{ event().created_at | ago }}
     </a>
 
-    <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="More options" (click)="$event.stopPropagation()">
+    <button
+      mat-icon-button
+      [matMenuTriggerFor]="menu"
+      aria-label="More options"
+      (click)="$event.stopPropagation()"
+    >
       <mat-icon>more_vert</mat-icon>
     </button>
     <mat-menu #menu="matMenu">
@@ -37,10 +49,10 @@
       </button>
       <mat-divider></mat-divider>
       @if (isOurEvent()) {
-      <button mat-menu-item (click)="deleteEvent()">
-        <mat-icon>delete</mat-icon>
-        Delete Event
-      </button>
+        <button mat-menu-item (click)="deleteEvent()">
+          <mat-icon>delete</mat-icon>
+          Delete Event
+        </button>
       }
       <button mat-menu-item (click)="layout.publishEvent(event())">
         <mat-icon>publish</mat-icon>
