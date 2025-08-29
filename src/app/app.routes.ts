@@ -4,7 +4,6 @@ import { AboutComponent } from './pages/settings/about/about.component';
 import { CredentialsComponent } from './pages/credentials/credentials.component';
 import { ProfileComponent } from './pages/profile/profile.component';
 import { ProfileNotesComponent } from './pages/profile/profile-notes/profile-notes.component';
-import { ProfileRepliesComponent } from './pages/profile/profile-replies/profile-replies.component';
 import { ProfileReadsComponent } from './pages/profile/profile-reads/profile-reads.component';
 import { ProfileMediaComponent } from './pages/profile/profile-media/profile-media.component';
 import { ProfileAboutComponent } from './pages/profile/profile-about/profile-about.component';
@@ -47,9 +46,8 @@ const profileChildren: Routes = [
     path: '',
     component: ProfileHomeComponent,
     children: [
-      { path: '', component: ProfileNotesComponent, title: 'Notes' },
-      { path: 'notes', component: ProfileNotesComponent, title: 'Notes' },
-      { path: 'replies', component: ProfileRepliesComponent, title: 'Replies' },
+      { path: '', component: ProfileNotesComponent, title: 'Timeline' },
+      { path: 'notes', component: ProfileNotesComponent, title: 'Timeline' },
       { path: 'reads', component: ProfileReadsComponent, title: 'Reads' },
       { path: 'media', component: ProfileMediaComponent, title: 'Media' },
     ],
