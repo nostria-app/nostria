@@ -20,7 +20,11 @@ export class ReplyButtonComponent {
   // we use NIP-10 replies for kind:1 and NIP-22 comments for all the other kinds
   isReply = computed(() => this.event().kind === kinds.ShortTextNote);
 
-  onClick(): void {
+  onClick(event?: MouseEvent): void {
+    if (event) {
+      event.stopPropagation();
+    }
+
     if (this.event().kind === kinds.ShortTextNote) {
       this.eventService.createNote({
         replyTo: {

@@ -180,15 +180,47 @@ export class EventComponent {
     }
   }
 
-  async toggleLike() {
-    const event = this.event();
-    if (!event) return;
+  async toggleLike(event?: MouseEvent) {
+    if (event) {
+      event.stopPropagation();
+    }
+
+    const currentEvent = this.event();
+    if (!currentEvent) return;
     const likeEvent = this.likeReaction();
     if (likeEvent) {
       await this.reactionService.deleteReaction(likeEvent.event);
     } else {
-      await this.reactionService.addLike(event);
+      await this.reactionService.addLike(currentEvent);
     }
     await this.loadReactions(true);
+  }
+
+  onBookmarkClick(event: MouseEvent) {
+    event.stopPropagation();
+    const targetItem = this.repostedRecord() || this.record();
+    if (targetItem) {
+      this.bookmark.toggleBookmark(targetItem.event.id);
+    }
+  }
+
+  onCardClick(event: MouseEvent) {
+    // Prevent navigation if clicking on interactive elements
+    const target = event.target as HTMLElement;
+
+    // Check if the click is on an interactive element or its children
+    const isInteractiveElement = target.closest(
+      'img, button, a, mat-menu, [mat-menu-trigger-for], [tabindex], input, textarea, select, .user-profile-avatar, .user-profile-name, .date-link',
+    );
+
+    if (isInteractiveElement) {
+      return;
+    }
+
+    // Navigate to the event
+    const currentEvent = this.event() || this.record()?.event;
+    if (currentEvent) {
+      this.layout.openEvent(currentEvent.id, currentEvent);
+    }
   }
 }
