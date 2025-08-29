@@ -25,7 +25,15 @@ export class ProfileStateService {
   relay: UserRelayService | null = null;
 
   // Current profile pubkey
-  currentProfilePubkey = signal<string>('');
+  currentProfileKey = signal<string>('');
+
+  // The "currentProfileKey" can sometimes be "npub" value, this returns parsed hex value.
+  pubkey = computed(() => {
+    const currentPubkey = this.currentProfileKey();
+    return currentPubkey.startsWith('npub')
+      ? this.utilities.getPubkeyFromNpub(currentPubkey)
+      : currentPubkey;
+  });
 
   // Signal to force reload even with same pubkey
   private reloadTrigger = signal<number>(0);
@@ -36,15 +44,15 @@ export class ProfileStateService {
 
   constructor() {
     effect(async () => {
-      const currentPubkey = this.currentProfilePubkey();
+      const pubkey = this.pubkey();
 
       // Include reloadTrigger to ensure effect runs when we force reload
       this.reloadTrigger();
 
-      if (currentPubkey) {
+      if (pubkey) {
         untracked(async () => {
-          await this.createRelay(currentPubkey);
-          await this.loadUserData(currentPubkey);
+          await this.createRelay(pubkey);
+          await this.loadUserData(pubkey);
         });
       }
     });
@@ -61,20 +69,20 @@ export class ProfileStateService {
 
   setCurrentProfilePubkey(pubkey: string): void {
     this.reset();
-    this.currentProfilePubkey.set(pubkey);
+    this.currentProfileKey.set(pubkey);
   }
 
   // Force reload of profile data even if pubkey is the same
   forceReloadProfileData(pubkey: string): void {
     this.reset();
-    this.currentProfilePubkey.set(pubkey);
+    this.currentProfileKey.set(pubkey);
     // Trigger the reload by incrementing the reload trigger
     this.reloadTrigger.update((val) => val + 1);
   }
 
   // Reload current profile data
   reloadCurrentProfile(): void {
-    const currentPubkey = this.currentProfilePubkey();
+    const currentPubkey = this.pubkey();
     if (currentPubkey) {
       console.log('ProfileStateService: Reloading current profile data for', currentPubkey);
       this.forceReloadProfileData(currentPubkey);
@@ -248,7 +256,7 @@ export class ProfileStateService {
     }
 
     this.isLoadingMoreNotes.set(true);
-    const pubkey = this.currentProfilePubkey();
+    const pubkey = this.pubkey();
 
     let foundAnything = false;
 

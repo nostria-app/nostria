@@ -215,7 +215,8 @@ export class ProfileComponent {
             }
 
             // Check if this is the same profile being reloaded (e.g., browser back)
-            const currentProfilePubkey = this.profileState.currentProfilePubkey();
+            debugger;
+            const currentProfilePubkey = this.profileState.pubkey();
             const isSameProfile = currentProfilePubkey === id;
 
             // Always set the profile pubkey first
@@ -266,8 +267,9 @@ export class ProfileComponent {
           // Small delay to ensure component is ready
           setTimeout(() => {
             const currentPubkey = this.pubkey();
-            const profileStatePubkey = this.profileState.currentProfilePubkey();
+            const profileStatePubkey = this.profileState.pubkey();
 
+            debugger;
             // If we have a pubkey and it matches the profile state, but we don't have data, reload
             if (currentPubkey && currentPubkey === profileStatePubkey) {
               const hasFollowingData = this.profileState.followingList().length > 0;

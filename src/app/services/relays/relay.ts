@@ -308,6 +308,13 @@ export abstract class RelayServiceBase {
       urls = this.relaysService.getOptimalRelays(this.relayUrls);
     }
 
+    // Check if the value of "authors" array starts with "npub" or not.
+    const isNpub = filter.authors?.some((author) => author.startsWith('npub'));
+
+    if (isNpub) {
+      debugger;
+    }
+
     this.logger.debug('Getting events with filters (account-relay):', filter, urls);
 
     if (urls.length === 0) {
@@ -364,6 +371,13 @@ export abstract class RelayServiceBase {
 
     if (this.useOptimizedRelays) {
       urls = this.relaysService.getOptimalRelays(this.relayUrls);
+    }
+
+    // Check if the value of "authors" array starts with "npub" or not.
+    const isNpub = filter.authors?.some((author) => author.startsWith('npub'));
+
+    if (isNpub) {
+      debugger;
     }
 
     this.logger.debug('Getting events with filters (account-relay):', filter, urls);
