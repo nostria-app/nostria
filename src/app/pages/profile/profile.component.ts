@@ -236,8 +236,22 @@ export class ProfileComponent {
             }
           }
 
+          // Check if this is the same profile being reloaded (e.g., browser back)
+          const currentProfilePubkey = this.profileState.currentProfilePubkey();
+          const isSameProfile = currentProfilePubkey === id;
+
+          // Always set the profile pubkey first
           this.profileState.setCurrentProfilePubkey(id);
           this.pubkey.set(id);
+
+          // If it's the same profile, always force reload to ensure fresh data after navigation
+          if (isSameProfile) {
+            this.logger.debug('Same profile detected, forcing reload to ensure fresh data');
+            // Use a small delay to ensure the component is fully ready
+            setTimeout(() => {
+              this.profileState.reloadCurrentProfile();
+            }, 50);
+          }
 
           // Always attempt to load user profile and check if own profile, regardless of relay status
           untracked(async () => {
@@ -285,6 +299,28 @@ export class ProfileComponent {
         // Only update if the value changes to avoid unnecessary renders
         if (this.isCompactHeader() !== shouldBeCompact) {
           this.isCompactHeader.set(shouldBeCompact);
+        }
+
+        // Check if we're navigating to a profile route
+        const isProfileRoute = currentUrl.match(/^\/(p|u)\//);
+        if (isProfileRoute) {
+          // Small delay to ensure component is ready
+          setTimeout(() => {
+            const currentPubkey = this.pubkey();
+            const profileStatePubkey = this.profileState.currentProfilePubkey();
+
+            // If we have a pubkey and it matches the profile state, but we don't have data, reload
+            if (currentPubkey && currentPubkey === profileStatePubkey) {
+              const hasFollowingData = this.profileState.followingList().length > 0;
+              const hasNotesData = this.profileState.notes().length > 0;
+
+              // If we don't have data, force a reload
+              if (!hasFollowingData && !hasNotesData) {
+                this.logger.debug('No profile data found after navigation, forcing reload');
+                this.profileState.reloadCurrentProfile();
+              }
+            }
+          }, 100);
         }
       }
     });
