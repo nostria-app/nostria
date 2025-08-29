@@ -6,7 +6,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { Event, kinds } from 'nostr-tools';
+import { Router } from '@angular/router';
+import { Event, kinds, nip19 } from 'nostr-tools';
 import { NostrRecord } from '../../interfaces';
 import { AgoPipe } from '../../pipes/ago.pipe';
 import { ApplicationService } from '../../services/application.service';
@@ -79,6 +80,7 @@ export class EventComponent {
   app = inject(ApplicationService);
   accountState = inject(AccountStateService);
   eventService = inject(EventService);
+  router = inject(Router);
   reactions = signal<ReactionEvents>({ events: [], data: new Map() });
 
   // Loading states
@@ -86,6 +88,62 @@ export class EventComponent {
   isLoadingThread = signal<boolean>(false);
   isLoadingReactions = signal<boolean>(false);
   loadingError = signal<string | null>(null);
+
+  // Check if this event is currently the one being displayed on the event page
+  isCurrentlySelected = computed<boolean>(() => {
+    const currentEvent = this.event() || this.record()?.event;
+    if (!currentEvent) return false;
+
+    const currentUrl = this.router.url;
+
+    // Check if we're on an event page (/e/:id)
+    const eventPageMatch = currentUrl.match(/^\/e\/([^/?]+)/);
+    if (eventPageMatch) {
+      const urlEventParam = eventPageMatch[1];
+
+      // Try to decode if it's a nevent
+      try {
+        if (urlEventParam.startsWith('nevent')) {
+          const decoded = nip19.decode(urlEventParam);
+          if (decoded.type === 'nevent' && decoded.data.id) {
+            return decoded.data.id === currentEvent.id;
+          }
+        }
+        // If it's not a nevent, compare directly (might be hex)
+        return urlEventParam === currentEvent.id;
+      } catch {
+        // If decoding fails, fall back to direct comparison
+        return urlEventParam === currentEvent.id;
+      }
+    }
+
+    // Check if we're on an article page (/a/:id)
+    const articlePageMatch = currentUrl.match(/^\/a\/([^/?]+)/);
+    if (articlePageMatch) {
+      const urlEventParam = articlePageMatch[1];
+
+      // Try to decode if it's a naddr
+      try {
+        if (urlEventParam.startsWith('naddr')) {
+          const decoded = nip19.decode(urlEventParam);
+          if (decoded.type === 'naddr' && decoded.data.identifier) {
+            // For naddr, compare the identifier with event id
+            return (
+              decoded.data.identifier === currentEvent.id ||
+              (decoded.data as { id?: string }).id === currentEvent.id
+            );
+          }
+        }
+        // If it's not a naddr, compare directly
+        return urlEventParam === currentEvent.id;
+      } catch {
+        // If decoding fails, fall back to direct comparison
+        return urlEventParam === currentEvent.id;
+      }
+    }
+
+    return false;
+  });
 
   likes = computed<NostrRecord[]>(() => {
     const event = this.event();
@@ -205,6 +263,11 @@ export class EventComponent {
   }
 
   onCardClick(event: MouseEvent) {
+    // Don't navigate if this event is currently selected/displayed
+    if (this.isCurrentlySelected()) {
+      return;
+    }
+
     // Prevent navigation if clicking on interactive elements
     const target = event.target as HTMLElement;
 

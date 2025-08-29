@@ -22,7 +22,7 @@
 // }
 
 .event-content {
-  cursor: pointer;
+  // cursor: pointer;
 
   .error-message {
     color: var(--mat-sys-error);
@@ -34,7 +34,7 @@
   // border-radius: 1rem;
   transition: box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out;
 
-  &:hover {
+  &:hover:not(.selected) {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     // transform: translateY(-1px);
   }
@@ -43,10 +43,17 @@
     // border-radius: 0;
     border: none;
 
-    &:hover {
+    &:hover:not(.selected) {
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       // transform: translateY(-1px);
     }
+  }
+
+  &.selected {
+    // Disable hover effects for selected events
+    box-shadow: none;
+    transform: none;
+    cursor: default;
   }
 }
 
