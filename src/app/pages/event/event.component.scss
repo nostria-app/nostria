@@ -140,13 +140,8 @@
 
   .parent-event {
     margin-bottom: 1rem;
-    opacity: 0.8;
     border-left: 3px solid var(--mat-sys-primary);
     padding-left: 12px;
-
-    &:hover {
-      opacity: 1;
-    }
   }
 
   .thread-indicator {
