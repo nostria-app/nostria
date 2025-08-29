@@ -23,7 +23,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { ApplicationService } from '../../services/application.service';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { EVENT_STATE_KEY, EventData } from '../../data-resolver';
-import { EventService, ThreadData } from '../../services/event';
+import { EventService, Reaction, ThreadData, ThreadedEvent } from '../../services/event';
 import { Title } from '@angular/platform-browser';
 
 /** Description of the EventPageComponent
@@ -32,18 +32,18 @@ import { Title } from '@angular/platform-browser';
  * Nostr clients should ensure they post replies and reactions to the OP's relays.
  */
 
-export interface Reaction {
-  emoji: string;
-  count: number;
-}
+// export interface Reaction {
+//   emoji: string;
+//   count: number;
+// }
 
-export interface ThreadedEvent {
-  event: Event;
-  replies: ThreadedEvent[];
-  level: number;
-  hasMoreReplies?: boolean;
-  deepestReplyId?: string;
-}
+// export interface ThreadedEvent {
+//   event: Event;
+//   replies: ThreadedEvent[];
+//   level: number;
+//   hasMoreReplies?: boolean;
+//   deepestReplyId?: string;
+// }
 
 @Component({
   selector: 'app-event-page',
@@ -225,9 +225,9 @@ export class EventPageComponent {
     }
   }
 
-  onViewMoreReplies(eventId: string): void {
+  onViewMoreReplies(data: any): void {
     // Navigate to the specific event to view deeper replies
-    const encoded = nip19.neventEncode({ id: eventId });
+    const encoded = nip19.neventEncode({ id: data.deepestReplyId, author: data.event.pubkey });
     this.router.navigate(['/e', encoded]);
   }
 }
