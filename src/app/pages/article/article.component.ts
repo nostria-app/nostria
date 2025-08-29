@@ -28,6 +28,7 @@ import { NostrRecord } from '../../interfaces';
 import { Cache } from '../../services/cache';
 import { UserDataService } from '../../services/user-data.service';
 import { Subscription } from 'rxjs';
+import { RepostButtonComponent } from '../../components/event/repost-button/repost-button.component';
 
 @Component({
   selector: 'app-article',
@@ -43,6 +44,7 @@ import { Subscription } from 'rxjs';
     DateToggleComponent,
     CommonModule,
     RouterModule,
+    RepostButtonComponent,
   ],
   templateUrl: './article.component.html',
   styleUrl: './article.component.scss',
@@ -323,11 +325,11 @@ export class ArticleComponent implements OnDestroy {
         const sanitizedTitle = title ? title.replace(/[<>"']/g, '') : '';
         const sanitizedAlt = text ? text.replace(/[<>"']/g, '') : '';
 
-        return `<img 
-          src="${sanitizedHref}" 
-          alt="${sanitizedAlt}" 
+        return `<img
+          src="${sanitizedHref}"
+          alt="${sanitizedAlt}"
           ${sanitizedTitle ? `title="${sanitizedTitle}"` : ''}
-          class="article-image" 
+          class="article-image"
           loading="lazy"
           decoding="async"
           onclick="window.open('${sanitizedHref}', '_blank')"
@@ -357,10 +359,10 @@ export class ArticleComponent implements OnDestroy {
           const sanitizedTitle = title ? title.replace(/[<>"']/g, '') : '';
 
           return `<a href="${sanitizedHref}" target="_blank" rel="noopener noreferrer" ${sanitizedTitle ? `title="${sanitizedTitle}"` : ''}>
-            <img 
-              src="${sanitizedImageSrc}" 
-              alt="${sanitizedAlt}" 
-              class="article-image linked-image" 
+            <img
+              src="${sanitizedImageSrc}"
+              alt="${sanitizedAlt}"
+              class="article-image linked-image"
               loading="lazy"
               decoding="async"
               style="cursor: pointer;"
@@ -375,11 +377,11 @@ export class ArticleComponent implements OnDestroy {
           const sanitizedTitle = title ? title.replace(/[<>"']/g, '') : '';
           const sanitizedAlt = text || 'Image';
 
-          return `<img 
-            src="${sanitizedHref}" 
-            alt="${sanitizedAlt}" 
+          return `<img
+            src="${sanitizedHref}"
+            alt="${sanitizedAlt}"
             ${sanitizedTitle ? `title="${sanitizedTitle}"` : ''}
-            class="article-image" 
+            class="article-image"
             loading="lazy"
             decoding="async"
             onclick="window.open('${sanitizedHref}', '_blank')"
