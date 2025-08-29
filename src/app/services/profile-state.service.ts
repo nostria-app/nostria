@@ -104,6 +104,10 @@ export class ProfileStateService {
     [...this.articles()].sort((a, b) => b.event.created_at - a.event.created_at),
   );
 
+  sortedMedia = computed(() =>
+    [...this.media()].sort((a, b) => b.event.created_at - a.event.created_at),
+  );
+
   async loadUserData(pubkey: string) {
     // if (!this.relay || this.relay.relayUrls.length === 0) {
     //   return;
@@ -140,6 +144,11 @@ export class ProfileStateService {
           kinds: [kinds.GenericRepost],
           authors: [pubkey],
           limit: 5,
+        },
+        {
+          kinds: [20, 21, 22], // Picture + Video
+          authors: [pubkey],
+          limit: 10,
         },
       ],
       (event: Event) => {
@@ -207,6 +216,19 @@ export class ProfileStateService {
             }
             console.log('Adding new repost:', event.id);
             return [...reposts, record];
+          });
+        } else if (event.kind === 20 || event.kind === 21 || event.kind === 22) {
+          // Handle media events (20 = Picture, 21 = Video, 22 = Unknown/Other media)
+          const record = this.utilities.toRecord(event);
+          // Check for duplicates before adding to media
+          this.media.update((media) => {
+            const exists = media.some((m) => m.event.id === event.id);
+            if (exists) {
+              console.log('Duplicate media event prevented:', event.id);
+              return media;
+            }
+            console.log('Adding new media:', event.id);
+            return [...media, record];
           });
         }
       },
