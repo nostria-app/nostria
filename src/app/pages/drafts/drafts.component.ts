@@ -19,7 +19,7 @@ import { Event, nip19 } from 'nostr-tools';
 import { DataService } from '../../services/data.service';
 import { ApplicationService } from '../../services/application.service';
 import { standardizedTag } from '../../standardized-tags';
-import { AccountRelayServiceEx } from '../../services/relays/account-relay';
+import { AccountRelayService } from '../../services/relays/account-relay';
 
 interface Draft {
   id: string;
@@ -55,7 +55,7 @@ interface Draft {
 export class DraftsComponent {
   private router = inject(Router);
   private nostrService = inject(NostrService);
-  private accountRelay = inject(AccountRelayServiceEx);
+  private accountRelay = inject(AccountRelayService);
   private logger = inject(LoggerService);
   private snackBar = inject(MatSnackBar);
   private data = inject(DataService);

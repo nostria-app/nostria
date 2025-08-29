@@ -18,10 +18,10 @@ import { UtilitiesService } from './utilities.service';
 import { ApplicationService } from './application.service';
 import { Algorithms } from './algorithms';
 import { UserDataFactoryService } from './user-data-factory.service';
-import { UserRelayServiceEx } from './relays/user-relay';
-import { SharedRelayServiceEx } from './relays/shared-relay';
+import { UserRelayService } from './relays/user-relay';
+import { SharedRelayService } from './relays/shared-relay';
 import { UserRelayExFactoryService } from './user-relay-factory.service';
-import { AccountRelayServiceEx } from './relays/account-relay';
+import { AccountRelayService } from './relays/account-relay';
 
 export interface FeedItem {
   column: ColumnConfig;
@@ -193,14 +193,14 @@ const DEFAULT_FEEDS: FeedConfig[] = [
 export class FeedService {
   private readonly localStorageService = inject(LocalStorageService);
   private readonly logger = inject(LoggerService);
-  private readonly accountRelay = inject(AccountRelayServiceEx);
+  private readonly accountRelay = inject(AccountRelayService);
   private readonly appState = inject(ApplicationStateService);
   private readonly accountState = inject(AccountStateService);
   private readonly dataService = inject(DataService);
   private readonly utilities = inject(UtilitiesService);
   private readonly app = inject(ApplicationService);
-  private readonly userRelayEx = inject(UserRelayServiceEx);
-  private readonly sharedRelayEx = inject(SharedRelayServiceEx);
+  private readonly userRelayEx = inject(UserRelayService);
+  private readonly sharedRelayEx = inject(SharedRelayService);
   private readonly userDataFactory = inject(UserDataFactoryService);
   private readonly userRelayFactory = inject(UserRelayExFactoryService);
 
@@ -367,7 +367,7 @@ export class FeedService {
       await this.loadFollowingFeed(item);
     } else {
       // Choose relay service based on column.relayConfig
-      let relayService: AccountRelayServiceEx | UserRelayServiceEx;
+      let relayService: AccountRelayService | UserRelayService;
 
       if (
         column.relayConfig === 'custom' &&

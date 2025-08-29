@@ -16,7 +16,7 @@ import {
   RelayPublishingNotification,
 } from '../../services/storage.service';
 import { RouterModule } from '@angular/router';
-import { AccountRelayServiceEx } from '../../services/relays/account-relay';
+import { AccountRelayService } from '../../services/relays/account-relay';
 
 @Component({
   selector: 'app-notifications',
@@ -37,7 +37,7 @@ import { AccountRelayServiceEx } from '../../services/relays/account-relay';
 })
 export class NotificationsComponent implements OnInit {
   private notificationService = inject(NotificationService);
-  private accountRelay = inject(AccountRelayServiceEx);
+  private accountRelay = inject(AccountRelayService);
   private nostrService = inject(NostrService);
 
   notifications = this.notificationService.notifications;

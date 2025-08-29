@@ -6,7 +6,7 @@ import { AccountStateService } from './account-state.service';
 import { MediaService } from './media.service';
 import { LoggerService } from './logger.service';
 import { Event } from 'nostr-tools';
-import { AccountRelayServiceEx } from './relays/account-relay';
+import { AccountRelayService } from './relays/account-relay';
 
 /**
  * Interface for profile data
@@ -57,7 +57,7 @@ export interface ProfileCreateResult {
 export class Profile {
   private nostr = inject(NostrService);
   // private relay = inject(RelayService);
-  private accountRelay = inject(AccountRelayServiceEx);
+  private accountRelay = inject(AccountRelayService);
   private storage = inject(StorageService);
   private data = inject(DataService);
   private accountState = inject(AccountStateService);

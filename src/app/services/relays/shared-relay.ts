@@ -1,16 +1,16 @@
 import { Injectable, inject } from '@angular/core';
 import { SimplePool, Event } from 'nostr-tools';
 import { LoggerService } from '../logger.service';
-import { DiscoveryRelayServiceEx } from './discovery-relay';
+import { DiscoveryRelayService } from './discovery-relay';
 import { RelaysService } from './relays';
 
 @Injectable({
   providedIn: 'root',
 })
-export class SharedRelayServiceEx {
+export class SharedRelayService {
   #pool = new SimplePool();
   private logger = inject(LoggerService);
-  private discoveryRelay = inject(DiscoveryRelayServiceEx);
+  private discoveryRelay = inject(DiscoveryRelayService);
   private readonly relaysService = inject(RelaysService);
 
   // Semaphore for controlling concurrent requests

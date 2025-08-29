@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { LoggerService } from './logger.service';
-import { Relay } from './relays/relay-base';
+import { Relay } from './relays/relay';
 import { openDB, IDBPDatabase, DBSchema, deleteDB } from 'idb';
 import { Event } from 'nostr-tools';
 import { UtilitiesService } from './utilities.service';
@@ -248,7 +248,7 @@ export class StorageService {
   private fallbackStorage = new Map<string, any>();
   useFallbackMode = signal(false);
 
-  constructor() {}
+  constructor() { }
 
   async init(): Promise<void> {
     this.logger.info('StorageService.init() called');

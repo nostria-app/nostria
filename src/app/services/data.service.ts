@@ -6,10 +6,10 @@ import { Event, kinds } from 'nostr-tools';
 import { UtilitiesService } from './utilities.service';
 import { Cache, CacheOptions } from './cache';
 import { RelaysService } from './relays/relays';
-import { UserRelayServiceEx } from './relays/user-relay';
-import { DiscoveryRelayServiceEx } from './relays/discovery-relay';
-import { SharedRelayServiceEx } from './relays/shared-relay';
-import { AccountRelayServiceEx } from './relays/account-relay';
+import { UserRelayService } from './relays/user-relay';
+import { DiscoveryRelayService } from './relays/discovery-relay';
+import { SharedRelayService } from './relays/shared-relay';
+import { AccountRelayService } from './relays/account-relay';
 import { UserRelayExFactoryService } from './user-relay-factory.service';
 
 export interface DataOptions {
@@ -22,11 +22,11 @@ export interface DataOptions {
 })
 export class DataService {
   private readonly storage = inject(StorageService);
-  private readonly accountRelay = inject(AccountRelayServiceEx);
-  private readonly userRelayEx = inject(UserRelayServiceEx);
-  private readonly discoveryRelayEx = inject(DiscoveryRelayServiceEx);
-  private readonly accountRelayEx = inject(AccountRelayServiceEx);
-  private readonly sharedRelayEx = inject(SharedRelayServiceEx);
+  private readonly accountRelay = inject(AccountRelayService);
+  private readonly userRelayEx = inject(UserRelayService);
+  private readonly discoveryRelayEx = inject(DiscoveryRelayService);
+  private readonly accountRelayEx = inject(AccountRelayService);
+  private readonly sharedRelayEx = inject(SharedRelayService);
   private readonly logger = inject(LoggerService);
   private readonly utilities = inject(UtilitiesService);
   private readonly cache = inject(Cache);

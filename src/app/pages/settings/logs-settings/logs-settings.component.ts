@@ -17,7 +17,7 @@ import { RelaysService, RelayStats } from '../../../services/relays/relays';
 import { ApplicationService } from '../../../services/application.service';
 import { LoggerService } from '../../../services/logger.service';
 import { UtilitiesService } from '../../../services/utilities.service';
-import { AccountRelayServiceEx } from '../../../services/relays/account-relay';
+import { AccountRelayService } from '../../../services/relays/account-relay';
 
 export interface RelayClusterOutput {
   relay: string;
@@ -58,7 +58,7 @@ export class LogsSettingsComponent {
   accountState = inject(AccountStateService);
   nostr = inject(NostrService);
   storage = inject(StorageService);
-  accountRelay = inject(AccountRelayServiceEx);
+  accountRelay = inject(AccountRelayService);
   relaysService = inject(RelaysService);
   app = inject(ApplicationService);
   logger = inject(LoggerService);

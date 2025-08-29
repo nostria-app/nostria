@@ -23,8 +23,8 @@ import { LayoutService } from '../../../services/layout.service';
 import { LoggerService } from '../../../services/logger.service';
 import { ApplicationService } from '../../../services/application.service';
 import { StorageService } from '../../../services/storage.service';
-import { AccountRelayServiceEx } from '../../../services/relays/account-relay';
-import { DiscoveryRelayServiceEx } from '../../../services/relays/discovery-relay';
+import { AccountRelayService } from '../../../services/relays/account-relay';
+import { DiscoveryRelayService } from '../../../services/relays/discovery-relay';
 import { kinds } from 'nostr-tools';
 
 @Component({
@@ -60,8 +60,8 @@ import { kinds } from 'nostr-tools';
 })
 export class DetailsComponent implements OnInit, AfterViewInit {
   private router = inject(Router);
-  private accountRelay = inject(AccountRelayServiceEx);
-  private discoveryRelay = inject(DiscoveryRelayServiceEx);
+  private accountRelay = inject(AccountRelayService);
+  private discoveryRelay = inject(DiscoveryRelayService);
   private route = inject(ActivatedRoute);
   private location = inject(Location);
   layout = inject(LayoutService);

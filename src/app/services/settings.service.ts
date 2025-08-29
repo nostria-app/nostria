@@ -3,7 +3,7 @@ import { NostrService } from './nostr.service';
 import { kinds } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
-import { AccountRelayServiceEx } from './relays/account-relay';
+import { AccountRelayService } from './relays/account-relay';
 
 export interface UserSettings {
   socialSharingPreview: boolean;
@@ -22,7 +22,7 @@ const DEFAULT_SETTINGS: UserSettings = {
 export class SettingsService {
   private nostrService = inject(NostrService);
   private accountState = inject(AccountStateService);
-  private accountRelay = inject(AccountRelayServiceEx);
+  private accountRelay = inject(AccountRelayService);
   private logger = inject(LoggerService);
 
   settings = signal<UserSettings>({ ...DEFAULT_SETTINGS });

@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { RelayServiceBase } from './relay-base';
+import { RelayServiceBase } from './relay';
 import { NostriaService } from '../../interfaces';
 import { UtilitiesService } from '../utilities.service';
 import { LocalStorageService } from '../local-storage.service';
@@ -9,7 +9,7 @@ import { kinds, SimplePool } from 'nostr-tools';
 @Injectable({
   providedIn: 'root',
 })
-export class DiscoveryRelayServiceEx extends RelayServiceBase implements NostriaService {
+export class DiscoveryRelayService extends RelayServiceBase implements NostriaService {
   private readonly utilities = inject(UtilitiesService);
   private localStorage = inject(LocalStorageService);
   private appState = inject(ApplicationStateService);

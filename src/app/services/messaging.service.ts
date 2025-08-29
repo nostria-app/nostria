@@ -15,7 +15,7 @@ import { UtilitiesService } from './utilities.service';
 import { EncryptionService } from './encryption.service';
 import { NostriaService } from '../interfaces';
 import { bytesToHex } from 'nostr-tools/utils';
-import { AccountRelayServiceEx } from './relays/account-relay';
+import { AccountRelayService } from './relays/account-relay';
 
 // Define interfaces for our DM data structures
 interface Chat {
@@ -57,7 +57,7 @@ interface DecryptionQueueItem {
 })
 export class MessagingService implements NostriaService {
   private nostr = inject(NostrService);
-  private relay = inject(AccountRelayServiceEx);
+  private relay = inject(AccountRelayService);
   private logger = inject(LoggerService);
   private readonly accountState = inject(AccountStateService);
   readonly utilities = inject(UtilitiesService);

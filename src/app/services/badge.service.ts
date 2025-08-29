@@ -7,7 +7,7 @@ import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
 import { NostriaService } from '../interfaces';
 import { DataService } from './data.service';
-import { AccountRelayServiceEx } from './relays/account-relay';
+import { AccountRelayService } from './relays/account-relay';
 import { UserRelayExFactoryService } from './user-relay-factory.service';
 
 export interface ParsedBadge {
@@ -37,7 +37,7 @@ interface ParsedReward {
 export class BadgeService implements NostriaService {
   private readonly storage = inject(StorageService);
   private readonly nostr = inject(NostrService);
-  private readonly accountRelay = inject(AccountRelayServiceEx);
+  private readonly accountRelay = inject(AccountRelayService);
   private readonly utilities = inject(UtilitiesService);
   userRelayFactory = inject(UserRelayExFactoryService);
   private readonly logger = inject(LoggerService);
@@ -94,7 +94,7 @@ export class BadgeService implements NostriaService {
     }
   }
 
-  async load() {}
+  async load() { }
 
   async loadAcceptedBadges(pubkey: string): Promise<void> {
     this.isLoadingAccepted.set(true);

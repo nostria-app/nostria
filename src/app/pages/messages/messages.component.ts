@@ -59,9 +59,9 @@ import { DataService } from '../../services/data.service';
 import { MessagingService } from '../../services/messaging.service';
 import { LayoutService } from '../../services/layout.service';
 import { NamePipe } from '../../pipes/name.pipe';
-import { AccountRelayServiceEx } from '../../services/relays/account-relay';
+import { AccountRelayService } from '../../services/relays/account-relay';
 import { UserRelayExFactoryService } from '../../services/user-relay-factory.service';
-import { UserRelayServiceEx } from '../../services/relays/user-relay';
+import { UserRelayService } from '../../services/relays/user-relay';
 
 // Define interfaces for our DM data structures
 interface Chat {
@@ -155,7 +155,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   isDecryptingMessages = signal<boolean>(false);
   decryptionQueueLength = signal<number>(0);
   selectedTabIndex = signal<number>(0); // 0 = Following, 1 = Others
-  private accountRelay = inject(AccountRelayServiceEx);
+  private accountRelay = inject(AccountRelayService);
 
   // Data signals
   // chats = signal<Chat[]>([]);
@@ -594,10 +594,10 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         msgs.map((msg) =>
           msg.id === pendingId
             ? {
-                ...finalMessage,
-                pending: false,
-                received: true,
-              }
+              ...finalMessage,
+              pending: false,
+              received: true,
+            }
             : msg,
         ),
       );
@@ -772,7 +772,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     messageText: string,
     receiverPubkey: string,
     myPubkey: string,
-    userRelay: UserRelayServiceEx,
+    userRelay: UserRelayService,
   ): Promise<DirectMessage> {
     try {
       // Encrypt the message using NIP-04
@@ -816,7 +816,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     messageText: string,
     receiverPubkey: string,
     myPubkey: string,
-    userRelay: UserRelayServiceEx,
+    userRelay: UserRelayService,
   ): Promise<DirectMessage> {
     try {
       // Step 1: Create the message (unsigned event) - kind 14
@@ -936,7 +936,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   /**
    * Publish an event to multiple relays
    */
-  private async publishToRelays(event: NostrEvent, userRelay: UserRelayServiceEx): Promise<void> {
+  private async publishToRelays(event: NostrEvent, userRelay: UserRelayService): Promise<void> {
     const promisesUser = userRelay.publish(event);
     const promisesAccount = this.accountRelay.publish(event);
 
@@ -946,7 +946,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private async publishToUserRelays(
     event: NostrEvent,
-    userRelay: UserRelayServiceEx,
+    userRelay: UserRelayService,
   ): Promise<void> {
     const promisesUser = userRelay.publish(event);
 

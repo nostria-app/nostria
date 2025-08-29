@@ -22,9 +22,9 @@ import { MEDIA_SERVERS_EVENT_KIND, NostriaService, NostrRecord } from '../interf
 import { DataService } from './data.service';
 import { UtilitiesService } from './utilities.service';
 import { PublishQueueService } from './publish-queue';
-import { SharedRelayServiceEx } from './relays/shared-relay';
-import { AccountRelayServiceEx } from './relays/account-relay';
-import { DiscoveryRelayServiceEx } from './relays/discovery-relay';
+import { SharedRelayService } from './relays/shared-relay';
+import { AccountRelayService } from './relays/account-relay';
+import { DiscoveryRelayService } from './relays/discovery-relay';
 import { LocalSettingsService } from './local-settings.service';
 
 export interface NostrUser {
@@ -54,9 +54,9 @@ export interface UserMetadataWithPubkey extends NostrEventData<UserMetadata> {
 export class NostrService implements NostriaService {
   private readonly logger = inject(LoggerService);
 
-  private readonly discoveryRelay = inject(DiscoveryRelayServiceEx);
-  private readonly accountRelay = inject(AccountRelayServiceEx);
-  private readonly sharedRelay = inject(SharedRelayServiceEx);
+  private readonly discoveryRelay = inject(DiscoveryRelayService);
+  private readonly accountRelay = inject(AccountRelayService);
+  private readonly sharedRelay = inject(SharedRelayService);
 
   private readonly storage = inject(StorageService);
   private readonly appState = inject(ApplicationStateService);

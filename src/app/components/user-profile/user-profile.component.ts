@@ -29,7 +29,7 @@ import { UtilitiesService } from '../../services/utilities.service';
 import { DataService } from '../../services/data.service';
 import { RelaysService } from '../../services/relays/relays';
 import { SettingsService } from '../../services/settings.service';
-import { SharedRelayServiceEx } from '../../services/relays/shared-relay';
+import { SharedRelayService } from '../../services/relays/shared-relay';
 
 @Component({
   selector: 'app-user-profile',
@@ -60,7 +60,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
   readonly utilities = inject(UtilitiesService);
   settingsService = inject(SettingsService);
   private relaysService = inject(RelaysService);
-  private readonly sharedRelay = inject(SharedRelayServiceEx);
+  private readonly sharedRelay = inject(SharedRelayService);
   layout = inject(LayoutService);
   publicKey = '';
   pubkey = input<string>('');

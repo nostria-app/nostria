@@ -1,10 +1,10 @@
 import { Injectable, inject, signal, PLATFORM_ID, OnDestroy } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { LoggerService } from './logger.service';
-import { AccountRelayServiceEx } from './relays/account-relay';
-import { DiscoveryRelayServiceEx } from './relays/discovery-relay';
-import { SharedRelayServiceEx } from './relays/shared-relay';
-import { UserRelayServiceEx } from './relays/user-relay';
+import { AccountRelayService } from './relays/account-relay';
+import { DiscoveryRelayService } from './relays/discovery-relay';
+import { SharedRelayService } from './relays/shared-relay';
+import { UserRelayService } from './relays/user-relay';
 
 export interface SleepModeState {
   isActive: boolean;
@@ -19,10 +19,10 @@ export interface SleepModeState {
 export class SleepModeService implements OnDestroy {
   private readonly logger = inject(LoggerService);
   private readonly platformId = inject(PLATFORM_ID);
-  private readonly accountRelay = inject(AccountRelayServiceEx);
-  private readonly discoveryRelay = inject(DiscoveryRelayServiceEx);
-  private readonly sharedRelay = inject(SharedRelayServiceEx);
-  private readonly userRelay = inject(UserRelayServiceEx);
+  private readonly accountRelay = inject(AccountRelayService);
+  private readonly discoveryRelay = inject(DiscoveryRelayService);
+  private readonly sharedRelay = inject(SharedRelayService);
+  private readonly userRelay = inject(UserRelayService);
 
   // Sleep mode configuration
   private readonly SLEEP_DETECTION_ENABLED = false; // Hard-coded flag to enable/disable sleep detection

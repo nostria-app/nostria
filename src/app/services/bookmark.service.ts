@@ -6,7 +6,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { LayoutService } from './layout.service';
 import { Event, kinds } from 'nostr-tools';
 import { AccountStateService } from './account-state.service';
-import { AccountRelayServiceEx } from './relays/account-relay';
+import { AccountRelayService } from './relays/account-relay';
 
 // Define bookmark types
 export type BookmarkType = 'e' | 'a' | 'r' | 't';
@@ -21,7 +21,7 @@ export interface ArticleBookmark {
   providedIn: 'root',
 })
 export class BookmarkService {
-  accountRelay = inject(AccountRelayServiceEx);
+  accountRelay = inject(AccountRelayService);
   nostr = inject(NostrService);
   app = inject(ApplicationService);
   appState = inject(ApplicationStateService);

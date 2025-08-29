@@ -12,8 +12,8 @@ import { MatListModule } from '@angular/material/list';
 import { FormsModule } from '@angular/forms';
 import { Event } from 'nostr-tools';
 import { NostrService } from '../../services/nostr.service';
-import { AccountRelayServiceEx } from '../../services/relays/account-relay';
-import { DiscoveryRelayServiceEx } from '../../services/relays/discovery-relay';
+import { AccountRelayService } from '../../services/relays/account-relay';
+import { DiscoveryRelayService } from '../../services/relays/discovery-relay';
 import { UtilitiesService } from '../../services/utilities.service';
 
 export interface PublishDialogData {
@@ -54,8 +54,8 @@ interface RelayPublishResult {
 export class PublishDialogComponent {
   private dialogRef = inject(MatDialogRef<PublishDialogComponent>);
   data: PublishDialogData = inject(MAT_DIALOG_DATA);
-  accountRelay = inject(AccountRelayServiceEx);
-  private discoveryRelay = inject(DiscoveryRelayServiceEx);
+  accountRelay = inject(AccountRelayService);
+  private discoveryRelay = inject(DiscoveryRelayService);
   private nostrService = inject(NostrService);
   private utilities = inject(UtilitiesService);
   // relayService = inject(RelayService);
