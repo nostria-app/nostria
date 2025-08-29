@@ -26,8 +26,7 @@ export class ProfileHomeComponent {
 
   // Updated navigation links for the profile tabs
   navLinks: NavLink[] = [
-    { path: 'notes', label: 'Notes', icon: 'chat' },
-    { path: 'replies', label: 'Replies', icon: 'reply_all' },
+    { path: 'notes', label: 'Timeline', icon: 'timeline' },
     { path: 'reads', label: 'Articles', icon: 'article' },
     { path: 'media', label: 'Media', icon: 'image' },
     // { path: 'about', label: 'About', icon: 'info' },

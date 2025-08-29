@@ -104,6 +104,13 @@ export class ProfileStateService {
     [...this.notes(), ...this.reposts()].sort((a, b) => b.event.created_at - a.event.created_at),
   );
 
+  // Timeline combines notes, reposts, and replies
+  sortedTimeline = computed(() =>
+    [...this.notes(), ...this.reposts(), ...this.replies()].sort(
+      (a, b) => b.event.created_at - a.event.created_at,
+    ),
+  );
+
   sortedReplies = computed(() =>
     [...this.replies()].sort((a, b) => b.event.created_at - a.event.created_at),
   );
@@ -270,6 +277,7 @@ export class ProfileStateService {
 
       return new Promise<NostrRecord[]>((resolve) => {
         const newNotes: NostrRecord[] = [];
+        const newReplies: NostrRecord[] = [];
 
         this.relay!.subscribeEose(
           [
@@ -277,38 +285,49 @@ export class ProfileStateService {
               kinds: [kinds.ShortTextNote],
               authors: [pubkey],
               until: oldestTimestamp,
-              limit: 5,
+              limit: 10, // Increased limit to get more timeline content
             },
             {
               kinds: [kinds.Repost],
               authors: [pubkey],
+              until: oldestTimestamp,
               limit: 5,
             },
             {
               kinds: [kinds.GenericRepost],
               authors: [pubkey],
+              until: oldestTimestamp,
               limit: 5,
             },
           ],
           (event) => {
             // Handle different event types
             if (event.kind === kinds.ShortTextNote) {
+              // Create a NostrRecord
+              const record: NostrRecord = {
+                event: event,
+                data: event.content,
+              };
+
               // Check if this is a root post (not a reply)
-              const isRootPost = !event.tags.some((tag) => tag[0] === 'e');
+              const isRootPost = this.utilities.isRootPost(event);
 
               if (isRootPost) {
-                // Create a NostrRecord
-                const record: NostrRecord = {
-                  event: event,
-                  data: event.content,
-                };
-
                 // Check if we already have this note to avoid duplicates
                 const existingNotes = this.notes();
                 const exists = existingNotes.some((n) => n.event.id === event.id);
 
                 if (!exists) {
                   newNotes.push(record);
+                }
+              } else {
+                // This is a reply
+                // Check if we already have this reply to avoid duplicates
+                const existingReplies = this.replies();
+                const exists = existingReplies.some((r) => r.event.id === event.id);
+
+                if (!exists) {
+                  newReplies.push(record);
                 }
               }
             } else if (event.kind === kinds.Repost || event.kind === kinds.GenericRepost) {
@@ -330,13 +349,15 @@ export class ProfileStateService {
           },
           () => {
             // EOSE callback - subscription finished
-            this.logger.debug(`Loaded ${newNotes.length} more notes`);
+            this.logger.debug(
+              `Loaded ${newNotes.length} more notes and ${newReplies.length} more replies`,
+            );
 
-            // Check if we actually got new notes, not just any events
-            if (newNotes.length === 0) {
-              this.hasMoreNotes.set(false);
-            } else {
-              // Add new notes to the existing ones with final deduplication check
+            // Track if we added any new content
+            let addedAnyContent = false;
+
+            // Add new notes to the existing ones with final deduplication check
+            if (newNotes.length > 0) {
               this.notes.update((existing) => {
                 const filtered = newNotes.filter(
                   (newNote) =>
@@ -346,19 +367,42 @@ export class ProfileStateService {
                   `Adding ${filtered.length} new notes (${newNotes.length - filtered.length} duplicates filtered)`,
                 );
 
-                // Only keep hasMoreNotes true if we actually added new notes
-                if (filtered.length === 0) {
-                  this.hasMoreNotes.set(false);
-                } else {
-                  this.hasMoreNotes.set(true);
+                if (filtered.length > 0) {
+                  addedAnyContent = true;
                 }
 
                 return [...existing, ...filtered];
               });
             }
 
+            // Add new replies to the existing ones with final deduplication check
+            if (newReplies.length > 0) {
+              this.replies.update((existing) => {
+                const filtered = newReplies.filter(
+                  (newReply) =>
+                    !existing.some((existingReply) => existingReply.event.id === newReply.event.id),
+                );
+                console.log(
+                  `Adding ${filtered.length} new replies (${newReplies.length - filtered.length} duplicates filtered)`,
+                );
+
+                if (filtered.length > 0) {
+                  addedAnyContent = true;
+                }
+
+                return [...existing, ...filtered];
+              });
+            }
+
+            // Only keep hasMoreNotes true if we actually added new content
+            if (!addedAnyContent) {
+              this.hasMoreNotes.set(false);
+            } else {
+              this.hasMoreNotes.set(true);
+            }
+
             this.isLoadingMoreNotes.set(false);
-            resolve(newNotes);
+            resolve([...newNotes, ...newReplies]);
           },
         );
       });

@@ -54,9 +54,9 @@ export class ProfileNotesComponent {
         this.layout.scrolledToBottom() &&
         !this.profileState.isLoadingMoreNotes() &&
         this.profileState.hasMoreNotes() &&
-        this.profileState.notes().length > 0
+        this.profileState.sortedTimeline().length > 0
       ) {
-        this.logger.debug('Scrolled to bottom, loading more notes...');
+        this.logger.debug('Scrolled to bottom, loading more timeline content...');
         this.loadMoreNotes();
       }
     });
@@ -71,30 +71,30 @@ export class ProfileNotesComponent {
       return;
     }
 
-    this.logger.debug('Loading more notes for profile');
+    this.logger.debug('Loading more timeline content for profile');
 
     try {
-      const currentNotes = this.profileState.notes();
+      const currentTimeline = this.profileState.sortedTimeline();
       const oldestTimestamp =
-        currentNotes.length > 0
-          ? Math.min(...currentNotes.map((n) => n.event.created_at)) - 1
+        currentTimeline.length > 0
+          ? Math.min(...currentTimeline.map((n) => n.event.created_at)) - 1
           : undefined;
 
       this.logger.debug(
-        `Current notes count: ${currentNotes.length}, oldest timestamp: ${oldestTimestamp}`,
+        `Current timeline count: ${currentTimeline.length}, oldest timestamp: ${oldestTimestamp}`,
       );
 
       // Load older notes from the profile state service
       const olderNotes = await this.profileState.loadMoreNotes(oldestTimestamp);
 
-      this.logger.debug(`Loaded ${olderNotes.length} older notes`);
+      this.logger.debug(`Loaded ${olderNotes.length} older timeline items`);
 
       if (olderNotes.length === 0) {
-        this.logger.debug('No more notes available');
+        this.logger.debug('No more timeline content available');
       }
     } catch (err) {
-      this.logger.error('Failed to load more notes', err);
-      this.error.set('Failed to load older notes. Please try again.');
+      this.logger.error('Failed to load more timeline content', err);
+      this.error.set('Failed to load older timeline content. Please try again.');
     }
   }
 }
