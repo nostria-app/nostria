@@ -1,49 +1,34 @@
-import { DatePipe } from '@angular/common';
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
 import { MatDialog } from '@angular/material/dialog';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { Event, nip19 } from 'nostr-tools';
-import { EventPointer } from 'nostr-tools/nip19';
+import { type Event, nip19 } from 'nostr-tools';
+import type { EventPointer } from 'nostr-tools/nip19';
 import { firstValueFrom } from 'rxjs';
-import { NostrRecord } from '../../../interfaces';
-import { AgoPipe } from '../../../pipes/ago.pipe';
+import type { NostrRecord } from '../../../interfaces';
+
 import { AccountStateService } from '../../../services/account-state.service';
 import { DataService } from '../../../services/data.service';
-import { LayoutService } from '../../../services/layout.service';
 import { NostrService } from '../../../services/nostr.service';
 import {
   ConfirmDialogComponent,
-  ConfirmDialogData,
+  type ConfirmDialogData,
 } from '../../confirm-dialog/confirm-dialog.component';
-import { UserProfileComponent } from '../../user-profile/user-profile.component';
-import { EventMenuComponent } from '../event-menu/event-menu.component';
+import { LayoutService } from '../../../services/layout.service';
 
 @Component({
-  selector: 'app-event-header',
+  selector: 'app-event-menu',
   standalone: true,
-  imports: [
-    MatCardModule,
-    MatIconModule,
-    MatButtonModule,
-    MatTooltipModule,
-    MatDividerModule,
-    MatMenuModule,
-    UserProfileComponent,
-    EventMenuComponent,
-    AgoPipe,
-    DatePipe,
-  ],
-  templateUrl: './header.component.html',
-  styleUrls: ['./header.component.scss'],
+  imports: [MatIconModule, MatButtonModule, MatTooltipModule, MatDividerModule, MatMenuModule],
+  templateUrl: './event-menu.component.html',
+  styleUrls: ['./event-menu.component.scss'],
 })
-export class EventHeaderComponent {
-  readonly layout = inject(LayoutService);
+export class EventMenuComponent {
+  layout = inject(LayoutService);
   accountState = inject(AccountStateService);
   dialog = inject(MatDialog);
   data = inject(DataService);
@@ -63,19 +48,6 @@ export class EventHeaderComponent {
     return event.pubkey === this.accountState.pubkey();
   });
 
-  nevent = computed<string>(() => {
-    const event = this.event();
-    if (!event) {
-      return '';
-    }
-
-    const eventPointer: EventPointer = {
-      id: event.id,
-      author: event.pubkey,
-    };
-    return nip19.neventEncode(eventPointer);
-  });
-
   constructor() {
     effect(() => {
       const event = this.event();
@@ -87,22 +59,6 @@ export class EventHeaderComponent {
       const record = this.data.toRecord(event);
       this.record.set(record);
     });
-  }
-
-  openEventWithNevent() {
-    const neventId = this.nevent();
-    if (!neventId) {
-      return;
-    }
-
-    const event = this.event();
-    this.layout.openEvent(neventId, event);
-  }
-
-  openEventAndStopPropagation(event: MouseEvent) {
-    event.stopPropagation();
-    const currentEvent = this.event();
-    this.layout.openEvent(currentEvent.id, currentEvent);
   }
 
   async deleteEvent() {
