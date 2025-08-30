@@ -60,7 +60,7 @@ export class SettingsComponent {
     },
     { id: 'backup', title: 'Backup', icon: 'archive', authenticated: true, premium: true },
     { id: 'premium', title: 'Premium', icon: 'diamond', authenticated: true },
-    { id: 'logs', title: 'Logs', icon: 'article', authenticated: true },
+    { id: 'logs', title: 'Logs', icon: 'article', authenticated: false },
     { id: 'about', title: 'About', icon: 'info' },
   ];
 
