@@ -48,29 +48,26 @@
       <div class="basic-config">
         <h3>Feed Information</h3>
 
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Feed Name</mat-label>
-          <input matInput formControlName="label" placeholder="My Custom Feed" />
-          <mat-icon matSuffix>label</mat-icon>
-          @if (feedForm.get('label')?.hasError('required')) {
-          <mat-error>Feed name is required</mat-error>
-          }
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Icon</mat-label>
-          <mat-select formControlName="icon">
-            @for (icon of data.icons; track icon) {
-            <mat-option [value]="icon">
-              <div class="icon-option">
-                <mat-icon>{{ icon }}</mat-icon>
-                <span>{{ icon }}</span>
-              </div>
-            </mat-option>
+        <div class="name-icon-row">
+          <mat-form-field appearance="outline" class="name-field">
+            <mat-label>Feed Name</mat-label>
+            <input matInput formControlName="label" placeholder="My Custom Feed" />
+            @if (feedForm.get('label')?.hasError('required')) {
+            <mat-error>Feed name is required</mat-error>
             }
-          </mat-select>
-          <mat-icon matSuffix>{{ feedForm.get('icon')?.value || 'dynamic_feed' }}</mat-icon>
-        </mat-form-field>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="icon-field">
+            <mat-select formControlName="icon">
+              @for (icon of data.icons; track icon) {
+              <mat-option [value]="icon">
+                <mat-icon>{{ icon }}</mat-icon>
+              </mat-option>
+              }
+            </mat-select>
+            <mat-icon matSuffix>{{ feedForm.get('icon')?.value || 'widgets' }}</mat-icon>
+          </mat-form-field>
+        </div>
 
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>URL Path (Optional)</mat-label>
