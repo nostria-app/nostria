@@ -968,8 +968,8 @@ export class LayoutService implements OnDestroy {
     if (navigator.share) {
       navigator
         .share({
-          title: `Nostra Event`,
-          text: `Check out this event on Nostr`,
+          title: `Nostria Event`,
+          text: `Check out this event on Nostria`,
           url: window.location.href,
         })
         .then(() => {
