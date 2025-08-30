@@ -110,41 +110,6 @@ mat-sidenav-content {
   cursor: pointer;
 }
 
-.beta-indicator {
-  display: inline-block;
-  font-size: 0.5em;
-  background-color: var(--mat-sys-primary);
-  color: white;
-  padding: 2px 4px;
-  border-radius: 4px;
-  margin-left: 5px;
-  transform: translateY(-8px);
-  box-shadow: var(--mat-sys-level1);
-  letter-spacing: 0.5px;
-  text-decoration: none;
-  cursor: pointer;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background-color: var(--mat-sys-tertiary);
-    color: black;
-    box-shadow: var(--mat-sys-level2);
-  }
-}
-
-.dark .beta-indicator {
-  background-color: var(--mat-sys-tertiary);
-  color: black;
-}
-
-@media screen and (max-width: 599px) {
-  .beta-indicator {
-    font-size: 0.45em;
-    padding: 1px 3px;
-    transform: translateY(-6px);
-  }
-}
-
 .content-wrapper {
   flex: 1;
   overflow-y: auto;
