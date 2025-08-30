@@ -30,6 +30,7 @@
             {{ item.event.created_at | ago }}
           </span>
         </span>
+        <app-event-menu [event]="item.event" class="note-footer-right"></app-event-menu>
       </mat-card-header>
       <mat-card-content>
         <mat-card appearance="outlined">

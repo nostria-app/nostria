@@ -1,0 +1,50 @@
+<button
+  mat-icon-button
+  [matMenuTriggerFor]="menu"
+  aria-label="More options"
+  (click)="$event.stopPropagation()"
+>
+  <mat-icon>more_vert</mat-icon>
+</button>
+<mat-menu #menu="matMenu">
+  <button mat-menu-item (click)="layout.copyToClipboard(layout.getCurrentUrl(), 'text')">
+    <mat-icon>link</mat-icon>
+    Copy Note Link
+  </button>
+  <button mat-menu-item (click)="layout.copyToClipboard(event().id, 'nevent', event().pubkey)">
+    <mat-icon>content_copy</mat-icon>
+    Copy Note ID (nevent)
+  </button>
+  <button mat-menu-item (click)="layout.copyToClipboard(event().id, 'hex')">
+    <mat-icon>content_copy</mat-icon>
+    Copy Note ID (hex)
+  </button>
+  <button mat-menu-item (click)="layout.shareEvent(event())">
+    <mat-icon>share</mat-icon>
+    Share Event
+  </button>
+  <mat-divider></mat-divider>
+  <button mat-menu-item (click)="layout.copyToClipboard(record()?.data, 'text')">
+    <mat-icon>content_copy</mat-icon>
+    Copy Note Text
+  </button>
+  <button mat-menu-item (click)="layout.copyToClipboard(event(), 'json')">
+    <mat-icon>content_copy</mat-icon>
+    Copy Note Data
+  </button>
+  <mat-divider></mat-divider>
+  @if (isOurEvent()) {
+    <button mat-menu-item (click)="deleteEvent()">
+      <mat-icon>delete</mat-icon>
+      Delete Event
+    </button>
+  }
+  <button mat-menu-item (click)="layout.publishEvent(event())">
+    <mat-icon>publish</mat-icon>
+    Publish Event
+  </button>
+  <!-- <button mat-menu-item>
+        <mat-icon>warning</mat-icon>
+        Report Content
+      </button> -->
+</mat-menu>
