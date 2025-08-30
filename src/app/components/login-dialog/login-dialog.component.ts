@@ -8,6 +8,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { FormsModule } from '@angular/forms';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
@@ -53,6 +54,7 @@ enum LoginStep {
 export class LoginDialogComponent {
   private dialogRef = inject(MatDialogRef<LoginDialogComponent>);
   private dialog = inject(MatDialog);
+  private snackBar = inject(MatSnackBar);
   nostrService = inject(NostrService);
   private logger = inject(LoggerService);
   region = inject(RegionService);
@@ -281,6 +283,87 @@ export class LoginDialogComponent {
       this.logger.error('Login with nsec failed', err);
       // Could add error handling here
     }
+  }
+
+  loadCredentialsFromFile(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) {
+      return;
+    }
+
+    const file = input.files[0];
+
+    // Validate file type
+    if (!file.name.endsWith('.json')) {
+      this.snackBar.open('Please select a JSON file', 'Dismiss', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        const credentials = JSON.parse(content);
+
+        // Validate the JSON structure
+        if (!credentials.nsec || typeof credentials.nsec !== 'string') {
+          throw new Error('Invalid credentials file format');
+        }
+
+        // Validate nsec format
+        if (!credentials.nsec.startsWith('nsec')) {
+          throw new Error('Invalid nsec format in credentials file');
+        }
+
+        // Start login process automatically with the loaded nsec
+        this.logger.debug('Credentials loaded from file, starting login process');
+
+        try {
+          this.nostrService.loginWithNsec(credentials.nsec.trim());
+          this.logger.debug('Login with loaded nsec successful');
+          this.snackBar.open('Login successful', 'Dismiss', {
+            duration: 2000,
+            horizontalPosition: 'center',
+            verticalPosition: 'bottom',
+          });
+          this.closeDialog();
+        } catch (loginError) {
+          this.logger.error('Login with loaded nsec failed', loginError);
+          // Fallback: set the nsec in the input field if login fails
+          this.nsecKey = credentials.nsec;
+          this.snackBar.open('Credentials loaded. Please try login manually.', 'Dismiss', {
+            duration: 3000,
+            horizontalPosition: 'center',
+            verticalPosition: 'bottom',
+          });
+        }
+      } catch (error) {
+        this.logger.error('Failed to parse credentials file:', error);
+        this.snackBar.open('Invalid credentials file format', 'Dismiss', {
+          duration: 3000,
+          horizontalPosition: 'center',
+          verticalPosition: 'bottom',
+        });
+      }
+    };
+
+    reader.onerror = () => {
+      this.logger.error('Failed to read credentials file');
+      this.snackBar.open('Failed to read file', 'Dismiss', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+    };
+
+    reader.readAsText(file);
+
+    // Clear the input so the same file can be selected again
+    input.value = '';
   }
 
   async loginWithNostrConnect(): Promise<void> {

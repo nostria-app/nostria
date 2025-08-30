@@ -594,10 +594,10 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         msgs.map((msg) =>
           msg.id === pendingId
             ? {
-              ...finalMessage,
-              pending: false,
-              received: true,
-            }
+                ...finalMessage,
+                pending: false,
+                received: true,
+              }
             : msg,
         ),
       );
@@ -944,10 +944,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     await Promise.allSettled([promisesUser, promisesAccount]);
   }
 
-  private async publishToUserRelays(
-    event: NostrEvent,
-    userRelay: UserRelayService,
-  ): Promise<void> {
+  private async publishToUserRelays(event: NostrEvent, userRelay: UserRelayService): Promise<void> {
     const promisesUser = userRelay.publish(event);
 
     // Wait for all publish attempts to complete

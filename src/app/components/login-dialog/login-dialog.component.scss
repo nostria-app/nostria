@@ -615,6 +615,30 @@
   }
 }
 
+.file-upload-section {
+  margin: 16px 0;
+  text-align: center;
+
+  p {
+    margin-bottom: 12px;
+    font-size: 14px;
+    color: var(--mat-text-secondary-color);
+  }
+
+  .file-upload-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+  }
+}
+
 .nostr-connect-info,
 .preview-info {
   background-color: rgba(0, 0, 0, 0.03);

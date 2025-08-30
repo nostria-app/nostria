@@ -94,7 +94,7 @@ export class BadgeService implements NostriaService {
     }
   }
 
-  async load() { }
+  async load() {}
 
   async loadAcceptedBadges(pubkey: string): Promise<void> {
     this.isLoadingAccepted.set(true);

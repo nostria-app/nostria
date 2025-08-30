@@ -49,5 +49,5 @@ export class AccountRelayService extends RelayServiceBase {
     this.init(relayUrls);
   }
 
-  clear() { }
+  clear() {}
 }

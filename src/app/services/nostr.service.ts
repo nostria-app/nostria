@@ -91,7 +91,6 @@ export class NostrService implements NostriaService {
   /** Used during discovery to reuse a single pool across many requests. This will eventually have many connections. */
   discoveryUserPool: SimplePool | null = null;
 
-
   constructor() {
     this.logger.info('Initializing NostrService');
 

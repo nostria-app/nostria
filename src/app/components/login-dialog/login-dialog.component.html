@@ -313,6 +313,27 @@
         />
       </mat-form-field>
 
+      <div class="file-upload-section">
+        <p>Or load from backup file:</p>
+        <input
+          #fileInput
+          type="file"
+          accept=".json"
+          (change)="loadCredentialsFromFile($event)"
+          class="hidden-file-input"
+          title="Select JSON backup file"
+        />
+        <button
+          mat-stroked-button
+          type="button"
+          (click)="fileInput.click()"
+          class="file-upload-button"
+        >
+          <mat-icon>upload_file</mat-icon>
+          <span>Choose JSON backup file</span>
+        </button>
+      </div>
+
       <div class="nsec-warning">
         <p>⚠️ Your private key will be stored locally on your device.</p>
         <p>
