@@ -48,6 +48,23 @@ export class EventMenuComponent {
     return event.pubkey === this.accountState.pubkey();
   });
 
+  eventLink = computed<string>(() => {
+    const event = this.event();
+    if (!event) {
+      return '';
+    }
+
+    const neventId = nip19.neventEncode({
+      id: event.id,
+      author: event.pubkey,
+    });
+
+    const url = new URL(window.location.href);
+    url.search = '';
+    url.pathname = `/e/${neventId}`;
+    return url.toString();
+  });
+
   constructor() {
     effect(() => {
       const event = this.event();
