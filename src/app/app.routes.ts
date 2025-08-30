@@ -16,7 +16,6 @@ import { NotificationsComponent } from './pages/notifications/notifications.comp
 import { MessagesComponent } from './pages/messages/messages.component';
 import { BadgesComponent } from './pages/badges/badges.component';
 import { ProfileRelaysComponent } from './pages/profile/profile-relays/profile-relays.component';
-import { BetaComponent } from './pages/beta/beta.component';
 import { AccountsComponent } from './pages/accounts/accounts.component';
 import { NotificationSettingsComponent } from './pages/notifications/settings/settings.component';
 import { LoginDialogComponent } from './components/login-dialog/login-dialog.component';
@@ -79,7 +78,6 @@ export const routes: Routes = [
     resolve: { data: DataResolver },
     title: 'Event',
   },
-  { path: 'beta', component: BetaComponent, title: 'Beta' },
   { path: 'relays', component: RelaysComponent, title: 'Relays' },
   {
     path: 'badges',
