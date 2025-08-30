@@ -17,6 +17,6 @@
 }
 
 // Add margin when there's a premium badge
-:host-context(.has-premium-badge) .info-tooltip-trigger {
-  right: 100px; // Adjust based on premium badge width
-}
+// :host-context(.has-premium-badge) .info-tooltip-trigger {
+//   right: 100px; // Adjust based on premium badge width
+// }

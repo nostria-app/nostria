@@ -4,7 +4,41 @@
     <span>Premium</span>
   </div>
 
-  <h2>Backup & Restore</h2>
+  <ng-template #discoveryRelaysInfoContent>
+    <mat-card-header>
+      <mat-card-title>
+        <div class="info-title">
+          <mat-icon class="info-icon">info</mat-icon>
+          How Backup Work
+        </div>
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <p>
+        Nostria keeps all your data in your browser's local storage. While this provides privacy, it
+        means your data could be lost if you clear your browser data or switch devices.
+      </p>
+      <p>
+        Regular backups ensure that you can restore your data when needed. Backups contain all of
+        your events, relay information, and profile data.
+      </p>
+      <p>You should normally not need more than one or two discovery relays.</p>
+      <h3>Important Notes:</h3>
+      <ul>
+        <li>Backups <strong>do not</strong> include your private keys for security reasons</li>
+        <li>You should store backup files securely as they contain your public data</li>
+        <li>Importing a backup will not overwrite existing data, only add missing events</li>
+      </ul>
+    </mat-card-content>
+  </ng-template>
+
+  <h2>
+    Backup & Restore
+    <app-info-tooltip
+      [content]="discoveryRelaysInfoContent"
+      ariaLabel="Learn how backup work"
+    ></app-info-tooltip>
+  </h2>
 
   <p class="subtitle">Manage your Nostr data backups</p>
 
@@ -105,24 +139,5 @@
         </button>
       </mat-card-actions>
     </mat-card>
-  </div>
-
-  <div class="info-section">
-    <h2>About Backups</h2>
-    <p>
-      Nostria keeps all your data in your browser's local storage. While this provides privacy, it
-      means your data could be lost if you clear your browser data or switch devices.
-    </p>
-    <p>
-      Regular backups ensure that you can restore your data when needed. Backups contain all of your
-      events, relay information, and profile data.
-    </p>
-
-    <h3>Important Notes:</h3>
-    <ul>
-      <li>Backups <strong>do not</strong> include your private keys for security reasons</li>
-      <li>You should store backup files securely as they contain your public data</li>
-      <li>Importing a backup will not overwrite existing data, only add missing events</li>
-    </ul>
   </div>
 </div>
