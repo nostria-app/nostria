@@ -25,16 +25,59 @@ app.use(
 );
 
 /**
- * Example Express Rest API endpoints can be defined here.
- * Uncomment and define endpoints as necessary.
- *
- * Example:
- * ```ts
- * app.get('/api/{*splat}', (req, res) => {
- *   // Handle API request
- * });
- * ```
+ * NIP-05 Nostr identifier endpoint
+ * Handles requests to /.well-known/nostr.json?name=<username>
  */
+app.get('/.well-known/nostr.json', async (req, res) => {
+  // Set CORS headers as required by NIP-05 specification
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Content-Type', 'application/json');
+
+  const username = req.query['name'] as string;
+
+  if (!username) {
+    return res.status(400).json({
+      error: 'name parameter is required',
+    });
+  }
+
+  try {
+    // Call the Nostria API to get user data
+    const apiResponse = await fetch(`https://api.nostria.app/api/account/${username}`);
+
+    if (!apiResponse.ok) {
+      if (apiResponse.status === 404) {
+        return res.status(404).json({});
+      }
+
+      throw new Error(`API request failed with status ${apiResponse.status}`);
+    }
+
+    const userData = await apiResponse.json();
+
+    if (!userData.success || !userData.result) {
+      return res.status(404).json({});
+    }
+
+    const { pubkey } = userData.result;
+
+    if (!pubkey) {
+      return res.status(404).json({});
+    }
+
+    // Return NIP-05 compliant response
+    return res.json({
+      names: {
+        [username]: pubkey,
+      },
+    });
+  } catch (error) {
+    console.error('Error handling NIP-05 request:', error);
+    return res.status(500).json({
+      error: 'Internal server error',
+    });
+  }
+});
 
 app.use(
   '/.well-known',
@@ -70,7 +113,7 @@ app.use((req, res, next) => {
  */
 if (isMainModule(import.meta.url)) {
   const port = process.env['PORT'] || 4000;
-  app.listen(port, (error) => {
+  app.listen(port, (error: Error | undefined) => {
     if (error) {
       throw error;
     }
