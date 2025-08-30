@@ -122,7 +122,7 @@ const DEFAULT_FEEDS: FeedConfig[] = [
         label: 'Notes',
         icon: 'notes',
         type: 'notes',
-        kinds: [kinds.ShortTextNote, kinds.Reaction],
+        kinds: [kinds.ShortTextNote, kinds.Repost],
         source: 'following',
         relayConfig: 'account',
         createdAt: Date.now(),
