@@ -14,7 +14,6 @@ import { UtilitiesService } from '../../services/utilities.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { MatTabsModule } from '@angular/material/tabs';
 import { Wallets } from '../../services/wallets';
-import { nip47 } from 'nostr-tools';
 import { LN, USD } from '@getalby/sdk';
 
 @Component({
@@ -72,6 +71,45 @@ export class CredentialsComponent {
       });
     }
   }
+
+  downloadCredentials(): void {
+    const account = this.accountState.account();
+    const pubkey = this.accountState.pubkey();
+
+    if (!account?.privkey || !pubkey) {
+      this.snackBar.open('Private key not available for download', 'Dismiss', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+      return;
+    }
+
+    const credentialsData = {
+      npub: this.getNpub(),
+      pubkey: pubkey,
+      nsec: this.getNsec(),
+      privkey: account.privkey,
+    };
+
+    const dataStr = JSON.stringify(credentialsData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(dataBlob);
+    link.download = `nostr-credentials-${pubkey.substring(0, 8)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+
+    this.snackBar.open('Credentials downloaded successfully', 'Dismiss', {
+      duration: 3000,
+      horizontalPosition: 'center',
+      verticalPosition: 'bottom',
+    });
+  }
+
   getMaskedNsec(nsec: string): string {
     if (!nsec) return '';
     // Show only first 4 characters, mask the rest
