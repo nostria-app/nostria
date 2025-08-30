@@ -30,7 +30,7 @@ const FEED_TEMPLATES = [
         label: 'Notes',
         icon: 'notes',
         type: 'notes',
-        kinds: [kinds.ShortTextNote, kinds.Reaction],
+        kinds: [kinds.ShortTextNote, kinds.Repost],
         source: 'following',
         relayConfig: 'account',
       },
