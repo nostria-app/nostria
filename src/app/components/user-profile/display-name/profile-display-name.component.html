@@ -1,0 +1,15 @@
+<span>
+  @if (isLoading() || profile() === null) {
+    ...
+  } @else if (profile() && !profile().isEmpty && profile().data) {
+    @if (profile().data.display_name) {
+      {{ profile().data.display_name }}
+    } @else if (profile().data.name) {
+      {{ profile().data.name }}
+    } @else {
+      {{ npubValue() }}
+    }
+  } @else {
+    {{ npubValue() }}
+  }
+</span>

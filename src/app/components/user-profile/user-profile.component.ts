@@ -30,11 +30,13 @@ import { DataService } from '../../services/data.service';
 import { RelaysService } from '../../services/relays/relays';
 import { SettingsService } from '../../services/settings.service';
 import { SharedRelayService } from '../../services/relays/shared-relay';
+import { ProfileDisplayNameComponent } from './display-name/profile-display-name.component';
 
 @Component({
   selector: 'app-user-profile',
   standalone: true,
   imports: [
+    ProfileDisplayNameComponent,
     CommonModule,
     MatIconModule,
     MatListModule,
