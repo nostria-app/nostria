@@ -13,6 +13,9 @@ import { LoggerService } from '../../services/logger.service';
 import JSZip from '@progress/jszip-esm';
 import { ApplicationService } from '../../services/application.service';
 import { AccountStateService } from '../../services/account-state.service';
+import { kinds } from 'nostr-tools';
+import { UtilitiesService } from '../../services/utilities.service';
+import { AccountRelayService } from '../../services/relays/account-relay';
 
 interface BackupStats {
   eventsCount: number;
@@ -43,6 +46,8 @@ export class BackupComponent {
   private logger = inject(LoggerService);
   private app = inject(ApplicationService);
   private accountState = inject(AccountStateService);
+  private readonly utilities = inject(UtilitiesService);
+  private readonly accountRelay = inject(AccountRelayService);
 
   stats = signal<BackupStats>({
     eventsCount: 0,
@@ -236,10 +241,18 @@ export class BackupComponent {
         this.importProgress.set((importedCount / totalEvents) * 100);
       }
 
-      // Import relays if available
-      // if (backupData.relays) {
-      //     await this.storage.saveUserRelays(backupData.relays);
-      // }
+      const relayListEvent = await this.storage.getEventByPubkeyAndKind(
+        currentPubkey,
+        kinds.RelayList,
+      );
+
+      if (relayListEvent) {
+        const relays = this.utilities.getRelayUrls(relayListEvent);
+
+        for (const event of backupData.events) {
+          await this.accountRelay.publishToRelay(event, relays);
+        }
+      }
 
       // Refresh stats
       await this.loadBackupStats();
