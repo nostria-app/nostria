@@ -36,7 +36,7 @@ export class FeedsCollectionService {
   private readonly logger = inject(LoggerService);
   private readonly feedService = inject(FeedService);
 
-  private readonly ACTIVE_FEED_KEY = 'nostria-active-feed';
+  readonly ACTIVE_FEED_KEY = 'nostria-active-feed';
 
   // Signal for active feed ID
   private readonly _activeFeedId = signal<string | null>(null);

@@ -20,6 +20,7 @@ import { AccountStateService } from './account-state.service';
 import { DataService } from './data.service';
 import { BadgeService } from './badge.service';
 import { SleepModeService } from './sleep-mode.service';
+import { FavoritesService } from './favorites.service';
 
 @Injectable({
   providedIn: 'root',
@@ -37,6 +38,7 @@ export class ApplicationService {
   notificationService = inject(NotificationService);
   dataService = inject(DataService);
   private readonly localStorage = inject(LocalStorageService);
+  private readonly favorites = inject(FavoritesService);
   private readonly platformId = inject(PLATFORM_ID);
   readonly isBrowser = signal(isPlatformBrowser(this.platformId));
 
@@ -136,6 +138,8 @@ export class ApplicationService {
       this.appState.SETTINGS_KEY,
       this.appState.WALLETS_KEY,
       this.appState.USERNAMES_STORAGE_KEY,
+      this.favorites.STORAGE_KEY,
+      'nostria-active-feed', // FeedsCollectionService.ACTIVE_FEED_KEY (avoid circular dependency)
     ];
 
     for (let i = 0; i < keysToRemove.length; i++) {

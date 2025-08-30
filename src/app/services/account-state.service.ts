@@ -58,6 +58,11 @@ export class AccountStateService implements OnDestroy {
   // Signal to store pre-loaded account profiles for fast access
   accountProfiles = signal<Map<string, NostrRecord>>(new Map());
 
+  // Flag to prevent multiple simultaneous profile preloading operations
+  private isPreloadingProfiles = false;
+  // Track the last set of account pubkeys we preloaded for
+  private lastPreloadedAccountPubkeys = new Set<string>();
+
   hasAccounts = computed(() => {
     return this.accounts().length > 0;
   });
@@ -191,6 +196,7 @@ export class AccountStateService implements OnDestroy {
     this.followingList.set([]);
     this.profile.set(undefined);
     this.accountProfiles.set(new Map()); // Clear pre-loaded account profiles
+    this.lastPreloadedAccountPubkeys.clear(); // Clear tracking set
   }
 
   async follow(pubkeys: string | string[]) {
@@ -404,8 +410,16 @@ export class AccountStateService implements OnDestroy {
     // Effect to pre-load account profiles when accounts change
     effect(() => {
       const accounts = this.accounts();
-      if (accounts.length > 0) {
-        this.preloadAccountProfiles(accounts);
+      if (accounts.length > 0 && !this.isPreloadingProfiles) {
+        // Check if the set of accounts has actually changed
+        const currentPubkeys = new Set(accounts.map((a) => a.pubkey));
+        const hasSameAccounts =
+          currentPubkeys.size === this.lastPreloadedAccountPubkeys.size &&
+          [...currentPubkeys].every((pubkey) => this.lastPreloadedAccountPubkeys.has(pubkey));
+
+        if (!hasSameAccounts) {
+          this.preloadAccountProfiles(accounts);
+        }
       }
     });
   }
@@ -414,30 +428,43 @@ export class AccountStateService implements OnDestroy {
    * Pre-loads profiles for all accounts to avoid repeated async calls in templates
    */
   private async preloadAccountProfiles(accounts: NostrUser[]): Promise<void> {
+    // Prevent multiple simultaneous preloading operations
+    if (this.isPreloadingProfiles) {
+      return;
+    }
+
+    this.isPreloadingProfiles = true;
     console.log('Pre-loading profiles for', accounts.length, 'accounts');
 
-    for (const account of accounts) {
-      try {
-        // Check if profile is already loaded and cached
-        const existingProfile = this.accountProfiles().get(account.pubkey);
-        if (existingProfile) {
-          continue; // Skip if already loaded
-        }
+    try {
+      for (const account of accounts) {
+        try {
+          // Check if profile is already loaded and cached
+          const existingProfile = this.accountProfiles().get(account.pubkey);
+          if (existingProfile) {
+            continue; // Skip if already loaded
+          }
 
-        // Load profile using the existing method
-        const profile = await this.loadAccountProfileInternal(account.pubkey);
-        if (profile) {
-          // Update the profiles map
-          this.accountProfiles.update((profiles) => {
-            const newProfiles = new Map(profiles);
-            newProfiles.set(account.pubkey, profile);
-            return newProfiles;
-          });
-          console.log('Pre-loaded profile for account:', account.pubkey);
+          // Load profile using the existing method
+          const profile = await this.loadAccountProfileInternal(account.pubkey);
+          if (profile) {
+            // Update the profiles map
+            this.accountProfiles.update((profiles) => {
+              const newProfiles = new Map(profiles);
+              newProfiles.set(account.pubkey, profile);
+              return newProfiles;
+            });
+            console.log('Pre-loaded profile for account:', account.pubkey);
+          }
+        } catch (error) {
+          console.warn('Failed to pre-load profile for account:', account.pubkey, error);
         }
-      } catch (error) {
-        console.warn('Failed to pre-load profile for account:', account.pubkey, error);
       }
+
+      // Update the tracking set
+      this.lastPreloadedAccountPubkeys = new Set(accounts.map((a) => a.pubkey));
+    } finally {
+      this.isPreloadingProfiles = false;
     }
   }
 
