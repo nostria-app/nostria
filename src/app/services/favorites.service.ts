@@ -12,7 +12,7 @@ export class FavoritesService {
   private readonly accountState = inject(AccountStateService);
   private readonly localStorage = inject(LocalStorageService);
   private readonly logger = inject(LoggerService);
-  private readonly STORAGE_KEY = 'nostria-favorites';
+  readonly STORAGE_KEY = 'nostria-favorites';
 
   // Signal containing all favorites data for all accounts
   private favoritesData = signal<FavoritesData>({});
