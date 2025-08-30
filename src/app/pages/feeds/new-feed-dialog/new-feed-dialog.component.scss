@@ -151,19 +151,32 @@
       display: flex;
       flex-direction: column;
       gap: 16px;
-    }
 
-    .icon-option {
-      display: flex;
-      align-items: center;
-      gap: 12px;
+      .name-icon-row {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
 
-      mat-icon {
-        color: var(--mat-sys-primary);
-      }
+        .name-field {
+          flex: 1;
+        }
 
-      span {
-        font-weight: 500;
+        .icon-field {
+          width: 120px;
+          flex-shrink: 0;
+
+          ::ng-deep .mat-mdc-select-value {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+          }
+
+          ::ng-deep .mat-mdc-select-value-text {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+          }
+        }
       }
     }
 
