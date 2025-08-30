@@ -175,8 +175,10 @@ export class Profile {
         account.name = cleanedProfile.display_name || cleanedProfile.name || '';
       }
 
+      const profile = await this.accountState.getAccountProfile(record.event.pubkey);
+
       // Update the profile signal
-      this.accountState.profile.set(this.accountState.getAccountProfile(record.event.pubkey));
+      this.accountState.profile.set(profile);
 
       this.logger.debug('Profile update completed successfully');
       return { success: true, profileEvent };

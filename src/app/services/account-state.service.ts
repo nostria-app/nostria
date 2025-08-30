@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, signal, OnDestroy } from '@angular/core';
+import { Injectable, computed, inject, signal, OnDestroy, effect } from '@angular/core';
 import { Event, kinds, nip19, UnsignedEvent } from 'nostr-tools';
 import { NostrRecord } from '../interfaces';
 import { LocalStorageService } from './local-storage.service';
@@ -37,6 +37,7 @@ type ProcessingTracking = Record<
 export class AccountStateService implements OnDestroy {
   private readonly localStorage = inject(LocalStorageService);
   private readonly appState = inject(ApplicationStateService);
+  private readonly data = inject(DataService);
   private readonly accountService = inject(AccountService);
   private readonly storage = inject(StorageService);
   private readonly utilities = inject(UtilitiesService);
@@ -53,6 +54,9 @@ export class AccountStateService implements OnDestroy {
   initialized = signal(false);
   account = signal<NostrUser | null>(null);
   accounts = signal<NostrUser[]>([]);
+
+  // Signal to store pre-loaded account profiles for fast access
+  accountProfiles = signal<Map<string, NostrRecord>>(new Map());
 
   hasAccounts = computed(() => {
     return this.accounts().length > 0;
@@ -157,7 +161,8 @@ export class AccountStateService implements OnDestroy {
       return;
     }
 
-    this.profile.set(this.getAccountProfile(account.pubkey));
+    const profile = await this.getAccountProfile(account.pubkey);
+    this.profile.set(profile);
 
     // TODO: Improve this!
     if (account.source === 'nsec') {
@@ -185,6 +190,7 @@ export class AccountStateService implements OnDestroy {
   clear() {
     this.followingList.set([]);
     this.profile.set(undefined);
+    this.accountProfiles.set(new Map()); // Clear pre-loaded account profiles
   }
 
   async follow(pubkeys: string | string[]) {
@@ -394,6 +400,61 @@ export class AccountStateService implements OnDestroy {
 
   constructor() {
     // Cache configuration is now handled by the injected cache service
+
+    // Effect to pre-load account profiles when accounts change
+    effect(() => {
+      const accounts = this.accounts();
+      if (accounts.length > 0) {
+        this.preloadAccountProfiles(accounts);
+      }
+    });
+  }
+
+  /**
+   * Pre-loads profiles for all accounts to avoid repeated async calls in templates
+   */
+  private async preloadAccountProfiles(accounts: NostrUser[]): Promise<void> {
+    console.log('Pre-loading profiles for', accounts.length, 'accounts');
+
+    for (const account of accounts) {
+      try {
+        // Check if profile is already loaded and cached
+        const existingProfile = this.accountProfiles().get(account.pubkey);
+        if (existingProfile) {
+          continue; // Skip if already loaded
+        }
+
+        // Load profile using the existing method
+        const profile = await this.loadAccountProfileInternal(account.pubkey);
+        if (profile) {
+          // Update the profiles map
+          this.accountProfiles.update((profiles) => {
+            const newProfiles = new Map(profiles);
+            newProfiles.set(account.pubkey, profile);
+            return newProfiles;
+          });
+          console.log('Pre-loaded profile for account:', account.pubkey);
+        }
+      } catch (error) {
+        console.warn('Failed to pre-load profile for account:', account.pubkey, error);
+      }
+    }
+  }
+
+  /**
+   * Internal method to load account profile without caching in the accountProfiles signal
+   */
+  private async loadAccountProfileInternal(pubkey: string): Promise<NostrRecord | undefined> {
+    const record = await this.data.getEventByPubkeyAndKind(pubkey, kinds.Metadata, {
+      cache: true,
+      save: true,
+    });
+
+    if (record == null) {
+      return undefined;
+    }
+
+    return record;
   }
 
   // Methods for tracking processing state per account
@@ -623,9 +684,34 @@ export class AccountStateService implements OnDestroy {
   }
 
   // Method to get cached account profile
-  getAccountProfile(pubkey: string): NostrRecord | undefined {
-    const cacheKey = `metadata-${pubkey}`;
-    return this.cache.get<NostrRecord>(cacheKey) || undefined;
+  async getAccountProfile(pubkey: string): Promise<NostrRecord | undefined> {
+    // First check if we have a pre-loaded profile
+    const preloadedProfile = this.accountProfiles().get(pubkey);
+    if (preloadedProfile) {
+      return preloadedProfile;
+    }
+
+    // Fall back to loading and caching the profile
+    const record = await this.loadAccountProfileInternal(pubkey);
+
+    if (record) {
+      // Cache it in the accountProfiles signal for future use
+      this.accountProfiles.update((profiles) => {
+        const newProfiles = new Map(profiles);
+        newProfiles.set(pubkey, record);
+        return newProfiles;
+      });
+    }
+
+    return record;
+  }
+
+  /**
+   * Synchronous method to get pre-loaded account profile for templates
+   * Returns undefined if profile hasn't been pre-loaded yet
+   */
+  getAccountProfileSync(pubkey: string): NostrRecord | undefined {
+    return this.accountProfiles().get(pubkey);
   }
 
   getCachedProfile(pubkey: string): NostrRecord | undefined {

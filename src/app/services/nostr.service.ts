@@ -1367,6 +1367,13 @@ export class NostrService implements NostriaService {
   }
 
   async getNIP98AuthToken({ url, method }: { url: string; method: string }) {
+    const currentUser = this.accountState.account();
+
+    // Check if preview account is trying to sign
+    if (currentUser?.source === 'preview') {
+      throw new Error('Preview accounts cannot sign events. Please use a different account type.');
+    }
+
     return nip98.getToken(url, method, async (e) => {
       const event = await this.signEvent(e);
       return event;
