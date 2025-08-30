@@ -5,12 +5,10 @@ import { LoggerService } from './logger.service';
 import { Event, kinds } from 'nostr-tools';
 import { UtilitiesService } from './utilities.service';
 import { Cache, CacheOptions } from './cache';
-import { RelaysService } from './relays/relays';
 import { UserRelayService } from './relays/user-relay';
 import { DiscoveryRelayService } from './relays/discovery-relay';
 import { SharedRelayService } from './relays/shared-relay';
 import { AccountRelayService } from './relays/account-relay';
-import { UserRelayExFactoryService } from './user-relay-factory.service';
 
 export interface DataOptions {
   cache: boolean; // Whether to use cache
@@ -61,6 +59,7 @@ export class DataService {
   ): Promise<NostrRecord | null> {
     let event: Event | null = null;
     let record: NostrRecord | undefined = undefined;
+    let eventFromRelays = false;
 
     if (options?.cache) {
       record = this.cache.get<NostrRecord>(`${id}`);
@@ -84,6 +83,8 @@ export class DataService {
         // Try to get the event from the account relay.
         event = await this.accountRelayEx.getEventById(id);
       }
+
+      eventFromRelays = true;
     }
 
     if (!event) {
@@ -96,7 +97,7 @@ export class DataService {
       this.cache.set(`${id}`, record, options);
     }
 
-    if (options?.save) {
+    if (options?.save && eventFromRelays) {
       // queueMicrotask(() => this.storage.saveEvent(event!));
       await this.storage.saveEvent(event);
     }
@@ -237,6 +238,7 @@ export class DataService {
     const cacheKey = `${pubkey}-${kind}-${dTagValue}`;
     let event: Event | null = null;
     let record: NostrRecord | undefined = undefined;
+    let eventFromRelays = false;
 
     if (options?.cache) {
       record = this.cache.get<NostrRecord>(cacheKey);
@@ -259,6 +261,8 @@ export class DataService {
         key: 'd',
         value: dTagValue,
       });
+
+      eventFromRelays = true;
     }
 
     if (!event) {
@@ -271,7 +275,7 @@ export class DataService {
       this.cache.set(cacheKey, record, options);
     }
 
-    if (options?.save) {
+    if (options?.save && eventFromRelays) {
       await this.storage.saveEvent(event);
     }
 
@@ -287,6 +291,7 @@ export class DataService {
     const cacheKey = `${Array.isArray(pubkey) ? pubkey.join(',') : pubkey}-${kind}`;
     let event: Event | null = null;
     let record: NostrRecord | undefined = undefined;
+    let eventFromRelays = false;
 
     if (options?.cache) {
       record = this.cache.get<NostrRecord>(cacheKey);
@@ -305,6 +310,7 @@ export class DataService {
     if (!event) {
       // Try to get the event from the account relay.
       event = await this.accountRelayEx.getEventByPubkeyAndKind(pubkey, kind);
+      eventFromRelays = true;
     }
 
     if (!event) {
@@ -317,7 +323,7 @@ export class DataService {
       this.cache.set(cacheKey, record, options);
     }
 
-    if (options?.save) {
+    if (options?.save && eventFromRelays) {
       await this.storage.saveEvent(event);
     }
 
@@ -332,6 +338,7 @@ export class DataService {
     const cacheKey = `${Array.isArray(pubkey) ? pubkey.join(',') : pubkey}-${kind}-all`;
     let events: Event[] = [];
     let records: NostrRecord[] = [];
+    let eventFromRelays = false;
 
     if (options?.cache) {
       const records = this.cache.get<NostrRecord[]>(cacheKey);
@@ -348,6 +355,8 @@ export class DataService {
 
     if (events.length === 0) {
       const relayEvents = await this.accountRelay.getEventsByPubkeyAndKind(pubkey, kind);
+      eventFromRelays = true;
+
       if (relayEvents && relayEvents.length > 0) {
         events = relayEvents;
       }
@@ -363,7 +372,7 @@ export class DataService {
       this.cache.set(cacheKey, records, options);
     }
 
-    if (options?.save) {
+    if (options?.save && eventFromRelays) {
       for (const event of events) {
         await this.storage.saveEvent(event);
       }
@@ -381,6 +390,7 @@ export class DataService {
     const cacheKey = `${userPubkey}-${kind}-${eventTag}-all`;
     let events: Event[] = [];
     let records: NostrRecord[] = [];
+    let eventFromRelays = false;
 
     if (options?.cache) {
       const records = this.cache.get<NostrRecord[]>(cacheKey);
@@ -402,6 +412,9 @@ export class DataService {
         kinds: [kind],
         ['#e']: [eventTag],
       });
+
+      eventFromRelays = true;
+
       if (relayEvents && relayEvents.length > 0) {
         events = relayEvents;
       }
@@ -417,7 +430,7 @@ export class DataService {
       this.cache.set(cacheKey, records, options);
     }
 
-    if (options?.save) {
+    if (options?.save && eventFromRelays) {
       for (const event of events) {
         await this.storage.saveEvent(event);
       }

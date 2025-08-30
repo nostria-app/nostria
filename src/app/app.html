@@ -385,7 +385,9 @@
             <mat-nav-list class="accounts-list">
               @for (account of accountState.accounts(); track account.pubkey) {
                 @if (account.pubkey !== accountState.account()?.pubkey) {
-                  @if (accountState.getAccountProfile(account.pubkey); as metadata) {
+                  @let accountProfile = accountState.getAccountProfileSync(account.pubkey);
+
+                  @if (accountProfile; as metadata) {
                     <a
                       mat-list-item
                       (click)="switchAccount(account.pubkey); toggleProfileSidenav()"
