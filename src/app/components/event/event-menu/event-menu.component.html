@@ -7,7 +7,7 @@
   <mat-icon>more_vert</mat-icon>
 </button>
 <mat-menu #menu="matMenu">
-  <button mat-menu-item (click)="layout.copyToClipboard(layout.getCurrentUrl(), 'text')">
+  <button mat-menu-item (click)="layout.copyToClipboard(eventLink(), 'text')">
     <mat-icon>link</mat-icon>
     Copy Note Link
   </button>
