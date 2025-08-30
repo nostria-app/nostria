@@ -25,7 +25,7 @@ import { LayoutService } from '../../../services/layout.service';
   standalone: true,
   imports: [MatIconModule, MatButtonModule, MatTooltipModule, MatDividerModule, MatMenuModule],
   templateUrl: './event-menu.component.html',
-  styleUrls: ['./event-menu.component.scss'],
+  styleUrl: './event-menu.component.scss',
 })
 export class EventMenuComponent {
   layout = inject(LayoutService);
