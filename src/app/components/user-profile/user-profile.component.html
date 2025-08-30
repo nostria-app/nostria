@@ -92,21 +92,7 @@
     ) {
       <div class="user-profile-content">
         <!-- Name section -->
-        <a [routerLink]="['/p', npubValue()]" class="user-profile-name">
-          @if (isLoading()) {
-            Loading...
-          } @else if (profile() && !profile().isEmpty && profile().data) {
-            @if (profile().data.display_name) {
-              {{ profile().data.display_name }}
-            } @else if (profile().data.name) {
-              {{ profile().data.name }}
-            } @else {
-              [No name]
-            }
-          } @else {
-            [Not found]
-          }
-        </a>
+        <app-profile-display-name [pubkey]="pubkey()"></app-profile-display-name>
 
         <!-- NPUB section - only shown in appropriate views -->
         @if (view() === 'list' || view() === 'details') {
@@ -173,19 +159,7 @@
             }
           </div>
           <span class="user-profile-name name-label">
-            @if (isLoading()) {
-              Loading...
-            } @else if (profile() && !profile().isEmpty && profile().data) {
-              @if (profile().data.display_name) {
-                {{ profile().data.display_name }}
-              } @else if (profile().data.name) {
-                {{ profile().data.name }}
-              } @else {
-                {{ npubValue() }}
-              }
-            } @else {
-              {{ npubValue() }}
-            }
+            <app-profile-display-name [pubkey]="pubkey()"></app-profile-display-name>
           </span>
         </a>
       </div>
@@ -231,19 +205,7 @@
           }
         </div>
         <span class="user-profile-name name-label">
-          @if (isLoading()) {
-            Loading...
-          } @else if (profile() && !profile().isEmpty && profile().data) {
-            @if (profile().data.display_name) {
-              {{ profile().data.display_name }}
-            } @else if (profile().data.name) {
-              {{ profile().data.name }}
-            } @else {
-              {{ npubValue() }}
-            }
-          } @else {
-            {{ npubValue() }}
-          }
+          <app-profile-display-name [pubkey]="pubkey()"></app-profile-display-name>
         </span>
       </a>
     }

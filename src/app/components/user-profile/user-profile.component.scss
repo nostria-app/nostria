@@ -163,6 +163,7 @@
     flex-shrink: 0;
   }
 
+  app-profile-display-name,
   .user-profile-name {
     font-weight: 500;
     white-space: nowrap;
@@ -211,6 +212,7 @@
       font-size: 256px;
     }
 
+    app-profile-display-name,
     .user-profile-name {
       font-size: 18px;
       font-weight: 600;
@@ -238,6 +240,7 @@
       font-size: 128px;
     }
 
+    app-profile-display-name,
     .user-profile-name {
       font-size: 16px;
       margin-top: 0; // Removed margin
@@ -264,6 +267,8 @@
       font-size: 48px;
     }
 
+
+    app-profile-display-name,
     .user-profile-name {
       font-size: 14px;
       margin-top: 0; // Removed margin
@@ -290,6 +295,7 @@
       font-size: 24px;
     }
 
+    app-profile-display-name,
     .user-profile-name {
       font-size: 14px;
       margin-top: 0; // Removed margin
@@ -316,6 +322,7 @@
       font-size: 48px;
     }
 
+    app-profile-display-name,
     .user-profile-name {
       font-size: 14px;
       margin-top: 0; // Removed margin
@@ -346,6 +353,7 @@
       font-size: 48px;
     }
 
+    app-profile-display-name,
     .user-profile-name {
       font-size: 14px;
       margin-top: 0; // Removed margin
@@ -388,6 +396,7 @@
     }
 
     // Override text styles for details view to handle overflow
+    app-profile-display-name,
     .user-profile-name {
       white-space: normal; // Allow wrapping instead of nowrap
       overflow: visible; // Don't hide overflowing text
@@ -593,7 +602,7 @@
     justify-content: center;
   }
 
-  .user-profile-name.name-label {
+  .user-profile-name.name-label app-profile-display-name {
     font-size: 13px;
     margin-top: 2px;
     white-space: nowrap;
@@ -657,7 +666,7 @@
     justify-content: center;
   }
 
-  .user-profile-name.name-label {
+  .user-profile-name.name-label app-profile-display-name {
     font-size: 13px;
     margin-top: 2px;
     white-space: nowrap;
