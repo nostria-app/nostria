@@ -16,6 +16,7 @@ interface SettingsSection {
   title: string;
   icon: string;
   authenticated?: boolean;
+  premium?: boolean;
 }
 
 @Component({
@@ -57,7 +58,7 @@ export class SettingsComponent {
       icon: 'security',
       authenticated: true,
     },
-    { id: 'backup', title: 'Backup', icon: 'archive', authenticated: true },
+    { id: 'backup', title: 'Backup', icon: 'archive', authenticated: true, premium: true },
     { id: 'premium', title: 'Premium', icon: 'diamond', authenticated: true },
     { id: 'logs', title: 'Logs', icon: 'article', authenticated: true },
     { id: 'about', title: 'About', icon: 'info' },
