@@ -16,6 +16,7 @@ import { AccountStateService } from '../../services/account-state.service';
 import { kinds } from 'nostr-tools';
 import { UtilitiesService } from '../../services/utilities.service';
 import { AccountRelayService } from '../../services/relays/account-relay';
+import { InfoTooltipComponent } from '../../components/info-tooltip/info-tooltip.component';
 
 interface BackupStats {
   eventsCount: number;
@@ -35,6 +36,7 @@ interface BackupStats {
     MatProgressBarModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
+    InfoTooltipComponent,
   ],
   templateUrl: './backup.component.html',
   styleUrl: './backup.component.scss',
