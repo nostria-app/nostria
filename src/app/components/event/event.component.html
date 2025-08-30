@@ -1,5 +1,6 @@
 @let item = record();
 @let targetItem = repostedRecord() || item;
+@let repostedEvent = repostedRecord()?.event;
 
 @if (isLoadingEvent()) {
   <div class="loading-container">
@@ -16,11 +17,12 @@
     [style.cursor]="isCurrentlySelected() ? 'auto' : 'pointer'"
     (click)="onCardClick($event)"
   >
-    @if (repostedRecord() !== null) {
+    @if (repostedEvent) {
       <mat-card-header class="repost-header">
         <mat-icon>repeat</mat-icon>
         <span>
-          Reposted
+          <app-profile-display-name [pubkey]="item.event.pubkey"></app-profile-display-name>
+          reposted
           <span
             [matTooltip]="item.event.created_at * 1000 | date: 'medium'"
             matTooltipPosition="below"

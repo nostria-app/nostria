@@ -32,6 +32,7 @@ import {
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { BadgeComponent } from '../../pages/badges/badge/badge.component';
 import { RepostButtonComponent } from './repost-button/repost-button.component';
+import { ProfileDisplayNameComponent } from '../user-profile/display-name/profile-display-name.component';
 
 type EventCardAppearance = 'card' | 'plain';
 
@@ -39,6 +40,7 @@ type EventCardAppearance = 'card' | 'plain';
   selector: 'app-event',
   imports: [
     ArticleEventComponent,
+    ProfileDisplayNameComponent,
     AgoPipe,
     DatePipe,
     CommonModule,
