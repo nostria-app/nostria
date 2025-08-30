@@ -53,7 +53,7 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
     this.initialized = true;
   }
 
-  clear() { }
+  clear() {}
 
   save(relayUrls: string[]) {
     // Save to local storage

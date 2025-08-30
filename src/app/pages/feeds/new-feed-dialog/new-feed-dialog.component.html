@@ -10,38 +10,41 @@
   <div class="dialog-content">
     <form [formGroup]="feedForm" (ngSubmit)="onSubmit()">
       @if (!isEditMode()) {
-      <!-- Feed Template Selection -->
-      <div class="template-selection">
-        <h3>Feed Templates</h3>
-        <p class="section-description">Select a template to get started quickly</p>
+        <!-- Feed Template Selection -->
+        <div class="template-selection">
+          <h3>Feed Templates</h3>
+          <p class="section-description">Select a template to get started quickly</p>
 
-        <div class="template-cards">
-          @for (template of feedTemplates(); track template.key) {
-          <mat-card class="template-card" [class.selected]="selectedTemplate() === template.key"
-            (click)="selectTemplate(template.key)">
-            <mat-card-content>
-              <div class="template-header">
-                <mat-icon>{{ template.icon }}</mat-icon>
-                <h4>{{ template.label }}</h4>
-              </div>
-              <p class="template-description">
-                {{ template.description }}
-              </p>
-              @if (template.defaultColumns.length > 0) {
-              <div class="template-columns">
-                <span class="columns-label">Includes:</span>
-                @for (column of template.defaultColumns; track $index) {
-                <span class="column-chip">{{ column.label }}</span>
-                }
-              </div>
-              }
-            </mat-card-content>
-          </mat-card>
-          }
+          <div class="template-cards">
+            @for (template of feedTemplates(); track template.key) {
+              <mat-card
+                class="template-card"
+                [class.selected]="selectedTemplate() === template.key"
+                (click)="selectTemplate(template.key)"
+              >
+                <mat-card-content>
+                  <div class="template-header">
+                    <mat-icon>{{ template.icon }}</mat-icon>
+                    <h4>{{ template.label }}</h4>
+                  </div>
+                  <p class="template-description">
+                    {{ template.description }}
+                  </p>
+                  @if (template.defaultColumns.length > 0) {
+                    <div class="template-columns">
+                      <span class="columns-label">Includes:</span>
+                      @for (column of template.defaultColumns; track $index) {
+                        <span class="column-chip">{{ column.label }}</span>
+                      }
+                    </div>
+                  }
+                </mat-card-content>
+              </mat-card>
+            }
+          </div>
         </div>
-      </div>
 
-      <mat-divider></mat-divider>
+        <mat-divider></mat-divider>
       }
 
       <!-- Basic Feed Configuration -->
@@ -53,16 +56,16 @@
             <mat-label>Feed Name</mat-label>
             <input matInput formControlName="label" placeholder="My Custom Feed" />
             @if (feedForm.get('label')?.hasError('required')) {
-            <mat-error>Feed name is required</mat-error>
+              <mat-error>Feed name is required</mat-error>
             }
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="icon-field">
             <mat-select formControlName="icon">
               @for (icon of data.icons; track icon) {
-              <mat-option [value]="icon">
-                <mat-icon>{{ icon }}</mat-icon>
-              </mat-option>
+                <mat-option [value]="icon">
+                  <mat-icon>{{ icon }}</mat-icon>
+                </mat-option>
               }
             </mat-select>
             <mat-icon matSuffix>{{ feedForm.get('icon')?.value || 'widgets' }}</mat-icon>
@@ -78,37 +81,39 @@
 
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Description (Optional)</mat-label>
-          <input matInput formControlName="description" placeholder="Brief description of this feed" />
+          <input
+            matInput
+            formControlName="description"
+            placeholder="Brief description of this feed"
+          />
           <mat-icon matSuffix>description</mat-icon>
         </mat-form-field>
       </div>
 
       @if (
-      selectedTemplate() &&
-      getSelectedTemplateConfig()?.defaultColumns &&
-      getSelectedTemplateConfig()!.defaultColumns.length > 0
+        selectedTemplate() &&
+        getSelectedTemplateConfig()?.defaultColumns &&
+        getSelectedTemplateConfig()!.defaultColumns.length > 0
       ) {
-      <mat-divider></mat-divider>
+        <mat-divider></mat-divider>
 
-      <!-- Template Preview -->
-      <div class="template-preview">
-        <h3>Columns to be Created</h3>
-        <p class="section-description">
-          These columns will be automatically added to your feed
-        </p>
+        <!-- Template Preview -->
+        <div class="template-preview">
+          <h3>Columns to be Created</h3>
+          <p class="section-description">These columns will be automatically added to your feed</p>
 
-        <div class="preview-columns">
-          @for (column of getSelectedTemplateConfig()!.defaultColumns; track $index) {
-          <div class="preview-column">
-            <mat-icon>{{ column.icon }}</mat-icon>
-            <div class="column-info">
-              <span class="column-name">{{ column.label }}</span>
-              <span class="column-type">{{ getColumnTypeDescription(column.type) }}</span>
-            </div>
+          <div class="preview-columns">
+            @for (column of getSelectedTemplateConfig()!.defaultColumns; track $index) {
+              <div class="preview-column">
+                <mat-icon>{{ column.icon }}</mat-icon>
+                <div class="column-info">
+                  <span class="column-name">{{ column.label }}</span>
+                  <span class="column-type">{{ getColumnTypeDescription(column.type) }}</span>
+                </div>
+              </div>
+            }
           </div>
-          }
         </div>
-      </div>
       }
     </form>
   </div>

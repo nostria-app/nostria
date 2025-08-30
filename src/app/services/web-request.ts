@@ -15,7 +15,7 @@ export interface AuthenticationInit {
 export class WebRequest {
   nostr = inject(NostrService);
 
-  constructor() { }
+  constructor() {}
 
   async fetchText(url: string, options?: RequestInit, auth?: AuthenticationInit): Promise<string> {
     try {
