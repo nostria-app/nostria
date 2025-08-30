@@ -259,9 +259,12 @@ export class Profile {
     delete cleaned['bannerUrl'];
 
     // Handle NIP-05 identifier formatting
-    if (cleaned.nip05 && !cleaned.nip05.startsWith('_')) {
-      // If user enters a NIP-05 identifier for root without "_", prepend it
-      cleaned.nip05 = `_${cleaned.nip05}`;
+    if (cleaned.nip05) {
+      // If user enters "@domain.com" (root domain), convert to "_@domain.com"
+      if (cleaned.nip05.startsWith('@') && !cleaned.nip05.startsWith('_@')) {
+        cleaned.nip05 = `_${cleaned.nip05}`;
+      }
+      // For regular "user@domain.com" format, leave as-is
     }
 
     // Remove empty string values to keep the profile clean
