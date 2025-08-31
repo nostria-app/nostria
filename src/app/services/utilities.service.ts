@@ -28,7 +28,7 @@ export class UtilitiesService {
   private readonly platformId = inject(PLATFORM_ID);
   readonly isBrowser = signal(isPlatformBrowser(this.platformId));
 
-  constructor() {}
+  constructor() { }
 
   toRecord(event: Event): NostrRecord {
     return {
@@ -219,7 +219,18 @@ export class UtilitiesService {
     let content = [];
 
     if (typeof event.content === 'string') {
-      content = JSON.parse(event.content);
+      try {
+        // This is a workaround for handling single wss:// URLs in content, which
+        // has been observed in the "wild".
+        if (event.content.startsWith('wss://')) {
+          event.content = `{"${event.content}":{"read":true,"write":true}}`;
+        }
+
+        content = JSON.parse(event.content);
+      } catch (err) {
+        console.error(err);
+        debugger;
+      }
     }
 
     const relayUrls = Object.keys(content).map((url) => {
