@@ -6,6 +6,7 @@ import { DataService } from './data.service';
 import { StorageService } from './storage.service';
 import { LoggerService } from './logger.service';
 import { NostrService } from './nostr.service';
+import { SettingsService } from './settings.service';
 
 export type ReportType =
   | 'nudity'
@@ -40,6 +41,7 @@ export class ReportingService {
   private storage = inject(StorageService);
   private logger = inject(LoggerService);
   private nostr = inject(NostrService);
+  private settings = inject(SettingsService);
 
   // Override signals for showing blocked content
   private contentOverrides = signal<Set<string>>(new Set());
@@ -158,6 +160,34 @@ export class ReportingService {
     // The actual hiding logic will be handled by the event component
     // This method can be expanded to include threshold logic, trust networks, etc.
     return false; // Placeholder - actual logic will be in the event component
+  }
+
+  /**
+   * Check if content should be hidden based on report types and user settings
+   */
+  shouldHideContentForReportTypes(reportTypes: string[]): boolean {
+    const userSettings = this.settings.settings();
+
+    return reportTypes.some((reportType) => {
+      switch (reportType) {
+        case 'nudity':
+          return userSettings.hideNudity ?? true;
+        case 'malware':
+          return userSettings.hideMalware ?? true;
+        case 'profanity':
+          return userSettings.hideProfanity ?? true;
+        case 'illegal':
+          return userSettings.hideIllegal ?? true;
+        case 'spam':
+          return userSettings.hideSpam ?? true;
+        case 'impersonation':
+          return userSettings.hideImpersonation ?? true;
+        case 'other':
+          return userSettings.hideOther ?? true;
+        default:
+          return true; // Hide unknown report types by default
+      }
+    });
   }
 
   /**

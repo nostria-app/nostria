@@ -8,12 +8,28 @@ import { AccountRelayService } from './relays/account-relay';
 export interface UserSettings {
   socialSharingPreview: boolean;
   imageCacheEnabled?: boolean; // Optional setting for image cache
+  // Report type visibility settings (NIP-56)
+  hideNudity?: boolean;
+  hideMalware?: boolean;
+  hideProfanity?: boolean;
+  hideIllegal?: boolean;
+  hideSpam?: boolean;
+  hideImpersonation?: boolean;
+  hideOther?: boolean;
   // Add more settings as needed
 }
 
 const DEFAULT_SETTINGS: UserSettings = {
   socialSharingPreview: true,
   imageCacheEnabled: true,
+  // By default, hide all reported content
+  hideNudity: true,
+  hideMalware: true,
+  hideProfanity: true,
+  hideIllegal: true,
+  hideSpam: true,
+  hideImpersonation: true,
+  hideOther: true,
 };
 
 @Injectable({
@@ -105,5 +121,16 @@ export class SettingsService {
     await this.updateSettings({
       imageCacheEnabled: !currentValue,
     });
+  }
+
+  async toggleReportTypeVisibility(reportType: string): Promise<void> {
+    const currentSettings = this.settings();
+    const settingKey =
+      `hide${reportType.charAt(0).toUpperCase() + reportType.slice(1)}` as keyof UserSettings;
+    const currentValue = currentSettings[settingKey] as boolean;
+
+    await this.updateSettings({
+      [settingKey]: !currentValue,
+    } as Partial<UserSettings>);
   }
 }

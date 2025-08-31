@@ -186,6 +186,12 @@ export class EventComponent {
     return this.reports().events.length > 0;
   });
 
+  // Get active report types for this event
+  reportTypes = computed<string[]>(() => {
+    const reportData = this.reports().data;
+    return Array.from(reportData.keys());
+  });
+
   // Check if content should be hidden due to reports
   shouldHideContent = computed<boolean>(() => {
     const event = this.event() || this.record()?.event;
@@ -196,8 +202,11 @@ export class EventComponent {
       return false;
     }
 
-    // Hide content if it has reports (you can add more sophisticated logic here)
-    return this.hasReports();
+    // Check if content should be hidden based on report types and user settings
+    const activeReportTypes = this.reportTypes();
+    if (activeReportTypes.length === 0) return false;
+
+    return this.reportingService.shouldHideContentForReportTypes(activeReportTypes);
   });
 
   constructor() {
