@@ -1,9 +1,4 @@
-<button
-  mat-icon-button
-  [matMenuTriggerFor]="menu"
-  aria-label="More options"
-  (click)="$event.stopPropagation()"
->
+<button mat-icon-button [matMenuTriggerFor]="menu" aria-label="More options" (click)="$event.stopPropagation()">
   <mat-icon>more_vert</mat-icon>
 </button>
 <mat-menu #menu="matMenu">
@@ -34,17 +29,18 @@
   </button>
   <mat-divider></mat-divider>
   @if (isOurEvent()) {
-    <button mat-menu-item (click)="deleteEvent()">
-      <mat-icon>delete</mat-icon>
-      Delete Event
-    </button>
+  <button mat-menu-item (click)="deleteEvent()">
+    <mat-icon>delete</mat-icon>
+    Delete Event
+  </button>
   }
   <button mat-menu-item (click)="layout.publishEvent(event())">
     <mat-icon>publish</mat-icon>
     Publish Event
   </button>
-  <!-- <button mat-menu-item>
-        <mat-icon>warning</mat-icon>
-        Report Content
-      </button> -->
+  <mat-divider></mat-divider>
+  <button mat-menu-item>
+    <mat-icon>warning</mat-icon>
+    Report Content
+  </button>
 </mat-menu>
