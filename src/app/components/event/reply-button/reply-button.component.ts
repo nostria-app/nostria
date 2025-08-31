@@ -26,10 +26,15 @@ export class ReplyButtonComponent {
     }
 
     if (this.event().kind === kinds.ShortTextNote) {
+      // Get the full thread context using EventService
+      const eventTags = this.eventService.getEventTags(this.event());
+
       this.eventService.createNote({
         replyTo: {
           id: this.event().id,
           pubkey: this.event().pubkey,
+          rootId: eventTags.rootId,
+          event: this.event(), // Pass the full event for complete tag analysis
         },
       });
     } else {

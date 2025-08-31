@@ -30,14 +30,15 @@ import { LocalStorageService } from '../../services/local-storage.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { ContentComponent } from '../content/content.component';
 import { Router } from '@angular/router';
-import { nip19 } from 'nostr-tools';
+import { nip19, Event as NostrEvent } from 'nostr-tools';
 import { AccountRelayService } from '../../services/relays/account-relay';
 
 export interface NoteEditorDialogData {
   replyTo?: {
     id: string;
     pubkey: string;
-    rootId?: string;
+    rootId?: string | null;
+    event?: NostrEvent; // Include the full event for complete tag analysis
   };
   quote?: {
     id: string;
@@ -443,13 +444,47 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
 
     // Add reply tags (NIP-10)
     if (this.data?.replyTo) {
-      if (this.data.replyTo.rootId) {
-        // This is a reply to a reply, so we have both root and reply
-        tags.push(['e', this.data.replyTo.rootId, '', 'root']);
-        tags.push(['e', this.data.replyTo.id, '', 'reply']);
+      const parentEvent = this.data.replyTo.event;
+
+      if (parentEvent) {
+        // Get all existing e and p tags from the parent event
+        const existingETags = parentEvent.tags.filter((tag) => tag[0] === 'e');
+        const existingPTags = parentEvent.tags.filter((tag) => tag[0] === 'p');
+
+        // Step 1: Add all existing "e" tags from the parent event
+        existingETags.forEach((eTag) => {
+          tags.push([...eTag]); // Copy the entire tag
+        });
+
+        // Step 2: Add the parent event as a new "e" tag with "reply" marker
+        // Format: ["e", <event-id>, <relay-url>, <marker>, <pubkey>]
+        tags.push(['e', this.data.replyTo.id, '', 'reply', this.data.replyTo.pubkey]);
+
+        // Step 3: Add all existing "p" tags from the parent event
+        existingPTags.forEach((pTag) => {
+          tags.push([...pTag]); // Copy the entire tag
+        });
+
+        // Step 4: Add the author of the parent event as a "p" tag if not already included
+        const authorAlreadyIncluded = existingPTags.some(
+          (tag) => tag[1] === this.data.replyTo!.pubkey,
+        );
+        if (!authorAlreadyIncluded) {
+          tags.push(['p', this.data.replyTo.pubkey, '']); // Format: ["p", <pubkey>, <relay-url>]
+        }
       } else {
-        // This is a direct reply, so the event we're replying to is the root
-        tags.push(['e', this.data.replyTo.id, '', 'root']);
+        // Fallback to old behavior if no event is provided
+        if (this.data.replyTo.rootId) {
+          // This is a reply to a reply, so we have both root and reply
+          tags.push(['e', this.data.replyTo.rootId, '', 'root']);
+          tags.push(['e', this.data.replyTo.id, '', 'reply']);
+        } else {
+          // This is a direct reply, so the event we're replying to is the root
+          tags.push(['e', this.data.replyTo.id, '', 'root']);
+        }
+
+        // Add the author as a p tag
+        tags.push(['p', this.data.replyTo.pubkey]);
       }
     }
 
@@ -459,9 +494,12 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
       tags.push(['q', this.data.quote.id, relay, this.data.quote.pubkey]);
     }
 
-    // Add mention tags
+    // Add mention tags (avoid duplicates with existing p tags)
+    const existingPubkeys = new Set(tags.filter((tag) => tag[0] === 'p').map((tag) => tag[1]));
     this.mentions().forEach((pubkey) => {
-      tags.push(['p', pubkey]);
+      if (!existingPubkeys.has(pubkey)) {
+        tags.push(['p', pubkey]);
+      }
     });
 
     // Add expiration tag if enabled
