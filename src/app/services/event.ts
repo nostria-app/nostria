@@ -27,6 +27,11 @@ export interface ReactionEvents {
   data: Map<string, number>;
 }
 
+export interface ReportEvents {
+  events: NostrRecord[];
+  data: Map<string, number>;
+}
+
 export interface ThreadedEvent {
   event: Event;
   replies: ThreadedEvent[];
@@ -358,6 +363,78 @@ export class EventService {
       };
     } catch (error) {
       this.logger.error('Error loading reactions:', error);
+      return { events: [], data: new Map() };
+    }
+  }
+
+  /**
+   * Load reports for an event
+   */
+  async loadReports(
+    eventId: string,
+    pubkey: string,
+    invalidateCache = false,
+  ): Promise<ReportEvents> {
+    this.logger.info('loadReports called with eventId:', eventId, 'pubkey:', pubkey);
+
+    let userData = this.cache.get<UserDataService>('user-data-' + pubkey);
+
+    if (!userData) {
+      userData = await this.userDataFactory.create(pubkey);
+
+      this.cache.set('user-data-' + pubkey, userData, {
+        maxSize: 20,
+        ttl: 1000 * 60,
+      });
+    }
+
+    try {
+      // Load reports (kind 1984 events that reference this event)
+      const reportRecords = await userData.getEventsByKindAndEventTag(kinds.Report, eventId, {
+        save: false,
+        cache: true,
+        invalidateCache,
+      });
+
+      // Count reports by type from tags (NIP-56)
+      const reportCounts = new Map<string, number>();
+      reportRecords.forEach((record) => {
+        const event = record.event;
+
+        // Look for report type in e-tags that reference this event
+        const eTags = event.tags.filter((tag) => tag[0] === 'e' && tag[1] === eventId);
+
+        eTags.forEach((tag) => {
+          // Report type is the 3rd element (index 2) in the tag according to NIP-56
+          const reportType = tag[2];
+          if (reportType && reportType.trim()) {
+            reportCounts.set(reportType, (reportCounts.get(reportType) || 0) + 1);
+          }
+        });
+
+        // Also check p-tags for user reports (in case this is being used for user reports)
+        // const pTags = event.tags.filter((tag) => tag[0] === 'p');
+        // pTags.forEach((tag) => {
+        //   const reportType = tag[2];
+        //   if (reportType && reportType.trim()) {
+        //     reportCounts.set(reportType, (reportCounts.get(reportType) || 0) + 1);
+        //   }
+        // });
+      });
+
+      this.logger.info(
+        'Successfully loaded reports for event:',
+        eventId,
+        'report types:',
+        Array.from(reportCounts.keys()),
+      );
+
+      return {
+        events: reportRecords,
+        data: reportCounts,
+      };
+    } catch (error) {
+      this.logger.error('Error loading reports:', error);
       return { events: [], data: new Map() };
     }
   }
