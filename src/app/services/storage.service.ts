@@ -205,9 +205,8 @@ export class StorageService {
   private readonly logger = inject(LoggerService);
   private readonly utilities = inject(UtilitiesService);
   private db!: IDBPDatabase<NostriaDBSchema>;
-  // TODO: Before public release, rename the database to "nostria", then reset the DB_VERSION.
-  private readonly DB_NAME = 'nostria-db-beta3';
-  private readonly DB_VERSION = 1; // Reset to 0 as the database has been renamed
+  private readonly DB_NAME = 'nostria';
+  private readonly DB_VERSION = 1;
 
   // Signal to track database initialization status
   initialized = signal(false);
