@@ -30,6 +30,7 @@ import {
 import { kinds } from 'nostr-tools';
 import { StorageService } from '../../../services/storage.service';
 import type { ReportTarget } from '../../../services/reporting.service';
+import { ReportingService } from '../../../services/reporting.service';
 
 @Component({
   selector: 'app-profile-header',
@@ -65,6 +66,7 @@ export class ProfileHeaderComponent {
   private dialog = inject(MatDialog);
   private storage = inject(StorageService);
   private accountService = inject(AccountService);
+  private reportingService = inject(ReportingService);
 
   // Add signal for QR code visibility
   showQrCode = signal<boolean>(false);
@@ -126,6 +128,13 @@ export class ProfileHeaderComponent {
     return this.favoritesService.isFavorite(this.currentPubkey());
   });
 
+  // Check if the current user is blocked
+  isUserBlocked = computed(() => {
+    const pubkey = this.currentPubkey();
+    if (!pubkey || this.isOwnProfile()) return false;
+    return this.reportingService.isUserBlocked(pubkey);
+  });
+
   // Signal to track the premium status
   premiumTier = signal<string | null>(null);
 
@@ -178,7 +187,13 @@ export class ProfileHeaderComponent {
   blockUser(): void {
     const pubkey = this.currentPubkey();
     if (pubkey) {
-      this.accountState.mutePubkey(pubkey);
+      if (this.isUserBlocked()) {
+        // User is already blocked, so unblock them
+        this.reportingService.unblockUser(pubkey);
+      } else {
+        // User is not blocked, so block them
+        this.accountState.mutePubkey(pubkey);
+      }
     }
   }
 

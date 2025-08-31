@@ -200,10 +200,17 @@
           <mat-icon>warning</mat-icon>
           <span>Report User</span>
         </button>
+        @if (isUserBlocked()) {
+        <button mat-menu-item (click)="blockUser()">
+          <mat-icon>check_circle</mat-icon>
+          <span>Unblock User</span>
+        </button>
+        } @else {
         <button mat-menu-item (click)="blockUser()">
           <mat-icon>block</mat-icon>
           <span>Block User</span>
         </button>
+        }
         }
       </mat-menu>
 

@@ -8,6 +8,7 @@ import { NostrService } from './nostr.service';
 import { MessagingService } from './messaging.service';
 import { DiscoveryRelayService } from './relays/discovery-relay';
 import { AccountRelayService } from './relays/account-relay';
+import { ReportingService } from './reporting.service';
 
 /** Service that handles changing account, will clear and load data in different services. */
 @Injectable({
@@ -23,6 +24,7 @@ export class StateService implements NostriaService {
   messaging = inject(MessagingService);
   discoveryRelay = inject(DiscoveryRelayService);
   accountRelay = inject(AccountRelayService);
+  reporting = inject(ReportingService);
 
   constructor() {
     effect(async () => {
@@ -58,5 +60,6 @@ export class StateService implements NostriaService {
     this.nostr.clear();
     this.badge.clear();
     this.media.clear();
+    this.reporting.clear();
   }
 }

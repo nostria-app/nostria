@@ -233,6 +233,18 @@ export class ReportingService {
   }
 
   /**
+   * Unblock a user (removes from mute list)
+   */
+  async unblockUser(pubkey: string): Promise<void> {
+    // Create a fresh mute list event without the user
+    const freshMuteList = await this.createFreshMuteListWithoutUser(pubkey);
+    if (freshMuteList) {
+      // Publish the updated mute list to account relays
+      this.accountState.publish.set(freshMuteList);
+    }
+  }
+
+  /**
    * Mute an event/thread (adds to mute list)
    */
   async muteEvent(eventId: string): Promise<void> {
@@ -358,5 +370,56 @@ export class ReportingService {
       console.error('Error creating fresh mute list event:', error);
       return null;
     }
+  }
+
+  /**
+   * Create a fresh mute list event without a specific user
+   */
+  async createFreshMuteListWithoutUser(pubkeyToRemove: string): Promise<Event | null> {
+    const account = this.accountState.account();
+    if (!account?.pubkey) {
+      return null;
+    }
+
+    // Get current mute list or create empty tags array
+    const currentMuteList = this.accountState.muteList();
+    let existingTags: string[][] = [];
+
+    if (currentMuteList) {
+      // Filter out the user to be removed
+      existingTags = currentMuteList.tags.filter(
+        (tag) => !(tag[0] === 'p' && tag[1] === pubkeyToRemove),
+      );
+    }
+
+    // Create fresh event with current timestamp
+    const muteListEvent: UnsignedEvent = {
+      kind: 10000,
+      created_at: Math.floor(Date.now() / 1000), // Fresh timestamp
+      content: '',
+      tags: existingTags,
+      pubkey: account.pubkey,
+    };
+
+    try {
+      // Sign the event
+      const signedEvent = await this.nostr.signEvent(muteListEvent);
+
+      // Update the account state with the new mute list
+      this.accountState.muteList.set(signedEvent);
+
+      return signedEvent;
+    } catch (error) {
+      console.error('Error creating fresh mute list event without user:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Clear reporting service state when switching accounts
+   */
+  clear(): void {
+    // Reset content overrides
+    this.contentOverrides.set(new Set());
   }
 }
