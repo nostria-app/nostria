@@ -114,11 +114,18 @@ export class ProfileComponent {
   isProfileBlocked = computed(() => {
     const currentPubkey = this.pubkey();
     if (!currentPubkey || this.isOwnProfile()) return false;
-    return this.reportingService.isUserBlocked(currentPubkey);
+
+    const isBlocked = this.reportingService.isUserBlocked(currentPubkey);
+    this.logger.debug('Profile blocked check:', { currentPubkey, isBlocked });
+
+    return isBlocked;
   });
 
   // Signal to control whether blocked profile is revealed
   isBlockedProfileRevealed = signal(false);
+
+  // Track previous blocked state to detect changes
+  private previousBlockedState = signal(false);
 
   showLightningQR = signal(false);
   lightningQrCode = signal<string>('');
@@ -163,6 +170,33 @@ export class ProfileComponent {
       }
     });
 
+    // Reset blocked profile reveal when block status changes from false to true
+    effect(() => {
+      const isBlocked = this.isProfileBlocked();
+      const previousBlocked = this.previousBlockedState();
+      const currentPubkey = this.pubkey();
+
+      this.logger.debug('Block status effect triggered:', {
+        pubkey: currentPubkey,
+        isBlocked,
+        previousBlocked,
+        revealed: this.isBlockedProfileRevealed(),
+      });
+
+      // Update the previous state
+      untracked(() => {
+        this.previousBlockedState.set(isBlocked);
+      });
+
+      // If user becomes blocked (transition from false to true), reset the reveal state
+      if (isBlocked && !previousBlocked) {
+        untracked(() => {
+          this.logger.debug('User newly blocked, showing overlay for:', currentPubkey);
+          this.isBlockedProfileRevealed.set(false);
+        });
+      }
+    });
+
     // React to changes in route parameters and app initialization
     effect(async () => {
       // Only proceed if app is initialized and route params are available
@@ -195,6 +229,7 @@ export class ProfileComponent {
             this.lightningQrCode.set('');
             this.error.set(null);
             this.isBlockedProfileRevealed.set(false); // Reset blocked profile reveal state
+            this.previousBlockedState.set(false); // Reset previous blocked state tracking
 
             if (id.startsWith('npub')) {
               id = this.utilities.getPubkeyFromNpub(id);
