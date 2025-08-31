@@ -452,13 +452,24 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
         const existingPTags = parentEvent.tags.filter((tag) => tag[0] === 'p');
 
         // Step 1: Add all existing "e" tags from the parent event
+        // When replying further down a thread, only the latest "e" tag should have "reply"
+        // All other "e" tags should preserve "root" marker or be unmarked
         existingETags.forEach((eTag) => {
-          tags.push([...eTag]); // Copy the entire tag
+          const tagCopy = [...eTag];
+          // If this tag has "reply" marker, remove it (make it unmarked)
+          // Keep "root" markers as they are
+          if (tagCopy[3] === 'reply') {
+            tagCopy[3] = ''; // Remove reply marker from intermediate events
+          }
+          tags.push(tagCopy);
         });
 
-        // Step 2: Add the parent event as a new "e" tag with "reply" marker
+        // Step 2: Add the parent event as a new "e" tag
+        // If the parent has no existing "e" tags, this is the first reply, so mark as "root"
+        // If the parent has existing "e" tags, this is a reply in a thread, so mark as "reply"
+        const marker = existingETags.length === 0 ? 'root' : 'reply';
         // Format: ["e", <event-id>, <relay-url>, <marker>, <pubkey>]
-        tags.push(['e', this.data.replyTo.id, '', 'reply', this.data.replyTo.pubkey]);
+        tags.push(['e', this.data.replyTo.id, '', marker, this.data.replyTo.pubkey]);
 
         // Step 3: Add all existing "p" tags from the parent event
         existingPTags.forEach((pTag) => {
