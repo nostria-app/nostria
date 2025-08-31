@@ -174,16 +174,11 @@ export class ProfileHeaderComponent {
     // No need to load favorites here as the service handles it automatically
   }
 
-  muteUser(): void {
+  blockUser(): void {
     const pubkey = this.currentPubkey();
     if (pubkey) {
       this.accountState.mutePubkey(pubkey);
     }
-  }
-
-  blockUser(): void {
-    this.logger.debug('Block requested for:', this.currentPubkey());
-    // TODO: Implement actual block functionality
   }
 
   /**
