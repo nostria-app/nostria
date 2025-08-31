@@ -17,6 +17,11 @@ import {
   PublishDialogComponent,
   PublishDialogData,
 } from '../components/publish-dialog/publish-dialog.component';
+import {
+  ReportDialogComponent,
+  ReportDialogData,
+} from '../components/report-dialog/report-dialog.component';
+import { ReportTarget } from './reporting.service';
 
 @Injectable({
   providedIn: 'root',
@@ -526,6 +531,21 @@ export class LayoutService implements OnDestroy {
       width: '600px',
       disableClose: false,
     });
+  }
+
+  async showReportDialog(target: ReportTarget, userDisplayName?: string) {
+    const dialogData: ReportDialogData = {
+      target,
+      userDisplayName,
+    };
+
+    const dialogRef = this.dialog.open(ReportDialogComponent, {
+      data: dialogData,
+      width: '600px',
+      disableClose: false,
+    });
+
+    return dialogRef.afterClosed();
   }
 
   // Method to show the welcome dialog

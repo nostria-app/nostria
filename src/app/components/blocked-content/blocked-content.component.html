@@ -1,0 +1,19 @@
+<div class="blocked-content-placeholder">
+  <mat-card class="blocked-card">
+    <mat-card-content>
+      <div class="blocked-icon">
+        <mat-icon>visibility_off</mat-icon>
+      </div>
+      <div class="blocked-message">
+        <h3>Content Hidden</h3>
+        <p>This content has been blocked based on your mute settings.</p>
+      </div>
+      <div class="blocked-actions">
+        <button mat-button (click)="showContent()">
+          <mat-icon>visibility</mat-icon>
+          Show Blocked Content
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

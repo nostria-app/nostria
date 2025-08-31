@@ -29,6 +29,7 @@ import {
 } from '../../../components/publish-dialog/publish-dialog.component';
 import { kinds } from 'nostr-tools';
 import { StorageService } from '../../../services/storage.service';
+import type { ReportTarget } from '../../../services/reporting.service';
 
 @Component({
   selector: 'app-profile-header',
@@ -179,6 +180,22 @@ export class ProfileHeaderComponent {
     if (pubkey) {
       this.accountState.mutePubkey(pubkey);
     }
+  }
+
+  reportUser(): void {
+    const pubkey = this.currentPubkey();
+    if (!pubkey) {
+      return;
+    }
+
+    const displayName = this.profile()?.data.display_name || this.profile()?.data.name || '';
+
+    const reportTarget: ReportTarget = {
+      type: 'user',
+      pubkey: pubkey,
+    };
+
+    this.layout.showReportDialog(reportTarget, displayName);
   }
 
   /**
