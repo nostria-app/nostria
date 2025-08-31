@@ -43,4 +43,10 @@
     <mat-icon>warning</mat-icon>
     Report Content
   </button>
+  @if (event().pubkey !== accountState.pubkey()) {
+  <button mat-menu-item (click)="accountState.mutePubkey(event().pubkey);">
+    <mat-icon>block</mat-icon>
+    <span>Block</span>
+  </button>
+  }
 </mat-menu>
