@@ -52,6 +52,7 @@ import { UrlUpdateService } from '../../services/url-update.service';
 import { UsernameService } from '../../services/username';
 import { Metrics } from '../../services/metrics';
 import { AccountRelayService } from '../../services/relays/account-relay';
+import { ReportingService } from '../../services/reporting.service';
 
 @Component({
   selector: 'app-profile',
@@ -98,6 +99,7 @@ export class ProfileComponent {
   private readonly username = inject(UsernameService);
   private readonly profileTracking = inject(ProfileTrackingService);
   private readonly metrics = inject(Metrics);
+  private readonly reportingService = inject(ReportingService);
 
   pubkey = signal<string>('');
   userMetadata = signal<NostrRecord | undefined>(undefined);
@@ -107,6 +109,16 @@ export class ProfileComponent {
   isOwnProfile = computed(() => {
     return this.accountState.pubkey() === this.pubkey();
   });
+
+  // Check if current profile user is blocked
+  isProfileBlocked = computed(() => {
+    const currentPubkey = this.pubkey();
+    if (!currentPubkey || this.isOwnProfile()) return false;
+    return this.reportingService.isUserBlocked(currentPubkey);
+  });
+
+  // Signal to control whether blocked profile is revealed
+  isBlockedProfileRevealed = signal(false);
 
   showLightningQR = signal(false);
   lightningQrCode = signal<string>('');
@@ -182,6 +194,7 @@ export class ProfileComponent {
             this.userMetadata.set(undefined);
             this.lightningQrCode.set('');
             this.error.set(null);
+            this.isBlockedProfileRevealed.set(false); // Reset blocked profile reveal state
 
             if (id.startsWith('npub')) {
               id = this.utilities.getPubkeyFromNpub(id);
@@ -504,6 +517,14 @@ export class ProfileComponent {
   blockUser(): void {
     this.logger.debug('Block requested for:', this.pubkey());
     // TODO: Implement actual block functionality
+  }
+
+  /**
+   * Reveals a blocked profile temporarily
+   */
+  revealBlockedProfile(): void {
+    this.isBlockedProfileRevealed.set(true);
+    this.logger.debug('Revealed blocked profile:', this.pubkey());
   }
 
   /**

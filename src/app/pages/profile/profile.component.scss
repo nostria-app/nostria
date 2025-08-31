@@ -1,6 +1,8 @@
 .profile-page {
   max-width: 1200px;
   margin: 0 auto;
+  position: relative;
+  min-height: 100vh;
   // padding-bottom: 2rem;
 }
 
@@ -477,12 +479,10 @@
 
   .banner-skeleton {
     height: 300px;
-    background: linear-gradient(
-      90deg,
-      var(--mat-sys-surface-container) 25%,
-      var(--mat-sys-surface-container-high) 50%,
-      var(--mat-sys-surface-container) 75%
-    );
+    background: linear-gradient(90deg,
+        var(--mat-sys-surface-container) 25%,
+        var(--mat-sys-surface-container-high) 50%,
+        var(--mat-sys-surface-container) 75%);
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite;
     border-radius: 0 0 8px 8px;
@@ -517,12 +517,10 @@
       width: 160px;
       height: 160px;
       border-radius: 50%;
-      background: linear-gradient(
-        90deg,
-        var(--mat-sys-surface-container) 25%,
-        var(--mat-sys-surface-container-high) 50%,
-        var(--mat-sys-surface-container) 75%
-      );
+      background: linear-gradient(90deg,
+          var(--mat-sys-surface-container) 25%,
+          var(--mat-sys-surface-container-high) 50%,
+          var(--mat-sys-surface-container) 75%);
       background-size: 200% 100%;
       animation: shimmer 1.5s infinite;
       flex-shrink: 0;
@@ -557,12 +555,10 @@
         height: 32px;
         width: 60%;
         max-width: 300px;
-        background: linear-gradient(
-          90deg,
-          var(--mat-sys-surface-container) 25%,
-          var(--mat-sys-surface-container-high) 50%,
-          var(--mat-sys-surface-container) 75%
-        );
+        background: linear-gradient(90deg,
+            var(--mat-sys-surface-container) 25%,
+            var(--mat-sys-surface-container-high) 50%,
+            var(--mat-sys-surface-container) 75%);
         background-size: 200% 100%;
         animation: shimmer 1.5s infinite;
         border-radius: 4px;
@@ -577,12 +573,10 @@
         height: 20px;
         width: 80%;
         max-width: 400px;
-        background: linear-gradient(
-          90deg,
-          var(--mat-sys-surface-container) 25%,
-          var(--mat-sys-surface-container-high) 50%,
-          var(--mat-sys-surface-container) 75%
-        );
+        background: linear-gradient(90deg,
+            var(--mat-sys-surface-container) 25%,
+            var(--mat-sys-surface-container-high) 50%,
+            var(--mat-sys-surface-container) 75%);
         background-size: 200% 100%;
         animation: shimmer 1.5s infinite;
         border-radius: 4px;
@@ -596,12 +590,10 @@
         height: 60px;
         width: 90%;
         max-width: 500px;
-        background: linear-gradient(
-          90deg,
-          var(--mat-sys-surface-container) 25%,
-          var(--mat-sys-surface-container-high) 50%,
-          var(--mat-sys-surface-container) 75%
-        );
+        background: linear-gradient(90deg,
+            var(--mat-sys-surface-container) 25%,
+            var(--mat-sys-surface-container-high) 50%,
+            var(--mat-sys-surface-container) 75%);
         background-size: 200% 100%;
         animation: shimmer 1.5s infinite;
         border-radius: 4px;
@@ -630,12 +622,10 @@
     .action-button-skeleton {
       height: 36px;
       width: 120px;
-      background: linear-gradient(
-        90deg,
-        var(--mat-sys-surface-container) 25%,
-        var(--mat-sys-surface-container-high) 50%,
-        var(--mat-sys-surface-container) 75%
-      );
+      background: linear-gradient(90deg,
+          var(--mat-sys-surface-container) 25%,
+          var(--mat-sys-surface-container-high) 50%,
+          var(--mat-sys-surface-container) 75%);
       background-size: 200% 100%;
       animation: shimmer 1.5s infinite;
       border-radius: 20px;
@@ -687,5 +677,99 @@
 
   100% {
     background-position: 200% 0;
+  }
+}
+
+/* Blocked Profile Overlay Styles */
+.blocked-profile-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--mat-sys-surface-container-low);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+
+.blocked-profile-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 3rem 2rem;
+  background-color: var(--mat-sys-surface-container);
+  border-radius: 16px;
+  box-shadow: var(--mat-sys-level3);
+  max-width: 500px;
+  text-align: center;
+  margin: 1rem;
+
+  .blocked-icon {
+    font-size: 4rem;
+    height: 4rem;
+    width: 4rem;
+    color: var(--mat-sys-error);
+  }
+
+  h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--mat-sys-on-surface);
+    font-weight: 500;
+  }
+
+  p {
+    margin: 0;
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+
+  .blocked-profile-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+
+    button {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-weight: 500;
+      min-width: 140px;
+
+      mat-icon {
+        font-size: 1.2rem;
+        height: 1.2rem;
+        width: 1.2rem;
+      }
+    }
+  }
+
+  @media (max-width: 768px) {
+    padding: 2rem 1.5rem;
+    margin: 1rem;
+
+    .blocked-icon {
+      font-size: 3rem;
+      height: 3rem;
+      width: 3rem;
+    }
+
+    h2 {
+      font-size: 1.3rem;
+    }
+
+    .blocked-profile-actions button {
+      width: 100%;
+      justify-content: center;
+    }
   }
 }
