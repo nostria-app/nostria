@@ -1,0 +1,188 @@
+.report-dialog-content {
+  min-width: 500px;
+  max-width: 600px;
+
+  .report-target-info {
+    margin-bottom: 24px;
+    padding: 16px;
+    background-color: var(--mat-sys-surface-variant);
+    border-radius: 8px;
+
+    h3 {
+      margin: 0;
+      font-weight: 500;
+      color: var(--mat-sys-on-surface-variant);
+    }
+  }
+
+  .report-type-section,
+  .report-description-section,
+  .publish-options {
+    margin-bottom: 24px;
+
+    h3 {
+      margin-bottom: 16px;
+      font-size: 16px;
+      font-weight: 500;
+    }
+  }
+
+  .full-width {
+    width: 100%;
+  }
+
+  .report-option {
+    .option-label {
+      font-weight: 500;
+    }
+
+    .option-description {
+      font-size: 12px;
+      color: var(--mat-sys-on-surface-variant);
+      margin-top: 4px;
+    }
+  }
+
+  .publish-option {
+    margin-bottom: 16px;
+
+    .option-content {
+      .option-label {
+        font-weight: 500;
+        margin-bottom: 4px;
+      }
+
+      .option-description {
+        font-size: 14px;
+        color: var(--mat-sys-on-surface-variant);
+        margin-bottom: 8px;
+      }
+
+      .relay-count {
+        font-size: 12px;
+        color: var(--mat-sys-primary);
+      }
+    }
+  }
+
+  .custom-relays-section {
+    margin-left: 32px;
+    margin-top: 16px;
+
+    h4 {
+      margin-bottom: 12px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .custom-relay-input {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      .relay-input {
+        flex: 1;
+      }
+    }
+
+    .custom-relays-list {
+      margin-top: 12px;
+    }
+  }
+
+  .publish-results {
+    margin-top: 24px;
+
+    h4 {
+      margin-bottom: 16px;
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    .result-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+
+      .relay-url {
+        font-family: monospace;
+        font-size: 12px;
+        color: var(--mat-sys-on-surface-variant);
+      }
+
+      .result-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        &.status-pending {
+          color: var(--mat-sys-primary);
+        }
+
+        &.status-success {
+          color: var(--mat-sys-primary);
+        }
+
+        &.status-error {
+          color: var(--mat-sys-error);
+        }
+      }
+    }
+  }
+
+  .relays-view-section {
+    margin-top: 24px;
+
+    h4 {
+      margin-bottom: 16px;
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    .relays-list {
+      .relay-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+
+        .relay-url {
+          font-family: monospace;
+          font-size: 12px;
+          color: var(--mat-sys-on-surface-variant);
+        }
+      }
+
+      .no-relays {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--mat-sys-error);
+
+        mat-icon {
+          font-size: 20px;
+          width: 20px;
+          height: 20px;
+        }
+      }
+    }
+  }
+}
+
+mat-dialog-actions {
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+
+  .block-toggle-section {
+    flex: 1;
+    
+    mat-slide-toggle {
+      ::ng-deep .mdc-switch__ripple {
+        color: var(--mat-sys-error);
+      }
+    }
+  }
+}

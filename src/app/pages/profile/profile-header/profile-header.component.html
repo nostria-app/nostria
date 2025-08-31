@@ -196,7 +196,7 @@
 
         @if (!isOwnProfile()) {
         <mat-divider></mat-divider>
-        <button mat-menu-item>
+        <button mat-menu-item (click)="reportUser()">
           <mat-icon>warning</mat-icon>
           <span>Report User</span>
         </button>

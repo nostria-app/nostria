@@ -17,6 +17,7 @@ import {
   type ConfirmDialogData,
 } from '../../confirm-dialog/confirm-dialog.component';
 import { LayoutService } from '../../../services/layout.service';
+import type { ReportTarget } from '../../../services/reporting.service';
 
 @Component({
   selector: 'app-event-menu',
@@ -103,5 +104,20 @@ export class EventMenuComponent {
         });
       }
     }
+  }
+
+  reportContent() {
+    const event = this.event();
+    if (!event) {
+      return;
+    }
+
+    const reportTarget: ReportTarget = {
+      type: 'content',
+      pubkey: event.pubkey,
+      eventId: event.id,
+    };
+
+    this.layout.showReportDialog(reportTarget);
   }
 }
