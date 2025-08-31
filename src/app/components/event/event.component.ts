@@ -87,6 +87,7 @@ export class EventComponent {
   eventService = inject(EventService);
   router = inject(Router);
   reactions = signal<ReactionEvents>({ events: [], data: new Map() });
+  reports = signal<ReactionEvents>({ events: [], data: new Map() });
 
   // Loading states
   isLoadingEvent = signal<boolean>(false);
@@ -190,6 +191,7 @@ export class EventComponent {
 
         if (record.event.kind == kinds.ShortTextNote) {
           this.loadReactions();
+          this.loadReports();
         }
       });
     });
@@ -222,6 +224,26 @@ export class EventComponent {
       }
     });
   }
+
+    async loadReports(invalidateCache = false) {
+    const record = this.record();
+    if (!record) return;
+
+    const userPubkey = this.accountState.pubkey();
+    if (!userPubkey) return;
+
+    try {
+      const reports = await this.eventService.loadReports(
+        record.event.id,
+        userPubkey,
+        invalidateCache,
+      );
+      this.reports.set(reports);
+    } finally {
+      
+    }
+  }
+
 
   async loadReactions(invalidateCache = false) {
     const record = this.record();
