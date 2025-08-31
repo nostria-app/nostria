@@ -192,7 +192,7 @@ export class ProfileHeaderComponent {
         this.reportingService.unblockUser(pubkey);
       } else {
         // User is not blocked, so block them
-        this.accountState.mutePubkey(pubkey);
+        this.reportingService.muteUser(pubkey);
       }
     }
   }

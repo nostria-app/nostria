@@ -226,10 +226,13 @@ export class ReportingService {
    * Mute a user (adds to mute list)
    */
   async muteUser(pubkey: string): Promise<void> {
-    await this.addToMuteList({
-      type: 'p',
-      value: pubkey,
-    });
+    // Create a fresh mute list event with the user
+    const freshMuteList = await this.createFreshMuteListEvent('user', pubkey);
+    if (freshMuteList) {
+      // Publish the updated mute list to account relays
+      this.accountState.publish.set(freshMuteList);
+      this.logger.debug('Blocked user and published mute list:', pubkey);
+    }
   }
 
   /**
