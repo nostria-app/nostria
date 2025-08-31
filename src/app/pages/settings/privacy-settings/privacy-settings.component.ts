@@ -102,8 +102,11 @@ export class PrivacySettingsComponent {
   }
 
   async toggleReportTypeVisibility(reportType: string): Promise<void> {
+    console.log('toggleReportTypeVisibility called with:', reportType);
+    console.log('Current settings before toggle:', this.settingsService.settings());
     try {
       await this.settingsService.toggleReportTypeVisibility(reportType);
+      console.log('Settings after toggle:', this.settingsService.settings());
     } catch (error) {
       console.error('Failed to toggle report type visibility setting', error);
     }
