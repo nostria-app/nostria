@@ -1,0 +1,41 @@
+<div class="reported-content-placeholder">
+  <mat-card class="reported-card">
+    <mat-card-content>
+      <div class="reported-header">
+        <mat-icon class="warning-icon">flag</mat-icon>
+        <div class="reported-message">
+          <h3>Content Reported</h3>
+          <p>This content has been reported {{ getTotalReports() }} time{{ getTotalReports() !== 1 ? 's' : '' }}.</p>
+        </div>
+      </div>
+
+      @if (getTopReportTypes().length > 0 && !isLoadingReports()) {
+      <div class="report-types">
+        <p class="report-types-label">Reported as:</p>
+        <div class="report-chips">
+          @for (reportType of getTopReportTypes(); track reportType.type) {
+          <mat-chip class="report-chip" [class]="'report-type-' + reportType.type">
+            <mat-icon>{{ getReportTypeIcon(reportType.type) }}</mat-icon>
+            {{ getReportTypeLabel(reportType.type) }}
+            @if (reportType.count > 1) {
+            <span class="report-count">{{ reportType.count }}</span>
+            }
+          </mat-chip>
+          }
+        </div>
+      </div>
+      }
+
+      <div class="reported-actions">
+        <button mat-button (click)="showContent()">
+          <mat-icon>visibility</mat-icon>
+          Show Content Anyway
+        </button>
+        <button mat-button (click)="showReportsDialog()">
+          <mat-icon>info</mat-icon>
+          View Report Details
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

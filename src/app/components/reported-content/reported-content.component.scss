@@ -1,0 +1,180 @@
+.reported-content-placeholder {
+  margin: 1rem 0;
+}
+
+.reported-card {
+  background-color: var(--mat-sys-error-container);
+  color: var(--mat-sys-on-error-container);
+  border: 1px solid var(--mat-sys-error);
+}
+
+.reported-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+
+  .warning-icon {
+    font-size: 2rem;
+    height: 2rem;
+    width: 2rem;
+    color: var(--mat-sys-error);
+  }
+
+  .reported-message {
+    flex: 1;
+
+    h3 {
+      margin: 0 0 0.5rem 0;
+      font-size: 1.2rem;
+      font-weight: 500;
+    }
+
+    p {
+      margin: 0;
+      opacity: 0.8;
+    }
+  }
+}
+
+.report-types {
+  margin-bottom: 1.5rem;
+
+  .report-types-label {
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    opacity: 0.9;
+  }
+
+  .report-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+
+    .report-chip {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.3rem 0.8rem;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      background-color: var(--mat-sys-surface);
+      color: var(--mat-sys-on-surface);
+
+      mat-icon {
+        font-size: 1rem;
+        height: 1rem;
+        width: 1rem;
+      }
+
+      .report-count {
+        background-color: var(--mat-sys-primary);
+        color: var(--mat-sys-on-primary);
+        border-radius: 50%;
+        min-width: 1.2rem;
+        height: 1.2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+        font-weight: 500;
+      }
+
+      // Color coding for different report types
+      &.report-type-nudity {
+        background-color: #ffcdd2;
+        color: #c62828;
+
+        mat-icon {
+          color: #c62828;
+        }
+      }
+
+      &.report-type-malware {
+        background-color: #ffe0b2;
+        color: #ef6c00;
+
+        mat-icon {
+          color: #ef6c00;
+        }
+      }
+
+      &.report-type-profanity {
+        background-color: #e1bee7;
+        color: #7b1fa2;
+
+        mat-icon {
+          color: #7b1fa2;
+        }
+      }
+
+      &.report-type-illegal {
+        background-color: #ffcdd2;
+        color: #d32f2f;
+
+        mat-icon {
+          color: #d32f2f;
+        }
+      }
+
+      &.report-type-spam {
+        background-color: #fff9c4;
+        color: #f57c00;
+
+        mat-icon {
+          color: #f57c00;
+        }
+      }
+
+      &.report-type-impersonation {
+        background-color: #c8e6c9;
+        color: #388e3c;
+
+        mat-icon {
+          color: #388e3c;
+        }
+      }
+
+      &.report-type-other {
+        background-color: #e0e0e0;
+        color: #616161;
+
+        mat-icon {
+          color: #616161;
+        }
+      }
+    }
+  }
+}
+
+.reported-actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+
+  button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: var(--mat-sys-surface);
+    color: var(--mat-sys-on-surface);
+
+    &:hover {
+      background-color: var(--mat-sys-surface-variant);
+    }
+
+    mat-icon {
+      font-size: 1.2rem;
+      height: 1.2rem;
+      width: 1.2rem;
+    }
+  }
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+
+    button {
+      justify-content: center;
+    }
+  }
+}

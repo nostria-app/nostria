@@ -34,6 +34,8 @@ import { BadgeComponent } from '../../pages/badges/badge/badge.component';
 import { RepostButtonComponent } from './repost-button/repost-button.component';
 import { ProfileDisplayNameComponent } from '../user-profile/display-name/profile-display-name.component';
 import { EventMenuComponent } from './event-menu/event-menu.component';
+import { ReportedContentComponent } from '../reported-content/reported-content.component';
+import { ReportingService } from '../../services/reporting.service';
 
 type EventCardAppearance = 'card' | 'plain';
 
@@ -61,6 +63,7 @@ type EventCardAppearance = 'card' | 'plain';
     PlaylistEventComponent,
     UserProfileComponent,
     BadgeComponent,
+    ReportedContentComponent,
   ],
   templateUrl: './event.component.html',
   styleUrl: './event.component.scss',
@@ -86,6 +89,7 @@ export class EventComponent {
   accountState = inject(AccountStateService);
   eventService = inject(EventService);
   router = inject(Router);
+  reportingService = inject(ReportingService);
   reactions = signal<ReactionEvents>({ events: [], data: new Map() });
   reports = signal<ReactionEvents>({ events: [], data: new Map() });
 
@@ -177,6 +181,25 @@ export class EventComponent {
     return record.event.tags.filter((tag) => tag[0] === 'p').length;
   });
 
+  // Check if this event has any reports
+  hasReports = computed<boolean>(() => {
+    return this.reports().events.length > 0;
+  });
+
+  // Check if content should be hidden due to reports
+  shouldHideContent = computed<boolean>(() => {
+    const event = this.event() || this.record()?.event;
+    if (!event) return false;
+
+    // Show content if user has manually overridden the hide
+    if (this.reportingService.isContentOverrideActive(event.id)) {
+      return false;
+    }
+
+    // Hide content if it has reports (you can add more sophisticated logic here)
+    return this.hasReports();
+  });
+
   constructor() {
     effect(() => {
       const event = this.event();
@@ -225,7 +248,7 @@ export class EventComponent {
     });
   }
 
-    async loadReports(invalidateCache = false) {
+  async loadReports(invalidateCache = false) {
     const record = this.record();
     if (!record) return;
 
@@ -239,11 +262,10 @@ export class EventComponent {
         invalidateCache,
       );
       this.reports.set(reports);
-    } finally {
-      
+    } catch (error) {
+      console.error('Error loading reports:', error);
     }
   }
-
 
   async loadReactions(invalidateCache = false) {
     const record = this.record();
