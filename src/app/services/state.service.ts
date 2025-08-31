@@ -42,8 +42,6 @@ export class StateService implements NostriaService {
     await this.discoveryRelay.load();
     await this.accountRelay.setAccount(pubkey);
     await this.accountState.load();
-
-    this.accountState.loadSubscriptions();
     await this.nostr.load();
 
     // Load notifications from storage

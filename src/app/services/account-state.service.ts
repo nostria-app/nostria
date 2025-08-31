@@ -43,7 +43,6 @@ export class AccountStateService implements OnDestroy {
   private readonly utilities = inject(UtilitiesService);
   private readonly wallets = inject(Wallets);
   private readonly cache = inject(Cache);
-  premium = signal(false);
 
   private destroy$ = new Subject<void>();
 
@@ -88,6 +87,11 @@ export class AccountStateService implements OnDestroy {
     return subs.find((sub) => sub.pubkey === pubkey);
   });
 
+  hasActiveSubscription = computed(() => {
+    const subscription = this.subscription();
+    return subscription?.expires && Date.now() < subscription.expires;
+  });
+
   expiresWhen = computed(() => {
     const sub = this.subscription();
     return sub?.expires ? new Date(sub.expires) : null;
@@ -102,6 +106,50 @@ export class AccountStateService implements OnDestroy {
       return `/p/${this.npub()}`;
     }
   });
+
+  muteList = signal<Event | undefined>(undefined);
+
+  // Processing state for toolbar indicator
+  profileProcessingState = signal<ProfileProcessingState>({
+    isProcessing: false,
+    total: 0,
+    processed: 0,
+    currentProfile: '',
+    startedAt: 0,
+  });
+
+  // Computed signals for cache access - removed since we can't iterate over injected cache keys
+
+  // Computed signal for processing progress
+  processingProgress = computed(() => {
+    const state = this.profileProcessingState();
+    if (state.total === 0) return 0;
+    return Math.round((state.processed / state.total) * 100);
+  }); // nostr = inject(NostrService);
+
+  // Signal to publish event
+  publish = signal<Event | UnsignedEvent | undefined>(undefined);
+
+  constructor() {
+    // Cache configuration is now handled by the injected cache service
+
+    // Effect to pre-load account profiles when accounts change
+    effect(() => {
+      const accounts = this.accounts();
+      if (accounts.length > 0 && !this.isPreloadingProfiles) {
+        // Check if the set of accounts has actually changed
+        const currentPubkeys = new Set(accounts.map((a) => a.pubkey));
+        const hasSameAccounts =
+          currentPubkeys.size === this.lastPreloadedAccountPubkeys.size &&
+          [...currentPubkeys].every((pubkey) => this.lastPreloadedAccountPubkeys.has(pubkey));
+
+        if (!hasSameAccounts) {
+          this.preloadAccountProfiles(accounts);
+        }
+      }
+    });
+  }
+
 
   hasFeature(feature: Feature): boolean {
     const sub = this.subscription();
@@ -160,6 +208,8 @@ export class AccountStateService implements OnDestroy {
   }
 
   async load() {
+    this.loadSubscriptions();
+
     const account = this.account();
 
     if (!account) {
@@ -328,17 +378,6 @@ export class AccountStateService implements OnDestroy {
 
     const subscription = this.subscription() as any;
 
-    if (subscription) {
-      // Check subscription.expires if the premium has expired or not.
-      if (subscription.expires && Date.now() > subscription.expires) {
-        this.premium.set(false);
-      } else {
-        this.premium.set(true);
-      }
-    } else {
-      this.premium.set(false);
-    }
-
     if (
       subscription &&
       subscription.error &&
@@ -357,8 +396,6 @@ export class AccountStateService implements OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (accountObj) => {
-          // this.accountSubscription.set(accountObj);
-
           // Create a copy with lastRetrieved property
           const accountWithTimestamp = { ...accountObj, retrieved: Date.now() };
 
@@ -375,53 +412,8 @@ export class AccountStateService implements OnDestroy {
             // Add the subscription to the local storage
             this.addSubscription(subscription);
           }
-
-          // this.accountSubscription.set(undefined);
         },
       });
-  }
-
-  muteList = signal<Event | undefined>(undefined);
-
-  // Processing state for toolbar indicator
-  profileProcessingState = signal<ProfileProcessingState>({
-    isProcessing: false,
-    total: 0,
-    processed: 0,
-    currentProfile: '',
-    startedAt: 0,
-  });
-
-  // Computed signals for cache access - removed since we can't iterate over injected cache keys
-
-  // Computed signal for processing progress
-  processingProgress = computed(() => {
-    const state = this.profileProcessingState();
-    if (state.total === 0) return 0;
-    return Math.round((state.processed / state.total) * 100);
-  }); // nostr = inject(NostrService);
-
-  // Signal to publish event
-  publish = signal<Event | UnsignedEvent | undefined>(undefined);
-
-  constructor() {
-    // Cache configuration is now handled by the injected cache service
-
-    // Effect to pre-load account profiles when accounts change
-    effect(() => {
-      const accounts = this.accounts();
-      if (accounts.length > 0 && !this.isPreloadingProfiles) {
-        // Check if the set of accounts has actually changed
-        const currentPubkeys = new Set(accounts.map((a) => a.pubkey));
-        const hasSameAccounts =
-          currentPubkeys.size === this.lastPreloadedAccountPubkeys.size &&
-          [...currentPubkeys].every((pubkey) => this.lastPreloadedAccountPubkeys.has(pubkey));
-
-        if (!hasSameAccounts) {
-          this.preloadAccountProfiles(accounts);
-        }
-      }
-    });
   }
 
   /**
