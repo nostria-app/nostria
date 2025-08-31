@@ -7,10 +7,8 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { type Event, nip19 } from 'nostr-tools';
-import type { EventPointer } from 'nostr-tools/nip19';
 import { firstValueFrom } from 'rxjs';
 import type { NostrRecord } from '../../../interfaces';
-
 import { AccountStateService } from '../../../services/account-state.service';
 import { DataService } from '../../../services/data.service';
 import { NostrService } from '../../../services/nostr.service';
