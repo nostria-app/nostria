@@ -28,7 +28,7 @@
         <button mat-flat-button routerLink="edit"><mat-icon>edit</mat-icon> Edit Profile</button>
         } @else {
         @if (!isFollowing()) {
-        <button mat-flat-button (click)="followUser()">
+        <button mat-flat-button class="hide-small" (click)="followUser()">
           <mat-icon>person_add</mat-icon> Follow
         </button>
         } @else {
@@ -37,7 +37,7 @@
                 </button> -->
         }
 
-        <button mat-stroked-button (click)="layoutService.openSendMessage(currentPubkey())">
+        <button class="hide-tiny" mat-stroked-button (click)="layoutService.openSendMessage(currentPubkey())">
           <mat-icon>message</mat-icon> Message
         </button>
         }
