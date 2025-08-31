@@ -15,6 +15,34 @@
   margin-bottom: 32px;
 }
 
+.report-settings-section {
+  margin-bottom: 32px;
+
+  .section-description {
+    margin-bottom: 16px;
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 0.875rem;
+    line-height: 1.4;
+  }
+
+  .report-type-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      color: var(--mat-sys-on-surface-variant);
+    }
+  }
+
+  .settings-option {
+    margin-bottom: 8px;
+  }
+}
+
 .settings-option {
   display: flex;
   align-items: center;
