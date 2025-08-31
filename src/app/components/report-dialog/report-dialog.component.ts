@@ -13,12 +13,14 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatListModule } from '@angular/material/list';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { Event } from 'nostr-tools';
 import { ReportingService, ReportTarget, ReportType } from '../../services/reporting.service';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { DiscoveryRelayService } from '../../services/relays/discovery-relay';
 import { NostrService } from '../../services/nostr.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { LayoutService } from '../../services/layout.service';
+import { AccountStateService } from '../../services/account-state.service';
 
 export interface ReportDialogData {
   target: ReportTarget;
@@ -68,6 +70,7 @@ export class ReportDialogComponent {
   private nostrService = inject(NostrService);
   private snackBar = inject(MatSnackBar);
   private layout = inject(LayoutService);
+  private accountState = inject(AccountStateService);
 
   selectedReportType = signal<ReportType>('spam');
   reportDescription = signal<string>('');
@@ -291,12 +294,22 @@ export class ReportDialogComponent {
   async blockTarget(): Promise<void> {
     try {
       if (this.data.target.type === 'user') {
-        await this.reportingService.muteUser(this.data.target.pubkey);
+        // Create a fresh mute list event with the user
+        const freshMuteList = await this.createFreshMuteListWithUser(this.data.target.pubkey);
+        if (freshMuteList) {
+          this.accountState.publish.set(freshMuteList);
+        }
+
         this.snackBar.open('User blocked successfully', 'Dismiss', {
           duration: 3000,
         });
       } else if (this.data.target.eventId) {
-        await this.reportingService.muteEvent(this.data.target.eventId);
+        // Create a fresh mute list event with the event
+        const freshMuteList = await this.createFreshMuteListWithEvent(this.data.target.eventId);
+        if (freshMuteList) {
+          this.accountState.publish.set(freshMuteList);
+        }
+
         this.snackBar.open('Content blocked successfully', 'Dismiss', {
           duration: 3000,
         });
@@ -307,5 +320,13 @@ export class ReportDialogComponent {
         duration: 3000,
       });
     }
+  }
+
+  private async createFreshMuteListWithUser(pubkey: string): Promise<Event | null> {
+    return this.reportingService.createFreshMuteListEvent('user', pubkey);
+  }
+
+  private async createFreshMuteListWithEvent(eventId: string): Promise<Event | null> {
+    return this.reportingService.createFreshMuteListEvent('event', eventId);
   }
 }

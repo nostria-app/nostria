@@ -392,7 +392,7 @@ export class NostrService implements NostriaService {
     return this.sign(event);
   }
 
-  private async sign(event: EventTemplate): Promise<Event> {
+  private async sign(event: EventTemplate | Event): Promise<Event> {
     const currentUser = this.accountState.account();
 
     if (!currentUser) {
@@ -404,6 +404,14 @@ export class NostrService implements NostriaService {
     if (!('pubkey' in event) || !event.pubkey) {
       (event as any).pubkey = currentUser.pubkey;
     }
+
+    // Remove id and signature, ensuring they are re-created upon signing.
+    (event as any).id = undefined;
+    (event as any).sig = undefined;
+
+    // Let's update the created_at to ensure if this is old event being updated,
+    // we have a fresh creation date.
+    event.created_at = this.currentDate();
 
     switch (currentUser?.source) {
       case 'extension':

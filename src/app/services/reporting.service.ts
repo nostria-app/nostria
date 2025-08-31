@@ -5,6 +5,7 @@ import { UtilitiesService } from './utilities.service';
 import { DataService } from './data.service';
 import { StorageService } from './storage.service';
 import { LoggerService } from './logger.service';
+import { NostrService } from './nostr.service';
 
 export type ReportType =
   | 'nudity'
@@ -38,6 +39,7 @@ export class ReportingService {
   private data = inject(DataService);
   private storage = inject(StorageService);
   private logger = inject(LoggerService);
+  private nostr = inject(NostrService);
 
   // Override signals for showing blocked content
   private contentOverrides = signal<Set<string>>(new Set());
@@ -293,5 +295,60 @@ export class ReportingService {
         description: 'Other issues not covered above',
       },
     ];
+  }
+
+  /**
+   * Create a fresh mute list event with new timestamp
+   */
+  async createFreshMuteListEvent(type: 'user' | 'event', target: string): Promise<Event | null> {
+    const account = this.accountState.account();
+    if (!account?.pubkey) {
+      return null;
+    }
+
+    // Get current mute list or create empty tags array
+    const currentMuteList = this.accountState.muteList();
+    let existingTags: string[][] = [];
+
+    if (currentMuteList) {
+      existingTags = [...currentMuteList.tags];
+    }
+
+    // Add the new target to the tags
+    if (type === 'user') {
+      // Check if user is already muted
+      const isAlreadyMuted = existingTags.some((tag) => tag[0] === 'p' && tag[1] === target);
+      if (!isAlreadyMuted) {
+        existingTags.push(['p', target]);
+      }
+    } else if (type === 'event') {
+      // Check if event is already muted
+      const isAlreadyMuted = existingTags.some((tag) => tag[0] === 'e' && tag[1] === target);
+      if (!isAlreadyMuted) {
+        existingTags.push(['e', target]);
+      }
+    }
+
+    // Create fresh event with current timestamp
+    const muteListEvent: UnsignedEvent = {
+      kind: 10000,
+      created_at: Math.floor(Date.now() / 1000), // Fresh timestamp
+      content: '',
+      tags: existingTags,
+      pubkey: account.pubkey,
+    };
+
+    try {
+      // Sign the event
+      const signedEvent = await this.nostr.signEvent(muteListEvent);
+
+      // Update the account state with the new mute list
+      this.accountState.muteList.set(signedEvent);
+
+      return signedEvent;
+    } catch (error) {
+      console.error('Error creating fresh mute list event:', error);
+      return null;
+    }
   }
 }

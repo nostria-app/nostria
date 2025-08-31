@@ -178,7 +178,7 @@ mat-dialog-actions {
 
   .block-toggle-section {
     flex: 1;
-    
+
     mat-slide-toggle {
       ::ng-deep .mdc-switch__ripple {
         color: var(--mat-sys-error);
