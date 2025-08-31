@@ -135,6 +135,14 @@ export class ReportingService {
   }
 
   /**
+   * Check if a specific user is muted/blocked
+   */
+  isUserBlocked(pubkey: string): boolean {
+    if (!pubkey) return false;
+    return this.mutedPubkeys().includes(pubkey);
+  }
+
+  /**
    * Check if content override is active for a specific event
    */
   isContentOverrideActive(eventId: string): boolean {
