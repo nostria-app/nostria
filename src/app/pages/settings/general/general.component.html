@@ -38,7 +38,7 @@
     </div>
   </div>
 
-  @if (accountState.premium()) {
+  @if (accountState.hasActiveSubscription()) {
     <div>
       <h2 i18n="@@settings.release-channel">
         Release Channel <mat-icon class="minor-icon">diamond</mat-icon>

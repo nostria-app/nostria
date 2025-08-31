@@ -156,7 +156,7 @@ interface RelayInfo {
 
         <div class="migration-container">
           <h3>Data Migration</h3>
-          @if (accountState.premium()) {
+          @if (accountState.hasActiveSubscription()) {
             <p>Would you like to migrate your existing data to this relay?</p>
             <mat-slide-toggle [checked]="migrateData()" (change)="migrateData.set($event.checked)">
               Migrate data to this relay

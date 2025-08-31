@@ -13,7 +13,7 @@
       <mat-nav-list>
         @for (section of sections; track section.id) {
           @if (section.premium) {
-            @if (accountState.premium()) {
+            @if (accountState.hasActiveSubscription()) {
               <a
                 mat-list-item
                 [class.active]="activeSection() === section.id"
