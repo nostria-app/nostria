@@ -150,6 +150,17 @@ export class ReportingService {
   }
 
   /**
+   * Check if an event should be hidden due to reports
+   * This is a simple check that can be expanded with more logic
+   */
+  shouldHideEventDueToReports(_event: Event): boolean {
+    // For now, we'll determine this based on the event component loading reports
+    // The actual hiding logic will be handled by the event component
+    // This method can be expanded to include threshold logic, trust networks, etc.
+    return false; // Placeholder - actual logic will be in the event component
+  }
+
+  /**
    * Toggle content override for a specific event
    */
   toggleContentOverride(eventId: string): void {
