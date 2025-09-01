@@ -169,7 +169,15 @@ export class EventService {
       const children = childrenMap.get(eventId) || [];
 
       return children
-        .sort((a, b) => a.created_at - b.created_at) // Sort by creation time
+        .sort((a, b) => {
+          // Replies to root post (level 0): newest first (descending)
+          // Replies to replies (level > 0): oldest first (ascending)
+          if (level === 0) {
+            return b.created_at - a.created_at; // Newest first for root replies
+          } else {
+            return a.created_at - b.created_at; // Oldest first for nested replies
+          }
+        })
         .map((child) => {
           const threadedEvent: ThreadedEvent = {
             event: child,
