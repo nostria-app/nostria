@@ -113,6 +113,7 @@ export class EventPageComponent {
       if (this.app.initialized() && this.routeParams()) {
         untracked(async () => {
           const id = this.routeParams()?.get('id');
+          debugger;
           if (id) {
             await this.loadEvent(id);
 
@@ -189,9 +190,16 @@ export class EventPageComponent {
           this.isLoading.set(false);
         }
 
-        if (partialData.parents !== undefined) {
-          this.parentEvents.set(partialData.parents);
+        debugger;
+
+        // If thread root, there are no parents.
+        if (partialData.isThreadRoot) {
           this.isLoadingParents.set(false);
+        } else { // If this is not thread root, it means there is suppose to be some parents, so wait for them to load.
+          if (partialData.parents !== undefined && partialData.parents.length > 0) {
+            this.parentEvents.set(partialData.parents);
+            this.isLoadingParents.set(false);
+          }
         }
 
         if (partialData.replies !== undefined) {

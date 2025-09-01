@@ -466,32 +466,40 @@ export class EventService {
   }
 
   /**
-   * Load parent events in a thread using outbox model. Only the initially opened
-   * reply is retrieved from user A relays. Everything else is fetched
-   * from user B relays (root author).
+   * Load parent events in a thread using outbox model. All parent events
+   * referenced in e-tags are loaded in a single batch query.
    */
   async loadParentEvents(event: Event): Promise<Event[]> {
-    const parents: Event[] = [];
-
     const { author: initialAuthor, rootId, replyId, pTags } = this.getEventTags(event);
-
-    let author = initialAuthor;
 
     if (!rootId && !replyId) {
       // This is a root event
-      return parents;
+      return [];
     }
+
+    // Extract all unique event IDs from e-tags
+    const eTags = event.tags.filter((tag) => tag[0] === 'e');
+    const parentEventIds = [...new Set(eTags.map((tag) => tag[1]))];
+
+    if (parentEventIds.length === 0) {
+      return [];
+    }
+
+    let author = initialAuthor;
 
     if (!author) {
       this.logger.warn(
-        'No author found for loading root event. Fallback to attempt using first p-tag.',
+        'No author found for loading parent events. Fallback to attempt using first p-tag.',
       );
       author = pTags[0];
     }
 
-    let userData: UserDataService | undefined;
+    if (!author) {
+      this.logger.warn('No author available for loading parent events.');
+      return [];
+    }
 
-    userData = this.cache.get<UserDataService>('user-data-' + author);
+    let userData = this.cache.get<UserDataService>('user-data-' + author);
 
     if (!userData) {
       userData = await this.userDataFactory.create(author);
@@ -503,31 +511,28 @@ export class EventService {
     }
 
     try {
-      // Load immediate parent (reply)
-      if (replyId && replyId !== rootId) {
-        const replyEvent = await userData.getEventById(replyId);
+      // Load all parent events in a single batch query
+      const parentRecords = await userData.getEventsByIds(parentEventIds, {
+        save: false,
+        cache: true,
+      });
 
-        if (replyEvent) {
-          parents.unshift(replyEvent.event);
+      // Extract events and sort them by creation time (oldest first for proper thread order)
+      const parentEvents = parentRecords
+        .map((record) => record.event)
+        .sort((a, b) => a.created_at - b.created_at);
 
-          // Recursively load parents of the reply
-          const grandParents = await this.loadParentEvents(replyEvent.event);
-          parents.unshift(...grandParents);
-        }
-      }
+      this.logger.info(
+        'Successfully loaded parent events:',
+        parentEvents.length,
+        'of',
+        parentEventIds.length,
+        'requested',
+      );
 
-      // Load root event if different from reply
-      if (rootId && rootId !== replyId) {
-        const rootEvent = await userData.getEventById(rootId);
-
-        if (rootEvent && !parents.find((p) => p.id === rootEvent.event.id)) {
-          parents.unshift(rootEvent.event);
-        }
-      }
-
-      return parents;
+      return parentEvents;
     } catch (error) {
-      console.error('Error loading parent events:', error);
+      this.logger.error('Error loading parent events:', error);
       return [];
     }
   }
@@ -577,14 +582,16 @@ export class EventService {
   }
 
   /**
-   * Load a thread progressively, yielding data as it becomes available
-   */
+ * Load a thread progressively, yielding data as it becomes available
+ */
   async *loadThreadProgressively(
     nevent: string,
     item?: EventData,
   ): AsyncGenerator<Partial<ThreadData>, ThreadData> {
+    debugger;
     // First, load the main event
     const event = await this.loadEvent(nevent, item);
+
     if (!event) {
       throw new Error('Event not found');
     }
@@ -592,128 +599,185 @@ export class EventService {
     const { rootId, replyId } = this.getEventTags(event);
     const isThreadRoot = !rootId && !replyId;
 
+    // Set initial values based on whether this is a thread root
+    const rootEvent = isThreadRoot ? event : null;
+    const parents: Event[] = [];
+
     // Yield the main event immediately
     yield {
       event,
       replies: [],
       threadedReplies: [],
       reactions: [],
-      parents: [],
+      parents,
       isThreadRoot,
-      rootEvent: null,
+      rootEvent,
     };
 
-    // Load parent events in the background
-    const parentsPromise = this.loadParentEvents(event);
-
-    // Start loading replies and reactions for the current event initially
+    // Start loading replies and reactions for the current event
     const currentEventRepliesPromise = this.loadReplies(event.id, event.pubkey);
     const currentEventReactionsPromise = this.loadReactions(event.id, event.pubkey);
 
-    // Wait for parents first and yield updated data
-    try {
-      const parents = await parentsPromise;
-      const rootEvent = parents.length > 0 ? parents[0] : isThreadRoot ? event : null;
-      const actualThreadRootId = rootEvent?.id || event.id;
-
-      // Yield with parent events
-      yield {
-        event,
-        replies: [],
-        threadedReplies: [],
-        reactions: [],
-        parents,
-        isThreadRoot,
-        rootEvent,
-      };
-
-      // Determine which replies to use based on thread structure
-      let finalRepliesPromise = currentEventRepliesPromise;
-      let finalReactionsPromise = currentEventReactionsPromise;
-
-      // If this event is part of a larger thread, load replies for the root
-      if (actualThreadRootId !== event.id) {
-        finalRepliesPromise = this.loadReplies(
-          actualThreadRootId,
-          rootEvent?.pubkey || event.pubkey,
-        );
-        finalReactionsPromise = this.loadReactions(
-          actualThreadRootId,
-          rootEvent?.pubkey || event.pubkey,
-        );
-      }
-
-      // Load replies and yield them as soon as available
-      const replies = await finalRepliesPromise;
-
-      // Only filter out parent events and current event from the flat replies list
-      const parentEventIds = new Set(parents.map((p) => p.id));
-      parentEventIds.add(event.id);
-
-      const filteredReplies = replies.filter((reply) => !parentEventIds.has(reply.id));
-
-      // Build thread tree starting from the current event, not the thread root
-      // This will show replies TO the current event and its descendants
-      const threadedReplies = this.buildThreadTree(filteredReplies, event.id, 4);
-
-      yield {
-        event,
-        replies: filteredReplies,
-        threadedReplies,
-        reactions: [],
-        parents,
-        isThreadRoot,
-        rootEvent,
-      };
-
-      // Finally wait for reactions and yield complete data
-      const reactions = await finalReactionsPromise;
-      const finalData: ThreadData = {
-        event,
-        replies: filteredReplies,
-        threadedReplies,
-        reactions: this.mapToReactionArray(reactions.data),
-        parents,
-        isThreadRoot,
-        rootEvent,
-      };
-
-      return finalData;
-    } catch (error) {
-      this.logger.error('Error in progressive thread loading:', error);
-
-      // Try to at least load replies for the current event
+    if (isThreadRoot) {
+      // For thread root events, skip parent loading and process replies/reactions directly
       try {
+        // Load replies and yield them as soon as available
         const replies = await currentEventRepliesPromise;
 
         // Filter out the current event from replies
         const filteredReplies = replies.filter((reply) => reply.id !== event.id);
+
+        // Build thread tree starting from the current event
         const threadedReplies = this.buildThreadTree(filteredReplies, event.id, 4);
 
-        const finalData: ThreadData = {
+        yield {
           event,
           replies: filteredReplies,
           threadedReplies,
           reactions: [],
-          parents: [],
+          parents,
           isThreadRoot,
-          rootEvent: isThreadRoot ? event : null,
+          rootEvent,
+        };
+
+        // Finally wait for reactions and yield complete data
+        const reactions = await currentEventReactionsPromise;
+        const finalData: ThreadData = {
+          event,
+          replies: filteredReplies,
+          threadedReplies,
+          reactions: this.mapToReactionArray(reactions.data),
+          parents,
+          isThreadRoot,
+          rootEvent,
         };
 
         return finalData;
-      } catch {
-        // Return minimal data if everything fails
+      } catch (error) {
+        this.logger.error('Error loading thread root data:', error);
+
+        // Return minimal data if loading fails
         const finalData: ThreadData = {
           event,
           replies: [],
           threadedReplies: [],
           reactions: [],
-          parents: [],
+          parents,
           isThreadRoot,
-          rootEvent: isThreadRoot ? event : null,
+          rootEvent,
         };
 
         return finalData;
+      }
+    } else {
+      debugger;
+      // For non-root events, load parent events in the background
+      const parentsPromise = this.loadParentEvents(event);
+
+      try {
+        const loadedParents = await parentsPromise;
+        const actualRootEvent = loadedParents.length > 0 ? loadedParents[0] : null;
+        const actualThreadRootId = actualRootEvent?.id || event.id;
+
+        // Yield with parent events
+        yield {
+          event,
+          replies: [],
+          threadedReplies: [],
+          reactions: [],
+          parents: loadedParents,
+          isThreadRoot,
+          rootEvent: actualRootEvent,
+        };
+
+        // Determine which replies to use based on thread structure
+        let finalRepliesPromise = currentEventRepliesPromise;
+        let finalReactionsPromise = currentEventReactionsPromise;
+
+        // If this event is part of a larger thread, load replies for the root
+        if (actualThreadRootId !== event.id) {
+          finalRepliesPromise = this.loadReplies(
+            actualThreadRootId,
+            actualRootEvent?.pubkey || event.pubkey,
+          );
+          finalReactionsPromise = this.loadReactions(
+            actualThreadRootId,
+            actualRootEvent?.pubkey || event.pubkey,
+          );
+        }
+
+        // Load replies and yield them as soon as available
+        const replies = await finalRepliesPromise;
+
+        // Only filter out parent events and current event from the flat replies list
+        const parentEventIds = new Set(loadedParents.map((p) => p.id));
+        parentEventIds.add(event.id);
+
+        const filteredReplies = replies.filter((reply) => !parentEventIds.has(reply.id));
+
+        // Build thread tree starting from the current event, not the thread root
+        // This will show replies TO the current event and its descendants
+        const threadedReplies = this.buildThreadTree(filteredReplies, event.id, 4);
+
+        yield {
+          event,
+          replies: filteredReplies,
+          threadedReplies,
+          reactions: [],
+          parents: loadedParents,
+          isThreadRoot,
+          rootEvent: actualRootEvent,
+        };
+
+        // Finally wait for reactions and yield complete data
+        const reactions = await finalReactionsPromise;
+        const finalData: ThreadData = {
+          event,
+          replies: filteredReplies,
+          threadedReplies,
+          reactions: this.mapToReactionArray(reactions.data),
+          parents: loadedParents,
+          isThreadRoot,
+          rootEvent: actualRootEvent,
+        };
+
+        return finalData;
+      } catch (error) {
+        this.logger.error('Error in progressive thread loading:', error);
+
+        // Try to at least load replies for the current event
+        try {
+          const replies = await currentEventRepliesPromise;
+
+          // Filter out the current event from replies
+          const filteredReplies = replies.filter((reply) => reply.id !== event.id);
+          const threadedReplies = this.buildThreadTree(filteredReplies, event.id, 4);
+
+          const finalData: ThreadData = {
+            event,
+            replies: filteredReplies,
+            threadedReplies,
+            reactions: [],
+            parents: [],
+            isThreadRoot,
+            rootEvent: isThreadRoot ? event : null,
+          };
+
+          return finalData;
+        } catch {
+          // Return minimal data if everything fails
+          const finalData: ThreadData = {
+            event,
+            replies: [],
+            threadedReplies: [],
+            reactions: [],
+            parents: [],
+            isThreadRoot,
+            rootEvent: isThreadRoot ? event : null,
+          };
+
+          return finalData;
+        }
       }
     }
   }

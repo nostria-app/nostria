@@ -402,6 +402,139 @@ export class UserDataService {
     return records;
   }
 
+  async getEventsByIds(
+    ids: string[],
+    options?: CacheOptions & DataOptions,
+  ): Promise<NostrRecord[]> {
+    // Validate input
+    if (!ids || ids.length === 0) {
+      this.logger.warn('getEventsByIds called with empty or invalid ids array:', ids);
+      return [];
+    }
+
+    // Filter out invalid IDs
+    const validIds = ids.filter((id) => id && id.trim() && id !== 'undefined');
+
+    if (validIds.length === 0) {
+      this.logger.warn('getEventsByIds called with no valid ids:', ids);
+      return [];
+    }
+
+    const cacheKey = `batch-${validIds.sort().join(',')}-events`;
+    let events: Event[] = [];
+    let records: NostrRecord[] = [];
+
+    // Check cache first
+    if (options?.cache && !options?.invalidateCache) {
+      const cachedRecords = this.cache.get<NostrRecord[]>(cacheKey);
+      if (cachedRecords) {
+        return cachedRecords;
+      }
+    }
+
+    // Try storage first if save option is enabled
+    if (options?.save) {
+      try {
+        const storageEvents = await Promise.all(
+          validIds.map((id) => this.storage.getEventById(id)),
+        );
+        events = storageEvents.filter((event): event is Event => event !== null);
+      } catch (error) {
+        this.logger.warn('Error loading events from storage:', error);
+      }
+    }
+
+    // If we didn't get all events from storage, or if save is false, try relays
+    const foundIds = new Set(events.map((e) => e.id));
+    const missingIds = validIds.filter((id) => !foundIds.has(id));
+
+    if (missingIds.length > 0) {
+      try {
+        // Try to use batch loading for better performance
+        const batchEvents = await this.loadEventsBatch(missingIds);
+
+        if (batchEvents.length > 0) {
+          events.push(...batchEvents);
+        } else {
+          // Fallback to individual requests if batch fails
+          const relayEventPromises = missingIds.map((id) => this.userRelayEx.getEventById(id));
+          const relayEventResults = await Promise.allSettled(relayEventPromises);
+
+          const relayEvents = relayEventResults
+            .filter(
+              (result): result is PromiseFulfilledResult<Event | null> =>
+                result.status === 'fulfilled' && result.value !== null,
+            )
+            .map((result) => result.value!);
+
+          if (relayEvents.length > 0) {
+            events.push(...relayEvents);
+          }
+        }
+      } catch (error) {
+        this.logger.error('Error loading events from relays:', error);
+      }
+    }
+
+    if (events.length === 0) {
+      return [];
+    }
+
+    // Convert to records
+    records = events.map((event) => this.toRecord(event));
+
+    // Cache the results
+    if (options?.cache || options?.invalidateCache) {
+      this.cache.set(cacheKey, records, options);
+    }
+
+    // Save new events to storage if needed
+    if (options?.save && missingIds.length > 0) {
+      try {
+        const newEvents = events.filter((e) => missingIds.includes(e.id));
+        await Promise.all(newEvents.map((event) => this.storage.saveEvent(event)));
+      } catch (error) {
+        this.logger.warn('Error saving events to storage:', error);
+      }
+    }
+
+    this.logger.info(
+      'Successfully loaded events by IDs:',
+      records.length,
+      'of',
+      validIds.length,
+      'requested',
+    );
+
+    return records;
+  }
+
+  /**
+   * Load multiple events by IDs using a single batch query for optimal performance
+   */
+  private async loadEventsBatch(ids: string[]): Promise<Event[]> {
+    if (!ids || ids.length === 0) {
+      return [];
+    }
+
+    try {
+      // For now, use parallel individual requests as batch
+      // TODO: When relay service supports batch loading, replace this with single query
+      const eventPromises = ids.map((id) => this.userRelayEx.getEventById(id));
+      const results = await Promise.allSettled(eventPromises);
+
+      return results
+        .filter(
+          (result): result is PromiseFulfilledResult<Event | null> =>
+            result.status === 'fulfilled' && result.value !== null,
+        )
+        .map((result) => result.value!);
+    } catch (error) {
+      this.logger.warn('Batch event loading failed:', error);
+      return [];
+    }
+  }
+
   async getEventsByKindAndEventTag(
     kind: number,
     eventTag: string,
