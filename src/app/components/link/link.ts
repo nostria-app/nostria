@@ -18,6 +18,12 @@ export class Link {
   // Input signal for the Nostr event
   event = input.required<Event>();
 
+  // Signal to detect if device supports hover (non-touch devices)
+  canHover = computed(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  });
+
   // Computed signal to generate the link
   link = computed(() => {
     const eventData = this.event();
