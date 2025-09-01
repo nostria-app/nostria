@@ -1,0 +1,18 @@
+/* Global dialog container styles */
+.whats-new-dialog-container {
+  .mat-mdc-dialog-container {
+    --mdc-dialog-container-color: var(--mat-dialog-container-background-color);
+    padding: 0;
+  }
+}
+
+/* Ensure proper spacing in mat-dialog-content */
+.whats-new-dialog-container .mat-mdc-dialog-content {
+  padding: 0;
+  margin: 0;
+}
+
+.whats-new-dialog-container .mat-mdc-dialog-actions {
+  padding: 0;
+  margin: 0;
+}

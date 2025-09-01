@@ -60,6 +60,7 @@ import { EventService } from './services/event';
 import { AgoPipe } from './pipes/ago.pipe';
 import { SleepModeService } from './services/sleep-mode.service';
 import { SleepModeOverlayComponent } from './components/sleep-mode-overlay/sleep-mode-overlay.component';
+import { WhatsNewDialogComponent } from './components/whats-new-dialog/whats-new-dialog.component';
 
 interface NavItem {
   path: string;
@@ -704,5 +705,14 @@ export class App implements OnInit {
         timestamp: new Date().toISOString(),
       });
     }
+  }
+
+  openWhatsNewDialog(): void {
+    this.dialog.open(WhatsNewDialogComponent, {
+      width: '800px',
+      maxWidth: '95vw',
+      maxHeight: '90vh',
+      panelClass: 'whats-new-dialog-container',
+    });
   }
 }
