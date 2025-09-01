@@ -83,6 +83,18 @@ app-user-profile {
           flex-wrap: wrap;
           gap: 8px;
 
+          .mobile-selectors {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            gap: 8px;
+
+            .column-selector-container {
+              margin-left: auto;
+            }
+          }
+
           .feed-tab {
             display: flex;
             align-items: center;
@@ -173,8 +185,7 @@ app-user-profile {
         height: 3px;
       }
 
-      &::-webkit-scrollbar-thumb {
-      }
+      &::-webkit-scrollbar-thumb {}
 
       .column-selector-button {
         display: flex;
@@ -193,12 +204,10 @@ app-user-profile {
         &.active {
           // background-color: var(--mat-sys-primary);
 
-          mat-icon {
-          }
+          mat-icon {}
         }
 
-        &:hover:not(.active) {
-        }
+        &:hover:not(.active) {}
 
         &.add-column {
           min-width: 40px;
@@ -832,8 +841,7 @@ app-user-profile {
           background-color: var(--mat-sys-primary);
         }
 
-        &:hover:not(.active) {
-        }
+        &:hover:not(.active) {}
       }
     }
 
@@ -971,8 +979,7 @@ app-user-profile {
         height: 3px;
       }
 
-      &::-webkit-scrollbar-thumb {
-      }
+      &::-webkit-scrollbar-thumb {}
 
       // Prevent reflow during drag
       &.cdk-drop-list-dragging {
@@ -1024,8 +1031,7 @@ app-user-profile {
         }
       }
 
-      &:hover:not(.active):not(.add-tab) {
-      }
+      &:hover:not(.active):not(.add-tab) {}
 
       &.add-tab {
         padding: 12px 8px;
