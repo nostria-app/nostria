@@ -46,3 +46,25 @@ export type ViewMode =
   | 'card'
   | 'tiny'
   | 'name';
+
+/** Static time constants in milliseconds */
+export const minutes = {
+  one: 1 * 60 * 1000,
+  two: 2 * 60 * 1000,
+  three: 3 * 60 * 1000,
+  four: 4 * 60 * 1000,
+  five: 5 * 60 * 1000,
+  six: 6 * 60 * 1000,
+  seven: 7 * 60 * 1000,
+  eight: 8 * 60 * 1000,
+  nine: 9 * 60 * 1000,
+  ten: 10 * 60 * 1000,
+} as const;
+
+export const hours = {
+  one: 1 * 60 * 60 * 1000,
+  two: 2 * 60 * 60 * 1000,
+  three: 3 * 60 * 60 * 1000,
+  four: 4 * 60 * 60 * 1000,
+  five: 5 * 60 * 60 * 1000,
+} as const;
