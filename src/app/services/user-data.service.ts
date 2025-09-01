@@ -11,9 +11,9 @@ import { SharedRelayService } from './relays/shared-relay';
 import { UserRelayService } from './relays/user-relay';
 
 export interface DataOptions {
-  cache: boolean; // Whether to use cache
+  cache?: boolean; // Whether to use cache
   invalidateCache?: boolean;
-  save: boolean; // Whether to save the event to storage
+  save?: boolean; // Whether to save the event to storage
 }
 
 export class UserDataService {

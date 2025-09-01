@@ -11,8 +11,8 @@ import { SharedRelayService } from './relays/shared-relay';
 import { AccountRelayService } from './relays/account-relay';
 
 export interface DataOptions {
-  cache: boolean; // Whether to use cache
-  save: boolean; // Whether to save the event to storage
+  cache?: boolean; // Whether to use cache
+  save?: boolean; // Whether to save the event to storage
 }
 
 @Injectable({

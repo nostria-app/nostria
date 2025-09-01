@@ -6,7 +6,7 @@ import { DataService } from './data.service';
 import { UtilitiesService } from './utilities.service';
 import { NostrService } from './nostr.service';
 import { EventData } from '../data-resolver';
-import { NostrRecord } from '../interfaces';
+import { minutes, NostrRecord } from '../interfaces';
 import { DiscoveryRelayService } from './relays/discovery-relay';
 import { UserDataFactoryService } from './user-data-factory.service';
 import { Cache } from './cache';
@@ -247,7 +247,7 @@ export class EventService {
     if (userData) {
       // Try to get from user data service first
       try {
-        const event = await userData.getEventById(hex);
+        const event = await userData.getEventById(hex, { cache: true, ttl: minutes.five });
 
         if (event) {
           this.logger.info('Loaded event from storage or relays:', event.event.id);
@@ -260,7 +260,7 @@ export class EventService {
       // Try to get from account data service.
       try {
         // Attempt to get from account relays.
-        const event = await this.data.getEventById(hex);
+        const event = await this.data.getEventById(hex, { cache: true, ttl: minutes.five });
 
         if (event) {
           this.logger.info('Loaded event from storage or relays:', event.event.id);
@@ -294,8 +294,8 @@ export class EventService {
     try {
       // Load replies (kind 1 events that reference this event)
       const replyRecords = await userData.getEventsByKindAndEventTag(kinds.ShortTextNote, eventId, {
-        save: false,
-        cache: false,
+        cache: true,
+        ttl: minutes.five,
       });
 
       // Extract events from records and filter valid replies
@@ -341,8 +341,8 @@ export class EventService {
     try {
       // Load reactions (kind 7 events that reference this event)
       const reactionRecords = await userData.getEventsByKindAndEventTag(kinds.Reaction, eventId, {
-        save: false,
         cache: true,
+        ttl: minutes.five,
         invalidateCache,
       });
 
@@ -399,8 +399,8 @@ export class EventService {
     try {
       // Load reports (kind 1984 events that reference this event)
       const reportRecords = await userData.getEventsByKindAndEventTag(kinds.Report, eventId, {
-        save: false,
         cache: true,
+        ttl: minutes.five,
         invalidateCache,
       });
 
@@ -498,14 +498,17 @@ export class EventService {
 
       this.cache.set('user-data-' + author, userData, {
         maxSize: 20,
-        ttl: 1000 * 60,
+        ttl: minutes.one,
       });
     }
 
     try {
       // Load immediate parent (reply)
       if (replyId && replyId !== rootId) {
-        const replyEvent = await userData.getEventById(replyId);
+        const replyEvent = await userData.getEventById(replyId, {
+          cache: true,
+          ttl: minutes.five,
+        });
 
         if (replyEvent) {
           parents.unshift(replyEvent.event);
@@ -518,7 +521,10 @@ export class EventService {
 
       // Load root event if different from reply
       if (rootId && rootId !== replyId) {
-        const rootEvent = await userData.getEventById(rootId);
+        const rootEvent = await userData.getEventById(rootId, {
+          cache: true,
+          ttl: minutes.five,
+        });
 
         if (rootEvent && !parents.find((p) => p.id === rootEvent.event.id)) {
           parents.unshift(rootEvent.event);
@@ -536,6 +542,7 @@ export class EventService {
    * Load a complete thread with parents and children using outbox model.
    */
   async loadCompleteThread(nevent: string, item?: EventData): Promise<ThreadData> {
+    debugger;
     // Load the main event
     const event = await this.loadEvent(nevent, item);
     if (!event) {
