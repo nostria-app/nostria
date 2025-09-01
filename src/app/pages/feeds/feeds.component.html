@@ -210,50 +210,50 @@
         (cdkDragEnded)="onDragEnded()">
         <!-- Column Header (Connected to its content) -->
         @if (!isMobileView()) {
-          <div class="column-header">
-            <div class="column-header-content">
-              @if (columns().length > 1) {
-                <div class="drag-handle" cdkDragHandle>
-                  <mat-icon>drag_indicator</mat-icon>
-                </div>
-              }
+        <div class="column-header">
+          <div class="column-header-content">
+            @if (columns().length > 1) {
+            <div class="drag-handle" cdkDragHandle>
+              <mat-icon>drag_indicator</mat-icon>
+            </div>
+            }
 
-              <mat-icon>{{ column.icon }}</mat-icon>
-              <span class="column-title">{{ column.label }}</span>
+            <mat-icon>{{ column.icon }}</mat-icon>
+            <span class="column-title">{{ column.label }}</span>
 
-              <div class="column-header-actions">
-                <button mat-icon-button (click)="refreshColumn(column)" matTooltip="Refresh content">
-                  <mat-icon>refresh</mat-icon>
-                </button>
-                <!-- <button mat-icon-button (click)="toggleAdvancedFilters()" matTooltip="Toggle filters">
+            <div class="column-header-actions">
+              <button mat-icon-button (click)="refreshColumn(column)" matTooltip="Refresh content">
+                <mat-icon>refresh</mat-icon>
+              </button>
+              <!-- <button mat-icon-button (click)="toggleAdvancedFilters()" matTooltip="Toggle filters">
                 <mat-icon>filter_list</mat-icon>
               </button> -->
-                @if (isColumnPaused(column.id)) {
-                  <button mat-icon-button (click)="continueColumn(column)" matTooltip="Resume live feed">
-                    <mat-icon>play_circle</mat-icon>
-                  </button>
-                } @else {
-                  <button mat-icon-button (click)="pauseColumn(column)" matTooltip="Pause the feed">
-                    <mat-icon>pause_circle</mat-icon>
-                  </button>
-                }
+              @if (isColumnPaused(column.id)) {
+              <button mat-icon-button (click)="continueColumn(column)" matTooltip="Resume live feed">
+                <mat-icon>play_circle</mat-icon>
+              </button>
+              } @else {
+              <button mat-icon-button (click)="pauseColumn(column)" matTooltip="Pause the feed">
+                <mat-icon>pause_circle</mat-icon>
+              </button>
+              }
 
-                <button mat-icon-button [matMenuTriggerFor]="columnMenu" (click)="$event.stopPropagation()">
-                  <mat-icon>more_vert</mat-icon>
+              <button mat-icon-button [matMenuTriggerFor]="columnMenu" (click)="$event.stopPropagation()">
+                <mat-icon>more_vert</mat-icon>
+              </button>
+              <mat-menu #columnMenu="matMenu">
+                <button mat-menu-item (click)="editColumn(i)">
+                  <mat-icon>edit</mat-icon>
+                  <span>Edit</span>
                 </button>
-                <mat-menu #columnMenu="matMenu">
-                  <button mat-menu-item (click)="editColumn(i)">
-                    <mat-icon>edit</mat-icon>
-                    <span>Edit</span>
-                  </button>
-                  <button mat-menu-item (click)="removeColumn(i)">
-                    <mat-icon>delete</mat-icon>
-                    <span>Remove</span>
-                  </button>
-                </mat-menu>
-              </div>
+                <button mat-menu-item (click)="removeColumn(i)">
+                  <mat-icon>delete</mat-icon>
+                  <span>Remove</span>
+                </button>
+              </mat-menu>
             </div>
           </div>
+        </div>
         }
 
         <!-- Filters Section -->
