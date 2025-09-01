@@ -166,7 +166,7 @@ export class App implements OnInit {
 
   navigationItems = computed(() => {
     const subscription = this.accountState.subscription();
-    console.log('navigationItems recomputing, subscription:', subscription);
+    this.logger.info('navigationItems recomputing, subscription:', subscription);
 
     return this.navItems.filter((item) => {
       // Filter out items that are not authenticated if user is not logged in
@@ -180,7 +180,7 @@ export class App implements OnInit {
 
       // Filter out items that should be hidden when subscribed
       if (item.hideOnSubscribed && subscription) {
-        console.log('Hiding item due to subscription:', item.label);
+        this.logger.info('Hiding item due to subscription:', item.label);
         return false;
       }
 
@@ -507,7 +507,7 @@ export class App implements OnInit {
 
     dialogRef.afterClosed().subscribe(async (result) => {
       if (result) {
-        console.log('The dialog was closed', result);
+        this.logger.info('The dialog was closed', result);
         this.layout.toggleSearch();
 
         if (result.startsWith('bunker://')) {

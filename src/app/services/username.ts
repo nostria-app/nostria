@@ -5,6 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import { ApiResponse } from '../api/models';
 import { LocalStorageService } from './local-storage.service';
 import { ApplicationStateService } from './application-state.service';
+import { LoggerService } from './logger.service';
 
 type UsernameByPubkeyMap = Record<string, string>;
 type PubkeyByUsernameMap = Record<string, string>;
@@ -19,6 +20,7 @@ export class UsernameService {
   private accountService = inject(AccountService);
   private usernameByKey = signal<UsernameByPubkeyMap>({});
   private pubkeyByUsername = signal<PubkeyByUsernameMap>({});
+  private logger = inject(LoggerService);
 
   constructor() {
     this.loadUsernamesCache();
@@ -29,7 +31,7 @@ export class UsernameService {
       this.appState.USERNAMES_STORAGE_KEY,
     );
 
-    console.log('load', data);
+    this.logger.info('Retrieved nostria-usernames local storage:', data);
 
     if (data) {
       this.usernameByKey.set(data);
