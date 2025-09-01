@@ -1,0 +1,164 @@
+import { Component, inject } from '@angular/core';
+import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatCardModule } from '@angular/material/card';
+import { MatDividerModule } from '@angular/material/divider';
+import { CommonModule } from '@angular/common';
+import { NgOptimizedImage } from '@angular/common';
+
+interface FeatureUpdate {
+  version: string;
+  date: string;
+  title: string;
+  description: string;
+  features: {
+    title: string;
+    description: string;
+    screenshots?: {
+      src: string;
+      alt: string;
+      width: number;
+      height: number;
+    }[];
+  }[];
+}
+
+@Component({
+  selector: 'app-whats-new-dialog',
+  template: `
+    <div class="whats-new-dialog">
+      <div class="dialog-header">
+        <h1 mat-dialog-title>
+          <mat-icon>campaign</mat-icon>
+          What's New in Nostria
+        </h1>
+        <button mat-icon-button [mat-dialog-close]="true" aria-label="Close dialog">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+
+      <div mat-dialog-content class="dialog-content">
+        @for (update of updates; track update.version) {
+          <mat-card class="update-card">
+            <mat-card-header>
+              <mat-card-title>{{ update.title }}</mat-card-title>
+              <mat-card-subtitle>
+                Version {{ update.version }} • {{ update.date }}
+              </mat-card-subtitle>
+            </mat-card-header>
+
+            <mat-card-content>
+              <p class="update-description">{{ update.description }}</p>
+
+              @for (feature of update.features; track feature.title) {
+                <div class="feature-item">
+                  <h3>{{ feature.title }}</h3>
+                  <p>{{ feature.description }}</p>
+
+                  @if (feature.screenshots && feature.screenshots.length > 0) {
+                    <div class="screenshots-container">
+                      @for (screenshot of feature.screenshots; track screenshot.src) {
+                        <div class="screenshot-wrapper">
+                          <img
+                            [ngSrc]="screenshot.src"
+                            [alt]="screenshot.alt"
+                            [width]="screenshot.width"
+                            [height]="screenshot.height"
+                            loading="lazy"
+                            class="feature-screenshot"
+                            priority="false"
+                          />
+                        </div>
+                        <p class="screenshot-description">{{ screenshot.alt }}</p>
+                      }
+                    </div>
+                  }
+                </div>
+
+                @if (!$last) {
+                  <mat-divider class="feature-divider"></mat-divider>
+                }
+              }
+            </mat-card-content>
+          </mat-card>
+        }
+      </div>
+
+      <div mat-dialog-actions class="dialog-actions">
+        <button mat-raised-button color="primary" [mat-dialog-close]="true">Got it!</button>
+      </div>
+    </div>
+  `,
+  styleUrl: './whats-new-dialog.component.scss',
+  imports: [
+    CommonModule,
+    MatDialogModule,
+    MatButtonModule,
+    MatIconModule,
+    MatCardModule,
+    MatDividerModule,
+    NgOptimizedImage,
+  ],
+})
+export class WhatsNewDialogComponent {
+  private dialogRef = inject(MatDialogRef<WhatsNewDialogComponent>);
+
+  // Sample updates - replace with real data
+  updates: FeatureUpdate[] = [
+    {
+      version: '1.0.1',
+      date: 'September 2025',
+      title: 'Enhanced User Experience',
+      description: "We've added several new features to make your Nostria experience even better.",
+      features: [
+        {
+          title: 'Simplified Feeds Interface',
+          description:
+            'The feeds interface has been simplified for smaller screens and mobile devices. This update takes up much less screen space and is quicker and easier to navigate and understand.',
+          screenshots: [
+            {
+              src: '/screenshots/2025-08-31-feeds-and-columns.png',
+              alt: 'Before: Original feeds interface with two rows for controls',
+              width: 522,
+              height: 225,
+            },
+            {
+              src: '/screenshots/2025-09-01-feeds-and-columns.png',
+              alt: 'After: Simplified feeds interface showing the new compact design',
+              width: 524,
+              height: 257,
+            },
+          ],
+        },
+        {
+          title: 'Performance Improvements',
+          description:
+            'We have done various performance optimizations to make the app faster and more responsive. We will continue to add more improvements in future updates.',
+        },
+        {
+          title: 'Thread Sorting',
+          description:
+            'Replies to a post are now sorted by latest activity on the first level. Replies to replies are sorted from oldest to newest.',
+        },
+      ],
+    },
+    {
+      version: '1.0.0',
+      date: 'August 2025',
+      title: 'First Release',
+      description: 'After a period of public beta, the first release of Nostria is here!',
+      features: [
+        {
+          title: 'Rich set of features',
+          description:
+            'In the initial release of Nostria, there is already a rich set of features. Publishing Notes, Articles, Media, Badges and more. Ability to have multiple feeds and columns. The People section to explore the people you care about. Many options for login, very easy signup for new users. Premium features. Music and Video player. Backup features. Notifications, bookmarks, messages and a lot more.',
+        },
+      ],
+    },
+  ];
+
+  close(): void {
+    this.dialogRef.close();
+  }
+}
