@@ -982,6 +982,7 @@ app-media-queue .media-list mat-list {
 }
 
 .mat-mdc-button.only-icon {
+  --mat-button-text-with-icon-horizontal-padding: 8px;
   min-width: 40px;
   padding: 0;
 
