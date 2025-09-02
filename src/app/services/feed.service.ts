@@ -238,8 +238,8 @@ export class FeedService {
   constructor() {
     effect(() => {
       if (this.accountState.initialized()) {
-        untracked(() => {
-          this.loadFeeds();
+        untracked(async () => {
+          await this.loadFeeds();
           this.loadRelays();
         });
       }
@@ -274,7 +274,7 @@ export class FeedService {
     if (activeFeedId) {
       const activeFeed = this.getFeedById(activeFeedId);
       if (activeFeed) {
-        this.subscribeToFeed(activeFeed);
+        await this.subscribeToFeed(activeFeed);
         this.logger.debug('Subscribed to active feed:', activeFeedId);
       }
     }
@@ -300,7 +300,7 @@ export class FeedService {
   /**
    * Set the active feed and manage subscriptions
    */
-  setActiveFeed(feedId: string | null): void {
+  async setActiveFeed(feedId: string | null): Promise<void> {
     const previousActiveFeedId = this._activeFeedId();
 
     // Unsubscribe from previous active feed
@@ -316,7 +316,7 @@ export class FeedService {
     if (feedId) {
       const activeFeed = this.getFeedById(feedId);
       if (activeFeed) {
-        this.subscribeToFeed(activeFeed);
+        await this.subscribeToFeed(activeFeed);
         this.logger.debug(`Subscribed to new active feed: ${feedId}`);
       } else {
         this.logger.warn(`Active feed with id ${feedId} not found`);
@@ -334,17 +334,17 @@ export class FeedService {
   /**
    * Subscribe to a single feed and all its columns
    */
-  private subscribeToFeed(feed: FeedConfig): void {
+  private async subscribeToFeed(feed: FeedConfig): Promise<void> {
     // Subscribe to each column in the feed
-    feed.columns.forEach((column) => {
-      this.subscribeToColumn(column);
-    });
+    for (const column of feed.columns) {
+      await this.subscribeToColumn(column);
+    }
   }
 
   /**
    * Subscribe to a single column
    */
-  private async subscribeToColumn(column: ColumnConfig) {
+  private async subscribeToColumn(column: ColumnConfig): Promise<void> {
     // Don't subscribe if already subscribed
     if (this.data.has(column.id)) {
       this.logger.warn(`Column ${column.id} is already subscribed`);
@@ -486,6 +486,8 @@ export class FeedService {
    * Updates UI incrementally as events are received for better UX
    */
   private async fetchEventsFromUsers(pubkeys: string[], feedData: FeedItem) {
+    debugger;
+    
     const isArticlesFeed = feedData.filter?.kinds?.includes(30023);
     const eventsPerUser = isArticlesFeed ? 10 : 5; // Fetch more events per user for articles
     const now = Math.floor(Date.now() / 1000); // current timestamp in seconds
@@ -546,8 +548,6 @@ export class FeedService {
     processedUsers: number,
     totalUsers: number,
   ) {
-    // debugger;
-
     // Update UI immediately if we have events from any user
     // if (userEventsMap.size === 0) {
     //   return;
@@ -882,7 +882,7 @@ export class FeedService {
   /**
    * Load feeds from local storage
    */
-  private loadFeeds(): void {
+  private async loadFeeds(): Promise<void> {
     try {
       const pubkey = this.accountState.pubkey();
       if (!pubkey) {
@@ -912,7 +912,7 @@ export class FeedService {
       this.saveFeeds();
     }
 
-    this.subscribe();
+    await this.subscribe();
   }
 
   /**
@@ -1000,7 +1000,7 @@ export class FeedService {
   /**
    * Add a new feed
    */
-  addFeed(feedData: Omit<FeedConfig, 'id' | 'createdAt' | 'updatedAt'>): FeedConfig {
+  async addFeed(feedData: Omit<FeedConfig, 'id' | 'createdAt' | 'updatedAt'>): Promise<FeedConfig> {
     const newFeed: FeedConfig = {
       ...feedData,
       id: `feed-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -1012,14 +1012,18 @@ export class FeedService {
     this.saveFeeds();
 
     // Subscribe to the new feed immediately
-    this.subscribeToFeed(newFeed);
+    await this.subscribeToFeed(newFeed);
 
     this.logger.debug('Added new feed and subscribed', newFeed);
     return newFeed;
   }
   /**
    * Update an existing feed
-   */ updateFeed(id: string, updates: Partial<Omit<FeedConfig, 'id' | 'createdAt'>>): boolean {
+   */
+  async updateFeed(
+    id: string,
+    updates: Partial<Omit<FeedConfig, 'id' | 'createdAt'>>,
+  ): Promise<boolean> {
     const feedIndex = this._feeds().findIndex((feed) => feed.id === id);
     if (feedIndex === -1) {
       this.logger.warn(`Feed with id ${id} not found`);
@@ -1087,9 +1091,9 @@ export class FeedService {
         });
 
         // Subscribe to new columns
-        addedColumns.forEach((column) => {
-          this.subscribeToColumn(column);
-        });
+        for (const column of addedColumns) {
+          await this.subscribeToColumn(column);
+        }
       }
     } else {
       // For non-column updates, just update the configuration
@@ -1268,10 +1272,12 @@ export class FeedService {
     } catch {
       return false;
     }
-  } /**
+  }
+
+  /**
    * Refresh a specific column by unsubscribing and resubscribing
    */
-  refreshColumn(columnId: string): void {
+  async refreshColumn(columnId: string): Promise<void> {
     console.log(`🔄 FeedService: Refreshing column ${columnId}`);
     const columnData = this.data.get(columnId);
     if (!columnData) {
@@ -1287,7 +1293,7 @@ export class FeedService {
     this.unsubscribeFromColumn(columnId);
 
     // Resubscribe to the column
-    this.subscribeToColumn(column);
+    await this.subscribeToColumn(column);
 
     this.logger.debug(`Refreshed column: ${columnId}`);
     console.log(`✅ FeedService: Column ${columnId} refreshed successfully`);
@@ -1297,7 +1303,7 @@ export class FeedService {
    * Refresh all columns with 'following' source in the active feed
    * This should be called after the user's following list changes to reload content
    */
-  refreshFollowingColumns(): void {
+  async refreshFollowingColumns(): Promise<void> {
     console.log(`🔄 FeedService: Refreshing all following columns`);
     const activeFeedId = this._activeFeedId();
     if (!activeFeedId) {
@@ -1323,10 +1329,10 @@ export class FeedService {
     console.log(`📊 Found ${followingColumns.length} following columns to refresh`);
 
     // Refresh each following column
-    followingColumns.forEach((column) => {
+    for (const column of followingColumns) {
       console.log(`🔄 Refreshing following column: ${column.label} (${column.id})`);
-      this.refreshColumn(column.id);
-    });
+      await this.refreshColumn(column.id);
+    }
 
     this.logger.debug(`Refreshed ${followingColumns.length} following columns`);
     console.log(
@@ -1389,6 +1395,7 @@ export class FeedService {
 
     // Handle following feeds with algorithm
     if (column.source === 'following') {
+      debugger;
       await this.loadFollowingFeed(columnData);
     } else {
       // Subscribe to relay events again
