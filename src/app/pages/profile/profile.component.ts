@@ -390,13 +390,30 @@ export class ProfileComponent {
       return;
     }
 
+    // Additional validation for pubkey format
+    if (!this.utilities.isValidPubkey(pubkey)) {
+      this.logger.warn('loadUserProfile called with invalid pubkey format:', pubkey);
+      this.error.set('Invalid pubkey format. Must be a valid hex pubkey or npub.');
+      this.isLoading.set(false);
+      return;
+    }
+
+    // Ensure we have the hex format for consistency
+    const hexPubkey = this.utilities.safeGetHexPubkey(pubkey);
+    if (!hexPubkey) {
+      this.logger.warn('Unable to convert pubkey to hex format:', pubkey);
+      this.error.set('Unable to process pubkey format');
+      this.isLoading.set(false);
+      return;
+    }
+
     this.isLoading.set(true);
     this.error.set(null);
 
     try {
-      // Try to get from cache first
-      const metadata = await this.data.getProfile(pubkey, true);
-      // let metadata = await this.nostrService.getMetadataForUser(pubkey, true);
+      // Try to get from cache first - use the validated hex pubkey
+      const metadata = await this.data.getProfile(hexPubkey, true);
+      // let metadata = await this.nostrService.getMetadataForUser(hexPubkey, true);
       this.userMetadata.set(metadata);
 
       if (!metadata) {
@@ -408,7 +425,7 @@ export class ProfileComponent {
       setTimeout(() => this.layoutService.scrollToOptimalProfilePosition(), 100);
 
       // Load user data regardless of metadata availability
-      // this.loadUserData(pubkey);
+      // this.loadUserData(hexPubkey);
     } catch (err) {
       this.logger.error('Error loading user profile', err);
       this.error.set('Error loading user profile');
@@ -432,12 +449,40 @@ export class ProfileComponent {
   }
 
   getTruncatedPubkey(): string {
-    return this.utilities.getTruncatedNpub(this.pubkey());
+    const pubkey = this.pubkey();
+    if (!this.utilities.isValidPubkey(pubkey)) {
+      console.warn('Invalid pubkey in getTruncatedPubkey:', pubkey);
+      return this.utilities.formatInvalidPubkey(pubkey);
+    }
+    return this.utilities.getTruncatedNpub(pubkey);
   }
 
   getFormattedNpub(): string {
-    console.debug('LOCATION 3:');
-    return this.utilities.getNpubFromPubkey(this.pubkey());
+    const pubkey = this.pubkey();
+
+    // Validate pubkey first
+    if (!this.utilities.isValidPubkey(pubkey)) {
+      console.warn('Invalid pubkey in getFormattedNpub:', pubkey);
+      throw new Error('Cannot format invalid pubkey as npub');
+    }
+
+    const hexPubkey = this.utilities.safeGetHexPubkey(pubkey);
+    if (!hexPubkey) {
+      throw new Error('Failed to get valid hex pubkey');
+    }
+
+    return this.utilities.getNpubFromPubkey(hexPubkey);
+  }
+
+  /**
+   * Safe method to get formatted npub for template use
+   */
+  getSafeFormattedNpub(): string {
+    try {
+      return this.getFormattedNpub();
+    } catch (error) {
+      return this.utilities.formatInvalidPubkey(this.pubkey());
+    }
   }
 
   getDefaultBanner(): string {
@@ -484,13 +529,25 @@ export class ProfileComponent {
   }
 
   copyNpub(): void {
-    this.copyToClipboard(this.getFormattedNpub(), 'npub');
+    try {
+      const npub = this.getFormattedNpub();
+      this.copyToClipboard(npub, 'npub');
+    } catch (error) {
+      console.warn('Failed to copy npub:', error);
+      this.snackBar.open('Unable to copy invalid pubkey', 'Close', { duration: 3000 });
+    }
   }
 
   copyNprofile(): void {
-    // For simplicity, just using npub here. In a real implementation,
-    // would need to create a proper nprofile URI with relays
-    this.copyToClipboard(this.getFormattedNpub(), 'nprofile');
+    try {
+      // For simplicity, just using npub here. In a real implementation,
+      // would need to create a proper nprofile URI with relays
+      const npub = this.getFormattedNpub();
+      this.copyToClipboard(npub, 'nprofile');
+    } catch (error) {
+      console.warn('Failed to copy nprofile:', error);
+      this.snackBar.open('Unable to copy invalid pubkey', 'Close', { duration: 3000 });
+    }
   }
 
   copyProfileData(): void {

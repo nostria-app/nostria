@@ -42,8 +42,12 @@
       <a [routerLink]="['/settings']">additional ones</a> and try again.
     </p>
     <p class="profile-link-container">
-      <a class="wrap-link" [href]="'https://nostr.at/' + utilities.getNpubFromPubkey(pubkey())" target="_blank"
-        rel="noopener noreferrer">https://nostr.at/{{ utilities.getNpubFromPubkey(pubkey()) }}</a>
+      @if (utilities.isValidPubkey(pubkey())) {
+      <a class="wrap-link" [href]="'https://nostr.at/' + getSafeFormattedNpub()" target="_blank"
+        rel="noopener noreferrer">https://nostr.at/{{ getSafeFormattedNpub() }}</a>
+      } @else {
+      <span class="invalid-pubkey">Invalid pubkey: {{ pubkey() }}</span>
+      }
     </p>
   </div>
   }

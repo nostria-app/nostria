@@ -30,6 +30,83 @@ export class UtilitiesService {
 
   constructor() { }
 
+  /**
+   * Validate if a string is a valid hex pubkey (64 character hex string)
+   */
+  isValidHexPubkey(pubkey: string): boolean {
+    if (!pubkey || typeof pubkey !== 'string') {
+      return false;
+    }
+
+    // Must be exactly 64 characters of valid hex
+    return /^[0-9a-fA-F]{64}$/.test(pubkey);
+  }
+
+  /**
+   * Validate if a string is a valid npub
+   */
+  isValidNpub(npub: string): boolean {
+    if (!npub || typeof npub !== 'string' || !npub.startsWith('npub1')) {
+      return false;
+    }
+
+    try {
+      const result = nip19.decode(npub);
+      return result.type === 'npub' && typeof result.data === 'string' && result.data.length === 64;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Validate if a pubkey (hex or npub) is valid
+   */
+  isValidPubkey(pubkey: string): boolean {
+    if (!pubkey || typeof pubkey !== 'string') {
+      return false;
+    }
+
+    // Check if it's a valid hex pubkey
+    if (this.isValidHexPubkey(pubkey)) {
+      return true;
+    }
+
+    // Check if it's a valid npub and convert to hex for validation
+    if (this.isValidNpub(pubkey)) {
+      try {
+        const hexPubkey = this.getPubkeyFromNpub(pubkey);
+        return this.isValidHexPubkey(hexPubkey);
+      } catch {
+        return false;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Safely get hex pubkey from either hex or npub input
+   */
+  safeGetHexPubkey(pubkey: string): string | null {
+    if (!this.isValidPubkey(pubkey)) {
+      return null;
+    }
+
+    if (this.isValidHexPubkey(pubkey)) {
+      return pubkey;
+    }
+
+    if (this.isValidNpub(pubkey)) {
+      try {
+        return this.getPubkeyFromNpub(pubkey);
+      } catch {
+        return null;
+      }
+    }
+
+    return null;
+  }
+
   toRecord(event: Event): NostrRecord {
     return {
       event,
@@ -302,8 +379,45 @@ export class UtilitiesService {
   }
 
   getTruncatedNpub(pubkey: string): string {
-    const npub = this.getNpubFromPubkey(pubkey);
-    return npub.length > 12 ? `${npub.substring(0, 6)}...${npub.substring(npub.length - 6)}` : npub;
+    try {
+      if (!this.isValidPubkey(pubkey)) {
+        this.logger.warn('Invalid pubkey format in getTruncatedNpub:', pubkey);
+        return this.formatInvalidPubkey(pubkey);
+      }
+
+      const hexPubkey = this.safeGetHexPubkey(pubkey);
+      if (!hexPubkey) {
+        return this.formatInvalidPubkey(pubkey);
+      }
+
+      const npub = this.getNpubFromPubkey(hexPubkey);
+      return npub.length > 12
+        ? `${npub.substring(0, 6)}...${npub.substring(npub.length - 6)}`
+        : npub;
+    } catch (error) {
+      this.logger.warn('Error in getTruncatedNpub:', pubkey, error);
+      return this.formatInvalidPubkey(pubkey);
+    }
+  }
+
+  formatInvalidPubkey(pubkey: string): string {
+    if (!pubkey || typeof pubkey !== 'string') {
+      return 'Invalid pubkey';
+    }
+
+    // If it's already an npub format, truncate it safely
+    if (pubkey.startsWith('npub1')) {
+      return pubkey.length > 16
+        ? `${pubkey.substring(0, 12)}...${pubkey.substring(pubkey.length - 4)}`
+        : pubkey;
+    }
+
+    // For other formats, truncate safely
+    if (pubkey.length > 16) {
+      return `${pubkey.substring(0, 8)}...${pubkey.substring(pubkey.length - 8)}`;
+    }
+
+    return pubkey;
   }
 
   getNsecFromPrivkey(privkey: string): string {
@@ -314,9 +428,18 @@ export class UtilitiesService {
   }
 
   getNpubFromPubkey(pubkey: string): string {
-    // Convert the hex public key to a Nostr public key (npub)
-    const npub = nip19.npubEncode(pubkey);
-    return npub;
+    try {
+      if (!this.isValidHexPubkey(pubkey)) {
+        throw new Error(`Invalid hex pubkey: ${pubkey}`);
+      }
+
+      // Convert the hex public key to a Nostr public key (npub)
+      const npub = nip19.npubEncode(pubkey);
+      return npub;
+    } catch (error) {
+      this.logger.warn('Error converting pubkey to npub:', pubkey, error);
+      throw error;
+    }
   }
 
   getPubkeyFromNpub(npub: string): string {
