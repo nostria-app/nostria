@@ -632,6 +632,20 @@ export class App implements OnInit {
     }
   }
 
+  onSearchInputPaste(event: ClipboardEvent): void {
+    // Handle paste events for nostr URLs
+    event.preventDefault();
+    const pastedText = event.clipboardData?.getData('text')?.trim();
+
+    if (pastedText) {
+      // Set the input value
+      this.layout.searchInput = pastedText;
+
+      // Trigger the search handling
+      this.layout.onSearchInput({ target: { value: pastedText } });
+    }
+  }
+
   /**
    * Check if the current URL contains a nostr protocol parameter and handle it
    */
