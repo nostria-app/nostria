@@ -667,7 +667,6 @@ export class NostrService implements NostriaService {
 
   /** Used to get Relay List, Following List and Metadata for a user from the account relays. This is a fallback if discovery fails. */
   async discoverMetadataFromAccountRelays(pubkey: string) {
-    debugger;
     // First get the relay list if exists.
     // Second get the following list if exists.
     // Get the metadata from the user's relays, not from the account relays. We truly do not want to fall back to get metadata
@@ -680,7 +679,6 @@ export class NostrService implements NostriaService {
     }
 
     try {
-      debugger;
       const relayListEvent = await this.accountRelay.get(
         {
           authors: [pubkey],
@@ -965,7 +963,6 @@ export class NostrService implements NostriaService {
     }
 
     // Not in cache, get from storage
-    debugger;
     const events = await this.storage.getEventsByPubkeyAndKind(pubkey, kinds.RelayList);
     if (events.length > 0) {
       // Add to cache
@@ -1152,8 +1149,6 @@ export class NostrService implements NostriaService {
 
     // Initialize the account relay so we can start using it.
     this.accountRelay.init([relayServerUrl!]);
-
-    debugger;
     // Create Relay List event for the new user
     const relayListEvent: UnsignedEvent = {
       pubkey,
