@@ -146,7 +146,6 @@ export class NewFeedDialogComponent {
 
   onSubmit(): void {
     if (this.feedForm.valid) {
-      debugger;
       const formValue = this.feedForm.value;
       const template = this.getSelectedTemplateConfig();
 

@@ -306,7 +306,6 @@ export class UtilitiesService {
         content = JSON.parse(event.content);
       } catch (err) {
         console.error(err);
-        debugger;
       }
     }
 
