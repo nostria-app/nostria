@@ -42,6 +42,10 @@
         @else if (targetItem.event.kind === 32100) {
         <app-playlist-event [event]="targetItem.event"></app-playlist-event>
         }
+        <!-- Starter Packs (kind 39089) -->
+        @else if (targetItem.event.kind === 39089) {
+        <app-starter-pack-event [event]="targetItem.event"></app-starter-pack-event>
+        }
         <!-- Profile events (kind 0) -->
         @else if (targetItem.event.kind === 0) {
         <app-user-profile [view]="'details'" [event]="targetItem.event"></app-user-profile>
@@ -76,6 +80,10 @@
     <!-- M3U Playlists (kind 32100) -->
     @else if (item.event.kind === 32100) {
     <app-playlist-event [event]="targetItem.event"></app-playlist-event>
+    }
+    <!-- Starter Packs (kind 39089) -->
+    @else if (item.event.kind === 39089) {
+    <app-starter-pack-event [event]="item.event"></app-starter-pack-event>
     } @else if (item.event.kind === 8) {
     <app-badge [badge]="targetItem.event"></app-badge>
     }

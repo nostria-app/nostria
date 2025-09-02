@@ -1,0 +1,37 @@
+<div class="starter-pack-container">
+  <div class="starter-pack-header">
+    <h3 class="starter-pack-title">{{ title() }}</h3>
+
+    @if (image()) {
+    <div class="starter-pack-banner">
+      <img [src]="image()" [alt]="title() + ' banner'" [title]="title() + ' banner'" class="banner-image"
+        loading="lazy" />
+    </div>
+    }
+  </div>
+
+  <div class="starter-pack-content">
+    @if (publicKeys().length > 0) {
+    <div class="users-section">
+      <h4 class="section-title">
+        <mat-icon>people</mat-icon>
+        Recommended Users ({{ publicKeys().length }})
+      </h4>
+
+      <div class="users-grid">
+        @for (pubkey of publicKeys(); track pubkey) {
+        <div class="user-item">
+          <app-user-profile [pubkey]="pubkey" [view]="'grid'">
+          </app-user-profile>
+        </div>
+        }
+      </div>
+    </div>
+    } @else {
+    <div class="empty-state">
+      <mat-icon>people_outline</mat-icon>
+      <p>No users in this starter pack</p>
+    </div>
+    }
+  </div>
+</div>

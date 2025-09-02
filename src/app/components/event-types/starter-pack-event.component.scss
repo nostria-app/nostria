@@ -1,0 +1,107 @@
+.starter-pack-container {
+  padding: 16px;
+
+  .starter-pack-header {
+    margin-bottom: 24px;
+
+    .starter-pack-title {
+      margin: 0 0 16px 0;
+      font-size: 1.25rem;
+      color: var(--mat-app-text-color);
+    }
+
+    .starter-pack-banner {
+      width: 100%;
+      border-radius: 8px;
+      overflow: hidden;
+      background-color: var(--mat-app-surface-variant);
+
+      .banner-image {
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+        display: block;
+      }
+    }
+  }
+
+  .starter-pack-content {
+    .users-section {
+      .section-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0 0 16px 0;
+        font-size: 1rem;
+        color: var(--mat-app-text-color);
+
+        mat-icon {
+          color: var(--mat-app-primary);
+        }
+      }
+
+      .users-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+
+        .user-item {
+          border: 1px solid var(--mat-app-outline-variant);
+          border-radius: 8px;
+          padding: 8px;
+          background-color: var(--mat-app-surface);
+          transition: all 0.2s ease;
+
+          &:hover {
+            border-color: var(--mat-app-primary);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+          }
+        }
+      }
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--mat-app-outline);
+
+      mat-icon {
+        font-size: 48px;
+        width: 48px;
+        height: 48px;
+        margin-bottom: 16px;
+        color: var(--mat-app-outline);
+      }
+
+      p {
+        margin: 0;
+        font-size: 1rem;
+      }
+    }
+  }
+}
+
+// Responsive design
+@media (min-width: 768px) {
+  .starter-pack-container {
+    .starter-pack-content {
+      .users-section {
+        .users-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+    }
+  }
+}
+
+@media (min-width: 1024px) {
+  .starter-pack-container {
+    .starter-pack-content {
+      .users-section {
+        .users-grid {
+          grid-template-columns: repeat(3, 1fr);
+        }
+      }
+    }
+  }
+}
