@@ -27,6 +27,7 @@ import {
   ArticleEventComponent,
   PhotoEventComponent,
   PlaylistEventComponent,
+  StarterPackEventComponent,
   VideoEventComponent,
 } from '../event-types';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
@@ -61,6 +62,7 @@ type EventCardAppearance = 'card' | 'plain';
     VideoEventComponent,
     ArticleEventComponent,
     PlaylistEventComponent,
+    StarterPackEventComponent,
     UserProfileComponent,
     BadgeComponent,
     ReportedContentComponent,
