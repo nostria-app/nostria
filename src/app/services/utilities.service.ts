@@ -28,7 +28,7 @@ export class UtilitiesService {
   private readonly platformId = inject(PLATFORM_ID);
   readonly isBrowser = signal(isPlatformBrowser(this.platformId));
 
-  constructor() { }
+  constructor() {}
 
   /**
    * Validate if a string is a valid hex pubkey (64 character hex string)

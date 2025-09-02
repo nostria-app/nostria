@@ -10,7 +10,7 @@ export class Metrics {
   private readonly storage = inject(StorageService);
   private readonly utilities = inject(UtilitiesService);
 
-  constructor() { }
+  constructor() {}
 
   /**
    * Get all metrics from storage
