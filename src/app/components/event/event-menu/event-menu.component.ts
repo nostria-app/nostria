@@ -18,11 +18,19 @@ import {
 } from '../../confirm-dialog/confirm-dialog.component';
 import { LayoutService } from '../../../services/layout.service';
 import type { ReportTarget } from '../../../services/reporting.service';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-event-menu',
   standalone: true,
-  imports: [MatIconModule, MatButtonModule, MatTooltipModule, MatDividerModule, MatMenuModule],
+  imports: [
+    CommonModule,
+    MatIconModule,
+    MatButtonModule,
+    MatTooltipModule,
+    MatDividerModule,
+    MatMenuModule,
+  ],
   templateUrl: './event-menu.component.html',
   styleUrl: './event-menu.component.scss',
 })
@@ -35,6 +43,7 @@ export class EventMenuComponent {
   snackBar = inject(MatSnackBar);
 
   event = input.required<Event>();
+  view = input<'icon' | 'full'>('icon');
 
   record = signal<NostrRecord | null>(null);
 

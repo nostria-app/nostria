@@ -29,6 +29,7 @@ import { Cache } from '../../services/cache';
 import { UserDataService } from '../../services/user-data.service';
 import { Subscription } from 'rxjs';
 import { RepostButtonComponent } from '../../components/event/repost-button/repost-button.component';
+import { EventMenuComponent } from '../../components/event/event-menu/event-menu.component';
 
 @Component({
   selector: 'app-article',
@@ -45,6 +46,7 @@ import { RepostButtonComponent } from '../../components/event/repost-button/repo
     CommonModule,
     RouterModule,
     RepostButtonComponent,
+    EventMenuComponent,
   ],
   templateUrl: './article.component.html',
   styleUrl: './article.component.scss',
