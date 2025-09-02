@@ -723,7 +723,6 @@ export class StorageService {
   async getEventByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<Event | null> {
     // Validate pubkey parameter
     if (!pubkey || (Array.isArray(pubkey) && pubkey.length === 0)) {
-      debugger;
       this.logger.warn('getEventByPubkeyAndKind called with invalid pubkey:', pubkey);
       return null;
     }

@@ -312,7 +312,6 @@ export abstract class RelayServiceBase {
     const isNpub = filter.authors?.some((author) => author.startsWith('npub'));
 
     if (isNpub) {
-      debugger;
     }
 
     this.logger.debug('Getting events with filters (account-relay):', filter, urls);
@@ -377,7 +376,6 @@ export abstract class RelayServiceBase {
     const isNpub = filter.authors?.some((author) => author.startsWith('npub'));
 
     if (isNpub) {
-      debugger;
     }
 
     this.logger.debug('Getting events with filters (account-relay):', filter, urls);
@@ -456,7 +454,6 @@ export abstract class RelayServiceBase {
 
       return publishResults;
     } catch (error) {
-      debugger;
       this.logger.error('Error publishing event', error);
       return null;
     }
@@ -494,7 +491,6 @@ export abstract class RelayServiceBase {
 
       return publishResults;
     } catch (error) {
-      debugger;
       this.logger.error('Error publishing event', error);
       return null;
     }

@@ -88,9 +88,9 @@ export class AlgorithmComponent implements OnInit {
       averageEngagement:
         metrics.length > 0
           ? Math.round(
-            (metrics.reduce((sum, m) => sum + (m.engagementScore || 0), 0) / metrics.length) *
-            100,
-          ) / 100
+              (metrics.reduce((sum, m) => sum + (m.engagementScore || 0), 0) / metrics.length) *
+                100,
+            ) / 100
           : 0,
     };
   });

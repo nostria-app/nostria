@@ -476,7 +476,6 @@ export class LayoutService implements OnDestroy {
     }
 
     if (type === 'note') {
-      debugger;
       text = nip19.noteEncode(text);
     }
 
