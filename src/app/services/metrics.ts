@@ -1,14 +1,16 @@
 import { inject, Injectable } from '@angular/core';
 import { StorageService } from './storage.service';
 import { UserMetric, MetricUpdate, MetricQuery } from '../interfaces/metrics';
+import { UtilitiesService } from './utilities.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class Metrics {
   private readonly storage = inject(StorageService);
+  private readonly utilities = inject(UtilitiesService);
 
-  constructor() {}
+  constructor() { }
 
   /**
    * Get all metrics from storage
@@ -22,7 +24,14 @@ export class Metrics {
    * Get metrics for a specific user
    */
   async getUserMetric(pubkey: string): Promise<UserMetric | null> {
-    const record = await this.storage.getInfo(pubkey, 'metric');
+    // Validate pubkey before querying
+    const validHexPubkey = this.utilities.safeGetHexPubkey(pubkey);
+    if (!validHexPubkey) {
+      console.warn('Invalid pubkey provided to getUserMetric:', pubkey);
+      return null;
+    }
+
+    const record = await this.storage.getInfo(validHexPubkey, 'metric');
     return record ? this.mapRecordToMetric(record) : null;
   }
 
@@ -33,7 +42,14 @@ export class Metrics {
     const metrics: UserMetric[] = [];
 
     for (const pubkey of pubkeys) {
-      const metric = await this.getUserMetric(pubkey);
+      // Validate each pubkey
+      const validHexPubkey = this.utilities.safeGetHexPubkey(pubkey);
+      if (!validHexPubkey) {
+        console.warn('Invalid pubkey in getUserMetrics, skipping:', pubkey);
+        continue;
+      }
+
+      const metric = await this.getUserMetric(validHexPubkey);
       if (metric) {
         metrics.push(metric);
       }
@@ -94,11 +110,18 @@ export class Metrics {
   async updateMetric(update: MetricUpdate): Promise<void> {
     const { pubkey, metric, increment = 1, value, timestamp = Date.now() } = update;
 
+    // Validate pubkey before updating metrics
+    const validHexPubkey = this.utilities.safeGetHexPubkey(pubkey);
+    if (!validHexPubkey) {
+      console.warn('Invalid pubkey provided to updateMetric, skipping:', pubkey);
+      return;
+    }
+
     // Get existing metric or create new one
-    let existingMetric = await this.getUserMetric(pubkey);
+    let existingMetric = await this.getUserMetric(validHexPubkey);
 
     if (!existingMetric) {
-      existingMetric = this.createEmptyMetric(pubkey, timestamp);
+      existingMetric = this.createEmptyMetric(validHexPubkey, timestamp);
     }
 
     // Update the specific metric
@@ -134,15 +157,29 @@ export class Metrics {
       'pubkey' | 'updated' | 'firstInteraction' | 'averageTimePerView' | 'engagementScore'
     >,
   ): Promise<void> {
-    await this.updateMetric({ pubkey, metric, increment: 1 });
+    // Validate pubkey before incrementing
+    const validHexPubkey = this.utilities.safeGetHexPubkey(pubkey);
+    if (!validHexPubkey) {
+      console.warn('Invalid pubkey provided to incrementMetric, skipping:', pubkey);
+      return;
+    }
+
+    await this.updateMetric({ pubkey: validHexPubkey, metric, increment: 1 });
   }
 
   /**
    * Add time spent viewing content for a user
    */
   async addTimeSpent(pubkey: string, timeSpent: number): Promise<void> {
+    // Validate pubkey before adding time
+    const validHexPubkey = this.utilities.safeGetHexPubkey(pubkey);
+    if (!validHexPubkey) {
+      console.warn('Invalid pubkey provided to addTimeSpent, skipping:', pubkey);
+      return;
+    }
+
     await this.updateMetric({
-      pubkey,
+      pubkey: validHexPubkey,
       metric: 'timeSpent',
       increment: timeSpent,
     });
@@ -179,7 +216,14 @@ export class Metrics {
    * Reset all metrics for a user
    */
   async resetUserMetrics(pubkey: string): Promise<void> {
-    await this.storage.deleteInfoByKeyAndType(pubkey, 'metric');
+    // Validate pubkey before resetting
+    const validHexPubkey = this.utilities.safeGetHexPubkey(pubkey);
+    if (!validHexPubkey) {
+      console.warn('Invalid pubkey provided to resetUserMetrics, skipping:', pubkey);
+      return;
+    }
+
+    await this.storage.deleteInfoByKeyAndType(validHexPubkey, 'metric');
   }
 
   /**

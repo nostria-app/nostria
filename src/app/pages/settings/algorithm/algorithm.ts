@@ -88,9 +88,9 @@ export class AlgorithmComponent implements OnInit {
       averageEngagement:
         metrics.length > 0
           ? Math.round(
-              (metrics.reduce((sum, m) => sum + (m.engagementScore || 0), 0) / metrics.length) *
-                100,
-            ) / 100
+            (metrics.reduce((sum, m) => sum + (m.engagementScore || 0), 0) / metrics.length) *
+            100,
+          ) / 100
           : 0,
     };
   });
@@ -207,10 +207,25 @@ export class AlgorithmComponent implements OnInit {
   }
 
   getTruncatedPubkey(pubkey: string): string {
-    return this.utilities.getTruncatedNpub(pubkey);
+    try {
+      return this.utilities.getTruncatedNpub(pubkey);
+    } catch (error) {
+      console.warn('Invalid pubkey format:', pubkey, error);
+      // Return a truncated version of the raw pubkey as fallback
+      if (pubkey && pubkey.length > 16) {
+        return `${pubkey.substring(0, 8)}...${pubkey.substring(pubkey.length - 8)}`;
+      }
+      return pubkey || 'Invalid pubkey';
+    }
   }
 
   getDisplayName(pubkey: string): string {
+    // Remove debugger statement and validate pubkey first
+    if (!this.utilities.isValidPubkey(pubkey)) {
+      console.warn('Invalid pubkey in getDisplayName:', pubkey);
+      return this.getTruncatedPubkey(pubkey);
+    }
+
     // In a real app, you'd look up the user's display name from metadata
     return this.getTruncatedPubkey(pubkey);
   }

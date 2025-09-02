@@ -4,6 +4,7 @@ import { StorageService } from './storage.service';
 import { Metrics } from './metrics';
 import { UserMetric } from '../interfaces/metrics';
 import { FavoritesService } from './favorites.service';
+import { UtilitiesService } from './utilities.service';
 
 @Injectable({
   providedIn: 'root',
@@ -13,20 +14,35 @@ export class Algorithms {
   private readonly storage = inject(StorageService);
   private readonly metrics = inject(Metrics);
   private readonly favoritesService = inject(FavoritesService);
+  private readonly utilities = inject(UtilitiesService);
 
   async calculateProfileViewed(limit: number, ascending: boolean): Promise<UserMetric[]> {
     // Get the list of users we follow
     const following = this.accountState.followingList();
 
-    // Get metrics for all users we follow
-    const followingMetrics = await this.metrics.getUserMetrics(following);
+    // Filter out invalid pubkeys before processing
+    const validFollowing = following.filter((pubkey) => this.utilities.isValidPubkey(pubkey));
+
+    if (validFollowing.length !== following.length) {
+      console.warn(
+        `Filtered out ${following.length - validFollowing.length} invalid pubkeys from following list`,
+      );
+    }
+
+    // Get metrics for all valid users we follow
+    const followingMetrics = await this.metrics.getUserMetrics(validFollowing);
 
     // Get favorites from the service
     const favorites = this.favoritesService.favorites();
+    const validFavorites = favorites.filter((pubkey) => this.utilities.isValidPubkey(pubkey));
 
     // Separate favorites from regular users
-    const favoriteMetrics = followingMetrics.filter((metric) => favorites.includes(metric.pubkey));
-    const regularMetrics = followingMetrics.filter((metric) => !favorites.includes(metric.pubkey));
+    const favoriteMetrics = followingMetrics.filter((metric) =>
+      validFavorites.includes(metric.pubkey),
+    );
+    const regularMetrics = followingMetrics.filter(
+      (metric) => !validFavorites.includes(metric.pubkey),
+    );
 
     // Sort favorites by engagement score (favorites are always at the top)
     const sortedFavorites = favoriteMetrics.sort((a, b) => {
@@ -54,10 +70,17 @@ export class Algorithms {
   async getRecommendedUsers(limit = 10): Promise<UserMetric[]> {
     const allMetrics = await this.metrics.getMetrics();
     const favorites = this.favoritesService.favorites();
+    const validFavorites = favorites.filter((pubkey) => this.utilities.isValidPubkey(pubkey));
 
     // Filter users with meaningful engagement OR are favorites
     const candidateUsers = allMetrics.filter((metric) => {
-      const isFavorite = favorites.includes(metric.pubkey);
+      // Ensure the metric itself has a valid pubkey
+      if (!this.utilities.isValidPubkey(metric.pubkey)) {
+        console.warn('Found metric with invalid pubkey:', metric.pubkey);
+        return false;
+      }
+
+      const isFavorite = validFavorites.includes(metric.pubkey);
       const hasEngagement =
         (metric.engagementScore || 0) > 10 &&
         metric.viewed > 5 &&
@@ -68,7 +91,9 @@ export class Algorithms {
 
     // Add favorites that don't have metrics yet
     const metricsPublicKeys = new Set(allMetrics.map((m) => m.pubkey));
-    const favoritesWithoutMetrics = favorites.filter((pubkey) => !metricsPublicKeys.has(pubkey));
+    const favoritesWithoutMetrics = validFavorites.filter(
+      (pubkey) => !metricsPublicKeys.has(pubkey),
+    );
 
     // Create minimal metrics for favorites without data
     const favoriteMetrics: UserMetric[] = favoritesWithoutMetrics.map((pubkey) => ({
@@ -95,7 +120,7 @@ export class Algorithms {
     // Calculate final score with favorite boost
     const scoredUsers = allCandidates.map((metric) => {
       const baseScore = metric.engagementScore || 0;
-      const favoriteBoost = favorites.includes(metric.pubkey) ? 2 : 0; // Small boost for favorites
+      const favoriteBoost = validFavorites.includes(metric.pubkey) ? 2 : 0; // Small boost for favorites
 
       return {
         ...metric,
@@ -111,6 +136,12 @@ export class Algorithms {
    * Calculate content affinity score for a user
    */
   async calculateContentAffinity(pubkey: string): Promise<number> {
+    // Validate pubkey before processing
+    if (!this.utilities.isValidPubkey(pubkey)) {
+      console.warn('Invalid pubkey provided to calculateContentAffinity:', pubkey);
+      return 0;
+    }
+
     const userMetric = await this.metrics.getUserMetric(pubkey);
 
     if (!userMetric) return 0;
@@ -134,10 +165,19 @@ export class Algorithms {
   async getDeclineingEngagementUsers(limit = 10): Promise<UserMetric[]> {
     const allMetrics = await this.metrics.getMetrics();
 
+    // Filter out any metrics with invalid pubkeys
+    const validMetrics = allMetrics.filter((metric) => {
+      if (!this.utilities.isValidPubkey(metric.pubkey)) {
+        console.warn('Found metric with invalid pubkey in declining users:', metric.pubkey);
+        return false;
+      }
+      return true;
+    });
+
     const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
 
     // Users who had engagement but haven't interacted recently
-    const decliningUsers = allMetrics.filter(
+    const decliningUsers = validMetrics.filter(
       (metric) =>
         (metric.engagementScore || 0) > 20 && // Had good engagement
         metric.lastInteraction < thirtyDaysAgo, // But not recent
