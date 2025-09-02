@@ -542,7 +542,6 @@ export class EventService {
    * Load a complete thread with parents and children using outbox model.
    */
   async loadCompleteThread(nevent: string, item?: EventData): Promise<ThreadData> {
-    debugger;
     // Load the main event
     const event = await this.loadEvent(nevent, item);
     if (!event) {

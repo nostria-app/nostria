@@ -1032,7 +1032,6 @@ export class FeedsComponent implements OnDestroy {
         }
       }
     } catch (error) {
-      debugger;
       this.logger.error('Failed to initialize followset data:', error);
       // Keep default interests if starter pack fetching fails
     } finally {
