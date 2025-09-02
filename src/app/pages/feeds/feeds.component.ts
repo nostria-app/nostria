@@ -355,7 +355,7 @@ export class FeedsComponent implements OnDestroy {
 
     // Handle route parameters for feed navigation
     effect(() => {
-      this.route.params.subscribe((params) => {
+      this.route.params.subscribe(async (params) => {
         const pathParam = params['path'];
         if (pathParam) {
           // Find feed by path
@@ -363,7 +363,7 @@ export class FeedsComponent implements OnDestroy {
           const targetFeed = feeds.find((feed) => feed.path === pathParam);
 
           if (targetFeed) {
-            this.feedsCollectionService.setActiveFeed(targetFeed.id);
+            await this.feedsCollectionService.setActiveFeed(targetFeed.id);
           } else {
             // If no feed with this path is found, redirect to default feed
             console.warn(`No feed found with path: ${pathParam}`);
@@ -574,7 +574,7 @@ export class FeedsComponent implements OnDestroy {
       this.followingProfiles.update((current) => [...new Set([...current, ...followsToAdd])]);
 
       // Refresh following feeds to load content from newly followed accounts
-      this.feedsCollectionService.refreshFollowingColumns();
+      await this.feedsCollectionService.refreshFollowingColumns();
 
       // Reset followset display state
       this.suggestedProfiles.set([]);
@@ -859,7 +859,7 @@ export class FeedsComponent implements OnDestroy {
       },
     });
 
-    dialogRef.afterClosed().subscribe((result) => {
+    dialogRef.afterClosed().subscribe(async (result) => {
       if (result && activeFeed) {
         // Add the new column to the current feed
         const updatedFeed = {
@@ -868,7 +868,7 @@ export class FeedsComponent implements OnDestroy {
           updatedAt: Date.now(),
         };
 
-        this.feedsCollectionService.updateFeed(activeFeed.id, updatedFeed);
+        await this.feedsCollectionService.updateFeed(activeFeed.id, updatedFeed);
 
         const newColumnIndex = updatedFeed.columns.length - 1;
 
@@ -923,7 +923,7 @@ export class FeedsComponent implements OnDestroy {
       },
     });
 
-    dialogRef.afterClosed().subscribe((result) => {
+    dialogRef.afterClosed().subscribe(async (result) => {
       if (result && activeFeed) {
         // Update the specific column in the feed
         const updatedColumns = [...activeFeed.columns];
@@ -935,12 +935,12 @@ export class FeedsComponent implements OnDestroy {
           updatedAt: Date.now(),
         };
 
-        this.feedsCollectionService.updateFeed(activeFeed.id, updatedFeed);
+        await this.feedsCollectionService.updateFeed(activeFeed.id, updatedFeed);
         this.notificationService.notify(`Column "${result.label}" updated`);
       }
     });
   }
-  removeColumn(index: number): void {
+  async removeColumn(index: number): Promise<void> {
     const activeFeed = this.activeFeed();
     const columns = this.columns();
 
@@ -957,7 +957,7 @@ export class FeedsComponent implements OnDestroy {
       updatedAt: Date.now(),
     };
 
-    this.feedsCollectionService.updateFeed(activeFeed.id, updatedFeed);
+    await this.feedsCollectionService.updateFeed(activeFeed.id, updatedFeed);
 
     // Adjust visible column index if needed for mobile view
     if (this.isMobileView()) {
@@ -971,9 +971,9 @@ export class FeedsComponent implements OnDestroy {
     this.notificationService.notify(`Column "${column.label}" removed`);
   }
 
-  refreshColumn(column: ColumnDefinition): void {
+  async refreshColumn(column: ColumnDefinition): Promise<void> {
     console.log('🔄 Refreshing column:', column.label, `(${column.id})`);
-    this.feedsCollectionService.refreshColumn(column.id);
+    await this.feedsCollectionService.refreshColumn(column.id);
     this.notificationService.notify(`Column "${column.label}" refreshed`);
   }
   pauseColumn(column: ColumnDefinition): void {
@@ -983,10 +983,10 @@ export class FeedsComponent implements OnDestroy {
     this.notificationService.notify(`Column "${column.label}" paused`);
     console.log('📊 Column status after pause:', this.getColumnStatus(column.id));
   }
-  continueColumn(column: ColumnDefinition): void {
+  async continueColumn(column: ColumnDefinition): Promise<void> {
     console.log('▶️ Continue column:', column.label, `(${column.id})`);
     console.log('📊 Column status before continue:', this.getColumnStatus(column.id));
-    this.feedsCollectionService.continueColumn(column.id);
+    await this.feedsCollectionService.continueColumn(column.id);
     this.notificationService.notify(`Column "${column.label}" continued`);
     console.log('📊 Column status after continue:', this.getColumnStatus(column.id));
   }
@@ -1187,12 +1187,12 @@ export class FeedsComponent implements OnDestroy {
   /**
    * Select a feed
    */
-  selectFeed(feedId: string): void {
+  async selectFeed(feedId: string): Promise<void> {
     const feeds = this.feedsCollectionService.feeds();
     const selectedFeed = feeds.find((feed) => feed.id === feedId);
 
     // Set the active feed
-    this.feedsCollectionService.setActiveFeed(feedId);
+    await this.feedsCollectionService.setActiveFeed(feedId);
     // Navigate to the appropriate URL
     if (selectedFeed?.path) {
       this.router.navigate(['/f', selectedFeed.path]);
@@ -1220,10 +1220,10 @@ export class FeedsComponent implements OnDestroy {
         ],
       },
     });
-    dialogRef.afterClosed().subscribe((result) => {
+    dialogRef.afterClosed().subscribe(async (result) => {
       if (result) {
         // The dialog returns a FeedConfig, but FeedsCollectionService.addFeed expects FeedDefinition data
-        const newFeed = this.feedsCollectionService.addFeed({
+        const newFeed = await this.feedsCollectionService.addFeed({
           label: result.label,
           icon: result.icon,
           description: result.description,
@@ -1264,9 +1264,9 @@ export class FeedsComponent implements OnDestroy {
       },
     });
 
-    dialogRef.afterClosed().subscribe((result) => {
+    dialogRef.afterClosed().subscribe(async (result) => {
       if (result && activeFeed) {
-        this.feedsCollectionService.updateFeed(activeFeed.id, {
+        await this.feedsCollectionService.updateFeed(activeFeed.id, {
           label: result.label,
           icon: result.icon,
           description: result.description,
