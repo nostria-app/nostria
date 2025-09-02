@@ -1,13 +1,12 @@
 import { DatePipe } from '@angular/common';
 import { Component, input, computed, inject } from '@angular/core';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { Event, nip19 } from 'nostr-tools';
 import { AgoPipe } from '../../pipes/ago.pipe';
 import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-link',
-  imports: [MatTooltipModule, DatePipe, AgoPipe],
+  imports: [DatePipe, AgoPipe],
   templateUrl: './link.html',
   styleUrl: './link.scss',
 })
@@ -17,12 +16,6 @@ export class Link {
 
   // Input signal for the Nostr event
   event = input.required<Event>();
-
-  // Signal to detect if device supports hover (non-touch devices)
-  canHover = computed(() => {
-    if (typeof window === 'undefined') return false;
-    return window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-  });
 
   // Computed signal to generate the link
   link = computed(() => {
