@@ -1,6 +1,23 @@
-<button mat-icon-button [matMenuTriggerFor]="menu" aria-label="More options" (click)="$event.stopPropagation()">
-  <mat-icon>more_vert</mat-icon>
-</button>
+@if (view() === 'full') {
+  <button
+    mat-button
+    [matMenuTriggerFor]="menu"
+    aria-label="More options"
+    (click)="$event.stopPropagation()"
+  >
+    <mat-icon>more_vert</mat-icon>
+    More options
+  </button>
+} @else {
+  <button
+    mat-icon-button
+    [matMenuTriggerFor]="menu"
+    aria-label="More options"
+    (click)="$event.stopPropagation()"
+  >
+    <mat-icon>more_vert</mat-icon>
+  </button>
+}
 <mat-menu #menu="matMenu">
   <button mat-menu-item (click)="layout.copyToClipboard(eventLink(), 'text')">
     <mat-icon>link</mat-icon>
@@ -29,10 +46,10 @@
   </button>
   <mat-divider></mat-divider>
   @if (isOurEvent()) {
-  <button mat-menu-item (click)="deleteEvent()">
-    <mat-icon>delete</mat-icon>
-    Delete Event
-  </button>
+    <button mat-menu-item (click)="deleteEvent()">
+      <mat-icon>delete</mat-icon>
+      Delete Event
+    </button>
   }
   <button mat-menu-item (click)="layout.publishEvent(event())">
     <mat-icon>publish</mat-icon>
@@ -44,9 +61,9 @@
     Report Content
   </button>
   @if (event().pubkey !== accountState.pubkey()) {
-  <button mat-menu-item (click)="accountState.mutePubkey(event().pubkey);">
-    <mat-icon>block</mat-icon>
-    <span>Block User</span>
-  </button>
+    <button mat-menu-item (click)="accountState.mutePubkey(event().pubkey)">
+      <mat-icon>block</mat-icon>
+      <span>Block User</span>
+    </button>
   }
 </mat-menu>
