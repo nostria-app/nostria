@@ -649,6 +649,13 @@ export class LayoutService implements OnDestroy {
       return;
     }
 
+    // Handle nostr: prefixed URLs first
+    if (value.startsWith('nostr:')) {
+      // Let the search service handle nostr URLs since it has the full implementation
+      // The search service will be triggered by the query signal that's already set
+      return;
+    }
+
     if (value.startsWith('npub')) {
       this.toggleSearch();
       this.searchInput = '';
