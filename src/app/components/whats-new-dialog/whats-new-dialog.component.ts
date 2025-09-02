@@ -132,6 +132,18 @@ export class WhatsNewDialogComponent {
           ],
         },
         {
+          title: 'Starter Packs Event Type',
+          description: 'Nostria can now display Starter Packs event types.',
+          screenshots: [
+            {
+              src: '/screenshots/2025-09-02-starter-packs.jpg',
+              alt: 'Starter Packs event type displayed in the interface',
+              width: 699,
+              height: 807,
+            },
+          ],
+        },
+        {
           title: 'Performance Improvements',
           description:
             'We have done various performance optimizations to make the app faster and more responsive. We will continue to add more improvements in future updates.',
