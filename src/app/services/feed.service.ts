@@ -487,7 +487,7 @@ export class FeedService {
    */
   private async fetchEventsFromUsers(pubkeys: string[], feedData: FeedItem) {
     debugger;
-    
+
     const isArticlesFeed = feedData.filter?.kinds?.includes(30023);
     const eventsPerUser = isArticlesFeed ? 10 : 5; // Fetch more events per user for articles
     const now = Math.floor(Date.now() / 1000); // current timestamp in seconds

@@ -3,131 +3,150 @@
 @let repostedEvent = repostedRecord()?.event;
 
 @if (isLoadingEvent()) {
-<div class="loading-container">
-  <mat-spinner diameter="32"></mat-spinner>
-  <p class="loading-text">Loading event...</p>
-</div>
+  <div class="loading-container">
+    <mat-spinner diameter="32"></mat-spinner>
+    <p class="loading-text">Loading event...</p>
+  </div>
 } @else if (targetItem && item) {
-<mat-card class="note-card" [class.plain]="isPlain()" [class.selected]="isCurrentlySelected()" appearance="outlined"
-  [attr.tabindex]="isCurrentlySelected() ? null : 0" [style.cursor]="isCurrentlySelected() ? 'auto' : 'pointer'"
-  (click)="onCardClick($event)">
-  @if (repostedEvent) {
-  <mat-card-header class="repost-header">
-    <mat-icon>repeat</mat-icon>
-    <span>
-      <app-profile-display-name [pubkey]="item.event.pubkey"></app-profile-display-name>
-      reposted
-      <span [matTooltip]="item.event.created_at * 1000 | date: 'medium'" matTooltipPosition="below">
-        {{ item.event.created_at | ago }}
-      </span>
-    </span>
-    <app-event-menu [event]="item.event" class="note-footer-right"></app-event-menu>
-  </mat-card-header>
-  <mat-card-content>
-    <mat-card appearance="outlined">
-      <app-event-header [event]="repostService.decodeRepost(item.event).event"></app-event-header>
+  <mat-card
+    class="note-card"
+    [class.plain]="isPlain()"
+    [class.selected]="isCurrentlySelected()"
+    appearance="outlined"
+    [attr.tabindex]="isCurrentlySelected() ? null : 0"
+    [style.cursor]="isCurrentlySelected() ? 'auto' : 'pointer'"
+    (click)="onCardClick($event)"
+  >
+    @if (repostedEvent) {
+      <mat-card-header class="repost-header">
+        <mat-icon>repeat</mat-icon>
+        <span>
+          <app-profile-display-name [pubkey]="item.event.pubkey"></app-profile-display-name>
+          reposted
+          <span
+            [matTooltip]="item.event.created_at * 1000 | date: 'medium'"
+            matTooltipPosition="below"
+          >
+            {{ item.event.created_at | ago }}
+          </span>
+        </span>
+        <app-event-menu [event]="item.event" class="note-footer-right"></app-event-menu>
+      </mat-card-header>
       <mat-card-content>
-        @if (targetItem.event.kind === 20) {
-        <app-photo-event [event]="targetItem.event"></app-photo-event>
-        }
-        <!-- Videos (NIP-71, kind 21/22) -->
-        @else if (targetItem.event.kind === 21 || targetItem.event.kind === 22) {
-        <app-video-event [event]="targetItem.event"></app-video-event>
-        }
-        <!-- Articles (kind 30023) -->
-        @else if (targetItem.event.kind === 30023) {
-        <app-article-event [event]="targetItem.event"></app-article-event>
-        }
-        <!-- M3U Playlists (kind 32100) -->
-        @else if (targetItem.event.kind === 32100) {
-        <app-playlist-event [event]="targetItem.event"></app-playlist-event>
-        }
-        <!-- Profile events (kind 0) -->
-        @else if (targetItem.event.kind === 0) {
-        <app-user-profile [view]="'details'" [event]="targetItem.event"></app-user-profile>
+        <mat-card appearance="outlined">
+          <app-event-header
+            [event]="repostService.decodeRepost(item.event).event"
+          ></app-event-header>
+          <mat-card-content>
+            @if (targetItem.event.kind === 20) {
+              <app-photo-event [event]="targetItem.event"></app-photo-event>
+            }
+            <!-- Videos (NIP-71, kind 21/22) -->
+            @else if (targetItem.event.kind === 21 || targetItem.event.kind === 22) {
+              <app-video-event [event]="targetItem.event"></app-video-event>
+            }
+            <!-- Articles (kind 30023) -->
+            @else if (targetItem.event.kind === 30023) {
+              <app-article-event [event]="targetItem.event"></app-article-event>
+            }
+            <!-- M3U Playlists (kind 32100) -->
+            @else if (targetItem.event.kind === 32100) {
+              <app-playlist-event [event]="targetItem.event"></app-playlist-event>
+            }
+            <!-- Profile events (kind 0) -->
+            @else if (targetItem.event.kind === 0) {
+              <app-user-profile [view]="'details'" [event]="targetItem.event"></app-user-profile>
+            } @else {
+              <app-content [content]="repostService.decodeRepost(item.event).data"></app-content>
+            }
+          </mat-card-content>
+        </mat-card>
+      </mat-card-content>
+    } @else {
+      <app-event-header [event]="item.event"></app-event-header>
+      <mat-card-content>
+        @if (shouldHideContent()) {
+          <app-reported-content [event]="item.event"></app-reported-content>
         } @else {
-        <app-content [content]="repostService.decodeRepost(item.event).data"></app-content>
+          @if (item.event.kind === 20) {
+            <app-photo-event [event]="item.event"></app-photo-event>
+          }
+          <!-- Videos (NIP-71, kind 21/22) -->
+          @else if (item.event.kind === 21 || item.event.kind === 22) {
+            <app-video-event [event]="item.event"></app-video-event>
+          }
+          <!-- Articles (kind 30023) -->
+          @else if (item.event.kind === 30023) {
+            <app-article-event [event]="item.event"></app-article-event>
+          } @else if (item.event.kind === 3) {
+            <div class="following-event">
+              <mat-icon>people</mat-icon>
+              <span>Following {{ followingCount() }} accounts</span>
+            </div>
+          }
+          <!-- M3U Playlists (kind 32100) -->
+          @else if (item.event.kind === 32100) {
+            <app-playlist-event [event]="targetItem.event"></app-playlist-event>
+          } @else if (item.event.kind === 8) {
+            <app-badge [badge]="targetItem.event"></app-badge>
+          }
+          <!-- Profile events (kind 0) -->
+          @else if (item.event.kind === 0) {
+            {{ item.data.about }}
+            <!-- <app-user-profile [view]="'details'" [event]="item.event"></app-user-profile> -->
+          } @else {
+            <app-content [content]="item.data"></app-content>
+          }
         }
       </mat-card-content>
-    </mat-card>
-  </mat-card-content>
-  } @else {
-  <app-event-header [event]="item.event"></app-event-header>
-  <mat-card-content>
-    @if (shouldHideContent()) {
-    <app-reported-content [event]="item.event"></app-reported-content>
-    } @else {
-    @if (item.event.kind === 20) {
-    <app-photo-event [event]="item.event"></app-photo-event>
-    }
-    <!-- Videos (NIP-71, kind 21/22) -->
-    @else if (item.event.kind === 21 || item.event.kind === 22) {
-    <app-video-event [event]="item.event"></app-video-event>
-    }
-    <!-- Articles (kind 30023) -->
-    @else if (item.event.kind === 30023) {
-    <app-article-event [event]="item.event"></app-article-event>
-    } @else if (item.event.kind === 3) {
-    <div class="following-event">
-      <mat-icon>people</mat-icon>
-      <span>Following {{ followingCount() }} accounts</span>
-    </div>
-    }
-    <!-- M3U Playlists (kind 32100) -->
-    @else if (item.event.kind === 32100) {
-    <app-playlist-event [event]="targetItem.event"></app-playlist-event>
-    } @else if (item.event.kind === 8) {
-    <app-badge [badge]="targetItem.event"></app-badge>
-    }
-    <!-- Profile events (kind 0) -->
-    @else if (item.event.kind === 0) {
-    {{ item.data.about }}
-    <!-- <app-user-profile [view]="'details'" [event]="item.event"></app-user-profile> -->
-    } @else {
-    <app-content [content]="item.data"></app-content>
-    }
-    }
-  </mat-card-content>
-  }
-
-  <mat-card-actions class="note-footer">
-    @if (item.event.kind === 1) {
-    <app-reply-button [event]="targetItem.event"></app-reply-button>
     }
 
-    @if (app.enabledFeature('beta')) {
-    <app-repost-button [event]="targetItem.event"></app-repost-button>
-    }
+    <mat-card-actions class="note-footer">
+      @if (item.event.kind === 1) {
+        <app-reply-button [event]="targetItem.event"></app-reply-button>
+      }
 
-    @if (item.event.kind === 1) {
-    <button mat-button [ngClass]="{
+      @if (app.enabledFeature('beta')) {
+        <app-repost-button [event]="targetItem.event"></app-repost-button>
+      }
+
+      @if (item.event.kind === 1) {
+        <button
+          mat-button
+          [ngClass]="{
             active: !!likeReaction(),
             'only-icon': !likes().length && !isLoadingReactions(),
-          }" [disabled]="isLoadingReactions()" (click)="toggleLike($event)">
-      <mat-icon>favorite</mat-icon>
-      @if (isLoadingReactions()) {
-      <mat-spinner diameter="18"></mat-spinner>
-      } @else {
-      @if (likes().length > 0) {
-      {{ (likes() || []).length }}
+          }"
+          [disabled]="isLoadingReactions()"
+          (click)="toggleLike($event)"
+        >
+          <mat-icon>favorite</mat-icon>
+          @if (isLoadingReactions()) {
+            <mat-spinner diameter="18"></mat-spinner>
+          } @else {
+            @if (likes().length > 0) {
+              {{ (likes() || []).length }}
+            }
+          }
+        </button>
       }
-      }
-    </button>
-    }
 
-    <button mat-icon-button class="note-footer-right" (click)="onBookmarkClick($event)">
-      <mat-icon [matTooltip]="bookmark.getBookmarkTooltip(targetItem.event.id)" matTooltipPosition="below">
-        {{ bookmark.getBookmarkIcon(targetItem.event.id) }}
-      </mat-icon>
-    </button>
-  </mat-card-actions>
-</mat-card>
+      <button mat-icon-button class="note-footer-right" (click)="onBookmarkClick($event)">
+        <mat-icon
+          [matTooltip]="bookmark.getBookmarkTooltip(targetItem.event.id)"
+          matTooltipPosition="below"
+        >
+          {{ bookmark.getBookmarkIcon(targetItem.event.id) }}
+        </mat-icon>
+      </button>
+    </mat-card-actions>
+  </mat-card>
 } @else if (id() && !isLoadingEvent()) {
-<div class="event-content">
-  @if (loadingError()) {
-  <p class="error-message">{{ loadingError() }}</p>
-  } @else {
-  <p>Event not found</p>
-  }
-</div>
+  <div class="event-content">
+    @if (loadingError()) {
+      <p class="error-message">{{ loadingError() }}</p>
+    } @else {
+      <p>Event not found</p>
+    }
+  </div>
 }

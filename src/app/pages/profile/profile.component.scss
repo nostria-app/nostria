@@ -478,10 +478,12 @@
 
   .banner-skeleton {
     height: 300px;
-    background: linear-gradient(90deg,
-        var(--mat-sys-surface-container) 25%,
-        var(--mat-sys-surface-container-high) 50%,
-        var(--mat-sys-surface-container) 75%);
+    background: linear-gradient(
+      90deg,
+      var(--mat-sys-surface-container) 25%,
+      var(--mat-sys-surface-container-high) 50%,
+      var(--mat-sys-surface-container) 75%
+    );
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite;
     border-radius: 0 0 8px 8px;
@@ -516,10 +518,12 @@
       width: 160px;
       height: 160px;
       border-radius: 50%;
-      background: linear-gradient(90deg,
-          var(--mat-sys-surface-container) 25%,
-          var(--mat-sys-surface-container-high) 50%,
-          var(--mat-sys-surface-container) 75%);
+      background: linear-gradient(
+        90deg,
+        var(--mat-sys-surface-container) 25%,
+        var(--mat-sys-surface-container-high) 50%,
+        var(--mat-sys-surface-container) 75%
+      );
       background-size: 200% 100%;
       animation: shimmer 1.5s infinite;
       flex-shrink: 0;
@@ -554,10 +558,12 @@
         height: 32px;
         width: 60%;
         max-width: 300px;
-        background: linear-gradient(90deg,
-            var(--mat-sys-surface-container) 25%,
-            var(--mat-sys-surface-container-high) 50%,
-            var(--mat-sys-surface-container) 75%);
+        background: linear-gradient(
+          90deg,
+          var(--mat-sys-surface-container) 25%,
+          var(--mat-sys-surface-container-high) 50%,
+          var(--mat-sys-surface-container) 75%
+        );
         background-size: 200% 100%;
         animation: shimmer 1.5s infinite;
         border-radius: 4px;
@@ -572,10 +578,12 @@
         height: 20px;
         width: 80%;
         max-width: 400px;
-        background: linear-gradient(90deg,
-            var(--mat-sys-surface-container) 25%,
-            var(--mat-sys-surface-container-high) 50%,
-            var(--mat-sys-surface-container) 75%);
+        background: linear-gradient(
+          90deg,
+          var(--mat-sys-surface-container) 25%,
+          var(--mat-sys-surface-container-high) 50%,
+          var(--mat-sys-surface-container) 75%
+        );
         background-size: 200% 100%;
         animation: shimmer 1.5s infinite;
         border-radius: 4px;
@@ -589,10 +597,12 @@
         height: 60px;
         width: 90%;
         max-width: 500px;
-        background: linear-gradient(90deg,
-            var(--mat-sys-surface-container) 25%,
-            var(--mat-sys-surface-container-high) 50%,
-            var(--mat-sys-surface-container) 75%);
+        background: linear-gradient(
+          90deg,
+          var(--mat-sys-surface-container) 25%,
+          var(--mat-sys-surface-container-high) 50%,
+          var(--mat-sys-surface-container) 75%
+        );
         background-size: 200% 100%;
         animation: shimmer 1.5s infinite;
         border-radius: 4px;
@@ -621,10 +631,12 @@
     .action-button-skeleton {
       height: 36px;
       width: 120px;
-      background: linear-gradient(90deg,
-          var(--mat-sys-surface-container) 25%,
-          var(--mat-sys-surface-container-high) 50%,
-          var(--mat-sys-surface-container) 75%);
+      background: linear-gradient(
+        90deg,
+        var(--mat-sys-surface-container) 25%,
+        var(--mat-sys-surface-container-high) 50%,
+        var(--mat-sys-surface-container) 75%
+      );
       background-size: 200% 100%;
       animation: shimmer 1.5s infinite;
       border-radius: 20px;

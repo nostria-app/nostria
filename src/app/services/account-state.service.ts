@@ -150,7 +150,6 @@ export class AccountStateService implements OnDestroy {
     });
   }
 
-
   hasFeature(feature: Feature): boolean {
     const sub = this.subscription();
     if (!sub) return false;
