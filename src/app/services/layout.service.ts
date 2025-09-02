@@ -643,7 +643,7 @@ export class LayoutService implements OnDestroy {
       this.handleSearch(event.target.value);
     }, 750);
   }
-  private handleSearch(value: string): void {
+  private async handleSearch(value: string): Promise<void> {
     if (!value) {
       this.query.set('');
       return;
@@ -651,59 +651,31 @@ export class LayoutService implements OnDestroy {
 
     // Handle nostr: prefixed URLs first
     if (value.startsWith('nostr:')) {
-      // Let the search service handle nostr URLs since it has the full implementation
-      // The search service will be triggered by the query signal that's already set
-      return;
-    }
-
-    if (value.startsWith('npub')) {
-      this.toggleSearch();
-      this.searchInput = '';
-      this.openProfile(value);
-    } else if (value.startsWith('nprofile')) {
-      this.toggleSearch();
       try {
-        const decoded = nip19.decode(value).data as ProfilePointer;
-        this.openProfile(decoded.pubkey);
+        await this.handleNostrEntity(value.substring(6));
+        return;
       } catch (error) {
-        console.warn('Failed to decode nprofile:', value, error);
-        this.toast('Invalid profile format', 3000, 'error-snackbar');
-      }
-    } else if (value.startsWith('nevent')) {
-      this.toggleSearch();
-      try {
-        const decoded = nip19.decode(value).data as EventPointer;
-        this.openGenericEvent(value);
-      } catch (error) {
-        console.warn('Failed to decode nevent:', value, error);
-        this.toast('Invalid event format', 3000, 'error-snackbar');
-      }
-    } else if (value.includes('@')) {
-      // Keep the query set for NIP-05 lookups (already set in onSearchInput)
-      // The search service will handle this
-    } else if (value.startsWith('nsec')) {
-      this.toggleSearch();
-      this.toast(
-        'WARNING: You pasted your nsec key. This is a security risk! Please remove it from your clipboard.',
-        5000,
-        'error-snackbar',
-      );
-      return;
-    } else if (value.startsWith('naddr')) {
-      this.toggleSearch();
-      try {
-        const decoded = nip19.decode(value).data as AddressPointer;
-
-        // If the naddr has a pubkey, we can discover them if not found locally.
-        if (decoded.pubkey) {
-        }
-      } catch (error) {
-        console.warn('Failed to decode naddr:', value, error);
-        this.toast('Invalid address format', 3000, 'error-snackbar');
+        console.error('Failed to parse nostr URL:', error);
+        this.toast('Invalid nostr URL format');
         return;
       }
+    }
 
-      this.openArticle(value);
+    // Handle nostr entities directly
+    if (this.isNostrEntity(value)) {
+      try {
+        await this.handleNostrEntity(value);
+        return;
+      } catch (error) {
+        console.warn('Failed to handle nostr entity:', value, error);
+        // For entities that aren't recognized as valid nostr entities, continue with other logic
+      }
+    }
+
+    // Handle other special cases
+    if (value.includes('@')) {
+      // Keep the query set for NIP-05 lookups (already set in onSearchInput)
+      // The search service will handle this
     } else if (value.includes(':')) {
       this.openProfile(value);
     } else {
@@ -715,6 +687,103 @@ export class LayoutService implements OnDestroy {
         // For now, we'll let the cached search work without navigation
       }, 100);
     }
+  }
+
+  /**
+   * Handle any nostr entity by parsing and routing appropriately
+   */
+  private async handleNostrEntity(value: string): Promise<void> {
+    if (!value) {
+      return;
+    }
+
+    // Handle different nostr entity types
+    if (value.startsWith('npub')) {
+      this.toggleSearch();
+      this.searchInput = '';
+      this.openProfile(value);
+      return;
+    }
+
+    if (value.startsWith('nprofile')) {
+      this.toggleSearch();
+      try {
+        const decoded = nip19.decode(value).data as ProfilePointer;
+        this.openProfile(decoded.pubkey);
+      } catch (error) {
+        console.warn('Failed to decode nprofile:', value, error);
+        this.toast('Invalid profile format', 3000, 'error-snackbar');
+      }
+      return;
+    }
+
+    if (value.startsWith('nevent')) {
+      this.toggleSearch();
+      try {
+        // Use the nevent value directly since openGenericEvent expects the encoded value
+        this.openGenericEvent(value);
+      } catch (error) {
+        console.warn('Failed to decode nevent:', value, error);
+        this.toast('Invalid event format', 3000, 'error-snackbar');
+      }
+      return;
+    }
+
+    if (value.startsWith('note')) {
+      this.toggleSearch();
+      try {
+        // Note ID - navigate to event page
+        console.log('Opening note:', value);
+        await this.router.navigate(['/e', value]);
+      } catch (error) {
+        console.warn('Failed to handle note:', value, error);
+        this.toast('Invalid note format', 3000, 'error-snackbar');
+      }
+      return;
+    }
+
+    if (value.startsWith('naddr')) {
+      this.toggleSearch();
+      try {
+        const decoded = nip19.decode(value).data as AddressPointer;
+        // If the naddr has a pubkey, we can discover them if not found locally.
+        if (decoded.pubkey) {
+          // Potential for profile discovery logic here
+        }
+        this.openArticle(value);
+      } catch (error) {
+        console.warn('Failed to decode naddr:', value, error);
+        this.toast('Invalid address format', 3000, 'error-snackbar');
+      }
+      return;
+    }
+
+    if (value.startsWith('nsec')) {
+      this.toggleSearch();
+      this.toast(
+        'WARNING: You pasted your nsec key. This is a security risk! Please remove it from your clipboard.',
+        5000,
+        'error-snackbar',
+      );
+      return;
+    }
+
+    // If none of the specific cases match, throw an error
+    throw new Error('Unsupported nostr entity type');
+  }
+
+  /**
+   * Check if a value is a nostr entity (npub, nprofile, nevent, note, naddr, nsec)
+   */
+  private isNostrEntity(value: string): boolean {
+    return (
+      value.startsWith('npub') ||
+      value.startsWith('nprofile') ||
+      value.startsWith('nevent') ||
+      value.startsWith('note') ||
+      value.startsWith('naddr') ||
+      value.startsWith('nsec')
+    );
   }
 
   openProfile(pubkey: string): void {
