@@ -1,35 +1,31 @@
-import { Component, inject, computed, signal, effect, OnDestroy } from '@angular/core';
-import { Event, kinds, nip19 } from 'nostr-tools';
-import { ActivatedRoute, Router, RouterModule, ParamMap } from '@angular/router';
-import { MatCardModule } from '@angular/material/card';
+import { CommonModule } from '@angular/common';
+import { Component, computed, effect, inject, OnDestroy, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
+import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { UtilitiesService } from '../../services/utilities.service';
-import { NostrService } from '../../services/nostr.service';
-import { StorageService } from '../../services/storage.service';
-import { LoggerService } from '../../services/logger.service';
-import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
+import type { SafeHtml } from '@angular/platform-browser';
+import { ActivatedRoute, type ParamMap, RouterModule } from '@angular/router';
+import { type Event, kinds, nip19 } from 'nostr-tools';
+import type { Subscription } from 'rxjs';
 import { DateToggleComponent } from '../../components/date-toggle/date-toggle.component';
-import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
-import { marked } from 'marked';
-import { DataService } from '../../services/data.service';
-import { LayoutService } from '../../services/layout.service';
-import { ParsingService } from '../../services/parsing.service';
-import { UrlUpdateService } from '../../services/url-update.service';
-import { BookmarkService } from '../../services/bookmark.service';
-import { CommonModule } from '@angular/common';
-import { AccountStateService } from '../../services/account-state.service';
-import DOMPurify from 'dompurify';
-import { UserDataFactoryService } from '../../services/user-data-factory.service';
-import { NostrRecord } from '../../interfaces';
-import { Cache } from '../../services/cache';
-import { UserDataService } from '../../services/user-data.service';
-import { Subscription } from 'rxjs';
-import { RepostButtonComponent } from '../../components/event/repost-button/repost-button.component';
 import { EventMenuComponent } from '../../components/event/event-menu/event-menu.component';
+import { RepostButtonComponent } from '../../components/event/repost-button/repost-button.component';
+import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
+import type { NostrRecord } from '../../interfaces';
+import { AccountStateService } from '../../services/account-state.service';
+import { BookmarkService } from '../../services/bookmark.service';
+import { Cache } from '../../services/cache';
+import { DataService } from '../../services/data.service';
+import { FormatService } from '../../services/format/format.service';
+import { LayoutService } from '../../services/layout.service';
+import { LoggerService } from '../../services/logger.service';
+import { UrlUpdateService } from '../../services/url-update.service';
+import { UserDataFactoryService } from '../../services/user-data-factory.service';
+import type { UserDataService } from '../../services/user-data.service';
+import { UtilitiesService } from '../../services/utilities.service';
 
 @Component({
   selector: 'app-article',
@@ -53,16 +49,12 @@ import { EventMenuComponent } from '../../components/event/event-menu/event-menu
 })
 export class ArticleComponent implements OnDestroy {
   private route = inject(ActivatedRoute);
-  private router = inject(Router);
   private utilities = inject(UtilitiesService);
-  private nostrService = inject(NostrService);
-  private storageService = inject(StorageService);
   private readonly userDataFactory = inject(UserDataFactoryService);
   private logger = inject(LoggerService);
-  private sanitizer = inject(DomSanitizer);
   private data = inject(DataService);
   private layout = inject(LayoutService);
-  private parsing = inject(ParsingService);
+  private formatService = inject(FormatService);
   private url = inject(UrlUpdateService);
   private readonly cache = inject(Cache);
   bookmark = inject(BookmarkService);
@@ -286,140 +278,7 @@ export class ArticleComponent implements OnDestroy {
       return;
     }
 
-    try {
-      // First, preprocess content to convert image URLs to markdown image syntax
-      // Do this BEFORE any HTML sanitization since we're working with markdown
-      const preprocessedContent = await this.preprocessImageUrls(content);
-
-      // Store reference to isImageUrl for use in renderer
-      const isImageUrl = this.isImageUrl.bind(this);
-
-      // Create a custom renderer for enhanced image handling
-      const renderer = new marked.Renderer();
-
-      // Custom heading renderer to ensure headers are properly rendered
-      renderer.heading = ({ text, depth }: { text: string; depth: number }): string => {
-        // Process inline markdown in the heading text (bold, italic, etc.)
-        const processedText = marked.parseInline(text) as string;
-        const headingId = text
-          .replace(/\*\*/g, '') // Remove bold markers for ID generation
-          .replace(/\*/g, '') // Remove italic markers for ID generation
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-|-$/g, '');
-        return `<h${depth} id="${headingId}">${processedText}</h${depth}>`;
-      };
-
-      // Custom image renderer with enhanced attributes and link support
-      renderer.image = ({
-        href,
-        title,
-        text,
-      }: {
-        href: string | null;
-        title: string | null;
-        text: string;
-      }): string => {
-        if (!href) return '';
-
-        // Sanitize the href URL
-        const sanitizedHref = href.replace(/[<>"']/g, '');
-        const sanitizedTitle = title ? title.replace(/[<>"']/g, '') : '';
-        const sanitizedAlt = text ? text.replace(/[<>"']/g, '') : '';
-
-        return `<img
-          src="${sanitizedHref}"
-          alt="${sanitizedAlt}"
-          ${sanitizedTitle ? `title="${sanitizedTitle}"` : ''}
-          class="article-image"
-          loading="lazy"
-          decoding="async"
-          onclick="window.open('${sanitizedHref}', '_blank')"
-          style="cursor: pointer;"
-        />`;
-      };
-
-      // Custom link renderer that preserves markdown image links and handles standalone image URLs
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      renderer.link = ({ href, title, tokens }: any): string => {
-        // Extract text from tokens safely
-        const text =
-          tokens && tokens.length > 0 && tokens[0] && tokens[0].raw ? tokens[0].raw : href;
-
-        if (!href) return text || '';
-
-        // Check if this link contains an image (markdown image link syntax: [![alt](image)](link))
-        const imageRegex = /!\[([^\]]*)\]\(([^)]+)\)/;
-        const imageMatch = text.match(imageRegex);
-
-        if (imageMatch) {
-          // This is a markdown image link: [![alt](image)](link)
-          const [, altText, imageSrc] = imageMatch;
-          const sanitizedHref = href.replace(/[<>"']/g, '');
-          const sanitizedImageSrc = imageSrc.replace(/[<>"']/g, '');
-          const sanitizedAlt = altText.replace(/[<>"']/g, '');
-          const sanitizedTitle = title ? title.replace(/[<>"']/g, '') : '';
-
-          return `<a href="${sanitizedHref}" target="_blank" rel="noopener noreferrer" ${sanitizedTitle ? `title="${sanitizedTitle}"` : ''}>
-            <img
-              src="${sanitizedImageSrc}"
-              alt="${sanitizedAlt}"
-              class="article-image linked-image"
-              loading="lazy"
-              decoding="async"
-              style="cursor: pointer;"
-            />
-          </a>`;
-        }
-
-        // Check if the link URL itself points to an image (standalone image URLs)
-        if (isImageUrl(href)) {
-          // Render as image instead of link
-          const sanitizedHref = href.replace(/[<>"']/g, '');
-          const sanitizedTitle = title ? title.replace(/[<>"']/g, '') : '';
-          const sanitizedAlt = text || 'Image';
-
-          return `<img
-            src="${sanitizedHref}"
-            alt="${sanitizedAlt}"
-            ${sanitizedTitle ? `title="${sanitizedTitle}"` : ''}
-            class="article-image"
-            loading="lazy"
-            decoding="async"
-            onclick="window.open('${sanitizedHref}', '_blank')"
-            style="cursor: pointer;"
-          />`;
-        }
-
-        // Regular link rendering
-        const sanitizedHref = href.replace(/[<>"']/g, '');
-        const sanitizedTitle = title ? title.replace(/[<>"']/g, '') : '';
-        return `<a href="${sanitizedHref}" ${sanitizedTitle ? `title="${sanitizedTitle}"` : ''} target="_blank" rel="noopener noreferrer">${text}</a>`;
-      };
-
-      // Configure marked with custom renderer and options for modern marked.js
-      marked.use({
-        renderer: renderer,
-        gfm: true,
-        breaks: true,
-        pedantic: false,
-      });
-
-      // Parse markdown to HTML (marked.parse returns string)
-      const htmlContent = marked.parse(preprocessedContent) as string;
-
-      // Now sanitize the resulting HTML to remove any malicious content
-      const sanitizedHtmlContent = DOMPurify.sanitize(htmlContent);
-
-      // Set the sanitized HTML content
-      this._parsedContent.set(this.sanitizer.bypassSecurityTrustHtml(sanitizedHtmlContent));
-    } catch (error) {
-      this.logger.error('Error parsing markdown:', error);
-      // Fallback to plain text
-      this._parsedContent.set(
-        this.sanitizer.bypassSecurityTrustHtml(content.replace(/\n/g, '<br>')),
-      );
-    }
+    this._parsedContent.set(await this.formatService.markdownToHtml(content));
   });
 
   authorPubkey = computed(() => {
@@ -483,186 +342,5 @@ export class ArticleComponent implements OnDestroy {
         }
       }
     }
-  }
-
-  // Helper method to check if a URL points to an image
-  private isImageUrl(url: string): boolean {
-    if (!url) return false;
-
-    // Remove query parameters and fragments for extension check
-    const urlWithoutParams = url.split('?')[0].split('#')[0];
-
-    // Common image extensions
-    const imageExtensions = /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico|tiff|avif|heic|heif)$/i;
-
-    // Check file extension
-    if (imageExtensions.test(urlWithoutParams)) {
-      return true;
-    }
-
-    // Check for common image hosting patterns and CDNs
-    const imageHostPatterns = [
-      /imgur\.com\/\w+$/i,
-      /i\.imgur\.com/i,
-      /images\.unsplash\.com/i,
-      /unsplash\.com\/photos/i,
-      /cdn\.pixabay\.com/i,
-      /pexels\.com\/photo/i,
-      /flickr\.com\/.*\.(jpg|jpeg|png|gif)/i,
-      /githubusercontent\.com.*\.(jpg|jpeg|png|gif|svg|webp)/i,
-      /media\.giphy\.com/i,
-      /tenor\.com\/view/i,
-      /prnt\.sc\/\w+/i,
-      /gyazo\.com\/\w+/i,
-      /postimg\.cc/i,
-      /imgbb\.com/i,
-      /imageban\.ru/i,
-      /photobucket\.com/i,
-      /tinypic\.com/i,
-      /imageshack\.us/i,
-      /cloud\.githubusercontent\.com/i,
-      /avatars\.githubusercontent\.com/i,
-      /raw\.githubusercontent\.com.*\.(jpg|jpeg|png|gif|svg|webp)/i,
-      /discord\.com\/attachments.*\.(jpg|jpeg|png|gif|webp)/i,
-      /cdn\.discordapp\.com.*\.(jpg|jpeg|png|gif|webp)/i,
-      /media\.discordapp\.net.*\.(jpg|jpeg|png|gif|webp)/i,
-      /.*\.cloudfront\.net.*\.(jpg|jpeg|png|gif|svg|webp)/i,
-      /.*\.amazonaws\.com.*\.(jpg|jpeg|png|gif|svg|webp)/i,
-    ];
-
-    return imageHostPatterns.some((pattern) => pattern.test(url));
-  }
-
-  // Helper method to preprocess content and convert standalone image URLs to markdown images
-  private async preprocessImageUrls(content: string) {
-    // First, process Nostr tokens
-    content = await this.processNostrTokens(content);
-
-    // Pattern to match standalone URLs that point to images
-    // This will match URLs on their own line or URLs not already in markdown syntax
-    // Updated to be more careful about existing markdown syntax
-    const standaloneImageUrlPattern = /(?:^|\s)(https?:\/\/[^\s<>"\]]+)(?=\s|$)/gm;
-
-    return content.replace(standaloneImageUrlPattern, (match, url) => {
-      // Don't convert if already in markdown image syntax
-      const beforeMatch = content.substring(0, content.indexOf(match));
-
-      // Check if it's already part of markdown image syntax ![alt](url) or [![alt](url)](link)
-      if (
-        beforeMatch.endsWith('](') ||
-        beforeMatch.endsWith('![') ||
-        beforeMatch.match(/!\[[^\]]*\]$/)
-      ) {
-        return match;
-      }
-
-      // Check if it's already part of markdown link syntax [text](url)
-      if (beforeMatch.match(/\[[^\]]*\]$/)) {
-        return match;
-      }
-
-      // If the URL points to an image, convert it to markdown image syntax
-      if (this.isImageUrl(url.trim())) {
-        const filename = url.split('/').pop()?.split('.')[0] || 'Image';
-        return match.replace(url, `![${filename}](${url.trim()})`);
-      }
-
-      return match;
-    });
-  }
-  // Helper method to process Nostr tokens and replace them with @username
-  private async processNostrTokens(content: string): Promise<string> {
-    const nostrRegex =
-      /(nostr:(?:npub|nprofile|note|nevent|naddr)1[a-zA-Z0-9]+)(?=\s|##LINEBREAK##|$|[^\w])/g;
-
-    // Find all matches first
-    const matches = Array.from(content.matchAll(nostrRegex));
-
-    // Process each match asynchronously
-    const replacements = await Promise.all(
-      matches.map(async (match: RegExpMatchArray) => {
-        try {
-          const nostrData = await this.parsing.parseNostrUri(match[0]);
-
-          if (nostrData) {
-            // Generate a user-friendly mention based on the Nostr data type
-            switch (nostrData.type) {
-              case 'npub':
-              case 'nprofile': {
-                // For user profiles, create @username mention with proper link
-                const pubkey = nostrData.data?.pubkey || nostrData.data;
-                const username = nostrData.displayName;
-                const npub = this.utilities.getNpubFromPubkey(pubkey);
-                return {
-                  original: match[0],
-                  replacement: `<a href="/p/${npub}" class="nostr-mention" data-pubkey="${pubkey}" data-type="profile" title="View @${username}'s profile">@${username}</a>`,
-                };
-              }
-
-              case 'note': {
-                // For notes, create a reference link
-                const noteId = nostrData.data;
-                const noteRef = nostrData.displayName || `note${noteId.substring(0, 8)}`;
-                const noteEncoded = nip19.noteEncode(noteId);
-                return {
-                  original: match[0],
-                  replacement: `<a href="/e/${noteEncoded}" class="nostr-reference" data-event-id="${noteId}" data-type="note" title="View note">📝 ${noteRef}</a>`,
-                };
-              }
-
-              case 'nevent': {
-                // For events, create a reference link
-                const eventId = nostrData.data?.id || nostrData.data;
-                const eventRef = nostrData.displayName || `event${eventId.substring(0, 8)}`;
-                const neventEncoded = nip19.neventEncode(nostrData.data);
-                return {
-                  original: match[0],
-                  replacement: `<a href="/e/${neventEncoded}" class="nostr-reference" data-event-id="${eventId}" data-type="event" title="View event">📝 ${eventRef}</a>`,
-                };
-              }
-
-              case 'naddr': {
-                // For addresses (like articles), create a reference link
-                const identifier = nostrData.data?.identifier || '';
-                const kind = nostrData.data?.kind || '';
-                const authorPubkey = nostrData.data?.pubkey || '';
-                const addrRef =
-                  nostrData.displayName || identifier || `${kind}:${authorPubkey.substring(0, 8)}`;
-                const naddrEncoded = nip19.naddrEncode(nostrData.data);
-                return {
-                  original: match[0],
-                  replacement: `<a href="/a/${naddrEncoded}" class="nostr-reference" data-identifier="${identifier}" data-kind="${kind}" data-type="article" title="View article">📄 ${addrRef}</a>`,
-                };
-              }
-
-              default:
-                return {
-                  original: match[0],
-                  replacement: `<span class="nostr-mention" title="Nostr reference">${nostrData.displayName || match[0]}</span>`,
-                };
-            }
-          }
-
-          return {
-            original: match[0],
-            replacement: match[0],
-          };
-        } catch (error) {
-          this.logger.error('Error parsing Nostr URI:', error);
-          return {
-            original: match[0],
-            replacement: match[0],
-          };
-        }
-      }),
-    );
-
-    // Apply all replacements to the content
-    let result = content;
-    for (const replacement of replacements) {
-      result = result.replace(replacement.original, replacement.replacement);
-    }
-
-    return result;
   }
 }
