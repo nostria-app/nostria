@@ -1,4 +1,4 @@
-import { Component, computed, input, signal, inject } from '@angular/core';
+import { Component, computed, input, signal, inject, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -6,6 +6,8 @@ import { Event } from 'nostr-tools';
 import { nip19 } from 'nostr-tools';
 import { LayoutService } from '../../services/layout.service';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
+import { FormatService } from '../../services/format/format.service';
+import { SafeHtml } from '@angular/platform-browser';
 
 @Component({
   selector: 'app-article-event',
@@ -16,6 +18,8 @@ import { UserProfileComponent } from '../user-profile/user-profile.component';
 })
 export class ArticleEventComponent {
   private layout = inject(LayoutService);
+  private formatService = inject(FormatService);
+  private readonly MAX_LENGTH = 300;
 
   event = input.required<Event>();
   showAuthor = input<boolean>(true);
@@ -40,13 +44,25 @@ export class ArticleEventComponent {
     return summaryTag?.[1] || null;
   });
 
-  // Article content (truncated for preview)
-  content = computed(() => {
-    const event = this.event();
-    if (!event || !event.content) return null;
+  previewContent = signal<SafeHtml>('');
+  articleContent = signal<SafeHtml>('');
 
-    return event.content;
-  });
+  constructor() {
+    effect(async () => {
+      const event = this.event();
+      if (!event || !event.content) return;
+
+      if (event.content.length > this.MAX_LENGTH) {
+        this.previewContent.set(
+          await this.formatService.markdownToHtml(
+            `${event.content.substring(0, this.MAX_LENGTH)}…`,
+          ),
+        );
+      }
+
+      this.articleContent.set(await this.formatService.markdownToHtml(event.content));
+    });
+  }
 
   // Article URL if available
   articleUrl = computed(() => {
@@ -108,23 +124,20 @@ export class ArticleEventComponent {
   });
 
   // Truncated content for preview
-  previewContent = computed(() => {
-    const content = this.content();
-    if (!content) return null;
+  contentToShow = computed<SafeHtml>(() => {
+    const content = this.articleContent();
+    const previewContent = this.previewContent();
+    if (!content) return '';
 
     // If expanded, show full content
-    if (this.isExpanded()) return content;
+    if (this.isExpanded() || !previewContent) return content;
 
-    const maxLength = 300;
-    if (content.length <= maxLength) return content;
-
-    return content.slice(0, maxLength) + '...';
+    return previewContent;
   });
 
-  // Check if content is truncated
-  isContentTruncated = computed(() => {
-    const content = this.content();
-    return content ? content.length > 300 : false;
+  // Check if content exceeds MAX_LENGTH and thus has a preview
+  isLongArticle = computed<boolean>(() => {
+    return !!this.previewContent();
   });
 
   expandContent(): void {
