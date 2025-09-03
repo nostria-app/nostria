@@ -36,7 +36,7 @@
   }
 
   <div class="article-content">
-    <p>{{ previewContent() }}</p>
+    <div class="markdown-content" [innerHTML]="contentToShow()"></div>
   </div>
 
   @if (articleTags().length > 0) {
@@ -48,7 +48,7 @@
   }
 
   <div class="article-actions">
-    @if (isContentTruncated()) {
+    @if (isLongArticle()) {
       <button mat-button color="primary" class="read-more" (click)="expandContent()">
         <mat-icon>{{ isExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
         {{ isExpanded() ? 'Show Less' : 'Read More' }}
