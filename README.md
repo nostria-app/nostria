@@ -110,6 +110,19 @@ Alternative if you want to run the desktop app:
 npm run tauri dev
 ```
 
+## Native Build
+
+Template created! To get started run:
+cd nostria
+npm install
+npm run tauri android init
+
+For Desktop development, run:
+npm run tauri dev
+
+For Android development, run:
+npm run tauri android dev
+
 ## Classifications
 
 - Accounts - List of accounts that the user has access to.
