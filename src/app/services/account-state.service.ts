@@ -246,6 +246,8 @@ export class AccountStateService implements OnDestroy {
     this.profile.set(undefined);
     this.accountProfiles.set(new Map()); // Clear pre-loaded account profiles
     this.lastPreloadedAccountPubkeys.clear(); // Clear tracking set
+    this.muteList.set(undefined); // Clear mute list
+    // Note: We don't clear subscriptions as they are persistent across account changes
   }
 
   async follow(pubkeys: string | string[]) {

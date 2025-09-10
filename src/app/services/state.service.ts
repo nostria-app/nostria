@@ -28,9 +28,13 @@ export class StateService implements NostriaService {
 
   constructor() {
     effect(async () => {
-      if (this.accountState.account()) {
+      const account = this.accountState.account();
+      if (account) {
         this.clear();
         await this.load();
+      } else {
+        // Clear when account is null (logout)
+        this.clear();
       }
     });
   }
