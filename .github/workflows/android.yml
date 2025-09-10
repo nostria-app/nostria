@@ -48,7 +48,7 @@ jobs:
       - name: Generate Android PWA package
         run: |
           cd pwabuilder-output
-          npx pwabuilder ../dist/app/browser \
+          npx pwabuilder https://nostria.app/ \
             --platform android \
             --options '{
               "packageId": "app.nostria",
@@ -60,7 +60,6 @@ jobs:
               "orientation": "any",
               "themeColor": "#303030",
               "backgroundColor": "#303030",
-              "iconUrl": "../public/icons/icon-512x512.png",
               "startUrl": "/",
               "splashScreenFadeOutDuration": 300,
               "shortcuts": [
