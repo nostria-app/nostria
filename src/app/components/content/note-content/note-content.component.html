@@ -1,54 +1,41 @@
 @for (token of contentTokens(); track token.id) {
-  @if (token.type === 'text') {
-    <span>{{ token.content }}</span>
-  } @else if (token.type === 'linebreak') {
-    <br />
-  } @else if (token.type === 'emoji') {
-    <span class="emoji-token" [title]="token.content">{{ token.emoji }}</span>
-  } @else if (token.type === 'url') {
-    <a [href]="token.content" target="_blank" rel="noopener noreferrer">{{ token.content }}</a>
-  } @else if (token.type === 'youtube') {
-    <div class="media-container">
-      <iframe
-        width="560"
-        height="315"
-        [src]="token.processedUrl"
-        frameborder="0"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowfullscreen
-      >
-      </iframe>
-    </div>
-  } @else if (token.type === 'image') {
-    <div class="media-container">
-      <img
-        [src]="token.content"
-        alt="Content image"
-        loading="lazy"
-        (click)="openImageDialog(token.content)"
-        class="clickable-image"
-      />
-    </div>
-  } @else if (token.type === 'audio') {
-    <div class="media-container">
-      <audio controls>
-        <source [src]="token.content" />
-        Your browser does not support the audio element.
-      </audio>
-    </div>
-  } @else if (token.type === 'video') {
-    <div class="media-container">
-      <video controls>
-        <source [src]="token.content" type="video/{{ getVideoType(token.content) }}" />
-        Your browser does not support the video element.
-      </video>
-    </div>
-  } @else if (
-    token.type === 'nostr-mention' &&
-    (token.nostrData?.type === 'npub' || token.nostrData?.type === 'nprofile')
-  ) {
-    &nbsp;<a class="nostr-mention" (click)="onNostrMentionClick(token)"
-      >&#64;{{ token.nostrData?.displayName }}</a
-    >&nbsp;
-  }
+@if (token.type === 'text') {
+<span>{{ token.content }}</span>
+} @else if (token.type === 'linebreak') {
+<br />
+} @else if (token.type === 'emoji') {
+<span class="emoji-token" [title]="token.content">{{ token.emoji }}</span>
+} @else if (token.type === 'url') {
+&nbsp;<a [href]="token.content" target="_blank" rel="noopener noreferrer">{{ token.content }}</a>&nbsp;
+} @else if (token.type === 'youtube') {
+<div class="media-container">
+  <iframe width="560" height="315" [src]="token.processedUrl" frameborder="0"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen>
+  </iframe>
+</div>
+} @else if (token.type === 'image') {
+<div class="media-container">
+  <img [src]="token.content" alt="Content image" loading="lazy" (click)="openImageDialog(token.content)"
+    class="clickable-image" />
+</div>
+} @else if (token.type === 'audio') {
+<div class="media-container">
+  <audio controls>
+    <source [src]="token.content" />
+    Your browser does not support the audio element.
+  </audio>
+</div>
+} @else if (token.type === 'video') {
+<div class="media-container">
+  <video controls>
+    <source [src]="token.content" type="video/{{ getVideoType(token.content) }}" />
+    Your browser does not support the video element.
+  </video>
+</div>
+} @else if (
+token.type === 'nostr-mention' &&
+(token.nostrData?.type === 'npub' || token.nostrData?.type === 'nprofile')
+) {
+&nbsp;<a class="nostr-mention" (click)="onNostrMentionClick(token)">&#64;{{ token.nostrData?.displayName }}</a>&nbsp;
+}
 }
