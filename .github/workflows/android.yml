@@ -42,10 +42,12 @@ jobs:
 
       - name: Install PWABuilder CLI and dependencies
         run: |
-          # Install latest PWABuilder CLI
-          npm install -g @pwabuilder/cli@latest
+          # Install PWABuilder CLI locally
+          npm install @pwabuilder/cli@latest
           # Install required Android build tools
-          npm install -g cordova@latest
+          npm install cordova@latest
+          # Verify installation
+          npx pwabuilder --version
 
       - name: Create PWABuilder directory
         run: mkdir -p pwabuilder-output
@@ -61,7 +63,7 @@ jobs:
       - name: Generate Android PWA package
         run: |
           cd pwabuilder-output
-          pwabuilder https://nostria.app/ \
+          npx pwabuilder https://nostria.app/ \
             --platform android \
             --log debug \
             --androidPackageId app.nostria \
