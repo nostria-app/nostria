@@ -1,0 +1,148 @@
+name: Build Android PWA
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build (e.g., v1.0.1)'
+        required: true
+        default: 'v1.0.1'
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Angular PWA for production
+        run: npm run build:ssr:prod
+
+      - name: Install PWABuilder CLI
+        run: npm install -g @pwabuilder/cli
+
+      - name: Create PWABuilder directory
+        run: mkdir -p pwabuilder-output
+
+      - name: Extract version info
+        id: version
+        run: |
+          VERSION=${{ github.event.inputs.version || github.ref_name }}
+          VERSION_CLEAN=${VERSION#v}  # Remove 'v' prefix if present
+          echo "version_clean=$VERSION_CLEAN" >> $GITHUB_OUTPUT
+          echo "version_code=$(date +%s)" >> $GITHUB_OUTPUT
+
+      - name: Generate Android PWA package
+        run: |
+          cd pwabuilder-output
+          pwabuilder ../dist/app/browser \
+            --platform android \
+            --options '{
+              "packageId": "app.nostria",
+              "name": "Nostria", 
+              "launcherName": "Nostria",
+              "version": "${{ steps.version.outputs.version_clean }}",
+              "versionCode": "${{ steps.version.outputs.version_code }}",
+              "display": "standalone",
+              "orientation": "any",
+              "themeColor": "#303030",
+              "backgroundColor": "#303030",
+              "iconUrl": "../public/icons/icon-512x512.png",
+              "startUrl": "/",
+              "splashScreenFadeOutDuration": 300,
+              "shortcuts": [
+                {
+                  "name": "Profile",
+                  "short_name": "Profile",
+                  "url": "/profile"
+                },
+                {
+                  "name": "Feed",
+                  "short_name": "Feed", 
+                  "url": "/feed"
+                }
+              ]
+            }' \
+            --publish false
+
+      - name: Find generated APK
+        id: find-apk
+        run: |
+          APK_PATH=$(find pwabuilder-output -name "*.apk" -type f | head -1)
+          if [ -z "$APK_PATH" ]; then
+            echo "No APK found in pwabuilder-output"
+            exit 1
+          fi
+          echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
+          echo "apk_name=$(basename $APK_PATH)" >> $GITHUB_OUTPUT
+
+      - name: Rename APK with version
+        run: |
+          VERSION=${{ github.event.inputs.version || github.ref_name }}
+          VERSION_CLEAN=${VERSION#v}  # Remove 'v' prefix if present
+          mv "${{ steps.find-apk.outputs.apk_path }}" "nostria-${VERSION_CLEAN}.apk"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nostria-android-apk
+          path: nostria-*.apk
+          retention-days: 30
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.version || github.ref_name }}
+          name: Nostria ${{ github.event.inputs.version || github.ref_name }}
+          body: |
+            ## Nostria Android PWA Release
+            
+            This release contains the Android APK generated from the Progressive Web App (PWA) using PWABuilder.
+            
+            ### Installation
+            1. Download the APK file below
+            2. Enable "Install from unknown sources" in your Android settings
+            3. Install the APK file
+            
+            ### Changes
+            - Built from commit ${{ github.sha }}
+            - Version: ${{ github.event.inputs.version || github.ref_name }}
+            - Build number: ${{ github.run_number }}
+            
+            ### Download
+            - **Android APK**: nostria-${{ github.event.inputs.version || github.ref_name }}.apk
+          files: |
+            nostria-*.apk
+          draft: false
+          prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'alpha') || contains(github.ref_name, 'rc') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update packages directory
+        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
+        run: |
+          # Copy the new APK to packages directory for repository storage
+          cp nostria-*.apk packages/nostria.apk
+          
+      - name: Commit updated APK
+        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'chore: update Android APK build'
+          file_pattern: packages/nostria.apk
+          commit_user_name: 'github-actions[bot]'
+          commit_user_email: 'github-actions[bot]@users.noreply.github.com'
