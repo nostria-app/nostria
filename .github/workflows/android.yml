@@ -31,8 +31,21 @@ jobs:
       - name: Build Angular PWA for production
         run: npm run build:ssr:prod
 
-      - name: Install PWABuilder CLI locally
-        run: npm install @pwabuilder/cli
+      - name: Setup Java for Android build
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install PWABuilder CLI and dependencies
+        run: |
+          # Install latest PWABuilder CLI
+          npm install -g @pwabuilder/cli@latest
+          # Install required Android build tools
+          npm install -g cordova@latest
 
       - name: Create PWABuilder directory
         run: mkdir -p pwabuilder-output
@@ -48,33 +61,13 @@ jobs:
       - name: Generate Android PWA package
         run: |
           cd pwabuilder-output
-          npx pwabuilder https://nostria.app/ \
+          pwabuilder https://nostria.app/ \
             --platform android \
-            --options '{
-              "packageId": "app.nostria",
-              "name": "Nostria", 
-              "launcherName": "Nostria",
-              "version": "${{ steps.version.outputs.version_clean }}",
-              "versionCode": "${{ steps.version.outputs.version_code }}",
-              "display": "standalone",
-              "orientation": "any",
-              "themeColor": "#303030",
-              "backgroundColor": "#303030",
-              "startUrl": "/",
-              "splashScreenFadeOutDuration": 300,
-              "shortcuts": [
-                {
-                  "name": "Profile",
-                  "short_name": "Profile",
-                  "url": "/profile"
-                },
-                {
-                  "name": "Feed",
-                  "short_name": "Feed", 
-                  "url": "/feed"
-                }
-              ]
-            }' \
+            --log debug \
+            --androidPackageId app.nostria \
+            --androidAppName "Nostria" \
+            --androidAppVersion "${{ steps.version.outputs.version_clean }}" \
+            --androidVersionCode "${{ steps.version.outputs.version_code }}" \
             --publish false
 
       - name: Find generated APK
