@@ -46,8 +46,6 @@ jobs:
           npm install @pwabuilder/cli@latest
           # Install required Android build tools
           npm install cordova@latest
-          # Verify installation
-          npx pwabuilder --version
 
       - name: Create PWABuilder directory
         run: mkdir -p pwabuilder-output
