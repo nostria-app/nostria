@@ -107,6 +107,27 @@ export class WhatsNewDialogComponent {
   // Sample updates - replace with real data
   updates: FeatureUpdate[] = [
     {
+      version: '1.0.2',
+      date: 'September 2025',
+      title: 'Tweaks and Improvements',
+      description: 'Smaller improvements with big impact. Many minor bug fixes everywhere.',
+      features: [
+        {
+          title: 'Reply threads in Timeline',
+          description:
+            'The timeline feed on a user profile, now renders the event being replied to and the original post.',
+          screenshots: [
+            {
+              src: '/screenshots/2025-09-11-timeline-replies.png',
+              alt: 'Improved visuals for reply events in the timeline feed',
+              width: 702,
+              height: 716,
+            },
+          ],
+        },
+      ],
+    },
+    {
       version: '1.0.1',
       date: 'September 2025',
       title: 'Enhanced User Experience',
