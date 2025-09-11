@@ -99,7 +99,11 @@ export class EventComponent {
   isLoadingEvent = signal<boolean>(false);
   isLoadingThread = signal<boolean>(false);
   isLoadingReactions = signal<boolean>(false);
+  isLoadingParent = signal<boolean>(false);
   loadingError = signal<string | null>(null);
+
+  // Parent event for replies
+  parentEvent = signal<Event | null>(null);
 
   // Check if this event is currently the one being displayed on the event page
   isCurrentlySelected = computed<boolean>(() => {
@@ -175,6 +179,32 @@ export class EventComponent {
     return this.repostService.decodeRepost(event);
   });
 
+  // Check if this event is a reply (has e-tags)
+  isReply = computed<boolean>(() => {
+    const event = this.event() || this.record()?.event;
+    if (!event) return false;
+
+    const eTags = event.tags.filter((tag) => tag[0] === 'e');
+    return eTags.length > 0;
+  });
+
+  // Get the parent event ID (root or reply)
+  parentEventId = computed<string | null>(() => {
+    const event = this.event() || this.record()?.event;
+    if (!event) return null;
+
+    const eventTags = this.eventService.getEventTags(event);
+    // Return the root ID if available, otherwise the reply ID
+    return eventTags.rootId || eventTags.replyId || null;
+  });
+
+  // Get parent record for display
+  parentRecord = computed<NostrRecord | null>(() => {
+    const parent = this.parentEvent();
+    if (!parent) return null;
+    return this.data.toRecord(parent);
+  });
+
   followingCount = computed<number>(() => {
     const record = this.record();
     if (!record || record.event.kind !== 3) return 0;
@@ -228,6 +258,19 @@ export class EventComponent {
           this.loadReports();
         }
       });
+    });
+
+    // Effect to load parent event when parentEventId changes
+    effect(() => {
+      const parentId = this.parentEventId();
+
+      if (parentId && this.isReply()) {
+        untracked(async () => {
+          await this.loadParentEvent(parentId);
+        });
+      } else {
+        this.parentEvent.set(null);
+      }
     });
 
     effect(async () => {
@@ -295,6 +338,21 @@ export class EventComponent {
       this.reactions.set(reactions);
     } finally {
       this.isLoadingReactions.set(false);
+    }
+  }
+
+  async loadParentEvent(parentId: string) {
+    if (!parentId) return;
+
+    this.isLoadingParent.set(true);
+    try {
+      const parentEvent = await this.eventService.loadEvent(parentId);
+      this.parentEvent.set(parentEvent);
+    } catch (error) {
+      console.error('Error loading parent event:', error);
+      this.parentEvent.set(null);
+    } finally {
+      this.isLoadingParent.set(false);
     }
   }
 
