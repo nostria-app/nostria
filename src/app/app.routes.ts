@@ -39,6 +39,7 @@ import { Calendar } from './pages/calendar/calendar';
 import { AlgorithmComponent } from './pages/settings/algorithm/algorithm';
 import { RelaysComponent } from './pages/settings/relays/relays.component';
 import { DraftsComponent } from './pages/drafts/drafts.component';
+import { ProfileOpenComponent } from './pages/profile/profile-open.component';
 
 const profileChildren: Routes = [
   {
@@ -201,6 +202,12 @@ export const routes: Routes = [
     component: ArticleComponent,
     title: 'Article',
     resolve: { data: DataResolver },
+  },
+  {
+    path: 'p',
+    component: ProfileOpenComponent,
+    resolve: { data: DataResolver },
+    children: profileChildren,
   },
   {
     path: 'p/:id',
