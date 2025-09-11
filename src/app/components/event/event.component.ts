@@ -102,8 +102,9 @@ export class EventComponent {
   isLoadingParent = signal<boolean>(false);
   loadingError = signal<string | null>(null);
 
-  // Parent event for replies
+  // Parent and root events for replies
   parentEvent = signal<Event | null>(null);
+  rootEvent = signal<Event | null>(null);
 
   // Check if this event is currently the one being displayed on the event page
   isCurrentlySelected = computed<boolean>(() => {
@@ -188,21 +189,43 @@ export class EventComponent {
     return eTags.length > 0;
   });
 
-  // Get the parent event ID (root or reply)
-  parentEventId = computed<string | null>(() => {
+  // Get the immediate parent event ID (what this is replying to)
+  replyEventId = computed<string | null>(() => {
     const event = this.event() || this.record()?.event;
     if (!event) return null;
 
     const eventTags = this.eventService.getEventTags(event);
-    // Return the root ID if available, otherwise the reply ID
-    return eventTags.rootId || eventTags.replyId || null;
+    return eventTags.replyId;
   });
 
-  // Get parent record for display
+  // Get the root event ID (original post in thread)
+  rootEventId = computed<string | null>(() => {
+    const event = this.event() || this.record()?.event;
+    if (!event) return null;
+
+    const eventTags = this.eventService.getEventTags(event);
+    return eventTags.rootId;
+  });
+
+  // Check if this reply has both root and reply events (threaded reply)
+  isThreadedReply = computed<boolean>(() => {
+    const rootId = this.rootEventId();
+    const replyId = this.replyEventId();
+    return !!(rootId && replyId && rootId !== replyId);
+  });
+
+  // Get parent record for display (immediate parent)
   parentRecord = computed<NostrRecord | null>(() => {
     const parent = this.parentEvent();
     if (!parent) return null;
     return this.data.toRecord(parent);
+  });
+
+  // Get root record for display
+  rootRecord = computed<NostrRecord | null>(() => {
+    const root = this.rootEvent();
+    if (!root) return null;
+    return this.data.toRecord(root);
   });
 
   followingCount = computed<number>(() => {
@@ -262,14 +285,24 @@ export class EventComponent {
 
     // Effect to load parent event when parentEventId changes
     effect(() => {
-      const parentId = this.parentEventId();
+      const replyId = this.replyEventId();
+      const rootId = this.rootEventId();
 
-      if (parentId && this.isReply()) {
+      if (this.isReply()) {
         untracked(async () => {
-          await this.loadParentEvent(parentId);
+          // Load immediate parent (reply)
+          if (replyId) {
+            await this.loadParentEvent(replyId);
+          }
+
+          // Load root event if it's different from reply
+          if (rootId && rootId !== replyId) {
+            await this.loadRootEvent(rootId);
+          }
         });
       } else {
         this.parentEvent.set(null);
+        this.rootEvent.set(null);
       }
     });
 
@@ -353,6 +386,18 @@ export class EventComponent {
       this.parentEvent.set(null);
     } finally {
       this.isLoadingParent.set(false);
+    }
+  }
+
+  async loadRootEvent(rootId: string) {
+    if (!rootId) return;
+
+    try {
+      const rootEvent = await this.eventService.loadEvent(rootId);
+      this.rootEvent.set(rootEvent);
+    } catch (error) {
+      console.error('Error loading root event:', error);
+      this.rootEvent.set(null);
     }
   }
 
