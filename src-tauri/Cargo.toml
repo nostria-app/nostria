@@ -1,6 +1,6 @@
 [package]
 name = "nostria"
-version = "1.0.1"
+version = "1.0.2"
 description = "Nostsria is an awesome Nostr client"
 authors = ["you"]
 edition = "2021"
