@@ -1,6 +1,7 @@
 @let item = record();
 @let targetItem = repostedRecord() || item;
 @let repostedEvent = repostedRecord()?.event;
+@let parentRecordData = parentRecord();
 
 @if (isLoadingEvent()) {
 <div class="loading-container">
@@ -11,7 +12,9 @@
 <mat-card class="note-card" [class.plain]="isPlain()" [class.selected]="isCurrentlySelected()" appearance="outlined"
   [attr.tabindex]="isCurrentlySelected() ? null : 0" [style.cursor]="isCurrentlySelected() ? 'auto' : 'pointer'"
   (click)="onCardClick($event)">
+
   @if (repostedEvent) {
+  <!-- Repost structure -->
   <mat-card-header class="repost-header">
     <mat-icon>repeat</mat-icon>
     <span>
@@ -55,7 +58,90 @@
       </mat-card-content>
     </mat-card>
   </mat-card-content>
+
+  } @else if (isReply() && parentRecordData) {
+  <!-- Reply structure -->
+  <mat-card-header class="reply-header">
+    <mat-icon>reply</mat-icon>
+    <span>
+      <app-profile-display-name [pubkey]="item.event.pubkey"></app-profile-display-name>
+      replied to
+    </span>
+  </mat-card-header>
+  <mat-card-content>
+    <!-- Parent event -->
+    <mat-card appearance="outlined" class="parent-event">
+      <app-event-header [event]="parentRecordData.event"></app-event-header>
+      <mat-card-content>
+        @if (parentRecordData.event.kind === 20) {
+        <app-photo-event [event]="parentRecordData.event"></app-photo-event>
+        }
+        <!-- Videos (NIP-71, kind 21/22) -->
+        @else if (parentRecordData.event.kind === 21 || parentRecordData.event.kind === 22) {
+        <app-video-event [event]="parentRecordData.event"></app-video-event>
+        }
+        <!-- Articles (kind 30023) -->
+        @else if (parentRecordData.event.kind === 30023) {
+        <app-article-event [event]="parentRecordData.event"></app-article-event>
+        }
+        <!-- M3U Playlists (kind 32100) -->
+        @else if (parentRecordData.event.kind === 32100) {
+        <app-playlist-event [event]="parentRecordData.event"></app-playlist-event>
+        }
+        <!-- Starter Packs (kind 39089) -->
+        @else if (parentRecordData.event.kind === 39089) {
+        <app-starter-pack-event [event]="parentRecordData.event"></app-starter-pack-event>
+        }
+        <!-- Profile events (kind 0) -->
+        @else if (parentRecordData.event.kind === 0) {
+        <app-user-profile [view]="'details'" [event]="parentRecordData.event"></app-user-profile>
+        } @else {
+        <app-content [content]="parentRecordData.data"></app-content>
+        }
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Reply content -->
+    <app-event-header [event]="item.event"></app-event-header>
+    @if (shouldHideContent()) {
+    <app-reported-content [event]="item.event"></app-reported-content>
+    } @else {
+    @if (item.event.kind === 20) {
+    <app-photo-event [event]="item.event"></app-photo-event>
+    }
+    <!-- Videos (NIP-71, kind 21/22) -->
+    @else if (item.event.kind === 21 || item.event.kind === 22) {
+    <app-video-event [event]="item.event"></app-video-event>
+    }
+    <!-- Articles (kind 30023) -->
+    @else if (item.event.kind === 30023) {
+    <app-article-event [event]="item.event"></app-article-event>
+    } @else if (item.event.kind === 3) {
+    <div class="following-event">
+      <mat-icon>people</mat-icon>
+      <span>Following {{ followingCount() }} accounts</span>
+    </div>
+    }
+    <!-- M3U Playlists (kind 32100) -->
+    @else if (item.event.kind === 32100) {
+    <app-playlist-event [event]="item.event"></app-playlist-event>
+    } @else if (item.event.kind === 39089) { <!-- Starter Packs (kind 39089) -->
+    <app-starter-pack-event [event]="item.event"></app-starter-pack-event>
+    } @else if (item.event.kind === 8) {
+    <app-badge [badge]="item.event"></app-badge>
+    }
+    <!-- Profile events (kind 0) -->
+    @else if (item.event.kind === 0) {
+    {{ item.data.about }}
+    <!-- <app-user-profile [view]="'details'" [event]="item.event"></app-user-profile> -->
+    } @else {
+    <app-content [content]="item.data"></app-content>
+    }
+    }
+  </mat-card-content>
+
   } @else {
+  <!-- Normal event structure -->
   <app-event-header [event]="item.event"></app-event-header>
   <mat-card-content>
     @if (shouldHideContent()) {

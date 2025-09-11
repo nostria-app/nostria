@@ -78,6 +78,25 @@
   }
 }
 
+.reply-header {
+  font-style: italic;
+  opacity: 0.7;
+  align-items: center;
+
+  mat-icon {
+    font-size: 18px;
+    line-height: 26px;
+  }
+}
+
+.parent-event {
+  margin-bottom: 16px;
+
+  mat-card-content {
+    padding-bottom: 8px;
+  }
+}
+
 .following-event {
   display: flex;
   align-items: center;
