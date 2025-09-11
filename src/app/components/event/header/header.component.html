@@ -2,8 +2,7 @@
   <app-user-profile [pubkey]="event().pubkey">
     <a
       class="date-link"
-      [matTooltip]="event().created_at * 1000 | date: 'medium'"
-      matTooltipPosition="below"
+      [title]="event().created_at * 1000 | date: 'medium'"
       tabindex="0"
       role="button"
       (click)="openEventAndStopPropagation($event)"
@@ -12,7 +11,6 @@
     >
       {{ event().created_at | ago }}
     </a>
-
     <app-event-menu [event]="event()"></app-event-menu>
   </app-user-profile>
 </mat-card-header>
