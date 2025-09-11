@@ -7,7 +7,6 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { Event, nip19 } from 'nostr-tools';
 import { EventPointer } from 'nostr-tools/nip19';
 import { firstValueFrom } from 'rxjs';
@@ -31,7 +30,6 @@ import { EventMenuComponent } from '../event-menu/event-menu.component';
     MatCardModule,
     MatIconModule,
     MatButtonModule,
-    MatTooltipModule,
     MatDividerModule,
     MatMenuModule,
     UserProfileComponent,
@@ -49,9 +47,7 @@ export class EventHeaderComponent {
   data = inject(DataService);
   nostrService = inject(NostrService);
   snackBar = inject(MatSnackBar);
-
   event = input.required<Event>();
-
   record = signal<NostrRecord | null>(null);
 
   isOurEvent = computed<boolean>(() => {
