@@ -98,15 +98,15 @@ export interface ReactionsDialogData {
                   <p>No zaps yet</p>
                 </div>
               } @else {
-                <mat-list>
+                <div class="zaps-container">
                   @for (zap of sortedZaps(); track zap.receipt.id) {
-                    <mat-list-item class="reaction-item zap-item">
-                      <div class="reaction-content">
+                    <div class="zap-item-custom">
+                      <div class="zap-header">
                         <app-user-profile
                           [pubkey]="zap.senderPubkey"
                           view="compact"
                         ></app-user-profile>
-                        <div class="zap-details">
+                        <div class="zap-meta">
                           <span class="zap-amount">{{ formatAmount(zap.amount) }} sats</span>
                           <span class="reaction-time">{{ zap.timestamp | ago }}</span>
                         </div>
@@ -114,12 +114,12 @@ export interface ReactionsDialogData {
                       @if (zap.comment) {
                         <div class="zap-comment">
                           <mat-icon class="comment-icon">format_quote</mat-icon>
-                          <span class="comment-text">{{ zap.comment }}</span>
+                          <div class="comment-text">{{ zap.comment }}</div>
                         </div>
                       }
-                    </mat-list-item>
+                    </div>
                   }
-                </mat-list>
+                </div>
               }
             </div>
           </mat-tab>
@@ -265,47 +265,76 @@ export interface ReactionsDialogData {
         white-space: nowrap;
       }
 
-      .zap-item .reaction-content {
-        align-items: flex-start;
+      .zaps-container {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 8px 16px;
       }
 
-      .zap-details {
+      .zap-item-custom {
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 16px;
+        background: #fff;
+        transition: box-shadow 0.2s ease;
+      }
+
+      .zap-item-custom:hover {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .zap-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 8px;
+      }
+
+      .zap-meta {
         display: flex;
         flex-direction: column;
         align-items: flex-end;
         gap: 4px;
+        flex-shrink: 0;
       }
 
       .zap-amount {
         color: #ff6b1a;
-        font-weight: 500;
-        font-size: 14px;
+        font-weight: 600;
+        font-size: 16px;
+        text-align: right;
       }
 
       .zap-comment {
         display: flex;
         align-items: flex-start;
-        gap: 8px;
-        margin-top: 8px;
-        padding: 8px;
-        background: rgba(255, 107, 26, 0.05);
-        border-left: 3px solid #ff6b1a;
-        border-radius: 4px;
+        gap: 12px;
+        margin-top: 12px;
+        padding: 12px;
+        background: rgba(255, 107, 26, 0.08);
+        border-left: 4px solid #ff6b1a;
+        border-radius: 6px;
       }
 
       .comment-icon {
         color: #ff6b1a;
-        font-size: 16px;
-        width: 16px;
-        height: 16px;
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
         margin-top: 2px;
+        flex-shrink: 0;
       }
 
       .comment-text {
-        font-style: italic;
         color: #333;
-        line-height: 1.4;
+        line-height: 1.5;
         flex: 1;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        white-space: pre-wrap;
+        font-size: 14px;
       }
 
       .dialog-actions {
