@@ -232,7 +232,7 @@ export interface ReactionsDialogData {
         align-items: center;
         justify-content: center;
         height: 200px;
-        color: #666;
+        color: var(--mat-sys-on-surface-variant);
       }
 
       .empty-state mat-icon {
@@ -241,10 +241,11 @@ export interface ReactionsDialogData {
         height: 48px;
         margin-bottom: 16px;
         opacity: 0.5;
+        color: var(--mat-sys-on-surface-variant);
       }
 
       .reaction-item {
-        border-bottom: 1px solid #f0f0f0;
+        border-bottom: 1px solid var(--mat-sys-outline-variant);
         padding: 12px 24px;
       }
 
@@ -260,7 +261,7 @@ export interface ReactionsDialogData {
       }
 
       .reaction-time {
-        color: #666;
+        color: var(--mat-sys-on-surface-variant);
         font-size: 12px;
         white-space: nowrap;
       }
@@ -273,15 +274,16 @@ export interface ReactionsDialogData {
       }
 
       .zap-item-custom {
-        border: 1px solid #e0e0e0;
+        border: 1px solid var(--mat-sys-outline-variant);
         border-radius: 8px;
         padding: 16px;
-        background: #fff;
+        background: var(--mat-sys-surface-container-low);
         transition: box-shadow 0.2s ease;
       }
 
       .zap-item-custom:hover {
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        box-shadow: var(--mat-sys-level2);
+        background: var(--mat-sys-surface-container);
       }
 
       .zap-header {
@@ -301,7 +303,7 @@ export interface ReactionsDialogData {
       }
 
       .zap-amount {
-        color: #ff6b1a;
+        color: var(--mat-sys-primary);
         font-weight: 600;
         font-size: 16px;
         text-align: right;
@@ -313,13 +315,13 @@ export interface ReactionsDialogData {
         gap: 12px;
         margin-top: 12px;
         padding: 12px;
-        background: rgba(255, 107, 26, 0.08);
-        border-left: 4px solid #ff6b1a;
+        background: var(--mat-sys-primary-container);
+        border-left: 4px solid var(--mat-sys-primary);
         border-radius: 6px;
       }
 
       .comment-icon {
-        color: #ff6b1a;
+        color: var(--mat-sys-primary);
         font-size: 18px;
         width: 18px;
         height: 18px;
@@ -328,7 +330,7 @@ export interface ReactionsDialogData {
       }
 
       .comment-text {
-        color: #333;
+        color: var(--mat-sys-on-primary-container);
         line-height: 1.5;
         flex: 1;
         word-wrap: break-word;

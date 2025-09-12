@@ -466,29 +466,33 @@ export class EventComponent {
   }
 
   async loadReposts() {
-    // TODO: Implement reposts loading
-    // For now, this is a placeholder
     const currentEvent = this.event();
     if (!currentEvent) return;
 
+    const userPubkey = this.accountState.pubkey();
+    if (!userPubkey) return;
+
     try {
-      // Query for repost events that reference this event
-      // This would use the EventService or RepostService to find reposts
-      this.reposts.set([]);
+      const reposts = await this.eventService.loadReposts(
+        currentEvent.id,
+        currentEvent.kind,
+        userPubkey,
+        false,
+      );
+      this.reposts.set(reposts);
     } catch (error) {
       console.error('Error loading reposts:', error);
     }
   }
 
   async loadQuotes() {
-    // TODO: Implement quotes loading
-    // For now, this is a placeholder
     const currentEvent = this.event();
     if (!currentEvent) return;
 
     try {
-      // Query for quote events that reference this event
-      // This would use the EventService to find quote posts
+      // For now, quotes are complex to find - they're regular notes that reference this event
+      // This would require a more complex query to find notes with 'q' tags referencing this event
+      // TODO: Implement proper quotes loading when EventService supports it
       this.quotes.set([]);
     } catch (error) {
       console.error('Error loading quotes:', error);
