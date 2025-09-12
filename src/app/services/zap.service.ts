@@ -8,6 +8,7 @@ import { LoggerService } from './logger.service';
 import { AccountRelayService } from './relays/account-relay';
 import { EncryptionService } from './encryption.service';
 import { ZapMetricsService } from './zap-metrics.service';
+import { NwcRelayService } from './relays/nwc-relay';
 
 interface LnurlPayResponse {
   callback: string;
@@ -48,8 +49,9 @@ export class ZapService {
   private wallets = inject(Wallets);
   private logger = inject(LoggerService);
   private accountRelay = inject(AccountRelayService);
+  private nwcRelay = inject(NwcRelayService);
   private encryption = inject(EncryptionService);
-  private metrics = inject(ZapMetricsService);
+  private zapMetrics = inject(ZapMetricsService);
 
   // Cache for LNURL pay endpoints
   private lnurlCache = new Map<string, LnurlPayResponse>();
@@ -379,6 +381,7 @@ export class ZapService {
    */
   private async waitForNwcResponse(
     requestId: string,
+    nwcRelayUrls: string[],
     timeoutMs: number,
   ): Promise<{
     result?: { preimage: string; fees_paid?: number };
@@ -390,14 +393,10 @@ export class ZapService {
         reject(new Error('Payment timeout: No response from wallet'));
       }, timeoutMs);
 
-      let subscription: { unsubscribe?: () => void; close?: () => void } | undefined;
-
       const cleanup = () => {
         clearTimeout(timeout);
         if (subscription?.unsubscribe) {
           subscription.unsubscribe();
-        } else if (subscription?.close) {
-          subscription.close();
         }
       };
 
@@ -410,25 +409,32 @@ export class ZapService {
         },
       ];
 
-      subscription = this.accountRelay.subscribe(filters, async (event: Event) => {
-        try {
-          // Decrypt the response content
-          const account = this.accountState.account();
-          if (!account) {
-            throw new Error('No account available to decrypt response');
+      const subscription = this.nwcRelay.subscribeToNwcResponse(
+        filters,
+        nwcRelayUrls,
+        async (event: Event) => {
+          try {
+            // Decrypt the response content
+            const account = this.accountState.account();
+            if (!account) {
+              throw new Error('No account available to decrypt response');
+            }
+
+            const decryptedContent = await this.encryption.decryptNip44(
+              event.content,
+              event.pubkey,
+            );
+
+            const response = JSON.parse(decryptedContent);
+            cleanup();
+            resolve(response);
+          } catch (error) {
+            this.logger.error('Failed to decrypt NWC response:', error);
+            cleanup();
+            reject(new Error('Failed to decrypt wallet response'));
           }
-
-          const decryptedContent = await this.encryption.decryptNip44(event.content, event.pubkey);
-
-          const response = JSON.parse(decryptedContent);
-          cleanup();
-          resolve(response);
-        } catch (error) {
-          this.logger.error('Failed to decrypt NWC response:', error);
-          cleanup();
-          reject(new Error('Failed to decrypt wallet response'));
-        }
-      });
+        },
+      );
     });
   }
 
@@ -485,12 +491,18 @@ export class ZapService {
 
       requestEvent.content = encryptedContent;
 
-      // Sign and publish the request event
+      // Sign and publish the request event to NWC relays
       const signedEvent = await this.nostr.signEvent(requestEvent);
-      await this.accountRelay.publish(signedEvent);
 
-      // Wait for response event from NWC wallet
-      const response = await this.waitForNwcResponse(signedEvent.id, 30000); // 30 second timeout
+      // Publish to the specific NWC relays from the connection string
+      await this.nwcRelay.publishNwcRequest(signedEvent, connectionData.relay);
+
+      // Wait for response event from NWC wallet on the same relays
+      const response = await this.waitForNwcResponse(
+        signedEvent.id,
+        connectionData.relay,
+        30000, // 30 second timeout
+      );
 
       if (response.error) {
         throw new Error(`Payment failed: ${response.error.message}`);
@@ -659,11 +671,11 @@ export class ZapService {
 
       // Record successful zap metrics
       const paymentTime = Date.now() - startTime;
-      this.metrics.recordZapSent(amount, paymentTime, recipientPubkey, eventId);
+      this.zapMetrics.recordZapSent(amount, paymentTime, recipientPubkey, eventId);
     } catch (error) {
       // Record failed zap metrics
       const errorCode = this.extractErrorCode(error);
-      this.metrics.recordZapFailed(amount, errorCode, recipientPubkey);
+      this.zapMetrics.recordZapFailed(amount, errorCode, recipientPubkey);
       throw error;
     }
   }
@@ -975,7 +987,7 @@ export class ZapService {
           // Extract event ID if this is an event zap
           const eventId = this.extractEventIdFromZapReceipt(zapReceipt);
 
-          this.metrics.recordZapReceived(amountSats, senderPubkey, eventId);
+          this.zapMetrics.recordZapReceived(amountSats, senderPubkey, eventId);
           this.logger.debug('Recorded received zap metrics', { amount: amountSats, senderPubkey });
         }
       }
