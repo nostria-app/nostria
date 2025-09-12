@@ -1001,6 +1001,70 @@ export class ZapService {
   }
 
   /**
+   * Generate Lightning invoice for manual payment without using NWC
+   */
+  async generateInvoiceForManualPayment(
+    recipientPubkey: string,
+    amount: number,
+    message?: string,
+    eventId?: string,
+    recipientMetadata?: Record<string, unknown>,
+  ): Promise<string> {
+    try {
+      const amountMsats = amount * 1000;
+
+      // Get recipient lightning address from metadata
+      if (!recipientMetadata) {
+        throw new Error('No metadata provided for recipient');
+      }
+
+      const lightningAddress = this.getLightningAddress(recipientMetadata);
+      if (!lightningAddress) {
+        throw new Error('No Lightning address found for recipient');
+      }
+
+      // Fetch LNURL-pay info
+      const lnurlPayInfo = await this.fetchLnurlPayInfo(lightningAddress);
+
+      // Validate amount
+      if (amountMsats < lnurlPayInfo.minSendable || amountMsats > lnurlPayInfo.maxSendable) {
+        throw new Error(
+          `Amount must be between ${lnurlPayInfo.minSendable / 1000} and ${lnurlPayInfo.maxSendable / 1000
+          } sats`,
+        );
+      }
+
+      // Convert lightning address to LNURL for the request
+      const lnurl = this.lightningAddressToLnurl(lightningAddress);
+
+      // Create zap request
+      const zapRequest = await this.createZapRequest(
+        recipientPubkey,
+        amountMsats,
+        message,
+        eventId,
+        lnurl,
+      );
+
+      // Sign the zap request
+      const signedZapRequest = await this.nostr.signEvent(zapRequest);
+
+      // Request invoice from LNURL service
+      const zapPayment = await this.requestZapInvoice(
+        signedZapRequest,
+        lnurlPayInfo.callback,
+        amountMsats,
+        message,
+      );
+
+      return zapPayment.pr;
+    } catch (error) {
+      this.logger.error('Failed to generate invoice for manual payment:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Extract event ID from zap receipt description
    */
   private extractEventIdFromZapReceipt(zapReceipt: Event): string | undefined {
