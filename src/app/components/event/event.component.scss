@@ -61,6 +61,76 @@
 
 .note-footer {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+}
+
+.reactions-row {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex: 1;
+}
+
+.reaction-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  button[mat-icon-button] {
+    color: #666;
+    min-width: 40px;
+    height: 40px;
+
+    &:hover {
+      color: #333;
+      background-color: rgba(0, 0, 0, 0.05);
+    }
+
+    &.active {
+      color: var(--mat-sys-primary);
+      background-color: rgba(var(--mat-sys-primary-rgb), 0.1);
+    }
+  }
+
+  .zap-button {
+    color: #ff6b1a !important;
+
+    &:hover {
+      background-color: rgba(255, 107, 26, 0.1) !important;
+    }
+
+    &.zapped {
+      background-color: rgba(255, 107, 26, 0.15) !important;
+    }
+  }
+
+  .count-button {
+    min-width: auto !important;
+    padding: 4px 8px !important;
+    color: #666 !important;
+    font-size: 12px !important;
+    height: 32px !important;
+
+    &:not([disabled]) {
+      cursor: pointer;
+
+      &:hover {
+        background-color: rgba(0, 0, 0, 0.05) !important;
+        color: #333 !important;
+      }
+    }
+
+    &[disabled] {
+      cursor: default;
+    }
+
+    span {
+      font-size: 12px;
+      font-weight: 500;
+    }
+  }
 }
 
 .note-footer-right {

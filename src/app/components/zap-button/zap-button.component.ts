@@ -15,21 +15,17 @@ import { DataService } from '../../services/data.service';
   imports: [CommonModule, MatButtonModule, MatIconModule, MatTooltipModule],
   template: `
     <button
-      mat-button
+      mat-icon-button
       [ngClass]="{
         'zap-button': true,
         zapped: hasZapped(),
-        'only-icon': !totalZaps(),
       }"
       [disabled]="isLoading()"
       (click)="onZapClick($event)"
       [matTooltip]="getTooltip()"
       matTooltipPosition="below"
     >
-      <mat-icon>{{ hasZapped() ? 'bolt' : 'bolt' }}</mat-icon>
-      @if (totalZaps()) {
-        <span class="zap-count">{{ formatZapAmount(totalZaps()) }}</span>
-      }
+      <mat-icon>bolt</mat-icon>
     </button>
   `,
   styles: [
