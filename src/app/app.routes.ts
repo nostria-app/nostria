@@ -180,6 +180,13 @@ export const routes: Routes = [
     title: 'Bookmarks',
   },
   {
+    path: 'zaps',
+    data: { isRoot: true },
+    loadComponent: () =>
+      import('./components/zap-history/zap-history.component').then((m) => m.ZapHistoryComponent),
+    title: 'Zap History',
+  },
+  {
     path: 'drafts',
     component: DraftsComponent,
     data: { isRoot: true },

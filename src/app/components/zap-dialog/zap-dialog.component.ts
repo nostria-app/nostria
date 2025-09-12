@@ -1,7 +1,12 @@
 import { Component, inject } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import {
+  MatDialogModule,
+  MatDialogRef,
+  MAT_DIALOG_DATA,
+  MatDialog,
+} from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -9,7 +14,13 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ZapService } from '../../services/zap.service';
-import { signal } from '@angular/core';
+import { Wallets } from '../../services/wallets';
+import { signal, computed } from '@angular/core';
+import {
+  ZapConfirmationDialogComponent,
+  ZapConfirmationData,
+} from '../zap-confirmation-dialog/zap-confirmation-dialog.component';
+import { ZapErrorHandlerService } from '../../services/zap-error-handler.service';
 
 export interface ZapDialogData {
   recipientPubkey: string;
@@ -54,21 +65,96 @@ export interface ZapDialogResult {
       }
 
       <form [formGroup]="zapForm" class="zap-form">
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Amount (sats)</mat-label>
-          <mat-select formControlName="amount" required>
-            <mat-option [value]="21">⚡ 21 sats</mat-option>
-            <mat-option [value]="100">⚡ 100 sats</mat-option>
-            <mat-option [value]="500">⚡ 500 sats</mat-option>
-            <mat-option [value]="1000">⚡ 1,000 sats</mat-option>
-            <mat-option [value]="5000">⚡ 5,000 sats</mat-option>
-            <mat-option [value]="10000">⚡ 10,000 sats</mat-option>
-            <mat-option value="custom">⚡ Custom amount</mat-option>
-          </mat-select>
-          @if (zapForm.get('amount')?.hasError('required')) {
-            <mat-error>Amount is required</mat-error>
-          }
-        </mat-form-field>
+        @if (availableWallets().length > 1) {
+          <div class="wallet-selection">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Select Wallet</mat-label>
+              <mat-select formControlName="selectedWallet">
+                @for (wallet of availableWallets(); track wallet.id) {
+                  <mat-option [value]="wallet.id">
+                    <div class="wallet-option">
+                      <mat-icon>account_balance_wallet</mat-icon>
+                      <span class="wallet-name">{{ wallet.name }}</span>
+                      <span class="wallet-status" [class.connected]="wallet.connected">
+                        {{ wallet.connected ? 'Connected' : 'Disconnected' }}
+                      </span>
+                    </div>
+                  </mat-option>
+                }
+              </mat-select>
+              <mat-hint>Choose which wallet to use for this zap</mat-hint>
+            </mat-form-field>
+          </div>
+        } @else if (availableWallets().length === 0) {
+          <div class="no-wallet-warning">
+            <mat-icon class="warning-icon">warning</mat-icon>
+            <p>
+              No wallet connected. Please connect a Nostr Wallet Connect (NWC) wallet to send zaps.
+            </p>
+          </div>
+        }
+
+        <div class="amount-selection">
+          <h3>Select Amount</h3>
+          <div class="amount-buttons">
+            <button
+              type="button"
+              mat-stroked-button
+              [class.selected]="zapForm.get('amount')?.value === 21"
+              (click)="selectAmount(21)"
+            >
+              ⚡ 21
+            </button>
+            <button
+              type="button"
+              mat-stroked-button
+              [class.selected]="zapForm.get('amount')?.value === 420"
+              (click)="selectAmount(420)"
+            >
+              ⚡ 420
+            </button>
+            <button
+              type="button"
+              mat-stroked-button
+              [class.selected]="zapForm.get('amount')?.value === 1000"
+              (click)="selectAmount(1000)"
+            >
+              ⚡ 1K
+            </button>
+            <button
+              type="button"
+              mat-stroked-button
+              [class.selected]="zapForm.get('amount')?.value === 5000"
+              (click)="selectAmount(5000)"
+            >
+              ⚡ 5K
+            </button>
+            <button
+              type="button"
+              mat-stroked-button
+              [class.selected]="zapForm.get('amount')?.value === 10000"
+              (click)="selectAmount(10000)"
+            >
+              ⚡ 10K
+            </button>
+            <button
+              type="button"
+              mat-stroked-button
+              [class.selected]="zapForm.get('amount')?.value === 100000"
+              (click)="selectAmount(100000)"
+            >
+              ⚡ 100K
+            </button>
+            <button
+              type="button"
+              mat-stroked-button
+              [class.selected]="zapForm.get('amount')?.value === 'custom'"
+              (click)="selectAmount('custom')"
+            >
+              ⚡ Custom
+            </button>
+          </div>
+        </div>
 
         @if (zapForm.get('amount')?.value === 'custom') {
           <mat-form-field appearance="outline" class="full-width">
@@ -135,6 +221,95 @@ export interface ZapDialogResult {
         min-width: 400px;
       }
 
+      .amount-selection h3 {
+        margin: 0 0 12px 0;
+        font-size: 16px;
+        font-weight: 500;
+      }
+
+      .amount-buttons {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+
+      @media (max-width: 480px) {
+        .amount-buttons {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .zap-form {
+          min-width: 300px;
+        }
+      }
+
+      .amount-buttons button {
+        padding: 12px 8px;
+        font-size: 13px;
+        font-weight: 500;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+      }
+
+      .amount-buttons button.selected {
+        background-color: #2196f3;
+        color: white;
+        border-color: #2196f3;
+      }
+
+      .amount-buttons button:hover:not(.selected) {
+        background-color: #f5f5f5;
+        border-color: #2196f3;
+      }
+
+      .wallet-selection {
+        margin-bottom: 16px;
+      }
+
+      .wallet-option {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .wallet-name {
+        flex: 1;
+        font-weight: 500;
+      }
+
+      .wallet-status {
+        font-size: 12px;
+        padding: 2px 8px;
+        border-radius: 12px;
+        background: #f5f5f5;
+        color: #666;
+      }
+
+      .wallet-status.connected {
+        background: #e8f5e8;
+        color: #4caf50;
+      }
+
+      .no-wallet-warning {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 16px;
+        background: #fff3e0;
+        border: 1px solid #ffcc02;
+        border-radius: 8px;
+        margin-bottom: 16px;
+      }
+
+      .warning-icon {
+        color: #ff9800;
+      }
+
+      .no-wallet-warning p {
+        margin: 0;
+        color: #e65100;
+      }
+
       .full-width {
         width: 100%;
       }
@@ -189,16 +364,30 @@ export class ZapDialogComponent {
   private dialogRef = inject(MatDialogRef<ZapDialogComponent>);
   private snackBar = inject(MatSnackBar);
   private zapService = inject(ZapService);
+  private wallets = inject(Wallets);
+  private dialog = inject(MatDialog);
+  private errorHandler = inject(ZapErrorHandlerService);
 
   data: ZapDialogData = inject(MAT_DIALOG_DATA);
 
   isProcessing = signal(false);
   errorMessage = signal<string | null>(null);
 
+  // Computed property for available wallets
+  availableWallets = computed(() => {
+    const walletsMap = this.wallets.wallets();
+    return Object.entries(walletsMap).map(([id, wallet]) => ({
+      id,
+      name: wallet.name || 'Unknown Wallet',
+      connected: wallet.connections && wallet.connections.length > 0,
+    }));
+  });
+
   zapForm = new FormGroup({
-    amount: new FormControl<string | number>('', [Validators.required]),
+    amount: new FormControl<string | number>(21, [Validators.required]),
     customAmount: new FormControl<number | null>(null),
     message: new FormControl('', [Validators.maxLength(280)]),
+    selectedWallet: new FormControl<string>(''),
   });
 
   constructor() {
@@ -215,6 +404,18 @@ export class ZapDialogComponent {
       }
       customAmountControl?.updateValueAndValidity();
     });
+
+    // Set default wallet if only one is available
+    const wallets = this.availableWallets();
+    if (wallets.length === 1) {
+      this.zapForm.get('selectedWallet')?.setValue(wallets[0].id);
+    } else if (wallets.length > 1) {
+      // Set the first connected wallet as default
+      const connectedWallet = wallets.find((w) => w.connected);
+      if (connectedWallet) {
+        this.zapForm.get('selectedWallet')?.setValue(connectedWallet.id);
+      }
+    }
   }
 
   getFinalAmount(): number {
@@ -225,18 +426,59 @@ export class ZapDialogComponent {
     return typeof amount === 'number' ? amount : 0;
   }
 
+  selectAmount(amount: number | string): void {
+    this.zapForm.get('amount')?.setValue(amount);
+  }
+
   async onSendZap(): Promise<void> {
     if (!this.zapForm.valid) {
       return;
+    }
+
+    const amount = this.getFinalAmount();
+    const message = this.zapForm.get('message')?.value || '';
+    const selectedWalletId = this.zapForm.get('selectedWallet')?.value;
+
+    // Find the selected wallet
+    const selectedWallet = this.availableWallets().find((w) => w.id === selectedWalletId);
+    if (!selectedWallet) {
+      this.errorMessage.set('Please select a wallet to send the zap.');
+      return;
+    }
+
+    // Show confirmation dialog
+    const confirmationData: ZapConfirmationData = {
+      recipient: {
+        pubkey: this.data.recipientPubkey,
+        name: this.data.recipientName,
+        displayName: this.data.recipientName,
+        picture: this.data.recipientMetadata?.['picture'] as string,
+      },
+      amount,
+      message: message || undefined,
+      wallet: {
+        id: selectedWallet.id,
+        name: selectedWallet.name,
+      },
+      eventTitle: this.data.eventContent,
+      isProfileZap: !this.data.eventId,
+    };
+
+    const confirmationDialogRef = this.dialog.open(ZapConfirmationDialogComponent, {
+      data: confirmationData,
+      width: '500px',
+      maxWidth: '90vw',
+    });
+
+    const confirmed = await confirmationDialogRef.afterClosed().toPromise();
+    if (!confirmed) {
+      return; // User cancelled
     }
 
     this.isProcessing.set(true);
     this.errorMessage.set(null);
 
     try {
-      const amount = this.getFinalAmount();
-      const message = this.zapForm.get('message')?.value || '';
-
       await this.zapService.sendZap(
         this.data.recipientPubkey,
         amount,
@@ -261,9 +503,8 @@ export class ZapDialogComponent {
       } as ZapDialogResult);
     } catch (error) {
       console.error('Failed to send zap:', error);
-      this.errorMessage.set(
-        error instanceof Error ? error.message : 'Failed to send zap. Please try again.',
-      );
+      const zapError = this.errorHandler.handleZapError(error);
+      this.errorMessage.set(zapError.message);
     } finally {
       this.isProcessing.set(false);
     }

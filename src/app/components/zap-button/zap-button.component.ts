@@ -116,7 +116,7 @@ export class ZapButtonComponent {
     return amount.toString();
   }
 
-  onZapClick(event: MouseEvent): void {
+  async onZapClick(event: MouseEvent): Promise<void> {
     event.stopPropagation();
 
     // Get the recipient pubkey from either direct input or event
@@ -130,8 +130,21 @@ export class ZapButtonComponent {
       return;
     }
 
+    // Get recipient metadata - either from input or fetch from data service
+    let metadata = this.recipientMetadata();
+    if (!metadata) {
+      try {
+        // Try to get metadata from the data service
+        const userProfile = await this.dataService.getProfile(pubkey);
+        if (userProfile?.data) {
+          metadata = userProfile.data;
+        }
+      } catch (error) {
+        console.warn('Failed to get user profile for zap:', error);
+      }
+    }
+
     // Check if recipient has lightning address
-    const metadata = this.recipientMetadata();
     if (metadata) {
       const lightningAddress = this.zapService.getLightningAddress(metadata);
       if (!lightningAddress) {
@@ -142,13 +155,25 @@ export class ZapButtonComponent {
         });
         return;
       }
+    } else {
+      // No metadata available at all
+      this.snackBar.open('Unable to get recipient information for zap', 'Dismiss', {
+        duration: 4000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+      return;
     }
 
     // Prepare dialog data
     const dialogData: ZapDialogData = {
       recipientPubkey: pubkey,
-      recipientName: this.recipientName() || undefined,
-      recipientMetadata: metadata || undefined,
+      recipientName:
+        this.recipientName() ||
+        (typeof metadata?.['name'] === 'string' ? metadata['name'] : undefined) ||
+        (typeof metadata?.['display_name'] === 'string' ? metadata['display_name'] : undefined) ||
+        undefined,
+      recipientMetadata: metadata,
       eventId: this.event()?.id,
       eventContent: this.event()?.content ? this.truncateContent(this.event()!.content) : undefined,
     };

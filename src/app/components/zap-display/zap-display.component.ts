@@ -1,4 +1,4 @@
-import { Component, inject, input, signal, computed, OnInit } from '@angular/core';
+import { Component, inject, input, signal, computed, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -228,7 +228,7 @@ interface ZapReceipt {
     `,
   ],
 })
-export class ZapDisplayComponent implements OnInit {
+export class ZapDisplayComponent implements OnInit, OnDestroy {
   // Inputs
   eventId = input<string | null>(null);
   recipientPubkey = input<string | null>(null);
@@ -239,6 +239,9 @@ export class ZapDisplayComponent implements OnInit {
   // State
   zaps = signal<ZapReceipt[]>([]);
   isLoading = signal(false);
+
+  // Real-time subscription cleanup function
+  private unsubscribeFromZaps: (() => void) | null = null;
 
   // Computed
   totalAmount = computed(() => {
@@ -251,6 +254,54 @@ export class ZapDisplayComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     await this.loadZaps();
+    this.setupRealtimeSubscription();
+  }
+
+  ngOnDestroy(): void {
+    // Clean up the real-time subscription
+    if (this.unsubscribeFromZaps) {
+      this.unsubscribeFromZaps();
+      this.unsubscribeFromZaps = null;
+    }
+  }
+
+  private setupRealtimeSubscription(): void {
+    if (this.eventId()) {
+      // Subscribe to real-time zap updates for this event
+      this.unsubscribeFromZaps = this.zapService.subscribeToEventZaps(
+        this.eventId()!,
+        (zapReceipt) => {
+          this.handleNewZapReceipt(zapReceipt);
+        },
+      );
+    } else if (this.recipientPubkey()) {
+      // Subscribe to real-time zap updates for this user
+      this.unsubscribeFromZaps = this.zapService.subscribeToUserZaps(
+        this.recipientPubkey()!,
+        (zapReceipt) => {
+          this.handleNewZapReceipt(zapReceipt);
+        },
+      );
+    }
+  }
+
+  private handleNewZapReceipt(zapReceipt: Event): void {
+    // Parse the new zap receipt
+    const parsed = this.zapService.parseZapReceipt(zapReceipt);
+    if (parsed.zapRequest && parsed.amount) {
+      const newZap: ZapReceipt = {
+        receipt: zapReceipt,
+        zapRequest: parsed.zapRequest,
+        amount: parsed.amount,
+        comment: parsed.comment,
+        senderName: this.getSenderName(parsed.zapRequest),
+        timestamp: zapReceipt.created_at,
+      };
+
+      // Add the new zap to the beginning of the list (most recent first)
+      const currentZaps = this.zaps();
+      this.zaps.set([newZap, ...currentZaps]);
+    }
   }
 
   private async loadZaps(): Promise<void> {
