@@ -107,6 +107,34 @@ export class WhatsNewDialogComponent {
   // Sample updates - replace with real data
   updates: FeatureUpdate[] = [
     {
+      version: '1.0.3',
+      date: 'September 2025',
+      title: 'Zaps Support',
+      description: 'Full support for Bitcoin Lightning Network Zaps has been added to Nostria.',
+      features: [
+        {
+          title: 'Send Zaps with Nostr Wallet Connect',
+          description:
+            'Connect your Lightning wallet using Nostr Wallet Connect (NWC) and send zaps directly from Nostria. Supports Alby and other NWC-compatible wallets.',
+        },
+        {
+          title: 'Zap History & Management',
+          description:
+            'View all your zap activity in the dedicated Zap History page. Easily access it from the Wallets tab in your credentials.',
+        },
+        {
+          title: 'Enhanced Zap Display',
+          description:
+            'Zaps on events now show sender profiles with avatars instead of just public keys. Zaps are automatically sorted by amount from highest to lowest for better visibility.',
+        },
+        {
+          title: 'Real-time Zap Updates',
+          description:
+            'Receive real-time updates when new zaps are sent to your posts or profile. The zap displays update automatically without requiring a page refresh.',
+        },
+      ],
+    },
+    {
       version: '1.0.2',
       date: 'September 2025',
       title: 'Tweaks and Improvements',
