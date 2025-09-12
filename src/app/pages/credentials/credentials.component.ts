@@ -9,10 +9,11 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatTabsModule } from '@angular/material/tabs';
+import { RouterModule } from '@angular/router';
 import { NostrService } from '../../services/nostr.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { AccountStateService } from '../../services/account-state.service';
-import { MatTabsModule } from '@angular/material/tabs';
 import { Wallets, Wallet } from '../../services/wallets';
 import { LN, USD } from '@getalby/sdk';
 
@@ -29,6 +30,7 @@ import { LN, USD } from '@getalby/sdk';
     MatTooltipModule,
     MatTabsModule,
     ReactiveFormsModule,
+    RouterModule,
   ],
   templateUrl: './credentials.component.html',
   styleUrl: './credentials.component.scss',
