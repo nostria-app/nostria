@@ -39,6 +39,8 @@ import { ReportedContentComponent } from '../reported-content/reported-content.c
 import { ReportingService } from '../../services/reporting.service';
 import { ZapButtonComponent } from '../zap-button/zap-button.component';
 import { ZapDisplayComponent } from '../zap-display/zap-display.component';
+import { ZapService } from '../../services/zap.service';
+import { ReactionsDialogComponent } from '../reactions-dialog/reactions-dialog.component';
 
 type EventCardAppearance = 'card' | 'plain';
 
@@ -96,6 +98,7 @@ export class EventComponent {
   eventService = inject(EventService);
   router = inject(Router);
   reportingService = inject(ReportingService);
+  zapService = inject(ZapService);
   reactions = signal<ReactionEvents>({ events: [], data: new Map() });
   reports = signal<ReactionEvents>({ events: [], data: new Map() });
 
@@ -177,6 +180,31 @@ export class EventComponent {
     if (!myReactions) return;
     return myReactions.find((r) => r.event.pubkey === this.accountState.pubkey());
   });
+
+  // Zap-related state
+  zaps = signal<
+    {
+      receipt: Event;
+      zapRequest: Event | null;
+      amount: number | null;
+      comment: string;
+      senderName?: string;
+      senderPubkey: string;
+      timestamp: number;
+    }[]
+  >([]);
+
+  totalZapAmount = computed<number>(() => {
+    return this.zaps().reduce((total, zap) => total + (zap.amount || 0), 0);
+  });
+
+  zapCount = computed<number>(() => {
+    return this.zaps().length;
+  });
+
+  // Reposts and quotes state
+  reposts = signal<NostrRecord[]>([]);
+  quotes = signal<NostrRecord[]>([]);
 
   repostedRecord = computed<NostrRecord | null>(() => {
     const event = this.event();
@@ -282,6 +310,9 @@ export class EventComponent {
 
         if (record.event.kind == kinds.ShortTextNote) {
           this.loadReactions();
+          this.loadZaps();
+          this.loadReposts();
+          this.loadQuotes();
           this.loadReports();
         }
       });
@@ -403,6 +434,93 @@ export class EventComponent {
       console.error('Error loading root event:', error);
       this.rootEvent.set(null);
     }
+  }
+
+  async loadZaps() {
+    const currentEvent = this.event();
+    if (!currentEvent) return;
+
+    try {
+      const zapReceipts = await this.zapService.getZapsForEvent(currentEvent.id);
+      const parsedZaps = [];
+
+      for (const receipt of zapReceipts) {
+        const parsed = this.zapService.parseZapReceipt(receipt);
+        if (parsed.zapRequest && parsed.amount) {
+          parsedZaps.push({
+            receipt,
+            zapRequest: parsed.zapRequest,
+            amount: parsed.amount,
+            comment: parsed.comment,
+            senderName: parsed.zapRequest.pubkey, // We'll use pubkey as name for now
+            senderPubkey: parsed.zapRequest.pubkey,
+            timestamp: receipt.created_at,
+          });
+        }
+      }
+
+      this.zaps.set(parsedZaps);
+    } catch (error) {
+      console.error('Error loading zaps:', error);
+    }
+  }
+
+  async loadReposts() {
+    // TODO: Implement reposts loading
+    // For now, this is a placeholder
+    const currentEvent = this.event();
+    if (!currentEvent) return;
+
+    try {
+      // Query for repost events that reference this event
+      // This would use the EventService or RepostService to find reposts
+      this.reposts.set([]);
+    } catch (error) {
+      console.error('Error loading reposts:', error);
+    }
+  }
+
+  async loadQuotes() {
+    // TODO: Implement quotes loading
+    // For now, this is a placeholder
+    const currentEvent = this.event();
+    if (!currentEvent) return;
+
+    try {
+      // Query for quote events that reference this event
+      // This would use the EventService to find quote posts
+      this.quotes.set([]);
+    } catch (error) {
+      console.error('Error loading quotes:', error);
+    }
+  }
+
+  formatZapAmount(amount: number): string {
+    if (amount >= 1000000) {
+      return `${(amount / 1000000).toFixed(1)}M`;
+    }
+    if (amount >= 1000) {
+      return `${(amount / 1000).toFixed(1)}K`;
+    }
+    return amount.toLocaleString();
+  }
+
+  openReactionsDialog(selectedTab: 'likes' | 'zaps' | 'reposts' | 'quotes' = 'likes') {
+    const currentEvent = this.event();
+    if (!currentEvent) return;
+
+    this.dialog.open(ReactionsDialogComponent, {
+      width: '500px',
+      maxWidth: '90vw',
+      data: {
+        event: currentEvent,
+        likes: this.likes(),
+        zaps: this.zaps(),
+        reposts: this.reposts(),
+        quotes: this.quotes(),
+        selectedTab,
+      },
+    });
   }
 
   async toggleLike(event?: MouseEvent) {
