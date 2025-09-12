@@ -1,24 +1,48 @@
 @if (view() === 'full') {
-  <button
-    mat-button
-    [matMenuTriggerFor]="menu"
-    aria-label="More options"
-    (click)="$event.stopPropagation()"
-  >
-    <mat-icon>more_vert</mat-icon>
-    More options
-  </button>
+<button mat-button [matMenuTriggerFor]="menu" aria-label="More options" (click)="$event.stopPropagation()">
+  <mat-icon>more_vert</mat-icon>
+  More options
+</button>
 } @else {
-  <button
-    mat-icon-button
-    [matMenuTriggerFor]="menu"
-    aria-label="More options"
-    (click)="$event.stopPropagation()"
-  >
-    <mat-icon>more_vert</mat-icon>
-  </button>
+<button mat-icon-button [matMenuTriggerFor]="menu" aria-label="More options" (click)="$event.stopPropagation()">
+  <mat-icon>more_vert</mat-icon>
+</button>
 }
+
 <mat-menu #menu="matMenu">
+  <button mat-menu-item [matMenuTriggerFor]="copyMenu">
+    <mat-icon>content_copy</mat-icon>
+    Copy
+  </button>
+  @if (isOurEvent()) {
+  <button mat-menu-item (click)="deleteEvent()">
+    <mat-icon>delete</mat-icon>
+    Delete Event
+  </button>
+  }
+  <mat-divider></mat-divider>
+  <button mat-menu-item (click)="layout.shareEvent(event())">
+    <mat-icon>share</mat-icon>
+    Share Event
+  </button>
+  <button mat-menu-item (click)="layout.publishEvent(event())">
+    <mat-icon>publish</mat-icon>
+    Publish Event
+  </button>
+  <mat-divider></mat-divider>
+  <button mat-menu-item (click)="reportContent()">
+    <mat-icon>warning</mat-icon>
+    Report Content
+  </button>
+  @if (event().pubkey !== accountState.pubkey()) {
+  <button mat-menu-item (click)="accountState.mutePubkey(event().pubkey)">
+    <mat-icon>block</mat-icon>
+    <span>Block User</span>
+  </button>
+  }
+</mat-menu>
+
+<mat-menu #copyMenu="matMenu">
   <button mat-menu-item (click)="layout.copyToClipboard(eventLink(), 'text')">
     <mat-icon>link</mat-icon>
     Copy Note Link
@@ -31,10 +55,6 @@
     <mat-icon>content_copy</mat-icon>
     Copy Note ID (hex)
   </button>
-  <button mat-menu-item (click)="layout.shareEvent(event())">
-    <mat-icon>share</mat-icon>
-    Share Event
-  </button>
   <mat-divider></mat-divider>
   <button mat-menu-item (click)="layout.copyToClipboard(record()?.data, 'text')">
     <mat-icon>content_copy</mat-icon>
@@ -44,26 +64,4 @@
     <mat-icon>content_copy</mat-icon>
     Copy Note Data
   </button>
-  <mat-divider></mat-divider>
-  @if (isOurEvent()) {
-    <button mat-menu-item (click)="deleteEvent()">
-      <mat-icon>delete</mat-icon>
-      Delete Event
-    </button>
-  }
-  <button mat-menu-item (click)="layout.publishEvent(event())">
-    <mat-icon>publish</mat-icon>
-    Publish Event
-  </button>
-  <mat-divider></mat-divider>
-  <button mat-menu-item (click)="reportContent()">
-    <mat-icon>warning</mat-icon>
-    Report Content
-  </button>
-  @if (event().pubkey !== accountState.pubkey()) {
-    <button mat-menu-item (click)="accountState.mutePubkey(event().pubkey)">
-      <mat-icon>block</mat-icon>
-      <span>Block User</span>
-    </button>
-  }
 </mat-menu>
