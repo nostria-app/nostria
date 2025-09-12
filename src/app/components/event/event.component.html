@@ -237,6 +237,11 @@
   </mat-card-content>
   }
 
+  <!-- Zap Display -->
+  @if (targetItem.event.kind === 1) {
+  <app-zap-display [eventId]="targetItem.event.id"></app-zap-display>
+  }
+
   <mat-card-actions class="note-footer">
     @if (item.event.kind === 1) {
     <app-reply-button [event]="targetItem.event"></app-reply-button>
@@ -260,6 +265,10 @@
       }
       }
     </button>
+
+    <!-- Zap Button -->
+    <app-zap-button [event]="targetItem.event" [recipientPubkey]="targetItem.event.pubkey">
+    </app-zap-button>
     }
 
     <button mat-icon-button class="note-footer-right" (click)="onBookmarkClick($event)">
