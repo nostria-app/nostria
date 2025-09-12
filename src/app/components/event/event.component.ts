@@ -206,6 +206,14 @@ export class EventComponent {
   reposts = signal<NostrRecord[]>([]);
   quotes = signal<NostrRecord[]>([]);
 
+  repostCount = computed<number>(() => {
+    return this.reposts().length;
+  });
+
+  quoteCount = computed<number>(() => {
+    return this.quotes().length;
+  });
+
   repostedRecord = computed<NostrRecord | null>(() => {
     const event = this.event();
     if (!event || (event.kind !== kinds.Repost && event.kind !== kinds.GenericRepost)) return null;
