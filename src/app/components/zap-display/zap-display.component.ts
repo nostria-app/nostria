@@ -8,6 +8,7 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { Event } from 'nostr-tools';
 import { ZapService } from '../../services/zap.service';
 import { AgoPipe } from '../../pipes/ago.pipe';
+import { UserProfileComponent } from '../user-profile/user-profile.component';
 
 interface ZapReceipt {
   receipt: Event;
@@ -15,6 +16,7 @@ interface ZapReceipt {
   amount: number | null;
   comment: string;
   senderName?: string;
+  senderPubkey: string;
   timestamp: number;
 }
 
@@ -28,6 +30,7 @@ interface ZapReceipt {
     MatTooltipModule,
     MatExpansionModule,
     AgoPipe,
+    UserProfileComponent,
   ],
   template: `
     @if (zaps().length > 0) {
@@ -48,12 +51,11 @@ interface ZapReceipt {
             </mat-expansion-panel-header>
 
             <div class="zaps-list">
-              @for (zap of zaps(); track zap.receipt.id) {
+              @for (zap of sortedZaps(); track zap.receipt.id) {
                 <div class="zap-item">
                   <div class="zap-header">
                     <div class="zap-sender">
-                      <mat-icon class="small-icon">person</mat-icon>
-                      <span class="sender-name">{{ zap.senderName || 'Anonymous' }}</span>
+                      <app-user-profile [pubkey]="zap.senderPubkey" view="icon"></app-user-profile>
                     </div>
                     <div class="zap-amount">
                       <mat-icon class="small-icon">bolt</mat-icon>
@@ -77,11 +79,10 @@ interface ZapReceipt {
         } @else {
           <!-- Simple list for few zaps -->
           <div class="simple-zaps-list">
-            @for (zap of zaps(); track zap.receipt.id) {
+            @for (zap of sortedZaps(); track zap.receipt.id) {
               <div class="simple-zap-item">
-                <span class="zap-info">
-                  {{ formatAmount(zap.amount) }} sats from {{ zap.senderName || 'Anonymous' }}
-                </span>
+                <app-user-profile [pubkey]="zap.senderPubkey" view="icon"></app-user-profile>
+                <span class="zap-info"> {{ formatAmount(zap.amount) }} sats </span>
                 @if (zap.comment) {
                   <span class="zap-comment-inline">"{{ zap.comment }}"</span>
                 }
@@ -131,7 +132,7 @@ interface ZapReceipt {
       }
 
       .zap-item {
-        padding: 12px;
+        padding: 12px 0;
         border-bottom: 1px solid #f0f0f0;
       }
 
@@ -142,28 +143,34 @@ interface ZapReceipt {
       .zap-header {
         display: flex;
         align-items: center;
-        gap: 16px;
-        margin-bottom: 8px;
+        gap: 12px;
+        justify-content: space-between;
       }
 
       .zap-sender {
         display: flex;
         align-items: center;
-        gap: 4px;
+        gap: 8px;
         flex: 1;
+        min-width: 0;
       }
 
       .zap-amount {
         display: flex;
         align-items: center;
         gap: 4px;
-        color: #ff6b1a;
+        color: #d84315;
         font-weight: 500;
+      }
+
+      .amount {
+        white-space: nowrap;
       }
 
       .zap-time {
         color: #666;
         font-size: 12px;
+        white-space: nowrap;
       }
 
       .small-icon {
@@ -202,7 +209,8 @@ interface ZapReceipt {
       .simple-zaps-list {
         display: flex;
         flex-direction: column;
-        gap: 4px;
+        gap: 8px;
+        margin-top: 8px;
       }
 
       .simple-zap-item {
@@ -210,6 +218,7 @@ interface ZapReceipt {
         align-items: center;
         gap: 8px;
         font-size: 14px;
+        padding: 4px 0;
       }
 
       .zap-info {
@@ -250,6 +259,10 @@ export class ZapDisplayComponent implements OnInit, OnDestroy {
 
   shouldShowZapList = computed(() => {
     return this.zaps().length > 3;
+  });
+
+  sortedZaps = computed(() => {
+    return [...this.zaps()].sort((a, b) => (b.amount || 0) - (a.amount || 0));
   });
 
   async ngOnInit(): Promise<void> {
@@ -295,6 +308,7 @@ export class ZapDisplayComponent implements OnInit, OnDestroy {
         amount: parsed.amount,
         comment: parsed.comment,
         senderName: this.getSenderName(parsed.zapRequest),
+        senderPubkey: parsed.zapRequest.pubkey,
         timestamp: zapReceipt.created_at,
       };
 
@@ -327,6 +341,7 @@ export class ZapDisplayComponent implements OnInit, OnDestroy {
             amount: parsed.amount,
             comment: parsed.comment,
             senderName: this.getSenderName(parsed.zapRequest),
+            senderPubkey: parsed.zapRequest.pubkey,
             timestamp: receipt.created_at,
           });
         }
