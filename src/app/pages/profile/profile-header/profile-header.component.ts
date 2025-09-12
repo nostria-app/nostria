@@ -31,6 +31,7 @@ import { kinds } from 'nostr-tools';
 import { StorageService } from '../../../services/storage.service';
 import type { ReportTarget } from '../../../services/reporting.service';
 import { ReportingService } from '../../../services/reporting.service';
+import { ZapButtonComponent } from '../../../components/zap-button/zap-button.component';
 
 @Component({
   selector: 'app-profile-header',
@@ -45,6 +46,7 @@ import { ReportingService } from '../../../services/reporting.service';
     MatDividerModule,
     MatTooltipModule,
     QrCodeComponent,
+    ZapButtonComponent,
   ],
   templateUrl: './profile-header.component.html',
   styleUrl: './profile-header.component.scss',

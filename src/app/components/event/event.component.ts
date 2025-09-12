@@ -37,6 +37,8 @@ import { ProfileDisplayNameComponent } from '../user-profile/display-name/profil
 import { EventMenuComponent } from './event-menu/event-menu.component';
 import { ReportedContentComponent } from '../reported-content/reported-content.component';
 import { ReportingService } from '../../services/reporting.service';
+import { ZapButtonComponent } from '../zap-button/zap-button.component';
+import { ZapDisplayComponent } from '../zap-display/zap-display.component';
 
 type EventCardAppearance = 'card' | 'plain';
 
@@ -66,6 +68,8 @@ type EventCardAppearance = 'card' | 'plain';
     UserProfileComponent,
     BadgeComponent,
     ReportedContentComponent,
+    ZapButtonComponent,
+    ZapDisplayComponent,
   ],
   templateUrl: './event.component.html',
   styleUrl: './event.component.scss',
