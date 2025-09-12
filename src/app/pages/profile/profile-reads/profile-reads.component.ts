@@ -1,4 +1,4 @@
-import { Component, inject, signal, Input, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, inject, signal, Input, OnChanges, SimpleChanges, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, RouterModule } from '@angular/router';
@@ -11,6 +11,8 @@ import { BookmarkService } from '../../../services/bookmark.service';
 import { MatButtonModule } from '@angular/material/button';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { ArticleEventComponent } from '../../../components/event-types';
+import { LayoutService } from '../../../services/layout.service';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 @Component({
   selector: 'app-profile-reads',
@@ -23,6 +25,7 @@ import { ArticleEventComponent } from '../../../components/event-types';
     MatTooltipModule,
     MatButtonModule,
     ArticleEventComponent,
+    MatProgressSpinnerModule,
   ],
   templateUrl: './profile-reads.component.html',
   styleUrl: './profile-reads.component.scss',
@@ -36,14 +39,28 @@ export class ProfileReadsComponent implements OnChanges {
   profileState = inject(ProfileStateService);
   bookmark = inject(BookmarkService);
   utilities = inject(UtilitiesService);
+  private layoutService = inject(LayoutService);
 
   isLoading = signal(true);
-  reads = signal<any[]>([]);
   error = signal<string | null>(null);
 
   constructor() {
     // Initial load of reads
     this.loadReads();
+
+    // Set up continuous scrolling effect
+    effect(() => {
+      // Only proceed if scroll monitoring is ready and user has scrolled to bottom
+      if (
+        this.layoutService.scrollMonitoringReady() &&
+        this.layoutService.scrolledToBottom() &&
+        !this.profileState.isLoadingMoreArticles() &&
+        this.profileState.hasMoreArticles()
+      ) {
+        this.logger.debug('Scrolled to bottom, loading more articles...');
+        this.loadMoreArticles();
+      }
+    });
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -88,5 +105,41 @@ export class ProfileReadsComponent implements OnChanges {
     // } finally {
     //   this.isLoading.set(false);
     // }
+  }
+
+  /**
+   * Load more articles (older articles)
+   */
+  async loadMoreArticles(): Promise<void> {
+    if (this.profileState.isLoadingMoreArticles() || !this.profileState.hasMoreArticles()) {
+      this.logger.debug('Already loading more articles or no more articles available, skipping');
+      return;
+    }
+
+    this.logger.debug('Loading more articles for profile');
+
+    try {
+      const currentArticles = this.profileState.articles();
+      const oldestTimestamp =
+        currentArticles.length > 0
+          ? Math.min(...currentArticles.map((a) => a.event.created_at)) - 1
+          : undefined;
+
+      this.logger.debug(
+        `Current articles count: ${currentArticles.length}, oldest timestamp: ${oldestTimestamp}`,
+      );
+
+      // Load older articles from the profile state service
+      const olderArticles = await this.profileState.loadMoreArticles(oldestTimestamp);
+
+      this.logger.debug(`Loaded ${olderArticles.length} older articles`);
+
+      if (olderArticles.length === 0) {
+        this.logger.debug('No more articles available');
+      }
+    } catch (err) {
+      this.logger.error('Failed to load more articles', err);
+      this.error.set('Failed to load older articles. Please try again.');
+    }
   }
 }

@@ -42,6 +42,10 @@ export class ProfileStateService {
   isLoadingMoreNotes = signal<boolean>(false);
   hasMoreNotes = signal<boolean>(true);
 
+  // Loading states for articles
+  isLoadingMoreArticles = signal<boolean>(false);
+  hasMoreArticles = signal<boolean>(true);
+
   constructor() {
     effect(async () => {
       const pubkey = this.pubkey();
@@ -97,6 +101,7 @@ export class ProfileStateService {
     this.articles.set([]);
     this.media.set([]);
     this.hasMoreNotes.set(true);
+    this.hasMoreArticles.set(true);
   }
 
   // Computed signals for sorted data
@@ -409,6 +414,106 @@ export class ProfileStateService {
     } catch (error) {
       this.logger.error('Failed to load more notes:', error);
       this.isLoadingMoreNotes.set(false);
+      return [];
+    }
+  }
+
+  /**
+   * Load more articles for the current profile
+   * @param beforeTimestamp - Load articles before this timestamp
+   */
+  async loadMoreArticles(beforeTimestamp?: number): Promise<NostrRecord[]> {
+    if (this.isLoadingMoreArticles() || !this.hasMoreArticles() || !this.relay) {
+      return [];
+    }
+
+    this.isLoadingMoreArticles.set(true);
+    const pubkey = this.pubkey();
+
+    try {
+      const currentArticles = this.articles();
+      const oldestTimestamp =
+        beforeTimestamp ||
+        (currentArticles.length > 0
+          ? Math.min(...currentArticles.map((a) => a.event.created_at)) - 1
+          : Math.floor(Date.now() / 1000));
+
+      this.logger.debug(
+        `Loading more articles for ${pubkey}, before timestamp: ${oldestTimestamp}`,
+      );
+
+      return new Promise<NostrRecord[]>((resolve) => {
+        const newArticles: NostrRecord[] = [];
+
+        this.relay!.subscribeEose(
+          [
+            {
+              kinds: [kinds.LongFormArticle],
+              authors: [pubkey],
+              until: oldestTimestamp,
+              limit: 10, // Load 10 more articles at a time
+            },
+          ],
+          (event) => {
+            if (event.kind === kinds.LongFormArticle) {
+              // Create a NostrRecord
+              const record: NostrRecord = {
+                event: event,
+                data: event.content,
+              };
+
+              // Check if we already have this article to avoid duplicates
+              const existingArticles = this.articles();
+              const exists = existingArticles.some((a) => a.event.id === event.id);
+
+              if (!exists) {
+                newArticles.push(record);
+              }
+            }
+          },
+          () => {
+            // EOSE callback - subscription finished
+            this.logger.debug(`Loaded ${newArticles.length} more articles`);
+
+            // Track if we added any new content
+            let addedAnyContent = false;
+
+            // Add new articles to the existing ones with final deduplication check
+            if (newArticles.length > 0) {
+              this.articles.update((existing) => {
+                const filtered = newArticles.filter(
+                  (newArticle) =>
+                    !existing.some(
+                      (existingArticle) => existingArticle.event.id === newArticle.event.id,
+                    ),
+                );
+                console.log(
+                  `Adding ${filtered.length} new articles (${newArticles.length - filtered.length} duplicates filtered)`,
+                );
+
+                if (filtered.length > 0) {
+                  addedAnyContent = true;
+                }
+
+                return [...existing, ...filtered];
+              });
+            }
+
+            // Only keep hasMoreArticles true if we actually added new content
+            if (!addedAnyContent) {
+              this.hasMoreArticles.set(false);
+            } else {
+              this.hasMoreArticles.set(true);
+            }
+
+            this.isLoadingMoreArticles.set(false);
+            resolve(newArticles);
+          },
+        );
+      });
+    } catch (error) {
+      this.logger.error('Failed to load more articles:', error);
+      this.isLoadingMoreArticles.set(false);
       return [];
     }
   }
