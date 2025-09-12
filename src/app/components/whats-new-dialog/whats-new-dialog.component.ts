@@ -116,6 +116,14 @@ export class WhatsNewDialogComponent {
           title: 'Send Zaps with Nostr Wallet Connect',
           description:
             'Connect your Lightning wallet using Nostr Wallet Connect (NWC) and send zaps directly from Nostria. Supports Alby and other NWC-compatible wallets.',
+          screenshots: [
+            {
+              src: '/screenshots/2025-09-12-zaps-send.png',
+              alt: 'Send zaps using Nostr Wallet Connect integration',
+              width: 576,
+              height: 571,
+            },
+          ],
         },
         {
           title: 'Zap History & Management',
@@ -126,6 +134,14 @@ export class WhatsNewDialogComponent {
           title: 'Enhanced Zap Display',
           description:
             'Zaps on events now show sender profiles with avatars instead of just public keys. Zaps are automatically sorted by amount from highest to lowest for better visibility.',
+          screenshots: [
+            {
+              src: '/screenshots/2025-09-12-zaps-and-reactions.png',
+              alt: 'Enhanced zap display with user profiles and reactions dialog',
+              width: 865,
+              height: 907,
+            },
+          ],
         },
         {
           title: 'Real-time Zap Updates',
