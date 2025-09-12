@@ -128,6 +128,13 @@ export class SettingsService {
     await this.updateSettings({
       imageCacheEnabled: !currentValue,
     });
+
+    // If disabling cache, optionally clear existing cache
+    if (currentValue) {
+      // Note: We don't automatically clear cache when disabling to preserve offline functionality
+      // Users can manually clear cache in the settings if needed
+      console.log('[Settings] Image cache disabled, existing cache preserved');
+    }
   }
 
   async toggleReportTypeVisibility(reportType: string): Promise<void> {
