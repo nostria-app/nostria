@@ -197,8 +197,8 @@ export interface ReactionsDialogData {
     `
       .reactions-dialog {
         width: 100%;
-        max-width: 500px;
-        max-height: 80vh;
+        max-width: 650px;
+        max-height: 85vh;
       }
 
       .dialog-header {
@@ -215,8 +215,8 @@ export interface ReactionsDialogData {
 
       .dialog-content {
         padding: 16px 0;
-        min-height: 300px;
-        max-height: 60vh;
+        min-height: 400px;
+        max-height: 70vh;
         overflow: hidden;
       }
 

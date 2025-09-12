@@ -510,7 +510,7 @@ export class EventComponent {
     if (!currentEvent) return;
 
     this.dialog.open(ReactionsDialogComponent, {
-      width: '500px',
+      width: '650px',
       maxWidth: '90vw',
       data: {
         event: currentEvent,
