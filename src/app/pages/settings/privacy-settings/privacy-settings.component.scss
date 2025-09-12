@@ -13,6 +13,26 @@
 
 .sharing-section {
   margin-bottom: 32px;
+
+  .cache-actions {
+    margin-top: 16px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+
+    button {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.875rem;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+    }
+  }
 }
 
 .report-settings-section {

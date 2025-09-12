@@ -30,6 +30,7 @@ import { DataService } from '../../services/data.service';
 import { RelaysService } from '../../services/relays/relays';
 import { SettingsService } from '../../services/settings.service';
 import { SharedRelayService } from '../../services/relays/shared-relay';
+import { ImageCacheService } from '../../services/image-cache.service';
 import { ProfileDisplayNameComponent } from './display-name/profile-display-name.component';
 
 @Component({
@@ -63,6 +64,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
   settingsService = inject(SettingsService);
   private relaysService = inject(RelaysService);
   private readonly sharedRelay = inject(SharedRelayService);
+  private readonly imageCacheService = inject(ImageCacheService);
   layout = inject(LayoutService);
   publicKey = '';
   pubkey = input<string>('');
@@ -393,6 +395,40 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
    */
   onImageLoadError(): void {
     this.imageLoadError.set(true);
+  }
+
+  /**
+   * Gets the optimized image URL using the image cache service
+   */
+  getOptimizedImageUrl(originalUrl: string): string {
+    if (!originalUrl) return '';
+
+    const size = this.getImageSize();
+    return this.imageCacheService.getOptimizedImageUrl(originalUrl, size, size);
+  }
+
+  /**
+   * Returns the appropriate image size based on the current view
+   */
+  private getImageSize(): number {
+    switch (this.view()) {
+      case 'large':
+        return 256;
+      case 'medium':
+        return 128;
+      case 'small':
+        return 48;
+      case 'details':
+        return 40;
+      case 'grid':
+        return 36;
+      case 'compact':
+      case 'name':
+      case 'tiny':
+        return 24;
+      default: // 'list'
+        return 40;
+    }
   }
 
   getInfoTooltip() {

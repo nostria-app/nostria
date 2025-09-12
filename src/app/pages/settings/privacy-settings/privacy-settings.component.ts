@@ -11,7 +11,8 @@ import { FormsModule } from '@angular/forms';
 import { AccountStateService } from '../../../services/account-state.service';
 import { NostrService } from '../../../services/nostr.service';
 import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
-import { SettingsService, UserSettings } from '../../../services/settings.service';
+import { SettingsService } from '../../../services/settings.service';
+import { ImageCacheService } from '../../../services/image-cache.service';
 import { InfoTooltipComponent } from '../../../components/info-tooltip/info-tooltip.component';
 
 @Component({
@@ -36,6 +37,7 @@ export class PrivacySettingsComponent {
   accountState = inject(AccountStateService);
   nostrService = inject(NostrService);
   settingsService = inject(SettingsService);
+  imageCacheService = inject(ImageCacheService);
 
   // NIP-56 report types
   reportTypes = [
@@ -97,7 +99,16 @@ export class PrivacySettingsComponent {
     try {
       await this.settingsService.toggleImageCache();
     } catch (error) {
-      console.error('Failed to toggle social sharing preview setting', error);
+      console.error('Failed to toggle image cache setting', error);
+    }
+  }
+
+  async clearImageCache(): Promise<void> {
+    try {
+      await this.imageCacheService.clearAllCache();
+      console.log('Image cache cleared successfully');
+    } catch (error) {
+      console.error('Failed to clear image cache', error);
     }
   }
 
