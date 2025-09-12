@@ -1,14 +1,13 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { Event, UnsignedEvent, nip19, nip57 } from 'nostr-tools';
+import { LN } from '@getalby/sdk';
 import { NostrService } from './nostr.service';
 import { AccountStateService } from './account-state.service';
 import { RelaysService } from './relays/relays';
 import { Wallets } from './wallets';
 import { LoggerService } from './logger.service';
 import { AccountRelayService } from './relays/account-relay';
-import { EncryptionService } from './encryption.service';
 import { ZapMetricsService } from './zap-metrics.service';
-import { NwcRelayService } from './relays/nwc-relay';
 
 interface LnurlPayResponse {
   callback: string;
@@ -49,8 +48,6 @@ export class ZapService {
   private wallets = inject(Wallets);
   private logger = inject(LoggerService);
   private accountRelay = inject(AccountRelayService);
-  private nwcRelay = inject(NwcRelayService);
-  private encryption = inject(EncryptionService);
   private zapMetrics = inject(ZapMetricsService);
 
   // Cache for LNURL pay endpoints
@@ -377,76 +374,12 @@ export class ZapService {
   }
 
   /**
-   * Wait for NWC wallet response to payment request
-   */
-  private async waitForNwcResponse(
-    requestId: string,
-    nwcRelayUrls: string[],
-    timeoutMs: number,
-  ): Promise<{
-    result?: { preimage: string; fees_paid?: number };
-    error?: { message: string };
-  }> {
-    return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        cleanup();
-        reject(new Error('Payment timeout: No response from wallet'));
-      }, timeoutMs);
-
-      const cleanup = () => {
-        clearTimeout(timeout);
-        if (subscription?.unsubscribe) {
-          subscription.unsubscribe();
-        }
-      };
-
-      // Listen for response events (kind 23195)
-      const filters = [
-        {
-          kinds: [23195],
-          '#e': [requestId],
-          since: Math.floor(Date.now() / 1000) - 60, // Look back 1 minute
-        },
-      ];
-
-      const subscription = this.nwcRelay.subscribeToNwcResponse(
-        filters,
-        nwcRelayUrls,
-        async (event: Event) => {
-          try {
-            // Decrypt the response content
-            const account = this.accountState.account();
-            if (!account) {
-              throw new Error('No account available to decrypt response');
-            }
-
-            const decryptedContent = await this.encryption.decryptNip44(
-              event.content,
-              event.pubkey,
-            );
-
-            const response = JSON.parse(decryptedContent);
-            cleanup();
-            resolve(response);
-          } catch (error) {
-            this.logger.error('Failed to decrypt NWC response:', error);
-            cleanup();
-            reject(new Error('Failed to decrypt wallet response'));
-          }
-        },
-      );
-    });
-  }
-
-  /**
-   * Pay a lightning invoice using NWC
+   * Pay a lightning invoice using NWC via Alby SDK
    */
   async payInvoice(invoice: string): Promise<{ preimage: string; fees_paid?: number }> {
     try {
-      const account = this.accountState.account();
-      if (!account) {
-        throw new Error('No account available for payment');
-      }
+      this.logger.info('=== Starting NWC Payment via Alby SDK ===');
+      this.logger.debug('Invoice:', invoice);
 
       const availableWallets = this.wallets.wallets();
       const walletEntries = Object.entries(availableWallets);
@@ -456,70 +389,54 @@ export class ZapService {
       }
 
       // For now, use the first available wallet
-      // TODO: Allow user to select which wallet to use
       const [, wallet] = walletEntries[0];
       const connectionString = wallet.connections[0];
 
-      // Parse the connection string to get wallet details
-      const connectionData = this.wallets.parseConnectionString(connectionString);
+      this.logger.debug('Using wallet connection string:', connectionString);
 
-      // Create the pay_invoice request event (NIP-47)
-      const requestEvent: UnsignedEvent = {
-        kind: 23194,
-        tags: [
-          ['p', connectionData.pubkey],
-          ['encryption', 'nip44_v2'],
-        ],
-        content: '', // Will be encrypted
-        pubkey: account.pubkey,
-        created_at: Math.floor(Date.now() / 1000),
-      };
+      // Use Alby SDK to handle the NWC payment
+      const ln = new LN(connectionString);
 
-      // The request payload for NWC pay_invoice
-      const requestPayload = {
-        method: 'pay_invoice',
-        params: {
-          invoice: invoice,
-        },
-      };
+      this.logger.debug('Created Alby LN client, making payment...');
+      const result = await ln.pay(invoice);
 
-      // Encrypt the payload using NIP-44
-      const encryptedContent = await this.encryption.encryptNip44(
-        JSON.stringify(requestPayload),
-        connectionData.pubkey,
-      );
+      this.logger.info('✅ Payment completed successfully via Alby SDK');
+      this.logger.debug('Payment result:', result);
 
-      requestEvent.content = encryptedContent;
-
-      // Sign and publish the request event to NWC relays
-      const signedEvent = await this.nostr.signEvent(requestEvent);
-
-      // Publish to the specific NWC relays from the connection string
-      await this.nwcRelay.publishNwcRequest(signedEvent, connectionData.relay);
-
-      // Wait for response event from NWC wallet on the same relays
-      const response = await this.waitForNwcResponse(
-        signedEvent.id,
-        connectionData.relay,
-        30000, // 30 second timeout
-      );
-
-      if (response.error) {
-        throw new Error(`Payment failed: ${response.error.message}`);
+      // Extract preimage and fees from Alby SDK result
+      // Define types for expected response formats
+      interface AlbyPaymentResult {
+        preimage?: string;
+        payment_preimage?: string;
+        fees_paid?: number;
+        fee?: number;
       }
 
-      if (!response.result) {
-        throw new Error('Payment failed: No result received from wallet');
+      let preimage: string;
+      let fees_paid: number | undefined;
+
+      if (typeof result === 'object' && result !== null) {
+        // Handle object response
+        const paymentResult = result as AlbyPaymentResult;
+        preimage = paymentResult.preimage || paymentResult.payment_preimage || '';
+        fees_paid = paymentResult.fees_paid || paymentResult.fee;
+      } else if (typeof result === 'string') {
+        // Handle string response (might be just preimage)
+        preimage = result;
+      } else {
+        throw new Error('Unexpected payment result format');
       }
 
-      this.logger.info('Payment completed successfully', { preimage: response.result.preimage });
+      if (!preimage) {
+        throw new Error('Payment completed but no preimage received');
+      }
 
       return {
-        preimage: response.result.preimage,
-        fees_paid: response.result.fees_paid,
+        preimage,
+        fees_paid,
       };
     } catch (error) {
-      this.logger.error('Failed to pay invoice via NWC:', error);
+      this.logger.error('❌ Failed to pay invoice via Alby SDK:', error);
       throw error;
     }
   }
