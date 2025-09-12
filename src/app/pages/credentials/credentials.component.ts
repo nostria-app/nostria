@@ -13,7 +13,7 @@ import { NostrService } from '../../services/nostr.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { MatTabsModule } from '@angular/material/tabs';
-import { Wallets } from '../../services/wallets';
+import { Wallets, Wallet } from '../../services/wallets';
 import { LN, USD } from '@getalby/sdk';
 
 @Component({
@@ -183,10 +183,7 @@ export class CredentialsComponent {
     });
   }
 
-  async donate(wallet: any) {
-    console.log('Initiating donation for wallet:', wallet);
-
-    // const request = await new LN(wallet.connections[0]).requestPayment(USD(0.1));
+  async donate(wallet: Wallet) {
     // 15 minutes.
     // request.onTimeout(900, () => {
     //   console.error('Payment request timed out');
@@ -204,7 +201,7 @@ export class CredentialsComponent {
     return Object.entries(this.wallets.wallets());
   }
 
-  getFirstConnectionString(wallet: any): string {
+  getFirstConnectionString(wallet: Wallet): string {
     return wallet.connections && wallet.connections.length > 0 ? wallet.connections[0] : '';
   }
 
@@ -233,7 +230,25 @@ export class CredentialsComponent {
     }
   }
 
-  getWalletName(wallet: any): string {
+  getWalletName(wallet: Wallet): string {
     return wallet.name || 'Unnamed Wallet';
+  }
+
+  getWalletRelays(wallet: Wallet): string[] {
+    const relayUrls: string[] = [];
+
+    if (wallet.connections && wallet.connections.length > 0) {
+      for (const connectionString of wallet.connections) {
+        try {
+          const parsed = this.wallets.parseConnectionString(connectionString);
+          relayUrls.push(...parsed.relay);
+        } catch (error) {
+          console.warn('Failed to parse connection string for relay extraction:', error);
+        }
+      }
+    }
+
+    // Remove duplicates
+    return [...new Set(relayUrls)];
   }
 }
