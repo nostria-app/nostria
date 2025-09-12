@@ -33,6 +33,8 @@ export interface ZapDialogData {
 export interface ZapDialogResult {
   amount: number;
   message: string;
+  paymentMethod: 'nwc' | 'native' | 'manual';
+  invoice?: string;
 }
 
 @Component({
@@ -453,6 +455,7 @@ export class ZapDialogComponent {
         name: this.data.recipientName,
         displayName: this.data.recipientName,
         picture: this.data.recipientMetadata?.['picture'] as string,
+        metadata: this.data.recipientMetadata,
       },
       amount,
       message: message || undefined,
@@ -462,6 +465,7 @@ export class ZapDialogComponent {
       },
       eventTitle: this.data.eventContent,
       isProfileZap: !this.data.eventId,
+      eventId: this.data.eventId,
     };
 
     const confirmationDialogRef = this.dialog.open(ZapConfirmationDialogComponent, {
@@ -470,25 +474,52 @@ export class ZapDialogComponent {
       maxWidth: '90vw',
     });
 
-    const confirmed = await confirmationDialogRef.afterClosed().toPromise();
-    if (!confirmed) {
+    const result = await confirmationDialogRef.afterClosed().toPromise();
+    if (!result?.confirmed) {
       return; // User cancelled
     }
 
-    this.isProcessing.set(true);
-    this.errorMessage.set(null);
+    // Handle different payment methods
+    if (result.paymentMethod === 'nwc') {
+      // Use traditional NWC flow
+      this.isProcessing.set(true);
+      this.errorMessage.set(null);
 
-    try {
-      await this.zapService.sendZap(
-        this.data.recipientPubkey,
-        amount,
-        message,
-        this.data.eventId,
-        this.data.recipientMetadata,
-      );
+      try {
+        await this.zapService.sendZap(
+          this.data.recipientPubkey,
+          amount,
+          message,
+          this.data.eventId,
+          this.data.recipientMetadata,
+        );
 
+        this.snackBar.open(
+          `⚡ Successfully sent ${amount} sats${this.data.recipientName ? ` to ${this.data.recipientName}` : ''}!`,
+          'Dismiss',
+          {
+            duration: 5000,
+            horizontalPosition: 'center',
+            verticalPosition: 'bottom',
+          },
+        );
+
+        this.dialogRef.close({
+          amount,
+          message,
+          paymentMethod: result.paymentMethod,
+        } as ZapDialogResult);
+      } catch (error) {
+        console.error('Failed to send zap:', error);
+        const zapError = this.errorHandler.handleZapError(error);
+        this.errorMessage.set(zapError.message);
+      } finally {
+        this.isProcessing.set(false);
+      }
+    } else if (result.paymentMethod === 'native' || result.paymentMethod === 'manual') {
+      // For manual payment methods, assume payment was completed
       this.snackBar.open(
-        `⚡ Successfully sent ${amount} sats${this.data.recipientName ? ` to ${this.data.recipientName}` : ''}!`,
+        `⚡ Payment initiated for ${amount} sats${this.data.recipientName ? ` to ${this.data.recipientName}` : ''}!`,
         'Dismiss',
         {
           duration: 5000,
@@ -500,13 +531,9 @@ export class ZapDialogComponent {
       this.dialogRef.close({
         amount,
         message,
+        paymentMethod: result.paymentMethod,
+        invoice: result.invoice,
       } as ZapDialogResult);
-    } catch (error) {
-      console.error('Failed to send zap:', error);
-      const zapError = this.errorHandler.handleZapError(error);
-      this.errorMessage.set(zapError.message);
-    } finally {
-      this.isProcessing.set(false);
     }
   }
 
