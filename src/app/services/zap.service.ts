@@ -1,11 +1,13 @@
-import { Injectable, inject } from '@angular/core';
-import { Event, UnsignedEvent, nip19 } from 'nostr-tools';
+import { Injectable, inject, signal } from '@angular/core';
+import { Event, UnsignedEvent, nip19, nip57 } from 'nostr-tools';
 import { NostrService } from './nostr.service';
 import { AccountStateService } from './account-state.service';
 import { RelaysService } from './relays/relays';
 import { Wallets } from './wallets';
 import { LoggerService } from './logger.service';
 import { AccountRelayService } from './relays/account-relay';
+import { EncryptionService } from './encryption.service';
+import { ZapMetricsService } from './zap-metrics.service';
 
 interface LnurlPayResponse {
   callback: string;
@@ -14,11 +16,26 @@ interface LnurlPayResponse {
   metadata: string;
   allowsNostr?: boolean;
   nostrPubkey?: string;
+  commentAllowed?: number;
 }
 
 interface ZapPayment {
   pr: string; // bolt11 invoice
   routes?: unknown[];
+}
+
+interface ZapError {
+  code: string;
+  message: string;
+  recoverable: boolean;
+  retryDelay?: number;
+}
+
+interface RetryOptions {
+  maxRetries: number;
+  initialDelay: number;
+  maxDelay: number;
+  backoffMultiplier: number;
 }
 
 @Injectable({
@@ -31,9 +48,154 @@ export class ZapService {
   private wallets = inject(Wallets);
   private logger = inject(LoggerService);
   private accountRelay = inject(AccountRelayService);
+  private encryption = inject(EncryptionService);
+  private metrics = inject(ZapMetricsService);
 
   // Cache for LNURL pay endpoints
   private lnurlCache = new Map<string, LnurlPayResponse>();
+
+  // Default retry configuration
+  private readonly DEFAULT_RETRY_OPTIONS: RetryOptions = {
+    maxRetries: 3,
+    initialDelay: 1000, // 1 second
+    maxDelay: 10000, // 10 seconds
+    backoffMultiplier: 2,
+  };
+
+  /**
+   * Create a standardized ZapError
+   */
+  private createZapError(
+    code: string,
+    message: string,
+    recoverable = true,
+    retryDelay?: number,
+  ): ZapError {
+    return { code, message, recoverable, retryDelay };
+  }
+
+  /**
+   * Retry wrapper with exponential backoff
+   */
+  private async withRetry<T>(
+    operation: () => Promise<T>,
+    options: Partial<RetryOptions> = {},
+    operationName = 'operation',
+  ): Promise<T> {
+    const config = { ...this.DEFAULT_RETRY_OPTIONS, ...options };
+    let lastError: Error;
+    let delay = config.initialDelay;
+
+    for (let attempt = 0; attempt <= config.maxRetries; attempt++) {
+      try {
+        this.logger.debug(
+          `Attempting ${operationName} (attempt ${attempt + 1}/${config.maxRetries + 1})`,
+        );
+        return await operation();
+      } catch (error) {
+        lastError = error as Error;
+        this.logger.warn(`${operationName} failed on attempt ${attempt + 1}:`, lastError);
+
+        if (attempt === config.maxRetries) {
+          break; // No more retries
+        }
+
+        // Check if error is recoverable
+        if (this.isNonRecoverableError(lastError)) {
+          this.logger.error(`Non-recoverable error in ${operationName}:`, lastError);
+          throw this.enhanceError(lastError);
+        }
+
+        // Wait before retrying
+        this.logger.debug(`Waiting ${delay}ms before retry...`);
+        await this.delay(delay);
+
+        // Exponential backoff
+        delay = Math.min(delay * config.backoffMultiplier, config.maxDelay);
+      }
+    }
+
+    throw this.enhanceError(lastError!);
+  }
+
+  /**
+   * Check if an error should not be retried
+   */
+  private isNonRecoverableError(error: Error): boolean {
+    const message = error.message.toLowerCase();
+
+    // User/configuration errors (don't retry)
+    const nonRecoverableMessages = [
+      'recipient has no lightning address',
+      'recipient does not support nostr zaps',
+      'amount must be between',
+      'invalid lightning address',
+      'no active account',
+      'no connected wallets',
+      'wallet not found',
+    ];
+
+    return nonRecoverableMessages.some((msg) => message.includes(msg));
+  }
+
+  /**
+   * Enhance error with more context
+   */
+  private enhanceError(error: Error): ZapError {
+    const message = error.message.toLowerCase();
+
+    if (message.includes('network') || message.includes('fetch')) {
+      return this.createZapError(
+        'NETWORK_ERROR',
+        'Network connection failed. Please check your internet connection.',
+        true,
+        2000,
+      );
+    }
+
+    if (message.includes('timeout')) {
+      return this.createZapError(
+        'TIMEOUT_ERROR',
+        'Request timed out. Please try again.',
+        true,
+        1000,
+      );
+    }
+
+    if (message.includes('invoice') || message.includes('bolt11')) {
+      return this.createZapError(
+        'INVOICE_ERROR',
+        'Invalid Lightning invoice. Please try again.',
+        true,
+      );
+    }
+
+    if (message.includes('wallet') || message.includes('payment')) {
+      return this.createZapError(
+        'WALLET_ERROR',
+        'Wallet payment failed. Please check your wallet connection.',
+        true,
+        3000,
+      );
+    }
+
+    if (message.includes('recipient')) {
+      return this.createZapError('RECIPIENT_ERROR', error.message, false);
+    }
+
+    return this.createZapError(
+      'UNKNOWN_ERROR',
+      error.message || 'An unexpected error occurred',
+      true,
+    );
+  }
+
+  /**
+   * Utility delay function
+   */
+  private delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
 
   /**
    * Get Lightning Address/LNURL from user metadata
@@ -62,68 +224,14 @@ export class ZapService {
       throw new Error('Invalid lightning address format');
     }
 
-    const url = `https://${domain}/.well-known/lnurlp/${username}`;
-    const urlBytes = new TextEncoder().encode(url);
-    const lnurl = this.bech32Encode('lnurl', urlBytes);
-    return lnurl;
+    // For LNURL-pay callback, we don't need to encode the URL as LNURL
+    // The callback URL already contains the proper endpoint
+    // Just return the lightning address for identification
+    return lightningAddress;
   }
 
   /**
-   * Simple bech32 encoding for LNURL
-   */
-  private bech32Encode(hrp: string, data: Uint8Array): string {
-    // This is a simplified implementation - in production you'd use a proper bech32 library
-    const words = this.convertBits(data, 8, 5, true);
-    if (!words) throw new Error('Invalid data for bech32 encoding');
-
-    // For simplicity, we'll return the original URL for now
-    // In a real implementation, you'd do proper bech32 encoding
-    return (
-      hrp +
-      '1' +
-      Array.from(words)
-        .map((w) => String.fromCharCode(97 + w))
-        .join('')
-    );
-  }
-
-  private convertBits(
-    data: Uint8Array,
-    fromBits: number,
-    toBits: number,
-    pad: boolean,
-  ): Uint8Array | null {
-    let acc = 0;
-    let bits = 0;
-    const ret: number[] = [];
-    const maxv = (1 << toBits) - 1;
-    const maxAcc = (1 << (fromBits + toBits - 1)) - 1;
-
-    for (const value of data) {
-      if (value < 0 || value >> fromBits !== 0) {
-        return null;
-      }
-      acc = ((acc << fromBits) | value) & maxAcc;
-      bits += fromBits;
-      while (bits >= toBits) {
-        bits -= toBits;
-        ret.push((acc >> bits) & maxv);
-      }
-    }
-
-    if (pad) {
-      if (bits > 0) {
-        ret.push((acc << (toBits - bits)) & maxv);
-      }
-    } else if (bits >= fromBits || (acc << (toBits - bits)) & maxv) {
-      return null;
-    }
-
-    return new Uint8Array(ret);
-  }
-
-  /**
-   * Fetch LNURL pay endpoint info
+   * Fetch LNURL-pay information for a Lightning address
    */
   async fetchLnurlPayInfo(lightningAddress: string): Promise<LnurlPayResponse> {
     // Check cache first
@@ -194,9 +302,13 @@ export class ZapService {
 
     // Use default relays if none provided
     if (relays.length === 0) {
-      const defaultRelays = this.relayService.getConnectedRelays();
-      if (Array.isArray(defaultRelays)) {
-        relays = defaultRelays;
+      // Get connected relay URLs
+      const connectedRelays = this.relayService.getConnectedRelays();
+      if (Array.isArray(connectedRelays)) {
+        relays = connectedRelays.slice(0, 3); // Limit to 3 relays
+      } else {
+        // Fallback to some common relays if no connected ones
+        relays = ['wss://relay.damus.io', 'wss://nos.lol', 'wss://relay.snort.social'];
       }
     }
 
@@ -206,9 +318,7 @@ export class ZapService {
       ['p', recipientPubkey],
     ];
 
-    if (lnurl) {
-      tags.push(['lnurl', lnurl]);
-    }
+    // Don't include lnurl in zap request - it's only used for the callback
 
     if (eventId) {
       tags.push(['e', eventId]);
@@ -234,11 +344,17 @@ export class ZapService {
     zapRequest: Event,
     callbackUrl: string,
     amount: number,
-    lnurl: string,
+    comment?: string,
   ): Promise<ZapPayment> {
     try {
       const encodedZapRequest = encodeURIComponent(JSON.stringify(zapRequest));
-      const requestUrl = `${callbackUrl}?amount=${amount}&nostr=${encodedZapRequest}&lnurl=${lnurl}`;
+      let requestUrl = `${callbackUrl}?amount=${amount}&nostr=${encodedZapRequest}`;
+
+      // Add comment parameter if provided
+      if (comment && comment.trim()) {
+        const encodedComment = encodeURIComponent(comment.trim());
+        requestUrl += `&comment=${encodedComment}`;
+      }
 
       const response = await fetch(requestUrl);
       if (!response.ok) {
@@ -259,11 +375,73 @@ export class ZapService {
   }
 
   /**
+   * Wait for NWC wallet response to payment request
+   */
+  private async waitForNwcResponse(
+    requestId: string,
+    timeoutMs: number,
+  ): Promise<{
+    result?: { preimage: string; fees_paid?: number };
+    error?: { message: string };
+  }> {
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        cleanup();
+        reject(new Error('Payment timeout: No response from wallet'));
+      }, timeoutMs);
+
+      let subscription: { unsubscribe?: () => void; close?: () => void } | undefined;
+
+      const cleanup = () => {
+        clearTimeout(timeout);
+        if (subscription?.unsubscribe) {
+          subscription.unsubscribe();
+        } else if (subscription?.close) {
+          subscription.close();
+        }
+      };
+
+      // Listen for response events (kind 23195)
+      const filters = [
+        {
+          kinds: [23195],
+          '#e': [requestId],
+          since: Math.floor(Date.now() / 1000) - 60, // Look back 1 minute
+        },
+      ];
+
+      subscription = this.accountRelay.subscribe(filters, async (event: Event) => {
+        try {
+          // Decrypt the response content
+          const account = this.accountState.account();
+          if (!account) {
+            throw new Error('No account available to decrypt response');
+          }
+
+          const decryptedContent = await this.encryption.decryptNip44(event.content, event.pubkey);
+
+          const response = JSON.parse(decryptedContent);
+          cleanup();
+          resolve(response);
+        } catch (error) {
+          this.logger.error('Failed to decrypt NWC response:', error);
+          cleanup();
+          reject(new Error('Failed to decrypt wallet response'));
+        }
+      });
+    });
+  }
+
+  /**
    * Pay a lightning invoice using NWC
    */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async payInvoice(invoice: string): Promise<{ preimage: string; fees_paid?: number }> {
     try {
+      const account = this.accountState.account();
+      if (!account) {
+        throw new Error('No account available for payment');
+      }
+
       const availableWallets = this.wallets.wallets();
       const walletEntries = Object.entries(availableWallets);
 
@@ -277,17 +455,104 @@ export class ZapService {
       const connectionString = wallet.connections[0];
 
       // Parse the connection string to get wallet details
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const connectionData = this.wallets.parseConnectionString(connectionString);
 
-      // TODO: Implement proper NIP-44 encryption and NWC communication
-      // For now, throw an error indicating this needs to be implemented
-      throw new Error(
-        'NWC payment integration needs to be completed. Please pay the invoice manually.',
+      // Create the pay_invoice request event (NIP-47)
+      const requestEvent: UnsignedEvent = {
+        kind: 23194,
+        tags: [
+          ['p', connectionData.pubkey],
+          ['encryption', 'nip44_v2'],
+        ],
+        content: '', // Will be encrypted
+        pubkey: account.pubkey,
+        created_at: Math.floor(Date.now() / 1000),
+      };
+
+      // The request payload for NWC pay_invoice
+      const requestPayload = {
+        method: 'pay_invoice',
+        params: {
+          invoice: invoice,
+        },
+      };
+
+      // Encrypt the payload using NIP-44
+      const encryptedContent = await this.encryption.encryptNip44(
+        JSON.stringify(requestPayload),
+        connectionData.pubkey,
       );
+
+      requestEvent.content = encryptedContent;
+
+      // Sign and publish the request event
+      const signedEvent = await this.nostr.signEvent(requestEvent);
+      await this.accountRelay.publish(signedEvent);
+
+      // Wait for response event from NWC wallet
+      const response = await this.waitForNwcResponse(signedEvent.id, 30000); // 30 second timeout
+
+      if (response.error) {
+        throw new Error(`Payment failed: ${response.error.message}`);
+      }
+
+      if (!response.result) {
+        throw new Error('Payment failed: No result received from wallet');
+      }
+
+      this.logger.info('Payment completed successfully', { preimage: response.result.preimage });
+
+      return {
+        preimage: response.result.preimage,
+        fees_paid: response.result.fees_paid,
+      };
     } catch (error) {
       this.logger.error('Failed to pay invoice via NWC:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Parse amount from bolt11 invoice using nostr-tools
+   */
+  private getBolt11Amount(invoice: string): number | null {
+    try {
+      // Use the getSatoshisAmountFromBolt11 function from nostr-tools
+      const amountSats = nip57.getSatoshisAmountFromBolt11(invoice);
+      // Convert sats to millisats
+      return amountSats * 1000;
+    } catch (error) {
+      this.logger.error('Failed to parse bolt11 amount:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Validate amount consistency between zap request and bolt11 invoice
+   */
+  private validateZapAmount(zapRequest: Event, bolt11Invoice: string): boolean {
+    try {
+      const invoiceAmountMsats = this.getBolt11Amount(bolt11Invoice);
+      if (!invoiceAmountMsats) {
+        return false;
+      }
+
+      // Get the amount from zap request (in millisats)
+      const amountTag = zapRequest.tags.find((tag) => tag[0] === 'amount');
+      if (!amountTag || !amountTag[1]) {
+        return false;
+      }
+
+      const requestedAmount = parseInt(amountTag[1]);
+
+      // Allow for small rounding differences (within 1% or 100 msats, whichever is larger)
+      const tolerance = Math.max(100, requestedAmount * 0.01);
+      const difference = Math.abs(invoiceAmountMsats - requestedAmount);
+
+      return difference <= tolerance;
+    } catch (error) {
+      this.logger.error('Error validating zap amount:', error);
+      return false;
     }
   }
 
@@ -301,68 +566,122 @@ export class ZapService {
     eventId?: string,
     recipientMetadata?: Record<string, unknown>,
   ): Promise<void> {
+    const startTime = Date.now();
+
     try {
-      this.logger.info('Starting zap process', { recipientPubkey, amount, eventId });
+      await this.withRetry(
+        async () => {
+          this.logger.info('Starting zap process', { recipientPubkey, amount, eventId });
 
-      // Convert sats to millisats
-      const amountMsats = amount * 1000;
+          // Convert sats to millisats
+          const amountMsats = amount * 1000;
 
-      // Get lightning address from metadata
-      if (!recipientMetadata) {
-        throw new Error('Recipient metadata required for zapping');
-      }
+          // Get lightning address from metadata
+          if (!recipientMetadata) {
+            throw new Error(
+              'Recipient metadata required for zapping. Please ensure the recipient has a valid profile with Lightning address.',
+            );
+          }
 
-      const lightningAddress = this.getLightningAddress(recipientMetadata);
-      if (!lightningAddress) {
-        throw new Error('Recipient has no lightning address configured');
-      }
+          const lightningAddress = this.getLightningAddress(recipientMetadata);
+          if (!lightningAddress) {
+            throw new Error(
+              'Recipient has no lightning address (lud16 or lud06) configured in their profile. They cannot receive zaps.',
+            );
+          }
 
-      // Fetch LNURL pay info
-      const lnurlPayInfo = await this.fetchLnurlPayInfo(lightningAddress);
+          // Fetch LNURL pay info with retry
+          const lnurlPayInfo = await this.withRetry(
+            () => this.fetchLnurlPayInfo(lightningAddress),
+            { maxRetries: 2 },
+            'fetch LNURL pay info',
+          );
 
-      // Check if recipient supports Nostr zaps
-      if (!lnurlPayInfo.allowsNostr || !lnurlPayInfo.nostrPubkey) {
-        throw new Error('Recipient does not support Nostr zaps');
-      }
+          // Check if recipient supports Nostr zaps
+          if (!lnurlPayInfo.allowsNostr || !lnurlPayInfo.nostrPubkey) {
+            throw new Error('Recipient does not support Nostr zaps');
+          }
 
-      // Validate amount is within bounds
-      if (amountMsats < lnurlPayInfo.minSendable || amountMsats > lnurlPayInfo.maxSendable) {
-        throw new Error(
-          `Amount must be between ${lnurlPayInfo.minSendable / 1000} and ${lnurlPayInfo.maxSendable / 1000} sats`,
-        );
-      }
+          // Validate amount is within bounds
+          if (amountMsats < lnurlPayInfo.minSendable || amountMsats > lnurlPayInfo.maxSendable) {
+            throw new Error(
+              `Amount must be between ${lnurlPayInfo.minSendable / 1000} and ${lnurlPayInfo.maxSendable / 1000} sats`,
+            );
+          }
 
-      // Convert lightning address to LNURL for the request
-      const lnurl = this.lightningAddressToLnurl(lightningAddress);
+          // Validate comment length if provided
+          if (message && message.trim()) {
+            const commentAllowed = lnurlPayInfo.commentAllowed || 0;
+            if (commentAllowed === 0) {
+              throw new Error('Recipient does not allow comments with zaps');
+            }
+            if (message.trim().length > commentAllowed) {
+              throw new Error(`Comment too long. Maximum ${commentAllowed} characters allowed.`);
+            }
+          }
 
-      // Create zap request
-      const zapRequest = await this.createZapRequest(
-        recipientPubkey,
-        amountMsats,
-        message,
-        eventId,
-        lnurl,
-      );
+          // Convert lightning address to LNURL for the request
+          const lnurl = this.lightningAddressToLnurl(lightningAddress);
 
-      // Sign the zap request
-      const signedZapRequest = await this.nostr.signEvent(zapRequest);
+          // Create zap request (usually succeeds, so no retry needed)
+          const zapRequest = await this.createZapRequest(
+            recipientPubkey,
+            amountMsats,
+            message,
+            eventId,
+            lnurl,
+          );
 
-      // Request invoice from LNURL service
-      const zapPayment = await this.requestZapInvoice(
-        signedZapRequest,
-        lnurlPayInfo.callback,
-        amountMsats,
-        lnurl,
-      );
+          // Sign the zap request
+          const signedZapRequest = await this.nostr.signEvent(zapRequest);
 
-      // Pay the invoice
-      await this.payInvoice(zapPayment.pr);
+          // Request invoice from LNURL service with retry
+          const zapPayment = await this.withRetry(
+            () =>
+              this.requestZapInvoice(signedZapRequest, lnurlPayInfo.callback, amountMsats, message),
+            { maxRetries: 2 },
+            'request zap invoice',
+          );
 
-      this.logger.info('Zap completed successfully');
+          // Pay the invoice with retry (most critical part)
+          await this.withRetry(
+            () => this.payInvoice(zapPayment.pr),
+            { maxRetries: 1, initialDelay: 2000 }, // Longer delay for payment retries
+            'pay invoice',
+          );
+
+          this.logger.info('Zap completed successfully');
+          return true;
+        },
+        { maxRetries: 1 },
+        'send zap',
+      ); // Overall retry for the entire process
+
+      // Record successful zap metrics
+      const paymentTime = Date.now() - startTime;
+      this.metrics.recordZapSent(amount, paymentTime, recipientPubkey, eventId);
     } catch (error) {
-      this.logger.error('Failed to send zap:', error as Error);
+      // Record failed zap metrics
+      const errorCode = this.extractErrorCode(error);
+      this.metrics.recordZapFailed(amount, errorCode, recipientPubkey);
       throw error;
     }
+  }
+
+  /**
+   * Extract error code for metrics
+   */
+  private extractErrorCode(error: unknown): string {
+    if (error instanceof Error) {
+      const message = error.message.toLowerCase();
+      if (message.includes('network')) return 'NETWORK_ERROR';
+      if (message.includes('timeout')) return 'TIMEOUT_ERROR';
+      if (message.includes('wallet')) return 'WALLET_ERROR';
+      if (message.includes('invoice')) return 'INVOICE_ERROR';
+      if (message.includes('recipient')) return 'RECIPIENT_ERROR';
+      return 'UNKNOWN_ERROR';
+    }
+    return 'UNKNOWN_ERROR';
   }
 
   /**
@@ -399,7 +718,35 @@ export class ZapService {
       }
 
       // TODO: Validate the bolt11 invoice and description hash
-      // TODO: Parse and validate the zap request from the description tag
+      // Validate bolt11 invoice format
+      const bolt11Invoice = bolt11Tags[0][1];
+      const invoiceAmount = this.getBolt11Amount(bolt11Invoice);
+      if (!invoiceAmount) {
+        this.logger.warn('Invalid bolt11 invoice in zap receipt');
+        return false;
+      }
+
+      // Parse and validate the zap request from description
+      try {
+        const zapRequestString = descriptionTags[0][1];
+        const zapRequest = JSON.parse(zapRequestString) as Event;
+
+        // Use nostr-tools to validate the zap request
+        const validationError = nip57.validateZapRequest(zapRequestString);
+        if (validationError) {
+          this.logger.warn('Invalid zap request:', validationError);
+          return false;
+        }
+
+        // Validate amount consistency between zap request and bolt11 invoice
+        if (!this.validateZapAmount(zapRequest, bolt11Invoice)) {
+          this.logger.warn('Amount mismatch between zap request and bolt11 invoice');
+          return false;
+        }
+      } catch (error) {
+        this.logger.warn('Failed to parse zap request from description tag:', error);
+        return false;
+      }
 
       return true;
     } catch (error) {
@@ -430,11 +777,18 @@ export class ZapService {
       let amount: number | null = null;
 
       if (bolt11Tag && bolt11Tag[1]) {
-        // TODO: Parse bolt11 invoice to extract amount
-        // For now, try to get it from the zap request
-        const amountTag = zapRequest.tags.find((tag) => tag[0] === 'amount');
-        if (amountTag && amountTag[1]) {
-          amount = parseInt(amountTag[1]) / 1000; // Convert msats to sats
+        // Parse bolt11 invoice to extract amount
+        const invoiceAmountMsats = this.getBolt11Amount(bolt11Tag[1]);
+        if (invoiceAmountMsats) {
+          amount = Math.round(invoiceAmountMsats / 1000); // Convert msats to sats
+        }
+
+        // Fallback: try to get amount from the zap request if bolt11 parsing failed
+        if (!amount) {
+          const amountTag = zapRequest.tags.find((tag) => tag[0] === 'amount');
+          if (amountTag && amountTag[1]) {
+            amount = parseInt(amountTag[1]) / 1000; // Convert msats to sats
+          }
         }
       }
 
@@ -485,5 +839,183 @@ export class ZapService {
       this.logger.error('Error fetching zaps for user:', error as Error);
       return [];
     }
+  }
+
+  // Real-time subscription management
+  private activeSubscriptions = new Map<string, { unsubscribe: () => void }>();
+  private zapUpdates = signal<Event[]>([]);
+
+  /**
+   * Subscribe to real-time zap updates for an event
+   */
+  subscribeToEventZaps(eventId: string, onZapReceived: (zapReceipt: Event) => void): () => void {
+    const subscriptionKey = `event-${eventId}`;
+
+    // Don't create duplicate subscriptions
+    if (this.activeSubscriptions.has(subscriptionKey)) {
+      this.logger.debug(`Already subscribed to zaps for event ${eventId}`);
+      const existing = this.activeSubscriptions.get(subscriptionKey);
+      return existing
+        ? existing.unsubscribe
+        : () => {
+          this.logger.debug('Empty unsubscribe function called');
+        };
+    }
+
+    this.logger.debug(`Subscribing to real-time zaps for event ${eventId}`);
+
+    const subscription = this.accountRelay.subscribe(
+      [
+        {
+          kinds: [9735], // Zap receipts
+          '#e': [eventId],
+          since: Math.floor(Date.now() / 1000), // Only new zaps from now
+        },
+      ],
+      (event: Event) => {
+        this.logger.debug('Received new zap receipt for event:', event);
+        onZapReceived(event);
+      },
+    );
+
+    // Store subscription for cleanup with normalized interface
+    const unsubscribeFn =
+      subscription.unsubscribe ||
+      subscription.close ||
+      (() => {
+        this.logger.debug('No unsubscribe method available');
+      });
+    this.activeSubscriptions.set(subscriptionKey, { unsubscribe: unsubscribeFn });
+
+    // Return unsubscribe function
+    return () => {
+      this.logger.debug(`Unsubscribing from zaps for event ${eventId}`);
+      unsubscribeFn();
+      this.activeSubscriptions.delete(subscriptionKey);
+    };
+  }
+
+  /**
+   * Subscribe to real-time zap updates for a user
+   */
+  subscribeToUserZaps(pubkey: string, onZapReceived: (zapReceipt: Event) => void): () => void {
+    const subscriptionKey = `user-${pubkey}`;
+
+    // Don't create duplicate subscriptions
+    if (this.activeSubscriptions.has(subscriptionKey)) {
+      this.logger.debug(`Already subscribed to zaps for user ${pubkey}`);
+      const existing = this.activeSubscriptions.get(subscriptionKey);
+      return existing
+        ? existing.unsubscribe
+        : () => {
+          this.logger.debug('Empty unsubscribe function called');
+        };
+    }
+
+    this.logger.debug(`Subscribing to real-time zaps for user ${pubkey}`);
+
+    const subscription = this.accountRelay.subscribe(
+      [
+        {
+          kinds: [9735], // Zap receipts
+          '#p': [pubkey],
+          since: Math.floor(Date.now() / 1000), // Only new zaps from now
+        },
+      ],
+      (event: Event) => {
+        this.logger.debug('Received new zap receipt for user:', event);
+        onZapReceived(event);
+      },
+    );
+
+    // Store subscription for cleanup with normalized interface
+    const unsubscribeFn =
+      subscription.unsubscribe ||
+      subscription.close ||
+      (() => {
+        this.logger.debug('No unsubscribe method available');
+      });
+    this.activeSubscriptions.set(subscriptionKey, { unsubscribe: unsubscribeFn });
+
+    // Return unsubscribe function
+    return () => {
+      this.logger.debug(`Unsubscribing from zaps for user ${pubkey}`);
+      unsubscribeFn();
+      this.activeSubscriptions.delete(subscriptionKey);
+    };
+  }
+
+  /**
+   * Clean up all active subscriptions
+   */
+  cleanupSubscriptions(): void {
+    this.logger.debug(`Cleaning up ${this.activeSubscriptions.size} zap subscriptions`);
+    this.activeSubscriptions.forEach((subscription) => {
+      subscription.unsubscribe();
+    });
+    this.activeSubscriptions.clear();
+  }
+
+  /**
+   * Process a received zap receipt for metrics tracking
+   */
+  processReceivedZapReceipt(zapReceipt: Event): void {
+    try {
+      // Extract amount from bolt11 invoice
+      const bolt11Tags = zapReceipt.tags.filter((tag) => tag[0] === 'bolt11');
+      if (bolt11Tags.length === 1) {
+        const bolt11Invoice = bolt11Tags[0][1];
+        const amountMsats = this.getBolt11Amount(bolt11Invoice);
+        if (amountMsats) {
+          const amountSats = amountMsats / 1000;
+
+          // Extract sender pubkey from description
+          const senderPubkey = this.extractSenderFromZapReceipt(zapReceipt);
+
+          // Extract event ID if this is an event zap
+          const eventId = this.extractEventIdFromZapReceipt(zapReceipt);
+
+          this.metrics.recordZapReceived(amountSats, senderPubkey, eventId);
+          this.logger.debug('Recorded received zap metrics', { amount: amountSats, senderPubkey });
+        }
+      }
+    } catch (error) {
+      this.logger.warn('Failed to process received zap receipt for metrics:', error);
+    }
+  }
+
+  /**
+   * Extract sender pubkey from zap receipt description
+   */
+  private extractSenderFromZapReceipt(zapReceipt: Event): string | undefined {
+    try {
+      const descriptionTags = zapReceipt.tags.filter((tag) => tag[0] === 'description');
+      if (descriptionTags.length === 1) {
+        const zapRequest = JSON.parse(descriptionTags[0][1]);
+        return zapRequest.pubkey;
+      }
+    } catch (error) {
+      this.logger.warn('Failed to extract sender from zap receipt:', error);
+    }
+    return undefined;
+  }
+
+  /**
+   * Extract event ID from zap receipt description
+   */
+  private extractEventIdFromZapReceipt(zapReceipt: Event): string | undefined {
+    try {
+      const descriptionTags = zapReceipt.tags.filter((tag) => tag[0] === 'description');
+      if (descriptionTags.length === 1) {
+        const zapRequest = JSON.parse(descriptionTags[0][1]);
+        const eTags = zapRequest.tags?.filter((tag: string[]) => tag[0] === 'e');
+        if (eTags && eTags.length > 0) {
+          return eTags[0][1];
+        }
+      }
+    } catch (error) {
+      this.logger.warn('Failed to extract event ID from zap receipt:', error);
+    }
+    return undefined;
   }
 }
