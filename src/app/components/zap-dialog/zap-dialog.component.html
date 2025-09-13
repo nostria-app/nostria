@@ -89,10 +89,10 @@
 
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Message (optional)</mat-label>
-        <textarea matInput formControlName="message" placeholder="Add a message with your zap..." rows="3"></textarea>
-        <mat-hint>{{ zapForm.get('message')?.value?.length || 0 }}/280 characters</mat-hint>
+        <textarea matInput maxlength="200" formControlName="message" placeholder="Add a message with your zap..." rows="3"></textarea>
+        <mat-hint>{{ zapForm.get('message')?.value?.length || 0 }}/200 characters</mat-hint>
         @if (zapForm.get('message')?.hasError('maxlength')) {
-        <mat-error>Message is too long (max 280 characters)</mat-error>
+        <mat-error>Message is too long (max 200 characters)</mat-error>
         }
       </mat-form-field>
     </form>
