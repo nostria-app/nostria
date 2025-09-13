@@ -72,6 +72,8 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
   event = input<Event | undefined>(undefined);
   info = input<InfoRecord | undefined>(undefined);
   profile = signal<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
+  // Optional prefetched profile passed from parent to avoid duplicate fetches
+  prefetchedProfile = input<unknown | null>(null);
   isLoading = signal(false);
   error = signal<string>('');
   view = input<ViewMode>('list');
@@ -104,6 +106,13 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
   });
 
   constructor() {
+    // If a prefetched profile is provided, initialize local profile with it
+    effect(() => {
+      const pref = this.prefetchedProfile();
+      if (pref) {
+        this.profile.set(pref as unknown as Record<string, unknown>);
+      }
+    });
     // Set up scroll detection
     this.setupScrollDetection(); // Set up an effect to watch for changes to npub input
     effect(() => {

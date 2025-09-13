@@ -9,6 +9,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Event } from 'nostr-tools';
 import { ZapService } from '../../services/zap.service';
+import { DataService } from '../../services/data.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { AgoPipe } from '../../pipes/ago.pipe';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
@@ -99,6 +100,7 @@ interface ZapHistoryEntry {
                                 [pubkey]="zap.counterparty"
                                 view="name"
                                 [hostWidthAuto]="true"
+                                [prefetchedProfile]="prefetchedProfiles()[zap.counterparty]"
                               ></app-user-profile>
                             </span>
                           </div>
@@ -162,6 +164,7 @@ interface ZapHistoryEntry {
                                 [pubkey]="zap.counterparty"
                                 view="name"
                                 [hostWidthAuto]="true"
+                                [prefetchedProfile]="prefetchedProfiles()[zap.counterparty]"
                               ></app-user-profile>
                             </span>
                           </div>
@@ -222,6 +225,7 @@ interface ZapHistoryEntry {
                                 [pubkey]="zap.counterparty"
                                 view="name"
                                 [hostWidthAuto]="true"
+                                [prefetchedProfile]="prefetchedProfiles()[zap.counterparty]"
                               ></app-user-profile>
                             </span>
                           </div>
@@ -505,10 +509,13 @@ export class ZapHistoryComponent implements OnInit, OnDestroy {
   // Services
   private zapService = inject(ZapService);
   private accountState = inject(AccountStateService);
+  private data = inject(DataService);
 
   // State
   isLoading = signal(false);
   allZaps = signal<ZapHistoryEntry[]>([]);
+  // Prefetched profiles keyed by pubkey
+  prefetchedProfiles = signal<Record<string, unknown>>({});
 
   // Computed properties
   sentZaps = computed(() => this.allZaps().filter((zap) => zap.type === 'sent'));
@@ -579,6 +586,27 @@ export class ZapHistoryComponent implements OnInit, OnDestroy {
       zapHistory.sort((a, b) => b.timestamp - a.timestamp);
 
       this.allZaps.set(zapHistory);
+
+      // Prefetch unique profiles to avoid duplicate loads in child components
+      const uniquePubkeys = Array.from(new Set(zapHistory.map((z) => z.counterparty)));
+      const profileMap: Record<string, unknown> = {};
+
+      await Promise.all(
+        uniquePubkeys.map(async (pubkey) => {
+          try {
+            const profile = await this.data.getProfile(pubkey);
+            if (profile) {
+              profileMap[pubkey] = profile;
+            }
+          } catch {
+            // ignore individual profile errors
+          }
+        }),
+      );
+
+      if (Object.keys(profileMap).length) {
+        this.prefetchedProfiles.set(profileMap);
+      }
     } catch (error) {
       console.error('Failed to load zap history:', error);
     } finally {
