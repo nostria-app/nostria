@@ -770,6 +770,53 @@ export class ZapService {
     }
   }
 
+  /**
+   * Get zap receipts that correspond to zaps sent by a user.
+   *
+   * There is no direct indexed tag for the zap *sender* inside the
+   * zap receipt (the description contains the original zap request), so
+   * we fetch recent zap receipts and filter by the embedded zapRequest.pubkey.
+   * This is best-effort and limited by the relay query limit.
+   */
+  async getZapsSentByUser(pubkey: string, limit = 200): Promise<Event[]> {
+    try {
+      // Fetch recent zap receipts (kind 9735) and filter those whose embedded
+      // zap request was authored by the provided pubkey.
+      const receipts = await this.accountRelay.getMany({
+        kinds: [9735],
+        authors: [pubkey],
+        limit,
+      });
+
+      const sent: Event[] = [];
+
+      for (const receipt of receipts) {
+        try {
+          const descriptionTag = receipt.tags.find((t) => t[0] === 'description');
+          if (!descriptionTag || !descriptionTag[1]) {
+            continue;
+          }
+
+          const zapRequest = JSON.parse(descriptionTag[1]) as Event;
+          if (zapRequest && zapRequest.pubkey === pubkey) {
+            sent.push(receipt);
+          }
+        } catch (err) {
+          // ignore parse errors for individual receipts
+          this.logger.debug(
+            'Failed to parse zap receipt description while filtering sent zaps',
+            err,
+          );
+        }
+      }
+
+      return sent;
+    } catch (error) {
+      this.logger.error('Error fetching zaps sent by user:', error as Error);
+      return [];
+    }
+  }
+
   // Real-time subscription management
   private activeSubscriptions = new Map<string, { unsubscribe: () => void }>();
   private zapUpdates = signal<Event[]>([]);
@@ -786,9 +833,7 @@ export class ZapService {
       const existing = this.activeSubscriptions.get(subscriptionKey);
       return existing
         ? existing.unsubscribe
-        : () => {
-          this.logger.debug('Empty unsubscribe function called');
-        };
+        : () => this.logger.debug('Empty unsubscribe function called');
     }
 
     this.logger.debug(`Subscribing to real-time zaps for event ${eventId}`);
@@ -836,9 +881,7 @@ export class ZapService {
       const existing = this.activeSubscriptions.get(subscriptionKey);
       return existing
         ? existing.unsubscribe
-        : () => {
-          this.logger.debug('Empty unsubscribe function called');
-        };
+        : () => this.logger.debug('Empty unsubscribe function called');
     }
 
     this.logger.debug(`Subscribing to real-time zaps for user ${pubkey}`);
@@ -958,8 +1001,7 @@ export class ZapService {
       // Validate amount
       if (amountMsats < lnurlPayInfo.minSendable || amountMsats > lnurlPayInfo.maxSendable) {
         throw new Error(
-          `Amount must be between ${lnurlPayInfo.minSendable / 1000} and ${lnurlPayInfo.maxSendable / 1000
-          } sats`,
+          `Amount must be between ${lnurlPayInfo.minSendable / 1000} and ${lnurlPayInfo.maxSendable / 1000} sats`,
         );
       }
 

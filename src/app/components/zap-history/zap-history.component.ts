@@ -555,8 +555,9 @@ export class ZapHistoryComponent implements OnInit, OnDestroy {
       // Get zaps received by the user
       const receivedZapReceipts = await this.zapService.getZapsForUser(userPubkey);
 
-      // TODO: Get zaps sent by the user (requires more complex querying)
-      // For now, we'll just show received zaps
+      // Unable to get any events for test account on this, need investigation.
+      // Also get zaps the user sent
+      const sentZapReceipts = await this.zapService.getZapsSentByUser(userPubkey);
 
       const zapHistory: ZapHistoryEntry[] = [];
 
@@ -578,9 +579,27 @@ export class ZapHistoryComponent implements OnInit, OnDestroy {
         }
       }
 
-      // TODO: Process sent zaps
-      // This requires querying for zap receipts where the zap request pubkey matches the current user
-      // For now, we'll just show received zaps
+      // Process sent zaps - receipts whose embedded zapRequest.pubkey === current user
+      for (const receipt of sentZapReceipts) {
+        const parsed = this.zapService.parseZapReceipt(receipt);
+        if (parsed.zapRequest && parsed.amount) {
+          // Determine the recipient pubkey from the zapRequest tags (p tag)
+          const pTag = parsed.zapRequest.tags.find((t) => t[0] === 'p');
+          const recipient = pTag && pTag[1] ? pTag[1] : parsed.zapRequest.pubkey;
+          const eventTag = receipt.tags.find((tag) => tag[0] === 'e');
+
+          zapHistory.push({
+            type: 'sent',
+            zapReceipt: receipt,
+            zapRequest: parsed.zapRequest,
+            amount: parsed.amount,
+            comment: parsed.comment,
+            counterparty: recipient,
+            timestamp: receipt.created_at,
+            eventId: eventTag?.[1],
+          });
+        }
+      }
 
       // Sort by timestamp (most recent first)
       zapHistory.sort((a, b) => b.timestamp - a.timestamp);
