@@ -267,7 +267,7 @@ interface ZapHistoryEntry {
 
       .title-icon {
         margin-right: 8px;
-        color: #ff6b1a;
+        color: var(--mat-sys-primary);
       }
 
       .loading-container {
@@ -299,21 +299,22 @@ interface ZapHistoryEntry {
 
       .stat-label {
         font-size: 12px;
-        color: #666;
+        color: var(--mat-sys-on-surface-variant);
         text-transform: uppercase;
       }
 
       .stat-value {
         font-size: 18px;
-        font-weight: 500;
+        /* Avoid setting font-weight per project guidance */
+        color: var(--mat-sys-on-surface);
       }
 
       .stat-value.sent {
-        color: #d32f2f;
+        color: var(--mat-sys-error);
       }
 
       .stat-value.received {
-        color: #388e3c;
+        color: var(--mat-success-color);
       }
 
       .zaps-list {
@@ -335,11 +336,11 @@ interface ZapHistoryEntry {
       }
 
       .zap-entry.sent {
-        border-left: 4px solid #d32f2f;
+        border-left: 4px solid var(--mat-sys-error);
       }
 
       .zap-entry.received {
-        border-left: 4px solid #388e3c;
+        border-left: 4px solid var(--mat-success-color);
       }
 
       .zap-header {
@@ -358,18 +359,15 @@ interface ZapHistoryEntry {
 
       .type-icon {
         font-size: 18px;
-      }
-
-      .type-icon {
-        color: #666;
+        color: var(--mat-sys-on-surface-variant);
       }
 
       .zap-entry.sent .type-icon {
-        color: #d32f2f;
+        color: var(--mat-sys-error);
       }
 
       .zap-entry.received .type-icon {
-        color: #388e3c;
+        color: var(--mat-success-color);
       }
 
       .type-label {
@@ -378,8 +376,8 @@ interface ZapHistoryEntry {
       }
 
       .counterparty {
-        font-weight: 500;
-        color: #333;
+        /* Avoid setting font-weight; use color token */
+        color: var(--mat-sys-on-surface);
       }
 
       .zap-amount {
@@ -389,18 +387,18 @@ interface ZapHistoryEntry {
       }
 
       .bolt-icon {
-        color: #ff6b1a;
+        color: var(--nostria-bitcoin);
         font-size: 18px;
       }
 
       .amount {
-        font-weight: 500;
-        color: #d84315;
+        /* Avoid setting font-weight */
+        color: var(--nostria-bitcoin);
       }
 
       .zap-time {
         font-size: 12px;
-        color: #666;
+        color: var(--mat-sys-on-surface-variant);
         min-width: 80px;
         text-align: right;
       }
@@ -416,13 +414,13 @@ interface ZapHistoryEntry {
       }
 
       .comment-icon {
-        color: #666;
+        color: var(--mat-sys-on-surface-variant);
         font-size: 16px;
         margin-top: 2px;
       }
 
       .comment-text {
-        color: #333;
+        color: var(--mat-sys-on-surface);
         line-height: 1.4;
       }
 
@@ -440,18 +438,18 @@ interface ZapHistoryEntry {
 
       .empty-icon {
         font-size: 48px;
-        color: #ccc;
+        color: var(--mat-sys-on-surface-variant);
         margin-bottom: 16px;
       }
 
       .empty-state h3 {
         margin: 0 0 8px 0;
-        color: #666;
+        color: var(--mat-sys-on-surface-variant);
       }
 
       .empty-state p {
         margin: 0;
-        color: #999;
+        color: var(--mat-sys-on-surface-variant);
         max-width: 300px;
       }
 

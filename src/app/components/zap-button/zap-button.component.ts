@@ -31,22 +31,22 @@ import { DataService } from '../../services/data.service';
   styles: [
     `
       .zap-button {
-        color: #ff6b1a !important;
+        color: var(--nostria-bitcoin) !important;
         transition: all 0.2s ease;
       }
 
       .zap-button:hover {
-        background-color: rgba(255, 107, 26, 0.1);
+        background-color: var(--nostria-bitcoin-10);
         transform: scale(1.05);
       }
 
       .zap-button.zapped {
-        color: #ff6b1a !important;
-        background-color: rgba(255, 107, 26, 0.1);
+        color: var(--nostria-bitcoin) !important;
+        background-color: var(--nostria-bitcoin-10);
       }
 
       .zap-button.zapped mat-icon {
-        color: #ff6b1a !important;
+        color: var(--nostria-bitcoin) !important;
       }
 
       .zap-button.only-icon {
@@ -57,7 +57,7 @@ import { DataService } from '../../services/data.service';
       .zap-count {
         margin-left: 4px;
         font-size: 14px;
-        font-weight: 500;
+        /* Avoid setting font-weight per project conventions */
       }
 
       mat-icon {
