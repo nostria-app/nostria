@@ -25,7 +25,7 @@
     <div class="profile-info" [class.compact]="compact()">
       <div class="profile-menu-actions">
         @if (isOwnProfile()) {
-        <button mat-flat-button routerLink="edit"><mat-icon>edit</mat-icon> Edit Profile</button>
+        <button mat-flat-button routerLink="edit" class="hide-tiny"><mat-icon>edit</mat-icon> Edit Profile</button>
         } @else {
         @if (!isFollowing()) {
         <button mat-flat-button class="hide-small" (click)="followUser()">
