@@ -287,7 +287,7 @@
     </div>
     }
 
-    <button mat-icon-button class="note-footer-right" (click)="onBookmarkClick($event)">
+    <button mat-icon-button class="note-footer-right hide-small" (click)="onBookmarkClick($event)">
       <mat-icon [matTooltip]="bookmark.getBookmarkTooltip(targetItem.event.id)" matTooltipPosition="below">
         {{ bookmark.getBookmarkIcon(targetItem.event.id) }}
       </mat-icon>
