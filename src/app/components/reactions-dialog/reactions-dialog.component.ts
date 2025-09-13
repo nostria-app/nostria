@@ -303,7 +303,7 @@ export interface ReactionsDialogData {
       }
 
       .zap-amount {
-        color: var(--mat-sys-primary);
+        color: #ff6b1a;
         font-weight: 600;
         font-size: 16px;
         text-align: right;
