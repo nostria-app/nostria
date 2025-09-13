@@ -361,6 +361,22 @@
   color: var(--mat-sys-on-surface-variant);
 }
 
+.recipient-preview {
+  background: var(--mat-sys-surface-container-low);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.recipient-preview h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
 .event-content {
   margin: 0;
   font-style: italic;

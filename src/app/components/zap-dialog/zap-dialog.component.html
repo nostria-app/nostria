@@ -24,10 +24,23 @@
     </div>
     }
 
-    @if (data.eventContent) {
-    <div class="event-preview">
-      <h4>Zapping this note:</h4>
-      <p class="event-content">"{{ data.eventContent }}"</p>
+    @if (data.recipientPubkey) {
+    <div class="recipient-preview">
+      <h4>Zapping</h4>
+      <div class="recipient-info">
+        <app-user-profile [pubkey]="data.recipientPubkey"></app-user-profile>
+      </div>
+      @if (data.eventContent) {
+      <div class="event-context">
+        <mat-icon>article</mat-icon>
+        <span>{{ data.eventContent }}</span>
+      </div>
+      } @else if (!data.eventId) {
+      <div class="event-context">
+        <mat-icon>person</mat-icon>
+        <span>Profile zap</span>
+      </div>
+      }
     </div>
     }
 
