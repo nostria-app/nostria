@@ -232,3 +232,66 @@
     font-size: 14px;
   }
 }
+
+// Responsive styles for smaller screens
+@media screen and (max-width: 600px) {
+  .note-footer {
+    padding: 6px 12px; // Reduced from 8px 16px
+  }
+
+  .reactions-row {
+    gap: 16px; // Reduced from 24px
+  }
+
+  .reaction-group {
+    gap: 2px; // Reduced from 4px
+
+    button[mat-icon-button] {
+      min-width: 36px; // Reduced from 40px
+      height: 36px; // Reduced from 40px
+    }
+
+    .count-button {
+      padding: 2px 6px !important; // Reduced from 4px 8px
+      height: 28px !important; // Reduced from 32px
+      font-size: 11px !important; // Reduced from 12px
+
+      span {
+        font-size: 11px; // Reduced from 12px
+      }
+    }
+  }
+}
+
+@media screen and (max-width: 420px) {
+  .note-footer {
+    padding: 4px 8px; // Further reduced for very small screens
+  }
+
+  .reactions-row {
+    gap: 12px; // Further reduced from 16px
+  }
+
+  .reaction-group {
+    gap: 1px; // Further reduced from 2px
+
+    button[mat-icon-button] {
+      min-width: 32px; // Further reduced from 36px
+      height: 32px; // Further reduced from 36px
+
+      mat-icon {
+        font-size: 18px; // Reduced icon size
+      }
+    }
+
+    .count-button {
+      padding: 1px 4px !important; // Further reduced
+      height: 24px !important; // Further reduced from 28px
+      font-size: 10px !important; // Further reduced from 11px
+
+      span {
+        font-size: 10px; // Further reduced from 11px
+      }
+    }
+  }
+}
