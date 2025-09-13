@@ -27,7 +27,14 @@ export class MediaPlayerService implements OnInitialized {
   media = signal<MediaItem[]>([]);
   audio?: HTMLAudioElement;
   current?: MediaItem;
-  index = 0;
+  // make index a signal-backed property so computed signals can react to changes
+  private _index = signal<number>(0);
+  get index(): number {
+    return this._index();
+  }
+  set index(v: number) {
+    this._index.set(v);
+  }
   readonly MEDIA_STORAGE_KEY = 'nostria-media-queue';
 
   // Cache for YouTube embed URLs
@@ -45,8 +52,8 @@ export class MediaPlayerService implements OnInitialized {
   });
 
   // Convert to computed signals
-  canPrevious = computed(() => this.index > 0);
-  canNext = computed(() => this.index < this.media().length - 1);
+  canPrevious = computed(() => this._index() > 0);
+  canNext = computed(() => this._index() < this.media().length - 1);
   // Signal that indicates whether there are any items in the media queue
   hasQueue = computed(() => this.media().length > 0);
 
