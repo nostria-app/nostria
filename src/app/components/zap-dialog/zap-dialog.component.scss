@@ -81,7 +81,7 @@
 }
 
 .payment-method-buttons button {
-  padding: 12px 8px;
+  padding: 16px 12px;
   font-size: 12px;
   font-weight: 500;
   border-radius: 8px;
@@ -89,7 +89,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  min-height: 64px;
 }
 
 .payment-method-buttons button.selected {
@@ -413,6 +414,12 @@ mat-divider {
 
   .payment-method-buttons {
     grid-template-columns: repeat(1, 1fr);
+  }
+
+  .payment-method-buttons button {
+    padding: 18px 16px;
+    min-height: 68px;
+    gap: 8px;
   }
 
   .payment-method-content {
