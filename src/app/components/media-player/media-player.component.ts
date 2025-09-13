@@ -2,7 +2,6 @@ import {
   Component,
   ElementRef,
   inject,
-  signal,
   effect,
   input,
   ViewChild,
@@ -15,21 +14,18 @@ import {
 } from '@angular/core';
 import { LayoutService } from '../../services/layout.service';
 import { ThemeService } from '../../services/theme.service';
-
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MediaPlayerService } from '../../services/media-player.service';
-import { MediaItem } from '../../interfaces';
 import { RouterModule } from '@angular/router';
+import { Router, NavigationEnd } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
-import {
-  AddMediaDialog,
-  AddMediaDialogData,
-} from '../../pages/media-queue/add-media-dialog/add-media-dialog';
 import { UtilitiesService } from '../../services/utilities.service';
 import { MatSliderModule } from '@angular/material/slider';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { TimePipe } from '../../pipes/time.pipe';
+import { Subscription } from 'rxjs';
+import { filter } from 'rxjs/operators';
 
 interface WindowControlsOverlay {
   getTitlebarAreaRect(): DOMRect;
@@ -57,7 +53,8 @@ declare global {
   styleUrl: './media-player.component.scss',
 })
 export class MediaPlayerComponent implements AfterViewInit, OnInit, OnDestroy {
-  private readonly layout = inject(LayoutService);
+  // expose layout to template so we can read overlayMode() there
+  readonly layout = inject(LayoutService);
   private readonly theme = inject(ThemeService);
   private readonly utilities = inject(UtilitiesService);
   private readonly document = inject(DOCUMENT);
@@ -68,6 +65,11 @@ export class MediaPlayerComponent implements AfterViewInit, OnInit, OnDestroy {
   expanded = false;
   // maximized = false;
   private readonly renderer = inject(Renderer2);
+  private readonly router = inject(Router);
+  private routerSub?: Subscription;
+  private displayModeListener?: (event: MediaQueryListEvent) => void;
+  // store the current page title shown in the titlebar
+  pageTitle = '';
   @ViewChild('videoElement', { static: false })
   videoElement?: ElementRef<HTMLVideoElement>;
 
@@ -122,7 +124,8 @@ export class MediaPlayerComponent implements AfterViewInit, OnInit, OnDestroy {
 
     // Effect to handle theme changes and update background color
     effect(() => {
-      const isDark = this.theme.darkMode();
+      // read the signal so the effect reruns when darkMode changes
+      this.theme.darkMode();
       this.updateBackgroundFromThemeColor();
     });
 
@@ -213,14 +216,24 @@ export class MediaPlayerComponent implements AfterViewInit, OnInit, OnDestroy {
       // Set initial state
       this.layout.overlayMode.set(this.mediaQueryList.matches);
 
-      // Define callback for media query changes
-      const handleDisplayModeChange = (event: MediaQueryListEvent) => {
+      // Define callback for media query changes and keep a reference so we can remove it later
+      this.displayModeListener = (event: MediaQueryListEvent) => {
         this.layout.overlayMode.set(event.matches);
       };
 
       // Add event listener
-      this.mediaQueryList.addEventListener('change', handleDisplayModeChange);
+      this.mediaQueryList.addEventListener('change', this.displayModeListener);
     }
+
+    // Initialize page title from document
+    this.pageTitle = this.document.title || '';
+
+    // Subscribe to router navigation end events to update title when routes change
+    this.routerSub = this.router.events
+      .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
+      .subscribe(() => {
+        this.pageTitle = this.document.title || '';
+      });
   }
 
   private moveVideoToGlobalContainer(): void {
@@ -286,7 +299,9 @@ export class MediaPlayerComponent implements AfterViewInit, OnInit, OnDestroy {
   ngOnDestroy() {
     // Clean up media query listener
     if (this.mediaQueryList) {
-      this.mediaQueryList.removeEventListener('change', () => {});
+      if (this.displayModeListener) {
+        this.mediaQueryList.removeEventListener('change', this.displayModeListener);
+      }
     }
     this.removeEscapeListener();
 
@@ -297,65 +312,10 @@ export class MediaPlayerComponent implements AfterViewInit, OnInit, OnDestroy {
     if (this.media.isFullscreen() && this.originalVideoParent) {
       this.moveVideoBackToOriginal();
     }
-  }
 
-  addTestSong() {
-    // Open the add media dialog with a test song
-    const dialogRef = this.dialog.open(AddMediaDialog, {
-      data: {},
-      maxWidth: '100vw',
-      panelClass: 'full-width-dialog',
-    });
-
-    dialogRef.afterClosed().subscribe(async (result: AddMediaDialogData) => {
-      if (!result || !result.url) {
-        return;
-      }
-
-      if (result.url.indexOf('youtu.be') > -1 || result.url.indexOf('youtube.com') > -1) {
-        const youtubes = [...result.url.matchAll(this.utilities.regexpYouTube)];
-        const youtube = youtubes.map((i) => {
-          return { url: `https://www.youtube.com/embed/${i[1]}` };
-        });
-
-        for (let index = 0; index < youtube.length; index++) {
-          const youtubeUrl = youtube[index].url;
-          this.media.enque({
-            artist: '',
-            artwork: '/logos/youtube.png',
-            title: youtubeUrl,
-            source: youtubeUrl,
-            type: 'YouTube',
-          });
-        }
-      } else if (result.url.indexOf('.mp4') > -1 || result.url.indexOf('.webm') > -1) {
-        this.media.enque({
-          artist: '',
-          artwork: '/logos/youtube.png',
-          title: result.url,
-          source: result.url,
-          type: 'Video',
-        });
-      } else {
-        this.media.enque({
-          artist: '',
-          artwork: '',
-          title: result.url,
-          source: result.url,
-          type: 'Music',
-        });
-      }
-    });
-
-    // let mediaItem: MediaItem = {
-    //   artist: 'Test Artist',
-    //   title: 'Test Song',
-    //   artwork: 'https://example.com/artwork.jpg',
-    //   source: 'https://github.com/rafaelreis-hotmart/Audio-Sample-files/raw/master/sample.mp3',
-    //   type: 'Music'
-    // };
-    // this.media.enque(mediaItem);
-
-    // this.media.start();
+    // Unsubscribe router events
+    if (this.routerSub) {
+      this.routerSub.unsubscribe();
+    }
   }
 }
