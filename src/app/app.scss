@@ -40,7 +40,6 @@ nav {
   /** This is for when the app is running in a window with custom title bar controls. */
   .app-container {
     padding-top: env(titlebar-area-height, 33px);
-    height: calc(100dvh - env(titlebar-area-height, 33px));
   }
 }
 
