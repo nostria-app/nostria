@@ -11,6 +11,7 @@ import { Event } from 'nostr-tools';
 import { ZapService } from '../../services/zap.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { AgoPipe } from '../../pipes/ago.pipe';
+import { UserProfileComponent } from '../user-profile/user-profile.component';
 
 interface ZapHistoryEntry {
   type: 'sent' | 'received';
@@ -35,6 +36,7 @@ interface ZapHistoryEntry {
     MatProgressSpinnerModule,
     MatTooltipModule,
     AgoPipe,
+    UserProfileComponent,
   ],
   template: `
     <div class="zap-history-container">
@@ -92,7 +94,13 @@ interface ZapHistoryEntry {
                             <span class="type-label">{{
                               zap.type === 'sent' ? 'Sent to' : 'Received from'
                             }}</span>
-                            <span class="counterparty">{{ formatPubkey(zap.counterparty) }}</span>
+                            <span class="counterparty">
+                              <app-user-profile
+                                [pubkey]="zap.counterparty"
+                                view="name"
+                                [hostWidthAuto]="true"
+                              ></app-user-profile>
+                            </span>
                           </div>
                           <div class="zap-amount">
                             <mat-icon class="bolt-icon">bolt</mat-icon>
@@ -149,7 +157,13 @@ interface ZapHistoryEntry {
                           <div class="zap-type">
                             <mat-icon class="type-icon">trending_up</mat-icon>
                             <span class="type-label">Sent to</span>
-                            <span class="counterparty">{{ formatPubkey(zap.counterparty) }}</span>
+                            <span class="counterparty">
+                              <app-user-profile
+                                [pubkey]="zap.counterparty"
+                                view="name"
+                                [hostWidthAuto]="true"
+                              ></app-user-profile>
+                            </span>
                           </div>
                           <div class="zap-amount">
                             <mat-icon class="bolt-icon">bolt</mat-icon>
@@ -203,7 +217,13 @@ interface ZapHistoryEntry {
                           <div class="zap-type">
                             <mat-icon class="type-icon">trending_down</mat-icon>
                             <span class="type-label">Received from</span>
-                            <span class="counterparty">{{ formatPubkey(zap.counterparty) }}</span>
+                            <span class="counterparty">
+                              <app-user-profile
+                                [pubkey]="zap.counterparty"
+                                view="name"
+                                [hostWidthAuto]="true"
+                              ></app-user-profile>
+                            </span>
                           </div>
                           <div class="zap-amount">
                             <mat-icon class="bolt-icon">bolt</mat-icon>
