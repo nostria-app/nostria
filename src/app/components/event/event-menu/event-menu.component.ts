@@ -19,6 +19,7 @@ import {
 import { LayoutService } from '../../../services/layout.service';
 import type { ReportTarget } from '../../../services/reporting.service';
 import { CommonModule } from '@angular/common';
+import { BookmarkService } from '../../../services/bookmark.service';
 
 @Component({
   selector: 'app-event-menu',
@@ -41,6 +42,7 @@ export class EventMenuComponent {
   data = inject(DataService);
   nostrService = inject(NostrService);
   snackBar = inject(MatSnackBar);
+  bookmark = inject(BookmarkService);
 
   event = input.required<Event>();
   view = input<'icon' | 'full'>('icon');
@@ -55,6 +57,14 @@ export class EventMenuComponent {
 
     return event.pubkey === this.accountState.pubkey();
   });
+
+  onBookmarkClick(event: MouseEvent) {
+    event.stopPropagation();
+    const targetItem = this.record();
+    if (targetItem) {
+      this.bookmark.toggleBookmark(targetItem.event.id);
+    }
+  }
 
   eventLink = computed<string>(() => {
     const event = this.event();
