@@ -103,7 +103,7 @@ export class ZapDialogComponent {
   zapForm = new FormGroup({
     amount: new FormControl<string | number>(21, [Validators.required]),
     customAmount: new FormControl<number | null>(null),
-    message: new FormControl('', [Validators.maxLength(280)]),
+    message: new FormControl('', [Validators.maxLength(200)]),
     selectedWallet: new FormControl<string>(''),
   });
 
