@@ -87,13 +87,6 @@ export interface ZapDialogResult {
               <mat-hint>Choose which wallet to use for this zap</mat-hint>
             </mat-form-field>
           </div>
-        } @else if (availableWallets().length === 0) {
-          <div class="no-wallet-warning">
-            <mat-icon class="warning-icon">warning</mat-icon>
-            <p>
-              No wallet connected. Please connect a Nostr Wallet Connect (NWC) wallet to send zaps.
-            </p>
-          </div>
         }
 
         <div class="amount-selection">
@@ -207,7 +200,7 @@ export interface ZapDialogResult {
           Processing...
         } @else {
           <ng-container>
-            <mat-icon>bolt</mat-icon>
+            <!-- <mat-icon>bolt</mat-icon> -->
             Send Zap ({{ getFinalAmount() }} sats)
           </ng-container>
         }
@@ -441,12 +434,8 @@ export class ZapDialogComponent {
     const message = this.zapForm.get('message')?.value || '';
     const selectedWalletId = this.zapForm.get('selectedWallet')?.value;
 
-    // Find the selected wallet
+    // Find the selected wallet (may be undefined if no wallets available)
     const selectedWallet = this.availableWallets().find((w) => w.id === selectedWalletId);
-    if (!selectedWallet) {
-      this.errorMessage.set('Please select a wallet to send the zap.');
-      return;
-    }
 
     // Show confirmation dialog
     const confirmationData: ZapConfirmationData = {
@@ -460,8 +449,8 @@ export class ZapDialogComponent {
       amount,
       message: message || undefined,
       wallet: {
-        id: selectedWallet.id,
-        name: selectedWallet.name,
+        id: selectedWallet?.id || '',
+        name: selectedWallet?.name || 'No Wallet',
       },
       eventTitle: this.data.eventContent,
       isProfileZap: !this.data.eventId,

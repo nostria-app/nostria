@@ -5,12 +5,14 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTabsModule } from '@angular/material/tabs';
+import { Router } from '@angular/router';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { QrCodeComponent } from '../qr-code/qr-code.component';
 import { ZapService } from '../../services/zap.service';
+import { Wallets } from '../../services/wallets';
 
 export interface ZapConfirmationData {
   recipient: {
@@ -105,114 +107,139 @@ export type PaymentMethod = 'nwc' | 'native' | 'manual';
           <div class="payment-method-section">
             <h3>Choose Payment Method</h3>
 
-            <mat-tab-group
-              [(selectedIndex)]="selectedTabIndex"
-              (selectedTabChange)="onTabChange($event)"
-            >
-              <!-- NWC Payment Tab -->
-              <mat-tab>
-                <ng-template mat-tab-label>
+            <div class="payment-method-buttons">
+              <button
+                mat-stroked-button
+                (click)="selectPayment('nwc')"
+                [class.selected]="selectedPaymentMethod() === 'nwc'"
+              >
+                <mat-icon>account_balance_wallet</mat-icon>
+                Wallet Connect
+              </button>
+
+              <button
+                mat-stroked-button
+                (click)="selectPayment('native')"
+                [class.selected]="selectedPaymentMethod() === 'native'"
+              >
+                <mat-icon>smartphone</mat-icon>
+                Lightning Wallet
+              </button>
+
+              <button
+                mat-stroked-button
+                (click)="selectPayment('manual')"
+                [class.selected]="selectedPaymentMethod() === 'manual'"
+              >
+                <mat-icon>qr_code</mat-icon>
+                QR Code
+              </button>
+            </div>
+
+            <div class="payment-method-content">
+              <!-- NWC Content -->
+              @if (selectedPaymentMethod() === 'nwc') {
+                <div class="wallet-info">
                   <mat-icon>account_balance_wallet</mat-icon>
-                  <span>Wallet Connect</span>
-                </ng-template>
-                <div class="payment-method-content">
-                  <div class="wallet-info">
-                    <mat-icon>account_balance_wallet</mat-icon>
-                    <span>{{ data.wallet.name }}</span>
-                  </div>
-                  <p class="method-description">
-                    Use your connected Nostr Wallet Connect (NWC) wallet to pay automatically.
-                  </p>
-                  @if (isProcessing() && selectedPaymentMethod() === 'nwc') {
-                    <div class="processing-indicator">
-                      <mat-spinner diameter="20"></mat-spinner>
-                      <span>Processing payment...</span>
-                    </div>
-                  }
+                  <span>{{ data.wallet.name }}</span>
                 </div>
-              </mat-tab>
+                <p class="method-description">
+                  Use your connected Nostr Wallet Connect (NWC) wallet to pay automatically.
+                </p>
 
-              <!-- Native Lightning Wallet Tab -->
-              <mat-tab>
-                <ng-template mat-tab-label>
-                  <mat-icon>smartphone</mat-icon>
-                  <span>Lightning Wallet</span>
-                </ng-template>
-                <div class="payment-method-content">
-                  @if (invoiceUrl()) {
-                    <div class="native-wallet-section">
-                      <p class="method-description">
-                        Open your mobile Lightning wallet app to pay this invoice.
-                      </p>
-                      <button
-                        mat-raised-button
-                        color="primary"
-                        (click)="openLightningWallet()"
-                        class="open-wallet-btn"
-                      >
-                        <mat-icon>open_in_new</mat-icon>
-                        Open Lightning Wallet
-                      </button>
-                      <p class="wallet-hint">
-                        If your wallet doesn't open automatically, copy the invoice manually.
-                      </p>
-                    </div>
-                  } @else if (isProcessing() && selectedPaymentMethod() === 'native') {
-                    <div class="processing-indicator">
-                      <mat-spinner diameter="20"></mat-spinner>
-                      <span>Generating invoice...</span>
-                    </div>
-                  } @else {
-                    <p class="method-description">
-                      Click "Generate Invoice" to create a Lightning invoice for your mobile wallet.
-                    </p>
-                  }
-                </div>
-              </mat-tab>
-
-              <!-- Manual QR Code Tab -->
-              <mat-tab>
-                <ng-template mat-tab-label>
-                  <mat-icon>qr_code</mat-icon>
-                  <span>QR Code</span>
-                </ng-template>
-                <div class="payment-method-content">
-                  @if (invoiceUrl()) {
-                    <div class="qr-code-section">
-                      <p class="method-description">
-                        Scan this QR code with any Lightning wallet to pay.
-                      </p>
-                      <div class="qr-code-container">
-                        <qr-code [qrdata]="invoiceUrl()!" [width]="200" [height]="200"></qr-code>
-                      </div>
-                      <div class="invoice-details">
-                        <p class="invoice-label">Lightning Invoice:</p>
-                        <button
-                          class="invoice-text"
-                          (click)="copyInvoice()"
-                          (keydown.enter)="copyInvoice()"
-                          (keydown.space)="copyInvoice()"
-                          type="button"
-                          aria-label="Copy invoice to clipboard"
-                        >
-                          <span class="invoice-value">{{ truncateInvoice(invoiceUrl()!) }}</span>
-                          <mat-icon class="copy-icon">content_copy</mat-icon>
+                @if (!hasNwcWallet()) {
+                  <div class="no-wallet-warning">
+                    <mat-icon class="warning-icon">warning</mat-icon>
+                    <div>
+                      <p>No NWC wallet connected.</p>
+                      <p>
+                        Please add your NWC connection string on the
+                        <button mat-button color="primary" (click)="openCredentials()">
+                          Credentials
                         </button>
-                      </div>
+                        page.
+                      </p>
                     </div>
-                  } @else if (isProcessing() && selectedPaymentMethod() === 'manual') {
-                    <div class="processing-indicator">
-                      <mat-spinner diameter="20"></mat-spinner>
-                      <span>Generating QR code...</span>
-                    </div>
-                  } @else {
+                  </div>
+                }
+
+                @if (isProcessing() && selectedPaymentMethod() === 'nwc') {
+                  <div class="processing-indicator">
+                    <mat-spinner diameter="20"></mat-spinner>
+                    <span>Processing payment...</span>
+                  </div>
+                }
+              }
+
+              <!-- Native (Open Lightning) Content -->
+              @if (selectedPaymentMethod() === 'native') {
+                @if (invoiceUrl()) {
+                  <div class="native-wallet-section">
                     <p class="method-description">
-                      Click "Generate QR Code" to create a QR code for manual payment.
+                      Open your mobile Lightning wallet app to pay this invoice.
                     </p>
-                  }
-                </div>
-              </mat-tab>
-            </mat-tab-group>
+                    <button
+                      mat-raised-button
+                      color="primary"
+                      (click)="openLightningWallet()"
+                      class="open-wallet-btn"
+                    >
+                      <mat-icon>open_in_new</mat-icon>
+                      Open Lightning Wallet
+                    </button>
+                    <p class="wallet-hint">
+                      If your wallet doesn't open automatically, copy the invoice manually.
+                    </p>
+                  </div>
+                } @else if (isProcessing() && selectedPaymentMethod() === 'native') {
+                  <div class="processing-indicator">
+                    <mat-spinner diameter="20"></mat-spinner>
+                    <span>Generating invoice...</span>
+                  </div>
+                } @else {
+                  <p class="method-description">
+                    Click "Generate Invoice" to create a Lightning invoice for your mobile wallet.
+                  </p>
+                }
+              }
+
+              <!-- Manual (QR Code) Content -->
+              @if (selectedPaymentMethod() === 'manual') {
+                @if (invoiceUrl()) {
+                  <div class="qr-code-section">
+                    <p class="method-description">
+                      Scan this QR code with any Lightning wallet to pay.
+                    </p>
+                    <div class="qr-code-container">
+                      <qr-code [qrdata]="invoiceUrl()!" [width]="200" [height]="200"></qr-code>
+                    </div>
+                    <div class="invoice-details">
+                      <p class="invoice-label">Lightning Invoice:</p>
+                      <button
+                        class="invoice-text"
+                        (click)="copyInvoice()"
+                        (keydown.enter)="copyInvoice()"
+                        (keydown.space)="copyInvoice()"
+                        type="button"
+                        aria-label="Copy invoice to clipboard"
+                      >
+                        <span class="invoice-value">{{ truncateInvoice(invoiceUrl()!) }}</span>
+                        <mat-icon class="copy-icon">content_copy</mat-icon>
+                      </button>
+                    </div>
+                  </div>
+                } @else if (isProcessing() && selectedPaymentMethod() === 'manual') {
+                  <div class="processing-indicator">
+                    <mat-spinner diameter="20"></mat-spinner>
+                    <span>Generating QR code...</span>
+                  </div>
+                } @else {
+                  <p class="method-description">
+                    Click "Generate QR Code" to create a QR code for manual payment.
+                  </p>
+                }
+              }
+            </div>
           </div>
         </div>
       </mat-dialog-content>
@@ -557,6 +584,8 @@ export class ZapConfirmationDialogComponent {
   private snackBar = inject(MatSnackBar);
   private breakpointObserver = inject(BreakpointObserver);
   private zapService = inject(ZapService);
+  private router = inject(Router);
+  private wallets = inject(Wallets);
   protected data = inject<ZapConfirmationData>(MAT_DIALOG_DATA);
 
   // State management
@@ -578,6 +607,42 @@ export class ZapConfirmationDialogComponent {
   isProcessing = signal(false);
   invoiceUrl = signal<string | null>(null);
   isMobile = signal(false);
+
+  // Helper to check for NWC wallets
+  hasNwcWallet = computed(() => {
+    try {
+      const walletsMap = this.wallets.wallets ? this.wallets.wallets() : {};
+      const entries = Object.entries(walletsMap) as [string, any][];
+      return entries.some(([, w]) => w && w.connections && w.connections.length > 0);
+    } catch {
+      return false;
+    }
+  });
+
+  selectPayment(method: PaymentMethod): void {
+    switch (method) {
+      case 'nwc':
+        this.selectedTabIndex.set(0);
+        break;
+      case 'native':
+        this.selectedTabIndex.set(1);
+        break;
+      case 'manual':
+        this.selectedTabIndex.set(2);
+        break;
+    }
+  }
+
+  openCredentials(): void {
+    // Navigate to credentials page where user can paste NWC connection string
+    try {
+      this.dialogRef.close({ confirmed: false });
+      this.router.navigate(['/credentials']);
+    } catch (e) {
+      // If navigation fails, fallback to opening new window with #/credentials
+      window.location.href = '#/credentials';
+    }
+  }
 
   constructor() {
     // Check if on mobile device
