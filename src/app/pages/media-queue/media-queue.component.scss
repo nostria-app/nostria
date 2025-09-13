@@ -17,7 +17,8 @@
     display: flex;
     gap: 8px;
     align-items: center;
-    margin-left: auto; /* Push actions to right */
+    margin-left: auto;
+    /* Push actions to right */
   }
 }
 
@@ -78,13 +79,15 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  overflow: hidden; /* Prevent double scrollbars */
+  overflow: hidden;
+  /* Prevent double scrollbars */
 }
 
 .media-list {
   flex: 1;
   /* Remove overflow-y: auto to prevent double scrollbars */
-  min-height: 0; /* Allow flex item to shrink below content size */
+  min-height: 0;
+  /* Allow flex item to shrink below content size */
 }
 
 @media screen and (max-width: 600px) {
