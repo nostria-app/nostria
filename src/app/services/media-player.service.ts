@@ -410,8 +410,8 @@ export class MediaPlayerService implements OnInitialized {
       this.audio.currentTime = 0;
       // Remove event listeners
       this.audio.removeEventListener('ended', this.handleMediaEnded);
-      this.audio.removeEventListener('canplay', () => {});
-      this.audio.removeEventListener('loadeddata', () => {});
+      this.audio.removeEventListener('canplay', () => { });
+      this.audio.removeEventListener('loadeddata', () => { });
     }
 
     // Stop and cleanup video
@@ -420,8 +420,8 @@ export class MediaPlayerService implements OnInitialized {
       this.videoElement.currentTime = 0;
       // Remove event listeners
       this.videoElement.removeEventListener('ended', this.handleMediaEnded);
-      this.videoElement.removeEventListener('canplay', () => {});
-      this.videoElement.removeEventListener('loadeddata', () => {});
+      this.videoElement.removeEventListener('canplay', () => { });
+      this.videoElement.removeEventListener('loadeddata', () => { });
     }
 
     // Clear video URLs to stop any playing videos

@@ -2,16 +2,18 @@
   <div class="queue-header">
     <h2>Media Queue</h2>
 
-    <button matTooltip="Add to playlist" (click)="addQueue()" mat-icon-button>
-      <mat-icon>playlist_add</mat-icon>
-    </button>
+    <div class="queue-header-actions">
+      <button matTooltip="Add to playlist" (click)="addQueue()" mat-icon-button>
+        <mat-icon>playlist_add</mat-icon>
+      </button>
 
-    @if (media.media().length > 0) {
-    <button mat-raised-button (click)="clearQueue()" matTooltip="Clear entire queue">
-      <mat-icon>clear_all</mat-icon>
-      Clear Queue
-    </button>
-    }
+      @if (media.media().length > 0) {
+      <button mat-raised-button (click)="clearQueue()" matTooltip="Clear entire queue">
+        <mat-icon>clear_all</mat-icon>
+        Clear Queue
+      </button>
+      }
+    </div>
   </div>
 
   @if (media.media().length === 0) {
@@ -28,7 +30,7 @@
     <mat-list>
       @for (item of media.media(); track item; let i = $index) {
       <mat-list-item [class.current-playing]="isCurrentPlaying(item, i)">
-        <img matListItemAvatar class="queue-artwork" [src]="utilities.sanitizeImageUrl(item.artwork)" />
+  <img matListItemAvatar class="queue-artwork" [src]="utilities.sanitizeImageUrl(item.artwork)" alt="Artwork" />
         <span matListItemTitle>
           @if (isCurrentPlaying(item, i)) {
           <mat-icon class="playing-icon">play_circle</mat-icon>
