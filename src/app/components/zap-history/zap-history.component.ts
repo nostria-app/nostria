@@ -263,6 +263,9 @@ interface ZapHistoryEntry {
 
       .history-card {
         min-height: 400px;
+        /* Use Material surface container so card adapts to light/dark themes */
+        background: var(--mat-sys-color-surface-container);
+        color: var(--mat-sys-on-surface);
       }
 
       .title-icon {
@@ -287,7 +290,7 @@ interface ZapHistoryEntry {
         gap: 24px;
         margin-bottom: 24px;
         padding: 16px;
-        background: #f5f5f5;
+        background: var(--mat-sys-surface-container-lowest, var(--mat-sys-color-surface-container));
         border-radius: 8px;
       }
 
@@ -325,14 +328,14 @@ interface ZapHistoryEntry {
 
       .zap-entry {
         padding: 16px;
-        border: 1px solid #e0e0e0;
+        border: 1px solid var(--mat-sys-outline-variant, #e0e0e0);
         border-radius: 8px;
-        background: white;
+        background: var(--mat-sys-color-surface-container);
         transition: box-shadow 0.2s;
       }
 
       .zap-entry:hover {
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
       }
 
       .zap-entry.sent {
@@ -409,7 +412,8 @@ interface ZapHistoryEntry {
         gap: 8px;
         margin-top: 8px;
         padding: 8px;
-        background: #f9f9f9;
+        /* Use a slightly elevated surface container for comment boxes so they adapt to theme */
+        background: var(--mat-sys-surface-container-high, var(--mat-sys-color-surface-container));
         border-radius: 4px;
       }
 
