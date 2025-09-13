@@ -1005,6 +1005,17 @@ export class ZapService {
         );
       }
 
+      // Validate comment length if provided
+      if (message && message.trim()) {
+        const commentAllowed = lnurlPayInfo.commentAllowed || 0;
+        if (commentAllowed === 0) {
+          throw new Error('Recipient does not allow comments with zaps');
+        }
+        if (message.trim().length > commentAllowed) {
+          throw new Error(`Comment too long. Maximum ${commentAllowed} characters allowed.`);
+        }
+      }
+
       // Convert lightning address to LNURL for the request
       const lnurl = this.lightningAddressToLnurl(lightningAddress);
 

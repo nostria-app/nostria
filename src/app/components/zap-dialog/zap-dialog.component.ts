@@ -33,6 +33,16 @@ export interface ZapDialogResult {
   invoice?: string;
 }
 
+interface LnurlPayResponse {
+  callback: string;
+  maxSendable: number;
+  minSendable: number;
+  metadata: string;
+  allowsNostr?: boolean;
+  nostrPubkey?: string;
+  commentAllowed?: number;
+}
+
 export type PaymentMethod = 'nwc' | 'native' | 'manual';
 export type DialogState = 'input' | 'confirmation';
 
@@ -73,6 +83,9 @@ export class ZapDialogComponent {
   selectedPaymentMethod = signal<PaymentMethod>('nwc');
   invoiceUrl = signal<string | null>(null);
   isMobile = signal(false);
+  lnurlPayInfo = signal<LnurlPayResponse | null>(null);
+  isLoadingLnurlInfo = signal(false);
+  lnurlError = signal<string | null>(null);
 
   // Computed property for available wallets
   availableWallets = computed(() => {
@@ -100,10 +113,29 @@ export class ZapDialogComponent {
     }
   });
 
+  // Computed property for comment limit
+  commentLimit = computed(() => {
+    const lnurlInfo = this.lnurlPayInfo();
+    if (!lnurlInfo) return null; // Don't show limit until loaded
+    return lnurlInfo.commentAllowed ?? 0;
+  });
+
+  // Computed property for amount limits
+  amountLimits = computed(() => {
+    const lnurlInfo = this.lnurlPayInfo();
+    if (!lnurlInfo) {
+      return null; // Don't show limits until loaded
+    }
+    return {
+      minSats: lnurlInfo.minSendable / 1000,
+      maxSats: lnurlInfo.maxSendable / 1000,
+    };
+  });
+
   zapForm = new FormGroup({
     amount: new FormControl<string | number>(21, [Validators.required]),
     customAmount: new FormControl<number | null>(null),
-    message: new FormControl('', [Validators.maxLength(200)]),
+    message: new FormControl('', [Validators.maxLength(200)]), // Conservative default until LNURL loads
     selectedWallet: new FormControl<string>(''),
   });
 
@@ -138,6 +170,91 @@ export class ZapDialogComponent {
     this.breakpointObserver.observe('(max-width: 768px)').subscribe((result) => {
       this.isMobile.set(result.matches);
     });
+
+    // Fetch LNURL pay info for the recipient
+    this.fetchLnurlPayInfo();
+  }
+
+  async fetchLnurlPayInfo(): Promise<void> {
+    if (!this.data.recipientMetadata) {
+      this.lnurlError.set('No recipient metadata available');
+      return;
+    }
+
+    try {
+      this.isLoadingLnurlInfo.set(true);
+      this.lnurlError.set(null);
+
+      const lightningAddress = this.zapService.getLightningAddress(this.data.recipientMetadata);
+      if (!lightningAddress) {
+        this.lnurlError.set('No Lightning address found for recipient');
+        return;
+      }
+
+      const lnurlInfo = await this.zapService.fetchLnurlPayInfo(lightningAddress);
+      this.lnurlPayInfo.set(lnurlInfo);
+
+      // Update form validators based on the LNURL response
+      this.updateFormValidators();
+
+      // Check if current selected amount is still valid
+      this.validateCurrentAmount();
+    } catch (error) {
+      console.error('Failed to fetch LNURL pay info:', error);
+      this.lnurlError.set('Failed to load payment information');
+    } finally {
+      this.isLoadingLnurlInfo.set(false);
+    }
+  }
+
+  updateFormValidators(): void {
+    const messageControl = this.zapForm.get('message');
+    const customAmountControl = this.zapForm.get('customAmount');
+    const commentLimit = this.commentLimit();
+    const amountLimits = this.amountLimits();
+
+    // Update message validators
+    if (messageControl) {
+      if (commentLimit === null) {
+        // LNURL info not loaded yet, use conservative default
+        messageControl.setValidators([Validators.maxLength(200)]);
+      } else {
+        const currentValidators = commentLimit > 0 ? [Validators.maxLength(commentLimit)] : [];
+        messageControl.setValidators(currentValidators);
+      }
+      messageControl.updateValueAndValidity();
+    }
+
+    // Update custom amount validators
+    if (customAmountControl) {
+      if (amountLimits === null) {
+        // LNURL info not loaded yet, use basic validation
+        const currentValidators = [Validators.required, Validators.min(1)];
+        customAmountControl.setValidators(currentValidators);
+      } else {
+        const currentValidators = [
+          Validators.required,
+          Validators.min(amountLimits.minSats),
+          Validators.max(amountLimits.maxSats),
+        ];
+        customAmountControl.setValidators(currentValidators);
+      }
+      customAmountControl.updateValueAndValidity();
+    }
+  }
+
+  validateCurrentAmount(): void {
+    const currentAmount = this.zapForm.get('amount')?.value;
+    if (typeof currentAmount === 'number') {
+      const limits = this.amountLimits();
+      if (limits && (currentAmount < limits.minSats || currentAmount > limits.maxSats)) {
+        // Current amount is invalid, reset to custom and show error
+        this.zapForm.get('amount')?.setValue('custom');
+        this.errorMessage.set(
+          `Default amount ${currentAmount} sats is outside the allowed range (${limits.minSats} - ${limits.maxSats} sats). Please enter a custom amount.`,
+        );
+      }
+    }
   }
 
   getFinalAmount(): number {
@@ -149,7 +266,30 @@ export class ZapDialogComponent {
   }
 
   selectAmount(amount: number | string): void {
+    // Validate preset amounts against LNURL limits
+    if (typeof amount === 'number') {
+      const limits = this.amountLimits();
+      if (limits && (amount < limits.minSats || amount > limits.maxSats)) {
+        // If preset amount is outside limits, don't select it and show error
+        this.errorMessage.set(
+          `Amount ${amount} sats is outside the allowed range (${limits.minSats} - ${limits.maxSats} sats)`,
+        );
+        return;
+      }
+    }
+
     this.zapForm.get('amount')?.setValue(amount);
+    this.errorMessage.set(null); // Clear any previous errors
+  }
+
+  isAmountValid(amount: number): boolean {
+    const limits = this.amountLimits();
+    if (!limits) {
+      // If LNURL info not loaded yet, allow all preset amounts for now
+      // They will be validated when the form is submitted
+      return true;
+    }
+    return amount >= limits.minSats && amount <= limits.maxSats;
   }
 
   selectPaymentMethod(method: PaymentMethod): void {
