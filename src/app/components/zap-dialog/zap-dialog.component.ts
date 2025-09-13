@@ -134,7 +134,7 @@ export class ZapDialogComponent {
 
   zapForm = new FormGroup({
     amount: new FormControl<string | number>(21, [Validators.required]),
-    customAmount: new FormControl<number | null>(null),
+    customAmount: new FormControl({ value: null, disabled: true }), // Start disabled
     message: new FormControl('', [Validators.maxLength(200)]), // Conservative default until LNURL loads
     selectedWallet: new FormControl<string>(''),
   });
@@ -173,6 +173,17 @@ export class ZapDialogComponent {
 
     // Fetch LNURL pay info for the recipient
     this.fetchLnurlPayInfo();
+
+    // Ensure the form is in the correct initial state
+    // Trigger the amount change handler manually for the initial value
+    const initialAmount = this.zapForm.get('amount')?.value;
+    if (initialAmount !== 'custom') {
+      const customAmountControl = this.zapForm.get('customAmount');
+      customAmountControl?.clearValidators();
+      customAmountControl?.disable();
+      customAmountControl?.setValue(null);
+      customAmountControl?.updateValueAndValidity();
+    }
   }
 
   async fetchLnurlPayInfo(): Promise<void> {
@@ -296,10 +307,35 @@ export class ZapDialogComponent {
     this.selectedPaymentMethod.set(method);
   }
 
-  proceedToConfirmation(): void {
+  async proceedToConfirmation(): Promise<void> {
     if (!this.zapForm.valid) {
       return;
     }
+
+    // If LNURL info is still loading, wait for it or show error
+    if (this.isLoadingLnurlInfo()) {
+      this.errorMessage.set('Please wait while payment information is loading...');
+      return;
+    }
+
+    // If there was an error loading LNURL info, don't proceed
+    if (this.lnurlError()) {
+      this.errorMessage.set('Unable to load payment information. Please try again.');
+      return;
+    }
+
+    // Validate the current amount against LNURL limits
+    const finalAmount = this.getFinalAmount();
+    const limits = this.amountLimits();
+    if (limits && (finalAmount < limits.minSats || finalAmount > limits.maxSats)) {
+      this.errorMessage.set(
+        `Amount ${finalAmount} sats is outside the allowed range (${limits.minSats} - ${limits.maxSats} sats)`,
+      );
+      return;
+    }
+
+    // Clear any errors and proceed
+    this.errorMessage.set(null);
     this.currentState.set('confirmation');
   }
 
