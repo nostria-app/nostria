@@ -1,8 +1,6 @@
 :host {
-  background: var(
-    --theme-background-color,
-    var(--mat-toolbar-container-background-color, var(--mat-sys-surface))
-  );
+  background: var(--theme-background-color,
+      var(--mat-toolbar-container-background-color, var(--mat-sys-surface)));
   height: 33px;
   z-index: 1500;
 
@@ -19,7 +17,6 @@
     height: env(titlebar-area-height, 33px);
 
     -webkit-app-region: drag;
-    app-region: drag;
   }
 
   &.footer-mode {
@@ -33,7 +30,6 @@
 
     /* Remove drag behavior for footer mode */
     -webkit-app-region: none;
-    app-region: none;
 
     display: flex;
     flex-direction: row;
@@ -45,6 +41,25 @@
   height: 100%;
   align-items: center;
   z-index: 1500;
+}
+
+/* Titlebar area displayed only when using window-controls-overlay */
+.titlebar-area {
+  -webkit-app-region: drag;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  height: 100%;
+  // min-width: 120px;
+  max-width: 50%;
+  overflow: hidden;
+}
+
+.title-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.8em;
 }
 
 .media-player-footer {
@@ -63,7 +78,7 @@
 }
 
 .media-player-controls {
-  margin-top: -4px;
+  // margin-top: -4px;
 }
 
 .media-player-controls-footer {
@@ -77,31 +92,25 @@
 
 .nodrag {
   -webkit-app-region: no-drag;
-  app-region: no-drag;
 }
 
 /* …except for the `input`. */
 input {
   -webkit-app-region: no-drag;
-  app-region: no-drag;
 }
 
 /* For macOS: */
 .search-controls-left {
   /* Remove hardcoded gradient, let theme color take precedence */
-  background: var(
-    --theme-background-color,
-    var(--mat-toolbar-container-background-color, var(--mat-sys-surface))
-  );
+  background: var(--theme-background-color,
+      var(--mat-toolbar-container-background-color, var(--mat-sys-surface)));
 }
 
 /* For Windows: */
 .search-controls-right {
   /* Remove hardcoded gradient, let theme color take precedence */
-  background: var(
-    --theme-background-color,
-    var(--mat-toolbar-container-background-color, var(--mat-sys-surface))
-  );
+  background: var(--theme-background-color,
+      var(--mat-toolbar-container-background-color, var(--mat-sys-surface)));
 }
 
 // @media (display-mode: window-controls-overlay) {
@@ -122,7 +131,6 @@ input {
   align-self: center;
   flex: 2 2 auto;
   -webkit-app-region: no-drag;
-  app-region: no-drag;
 }
 
 .media-audio-container {

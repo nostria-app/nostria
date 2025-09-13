@@ -47,6 +47,8 @@ export class MediaPlayerService implements OnInitialized {
   // Convert to computed signals
   canPrevious = computed(() => this.index > 0);
   canNext = computed(() => this.index < this.media().length - 1);
+  // Signal that indicates whether there are any items in the media queue
+  hasQueue = computed(() => this.media().length > 0);
 
   // Convert to signals
   youtubeUrl = signal<SafeResourceUrl | undefined>(undefined);
