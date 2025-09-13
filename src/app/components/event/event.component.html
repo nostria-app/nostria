@@ -74,6 +74,8 @@
     </span>
   </mat-card-header>
   <mat-card-content>
+    <!-- Show thread context only in timeline mode -->
+    @if (mode() === 'timeline') {
     <!-- Show thread context if this is a threaded reply -->
     @if (isThreadedReply() && rootRecordData && parentRecordData) {
     <!-- Root event (original post) -->
@@ -156,6 +158,7 @@
         </mat-card-content>
       </mat-card>
     </div>
+    }
     }
 
     <!-- Current event (the reply) -->

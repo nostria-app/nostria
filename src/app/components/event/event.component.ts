@@ -82,6 +82,7 @@ export class EventComponent {
   event = input<Event | null | undefined>(null);
   appearance = input<EventCardAppearance>('plain');
   navigationDisabled = input<boolean>(false);
+  mode = input<'timeline' | 'thread'>('timeline');
   isPlain = computed<boolean>(() => this.appearance() === 'plain');
 
   data = inject(DataService);
