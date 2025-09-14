@@ -154,8 +154,8 @@ export class DataService {
       return this.pendingProfileRequests.get(pubkey);
     }
 
-    // Check cache first
-    if (this.cache.has(cacheKey)) {
+    // Check cache first, but skip if refresh is requested
+    if (!refresh && this.cache.has(cacheKey)) {
       const record = this.cache.get<NostrRecord>(cacheKey);
       if (record) {
         return record;
@@ -178,30 +178,46 @@ export class DataService {
   private async loadProfile(
     pubkey: string,
     cacheKey: string,
-    refresh: boolean, // eslint-disable-line @typescript-eslint/no-unused-vars
+    refresh: boolean,
   ): Promise<NostrRecord | undefined> {
     let metadata: Event | null = null;
     let record: NostrRecord | undefined = undefined;
 
-    // Try storage first
-    metadata = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Metadata);
-
-    if (metadata) {
-      record = this.toRecord(metadata);
-      this.cache.set(cacheKey, record);
-    } else {
-      // Try to get from relays
-      console.log('getProfile', pubkey, metadata);
+    if (refresh) {
+      // When refresh is true, skip storage and go directly to relays for fresh data
+      console.log('getProfile (refresh)', pubkey);
       metadata = await this.sharedRelayEx.get(pubkey, {
         authors: [pubkey],
         kinds: [kinds.Metadata],
       });
-      console.log('gotProfile', pubkey, metadata);
+      console.log('gotProfile (refresh)', pubkey, metadata);
 
       if (metadata) {
         record = this.toRecord(metadata);
         this.cache.set(cacheKey, record);
         await this.storage.saveEvent(metadata);
+      }
+    } else {
+      // Normal flow: try storage first, then relays if not found
+      metadata = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Metadata);
+
+      if (metadata) {
+        record = this.toRecord(metadata);
+        this.cache.set(cacheKey, record);
+      } else {
+        // Try to get from relays
+        console.log('getProfile', pubkey, metadata);
+        metadata = await this.sharedRelayEx.get(pubkey, {
+          authors: [pubkey],
+          kinds: [kinds.Metadata],
+        });
+        console.log('gotProfile', pubkey, metadata);
+
+        if (metadata) {
+          record = this.toRecord(metadata);
+          this.cache.set(cacheKey, record);
+          await this.storage.saveEvent(metadata);
+        }
       }
     }
 
