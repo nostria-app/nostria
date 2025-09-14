@@ -32,6 +32,11 @@ import { StorageService } from '../../../services/storage.service';
 import type { ReportTarget } from '../../../services/reporting.service';
 import { ReportingService } from '../../../services/reporting.service';
 import { ZapButtonComponent } from '../../../components/zap-button/zap-button.component';
+import { ZapService } from '../../../services/zap.service';
+import {
+  ZapDialogComponent,
+  ZapDialogData,
+} from '../../../components/zap-dialog/zap-dialog.component';
 
 @Component({
   selector: 'app-profile-header',
@@ -69,6 +74,7 @@ export class ProfileHeaderComponent {
   private storage = inject(StorageService);
   private accountService = inject(AccountService);
   private reportingService = inject(ReportingService);
+  private zapService = inject(ZapService);
 
   // Add signal for QR code visibility
   showQrCode = signal<boolean>(false);
@@ -144,6 +150,13 @@ export class ProfileHeaderComponent {
   isPremium = computed(() => {
     const tier = this.premiumTier();
     return tier === 'premium' || tier === 'premium_plus';
+  });
+
+  // Computed to check if the profile has a Lightning Address configured
+  hasLightningAddress = computed(() => {
+    const profileData = this.profile()?.data;
+    if (!profileData) return false;
+    return this.zapService.getLightningAddress(profileData) !== null;
   });
 
   constructor() {
@@ -226,6 +239,46 @@ export class ProfileHeaderComponent {
   async unfollowUser() {
     this.logger.debug('Unfollow requested for:', this.pubkey());
     await this.accountState.unfollow(this.pubkey());
+  }
+
+  /**
+   * Opens the zap dialog for the user
+   */
+  zapUser(): void {
+    const pubkey = this.currentPubkey();
+    const profileData = this.profile()?.data;
+
+    if (!pubkey) {
+      this.snackBar.open('Unable to determine user for zap', 'Dismiss', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+      return;
+    }
+
+    if (!profileData || !this.hasLightningAddress()) {
+      this.snackBar.open('This user has no lightning address configured for zaps', 'Dismiss', {
+        duration: 4000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+      return;
+    }
+
+    const dialogData: ZapDialogData = {
+      recipientPubkey: pubkey,
+      recipientName: this.name(),
+      recipientMetadata: profileData,
+      eventId: undefined, // This is for zapping a user, not a specific event
+    };
+
+    this.dialog.open(ZapDialogComponent, {
+      data: dialogData,
+      width: '400px',
+      maxWidth: '95vw',
+      disableClose: false,
+    });
   }
 
   copyProfileData(): void {
