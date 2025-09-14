@@ -55,7 +55,7 @@ export class AccountStateService implements OnDestroy {
   accounts = signal<NostrUser[]>([]);
 
   // Signal to store pre-loaded account profiles for fast access
-  accountProfiles = signal<Map<string, NostrRecord>>(new Map());
+  // accountProfiles = signal<Map<string, NostrRecord>>(new Map());
 
   // Flag to prevent multiple simultaneous profile preloading operations
   private isPreloadingProfiles = false;
@@ -144,7 +144,8 @@ export class AccountStateService implements OnDestroy {
           [...currentPubkeys].every((pubkey) => this.lastPreloadedAccountPubkeys.has(pubkey));
 
         if (!hasSameAccounts) {
-          this.preloadAccountProfiles(accounts);
+          // REMOVED, don't preload profiles.
+          // this.preloadAccountProfiles(accounts);
         }
       }
     });
@@ -215,7 +216,8 @@ export class AccountStateService implements OnDestroy {
       return;
     }
 
-    const profile = await this.getAccountProfile(account.pubkey);
+    const profile = await this.data.getProfile(account.pubkey);
+    // const profile = await this.getAccountProfile(account.pubkey);
     this.profile.set(profile);
 
     // TODO: Improve this!
@@ -244,7 +246,7 @@ export class AccountStateService implements OnDestroy {
   clear() {
     this.followingList.set([]);
     this.profile.set(undefined);
-    this.accountProfiles.set(new Map()); // Clear pre-loaded account profiles
+    // this.accountProfiles.set(new Map()); // Clear pre-loaded account profiles
     this.lastPreloadedAccountPubkeys.clear(); // Clear tracking set
     this.muteList.set(undefined); // Clear mute list
     // Note: We don't clear subscriptions as they are persistent across account changes
@@ -420,46 +422,46 @@ export class AccountStateService implements OnDestroy {
   /**
    * Pre-loads profiles for all accounts to avoid repeated async calls in templates
    */
-  private async preloadAccountProfiles(accounts: NostrUser[]): Promise<void> {
-    // Prevent multiple simultaneous preloading operations
-    if (this.isPreloadingProfiles) {
-      return;
-    }
+  // private async preloadAccountProfiles(accounts: NostrUser[]): Promise<void> {
+  //   // Prevent multiple simultaneous preloading operations
+  //   if (this.isPreloadingProfiles) {
+  //     return;
+  //   }
 
-    this.isPreloadingProfiles = true;
-    console.log('Pre-loading profiles for', accounts.length, 'accounts');
+  //   this.isPreloadingProfiles = true;
+  //   console.log('Pre-loading profiles for', accounts.length, 'accounts');
 
-    try {
-      for (const account of accounts) {
-        try {
-          // Check if profile is already loaded and cached
-          const existingProfile = this.accountProfiles().get(account.pubkey);
-          if (existingProfile) {
-            continue; // Skip if already loaded
-          }
+  //   try {
+  //     for (const account of accounts) {
+  //       try {
+  //         // Check if profile is already loaded and cached
+  //         const existingProfile = this.accountProfiles().get(account.pubkey);
+  //         if (existingProfile) {
+  //           continue; // Skip if already loaded
+  //         }
 
-          // Load profile using the existing method
-          const profile = await this.loadAccountProfileInternal(account.pubkey);
-          if (profile) {
-            // Update the profiles map
-            this.accountProfiles.update((profiles) => {
-              const newProfiles = new Map(profiles);
-              newProfiles.set(account.pubkey, profile);
-              return newProfiles;
-            });
-            console.log('Pre-loaded profile for account:', account.pubkey);
-          }
-        } catch (error) {
-          console.warn('Failed to pre-load profile for account:', account.pubkey, error);
-        }
-      }
+  //         // Load profile using the existing method
+  //         const profile = await this.loadAccountProfileInternal(account.pubkey);
+  //         if (profile) {
+  //           // Update the profiles map
+  //           // this.accountProfiles.update((profiles) => {
+  //           //   const newProfiles = new Map(profiles);
+  //           //   newProfiles.set(account.pubkey, profile);
+  //           //   return newProfiles;
+  //           // });
+  //           // console.log('Pre-loaded profile for account:', account.pubkey);
+  //         }
+  //       } catch (error) {
+  //         console.warn('Failed to pre-load profile for account:', account.pubkey, error);
+  //       }
+  //     }
 
-      // Update the tracking set
-      this.lastPreloadedAccountPubkeys = new Set(accounts.map((a) => a.pubkey));
-    } finally {
-      this.isPreloadingProfiles = false;
-    }
-  }
+  //     // Update the tracking set
+  //     this.lastPreloadedAccountPubkeys = new Set(accounts.map((a) => a.pubkey));
+  //   } finally {
+  //     this.isPreloadingProfiles = false;
+  //   }
+  // }
 
   /**
    * Internal method to load account profile without caching in the accountProfiles signal
@@ -704,35 +706,35 @@ export class AccountStateService implements OnDestroy {
   }
 
   // Method to get cached account profile
-  async getAccountProfile(pubkey: string): Promise<NostrRecord | undefined> {
-    // First check if we have a pre-loaded profile
-    const preloadedProfile = this.accountProfiles().get(pubkey);
-    if (preloadedProfile) {
-      return preloadedProfile;
-    }
+  // async getAccountProfile(pubkey: string): Promise<NostrRecord | undefined> {
+  //   // First check if we have a pre-loaded profile
+  //   // const preloadedProfile = this.accountProfiles().get(pubkey);
+  //   // if (preloadedProfile) {
+  //   //   return preloadedProfile;
+  //   // }
 
-    // Fall back to loading and caching the profile
-    const record = await this.loadAccountProfileInternal(pubkey);
+  //   // Fall back to loading and caching the profile
+  //   const record = await this.loadAccountProfileInternal(pubkey);
 
-    if (record) {
-      // Cache it in the accountProfiles signal for future use
-      this.accountProfiles.update((profiles) => {
-        const newProfiles = new Map(profiles);
-        newProfiles.set(pubkey, record);
-        return newProfiles;
-      });
-    }
+  //   if (record) {
+  //     // Cache it in the accountProfiles signal for future use
+  //     this.accountProfiles.update((profiles) => {
+  //       const newProfiles = new Map(profiles);
+  //       newProfiles.set(pubkey, record);
+  //       return newProfiles;
+  //     });
+  //   }
 
-    return record;
-  }
+  //   return record;
+  // }
 
-  /**
-   * Synchronous method to get pre-loaded account profile for templates
-   * Returns undefined if profile hasn't been pre-loaded yet
-   */
-  getAccountProfileSync(pubkey: string): NostrRecord | undefined {
-    return this.accountProfiles().get(pubkey);
-  }
+  // /**
+  //  * Synchronous method to get pre-loaded account profile for templates
+  //  * Returns undefined if profile hasn't been pre-loaded yet
+  //  */
+  // getAccountProfileSync(pubkey: string): NostrRecord | undefined {
+  //   return this.accountProfiles().get(pubkey);
+  // }
 
   getCachedProfile(pubkey: string): NostrRecord | undefined {
     // The Cache service handles TTL automatically, so no need to check age manually
@@ -759,18 +761,20 @@ export class AccountStateService implements OnDestroy {
       console.log('Loading profiles from storage to cache for account:', pubkey);
       console.log('Following list size:', followingList.length);
 
+      // REMOVED: Let's not load everything into memory of all following.
+
       // Load metadata events from storage for all following users
-      const events = await storageService.getEventsByPubkeyAndKind(followingList, 0); // kind 0 is metadata
-      const records = dataService.toRecords(events);
+      // const events = await storageService.getEventsByPubkeyAndKind(followingList, 0); // kind 0 is metadata
+      // const records = dataService.toRecords(events);
 
-      console.log('Found metadata records in storage:', records.length);
+      // console.log('Found metadata records in storage:', records.length);
 
-      // Add all found profiles to cache
-      for (const record of records) {
-        this.addToCache(record.event.pubkey, record);
-      }
+      // // Add all found profiles to cache
+      // for (const record of records) {
+      //   this.addToCache(record.event.pubkey, record);
+      // }
 
-      console.log('Profile cache populated with', records.length, 'profiles from storage');
+      // console.log('Profile cache populated with', records.length, 'profiles from storage');
     } catch (error) {
       console.error('Failed to load profiles from storage to cache:', error);
     }

@@ -28,7 +28,7 @@ export class Cache {
   private readonly cache = new Map<string, CacheEntry<any>>();
 
   private readonly defaultOptions: Required<CacheOptions> = {
-    maxSize: 100,
+    maxSize: 200,
     ttl: 5 * 60 * 1000, // 5 minutes
     persistent: false,
   };
@@ -104,7 +104,8 @@ export class Cache {
    * Checks if a key exists in the cache and is not expired
    */
   has(key: string): boolean {
-    return this.get(key) !== null;
+    // Check for both undefined and null.
+    return this.get(key) != null;
   }
 
   /**
