@@ -423,8 +423,6 @@ export class AccountStateService implements OnDestroy {
    * Pre-loads profiles for all accounts to avoid repeated async calls in templates
    */
   private async preloadAccountProfiles(accounts: NostrUser[]): Promise<void> {
-    debugger;
-
     // Prevent multiple simultaneous preloading operations
     if (this.isPreloadingProfiles) {
       return;
