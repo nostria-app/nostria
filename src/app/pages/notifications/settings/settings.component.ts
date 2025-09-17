@@ -140,6 +140,9 @@ export class NotificationSettingsComponent {
         } finally {
           this.isLoading.set(false);
         }
+      } else {
+        // If account is not initialized, set loading to false to prevent infinite loading
+        this.isLoading.set(false);
       }
     });
   }
@@ -170,8 +173,31 @@ export class NotificationSettingsComponent {
       return null;
     }
 
+    // Helper function to add timeout to any promise
+    function timeoutPromise<T>(promise: Promise<T>, ms: number): Promise<T | null> {
+      return new Promise((resolve) => {
+        const timer = setTimeout(() => resolve(null), ms);
+        promise.then(
+          (value) => {
+            clearTimeout(timer);
+            resolve(value);
+          },
+          () => {
+            clearTimeout(timer);
+            resolve(null);
+          },
+        );
+      });
+    }
+
     try {
-      const registration = await navigator.serviceWorker.ready;
+      // Wait up to 3 seconds for serviceWorker.ready
+      const registration = await timeoutPromise(navigator.serviceWorker.ready, 3000);
+      if (!registration) {
+        this.logger.warn('Service worker not ready after timeout, skipping subscription check');
+        return null;
+      }
+
       const subscription = await registration.pushManager.getSubscription();
 
       if (subscription) {
