@@ -354,7 +354,7 @@
             @if (accountState.hasActiveSubscription()) {
               <span class="premium-label">Premium</span>
               <div class="premium-expires">
-                Expires {{ accountState.expiresWhen() | date: 'MMM d' }}
+                Expires {{ accountState.expiresWhen() | date: 'MMM d yyyy' }}
               </div>
             } @else {
               <span class="premium-label">Free</span>
