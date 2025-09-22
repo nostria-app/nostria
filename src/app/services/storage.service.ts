@@ -154,12 +154,57 @@ export interface GeneralNotification extends Notification {
   };
 }
 
+// Interface for observed relay statistics stored in IndexedDB
+export interface ObservedRelayStats {
+  url: string; // Primary key
+  isConnected: boolean;
+  isOffline: boolean;
+  eventsReceived: number;
+  lastConnectionRetry: number; // timestamp in seconds
+  lastSuccessfulConnection: number; // timestamp in seconds
+  connectionAttempts: number;
+  firstObserved: number; // timestamp when first discovered
+  lastUpdated: number; // timestamp of last update
+  nip11?: Nip11Info; // NIP-11 relay information if available
+}
+
+// Interface for pubkey-relay mapping stored in IndexedDB
+export interface PubkeyRelayMapping {
+  id: string; // composite key: pubkey::relayUrl
+  pubkey: string;
+  relayUrl: string;
+  source: 'hint' | 'user_list' | 'discovery'; // How this mapping was discovered
+  firstSeen: number; // timestamp when first discovered
+  lastSeen: number; // timestamp when last seen
+  eventCount: number; // Number of events seen from this pubkey on this relay
+}
+
 // Schema for the IndexedDB database
 interface NostriaDBSchema extends DBSchema {
   relays: {
     key: string;
     value: Relay & { nip11?: Nip11Info };
     indexes: { 'by-status': string };
+  };
+  observedRelays: {
+    key: string; // relay URL
+    value: ObservedRelayStats;
+    indexes: {
+      'by-last-updated': number;
+      'by-first-observed': number;
+      'by-events-received': number;
+      'by-connection-status': boolean;
+    };
+  };
+  pubkeyRelayMappings: {
+    key: string; // composite key: pubkey::relayUrl
+    value: PubkeyRelayMapping;
+    indexes: {
+      'by-pubkey': string;
+      'by-relay-url': string;
+      'by-last-seen': number;
+      'by-source': string;
+    };
   };
   userMetadata: {
     key: string; // pubkey
@@ -206,7 +251,7 @@ export class StorageService {
   private readonly utilities = inject(UtilitiesService);
   private db!: IDBPDatabase<NostriaDBSchema>;
   private readonly DB_NAME = 'nostria';
-  private readonly DB_VERSION = 1;
+  private readonly DB_VERSION = 2;
 
   // Signal to track database initialization status
   initialized = signal(false);
@@ -370,6 +415,30 @@ export class StorageService {
           });
           notificationsStore.createIndex('by-timestamp', 'timestamp');
           this.logger.debug('Created notifications object store');
+        }
+
+        // Create new observed relays object store
+        if (!db.objectStoreNames.contains('observedRelays')) {
+          const observedRelaysStore = db.createObjectStore('observedRelays', {
+            keyPath: 'url',
+          });
+          observedRelaysStore.createIndex('by-last-updated', 'lastUpdated');
+          observedRelaysStore.createIndex('by-first-observed', 'firstObserved');
+          observedRelaysStore.createIndex('by-events-received', 'eventsReceived');
+          observedRelaysStore.createIndex('by-connection-status', 'isConnected');
+          this.logger.debug('Created observedRelays object store');
+        }
+
+        // Create new pubkey-relay mappings object store
+        if (!db.objectStoreNames.contains('pubkeyRelayMappings')) {
+          const pubkeyRelayMappingsStore = db.createObjectStore('pubkeyRelayMappings', {
+            keyPath: 'id',
+          });
+          pubkeyRelayMappingsStore.createIndex('by-pubkey', 'pubkey');
+          pubkeyRelayMappingsStore.createIndex('by-relay-url', 'relayUrl');
+          pubkeyRelayMappingsStore.createIndex('by-last-seen', 'lastSeen');
+          pubkeyRelayMappingsStore.createIndex('by-source', 'source');
+          this.logger.debug('Created pubkeyRelayMappings object store');
         }
       },
       blocked: (currentVersion, blockedVersion, event) => {
@@ -1289,6 +1358,182 @@ export class StorageService {
     } catch (error: any) {
       this.logger.error('Storage health check failed', error);
       return false;
+    }
+  }
+
+  // Methods for observed relay statistics
+
+  /**
+   * Save or update observed relay statistics
+   */
+  async saveObservedRelay(stats: ObservedRelayStats): Promise<void> {
+    try {
+      await this.db.put('observedRelays', stats);
+      this.logger.debug(`Saved observed relay stats for: ${stats.url}`);
+    } catch (error) {
+      this.logger.error(`Error saving observed relay stats for ${stats.url}`, error);
+    }
+  }
+
+  /**
+   * Get observed relay statistics by URL
+   */
+  async getObservedRelay(url: string): Promise<ObservedRelayStats | undefined> {
+    try {
+      return await this.db.get('observedRelays', url);
+    } catch (error) {
+      this.logger.error(`Error getting observed relay stats for ${url}`, error);
+      return undefined;
+    }
+  }
+
+  /**
+   * Get all observed relay statistics
+   */
+  async getAllObservedRelays(): Promise<ObservedRelayStats[]> {
+    try {
+      return await this.db.getAll('observedRelays');
+    } catch (error) {
+      this.logger.error('Error getting all observed relay stats', error);
+      return [];
+    }
+  }
+
+  /**
+   * Delete observed relay statistics
+   */
+  async deleteObservedRelay(url: string): Promise<void> {
+    try {
+      await this.db.delete('observedRelays', url);
+      this.logger.debug(`Deleted observed relay stats for: ${url}`);
+    } catch (error) {
+      this.logger.error(`Error deleting observed relay stats for ${url}`, error);
+    }
+  }
+
+  /**
+   * Get observed relays sorted by a specific criterion
+   */
+  async getObservedRelaysSorted(sortBy: 'eventsReceived' | 'lastUpdated' | 'firstObserved' = 'lastUpdated'): Promise<ObservedRelayStats[]> {
+    try {
+      const index = sortBy === 'eventsReceived' ? 'by-events-received' : 
+                    sortBy === 'firstObserved' ? 'by-first-observed' : 'by-last-updated';
+      return await this.db.getAllFromIndex('observedRelays', index);
+    } catch (error) {
+      this.logger.error(`Error getting sorted observed relay stats by ${sortBy}`, error);
+      return [];
+    }
+  }
+
+  // Methods for pubkey-relay mappings
+
+  /**
+   * Save or update a pubkey-relay mapping
+   */
+  async savePubkeyRelayMapping(mapping: PubkeyRelayMapping): Promise<void> {
+    try {
+      await this.db.put('pubkeyRelayMappings', mapping);
+      this.logger.debug(`Saved pubkey-relay mapping: ${mapping.pubkey} -> ${mapping.relayUrl}`);
+    } catch (error) {
+      this.logger.error(`Error saving pubkey-relay mapping for ${mapping.pubkey} -> ${mapping.relayUrl}`, error);
+    }
+  }
+
+  /**
+   * Get a specific pubkey-relay mapping
+   */
+  async getPubkeyRelayMapping(pubkey: string, relayUrl: string): Promise<PubkeyRelayMapping | undefined> {
+    try {
+      const id = `${pubkey}::${relayUrl}`;
+      return await this.db.get('pubkeyRelayMappings', id);
+    } catch (error) {
+      this.logger.error(`Error getting pubkey-relay mapping for ${pubkey} -> ${relayUrl}`, error);
+      return undefined;
+    }
+  }
+
+  /**
+   * Get all relay URLs for a pubkey (excluding kind 10002 relay lists)
+   */
+  async getRelayUrlsForPubkey(pubkey: string): Promise<string[]> {
+    try {
+      const mappings = await this.db.getAllFromIndex('pubkeyRelayMappings', 'by-pubkey', pubkey);
+      // Filter out user_list source since those are kind 10002 events which should not be included
+      return mappings
+        .filter(mapping => mapping.source !== 'user_list')
+        .map(mapping => mapping.relayUrl);
+    } catch (error) {
+      this.logger.error(`Error getting relay URLs for pubkey ${pubkey}`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Get all pubkeys for a relay URL
+   */
+  async getPubkeysForRelay(relayUrl: string): Promise<string[]> {
+    try {
+      const mappings = await this.db.getAllFromIndex('pubkeyRelayMappings', 'by-relay-url', relayUrl);
+      return mappings.map(mapping => mapping.pubkey);
+    } catch (error) {
+      this.logger.error(`Error getting pubkeys for relay ${relayUrl}`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Update or create a pubkey-relay mapping from relay hint
+   */
+  async updatePubkeyRelayMappingFromHint(pubkey: string, relayUrl: string): Promise<void> {
+    try {
+      const id = `${pubkey}::${relayUrl}`;
+      const existing = await this.getPubkeyRelayMapping(pubkey, relayUrl);
+      const now = Math.floor(Date.now() / 1000); // Nostr uses seconds
+
+      if (existing) {
+        // Update existing mapping
+        existing.lastSeen = now;
+        existing.eventCount++;
+        await this.savePubkeyRelayMapping(existing);
+      } else {
+        // Create new mapping
+        const newMapping: PubkeyRelayMapping = {
+          id,
+          pubkey,
+          relayUrl,
+          source: 'hint',
+          firstSeen: now,
+          lastSeen: now,
+          eventCount: 1,
+        };
+        await this.savePubkeyRelayMapping(newMapping);
+      }
+    } catch (error) {
+      this.logger.error(`Error updating pubkey-relay mapping from hint for ${pubkey} -> ${relayUrl}`, error);
+    }
+  }
+
+  /**
+   * Clean up old pubkey-relay mappings (older than specified days)
+   */
+  async cleanupOldPubkeyRelayMappings(olderThanDays: number = 30): Promise<number> {
+    try {
+      const cutoffTime = Math.floor(Date.now() / 1000) - (olderThanDays * 24 * 60 * 60);
+      const allMappings = await this.db.getAll('pubkeyRelayMappings');
+      
+      let deletedCount = 0;
+      for (const mapping of allMappings) {
+        if (mapping.lastSeen < cutoffTime) {
+          await this.db.delete('pubkeyRelayMappings', mapping.id);
+          deletedCount++;
+        }
+      }
+      
+      this.logger.debug(`Cleaned up ${deletedCount} old pubkey-relay mappings`);
+      return deletedCount;
+    } catch (error) {
+      this.logger.error('Error cleaning up old pubkey-relay mappings', error);
+      return 0;
     }
   }
 }
