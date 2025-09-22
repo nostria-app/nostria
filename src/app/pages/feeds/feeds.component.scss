@@ -185,8 +185,7 @@ app-user-profile {
         height: 3px;
       }
 
-      &::-webkit-scrollbar-thumb {
-      }
+      &::-webkit-scrollbar-thumb {}
 
       .column-selector-button {
         display: flex;
@@ -205,12 +204,10 @@ app-user-profile {
         &.active {
           // background-color: var(--mat-sys-primary);
 
-          mat-icon {
-          }
+          mat-icon {}
         }
 
-        &:hover:not(.active) {
-        }
+        &:hover:not(.active) {}
 
         &.add-column {
           min-width: 40px;
@@ -844,8 +841,7 @@ app-user-profile {
           background-color: var(--mat-sys-primary);
         }
 
-        &:hover:not(.active) {
-        }
+        &:hover:not(.active) {}
       }
     }
 
@@ -983,8 +979,7 @@ app-user-profile {
         height: 3px;
       }
 
-      &::-webkit-scrollbar-thumb {
-      }
+      &::-webkit-scrollbar-thumb {}
 
       // Prevent reflow during drag
       &.cdk-drop-list-dragging {
@@ -1036,8 +1031,7 @@ app-user-profile {
         }
       }
 
-      &:hover:not(.active):not(.add-tab) {
-      }
+      &:hover:not(.active):not(.add-tab) {}
 
       &.add-tab {
         padding: 12px 8px;
@@ -1659,5 +1653,124 @@ h1 {
 
   .column-scroll-container {
     padding: 10px 0 10px 0 !important;
+  }
+}
+
+// Feeds Loading Skeleton Styles
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+// Skeleton items within column content
+.column-skeleton-items {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.feed-item-skeleton {
+  padding: 1rem;
+  border-radius: 8px;
+  background-color: var(--mat-sys-surface-container);
+  border: 1px solid var(--mat-sys-outline-variant);
+
+  .item-header-skeleton {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+
+    .avatar-skeleton {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(90deg, var(--mat-sys-surface-variant) 25%, rgba(var(--mat-sys-surface-variant), 0.5) 50%, var(--mat-sys-surface-variant) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
+
+    .user-info-skeleton {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+
+      .username-skeleton {
+        width: 120px;
+        height: 16px;
+        border-radius: 4px;
+        background: linear-gradient(90deg, var(--mat-sys-surface-variant) 25%, rgba(var(--mat-sys-surface-variant), 0.5) 50%, var(--mat-sys-surface-variant) 75%);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+      }
+
+      .timestamp-skeleton {
+        width: 80px;
+        height: 12px;
+        border-radius: 4px;
+        background: linear-gradient(90deg, var(--mat-sys-surface-variant) 25%, rgba(var(--mat-sys-surface-variant), 0.5) 50%, var(--mat-sys-surface-variant) 75%);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+      }
+    }
+  }
+
+  .item-content-skeleton {
+    margin-bottom: 0.75rem;
+
+    .content-line-skeleton {
+      height: 14px;
+      border-radius: 4px;
+      background: linear-gradient(90deg, var(--mat-sys-surface-variant) 25%, rgba(var(--mat-sys-surface-variant), 0.5) 50%, var(--mat-sys-surface-variant) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      margin-bottom: 0.5rem;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+
+      &.short {
+        width: 70%;
+      }
+    }
+  }
+
+  .item-actions-skeleton {
+    display: flex;
+    gap: 1rem;
+
+    .action-skeleton {
+      width: 60px;
+      height: 16px;
+      border-radius: 4px;
+      background: linear-gradient(90deg, var(--mat-sys-surface-variant) 25%, rgba(var(--mat-sys-surface-variant), 0.5) 50%, var(--mat-sys-surface-variant) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
+  }
+}
+
+// Mobile adjustments for skeleton items
+@media (max-width: 1023px) {
+  .column-skeleton-items {
+    padding: 0.75rem;
+
+    .feed-item-skeleton {
+      padding: 0.75rem;
+
+      .item-header-skeleton {
+        .avatar-skeleton {
+          width: 32px;
+          height: 32px;
+        }
+      }
+    }
   }
 }

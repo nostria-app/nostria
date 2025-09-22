@@ -341,13 +341,26 @@ export class FeedsComponent implements OnDestroy {
     effect(async () => {
       // Whenever account is changed, make sure we reload this data.
       if (this.accountState.account()) {
-        untracked(async () => {
-          // Re-establish subscriptions when component loads
-          this.feedService.subscribe();
+        // Set loading state while initializing
+        this.isLoading.set(true);
 
-          if (this.availableInterests().length === 0) {
-            // Initialize followset data for new users
-            await this.initializeFollowsetData();
+        untracked(async () => {
+          try {
+            // Re-establish subscriptions when component loads
+            this.feedService.subscribe();
+
+            if (this.availableInterests().length === 0) {
+              // Initialize followset data for new users
+              await this.initializeFollowsetData();
+            }
+
+            // Give a small delay to let the feeds initialize
+            setTimeout(() => {
+              this.isLoading.set(false);
+            }, 1000);
+          } catch (error) {
+            console.error('Error initializing feeds:', error);
+            this.isLoading.set(false);
           }
         });
       }
