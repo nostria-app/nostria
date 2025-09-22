@@ -11,6 +11,7 @@ import { DiscoveryRelayService } from './relays/discovery-relay';
 import { UserDataFactoryService } from './user-data-factory.service';
 import { Cache } from './cache';
 import { UserDataService } from './user-data.service';
+import { RelaysService } from './relays/relays';
 import {
   NoteEditorDialogComponent,
   NoteEditorDialogData,
@@ -71,6 +72,7 @@ export class EventService {
   private readonly userDataFactory = inject(UserDataFactoryService);
   private readonly cache = inject(Cache);
   private readonly dialog = inject(MatDialog);
+  private readonly relays = inject(RelaysService);
 
   /**
    * Parse event tags to extract thread information
@@ -142,6 +144,29 @@ export class EventService {
     }
 
     return { author, rootId, replyId, pTags, rootRelays, replyRelays };
+  }
+
+  /**
+   * Process an event and collect relay hints for storage
+   */
+  async processEventForRelayHints(event: Event): Promise<void> {
+    // Skip kind 10002 events (user relay lists) as these should not be stored in the mapping
+    if (event.kind === 10002) {
+      return;
+    }
+
+    const { rootRelays, replyRelays, author } = this.getEventTags(event);
+    const allRelayHints = [...rootRelays, ...replyRelays];
+    
+    if (allRelayHints.length > 0) {
+      // Store hints for the event author if we know them
+      if (author) {
+        await this.relays.addRelayHintsFromEvent(author, allRelayHints);
+      }
+      
+      // Store hints for the event creator
+      await this.relays.addRelayHintsFromEvent(event.pubkey, allRelayHints);
+    }
   }
 
   /**

@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { UtilitiesService } from '../utilities.service';
-import { StorageService } from '../storage.service';
+import { StorageService, ObservedRelayStats } from '../storage.service';
 import { LocalSettingsService } from '../local-settings.service';
 
 export interface RelayStats {
@@ -32,10 +32,14 @@ export class RelaysService {
   // Signals for reactive updates
   readonly relayStatsSignal = signal<Map<string, RelayStats>>(new Map());
   readonly userRelaysSignal = signal<Map<string, string[]>>(new Map());
+  readonly observedRelaysSignal = signal<ObservedRelayStats[]>([]);
 
   constructor() {
     // Initialize with preferred relays
     this.initializePreferredRelays();
+    
+    // Load observed relays from storage
+    this.loadObservedRelays();
   }
 
   private initializePreferredRelays(): void {
@@ -64,6 +68,9 @@ export class RelaysService {
 
       this.relayStats.set(normalizedUrl, stats);
       this.updateSignals();
+      
+      // Save to storage
+      this.saveRelayStatsToStorage(stats);
     }
   }
 
@@ -84,6 +91,9 @@ export class RelaysService {
       }
 
       this.updateSignals();
+      
+      // Save to storage
+      this.saveRelayStatsToStorage(stats);
     }
   }
 
@@ -99,6 +109,9 @@ export class RelaysService {
       stats.lastConnectionRetry = this.utilities.currentDate();
       stats.connectionAttempts++;
       this.updateSignals();
+      
+      // Save to storage
+      this.saveRelayStatsToStorage(stats);
     }
   }
 
@@ -113,6 +126,9 @@ export class RelaysService {
     if (stats) {
       stats.eventsReceived++;
       this.updateSignals();
+      
+      // Save to storage
+      this.saveRelayStatsToStorage(stats);
     }
   }
 
@@ -272,5 +288,102 @@ export class RelaysService {
   private updateSignals(): void {
     this.relayStatsSignal.set(new Map(this.relayStats));
     this.userRelaysSignal.set(new Map(this.userRelays));
+  }
+
+  /**
+   * Load observed relays from IndexedDB (public method)
+   */
+  async loadObservedRelays(): Promise<void> {
+    try {
+      const observedRelays = await this.storage.getAllObservedRelays();
+      this.observedRelaysSignal.set(observedRelays);
+    } catch (error) {
+      console.error('Failed to load observed relays from storage:', error);
+    }
+  }
+
+  /**
+   * Convert RelayStats to ObservedRelayStats for storage
+   */
+  private toObservedRelayStats(stats: RelayStats): ObservedRelayStats {
+    const now = this.utilities.currentDate();
+    return {
+      url: stats.url,
+      isConnected: stats.isConnected,
+      isOffline: stats.isOffline,
+      eventsReceived: stats.eventsReceived,
+      lastConnectionRetry: stats.lastConnectionRetry,
+      lastSuccessfulConnection: stats.lastSuccessfulConnection,
+      connectionAttempts: stats.connectionAttempts,
+      firstObserved: now, // Will be overridden if it already exists
+      lastUpdated: now,
+    };
+  }
+
+  /**
+   * Save relay statistics to IndexedDB
+   */
+  private async saveRelayStatsToStorage(stats: RelayStats): Promise<void> {
+    try {
+      const existing = await this.storage.getObservedRelay(stats.url);
+      const observedStats = this.toObservedRelayStats(stats);
+      
+      if (existing) {
+        // Preserve the first observed time and merge with existing NIP-11 info
+        observedStats.firstObserved = existing.firstObserved;
+        observedStats.nip11 = existing.nip11;
+      }
+      
+      await this.storage.saveObservedRelay(observedStats);
+      
+      // Update the signal with fresh data
+      this.loadObservedRelays();
+    } catch (error) {
+      console.error('Failed to save relay stats to storage:', error);
+    }
+  }
+
+  /**
+   * Get all observed relays from storage
+   */
+  async getAllObservedRelays(): Promise<ObservedRelayStats[]> {
+    return await this.storage.getAllObservedRelays();
+  }
+
+  /**
+   * Get observed relays sorted by criteria
+   */
+  async getObservedRelaysSorted(sortBy: 'eventsReceived' | 'lastUpdated' | 'firstObserved' = 'lastUpdated'): Promise<ObservedRelayStats[]> {
+    return await this.storage.getObservedRelaysSorted(sortBy);
+  }
+
+  /**
+   * Add relay hints from event parsing
+   */
+  async addRelayHintsFromEvent(pubkey: string, relayUrls: string[]): Promise<void> {
+    for (const url of relayUrls) {
+      const normalizedUrl = this.utilities.normalizeRelayUrl(url);
+      if (!normalizedUrl) continue;
+
+      // Add to our relay stats if not already present
+      this.addRelay(normalizedUrl);
+      
+      // Update pubkey-relay mapping in storage
+      await this.storage.updatePubkeyRelayMappingFromHint(pubkey, normalizedUrl);
+    }
+  }
+
+  /**
+   * Get relay URLs discovered for a specific pubkey (fallback method)
+   */
+  async getFallbackRelaysForPubkey(pubkey: string): Promise<string[]> {
+    return await this.storage.getRelayUrlsForPubkey(pubkey);
+  }
+
+  /**
+   * Clean up old relay data
+   */
+  async cleanupOldRelayData(olderThanDays: number = 30): Promise<void> {
+    await this.storage.cleanupOldPubkeyRelayMappings(olderThanDays);
   }
 }

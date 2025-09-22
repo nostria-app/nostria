@@ -177,6 +177,111 @@ app-info-tooltip {
 
 // Card positioning for tooltips
 .user-relays-card,
-.discovery-relays-card {
+.discovery-relays-card,
+.observed-relays-card {
   position: relative;
+}
+
+// Styles for observed relays tab
+.observed-relay-item {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 8px;
+
+  .relay-header {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    grid-gap: 12px;
+    align-items: center;
+    width: 100%;
+  }
+
+  .relay-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    padding-left: 24px; // Align with relay URL
+    font-size: 0.875rem;
+    color: var(--mdc-theme-text-secondary-on-background, rgba(0, 0, 0, 0.6));
+
+    .stat-item {
+      display: flex;
+      justify-content: space-between;
+      
+      .stat-label {
+        font-weight: 500;
+      }
+      
+      .stat-value {
+        margin-left: 8px;
+      }
+    }
+  }
+
+  .performance-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-align: center;
+    min-width: 50px;
+
+    &.performance-excellent {
+      background-color: #4caf50;
+      color: white;
+    }
+
+    &.performance-good {
+      background-color: #8bc34a;
+      color: white;
+    }
+
+    &.performance-fair {
+      background-color: #ff9800;
+      color: white;
+    }
+
+    &.performance-poor {
+      background-color: #f44336;
+      color: white;
+    }
+  }
+}
+
+.sort-controls {
+  margin-bottom: 16px;
+  
+  mat-form-field {
+    width: 200px;
+  }
+}
+
+// Mobile responsive design for observed relays
+@media (max-width: 768px) {
+  .observed-relay-item {
+    .relay-header {
+      grid-template-columns: auto 1fr;
+      grid-template-rows: auto auto;
+      gap: 8px;
+
+      .performance-badge {
+        grid-column: 1;
+        grid-row: 2;
+        justify-self: start;
+      }
+
+      .action-buttons {
+        grid-column: 2;
+        grid-row: 1 / -1;
+        justify-self: end;
+        align-self: start;
+      }
+    }
+
+    .relay-stats {
+      grid-template-columns: 1fr;
+      padding-left: 12px;
+    }
+  }
 }
