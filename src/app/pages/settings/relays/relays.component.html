@@ -297,7 +297,7 @@
                     <div class="observed-relay-item">
                       <div class="relay-header">
                         <div class="status-icon">
-                          <mat-icon [ngClass]="getStatusColor(relay.isConnected ? 'connected' : relay.isOffline ? 'offline' : 'disconnected')">
+                          <mat-icon [ngClass]="getStatusColor(relay.isConnected ? 'connected' : relay.isOffline ? 'error' : 'disconnected')">
                             {{ relay.isConnected ? 'wifi' : relay.isOffline ? 'wifi_off' : 'wifi_tethering' }}
                           </mat-icon>
                         </div>
