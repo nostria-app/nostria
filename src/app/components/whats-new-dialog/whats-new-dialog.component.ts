@@ -107,6 +107,27 @@ export class WhatsNewDialogComponent {
   // Sample updates - replace with real data
   updates: FeatureUpdate[] = [
     {
+      version: '1.0.4',
+      date: 'September 2025',
+      title: 'Loading improvements',
+      description: 'Better loading indicators, better resolving events through fallbacks.',
+      features: [
+        {
+          title: 'Feeds Columns loading view',
+          description:
+            'Improved loading view for feeds columns, providing better visual feedback while content is being loaded.',
+          screenshots: [
+            {
+              src: '/screenshots/2025-09-22-feed-column-loading.png',
+              alt: 'Improved loading view for feeds columns',
+              width: 520,
+              height: 700,
+            },
+          ],
+        },
+      ],
+    },
+    {
       version: '1.0.3',
       date: 'September 2025',
       title: 'Zaps Support',
