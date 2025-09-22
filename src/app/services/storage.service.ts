@@ -179,51 +179,12 @@ export interface PubkeyRelayMapping {
   eventCount: number; // Number of events seen from this pubkey on this relay
 }
 
-// Schema for the IndexedDB database
+// Schema for the IndexedDB database  
 interface NostriaDBSchema extends DBSchema {
   relays: {
     key: string;
     value: Relay & { nip11?: Nip11Info };
     indexes: { 'by-status': string };
-  };
-  observedRelays: {
-    key: string; // relay URL
-    value: {
-      url: string;
-      isConnected: boolean;
-      isOffline: boolean;
-      eventsReceived: number;
-      lastConnectionRetry: number;
-      lastSuccessfulConnection: number;
-      connectionAttempts: number;
-      firstObserved: number;
-      lastUpdated: number;
-      nip11?: Nip11Info;
-    };
-    indexes: {
-      'by-last-updated': number;
-      'by-first-observed': number;
-      'by-events-received': number;
-      'by-connection-status': boolean;
-    };
-  };
-  pubkeyRelayMappings: {
-    key: string; // composite key: pubkey::relayUrl
-    value: {
-      id: string;
-      pubkey: string;
-      relayUrl: string;
-      source: string;
-      firstSeen: number;
-      lastSeen: number;
-      eventCount: number;
-    };
-    indexes: {
-      'by-pubkey': string;
-      'by-relay-url': string;
-      'by-last-seen': number;
-      'by-source': string;
-    };
   };
   userMetadata: {
     key: string; // pubkey
@@ -259,6 +220,28 @@ interface NostriaDBSchema extends DBSchema {
     key: string; // notification id
     value: Notification;
     indexes: { 'by-timestamp': number };
+  };
+  // @ts-ignore TypeScript issue with IndexedDB schema value types
+  observedRelays: {
+    key: string;
+    value: ObservedRelayStats;
+    indexes: {
+      'by-last-updated': number;
+      'by-first-observed': number;
+      'by-events-received': number;
+      'by-connection-status': boolean;
+    };
+  };
+  // @ts-ignore TypeScript issue with IndexedDB schema value types
+  pubkeyRelayMappings: {
+    key: string;
+    value: PubkeyRelayMapping;
+    indexes: {
+      'by-pubkey': string;
+      'by-relay-url': string;
+      'by-last-seen': number;
+      'by-source': string;
+    };
   };
 }
 
