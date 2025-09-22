@@ -1667,12 +1667,50 @@ h1 {
   }
 }
 
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.8;
+  }
+}
+
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes breathe {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.005);
+  }
+}
+
 // Skeleton items within column content
 .column-skeleton-items {
   padding: 1rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  animation: fadeInUp 0.3s ease-out, breathe 4s ease-in-out infinite;
+  animation-delay: 0s, 0.5s;
 }
 
 .feed-item-skeleton {
@@ -1680,6 +1718,32 @@ h1 {
   border-radius: 8px;
   background-color: var(--mat-sys-surface-container);
   border: 1px solid var(--mat-sys-outline-variant);
+  animation: pulse 2s ease-in-out infinite;
+
+  // Staggered animation delays for each item
+  &:nth-child(1) {
+    animation-delay: 0ms;
+  }
+
+  &:nth-child(2) {
+    animation-delay: 150ms;
+  }
+
+  &:nth-child(3) {
+    animation-delay: 300ms;
+  }
+
+  &:nth-child(4) {
+    animation-delay: 450ms;
+  }
+
+  &:nth-child(5) {
+    animation-delay: 600ms;
+  }
+
+  &:nth-child(6) {
+    animation-delay: 750ms;
+  }
 
   .item-header-skeleton {
     display: flex;
@@ -1693,7 +1757,8 @@ h1 {
       border-radius: 50%;
       background: linear-gradient(90deg, var(--mat-sys-surface-variant) 25%, rgba(var(--mat-sys-surface-variant), 0.5) 50%, var(--mat-sys-surface-variant) 75%);
       background-size: 200% 100%;
-      animation: shimmer 1.5s infinite;
+      animation: shimmer 1.5s infinite, pulse 3s ease-in-out infinite;
+      animation-delay: 0ms, 200ms;
     }
 
     .user-info-skeleton {
@@ -1707,7 +1772,8 @@ h1 {
         border-radius: 4px;
         background: linear-gradient(90deg, var(--mat-sys-surface-variant) 25%, rgba(var(--mat-sys-surface-variant), 0.5) 50%, var(--mat-sys-surface-variant) 75%);
         background-size: 200% 100%;
-        animation: shimmer 1.5s infinite;
+        animation: shimmer 1.8s infinite;
+        animation-delay: 100ms;
       }
 
       .timestamp-skeleton {
@@ -1716,7 +1782,8 @@ h1 {
         border-radius: 4px;
         background: linear-gradient(90deg, var(--mat-sys-surface-variant) 25%, rgba(var(--mat-sys-surface-variant), 0.5) 50%, var(--mat-sys-surface-variant) 75%);
         background-size: 200% 100%;
-        animation: shimmer 1.5s infinite;
+        animation: shimmer 1.6s infinite;
+        animation-delay: 300ms;
       }
     }
   }
@@ -1729,7 +1796,7 @@ h1 {
       border-radius: 4px;
       background: linear-gradient(90deg, var(--mat-sys-surface-variant) 25%, rgba(var(--mat-sys-surface-variant), 0.5) 50%, var(--mat-sys-surface-variant) 75%);
       background-size: 200% 100%;
-      animation: shimmer 1.5s infinite;
+      animation: shimmer 1.7s infinite;
       margin-bottom: 0.5rem;
 
       &:last-child {
@@ -1738,6 +1805,19 @@ h1 {
 
       &.short {
         width: 70%;
+      }
+
+      // Staggered delays for content lines
+      &:nth-child(1) {
+        animation-delay: 400ms;
+      }
+
+      &:nth-child(2) {
+        animation-delay: 550ms;
+      }
+
+      &:nth-child(3) {
+        animation-delay: 700ms;
       }
     }
   }
@@ -1752,8 +1832,82 @@ h1 {
       border-radius: 4px;
       background: linear-gradient(90deg, var(--mat-sys-surface-variant) 25%, rgba(var(--mat-sys-surface-variant), 0.5) 50%, var(--mat-sys-surface-variant) 75%);
       background-size: 200% 100%;
-      animation: shimmer 1.5s infinite;
+      animation: shimmer 1.4s infinite;
+
+      // Staggered delays for action buttons
+      &:nth-child(1) {
+        animation-delay: 800ms;
+      }
+
+      &:nth-child(2) {
+        animation-delay: 900ms;
+      }
+
+      &:nth-child(3) {
+        animation-delay: 1000ms;
+      }
+
+      &:nth-child(4) {
+        animation-delay: 1100ms;
+      }
     }
+  }
+}
+
+// Loading indicator with animated dots
+.skeleton-loading-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  margin-top: 0.5rem;
+  opacity: 0.7;
+
+  .loading-dots {
+    display: flex;
+    gap: 0.25rem;
+
+    span {
+      width: 4px;
+      height: 4px;
+      background-color: var(--mat-sys-primary);
+      border-radius: 50%;
+      animation: bounce 1.4s infinite ease-in-out;
+
+      &:nth-child(1) {
+        animation-delay: -0.32s;
+      }
+
+      &:nth-child(2) {
+        animation-delay: -0.16s;
+      }
+
+      &:nth-child(3) {
+        animation-delay: 0s;
+      }
+    }
+  }
+
+  .loading-text {
+    font-size: 0.75rem;
+    color: var(--mat-sys-on-surface-variant);
+    animation: pulse 2s ease-in-out infinite;
+  }
+}
+
+@keyframes bounce {
+
+  0%,
+  80%,
+  100% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+
+  40% {
+    transform: scale(1);
+    opacity: 1;
   }
 }
 
