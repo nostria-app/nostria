@@ -125,6 +125,11 @@ export class WhatsNewDialogComponent {
             },
           ],
         },
+        {
+          title: 'Profile image caching',
+          description:
+            'Profile images will be cached locally, maximum limit of 2000 and they are cached for 5 days.',
+        },
       ],
     },
     {
