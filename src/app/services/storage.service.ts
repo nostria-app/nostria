@@ -188,7 +188,18 @@ interface NostriaDBSchema extends DBSchema {
   };
   observedRelays: {
     key: string; // relay URL
-    value: ObservedRelayStats;
+    value: {
+      url: string;
+      isConnected: boolean;
+      isOffline: boolean;
+      eventsReceived: number;
+      lastConnectionRetry: number;
+      lastSuccessfulConnection: number;
+      connectionAttempts: number;
+      firstObserved: number;
+      lastUpdated: number;
+      nip11?: Nip11Info;
+    };
     indexes: {
       'by-last-updated': number;
       'by-first-observed': number;
@@ -198,7 +209,15 @@ interface NostriaDBSchema extends DBSchema {
   };
   pubkeyRelayMappings: {
     key: string; // composite key: pubkey::relayUrl
-    value: PubkeyRelayMapping;
+    value: {
+      id: string;
+      pubkey: string;
+      relayUrl: string;
+      source: string;
+      firstSeen: number;
+      lastSeen: number;
+      eventCount: number;
+    };
     indexes: {
       'by-pubkey': string;
       'by-relay-url': string;
