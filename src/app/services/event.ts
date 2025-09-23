@@ -18,6 +18,7 @@ import {
   NoteEditorDialogData,
 } from '../components/note-editor-dialog/note-editor-dialog.component';
 import { MatDialog } from '@angular/material/dialog';
+import { DebugLoggerService } from './debug-logger.service';
 
 export interface Reaction {
   emoji: string;
@@ -75,6 +76,7 @@ export class EventService {
   private readonly dialog = inject(MatDialog);
   private readonly relays = inject(RelaysService);
   private readonly subscriptionCache = inject(SubscriptionCacheService);
+  private readonly debugLogger = inject(DebugLoggerService);
 
   // UserDataService instance management with automatic cleanup
   private readonly userDataInstances = new Map<
@@ -95,6 +97,11 @@ export class EventService {
   constructor() {
     // Start cleanup timer for UserDataService instances
     this.startUserDataCleanup();
+
+    // Register with debug logger for stats (use setTimeout to avoid circular dependency)
+    setTimeout(() => {
+      this.debugLogger.setEventService(this);
+    }, 0);
   }
 
   /**
