@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { SimplePool, Event } from 'nostr-tools';
 import { LoggerService } from '../logger.service';
+import { DebugLoggerService } from '../debug-logger.service';
 import { DiscoveryRelayService } from './discovery-relay';
 import { RelaysService } from './relays';
 
@@ -10,8 +11,12 @@ import { RelaysService } from './relays';
 export class SharedRelayService {
   #pool = new SimplePool();
   private logger = inject(LoggerService);
+  private debugLogger = inject(DebugLoggerService);
   private discoveryRelay = inject(DiscoveryRelayService);
   private readonly relaysService = inject(RelaysService);
+
+  // Debug tracking
+  private debugInstanceId: string;
 
   // Semaphore for controlling concurrent requests
   private readonly maxConcurrentRequests = 3;
@@ -21,6 +26,14 @@ export class SharedRelayService {
   // Request deduplication cache
   private readonly requestCache = new Map<string, Promise<any>>();
   private readonly cacheTimeout = 1000; // 1 second cache
+
+  constructor() {
+    // Register this instance with the debug logger
+    this.debugInstanceId = this.debugLogger.registerInstance(
+      this.constructor.name,
+      [], // No specific relay URLs for shared service
+    );
+  }
 
   /**
    * Creates a unique cache key for request deduplication
@@ -33,7 +46,7 @@ export class SharedRelayService {
    * Acquires a semaphore slot for making a request
    */
   private async acquireSemaphore(): Promise<void> {
-    return new Promise<void>(resolve => {
+    return new Promise<void>((resolve) => {
       if (this.currentRequests < this.maxConcurrentRequests) {
         this.currentRequests++;
         resolve();
@@ -63,13 +76,13 @@ export class SharedRelayService {
   private async performRequest<T extends Event = Event>(
     relayUrls: string[],
     filter: any,
-    timeout: number
+    timeout: number,
   ): Promise<T | null> {
     await this.acquireSemaphore();
 
     try {
       // Track that we're attempting to connect to these relays
-      relayUrls.forEach(url => {
+      relayUrls.forEach((url) => {
         this.relaysService.updateRelayConnection(url, true);
       });
 
@@ -81,7 +94,7 @@ export class SharedRelayService {
 
       // If we received an event, increment the count for all relays that could have provided it
       if (event) {
-        relayUrls.forEach(url => {
+        relayUrls.forEach((url) => {
           this.relaysService.incrementEventCount(url);
         });
       }
@@ -91,7 +104,7 @@ export class SharedRelayService {
       this.logger.error('Error fetching events', error);
 
       // Track connection retry for failed connections
-      relayUrls.forEach(url => {
+      relayUrls.forEach((url) => {
         this.relaysService.recordConnectionRetry(url);
         this.relaysService.updateRelayConnection(url, false);
       });
@@ -121,7 +134,7 @@ export class SharedRelayService {
       until?: number;
       limit?: number;
     },
-    options: { timeout?: number } = {}
+    options: { timeout?: number } = {},
   ): Promise<T | null> {
     this.logger.debug('Getting events with filters (account-relay):', filter);
 
@@ -157,7 +170,7 @@ export class SharedRelayService {
   private async executeGetRequest<T extends Event = Event>(
     pubkey: string,
     filter: any,
-    timeout: number
+    timeout: number,
   ): Promise<T | null> {
     // Get optimal relays for the user
     let relayUrls = await this.discoveryRelay.getUserRelayUrls(pubkey);
@@ -197,7 +210,7 @@ export class SharedRelayService {
       until?: number;
       limit?: number;
     },
-    options: { timeout?: number } = {}
+    options: { timeout?: number } = {},
   ): Promise<T[]> {
     this.logger.debug('Getting events with filters (account-relay):', filter);
 
@@ -233,7 +246,7 @@ export class SharedRelayService {
   private async executeGetManyRequest<T extends Event = Event>(
     pubkey: string,
     filter: any,
-    timeout: number
+    timeout: number,
   ): Promise<T[]> {
     let relayUrls = await this.discoveryRelay.getUserRelayUrls(pubkey);
     relayUrls = this.relaysService.getOptimalRelays(relayUrls);
@@ -248,15 +261,24 @@ export class SharedRelayService {
     try {
       // Execute the query
       const events: T[] = [];
-      return new Promise<T[]>(resolve => {
+      return new Promise<T[]>((resolve) => {
+        // Register subscription with debug logger
+        const debugSubscriptionId = this.debugLogger.registerSubscription(
+          this.debugInstanceId,
+          [filter],
+          relayUrls,
+        );
+
         const sub = this.#pool!.subscribeEose(relayUrls, filter, {
           maxWait: timeout,
-          onevent: event => {
+          onevent: (event) => {
             // Add the received event to our collection
             events.push(event as T);
           },
-          onclose: reasons => {
+          onclose: (reasons) => {
             console.log('Subscriptions closed', reasons);
+            // Mark subscription as closed in debug logger
+            this.debugLogger.closeSubscription(debugSubscriptionId);
             resolve(events);
           },
         });
