@@ -11,6 +11,9 @@ import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { frontalCamera, QRCanvas, frameLoop } from 'qr/dom';
+import { nip19 } from 'nostr-tools';
+import { UtilitiesService } from '../../services/utilities.service';
+import { LoggerService } from '../../services/logger.service';
 
 @Component({
   selector: 'app-qrcode-scan-dialog',
@@ -21,6 +24,8 @@ import { frontalCamera, QRCanvas, frameLoop } from 'qr/dom';
 })
 export class QrcodeScanDialogComponent implements AfterViewInit, OnDestroy {
   private dialogRef = inject(MatDialogRef<QrcodeScanDialogComponent>);
+  private utilities = inject(UtilitiesService);
+  private logger = inject(LoggerService);
 
   @ViewChild('videoElement', { static: false })
   videoElement!: ElementRef<HTMLVideoElement>;
@@ -215,8 +220,107 @@ export class QrcodeScanDialogComponent implements AfterViewInit, OnDestroy {
   }
 
   private onScanSuccess(result: string) {
+    this.logger.info('QR code scanned:', result);
+
+    // Process the scanned result to handle different Nostr entity formats
+    const processedResult = this.processScannedResult(result);
+
     this.stopScanning();
-    this.dialogRef.close(result);
+    this.dialogRef.close(processedResult);
+  }
+
+  /**
+   * Process scanned QR code result to handle different Nostr entity formats
+   */
+  private processScannedResult(rawResult: string): string {
+    if (!rawResult || typeof rawResult !== 'string') {
+      return rawResult;
+    }
+
+    const trimmedResult = rawResult.trim();
+    this.logger.debug('Processing scanned result:', trimmedResult);
+
+    // Handle different formats of Nostr entities
+
+    // 1. Handle "nostr:" prefixed URIs (standard format)
+    if (trimmedResult.startsWith('nostr:')) {
+      const entity = trimmedResult.substring(6); // Remove "nostr:" prefix
+      this.logger.debug('Found nostr: prefixed entity:', entity);
+      return this.normalizeNostrEntity(entity);
+    }
+
+    // 2. Handle direct Nostr entities (npub, nprofile, note, nevent, naddr, etc.)
+    if (this.isNostrEntity(trimmedResult)) {
+      this.logger.debug('Found direct nostr entity:', trimmedResult);
+      return this.normalizeNostrEntity(trimmedResult);
+    }
+
+    // 3. Handle other special formats
+    if (trimmedResult.startsWith('bunker://') ||
+      trimmedResult.startsWith('nostr+walletconnect://') ||
+      trimmedResult.startsWith('nostr+')) {
+      this.logger.debug('Found special protocol:', trimmedResult);
+      return trimmedResult;
+    }
+
+    // 4. Check if it's a raw hex pubkey
+    if (this.utilities.isValidHexPubkey(trimmedResult)) {
+      this.logger.debug('Found raw hex pubkey, converting to npub');
+      return this.utilities.getNpubFromPubkey(trimmedResult);
+    }
+
+    // Return as-is if no special processing needed
+    this.logger.debug('No special processing needed, returning as-is');
+    return trimmedResult;
+  }
+
+  /**
+   * Check if a string is a Nostr entity
+   */
+  private isNostrEntity(value: string): boolean {
+    return (
+      value.startsWith('npub') ||
+      value.startsWith('nprofile') ||
+      value.startsWith('nevent') ||
+      value.startsWith('note') ||
+      value.startsWith('naddr') ||
+      value.startsWith('nsec')
+    );
+  }
+
+  /**
+   * Normalize a Nostr entity to ensure it's in the correct format
+   */
+  private normalizeNostrEntity(entity: string): string {
+    try {
+      // Validate the entity by trying to decode it
+      if (entity.startsWith('npub') || entity.startsWith('nprofile')) {
+        const decoded = nip19.decode(entity);
+        if (decoded.type === 'npub' || decoded.type === 'nprofile') {
+          this.logger.debug('Valid Nostr entity confirmed:', entity);
+          return entity;
+        }
+      } else if (entity.startsWith('note') || entity.startsWith('nevent')) {
+        const decoded = nip19.decode(entity);
+        if (decoded.type === 'note' || decoded.type === 'nevent') {
+          this.logger.debug('Valid Nostr entity confirmed:', entity);
+          return entity;
+        }
+      } else if (entity.startsWith('naddr')) {
+        const decoded = nip19.decode(entity);
+        if (decoded.type === 'naddr') {
+          this.logger.debug('Valid Nostr entity confirmed:', entity);
+          return entity;
+        }
+      }
+
+      // If we reach here, the entity might be malformed
+      this.logger.warn('Potentially malformed Nostr entity:', entity);
+      return entity; // Return as-is, let the consuming code handle it
+    } catch (error) {
+      this.logger.warn('Error validating Nostr entity:', entity, error);
+      return entity; // Return as-is if validation fails
+    }
   }
 
   async switchCamera() {
