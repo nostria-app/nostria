@@ -12,6 +12,7 @@ import { UserDataFactoryService } from './user-data-factory.service';
 import { Cache } from './cache';
 import { UserDataService } from './user-data.service';
 import { RelaysService } from './relays/relays';
+import { SubscriptionCacheService } from './subscription-cache.service';
 import {
   NoteEditorDialogComponent,
   NoteEditorDialogData,
@@ -73,13 +74,122 @@ export class EventService {
   private readonly cache = inject(Cache);
   private readonly dialog = inject(MatDialog);
   private readonly relays = inject(RelaysService);
+  private readonly subscriptionCache = inject(SubscriptionCacheService);
+
+  // UserDataService instance management with automatic cleanup
+  private readonly userDataInstances = new Map<
+    string,
+    {
+      instance: UserDataService;
+      lastUsed: number;
+      refCount: number;
+    }
+  >();
+
+  // Cache configuration for UserDataService instances
+  private readonly USER_DATA_CACHE_CONFIG = {
+    maxSize: 50, // Increased from 20 to handle more concurrent users
+    ttl: 1000 * 60 * 5, // Increased from 1 minute to 5 minutes
+  };
+
+  constructor() {
+    // Start cleanup timer for UserDataService instances
+    this.startUserDataCleanup();
+  }
+
+  /**
+   * Start periodic cleanup of unused UserDataService instances
+   */
+  private startUserDataCleanup(): void {
+    setInterval(() => {
+      this.cleanupUnusedUserDataServices();
+    }, 60000); // Check every minute
+  }
+
+  /**
+   * Clean up UserDataService instances that haven't been used recently
+   */
+  private cleanupUnusedUserDataServices(): void {
+    const now = Date.now();
+    const maxAge = 30 * 1000; // 30 seconds
+    const keysToDelete: string[] = [];
+
+    console.log(`[DEBUG] Cleanup check: ${this.userDataInstances.size} instances tracked`);
+
+    for (const [key, entry] of this.userDataInstances.entries()) {
+      const timeSinceLastUsed = now - entry.lastUsed;
+      const isIdle = entry.instance.isIdle?.() ?? true; // Assume idle if method doesn't exist
+      const shouldCleanup = timeSinceLastUsed > maxAge && entry.refCount === 0 && isIdle;
+
+      console.log(`[DEBUG] Instance ${key}:`, {
+        timeSinceLastUsed: Math.round(timeSinceLastUsed / 1000) + 's',
+        refCount: entry.refCount,
+        isIdle,
+        shouldCleanup,
+      });
+
+      if (shouldCleanup) {
+        this.logger.debug(`Cleaning up idle UserDataService for key: ${key}`);
+        entry.instance.destroy();
+        keysToDelete.push(key);
+      }
+    }
+
+    keysToDelete.forEach((key) => this.userDataInstances.delete(key));
+
+    if (keysToDelete.length > 0) {
+      this.logger.info(`Cleaned up ${keysToDelete.length} unused UserDataService instances`);
+      console.log(`[DEBUG] Cleaned up instances:`, keysToDelete);
+    }
+  }
+
+  /**
+   * Get or create a UserDataService instance with reference counting
+   */
+  private async getUserDataService(pubkey: string): Promise<UserDataService> {
+    const key = `user-data-${pubkey}`;
+    let entry = this.userDataInstances.get(key);
+
+    if (!entry) {
+      // Create new instance
+      const instance = await this.userDataFactory.create(pubkey);
+      entry = {
+        instance,
+        lastUsed: Date.now(),
+        refCount: 0,
+      };
+      this.userDataInstances.set(key, entry);
+      this.logger.debug(`Created new UserDataService for ${pubkey}`);
+      console.log(`[DEBUG] Created UserDataService for ${pubkey}, total instances: ${this.userDataInstances.size}`);
+    }
+
+    // Update usage tracking
+    entry.lastUsed = Date.now();
+    entry.refCount++;
+    console.log(`[DEBUG] ${key} ref count increased to ${entry.refCount}`);
+
+    return entry.instance;
+  }
+
+  /**
+   * Release a UserDataService instance (decrease reference count)
+   */
+  private releaseUserDataService(pubkey: string): void {
+    const key = `user-data-${pubkey}`;
+    const entry = this.userDataInstances.get(key);
+
+    if (entry && entry.refCount > 0) {
+      entry.refCount--;
+      console.log(`[DEBUG] ${key} ref count decreased to ${entry.refCount}`);
+    }
+  }
 
   /**
    * Parse event tags to extract thread information
    */
   getEventTags(event: Event): EventTags {
-    const eTags = event.tags.filter(tag => tag[0] === 'e');
-    const pTags = event.tags.filter(tag => tag[0] === 'p').map(tag => tag[1]);
+    const eTags = event.tags.filter((tag) => tag[0] === 'e');
+    const pTags = event.tags.filter((tag) => tag[0] === 'p').map((tag) => tag[1]);
 
     let rootId: string | null = null;
     let replyId: string | null = null;
@@ -88,7 +198,7 @@ export class EventService {
     const replyRelays: string[] = [];
 
     // Find root tag (NIP-10 marked format)
-    const rootTag = eTags.find(tag => tag[3] === 'root');
+    const rootTag = eTags.find((tag) => tag[3] === 'root');
     if (rootTag) {
       rootId = rootTag[1];
       // Extract author pubkey from root tag if present (5th element)
@@ -100,7 +210,7 @@ export class EventService {
     }
 
     // Find reply tag (NIP-10 marked format)
-    const replyTag = eTags.find(tag => tag[3] === 'reply');
+    const replyTag = eTags.find((tag) => tag[3] === 'reply');
     if (replyTag) {
       replyId = replyTag[1];
       // Extract relay URL from reply tag if present (3rd element)
@@ -177,7 +287,7 @@ export class EventService {
     const childrenMap = new Map<string, Event[]>();
 
     // Build maps
-    events.forEach(event => {
+    events.forEach((event) => {
       eventMap.set(event.id, event);
 
       const { replyId } = this.getEventTags(event);
@@ -203,7 +313,7 @@ export class EventService {
             return a.created_at - b.created_at; // Oldest first for nested replies
           }
         })
-        .map(child => {
+        .map((child) => {
           const threadedEvent: ThreadedEvent = {
             event: child,
             replies: [],
@@ -237,6 +347,7 @@ export class EventService {
     this.logger.info('loadEvent called with nevent:', nevent);
 
     let userData: UserDataService | undefined;
+    let shouldReleaseUserData = false;
 
     // Handle hex string input
     if (this.utilities.isHex(nevent)) {
@@ -249,54 +360,53 @@ export class EventService {
     const hex = decoded.data.id;
     this.logger.info('Decoded event ID:', hex, 'Author:', decoded.data.author);
 
-    // If we have an author, we'll create a data factory for it.
-    if (decoded.data.author) {
-      userData = this.cache.get<UserDataService>('user-data-' + decoded.data.author);
-
-      if (!userData) {
-        userData = await this.userDataFactory.create(decoded.data.author);
-
-        this.cache.set('user-data-' + decoded.data.author, userData, {
-          maxSize: 20,
-          ttl: 1000 * 60,
-        });
-      }
-    }
-
     // Check if we have cached event in item
     if (item?.event && item.event.id === hex) {
       this.logger.info('Using cached event from item');
       return item.event;
     }
 
-    if (userData) {
-      // Try to get from user data service first
-      try {
-        const event = await userData.getEventById(hex, { cache: true, ttl: minutes.five });
-
-        if (event) {
-          this.logger.info('Loaded event from storage or relays:', event.event.id);
-          return event.event;
-        }
-      } catch (error) {
-        this.logger.error('Error loading event from data service:', error);
+    try {
+      // If we have an author, we'll create a managed data factory for it.
+      if (decoded.data.author) {
+        userData = await this.getUserDataService(decoded.data.author);
+        shouldReleaseUserData = true;
       }
-    } else {
-      // Try to get from account data service.
-      try {
-        // Attempt to get from account relays.
-        const event = await this.data.getEventById(hex, { cache: true, ttl: minutes.five });
 
-        if (event) {
-          this.logger.info('Loaded event from storage or relays:', event.event.id);
-          return event.event;
+      if (userData) {
+        // Try to get from user data service first
+        try {
+          const event = await userData.getEventById(hex, { cache: true, ttl: minutes.five });
+
+          if (event) {
+            this.logger.info('Loaded event from storage or relays:', event.event.id);
+            return event.event;
+          }
+        } catch (error) {
+          this.logger.error('Error loading event from data service:', error);
         }
-      } catch (error) {
-        this.logger.error('Error loading event from data service:', error);
+      } else {
+        // Try to get from account data service.
+        try {
+          // Attempt to get from account relays.
+          const event = await this.data.getEventById(hex, { cache: true, ttl: minutes.five });
+
+          if (event) {
+            this.logger.info('Loaded event from storage or relays:', event.event.id);
+            return event.event;
+          }
+        } catch (error) {
+          this.logger.error('Error loading event from data service:', error);
+        }
+      }
+
+      return null;
+    } finally {
+      // Release the UserDataService instance if we acquired one
+      if (shouldReleaseUserData && decoded.data.author) {
+        this.releaseUserDataService(decoded.data.author);
       }
     }
-
-    return null;
   }
 
   /**
@@ -305,16 +415,8 @@ export class EventService {
   async loadReplies(eventId: string, pubkey: string): Promise<Event[]> {
     this.logger.info('loadReplies called with eventId:', eventId, 'pubkey:', pubkey);
 
-    let userData = this.cache.get<UserDataService>('user-data-' + pubkey);
-
-    if (!userData) {
-      userData = await this.userDataFactory.create(pubkey);
-
-      this.cache.set('user-data-' + pubkey, userData, {
-        maxSize: 20,
-        ttl: 1000 * 60,
-      });
-    }
+    // Get managed UserDataService instance
+    const userData = await this.getUserDataService(pubkey);
 
     try {
       // Load replies (kind 1 events that reference this event)
@@ -325,20 +427,23 @@ export class EventService {
 
       // Extract events from records and filter valid replies
       const replies = replyRecords
-        .map(record => record.event)
-        .filter(event => event.content && event.content.trim().length > 0);
+        .map((record) => record.event)
+        .filter((event) => event.content && event.content.trim().length > 0);
 
       this.logger.info(
         'Successfully loaded replies for event:',
         eventId,
         'replies:',
-        replies.length
+        replies.length,
       );
 
       return replies;
     } catch (error) {
       this.logger.error('Error loading replies:', error);
       return [];
+    } finally {
+      // Release the UserDataService instance
+      this.releaseUserDataService(pubkey);
     }
   }
 
@@ -348,56 +453,71 @@ export class EventService {
   async loadReactions(
     eventId: string,
     pubkey: string,
-    invalidateCache = false
+    invalidateCache = false,
   ): Promise<ReactionEvents> {
     this.logger.info('loadReactions called with eventId:', eventId, 'pubkey:', pubkey);
 
-    let userData = this.cache.get<UserDataService>('user-data-' + pubkey);
-
-    if (!userData) {
-      userData = await this.userDataFactory.create(pubkey);
-
-      this.cache.set('user-data-' + pubkey, userData, {
-        maxSize: 20,
-        ttl: 1000 * 60,
-      });
+    // Handle cache invalidation if requested
+    if (invalidateCache) {
+      this.subscriptionCache.invalidateEventCache([eventId]);
     }
 
-    try {
-      // Load reactions (kind 7 events that reference this event)
-      const reactionRecords = await userData.getEventsByKindAndEventTag(kinds.Reaction, eventId, {
-        cache: true,
-        ttl: minutes.five,
-        invalidateCache,
-      });
+    // Use subscription cache to prevent duplicate subscriptions
+    const cacheKey = `reactions-${eventId}-${pubkey}`;
+    const cachedResult = await this.subscriptionCache.getOrCreateSubscription<ReactionEvents>(
+      cacheKey,
+      [eventId], // eventIds array
+      'reactions', // subscription type
+      async () => {
+        // Get managed UserDataService instance
+        const userData = await this.getUserDataService(pubkey);
 
-      // Count reactions by emoji
-      const reactionCounts = new Map<string, number>();
-      reactionRecords.forEach(record => {
-        const event = record.event;
-        if (event.content && event.content.trim()) {
-          const emoji = event.content.trim();
-          reactionCounts.set(emoji, (reactionCounts.get(emoji) || 0) + 1);
+        try {
+          // Load reactions (kind 7 events that reference this event)
+          const reactionRecords = await userData.getEventsByKindAndEventTag(
+            kinds.Reaction,
+            eventId,
+            {
+              cache: true,
+              ttl: minutes.five,
+              invalidateCache,
+            },
+          );
+
+          // Count reactions by emoji
+          const reactionCounts = new Map<string, number>();
+          reactionRecords.forEach((record) => {
+            const event = record.event;
+            if (event.content && event.content.trim()) {
+              const emoji = event.content.trim();
+              reactionCounts.set(emoji, (reactionCounts.get(emoji) || 0) + 1);
+            }
+          });
+
+          const reactions = this.mapToReactionArray(reactionCounts);
+
+          this.logger.info(
+            'Successfully loaded reactions for event:',
+            eventId,
+            'reactions:',
+            reactions.length,
+          );
+
+          return {
+            events: reactionRecords,
+            data: reactionCounts,
+          };
+        } catch (error) {
+          this.logger.error('Error loading reactions:', error);
+          return { events: [], data: new Map() };
+        } finally {
+          // Release the UserDataService instance
+          this.releaseUserDataService(pubkey);
         }
-      });
+      },
+    );
 
-      const reactions = this.mapToReactionArray(reactionCounts);
-
-      this.logger.info(
-        'Successfully loaded reactions for event:',
-        eventId,
-        'reactions:',
-        reactions.length
-      );
-
-      return {
-        events: reactionRecords,
-        data: reactionCounts,
-      };
-    } catch (error) {
-      this.logger.error('Error loading reactions:', error);
-      return { events: [], data: new Map() };
-    }
+    return cachedResult;
   }
 
   /**
@@ -406,20 +526,12 @@ export class EventService {
   async loadReports(
     eventId: string,
     pubkey: string,
-    invalidateCache = false
+    invalidateCache = false,
   ): Promise<ReportEvents> {
     this.logger.info('loadReports called with eventId:', eventId, 'pubkey:', pubkey);
 
-    let userData = this.cache.get<UserDataService>('user-data-' + pubkey);
-
-    if (!userData) {
-      userData = await this.userDataFactory.create(pubkey);
-
-      this.cache.set('user-data-' + pubkey, userData, {
-        maxSize: 20,
-        ttl: 1000 * 60,
-      });
-    }
+    // Get managed UserDataService instance
+    const userData = await this.getUserDataService(pubkey);
 
     try {
       // Load reports (kind 1984 events that reference this event)
@@ -431,13 +543,13 @@ export class EventService {
 
       // Count reports by type from tags (NIP-56)
       const reportCounts = new Map<string, number>();
-      reportRecords.forEach(record => {
+      reportRecords.forEach((record) => {
         const event = record.event;
 
         // Look for report type in e-tags that reference this event
-        const eTags = event.tags.filter(tag => tag[0] === 'e' && tag[1] === eventId);
+        const eTags = event.tags.filter((tag) => tag[0] === 'e' && tag[1] === eventId);
 
-        eTags.forEach(tag => {
+        eTags.forEach((tag) => {
           // Report type is the 3rd element (index 2) in the tag according to NIP-56
           const reportType = tag[2];
           if (reportType && reportType.trim()) {
@@ -459,7 +571,7 @@ export class EventService {
         'Successfully loaded reports for event:',
         eventId,
         'report types:',
-        Array.from(reportCounts.keys())
+        Array.from(reportCounts.keys()),
       );
 
       return {
@@ -469,6 +581,9 @@ export class EventService {
     } catch (error) {
       this.logger.error('Error loading reports:', error);
       return { events: [], data: new Map() };
+    } finally {
+      // Release the UserDataService instance
+      this.releaseUserDataService(pubkey);
     }
   }
 
@@ -478,7 +593,7 @@ export class EventService {
    */
   async loadRepliesAndReactions(
     eventId: string,
-    pubkey: string
+    pubkey: string,
   ): Promise<{ replies: Event[]; reactions: Reaction[] }> {
     this.logger.info('loadRepliesAndReactions called with eventId:', eventId, 'pubkey:', pubkey);
 
@@ -509,23 +624,13 @@ export class EventService {
 
     if (!author) {
       this.logger.warn(
-        'No author found for loading root event. Fallback to attempt using first p-tag.'
+        'No author found for loading root event. Fallback to attempt using first p-tag.',
       );
       author = pTags[0];
     }
 
-    let userData: UserDataService | undefined;
-
-    userData = this.cache.get<UserDataService>('user-data-' + author);
-
-    if (!userData) {
-      userData = await this.userDataFactory.create(author);
-
-      this.cache.set('user-data-' + author, userData, {
-        maxSize: 20,
-        ttl: minutes.one,
-      });
-    }
+    // Get managed UserDataService instance
+    const userData = await this.getUserDataService(author);
 
     try {
       // Load immediate parent (reply)
@@ -551,7 +656,7 @@ export class EventService {
           ttl: minutes.five,
         });
 
-        if (rootEvent && !parents.find(p => p.id === rootEvent.event.id)) {
+        if (rootEvent && !parents.find((p) => p.id === rootEvent.event.id)) {
           parents.unshift(rootEvent.event);
         }
       }
@@ -560,6 +665,9 @@ export class EventService {
     } catch (error) {
       console.error('Error loading parent events:', error);
       return [];
+    } finally {
+      // Release the UserDataService instance
+      this.releaseUserDataService(author);
     }
   }
 
@@ -587,11 +695,11 @@ export class EventService {
     const { replies, reactions } = await this.loadRepliesAndReactions(threadRootId, event.pubkey);
 
     // Filter out parent events from replies to avoid duplication
-    const parentEventIds = new Set(parents.map(p => p.id));
+    const parentEventIds = new Set(parents.map((p) => p.id));
     // Also exclude the current event itself from replies
     parentEventIds.add(event.id);
 
-    const filteredReplies = replies.filter(reply => !parentEventIds.has(reply.id));
+    const filteredReplies = replies.filter((reply) => !parentEventIds.has(reply.id));
 
     // Build threaded structure starting from the current event
     const threadedReplies = this.buildThreadTree(filteredReplies, event.id, 4);
@@ -612,7 +720,7 @@ export class EventService {
    */
   async *loadThreadProgressively(
     nevent: string,
-    item?: EventData
+    item?: EventData,
   ): AsyncGenerator<Partial<ThreadData>, ThreadData> {
     // First, load the main event
     const event = await this.loadEvent(nevent, item);
@@ -666,11 +774,11 @@ export class EventService {
       if (actualThreadRootId !== event.id) {
         finalRepliesPromise = this.loadReplies(
           actualThreadRootId,
-          rootEvent?.pubkey || event.pubkey
+          rootEvent?.pubkey || event.pubkey,
         );
         finalReactionsPromise = this.loadReactions(
           actualThreadRootId,
-          rootEvent?.pubkey || event.pubkey
+          rootEvent?.pubkey || event.pubkey,
         );
       }
 
@@ -678,10 +786,10 @@ export class EventService {
       const replies = await finalRepliesPromise;
 
       // Only filter out parent events and current event from the flat replies list
-      const parentEventIds = new Set(parents.map(p => p.id));
+      const parentEventIds = new Set(parents.map((p) => p.id));
       parentEventIds.add(event.id);
 
-      const filteredReplies = replies.filter(reply => !parentEventIds.has(reply.id));
+      const filteredReplies = replies.filter((reply) => !parentEventIds.has(reply.id));
 
       // Build thread tree starting from the current event, not the thread root
       // This will show replies TO the current event and its descendants
@@ -718,7 +826,7 @@ export class EventService {
         const replies = await currentEventRepliesPromise;
 
         // Filter out the current event from replies
-        const filteredReplies = replies.filter(reply => reply.id !== event.id);
+        const filteredReplies = replies.filter((reply) => reply.id !== event.id);
         const threadedReplies = this.buildThreadTree(filteredReplies, event.id, 4);
 
         const finalData: ThreadData = {
@@ -766,38 +874,52 @@ export class EventService {
     eventId: string,
     eventKind: number,
     userPubkey: string,
-    invalidateCache = false
+    invalidateCache = false,
   ): Promise<NostrRecord[]> {
     this.logger.info('loadReposts called with eventId:', eventId, 'userPubkey:', userPubkey);
 
-    let userData: UserDataService | undefined;
-
-    userData = this.cache.get<UserDataService>('user-data-' + userPubkey);
-
-    if (!userData) {
-      userData = await this.userDataFactory.create(userPubkey);
-
-      this.cache.set('user-data-' + userPubkey, userData, {
-        maxSize: 20,
-        ttl: 1000 * 60,
-      });
+    // Handle cache invalidation if requested
+    if (invalidateCache) {
+      this.subscriptionCache.invalidateEventCache([eventId]);
     }
 
-    const repostKind = eventKind === kinds.ShortTextNote ? kinds.Repost : kinds.GenericRepost;
+    // Use subscription cache to prevent duplicate subscriptions
+    const cacheKey = `reposts-${eventId}-${userPubkey}`;
+    const cachedResult = await this.subscriptionCache.getOrCreateSubscription<NostrRecord[]>(
+      cacheKey,
+      [eventId], // eventIds array
+      'reposts', // subscription type
+      async () => {
+        // Get managed UserDataService instance
+        const userData = await this.getUserDataService(userPubkey);
 
-    try {
-      const reposts = await userData.getEventsByKindAndEventTag(repostKind, eventId, {
-        save: false,
-        cache: true,
-        invalidateCache,
-      });
+        const repostKind = eventKind === kinds.ShortTextNote ? kinds.Repost : kinds.GenericRepost;
 
-      this.logger.info('Successfully loaded reposts for event:', eventId, 'count:', reposts.length);
-      return reposts;
-    } catch (error) {
-      this.logger.error('Error loading reposts for event:', eventId, error);
-      return [];
-    }
+        try {
+          const reposts = await userData.getEventsByKindAndEventTag(repostKind, eventId, {
+            save: false,
+            cache: true,
+            invalidateCache,
+          });
+
+          this.logger.info(
+            'Successfully loaded reposts for event:',
+            eventId,
+            'count:',
+            reposts.length,
+          );
+          return reposts;
+        } catch (error) {
+          this.logger.error('Error loading reposts for event:', eventId, error);
+          return [];
+        } finally {
+          // Release the UserDataService instance
+          this.releaseUserDataService(userPubkey);
+        }
+      },
+    );
+
+    return cachedResult;
   }
 
   // Handler methods for different creation types
@@ -809,7 +931,7 @@ export class EventService {
       data,
     });
 
-    dialogRef.afterClosed().subscribe(result => {
+    dialogRef.afterClosed().subscribe((result) => {
       if (result?.published) {
         console.log('Note published successfully:', result.event);
       }

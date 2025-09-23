@@ -13,15 +13,9 @@ module.exports = tseslint.config(
       ...tseslint.configs.stylistic,
       ...angular.configs.tsRecommended,
     ],
-    plugins: {
-      prettier: require('eslint-plugin-prettier'),
-    },
+
     processor: angular.processInlineTemplates,
     rules: {
-      // Prettier rules
-      'prettier/prettier': 'error',
-
-      // Disable conflicting rules that prettier handles
       'max-len': 'off',
       quotes: 'off',
       semi: 'off',

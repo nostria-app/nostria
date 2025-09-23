@@ -19,7 +19,7 @@ export class SharedRelayService {
   private debugInstanceId: string;
 
   // Semaphore for controlling concurrent requests
-  private readonly maxConcurrentRequests = 3;
+  private readonly maxConcurrentRequests = 50; // Increased from 3 to handle many concurrent users
   private currentRequests = 0;
   private requestQueue: (() => void)[] = [];
 
