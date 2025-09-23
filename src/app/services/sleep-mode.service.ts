@@ -268,7 +268,7 @@ export class SleepModeService implements OnDestroy {
    */
   hideWakeupOverlay(): void {
     this.showWakeupOverlay.set(false);
-    this.state.update((state) => ({ ...state, showWakeupOverlay: false }));
+    this.state.update(state => ({ ...state, showWakeupOverlay: false }));
   }
 
   /**

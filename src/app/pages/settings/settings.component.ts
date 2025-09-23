@@ -66,13 +66,13 @@ export class SettingsComponent {
 
   constructor() {
     // Check if the screen is mobile-sized
-    this.breakpointObserver.observe(['(max-width: 768px)']).subscribe((result) => {
+    this.breakpointObserver.observe(['(max-width: 768px)']).subscribe(result => {
       this.isMobile.set(result.matches);
       this.showDetails.set(!result.matches);
     });
 
     // Listen to route changes to update active section
-    this.router.events.pipe(filter((event) => event instanceof NavigationEnd)).subscribe(() => {
+    this.router.events.pipe(filter(event => event instanceof NavigationEnd)).subscribe(() => {
       const currentRoute = this.router.url.split('/').pop() || 'general';
       this.activeSection.set(currentRoute);
     });
@@ -98,8 +98,6 @@ export class SettingsComponent {
   }
 
   getTitle() {
-    return (
-      this.sections.find((section) => section.id === this.activeSection())?.title || 'Settings'
-    );
+    return this.sections.find(section => section.id === this.activeSection())?.title || 'Settings';
   }
 }

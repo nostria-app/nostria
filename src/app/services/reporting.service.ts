@@ -50,25 +50,25 @@ export class ReportingService {
   mutedPubkeys = computed(() => {
     const muteList = this.accountState.muteList();
     if (!muteList?.tags) return [];
-    return muteList.tags.filter((tag) => tag[0] === 'p').map((tag) => tag[1]);
+    return muteList.tags.filter(tag => tag[0] === 'p').map(tag => tag[1]);
   });
 
   mutedEvents = computed(() => {
     const muteList = this.accountState.muteList();
     if (!muteList?.tags) return [];
-    return muteList.tags.filter((tag) => tag[0] === 'e').map((tag) => tag[1]);
+    return muteList.tags.filter(tag => tag[0] === 'e').map(tag => tag[1]);
   });
 
   mutedHashtags = computed(() => {
     const muteList = this.accountState.muteList();
     if (!muteList?.tags) return [];
-    return muteList.tags.filter((tag) => tag[0] === 't').map((tag) => tag[1]);
+    return muteList.tags.filter(tag => tag[0] === 't').map(tag => tag[1]);
   });
 
   mutedWords = computed(() => {
     const muteList = this.accountState.muteList();
     if (!muteList?.tags) return [];
-    return muteList.tags.filter((tag) => tag[0] === 'word').map((tag) => tag[1]);
+    return muteList.tags.filter(tag => tag[0] === 'word').map(tag => tag[1]);
   });
 
   /**
@@ -94,7 +94,7 @@ export class ReportingService {
       1984, // NIP-56 report kind
       content || '',
       tags,
-      account.pubkey,
+      account.pubkey
     );
 
     return reportEvent as Event;
@@ -116,12 +116,12 @@ export class ReportingService {
 
     // Check for muted hashtags in event tags
     const eventHashtags = event.tags
-      .filter((tag) => tag[0] === 't')
-      .map((tag) => tag[1]?.toLowerCase());
+      .filter(tag => tag[0] === 't')
+      .map(tag => tag[1]?.toLowerCase());
 
     if (
-      eventHashtags.some((hashtag) =>
-        this.mutedHashtags().some((muted) => muted.toLowerCase() === hashtag),
+      eventHashtags.some(hashtag =>
+        this.mutedHashtags().some(muted => muted.toLowerCase() === hashtag)
       )
     ) {
       return true;
@@ -129,7 +129,7 @@ export class ReportingService {
 
     // Check for muted words in content
     const content = event.content?.toLowerCase() || '';
-    if (this.mutedWords().some((word) => content.includes(word.toLowerCase()))) {
+    if (this.mutedWords().some(word => content.includes(word.toLowerCase()))) {
       return true;
     }
 
@@ -168,7 +168,7 @@ export class ReportingService {
   shouldHideContentForReportTypes(reportTypes: string[]): boolean {
     const userSettings = this.settings.settings();
 
-    return reportTypes.some((reportType) => {
+    return reportTypes.some(reportType => {
       switch (reportType) {
         case 'nudity':
           return userSettings.hideNudity ?? true;
@@ -194,7 +194,7 @@ export class ReportingService {
    * Toggle content override for a specific event
    */
   toggleContentOverride(eventId: string): void {
-    this.contentOverrides.update((overrides) => {
+    this.contentOverrides.update(overrides => {
       const newOverrides = new Set(overrides);
       if (newOverrides.has(eventId)) {
         newOverrides.delete(eventId);
@@ -223,12 +223,12 @@ export class ReportingService {
         10000, // NIP-51 mute list kind
         '',
         [],
-        account.pubkey,
+        account.pubkey
       ) as Event;
     }
 
     // Check if item already exists
-    const existingTag = muteList.tags.find((tag) => tag[0] === item.type && tag[1] === item.value);
+    const existingTag = muteList.tags.find(tag => tag[0] === item.type && tag[1] === item.value);
 
     if (existingTag) {
       this.logger.debug('Item already in mute list', item);
@@ -255,7 +255,7 @@ export class ReportingService {
     }
 
     // Remove the tag
-    muteList.tags = muteList.tags.filter((tag) => !(tag[0] === item.type && tag[1] === item.value));
+    muteList.tags = muteList.tags.filter(tag => !(tag[0] === item.type && tag[1] === item.value));
 
     // Update the account state
     this.accountState.updateMuteList(muteList);
@@ -381,13 +381,13 @@ export class ReportingService {
     // Add the new target to the tags
     if (type === 'user') {
       // Check if user is already muted
-      const isAlreadyMuted = existingTags.some((tag) => tag[0] === 'p' && tag[1] === target);
+      const isAlreadyMuted = existingTags.some(tag => tag[0] === 'p' && tag[1] === target);
       if (!isAlreadyMuted) {
         existingTags.push(['p', target]);
       }
     } else if (type === 'event') {
       // Check if event is already muted
-      const isAlreadyMuted = existingTags.some((tag) => tag[0] === 'e' && tag[1] === target);
+      const isAlreadyMuted = existingTags.some(tag => tag[0] === 'e' && tag[1] === target);
       if (!isAlreadyMuted) {
         existingTags.push(['e', target]);
       }
@@ -432,7 +432,7 @@ export class ReportingService {
     if (currentMuteList) {
       // Filter out the user to be removed
       existingTags = currentMuteList.tags.filter(
-        (tag) => !(tag[0] === 'p' && tag[1] === pubkeyToRemove),
+        tag => !(tag[0] === 'p' && tag[1] === pubkeyToRemove)
       );
     }
 

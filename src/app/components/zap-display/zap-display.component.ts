@@ -283,17 +283,17 @@ export class ZapDisplayComponent implements OnInit, OnDestroy {
       // Subscribe to real-time zap updates for this event
       this.unsubscribeFromZaps = this.zapService.subscribeToEventZaps(
         this.eventId()!,
-        (zapReceipt) => {
+        zapReceipt => {
           this.handleNewZapReceipt(zapReceipt);
-        },
+        }
       );
     } else if (this.recipientPubkey()) {
       // Subscribe to real-time zap updates for this user
       this.unsubscribeFromZaps = this.zapService.subscribeToUserZaps(
         this.recipientPubkey()!,
-        (zapReceipt) => {
+        zapReceipt => {
           this.handleNewZapReceipt(zapReceipt);
-        },
+        }
       );
     }
   }

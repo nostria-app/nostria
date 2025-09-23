@@ -87,7 +87,7 @@ export class VideoPlayerComponent {
 
       this.media.updateWindowPosition(
         Math.max(0, Math.min(newX, maxX)),
-        Math.max(titlebarHeight, Math.min(newY, maxY)),
+        Math.max(titlebarHeight, Math.min(newY, maxY))
       );
     }
   }

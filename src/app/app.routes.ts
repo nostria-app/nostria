@@ -90,7 +90,7 @@ export const routes: Routes = [
         path: 'create',
         loadComponent: () =>
           import('./pages/badges/badge-editor/badge-editor.component').then(
-            (m) => m.BadgeEditorComponent,
+            m => m.BadgeEditorComponent
           ),
         title: 'Create Badge',
       },
@@ -98,7 +98,7 @@ export const routes: Routes = [
         path: 'details/:id',
         loadComponent: () =>
           import('./pages/badges/badge-details/badge-details.component').then(
-            (m) => m.BadgeDetailsComponent,
+            m => m.BadgeDetailsComponent
           ),
         title: 'Badge Details',
       },
@@ -106,7 +106,7 @@ export const routes: Routes = [
         path: 'edit/:id',
         loadComponent: () =>
           import('./pages/badges/badge-editor/badge-editor.component').then(
-            (m) => m.BadgeEditorComponent,
+            m => m.BadgeEditorComponent
           ),
         title: 'Edit Badge',
       },
@@ -116,7 +116,7 @@ export const routes: Routes = [
     path: 'b/:id',
     loadComponent: () =>
       import('./pages/badges/badge-details/badge-details.component').then(
-        (m) => m.BadgeDetailsComponent,
+        m => m.BadgeDetailsComponent
       ),
     title: 'Badge',
   },
@@ -176,14 +176,14 @@ export const routes: Routes = [
     path: 'bookmarks',
     data: { isRoot: true },
     loadComponent: () =>
-      import('./pages/bookmarks/bookmarks.component').then((m) => m.BookmarksComponent),
+      import('./pages/bookmarks/bookmarks.component').then(m => m.BookmarksComponent),
     title: 'Bookmarks',
   },
   {
     path: 'zaps',
     data: { isRoot: true },
     loadComponent: () =>
-      import('./components/zap-history/zap-history.component').then((m) => m.ZapHistoryComponent),
+      import('./components/zap-history/zap-history.component').then(m => m.ZapHistoryComponent),
     title: 'Zap History',
   },
   {
@@ -241,8 +241,7 @@ export const routes: Routes = [
   },
   {
     path: 'backup',
-    loadComponent: () =>
-      import('./pages/backup/backup.component').then((mod) => mod.BackupComponent),
+    loadComponent: () => import('./pages/backup/backup.component').then(mod => mod.BackupComponent),
   },
   {
     path: 'media',
@@ -251,13 +250,13 @@ export const routes: Routes = [
       {
         path: '',
         loadComponent: () =>
-          import('./pages/media/media.component').then((mod) => mod.MediaComponent),
+          import('./pages/media/media.component').then(mod => mod.MediaComponent),
       },
       {
         path: 'details/:id',
         loadComponent: () =>
           import('./pages/media/media-details/media-details.component').then(
-            (mod) => mod.MediaDetailsComponent,
+            mod => mod.MediaDetailsComponent
           ),
       },
     ],
@@ -265,14 +264,14 @@ export const routes: Routes = [
   {
     path: 'people',
     data: { isRoot: true },
-    loadComponent: () => import('./pages/people/people.component').then((m) => m.PeopleComponent),
+    loadComponent: () => import('./pages/people/people.component').then(m => m.PeopleComponent),
     title: 'People',
   },
   {
     path: 'debug/storage',
     loadComponent: () =>
       import('./components/storage-debug/storage-debug.component').then(
-        (mod) => mod.StorageDebugComponent,
+        mod => mod.StorageDebugComponent
       ),
     title: 'Storage Debug',
   },

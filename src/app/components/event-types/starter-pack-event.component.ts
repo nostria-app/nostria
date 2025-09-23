@@ -19,7 +19,7 @@ export class StarterPackEventComponent {
     const event = this.event();
     if (!event) return null;
 
-    const titleTag = event.tags.find((tag) => tag[0] === 'title');
+    const titleTag = event.tags.find(tag => tag[0] === 'title');
     return titleTag?.[1] || 'Starter Pack';
   });
 
@@ -28,7 +28,7 @@ export class StarterPackEventComponent {
     const event = this.event();
     if (!event) return null;
 
-    const imageTag = event.tags.find((tag) => tag[0] === 'image');
+    const imageTag = event.tags.find(tag => tag[0] === 'image');
     return imageTag?.[1] || null;
   });
 
@@ -37,7 +37,7 @@ export class StarterPackEventComponent {
     const event = this.event();
     if (!event) return [];
 
-    return event.tags.filter((tag) => tag[0] === 'p' && tag[1]).map((tag) => tag[1]);
+    return event.tags.filter(tag => tag[0] === 'p' && tag[1]).map(tag => tag[1]);
   });
 
   // Extract the d tag (identifier)
@@ -45,7 +45,7 @@ export class StarterPackEventComponent {
     const event = this.event();
     if (!event) return null;
 
-    const dTag = event.tags.find((tag) => tag[0] === 'd');
+    const dTag = event.tags.find(tag => tag[0] === 'd');
     return dTag?.[1] || null;
   });
 }

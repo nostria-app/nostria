@@ -147,7 +147,7 @@ export class PublishDialogComponent {
     }
 
     if (!this.customRelays().includes(normalizedUrl)) {
-      this.customRelays.update((relays) => [...relays, normalizedUrl]);
+      this.customRelays.update(relays => [...relays, normalizedUrl]);
       this.customRelayInput.set('');
     } else {
       alert('This relay is already in the list');
@@ -155,7 +155,7 @@ export class PublishDialogComponent {
   }
 
   removeCustomRelay(relay: string): void {
-    this.customRelays.update((relays) => relays.filter((r) => r !== relay));
+    this.customRelays.update(relays => relays.filter(r => r !== relay));
   }
 
   getTargetRelays(): string[] {
@@ -179,7 +179,7 @@ export class PublishDialogComponent {
   }
 
   onOptionChange(option: 'account' | 'author' | 'custom', checked: boolean): void {
-    this.selectedOptions.update((options) => {
+    this.selectedOptions.update(options => {
       const newOptions = new Set(options);
       if (checked) {
         newOptions.add(option);
@@ -205,7 +205,7 @@ export class PublishDialogComponent {
     this.isPublishing.set(true);
 
     // Initialize publish results
-    const initialResults: RelayPublishResult[] = targetRelays.map((url) => ({
+    const initialResults: RelayPublishResult[] = targetRelays.map(url => ({
       url,
       status: 'pending',
     }));
@@ -230,7 +230,7 @@ export class PublishDialogComponent {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             this.updatePublishResult(targetRelays[index], 'error', errorMessage);
           }
-        }),
+        })
       );
     } catch (error) {
       console.error('Error during publishing:', error);
@@ -240,8 +240,8 @@ export class PublishDialogComponent {
   }
 
   private updatePublishResult(url: string, status: 'success' | 'error', message?: string): void {
-    this.publishResults.update((results) =>
-      results.map((result) => (result.url === url ? { ...result, status, message } : result)),
+    this.publishResults.update(results =>
+      results.map(result => (result.url === url ? { ...result, status, message } : result))
     );
   }
 
@@ -254,11 +254,11 @@ export class PublishDialogComponent {
   }
 
   toggleJsonView(): void {
-    this.showJsonView.update((show) => !show);
+    this.showJsonView.update(show => !show);
   }
 
   toggleRelaysView(): void {
-    this.showRelaysView.update((show) => !show);
+    this.showRelaysView.update(show => !show);
   }
 
   getEventJson(): string {

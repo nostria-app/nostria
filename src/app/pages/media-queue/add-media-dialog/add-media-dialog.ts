@@ -31,7 +31,7 @@ export interface AddMediaDialogData {
 export class AddMediaDialog {
   constructor(
     public dialogRef: MatDialogRef<AddMediaDialogData>,
-    @Inject(MAT_DIALOG_DATA) public data: AddMediaDialogData,
+    @Inject(MAT_DIALOG_DATA) public data: AddMediaDialogData
   ) {}
 
   onNoClick(): void {

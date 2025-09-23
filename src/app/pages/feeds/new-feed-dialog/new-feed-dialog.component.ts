@@ -130,7 +130,7 @@ export class NewFeedDialogComponent {
   }
 
   getSelectedTemplateConfig() {
-    return this.feedTemplates().find((t) => t.key === this.selectedTemplate());
+    return this.feedTemplates().find(t => t.key === this.selectedTemplate());
   }
 
   getColumnTypeDescription(type: string): string {
@@ -151,7 +151,7 @@ export class NewFeedDialogComponent {
 
       // Create default columns based on template
       const defaultColumns: ColumnConfig[] =
-        template?.defaultColumns.map((col) => ({
+        template?.defaultColumns.map(col => ({
           id: crypto.randomUUID(),
           label: col.label,
           icon: col.icon,

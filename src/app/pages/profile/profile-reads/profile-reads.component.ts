@@ -122,11 +122,11 @@ export class ProfileReadsComponent implements OnChanges {
       const currentArticles = this.profileState.articles();
       const oldestTimestamp =
         currentArticles.length > 0
-          ? Math.min(...currentArticles.map((a) => a.event.created_at)) - 1
+          ? Math.min(...currentArticles.map(a => a.event.created_at)) - 1
           : undefined;
 
       this.logger.debug(
-        `Current articles count: ${currentArticles.length}, oldest timestamp: ${oldestTimestamp}`,
+        `Current articles count: ${currentArticles.length}, oldest timestamp: ${oldestTimestamp}`
       );
 
       // Load older articles from the profile state service

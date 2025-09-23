@@ -59,7 +59,7 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
     // Save to local storage
     this.localStorage.setItem(
       this.appState.DISCOVERY_RELAYS_STORAGE_KEY,
-      JSON.stringify(relayUrls),
+      JSON.stringify(relayUrls)
     );
   }
 
@@ -69,7 +69,7 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
   setDiscoveryRelays(relayUrls: string[]): void {
     try {
       // Validate that all URLs are valid relay URLs
-      const validRelays = relayUrls.filter((url) => {
+      const validRelays = relayUrls.filter(url => {
         try {
           const parsed = new URL(url);
           return parsed.protocol === 'wss:' || parsed.protocol === 'ws:';

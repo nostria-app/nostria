@@ -85,7 +85,7 @@ export class BadgeEditorComponent {
     });
 
     // Update slug automatically from name
-    this.badgeForm.get('name')?.valueChanges.subscribe((name) => {
+    this.badgeForm.get('name')?.valueChanges.subscribe(name => {
       if (name) {
         const slug = name
           .toLowerCase()
@@ -111,7 +111,7 @@ export class BadgeEditorComponent {
       }
 
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = e => {
         const result = e.target?.result as string;
 
         if (type === 'image') {
@@ -157,13 +157,13 @@ export class BadgeEditorComponent {
   // Toggle image input method
   toggleImageInputMethod(type: 'image' | 'thumbnail'): void {
     if (type === 'image') {
-      this.useImageUrl.update((current) => !current);
+      this.useImageUrl.update(current => !current);
       // Clear form values when switching
       this.badgeForm.get('image')?.setValue('');
       this.badgeForm.get('imageUrl')?.setValue('');
       this.previewImage.set(null);
     } else {
-      this.useThumbnailUrl.update((current) => !current);
+      this.useThumbnailUrl.update(current => !current);
       // Clear form values when switching
       this.badgeForm.get('thumbnail')?.setValue('');
       this.badgeForm.get('thumbnailUrl')?.setValue('');
@@ -176,13 +176,13 @@ export class BadgeEditorComponent {
     event.preventDefault();
     const value = this.tagInput();
     if (value.trim() !== '') {
-      this.tags.update((currentTags) => [...currentTags, value.trim()]);
+      this.tags.update(currentTags => [...currentTags, value.trim()]);
       this.tagInput.set('');
     }
   }
 
   removeTag(tag: string): void {
-    this.tags.update((currentTags) => currentTags.filter((t) => t !== tag));
+    this.tags.update(currentTags => currentTags.filter(t => t !== tag));
   }
 
   // Navigate to media settings to add servers
@@ -194,7 +194,7 @@ export class BadgeEditorComponent {
   async publishBadge(): Promise<void> {
     if (this.badgeForm.invalid) {
       // Mark all fields as touched to show validation errors
-      Object.keys(this.badgeForm.controls).forEach((key) => {
+      Object.keys(this.badgeForm.controls).forEach(key => {
         this.badgeForm.get(key)?.markAsTouched();
       });
 
@@ -267,7 +267,7 @@ export class BadgeEditorComponent {
 
             if (!uploadResult.item) {
               throw new Error(
-                `Failed to upload thumbnail: ${uploadResult.message || 'Unknown error'}`,
+                `Failed to upload thumbnail: ${uploadResult.message || 'Unknown error'}`
               );
             }
 
@@ -311,7 +311,7 @@ export class BadgeEditorComponent {
         'Close',
         {
           duration: 5000,
-        },
+        }
       );
     } finally {
       this.isUploading.set(false);

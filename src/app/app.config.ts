@@ -57,7 +57,7 @@ export const appConfig: ApplicationConfig = {
       const initializerFn = ((iconRegistry: MatIconRegistry) => () => {
         const defaultFontSetClasses = iconRegistry.getDefaultFontSetClass();
         const outlinedFontSetClasses = defaultFontSetClasses
-          .filter((fontSetClass) => fontSetClass !== 'material-icons')
+          .filter(fontSetClass => fontSetClass !== 'material-icons')
           .concat(['material-symbols-outlined']);
         iconRegistry.setDefaultFontSetClass(...outlinedFontSetClasses);
       })(inject(MatIconRegistry));

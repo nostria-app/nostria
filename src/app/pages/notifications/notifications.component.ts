@@ -97,7 +97,7 @@ export class NotificationsComponent implements OnInit {
 
   async onRetryPublish(notificationId: string): Promise<void> {
     await this.notificationService.retryFailedRelays(notificationId, (event, relayUrl) =>
-      this.accountRelay.publishToRelay(event, relayUrl),
+      this.accountRelay.publishToRelay(event, relayUrl)
     );
   }
 

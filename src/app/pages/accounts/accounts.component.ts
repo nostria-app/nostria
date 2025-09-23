@@ -62,7 +62,7 @@ export class AccountsComponent {
       } as ConfirmDialogData,
     });
 
-    dialogRef.afterClosed().subscribe((result) => {
+    dialogRef.afterClosed().subscribe(result => {
       if (result) {
         this.logger.debug('Removing account confirmed', { pubkey });
 
@@ -72,7 +72,7 @@ export class AccountsComponent {
         // Find another account to switch to if we're removing the current one
         if (isCurrentAccount) {
           const allAccounts = this.accountState.accounts();
-          const nextAccount = allAccounts.find((acc) => acc.pubkey !== pubkey);
+          const nextAccount = allAccounts.find(acc => acc.pubkey !== pubkey);
 
           // Remove the account
           this.nostrService.removeAccount(pubkey);

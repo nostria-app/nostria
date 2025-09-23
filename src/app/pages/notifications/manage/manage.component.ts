@@ -74,7 +74,7 @@ export class NotificationManageComponent implements OnInit, OnDestroy {
   devicePreferences = computed(() => {
     const devices = this.devices();
 
-    return devices.map((device) => ({
+    return devices.map(device => ({
       device,
       preferences: this.webPush.getDevicePreferences(device.deviceId),
     }));
@@ -132,13 +132,13 @@ export class NotificationManageComponent implements OnInit, OnDestroy {
   // Helper method to check if a device has any notifications enabled
   hasAnyEnabled(deviceId: string): boolean {
     const prefs = this.webPush.getDevicePreferences(deviceId);
-    return Object.values(prefs).some((enabled) => enabled);
+    return Object.values(prefs).some(enabled => enabled);
   }
 
   // Helper method to check if all notifications are enabled for a device
   hasAllEnabled(deviceId: string): boolean {
     const prefs = this.webPush.getDevicePreferences(deviceId);
-    return Object.values(prefs).every((enabled) => enabled);
+    return Object.values(prefs).every(enabled => enabled);
   }
   // Toggle all notifications for a device
   toggleAllForDevice(deviceId: string, enabled: boolean) {
@@ -147,7 +147,7 @@ export class NotificationManageComponent implements OnInit, OnDestroy {
         prefs[type.key] = enabled;
         return prefs;
       },
-      {} as Record<UserNotificationType, boolean>,
+      {} as Record<UserNotificationType, boolean>
     );
 
     this.webPush.updateDevicePreferences(deviceId, updatedPrefs);

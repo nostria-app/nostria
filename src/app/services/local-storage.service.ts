@@ -70,7 +70,7 @@ export class LocalStorageService {
         return true;
       } else {
         // Update memory store for SSR
-        this.memoryStore.update((store) => ({
+        this.memoryStore.update(store => ({
           ...store,
           [key]: value,
         }));
@@ -96,7 +96,7 @@ export class LocalStorageService {
         return true;
       } else {
         // Update memory store for SSR
-        this.memoryStore.update((store) => {
+        this.memoryStore.update(store => {
           const { [key]: removed, ...rest } = store;
           return rest;
         });

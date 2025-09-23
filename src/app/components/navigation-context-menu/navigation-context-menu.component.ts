@@ -33,7 +33,7 @@ export class NavigationContextMenuComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     window.removeEventListener(
       'show-navigation-context-menu',
-      this.handleShowContextMenu.bind(this),
+      this.handleShowContextMenu.bind(this)
     );
     this.document.removeEventListener('click', this.closeMenu.bind(this));
   }

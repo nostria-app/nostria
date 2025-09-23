@@ -55,7 +55,7 @@ export class ReportsDialogComponent {
 
       const reportData = await this.eventService.loadReports(
         this.data.eventId,
-        this.data.eventPubkey,
+        this.data.eventPubkey
       );
 
       this.reports.set(reportData);

@@ -38,7 +38,7 @@ export class RouteDataService implements OnDestroy {
 
   // Listen to navigation events
   navigationEvents = toSignal(
-    this.router.events.pipe(filter((event) => event instanceof NavigationEnd)),
+    this.router.events.pipe(filter(event => event instanceof NavigationEnd))
   );
 
   constructor() {
@@ -50,7 +50,7 @@ export class RouteDataService implements OnDestroy {
 
     // Listen for router events and track navigation
     this.router.events
-      .pipe(filter((event) => event instanceof NavigationEnd))
+      .pipe(filter(event => event instanceof NavigationEnd))
       .subscribe((event: NavigationEnd) => {
         this.updateRouteData();
         // Delay history update to ensure title is properly set
@@ -142,7 +142,7 @@ export class RouteDataService implements OnDestroy {
     console.log('Current history length:', currentHistory.length);
 
     // Find if the current URL exists in our history
-    const existingIndex = currentHistory.findIndex((item) => item.url === currentUrl);
+    const existingIndex = currentHistory.findIndex(item => item.url === currentUrl);
 
     if (existingIndex !== -1) {
       console.log('Found URL in history at index:', existingIndex);
@@ -217,7 +217,7 @@ export class RouteDataService implements OnDestroy {
     const allRoutes = flattenRoutes(this.router.config);
 
     // Find the most specific matching route
-    const matches = allRoutes.filter((route) => matchesPattern(route.path || '', url));
+    const matches = allRoutes.filter(route => matchesPattern(route.path || '', url));
 
     // Sort by specificity (longer paths first)
     matches.sort((a, b) => (b.fullPath?.length || 0) - (a.fullPath?.length || 0));
@@ -226,7 +226,7 @@ export class RouteDataService implements OnDestroy {
   }
 
   private generateTitleFromUrl(url: string): string {
-    const segments = url.split('/').filter((s) => s.length > 0);
+    const segments = url.split('/').filter(s => s.length > 0);
 
     if (segments.length === 0) return 'Home';
 
@@ -283,7 +283,7 @@ export class RouteDataService implements OnDestroy {
     }
 
     // Convert segment to title case
-    return firstSegment.replace(/[-_]/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+    return firstSegment.replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   }
 
   // Helper methods

@@ -30,7 +30,7 @@ export class NostrProtocolService {
         this.logger.debug('[NostrProtocol] URL search:', urlObj.search);
         this.logger.debug(
           '[NostrProtocol] URL searchParams keys:',
-          Array.from(urlObj.searchParams.keys()),
+          Array.from(urlObj.searchParams.keys())
         );
       } catch (urlError) {
         this.logger.error('[NostrProtocol] Failed to create URL object:', urlError);
@@ -42,7 +42,7 @@ export class NostrProtocolService {
       const urlParams = new URLSearchParams(urlObj.search);
       this.logger.debug(
         '[NostrProtocol] URLSearchParams created, available keys:',
-        Array.from(urlParams.keys()),
+        Array.from(urlParams.keys())
       );
 
       const nostrValue = urlParams.get('nostr');
@@ -98,7 +98,7 @@ export class NostrProtocolService {
       this.logger.debug(
         '[NostrProtocol] Parsing completed in:',
         parseEndTime - parseStartTime,
-        'ms',
+        'ms'
       );
       this.logger.debug('[NostrProtocol] Parse result:', parsed);
 
@@ -209,14 +209,14 @@ export class NostrProtocolService {
           if (data?.identifier) {
             this.logger.debug(
               '[NostrProtocol] Using identifier for naddr routing:',
-              data.identifier,
+              data.identifier
             );
             await this.router.navigate(['/e', data.identifier]);
             this.logger.info('[NostrProtocol] Successfully navigated to event page from naddr');
           } else {
             this.logger.error('[NostrProtocol] No identifier found in naddr data:', data);
             this.logger.warn(
-              '[NostrProtocol] Falling back to home page for naddr without identifier',
+              '[NostrProtocol] Falling back to home page for naddr without identifier'
             );
             await this.router.navigate(['/']);
           }

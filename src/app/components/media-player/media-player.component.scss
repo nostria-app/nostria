@@ -1,6 +1,8 @@
 :host {
-  background: var(--theme-background-color,
-      var(--mat-toolbar-container-background-color, var(--mat-sys-surface)));
+  background: var(
+    --theme-background-color,
+    var(--mat-toolbar-container-background-color, var(--mat-sys-surface))
+  );
   height: 33px;
   z-index: 1500;
 
@@ -102,15 +104,19 @@ input {
 /* For macOS: */
 .search-controls-left {
   /* Remove hardcoded gradient, let theme color take precedence */
-  background: var(--theme-background-color,
-      var(--mat-toolbar-container-background-color, var(--mat-sys-surface)));
+  background: var(
+    --theme-background-color,
+    var(--mat-toolbar-container-background-color, var(--mat-sys-surface))
+  );
 }
 
 /* For Windows: */
 .search-controls-right {
   /* Remove hardcoded gradient, let theme color take precedence */
-  background: var(--theme-background-color,
-      var(--mat-toolbar-container-background-color, var(--mat-sys-surface)));
+  background: var(
+    --theme-background-color,
+    var(--mat-toolbar-container-background-color, var(--mat-sys-surface))
+  );
 }
 
 // @media (display-mode: window-controls-overlay) {

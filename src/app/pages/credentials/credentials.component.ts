@@ -53,7 +53,7 @@ export class CredentialsComponent {
   editNameControl = new FormControl('', [Validators.required]);
 
   toggleNsecVisibility(): void {
-    this.isNsecVisible.update((current) => !current);
+    this.isNsecVisible.update(current => !current);
   }
 
   async copyToClipboard(text: string, label: string): Promise<void> {

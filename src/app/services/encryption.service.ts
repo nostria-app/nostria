@@ -131,7 +131,7 @@ export class EncryptionService {
   async encryptNip44WithKey(
     plaintext: string,
     privateKeyHex: string,
-    recipientPubkey: string,
+    recipientPubkey: string
   ): Promise<string> {
     try {
       // Use nostr-tools nip44 v2 encryption with the provided private key
@@ -151,7 +151,7 @@ export class EncryptionService {
   async autoDecrypt(
     ciphertext: string,
     senderPubkey: string,
-    event: Event,
+    event: Event
   ): Promise<DecryptionResult> {
     if (ciphertext.includes('?iv=')) {
       // Fallback to NIP-04 (legacy format with ?iv=)

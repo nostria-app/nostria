@@ -132,7 +132,7 @@ export class StartChatDialogComponent {
         console.log('Discovering relays for pubkey:', pubkey);
 
         // Simulate relay discovery delay
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
     } catch (error) {
       console.error('Error discovering relays:', error);

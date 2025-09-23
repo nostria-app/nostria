@@ -18,11 +18,12 @@ The Observed Relays feature adds the ability to track relay statistics and maint
   - Indexes: by last updated, first observed, events received, connection status
 
 - **pubkeyRelayMappings**: Stores mappings between pubkeys and relay URLs
-  - Primary key: `id` (composite: pubkey::relayUrl)  
+  - Primary key: `id` (composite: pubkey::relayUrl)
   - Fields: pubkey, relayUrl, source, timestamps, event count
   - Indexes: by pubkey, relay URL, last seen, source
 
 #### Methods Added to StorageService:
+
 - `saveObservedRelay()` / `getObservedRelay()` / `getAllObservedRelays()`
 - `savePubkeyRelayMapping()` / `getPubkeyRelayMapping()`
 - `getRelayUrlsForPubkey()` / `getPubkeysForRelay()`
@@ -32,6 +33,7 @@ The Observed Relays feature adds the ability to track relay statistics and maint
 ### 2. RelaysService Enhancements
 
 #### New Features:
+
 - Persist relay statistics to IndexedDB automatically
 - Load observed relays on initialization
 - Add relay hints from event parsing
@@ -39,6 +41,7 @@ The Observed Relays feature adds the ability to track relay statistics and maint
 - Enhanced relay performance scoring
 
 #### Methods Added:
+
 - `addRelayHintsFromEvent()` - Process relay hints from events
 - `getFallbackRelaysForPubkey()` - Get discovered relays for a user
 - `getAllObservedRelays()` / `getObservedRelaysSorted()` - Get observed relays
@@ -47,12 +50,14 @@ The Observed Relays feature adds the ability to track relay statistics and maint
 ### 3. Event Processing Integration
 
 #### DataService Modifications:
+
 - Added automatic relay hint processing when events are saved
 - Process e-tags to extract relay URLs and associated pubkeys
 - Skip kind 10002 events (user relay lists) to avoid duplication
 - Store hints for both event creators and mentioned authors
 
 #### Event Processing Flow:
+
 1. When an event is saved from relays (not from local storage)
 2. Extract relay hints from e-tags (3rd element in e-tag arrays)
 3. Extract author pubkeys from e-tags (5th element in e-tag arrays)
@@ -62,6 +67,7 @@ The Observed Relays feature adds the ability to track relay statistics and maint
 ### 4. UI Implementation
 
 #### New "Observed Relays" Tab:
+
 - Added to the Relays settings page alongside "Account Relays" and "Discovery Relays"
 - Displays all observed relays with detailed statistics
 - Shows performance scores, connection status, event counts
@@ -69,6 +75,7 @@ The Observed Relays feature adds the ability to track relay statistics and maint
 - Actions: view relay info, delete observed relay data
 
 #### Features:
+
 - **Performance Scoring**: Visual badges showing relay reliability (0-100%)
 - **Connection Status**: Icons showing connected/offline/disconnected state
 - **Statistics Display**: Events received, connection attempts, timestamps
@@ -76,6 +83,7 @@ The Observed Relays feature adds the ability to track relay statistics and maint
 - **Data Management**: Clear all data button with confirmation
 
 #### Styling:
+
 - Performance badges with color coding (excellent/good/fair/poor)
 - Grid layout for relay information and statistics
 - Mobile responsive design with collapsible layouts
@@ -84,17 +92,20 @@ The Observed Relays feature adds the ability to track relay statistics and maint
 ## Data Flow
 
 ### Relay Hint Collection:
+
 1. Events received from relays → DataService.processEventForRelayHints()
-2. Extract relay URLs from e-tags → RelaysService.addRelayHintsFromEvent()  
+2. Extract relay URLs from e-tags → RelaysService.addRelayHintsFromEvent()
 3. Update pubkey-relay mappings → StorageService.updatePubkeyRelayMappingFromHint()
 4. Update relay statistics → StorageService.saveObservedRelay()
 
 ### Fallback Relay Discovery:
+
 1. User relay discovery fails → DataService.getUserRelays()
 2. Check fallback mappings → RelaysService.getFallbackRelaysForPubkey()
 3. Return discovered relay URLs → StorageService.getRelayUrlsForPubkey()
 
 ### UI Updates:
+
 1. Relay statistics change → RelaysService.updateSignals()
 2. UI reactively updates → observedRelaysSignal computed property
 3. User interactions → StorageService methods → Signal updates

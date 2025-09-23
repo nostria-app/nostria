@@ -78,12 +78,12 @@ export class NotificationSettingsComponent {
     // Only log push status once
     this.logger.debug('Push enabled status:', this.push.isEnabled);
 
-    this.push.messages.subscribe((message) => {
+    this.push.messages.subscribe(message => {
       // This is triggered when a push message is received and the app is active.
       this.logger.info('Push message received:', message);
     });
 
-    this.push.notificationClicks.subscribe((event) => {
+    this.push.notificationClicks.subscribe(event => {
       this.logger.info('Notification clicked:', event);
     });
 
@@ -113,7 +113,7 @@ export class NotificationSettingsComponent {
               } as Device);
             }
           } // Also set up Angular's subscription listener for updates
-          this.push.subscription.subscribe((sub) => {
+          this.push.subscription.subscribe(sub => {
             if (!sub) {
               this.currentDevice.set(null);
               return;
@@ -175,17 +175,17 @@ export class NotificationSettingsComponent {
 
     // Helper function to add timeout to any promise
     function timeoutPromise<T>(promise: Promise<T>, ms: number): Promise<T | null> {
-      return new Promise((resolve) => {
+      return new Promise(resolve => {
         const timer = setTimeout(() => resolve(null), ms);
         promise.then(
-          (value) => {
+          value => {
             clearTimeout(timer);
             resolve(value);
           },
           () => {
             clearTimeout(timer);
             resolve(null);
-          },
+          }
         );
       });
     }
@@ -229,7 +229,7 @@ export class NotificationSettingsComponent {
     }
 
     // Check if the device is enabled remotely
-    return this.devices().some((device) => device.deviceId === deviceId);
+    return this.devices().some(device => device.deviceId === deviceId);
   }
 
   async enableNotifications() {
@@ -371,7 +371,7 @@ export class NotificationSettingsComponent {
       });
 
       // After deletion, perform a check if there is subscription left, if not, remove the device one.
-      this.push.subscription.subscribe((sub) => {
+      this.push.subscription.subscribe(sub => {
         if (!sub) {
           this.currentDevice.set(null);
         }

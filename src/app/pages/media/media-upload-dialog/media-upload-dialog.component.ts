@@ -99,9 +99,9 @@ export class MediaUploadDialogComponent {
   }
 
   toggleServerSelection(server: string): void {
-    this.selectedServers.update((servers) => {
+    this.selectedServers.update(servers => {
       if (servers.includes(server)) {
-        return servers.filter((s) => s !== server);
+        return servers.filter(s => s !== server);
       } else {
         return [...servers, server];
       }

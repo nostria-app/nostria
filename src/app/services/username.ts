@@ -28,7 +28,7 @@ export class UsernameService {
 
   private loadUsernamesCache() {
     const data = this.localStorage.getObject<UsernameByPubkeyMap>(
-      this.appState.USERNAMES_STORAGE_KEY,
+      this.appState.USERNAMES_STORAGE_KEY
     );
 
     this.logger.info('Retrieved nostria-usernames local storage:', data);
@@ -42,7 +42,7 @@ export class UsernameService {
           ...acc,
           [data[username]]: username,
         }),
-        {} as PubkeyByUsernameMap,
+        {} as PubkeyByUsernameMap
       );
       this.pubkeyByUsername.set(pubkeyByUsername);
     }
@@ -59,7 +59,7 @@ export class UsernameService {
     });
     this.localStorage.setObject<UsernameByPubkeyMap>(
       this.appState.USERNAMES_STORAGE_KEY,
-      this.usernameByKey(),
+      this.usernameByKey()
     );
   }
 
@@ -75,7 +75,7 @@ export class UsernameService {
     if (pubkey) return pubkey;
 
     const publicProfile = await firstValueFrom(
-      this.accountService.getPublicAccount({ pubkeyOrUsername: username }),
+      this.accountService.getPublicAccount({ pubkeyOrUsername: username })
     );
 
     if (publicProfile && publicProfile.success && publicProfile.result) {
@@ -99,7 +99,7 @@ export class UsernameService {
     if (username) return username;
 
     const publicProfile = await firstValueFrom(
-      this.accountService.getPublicAccount({ pubkeyOrUsername: pubkey }),
+      this.accountService.getPublicAccount({ pubkeyOrUsername: pubkey })
     );
 
     if (publicProfile && publicProfile.success && publicProfile.result) {

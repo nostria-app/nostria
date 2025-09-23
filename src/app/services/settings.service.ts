@@ -65,7 +65,7 @@ export class SettingsService {
       if (event && event.content) {
         try {
           const parsedContent = JSON.parse(event.content);
-          this.settings.update((currentSettings) => ({
+          this.settings.update(currentSettings => ({
             ...DEFAULT_SETTINGS,
             ...currentSettings,
             ...parsedContent,

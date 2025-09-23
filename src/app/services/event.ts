@@ -78,8 +78,8 @@ export class EventService {
    * Parse event tags to extract thread information
    */
   getEventTags(event: Event): EventTags {
-    const eTags = event.tags.filter((tag) => tag[0] === 'e');
-    const pTags = event.tags.filter((tag) => tag[0] === 'p').map((tag) => tag[1]);
+    const eTags = event.tags.filter(tag => tag[0] === 'e');
+    const pTags = event.tags.filter(tag => tag[0] === 'p').map(tag => tag[1]);
 
     let rootId: string | null = null;
     let replyId: string | null = null;
@@ -88,7 +88,7 @@ export class EventService {
     const replyRelays: string[] = [];
 
     // Find root tag (NIP-10 marked format)
-    const rootTag = eTags.find((tag) => tag[3] === 'root');
+    const rootTag = eTags.find(tag => tag[3] === 'root');
     if (rootTag) {
       rootId = rootTag[1];
       // Extract author pubkey from root tag if present (5th element)
@@ -100,7 +100,7 @@ export class EventService {
     }
 
     // Find reply tag (NIP-10 marked format)
-    const replyTag = eTags.find((tag) => tag[3] === 'reply');
+    const replyTag = eTags.find(tag => tag[3] === 'reply');
     if (replyTag) {
       replyId = replyTag[1];
       // Extract relay URL from reply tag if present (3rd element)
@@ -157,13 +157,13 @@ export class EventService {
 
     const { rootRelays, replyRelays, author } = this.getEventTags(event);
     const allRelayHints = [...rootRelays, ...replyRelays];
-    
+
     if (allRelayHints.length > 0) {
       // Store hints for the event author if we know them
       if (author) {
         await this.relays.addRelayHintsFromEvent(author, allRelayHints);
       }
-      
+
       // Store hints for the event creator
       await this.relays.addRelayHintsFromEvent(event.pubkey, allRelayHints);
     }
@@ -177,7 +177,7 @@ export class EventService {
     const childrenMap = new Map<string, Event[]>();
 
     // Build maps
-    events.forEach((event) => {
+    events.forEach(event => {
       eventMap.set(event.id, event);
 
       const { replyId } = this.getEventTags(event);
@@ -203,7 +203,7 @@ export class EventService {
             return a.created_at - b.created_at; // Oldest first for nested replies
           }
         })
-        .map((child) => {
+        .map(child => {
           const threadedEvent: ThreadedEvent = {
             event: child,
             replies: [],
@@ -325,14 +325,14 @@ export class EventService {
 
       // Extract events from records and filter valid replies
       const replies = replyRecords
-        .map((record) => record.event)
-        .filter((event) => event.content && event.content.trim().length > 0);
+        .map(record => record.event)
+        .filter(event => event.content && event.content.trim().length > 0);
 
       this.logger.info(
         'Successfully loaded replies for event:',
         eventId,
         'replies:',
-        replies.length,
+        replies.length
       );
 
       return replies;
@@ -348,7 +348,7 @@ export class EventService {
   async loadReactions(
     eventId: string,
     pubkey: string,
-    invalidateCache = false,
+    invalidateCache = false
   ): Promise<ReactionEvents> {
     this.logger.info('loadReactions called with eventId:', eventId, 'pubkey:', pubkey);
 
@@ -373,7 +373,7 @@ export class EventService {
 
       // Count reactions by emoji
       const reactionCounts = new Map<string, number>();
-      reactionRecords.forEach((record) => {
+      reactionRecords.forEach(record => {
         const event = record.event;
         if (event.content && event.content.trim()) {
           const emoji = event.content.trim();
@@ -387,7 +387,7 @@ export class EventService {
         'Successfully loaded reactions for event:',
         eventId,
         'reactions:',
-        reactions.length,
+        reactions.length
       );
 
       return {
@@ -406,7 +406,7 @@ export class EventService {
   async loadReports(
     eventId: string,
     pubkey: string,
-    invalidateCache = false,
+    invalidateCache = false
   ): Promise<ReportEvents> {
     this.logger.info('loadReports called with eventId:', eventId, 'pubkey:', pubkey);
 
@@ -431,13 +431,13 @@ export class EventService {
 
       // Count reports by type from tags (NIP-56)
       const reportCounts = new Map<string, number>();
-      reportRecords.forEach((record) => {
+      reportRecords.forEach(record => {
         const event = record.event;
 
         // Look for report type in e-tags that reference this event
-        const eTags = event.tags.filter((tag) => tag[0] === 'e' && tag[1] === eventId);
+        const eTags = event.tags.filter(tag => tag[0] === 'e' && tag[1] === eventId);
 
-        eTags.forEach((tag) => {
+        eTags.forEach(tag => {
           // Report type is the 3rd element (index 2) in the tag according to NIP-56
           const reportType = tag[2];
           if (reportType && reportType.trim()) {
@@ -459,7 +459,7 @@ export class EventService {
         'Successfully loaded reports for event:',
         eventId,
         'report types:',
-        Array.from(reportCounts.keys()),
+        Array.from(reportCounts.keys())
       );
 
       return {
@@ -478,7 +478,7 @@ export class EventService {
    */
   async loadRepliesAndReactions(
     eventId: string,
-    pubkey: string,
+    pubkey: string
   ): Promise<{ replies: Event[]; reactions: Reaction[] }> {
     this.logger.info('loadRepliesAndReactions called with eventId:', eventId, 'pubkey:', pubkey);
 
@@ -509,7 +509,7 @@ export class EventService {
 
     if (!author) {
       this.logger.warn(
-        'No author found for loading root event. Fallback to attempt using first p-tag.',
+        'No author found for loading root event. Fallback to attempt using first p-tag.'
       );
       author = pTags[0];
     }
@@ -551,7 +551,7 @@ export class EventService {
           ttl: minutes.five,
         });
 
-        if (rootEvent && !parents.find((p) => p.id === rootEvent.event.id)) {
+        if (rootEvent && !parents.find(p => p.id === rootEvent.event.id)) {
           parents.unshift(rootEvent.event);
         }
       }
@@ -587,11 +587,11 @@ export class EventService {
     const { replies, reactions } = await this.loadRepliesAndReactions(threadRootId, event.pubkey);
 
     // Filter out parent events from replies to avoid duplication
-    const parentEventIds = new Set(parents.map((p) => p.id));
+    const parentEventIds = new Set(parents.map(p => p.id));
     // Also exclude the current event itself from replies
     parentEventIds.add(event.id);
 
-    const filteredReplies = replies.filter((reply) => !parentEventIds.has(reply.id));
+    const filteredReplies = replies.filter(reply => !parentEventIds.has(reply.id));
 
     // Build threaded structure starting from the current event
     const threadedReplies = this.buildThreadTree(filteredReplies, event.id, 4);
@@ -612,7 +612,7 @@ export class EventService {
    */
   async *loadThreadProgressively(
     nevent: string,
-    item?: EventData,
+    item?: EventData
   ): AsyncGenerator<Partial<ThreadData>, ThreadData> {
     // First, load the main event
     const event = await this.loadEvent(nevent, item);
@@ -666,11 +666,11 @@ export class EventService {
       if (actualThreadRootId !== event.id) {
         finalRepliesPromise = this.loadReplies(
           actualThreadRootId,
-          rootEvent?.pubkey || event.pubkey,
+          rootEvent?.pubkey || event.pubkey
         );
         finalReactionsPromise = this.loadReactions(
           actualThreadRootId,
-          rootEvent?.pubkey || event.pubkey,
+          rootEvent?.pubkey || event.pubkey
         );
       }
 
@@ -678,10 +678,10 @@ export class EventService {
       const replies = await finalRepliesPromise;
 
       // Only filter out parent events and current event from the flat replies list
-      const parentEventIds = new Set(parents.map((p) => p.id));
+      const parentEventIds = new Set(parents.map(p => p.id));
       parentEventIds.add(event.id);
 
-      const filteredReplies = replies.filter((reply) => !parentEventIds.has(reply.id));
+      const filteredReplies = replies.filter(reply => !parentEventIds.has(reply.id));
 
       // Build thread tree starting from the current event, not the thread root
       // This will show replies TO the current event and its descendants
@@ -718,7 +718,7 @@ export class EventService {
         const replies = await currentEventRepliesPromise;
 
         // Filter out the current event from replies
-        const filteredReplies = replies.filter((reply) => reply.id !== event.id);
+        const filteredReplies = replies.filter(reply => reply.id !== event.id);
         const threadedReplies = this.buildThreadTree(filteredReplies, event.id, 4);
 
         const finalData: ThreadData = {
@@ -766,7 +766,7 @@ export class EventService {
     eventId: string,
     eventKind: number,
     userPubkey: string,
-    invalidateCache = false,
+    invalidateCache = false
   ): Promise<NostrRecord[]> {
     this.logger.info('loadReposts called with eventId:', eventId, 'userPubkey:', userPubkey);
 
@@ -809,7 +809,7 @@ export class EventService {
       data,
     });
 
-    dialogRef.afterClosed().subscribe((result) => {
+    dialogRef.afterClosed().subscribe(result => {
       if (result?.published) {
         console.log('Note published successfully:', result.event);
       }

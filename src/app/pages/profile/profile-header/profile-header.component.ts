@@ -323,7 +323,7 @@ export class ProfileHeaderComponent {
           this.logger.warn(
             'NIP-05 profile pubkey mismatch:',
             profile.pubkey,
-            metadata.event.pubkey,
+            metadata.event.pubkey
           );
         }
       }
@@ -418,7 +418,7 @@ export class ProfileHeaderComponent {
       // Get the relay list event (kind 10002)
       const relayListEvent = await this.storage.getEventByPubkeyAndKind(
         currentPubkey,
-        kinds.RelayList,
+        kinds.RelayList
       );
 
       if (!relayListEvent) {
@@ -456,7 +456,7 @@ export class ProfileHeaderComponent {
       // Get the following list event (kind 3)
       const followingListEvent = await this.storage.getEventByPubkeyAndKind(
         currentPubkey,
-        kinds.Contacts,
+        kinds.Contacts
       );
 
       if (!followingListEvent) {
@@ -498,7 +498,7 @@ export class ProfileHeaderComponent {
         const result = await firstValueFrom(
           this.accountService.getPublicAccount({
             pubkeyOrUsername: pubkey,
-          }),
+          })
         );
 
         if (result?.result) {

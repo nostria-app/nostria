@@ -47,7 +47,7 @@ export class RelaysService {
   }
 
   private initializePreferredRelays(): void {
-    this.utilities.preferredRelays.forEach((url) => {
+    this.utilities.preferredRelays.forEach(url => {
       this.addRelay(url);
     });
   }
@@ -159,7 +159,7 @@ export class RelaysService {
     this.userRelays.set(pubkey, normalizedRelays);
 
     // Add these relays to our stats if they don't exist
-    normalizedRelays.forEach((url) => this.addRelay(url));
+    normalizedRelays.forEach(url => this.addRelay(url));
 
     this.updateSignals();
   }
@@ -358,7 +358,7 @@ export class RelaysService {
    * Get observed relays sorted by criteria
    */
   async getObservedRelaysSorted(
-    sortBy: 'eventsReceived' | 'lastUpdated' | 'firstObserved' = 'lastUpdated',
+    sortBy: 'eventsReceived' | 'lastUpdated' | 'firstObserved' = 'lastUpdated'
   ): Promise<ObservedRelayStats[]> {
     return await this.storage.getObservedRelaysSorted(sortBy);
   }

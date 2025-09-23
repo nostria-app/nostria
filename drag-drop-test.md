@@ -120,7 +120,7 @@ columnEvents = computed(() => {
   const isDragging = this.isDragging();
   const eventsMap = new Map<string, Event[]>();
 
-  columns.forEach((column) => {
+  columns.forEach(column => {
     if (isDragging) {
       // During drag operations, use cached events to prevent DOM updates
       eventsMap.set(column.id, this._eventCache.get(column.id) || []);

@@ -144,14 +144,14 @@ export class ArticleComponent {
           this.pubkey(),
           this.kind(),
           this.slug(),
-          { save: false, cache: false },
+          { save: false, cache: false }
         );
       } else {
         event = await this.data.getEventByPubkeyAndKindAndReplaceableEvent(
           this.pubkey(),
           this.kind(),
           this.slug(),
-          { save: false, cache: false },
+          { save: false, cache: false }
         );
       }
 

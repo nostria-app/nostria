@@ -49,7 +49,7 @@ export class MediaQueueComponent implements OnInit {
 
       if (result.url.indexOf('youtu.be') > -1 || result.url.indexOf('youtube.com') > -1) {
         const youtubes = [...result.url.matchAll(this.utilities.regexpYouTube)];
-        const youtube = youtubes.map((i) => {
+        const youtube = youtubes.map(i => {
           return { url: `https://www.youtube.com/embed/${i[1]}` };
         });
 

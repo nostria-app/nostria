@@ -115,7 +115,7 @@ export class UtilitiesService {
   }
 
   toRecords(events: Event[]) {
-    return events.map((event) => this.toRecord(event));
+    return events.map(event => this.toRecord(event));
   }
 
   /** Attempts to parse the content if it is a JSON string. */
@@ -309,7 +309,7 @@ export class UtilitiesService {
       }
     }
 
-    const relayUrls = Object.keys(content).map((url) => {
+    const relayUrls = Object.keys(content).map(url => {
       const wssIndex = url.indexOf('wss://');
       return wssIndex >= 0 ? url.substring(wssIndex) : url;
     });
@@ -320,8 +320,8 @@ export class UtilitiesService {
   /** Parses the URLs and cleans up, ensuring only wss:// instances are returned. */
   getRelayUrls(event: Event): string[] {
     const relayUrls = event.tags
-      .filter((tag) => tag.length >= 2 && tag[0] === 'r')
-      .map((tag) => {
+      .filter(tag => tag.length >= 2 && tag[0] === 'r')
+      .map(tag => {
         const url = tag[1];
         const wssIndex = url.indexOf('wss://');
         return wssIndex >= 0 ? url.substring(wssIndex) : url;
@@ -347,7 +347,7 @@ export class UtilitiesService {
   ];
 
   normalizeRelayUrls(urls: string[]): string[] {
-    return urls.map((url) => this.normalizeRelayUrl(url)).filter((url) => url !== '');
+    return urls.map(url => this.normalizeRelayUrl(url)).filter(url => url !== '');
   }
 
   /**
@@ -458,9 +458,7 @@ export class UtilitiesService {
   }
 
   getTags(event: Event | UnsignedEvent, tagType: NostrTagKey): string[] {
-    const tags = event.tags
-      .filter((tag) => tag.length >= 2 && tag[0] === tagType)
-      .map((tag) => tag[1]);
+    const tags = event.tags.filter(tag => tag.length >= 2 && tag[0] === tagType).map(tag => tag[1]);
 
     return tags;
   }
@@ -510,7 +508,7 @@ export class UtilitiesService {
   /** Used to optimize the selection of a few relays from the user's relay list. */
   pickOptimalRelays(relayUrls: string[], count: number): string[] {
     // Filter out malformed URLs first
-    const validUrls = relayUrls.filter((url) => {
+    const validUrls = relayUrls.filter(url => {
       // Must start with wss:// and have something after it
       if (!url.startsWith('wss://') || url === 'wss://') {
         return false;
@@ -541,16 +539,16 @@ export class UtilitiesService {
 
     // 1. First tier: Preferred relays
     const preferredRelays = normalizedUrls.filter(
-      (url) => this.preferredRelays.includes(url) && !isIpOrLocalhost(url),
+      url => this.preferredRelays.includes(url) && !isIpOrLocalhost(url)
     );
 
     // 2. Second tier: Normal domain relays (not IP or localhost)
     const normalDomainRelays = normalizedUrls.filter(
-      (url) => !this.preferredRelays.includes(url) && !isIpOrLocalhost(url),
+      url => !this.preferredRelays.includes(url) && !isIpOrLocalhost(url)
     );
 
     // 3. Third tier: IP-based and localhost relays
-    const ipAndLocalhostRelays = normalizedUrls.filter((url) => isIpOrLocalhost(url));
+    const ipAndLocalhostRelays = normalizedUrls.filter(url => isIpOrLocalhost(url));
 
     // Combine all three tiers with preferred relays first, then normal domains, then IPs/localhost
     const sortedRelays = [...preferredRelays, ...normalDomainRelays, ...ipAndLocalhostRelays];
@@ -565,7 +563,7 @@ export class UtilitiesService {
 
   isRootPost(event: Event) {
     // A root post has no 'e' tag (no reply or root reference)
-    return !event.tags.some((tag) => tag[0] === 'e');
+    return !event.tags.some(tag => tag[0] === 'e');
   }
 
   createEvent(kind: number, content: string, tags: string[][], pubkey: string): UnsignedEvent {

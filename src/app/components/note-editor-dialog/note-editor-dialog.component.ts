@@ -448,13 +448,13 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
 
       if (parentEvent) {
         // Get all existing e and p tags from the parent event
-        const existingETags = parentEvent.tags.filter((tag) => tag[0] === 'e');
-        const existingPTags = parentEvent.tags.filter((tag) => tag[0] === 'p');
+        const existingETags = parentEvent.tags.filter(tag => tag[0] === 'e');
+        const existingPTags = parentEvent.tags.filter(tag => tag[0] === 'p');
 
         // Step 1: Add all existing "e" tags from the parent event
         // When replying further down a thread, only the latest "e" tag should have "reply"
         // All other "e" tags should preserve "root" marker or be unmarked
-        existingETags.forEach((eTag) => {
+        existingETags.forEach(eTag => {
           const tagCopy = [...eTag];
           // If this tag has "reply" marker, remove it (make it unmarked)
           // Keep "root" markers as they are
@@ -472,13 +472,13 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
         tags.push(['e', this.data.replyTo.id, '', marker, this.data.replyTo.pubkey]);
 
         // Step 3: Add all existing "p" tags from the parent event
-        existingPTags.forEach((pTag) => {
+        existingPTags.forEach(pTag => {
           tags.push([...pTag]); // Copy the entire tag
         });
 
         // Step 4: Add the author of the parent event as a "p" tag if not already included
         const authorAlreadyIncluded = existingPTags.some(
-          (tag) => tag[1] === this.data.replyTo!.pubkey,
+          tag => tag[1] === this.data.replyTo!.pubkey
         );
         if (!authorAlreadyIncluded) {
           tags.push(['p', this.data.replyTo.pubkey, '']); // Format: ["p", <pubkey>, <relay-url>]
@@ -506,8 +506,8 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
     }
 
     // Add mention tags (avoid duplicates with existing p tags)
-    const existingPubkeys = new Set(tags.filter((tag) => tag[0] === 'p').map((tag) => tag[1]));
-    this.mentions().forEach((pubkey) => {
+    const existingPubkeys = new Set(tags.filter(tag => tag[0] === 'p').map(tag => tag[1]));
+    this.mentions().forEach(pubkey => {
       if (!existingPubkeys.has(pubkey)) {
         tags.push(['p', pubkey]);
       }
@@ -533,7 +533,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
   }
 
   removeMention(pubkey: string): void {
-    this.mentions.set(this.mentions().filter((p) => p !== pubkey));
+    this.mentions.set(this.mentions().filter(p => p !== pubkey));
   }
 
   cancel(): void {
@@ -555,12 +555,12 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
 
   // Preview functionality
   togglePreview(): void {
-    this.showPreview.update((current) => !current);
+    this.showPreview.update(current => !current);
   }
 
   // Advanced options functionality
   toggleAdvancedOptions(): void {
-    this.showAdvancedOptions.update((current) => !current);
+    this.showAdvancedOptions.update(current => !current);
   }
 
   onExpirationToggle(enabled: boolean): void {
@@ -612,7 +612,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
     // Convert URLs to clickable links
     const withLinks = escaped.replace(
       /(https?:\/\/[^\s]+)/g,
-      '<a href="$1" target="_blank" rel="noopener noreferrer" class="preview-link">$1</a>',
+      '<a href="$1" target="_blank" rel="noopener noreferrer" class="preview-link">$1</a>'
     );
 
     // Convert line breaks to <br> tags
@@ -621,7 +621,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
     // Convert nostr: references to a special format
     const withNostrRefs = withLineBreaks.replace(
       /nostr:([a-zA-Z0-9]+)/g,
-      '<span class="nostr-ref">nostr:$1</span>',
+      '<span class="nostr-ref">nostr:$1</span>'
     );
 
     return withNostrRefs;
@@ -686,12 +686,12 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
       // Load media service if not already loaded
       await this.mediaService.load();
 
-      const uploadPromises = files.map(async (file) => {
+      const uploadPromises = files.map(async file => {
         try {
           const result = await this.mediaService.uploadFile(
             file,
             false,
-            this.mediaService.mediaServers(),
+            this.mediaService.mediaServers()
           );
 
           if (result.status === 'success' && result.item) {
@@ -716,8 +716,8 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
       const results = await Promise.all(uploadPromises);
 
       // Show success/error messages
-      const successful = results.filter((r) => r.success);
-      const failed = results.filter((r) => !r.success);
+      const successful = results.filter(r => r.success);
+      const failed = results.filter(r => !r.success);
 
       if (successful.length > 0) {
         this.snackBar.open(`${successful.length} file(s) uploaded successfully`, 'Close', {
@@ -734,7 +734,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
       this.snackBar.open(
         'Upload failed: ' + (error instanceof Error ? error.message : 'Unknown error'),
         'Close',
-        { duration: 5000 },
+        { duration: 5000 }
       );
     } finally {
       this.isUploading.set(false);

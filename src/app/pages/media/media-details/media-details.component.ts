@@ -118,7 +118,7 @@ export class MediaDetailsComponent {
     ];
 
     return (
-      textMimeTypes.some((type) => mimeType.startsWith(type)) ||
+      textMimeTypes.some(type => mimeType.startsWith(type)) ||
       mimeType.includes('text/') ||
       // Check extensions for common text file formats
       this.hasTextFileExtension(mimeType)
@@ -148,7 +148,7 @@ export class MediaDetailsComponent {
       '.yaml',
     ];
 
-    return textExtensions.some((ext) => url.endsWith(ext));
+    return textExtensions.some(ext => url.endsWith(ext));
   }
 
   async downloadMedia(): Promise<void> {

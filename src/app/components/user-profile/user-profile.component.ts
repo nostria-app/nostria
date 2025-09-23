@@ -251,9 +251,9 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
 
     // Create IntersectionObserver instance
     this.intersectionObserver = new IntersectionObserver(
-      (entries) => {
+      entries => {
         // Update visibility state
-        const isVisible = entries.some((entry) => entry.isIntersecting);
+        const isVisible = entries.some(entry => entry.isIntersecting);
         this.isVisible.set(isVisible);
 
         if (isVisible && !this.isScrolling()) {
@@ -266,7 +266,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
       {
         threshold: 0.1, // Trigger when at least 10% is visible
         root: null, // Use viewport as root
-      },
+      }
     );
 
     // Start observing this component

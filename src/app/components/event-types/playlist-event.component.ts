@@ -64,14 +64,14 @@ export class PlaylistEventComponent {
     const event = this.event();
     if (!event) return false;
 
-    return event.tags.some((tag) => tag[0] === 'content-warning');
+    return event.tags.some(tag => tag[0] === 'content-warning');
   });
 
   contentWarning = computed(() => {
     const event = this.event();
     if (!event) return null;
 
-    const warningTag = event.tags.find((tag) => tag[0] === 'content-warning');
+    const warningTag = event.tags.find(tag => tag[0] === 'content-warning');
     return warningTag?.[1] || 'Content may be sensitive';
   });
 
@@ -124,7 +124,7 @@ export class PlaylistEventComponent {
     }));
 
     // Add all tracks to queue
-    mediaItems.forEach((item) => {
+    mediaItems.forEach(item => {
       this.mediaPlayerService.enque(item);
     });
   }
@@ -140,7 +140,7 @@ export class PlaylistEventComponent {
     // Check for video file extensions
     const videoExtensions = ['.mp4', '.webm', '.ogg', '.avi', '.mov', '.wmv', '.flv', '.mkv'];
     const lowercaseUrl = url.toLowerCase();
-    if (videoExtensions.some((ext) => lowercaseUrl.includes(ext))) {
+    if (videoExtensions.some(ext => lowercaseUrl.includes(ext))) {
       return 'Video';
     }
 
@@ -151,15 +151,15 @@ export class PlaylistEventComponent {
   private getPlaylistData(event: Event): PlaylistData | null {
     try {
       // Get title
-      const titleTag = event.tags.find((tag) => tag[0] === 'title');
+      const titleTag = event.tags.find(tag => tag[0] === 'title');
       const title = titleTag?.[1] || 'Untitled Playlist';
 
       // Get alt text/description
-      const altTag = event.tags.find((tag) => tag[0] === 'alt');
+      const altTag = event.tags.find(tag => tag[0] === 'alt');
       const alt = altTag?.[1];
 
       // Get playlist URL
-      const urlTag = event.tags.find((tag) => tag[0] === 'url');
+      const urlTag = event.tags.find(tag => tag[0] === 'url');
       const url = urlTag?.[1];
 
       // Parse M3U content from event content
@@ -184,11 +184,11 @@ export class PlaylistEventComponent {
   private parseM3UContent(content: string): PlaylistTrack[] {
     if (!content) return [];
 
-    const lines = content.split('\n').map((line) => line.trim());
+    const lines = content.split('\n').map(line => line.trim());
     const tracks: PlaylistTrack[] = [];
     let currentTrack: Partial<PlaylistTrack> = {};
 
-    lines.forEach((line) => {
+    lines.forEach(line => {
       if (line.startsWith('#EXTINF:')) {
         // Parse track info: #EXTINF:duration,artist - title
         const match = line.match(/#EXTINF:([^,]*),(.*)$/);
@@ -243,7 +243,7 @@ export class PlaylistEventComponent {
   private parseDuration(duration: string): number {
     // Handle formats like "3:45" or "245" (seconds)
     if (duration.includes(':')) {
-      const parts = duration.split(':').map((p) => parseInt(p, 10));
+      const parts = duration.split(':').map(p => parseInt(p, 10));
       if (parts.length === 2) {
         return parts[0] * 60 + parts[1];
       } else if (parts.length === 3) {

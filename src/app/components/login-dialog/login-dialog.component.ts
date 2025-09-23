@@ -149,7 +149,7 @@ export class LoginDialogComponent {
       }
 
       // Simulate detection time for better UX (minimum display time)
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
       this.isDetectingRegion.set(false);
     } catch (error) {
@@ -182,7 +182,7 @@ export class LoginDialogComponent {
 
       const reader = new FileReader();
 
-      reader.onload = (e) => {
+      reader.onload = e => {
         const result = e.target?.result as string;
         this.profileImage.set(result);
         this.logger.debug('Profile image selected');
@@ -224,7 +224,7 @@ export class LoginDialogComponent {
           const result = await this.profileService.createInitialProfile(
             newUser.pubkey,
             displayName || undefined,
-            profileImageFile || undefined,
+            profileImageFile || undefined
           );
 
           if (!result.success) {
@@ -267,7 +267,7 @@ export class LoginDialogComponent {
     } catch (err) {
       this.logger.error('Login with extension failed', err);
       this.extensionError.set(
-        err instanceof Error ? err.message : 'Unknown error connecting to extension',
+        err instanceof Error ? err.message : 'Unknown error connecting to extension'
       );
       this.goToStep(LoginStep.LOGIN_OPTIONS);
     }
@@ -304,7 +304,7 @@ export class LoginDialogComponent {
     }
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = e => {
       try {
         const content = e.target?.result as string;
         const credentials = JSON.parse(content);
@@ -378,7 +378,7 @@ export class LoginDialogComponent {
     } catch (err) {
       this.logger.error('Login with Nostr Connect failed', err);
       this.nostrConnectError.set(
-        err instanceof Error ? err.message : 'Failed to connect using Nostr Connect',
+        err instanceof Error ? err.message : 'Failed to connect using Nostr Connect'
       );
       this.nostrConnectLoading.set(false);
     }
@@ -397,7 +397,7 @@ export class LoginDialogComponent {
       disableClose: false,
     });
 
-    scanDialogRef.afterClosed().subscribe(async (result) => {
+    scanDialogRef.afterClosed().subscribe(async result => {
       if (result && typeof result === 'string') {
         this.logger.debug('QR scan result:', { result });
 

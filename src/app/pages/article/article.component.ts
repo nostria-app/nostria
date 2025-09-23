@@ -73,7 +73,7 @@ export class ArticleComponent implements OnDestroy {
     }
 
     // Subscribe to route parameter changes
-    this.routeSubscription = this.route.paramMap.subscribe((params) => {
+    this.routeSubscription = this.route.paramMap.subscribe(params => {
       const addrParam = params.get('id');
       if (addrParam) {
         this.loadArticle(addrParam, params);
@@ -111,7 +111,7 @@ export class ArticleComponent implements OnDestroy {
 
     if (receivedData) {
       const encoded = nip19.naddrEncode({
-        identifier: receivedData.tags.find((tag) => tag[0] === 'd')?.[1] || '',
+        identifier: receivedData.tags.find(tag => tag[0] === 'd')?.[1] || '',
         kind: receivedData.kind,
         pubkey: receivedData.pubkey,
       });
@@ -181,14 +181,14 @@ export class ArticleComponent implements OnDestroy {
           pubkey,
           kinds.LongFormArticle,
           slug,
-          { save: false, cache: false },
+          { save: false, cache: false }
         );
       } else {
         event = await this.data.getEventByPubkeyAndKindAndReplaceableEvent(
           pubkey,
           kinds.LongFormArticle,
           slug,
-          { save: false, cache: false },
+          { save: false, cache: false }
         );
       }
 

@@ -185,7 +185,7 @@ export class Calendar {
       const date = new Date(
         selected.getFullYear(),
         selected.getMonth(),
-        selected.getDate() - selected.getDay() + i,
+        selected.getDate() - selected.getDay() + i
       );
       dates.push(date);
     }
@@ -195,7 +195,7 @@ export class Calendar {
   // Events for selected date
   selectedDateEvents = computed(() => {
     const selected = this.selectedDate();
-    return this.events().filter((event) => {
+    return this.events().filter(event => {
       return (
         this.isSameDay(event.start, selected) ||
         (event.end && this.isDateInRange(selected, event.start, event.end))
@@ -206,8 +206,8 @@ export class Calendar {
   // Events for the current week
   weekEvents = computed(() => {
     const weekDates = this.weekDates();
-    return this.events().filter((event) => {
-      return weekDates.some((date) => this.isSameDay(event.start, date));
+    return this.events().filter(event => {
+      return weekDates.some(date => this.isSameDay(event.start, date));
     });
   });
 
@@ -216,7 +216,7 @@ export class Calendar {
     const events = this.events();
     const groupedEvents = new Map<string, CalendarEvent[]>();
 
-    events.forEach((event) => {
+    events.forEach(event => {
       const dateKey = event.start.toDateString();
       if (!groupedEvents.has(dateKey)) {
         groupedEvents.set(dateKey, []);
@@ -244,11 +244,11 @@ export class Calendar {
     }
 
     // Filter events based on enabled calendars
-    return allEvents.filter((event) => {
+    return allEvents.filter(event => {
       // Check if event belongs to an enabled calendar
       const calendars = this.calendars();
-      const eventCalendar = calendars.find((cal) =>
-        cal.events.some((eventCoord) => eventCoord.includes(event.id)),
+      const eventCalendar = calendars.find(cal =>
+        cal.events.some(eventCoord => eventCoord.includes(event.id))
       );
 
       return eventCalendar ? enabledCals.has(eventCalendar.id) : true;
@@ -258,7 +258,7 @@ export class Calendar {
   // Override existing computed values to use filtered events
   selectedDateEventsFiltered = computed(() => {
     const selected = this.selectedDate();
-    return this.filteredEvents().filter((event) => {
+    return this.filteredEvents().filter(event => {
       return (
         this.isSameDay(event.start, selected) ||
         (event.end && this.isDateInRange(selected, event.start, event.end))
@@ -268,8 +268,8 @@ export class Calendar {
 
   weekEventsFiltered = computed(() => {
     const weekDates = this.weekDates();
-    return this.filteredEvents().filter((event) => {
-      return weekDates.some((date) => this.isSameDay(event.start, date));
+    return this.filteredEvents().filter(event => {
+      return weekDates.some(date => this.isSameDay(event.start, date));
     });
   });
 
@@ -277,7 +277,7 @@ export class Calendar {
     const events = this.filteredEvents();
     const groupedEvents = new Map<string, CalendarEvent[]>();
 
-    events.forEach((event) => {
+    events.forEach(event => {
       const dateKey = event.start.toDateString();
       if (!groupedEvents.has(dateKey)) {
         groupedEvents.set(dateKey, []);
@@ -302,7 +302,7 @@ export class Calendar {
 
     // Effect to handle date picker changes
     effect(() => {
-      this.selectedDateControl.valueChanges.subscribe((date) => {
+      this.selectedDateControl.valueChanges.subscribe(date => {
         if (date) {
           this.selectedDate.set(date);
         }
@@ -332,8 +332,7 @@ export class Calendar {
         // Wait a moment for events to load, then try to find and open the event
         setTimeout(() => {
           const event = this.events().find(
-            (e) =>
-              e.kind.toString() === kind && e.pubkey === pubkey && this.getEventDTag(e) === dTag,
+            e => e.kind.toString() === kind && e.pubkey === pubkey && this.getEventDTag(e) === dTag
           );
 
           if (event) {
@@ -363,7 +362,7 @@ export class Calendar {
         ],
         (event: Event) => {
           // Check if this event has the matching d tag
-          const eventDTag = event.tags.find((tag) => tag[0] === 'd')?.[1];
+          const eventDTag = event.tags.find(tag => tag[0] === 'd')?.[1];
           if (eventDTag === dTag) {
             const calendarEvent = this.parseCalendarEvent(event);
             if (calendarEvent) {
@@ -371,7 +370,7 @@ export class Calendar {
               this.openEventDetails(calendarEvent);
             }
           }
-        },
+        }
       );
     } catch (error) {
       this.logger.error('Error loading specific event', error);
@@ -402,7 +401,7 @@ export class Calendar {
           if (calendar) {
             this.addCalendar(calendar);
           }
-        },
+        }
       );
     } catch (error) {
       this.logger.error('Error loading calendars', error);
@@ -413,13 +412,13 @@ export class Calendar {
 
   private parseCalendar(event: Event): CalendarCollection | null {
     try {
-      const tags = new Map(event.tags.map((tag) => [tag[0], tag.slice(1)]));
+      const tags = new Map(event.tags.map(tag => [tag[0], tag.slice(1)]));
 
       const title = tags.get('title')?.[0] || 'Untitled Calendar';
       const dTag = tags.get('d')?.[0] || '';
 
       // Get event references (a tags)
-      const events = event.tags.filter((tag) => tag[0] === 'a').map((tag) => tag[1]);
+      const events = event.tags.filter(tag => tag[0] === 'a').map(tag => tag[1]);
 
       return {
         id: event.id,
@@ -439,7 +438,7 @@ export class Calendar {
 
   private addCalendar(calendar: CalendarCollection): void {
     const currentCalendars = this.calendars();
-    const existingIndex = currentCalendars.findIndex((c) => c.id === calendar.id);
+    const existingIndex = currentCalendars.findIndex(c => c.id === calendar.id);
 
     if (existingIndex >= 0) {
       // Update existing calendar
@@ -449,12 +448,12 @@ export class Calendar {
     } else {
       // Add new calendar and enable it by default
       this.calendars.set([...currentCalendars, calendar]);
-      this.enabledCalendars.update((enabled) => new Set(enabled).add(calendar.id));
+      this.enabledCalendars.update(enabled => new Set(enabled).add(calendar.id));
     }
   }
 
   toggleCalendar(calendarId: string): void {
-    this.enabledCalendars.update((enabled) => {
+    this.enabledCalendars.update(enabled => {
       const newEnabled = new Set(enabled);
       if (newEnabled.has(calendarId)) {
         newEnabled.delete(calendarId);
@@ -620,7 +619,7 @@ export class Calendar {
           if (calendarEvent) {
             this.addEvent(calendarEvent);
           }
-        },
+        }
       );
     } catch (error) {
       this.logger.error('Error loading calendar events', error);
@@ -643,7 +642,7 @@ export class Calendar {
   // Event parsing methods
   private parseCalendarEvent(event: Event): CalendarEvent | null {
     try {
-      const tags = new Map(event.tags.map((tag) => [tag[0], tag.slice(1)]));
+      const tags = new Map(event.tags.map(tag => [tag[0], tag.slice(1)]));
 
       const title = tags.get('title')?.[0] || 'Untitled Event';
       const summary = tags.get('summary')?.[0];
@@ -676,9 +675,9 @@ export class Calendar {
         isAllDay = false;
       }
 
-      const participants = event.tags.filter((tag) => tag[0] === 'p').map((tag) => tag[1]);
+      const participants = event.tags.filter(tag => tag[0] === 'p').map(tag => tag[1]);
 
-      const hashtags = event.tags.filter((tag) => tag[0] === 't').map((tag) => tag[1]);
+      const hashtags = event.tags.filter(tag => tag[0] === 't').map(tag => tag[1]);
 
       return {
         id: event.id,
@@ -706,7 +705,7 @@ export class Calendar {
   // Event management methods
   private addEvent(event: CalendarEvent): void {
     const currentEvents = this.events();
-    const existingIndex = currentEvents.findIndex((e) => e.id === event.id);
+    const existingIndex = currentEvents.findIndex(e => e.id === event.id);
 
     if (existingIndex >= 0) {
       // Update existing event
@@ -748,7 +747,7 @@ export class Calendar {
 
   async respondToEvent(
     event: CalendarEvent,
-    status: 'accepted' | 'declined' | 'tentative',
+    status: 'accepted' | 'declined' | 'tentative'
   ): Promise<void> {
     if (!this.app.accountState.pubkey()) {
       this.logger.error('User not logged in');
@@ -804,7 +803,7 @@ export class Calendar {
       console.log('Publishing deletion:', deletionEvent);
 
       // Remove from local state
-      const updatedEvents = this.events().filter((e) => e.id !== event.id);
+      const updatedEvents = this.events().filter(e => e.id !== event.id);
       this.events.set(updatedEvents);
     } catch (error) {
       this.logger.error('Error deleting event', error);
@@ -813,7 +812,7 @@ export class Calendar {
 
   // Utility methods
   private getEventDTag(event: CalendarEvent): string {
-    const dTag = event.tags.find((tag) => tag[0] === 'd');
+    const dTag = event.tags.find(tag => tag[0] === 'd');
     return dTag ? dTag[1] : '';
   }
 
@@ -824,7 +823,7 @@ export class Calendar {
   }
 
   getEventsForDate(date: Date): CalendarEvent[] {
-    return this.filteredEvents().filter((event) => {
+    return this.filteredEvents().filter(event => {
       return (
         this.isSameDay(event.start, date) ||
         (event.end && this.isDateInRange(date, event.start, event.end))
@@ -879,7 +878,7 @@ export class Calendar {
     const weekDates = this.weekDates();
     const targetDate = weekDates[dayIndex];
 
-    return this.weekEventsFiltered().filter((event) => {
+    return this.weekEventsFiltered().filter(event => {
       if (!this.isSameDay(event.start, targetDate)) return false;
 
       if (event.isAllDay) {
@@ -962,7 +961,7 @@ export class Calendar {
           text: event.summary || event.content,
           url: shareUrl,
         })
-        .catch((error) => {
+        .catch(error => {
           this.logger.error('Error sharing event', error);
           this.copyEventUrl(shareUrl);
         });
@@ -979,7 +978,7 @@ export class Calendar {
         // Could show a snackbar here indicating the URL was copied
         this.logger.info('Event URL copied to clipboard');
       })
-      .catch((error) => {
+      .catch(error => {
         this.logger.error('Failed to copy URL to clipboard', error);
       });
   }

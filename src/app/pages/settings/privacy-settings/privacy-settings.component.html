@@ -4,31 +4,41 @@
   <section class="sharing-section">
     <h3>Image Cache Service</h3>
     <div class="settings-option">
-      <mat-checkbox [checked]="settingsService.settings().imageCacheEnabled" (change)="toggleImageCache()">
+      <mat-checkbox
+        [checked]="settingsService.settings().imageCacheEnabled"
+        (change)="toggleImageCache()"
+      >
         Enable image cache
       </mat-checkbox>
-      <app-info-tooltip [content]="imageCacheInfoContent"
-        ariaLabel="Learn about image cache service"></app-info-tooltip>
+      <app-info-tooltip
+        [content]="imageCacheInfoContent"
+        ariaLabel="Learn about image cache service"
+      ></app-info-tooltip>
     </div>
 
     @if (settingsService.settings().imageCacheEnabled) {
-    <div class="cache-actions">
-      <button mat-raised-button color="warn" (click)="clearImageCache()">
-        <mat-icon>delete</mat-icon>
-        Clear Cache
-      </button>
-    </div>
+      <div class="cache-actions">
+        <button mat-raised-button color="warn" (click)="clearImageCache()">
+          <mat-icon>delete</mat-icon>
+          Clear Cache
+        </button>
+      </div>
     }
   </section>
 
   <section class="sharing-section">
     <h3>Social Sharing Options</h3>
     <div class="settings-option">
-      <mat-checkbox [checked]="settingsService.settings().socialSharingPreview" (change)="toggleSocialSharingPreview()">
+      <mat-checkbox
+        [checked]="settingsService.settings().socialSharingPreview"
+        (change)="toggleSocialSharingPreview()"
+      >
         Enable social sharing preview
       </mat-checkbox>
-      <app-info-tooltip [content]="socialSharingInfoContent"
-        ariaLabel="Learn about social sharing preview"></app-info-tooltip>
+      <app-info-tooltip
+        [content]="socialSharingInfoContent"
+        ariaLabel="Learn about social sharing preview"
+      ></app-info-tooltip>
     </div>
   </section>
 
@@ -42,15 +52,17 @@
     </p>
 
     @for (reportType of reportTypes; track reportType.key) {
-    <div class="settings-option">
-      <mat-checkbox [checked]="isReportTypeHidden(reportType.key)"
-        (change)="toggleReportTypeVisibility(reportType.key)">
-        <div class="report-type-option">
-          <mat-icon [fontIcon]="reportType.icon"></mat-icon>
-          <span>Hide {{ reportType.label }}</span>
-        </div>
-      </mat-checkbox>
-    </div>
+      <div class="settings-option">
+        <mat-checkbox
+          [checked]="isReportTypeHidden(reportType.key)"
+          (change)="toggleReportTypeVisibility(reportType.key)"
+        >
+          <div class="report-type-option">
+            <mat-icon [fontIcon]="reportType.icon"></mat-icon>
+            <span>Hide {{ reportType.label }}</span>
+          </div>
+        </mat-checkbox>
+      </div>
     }
   </section>
 
@@ -60,29 +72,34 @@
     <h3>Blocked Accounts</h3>
     <div class="muted-section">
       @if (mutedAccounts().length > 0) {
-      <mat-list>
-        @for (pubkey of mutedAccounts(); track pubkey) {
-        <mat-list-item>
-          <span matListItemTitle>
-            <app-user-profile [pubkey]="pubkey"> </app-user-profile>
-          </span>
-          <button mat-icon-button color="warn" (click)="removeMutedItem('account', pubkey)" matListItemMeta>
-            <mat-icon>clear</mat-icon>
-          </button>
-        </mat-list-item>
+        <mat-list>
+          @for (pubkey of mutedAccounts(); track pubkey) {
+            <mat-list-item>
+              <span matListItemTitle>
+                <app-user-profile [pubkey]="pubkey"> </app-user-profile>
+              </span>
+              <button
+                mat-icon-button
+                color="warn"
+                (click)="removeMutedItem('account', pubkey)"
+                matListItemMeta
+              >
+                <mat-icon>clear</mat-icon>
+              </button>
+            </mat-list-item>
 
-        <!-- <mat-list-item>
+            <!-- <mat-list-item>
           <span matListItemTitle>{{ pubkey }}</span>
           <button mat-icon-button color="warn" (click)="removeMutedItem('account', pubkey)" matListItemMeta>
             <mat-icon>clear</mat-icon>
           </button>
         </mat-list-item> -->
-        <!-- <mat-divider>
+            <!-- <mat-divider>
         </mat-divider> -->
-        }
-      </mat-list>
+          }
+        </mat-list>
       } @else {
-      <p class="empty-state">No blocked accounts.</p>
+        <p class="empty-state">No blocked accounts.</p>
       }
     </div>
   </section>
@@ -91,19 +108,24 @@
     <h3>Muted Words</h3>
     <div class="muted-section">
       @if (mutedWords().length > 0) {
-      <mat-list>
-        @for (word of mutedWords(); track $index) {
-        <mat-list-item>
-          <span matListItemTitle>{{ word }}</span>
-          <button mat-icon-button color="warn" (click)="removeMutedItem('word', word)" matListItemMeta>
-            <mat-icon>clear</mat-icon>
-          </button>
-        </mat-list-item>
-        <mat-divider></mat-divider>
-        }
-      </mat-list>
+        <mat-list>
+          @for (word of mutedWords(); track $index) {
+            <mat-list-item>
+              <span matListItemTitle>{{ word }}</span>
+              <button
+                mat-icon-button
+                color="warn"
+                (click)="removeMutedItem('word', word)"
+                matListItemMeta
+              >
+                <mat-icon>clear</mat-icon>
+              </button>
+            </mat-list-item>
+            <mat-divider></mat-divider>
+          }
+        </mat-list>
       } @else {
-      <p class="empty-state">No muted words.</p>
+        <p class="empty-state">No muted words.</p>
       }
     </div>
   </section>
@@ -112,19 +134,24 @@
     <h3>Muted Tags</h3>
     <div class="muted-section">
       @if (mutedTags().length > 0) {
-      <mat-list>
-        @for (tag of mutedTags(); track $index) {
-        <mat-list-item>
-          <span matListItemTitle>#{{ tag }}</span>
-          <button mat-icon-button color="warn" (click)="removeMutedItem('tag', tag)" matListItemMeta>
-            <mat-icon>clear</mat-icon>
-          </button>
-        </mat-list-item>
-        <mat-divider></mat-divider>
-        }
-      </mat-list>
+        <mat-list>
+          @for (tag of mutedTags(); track $index) {
+            <mat-list-item>
+              <span matListItemTitle>#{{ tag }}</span>
+              <button
+                mat-icon-button
+                color="warn"
+                (click)="removeMutedItem('tag', tag)"
+                matListItemMeta
+              >
+                <mat-icon>clear</mat-icon>
+              </button>
+            </mat-list-item>
+            <mat-divider></mat-divider>
+          }
+        </mat-list>
       } @else {
-      <p class="empty-state">No muted tags.</p>
+        <p class="empty-state">No muted tags.</p>
       }
     </div>
   </section>
@@ -133,19 +160,24 @@
     <h3>Muted Threads</h3>
     <div class="muted-section">
       @if (mutedThreads().length > 0) {
-      <mat-list>
-        @for (thread of mutedThreads(); track $index) {
-        <mat-list-item>
-          <span matListItemTitle>{{ thread }}</span>
-          <button mat-icon-button color="warn" (click)="removeMutedItem('thread', thread)" matListItemMeta>
-            <mat-icon>clear</mat-icon>
-          </button>
-        </mat-list-item>
-        <mat-divider></mat-divider>
-        }
-      </mat-list>
+        <mat-list>
+          @for (thread of mutedThreads(); track $index) {
+            <mat-list-item>
+              <span matListItemTitle>{{ thread }}</span>
+              <button
+                mat-icon-button
+                color="warn"
+                (click)="removeMutedItem('thread', thread)"
+                matListItemMeta
+              >
+                <mat-icon>clear</mat-icon>
+              </button>
+            </mat-list-item>
+            <mat-divider></mat-divider>
+          }
+        </mat-list>
       } @else {
-      <p class="empty-state">No muted threads.</p>
+        <p class="empty-state">No muted threads.</p>
       }
     </div>
   </section>
@@ -162,8 +194,8 @@
     </mat-card-header>
     <mat-card-content>
       <p>
-        When enabled, profile images and other images are optimized and cached using Angular Service Worker
-        for improved loading times and offline availability.
+        When enabled, profile images and other images are optimized and cached using Angular Service
+        Worker for improved loading times and offline availability.
       </p>
       <p>
         Images are cached for up to 7 days and automatically managed. This reduces bandwidth usage

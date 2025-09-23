@@ -21,11 +21,11 @@ export class Algorithms {
     const following = this.accountState.followingList();
 
     // Filter out invalid pubkeys before processing
-    const validFollowing = following.filter((pubkey) => this.utilities.isValidPubkey(pubkey));
+    const validFollowing = following.filter(pubkey => this.utilities.isValidPubkey(pubkey));
 
     if (validFollowing.length !== following.length) {
       console.warn(
-        `Filtered out ${following.length - validFollowing.length} invalid pubkeys from following list`,
+        `Filtered out ${following.length - validFollowing.length} invalid pubkeys from following list`
       );
     }
 
@@ -34,14 +34,14 @@ export class Algorithms {
 
     // Get favorites from the service
     const favorites = this.favoritesService.favorites();
-    const validFavorites = favorites.filter((pubkey) => this.utilities.isValidPubkey(pubkey));
+    const validFavorites = favorites.filter(pubkey => this.utilities.isValidPubkey(pubkey));
 
     // Separate favorites from regular users
-    const favoriteMetrics = followingMetrics.filter((metric) =>
-      validFavorites.includes(metric.pubkey),
+    const favoriteMetrics = followingMetrics.filter(metric =>
+      validFavorites.includes(metric.pubkey)
     );
     const regularMetrics = followingMetrics.filter(
-      (metric) => !validFavorites.includes(metric.pubkey),
+      metric => !validFavorites.includes(metric.pubkey)
     );
 
     // Sort favorites by engagement score (favorites are always at the top)
@@ -70,10 +70,10 @@ export class Algorithms {
   async getRecommendedUsers(limit = 10): Promise<UserMetric[]> {
     const allMetrics = await this.metrics.getMetrics();
     const favorites = this.favoritesService.favorites();
-    const validFavorites = favorites.filter((pubkey) => this.utilities.isValidPubkey(pubkey));
+    const validFavorites = favorites.filter(pubkey => this.utilities.isValidPubkey(pubkey));
 
     // Filter users with meaningful engagement OR are favorites
-    const candidateUsers = allMetrics.filter((metric) => {
+    const candidateUsers = allMetrics.filter(metric => {
       // Ensure the metric itself has a valid pubkey
       if (!this.utilities.isValidPubkey(metric.pubkey)) {
         console.warn('Found metric with invalid pubkey:', metric.pubkey);
@@ -90,13 +90,11 @@ export class Algorithms {
     });
 
     // Add favorites that don't have metrics yet
-    const metricsPublicKeys = new Set(allMetrics.map((m) => m.pubkey));
-    const favoritesWithoutMetrics = validFavorites.filter(
-      (pubkey) => !metricsPublicKeys.has(pubkey),
-    );
+    const metricsPublicKeys = new Set(allMetrics.map(m => m.pubkey));
+    const favoritesWithoutMetrics = validFavorites.filter(pubkey => !metricsPublicKeys.has(pubkey));
 
     // Create minimal metrics for favorites without data
-    const favoriteMetrics: UserMetric[] = favoritesWithoutMetrics.map((pubkey) => ({
+    const favoriteMetrics: UserMetric[] = favoritesWithoutMetrics.map(pubkey => ({
       pubkey,
       viewed: 0,
       profileClicks: 0,
@@ -118,7 +116,7 @@ export class Algorithms {
     const allCandidates = [...candidateUsers, ...favoriteMetrics];
 
     // Calculate final score with favorite boost
-    const scoredUsers = allCandidates.map((metric) => {
+    const scoredUsers = allCandidates.map(metric => {
       const baseScore = metric.engagementScore || 0;
       const favoriteBoost = validFavorites.includes(metric.pubkey) ? 2 : 0; // Small boost for favorites
 
@@ -166,7 +164,7 @@ export class Algorithms {
     const allMetrics = await this.metrics.getMetrics();
 
     // Filter out any metrics with invalid pubkeys
-    const validMetrics = allMetrics.filter((metric) => {
+    const validMetrics = allMetrics.filter(metric => {
       if (!this.utilities.isValidPubkey(metric.pubkey)) {
         console.warn('Found metric with invalid pubkey in declining users:', metric.pubkey);
         return false;
@@ -178,9 +176,9 @@ export class Algorithms {
 
     // Users who had engagement but haven't interacted recently
     const decliningUsers = validMetrics.filter(
-      (metric) =>
+      metric =>
         (metric.engagementScore || 0) > 20 && // Had good engagement
-        metric.lastInteraction < thirtyDaysAgo, // But not recent
+        metric.lastInteraction < thirtyDaysAgo // But not recent
     );
 
     return decliningUsers
@@ -203,13 +201,13 @@ export class Algorithms {
 
     // Calculate engagement rate (engagement actions / views)
     const usersWithRate = allMetrics
-      .filter((metric) => metric.viewed > 0) // Must have views
-      .map((metric) => ({
+      .filter(metric => metric.viewed > 0) // Must have views
+      .map(metric => ({
         ...metric,
         engagementRate:
           (metric.liked + metric.replied + metric.reposted + metric.quoted) / metric.viewed,
       }))
-      .filter((metric) => metric.engagementRate > 0) // Must have some engagement
+      .filter(metric => metric.engagementRate > 0) // Must have some engagement
       .sort((a, b) => b.engagementRate - a.engagementRate);
 
     return usersWithRate.slice(0, limit);
@@ -224,7 +222,7 @@ export class Algorithms {
     const following = this.accountState.followingList();
 
     // For articles, use much more lenient criteria
-    const candidateUsers = allMetrics.filter((metric) => {
+    const candidateUsers = allMetrics.filter(metric => {
       const isFavorite = favorites.includes(metric.pubkey);
       const isFollowing = following.includes(metric.pubkey);
       const hasAnyEngagement =
@@ -237,13 +235,13 @@ export class Algorithms {
     });
 
     // Add favorites that don't have metrics yet
-    const metricsPublicKeys = new Set(allMetrics.map((m) => m.pubkey));
+    const metricsPublicKeys = new Set(allMetrics.map(m => m.pubkey));
     const favoritesWithoutMetrics = favorites.filter(
-      (pubkey) => !metricsPublicKeys.has(pubkey) && following.includes(pubkey),
+      pubkey => !metricsPublicKeys.has(pubkey) && following.includes(pubkey)
     );
 
     // Create minimal metrics for favorites without data
-    const favoriteMetrics: UserMetric[] = favoritesWithoutMetrics.map((pubkey) => ({
+    const favoriteMetrics: UserMetric[] = favoritesWithoutMetrics.map(pubkey => ({
       pubkey,
       viewed: 0,
       profileClicks: 0,
@@ -265,11 +263,11 @@ export class Algorithms {
     const allCandidates = [...candidateUsers, ...favoriteMetrics];
 
     if (allCandidates.length < limit) {
-      const candidatePubkeys = new Set(allCandidates.map((c) => c.pubkey));
+      const candidatePubkeys = new Set(allCandidates.map(c => c.pubkey));
       const additionalUsers = following
-        .filter((pubkey) => !candidatePubkeys.has(pubkey))
+        .filter(pubkey => !candidatePubkeys.has(pubkey))
         .slice(0, limit - allCandidates.length)
-        .map((pubkey) => ({
+        .map(pubkey => ({
           pubkey,
           viewed: 0,
           profileClicks: 0,
@@ -291,7 +289,7 @@ export class Algorithms {
     }
 
     // Calculate final score with read activity boost for articles
-    const scoredUsers = allCandidates.map((metric) => {
+    const scoredUsers = allCandidates.map(metric => {
       const baseScore = metric.engagementScore || 0;
       const favoriteBoost = favorites.includes(metric.pubkey) ? 5 : 0;
       const readBoost = metric.read * 2; // Boost users whose content we've read

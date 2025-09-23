@@ -20,7 +20,7 @@ if (typeof window !== 'undefined') {
 // Init provided language
 initLanguage(appLang)
   .then(() => bootstrapApplication(App, appConfig))
-  .catch((err) => {
+  .catch(err => {
     console.error('[BOOTSTRAP ERROR] Failed to bootstrap application', err);
   });
 

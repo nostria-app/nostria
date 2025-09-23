@@ -180,7 +180,7 @@ export class ZapButtonComponent {
       data: dialogData,
     });
 
-    dialogRef.afterClosed().subscribe((result) => {
+    dialogRef.afterClosed().subscribe(result => {
       if (result) {
         // Zap was sent successfully
         this.onZapSent(result.amount);
@@ -198,7 +198,7 @@ export class ZapButtonComponent {
 
   private onZapSent(amount: number): void {
     // Update local state to reflect the new zap
-    this.totalZaps.update((current) => current + amount);
+    this.totalZaps.update(current => current + amount);
     this.hasZapped.set(true);
 
     // TODO: Optionally refresh zap data from relays

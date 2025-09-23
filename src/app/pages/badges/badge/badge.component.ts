@@ -158,7 +158,7 @@ export class BadgeComponent {
   async loadBadgeDefinition(pubkey: string, slug: string) {
     let definition: NostrEvent | null | undefined = this.badgeService.getBadgeDefinition(
       pubkey,
-      slug,
+      slug
     );
 
     if (!definition) {

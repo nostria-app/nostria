@@ -15,14 +15,14 @@ export class UsernameResolver implements Resolve<{ id: string | undefined; usern
     const sub = this.accountState.subscription();
 
     if (sub && sub.username === username) {
-      return new Observable((observer) => {
+      return new Observable(observer => {
         observer.next({ id: sub.pubkey, username });
         observer.complete();
       });
     }
 
     return from(
-      this.usernameService.getPubkey(username).then((pubkey) => ({ id: pubkey, username })),
+      this.usernameService.getPubkey(username).then(pubkey => ({ id: pubkey, username }))
     );
   }
 }

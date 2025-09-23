@@ -136,10 +136,10 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
       if (!this._isVisible() && !this._hasBeenVisible()) return;
 
       const tokens = this.contentTokens();
-      const urlTokens = tokens.filter((token) => token.type === 'url');
+      const urlTokens = tokens.filter(token => token.type === 'url');
 
       if (urlTokens.length) {
-        this.loadSocialPreviews(urlTokens.map((token) => token.content));
+        this.loadSocialPreviews(urlTokens.map(token => token.content));
       } else {
         this.socialPreviews.set([]);
       }
@@ -185,8 +185,8 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
 
         const eventMentions = await Promise.all(
           newTokens
-            .filter((t) => t.type === 'nostr-mention' && t.nostrData?.type === 'nevent')
-            .map(async (mention) => {
+            .filter(t => t.type === 'nostr-mention' && t.nostrData?.type === 'nevent')
+            .map(async mention => {
               const eventData = await this.data.getEventById(mention.nostrData?.data.id);
               if (!eventData) return null;
               const contentTokens = await this.parsing.parseContent(eventData?.data);
@@ -194,13 +194,13 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
                 event: eventData,
                 contentTokens,
               };
-            }),
+            })
         );
 
         // Use untracked to prevent triggering effects during token update
         untracked(() => {
           this._cachedTokens.set(newTokens);
-          this.eventMentions.set(eventMentions.filter((m) => !!m));
+          this.eventMentions.set(eventMentions.filter(m => !!m));
           this._lastParsedContent = content;
         });
       } catch (error) {
@@ -233,8 +233,8 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
       rootMargin: '0px',
       threshold: 0.1, // 10% of the item visible
     };
-    this.intersectionObserver = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
+    this.intersectionObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
         const isIntersecting = entry.isIntersecting;
         this._isVisible.set(isIntersecting);
 
@@ -251,7 +251,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
 
   private async loadSocialPreviews(urls: string[]): Promise<void> {
     // Initialize previews with loading state
-    const initialPreviews = urls.map((url) => ({
+    const initialPreviews = urls.map(url => ({
       url,
       loading: true,
       error: false,
@@ -260,7 +260,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     this.socialPreviews.set(initialPreviews);
 
     // Load previews for each URL
-    const previewPromises = urls.map(async (url) => {
+    const previewPromises = urls.map(async url => {
       try {
         // In a real implementation, you would call an API to fetch the metadata
         // For example, using a service like Open Graph or your own backend API
@@ -296,7 +296,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
   // Mock function for demonstration purposes
   private async mockFetchPreview(url: string): Promise<Partial<SocialPreview>> {
     // In a real application, replace this with an actual API call
-    await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
 
     // Return mock data based on URL type
     if (url.includes('youtube.com') || url.includes('youtu.be')) {

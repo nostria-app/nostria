@@ -78,12 +78,12 @@ export class NotificationService {
    */
   addRelayPublishingNotification(
     event: Event,
-    relayPromises: Map<Promise<string>, string>,
+    relayPromises: Map<Promise<string>, string>
   ): string {
     const notificationId = `publish-${event.id}-${Date.now()}`;
 
     this.logger.debug(
-      `Creating relay publishing notification ${notificationId} for event ${event.id}`,
+      `Creating relay publishing notification ${notificationId} for event ${event.id}`
     );
     this.logger.debug(`Publishing to ${relayPromises.size} relays`);
 
@@ -164,7 +164,7 @@ export class NotificationService {
    * Add a notification
    */
   addNotification(notification: Notification): void {
-    this._notifications.update((notifications) => [notification, ...notifications]);
+    this._notifications.update(notifications => [notification, ...notifications]);
     this.logger.debug('Added notification', notification);
   }
 
@@ -176,7 +176,7 @@ export class NotificationService {
     message?: string,
     type: NotificationType = NotificationType.GENERAL,
     actionLabel?: string,
-    actionCallback?: () => void,
+    actionCallback?: () => void
   ): string {
     const id = `notification-${Date.now()}`;
 
@@ -205,8 +205,8 @@ export class NotificationService {
    * Mark a notification as read
    */
   markAsRead(id: string): void {
-    this._notifications.update((notifications) => {
-      return notifications.map((notification) => {
+    this._notifications.update(notifications => {
+      return notifications.map(notification => {
         if (notification.id === id) {
           return { ...notification, read: true };
         }
@@ -221,16 +221,14 @@ export class NotificationService {
    * Remove a notification
    */
   removeNotification(id: string): void {
-    this._notifications.update((notifications) =>
-      notifications.filter((notification) => notification.id !== id),
+    this._notifications.update(notifications =>
+      notifications.filter(notification => notification.id !== id)
     );
 
     // Also remove from storage directly
     this.storage
       .deleteNotification(id)
-      .catch((error) =>
-        this.logger.error(`Failed to delete notification ${id} from storage`, error),
-      );
+      .catch(error => this.logger.error(`Failed to delete notification ${id} from storage`, error));
   }
 
   /**
@@ -242,7 +240,7 @@ export class NotificationService {
     // Clear from storage
     this.storage
       .clearAllNotifications()
-      .catch((error) => this.logger.error('Failed to clear notifications from storage', error));
+      .catch(error => this.logger.error('Failed to clear notifications from storage', error));
   }
 
   /**
@@ -250,11 +248,11 @@ export class NotificationService {
    */
   async retryFailedRelays(
     notificationId: string,
-    retryFunction: (event: Event, relayUrl: string) => Promise<any>,
+    retryFunction: (event: Event, relayUrl: string) => Promise<any>
   ): Promise<void> {
     this.logger.info(`Attempting to retry failed relays for notification ${notificationId}`);
 
-    const notification = this._notifications().find((n) => n.id === notificationId);
+    const notification = this._notifications().find(n => n.id === notificationId);
 
     if (!notification || notification.type !== NotificationType.RELAY_PUBLISHING) {
       this.logger.error('Cannot retry: notification not found or wrong type');
@@ -265,15 +263,15 @@ export class NotificationService {
 
     const failedRelays =
       relayNotification.relayPromises
-        ?.filter((rp) => rp.status === 'failed')
-        .map((rp) => rp.relayUrl) || [];
+        ?.filter(rp => rp.status === 'failed')
+        .map(rp => rp.relayUrl) || [];
 
     this.logger.debug(
-      `Found ${failedRelays.length} failed relays to retry: ${failedRelays.join(', ')}`,
+      `Found ${failedRelays.length} failed relays to retry: ${failedRelays.join(', ')}`
     );
 
     // Update status of failed relays back to pending
-    failedRelays.forEach((relayUrl) => {
+    failedRelays.forEach(relayUrl => {
       this.logger.debug(`Resetting status to pending for relay ${relayUrl}`);
       this.updateRelayPromiseStatus(notificationId, relayUrl, 'pending');
     });
@@ -309,17 +307,17 @@ export class NotificationService {
     notificationId: string,
     relayUrl: string,
     status: 'pending' | 'success' | 'failed',
-    error?: any,
+    error?: any
   ): void {
     this.logger.debug(
-      `Updating relay promise status for notification ${notificationId}, relay ${relayUrl} to ${status}`,
+      `Updating relay promise status for notification ${notificationId}, relay ${relayUrl} to ${status}`
     );
     if (error) {
       this.logger.debug('Error details:', error);
     }
 
-    this._notifications.update((notifications) => {
-      return notifications.map((notification) => {
+    this._notifications.update(notifications => {
+      return notifications.map(notification => {
         if (
           notification.id === notificationId &&
           notification.type === NotificationType.RELAY_PUBLISHING
@@ -328,7 +326,7 @@ export class NotificationService {
 
           // Update the specific relay's status
           const updatedRelayPromises =
-            relayNotification.relayPromises?.map((rp) => {
+            relayNotification.relayPromises?.map(rp => {
               if (rp.relayUrl === relayUrl) {
                 this.logger.debug(`Changed status for ${relayUrl} from ${rp.status} to ${status}`);
                 return { ...rp, status, error };
@@ -338,20 +336,20 @@ export class NotificationService {
 
           // Check if all promises are resolved (success or failed)
           const allResolved = updatedRelayPromises.every(
-            (rp) => rp.status === 'success' || rp.status === 'failed',
+            rp => rp.status === 'success' || rp.status === 'failed'
           );
 
-          const successCount = updatedRelayPromises.filter((rp) => rp.status === 'success').length;
-          const failedCount = updatedRelayPromises.filter((rp) => rp.status === 'failed').length;
-          const pendingCount = updatedRelayPromises.filter((rp) => rp.status === 'pending').length;
+          const successCount = updatedRelayPromises.filter(rp => rp.status === 'success').length;
+          const failedCount = updatedRelayPromises.filter(rp => rp.status === 'failed').length;
+          const pendingCount = updatedRelayPromises.filter(rp => rp.status === 'pending').length;
 
           this.logger.debug(
-            `Relay status summary for ${notificationId}: success=${successCount}, failed=${failedCount}, pending=${pendingCount}`,
+            `Relay status summary for ${notificationId}: success=${successCount}, failed=${failedCount}, pending=${pendingCount}`
           );
 
           if (allResolved) {
             this.logger.info(
-              `Publishing notification ${notificationId} complete with ${successCount} successes and ${failedCount} failures`,
+              `Publishing notification ${notificationId} complete with ${successCount} successes and ${failedCount} failures`
             );
           }
 

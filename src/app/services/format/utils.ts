@@ -42,7 +42,7 @@ export const isImageUrl = (url: string): boolean => {
     /.*\.amazonaws\.com.*\.(jpg|jpeg|png|gif|svg|webp)/i,
   ];
 
-  return imageHostPatterns.some((pattern) => pattern.test(url));
+  return imageHostPatterns.some(pattern => pattern.test(url));
 };
 
 export const imageUrlsToMarkdown = async (content: string) => {

@@ -53,7 +53,7 @@ export class ZapMetricsService {
   // Recent performance (last 24 hours)
   recentMetrics = computed<ZapMetrics>(() => {
     const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
-    const recentEvents = this.performanceEvents().filter((event) => event.timestamp > oneDayAgo);
+    const recentEvents = this.performanceEvents().filter(event => event.timestamp > oneDayAgo);
     return this.calculateMetrics(recentEvents);
   });
 
@@ -74,7 +74,7 @@ export class ZapMetricsService {
     amount: number,
     paymentTime: number,
     recipientPubkey?: string,
-    eventId?: string,
+    eventId?: string
   ): void {
     const event: ZapPerformanceEvent = {
       timestamp: Date.now(),
@@ -133,8 +133,8 @@ export class ZapMetricsService {
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     const weekStart = todayStart - 7 * 24 * 60 * 60 * 1000;
 
-    const todayEvents = this.performanceEvents().filter((event) => event.timestamp >= todayStart);
-    const weekEvents = this.performanceEvents().filter((event) => event.timestamp >= weekStart);
+    const todayEvents = this.performanceEvents().filter(event => event.timestamp >= todayStart);
+    const weekEvents = this.performanceEvents().filter(event => event.timestamp >= weekStart);
 
     return {
       todayStats: this.calculateSingleDayStats(todayEvents, new Date().toISOString().split('T')[0]),
@@ -200,9 +200,9 @@ export class ZapMetricsService {
    * Calculate comprehensive metrics from events
    */
   private calculateMetrics(events: ZapPerformanceEvent[]): ZapMetrics {
-    const sentEvents = events.filter((e) => e.type === 'sent');
-    const receivedEvents = events.filter((e) => e.type === 'received');
-    const failedEvents = events.filter((e) => e.type === 'failed');
+    const sentEvents = events.filter(e => e.type === 'sent');
+    const receivedEvents = events.filter(e => e.type === 'received');
+    const failedEvents = events.filter(e => e.type === 'failed');
 
     const totalSent = sentEvents.length;
     const totalReceived = receivedEvents.length;
@@ -212,7 +212,7 @@ export class ZapMetricsService {
     const successRate = totalAttempts > 0 ? (totalSent / totalAttempts) * 100 : 0;
 
     const paymentTimes = sentEvents
-      .map((e) => e.paymentTime)
+      .map(e => e.paymentTime)
       .filter((time): time is number => time !== undefined);
 
     const averagePaymentTime =
@@ -228,7 +228,7 @@ export class ZapMetricsService {
 
     // Count errors by type
     const errorCounts: Record<string, number> = {};
-    failedEvents.forEach((event) => {
+    failedEvents.forEach(event => {
       if (event.errorCode) {
         errorCounts[event.errorCode] = (errorCounts[event.errorCode] || 0) + 1;
       }
@@ -258,21 +258,21 @@ export class ZapMetricsService {
     const dayStart = new Date(date).getTime();
     const dayEnd = dayStart + 24 * 60 * 60 * 1000;
     const dayEvents = events.filter(
-      (event) => event.timestamp >= dayStart && event.timestamp < dayEnd,
+      event => event.timestamp >= dayStart && event.timestamp < dayEnd
     );
 
-    const sent = dayEvents.filter((e) => e.type === 'sent').length;
-    const received = dayEvents.filter((e) => e.type === 'received').length;
-    const failed = dayEvents.filter((e) => e.type === 'failed').length;
+    const sent = dayEvents.filter(e => e.type === 'sent').length;
+    const received = dayEvents.filter(e => e.type === 'received').length;
+    const failed = dayEvents.filter(e => e.type === 'failed').length;
     const totalAttempts = sent + failed;
 
     return {
       date,
       sent,
       received,
-      volumeSent: dayEvents.filter((e) => e.type === 'sent').reduce((sum, e) => sum + e.amount, 0),
+      volumeSent: dayEvents.filter(e => e.type === 'sent').reduce((sum, e) => sum + e.amount, 0),
       volumeReceived: dayEvents
-        .filter((e) => e.type === 'received')
+        .filter(e => e.type === 'received')
         .reduce((sum, e) => sum + e.amount, 0),
       successRate: totalAttempts > 0 ? (sent / totalAttempts) * 100 : 0,
     };
@@ -289,7 +289,7 @@ export class ZapMetricsService {
       return date.toISOString().split('T')[0];
     });
 
-    return last30Days.map((date) => this.calculateSingleDayStats(events, date));
+    return last30Days.map(date => this.calculateSingleDayStats(events, date));
   }
 
   /**

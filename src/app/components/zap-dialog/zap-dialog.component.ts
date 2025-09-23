@@ -106,7 +106,7 @@ export class ZapDialogComponent {
         ([, w]) =>
           w &&
           (w as { connections?: unknown[] }).connections &&
-          (w as { connections: unknown[] }).connections.length > 0,
+          (w as { connections: unknown[] }).connections.length > 0
       );
     } catch {
       return false;
@@ -141,7 +141,7 @@ export class ZapDialogComponent {
 
   constructor() {
     // Watch for amount changes to enable/disable custom amount
-    this.zapForm.get('amount')?.valueChanges.subscribe((value) => {
+    this.zapForm.get('amount')?.valueChanges.subscribe(value => {
       const customAmountControl = this.zapForm.get('customAmount');
       if (value === 'custom') {
         customAmountControl?.setValidators([Validators.required, Validators.min(1)]);
@@ -160,14 +160,14 @@ export class ZapDialogComponent {
       this.zapForm.get('selectedWallet')?.setValue(wallets[0].id);
     } else if (wallets.length > 1) {
       // Set the first connected wallet as default
-      const connectedWallet = wallets.find((w) => w.connected);
+      const connectedWallet = wallets.find(w => w.connected);
       if (connectedWallet) {
         this.zapForm.get('selectedWallet')?.setValue(connectedWallet.id);
       }
     }
 
     // Check if on mobile device
-    this.breakpointObserver.observe('(max-width: 768px)').subscribe((result) => {
+    this.breakpointObserver.observe('(max-width: 768px)').subscribe(result => {
       this.isMobile.set(result.matches);
     });
 
@@ -262,7 +262,7 @@ export class ZapDialogComponent {
         // Current amount is invalid, reset to custom and show error
         this.zapForm.get('amount')?.setValue('custom');
         this.errorMessage.set(
-          `Default amount ${currentAmount} sats is outside the allowed range (${limits.minSats} - ${limits.maxSats} sats). Please enter a custom amount.`,
+          `Default amount ${currentAmount} sats is outside the allowed range (${limits.minSats} - ${limits.maxSats} sats). Please enter a custom amount.`
         );
       }
     }
@@ -283,7 +283,7 @@ export class ZapDialogComponent {
       if (limits && (amount < limits.minSats || amount > limits.maxSats)) {
         // If preset amount is outside limits, don't select it and show error
         this.errorMessage.set(
-          `Amount ${amount} sats is outside the allowed range (${limits.minSats} - ${limits.maxSats} sats)`,
+          `Amount ${amount} sats is outside the allowed range (${limits.minSats} - ${limits.maxSats} sats)`
         );
         return;
       }
@@ -329,7 +329,7 @@ export class ZapDialogComponent {
     const limits = this.amountLimits();
     if (limits && (finalAmount < limits.minSats || finalAmount > limits.maxSats)) {
       this.errorMessage.set(
-        `Amount ${finalAmount} sats is outside the allowed range (${limits.minSats} - ${limits.maxSats} sats)`,
+        `Amount ${finalAmount} sats is outside the allowed range (${limits.minSats} - ${limits.maxSats} sats)`
       );
       return;
     }
@@ -357,7 +357,7 @@ export class ZapDialogComponent {
 
   getSelectedWalletName(): string {
     const selectedWalletId = this.zapForm.get('selectedWallet')?.value;
-    const selectedWallet = this.availableWallets().find((w) => w.id === selectedWalletId);
+    const selectedWallet = this.availableWallets().find(w => w.id === selectedWalletId);
     return selectedWallet?.name || 'No Wallet';
   }
 
@@ -381,7 +381,7 @@ export class ZapDialogComponent {
         this.getFinalAmount(),
         this.zapForm.get('message')?.value || undefined,
         this.data.eventId,
-        this.data.recipientMetadata,
+        this.data.recipientMetadata
       );
 
       this.invoiceUrl.set(invoice);
@@ -413,7 +413,7 @@ export class ZapDialogComponent {
         'Dismiss',
         {
           duration: 5000,
-        },
+        }
       );
     }
   }
@@ -454,7 +454,7 @@ export class ZapDialogComponent {
         amount,
         message,
         this.data.eventId,
-        this.data.recipientMetadata,
+        this.data.recipientMetadata
       );
 
       this.snackBar.open(
@@ -464,7 +464,7 @@ export class ZapDialogComponent {
           duration: 5000,
           horizontalPosition: 'center',
           verticalPosition: 'bottom',
-        },
+        }
       );
 
       this.dialogRef.close({
@@ -492,7 +492,7 @@ export class ZapDialogComponent {
         duration: 5000,
         horizontalPosition: 'center',
         verticalPosition: 'bottom',
-      },
+      }
     );
 
     this.dialogRef.close({

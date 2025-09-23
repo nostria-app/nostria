@@ -136,7 +136,7 @@ export class OpenGraphService {
    * Gets OpenGraph data for multiple URLs
    */
   async getMultipleOpenGraphData(urls: string[]): Promise<OpenGraphData[]> {
-    const promises = urls.map((url) => this.getOpenGraphData(url));
+    const promises = urls.map(url => this.getOpenGraphData(url));
     return await Promise.all(promises);
   }
 }

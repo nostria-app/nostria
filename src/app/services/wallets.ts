@@ -15,7 +15,7 @@ export class Wallets {
   localStorage = inject(LocalStorageService);
   appState = inject(ApplicationStateService);
   wallets = signal<Record<string, Wallet>>(
-    this.localStorage.getObject(this.appState.WALLETS_KEY) || {},
+    this.localStorage.getObject(this.appState.WALLETS_KEY) || {}
   );
 
   hasWallets = computed(() => Object.keys(this.wallets()).length > 0);
@@ -75,9 +75,9 @@ export class Wallets {
 
   generateWalletName(wallets: Record<string, Wallet>): string {
     const existingNumbers = Object.values(wallets)
-      .map((w) => w.name || '')
-      .filter((name) => name.match(/^Wallet \d+$/))
-      .map((name) => parseInt(name.replace('Wallet ', '')))
+      .map(w => w.name || '')
+      .filter(name => name.match(/^Wallet \d+$/))
+      .map(name => parseInt(name.replace('Wallet ', '')))
       .sort((a, b) => a - b);
 
     let nextNumber = 1;

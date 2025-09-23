@@ -52,7 +52,7 @@ export class ThemeService {
       this.darkMode.set(await this.getInitialThemePreference());
 
       // Listen for system preference changes
-      this.darkThemeMediaQuery.addEventListener('change', (e) => {
+      this.darkThemeMediaQuery.addEventListener('change', e => {
         // Only update if user hasn't explicitly set a preference
         if (!this.localStorage.getItem(this.THEME_KEY)) {
           this.logger.info(`System color scheme changed to ${e.matches ? 'dark' : 'light'}`);
@@ -61,7 +61,7 @@ export class ThemeService {
       });
 
       this.logger.debug(
-        `Browser initialization complete. Theme: ${this.darkMode() ? 'dark' : 'light'}`,
+        `Browser initialization complete. Theme: ${this.darkMode() ? 'dark' : 'light'}`
       );
     } catch (error) {
       this.logger.error('Error initializing browser features:', error);
@@ -96,7 +96,7 @@ export class ThemeService {
     // Fall back to system preference
     const systemPrefersDark = this.darkThemeMediaQuery?.matches || false;
     this.logger.debug(
-      `No saved theme preference, using system preference: ${systemPrefersDark ? 'dark' : 'light'}`,
+      `No saved theme preference, using system preference: ${systemPrefersDark ? 'dark' : 'light'}`
     );
     return systemPrefersDark;
   }

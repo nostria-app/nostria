@@ -79,7 +79,7 @@ export class FavoritesService {
       }
 
       // Validate that all items in the array are strings
-      if (!value.every((item) => typeof item === 'string')) {
+      if (!value.every(item => typeof item === 'string')) {
         return false;
       }
     }
@@ -174,7 +174,7 @@ export class FavoritesService {
       return false;
     }
 
-    this.favoritesData.update((data) => {
+    this.favoritesData.update(data => {
       const updatedData = { ...data };
       if (!updatedData[currentPubkey]) {
         updatedData[currentPubkey] = [];
@@ -205,11 +205,11 @@ export class FavoritesService {
       return false;
     }
 
-    this.favoritesData.update((data) => {
+    this.favoritesData.update(data => {
       const updatedData = { ...data };
       if (updatedData[currentPubkey]) {
         updatedData[currentPubkey] = updatedData[currentPubkey].filter(
-          (pubkey) => pubkey !== userPubkey,
+          pubkey => pubkey !== userPubkey
         );
       }
       return updatedData;
@@ -251,7 +251,7 @@ export class FavoritesService {
       return;
     }
 
-    this.favoritesData.update((data) => {
+    this.favoritesData.update(data => {
       const updatedData = { ...data };
       delete updatedData[currentPubkey];
       return updatedData;

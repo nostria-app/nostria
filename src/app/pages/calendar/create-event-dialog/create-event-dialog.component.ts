@@ -78,7 +78,7 @@ export class CreateEventDialogComponent {
     });
 
     // Watch all-day toggle
-    this.eventForm.get('isAllDay')?.valueChanges.subscribe((value) => {
+    this.eventForm.get('isAllDay')?.valueChanges.subscribe(value => {
       this.isAllDay.set(value);
       if (value) {
         // For all-day events, clear time fields
@@ -93,13 +93,13 @@ export class CreateEventDialogComponent {
     const hashtag = hashtagControl?.value?.trim();
 
     if (hashtag && !this.hashtags().includes(hashtag)) {
-      this.hashtags.update((tags) => [...tags, hashtag]);
+      this.hashtags.update(tags => [...tags, hashtag]);
       hashtagControl?.setValue('');
     }
   }
 
   removeHashtag(hashtag: string): void {
-    this.hashtags.update((tags) => tags.filter((t) => t !== hashtag));
+    this.hashtags.update(tags => tags.filter(t => t !== hashtag));
   }
 
   onHashtagKeyPress(event: KeyboardEvent): void {
@@ -179,7 +179,7 @@ export class CreateEventDialogComponent {
       }
 
       // Add hashtags
-      this.hashtags().forEach((hashtag) => {
+      this.hashtags().forEach(hashtag => {
         tags.push(['t', hashtag]);
       });
 

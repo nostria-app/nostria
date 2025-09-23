@@ -131,7 +131,7 @@ export class ReportDialogComponent {
   }
 
   onOptionChange(option: 'account' | 'author' | 'custom', checked: boolean): void {
-    this.selectedOptions.update((options) => {
+    this.selectedOptions.update(options => {
       const newOptions = new Set(options);
       if (checked) {
         newOptions.add(option);
@@ -152,7 +152,7 @@ export class ReportDialogComponent {
       // Basic URL validation
       try {
         new URL(relay);
-        this.customRelays.update((relays) => [...relays, relay]);
+        this.customRelays.update(relays => [...relays, relay]);
         this.customRelayInput.set('');
       } catch {
         this.snackBar.open('Please enter a valid relay URL', 'Dismiss', {
@@ -167,7 +167,7 @@ export class ReportDialogComponent {
   }
 
   removeCustomRelay(relay: string): void {
-    this.customRelays.update((relays) => relays.filter((r) => r !== relay));
+    this.customRelays.update(relays => relays.filter(r => r !== relay));
   }
 
   getTargetRelays(): string[] {
@@ -207,7 +207,7 @@ export class ReportDialogComponent {
       const reportEvent = this.reportingService.createReportEvent(
         this.data.target,
         this.selectedReportType(),
-        this.reportDescription(),
+        this.reportDescription()
       );
 
       // Sign and publish the report
@@ -218,7 +218,7 @@ export class ReportDialogComponent {
       }
 
       // Initialize publish results
-      const initialResults: RelayPublishResult[] = targetRelays.map((url) => ({
+      const initialResults: RelayPublishResult[] = targetRelays.map(url => ({
         url,
         status: 'pending',
       }));
@@ -242,7 +242,7 @@ export class ReportDialogComponent {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             this.updatePublishResult(targetRelays[index], 'error', errorMessage);
           }
-        }),
+        })
       );
 
       // Show success message
@@ -270,8 +270,8 @@ export class ReportDialogComponent {
   }
 
   private updatePublishResult(url: string, status: 'success' | 'error', message?: string): void {
-    this.publishResults.update((results) =>
-      results.map((result) => (result.url === url ? { ...result, status, message } : result)),
+    this.publishResults.update(results =>
+      results.map(result => (result.url === url ? { ...result, status, message } : result))
     );
   }
 
@@ -288,7 +288,7 @@ export class ReportDialogComponent {
   }
 
   toggleRelaysView(): void {
-    this.showRelaysView.update((show) => !show);
+    this.showRelaysView.update(show => !show);
   }
 
   async blockTarget(): Promise<void> {

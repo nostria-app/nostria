@@ -32,7 +32,7 @@ export class ImageCacheService {
 
       const cacheNames = await caches.keys();
       const imageCaches = cacheNames.filter(
-        (name) => name.includes('ngsw') && (name.includes('data') || name.includes('image-cache')),
+        name => name.includes('ngsw') && (name.includes('data') || name.includes('image-cache'))
       );
 
       // Instead of deleting entire caches, let's remove only image entries
@@ -42,8 +42,8 @@ export class ImageCacheService {
           const keys = await cache.keys();
 
           // Filter and delete only image proxy requests
-          const imageKeys = keys.filter((request) =>
-            request.url.includes('proxy.eu.nostria.app/api/ImageOptimizeProxy'),
+          const imageKeys = keys.filter(request =>
+            request.url.includes('proxy.eu.nostria.app/api/ImageOptimizeProxy')
           );
 
           for (const request of imageKeys) {
