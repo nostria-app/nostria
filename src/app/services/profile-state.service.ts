@@ -134,6 +134,7 @@ export class ProfileStateService {
     // }
 
     // Subscribe to contacts separately since they need special handling (only 1 per user, potentially older)
+    // Try user-specific relays first
     this.relay?.subscribeEose(
       pubkey,
       {
@@ -150,6 +151,31 @@ export class ProfileStateService {
         }
       }
     );
+
+    // Also try to get contacts from global/discovery relays as fallback
+    // This is needed because contacts might be on different relays than recent content
+    setTimeout(async () => {
+      // Check if we still don't have a following list after initial attempt
+      if (this.followingList().length === 0) {
+        console.log('No contacts found on user relays, trying discovery relays as fallback');
+        try {
+          // Use the discovery relay service to search for contacts event
+          const discoveryRelay = this.relay;
+          if (discoveryRelay) {
+            // Try to get contacts event by searching author + kind
+            const contactsEvents = await discoveryRelay.getEventsByPubkeyAndKind(pubkey, kinds.Contacts);
+            if (contactsEvents && contactsEvents.length > 0) {
+              const contactsEvent = contactsEvents[0]; // Get the most recent one
+              const followingList = this.utilities.getPTagsValuesFromEvent(contactsEvent);
+              console.log('Following list found via discovery search:', followingList);
+              this.followingList.set(followingList);
+            }
+          }
+        } catch (error) {
+          console.log('Fallback contacts search failed:', error);
+        }
+      }
+    }, 2000); // Wait 2 seconds before trying fallback
 
     // Subscribe to content events (notes, articles, reposts)
     this.relay?.subscribeEose(
