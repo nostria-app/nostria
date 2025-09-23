@@ -23,8 +23,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint-fix": "eslint . --ext .ts,.html --fix",
-    "lint:check": "eslint . --ext .ts,.html",
-    "normalize-line-endings": "powershell -ExecutionPolicy Bypass -File scripts/normalize-line-endings.ps1"
+    "lint:check": "eslint . --ext .ts,.html"
   },
   "private": true,
   "dependencies": {
