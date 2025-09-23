@@ -182,105 +182,329 @@ app-info-tooltip {
   position: relative;
 }
 
-// Styles for observed relays tab
-.observed-relay-item {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  gap: 8px;
+// Styles for observed relays tab - Modern card-based design
+.observed-relays-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 20px;
+  margin-top: 16px;
+}
 
-  .relay-header {
-    display: grid;
-    grid-template-columns: auto 1fr auto auto;
-    grid-gap: 12px;
-    align-items: center;
-    width: 100%;
+.relay-card {
+  background: var(--mat-card-container-color);
+  border-radius: 12px;
+  border: 1px solid var(--mat-divider-color);
+  padding: 20px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  animation: fadeInUp 0.5s ease-out;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    border-color: var(--mat-primary-color);
   }
 
-  .relay-stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 12px;
-    padding-left: 24px; // Align with relay URL
-    font-size: 0.875rem;
+  .relay-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
 
-    .stat-item {
+    .relay-status {
       display: flex;
-      justify-content: space-between;
-      
-      .stat-label {
-        font-weight: 500;
+      align-items: center;
+      gap: 8px;
+
+      .status-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
       }
-      
-      .stat-value {
-        margin-left: 8px;
+
+      .status-text {
+        font-weight: 500;
+        font-size: 0.875rem;
+      }
+    }
+
+    .relay-actions {
+      display: flex;
+      gap: 4px;
+
+      .action-btn {
+        width: 32px;
+        height: 32px;
+
+        mat-icon {
+          font-size: 18px;
+          width: 18px;
+          height: 18px;
+        }
       }
     }
   }
 
-  .performance-badge {
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-align: center;
-    min-width: 50px;
+  .relay-url-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 12px 16px;
+    background: var(--mat-app-background-color);
+    border-radius: 8px;
+    border: 1px solid var(--mat-divider-color);
 
-    &.performance-excellent {
-      background-color: #4caf50;
-      color: white;
+    .relay-url-main {
+      font-family: 'Courier New', monospace;
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: var(--mat-primary-color);
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
-    &.performance-good {
-      background-color: #8bc34a;
-      color: white;
+    .performance-badge {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      min-width: 70px;
+      justify-content: center;
+
+      .performance-icon {
+        font-size: 14px;
+        width: 14px;
+        height: 14px;
+      }
+
+      &.performance-excellent {
+        background: linear-gradient(135deg, #4caf50, #66bb6a);
+        color: white;
+      }
+
+      &.performance-good {
+        background: linear-gradient(135deg, #8bc34a, #9ccc65);
+        color: white;
+      }
+
+      &.performance-fair {
+        background: linear-gradient(135deg, #ff9800, #ffb74d);
+        color: white;
+      }
+
+      &.performance-poor {
+        background: linear-gradient(135deg, #f44336, #ef5350);
+        color: white;
+      }
+    }
+  }
+
+  .relay-metrics {
+    .metric-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+
+      .metric-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        border-radius: 8px;
+        background: var(--mat-app-background-color);
+        border: 1px solid var(--mat-divider-color);
+
+        &.primary {
+          border-color: var(--mat-primary-color);
+          background: rgba(var(--mat-primary-rgb), 0.05);
+        }
+
+        .metric-icon {
+          color: var(--mat-primary-color);
+          font-size: 24px;
+          width: 24px;
+          height: 24px;
+        }
+
+        .metric-content {
+          .metric-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            line-height: 1.2;
+            color: var(--mat-primary-color);
+          }
+
+          .metric-label {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--mat-text-secondary-color);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+        }
+      }
     }
 
-    &.performance-fair {
-      background-color: #ff9800;
-      color: white;
-    }
+    .time-info {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
 
-    &.performance-poor {
-      background-color: #f44336;
-      color: white;
+      .time-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 0;
+
+        .time-icon {
+          color: var(--mat-text-secondary-color);
+          font-size: 16px;
+          width: 16px;
+          height: 16px;
+        }
+
+        .time-content {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          width: 100%;
+
+          .time-label {
+            font-size: 0.75rem;
+            color: var(--mat-text-secondary-color);
+            font-weight: 500;
+          }
+
+          .time-value {
+            font-size: 0.75rem;
+            color: var(--mat-text-primary-color);
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+          }
+        }
+      }
     }
   }
 }
 
+// Animation for card appearance
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .sort-controls {
-  margin-bottom: 16px;
-  
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+
   mat-form-field {
-    width: 200px;
+    width: 220px;
+
+    .mat-mdc-form-field-subscript-wrapper {
+      display: none;
+    }
   }
 }
 
 // Mobile responsive design for observed relays
 @media (max-width: 768px) {
-  .observed-relay-item {
-    .relay-header {
-      grid-template-columns: auto 1fr;
-      grid-template-rows: auto auto;
-      gap: 8px;
+  .observed-relays-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
 
-      .performance-badge {
-        grid-column: 1;
-        grid-row: 2;
-        justify-self: start;
-      }
+  .relay-card {
+    padding: 16px;
 
-      .action-buttons {
-        grid-column: 2;
-        grid-row: 1 / -1;
-        justify-self: end;
-        align-self: start;
+    .relay-card-header {
+      margin-bottom: 12px;
+
+      .relay-actions {
+        .action-btn {
+          width: 28px;
+          height: 28px;
+
+          mat-icon {
+            font-size: 16px;
+            width: 16px;
+            height: 16px;
+          }
+        }
       }
     }
 
-    .relay-stats {
-      grid-template-columns: 1fr;
-      padding-left: 12px;
+    .relay-url-section {
+      flex-direction: column;
+      gap: 12px;
+      align-items: stretch;
+
+      .relay-url-main {
+        text-align: center;
+        white-space: normal;
+        word-break: break-all;
+      }
+
+      .performance-badge {
+        align-self: center;
+      }
+    }
+
+    .relay-metrics {
+      .metric-group {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        margin-bottom: 16px;
+
+        .metric-item {
+          padding: 10px;
+        }
+      }
+
+      .time-info {
+        .time-content {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 2px;
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .relay-card {
+    .relay-card-header {
+      flex-direction: column;
+      gap: 12px;
+      align-items: flex-start;
+
+      .relay-actions {
+        align-self: flex-end;
+      }
+    }
+
+    .relay-url-section {
+      .relay-url-main {
+        font-size: 0.875rem;
+      }
     }
   }
 }
