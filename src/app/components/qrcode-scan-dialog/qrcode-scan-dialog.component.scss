@@ -83,6 +83,56 @@
   color: #90caf9;
 }
 
+.debug-panel {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 15;
+  max-width: 300px;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 12px;
+  border-radius: 8px;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  font-family: monospace;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.debug-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+
+  span {
+    word-break: break-word;
+  }
+}
+
+.debug-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  opacity: 0.9;
+
+  span {
+    padding: 2px 0;
+  }
+}
+
+.dark .debug-panel {
+  background-color: rgba(13, 13, 13, 0.9);
+}
+
 .camera-controls {
   position: absolute;
   bottom: 40px;
@@ -228,11 +278,13 @@
 }
 
 @keyframes pulse {
+
   0%,
   100% {
     opacity: 1;
     transform: scale(1);
   }
+
   50% {
     opacity: 0.7;
     transform: scale(1.1);

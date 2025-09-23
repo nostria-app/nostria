@@ -14,15 +14,18 @@ import { frontalCamera, QRCanvas, frameLoop } from 'qr/dom';
 import { nip19 } from 'nostr-tools';
 import { UtilitiesService } from '../../services/utilities.service';
 import { LoggerService } from '../../services/logger.service';
+import { DecimalPipe } from '@angular/common';
+import { computed } from '@angular/core';
 
 @Component({
   selector: 'app-qrcode-scan-dialog',
   templateUrl: './qrcode-scan-dialog.component.html',
   styleUrls: ['./qrcode-scan-dialog.component.scss'],
   standalone: true,
-  imports: [MatDialogModule, MatButtonModule, MatIconModule],
+  imports: [MatDialogModule, MatButtonModule, MatIconModule, DecimalPipe],
 })
-export class QrcodeScanDialogComponent implements AfterViewInit, OnDestroy {
+export class
+  QrcodeScanDialogComponent implements AfterViewInit, OnDestroy {
   private dialogRef = inject(MatDialogRef<QrcodeScanDialogComponent>);
   private utilities = inject(UtilitiesService);
   private logger = inject(LoggerService);
@@ -38,9 +41,22 @@ export class QrcodeScanDialogComponent implements AfterViewInit, OnDestroy {
   isScanning = signal<boolean>(false);
   errorMessage = signal<string>('');
 
+  // Debug signals
+  debugInfo = signal<string>('');
+  framesScanned = signal<number>(0);
+  lastScanAttempt = signal<Date | null>(null);
+  scanningActive = signal<boolean>(false);
+
+  // Computed property for time since last scan
+  timeSinceLastScan = computed(() => {
+    const lastScan = this.lastScanAttempt();
+    return lastScan ? (Date.now() - lastScan.getTime()) / 1000 : 0;
+  });
+
   private camera: any = null;
   private qrCanvas: QRCanvas | null = null;
   private frameLoopCancel: (() => void) | null = null;
+  private debugInterval: number | null = null;
 
   async ngAfterViewInit() {
     // Add a small delay to ensure the dialog is fully rendered
@@ -49,6 +65,7 @@ export class QrcodeScanDialogComponent implements AfterViewInit, OnDestroy {
         await this.initializeCamera();
       } catch (error) {
         console.error('Failed to initialize camera:', error);
+        this.debugInfo.set(`❌ Initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
 
         // Provide more specific error messages
         if (error instanceof Error) {
@@ -56,21 +73,27 @@ export class QrcodeScanDialogComponent implements AfterViewInit, OnDestroy {
             this.errorMessage.set(
               'Camera access denied. Please allow camera permissions and try again.'
             );
+            this.debugInfo.set('🚫 Camera permission denied - check browser settings');
           } else if (error.name === 'NotFoundError') {
             this.errorMessage.set('No camera found. Please ensure a camera is connected.');
+            this.debugInfo.set('📷 No camera devices found');
           } else if (error.name === 'NotSupportedError') {
             this.errorMessage.set('Camera not supported in this browser.');
+            this.debugInfo.set('🚫 Camera API not supported in this browser');
           } else if (error.name === 'NotReadableError') {
             this.errorMessage.set(
               'Camera is already in use by another application. Close other apps using the camera and try a different camera below.'
             );
+            this.debugInfo.set('🔒 Camera in use by another application');
           } else {
             this.errorMessage.set(`Camera error: ${error.message}`);
+            this.debugInfo.set(`❌ Camera error: ${error.message}`);
           }
         } else {
           this.errorMessage.set(
             'Failed to access camera. Please ensure camera permissions are granted.'
           );
+          this.debugInfo.set('❌ Unknown camera access error');
         }
 
         // Try to list available cameras even if initialization failed
@@ -85,6 +108,7 @@ export class QrcodeScanDialogComponent implements AfterViewInit, OnDestroy {
 
   ngOnDestroy() {
     this.stopScanning();
+    this.stopDebugInterval();
   }
 
   private async listAvailableCameras() {
@@ -107,6 +131,7 @@ export class QrcodeScanDialogComponent implements AfterViewInit, OnDestroy {
 
   private async initializeCamera() {
     try {
+      this.debugInfo.set('📹 Initializing camera...');
       console.log('Initializing camera...');
       const video = this.videoElement.nativeElement;
       const canvas = this.canvasElement.nativeElement;
@@ -115,15 +140,18 @@ export class QrcodeScanDialogComponent implements AfterViewInit, OnDestroy {
       console.log('Canvas element:', canvas);
 
       // Initialize QR canvas
+      this.debugInfo.set('🎨 Setting up QR canvas...');
       this.qrCanvas = new QRCanvas({ overlay: canvas });
       console.log('QR Canvas initialized');
 
       // Initialize camera with retry logic
+      this.debugInfo.set('📷 Connecting to camera...');
       console.log('Calling frontalCamera...');
       this.camera = await this.initializeCameraWithRetry(video);
       console.log('Camera initialized:', this.camera);
 
       // Get available cameras
+      this.debugInfo.set('🔍 Detecting available cameras...');
       console.log('Getting device list...');
       const devices = await this.camera.listDevices();
       console.log('Available devices:', devices);
@@ -131,15 +159,18 @@ export class QrcodeScanDialogComponent implements AfterViewInit, OnDestroy {
 
       if (devices.length > 0) {
         this.currentDevice.set(devices[0]);
+        this.debugInfo.set(`📱 Setting camera: ${devices[0].label}`);
         console.log('Setting device to:', devices[0]);
         await this.camera.setDevice(devices[0].deviceId);
       }
 
       // Start scanning
+      this.debugInfo.set('✅ Camera ready, starting scan...');
       console.log('Starting scanning...');
       this.startScanning();
     } catch (error) {
       console.error('Error in initializeCamera:', error);
+      this.debugInfo.set(`❌ Camera initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       throw error;
     }
   }
@@ -187,26 +218,61 @@ export class QrcodeScanDialogComponent implements AfterViewInit, OnDestroy {
   }
 
   private startScanning() {
-    if (!this.camera || !this.qrCanvas) return;
+    if (!this.camera || !this.qrCanvas) {
+      this.debugInfo.set('❌ Cannot start scanning: camera or canvas not available');
+      this.logger.error('Cannot start scanning: camera or canvas not available');
+      return;
+    }
 
     this.isScanning.set(true);
+    this.scanningActive.set(true);
+    this.framesScanned.set(0);
+    this.debugInfo.set('🔍 Starting QR code scanning...');
+    this.logger.info('QR scanning started');
+
+    // Start debug interval to update scan statistics
+    this.startDebugInterval();
 
     this.frameLoopCancel = frameLoop(() => {
-      if (!this.camera || !this.qrCanvas) return;
+      if (!this.camera || !this.qrCanvas) {
+        this.debugInfo.set('❌ Frame loop stopped: camera or canvas unavailable');
+        return;
+      }
 
       try {
+        // Update frame counter
+        const frameCount = this.framesScanned() + 1;
+        this.framesScanned.set(frameCount);
+        this.lastScanAttempt.set(new Date());
+
+        // Attempt to read QR code from current frame
         const result = this.camera.readFrame(this.qrCanvas);
+
         if (result) {
+          this.debugInfo.set(`✅ QR code detected after ${frameCount} frames!`);
+          this.logger.info('QR code detected:', result);
           this.onScanSuccess(result);
+        } else {
+          // Update debug info periodically (every 30 frames to avoid spam)
+          if (frameCount % 30 === 0) {
+            this.debugInfo.set(`🔍 Scanning... ${frameCount} frames processed, no QR code detected yet`);
+          }
         }
       } catch (error) {
-        console.error('Scan error:', error);
+        this.logger.error('Frame scanning error:', error);
+        this.debugInfo.set(`❌ Scan error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+
+        // Continue scanning despite errors
+        console.error('Scan error (continuing):', error);
       }
     });
   }
 
   private stopScanning() {
     this.isScanning.set(false);
+    this.scanningActive.set(false);
+    this.debugInfo.set('🛑 Scanning stopped');
+    this.stopDebugInterval();
 
     if (this.frameLoopCancel) {
       this.frameLoopCancel();
@@ -219,11 +285,38 @@ export class QrcodeScanDialogComponent implements AfterViewInit, OnDestroy {
     }
   }
 
+  private startDebugInterval() {
+    this.stopDebugInterval(); // Clear any existing interval
+
+    this.debugInterval = window.setInterval(() => {
+      if (this.scanningActive()) {
+        const frames = this.framesScanned();
+        const lastScan = this.lastScanAttempt();
+        const timeSinceLastScan = lastScan ? Date.now() - lastScan.getTime() : 0;
+
+        if (timeSinceLastScan > 5000) {
+          this.debugInfo.set(`⚠️ Scanner may be stalled. Frames: ${frames}, Last scan: ${Math.floor(timeSinceLastScan / 1000)}s ago`);
+        }
+      }
+    }, 2000);
+  }
+
+  private stopDebugInterval() {
+    if (this.debugInterval) {
+      clearInterval(this.debugInterval);
+      this.debugInterval = null;
+    }
+  }
+
   private onScanSuccess(result: string) {
     this.logger.info('QR code scanned:', result);
+    this.debugInfo.set(`✅ QR detected: ${result.substring(0, 50)}${result.length > 50 ? '...' : ''}`);
 
     // Process the scanned result to handle different Nostr entity formats
     const processedResult = this.processScannedResult(result);
+
+    this.logger.info('Processed QR result:', processedResult);
+    this.debugInfo.set(`🔄 Processed: ${processedResult.substring(0, 50)}${processedResult.length > 50 ? '...' : ''}`);
 
     this.stopScanning();
     this.dialogRef.close(processedResult);
