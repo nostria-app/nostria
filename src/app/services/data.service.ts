@@ -9,6 +9,7 @@ import { UserRelayService } from './relays/user-relay';
 import { DiscoveryRelayService } from './relays/discovery-relay';
 import { SharedRelayService } from './relays/shared-relay';
 import { AccountRelayService } from './relays/account-relay';
+import { RelaysService } from './relays/relays';
 
 export interface DataOptions {
   cache?: boolean; // Whether to use cache
@@ -28,6 +29,7 @@ export class DataService {
   private readonly logger = inject(LoggerService);
   private readonly utilities = inject(UtilitiesService);
   private readonly cache = inject(Cache);
+  private readonly relaysService = inject(RelaysService);
 
   // Map to track pending profile requests to prevent race conditions
   private pendingProfileRequests = new Map<string, Promise<NostrRecord | undefined>>();
@@ -100,6 +102,8 @@ export class DataService {
     if (options?.save && eventFromRelays) {
       // queueMicrotask(() => this.storage.saveEvent(event!));
       await this.storage.saveEvent(event);
+      // Process relay hints when saving events from relays
+      await this.processEventForRelayHints(event);
     }
 
     return record;
@@ -196,6 +200,8 @@ export class DataService {
         record = this.toRecord(metadata);
         this.cache.set(cacheKey, record);
         await this.storage.saveEvent(metadata);
+        // Process relay hints when saving metadata
+        await this.processEventForRelayHints(metadata);
       }
     } else {
       // Normal flow: try storage first, then relays if not found
@@ -217,6 +223,8 @@ export class DataService {
           record = this.toRecord(metadata);
           this.cache.set(cacheKey, record);
           await this.storage.saveEvent(metadata);
+          // Process relay hints when saving metadata
+          await this.processEventForRelayHints(metadata);
         }
       }
     }
@@ -237,6 +245,8 @@ export class DataService {
           const freshRecord = this.toRecord(fresh);
           this.cache.set(cacheKey, freshRecord);
           await this.storage.saveEvent(fresh);
+          // Process relay hints when saving fresh metadata
+          await this.processEventForRelayHints(fresh);
         }
       } catch (error) {
         this.logger.warn(`Failed to refresh profile in background for ${pubkey}:`, error);
@@ -341,6 +351,8 @@ export class DataService {
 
     if (options?.save && eventFromRelays) {
       await this.storage.saveEvent(event);
+      // Process relay hints when saving events from relays
+      await this.processEventForRelayHints(event);
     }
 
     return record;
@@ -391,6 +403,8 @@ export class DataService {
     if (options?.save && eventFromRelays) {
       for (const event of events) {
         await this.storage.saveEvent(event);
+        // Process relay hints when saving events from relays
+        await this.processEventForRelayHints(event);
       }
     }
 
@@ -449,9 +463,45 @@ export class DataService {
     if (options?.save && eventFromRelays) {
       for (const event of events) {
         await this.storage.saveEvent(event);
+        // Process relay hints when saving events from relays
+        await this.processEventForRelayHints(event);
       }
     }
 
     return records;
+  }
+
+  /**
+   * Process an event and collect relay hints for storage (from DataService to avoid circular dependency)
+   */
+  private async processEventForRelayHints(event: Event): Promise<void> {
+    // Skip kind 10002 events (user relay lists) as these should not be stored in the mapping
+    if (event.kind === 10002) {
+      return;
+    }
+
+    // Extract relay hints from e-tags
+    const eTags = event.tags.filter((tag) => tag[0] === 'e');
+    const relayHints: string[] = [];
+    
+    for (const eTag of eTags) {
+      // Check if there's a relay hint in the e-tag (3rd element)
+      if (eTag.length >= 3 && eTag[2] && eTag[2].trim() !== '') {
+        relayHints.push(eTag[2]);
+      }
+      
+      // Check for author pubkey in e-tag (5th element)  
+      if (eTag.length >= 5 && eTag[4] && eTag[4].trim() !== '') {
+        // Add relay hints for the mentioned author
+        if (relayHints.length > 0) {
+          await this.relaysService.addRelayHintsFromEvent(eTag[4], relayHints);
+        }
+      }
+    }
+    
+    // Store hints for the event creator
+    if (relayHints.length > 0) {
+      await this.relaysService.addRelayHintsFromEvent(event.pubkey, relayHints);
+    }
   }
 }

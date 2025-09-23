@@ -336,12 +336,29 @@ export abstract class RelayServiceBase {
 
       // Update lastUsed for all relays used in this query
       if (event) {
-        urls.forEach((url) => this.updateRelayLastUsed(url));
+        urls.forEach((url) => {
+          this.updateRelayLastUsed(url);
+          // Track relay statistics: mark as connected and increment event count
+          this.relaysService.updateRelayConnection(url, true);
+          this.relaysService.incrementEventCount(url);
+        });
+      } else {
+        // No event received, but relays were contacted
+        urls.forEach((url) => {
+          this.relaysService.updateRelayConnection(url, true);
+        });
       }
 
       return event;
     } catch (error) {
       this.logger.error('Error fetching events', error);
+
+      // Track connection retries for failed connections
+      urls.forEach((url) => {
+        this.relaysService.recordConnectionRetry(url);
+        this.relaysService.updateRelayConnection(url, false);
+      });
+
       return null;
     } finally {
       this.releaseSemaphore();
@@ -551,7 +568,12 @@ export abstract class RelayServiceBase {
           this.logger.debug(`Received event of kind ${evt.kind}`);
 
           // Update the lastUsed timestamp for all relays (since we don't know which relay sent this event)
-          urls.forEach((url) => this.updateRelayLastUsed(url));
+          urls.forEach((url) => {
+            this.updateRelayLastUsed(url);
+            // Track relay statistics: mark as connected and increment event count
+            this.relaysService.updateRelayConnection(url, true);
+            this.relaysService.incrementEventCount(url);
+          });
 
           // Call the provided event handler
           onEvent(evt as T);
@@ -644,7 +666,12 @@ export abstract class RelayServiceBase {
           this.logger.debug(`Received event of kind ${evt.kind}`);
 
           // Update the lastUsed timestamp for all relays (since we don't know which relay sent this event)
-          urls.forEach((url) => this.updateRelayLastUsed(url));
+          urls.forEach((url) => {
+            this.updateRelayLastUsed(url);
+            // Track relay statistics: mark as connected and increment event count
+            this.relaysService.updateRelayConnection(url, true);
+            this.relaysService.incrementEventCount(url);
+          });
 
           // Call the provided event handler
           onEvent(evt as T);

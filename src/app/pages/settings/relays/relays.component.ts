@@ -21,6 +21,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatDialog } from '@angular/material/dialog';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatSelectModule } from '@angular/material/select';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { RelayInfoDialogComponent } from './relay-info-dialog.component';
@@ -40,6 +41,7 @@ import { DataService } from '../../../services/data.service';
 import { InfoTooltipComponent } from '../../../components/info-tooltip/info-tooltip.component';
 import { Relay } from '../../../services/relays/relay';
 import { DiscoveryRelayService } from '../../../services/relays/discovery-relay';
+import { RelaysService } from '../../../services/relays/relays';
 
 @Component({
   selector: 'app-relays-page',
@@ -56,6 +58,7 @@ import { DiscoveryRelayService } from '../../../services/relays/discovery-relay'
     MatSlideToggleModule,
     MatTabsModule,
     MatDividerModule,
+    MatSelectModule,
     InfoTooltipComponent,
   ],
   templateUrl: './relays.component.html',
@@ -77,6 +80,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
   private readonly accountRelay = inject(AccountRelayService);
   private readonly discoveryRelay = inject(DiscoveryRelayService);
   private readonly data = inject(DataService);
+  private readonly relaysService = inject(RelaysService);
 
   followingRelayUrls = signal<string[]>([]);
   newRelayUrl = signal('');
@@ -113,6 +117,13 @@ export class RelaysComponent implements OnInit, OnDestroy {
 
   // For closest relay feature
   isCheckingRelays = signal(false);
+
+  // For observed relays tab
+  observedRelays = computed(() => {
+    return this.relaysService.observedRelaysSignal();
+  });
+  observedRelaysSortBy = signal<'eventsReceived' | 'lastUpdated' | 'firstObserved'>('lastUpdated');
+
   knownDiscoveryRelays = [
     'wss://discovery.eu.nostria.app',
     'wss://discovery.us.nostria.app',
@@ -197,7 +208,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
     }
   }
 
-  ngOnInit() {}
+  ngOnInit() { }
 
   cleanFollowingList() {
     if (this.isCleaningFollowingList()) {
@@ -681,5 +692,67 @@ export class RelaysComponent implements OnInit, OnDestroy {
         reject(error);
       }
     });
+  }
+
+  // Methods for observed relays tab
+
+  formatTimestamp(timestamp: number): string {
+    if (timestamp === 0) return 'Never';
+    return new Date(timestamp * 1000).toLocaleString();
+  }
+
+  formatEventsCount(count: number): string {
+    if (count >= 1000000) {
+      return `${(count / 1000000).toFixed(1)}M`;
+    } else if (count >= 1000) {
+      return `${(count / 1000).toFixed(1)}k`;
+    }
+    return count.toString();
+  }
+
+  getRelayPerformanceScore(url: string): number {
+    return this.relaysService.getRelayPerformanceScore(url);
+  }
+
+  getPerformanceClass(score: number): string {
+    if (score >= 80) return 'performance-excellent';
+    if (score >= 60) return 'performance-good';
+    if (score >= 40) return 'performance-fair';
+    return 'performance-poor';
+  }
+
+  onObservedRelaysSortChange(): void {
+    // Trigger re-sort when sort criteria changes
+    // The computed signal will automatically update when observedRelaysSortBy changes
+  }
+
+  async clearObservedRelayData(): Promise<void> {
+    const confirmed = confirm(
+      'Are you sure you want to clear all observed relay data? This action cannot be undone.',
+    );
+    if (confirmed) {
+      try {
+        // Clear in-memory data
+        this.relaysService.clearAllStats();
+
+        // Refresh the observed relays signal
+        await this.relaysService.loadObservedRelays();
+
+        this.snackBar.open('Observed relay data cleared', 'OK', { duration: 3000 });
+      } catch (error) {
+        this.snackBar.open('Failed to clear observed relay data', 'OK', { duration: 3000 });
+      }
+    }
+  }
+
+  async deleteObservedRelay(url: string): Promise<void> {
+    try {
+      await this.storage.deleteObservedRelay(url);
+      this.relaysService.removeRelay(url);
+      await this.relaysService.loadObservedRelays();
+      this.snackBar.open(`Removed observed relay: ${url}`, 'OK', { duration: 3000 });
+    } catch (error) {
+      this.snackBar.open('Failed to remove observed relay', 'OK', { duration: 3000 });
+    }
   }
 }
