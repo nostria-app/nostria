@@ -23,14 +23,18 @@
 
   <div class="user-profile-container">
     <!-- Banner section for grid view -->
-    @if (view() === 'grid' && profile()?.data?.banner) {
+    @if (view() === 'grid') {
       <div class="user-profile-banner">
-        <img
-          [src]="profile().data.banner"
-          onerror="this.onerror=null; this.src='images/banner-failure.png';"
-          alt="User Banner"
-          class="user-banner"
-        />
+        @if (profile()?.data?.banner) {
+          <img
+            [src]="profile().data.banner"
+            onerror="this.onerror=null; this.src='images/banner-failure.png';"
+            alt="User Banner"
+            class="user-banner"
+          />
+        } @else {
+          <div class="user-banner-placeholder"></div>
+        }
       </div>
     }
 

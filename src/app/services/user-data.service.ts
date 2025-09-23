@@ -35,7 +35,7 @@ export class UserDataService {
   async initialize(pubkey: string) {
     this.userRelayEx = await this.userRelayFactory.create(pubkey);
     this.logger.debug(`UserDataService initialized for pubkey: ${pubkey}`);
-    
+
     // Register this instance with the debug logger
     this.debugInstanceId = this.debugLogger.registerUserDataInstance(pubkey, this);
   }
@@ -474,12 +474,12 @@ export class UserDataService {
    */
   destroy(): void {
     this.logger.debug('UserDataService.destroy() called');
-    
+
     // Unregister from debug logger
     if (this.debugInstanceId) {
       this.debugLogger.destroyUserDataInstance(this.debugInstanceId);
     }
-    
+
     if (this.userRelayEx) {
       this.logger.debug('Calling userRelayEx.destroy()');
       this.userRelayEx.destroy();

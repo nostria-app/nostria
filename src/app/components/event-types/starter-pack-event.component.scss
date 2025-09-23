@@ -42,13 +42,13 @@
 
       .users-grid {
         display: grid;
-        grid-template-columns: 1fr;
-        gap: 12px;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
 
         .user-item {
           border: 1px solid var(--mat-app-outline-variant);
           border-radius: 8px;
-          padding: 8px;
+          padding: 12px;
           background-color: var(--mat-app-surface);
           transition: all 0.2s ease;
 
@@ -82,24 +82,40 @@
 }
 
 // Responsive design
-@media (min-width: 768px) {
+@media (max-width: 567px) {
   .starter-pack-container {
     .starter-pack-content {
       .users-section {
         .users-grid {
-          grid-template-columns: repeat(2, 1fr);
+          // Force single column on very small screens
+          grid-template-columns: 1fr;
         }
       }
     }
   }
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 568px) and (max-width: 899px) {
   .starter-pack-container {
     .starter-pack-content {
       .users-section {
         .users-grid {
-          grid-template-columns: repeat(3, 1fr);
+          // Ensure minimum 200px per item on medium screens for reliable 2-column layout
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        }
+      }
+    }
+  }
+}
+
+@media (min-width: 900px) {
+  .starter-pack-container {
+    .starter-pack-content {
+      .users-section {
+        .users-grid {
+          // Allow more columns on larger screens but keep reasonable minimum size
+          grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+          gap: 20px;
         }
       }
     }
