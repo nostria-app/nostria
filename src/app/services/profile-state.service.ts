@@ -133,6 +133,7 @@ export class ProfileStateService {
     //   return;
     // }
 
+    // Subscribe to contacts separately since they need special handling (only 1 per user, potentially older)
     this.relay?.subscribeEose(
       pubkey,
       {
@@ -141,23 +142,27 @@ export class ProfileStateService {
         limit: 1,
       },
       (event: Event) => {
-        console.log('Event received', event);
-
+        console.log('Contacts event received', event);
         if (event.kind === kinds.Contacts) {
           const followingList = this.utilities.getPTagsValuesFromEvent(event);
-          console.log(followingList);
-          // this.followingList.set(followingList);
+          console.log('Following list extracted:', followingList);
           this.followingList.set(followingList);
-          // If this is the logged on user, also set the account state.
-          // if (this.accountState.pubkey() === pubkey) {
-          //   this.accountState.followingList.set(followingList);
-          // }
+        }
+      }
+    );
 
-          // this.storage.saveEvent(evt);
+    // Subscribe to content events (notes, articles, reposts)
+    this.relay?.subscribeEose(
+      pubkey,
+      {
+        kinds: [kinds.ShortTextNote, kinds.LongFormArticle, kinds.Repost, kinds.GenericRepost],
+        authors: [pubkey],
+        limit: 20,
+      },
+      (event: Event) => {
+        console.log('Content event received', event);
 
-          // Now you can use 'this' here
-          // For example: this.handleContacts(evt);
-        } else if (event.kind === kinds.LongFormArticle) {
+        if (event.kind === kinds.LongFormArticle) {
           const record = this.utilities.toRecord(event);
           // Check for duplicates before adding
           this.articles.update(articles => {

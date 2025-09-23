@@ -46,6 +46,18 @@ export class ProfileNotesComponent {
       return;
     }
 
+    // Effect to load initial notes if none are present and profile is loaded
+    effect(() => {
+      const currentPubkey = this.profileState.pubkey();
+      const currentNotes = this.profileState.sortedTimeline();
+
+      // If we have a pubkey but no notes, and we're not already loading, load some notes
+      if (currentPubkey && currentNotes.length === 0 && !this.profileState.isLoadingMoreNotes()) {
+        this.logger.debug('No notes found for profile, loading initial notes...');
+        this.loadMoreNotes();
+      }
+    });
+
     // Effect to handle scroll events from layout service when user scrolls to bottom
     effect(() => {
       // Only react if scroll monitoring is ready to prevent early triggers

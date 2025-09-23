@@ -67,7 +67,7 @@ export class ProfileRelaysComponent {
   readonly minBufferPx = 200;
   readonly maxBufferPx = 400;
 
-  constructor() {}
+  constructor() { }
 
   async loadUserProfile(): Promise<void> {
     try {
