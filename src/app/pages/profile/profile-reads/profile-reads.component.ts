@@ -45,6 +45,18 @@ export class ProfileReadsComponent implements OnChanges {
   error = signal<string | null>(null);
 
   constructor() {
+    // Effect to load initial articles if none are present and profile is loaded
+    effect(() => {
+      const currentPubkey = this.profileState.pubkey();
+      const currentArticles = this.profileState.articles();
+
+      // If we have a pubkey but no articles, and we're not already loading, load some articles
+      if (currentPubkey && currentArticles.length === 0 && !this.profileState.isLoadingMoreArticles()) {
+        this.logger.debug('No articles found for profile, loading initial articles...');
+        this.loadMoreArticles();
+      }
+    });
+
     // Initial load of reads
     this.loadReads();
 

@@ -6,19 +6,19 @@
 
     <div class="profile-mini">
       @if (userProfile(); as profile) {
-        <div class="profile-mini-avatar">
-          @if (profile.picture) {
-            <img [src]="profile.picture" alt="Profile picture" />
-          } @else {
-            <mat-icon>account_circle</mat-icon>
-          }
-        </div>
-        <h1 class="profile-mini-name">{{ profile.name }}'s Relays</h1>
+      <div class="profile-mini-avatar">
+        @if (profile.picture) {
+        <img [src]="profile.picture" alt="Profile picture" />
+        } @else {
+        <mat-icon>account_circle</mat-icon>
+        }
+      </div>
+      <h1 class="profile-mini-name">{{ profile.name }}'s Relays</h1>
       } @else {
-        <div class="profile-mini-avatar">
-          <mat-icon>account_circle</mat-icon>
-        </div>
-        <h1 class="profile-mini-name">Relays</h1>
+      <div class="profile-mini-avatar">
+        <mat-icon>account_circle</mat-icon>
+      </div>
+      <h1 class="profile-mini-name">Relays</h1>
       }
     </div>
   </div>
@@ -28,24 +28,20 @@
     <mat-tab class="following-tab" label="Relays"> -->
   <div class="following-content">
     @if (getUserRelays().length === 0) {
-      <div class="empty-list">
-        <mat-icon>people_outline</mat-icon>
-        <p>This user does not have any relays.</p>
-      </div>
+    <div class="empty-list">
+      <mat-icon>people_outline</mat-icon>
+      <p>This user does not have any relays.</p>
+    </div>
     } @else {
-      <cdk-virtual-scroll-viewport
-        class="virtual-scroll-viewport"
-        [itemSize]="itemSize"
-        [minBufferPx]="minBufferPx"
-        [maxBufferPx]="maxBufferPx"
-      >
-        <mat-list class="full-width-list">
-          @for (url of getUserRelays(); track url) {
-            {{ url }}<br />
-            <!-- <app-user-profile [pubkey]="user.npub"></app-user-profile> -->
-          }
-        </mat-list>
-      </cdk-virtual-scroll-viewport>
+    <cdk-virtual-scroll-viewport class="virtual-scroll-viewport" [itemSize]="itemSize" [minBufferPx]="minBufferPx"
+      [maxBufferPx]="maxBufferPx">
+      <mat-list class="full-width-list">
+        @for (url of getUserRelays(); track url) {
+        {{ url }}<br />
+        <!-- <app-user-profile [pubkey]="user.npub"></app-user-profile> -->
+        }
+      </mat-list>
+    </cdk-virtual-scroll-viewport>
     }
   </div>
   <!-- </mat-tab>
