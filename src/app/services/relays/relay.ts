@@ -38,6 +38,8 @@ export abstract class RelayServiceBase {
   // Signal to store the relays
   // relays: Relay[] = [];
   relays = signal<Relay[]>([]);
+  // Idempotent destroy flag
+  private _destroyed = false;
 
   constructor(pool: SimplePool) {
     this.#pool = pool;
@@ -49,38 +51,60 @@ export abstract class RelayServiceBase {
     return this.#pool;
   }
 
-  /** Inits the relay URLs. Make sure URLs are normalized before setting. */
-  init(relayUrls: string[], destroy = false) {
-    if (destroy) {
-      this.destroy();
+  /**
+   * Initialize (or re-initialize) relay URLs. Avoid leaking websockets by ensuring
+   * the previous SimplePool is explicitly destroyed before creating a new one.
+   * If only the URL list changes we just update internal state without recreating the pool.
+   * @param relayUrls New relay URL list
+   * @param forceRecreate When true always destroy the existing pool and create a new one
+   */
+  init(relayUrls: string[], forceRecreate = false) {
+    const urlsChanged = this.relayUrls.length !== relayUrls.length || this.relayUrls.some((u, i) => u !== relayUrls[i]);
+
+    // Decide whether to recreate pool
+    const shouldRecreate = forceRecreate || !this.#pool || this._destroyed || urlsChanged;
+
+    if (shouldRecreate && this.#pool && !this._destroyed) {
+      // Destroy the previous pool to close underlying sockets
+      try {
+        this.#pool.destroy();
+      } catch (e) {
+        this.logger.debug(`[${this.constructor.name}] Suppressed destroy error during re-init:`, e);
+      }
+    }
+
+    // Assign new pool if required
+    if (shouldRecreate) {
+      this.#pool = new SimplePool();
+      this._destroyed = false; // Reset destroyed flag for new pool lifecycle
+      this.logger.debug(`[${this.constructor.name}] Created new SimplePool (recreate=${forceRecreate}, urlsChanged=${urlsChanged})`);
     }
 
     this.relayUrls = relayUrls;
-    this.#pool = new SimplePool();
     this.updateRelaysSignal();
     this.notifyRelaysModified();
 
-    // Update debug logger with new relay URLs
     if (this.debugInstanceId) {
       this.debugLogger.updateInstanceRelayUrls(this.debugInstanceId, relayUrls);
     }
   }
 
   destroy() {
-    this.logger.debug(
-      `[${this.constructor.name}] destroy() called for instance ${this.debugInstanceId}`,
-    );
-    // Mark instance as destroyed in debug logger
+    if (this._destroyed) {
+      return; // Already destroyed
+    }
+    this.logger.debug(`[${this.constructor.name}] destroy() called for instance ${this.debugInstanceId}`);
     if (this.debugInstanceId) {
-      this.logger.debug(
-        `[${this.constructor.name}] Calling destroyInstance for ${this.debugInstanceId}`,
-      );
+      this.logger.debug(`[${this.constructor.name}] Calling destroyInstance for ${this.debugInstanceId}`);
       this.debugLogger.destroyInstance(this.debugInstanceId);
     }
-    this.#pool.destroy();
-    this.logger.debug(
-      `[${this.constructor.name}] Pool destroyed for instance ${this.debugInstanceId}`,
-    );
+    try {
+      this.#pool?.destroy();
+    } catch (e) {
+      this.logger.debug(`[${this.constructor.name}] Suppressed destroy error:`, e);
+    }
+    this._destroyed = true;
+    this.logger.debug(`[${this.constructor.name}] Pool destroyed for instance ${this.debugInstanceId}`);
   }
 
   getRelayUrls(): string[] {
@@ -379,6 +403,16 @@ export abstract class RelayServiceBase {
   }
 
   /**
+   * Get effective relay URLs (with optimization if enabled)
+   */
+  private getEffectiveRelayUrls(): string[] {
+    if (this.useOptimizedRelays) {
+      return this.relaysService.getOptimalRelays(this.relayUrls);
+    }
+    return this.relayUrls;
+  }
+
+  /**
    * Generic function to fetch Nostr events (one-time query) with concurrency control
    * @param filter Filter for the query
    * @param options Optional options for the query
@@ -397,11 +431,36 @@ export abstract class RelayServiceBase {
     },
     options: { timeout?: number } = {},
   ): Promise<T | null> {
-    let urls = this.relayUrls;
+    return this.getWithRelays(filter, this.getEffectiveRelayUrls(), options);
+  }
 
-    if (this.useOptimizedRelays) {
-      urls = this.relaysService.getOptimalRelays(this.relayUrls);
-    }
+  /**
+   * Generic function to fetch Nostr events with explicit relay URLs
+   * @param filter Filter for the query
+   * @param relayUrls Explicit relay URLs to use
+   * @param options Optional options for the query
+   * @returns Promise that resolves to a single event
+   */
+  async getWithRelays<T extends Event = Event>(
+    filter: {
+      ids?: string[];
+      kinds?: number[];
+      authors?: string[];
+      '#e'?: string[];
+      '#p'?: string[];
+      since?: number;
+      until?: number;
+      limit?: number;
+    },
+    relayUrls: string[],
+    options: { timeout?: number } = {},
+  ): Promise<T | null> {
+    const urls = relayUrls;
+
+    // Don't apply optimization to explicit relay URLs - use them as provided
+    // if (this.useOptimizedRelays) {
+    //   urls = this.relaysService.getOptimalRelays(relayUrls);
+    // }
 
     // Check if the value of "authors" array starts with "npub" or not.
     const isNpub = filter.authors?.some((author) => author.startsWith('npub'));
@@ -410,7 +469,7 @@ export abstract class RelayServiceBase {
       // TODO: Handle npub format if needed
     }
 
-    this.logger.debug('Getting events with filters (account-relay):', filter, urls);
+    this.logger.debug('Getting events with filters (explicit relays):', filter, urls);
 
     if (urls.length === 0) {
       this.logger.warn('No relays available for query');
@@ -484,11 +543,30 @@ export abstract class RelayServiceBase {
     },
     options: { timeout?: number } = {},
   ): Promise<T[]> {
-    let urls = this.relayUrls;
+    return this.getManyWithRelays(filter, this.getEffectiveRelayUrls(), options);
+  }
 
-    if (this.useOptimizedRelays) {
-      urls = this.relaysService.getOptimalRelays(this.relayUrls);
-    }
+  /**
+   * Generic function to fetch Nostr events with explicit relay URLs
+   * @param filter Filter for the query
+   * @param relayUrls Explicit relay URLs to use
+   * @param options Optional options for the query
+   * @returns Promise that resolves to an array of events
+   */
+  async getManyWithRelays<T extends Event = Event>(
+    filter: {
+      kinds?: number[];
+      authors?: string[];
+      '#e'?: string[];
+      '#p'?: string[];
+      since?: number;
+      until?: number;
+      limit?: number;
+    },
+    relayUrls: string[],
+    options: { timeout?: number } = {},
+  ): Promise<T[]> {
+    const urls = relayUrls;
 
     // Check if the value of "authors" array starts with "npub" or not.
     const isNpub = filter.authors?.some((author) => author.startsWith('npub'));
@@ -497,7 +575,7 @@ export abstract class RelayServiceBase {
       // TODO: Handle npub format if needed
     }
 
-    this.logger.debug('Getting events with filters (account-relay):', filter, urls);
+    this.logger.debug('Getting events with filters (explicit relays):', filter, urls);
 
     if (urls.length === 0) {
       this.logger.warn('No relays available for query');

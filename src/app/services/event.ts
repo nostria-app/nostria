@@ -9,6 +9,8 @@ import { EventData } from '../data-resolver';
 import { minutes, NostrRecord } from '../interfaces';
 import { DiscoveryRelayService } from './relays/discovery-relay';
 import { UserDataFactoryService } from './user-data-factory.service';
+import { InstancePoolManagerService } from './instance-pool-manager.service';
+import { OnDemandUserDataService } from './on-demand-user-data.service';
 import { Cache } from './cache';
 import { UserDataService } from './user-data.service';
 import { RelaysService } from './relays/relays';
@@ -72,123 +74,33 @@ export class EventService {
   private readonly nostrService = inject(NostrService);
   private readonly discoveryRelay = inject(DiscoveryRelayService);
   private readonly userDataFactory = inject(UserDataFactoryService);
+  private readonly poolManager = inject(InstancePoolManagerService);
+  private readonly onDemand = inject(OnDemandUserDataService);
   private readonly cache = inject(Cache);
   private readonly dialog = inject(MatDialog);
   private readonly relays = inject(RelaysService);
   private readonly subscriptionCache = inject(SubscriptionCacheService);
   private readonly debugLogger = inject(DebugLoggerService);
 
-  // UserDataService instance management with automatic cleanup
-  private readonly userDataInstances = new Map<
-    string,
-    {
-      instance: UserDataService;
-      lastUsed: number;
-      refCount: number;
-    }
-  >();
-
-  // Cache configuration for UserDataService instances
-  private readonly USER_DATA_CACHE_CONFIG = {
-    maxSize: 50, // Increased from 20 to handle more concurrent users
-    ttl: 1000 * 60 * 5, // Increased from 1 minute to 5 minutes
-  };
+  // Removed internal userDataInstances map in favor of central InstancePoolManagerService
+  // Kept minimal shim methods (getUserDataService / releaseUserDataService) delegating to pool.
+  // Data remains cached in StorageService so immediate destruction after release is acceptable.
 
   constructor() {
-    // Start cleanup timer for UserDataService instances
-    this.startUserDataCleanup();
-
     // Register with debug logger for stats (use setTimeout to avoid circular dependency)
     setTimeout(() => {
       this.debugLogger.setEventService(this);
     }, 0);
   }
-
-  /**
-   * Start periodic cleanup of unused UserDataService instances
-   */
-  private startUserDataCleanup(): void {
-    setInterval(() => {
-      this.cleanupUnusedUserDataServices();
-    }, 60000); // Check every minute
-  }
-
-  /**
-   * Clean up UserDataService instances that haven't been used recently
-   */
-  private cleanupUnusedUserDataServices(): void {
-    const now = Date.now();
-    const maxAge = 30 * 1000; // 30 seconds
-    const keysToDelete: string[] = [];
-
-    console.log(`[DEBUG] Cleanup check: ${this.userDataInstances.size} instances tracked`);
-
-    for (const [key, entry] of this.userDataInstances.entries()) {
-      const timeSinceLastUsed = now - entry.lastUsed;
-      const isIdle = entry.instance.isIdle?.() ?? true; // Assume idle if method doesn't exist
-      const shouldCleanup = timeSinceLastUsed > maxAge && entry.refCount === 0 && isIdle;
-
-      console.log(`[DEBUG] Instance ${key}:`, {
-        timeSinceLastUsed: Math.round(timeSinceLastUsed / 1000) + 's',
-        refCount: entry.refCount,
-        isIdle,
-        shouldCleanup,
-      });
-
-      if (shouldCleanup) {
-        this.logger.debug(`Cleaning up idle UserDataService for key: ${key}`);
-        entry.instance.destroy();
-        keysToDelete.push(key);
-      }
-    }
-
-    keysToDelete.forEach((key) => this.userDataInstances.delete(key));
-
-    if (keysToDelete.length > 0) {
-      this.logger.info(`Cleaned up ${keysToDelete.length} unused UserDataService instances`);
-      console.log(`[DEBUG] Cleaned up instances:`, keysToDelete);
-    }
-  }
-
-  /**
-   * Get or create a UserDataService instance with reference counting
-   */
+  // Acquire pooled instance
   private async getUserDataService(pubkey: string): Promise<UserDataService> {
-    const key = `user-data-${pubkey}`;
-    let entry = this.userDataInstances.get(key);
-
-    if (!entry) {
-      // Create new instance
-      const instance = await this.userDataFactory.create(pubkey);
-      entry = {
-        instance,
-        lastUsed: Date.now(),
-        refCount: 0,
-      };
-      this.userDataInstances.set(key, entry);
-      this.logger.debug(`Created new UserDataService for ${pubkey}`);
-      console.log(`[DEBUG] Created UserDataService for ${pubkey}, total instances: ${this.userDataInstances.size}`);
-    }
-
-    // Update usage tracking
-    entry.lastUsed = Date.now();
-    entry.refCount++;
-    console.log(`[DEBUG] ${key} ref count increased to ${entry.refCount}`);
-
-    return entry.instance;
+    const instance = await this.userDataFactory.create(pubkey);
+    return instance; // refCount managed inside pool
   }
 
-  /**
-   * Release a UserDataService instance (decrease reference count)
-   */
-  private releaseUserDataService(pubkey: string): void {
-    const key = `user-data-${pubkey}`;
-    const entry = this.userDataInstances.get(key);
-
-    if (entry && entry.refCount > 0) {
-      entry.refCount--;
-      console.log(`[DEBUG] ${key} ref count decreased to ${entry.refCount}`);
-    }
+  // Release pooled instance
+  private async releaseUserDataService(pubkey: string): Promise<void> {
+    await this.poolManager.releaseInstance(pubkey);
   }
 
   /**

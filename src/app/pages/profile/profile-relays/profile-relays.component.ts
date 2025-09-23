@@ -87,6 +87,12 @@ export class ProfileRelaysComponent {
     // this.scrollToTop();
   }
 
+  getUserRelays(): string[] {
+    const pubkey = this.profileState.pubkey();
+    if (!pubkey) return [];
+    return this.profileState.relay?.getRelaysForPubkey(pubkey) || [];
+  }
+
   goBack(): void {
     this.location.back();
   }

@@ -2,7 +2,8 @@ import { Injectable, inject, signal } from '@angular/core';
 import { Event } from 'nostr-tools';
 import { DataService } from './data.service';
 import { LoggerService } from './logger.service';
-import { UserDataFactoryService } from './user-data-factory.service';
+import { UserDataFactoryService } from './user-data-factory.service'; // retained if needed elsewhere
+import { OnDemandUserDataService } from './on-demand-user-data.service';
 
 export interface StarterPack {
   id: string;
@@ -31,13 +32,22 @@ export interface SuggestedProfile {
   region?: string;
 }
 
+interface ParsedProfileMetadata {
+  name?: string;
+  display_name?: string;
+  about?: string;
+  picture?: string;
+  [key: string]: unknown;
+}
+
 @Injectable({
   providedIn: 'root',
 })
 export class Followset {
   private readonly dataService = inject(DataService);
   private readonly logger = inject(LoggerService);
-  private readonly userDataFactory = inject(UserDataFactoryService);
+  private readonly userDataFactory = inject(UserDataFactoryService); // legacy usage (will be removed if unused)
+  private readonly onDemandUserData = inject(OnDemandUserDataService);
 
   // Signals for reactive updates
   starterPacks = signal<StarterPack[]>([]);
@@ -63,13 +73,10 @@ export class Followset {
       // Fetch starter packs from each curator
       for (const pubkey of this.NOSTRIA_CURATORS) {
         try {
-          const data = await this.userDataFactory.create(pubkey);
-
-          // Use DataService to get events by pubkey and kind
-          const events = await data.getEventsByPubkeyAndKind(
+          // One-shot fetch via on-demand service to avoid holding sockets
+          const events = await this.onDemandUserData.getEventsByPubkeyAndKind(
             pubkey,
-            39089, // Starter pack kind
-            { cache: true, save: true }
+            39089 // Starter pack kind
           );
 
           // Parse each event and add to starter packs
@@ -171,6 +178,7 @@ export class Followset {
         profileRecords.forEach(record => {
           const metadata = this.parseProfileMetadata(record.event.content);
           if (metadata) {
+            const meta = metadata as ParsedProfileMetadata;
             // Find which starter packs this pubkey belongs to
             const belongsToInterests = selectedPacks
               .filter(pack => pack.pubkeys.includes(record.event.pubkey))
@@ -178,9 +186,9 @@ export class Followset {
 
             profiles.push({
               id: record.event.pubkey,
-              name: metadata.name || metadata.display_name || 'Anonymous',
-              bio: metadata.about || '',
-              avatar: metadata.picture || '/icons/icon-192x192.png',
+              name: (typeof meta.name === 'string' && meta.name) || (typeof meta.display_name === 'string' && meta.display_name) || 'Anonymous',
+              bio: typeof meta.about === 'string' ? meta.about : '',
+              avatar: typeof meta.picture === 'string' ? meta.picture : '/icons/icon-192x192.png',
               interests: belongsToInterests,
             });
           }
@@ -196,10 +204,10 @@ export class Followset {
   /**
    * Parse profile metadata from event content
    */
-  private parseProfileMetadata(content: string): any {
+  private parseProfileMetadata(content: string): ParsedProfileMetadata | null {
     try {
-      return JSON.parse(content);
-    } catch (error) {
+      return JSON.parse(content) as ParsedProfileMetadata;
+    } catch {
       return null;
     }
   }

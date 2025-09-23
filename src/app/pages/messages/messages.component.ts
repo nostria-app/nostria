@@ -592,10 +592,10 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         msgs.map(msg =>
           msg.id === pendingId
             ? {
-                ...finalMessage,
-                pending: false,
-                received: true,
-              }
+              ...finalMessage,
+              pending: false,
+              received: true,
+            }
             : msg
         )
       );
@@ -789,7 +789,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       const signedEvent = await this.nostr.signEvent(event);
 
       // Publish to relays
-      await this.publishToRelays(signedEvent, userRelay);
+      await this.publishToRelays(signedEvent, userRelay, myPubkey);
 
       // Return the message object
       return {
@@ -910,7 +910,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       // const signedGiftWrapSelf = finalizeEvent(giftWrapSelf, ephemeralKey);
 
       // Publish the gift wrap to relays of the recipient
-      await this.publishToUserRelays(signedGiftWrap, userRelay);
+      await this.publishToUserRelays(signedGiftWrap, userRelay, myPubkey);
 
       // Publish the gift wrap to account relays, so the chat can be discovered on other devices.
       await this.publishToAccountRelays(signedGiftWrap2);
@@ -934,16 +934,16 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   /**
    * Publish an event to multiple relays
    */
-  private async publishToRelays(event: NostrEvent, userRelay: UserRelayService): Promise<void> {
-    const promisesUser = userRelay.publish(event);
+  private async publishToRelays(event: NostrEvent, userRelay: UserRelayService, pubkey: string): Promise<void> {
+    const promisesUser = userRelay.publish(pubkey, event);
     const promisesAccount = this.accountRelay.publish(event);
 
     // Wait for all publish attempts to complete
     await Promise.allSettled([promisesUser, promisesAccount]);
   }
 
-  private async publishToUserRelays(event: NostrEvent, userRelay: UserRelayService): Promise<void> {
-    const promisesUser = userRelay.publish(event);
+  private async publishToUserRelays(event: NostrEvent, userRelay: UserRelayService, pubkey: string): Promise<void> {
+    const promisesUser = userRelay.publish(pubkey, event);
 
     // Wait for all publish attempts to complete
     await Promise.allSettled([promisesUser]);

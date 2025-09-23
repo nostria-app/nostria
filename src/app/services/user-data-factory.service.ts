@@ -50,6 +50,20 @@ export class UserDataFactoryService {
   }
 
   /**
+   * Convenience helper that acquires a pooled instance, executes the async callback,
+   * and guarantees release afterwards (even on error). Prefer this for one-off
+   * reads when you can’t use OnDemandUserDataService directly.
+   */
+  async borrow<T>(pubkey: string, fn: (uds: UserDataService) => Promise<T>): Promise<T> {
+    const uds = await this.create(pubkey);
+    try {
+      return await fn(uds);
+    } finally {
+      await this.poolManager.releaseInstance(pubkey);
+    }
+  }
+
+  /**
    * Get pool statistics for debugging
    */
   getPoolStats() {

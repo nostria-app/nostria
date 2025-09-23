@@ -136,6 +136,12 @@ export class ProfileHeaderComponent {
     return this.favoritesService.isFavorite(this.currentPubkey());
   });
 
+  getUserRelays = computed(() => {
+    const pubkey = this.profileState.pubkey();
+    if (!pubkey) return [];
+    return this.profileState.relay?.getRelaysForPubkey(pubkey) || [];
+  });
+
   // Check if the current user is blocked
   isUserBlocked = computed(() => {
     const pubkey = this.currentPubkey();

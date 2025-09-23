@@ -1,30 +1,22 @@
-import { Injectable, inject, Injector } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { UserRelayService } from './relays/user-relay';
 
 @Injectable({
   providedIn: 'root',
 })
 export class UserRelayExFactoryService {
-  private injector = inject(Injector);
+  private userRelayService = inject(UserRelayService);
 
   /**
-   * Creates a new instance of UserRelayService
-   * @param config Optional configuration for the service
-   * @returns A new UserRelayService instance
+   * Returns the singleton UserRelayService instance and ensures relays are discovered for the pubkey
+   * @param pubkey The public key to discover relays for
+   * @returns The singleton UserRelayService instance
    */
   async create(pubkey: string): Promise<UserRelayService> {
-    // Create a new child injector with UserRelayService provider
-    const childInjector = Injector.create({
-      providers: [{ provide: UserRelayService, deps: [] }],
-      parent: this.injector,
-    });
+    // Ensure relays are discovered and cached for this pubkey
+    await this.userRelayService.ensureRelaysForPubkey(pubkey);
 
-    // Get the instance from the child injector
-    const service = childInjector.get(UserRelayService);
-
-    // Initialize the service with the provided pubkey and config
-    await service.initialize(pubkey);
-
-    return service;
+    // Return the singleton instance
+    return this.userRelayService;
   }
 }
