@@ -117,7 +117,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
 
   // For closest relay feature
   isCheckingRelays = signal(false);
-  
+
   // For observed relays tab
   observedRelays = computed(() => {
     return this.relaysService.observedRelaysSignal();
@@ -208,7 +208,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
     }
   }
 
-  ngOnInit() {}
+  ngOnInit() { }
 
   cleanFollowingList() {
     if (this.isCleaningFollowingList()) {
@@ -727,15 +727,17 @@ export class RelaysComponent implements OnInit, OnDestroy {
   }
 
   async clearObservedRelayData(): Promise<void> {
-    const confirmed = confirm('Are you sure you want to clear all observed relay data? This action cannot be undone.');
+    const confirmed = confirm(
+      'Are you sure you want to clear all observed relay data? This action cannot be undone.',
+    );
     if (confirmed) {
       try {
         // Clear in-memory data
         this.relaysService.clearAllStats();
-        
+
         // Refresh the observed relays signal
         await this.relaysService.loadObservedRelays();
-        
+
         this.snackBar.open('Observed relay data cleared', 'OK', { duration: 3000 });
       } catch (error) {
         this.snackBar.open('Failed to clear observed relay data', 'OK', { duration: 3000 });

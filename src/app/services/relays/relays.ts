@@ -37,7 +37,7 @@ export class RelaysService {
   constructor() {
     // Initialize with preferred relays
     this.initializePreferredRelays();
-    
+
     // Load observed relays from storage
     this.loadObservedRelays();
   }
@@ -68,7 +68,7 @@ export class RelaysService {
 
       this.relayStats.set(normalizedUrl, stats);
       this.updateSignals();
-      
+
       // Save to storage
       this.saveRelayStatsToStorage(stats);
     }
@@ -91,7 +91,7 @@ export class RelaysService {
       }
 
       this.updateSignals();
-      
+
       // Save to storage
       this.saveRelayStatsToStorage(stats);
     }
@@ -109,7 +109,7 @@ export class RelaysService {
       stats.lastConnectionRetry = this.utilities.currentDate();
       stats.connectionAttempts++;
       this.updateSignals();
-      
+
       // Save to storage
       this.saveRelayStatsToStorage(stats);
     }
@@ -126,7 +126,7 @@ export class RelaysService {
     if (stats) {
       stats.eventsReceived++;
       this.updateSignals();
-      
+
       // Save to storage
       this.saveRelayStatsToStorage(stats);
     }
@@ -327,15 +327,15 @@ export class RelaysService {
     try {
       const existing = await this.storage.getObservedRelay(stats.url);
       const observedStats = this.toObservedRelayStats(stats);
-      
+
       if (existing) {
         // Preserve the first observed time and merge with existing NIP-11 info
         observedStats.firstObserved = existing.firstObserved;
         observedStats.nip11 = existing.nip11;
       }
-      
+
       await this.storage.saveObservedRelay(observedStats);
-      
+
       // Update the signal with fresh data
       this.loadObservedRelays();
     } catch (error) {
@@ -353,7 +353,9 @@ export class RelaysService {
   /**
    * Get observed relays sorted by criteria
    */
-  async getObservedRelaysSorted(sortBy: 'eventsReceived' | 'lastUpdated' | 'firstObserved' = 'lastUpdated'): Promise<ObservedRelayStats[]> {
+  async getObservedRelaysSorted(
+    sortBy: 'eventsReceived' | 'lastUpdated' | 'firstObserved' = 'lastUpdated',
+  ): Promise<ObservedRelayStats[]> {
     return await this.storage.getObservedRelaysSorted(sortBy);
   }
 
@@ -367,7 +369,7 @@ export class RelaysService {
 
       // Add to our relay stats if not already present
       this.addRelay(normalizedUrl);
-      
+
       // Update pubkey-relay mapping in storage
       await this.storage.updatePubkeyRelayMappingFromHint(pubkey, normalizedUrl);
     }
@@ -383,7 +385,7 @@ export class RelaysService {
   /**
    * Clean up old relay data
    */
-  async cleanupOldRelayData(olderThanDays: number = 30): Promise<void> {
+  async cleanupOldRelayData(olderThanDays = 30): Promise<void> {
     await this.storage.cleanupOldPubkeyRelayMappings(olderThanDays);
   }
 

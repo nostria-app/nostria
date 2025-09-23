@@ -352,13 +352,13 @@ export abstract class RelayServiceBase {
       return event;
     } catch (error) {
       this.logger.error('Error fetching events', error);
-      
+
       // Track connection retries for failed connections
       urls.forEach((url) => {
         this.relaysService.recordConnectionRetry(url);
         this.relaysService.updateRelayConnection(url, false);
       });
-      
+
       return null;
     } finally {
       this.releaseSemaphore();
