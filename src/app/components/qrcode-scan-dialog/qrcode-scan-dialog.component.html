@@ -11,58 +11,67 @@
 
       <!-- Scanning indicator - top center -->
       @if (isScanning()) {
-        <div class="scanning-indicator">
-          <mat-icon>qr_code_scanner</mat-icon>
-          Scanning for QR codes...
+      <div class="scanning-indicator">
+        <mat-icon>qr_code_scanner</mat-icon>
+        Scanning for QR codes...
+      </div>
+      }
+
+      <!-- Debug info panel - top left -->
+      @if (debugInfo()) {
+      <div class="debug-panel">
+        <div class="debug-info">
+          <mat-icon>bug_report</mat-icon>
+          <span>{{ debugInfo() }}</span>
         </div>
+        @if (scanningActive()) {
+        <div class="debug-stats">
+          <span>📊 Frames: {{ framesScanned() }}</span>
+          @if (lastScanAttempt()) {
+          <span>🕒 Last: {{ timeSinceLastScan() | number:'1.0-1' }}s ago</span>
+          }
+        </div>
+        }
+      </div>
       }
 
       <!-- Camera controls - bottom center -->
       @if (availableCameras().length > 1) {
-        <div class="camera-controls">
-          <button
-            mat-raised-button
-            color="primary"
-            (click)="switchCamera()"
-            [disabled]="!isScanning()"
-          >
-            <mat-icon>switch_camera</mat-icon>
-            Switch Camera ({{ currentCameraIndex() + 1 }}/{{ availableCameras().length }})
-          </button>
-          @if (currentDevice()) {
-            <div class="camera-info">Current: {{ currentDevice()?.label || 'Unknown camera' }}</div>
-          }
-        </div>
+      <div class="camera-controls">
+        <button mat-raised-button color="primary" (click)="switchCamera()" [disabled]="!isScanning()">
+          <mat-icon>switch_camera</mat-icon>
+          Switch Camera ({{ currentCameraIndex() + 1 }}/{{ availableCameras().length }})
+        </button>
+        @if (currentDevice()) {
+        <div class="camera-info">Current: {{ currentDevice()?.label || 'Unknown camera' }}</div>
+        }
+      </div>
       }
     </div>
 
     <!-- Error panel - outside camera container -->
     @if (errorMessage()) {
-      <div class="error-panel">
-        <div class="error-message">
-          <mat-icon>error</mat-icon>
-          {{ errorMessage() }}
-        </div>
-
-        @if (availableCameras().length > 0) {
-          <div class="camera-selection">
-            <h3>Try a different camera:</h3>
-            <div class="camera-buttons">
-              @for (camera of availableCameras(); track camera.deviceId) {
-                <button
-                  mat-raised-button
-                  [color]="currentDevice()?.deviceId === camera.deviceId ? 'primary' : 'basic'"
-                  (click)="tryDifferentCamera(camera.deviceId)"
-                  class="camera-option-button"
-                >
-                  <mat-icon>videocam</mat-icon>
-                  {{ camera.label }}
-                </button>
-              }
-            </div>
-          </div>
-        }
+    <div class="error-panel">
+      <div class="error-message">
+        <mat-icon>error</mat-icon>
+        {{ errorMessage() }}
       </div>
+
+      @if (availableCameras().length > 0) {
+      <div class="camera-selection">
+        <h3>Try a different camera:</h3>
+        <div class="camera-buttons">
+          @for (camera of availableCameras(); track camera.deviceId) {
+          <button mat-raised-button [color]="currentDevice()?.deviceId === camera.deviceId ? 'primary' : 'basic'"
+            (click)="tryDifferentCamera(camera.deviceId)" class="camera-option-button">
+            <mat-icon>videocam</mat-icon>
+            {{ camera.label }}
+          </button>
+          }
+        </div>
+      </div>
+      }
+    </div>
     }
   </mat-dialog-content>
 </div>
