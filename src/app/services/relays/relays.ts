@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, inject, signal, effect } from '@angular/core';
 import { UtilitiesService } from '../utilities.service';
 import { StorageService, ObservedRelayStats } from '../storage.service';
 import { LocalSettingsService } from '../local-settings.service';
@@ -38,8 +38,12 @@ export class RelaysService {
     // Initialize with preferred relays
     this.initializePreferredRelays();
 
-    // Load observed relays from storage
-    this.loadObservedRelays();
+    // Load observed relays only when the storage is initialized
+    effect(() => {
+      if (this.storage.initialized()) {
+        this.loadObservedRelays();
+      }
+    });
   }
 
   private initializePreferredRelays(): void {
