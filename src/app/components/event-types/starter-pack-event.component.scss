@@ -46,15 +46,57 @@
         gap: 16px;
 
         .user-item {
+          position: relative;
           border: 1px solid var(--mat-app-outline-variant);
           border-radius: 8px;
-          padding: 12px;
           background-color: var(--mat-app-surface);
           transition: all 0.2s ease;
+          overflow: hidden;
 
           &:hover {
             border-color: var(--mat-app-primary);
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+          }
+
+          .user-content {
+            padding: 12px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+
+            &:hover {
+              background-color: var(--mat-app-surface-variant);
+            }
+
+            &:focus {
+              outline: 2px solid var(--mat-app-primary);
+              outline-offset: -2px;
+              background-color: var(--mat-app-surface-variant);
+            }
+          }
+
+          .user-actions {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            z-index: 2;
+
+            .follow-button {
+              min-width: 32px;
+              width: 32px;
+              height: 32px;
+              box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+
+              mat-icon {
+                font-size: 16px;
+                width: 16px;
+                height: 16px;
+              }
+
+              &.following {
+                background-color: var(--mat-app-surface-variant);
+                color: var(--mat-app-on-surface-variant);
+              }
+            }
           }
         }
       }
