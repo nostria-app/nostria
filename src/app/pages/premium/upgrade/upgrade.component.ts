@@ -106,7 +106,7 @@ export class UpgradeComponent implements OnDestroy {
       this.selectedTier()?.details?.pricing?.[this.selectedPaymentOption() || 'monthly'] || {
         priceCents: 0,
         currency: 'USD',
-      },
+      }
   );
   selectedTierTill = computed(() => {
     if (!this.selectedTier() || !this.selectedPaymentOption()) return '';
@@ -126,8 +126,8 @@ export class UpgradeComponent implements OnDestroy {
         this.accountService
           .getTiers()
           .pipe(takeUntil(this.destroy$))
-          .subscribe((tiersObj) => {
-            const tiers = Object.values(tiersObj).map((tier) => {
+          .subscribe(tiersObj => {
+            const tiers = Object.values(tiersObj).map(tier => {
               return {
                 key: tier.tier,
                 details: tier,
@@ -151,14 +151,14 @@ export class UpgradeComponent implements OnDestroy {
       ?.valueChanges.pipe(
         takeUntil(this.destroy$),
         debounceTime(300), // Wait 300ms after last keystroke
-        switchMap((value) => {
+        switchMap(value => {
           const trimmedValue = (value || '').trim();
           if (!trimmedValue) {
             return of({ success: true, message: '' });
           }
           this.isCheckingUsername.set(true);
           return from(this.usernameService.isUsernameAvailable(trimmedValue));
-        }),
+        })
       )
       .subscribe(({ success, message }) => {
         this.isCheckingUsername.set(false);
@@ -213,7 +213,7 @@ export class UpgradeComponent implements OnDestroy {
       console.error(
         'No price found for selected tier and payment option ',
         selectedTier.key,
-        selectedPaymentOption,
+        selectedPaymentOption
       );
       return;
     }
@@ -316,7 +316,7 @@ export class UpgradeComponent implements OnDestroy {
       this.paymentService.getPayment({
         paymentId: paymentInvoice.id,
         pubkey: this.accountState.pubkey(),
-      }),
+      })
     );
 
     if (payment.status === 'paid') {
@@ -356,7 +356,7 @@ export class UpgradeComponent implements OnDestroy {
             username: this.usernameFormGroup.get('username')?.value,
             paymentId: this.paymentInvoice()!.id,
           },
-        }),
+        })
       );
       this.stepComplete.set({
         ...this.stepComplete(),
@@ -437,7 +437,7 @@ export class UpgradeComponent implements OnDestroy {
   // Helper for template: get human-readable features for a tier
   getFeatureDescriptions(tier: TierDisplay): string[] {
     if (!tier.details.entitlements?.features) return [];
-    return tier.details.entitlements.features.map((feature) => feature.label || feature.key);
+    return tier.details.entitlements.features.map(feature => feature.label || feature.key);
   }
 
   // Helper for template: get pricing for a tier and billing period

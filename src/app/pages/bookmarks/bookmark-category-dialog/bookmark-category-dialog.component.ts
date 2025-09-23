@@ -68,10 +68,10 @@ export class BookmarkCategoryDialogComponent {
 
   constructor(
     @Inject(MAT_DIALOG_DATA) public data: DialogData,
-    private dialogRef: MatDialogRef<BookmarkCategoryDialogComponent>,
+    private dialogRef: MatDialogRef<BookmarkCategoryDialogComponent>
   ) {
     // Skip the "All" category which is always fixed
-    const categoriesWithoutAll = data.categories.filter((cat) => cat.id !== 'all');
+    const categoriesWithoutAll = data.categories.filter(cat => cat.id !== 'all');
     this.categories.set(categoriesWithoutAll);
     this.logger.debug('BookmarkCategoryDialog initialized with categories:', this.categories());
   }
@@ -89,7 +89,7 @@ export class BookmarkCategoryDialogComponent {
       .substring(0, 20);
 
     // Check if ID already exists
-    if (this.categories().some((cat) => cat.id === id)) {
+    if (this.categories().some(cat => cat.id === id)) {
       this.logger.debug('Category with this name already exists');
       return;
     }
@@ -100,7 +100,7 @@ export class BookmarkCategoryDialogComponent {
       color: this.newCategory.color,
     };
 
-    this.categories.update((categories) => [...categories, newCategory]);
+    this.categories.update(categories => [...categories, newCategory]);
     this.newCategory.name = '';
     this.newCategory.color = this.availableColors[0];
     this.logger.debug('Category added:', newCategory);
@@ -125,7 +125,7 @@ export class BookmarkCategoryDialogComponent {
       return;
     }
 
-    this.categories.update((categories) => {
+    this.categories.update(categories => {
       const updated = [...categories];
       const category = updated[this.editingCategory!.index];
 
@@ -143,7 +143,7 @@ export class BookmarkCategoryDialogComponent {
   }
 
   deleteCategory(index: number): void {
-    this.categories.update((categories) => {
+    this.categories.update(categories => {
       const updated = [...categories];
       updated.splice(index, 1);
       return updated;

@@ -84,7 +84,7 @@ export class AccountStateService implements OnDestroy {
     if (!pubkey) return undefined;
 
     const subs = this.subscriptions();
-    return subs.find((sub) => sub.pubkey === pubkey);
+    return subs.find(sub => sub.pubkey === pubkey);
   });
 
   hasActiveSubscription = computed(() => {
@@ -138,10 +138,10 @@ export class AccountStateService implements OnDestroy {
       const accounts = this.accounts();
       if (accounts.length > 0 && !this.isPreloadingProfiles) {
         // Check if the set of accounts has actually changed
-        const currentPubkeys = new Set(accounts.map((a) => a.pubkey));
+        const currentPubkeys = new Set(accounts.map(a => a.pubkey));
         const hasSameAccounts =
           currentPubkeys.size === this.lastPreloadedAccountPubkeys.size &&
-          [...currentPubkeys].every((pubkey) => this.lastPreloadedAccountPubkeys.has(pubkey));
+          [...currentPubkeys].every(pubkey => this.lastPreloadedAccountPubkeys.has(pubkey));
 
         if (!hasSameAccounts) {
           // REMOVED, don't preload profiles.
@@ -181,12 +181,10 @@ export class AccountStateService implements OnDestroy {
     }
 
     // Remove the pubkey from the following list in the event
-    followingEvent.tags = followingEvent.tags.filter(
-      (tag) => !(tag[0] === 'p' && tag[1] === pubkey),
-    );
+    followingEvent.tags = followingEvent.tags.filter(tag => !(tag[0] === 'p' && tag[1] === pubkey));
 
     // Remove from following list
-    this.followingList.update((list) => list.filter((p) => p !== pubkey));
+    this.followingList.update(list => list.filter(p => p !== pubkey));
 
     // Publish the event to update the following list
     try {
@@ -264,7 +262,7 @@ export class AccountStateService implements OnDestroy {
 
     // Filter out pubkeys that are already being followed
     const currentFollowing = this.followingList();
-    const newPubkeys = pubkeyArray.filter((pubkey) => !currentFollowing.includes(pubkey));
+    const newPubkeys = pubkeyArray.filter(pubkey => !currentFollowing.includes(pubkey));
 
     if (newPubkeys.length === 0) {
       console.log('All specified pubkeys are already being followed');
@@ -275,28 +273,28 @@ export class AccountStateService implements OnDestroy {
     // Ensure we keep original 'content' and relays/pet names.
     let followingEvent: Event | UnsignedEvent | null = await this.storage.getEventByPubkeyAndKind(
       [account.pubkey],
-      3,
+      3
     );
 
     if (!followingEvent) {
       console.warn(
         'No existing following event found. This might result in overwriting this event on unknown relays.',
-        newPubkeys,
+        newPubkeys
       );
       // Create new event with all new pubkeys
-      const tags = newPubkeys.map((pubkey) => ['p', pubkey]);
+      const tags = newPubkeys.map(pubkey => ['p', pubkey]);
       followingEvent = this.utilities.createEvent(kinds.Contacts, '', tags, account.pubkey);
     } else {
       // Add all new pubkeys to the following list in the event
       for (const pubkey of newPubkeys) {
-        if (!followingEvent.tags.some((tag) => tag[0] === 'p' && tag[1] === pubkey)) {
+        if (!followingEvent.tags.some(tag => tag[0] === 'p' && tag[1] === pubkey)) {
           followingEvent.tags.push(['p', pubkey]);
         }
       }
     }
 
     // Add all new pubkeys to following list
-    this.followingList.update((list) => [...list, ...newPubkeys]);
+    this.followingList.update(list => [...list, ...newPubkeys]);
 
     // Publish the event to update the following list (single operation)
     try {
@@ -305,7 +303,7 @@ export class AccountStateService implements OnDestroy {
     } catch (error) {
       console.error(`Failed to follow pubkey(s):`, error);
       // Rollback the local state if publish failed
-      this.followingList.update((list) => list.filter((pubkey) => !newPubkeys.includes(pubkey)));
+      this.followingList.update(list => list.filter(pubkey => !newPubkeys.includes(pubkey)));
     }
   }
 
@@ -340,25 +338,25 @@ export class AccountStateService implements OnDestroy {
   updateAccount(account: NostrUser) {
     // Update lastUsed timestamp
     const allAccounts = this.accounts();
-    const existingAccountIndex = allAccounts.findIndex((u) => u.pubkey === account.pubkey);
+    const existingAccountIndex = allAccounts.findIndex(u => u.pubkey === account.pubkey);
 
     if (existingAccountIndex >= 0) {
-      this.accounts.update((u) =>
-        u.map((existingUser) => (existingUser.pubkey === account.pubkey ? account : existingUser)),
+      this.accounts.update(u =>
+        u.map(existingUser => (existingUser.pubkey === account.pubkey ? account : existingUser))
       );
     }
   }
 
   loadSubscriptions() {
     const subscriptions = this.localStorage.getObject<Account[]>(
-      this.appState.SUBSCRIPTIONS_STORAGE_KEY,
+      this.appState.SUBSCRIPTIONS_STORAGE_KEY
     );
     this.subscriptions.set(subscriptions || []);
   }
 
   addSubscription(account: Account) {
     const currentSubscriptions = this.subscriptions();
-    const existingIndex = currentSubscriptions.findIndex((sub) => sub.pubkey === account.pubkey);
+    const existingIndex = currentSubscriptions.findIndex(sub => sub.pubkey === account.pubkey);
 
     if (existingIndex >= 0) {
       // Update existing subscription
@@ -398,14 +396,14 @@ export class AccountStateService implements OnDestroy {
       .getAccount(pubkey, new HttpContext().set(USE_NIP98, true))
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (accountObj) => {
+        next: accountObj => {
           // Create a copy with lastRetrieved property
           const accountWithTimestamp = { ...accountObj, retrieved: Date.now() };
 
           // Add the subscription to the local storage
           this.addSubscription(accountWithTimestamp);
         },
-        error: (err) => {
+        error: err => {
           console.error('Failed to fetch account:', err);
 
           if (subscription) {
@@ -444,7 +442,7 @@ export class AccountStateService implements OnDestroy {
           const profile = await this.loadAccountProfileInternal(account.pubkey);
           if (profile) {
             // Update the profiles map
-            this.accountProfiles.update((profiles) => {
+            this.accountProfiles.update(profiles => {
               const newProfiles = new Map(profiles);
               newProfiles.set(account.pubkey, profile);
               return newProfiles;
@@ -457,7 +455,7 @@ export class AccountStateService implements OnDestroy {
       }
 
       // Update the tracking set
-      this.lastPreloadedAccountPubkeys = new Set(accounts.map((a) => a.pubkey));
+      this.lastPreloadedAccountPubkeys = new Set(accounts.map(a => a.pubkey));
     } finally {
       this.isPreloadingProfiles = false;
     }
@@ -557,9 +555,9 @@ export class AccountStateService implements OnDestroy {
     try {
       // Use parallel processing with the optimized discovery queue
       await Promise.allSettled(
-        pubkeys.map(async (pubkey) => {
+        pubkeys.map(async pubkey => {
           try {
-            this.profileProcessingState.update((state) => ({
+            this.profileProcessingState.update(state => ({
               ...state,
               currentProfile: pubkey,
             }));
@@ -570,18 +568,18 @@ export class AccountStateService implements OnDestroy {
               this.addToCache(pubkey, profile);
             }
 
-            this.profileProcessingState.update((state) => ({
+            this.profileProcessingState.update(state => ({
               ...state,
               processed: state.processed + 1,
             }));
           } catch (error) {
             console.error(`Failed to cache profile for ${pubkey}:`, error);
-            this.profileProcessingState.update((state) => ({
+            this.profileProcessingState.update(state => ({
               ...state,
               processed: state.processed + 1,
             }));
           }
-        }),
+        })
       );
     } catch (error) {
       console.error('Failed to start profile processing:', error);
@@ -746,7 +744,7 @@ export class AccountStateService implements OnDestroy {
   async loadProfilesFromStorageToCache(
     pubkey: string,
     dataService: DataService,
-    storageService: StorageService,
+    storageService: StorageService
   ): Promise<void> {
     if (!this.hasProfileDiscoveryBeenDone(pubkey)) {
       return; // Don't load if discovery hasn't been done
@@ -784,25 +782,25 @@ export class AccountStateService implements OnDestroy {
   mutedAccounts = computed(() => {
     const list = this.muteList();
     if (!list || !list.tags) return [];
-    return list.tags.filter((tag) => tag[0] === 'p').map((tag) => tag[1]);
+    return list.tags.filter(tag => tag[0] === 'p').map(tag => tag[1]);
   });
 
   mutedTags = computed(() => {
     const list = this.muteList();
     if (!list || !list.tags) return [];
-    return list.tags.filter((tag) => tag[0] === 't').map((tag) => tag[1]);
+    return list.tags.filter(tag => tag[0] === 't').map(tag => tag[1]);
   });
 
   mutedWords = computed(() => {
     const list = this.muteList();
     if (!list || !list.tags) return [];
-    return list.tags.filter((tag) => tag[0] === 'word').map((tag) => tag[1]);
+    return list.tags.filter(tag => tag[0] === 'word').map(tag => tag[1]);
   });
 
   mutedThreads = computed(() => {
     const list = this.muteList();
     if (!list || !list.tags) return [];
-    return list.tags.filter((tag) => tag[0] === 'e').map((tag) => tag[1]);
+    return list.tags.filter(tag => tag[0] === 'e').map(tag => tag[1]);
   });
 
   // Method to update mute list
@@ -815,7 +813,7 @@ export class AccountStateService implements OnDestroy {
       return;
     }
 
-    return this.mutedAccounts().find((account) => account === event.pubkey);
+    return this.mutedAccounts().find(account => account === event.pubkey);
   }
 
   async mutePubkey(pubkey: string) {

@@ -100,13 +100,13 @@ describe('MessagingService', () => {
     const conversationKeyEmpheral1 = v2.utils.getConversationKey(ephemeralKey, receiverKeyPubkey);
     const giftWrapContent1 = v2.encrypt(
       JSON.stringify(signedSealedMessage),
-      conversationKeyEmpheral1,
+      conversationKeyEmpheral1
     );
 
     const conversationKeyEmpheral2 = v2.utils.getConversationKey(ephemeralKey, myPubkey);
     const giftWrapContent2 = v2.encrypt(
       JSON.stringify(signedSealedMessage2),
-      conversationKeyEmpheral2,
+      conversationKeyEmpheral2
     );
 
     const giftWrap = {
@@ -137,34 +137,34 @@ describe('MessagingService', () => {
     // Use nostr-tools nip44 v2 decryption
     const conversationKeyDecrypt = v2.utils.getConversationKey(receiverKey, signedGiftWrap.pubkey);
     const decryptedGiftWrap = JSON.parse(
-      v2.decrypt(signedGiftWrap.content, conversationKeyDecrypt),
+      v2.decrypt(signedGiftWrap.content, conversationKeyDecrypt)
     );
 
     // The receiver & the author should both be able to decrypt the content of kind 13.
     const receiverConversationKey = v2.utils.getConversationKey(
       receiverKey,
-      decryptedGiftWrap.pubkey,
+      decryptedGiftWrap.pubkey
     );
     const decryptedMessageEvent = JSON.parse(
-      v2.decrypt(decryptedGiftWrap.content, receiverConversationKey),
+      v2.decrypt(decryptedGiftWrap.content, receiverConversationKey)
     );
 
     // Now the sender will decrypt his own gift wrap to get the original message.
     const conversationKeyDecryptSelf = v2.utils.getConversationKey(
       myKey,
-      signedGiftWrapSelf.pubkey,
+      signedGiftWrapSelf.pubkey
     );
     const decryptedGiftWrapSelf = JSON.parse(
-      v2.decrypt(signedGiftWrapSelf.content, conversationKeyDecryptSelf),
+      v2.decrypt(signedGiftWrapSelf.content, conversationKeyDecryptSelf)
     );
 
     // The receiver & the author should both be able to decrypt the content of kind 13.
     const receiverConversationKey2 = v2.utils.getConversationKey(
       myKey,
-      decryptedGiftWrapSelf.pubkey,
+      decryptedGiftWrapSelf.pubkey
     );
     const decryptedMessageEvent2 = JSON.parse(
-      v2.decrypt(decryptedGiftWrapSelf.content, receiverConversationKey2),
+      v2.decrypt(decryptedGiftWrapSelf.content, receiverConversationKey2)
     );
 
     expect(decryptedMessageEvent2.id).toEqual(decryptedMessageEvent.id);

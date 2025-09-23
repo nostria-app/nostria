@@ -1,164 +1,179 @@
 @if (!app.authenticated()) {
-<app-introduction></app-introduction>
+  <app-introduction></app-introduction>
 } @else if (hasEmptyFollowingList()) {
-<!-- Show followset component when user has empty following list -->
-<div class="followset-container">
-  @if (isLoadingInterests()) {
-  <!-- Show loading indicator while interests are being fetched -->
-  <div class="loading-container">
-    <mat-spinner diameter="40"></mat-spinner>
-    <p>Loading interests...</p>
+  <!-- Show followset component when user has empty following list -->
+  <div class="followset-container">
+    @if (isLoadingInterests()) {
+      <!-- Show loading indicator while interests are being fetched -->
+      <div class="loading-container">
+        <mat-spinner diameter="40"></mat-spinner>
+        <p>Loading interests...</p>
+      </div>
+    } @else {
+      <app-followset
+        title="Welcome! Let's get you started"
+        [availableInterests]="availableInterests()"
+        [suggestedProfiles]="suggestedProfiles()"
+        [selectedInterests]="selectedInterests()"
+        [followingProfiles]="followingProfiles()"
+        [detectedRegion]="detectedRegion()"
+        (interestToggled)="toggleInterest($event)"
+        (completed)="onFollowsetComplete($event)"
+      ></app-followset>
+    }
   </div>
-  } @else {
-  <app-followset title="Welcome! Let's get you started" [availableInterests]="availableInterests()"
-    [suggestedProfiles]="suggestedProfiles()" [selectedInterests]="selectedInterests()"
-    [followingProfiles]="followingProfiles()" [detectedRegion]="detectedRegion()"
-    (interestToggled)="toggleInterest($event)" (completed)="onFollowsetComplete($event)"></app-followset>
-  }
-</div>
 } @else {
-<div class="home-container" [ngClass]="columnLayout()">
-  <!-- Header Section -->
-  <header class="header-section">
-    <div class="title-section">
-      <!-- Feed Selector -->
-      <div class="feed-selector">
-        <div class="feed-tabs">
-          @if (isMobileView()) {
-          <div class="mobile-selectors">
-            <button mat-stroked-button [matMenuTriggerFor]="feedMenu">
-              <mat-icon>{{ feedIcon() }}</mat-icon>
-              {{ feedLabel() }}
-            </button>
-
-            <mat-menu #feedMenu="matMenu">
-              @for (feed of feeds(); track feed.id) {
-              <button mat-menu-item (click)="selectFeed(feed.id)">
-                <mat-icon>{{ feed.icon }}</mat-icon>
-                <span>{{ feed.label }}</span>
-              </button>
-              }
-              <mat-divider></mat-divider>
-              <button mat-menu-item (click)="addNewFeed()">
-                <mat-icon>add</mat-icon>
-                <span>New Feed</span>
-              </button>
-              <button mat-menu-item (click)="editCurrentFeed()" [disabled]="!activeFeed()">
-                <mat-icon>edit</mat-icon>
-                <span>Edit Feed</span>
-              </button>
-              <button mat-menu-item (click)="deleteCurrentFeed()" [disabled]="!activeFeed()">
-                <mat-icon>delete</mat-icon>
-                <span>Delete Feed</span>
-              </button>
-              <button mat-menu-item (click)="resetFeeds()">
-                <mat-icon>restore</mat-icon>
-                <span>Reset Feeds</span>
-              </button>
-              <mat-divider></mat-divider>
-              <button mat-menu-item routerLink="/settings/algorithm">
-                <mat-icon>model_training</mat-icon>
-                <span>Algorithm</span>
-              </button>
-            </mat-menu>
-
-            <!-- Column Selector for Mobile -->
-            @if (columns().length > 0) {
-            <div class="column-selector-container">
-              @if (columns().length > 1) {
-              <button mat-stroked-button [matMenuTriggerFor]="columnMenu">
-                <mat-icon>{{ columns()[visibleColumnIndex()].icon }}</mat-icon>
-                {{ columns()[visibleColumnIndex()].label }}
-              </button>
-              } @else {
-              <button mat-stroked-button [matMenuTriggerFor]="columnMenu">
-                <mat-icon>view_column</mat-icon>
-                Columns
-              </button>
-              }
-
-              <mat-menu #columnMenu="matMenu">
-                @if (columns().length > 1) {
-                @for (column of columns(); track column.id; let i = $index) {
-                <button mat-menu-item (click)="selectColumn(i)">
-                  <mat-icon>{{ column.icon }}</mat-icon>
-                  <span>{{ column.label }}</span>
+  <div class="home-container" [ngClass]="columnLayout()">
+    <!-- Header Section -->
+    <header class="header-section">
+      <div class="title-section">
+        <!-- Feed Selector -->
+        <div class="feed-selector">
+          <div class="feed-tabs">
+            @if (isMobileView()) {
+              <div class="mobile-selectors">
+                <button mat-stroked-button [matMenuTriggerFor]="feedMenu">
+                  <mat-icon>{{ feedIcon() }}</mat-icon>
+                  {{ feedLabel() }}
                 </button>
+
+                <mat-menu #feedMenu="matMenu">
+                  @for (feed of feeds(); track feed.id) {
+                    <button mat-menu-item (click)="selectFeed(feed.id)">
+                      <mat-icon>{{ feed.icon }}</mat-icon>
+                      <span>{{ feed.label }}</span>
+                    </button>
+                  }
+                  <mat-divider></mat-divider>
+                  <button mat-menu-item (click)="addNewFeed()">
+                    <mat-icon>add</mat-icon>
+                    <span>New Feed</span>
+                  </button>
+                  <button mat-menu-item (click)="editCurrentFeed()" [disabled]="!activeFeed()">
+                    <mat-icon>edit</mat-icon>
+                    <span>Edit Feed</span>
+                  </button>
+                  <button mat-menu-item (click)="deleteCurrentFeed()" [disabled]="!activeFeed()">
+                    <mat-icon>delete</mat-icon>
+                    <span>Delete Feed</span>
+                  </button>
+                  <button mat-menu-item (click)="resetFeeds()">
+                    <mat-icon>restore</mat-icon>
+                    <span>Reset Feeds</span>
+                  </button>
+                  <mat-divider></mat-divider>
+                  <button mat-menu-item routerLink="/settings/algorithm">
+                    <mat-icon>model_training</mat-icon>
+                    <span>Algorithm</span>
+                  </button>
+                </mat-menu>
+
+                <!-- Column Selector for Mobile -->
+                @if (columns().length > 0) {
+                  <div class="column-selector-container">
+                    @if (columns().length > 1) {
+                      <button mat-stroked-button [matMenuTriggerFor]="columnMenu">
+                        <mat-icon>{{ columns()[visibleColumnIndex()].icon }}</mat-icon>
+                        {{ columns()[visibleColumnIndex()].label }}
+                      </button>
+                    } @else {
+                      <button mat-stroked-button [matMenuTriggerFor]="columnMenu">
+                        <mat-icon>view_column</mat-icon>
+                        Columns
+                      </button>
+                    }
+
+                    <mat-menu #columnMenu="matMenu">
+                      @if (columns().length > 1) {
+                        @for (column of columns(); track column.id; let i = $index) {
+                          <button mat-menu-item (click)="selectColumn(i)">
+                            <mat-icon>{{ column.icon }}</mat-icon>
+                            <span>{{ column.label }}</span>
+                          </button>
+                        }
+                        <mat-divider></mat-divider>
+                        <button mat-menu-item (click)="addNewColumn()">
+                          <mat-icon>add_column_right</mat-icon>
+                          <span>New Column</span>
+                        </button>
+                        <button mat-menu-item (click)="editColumn(visibleColumnIndex())">
+                          <mat-icon>edit</mat-icon>
+                          <span>Edit Column</span>
+                        </button>
+                        <button mat-menu-item (click)="removeColumn(visibleColumnIndex())">
+                          <mat-icon>delete</mat-icon>
+                          <span>Remove Column</span>
+                        </button>
+                      }
+                    </mat-menu>
+                  </div>
                 }
-                <mat-divider></mat-divider>
+              </div>
+            } @else {
+              <button mat-icon-button (click)="addNewFeed()" matTooltip="Add feed">
+                <mat-icon>add</mat-icon>
+              </button>
+
+              @for (feed of feeds(); track feed.id) {
+                <button
+                  class="feed-tab"
+                  mat-button
+                  [class.active]="feed.id === feedsCollectionService.activeFeedId()"
+                  (click)="selectFeed(feed.id)"
+                  [matTooltip]="feed.description || feed.label"
+                >
+                  <mat-icon>{{ feed.icon }}</mat-icon>
+                  <span>{{ feed.label }}</span>
+                </button>
+              }
+            }
+          </div>
+
+          <!-- Feed Management Actions -->
+          @if (!isMobileView()) {
+            <div class="feed-actions">
+              <button
+                mat-icon-button
+                [matMenuTriggerFor]="feedManagementMenu"
+                matTooltip="Manage feeds"
+              >
+                <mat-icon>more_vert</mat-icon>
+              </button>
+              <mat-menu #feedManagementMenu="matMenu">
                 <button mat-menu-item (click)="addNewColumn()">
                   <mat-icon>add_column_right</mat-icon>
                   <span>New Column</span>
                 </button>
-                <button mat-menu-item (click)="editColumn(visibleColumnIndex())">
+                <mat-divider></mat-divider>
+                <button mat-menu-item (click)="addNewFeed()">
+                  <mat-icon>add</mat-icon>
+                  <span>New Feed</span>
+                </button>
+                <button mat-menu-item (click)="editCurrentFeed()" [disabled]="!activeFeed()">
                   <mat-icon>edit</mat-icon>
-                  <span>Edit Column</span>
+                  <span>Edit Feed</span>
                 </button>
-                <button mat-menu-item (click)="removeColumn(visibleColumnIndex())">
+                <button mat-menu-item (click)="deleteCurrentFeed()" [disabled]="!activeFeed()">
                   <mat-icon>delete</mat-icon>
-                  <span>Remove Column</span>
+                  <span>Delete Feed</span>
                 </button>
-                }
+                <button mat-menu-item (click)="resetFeeds()">
+                  <mat-icon>restore</mat-icon>
+                  <span>Reset Feeds</span>
+                </button>
+                <mat-divider></mat-divider>
+                <button mat-menu-item routerLink="/settings/algorithm">
+                  <mat-icon>model_training</mat-icon>
+                  <span>Algorithm</span>
+                </button>
               </mat-menu>
             </div>
-            }
-          </div>
-          } @else {
-          <button mat-icon-button (click)="addNewFeed()" matTooltip="Add feed">
-            <mat-icon>add</mat-icon>
-          </button>
-
-          @for (feed of feeds(); track feed.id) {
-          <button class="feed-tab" mat-button [class.active]="feed.id === feedsCollectionService.activeFeedId()"
-            (click)="selectFeed(feed.id)" [matTooltip]="feed.description || feed.label">
-            <mat-icon>{{ feed.icon }}</mat-icon>
-            <span>{{ feed.label }}</span>
-          </button>
-          }
           }
         </div>
-
-        <!-- Feed Management Actions -->
-        @if (!isMobileView()) {
-        <div class="feed-actions">
-          <button mat-icon-button [matMenuTriggerFor]="feedManagementMenu" matTooltip="Manage feeds">
-            <mat-icon>more_vert</mat-icon>
-          </button>
-          <mat-menu #feedManagementMenu="matMenu">
-            <button mat-menu-item (click)="addNewColumn()">
-              <mat-icon>add_column_right</mat-icon>
-              <span>New Column</span>
-            </button>
-            <mat-divider></mat-divider>
-            <button mat-menu-item (click)="addNewFeed()">
-              <mat-icon>add</mat-icon>
-              <span>New Feed</span>
-            </button>
-            <button mat-menu-item (click)="editCurrentFeed()" [disabled]="!activeFeed()">
-              <mat-icon>edit</mat-icon>
-              <span>Edit Feed</span>
-            </button>
-            <button mat-menu-item (click)="deleteCurrentFeed()" [disabled]="!activeFeed()">
-              <mat-icon>delete</mat-icon>
-              <span>Delete Feed</span>
-            </button>
-            <button mat-menu-item (click)="resetFeeds()">
-              <mat-icon>restore</mat-icon>
-              <span>Reset Feeds</span>
-            </button>
-            <mat-divider></mat-divider>
-            <button mat-menu-item routerLink="/settings/algorithm">
-              <mat-icon>model_training</mat-icon>
-              <span>Algorithm</span>
-            </button>
-          </mat-menu>
-        </div>
-        }
       </div>
-    </div>
 
-    <!-- Replace with menu below -->
-    <!-- @if (isMobileView()) {
+      <!-- Replace with menu below -->
+      <!-- @if (isMobileView()) {
     <div class="column-navigation">
       <div class="column-selector">
         @for (column of columns(); track column.id; let i = $index) {
@@ -171,217 +186,263 @@
     </div>
     } -->
 
-    @if (!isMobileView()) {
-    <div class="header-actions">
-      <!-- <button mat-icon-button (click)="refreshContent()" matTooltip="Refresh content">
+      @if (!isMobileView()) {
+        <div class="header-actions">
+          <!-- <button mat-icon-button (click)="refreshContent()" matTooltip="Refresh content">
         <mat-icon>refresh</mat-icon>
       </button>
       <button mat-icon-button (click)="toggleAdvancedFilters()" matTooltip="Toggle filters">
         <mat-icon>filter_list</mat-icon>
       </button> -->
-      <button mat-icon-button (click)="addNewColumn()" matTooltip="Add column" [disabled]="feeds().length === 0">
-        <mat-icon>add_column_right</mat-icon>
-      </button>
-    </div>
-    }
-  </header>
+          <button
+            mat-icon-button
+            (click)="addNewColumn()"
+            matTooltip="Add column"
+            [disabled]="feeds().length === 0"
+          >
+            <mat-icon>add_column_right</mat-icon>
+          </button>
+        </div>
+      }
+    </header>
 
-  <!-- Columns Container with Connected Headers and Content -->
-  <div class="columns-container">
-    <!-- Scroll indicators -->
-    @if (!isMobileView() && canScrollLeft()) {
-    <div class="scroll-indicator left" (click)="scrollLeft()">
-      <mat-icon>chevron_left</mat-icon>
-    </div>
-    }
-    @if (!isMobileView() && canScrollRight()) {
-    <div class="scroll-indicator right" (click)="scrollRight()">
-      <mat-icon>chevron_right</mat-icon>
-    </div>
-    }
+    <!-- Columns Container with Connected Headers and Content -->
+    <div class="columns-container">
+      <!-- Scroll indicators -->
+      @if (!isMobileView() && canScrollLeft()) {
+        <div class="scroll-indicator left" (click)="scrollLeft()">
+          <mat-icon>chevron_left</mat-icon>
+        </div>
+      }
+      @if (!isMobileView() && canScrollRight()) {
+        <div class="scroll-indicator right" (click)="scrollRight()">
+          <mat-icon>chevron_right</mat-icon>
+        </div>
+      }
 
-    <div class="columns-wrapper" #columnsWrapper cdkDropList cdkDropListOrientation="horizontal"
-      [cdkDropListData]="columns()" (cdkDropListDropped)="onColumnDrop($event)">
+      <div
+        class="columns-wrapper"
+        #columnsWrapper
+        cdkDropList
+        cdkDropListOrientation="horizontal"
+        [cdkDropListData]="columns()"
+        (cdkDropListDropped)="onColumnDrop($event)"
+      >
+        <!-- Normal Columns with connected headers and content -->
+        @for (column of columns(); track column.id; let i = $index) {
+          <div
+            class="column-unit"
+            cdkDrag
+            [cdkDragData]="i"
+            [cdkDragDisabled]="isMobileView() || columns().length <= 1"
+            [class.visible]="!isMobileView() || (isMobileView() && i === visibleColumnIndex())"
+            [attr.aria-hidden]="isMobileView() && i !== visibleColumnIndex()"
+            (cdkDragStarted)="onDragStarted()"
+            (cdkDragEnded)="onDragEnded()"
+          >
+            <!-- Column Header (Connected to its content) -->
+            @if (!isMobileView()) {
+              <div class="column-header">
+                <div class="column-header-content">
+                  @if (columns().length > 1) {
+                    <div class="drag-handle" cdkDragHandle>
+                      <mat-icon>drag_indicator</mat-icon>
+                    </div>
+                  }
 
-      <!-- Normal Columns with connected headers and content -->
-      @for (column of columns(); track column.id; let i = $index) {
-      <div class="column-unit" cdkDrag [cdkDragData]="i" [cdkDragDisabled]="isMobileView() || columns().length <= 1"
-        [class.visible]="!isMobileView() || (isMobileView() && i === visibleColumnIndex())"
-        [attr.aria-hidden]="isMobileView() && i !== visibleColumnIndex()" (cdkDragStarted)="onDragStarted()"
-        (cdkDragEnded)="onDragEnded()">
-        <!-- Column Header (Connected to its content) -->
-        @if (!isMobileView()) {
-        <div class="column-header">
-          <div class="column-header-content">
-            @if (columns().length > 1) {
-            <div class="drag-handle" cdkDragHandle>
-              <mat-icon>drag_indicator</mat-icon>
-            </div>
-            }
+                  <mat-icon>{{ column.icon }}</mat-icon>
+                  <span class="column-title">{{ column.label }}</span>
 
-            <mat-icon>{{ column.icon }}</mat-icon>
-            <span class="column-title">{{ column.label }}</span>
-
-            <div class="column-header-actions">
-              <button mat-icon-button (click)="refreshColumn(column)" matTooltip="Refresh content">
-                <mat-icon>refresh</mat-icon>
-              </button>
-              <!-- <button mat-icon-button (click)="toggleAdvancedFilters()" matTooltip="Toggle filters">
+                  <div class="column-header-actions">
+                    <button
+                      mat-icon-button
+                      (click)="refreshColumn(column)"
+                      matTooltip="Refresh content"
+                    >
+                      <mat-icon>refresh</mat-icon>
+                    </button>
+                    <!-- <button mat-icon-button (click)="toggleAdvancedFilters()" matTooltip="Toggle filters">
                   <mat-icon>filter_list</mat-icon>
                 </button> -->
-              @if (isColumnPaused(column.id)) {
-              <button mat-icon-button (click)="continueColumn(column)" matTooltip="Resume live feed">
-                <mat-icon>play_circle</mat-icon>
-              </button>
-              } @else {
-              <button mat-icon-button (click)="pauseColumn(column)" matTooltip="Pause the feed">
-                <mat-icon>pause_circle</mat-icon>
-              </button>
-              }
+                    @if (isColumnPaused(column.id)) {
+                      <button
+                        mat-icon-button
+                        (click)="continueColumn(column)"
+                        matTooltip="Resume live feed"
+                      >
+                        <mat-icon>play_circle</mat-icon>
+                      </button>
+                    } @else {
+                      <button
+                        mat-icon-button
+                        (click)="pauseColumn(column)"
+                        matTooltip="Pause the feed"
+                      >
+                        <mat-icon>pause_circle</mat-icon>
+                      </button>
+                    }
 
-              <button mat-icon-button [matMenuTriggerFor]="columnMenu" (click)="$event.stopPropagation()">
-                <mat-icon>more_vert</mat-icon>
-              </button>
-              <mat-menu #columnMenu="matMenu">
-                <button mat-menu-item (click)="editColumn(i)">
-                  <mat-icon>edit</mat-icon>
-                  <span>Edit</span>
-                </button>
-                <button mat-menu-item (click)="removeColumn(i)">
-                  <mat-icon>delete</mat-icon>
-                  <span>Remove</span>
-                </button>
-              </mat-menu>
-            </div>
-          </div>
-        </div>
-        }
-
-        <!-- Filters Section -->
-        @if (showAdvancedFilters()) {
-        <div class="filters-section">
-          <h3>Filter by tags</h3>
-          <div class="tag-chips">
-            @for (tag of availableTags(); track $index) {
-            <mat-chip-option [selected]="selectedTags().includes(tag)" (click)="toggleTagFilter(tag)" color="primary">
-              #{{ tag }}
-            </mat-chip-option>
-            }
-          </div>
-        </div>
-        }
-
-        <!-- Column Content with Individual Scrolling -->
-        <div class="column-content">
-          <div class="column-scroll-container">
-            @if (isLoading() && !columnContentLoaded()[column.id]) {
-            <!-- Show skeleton items while content is loading -->
-            <div class="column-skeleton-items">
-              @for (item of [1,2,3,4,5,6]; track $index) {
-              <div class="feed-item-skeleton">
-                <div class="item-header-skeleton">
-                  <div class="avatar-skeleton"></div>
-                  <div class="user-info-skeleton">
-                    <div class="username-skeleton"></div>
-                    <div class="timestamp-skeleton"></div>
+                    <button
+                      mat-icon-button
+                      [matMenuTriggerFor]="columnMenu"
+                      (click)="$event.stopPropagation()"
+                    >
+                      <mat-icon>more_vert</mat-icon>
+                    </button>
+                    <mat-menu #columnMenu="matMenu">
+                      <button mat-menu-item (click)="editColumn(i)">
+                        <mat-icon>edit</mat-icon>
+                        <span>Edit</span>
+                      </button>
+                      <button mat-menu-item (click)="removeColumn(i)">
+                        <mat-icon>delete</mat-icon>
+                        <span>Remove</span>
+                      </button>
+                    </mat-menu>
                   </div>
                 </div>
-                <div class="item-content-skeleton">
-                  <div class="content-line-skeleton"></div>
-                  <div class="content-line-skeleton"></div>
-                  <div class="content-line-skeleton short"></div>
-                </div>
-                <div class="item-actions-skeleton">
-                  <div class="action-skeleton"></div>
-                  <div class="action-skeleton"></div>
-                  <div class="action-skeleton"></div>
-                  <div class="action-skeleton"></div>
-                </div>
               </div>
-              }
+            }
 
-              <!-- Loading indicator -->
-              <div class="skeleton-loading-indicator">
-                <div class="loading-dots">
-                  <span></span>
-                  <span></span>
-                  <span></span>
+            <!-- Filters Section -->
+            @if (showAdvancedFilters()) {
+              <div class="filters-section">
+                <h3>Filter by tags</h3>
+                <div class="tag-chips">
+                  @for (tag of availableTags(); track $index) {
+                    <mat-chip-option
+                      [selected]="selectedTags().includes(tag)"
+                      (click)="toggleTagFilter(tag)"
+                      color="primary"
+                    >
+                      #{{ tag }}
+                    </mat-chip-option>
+                  }
                 </div>
-                <span class="loading-text">Loading content...</span>
               </div>
-            </div>
-            } @else {
-            <div class="column-items">
-              @let columnData = feedService.feedDataReactive().get(column.id);
-              @let columnEventsData = columnEvents().get(column.id);
-              @if (columnData && columnEventsData) {
-              @for (event of columnEventsData; track event.id) {
-              <app-event [event]="event"></app-event>
-              }
-              }
-              <!-- @else {
+            }
+
+            <!-- Column Content with Individual Scrolling -->
+            <div class="column-content">
+              <div class="column-scroll-container">
+                @if (isLoading() && !columnContentLoaded()[column.id]) {
+                  <!-- Show skeleton items while content is loading -->
+                  <div class="column-skeleton-items">
+                    @for (item of [1, 2, 3, 4, 5, 6]; track $index) {
+                      <div class="feed-item-skeleton">
+                        <div class="item-header-skeleton">
+                          <div class="avatar-skeleton"></div>
+                          <div class="user-info-skeleton">
+                            <div class="username-skeleton"></div>
+                            <div class="timestamp-skeleton"></div>
+                          </div>
+                        </div>
+                        <div class="item-content-skeleton">
+                          <div class="content-line-skeleton"></div>
+                          <div class="content-line-skeleton"></div>
+                          <div class="content-line-skeleton short"></div>
+                        </div>
+                        <div class="item-actions-skeleton">
+                          <div class="action-skeleton"></div>
+                          <div class="action-skeleton"></div>
+                          <div class="action-skeleton"></div>
+                          <div class="action-skeleton"></div>
+                        </div>
+                      </div>
+                    }
+
+                    <!-- Loading indicator -->
+                    <div class="skeleton-loading-indicator">
+                      <div class="loading-dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                      </div>
+                      <span class="loading-text">Loading content...</span>
+                    </div>
+                  </div>
+                } @else {
+                  <div class="column-items">
+                    @let columnData = feedService.feedDataReactive().get(column.id);
+                    @let columnEventsData = columnEvents().get(column.id);
+                    @if (columnData && columnEventsData) {
+                      @for (event of columnEventsData; track event.id) {
+                        <app-event [event]="event"></app-event>
+                      }
+                    }
+                    <!-- @else {
                         <div class="no-events">
                           <p>No events available for this feed</p>
                         </div>
                       } -->
+                  </div>
+                }
+              </div>
             </div>
-            }
-          </div>
-        </div>
 
-        <!-- Preview for drag operation -->
-        <ng-template cdkDragPreview>
-          <div class="column-drag-preview">
-            <div class="preview-header">
-              <mat-icon>{{ column.icon }}</mat-icon>
-              <span>{{ column.label }}</span>
+            <!-- Preview for drag operation -->
+            <ng-template cdkDragPreview>
+              <div class="column-drag-preview">
+                <div class="preview-header">
+                  <mat-icon>{{ column.icon }}</mat-icon>
+                  <span>{{ column.label }}</span>
+                </div>
+              </div>
+            </ng-template>
+          </div>
+        }
+
+        <!-- Zero state when no feeds are available -->
+        @if (feeds().length === 0) {
+          <div class="empty-columns-state">
+            <div class="empty-state-content">
+              <mat-icon class="empty-state-icon">dynamic_feed</mat-icon>
+              <h2>No feeds added</h2>
+              <p>
+                Create your first feed to start organizing and viewing content from various sources.
+              </p>
+              <button
+                mat-raised-button
+                color="primary"
+                (click)="addNewFeed()"
+                class="add-first-column-btn"
+              >
+                <mat-icon>add</mat-icon>
+                Add Your First Feed
+              </button>
             </div>
           </div>
-        </ng-template>
-      </div>
-      }
+        }
 
-      <!-- Zero state when no feeds are available -->
-      @if (feeds().length === 0) {
-      <div class="empty-columns-state">
-        <div class="empty-state-content">
-          <mat-icon class="empty-state-icon">dynamic_feed</mat-icon>
-          <h2>No feeds added</h2>
-          <p>
-            Create your first feed to start organizing and viewing content from various sources.
-          </p>
-          <button mat-raised-button color="primary" (click)="addNewFeed()" class="add-first-column-btn">
-            <mat-icon>add</mat-icon>
-            Add Your First Feed
-          </button>
-        </div>
-      </div>
-      }
+        <!-- Zero state when no columns are available but feeds exist -->
+        @else if (columns().length === 0) {
+          <div class="empty-columns-state">
+            <div class="empty-state-content">
+              <mat-icon class="empty-state-icon">view_column</mat-icon>
+              <h2>No columns in this feed</h2>
+              <p>Get started by adding your first column to organize and view content.</p>
+              <button
+                mat-raised-button
+                color="primary"
+                (click)="addNewColumn()"
+                class="add-first-column-btn"
+              >
+                <mat-icon>add</mat-icon>
+                Add Your First Column
+              </button>
+            </div>
+          </div>
+        }
 
-      <!-- Zero state when no columns are available but feeds exist -->
-      @else if (columns().length === 0) {
-      <div class="empty-columns-state">
-        <div class="empty-state-content">
-          <mat-icon class="empty-state-icon">view_column</mat-icon>
-          <h2>No columns in this feed</h2>
-          <p>Get started by adding your first column to organize and view content.</p>
-          <button mat-raised-button color="primary" (click)="addNewColumn()" class="add-first-column-btn">
-            <mat-icon>add</mat-icon>
-            Add Your First Column
-          </button>
-        </div>
-      </div>
-      }
-
-      <!-- Add column button -->
-      <!-- @if (!isMobileView()) {
+        <!-- Add column button -->
+        <!-- @if (!isMobileView()) {
         <div class="add-column-button">
           <button mat-mini-fab color="primary" (click)="addNewColumn()" matTooltip="Add new column">
             <mat-icon>add</mat-icon>
           </button>
         </div>
         } -->
+      </div>
     </div>
   </div>
-</div>
 }

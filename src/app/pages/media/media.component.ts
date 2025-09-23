@@ -91,13 +91,12 @@ export class MediaComponent {
     // Update filtered lists whenever media items change
     effect(() => {
       const allMedia = this.mediaService.mediaItems();
-      this.images.set(allMedia.filter((item) => item.type?.startsWith('image') || false));
-      this.videos.set(allMedia.filter((item) => item.type?.startsWith('video') || false));
+      this.images.set(allMedia.filter(item => item.type?.startsWith('image') || false));
+      this.videos.set(allMedia.filter(item => item.type?.startsWith('video') || false));
       this.files.set(
         allMedia.filter(
-          (item) =>
-            !item.type || (!item.type.startsWith('image') && !item.type.startsWith('video')),
-        ),
+          item => !item.type || (!item.type.startsWith('image') && !item.type.startsWith('video'))
+        )
       );
       this.selectedItems.set([]);
     });
@@ -137,7 +136,7 @@ export class MediaComponent {
     // });
 
     // Check for upload query parameter and trigger upload dialog
-    this.route.queryParamMap.subscribe((params) => {
+    this.route.queryParamMap.subscribe(params => {
       const uploadParam = params.get('upload');
       if (uploadParam === 'true') {
         // Remove the query parameter from URL without navigation
@@ -161,7 +160,7 @@ export class MediaComponent {
       disableClose: true, // Prevent dialog from closing while uploading
     });
 
-    dialogRef.afterClosed().subscribe(async (result) => {
+    dialogRef.afterClosed().subscribe(async result => {
       if (result && result.file) {
         try {
           // Set uploading state to true
@@ -171,7 +170,7 @@ export class MediaComponent {
           const uploadResult = await this.mediaService.uploadFile(
             result.file,
             result.uploadOriginal,
-            result.servers,
+            result.servers
           );
 
           // Set the uploading state to false
@@ -209,7 +208,7 @@ export class MediaComponent {
       data: server,
     });
 
-    dialogRef.afterClosed().subscribe(async (result) => {
+    dialogRef.afterClosed().subscribe(async result => {
       if (!result) return;
 
       try {
@@ -228,7 +227,7 @@ export class MediaComponent {
         this.snackBar.open(
           error instanceof Error ? error.message : 'Failed to save media server',
           'Close',
-          { duration: 3000 },
+          { duration: 3000 }
         );
       }
     });
@@ -338,9 +337,9 @@ export class MediaComponent {
   }
 
   toggleItemSelection(sha256: string): void {
-    this.selectedItems.update((items) => {
+    this.selectedItems.update(items => {
       if (items.includes(sha256)) {
-        return items.filter((itemSha256) => itemSha256 !== sha256);
+        return items.filter(itemSha256 => itemSha256 !== sha256);
       } else {
         return [...items, sha256];
       }
@@ -354,7 +353,7 @@ export class MediaComponent {
         : this.activeTab() === 'videos'
           ? this.videos()
           : this.files();
-    this.selectedItems.set(currentMedia.map((item) => item.sha256));
+    this.selectedItems.set(currentMedia.map(item => item.sha256));
   }
 
   clearSelection(): void {
@@ -409,7 +408,7 @@ export class MediaComponent {
         this.snackBar.open(
           `${itemsToDelete.length} ${itemsToDelete.length === 1 ? 'item' : 'items'} deleted`,
           'Close',
-          { duration: 3000 },
+          { duration: 3000 }
         );
         this.selectedItems.set([]);
       } catch (error) {
@@ -460,7 +459,7 @@ export class MediaComponent {
             window.URL.revokeObjectURL(url);
 
             // Small delay between downloads to prevent browser issues
-            await new Promise((resolve) => setTimeout(resolve, 300));
+            await new Promise(resolve => setTimeout(resolve, 300));
           } catch (err) {
             console.error(`Failed to download ${item.url}:`, err);
           }
@@ -527,7 +526,7 @@ export class MediaComponent {
         this.snackBar.open(
           `Mirrored ${toMirror.length} file(s), ${alreadyMirrored.length} already fully mirrored`,
           'Close',
-          { duration: 3000 },
+          { duration: 3000 }
         );
       } else if (toMirror.length > 0) {
         this.snackBar.open(`Mirrored ${toMirror.length} file(s) successfully`, 'Close', {

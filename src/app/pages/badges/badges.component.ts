@@ -193,7 +193,7 @@ export class BadgesComponent {
       }
 
       // Ensure we're not adding duplicate
-      const existingIndex = tags.findIndex((tag) => tag[0] === 'a' && tag[1] === aTag);
+      const existingIndex = tags.findIndex(tag => tag[0] === 'a' && tag[1] === aTag);
       if (existingIndex !== -1) {
         return;
       }

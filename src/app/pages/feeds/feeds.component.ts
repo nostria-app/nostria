@@ -212,8 +212,8 @@ export class FeedsComponent implements OnDestroy {
     if (tags.length === 0) {
       return this.trendingEvents();
     } else {
-      return this.trendingEvents().filter((event) =>
-        event.event.tags.some((tag) => tag[0] === 't' && tags.includes(tag[1])),
+      return this.trendingEvents().filter(event =>
+        event.event.tags.some(tag => tag[0] === 't' && tags.includes(tag[1]))
       );
     }
   });
@@ -223,8 +223,8 @@ export class FeedsComponent implements OnDestroy {
     if (tags.length === 0) {
       return this.followingEvents();
     } else {
-      return this.followingEvents().filter((event) =>
-        event.event.tags.some((tag) => tag[0] === 't' && tags.includes(tag[1])),
+      return this.followingEvents().filter(event =>
+        event.event.tags.some(tag => tag[0] === 't' && tags.includes(tag[1]))
       );
     }
   });
@@ -234,8 +234,8 @@ export class FeedsComponent implements OnDestroy {
     if (tags.length === 0) {
       return this.mediaEvents();
     } else {
-      return this.mediaEvents().filter((event) =>
-        event.event.tags.some((tag) => tag[0] === 't' && tags.includes(tag[1])),
+      return this.mediaEvents().filter(event =>
+        event.event.tags.some(tag => tag[0] === 't' && tags.includes(tag[1]))
       );
     }
   }); // Drag state to prevent unnecessary re-renders during column reordering
@@ -253,7 +253,7 @@ export class FeedsComponent implements OnDestroy {
     // Get reactive feed data map from service
     const feedDataMap = this.feedService.feedDataReactive();
 
-    columns.forEach((column) => {
+    columns.forEach(column => {
       if (isDragging) {
         // During drag operations, use cached events to prevent DOM updates
         eventsMap.set(column.id, this._eventCache.get(column.id) || []);
@@ -311,7 +311,7 @@ export class FeedsComponent implements OnDestroy {
     const feedDataMap = this.feedService.feedDataReactive(); // Use reactive signal instead of regular Map
     const pausedSet = new Set<string>();
 
-    columns.forEach((column) => {
+    columns.forEach(column => {
       const columnData = feedDataMap.get(column.id);
       if (columnData && !columnData.subscription) {
         pausedSet.add(column.id);
@@ -368,12 +368,12 @@ export class FeedsComponent implements OnDestroy {
 
     // Handle route parameters for feed navigation
     effect(() => {
-      this.route.params.subscribe(async (params) => {
+      this.route.params.subscribe(async params => {
         const pathParam = params['path'];
         if (pathParam) {
           // Find feed by path
           const feeds = this.feedsCollectionService.feeds();
-          const targetFeed = feeds.find((feed) => feed.path === pathParam);
+          const targetFeed = feeds.find(feed => feed.path === pathParam);
 
           if (targetFeed) {
             await this.feedsCollectionService.setActiveFeed(targetFeed.id);
@@ -510,13 +510,13 @@ export class FeedsComponent implements OnDestroy {
   // }
 
   toggleAdvancedFilters(): void {
-    this.showAdvancedFilters.update((value) => !value);
+    this.showAdvancedFilters.update(value => !value);
   }
 
   toggleTagFilter(tag: string): void {
-    this.selectedTags.update((tags) => {
+    this.selectedTags.update(tags => {
       if (tags.includes(tag)) {
-        return tags.filter((t) => t !== tag);
+        return tags.filter(t => t !== tag);
       } else {
         return [...tags, tag];
       }
@@ -584,7 +584,7 @@ export class FeedsComponent implements OnDestroy {
 
       // Update local state
       this.selectedInterests.set(selectedInterests);
-      this.followingProfiles.update((current) => [...new Set([...current, ...followsToAdd])]);
+      this.followingProfiles.update(current => [...new Set([...current, ...followsToAdd])]);
 
       // Refresh following feeds to load content from newly followed accounts
       await this.feedsCollectionService.refreshFollowingColumns();
@@ -599,9 +599,9 @@ export class FeedsComponent implements OnDestroy {
 
   // Followset interaction methods
   async toggleInterest(interestId: string): Promise<void> {
-    this.selectedInterests.update((interests) => {
+    this.selectedInterests.update(interests => {
       if (interests.includes(interestId)) {
-        return interests.filter((id) => id !== interestId);
+        return interests.filter(id => id !== interestId);
       } else {
         return [...interests, interestId];
       }
@@ -625,7 +625,7 @@ export class FeedsComponent implements OnDestroy {
       const starterPacks = this.followsetService.starterPacks();
       const profiles = await this.followsetService.convertStarterPacksToProfiles(
         starterPacks,
-        selectedInterests,
+        selectedInterests
       );
 
       this.suggestedProfiles.set(profiles);
@@ -636,9 +636,9 @@ export class FeedsComponent implements OnDestroy {
   }
 
   toggleFollow(profileId: string): void {
-    this.followingProfiles.update((profiles) => {
+    this.followingProfiles.update(profiles => {
       if (profiles.includes(profileId)) {
-        return profiles.filter((id) => id !== profileId);
+        return profiles.filter(id => id !== profileId);
       } else {
         // Add to local state and also to account following
         this.accountState.follow(profileId);
@@ -664,7 +664,7 @@ export class FeedsComponent implements OnDestroy {
 
       // Simulate loading content for this specific column
       setTimeout(() => {
-        this.columnContentLoaded.update((loaded) => ({
+        this.columnContentLoaded.update(loaded => ({
           ...loaded,
           [columnId]: true,
         }));
@@ -713,7 +713,7 @@ export class FeedsComponent implements OnDestroy {
 
       console.log(
         '📋 Columns reordered:',
-        columns.map((col) => `${col.label} (${col.id})`),
+        columns.map(col => `${col.label} (${col.id})`)
       );
 
       // Update the actual feed data using the optimized method
@@ -730,20 +730,20 @@ export class FeedsComponent implements OnDestroy {
           currentIndex >= this.visibleColumnIndex()
         ) {
           // If a column was moved from before the visible one to after it, shift visibility back
-          this.visibleColumnIndex.update((idx) => idx - 1);
+          this.visibleColumnIndex.update(idx => idx - 1);
         } else if (
           previousIndex > this.visibleColumnIndex() &&
           currentIndex <= this.visibleColumnIndex()
         ) {
           // If a column was moved from after the visible one to before it, shift visibility forward
-          this.visibleColumnIndex.update((idx) => idx + 1);
+          this.visibleColumnIndex.update(idx => idx + 1);
         }
       }
 
       this.notificationService.notify('Column order changed');
       this.logger.debug(
         'Column order changed',
-        columns.map((col) => col.id),
+        columns.map(col => col.id)
       );
 
       // Let's scroll to ensure the dropped column is visible
@@ -767,7 +767,7 @@ export class FeedsComponent implements OnDestroy {
     // Pre-cache all column events to prevent DOM updates during drag
     const columns = this.columns();
     const feedDataMap = this.feedService.feedDataReactive();
-    columns.forEach((column) => {
+    columns.forEach(column => {
       const columnData = feedDataMap.get(column.id);
       const events = columnData?.events() || [];
       this._eventCache.set(column.id, events);
@@ -803,7 +803,7 @@ export class FeedsComponent implements OnDestroy {
     const wrapper = this.columnsWrapper.nativeElement;
     const newPosition = Math.min(
       this.maxScroll(),
-      this.scrollPosition() + 750, // Scroll approximately one column
+      this.scrollPosition() + 750 // Scroll approximately one column
     );
 
     wrapper.scrollTo({
@@ -872,7 +872,7 @@ export class FeedsComponent implements OnDestroy {
       },
     });
 
-    dialogRef.afterClosed().subscribe(async (result) => {
+    dialogRef.afterClosed().subscribe(async result => {
       if (result && activeFeed) {
         // Add the new column to the current feed
         const updatedFeed = {
@@ -893,7 +893,7 @@ export class FeedsComponent implements OnDestroy {
           }, 100);
         }
 
-        this.columnContentLoaded.update((loaded) => ({
+        this.columnContentLoaded.update(loaded => ({
           ...loaded,
           [result.id]: false,
         }));
@@ -936,7 +936,7 @@ export class FeedsComponent implements OnDestroy {
       },
     });
 
-    dialogRef.afterClosed().subscribe(async (result) => {
+    dialogRef.afterClosed().subscribe(async result => {
       if (result && activeFeed) {
         // Update the specific column in the feed
         const updatedColumns = [...activeFeed.columns];
@@ -977,7 +977,7 @@ export class FeedsComponent implements OnDestroy {
       if (this.visibleColumnIndex() >= updatedColumns.length) {
         this.visibleColumnIndex.set(Math.max(0, updatedColumns.length - 1));
       } else if (this.visibleColumnIndex() > index) {
-        this.visibleColumnIndex.update((idx) => idx - 1);
+        this.visibleColumnIndex.update(idx => idx - 1);
       }
     }
 
@@ -1006,14 +1006,14 @@ export class FeedsComponent implements OnDestroy {
 
   // Video expansion state management methods
   expandVideo(videoKey: string): void {
-    this.videoExpandedStates.update((states) => ({
+    this.videoExpandedStates.update(states => ({
       ...states,
       [videoKey]: true,
     }));
   }
 
   collapseVideo(videoKey: string): void {
-    this.videoExpandedStates.update((states) => ({
+    this.videoExpandedStates.update(states => ({
       ...states,
       [videoKey]: false,
     }));
@@ -1062,7 +1062,7 @@ export class FeedsComponent implements OnDestroy {
     const imetas = event.tags?.filter((tag: any[]) => tag[0] === 'imeta') || [];
     return imetas
       .map((imeta: string[]) => {
-        const urlIndex = imeta.findIndex((item) => item.startsWith('url '));
+        const urlIndex = imeta.findIndex(item => item.startsWith('url '));
         return urlIndex > 0 ? imeta[urlIndex].substring(4) : null;
       })
       .filter(Boolean);
@@ -1201,7 +1201,7 @@ export class FeedsComponent implements OnDestroy {
    */
   async selectFeed(feedId: string): Promise<void> {
     const feeds = this.feedsCollectionService.feeds();
-    const selectedFeed = feeds.find((feed) => feed.id === feedId);
+    const selectedFeed = feeds.find(feed => feed.id === feedId);
 
     // Set the active feed
     await this.feedsCollectionService.setActiveFeed(feedId);
@@ -1232,7 +1232,7 @@ export class FeedsComponent implements OnDestroy {
         ],
       },
     });
-    dialogRef.afterClosed().subscribe(async (result) => {
+    dialogRef.afterClosed().subscribe(async result => {
       if (result) {
         // The dialog returns a FeedConfig, but FeedsCollectionService.addFeed expects FeedDefinition data
         const newFeed = await this.feedsCollectionService.addFeed({
@@ -1276,7 +1276,7 @@ export class FeedsComponent implements OnDestroy {
       },
     });
 
-    dialogRef.afterClosed().subscribe(async (result) => {
+    dialogRef.afterClosed().subscribe(async result => {
       if (result && activeFeed) {
         await this.feedsCollectionService.updateFeed(activeFeed.id, {
           label: result.label,
@@ -1304,7 +1304,7 @@ export class FeedsComponent implements OnDestroy {
         confirmColor: 'warn',
       } as ConfirmDialogData,
     });
-    dialogRef.afterClosed().subscribe((result) => {
+    dialogRef.afterClosed().subscribe(result => {
       if (result) {
         this.feedsCollectionService.removeFeed(activeFeed.id);
       }
@@ -1323,7 +1323,7 @@ export class FeedsComponent implements OnDestroy {
         confirmColor: 'warn',
       } as ConfirmDialogData,
     });
-    dialogRef.afterClosed().subscribe((result) => {
+    dialogRef.afterClosed().subscribe(result => {
       if (result) {
         this.feedsCollectionService.resetToDefaults();
         this.notificationService.notify('Feeds have been reset to defaults');
@@ -1358,7 +1358,7 @@ export class FeedsComponent implements OnDestroy {
       tracks = this.parseM3UContent(m3uContent);
 
       // Calculate total duration if available
-      tracks.forEach((track) => {
+      tracks.forEach(track => {
         if (track.url) {
           // Try to extract duration from M3U metadata if available
           const durationMatch = m3uContent.match(/#EXTINF:(\d+)/);
@@ -1384,8 +1384,8 @@ export class FeedsComponent implements OnDestroy {
   private parseM3UContent(content: string): { url: string; title?: string; artist?: string }[] {
     const lines = content
       .split('\n')
-      .map((line) => line.trim())
-      .filter((line) => line);
+      .map(line => line.trim())
+      .filter(line => line);
     const tracks: { url: string; title?: string; artist?: string }[] = [];
 
     let currentTrack: { url?: string; title?: string; artist?: string } = {};

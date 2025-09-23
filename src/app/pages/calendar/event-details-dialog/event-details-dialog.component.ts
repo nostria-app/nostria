@@ -289,7 +289,7 @@ export class EventDetailsDialogComponent {
 
   constructor(
     public dialogRef: MatDialogRef<EventDetailsDialogComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: EventDetailsDialogData,
+    @Inject(MAT_DIALOG_DATA) public data: EventDetailsDialogData
   ) {}
 
   get isCurrentUserEvent(): boolean {

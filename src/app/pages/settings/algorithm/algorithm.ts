@@ -83,13 +83,12 @@ export class AlgorithmComponent implements OnInit {
     return {
       totalUsers: metrics.length,
       favoriteUsers: favorites.length,
-      activeUsers: metrics.filter((m) => m.lastInteraction > Date.now() - 7 * 24 * 60 * 60 * 1000)
+      activeUsers: metrics.filter(m => m.lastInteraction > Date.now() - 7 * 24 * 60 * 60 * 1000)
         .length,
       averageEngagement:
         metrics.length > 0
           ? Math.round(
-              (metrics.reduce((sum, m) => sum + (m.engagementScore || 0), 0) / metrics.length) *
-                100,
+              (metrics.reduce((sum, m) => sum + (m.engagementScore || 0), 0) / metrics.length) * 100
             ) / 100
           : 0,
     };

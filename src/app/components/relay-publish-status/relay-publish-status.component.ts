@@ -34,15 +34,15 @@ export class RelayPublishStatusComponent {
   private nostrService = inject(NostrService);
 
   get successCount(): number {
-    return this.notification.relayPromises?.filter((rp) => rp.status === 'success').length || 0;
+    return this.notification.relayPromises?.filter(rp => rp.status === 'success').length || 0;
   }
 
   get failedCount(): number {
-    return this.notification.relayPromises?.filter((rp) => rp.status === 'failed').length || 0;
+    return this.notification.relayPromises?.filter(rp => rp.status === 'failed').length || 0;
   }
 
   get pendingCount(): number {
-    return this.notification.relayPromises?.filter((rp) => rp.status === 'pending').length || 0;
+    return this.notification.relayPromises?.filter(rp => rp.status === 'pending').length || 0;
   }
 
   get progress(): number {

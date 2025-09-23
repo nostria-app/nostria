@@ -103,7 +103,7 @@ export class PeopleComponent {
     const search = this.searchTerm().toLowerCase();
     const activeFilters = this.filters();
 
-    return this.people().filter((pubkey) => {
+    return this.people().filter(pubkey => {
       // If there's a search term, filter by it first
       if (search) {
         const metadata = this.accountState.getCachedProfile(pubkey);
@@ -185,12 +185,12 @@ export class PeopleComponent {
   // Check if any filters are active
   hasActiveFilters = computed(() => {
     const activeFilters = this.filters();
-    return Object.values(activeFilters).some((val) => val === true);
+    return Object.values(activeFilters).some(val => val === true);
   });
 
   constructor() {
     // Initialize search debounce
-    this.searchChanged.pipe(debounceTime(300)).subscribe((term) => {
+    this.searchChanged.pipe(debounceTime(300)).subscribe(term => {
       this.searchTerm.set(term);
     });
 
@@ -249,7 +249,7 @@ export class PeopleComponent {
     const activeFilters = this.filters();
     if (activeFilters.favoritesOnly) {
       const favorites = this.favoritesService.favorites();
-      result = result.filter((pubkey) => favorites.includes(pubkey));
+      result = result.filter(pubkey => favorites.includes(pubkey));
     }
 
     // Apply sorting
@@ -375,7 +375,7 @@ export class PeopleComponent {
   }
 
   toggleFilter(filterName: keyof FilterOptions, event?: Event | any) {
-    this.filters.update((current) => ({
+    this.filters.update(current => ({
       ...current,
       [filterName]: !current[filterName],
     }));

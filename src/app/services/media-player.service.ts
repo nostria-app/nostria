@@ -184,7 +184,7 @@ export class MediaPlayerService implements OnInitialized {
   play(file: MediaItem) {
     this.layout.showMediaPlayer.set(true);
     // this.media.set[];
-    this.media.update((files) => [...files, file]);
+    this.media.update(files => [...files, file]);
 
     // this.stop();
 
@@ -194,13 +194,13 @@ export class MediaPlayerService implements OnInitialized {
   enque(file: MediaItem) {
     // TODO: Clean the file.source URL!
     // this.layout.showMediaPlayer.set(true);
-    this.media.update((files) => [...files, file]);
+    this.media.update(files => [...files, file]);
     this.save();
   }
 
   dequeue(file: MediaItem) {
-    this.media.update((files) => {
-      const index = files.findIndex((e) => e === file);
+    this.media.update(files => {
+      const index = files.findIndex(e => e === file);
       if (index === -1) {
         return files;
       }
@@ -221,22 +221,22 @@ export class MediaPlayerService implements OnInitialized {
   saveWindowState() {
     this.localStorage.setItem(
       this.WINDOW_STATE_STORAGE_KEY,
-      JSON.stringify(this.videoWindowState()),
+      JSON.stringify(this.videoWindowState())
     );
   }
 
   updateWindowPosition(x: number, y: number) {
-    this.videoWindowState.update((state) => ({ ...state, x, y }));
+    this.videoWindowState.update(state => ({ ...state, x, y }));
     this.saveWindowState();
   }
 
   updateWindowSize(width: number, height: number) {
-    this.videoWindowState.update((state) => ({ ...state, width, height }));
+    this.videoWindowState.update(state => ({ ...state, width, height }));
     this.saveWindowState();
   }
 
   minimizeWindow() {
-    this.videoWindowState.update((state) => ({
+    this.videoWindowState.update(state => ({
       ...state,
       isMinimized: !state.isMinimized,
     }));
@@ -244,7 +244,7 @@ export class MediaPlayerService implements OnInitialized {
   }
 
   maximizeWindow() {
-    this.videoWindowState.update((state) => ({
+    this.videoWindowState.update(state => ({
       ...state,
       isMaximized: !state.isMaximized,
       isMinimized: false,
@@ -417,8 +417,8 @@ export class MediaPlayerService implements OnInitialized {
       this.audio.currentTime = 0;
       // Remove event listeners
       this.audio.removeEventListener('ended', this.handleMediaEnded);
-      this.audio.removeEventListener('canplay', () => { });
-      this.audio.removeEventListener('loadeddata', () => { });
+      this.audio.removeEventListener('canplay', () => {});
+      this.audio.removeEventListener('loadeddata', () => {});
     }
 
     // Stop and cleanup video
@@ -427,8 +427,8 @@ export class MediaPlayerService implements OnInitialized {
       this.videoElement.currentTime = 0;
       // Remove event listeners
       this.videoElement.removeEventListener('ended', this.handleMediaEnded);
-      this.videoElement.removeEventListener('canplay', () => { });
-      this.videoElement.removeEventListener('loadeddata', () => { });
+      this.videoElement.removeEventListener('canplay', () => {});
+      this.videoElement.removeEventListener('loadeddata', () => {});
     }
 
     // Clear video URLs to stop any playing videos

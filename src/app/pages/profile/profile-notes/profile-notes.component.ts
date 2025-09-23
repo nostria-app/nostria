@@ -77,11 +77,11 @@ export class ProfileNotesComponent {
       const currentTimeline = this.profileState.sortedTimeline();
       const oldestTimestamp =
         currentTimeline.length > 0
-          ? Math.min(...currentTimeline.map((n) => n.event.created_at)) - 1
+          ? Math.min(...currentTimeline.map(n => n.event.created_at)) - 1
           : undefined;
 
       this.logger.debug(
-        `Current timeline count: ${currentTimeline.length}, oldest timestamp: ${oldestTimestamp}`,
+        `Current timeline count: ${currentTimeline.length}, oldest timestamp: ${oldestTimestamp}`
       );
 
       // Load older notes from the profile state service

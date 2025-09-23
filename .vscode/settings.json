@@ -38,10 +38,6 @@
   },
   "files.eol": "\r\n",
   "prettier.requireConfig": true,
-  "eslint.validate": [
-    "javascript",
-    "typescript",
-    "html"
-  ],
+  "eslint.validate": ["javascript", "typescript", "html"],
   "eslint.format.enable": true
 }

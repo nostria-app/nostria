@@ -144,7 +144,7 @@ export class PracticalUrlExamplesComponent {
     const currentParams = { ...this.route.snapshot.queryParams };
 
     // Remove specified parameters
-    paramsToRemove.forEach((param) => {
+    paramsToRemove.forEach(param => {
       delete currentParams[param];
     });
 
@@ -176,7 +176,7 @@ export class PracticalUrlExamplesComponent {
     };
 
     // Remove empty parameters
-    Object.keys(queryParams).forEach((key) => {
+    Object.keys(queryParams).forEach(key => {
       if (
         !queryParams[key as keyof typeof queryParams] ||
         queryParams[key as keyof typeof queryParams] === ''

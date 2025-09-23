@@ -80,12 +80,12 @@ export class FollowingComponent {
     const profileFollowing = this.followingList();
 
     // Find users that both the current user and the profile are following
-    const mutualPubkeys = currentUserFollowing.filter((pubkey) =>
-      profileFollowing.some((user) => user.id === pubkey),
+    const mutualPubkeys = currentUserFollowing.filter(pubkey =>
+      profileFollowing.some(user => user.id === pubkey)
     );
 
     // Return the user profiles for mutual connections
-    return profileFollowing.filter((user) => mutualPubkeys.includes(user.id));
+    return profileFollowing.filter(user => mutualPubkeys.includes(user.id));
   });
 
   selectedTabIndex = signal(0);

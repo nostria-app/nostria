@@ -40,7 +40,7 @@ export class DataService {
     setInterval(() => {
       if (this.pendingProfileRequests.size > 100) {
         this.logger.warn(
-          `Large number of pending profile requests: ${this.pendingProfileRequests.size}. Consider investigating.`,
+          `Large number of pending profile requests: ${this.pendingProfileRequests.size}. Consider investigating.`
         );
       }
     }, 30000);
@@ -57,7 +57,7 @@ export class DataService {
   async getEventById(
     id: string,
     options?: CacheOptions & DataOptions,
-    userRelays = false,
+    userRelays = false
   ): Promise<NostrRecord | null> {
     let event: Event | null = null;
     let record: NostrRecord | undefined = undefined;
@@ -182,7 +182,7 @@ export class DataService {
   private async loadProfile(
     pubkey: string,
     cacheKey: string,
-    refresh: boolean,
+    refresh: boolean
   ): Promise<NostrRecord | undefined> {
     let metadata: Event | null = null;
     let record: NostrRecord | undefined = undefined;
@@ -259,7 +259,7 @@ export class DataService {
     pubkey: string,
     kind: number,
     dTagValue: string,
-    options?: CacheOptions & DataOptions,
+    options?: CacheOptions & DataOptions
   ): Promise<NostrRecord | null> {
     const cacheKey = `${pubkey}-${kind}-${dTagValue}`;
     let event: Event | null = null;
@@ -312,7 +312,7 @@ export class DataService {
   async getEventByPubkeyAndKind(
     pubkey: string | string[],
     kind: number,
-    options?: CacheOptions & DataOptions,
+    options?: CacheOptions & DataOptions
   ): Promise<NostrRecord | null> {
     const cacheKey = `${Array.isArray(pubkey) ? pubkey.join(',') : pubkey}-${kind}`;
     let event: Event | null = null;
@@ -361,7 +361,7 @@ export class DataService {
   async getEventsByPubkeyAndKind(
     pubkey: string | string[],
     kind: number,
-    options?: CacheOptions & DataOptions,
+    options?: CacheOptions & DataOptions
   ): Promise<NostrRecord[]> {
     const cacheKey = `${Array.isArray(pubkey) ? pubkey.join(',') : pubkey}-${kind}-all`;
     let events: Event[] = [];
@@ -394,7 +394,7 @@ export class DataService {
       return [];
     }
 
-    records = events.map((event) => this.toRecord(event));
+    records = events.map(event => this.toRecord(event));
 
     if (options?.cache) {
       this.cache.set(cacheKey, records, options);
@@ -415,7 +415,7 @@ export class DataService {
     kind: number,
     eventTag: string,
     userPubkey: string,
-    options?: CacheOptions & DataOptions,
+    options?: CacheOptions & DataOptions
   ): Promise<NostrRecord[]> {
     const cacheKey = `${userPubkey}-${kind}-${eventTag}-all`;
     let events: Event[] = [];
@@ -433,7 +433,7 @@ export class DataService {
     // If the caller explicitly don't want to save, we will not check the storage.
     if (events.length === 0 && options?.save) {
       const allEvents = await this.storage.getEventsByKind(kind);
-      events = allEvents.filter((e) => this.utilities.getTagValues('#e', e.tags)[0] === eventTag);
+      events = allEvents.filter(e => this.utilities.getTagValues('#e', e.tags)[0] === eventTag);
     }
 
     if (events.length === 0) {
@@ -454,7 +454,7 @@ export class DataService {
       return [];
     }
 
-    records = events.map((event) => this.toRecord(event));
+    records = events.map(event => this.toRecord(event));
 
     if (options?.cache) {
       this.cache.set(cacheKey, records, options);
@@ -481,16 +481,16 @@ export class DataService {
     }
 
     // Extract relay hints from e-tags
-    const eTags = event.tags.filter((tag) => tag[0] === 'e');
+    const eTags = event.tags.filter(tag => tag[0] === 'e');
     const relayHints: string[] = [];
-    
+
     for (const eTag of eTags) {
       // Check if there's a relay hint in the e-tag (3rd element)
       if (eTag.length >= 3 && eTag[2] && eTag[2].trim() !== '') {
         relayHints.push(eTag[2]);
       }
-      
-      // Check for author pubkey in e-tag (5th element)  
+
+      // Check for author pubkey in e-tag (5th element)
       if (eTag.length >= 5 && eTag[4] && eTag[4].trim() !== '') {
         // Add relay hints for the mentioned author
         if (relayHints.length > 0) {
@@ -498,7 +498,7 @@ export class DataService {
         }
       }
     }
-    
+
     // Store hints for the event creator
     if (relayHints.length > 0) {
       await this.relaysService.addRelayHintsFromEvent(event.pubkey, relayHints);

@@ -17,7 +17,7 @@ export class Metrics {
    */
   async getMetrics(): Promise<UserMetric[]> {
     const records = await this.storage.getInfoByType('metric');
-    return records.map((record) => this.mapRecordToMetric(record));
+    return records.map(record => this.mapRecordToMetric(record));
   }
 
   /**
@@ -66,20 +66,20 @@ export class Metrics {
 
     // Filter by pubkey if specified
     if (query.pubkey) {
-      metrics = metrics.filter((m) => m.pubkey === query.pubkey);
+      metrics = metrics.filter(m => m.pubkey === query.pubkey);
     }
 
     // Filter by minimum values
     if (query.minViewed !== undefined) {
-      metrics = metrics.filter((m) => m.viewed >= query.minViewed!);
+      metrics = metrics.filter(m => m.viewed >= query.minViewed!);
     }
 
     if (query.minLiked !== undefined) {
-      metrics = metrics.filter((m) => m.liked >= query.minLiked!);
+      metrics = metrics.filter(m => m.liked >= query.minLiked!);
     }
 
     if (query.minEngagementScore !== undefined) {
-      metrics = metrics.filter((m) => (m.engagementScore || 0) >= query.minEngagementScore!);
+      metrics = metrics.filter(m => (m.engagementScore || 0) >= query.minEngagementScore!);
     }
 
     // Sort if specified
@@ -155,7 +155,7 @@ export class Metrics {
     metric: keyof Omit<
       UserMetric,
       'pubkey' | 'updated' | 'firstInteraction' | 'averageTimePerView' | 'engagementScore'
-    >,
+    >
   ): Promise<void> {
     // Validate pubkey before incrementing
     const validHexPubkey = this.utilities.safeGetHexPubkey(pubkey);
@@ -203,7 +203,7 @@ export class Metrics {
     const metrics = await this.getMetrics();
 
     // Calculate engagement scores for all users
-    metrics.forEach((metric) => {
+    metrics.forEach(metric => {
       metric.engagementScore = this.calculateEngagementScore(metric);
     });
 

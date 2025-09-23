@@ -185,7 +185,8 @@ app-user-profile {
         height: 3px;
       }
 
-      &::-webkit-scrollbar-thumb {}
+      &::-webkit-scrollbar-thumb {
+      }
 
       .column-selector-button {
         display: flex;
@@ -204,10 +205,12 @@ app-user-profile {
         &.active {
           // background-color: var(--mat-sys-primary);
 
-          mat-icon {}
+          mat-icon {
+          }
         }
 
-        &:hover:not(.active) {}
+        &:hover:not(.active) {
+        }
 
         &.add-column {
           min-width: 40px;
@@ -841,7 +844,8 @@ app-user-profile {
           background-color: var(--mat-sys-primary);
         }
 
-        &:hover:not(.active) {}
+        &:hover:not(.active) {
+        }
       }
     }
 
@@ -979,7 +983,8 @@ app-user-profile {
         height: 3px;
       }
 
-      &::-webkit-scrollbar-thumb {}
+      &::-webkit-scrollbar-thumb {
+      }
 
       // Prevent reflow during drag
       &.cdk-drop-list-dragging {
@@ -1031,7 +1036,8 @@ app-user-profile {
         }
       }
 
-      &:hover:not(.active):not(.add-tab) {}
+      &:hover:not(.active):not(.add-tab) {
+      }
 
       &.add-tab {
         padding: 12px 8px;
@@ -1668,7 +1674,6 @@ h1 {
 }
 
 @keyframes pulse {
-
   0%,
   100% {
     opacity: 1;
@@ -1692,7 +1697,6 @@ h1 {
 }
 
 @keyframes breathe {
-
   0%,
   100% {
     transform: scale(1);
@@ -1709,7 +1713,9 @@ h1 {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  animation: fadeInUp 0.3s ease-out, breathe 4s ease-in-out infinite;
+  animation:
+    fadeInUp 0.3s ease-out,
+    breathe 4s ease-in-out infinite;
   animation-delay: 0s, 0.5s;
 }
 
@@ -1755,9 +1761,16 @@ h1 {
       width: 40px;
       height: 40px;
       border-radius: 50%;
-      background: linear-gradient(90deg, var(--mat-sys-surface-variant) 25%, rgba(var(--mat-sys-surface-variant), 0.5) 50%, var(--mat-sys-surface-variant) 75%);
+      background: linear-gradient(
+        90deg,
+        var(--mat-sys-surface-variant) 25%,
+        rgba(var(--mat-sys-surface-variant), 0.5) 50%,
+        var(--mat-sys-surface-variant) 75%
+      );
       background-size: 200% 100%;
-      animation: shimmer 1.5s infinite, pulse 3s ease-in-out infinite;
+      animation:
+        shimmer 1.5s infinite,
+        pulse 3s ease-in-out infinite;
       animation-delay: 0ms, 200ms;
     }
 
@@ -1770,7 +1783,12 @@ h1 {
         width: 120px;
         height: 16px;
         border-radius: 4px;
-        background: linear-gradient(90deg, var(--mat-sys-surface-variant) 25%, rgba(var(--mat-sys-surface-variant), 0.5) 50%, var(--mat-sys-surface-variant) 75%);
+        background: linear-gradient(
+          90deg,
+          var(--mat-sys-surface-variant) 25%,
+          rgba(var(--mat-sys-surface-variant), 0.5) 50%,
+          var(--mat-sys-surface-variant) 75%
+        );
         background-size: 200% 100%;
         animation: shimmer 1.8s infinite;
         animation-delay: 100ms;
@@ -1780,7 +1798,12 @@ h1 {
         width: 80px;
         height: 12px;
         border-radius: 4px;
-        background: linear-gradient(90deg, var(--mat-sys-surface-variant) 25%, rgba(var(--mat-sys-surface-variant), 0.5) 50%, var(--mat-sys-surface-variant) 75%);
+        background: linear-gradient(
+          90deg,
+          var(--mat-sys-surface-variant) 25%,
+          rgba(var(--mat-sys-surface-variant), 0.5) 50%,
+          var(--mat-sys-surface-variant) 75%
+        );
         background-size: 200% 100%;
         animation: shimmer 1.6s infinite;
         animation-delay: 300ms;
@@ -1794,7 +1817,12 @@ h1 {
     .content-line-skeleton {
       height: 14px;
       border-radius: 4px;
-      background: linear-gradient(90deg, var(--mat-sys-surface-variant) 25%, rgba(var(--mat-sys-surface-variant), 0.5) 50%, var(--mat-sys-surface-variant) 75%);
+      background: linear-gradient(
+        90deg,
+        var(--mat-sys-surface-variant) 25%,
+        rgba(var(--mat-sys-surface-variant), 0.5) 50%,
+        var(--mat-sys-surface-variant) 75%
+      );
       background-size: 200% 100%;
       animation: shimmer 1.7s infinite;
       margin-bottom: 0.5rem;
@@ -1830,7 +1858,12 @@ h1 {
       width: 60px;
       height: 16px;
       border-radius: 4px;
-      background: linear-gradient(90deg, var(--mat-sys-surface-variant) 25%, rgba(var(--mat-sys-surface-variant), 0.5) 50%, var(--mat-sys-surface-variant) 75%);
+      background: linear-gradient(
+        90deg,
+        var(--mat-sys-surface-variant) 25%,
+        rgba(var(--mat-sys-surface-variant), 0.5) 50%,
+        var(--mat-sys-surface-variant) 75%
+      );
       background-size: 200% 100%;
       animation: shimmer 1.4s infinite;
 
@@ -1897,7 +1930,6 @@ h1 {
 }
 
 @keyframes bounce {
-
   0%,
   80%,
   100% {

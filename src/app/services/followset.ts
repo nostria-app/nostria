@@ -69,11 +69,11 @@ export class Followset {
           const events = await data.getEventsByPubkeyAndKind(
             pubkey,
             39089, // Starter pack kind
-            { cache: true, save: true },
+            { cache: true, save: true }
           );
 
           // Parse each event and add to starter packs
-          events.forEach((record) => {
+          events.forEach(record => {
             const starterPack = this.parseStarterPackEvent(record.event);
             if (starterPack) {
               starterPacks.push(starterPack);
@@ -102,12 +102,12 @@ export class Followset {
    */
   private parseStarterPackEvent(event: Event): StarterPack | null {
     try {
-      const titleTag = event.tags.find((tag) => tag[0] === 'title');
-      const dTag = event.tags.find((tag) => tag[0] === 'd');
-      const imageTag = event.tags.find((tag) => tag[0] === 'image');
-      const descriptionTag = event.tags.find((tag) => tag[0] === 'description');
-      const relayTags = event.tags.filter((tag) => tag[0] === 'relays');
-      const pubkeyTags = event.tags.filter((tag) => tag[0] === 'p');
+      const titleTag = event.tags.find(tag => tag[0] === 'title');
+      const dTag = event.tags.find(tag => tag[0] === 'd');
+      const imageTag = event.tags.find(tag => tag[0] === 'image');
+      const descriptionTag = event.tags.find(tag => tag[0] === 'description');
+      const relayTags = event.tags.filter(tag => tag[0] === 'relays');
+      const pubkeyTags = event.tags.filter(tag => tag[0] === 'p');
 
       if (!titleTag || !dTag) {
         this.logger.warn('Starter pack missing required tags', {
@@ -121,8 +121,8 @@ export class Followset {
         title: titleTag[1],
         description: descriptionTag?.[1],
         image: imageTag?.[1],
-        pubkeys: pubkeyTags.map((tag) => tag[1]),
-        relays: relayTags.flatMap((tag) => tag.slice(1)),
+        pubkeys: pubkeyTags.map(tag => tag[1]),
+        relays: relayTags.flatMap(tag => tag.slice(1)),
         dTag: dTag[1],
         authorPubkey: event.pubkey,
         createdAt: event.created_at,
@@ -137,7 +137,7 @@ export class Followset {
    * Convert starter packs to interests for the followset component
    */
   convertStarterPacksToInterests(starterPacks: StarterPack[]): Interest[] {
-    return starterPacks.map((pack) => ({
+    return starterPacks.map(pack => ({
       id: pack.dTag,
       name: pack.title,
       icon: this.getIconForStarterPack(pack),
@@ -149,16 +149,16 @@ export class Followset {
    */
   async convertStarterPacksToProfiles(
     starterPacks: StarterPack[],
-    selectedInterests: string[],
+    selectedInterests: string[]
   ): Promise<SuggestedProfile[]> {
     const profiles: SuggestedProfile[] = [];
 
     // Get all pubkeys from selected starter packs
-    const selectedPacks = starterPacks.filter((pack) => selectedInterests.includes(pack.dTag));
+    const selectedPacks = starterPacks.filter(pack => selectedInterests.includes(pack.dTag));
     const allPubkeys = new Set<string>();
 
-    selectedPacks.forEach((pack) => {
-      pack.pubkeys.forEach((pubkey) => allPubkeys.add(pubkey));
+    selectedPacks.forEach(pack => {
+      pack.pubkeys.forEach(pubkey => allPubkeys.add(pubkey));
     });
 
     // Fetch profiles for these pubkeys
@@ -168,13 +168,13 @@ export class Followset {
       const profileRecords = await this.dataService.getProfiles(pubkeyArray);
 
       if (profileRecords) {
-        profileRecords.forEach((record) => {
+        profileRecords.forEach(record => {
           const metadata = this.parseProfileMetadata(record.event.content);
           if (metadata) {
             // Find which starter packs this pubkey belongs to
             const belongsToInterests = selectedPacks
-              .filter((pack) => pack.pubkeys.includes(record.event.pubkey))
-              .map((pack) => pack.dTag);
+              .filter(pack => pack.pubkeys.includes(record.event.pubkey))
+              .map(pack => pack.dTag);
 
             profiles.push({
               id: record.event.pubkey,
@@ -230,7 +230,7 @@ export class Followset {
    * Get starter pack by dTag
    */
   getStarterPackByDTag(dTag: string): StarterPack | undefined {
-    return this.starterPacks().find((pack) => pack.dTag === dTag);
+    return this.starterPacks().find(pack => pack.dTag === dTag);
   }
 
   /**
@@ -239,10 +239,10 @@ export class Followset {
   getPubkeysFromInterests(selectedInterests: string[]): string[] {
     const pubkeys = new Set<string>();
 
-    selectedInterests.forEach((interestId) => {
+    selectedInterests.forEach(interestId => {
       const pack = this.getStarterPackByDTag(interestId);
       if (pack) {
-        pack.pubkeys.forEach((pubkey) => pubkeys.add(pubkey));
+        pack.pubkeys.forEach(pubkey => pubkeys.add(pubkey));
       }
     });
 

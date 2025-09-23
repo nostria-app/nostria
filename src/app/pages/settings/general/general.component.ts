@@ -95,7 +95,7 @@ export class GeneralSettingsComponent {
       },
     });
 
-    dialogRef.afterClosed().subscribe(async (confirmed) => {
+    dialogRef.afterClosed().subscribe(async confirmed => {
       if (confirmed) {
         await this.app.wipe();
       }

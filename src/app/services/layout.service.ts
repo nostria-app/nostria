@@ -121,14 +121,14 @@ export class LayoutService implements OnDestroy {
 
   constructor() {
     // Monitor only mobile devices (not tablets)
-    this.breakpointObserver.observe('(max-width: 599px)').subscribe((result) => {
+    this.breakpointObserver.observe('(max-width: 599px)').subscribe(result => {
       this.logger.debug('Breakpoint observer update', {
         isMobile: result.matches,
       });
       this.isHandset.set(result.matches);
     });
 
-    this.breakpointObserver.observe('(min-width: 1200px)').subscribe((result) => {
+    this.breakpointObserver.observe('(min-width: 1200px)').subscribe(result => {
       this.isWideScreen.set(result.matches);
     });
     effect(() => {
@@ -495,10 +495,10 @@ export class LayoutService implements OnDestroy {
             horizontalPosition: 'center',
             verticalPosition: 'bottom',
             panelClass: 'copy-snackbar',
-          },
+          }
         );
       })
-      .catch((error) => {
+      .catch(error => {
         this.logger.error('Failed to copy to clipboard:', error);
         this.snackBar.open('Failed to copy to clipboard', 'Dismiss', {
           duration: 3000,
@@ -762,7 +762,7 @@ export class LayoutService implements OnDestroy {
       this.toast(
         'WARNING: You pasted your nsec key. This is a security risk! Please remove it from your clipboard.',
         5000,
-        'error-snackbar',
+        'error-snackbar'
       );
       return;
     }
@@ -854,7 +854,7 @@ export class LayoutService implements OnDestroy {
 
       this.logger.debug(
         'Scrolled content wrapper to optimal profile view position',
-        scrollPosition,
+        scrollPosition
       );
 
       // Refresh scroll monitoring after programmatic scroll
@@ -947,7 +947,7 @@ export class LayoutService implements OnDestroy {
   scrollToElement(
     elementSelector: string,
     block: ScrollLogicalPosition = 'start',
-    behavior: ScrollBehavior = 'smooth',
+    behavior: ScrollBehavior = 'smooth'
   ): void {
     const element = document.querySelector(elementSelector);
     if (element) {
@@ -1002,7 +1002,7 @@ export class LayoutService implements OnDestroy {
     });
 
     this.logger.debug(
-      `Scrolled .content-wrapper to show element "${elementSelector}" at position ${relativeTop}`,
+      `Scrolled .content-wrapper to show element "${elementSelector}" at position ${relativeTop}`
     );
   }
 
@@ -1070,7 +1070,7 @@ export class LayoutService implements OnDestroy {
         .then(() => {
           this.logger.debug('Event shared successfully');
         })
-        .catch((error) => {
+        .catch(error => {
           this.logger.error('Error sharing profile:', error);
         });
     } else {
@@ -1103,7 +1103,7 @@ export class LayoutService implements OnDestroy {
         .then(() => {
           this.logger.debug('Profile shared successfully');
         })
-        .catch((error) => {
+        .catch(error => {
           this.logger.error('Error sharing profile:', error);
         });
     } else {
@@ -1143,7 +1143,7 @@ export class LayoutService implements OnDestroy {
       const results = await Promise.all(publishPromises || []);
 
       // Count successes and failures
-      const successful = results.filter((result) => result === '').length;
+      const successful = results.filter(result => result === '').length;
       const failed = results.length - successful;
 
       // Display appropriate notification
@@ -1156,7 +1156,7 @@ export class LayoutService implements OnDestroy {
             horizontalPosition: 'center',
             verticalPosition: 'bottom',
             panelClass: 'success-snackbar',
-          },
+          }
         );
       } else {
         this.snackBar.open(
@@ -1167,7 +1167,7 @@ export class LayoutService implements OnDestroy {
             horizontalPosition: 'center',
             verticalPosition: 'bottom',
             panelClass: failed > successful ? 'error-snackbar' : 'warning-snackbar',
-          },
+          }
         );
       }
     } catch (error) {

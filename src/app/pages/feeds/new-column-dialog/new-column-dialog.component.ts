@@ -118,7 +118,7 @@ export class NewColumnDialogComponent {
     const input = this.kindInputControl.value?.toString().toLowerCase() || '';
     const selected = this.selectedKinds();
 
-    return this.nostrKinds().filter((kind) => {
+    return this.nostrKinds().filter(kind => {
       const matchesInput =
         kind.label.toLowerCase().includes(input) || kind.value.toString().includes(input);
       const notSelected = !selected.includes(kind.value);
@@ -152,7 +152,7 @@ export class NewColumnDialogComponent {
   }
 
   getKindLabel(kind: number): string {
-    const kindInfo = this.nostrKinds().find((k) => k.value === kind);
+    const kindInfo = this.nostrKinds().find(k => k.value === kind);
     return kindInfo ? kindInfo.label : `Kind ${kind}`;
   }
 
@@ -161,7 +161,7 @@ export class NewColumnDialogComponent {
     if (value) {
       const kindNumber = parseInt(value, 10);
       if (!isNaN(kindNumber) && !this.selectedKinds().includes(kindNumber)) {
-        this.selectedKinds.update((kinds) => [...kinds, kindNumber]);
+        this.selectedKinds.update(kinds => [...kinds, kindNumber]);
         this.updateKindsForm();
       }
     }
@@ -170,14 +170,14 @@ export class NewColumnDialogComponent {
   }
 
   removeKind(kind: number): void {
-    this.selectedKinds.update((kinds) => kinds.filter((k) => k !== kind));
+    this.selectedKinds.update(kinds => kinds.filter(k => k !== kind));
     this.updateKindsForm();
   }
 
   kindSelected(event: MatAutocompleteSelectedEvent): void {
     const kindValue = event.option.value;
     if (!this.selectedKinds().includes(kindValue)) {
-      this.selectedKinds.update((kinds) => [...kinds, kindValue]);
+      this.selectedKinds.update(kinds => [...kinds, kindValue]);
       this.updateKindsForm();
     }
     this.kindInputControl.setValue('');
@@ -205,7 +205,7 @@ export class NewColumnDialogComponent {
 
       if (this.isValidRelayUrl(value)) {
         if (!this.customRelays().includes(value)) {
-          this.customRelays.update((relays) => [...relays, value]);
+          this.customRelays.update(relays => [...relays, value]);
           this.updateCustomRelaysForm();
         }
       }
@@ -215,7 +215,7 @@ export class NewColumnDialogComponent {
   }
 
   removeCustomRelay(relay: string): void {
-    this.customRelays.update((relays) => relays.filter((r) => r !== relay));
+    this.customRelays.update(relays => relays.filter(r => r !== relay));
     this.updateCustomRelaysForm();
   }
 
@@ -237,7 +237,7 @@ export class NewColumnDialogComponent {
 
     switch (relayConfig) {
       case 'account':
-        return this.feedService.userRelays().map((r) => r.url);
+        return this.feedService.userRelays().map(r => r.url);
       case 'custom':
         return this.customRelays();
       default:

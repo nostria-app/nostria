@@ -457,7 +457,7 @@ export class EditorComponent implements OnInit, OnDestroy {
         {
           cache: false,
           save: false,
-        },
+        }
       );
 
       if (record?.event) {
@@ -469,7 +469,7 @@ export class EditorComponent implements OnInit, OnDestroy {
           summary: this.getTagValue(tags, 'summary') || '',
           image: this.getTagValue(tags, 'image') || '',
           content: event.content || '',
-          tags: tags.filter((tag) => tag[0] === 't').map((tag) => tag[1]) || [],
+          tags: tags.filter(tag => tag[0] === 't').map(tag => tag[1]) || [],
           publishedAt: parseInt(this.getTagValue(tags, 'published_at') || '0') || undefined,
           dTag: this.getTagValue(tags, 'd') || articleId,
         });
@@ -490,14 +490,14 @@ export class EditorComponent implements OnInit, OnDestroy {
   }
 
   private getTagValue(tags: string[][], tagName: string): string | undefined {
-    const tag = tags.find((t) => t[0] === tagName);
+    const tag = tags.find(t => t[0] === tagName);
     return tag ? tag[1] : undefined;
   }
 
   addTag(): void {
     const tag = this.newTag().trim();
     if (tag && !this.article().tags.includes(tag)) {
-      this.article.update((art) => ({
+      this.article.update(art => ({
         ...art,
         tags: [...art.tags, tag],
       }));
@@ -506,9 +506,9 @@ export class EditorComponent implements OnInit, OnDestroy {
   }
 
   removeTag(tag: string): void {
-    this.article.update((art) => ({
+    this.article.update(art => ({
       ...art,
-      tags: art.tags.filter((t) => t !== tag),
+      tags: art.tags.filter(t => t !== tag),
     }));
   }
 
@@ -574,7 +574,7 @@ export class EditorComponent implements OnInit, OnDestroy {
       let dTag = art.dTag.trim();
       if (!dTag) {
         dTag = this.generateUniqueId();
-        this.article.update((a) => ({ ...a, dTag }));
+        this.article.update(a => ({ ...a, dTag }));
       }
 
       // Build tags array according to NIP-23
@@ -600,13 +600,13 @@ export class EditorComponent implements OnInit, OnDestroy {
       if (!this.isEditMode() || !art.publishedAt) {
         const publishedAt = Math.floor(Date.now() / 1000);
         tags.push(['published_at', publishedAt.toString()]);
-        this.article.update((a) => ({ ...a, publishedAt }));
+        this.article.update(a => ({ ...a, publishedAt }));
       } else if (art.publishedAt) {
         tags.push(['published_at', art.publishedAt.toString()]);
       }
 
       // Add topic tags
-      art.tags.forEach((tag) => {
+      art.tags.forEach(tag => {
         tags.push(['t', tag]);
       });
 
@@ -683,35 +683,35 @@ export class EditorComponent implements OnInit, OnDestroy {
   }
 
   updateTitle(value: string): void {
-    this.article.update((art) => ({ ...art, title: value }));
+    this.article.update(art => ({ ...art, title: value }));
 
     // Schedule auto-save directly instead of relying on effect
     this.scheduleAutoSaveIfNeeded();
   }
 
   updateSummary(value: string): void {
-    this.article.update((art) => ({ ...art, summary: value }));
+    this.article.update(art => ({ ...art, summary: value }));
 
     // Schedule auto-save directly instead of relying on effect
     this.scheduleAutoSaveIfNeeded();
   }
 
   updateImage(value: string): void {
-    this.article.update((art) => ({ ...art, image: value }));
+    this.article.update(art => ({ ...art, image: value }));
 
     // Schedule auto-save directly instead of relying on effect
     this.scheduleAutoSaveIfNeeded();
   }
 
   updateContent(value: string): void {
-    this.article.update((art) => ({ ...art, content: value }));
+    this.article.update(art => ({ ...art, content: value }));
 
     // Schedule auto-save directly instead of relying on effect
     this.scheduleAutoSaveIfNeeded();
   }
 
   updateDTag(value: string): void {
-    this.article.update((art) => ({ ...art, dTag: value }));
+    this.article.update(art => ({ ...art, dTag: value }));
 
     // Schedule auto-save directly instead of relying on effect
     this.scheduleAutoSaveIfNeeded();
@@ -719,7 +719,7 @@ export class EditorComponent implements OnInit, OnDestroy {
 
   toggleAutoTitleMode(): void {
     const wasEnabled = this.autoTitleEnabled();
-    this.autoTitleEnabled.update((enabled) => !enabled);
+    this.autoTitleEnabled.update(enabled => !enabled);
 
     // Apply auto-title when enabling and show notification
     if (!wasEnabled && this.autoTitleEnabled() && this.suggestedTitle()) {
@@ -733,13 +733,13 @@ export class EditorComponent implements OnInit, OnDestroy {
   applyAutoTitle(): void {
     const suggested = this.suggestedTitle();
     if (suggested) {
-      this.article.update((art) => ({ ...art, title: suggested }));
+      this.article.update(art => ({ ...art, title: suggested }));
       // Only show notification when manually triggered, not during auto-updates
     }
   }
 
   toggleAutoDTagMode(): void {
-    this.autoDTagEnabled.update((enabled) => !enabled);
+    this.autoDTagEnabled.update(enabled => !enabled);
     // Apply auto-dTag when enabling
     if (this.autoDTagEnabled() && this.suggestedDTag()) {
       this.applyAutoDTag();
@@ -749,7 +749,7 @@ export class EditorComponent implements OnInit, OnDestroy {
   applyAutoDTag(): void {
     const suggested = this.suggestedDTag();
     if (suggested) {
-      this.article.update((art) => ({ ...art, dTag: suggested }));
+      this.article.update(art => ({ ...art, dTag: suggested }));
     }
   }
 }

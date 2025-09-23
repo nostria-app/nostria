@@ -82,7 +82,7 @@ export class ApplicationService {
                 await this.accountState.loadProfilesFromStorageToCache(
                   pubkey,
                   this.dataService,
-                  this.storage,
+                  this.storage
                 );
               }
             }

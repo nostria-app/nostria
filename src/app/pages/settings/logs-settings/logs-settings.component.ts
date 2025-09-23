@@ -73,13 +73,13 @@ export class LogsSettingsComponent {
   connectedRelays = computed(() =>
     Array.from(this.relayStats().entries())
       .filter(([_, stats]) => stats.isConnected)
-      .sort((a, b) => b[1].eventsReceived - a[1].eventsReceived),
+      .sort((a, b) => b[1].eventsReceived - a[1].eventsReceived)
   );
 
   offlineRelays = computed(() =>
     Array.from(this.relayStats().entries())
       .filter(([_, stats]) => stats.isOffline)
-      .sort((a, b) => b[1].connectionAttempts - a[1].connectionAttempts),
+      .sort((a, b) => b[1].connectionAttempts - a[1].connectionAttempts)
   );
 
   allRelayStats = computed(() =>
@@ -88,7 +88,7 @@ export class LogsSettingsComponent {
       if (a[1].isConnected && !b[1].isConnected) return -1;
       if (!a[1].isConnected && b[1].isConnected) return 1;
       return b[1].eventsReceived - a[1].eventsReceived;
-    }),
+    })
   );
 
   constructor() {
@@ -113,7 +113,7 @@ export class LogsSettingsComponent {
     relay['disabled'] = false;
     relay['suspendedCount'] = 0;
     await this.storage.updateInfo(relay);
-    this.disabledRelays.update((relays) => relays.filter((r: InfoRecord) => r.key !== relay.key));
+    this.disabledRelays.update(relays => relays.filter((r: InfoRecord) => r.key !== relay.key));
   }
 
   /**
@@ -187,7 +187,7 @@ export class LogsSettingsComponent {
     const relayToUsers = new Map<string, string[]>();
 
     userRelaysMap.forEach((relays, pubkey) => {
-      relays.forEach((relay) => {
+      relays.forEach(relay => {
         if (!relayToUsers.has(relay)) {
           relayToUsers.set(relay, []);
         }
@@ -205,10 +205,10 @@ export class LogsSettingsComponent {
 
       relayToUsers.forEach((otherUsers, otherRelay) => {
         if (relay !== otherRelay) {
-          const sharedUsers = users.filter((user) => otherUsers.includes(user));
+          const sharedUsers = users.filter(user => otherUsers.includes(user));
           if (sharedUsers.length > 0) {
             const connectionStrength = Math.round(
-              (sharedUsers.length / Math.max(users.length, otherUsers.length)) * 100,
+              (sharedUsers.length / Math.max(users.length, otherUsers.length)) * 100
             );
             sharedWithRelays.push({
               relay: otherRelay,

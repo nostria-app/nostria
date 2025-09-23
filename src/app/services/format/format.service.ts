@@ -102,7 +102,7 @@ export class FormatService {
             replacement: match[0],
           };
         }
-      }),
+      })
     );
 
     // Apply all replacements to the content

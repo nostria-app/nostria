@@ -173,13 +173,13 @@ export class EventComponent {
   likes = computed<NostrRecord[]>(() => {
     const event = this.event();
     if (!event) return [];
-    return this.reactions().events.filter((r) => r.event.content === '+');
+    return this.reactions().events.filter(r => r.event.content === '+');
   });
 
   likeReaction = computed<NostrRecord | undefined>(() => {
     const myReactions = this.likes();
     if (!myReactions) return;
-    return myReactions.find((r) => r.event.pubkey === this.accountState.pubkey());
+    return myReactions.find(r => r.event.pubkey === this.accountState.pubkey());
   });
 
   // Zap-related state
@@ -226,7 +226,7 @@ export class EventComponent {
     const event = this.event() || this.record()?.event;
     if (!event) return false;
 
-    const eTags = event.tags.filter((tag) => tag[0] === 'e');
+    const eTags = event.tags.filter(tag => tag[0] === 'e');
     return eTags.length > 0;
   });
 
@@ -274,7 +274,7 @@ export class EventComponent {
     if (!record || record.event.kind !== 3) return 0;
 
     // Count the "p" tags in the event
-    return record.event.tags.filter((tag) => tag[0] === 'p').length;
+    return record.event.tags.filter(tag => tag[0] === 'p').length;
   });
 
   // Check if this event has any reports
@@ -390,7 +390,7 @@ export class EventComponent {
       const reports = await this.eventService.loadReports(
         record.event.id,
         userPubkey,
-        invalidateCache,
+        invalidateCache
       );
       this.reports.set(reports);
     } catch (error) {
@@ -410,7 +410,7 @@ export class EventComponent {
       const reactions = await this.eventService.loadReactions(
         record.event.id,
         userPubkey,
-        invalidateCache,
+        invalidateCache
       );
       this.reactions.set(reactions);
     } finally {
@@ -486,7 +486,7 @@ export class EventComponent {
         currentEvent.id,
         currentEvent.kind,
         userPubkey,
-        false,
+        false
       );
       this.reposts.set(reposts);
     } catch (error) {
@@ -576,7 +576,7 @@ export class EventComponent {
 
     // Check if the click is on an interactive element or its children
     const isInteractiveElement = target.closest(
-      'img, button, a, mat-menu, [mat-menu-trigger-for], input, textarea, select, .user-profile-avatar, .user-profile-name, .date-link',
+      'img, button, a, mat-menu, [mat-menu-trigger-for], input, textarea, select, .user-profile-avatar, .user-profile-name, .date-link'
     );
 
     if (isInteractiveElement) {

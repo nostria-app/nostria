@@ -294,7 +294,7 @@ export class StorageService {
   private fallbackStorage = new Map<string, any>();
   useFallbackMode = signal(false);
 
-  constructor() { }
+  constructor() {}
 
   async init(): Promise<void> {
     this.logger.info('StorageService.init() called');
@@ -308,7 +308,7 @@ export class StorageService {
       this.logger.info('Starting IndexedDB availability check');
 
       // Update storage info
-      this.storageInfo.update((info) => ({
+      this.storageInfo.update(info => ({
         ...info,
         isIndexedDBAvailable: 'indexedDB' in window,
         isPrivateMode: this.detectPrivateMode(),
@@ -324,7 +324,7 @@ export class StorageService {
 
       // Get quota info
       const quotaInfo = await this.getStorageQuotaInfo();
-      this.storageInfo.update((info) => ({ ...info, quotaInfo }));
+      this.storageInfo.update(info => ({ ...info, quotaInfo }));
 
       // Initialize the database
       await this.initDatabase();
@@ -339,7 +339,7 @@ export class StorageService {
       });
 
       // Update storage info with error
-      this.storageInfo.update((info) => ({
+      this.storageInfo.update(info => ({
         ...info,
         lastError: error?.message || 'Unknown error',
       }));
@@ -525,12 +525,12 @@ export class StorageService {
       await deleteDB(this.DB_NAME);
 
       // Wait a bit before recreating
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       // Try again with a simplified approach
       this.logger.info('Recreating database with simplified schema');
       this.db = await openDB<NostriaDBSchema>(this.DB_NAME, 1, {
-        upgrade: async (db) => {
+        upgrade: async db => {
           this.logger.info('Creating minimal database schema');
 
           // Create only essential stores
@@ -556,7 +556,7 @@ export class StorageService {
       this.initialized.set(true);
 
       // Update storage info
-      this.storageInfo.update((info) => ({
+      this.storageInfo.update(info => ({
         ...info,
         lastError: 'Complete IndexedDB failure - using memory storage',
         initializationAttempts: info.initializationAttempts + 1,
@@ -666,11 +666,11 @@ export class StorageService {
         // Add the new event
         await this.db.put('events', event);
         this.logger.debug(
-          `Replaced older event with newer event ${event.id} (kind: ${event.kind})`,
+          `Replaced older event with newer event ${event.id} (kind: ${event.kind})`
         );
       } else {
         this.logger.debug(
-          `Skipped saving older replaceable event ${event.id} (kind: ${event.kind})`,
+          `Skipped saving older replaceable event ${event.id} (kind: ${event.kind})`
         );
       }
     } else {
@@ -685,7 +685,7 @@ export class StorageService {
 
     if (!dTagValue) {
       this.logger.debug(
-        `Parameterized replaceable event ${event.id} has no d tag, storing as regular event`,
+        `Parameterized replaceable event ${event.id} has no d tag, storing as regular event`
       );
       await this.db.put('events', event);
       return;
@@ -715,18 +715,18 @@ export class StorageService {
         // Add the new event
         await this.db.put('events', enhancedEvent);
         this.logger.debug(
-          `Replaced older parameterized event with newer event ${event.id} (kind: ${event.kind}, d: ${dTagValue})`,
+          `Replaced older parameterized event with newer event ${event.id} (kind: ${event.kind}, d: ${dTagValue})`
         );
       } else {
         this.logger.debug(
-          `Skipped saving older parameterized replaceable event ${event.id} (kind: ${event.kind}, d: ${dTagValue})`,
+          `Skipped saving older parameterized replaceable event ${event.id} (kind: ${event.kind}, d: ${dTagValue})`
         );
       }
     } else {
       // No existing event, just add this one
       await this.db.put('events', enhancedEvent);
       this.logger.debug(
-        `Saved new parameterized replaceable event ${event.id} (kind: ${event.kind}, d: ${dTagValue})`,
+        `Saved new parameterized replaceable event ${event.id} (kind: ${event.kind}, d: ${dTagValue})`
       );
     }
   }
@@ -762,7 +762,7 @@ export class StorageService {
         return [];
       }
 
-      if (Array.isArray(pubkey) && pubkey.some((pk) => !pk || pk === 'undefined')) {
+      if (Array.isArray(pubkey) && pubkey.some(pk => !pk || pk === 'undefined')) {
         this.logger.warn('getEventsByPubkey called with invalid pubkey in array:', pubkey);
         return [];
       }
@@ -808,7 +808,7 @@ export class StorageService {
       return null;
     }
 
-    if (Array.isArray(pubkey) && pubkey.some((pk) => !pk || pk === 'undefined')) {
+    if (Array.isArray(pubkey) && pubkey.some(pk => !pk || pk === 'undefined')) {
       this.logger.warn('getEventByPubkeyAndKind called with invalid pubkey in array:', pubkey);
       return null;
     }
@@ -835,7 +835,7 @@ export class StorageService {
         return [];
       }
 
-      if (Array.isArray(pubkey) && pubkey.some((pk) => !pk || pk === 'undefined')) {
+      if (Array.isArray(pubkey) && pubkey.some(pk => !pk || pk === 'undefined')) {
         this.logger.warn('getEventsByPubkeyAndKind called with invalid pubkey in array:', pubkey);
         return [];
       }
@@ -867,7 +867,7 @@ export class StorageService {
   async getParameterizedReplaceableEvent(
     pubkey: string | string[],
     kind: number,
-    dTagValue: string,
+    dTagValue: string
   ): Promise<Event | undefined> {
     try {
       // Validate pubkey parameter
@@ -876,10 +876,10 @@ export class StorageService {
         return undefined;
       }
 
-      if (Array.isArray(pubkey) && pubkey.some((pk) => !pk || pk === 'undefined')) {
+      if (Array.isArray(pubkey) && pubkey.some(pk => !pk || pk === 'undefined')) {
         this.logger.warn(
           'getParameterizedReplaceableEvent called with invalid pubkey in array:',
-          pubkey,
+          pubkey
         );
         return undefined;
       }
@@ -887,7 +887,7 @@ export class StorageService {
       if (typeof pubkey === 'string' && (pubkey === 'undefined' || !pubkey.trim())) {
         this.logger.warn(
           'getParameterizedReplaceableEvent called with invalid pubkey string:',
-          pubkey,
+          pubkey
         );
         return undefined;
       }
@@ -926,7 +926,7 @@ export class StorageService {
       const pubkeyDisplay = Array.isArray(pubkey) ? `[multiple keys: ${pubkey.length}]` : pubkey;
       this.logger.error(
         `Error getting parameterized replaceable event for pubkey ${pubkeyDisplay}, kind ${kind}, and d-tag ${dTagValue}`,
-        error,
+        error
       );
       return undefined;
     }
@@ -1015,7 +1015,7 @@ export class StorageService {
   async saveInfo(
     key: string,
     type: 'user' | 'relay' | 'metric',
-    data: Record<string, any>,
+    data: Record<string, any>
   ): Promise<void> {
     try {
       const compositeKey = this.generateCompositeKey(key, type);
@@ -1075,7 +1075,7 @@ export class StorageService {
 
       // If keyPattern is provided, filter the results
       if (keyPattern) {
-        return records.filter((record) => record.key.includes(keyPattern));
+        return records.filter(record => record.key.includes(keyPattern));
       }
 
       return records;
@@ -1314,7 +1314,7 @@ export class StorageService {
       dbConnection: !!this.db,
       platform: {
         isMobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-          navigator.userAgent,
+          navigator.userAgent
         ),
         isIOS: /iPad|iPhone|iPod/.test(navigator.userAgent),
         isAndroid: /Android/.test(navigator.userAgent),
@@ -1383,7 +1383,7 @@ export class StorageService {
       // Check if database is initialized
       if (!this.db || !this.initialized()) {
         this.logger.debug(
-          `Database not initialized yet, cannot save observed relay stats for ${stats.url}`,
+          `Database not initialized yet, cannot save observed relay stats for ${stats.url}`
         );
         return;
       }
@@ -1439,7 +1439,7 @@ export class StorageService {
       // Check if database is initialized
       if (!this.db || !this.initialized()) {
         this.logger.debug(
-          `Database not initialized yet, cannot delete observed relay stats for ${url}`,
+          `Database not initialized yet, cannot delete observed relay stats for ${url}`
         );
         return;
       }
@@ -1455,7 +1455,7 @@ export class StorageService {
    * Get observed relays sorted by a specific criterion
    */
   async getObservedRelaysSorted(
-    sortBy: 'eventsReceived' | 'lastUpdated' | 'firstObserved' = 'lastUpdated',
+    sortBy: 'eventsReceived' | 'lastUpdated' | 'firstObserved' = 'lastUpdated'
   ): Promise<ObservedRelayStats[]> {
     try {
       const index =
@@ -1483,7 +1483,7 @@ export class StorageService {
     } catch (error) {
       this.logger.error(
         `Error saving pubkey-relay mapping for ${mapping.pubkey} -> ${mapping.relayUrl}`,
-        error,
+        error
       );
     }
   }
@@ -1493,7 +1493,7 @@ export class StorageService {
    */
   async getPubkeyRelayMapping(
     pubkey: string,
-    relayUrl: string,
+    relayUrl: string
   ): Promise<PubkeyRelayMapping | undefined> {
     try {
       const id = `${pubkey}::${relayUrl}`;
@@ -1512,8 +1512,8 @@ export class StorageService {
       const mappings = await this.db.getAllFromIndex('pubkeyRelayMappings', 'by-pubkey', pubkey);
       // Filter out user_list source since those are kind 10002 events which should not be included
       return mappings
-        .filter((mapping) => mapping.source !== 'user_list')
-        .map((mapping) => mapping.relayUrl);
+        .filter(mapping => mapping.source !== 'user_list')
+        .map(mapping => mapping.relayUrl);
     } catch (error) {
       this.logger.error(`Error getting relay URLs for pubkey ${pubkey}`, error);
       return [];
@@ -1528,9 +1528,9 @@ export class StorageService {
       const mappings = await this.db.getAllFromIndex(
         'pubkeyRelayMappings',
         'by-relay-url',
-        relayUrl,
+        relayUrl
       );
-      return mappings.map((mapping) => mapping.pubkey);
+      return mappings.map(mapping => mapping.pubkey);
     } catch (error) {
       this.logger.error(`Error getting pubkeys for relay ${relayUrl}`, error);
       return [];
@@ -1567,7 +1567,7 @@ export class StorageService {
     } catch (error) {
       this.logger.error(
         `Error updating pubkey-relay mapping from hint for ${pubkey} -> ${relayUrl}`,
-        error,
+        error
       );
     }
   }

@@ -374,7 +374,7 @@ export class ReactionsDialogComponent {
         ? 2
         : this.data.selectedTab === 'quotes'
           ? 3
-          : 0,
+          : 0
   );
 
   totalZapAmount = computed(() => {

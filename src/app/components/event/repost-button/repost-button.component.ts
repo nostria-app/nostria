@@ -42,7 +42,7 @@ export class RepostButtonComponent {
   repostByCurrentAccount = computed<NostrRecord | undefined>(() => {
     const event = this.event();
     if (!event) return;
-    return this.reposts().find((e) => e.event.pubkey === this.accountState.pubkey());
+    return this.reposts().find(e => e.event.pubkey === this.accountState.pubkey());
   });
 
   constructor() {
@@ -98,7 +98,7 @@ export class RepostButtonComponent {
         event.id,
         event.kind,
         userPubkey,
-        invalidateCache,
+        invalidateCache
       );
       this.reposts.set(reposts);
     } finally {

@@ -81,7 +81,7 @@ export class ProfileStateService {
     this.reset();
     this.currentProfileKey.set(pubkey);
     // Trigger the reload by incrementing the reload trigger
-    this.reloadTrigger.update((val) => val + 1);
+    this.reloadTrigger.update(val => val + 1);
   }
 
   // Reload current profile data
@@ -106,26 +106,26 @@ export class ProfileStateService {
 
   // Computed signals for sorted data
   sortedNotes = computed(() =>
-    [...this.notes(), ...this.reposts()].sort((a, b) => b.event.created_at - a.event.created_at),
+    [...this.notes(), ...this.reposts()].sort((a, b) => b.event.created_at - a.event.created_at)
   );
 
   // Timeline combines notes, reposts, and replies
   sortedTimeline = computed(() =>
     [...this.notes(), ...this.reposts(), ...this.replies()].sort(
-      (a, b) => b.event.created_at - a.event.created_at,
-    ),
+      (a, b) => b.event.created_at - a.event.created_at
+    )
   );
 
   sortedReplies = computed(() =>
-    [...this.replies()].sort((a, b) => b.event.created_at - a.event.created_at),
+    [...this.replies()].sort((a, b) => b.event.created_at - a.event.created_at)
   );
 
   sortedArticles = computed(() =>
-    [...this.articles()].sort((a, b) => b.event.created_at - a.event.created_at),
+    [...this.articles()].sort((a, b) => b.event.created_at - a.event.created_at)
   );
 
   sortedMedia = computed(() =>
-    [...this.media()].sort((a, b) => b.event.created_at - a.event.created_at),
+    [...this.media()].sort((a, b) => b.event.created_at - a.event.created_at)
   );
 
   async loadUserData(pubkey: string) {
@@ -191,8 +191,8 @@ export class ProfileStateService {
         } else if (event.kind === kinds.LongFormArticle) {
           const record = this.utilities.toRecord(event);
           // Check for duplicates before adding
-          this.articles.update((articles) => {
-            const exists = articles.some((a) => a.event.id === event.id);
+          this.articles.update(articles => {
+            const exists = articles.some(a => a.event.id === event.id);
             if (exists) {
               console.log('Duplicate article event prevented:', event.id);
               return articles;
@@ -204,8 +204,8 @@ export class ProfileStateService {
           const record = this.utilities.toRecord(event);
           if (this.utilities.isRootPost(event)) {
             // Check for duplicates before adding to notes
-            this.notes.update((events) => {
-              const exists = events.some((n) => n.event.id === event.id);
+            this.notes.update(events => {
+              const exists = events.some(n => n.event.id === event.id);
               if (exists) {
                 console.log('Duplicate note event prevented:', event.id);
                 return events;
@@ -215,8 +215,8 @@ export class ProfileStateService {
             });
           } else {
             // Check for duplicates before adding to replies
-            this.replies.update((events) => {
-              const exists = events.some((r) => r.event.id === event.id);
+            this.replies.update(events => {
+              const exists = events.some(r => r.event.id === event.id);
               if (exists) {
                 console.log('Duplicate reply event prevented:', event.id);
                 return events;
@@ -228,8 +228,8 @@ export class ProfileStateService {
         } else if (event.kind === kinds.Repost || event.kind === kinds.GenericRepost) {
           const record = this.utilities.toRecord(event);
           // Check for duplicates before adding to reposts
-          this.reposts.update((reposts) => {
-            const exists = reposts.some((r) => r.event.id === event.id);
+          this.reposts.update(reposts => {
+            const exists = reposts.some(r => r.event.id === event.id);
             if (exists) {
               console.log('Duplicate repost event prevented:', event.id);
               return reposts;
@@ -241,8 +241,8 @@ export class ProfileStateService {
           // Handle media events (20 = Picture, 21 = Video, 22 = Unknown/Other media)
           const record = this.utilities.toRecord(event);
           // Check for duplicates before adding to media
-          this.media.update((media) => {
-            const exists = media.some((m) => m.event.id === event.id);
+          this.media.update(media => {
+            const exists = media.some(m => m.event.id === event.id);
             if (exists) {
               console.log('Duplicate media event prevented:', event.id);
               return media;
@@ -254,7 +254,7 @@ export class ProfileStateService {
       },
       () => {
         console.log('Subscription closed');
-      },
+      }
     );
   }
 
@@ -275,12 +275,12 @@ export class ProfileStateService {
       const oldestTimestamp =
         beforeTimestamp ||
         (currentNotes.length > 0
-          ? Math.min(...currentNotes.map((n) => n.event.created_at)) - 1
+          ? Math.min(...currentNotes.map(n => n.event.created_at)) - 1
           : Math.floor(Date.now() / 1000));
 
       this.logger.debug(`Loading more notes for ${pubkey}, before timestamp: ${oldestTimestamp}`);
 
-      return new Promise<NostrRecord[]>((resolve) => {
+      return new Promise<NostrRecord[]>(resolve => {
         const newNotes: NostrRecord[] = [];
         const newReplies: NostrRecord[] = [];
 
@@ -305,7 +305,7 @@ export class ProfileStateService {
               limit: 5,
             },
           ],
-          (event) => {
+          event => {
             // Handle different event types
             if (event.kind === kinds.ShortTextNote) {
               // Create a NostrRecord
@@ -320,7 +320,7 @@ export class ProfileStateService {
               if (isRootPost) {
                 // Check if we already have this note to avoid duplicates
                 const existingNotes = this.notes();
-                const exists = existingNotes.some((n) => n.event.id === event.id);
+                const exists = existingNotes.some(n => n.event.id === event.id);
 
                 if (!exists) {
                   newNotes.push(record);
@@ -329,7 +329,7 @@ export class ProfileStateService {
                 // This is a reply
                 // Check if we already have this reply to avoid duplicates
                 const existingReplies = this.replies();
-                const exists = existingReplies.some((r) => r.event.id === event.id);
+                const exists = existingReplies.some(r => r.event.id === event.id);
 
                 if (!exists) {
                   newReplies.push(record);
@@ -344,18 +344,18 @@ export class ProfileStateService {
 
               // Check if we already have this repost to avoid duplicates
               const existingReposts = this.reposts();
-              const exists = existingReposts.some((r) => r.event.id === event.id);
+              const exists = existingReposts.some(r => r.event.id === event.id);
 
               if (!exists) {
                 // Add to reposts directly since loadMoreNotes is for notes, but we should handle reposts too
-                this.reposts.update((existing) => [...existing, record]);
+                this.reposts.update(existing => [...existing, record]);
               }
             }
           },
           () => {
             // EOSE callback - subscription finished
             this.logger.debug(
-              `Loaded ${newNotes.length} more notes and ${newReplies.length} more replies`,
+              `Loaded ${newNotes.length} more notes and ${newReplies.length} more replies`
             );
 
             // Track if we added any new content
@@ -363,13 +363,13 @@ export class ProfileStateService {
 
             // Add new notes to the existing ones with final deduplication check
             if (newNotes.length > 0) {
-              this.notes.update((existing) => {
+              this.notes.update(existing => {
                 const filtered = newNotes.filter(
-                  (newNote) =>
-                    !existing.some((existingNote) => existingNote.event.id === newNote.event.id),
+                  newNote =>
+                    !existing.some(existingNote => existingNote.event.id === newNote.event.id)
                 );
                 console.log(
-                  `Adding ${filtered.length} new notes (${newNotes.length - filtered.length} duplicates filtered)`,
+                  `Adding ${filtered.length} new notes (${newNotes.length - filtered.length} duplicates filtered)`
                 );
 
                 if (filtered.length > 0) {
@@ -382,13 +382,13 @@ export class ProfileStateService {
 
             // Add new replies to the existing ones with final deduplication check
             if (newReplies.length > 0) {
-              this.replies.update((existing) => {
+              this.replies.update(existing => {
                 const filtered = newReplies.filter(
-                  (newReply) =>
-                    !existing.some((existingReply) => existingReply.event.id === newReply.event.id),
+                  newReply =>
+                    !existing.some(existingReply => existingReply.event.id === newReply.event.id)
                 );
                 console.log(
-                  `Adding ${filtered.length} new replies (${newReplies.length - filtered.length} duplicates filtered)`,
+                  `Adding ${filtered.length} new replies (${newReplies.length - filtered.length} duplicates filtered)`
                 );
 
                 if (filtered.length > 0) {
@@ -408,7 +408,7 @@ export class ProfileStateService {
 
             this.isLoadingMoreNotes.set(false);
             resolve([...newNotes, ...newReplies]);
-          },
+          }
         );
       });
     } catch (error) {
@@ -435,14 +435,14 @@ export class ProfileStateService {
       const oldestTimestamp =
         beforeTimestamp ||
         (currentArticles.length > 0
-          ? Math.min(...currentArticles.map((a) => a.event.created_at)) - 1
+          ? Math.min(...currentArticles.map(a => a.event.created_at)) - 1
           : Math.floor(Date.now() / 1000));
 
       this.logger.debug(
-        `Loading more articles for ${pubkey}, before timestamp: ${oldestTimestamp}`,
+        `Loading more articles for ${pubkey}, before timestamp: ${oldestTimestamp}`
       );
 
-      return new Promise<NostrRecord[]>((resolve) => {
+      return new Promise<NostrRecord[]>(resolve => {
         const newArticles: NostrRecord[] = [];
 
         this.relay!.subscribeEose(
@@ -454,7 +454,7 @@ export class ProfileStateService {
               limit: 10, // Load 10 more articles at a time
             },
           ],
-          (event) => {
+          event => {
             if (event.kind === kinds.LongFormArticle) {
               // Create a NostrRecord
               const record: NostrRecord = {
@@ -464,7 +464,7 @@ export class ProfileStateService {
 
               // Check if we already have this article to avoid duplicates
               const existingArticles = this.articles();
-              const exists = existingArticles.some((a) => a.event.id === event.id);
+              const exists = existingArticles.some(a => a.event.id === event.id);
 
               if (!exists) {
                 newArticles.push(record);
@@ -480,15 +480,15 @@ export class ProfileStateService {
 
             // Add new articles to the existing ones with final deduplication check
             if (newArticles.length > 0) {
-              this.articles.update((existing) => {
+              this.articles.update(existing => {
                 const filtered = newArticles.filter(
-                  (newArticle) =>
+                  newArticle =>
                     !existing.some(
-                      (existingArticle) => existingArticle.event.id === newArticle.event.id,
-                    ),
+                      existingArticle => existingArticle.event.id === newArticle.event.id
+                    )
                 );
                 console.log(
-                  `Adding ${filtered.length} new articles (${newArticles.length - filtered.length} duplicates filtered)`,
+                  `Adding ${filtered.length} new articles (${newArticles.length - filtered.length} duplicates filtered)`
                 );
 
                 if (filtered.length > 0) {
@@ -508,7 +508,7 @@ export class ProfileStateService {
 
             this.isLoadingMoreArticles.set(false);
             resolve(newArticles);
-          },
+          }
         );
       });
     } catch (error) {

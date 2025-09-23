@@ -66,7 +66,7 @@ export class ParsingService {
     setInterval(() => {
       if (this.nostrUriCache.size > 500) {
         this.logger.debug(
-          `Parsing service cache size: ${this.nostrUriCache.size}. Consider clearing if too large.`,
+          `Parsing service cache size: ${this.nostrUriCache.size}. Consider clearing if too large.`
         );
         // Optionally clear cache if it gets too large
         if (this.nostrUriCache.size > 1000) {
@@ -78,7 +78,7 @@ export class ParsingService {
   }
 
   async parseNostrUri(
-    uri: string,
+    uri: string
   ): Promise<{ type: string; data: any; displayName: string } | null> {
     // Check cache first
     if (this.nostrUriCache.has(uri)) {
@@ -106,7 +106,7 @@ export class ParsingService {
   }
 
   private async parseNostrUriInternal(
-    uri: string,
+    uri: string
   ): Promise<{ type: string; data: any; displayName: string } | null> {
     try {
       // Use the proper nip19 function for decoding nostr URIs
@@ -331,7 +331,7 @@ export class ParsingService {
     }
 
     // Batch process nostr URIs to avoid sequential awaits
-    const nostrDataPromises = nostrMatches.map(async (nostrMatch) => {
+    const nostrDataPromises = nostrMatches.map(async nostrMatch => {
       try {
         const nostrData = await this.parseNostrUri(nostrMatch.match[0]);
         return {
@@ -437,9 +437,7 @@ export class ParsingService {
 
       if (!rawUrl) continue;
 
-      const isSpecialType = matches.some(
-        (m) => m.start === start && m.end === start + rawUrl.length,
-      );
+      const isSpecialType = matches.some(m => m.start === start && m.end === start + rawUrl.length);
       if (!isSpecialType) {
         matches.push({
           start,

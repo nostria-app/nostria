@@ -240,7 +240,7 @@ export class ProfileComponent {
               } else {
                 // username = await this.username.getUsername(id);
                 const identifier: string = id;
-                this.username.getUsername(id).then((username) => {
+                this.username.getUsername(id).then(username => {
                   if (username) {
                     this.url.updatePathSilently(['/u', username]);
                   } else {
@@ -253,7 +253,7 @@ export class ProfileComponent {
             } else {
               if (!username) {
                 const identifier: string = id;
-                this.username.getUsername(id).then((username) => {
+                this.username.getUsername(id).then(username => {
                   if (username) {
                     this.url.updatePathSilently(['/u', username]);
                   } else {
@@ -303,7 +303,7 @@ export class ProfileComponent {
     });
 
     // Add effect to monitor router events for sub-route changes
-    this.router.events.subscribe((event) => {
+    this.router.events.subscribe(event => {
       if (event instanceof NavigationEnd) {
         // Check if current route is one that should use compact header
         const currentUrl = event.urlAfterRedirects;
@@ -327,7 +327,7 @@ export class ProfileComponent {
               'Profile changed from',
               this.previousProfilePubkey,
               'to',
-              urlProfileId,
+              urlProfileId
             );
             this.previousProfilePubkey = urlProfileId;
 
@@ -514,10 +514,10 @@ export class ProfileComponent {
             horizontalPosition: 'center',
             verticalPosition: 'bottom',
             panelClass: 'copy-snackbar',
-          },
+          }
         );
       })
-      .catch((error) => {
+      .catch(error => {
         this.logger.error('Failed to copy to clipboard:', error);
         this.snackBar.open('Failed to copy to clipboard', 'Dismiss', {
           duration: 3000,
@@ -583,7 +583,7 @@ export class ProfileComponent {
         .then(() => {
           this.logger.debug('Profile shared successfully');
         })
-        .catch((error) => {
+        .catch(error => {
           this.logger.error('Error sharing profile:', error);
         });
     } else {

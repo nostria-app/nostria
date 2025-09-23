@@ -97,7 +97,7 @@ export class Profile {
       if (needsFileUpload && !options.skipMediaServerCheck) {
         if (!this.hasMediaServers()) {
           throw new Error(
-            'Media servers are required for file uploads. Please configure media servers first.',
+            'Media servers are required for file uploads. Please configure media servers first.'
           );
         }
       }
@@ -107,12 +107,12 @@ export class Profile {
         const uploadResult = await this.media.uploadFile(
           options.profileImageFile,
           true,
-          this.media.mediaServers(),
+          this.media.mediaServers()
         );
 
         if (!uploadResult.item) {
           throw new Error(
-            `Failed to upload profile image: ${uploadResult.message || 'Unknown error'}`,
+            `Failed to upload profile image: ${uploadResult.message || 'Unknown error'}`
           );
         }
 
@@ -127,12 +127,12 @@ export class Profile {
         const uploadResult = await this.media.uploadFile(
           options.bannerImageFile,
           true,
-          this.media.mediaServers(),
+          this.media.mediaServers()
         );
 
         if (!uploadResult.item) {
           throw new Error(
-            `Failed to upload banner image: ${uploadResult.message || 'Unknown error'}`,
+            `Failed to upload banner image: ${uploadResult.message || 'Unknown error'}`
           );
         }
 
@@ -200,7 +200,7 @@ export class Profile {
   async createInitialProfile(
     pubkey: string,
     displayName?: string,
-    profileImageFile?: File,
+    profileImageFile?: File
   ): Promise<ProfileCreateResult> {
     this.logger.debug('Creating initial profile', {
       hasDisplayName: !!displayName,
@@ -266,7 +266,7 @@ export class Profile {
     }
 
     // Remove empty string values to keep the profile clean
-    Object.keys(cleaned).forEach((key) => {
+    Object.keys(cleaned).forEach(key => {
       if (cleaned[key] === '') {
         delete cleaned[key];
       }

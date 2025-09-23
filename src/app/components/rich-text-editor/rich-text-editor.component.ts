@@ -101,7 +101,7 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
       this.renderMarkdownToEditor(this.markdownContent());
     }
 
-    this.isRichTextMode.update((mode) => !mode);
+    this.isRichTextMode.update(mode => !mode);
 
     // Set up paste handlers for the newly active editor
     setTimeout(() => {
@@ -141,7 +141,7 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
       // Handle images - convert ![alt](url) to <img> tags (must come before links)
       .replace(
         /!\[([^\]]*)\]\(([^\)]+)\)/g,
-        '<img src="$2" alt="$1" style="max-width: 100%; height: auto; border-radius: 4px;" />',
+        '<img src="$2" alt="$1" style="max-width: 100%; height: auto; border-radius: 4px;" />'
       )
 
       // Handle headings FIRST to avoid paragraph wrapping
@@ -162,7 +162,7 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
         /(?:^|\n)(\d+)\. (.*?)(?=\n(?!\d+\. )|$)/gs,
         function (match: string, num: string, item: string) {
           return '<ol><li>' + item.trim() + '</li></ol>';
-        },
+        }
       )
 
       // Handle text formatting - non-greedy to prevent overlapping tags
@@ -393,12 +393,12 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
       // Load media service if not already loaded
       await this.mediaService.load();
 
-      const uploadPromises = files.map(async (file) => {
+      const uploadPromises = files.map(async file => {
         try {
           const result = await this.mediaService.uploadFile(
             file,
             false,
-            this.mediaService.mediaServers(),
+            this.mediaService.mediaServers()
           );
 
           if (result.status === 'success' && result.item) {
@@ -423,8 +423,8 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
       const results = await Promise.all(uploadPromises);
 
       // Show success/error messages
-      const successful = results.filter((r) => r.success);
-      const failed = results.filter((r) => !r.success);
+      const successful = results.filter(r => r.success);
+      const failed = results.filter(r => !r.success);
 
       if (successful.length > 0) {
         this.snackBar.open(`${successful.length} file(s) uploaded successfully`, 'Close', {
@@ -441,7 +441,7 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
       this.snackBar.open(
         'Upload failed: ' + (error instanceof Error ? error.message : 'Unknown error'),
         'Close',
-        { duration: 5000 },
+        { duration: 5000 }
       );
     } finally {
       this.isUploading.set(false);
@@ -514,7 +514,7 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
         // Handle images first (before links)
         .replace(
           /!\[([^\]]*)\]\(([^\)]+)\)/g,
-          '<img src="$2" alt="$1" style="max-width: 100%; height: auto; border-radius: 4px;" />',
+          '<img src="$2" alt="$1" style="max-width: 100%; height: auto; border-radius: 4px;" />'
         )
         // Handle links
         .replace(/\[([^\[]+)\]\(([^\)]+)\)/g, '<a href="$2">$1</a>')

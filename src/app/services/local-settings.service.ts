@@ -93,7 +93,7 @@ export class LocalSettingsService {
    * Update specific settings
    */
   updateSettings(updates: Partial<LocalSettings>): void {
-    this.settings.update((current) => ({
+    this.settings.update(current => ({
       ...current,
       ...updates,
     }));

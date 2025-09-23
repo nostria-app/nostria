@@ -145,9 +145,9 @@ export class BackupComponent {
           compression: 'DEFLATE',
           compressionOptions: { level: 9 },
         },
-        (metadata) => {
+        metadata => {
           this.progress.set(metadata.percent);
-        },
+        }
       );
 
       // Create and trigger download
@@ -245,7 +245,7 @@ export class BackupComponent {
 
       const relayListEvent = await this.storage.getEventByPubkeyAndKind(
         currentPubkey,
-        kinds.RelayList,
+        kinds.RelayList
       );
 
       if (relayListEvent) {
@@ -263,7 +263,7 @@ export class BackupComponent {
     } catch (error) {
       this.logger.error('Error importing backup', error);
       this.showMessage(
-        'Failed to import backup: ' + (error instanceof Error ? error.message : 'Unknown error'),
+        'Failed to import backup: ' + (error instanceof Error ? error.message : 'Unknown error')
       );
     } finally {
       this.isImporting.set(false);

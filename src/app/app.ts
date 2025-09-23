@@ -148,19 +148,19 @@ export class App implements OnInit {
 
   // Computed signal to count unread notifications
   unreadNotificationsCount = computed(() => {
-    return this.notificationService.notifications().filter((notification) => !notification.read)
+    return this.notificationService.notifications().filter(notification => !notification.read)
       .length;
   });
 
   // Computed signal to check if there are any active pending notifications
   hasActivePendingNotifications = computed(() => {
-    return this.notificationService.notifications().some((notification) => {
+    return this.notificationService.notifications().some(notification => {
       // Check if it's a RelayPublishingNotification with pending promises
       if (notification.type === NotificationType.RELAY_PUBLISHING) {
         const relayNotification = notification as RelayPublishingNotification;
         return (
           !relayNotification.complete &&
-          relayNotification.relayPromises?.some((relay) => relay.status === 'pending')
+          relayNotification.relayPromises?.some(relay => relay.status === 'pending')
         );
       }
       return false;
@@ -171,7 +171,7 @@ export class App implements OnInit {
     const subscription = this.accountState.subscription();
     this.logger.info('navigationItems recomputing, subscription:', subscription);
 
-    return this.navItems.filter((item) => {
+    return this.navItems.filter(item => {
       // Filter out items that are not authenticated if user is not logged in
       if (item.authenticated && !this.app.authenticated()) {
         return false;
@@ -263,7 +263,7 @@ export class App implements OnInit {
           this.logger.info('[App] Target URL type:', typeof launchParams.targetURL);
           this.logger.info(
             '[App] Target URL length:',
-            launchParams.targetURL?.length || 'undefined',
+            launchParams.targetURL?.length || 'undefined'
           );
 
           // Handle nostr protocol links
@@ -308,7 +308,7 @@ export class App implements OnInit {
       this.logger.info('[App] LaunchQueue not available in this environment');
       this.logger.debug(
         '[App] Window object keys containing "launch":',
-        Object.keys(window).filter((key) => key.toLowerCase().includes('launch')),
+        Object.keys(window).filter(key => key.toLowerCase().includes('launch'))
       );
     }
 
@@ -516,7 +516,7 @@ export class App implements OnInit {
       disableClose: false,
     });
 
-    dialogRef.afterClosed().subscribe(async (result) => {
+    dialogRef.afterClosed().subscribe(async result => {
       if (result) {
         this.logger.info('The dialog was closed', result);
         this.layout.toggleSearch();
@@ -550,7 +550,7 @@ export class App implements OnInit {
                 duration: 3000,
                 horizontalPosition: 'center',
                 verticalPosition: 'bottom',
-              },
+              }
             );
           }
         }
@@ -628,7 +628,7 @@ export class App implements OnInit {
         // Focus the search results container after a short delay to ensure it's rendered
         setTimeout(() => {
           const searchResultsContainer = this.document.querySelector(
-            '.search-results',
+            '.search-results'
           ) as HTMLElement;
           if (searchResultsContainer) {
             searchResultsContainer.focus();
@@ -691,7 +691,7 @@ export class App implements OnInit {
         } catch (urlParseError) {
           this.logger.error(
             '[App] Failed to parse current URL for parameter extraction:',
-            urlParseError,
+            urlParseError
           );
         }
 

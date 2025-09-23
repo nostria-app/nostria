@@ -68,7 +68,7 @@ export class ZapService {
     code: string,
     message: string,
     recoverable = true,
-    retryDelay?: number,
+    retryDelay?: number
   ): ZapError {
     return { code, message, recoverable, retryDelay };
   }
@@ -79,7 +79,7 @@ export class ZapService {
   private async withRetry<T>(
     operation: () => Promise<T>,
     options: Partial<RetryOptions> = {},
-    operationName = 'operation',
+    operationName = 'operation'
   ): Promise<T> {
     const config = { ...this.DEFAULT_RETRY_OPTIONS, ...options };
     let lastError: Error;
@@ -88,7 +88,7 @@ export class ZapService {
     for (let attempt = 0; attempt <= config.maxRetries; attempt++) {
       try {
         this.logger.debug(
-          `Attempting ${operationName} (attempt ${attempt + 1}/${config.maxRetries + 1})`,
+          `Attempting ${operationName} (attempt ${attempt + 1}/${config.maxRetries + 1})`
         );
         return await operation();
       } catch (error) {
@@ -134,7 +134,7 @@ export class ZapService {
       'wallet not found',
     ];
 
-    return nonRecoverableMessages.some((msg) => message.includes(msg));
+    return nonRecoverableMessages.some(msg => message.includes(msg));
   }
 
   /**
@@ -148,7 +148,7 @@ export class ZapService {
         'NETWORK_ERROR',
         'Network connection failed. Please check your internet connection.',
         true,
-        2000,
+        2000
       );
     }
 
@@ -157,7 +157,7 @@ export class ZapService {
         'TIMEOUT_ERROR',
         'Request timed out. Please try again.',
         true,
-        1000,
+        1000
       );
     }
 
@@ -165,7 +165,7 @@ export class ZapService {
       return this.createZapError(
         'INVOICE_ERROR',
         'Invalid Lightning invoice. Please try again.',
-        true,
+        true
       );
     }
 
@@ -174,7 +174,7 @@ export class ZapService {
         'WALLET_ERROR',
         'Wallet payment failed. Please check your wallet connection.',
         true,
-        3000,
+        3000
       );
     }
 
@@ -185,7 +185,7 @@ export class ZapService {
     return this.createZapError(
       'UNKNOWN_ERROR',
       error.message || 'An unexpected error occurred',
-      true,
+      true
     );
   }
 
@@ -193,7 +193,7 @@ export class ZapService {
    * Utility delay function
    */
   private delay(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   /**
@@ -292,7 +292,7 @@ export class ZapService {
     message = '',
     eventId?: string,
     lnurl?: string,
-    relays: string[] = [],
+    relays: string[] = []
   ): Promise<UnsignedEvent> {
     const currentUser = this.accountState.account();
     if (!currentUser) {
@@ -343,7 +343,7 @@ export class ZapService {
     zapRequest: Event,
     callbackUrl: string,
     amount: number,
-    comment?: string,
+    comment?: string
   ): Promise<ZapPayment> {
     try {
       const encodedZapRequest = encodeURIComponent(JSON.stringify(zapRequest));
@@ -467,7 +467,7 @@ export class ZapService {
       }
 
       // Get the amount from zap request (in millisats)
-      const amountTag = zapRequest.tags.find((tag) => tag[0] === 'amount');
+      const amountTag = zapRequest.tags.find(tag => tag[0] === 'amount');
       if (!amountTag || !amountTag[1]) {
         return false;
       }
@@ -493,7 +493,7 @@ export class ZapService {
     amount: number, // in sats
     message = '',
     eventId?: string,
-    recipientMetadata?: Record<string, unknown>,
+    recipientMetadata?: Record<string, unknown>
   ): Promise<void> {
     const startTime = Date.now();
 
@@ -508,14 +508,14 @@ export class ZapService {
           // Get lightning address from metadata
           if (!recipientMetadata) {
             throw new Error(
-              'Recipient metadata required for zapping. Please ensure the recipient has a valid profile with Lightning address.',
+              'Recipient metadata required for zapping. Please ensure the recipient has a valid profile with Lightning address.'
             );
           }
 
           const lightningAddress = this.getLightningAddress(recipientMetadata);
           if (!lightningAddress) {
             throw new Error(
-              'Recipient has no lightning address (lud16 or lud06) configured in their profile. They cannot receive zaps.',
+              'Recipient has no lightning address (lud16 or lud06) configured in their profile. They cannot receive zaps.'
             );
           }
 
@@ -523,7 +523,7 @@ export class ZapService {
           const lnurlPayInfo = await this.withRetry(
             () => this.fetchLnurlPayInfo(lightningAddress),
             { maxRetries: 2 },
-            'fetch LNURL pay info',
+            'fetch LNURL pay info'
           );
 
           // Check if recipient supports Nostr zaps
@@ -534,7 +534,7 @@ export class ZapService {
           // Validate amount is within bounds
           if (amountMsats < lnurlPayInfo.minSendable || amountMsats > lnurlPayInfo.maxSendable) {
             throw new Error(
-              `Amount must be between ${lnurlPayInfo.minSendable / 1000} and ${lnurlPayInfo.maxSendable / 1000} sats`,
+              `Amount must be between ${lnurlPayInfo.minSendable / 1000} and ${lnurlPayInfo.maxSendable / 1000} sats`
             );
           }
 
@@ -558,7 +558,7 @@ export class ZapService {
             amountMsats,
             message,
             eventId,
-            lnurl,
+            lnurl
           );
 
           // Sign the zap request
@@ -569,21 +569,21 @@ export class ZapService {
             () =>
               this.requestZapInvoice(signedZapRequest, lnurlPayInfo.callback, amountMsats, message),
             { maxRetries: 2 },
-            'request zap invoice',
+            'request zap invoice'
           );
 
           // Pay the invoice with retry (most critical part)
           await this.withRetry(
             () => this.payInvoice(zapPayment.pr),
             { maxRetries: 1, initialDelay: 2000 }, // Longer delay for payment retries
-            'pay invoice',
+            'pay invoice'
           );
 
           this.logger.info('Zap completed successfully');
           return true;
         },
         { maxRetries: 1 },
-        'send zap',
+        'send zap'
       ); // Overall retry for the entire process
 
       // Record successful zap metrics
@@ -619,7 +619,7 @@ export class ZapService {
   validateZapReceipt(
     zapReceipt: Event,
     expectedRecipientPubkey: string,
-    lnurlPayInfo?: LnurlPayResponse,
+    lnurlPayInfo?: LnurlPayResponse
   ): boolean {
     try {
       // Basic validation
@@ -633,9 +633,9 @@ export class ZapService {
       }
 
       // Validate required tags
-      const pTags = zapReceipt.tags.filter((tag) => tag[0] === 'p');
-      const descriptionTags = zapReceipt.tags.filter((tag) => tag[0] === 'description');
-      const bolt11Tags = zapReceipt.tags.filter((tag) => tag[0] === 'bolt11');
+      const pTags = zapReceipt.tags.filter(tag => tag[0] === 'p');
+      const descriptionTags = zapReceipt.tags.filter(tag => tag[0] === 'description');
+      const bolt11Tags = zapReceipt.tags.filter(tag => tag[0] === 'bolt11');
 
       if (pTags.length !== 1 || descriptionTags.length !== 1 || bolt11Tags.length !== 1) {
         return false;
@@ -693,7 +693,7 @@ export class ZapService {
     comment: string;
   } {
     try {
-      const descriptionTag = zapReceipt.tags.find((tag) => tag[0] === 'description');
+      const descriptionTag = zapReceipt.tags.find(tag => tag[0] === 'description');
       if (!descriptionTag || !descriptionTag[1]) {
         return { zapRequest: null, amount: null, comment: '' };
       }
@@ -702,7 +702,7 @@ export class ZapService {
       const zapRequest = JSON.parse(descriptionTag[1]) as Event;
 
       // Extract amount from bolt11 invoice
-      const bolt11Tag = zapReceipt.tags.find((tag) => tag[0] === 'bolt11');
+      const bolt11Tag = zapReceipt.tags.find(tag => tag[0] === 'bolt11');
       let amount: number | null = null;
 
       if (bolt11Tag && bolt11Tag[1]) {
@@ -714,7 +714,7 @@ export class ZapService {
 
         // Fallback: try to get amount from the zap request if bolt11 parsing failed
         if (!amount) {
-          const amountTag = zapRequest.tags.find((tag) => tag[0] === 'amount');
+          const amountTag = zapRequest.tags.find(tag => tag[0] === 'amount');
           if (amountTag && amountTag[1]) {
             amount = parseInt(amountTag[1]) / 1000; // Convert msats to sats
           }
@@ -792,7 +792,7 @@ export class ZapService {
 
       for (const receipt of receipts) {
         try {
-          const descriptionTag = receipt.tags.find((t) => t[0] === 'description');
+          const descriptionTag = receipt.tags.find(t => t[0] === 'description');
           if (!descriptionTag || !descriptionTag[1]) {
             continue;
           }
@@ -805,7 +805,7 @@ export class ZapService {
           // ignore parse errors for individual receipts
           this.logger.debug(
             'Failed to parse zap receipt description while filtering sent zaps',
-            err,
+            err
           );
         }
       }
@@ -849,7 +849,7 @@ export class ZapService {
       (event: Event) => {
         this.logger.debug('Received new zap receipt for event:', event);
         onZapReceived(event);
-      },
+      }
     );
 
     // Store subscription for cleanup with normalized interface
@@ -897,7 +897,7 @@ export class ZapService {
       (event: Event) => {
         this.logger.debug('Received new zap receipt for user:', event);
         onZapReceived(event);
-      },
+      }
     );
 
     // Store subscription for cleanup with normalized interface
@@ -922,7 +922,7 @@ export class ZapService {
    */
   cleanupSubscriptions(): void {
     this.logger.debug(`Cleaning up ${this.activeSubscriptions.size} zap subscriptions`);
-    this.activeSubscriptions.forEach((subscription) => {
+    this.activeSubscriptions.forEach(subscription => {
       subscription.unsubscribe();
     });
     this.activeSubscriptions.clear();
@@ -934,7 +934,7 @@ export class ZapService {
   processReceivedZapReceipt(zapReceipt: Event): void {
     try {
       // Extract amount from bolt11 invoice
-      const bolt11Tags = zapReceipt.tags.filter((tag) => tag[0] === 'bolt11');
+      const bolt11Tags = zapReceipt.tags.filter(tag => tag[0] === 'bolt11');
       if (bolt11Tags.length === 1) {
         const bolt11Invoice = bolt11Tags[0][1];
         const amountMsats = this.getBolt11Amount(bolt11Invoice);
@@ -961,7 +961,7 @@ export class ZapService {
    */
   private extractSenderFromZapReceipt(zapReceipt: Event): string | undefined {
     try {
-      const descriptionTags = zapReceipt.tags.filter((tag) => tag[0] === 'description');
+      const descriptionTags = zapReceipt.tags.filter(tag => tag[0] === 'description');
       if (descriptionTags.length === 1) {
         const zapRequest = JSON.parse(descriptionTags[0][1]);
         return zapRequest.pubkey;
@@ -980,7 +980,7 @@ export class ZapService {
     amount: number,
     message?: string,
     eventId?: string,
-    recipientMetadata?: Record<string, unknown>,
+    recipientMetadata?: Record<string, unknown>
   ): Promise<string> {
     try {
       const amountMsats = amount * 1000;
@@ -1001,7 +1001,7 @@ export class ZapService {
       // Validate amount
       if (amountMsats < lnurlPayInfo.minSendable || amountMsats > lnurlPayInfo.maxSendable) {
         throw new Error(
-          `Amount must be between ${lnurlPayInfo.minSendable / 1000} and ${lnurlPayInfo.maxSendable / 1000} sats`,
+          `Amount must be between ${lnurlPayInfo.minSendable / 1000} and ${lnurlPayInfo.maxSendable / 1000} sats`
         );
       }
 
@@ -1025,7 +1025,7 @@ export class ZapService {
         amountMsats,
         message,
         eventId,
-        lnurl,
+        lnurl
       );
 
       // Sign the zap request
@@ -1036,7 +1036,7 @@ export class ZapService {
         signedZapRequest,
         lnurlPayInfo.callback,
         amountMsats,
-        message,
+        message
       );
 
       return zapPayment.pr;
@@ -1051,7 +1051,7 @@ export class ZapService {
    */
   private extractEventIdFromZapReceipt(zapReceipt: Event): string | undefined {
     try {
-      const descriptionTags = zapReceipt.tags.filter((tag) => tag[0] === 'description');
+      const descriptionTags = zapReceipt.tags.filter(tag => tag[0] === 'description');
       if (descriptionTags.length === 1) {
         const zapRequest = JSON.parse(descriptionTags[0][1]);
         const eTags = zapRequest.tags?.filter((tag: string[]) => tag[0] === 'e');

@@ -518,8 +518,8 @@ export class ZapHistoryComponent implements OnInit, OnDestroy {
   prefetchedProfiles = signal<Record<string, unknown>>({});
 
   // Computed properties
-  sentZaps = computed(() => this.allZaps().filter((zap) => zap.type === 'sent'));
-  receivedZaps = computed(() => this.allZaps().filter((zap) => zap.type === 'received'));
+  sentZaps = computed(() => this.allZaps().filter(zap => zap.type === 'sent'));
+  receivedZaps = computed(() => this.allZaps().filter(zap => zap.type === 'received'));
 
   totalSent = computed(() => {
     return this.sentZaps().reduce((total, zap) => total + zap.amount, 0);
@@ -565,7 +565,7 @@ export class ZapHistoryComponent implements OnInit, OnDestroy {
       for (const receipt of receivedZapReceipts) {
         const parsed = this.zapService.parseZapReceipt(receipt);
         if (parsed.zapRequest && parsed.amount) {
-          const eventTag = receipt.tags.find((tag) => tag[0] === 'e');
+          const eventTag = receipt.tags.find(tag => tag[0] === 'e');
           zapHistory.push({
             type: 'received',
             zapReceipt: receipt,
@@ -584,9 +584,9 @@ export class ZapHistoryComponent implements OnInit, OnDestroy {
         const parsed = this.zapService.parseZapReceipt(receipt);
         if (parsed.zapRequest && parsed.amount) {
           // Determine the recipient pubkey from the zapRequest tags (p tag)
-          const pTag = parsed.zapRequest.tags.find((t) => t[0] === 'p');
+          const pTag = parsed.zapRequest.tags.find(t => t[0] === 'p');
           const recipient = pTag && pTag[1] ? pTag[1] : parsed.zapRequest.pubkey;
-          const eventTag = receipt.tags.find((tag) => tag[0] === 'e');
+          const eventTag = receipt.tags.find(tag => tag[0] === 'e');
 
           zapHistory.push({
             type: 'sent',
@@ -607,11 +607,11 @@ export class ZapHistoryComponent implements OnInit, OnDestroy {
       this.allZaps.set(zapHistory);
 
       // Prefetch unique profiles to avoid duplicate loads in child components
-      const uniquePubkeys = Array.from(new Set(zapHistory.map((z) => z.counterparty)));
+      const uniquePubkeys = Array.from(new Set(zapHistory.map(z => z.counterparty)));
       const profileMap: Record<string, unknown> = {};
 
       await Promise.all(
-        uniquePubkeys.map(async (pubkey) => {
+        uniquePubkeys.map(async pubkey => {
           try {
             const profile = await this.data.getProfile(pubkey);
             if (profile) {
@@ -620,7 +620,7 @@ export class ZapHistoryComponent implements OnInit, OnDestroy {
           } catch {
             // ignore individual profile errors
           }
-        }),
+        })
       );
 
       if (Object.keys(profileMap).length) {

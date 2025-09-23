@@ -63,7 +63,7 @@ export class NwcRelayService extends RelayServiceBase {
     filters: Filter[],
     nwcRelayUrls: string[],
     onEvent: (event: Event) => void,
-    onEose?: () => void,
+    onEose?: () => void
   ): { unsubscribe: () => void } {
     try {
       this.logger.debug('Subscribing to NWC responses on relays:', nwcRelayUrls);

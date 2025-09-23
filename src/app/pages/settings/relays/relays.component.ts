@@ -177,13 +177,13 @@ export class RelaysComponent implements OnInit, OnDestroy {
     try {
       // Get current user relay list (kind 10002) from storage (already have in memory as this.relay.relays)
       const userRelayUrls = this.utilities.normalizeRelayUrls(
-        this.accountRelay.getRelayUrls().map((r) => r),
+        this.accountRelay.getRelayUrls().map(r => r)
       );
 
       // Fetch existing DM relay list event (10050)
       const dmRelayEvent = await this.data.getEventByPubkeyAndKind(
         pubkey,
-        kinds.DirectMessageRelaysList,
+        kinds.DirectMessageRelaysList
       );
       if (!dmRelayEvent) {
         this.showUpdateDMRelays.set(true); // Need to create one
@@ -192,14 +192,14 @@ export class RelaysComponent implements OnInit, OnDestroy {
 
       // Extract relay tag URLs from dmRelayEvent
       const dmRelayUrls = dmRelayEvent.event.tags
-        .filter((t) => t[0] === 'relay' && t[1])
-        .map((t) => t[1]);
+        .filter(t => t[0] === 'relay' && t[1])
+        .map(t => t[1]);
       const normalizedDMUrls = this.utilities.normalizeRelayUrls(dmRelayUrls);
 
       // Compare sets (unordered)
       const setA = new Set(userRelayUrls);
       const setB = new Set(normalizedDMUrls);
-      const same = setA.size === setB.size && [...setA].every((u) => setB.has(u));
+      const same = setA.size === setB.size && [...setA].every(u => setB.has(u));
 
       this.showUpdateDMRelays.set(!same);
     } catch (err) {
@@ -208,7 +208,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
     }
   }
 
-  ngOnInit() { }
+  ngOnInit() {}
 
   cleanFollowingList() {
     if (this.isCleaningFollowingList()) {
@@ -311,7 +311,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
     console.log(userPool.seenOn);
 
     // Update the status of each relay in our user relays list
-    this.userRelays().forEach((relay) => {
+    this.userRelays().forEach(relay => {
       // Check if this relay URL exists in the connection status map
       if (connectionStatusMap.has(relay.url)) {
         const isConnected = connectionStatusMap.get(relay.url);
@@ -329,7 +329,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
     const discoveryPool = this.discoveryRelay.getPool();
     if (discoveryPool) {
       const discoveryConnectionStatusMap = discoveryPool.listConnectionStatus();
-      this.discoveryRelays().forEach((relay) => {
+      this.discoveryRelays().forEach(relay => {
         if (discoveryConnectionStatusMap.has(relay.url)) {
           const isConnected = discoveryConnectionStatusMap.get(relay.url);
           const newStatus = isConnected ? 'connected' : 'disconnected';
@@ -382,7 +382,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
     this.newRelayUrl.set(url);
 
     // Check if relay already exists
-    if (this.accountRelay.getRelayUrls().some((relay) => relay === url)) {
+    if (this.accountRelay.getRelayUrls().some(relay => relay === url)) {
       this.showMessage('This relay is already in your list');
       return;
     }
@@ -396,7 +396,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
       },
     });
 
-    dialogRef.afterClosed().subscribe(async (result) => {
+    dialogRef.afterClosed().subscribe(async result => {
       if (result?.confirmed) {
         this.logger.info('Adding new relay', {
           url,
@@ -443,7 +443,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
 
     const tags = this.nostr.createTags(
       'r',
-      relays.map((relay) => relay),
+      relays.map(relay => relay)
     );
 
     const relayListEvent = this.nostr.createEvent(kinds.RelayList, '', tags);
@@ -461,7 +461,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
     const allCallbacks = [...(callbacks1 || []), ...(callbacks2 || [])].flat();
 
     const relayUrls = [
-      ...this.accountRelay.getRelayUrls().map((relay) => relay),
+      ...this.accountRelay.getRelayUrls().map(relay => relay),
       ...this.discoveryRelay.getRelayUrls(),
     ];
     this.logger.debug('Publishing to relay URLs:', relayUrls);
@@ -565,7 +565,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
   }
 
   async updateDirectMessageRelayList() {
-    const relayUrls = this.relays().map((relay) => {
+    const relayUrls = this.relays().map(relay => {
       return relay;
     });
     const normalizedUrls = this.utilities.normalizeRelayUrls(relayUrls);
@@ -604,7 +604,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
     try {
       // Check latency for all relays
       const pingResults = await Promise.allSettled(
-        relaysToCheck.map((url) => this.checkRelayPing(url)),
+        relaysToCheck.map(url => this.checkRelayPing(url))
       );
 
       // Process results
@@ -614,7 +614,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
           pingTime: result.status === 'fulfilled' ? result.value : Infinity,
           isAlreadyAdded: this.discoveryRelay.getRelayUrls().includes(relaysToCheck[index]),
         }))
-        .filter((result) => result.pingTime !== Infinity)
+        .filter(result => result.pingTime !== Infinity)
         .sort((a, b) => a.pingTime - b.pingTime);
 
       this.logger.debug('Latency results', { successfulPings });
@@ -633,7 +633,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
         },
       });
 
-      dialogRef.afterClosed().subscribe((result) => {
+      dialogRef.afterClosed().subscribe(result => {
         if (result?.selected) {
           const selectedRelay = result.selected as PingResult;
 
@@ -684,7 +684,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
           resolve(pingTime);
         };
 
-        ws.onerror = (error) => {
+        ws.onerror = error => {
           clearTimeout(timeout);
           reject(error);
         };
@@ -728,7 +728,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
 
   async clearObservedRelayData(): Promise<void> {
     const confirmed = confirm(
-      'Are you sure you want to clear all observed relay data? This action cannot be undone.',
+      'Are you sure you want to clear all observed relay data? This action cannot be undone.'
     );
     if (confirmed) {
       try {

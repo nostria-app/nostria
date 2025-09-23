@@ -53,13 +53,13 @@ export class WebPushService {
   // Get device preferences for a specific device (uses temp preferences if available)
   getDevicePreferences(deviceId: string): Record<UserNotificationType, boolean> {
     // First check temp preferences (for unsaved changes)
-    const tempPreferences = this.tempDevicePreferences().find((pref) => pref.deviceId === deviceId);
+    const tempPreferences = this.tempDevicePreferences().find(pref => pref.deviceId === deviceId);
     if (tempPreferences) {
       return tempPreferences.preferences;
     }
 
     // Fall back to saved preferences
-    const preferences = this.devicePreferences().find((pref) => pref.deviceId === deviceId);
+    const preferences = this.devicePreferences().find(pref => pref.deviceId === deviceId);
     if (preferences) {
       return preferences.preferences;
     }
@@ -78,10 +78,10 @@ export class WebPushService {
   // Update device preferences (temporary, not saved until commitPreferences is called)
   updateDevicePreferences(
     deviceId: string,
-    preferences: Record<UserNotificationType, boolean>,
+    preferences: Record<UserNotificationType, boolean>
   ): void {
-    this.tempDevicePreferences.update((currentPrefs) => {
-      const existingIndex = currentPrefs.findIndex((pref) => pref.deviceId === deviceId);
+    this.tempDevicePreferences.update(currentPrefs => {
+      const existingIndex = currentPrefs.findIndex(pref => pref.deviceId === deviceId);
       const newPreference: DeviceNotificationPreferences = {
         deviceId,
         preferences,
@@ -107,7 +107,7 @@ export class WebPushService {
       const response = await this.webRequest.fetchJson(
         url,
         { method: 'POST', body: JSON.stringify(prefs) },
-        { kind: kinds.HTTPAuth },
+        { kind: kinds.HTTPAuth }
       );
       console.log('Response from savePreferencesToServer:', response);
       this.logger.info('Device notification preferences saved successfully');
@@ -122,7 +122,7 @@ export class WebPushService {
       const result = await this.webRequest.fetchJson(
         url,
         { method: 'GET' },
-        { kind: kinds.HTTPAuth },
+        { kind: kinds.HTTPAuth }
       );
 
       if (result && result.settings) {
@@ -138,9 +138,9 @@ export class WebPushService {
 
   // Add device to the signal when a new subscription is created
   addDevice(device: Device): void {
-    this.deviceList.update((devices) => {
+    this.deviceList.update(devices => {
       // Check if device already exists to avoid duplicates
-      const exists = devices.some((d) => d.deviceId === device.deviceId);
+      const exists = devices.some(d => d.deviceId === device.deviceId);
       if (!exists) {
         return [...devices, device];
       }
@@ -149,7 +149,7 @@ export class WebPushService {
   }
   // Remove device from the signal when unsubscribed
   removeDevice(deviceId: string): void {
-    this.deviceList.update((devices) => devices.filter((d) => d.deviceId !== deviceId));
+    this.deviceList.update(devices => devices.filter(d => d.deviceId !== deviceId));
   }
 
   // Helper method to parse userAgent into a readable device name
@@ -201,7 +201,7 @@ export class WebPushService {
         const result = await this.webRequest.fetchJson(
           url,
           { method: 'GET' },
-          { kind: kinds.HTTPAuth },
+          { kind: kinds.HTTPAuth }
         );
 
         return result.devices || [];
@@ -229,7 +229,7 @@ export class WebPushService {
       const result = await this.webRequest.fetchJson(
         url,
         { method: 'POST', body: JSON.stringify(payload) },
-        { kind: kinds.HTTPAuth },
+        { kind: kinds.HTTPAuth }
       );
       console.log('Response from self notification:', result);
     } catch (error) {
@@ -271,7 +271,7 @@ export class WebPushService {
         const result = await this.webRequest.fetchJson(
           url,
           { method: 'POST', body: JSON.stringify(subscriptionWithUserAgent) },
-          { kind: kinds.HTTPAuth },
+          { kind: kinds.HTTPAuth }
         );
 
         this.logger.info('Push subscription registered successfully', result);
@@ -301,7 +301,7 @@ export class WebPushService {
   async unsubscribe(deviceId: string, endpoint: string) {
     // If the subscription being deleted is the current one, unsubscribe from it
     try {
-      this.push.subscription.subscribe((s) => {
+      this.push.subscription.subscribe(s => {
         if (s && s.endpoint === endpoint) {
           // Removed excessive logging
           return this.push.unsubscribe();
@@ -318,7 +318,7 @@ export class WebPushService {
       const result = await this.webRequest.fetchJson(
         url,
         { method: 'DELETE' },
-        { kind: kinds.HTTPAuth },
+        { kind: kinds.HTTPAuth }
       );
 
       console.log('Response from unsubscribe:', result);

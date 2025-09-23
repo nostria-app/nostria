@@ -21,7 +21,7 @@ export class NavigationComponent {
   private route = inject(ActivatedRoute);
 
   // Convert route data to signal
-  routeData = toSignal(this.route.data.pipe(map((data) => data)), {
+  routeData = toSignal(this.route.data.pipe(map(data => data)), {
     initialValue: {},
   });
 

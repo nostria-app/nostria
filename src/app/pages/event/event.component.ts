@@ -83,7 +83,7 @@ export class EventPageComponent {
 
   // Computed signal to track if anything is still loading
   isAnyLoading = computed(
-    () => this.isLoading() || this.isLoadingParents() || this.isLoadingReplies(),
+    () => this.isLoading() || this.isLoadingParents() || this.isLoadingReplies()
   );
 
   showCompletionStatus = signal(false);

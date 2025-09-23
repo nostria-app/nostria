@@ -90,7 +90,7 @@ export class LoadingOverlayComponent implements OnInit, OnDestroy {
         (msg, index) =>
           !latestMessages[index] ||
           msg.text !== latestMessages[index].text ||
-          msg.level !== latestMessages[index].level,
+          msg.level !== latestMessages[index].level
       );
 
     if (hasChanged) {
@@ -98,19 +98,19 @@ export class LoadingOverlayComponent implements OnInit, OnDestroy {
       if (currentMessages.length > 0 && latestMessages.length === 3) {
         // Find messages that are being removed
         const removingMessages = currentMessages.filter(
-          (current) =>
+          current =>
             !latestMessages.some(
-              (latest) => latest.text === current.text && latest.level === current.level,
-            ),
+              latest => latest.text === current.text && latest.level === current.level
+            )
         );
 
         // Mark them for fade out
-        removingMessages.forEach((msg) => (msg.fadeOut = true));
+        removingMessages.forEach(msg => (msg.fadeOut = true));
 
         // Update with fade out messages first
         this.currentLogMessages.set([
-          ...currentMessages.map((msg) =>
-            removingMessages.includes(msg) ? { ...msg, fadeOut: true } : msg,
+          ...currentMessages.map(msg =>
+            removingMessages.includes(msg) ? { ...msg, fadeOut: true } : msg
           ),
         ]);
 

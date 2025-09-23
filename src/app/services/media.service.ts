@@ -66,12 +66,12 @@ export class MediaService implements NostriaService {
       this.setMediaServers(servers);
     } else {
       this.logger.debug(
-        'No media servers found for user. This user might be a Nostria account or any other Nostr user.',
+        'No media servers found for user. This user might be a Nostria account or any other Nostr user.'
       );
 
       if (!this.accountState.account()?.hasActivated) {
         this.logger.debug(
-          'User has not activated their account yet, so we will add regional media servers.',
+          'User has not activated their account yet, so we will add regional media servers.'
         );
 
         const region = this.accountState.account()?.region || 'eu';
@@ -104,7 +104,7 @@ export class MediaService implements NostriaService {
 
   async getFileById(id: string): Promise<MediaItem> {
     const media = this.mediaItems();
-    const item = media.find((m) => m.sha256 === id);
+    const item = media.find(m => m.sha256 === id);
 
     if (!item) {
       throw new Error('Media item not found');
@@ -116,7 +116,7 @@ export class MediaService implements NostriaService {
   // Add implementation for the missing updateMetadata method
   async updateMetadata(
     id: string,
-    metadata: { title?: string; description?: string },
+    metadata: { title?: string; description?: string }
   ): Promise<MediaItem> {
     const response = await fetch(`/api/media/${id}/metadata`, {
       method: 'PUT',
@@ -141,13 +141,13 @@ export class MediaService implements NostriaService {
     // First try to load from localStorage for faster initial load
     let mediaServerEvent = await this.storage.getEventByPubkeyAndKind(
       this.accountState.pubkey(),
-      MEDIA_SERVERS_EVENT_KIND,
+      MEDIA_SERVERS_EVENT_KIND
     );
 
     if (!mediaServerEvent) {
       mediaServerEvent = await this.accountRelay.getEventByPubkeyAndKind(
         this.accountState.pubkey(),
-        MEDIA_SERVERS_EVENT_KIND,
+        MEDIA_SERVERS_EVENT_KIND
       );
     }
 
@@ -257,14 +257,14 @@ export class MediaService implements NostriaService {
     }
 
     // Check if server already exists
-    const exists = this._mediaServers().some((s) => s === normalizedUrl);
+    const exists = this._mediaServers().some(s => s === normalizedUrl);
 
     if (exists) {
       throw new Error('Server with this URL already exists');
     }
 
     // Add the new server
-    this._mediaServers.update((servers) => [...servers, normalizedUrl]);
+    this._mediaServers.update(servers => [...servers, normalizedUrl]);
 
     // Publish to Nostr
     await this.publishMediaServers();
@@ -279,19 +279,19 @@ export class MediaService implements NostriaService {
 
     // Check if the new normalized URL already exists (excluding the original)
     const existingServers = this._mediaServers();
-    const duplicateExists = existingServers.some((s) => s === normalizedUrl && s !== original);
+    const duplicateExists = existingServers.some(s => s === normalizedUrl && s !== original);
 
     if (duplicateExists) {
       throw new Error('Server with this URL already exists');
     }
 
     // Find and replace the original server
-    const serverIndex = existingServers.findIndex((s) => s === original);
+    const serverIndex = existingServers.findIndex(s => s === original);
 
     if (serverIndex !== -1) {
       // Replace the server at the found index
-      this._mediaServers.update((servers) =>
-        servers.map((server, index) => (index === serverIndex ? normalizedUrl : server)),
+      this._mediaServers.update(servers =>
+        servers.map((server, index) => (index === serverIndex ? normalizedUrl : server))
       );
 
       // Publish to Nostr
@@ -302,7 +302,7 @@ export class MediaService implements NostriaService {
   }
 
   async removeMediaServer(url: string): Promise<void> {
-    this._mediaServers.update((servers) => servers.filter((server) => server !== url));
+    this._mediaServers.update(servers => servers.filter(server => server !== url));
 
     // Publish to Nostr
     await this.publishMediaServers();
@@ -353,7 +353,7 @@ export class MediaService implements NostriaService {
       const servers = this._mediaServers();
 
       // Create tags array from servers
-      const tags: string[][] = servers.map((server) => {
+      const tags: string[][] = servers.map(server => {
         return ['server', server];
       });
 
@@ -400,7 +400,7 @@ export class MediaService implements NostriaService {
   async uploadFile(
     file: File,
     uploadOriginal: boolean,
-    servers: string[],
+    servers: string[]
   ): Promise<{
     item: MediaItem | null;
     status: 'success' | 'duplicate' | 'error';
@@ -473,7 +473,7 @@ export class MediaService implements NostriaService {
             console.log('Response:', response);
 
             throw new Error(
-              `Upload not allowed on ${server}: Reason: ${reason}, Status: ${headResponse.status}`,
+              `Upload not allowed on ${server}: Reason: ${reason}, Status: ${headResponse.status}`
             );
           }
 
@@ -498,11 +498,11 @@ export class MediaService implements NostriaService {
               if (!uploadOriginal) {
                 if (action.isVideo) {
                   this._error.set(
-                    `${reason}. This might happen because you upload a video file and the server cannot transcode it. Try uploading original instead.`,
+                    `${reason}. This might happen because you upload a video file and the server cannot transcode it. Try uploading original instead.`
                   );
                 } else if (action.isPicture) {
                   this._error.set(
-                    `${reason}. This might happen because you upload a picture file and the server cannot optimize it. Try uploading original instead.`,
+                    `${reason}. This might happen because you upload a picture file and the server cannot optimize it. Try uploading original instead.`
                   );
                 }
               } else {
@@ -517,7 +517,7 @@ export class MediaService implements NostriaService {
             }
 
             throw new Error(
-              `Failed to upload file on ${server}: Reason: ${reason}, Status: ${headResponse.status}`,
+              `Failed to upload file on ${server}: Reason: ${reason}, Status: ${headResponse.status}`
             );
           }
 
@@ -537,7 +537,7 @@ export class MediaService implements NostriaService {
 
       if (uploadedMedia) {
         // Update the media items list with the new item
-        this._mediaItems.update((items) => [...items, uploadedMedia!]);
+        this._mediaItems.update(items => [...items, uploadedMedia!]);
 
         this.logger.info('File uploaded successfully:', uploadedMedia);
 
@@ -580,14 +580,14 @@ export class MediaService implements NostriaService {
    */
   getFileByHash(hash: string): MediaItem | null {
     const mediaItems = this._mediaItems();
-    return mediaItems.find((item) => item.sha256 === hash) || null;
+    return mediaItems.find(item => item.sha256 === hash) || null;
   }
 
   otherServers(url: string, servers?: string[]): string[] {
     if (servers && servers.length > 0) {
-      return servers.filter((server) => !url.startsWith(server));
+      return servers.filter(server => !url.startsWith(server));
     } else {
-      return this._mediaServers().filter((server) => !url.startsWith(server));
+      return this._mediaServers().filter(server => !url.startsWith(server));
     }
   }
 
@@ -636,7 +636,7 @@ export class MediaService implements NostriaService {
 
       if (deleteSuccessful) {
         // Remove the deleted item from the media items list
-        this._mediaItems.update((items) => items.filter((item) => item.sha256 !== id));
+        this._mediaItems.update(items => items.filter(item => item.sha256 !== id));
       } else if (firstError) {
         throw firstError;
       } else {
@@ -698,7 +698,7 @@ export class MediaService implements NostriaService {
 
       // Update the local state by removing all successfully deleted items
       if (failedDeletes < ids.length) {
-        this._mediaItems.update((items) => items.filter((item) => !ids.includes(item.sha256)));
+        this._mediaItems.update(items => items.filter(item => !ids.includes(item.sha256)));
       }
 
       // If some or all deletions failed, throw an error
@@ -720,7 +720,7 @@ export class MediaService implements NostriaService {
     sha256: string,
     fileUrl: string,
     servers?: string[],
-    headers?: Record<string, string>,
+    headers?: Record<string, string>
   ): Promise<void> {
     this.loading.set(true);
     this._error.set(null);
@@ -752,7 +752,7 @@ export class MediaService implements NostriaService {
           if (!headResponse.ok) {
             const reason = headResponse.headers.get('x-reason');
             throw new Error(
-              `Mirroring not allowed on ${server}: Reason: ${reason}, Status: ${headResponse.status}`,
+              `Mirroring not allowed on ${server}: Reason: ${reason}, Status: ${headResponse.status}`
             );
           }
 
@@ -768,7 +768,7 @@ export class MediaService implements NostriaService {
           if (!response.ok) {
             const reason = response.headers.get('x-reason');
             throw new Error(
-              `Mirroring not allowed on ${server}: Reason: ${reason}, Status: ${response.status}`,
+              `Mirroring not allowed on ${server}: Reason: ${reason}, Status: ${response.status}`
             );
           }
 
@@ -779,8 +779,8 @@ export class MediaService implements NostriaService {
           const mirrorServerUrl = this.extractServerUrl(mirroredMedia.url);
 
           // Update the media item by adding the mirror URL to its mirrors array
-          this._mediaItems.update((items) => {
-            return items.map((item) => {
+          this._mediaItems.update(items => {
+            return items.map(item => {
               if (item.sha256 === sha256) {
                 // Initialize mirrors array if it doesn't exist
                 if (!item.mirrors) {
@@ -832,7 +832,7 @@ export class MediaService implements NostriaService {
 
     try {
       // Create a comma-separated string of all file hashes for the auth header
-      const fileHashes = items.map((item) => item.sha256).join(',');
+      const fileHashes = items.map(item => item.sha256).join(',');
 
       // Generate a single auth header for all files
       const headers = await this.getAuthHeaders('Mirror Multiple Files', 'upload', fileHashes);
@@ -881,8 +881,8 @@ export class MediaService implements NostriaService {
             const mirrorServerUrl = this.extractServerUrl(mirroredMedia.url);
 
             // Update the media item's mirrors array
-            this._mediaItems.update((mediaItems) => {
-              return mediaItems.map((mediaItem) => {
+            this._mediaItems.update(mediaItems => {
+              return mediaItems.map(mediaItem => {
                 if (mediaItem.sha256 === item.sha256) {
                   // Initialize mirrors array if needed
                   if (!mediaItem.mirrors) {
@@ -988,7 +988,7 @@ export class MediaService implements NostriaService {
     reason: string,
     action: string | 'list' | 'upload' | 'media' | 'delete' | 'get',
     sha256?: string,
-    skipContentType = false,
+    skipContentType = false
   ): Promise<Record<string, string>> {
     const currentUser = this.accountState.account();
     if (!currentUser) {
@@ -1076,12 +1076,12 @@ export class MediaService implements NostriaService {
       allMirrorUrls.push(item.url);
     }
 
-    const mirrorDomains = allMirrorUrls.map((mirror) => extractDomain(mirror));
-    const serverDomains = availableServers.map((server) => extractDomain(server));
+    const mirrorDomains = allMirrorUrls.map(mirror => extractDomain(mirror));
+    const serverDomains = availableServers.map(server => extractDomain(server));
 
     // Check if all configured media servers are already in the item's mirrors
-    return serverDomains.every((serverDomain) =>
-      mirrorDomains.some((mirrorDomain) => mirrorDomain === serverDomain),
+    return serverDomains.every(serverDomain =>
+      mirrorDomains.some(mirrorDomain => mirrorDomain === serverDomain)
     );
   }
 

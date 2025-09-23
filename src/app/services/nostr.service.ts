@@ -230,7 +230,7 @@ export class NostrService implements NostriaService {
 
       // Schedule a refresh of the relays in the background. For now this won't be reflected until
       // the user refreshes the app.
-      this.discoveryRelay.getEventByPubkeyAndKind(pubkey, kinds.RelayList).then(async (evt) => {
+      this.discoveryRelay.getEventByPubkeyAndKind(pubkey, kinds.RelayList).then(async evt => {
         if (evt) {
           this.storage.saveEvent(evt);
         }
@@ -276,7 +276,7 @@ export class NostrService implements NostriaService {
         // Look for the account in our accounts list
         const targetAccount = this.accountState
           .accounts()
-          .find((account) => account.pubkey === pubkeyParam);
+          .find(account => account.pubkey === pubkeyParam);
 
         if (targetAccount) {
           this.logger.info('Found matching account for pubkey from query parameter', {
@@ -351,7 +351,7 @@ export class NostrService implements NostriaService {
       }
     } else {
       // Queue up refresh of this event in the background
-      this.accountRelay.getEventByPubkeyAndKind(pubkey, kinds.Contacts).then(async (evt) => {
+      this.accountRelay.getEventByPubkeyAndKind(pubkey, kinds.Contacts).then(async evt => {
         if (evt) {
           this.accountState.parseFollowingList(evt);
         }
@@ -375,7 +375,7 @@ export class NostrService implements NostriaService {
       }
     } else {
       // Queue up refresh of this event in the background
-      this.accountRelay.getEventByPubkeyAndKind(pubkey, kinds.Mutelist).then(async (evt) => {
+      this.accountRelay.getEventByPubkeyAndKind(pubkey, kinds.Mutelist).then(async evt => {
         if (evt) {
           this.accountState.muteList.set(evt);
           await this.storage.saveEvent(evt);
@@ -417,7 +417,7 @@ export class NostrService implements NostriaService {
       case 'extension':
         if (!window.nostr) {
           throw new Error(
-            'Nostr extension not found. Please install Alby, nos2x, or another NIP-07 compatible extension.',
+            'Nostr extension not found. Please install Alby, nos2x, or another NIP-07 compatible extension.'
           );
         }
 
@@ -435,7 +435,7 @@ export class NostrService implements NostriaService {
         const bunker = new BunkerSigner(
           hexToBytes(currentUser.privkey!),
           this.accountState.account()!.bunker!,
-          { pool },
+          { pool }
         );
         signedEvent = await bunker.signEvent(event);
         this.logger.info('Using remote signer account');
@@ -443,7 +443,7 @@ export class NostrService implements NostriaService {
 
       case 'preview':
         throw new Error(
-          'Preview accounts cannot sign events. Please use a different account type.',
+          'Preview accounts cannot sign events. Please use a different account type.'
         );
         break;
       case 'nsec':
@@ -601,7 +601,7 @@ export class NostrService implements NostriaService {
       }
     } else {
       // Queue up refresh of this event in the background
-      this.accountRelay.getEventByPubkeyAndKind(pubkey, 10063).then((newEvent) => {
+      this.accountRelay.getEventByPubkeyAndKind(pubkey, 10063).then(newEvent => {
         if (newEvent) {
           this.storage.saveEvent(newEvent as Event);
         }
@@ -630,7 +630,7 @@ export class NostrService implements NostriaService {
         },
         {
           maxWait: this.MAX_WAIT_TIME_METADATA,
-        },
+        }
       );
 
       if (metadata) {
@@ -683,7 +683,7 @@ export class NostrService implements NostriaService {
         {
           authors: [pubkey],
           kinds: [kinds.RelayList],
-        },
+        }
         // ,
         // undefined,
         // { timeout: this.MAX_WAIT_TIME }
@@ -711,7 +711,7 @@ export class NostrService implements NostriaService {
 
         relayUrls = this.utilities.pickOptimalRelays(
           this.utilities.getRelayUrls(relayListEvent),
-          this.settings.maxRelaysPerUser(),
+          this.settings.maxRelaysPerUser()
         );
       } else {
         const followingEvent = await this.accountRelay.get({
@@ -767,7 +767,7 @@ export class NostrService implements NostriaService {
             authors: [pubkey],
             kinds: [kinds.Metadata],
           },
-          { maxWait: this.MAX_WAIT_TIME },
+          { maxWait: this.MAX_WAIT_TIME }
         );
 
         if (metadataEvent) {
@@ -798,7 +798,7 @@ export class NostrService implements NostriaService {
 
   private async queueMetadataDiscovery(
     pubkey: string,
-    disconnect = true,
+    disconnect = true
   ): Promise<Event | undefined> {
     return new Promise((resolve, reject) => {
       this.discoveryQueue.push({ pubkey, disconnect, resolve, reject });
@@ -838,7 +838,7 @@ export class NostrService implements NostriaService {
           if (!result) {
             this.logger.warn(
               'No metadata found during discovery, fallback to using current account relays.',
-              { pubkey: item.pubkey },
+              { pubkey: item.pubkey }
             );
             result = await this.discoverMetadataFromAccountRelays(item.pubkey);
           }
@@ -1002,7 +1002,7 @@ export class NostrService implements NostriaService {
   }
 
   async getAccountsMetadata() {
-    const pubkeys = this.accountState.accounts().map((user) => user.pubkey);
+    const pubkeys = this.accountState.accounts().map(user => user.pubkey);
 
     // Get metadata for all accounts from storage, we have not initialized accounts pool yet so cannot get from relays.
     const events = await this.storage.getEventsByPubkeyAndKind(pubkeys, kinds.Metadata);
@@ -1011,16 +1011,14 @@ export class NostrService implements NostriaService {
   }
 
   async getAccountsRelays() {
-    const pubkeys = this.accountState.accounts().map((user) => user.pubkey);
+    const pubkeys = this.accountState.accounts().map(user => user.pubkey);
 
     const relays = await this.storage.getEventsByPubkeyAndKind(pubkeys, kinds.RelayList);
     return relays;
   }
 
   getTags(event: Event | UnsignedEvent, tagType: NostrTagKey): string[] {
-    const tags = event.tags
-      .filter((tag) => tag.length >= 2 && tag[0] === tagType)
-      .map((tag) => tag[1]);
+    const tags = event.tags.filter(tag => tag.length >= 2 && tag[0] === tagType).map(tag => tag[1]);
 
     return tags;
   }
@@ -1028,7 +1026,7 @@ export class NostrService implements NostriaService {
   setTags(
     event: Event | UnsignedEvent,
     tagType: NostrTagKey,
-    values: string[],
+    values: string[]
   ): Event | UnsignedEvent {
     // Create a shallow copy of the event to avoid mutating the original
     const updatedEvent: Event | UnsignedEvent = {
@@ -1038,7 +1036,7 @@ export class NostrService implements NostriaService {
 
     // Filter out values that already exist in tags of this type to avoid duplicates
     const existingValues = this.getTags(event, tagType);
-    const newValues = values.filter((value) => !existingValues.includes(value));
+    const newValues = values.filter(value => !existingValues.includes(value));
 
     // Add new tags for each unique value that doesn't already exist
     for (const value of newValues) {
@@ -1060,7 +1058,7 @@ export class NostrService implements NostriaService {
 
   async switchToUser(pubkey: string) {
     this.logger.info(`Switching to user with pubkey: ${pubkey}`);
-    const targetUser = this.accountState.accounts().find((u) => u.pubkey === pubkey);
+    const targetUser = this.accountState.accounts().find(u => u.pubkey === pubkey);
     if (targetUser) {
       // Update lastUsed timestamp
       targetUser.lastUsed = Date.now();
@@ -1087,20 +1085,20 @@ export class NostrService implements NostriaService {
     user.name ??= this.utilities.getTruncatedNpub(user.pubkey);
 
     const allUsers = this.accountState.accounts();
-    const existingUserIndex = allUsers.findIndex((u) => u.pubkey === user.pubkey);
+    const existingUserIndex = allUsers.findIndex(u => u.pubkey === user.pubkey);
 
     if (existingUserIndex >= 0) {
       // Update existing user
       this.logger.debug('Updating existing user in collection', {
         index: existingUserIndex,
       });
-      this.accountState.accounts.update((u) =>
-        u.map((existingUser) => (existingUser.pubkey === user.pubkey ? user : existingUser)),
+      this.accountState.accounts.update(u =>
+        u.map(existingUser => (existingUser.pubkey === user.pubkey ? user : existingUser))
       );
     } else {
       // Add new user
       this.logger.debug('Adding new user to collection');
-      this.accountState.accounts.update((u) => [...u, user]);
+      this.accountState.accounts.update(u => [...u, user]);
     }
 
     // Persist the account to local storage.
@@ -1341,7 +1339,7 @@ export class NostrService implements NostriaService {
   removeAccount(pubkey: string): void {
     this.logger.info(`Removing account with pubkey: ${pubkey}`);
     const allUsers = this.accountState.accounts();
-    const updatedUsers = allUsers.filter((u) => u.pubkey !== pubkey);
+    const updatedUsers = allUsers.filter(u => u.pubkey !== pubkey);
     this.accountState.accounts.set(updatedUsers);
 
     // If we're removing the active user, set active user to null
@@ -1377,7 +1375,7 @@ export class NostrService implements NostriaService {
       throw new Error('Preview accounts cannot sign events. Please use a different account type.');
     }
 
-    return nip98.getToken(url, method, async (e) => {
+    return nip98.getToken(url, method, async e => {
       const event = await this.signEvent(e);
       return event;
     });

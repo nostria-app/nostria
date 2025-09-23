@@ -214,7 +214,7 @@ export class BookmarksComponent {
       width: '500px',
     });
 
-    dialogRef.afterClosed().subscribe((result) => {
+    dialogRef.afterClosed().subscribe(result => {
       if (result) {
         this.categories.set(result);
         this.saveToStorage();
@@ -287,7 +287,7 @@ export class BookmarksComponent {
   }
 
   getCategoryById(id: string): BookmarkCategory | undefined {
-    return this.categories().find((category) => category.id === id);
+    return this.categories().find(category => category.id === id);
   }
 
   getFormattedDate(timestamp: number): string {
