@@ -10,12 +10,20 @@ import {
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { frontalCamera, QRCanvas, frameLoop } from 'qr/dom';
+import { frontalCamera, QRCanvas, frameLoop } from 'qr/dom.js';
 import { nip19 } from 'nostr-tools';
 import { UtilitiesService } from '../../services/utilities.service';
 import { LoggerService } from '../../services/logger.service';
 import { DecimalPipe } from '@angular/common';
 import { computed } from '@angular/core';
+
+// Define interface for QR camera to avoid 'any' type
+interface QRCamera {
+  readFrame(canvas: QRCanvas, fullSize?: boolean): string | undefined;
+  stop(): void;
+  listDevices(): Promise<{ deviceId: string; label: string }[]>;
+  setDevice(deviceId: string): Promise<void>;
+}
 
 @Component({
   selector: 'app-qrcode-scan-dialog',
@@ -47,13 +55,21 @@ export class
   lastScanAttempt = signal<Date | null>(null);
   scanningActive = signal<boolean>(false);
 
+  // Additional debug signals for QR library analysis
+  qrDetectionAttempts = signal<number>(0);
+  imageProcessingErrors = signal<number>(0);
+  lastProcessingTime = signal<number>(0);
+
+  // Debug canvas for visual inspection
+  private debugCanvasElement: HTMLCanvasElement | null = null;
+
   // Computed property for time since last scan
   timeSinceLastScan = computed(() => {
     const lastScan = this.lastScanAttempt();
     return lastScan ? (Date.now() - lastScan.getTime()) / 1000 : 0;
   });
 
-  private camera: any = null;
+  private camera: QRCamera | null = null;
   private qrCanvas: QRCanvas | null = null;
   private frameLoopCancel: (() => void) | null = null;
   private debugInterval: number | null = null;
@@ -109,9 +125,23 @@ export class
   ngOnDestroy() {
     this.stopScanning();
     this.stopDebugInterval();
+    this.cleanupDebugCanvas();
   }
 
-  private async listAvailableCameras() {
+  private cleanupDebugCanvas() {
+    if (this.debugCanvasElement) {
+      this.debugCanvasElement.remove();
+      this.debugCanvasElement = null;
+    }
+
+    // Also clean up result canvas
+    const resultCanvas = document.getElementById('qr-result-canvas');
+    if (resultCanvas) {
+      resultCanvas.remove();
+    }
+  }
+
+  private async listAvailableCameras(): Promise<{ deviceId: string; label: string }[]> {
     try {
       // Get available media devices without initializing a camera
       const devices = await navigator.mediaDevices.enumerateDevices();
@@ -124,8 +154,10 @@ export class
 
       this.availableCameras.set(videoDevices);
       console.log('Available cameras (fallback):', videoDevices);
+      return videoDevices;
     } catch (error) {
       console.error('Failed to enumerate devices:', error);
+      return [];
     }
   }
 
@@ -139,10 +171,56 @@ export class
       console.log('Video element:', video);
       console.log('Canvas element:', canvas);
 
-      // Initialize QR canvas
-      this.debugInfo.set('🎨 Setting up QR canvas...');
-      this.qrCanvas = new QRCanvas({ overlay: canvas });
-      console.log('QR Canvas initialized');
+      // Initialize QR canvas with debug canvases for better troubleshooting
+      this.debugInfo.set('🎨 Setting up QR canvas with debug features...');
+
+      // Create additional debug canvases for visual inspection
+      this.debugCanvasElement = document.createElement('canvas');
+      this.debugCanvasElement.style.position = 'fixed';
+      this.debugCanvasElement.style.top = '10px';
+      this.debugCanvasElement.style.right = '10px';
+      this.debugCanvasElement.style.zIndex = '10000';
+      this.debugCanvasElement.style.border = '2px solid red';
+      this.debugCanvasElement.style.background = 'black';
+      this.debugCanvasElement.style.maxWidth = '200px';
+      this.debugCanvasElement.style.maxHeight = '200px';
+      this.debugCanvasElement.id = 'qr-debug-canvas';
+      this.debugCanvasElement.title = 'QR Decoder Debug View - What the library sees';
+
+      // Make debug canvas visible for troubleshooting
+      document.body.appendChild(this.debugCanvasElement);
+
+      // Create a result canvas for successful QR detections
+      const resultCanvas = document.createElement('canvas');
+      resultCanvas.style.position = 'fixed';
+      resultCanvas.style.top = '220px';
+      resultCanvas.style.right = '10px';
+      resultCanvas.style.zIndex = '10000';
+      resultCanvas.style.border = '2px solid green';
+      resultCanvas.style.background = 'white';
+      resultCanvas.id = 'qr-result-canvas';
+      resultCanvas.title = 'QR Detection Result';
+      document.body.appendChild(resultCanvas);
+
+      this.qrCanvas = new QRCanvas(
+        {
+          overlay: canvas,
+          bitmap: this.debugCanvasElement, // This will show what the decoder sees
+          resultQR: resultCanvas // This will show successful QR detections
+        },
+        {
+          resultBlockSize: 8, // Standard block size for result display
+          overlayMainColor: 'rgba(0, 255, 0, 0.2)', // Light green overlay
+          overlayFinderColor: 'rgba(0, 0, 255, 0.4)', // Blue for finder patterns
+          overlaySideColor: 'rgba(0, 0, 0, 0.3)', // Light black for sides
+          overlayTimeout: 2000, // 2 second timeout for overlay
+          cropToSquare: true // Critical for QR detection - ensures proper aspect ratio
+        }
+      );
+      console.log('QR Canvas initialized with debug features');
+
+      // Add visual indicator that debug canvases are active
+      this.debugInfo.set('🔍 Debug view active - check top-right corner for decoder visualization');
 
       // Initialize camera with retry logic
       this.debugInfo.set('📷 Connecting to camera...');
@@ -153,7 +231,7 @@ export class
       // Get available cameras
       this.debugInfo.set('🔍 Detecting available cameras...');
       console.log('Getting device list...');
-      const devices = await this.camera.listDevices();
+      const devices = await this.camera!.listDevices();
       console.log('Available devices:', devices);
       this.availableCameras.set(devices);
 
@@ -161,7 +239,7 @@ export class
         this.currentDevice.set(devices[0]);
         this.debugInfo.set(`📱 Setting camera: ${devices[0].label}`);
         console.log('Setting device to:', devices[0]);
-        await this.camera.setDevice(devices[0].deviceId);
+        await this.camera!.setDevice(devices[0].deviceId);
       }
 
       // Start scanning
@@ -175,7 +253,7 @@ export class
     }
   }
 
-  private async initializeCameraWithRetry(video: HTMLVideoElement, maxRetries = 3): Promise<any> {
+  private async initializeCameraWithRetry(video: HTMLVideoElement, maxRetries = 3): Promise<QRCamera> {
     let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -245,22 +323,108 @@ export class
         this.framesScanned.set(frameCount);
         this.lastScanAttempt.set(new Date());
 
-        // Attempt to read QR code from current frame
-        const result = this.camera.readFrame(this.qrCanvas);
+        // Get video element to check its state
+        const video = this.videoElement.nativeElement;
 
-        if (result) {
-          this.debugInfo.set(`✅ QR code detected after ${frameCount} frames!`);
-          this.logger.info('QR code detected:', result);
-          this.onScanSuccess(result);
+        // Enhanced debugging: Check video state
+        const videoState = {
+          readyState: video.readyState,
+          videoWidth: video.videoWidth,
+          videoHeight: video.videoHeight,
+          paused: video.paused,
+          ended: video.ended,
+          duration: video.duration,
+        };
+
+        // Only attempt to scan if video is ready and has dimensions
+        if (video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0) {
+          const startTime = performance.now();
+
+          try {
+            this.qrDetectionAttempts.set(this.qrDetectionAttempts() + 1);
+
+            // Try both full size and element size frame reading
+            let result = this.camera.readFrame(this.qrCanvas, true); // fullSize = true
+
+            if (!result) {
+              // Try with element size if full size failed
+              result = this.camera.readFrame(this.qrCanvas, false); // fullSize = false
+            }
+
+            const processingTime = performance.now() - startTime;
+            this.lastProcessingTime.set(processingTime);
+
+            if (result) {
+              this.debugInfo.set(`✅ QR code detected after ${frameCount} frames! Processing time: ${processingTime.toFixed(2)}ms`);
+              this.logger.info('QR code detected:', result);
+              this.onScanSuccess(result);
+            } else {
+              // Enhanced debug info every 30 frames
+              if (frameCount % 30 === 0) {
+                const avgProcessingTime = this.lastProcessingTime();
+                this.debugInfo.set(
+                  `🔍 Frame ${frameCount}: Video ${video.videoWidth}x${video.videoHeight}, ` +
+                  `Processing: ${avgProcessingTime.toFixed(2)}ms, ` +
+                  `Attempts: ${this.qrDetectionAttempts()}, ` +
+                  `Errors: ${this.imageProcessingErrors()}`
+                );
+              }
+
+              // Additional debugging every 60 frames
+              if (frameCount % 60 === 0) {
+                console.log('Detailed scan state:', {
+                  videoState,
+                  processingTime,
+                  qrCanvasConfig: this.qrCanvas,
+                  detectionAttempts: this.qrDetectionAttempts(),
+                  processingErrors: this.imageProcessingErrors()
+                });
+
+                // Log QR library specific debugging info
+                console.log('QR Library Analysis:', {
+                  message: 'Based on paulmillr/qr library analysis:',
+                  requirements: [
+                    'Image must be grayscale converted with GRAYSCALE_BLOCK_SIZE=8',
+                    'Pattern detection needs 1:1:3:1:1 run length ratios for finder patterns',
+                    'Image requires minimum 5 blocks × 8 pixels',
+                    'Perspective transformation must be accurate',
+                    'Error correction allows MAX_BITS_ERROR=3'
+                  ],
+                  suggestions: [
+                    'Ensure QR code is well-lit and in focus',
+                    'QR code should fill significant portion of frame',
+                    'Avoid skewed angles or perspective distortion',
+                    'Higher contrast between dark/light modules helps'
+                  ]
+                });
+              }
+            }
+          } catch (processingError) {
+            this.imageProcessingErrors.set(this.imageProcessingErrors() + 1);
+            console.warn('QR processing error:', processingError);
+          }
         } else {
-          // Update debug info periodically (every 30 frames to avoid spam)
+          // Video not ready - show this in debug
           if (frameCount % 30 === 0) {
-            this.debugInfo.set(`🔍 Scanning... ${frameCount} frames processed, no QR code detected yet`);
+            this.debugInfo.set(
+              `⏳ Video not ready: readyState=${video.readyState}, ` +
+              `size=${video.videoWidth}x${video.videoHeight}, ` +
+              `frame ${frameCount}`
+            );
           }
         }
       } catch (error) {
         this.logger.error('Frame scanning error:', error);
         this.debugInfo.set(`❌ Scan error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+
+        // Enhanced error logging
+        console.error('Scan error details:', {
+          error,
+          frameCount: this.framesScanned(),
+          camera: this.camera,
+          qrCanvas: this.qrCanvas,
+          videoElement: this.videoElement?.nativeElement
+        });
 
         // Continue scanning despite errors
         console.error('Scan error (continuing):', error);
@@ -459,7 +623,12 @@ export class
 
         // Initialize with the existing stream
         this.camera = {
-          readFrame: (canvas: any) => canvas.drawImage(video, video.videoHeight, video.videoWidth),
+          readFrame: (canvas: QRCanvas, fullSize?: boolean) => {
+            const size = fullSize ?
+              { height: video.videoHeight, width: video.videoWidth } :
+              { height: video.clientHeight, width: video.clientWidth };
+            return canvas.drawImage(video, size.height, size.width);
+          },
           stop: () => {
             stream.getTracks().forEach(track => track.stop());
             video.srcObject = null;
@@ -477,7 +646,7 @@ export class
       } else {
         // Try default camera initialization
         this.camera = await frontalCamera(video);
-        const devices = await this.camera.listDevices();
+        const devices = await this.camera!.listDevices();
         this.availableCameras.set(devices);
 
         if (devices.length > 0) {
