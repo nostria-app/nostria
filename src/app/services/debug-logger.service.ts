@@ -70,6 +70,9 @@ export class DebugLoggerService {
   private readonly logger = inject(LoggerService);
   private readonly isBrowser = signal(isPlatformBrowser(this.platformId));
 
+  // Lazy injection to avoid circular dependencies
+  private poolManager?: unknown;
+
   // Instance tracking
   private instances = new Map<string, RelayInstanceInfo>();
   private instanceCounter = 0;
@@ -96,8 +99,21 @@ export class DebugLoggerService {
   }
 
   /**
-   * Normalize relay URL to ensure consistent identification
+   * Set the pool manager reference for getting pool stats
    */
+  setPoolManager(poolManager: unknown): void {
+    this.poolManager = poolManager;
+  }
+
+  /**
+   * Get pool stats if available
+   */
+  private getPoolStats(): unknown {
+    if (this.poolManager && typeof this.poolManager === 'object' && 'getPoolStats' in this.poolManager) {
+      return (this.poolManager as { getPoolStats: () => unknown }).getPoolStats();
+    }
+    return null;
+  }
   private normalizeRelayUrl(url: string): string {
     try {
       // Remove trailing slashes and ensure consistent format
@@ -404,6 +420,7 @@ export class DebugLoggerService {
    */
   logStats(): void {
     const stats = this.getStats();
+    const poolStats = this.getPoolStats();
 
     this.logger.info('[DebugLogger] === Relay Debug Statistics ===');
 
@@ -426,6 +443,66 @@ export class DebugLoggerService {
       'Active Subscriptions': stats.subscriptions.active,
       'Closed Subscriptions': stats.subscriptions.closed,
     });
+
+    // Log UserDataService instances table
+    console.table({
+      'Total UserData Instances': stats.userDataInstances.total,
+      'Active UserData Instances': stats.userDataInstances.active,
+      'Destroyed UserData Instances': stats.userDataInstances.destroyed,
+    });
+
+    // Log detailed UserDataService instances
+    const activeUserDataInstances = Array.from(this.userDataInstances.values()).filter(
+      instance => !instance.destroyedAt
+    );
+
+    if (activeUserDataInstances.length > 0) {
+      this.logger.info('[DebugLogger] Active UserDataService Instances:');
+      const userDataTable = activeUserDataInstances.reduce(
+        (acc, instance) => {
+          acc[instance.pubkey.substring(0, 16) + '...'] = {
+            'Instance ID': instance.id,
+            'Created': new Date(instance.createdAt).toLocaleTimeString(),
+            'Age (minutes)': Math.round((Date.now() - instance.createdAt) / 60000),
+          };
+          return acc;
+        },
+        {} as Record<string, unknown>,
+      );
+      console.table(userDataTable);
+    }
+
+    // Log pool statistics if available
+    if (poolStats && typeof poolStats === 'object') {
+      this.logger.info('[DebugLogger] Instance Pool Statistics:');
+      const poolStatsObj = poolStats as Record<string, unknown>;
+
+      // Pool summary
+      console.table({
+        'Pool Size': poolStatsObj['currentPoolSize'],
+        'Active Instances': poolStatsObj['activeInstances'],
+        'Idle Instances': poolStatsObj['idleInstances'],
+        'Total Created': poolStatsObj['totalCreated'],
+        'Total Destroyed': poolStatsObj['totalDestroyed'],
+        'Total Reused': poolStatsObj['totalReused'],
+        'Cleanup Runs': poolStatsObj['cleanupRuns'],
+      });
+
+      // Pool configuration
+      if (poolStatsObj['config']) {
+        this.logger.info('[DebugLogger] Pool Configuration:');
+        console.table(poolStatsObj['config']);
+      }
+
+      // Detailed instance information
+      if (poolStatsObj['instanceDetails'] && Array.isArray(poolStatsObj['instanceDetails'])) {
+        const details = poolStatsObj['instanceDetails'];
+        if (details.length > 0) {
+          this.logger.info('[DebugLogger] Pool Instance Details:');
+          console.table(details);
+        }
+      }
+    }
 
     // Log cache statistics if available
     if (stats.cache) {

@@ -29,15 +29,56 @@ export class UserDataService {
   private userRelayEx!: UserRelayService;
   private debugInstanceId?: string;
 
+  // Instance tracking for pool management
+  private pubkey!: string;
+  private lastAccessedAt = Date.now();
+  private accessCount = 0;
+  private createdAt = Date.now();
+
   // Map to track pending profile requests to prevent race conditions
   private pendingProfileRequests = new Map<string, Promise<NostrRecord | undefined>>();
 
   async initialize(pubkey: string) {
+    this.pubkey = pubkey;
     this.userRelayEx = await this.userRelayFactory.create(pubkey);
     this.logger.debug(`UserDataService initialized for pubkey: ${pubkey}`);
 
     // Register this instance with the debug logger
     this.debugInstanceId = this.debugLogger.registerUserDataInstance(pubkey, this);
+  }
+
+  /**
+   * Update the last accessed timestamp and increment access count
+   * This should be called by any method that performs significant work
+   */
+  private updateAccess(): void {
+    this.lastAccessedAt = Date.now();
+    this.accessCount++;
+  }
+
+  /**
+   * Get usage statistics for pool management
+   */
+  getUsageStats() {
+    const now = Date.now();
+    return {
+      pubkey: this.pubkey,
+      createdAt: this.createdAt,
+      lastAccessedAt: this.lastAccessedAt,
+      accessCount: this.accessCount,
+      ageMs: now - this.createdAt,
+      idleMs: now - this.lastAccessedAt,
+      debugInstanceId: this.debugInstanceId,
+    };
+  }
+
+  /**
+   * Reset usage counters (useful when reusing an instance)
+   */
+  resetUsageStats(): void {
+    this.accessCount = 0;
+    this.lastAccessedAt = Date.now();
+    this.logger.debug(`[UserDataService] Usage stats reset for pubkey: ${this.pubkey}`);
   }
 
   toRecord(event: Event) {
@@ -52,6 +93,8 @@ export class UserDataService {
     id: string,
     options?: CacheOptions & DataOptions,
   ): Promise<NostrRecord | null> {
+    this.updateAccess(); // Track usage
+
     let event: Event | null = null;
     let record: NostrRecord | undefined = undefined;
 
@@ -134,6 +177,8 @@ export class UserDataService {
   }
 
   async getProfile(pubkey: string, refresh = false): Promise<NostrRecord | undefined> {
+    this.updateAccess(); // Track usage
+
     // Validate pubkey parameter
     if (!pubkey || pubkey === 'undefined' || !pubkey.trim()) {
       this.logger.warn('getProfile called with invalid pubkey:', pubkey);
@@ -289,6 +334,8 @@ export class UserDataService {
     kind: number,
     options?: CacheOptions & DataOptions,
   ): Promise<NostrRecord | null> {
+    this.updateAccess(); // Track usage
+
     // Validate pubkey parameter
     if (!pubkey || (Array.isArray(pubkey) && pubkey.length === 0)) {
       this.logger.warn('getEventByPubkeyAndKind called with invalid pubkey:', pubkey);
@@ -462,12 +509,30 @@ export class UserDataService {
    * Check if the underlying UserRelayService is idle
    */
   isIdle(): boolean {
-    if (this.userRelayEx && typeof this.userRelayEx.isIdle === 'function') {
-      return this.userRelayEx.isIdle();
+    const now = Date.now();
+    const idleTimeMs = now - this.lastAccessedAt;
+
+    // Consider instance idle if:
+    // 1. No recent access (more than 2 minutes)
+    // 2. Underlying relay service is idle
+    const isRecentlyAccessed = idleTimeMs < 2 * 60 * 1000; // 2 minutes
+    const isRelayIdle = this.userRelayEx && typeof this.userRelayEx.isIdle === 'function'
+      ? this.userRelayEx.isIdle()
+      : true;
+
+    const instanceIsIdle = !isRecentlyAccessed && isRelayIdle;
+
+    // Log idle state changes for debugging
+    if (instanceIsIdle !== this.wasLastIdle) {
+      this.logger.debug(`[UserDataService] Idle state changed to ${instanceIsIdle} for pubkey: ${this.pubkey.slice(0, 16)}... (idle for ${Math.round(idleTimeMs / 1000)}s)`);
+      this.wasLastIdle = instanceIsIdle;
     }
-    // If no relay service or method doesn't exist, assume idle
-    return true;
+
+    return instanceIsIdle;
   }
+
+  // Track last idle state to avoid excessive logging
+  private wasLastIdle = false;
 
   /**
    * Clean up resources and destroy the associated UserRelayService
