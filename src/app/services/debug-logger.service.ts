@@ -72,6 +72,7 @@ export class DebugLoggerService {
 
   // Lazy injection to avoid circular dependencies
   private poolManager?: unknown;
+  private eventService?: unknown;
 
   // Instance tracking
   private instances = new Map<string, RelayInstanceInfo>();
@@ -106,11 +107,57 @@ export class DebugLoggerService {
   }
 
   /**
+   * Set the event service reference for getting event service stats
+   */
+  setEventService(eventService: unknown): void {
+    this.eventService = eventService;
+  }
+
+  /**
    * Get pool stats if available
    */
   private getPoolStats(): unknown {
     if (this.poolManager && typeof this.poolManager === 'object' && 'getPoolStats' in this.poolManager) {
       return (this.poolManager as { getPoolStats: () => unknown }).getPoolStats();
+    }
+    return null;
+  }
+
+  /**
+   * Get event service user data instances stats if available
+   */
+  private getEventServiceStats(): {
+    userDataInstances: {
+      key: string;
+      pubkey: string;
+      lastUsed: string;
+      refCount: number;
+      ageMinutes: number;
+      idleMinutes: number;
+    }[];
+    totalInstances: number;
+  } | null {
+    if (this.eventService && typeof this.eventService === 'object' && 'userDataInstances' in this.eventService) {
+      const now = Date.now();
+      const instances = (this.eventService as { userDataInstances: Map<string, { instance: unknown, lastUsed: number, refCount: number }> }).userDataInstances;
+
+      const instanceDetails = Array.from(instances.entries()).map(([key, entry]) => {
+        // Extract pubkey from key (format: "user-data-{pubkey}")
+        const pubkey = key.replace('user-data-', '');
+        return {
+          key,
+          pubkey: pubkey.slice(0, 16) + '...',
+          lastUsed: new Date(entry.lastUsed).toLocaleTimeString(),
+          refCount: entry.refCount,
+          ageMinutes: Math.round((now - entry.lastUsed) / 1000 / 60),
+          idleMinutes: Math.round((now - entry.lastUsed) / 1000 / 60),
+        };
+      });
+
+      return {
+        userDataInstances: instanceDetails,
+        totalInstances: instances.size,
+      };
     }
     return null;
   }
@@ -421,6 +468,7 @@ export class DebugLoggerService {
   logStats(): void {
     const stats = this.getStats();
     const poolStats = this.getPoolStats();
+    const eventServiceStats = this.getEventServiceStats();
 
     this.logger.info('[DebugLogger] === Relay Debug Statistics ===');
 
@@ -501,6 +549,35 @@ export class DebugLoggerService {
           this.logger.info('[DebugLogger] Pool Instance Details:');
           console.table(details);
         }
+      }
+    }
+
+    // Log EventService UserDataService instances if available
+    if (eventServiceStats) {
+      this.logger.info('[DebugLogger] EventService UserDataService Instances:');
+
+      // Summary table
+      console.table({
+        'Total EventService Instances': eventServiceStats.totalInstances,
+      });
+
+      // Detailed instances with refCount
+      if (eventServiceStats.userDataInstances.length > 0) {
+        this.logger.info('[DebugLogger] EventService Instance Details (with refCount):');
+        const eventInstanceTable = eventServiceStats.userDataInstances.reduce(
+          (acc, instance) => {
+            acc[instance.pubkey] = {
+              'Key': instance.key,
+              'Last Used': instance.lastUsed,
+              'Ref Count': instance.refCount,
+              'Age (minutes)': instance.ageMinutes,
+              'Idle (minutes)': instance.idleMinutes,
+            };
+            return acc;
+          },
+          {} as Record<string, unknown>,
+        );
+        console.table(eventInstanceTable);
       }
     }
 
