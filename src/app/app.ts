@@ -48,6 +48,7 @@ import { MediaPlayerComponent } from './components/media-player/media-player.com
 import { MediaPlayerService } from './services/media-player.service';
 import { LocalSettingsService } from './services/local-settings.service';
 import { AccountStateService } from './services/account-state.service';
+import { RelaysService } from './services/relays/relays';
 import { SearchResultsComponent } from './components/search-results/search-results.component';
 import { NostrProtocolService } from './services/nostr-protocol.service';
 import { StateService } from './services/state.service';
@@ -113,6 +114,7 @@ export class App implements OnInit {
   dialog = inject(MatDialog);
   nostrService = inject(NostrService);
   storage = inject(StorageService);
+  relaysService = inject(RelaysService);
   appState = inject(ApplicationStateService);
   app = inject(ApplicationService);
   layout = inject(LayoutService);
@@ -428,6 +430,14 @@ export class App implements OnInit {
 
       await Promise.race([storageInitPromise, timeoutPromise]);
       this.logger.info('[App] Storage initialized successfully');
+
+      // Persist relay statistics that were added during initialization
+      try {
+        await this.relaysService.persistInitialRelayStats();
+        this.logger.info('[App] Initial relay statistics persisted successfully');
+      } catch (error) {
+        this.logger.warn('[App] Failed to persist initial relay statistics:', error);
+      }
 
       // Get diagnostic info if there were any issues
       if (!this.storage.initialized()) {

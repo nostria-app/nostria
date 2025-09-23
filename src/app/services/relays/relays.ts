@@ -386,4 +386,22 @@ export class RelaysService {
   async cleanupOldRelayData(olderThanDays: number = 30): Promise<void> {
     await this.storage.cleanupOldPubkeyRelayMappings(olderThanDays);
   }
+
+  /**
+   * Re-save relay statistics to storage once database is initialized
+   * This ensures that relays added during initialization are properly persisted
+   */
+  async persistInitialRelayStats(): Promise<void> {
+    if (!this.storage.initialized()) {
+      return; // Database not ready yet
+    }
+
+    for (const [url, stats] of this.relayStats) {
+      try {
+        await this.saveRelayStatsToStorage(stats);
+      } catch (error) {
+        console.error(`Failed to persist initial relay stats for ${url}:`, error);
+      }
+    }
+  }
 }

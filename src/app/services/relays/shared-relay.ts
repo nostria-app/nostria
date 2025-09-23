@@ -68,13 +68,34 @@ export class SharedRelayService {
     await this.acquireSemaphore();
 
     try {
+      // Track that we're attempting to connect to these relays
+      relayUrls.forEach(url => {
+        this.relaysService.updateRelayConnection(url, true);
+      });
+
       const event = (await this.#pool.get(relayUrls, filter, {
         maxWait: timeout,
       })) as unknown as T;
+      
       this.logger.debug(`Received event from query`, event);
+      
+      // If we received an event, increment the count for all relays that could have provided it
+      if (event) {
+        relayUrls.forEach(url => {
+          this.relaysService.incrementEventCount(url);
+        });
+      }
+      
       return event;
     } catch (error) {
       this.logger.error('Error fetching events', error);
+      
+      // Track connection retry for failed connections
+      relayUrls.forEach(url => {
+        this.relaysService.recordConnectionRetry(url);
+        this.relaysService.updateRelayConnection(url, false);
+      });
+      
       return null;
     } finally {
       this.releaseSemaphore();
