@@ -21,19 +21,10 @@
     "debug:ssr": "npm run debug:ssr:build && npm run debug:ssr:serve",
     "lint": "ng lint",
     "format": "prettier --write .",
-    "lint-fix": "eslint . --ext .ts,.html --fix"
-  },
-  "prettier": {
-    "printWidth": 100,
-    "singleQuote": true,
-    "overrides": [
-      {
-        "files": "*.html",
-        "options": {
-          "parser": "angular"
-        }
-      }
-    ]
+    "format:check": "prettier --check .",
+    "lint-fix": "eslint . --ext .ts,.html --fix",
+    "lint:check": "eslint . --ext .ts,.html",
+    "normalize-line-endings": "powershell -ExecutionPolicy Bypass -File scripts/normalize-line-endings.ps1"
   },
   "private": true,
   "dependencies": {
