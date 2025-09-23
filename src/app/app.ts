@@ -38,6 +38,7 @@ import { QrcodeScanDialogComponent } from './components/qrcode-scan-dialog/qrcod
 import { ApplicationService } from './services/application.service';
 import { NPubPipe } from './pipes/npub.pipe';
 import { MatBadgeModule } from '@angular/material/badge';
+import { nip19 } from 'nostr-tools';
 import { NotificationService } from './services/notification.service';
 import { MatBottomSheet, MatBottomSheetModule } from '@angular/material/bottom-sheet';
 import { CreateOptionsSheetComponent } from './components/create-options-sheet/create-options-sheet.component';
@@ -526,44 +527,158 @@ export class App implements OnInit {
 
     dialogRef.afterClosed().subscribe(async result => {
       if (result) {
-        this.logger.info('The dialog was closed', result);
+        this.logger.info('QR scan result received:', result);
         this.layout.toggleSearch();
 
-        if (result.startsWith('bunker://')) {
-          await this.nostrService.loginWithNostrConnect(result);
-        } else if (result.startsWith('npub:')) {
-          this.router.navigate(['/p', result]);
-        } else if (result.startsWith('nostr+walletconnect://')) {
-          // Handle WalletConnect URL
-          // const connect = nip47.parseConnectionString(result);
-          try {
-            const parsed = this.wallets.parseConnectionString(result);
+        try {
+          // Handle special protocols first
+          if (result.startsWith('bunker://')) {
+            await this.nostrService.loginWithNostrConnect(result);
+            return;
+          }
 
-            this.wallets.addWallet(parsed.pubkey, result, {
-              relay: parsed.relay,
-              secret: parsed.secret,
-            });
+          if (result.startsWith('nostr+walletconnect://')) {
+            // Handle WalletConnect URL
+            try {
+              const parsed = this.wallets.parseConnectionString(result);
 
-            this.snackBar.open('Wallet added successfully', 'Dismiss', {
-              duration: 3000,
-              horizontalPosition: 'center',
-              verticalPosition: 'bottom',
-            });
-          } catch (error) {
-            console.error('Failed to add wallet:', error);
-            this.snackBar.open(
-              'Failed to add wallet. Please check the connection string.',
-              'Dismiss',
-              {
+              this.wallets.addWallet(parsed.pubkey, result, {
+                relay: parsed.relay,
+                secret: parsed.secret,
+              });
+
+              this.snackBar.open('Wallet added successfully', 'Dismiss', {
                 duration: 3000,
                 horizontalPosition: 'center',
                 verticalPosition: 'bottom',
-              }
-            );
+              });
+            } catch (error) {
+              console.error('Failed to add wallet:', error);
+              this.snackBar.open(
+                'Failed to add wallet. Please check the connection string.',
+                'Dismiss',
+                {
+                  duration: 3000,
+                  horizontalPosition: 'center',
+                  verticalPosition: 'bottom',
+                }
+              );
+            }
+            return;
           }
+
+          // Handle Nostr entities (npub, nprofile, note, nevent, naddr, etc.)
+          if (this.isNostrEntity(result)) {
+            this.logger.debug('Handling Nostr entity from QR code:', result);
+            await this.handleNostrEntityFromQR(result);
+            return;
+          }
+
+          // Handle any other formats - show a generic message
+          this.logger.info('Unrecognized QR code format:', result);
+          this.snackBar.open('QR code scanned, but format not recognized.', 'Dismiss', {
+            duration: 3000,
+            horizontalPosition: 'center',
+            verticalPosition: 'bottom',
+          });
+
+        } catch (error) {
+          this.logger.error('Error processing QR code result:', error);
+          this.snackBar.open('Error processing QR code.', 'Dismiss', {
+            duration: 3000,
+            horizontalPosition: 'center',
+            verticalPosition: 'bottom',
+          });
         }
       }
     });
+  }
+
+  /**
+   * Check if a value is a Nostr entity (npub, nprofile, nevent, note, naddr, etc.)
+   */
+  private isNostrEntity(value: string): boolean {
+    return (
+      value.startsWith('npub') ||
+      value.startsWith('nprofile') ||
+      value.startsWith('nevent') ||
+      value.startsWith('note') ||
+      value.startsWith('naddr') ||
+      value.startsWith('nsec')
+    );
+  }
+
+  /**
+   * Handle Nostr entities scanned from QR codes
+   */
+  private async handleNostrEntityFromQR(entity: string): Promise<void> {
+    try {
+      if (entity.startsWith('npub') || entity.startsWith('nprofile')) {
+        // Handle profile entities
+        if (entity.startsWith('npub')) {
+          this.router.navigate(['/p', entity]);
+        } else {
+          // nprofile - decode to get pubkey
+          const decoded = nip19.decode(entity);
+          if (decoded.type === 'nprofile' && typeof decoded.data === 'object' && decoded.data && 'pubkey' in decoded.data) {
+            this.router.navigate(['/p', decoded.data.pubkey]);
+          } else {
+            throw new Error('Invalid nprofile data');
+          }
+        }
+
+        this.snackBar.open('Opening profile...', 'Dismiss', {
+          duration: 2000,
+          horizontalPosition: 'center',
+          verticalPosition: 'bottom',
+        });
+
+      } else if (entity.startsWith('note') || entity.startsWith('nevent')) {
+        // Handle note/event entities - use the layout service
+        this.layout.openGenericEvent(entity);
+
+        this.snackBar.open('Opening event...', 'Dismiss', {
+          duration: 2000,
+          horizontalPosition: 'center',
+          verticalPosition: 'bottom',
+        });
+
+      } else if (entity.startsWith('naddr')) {
+        // Handle address entities - use the layout service
+        this.layout.openArticle(entity);
+
+        this.snackBar.open('Opening article...', 'Dismiss', {
+          duration: 2000,
+          horizontalPosition: 'center',
+          verticalPosition: 'bottom',
+        });
+
+      } else if (entity.startsWith('nsec')) {
+        // Warn about private key
+        this.snackBar.open('Warning: This appears to be a private key! Do not share it.', 'Dismiss', {
+          duration: 5000,
+          horizontalPosition: 'center',
+          verticalPosition: 'bottom',
+          panelClass: 'error-snackbar'
+        });
+
+      } else {
+        this.logger.warn('Unhandled Nostr entity type:', entity);
+        this.snackBar.open('Unsupported Nostr entity type.', 'Dismiss', {
+          duration: 3000,
+          horizontalPosition: 'center',
+          verticalPosition: 'bottom',
+        });
+      }
+
+    } catch (error) {
+      this.logger.error('Error handling Nostr entity from QR:', error);
+      this.snackBar.open('Error processing Nostr entity.', 'Dismiss', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+    }
   }
 
   toggleSidenav() {
