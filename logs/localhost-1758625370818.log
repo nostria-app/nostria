@@ -1,0 +1,626 @@
+logger.service.ts:77 [2025-09-23T11:02:23.785Z] [INFO] [DebugLogger] === Relay Debug Statistics ===
+debug-logger.service.ts:274 (index)Value(index)ValueTotal Instances20Active Instances20Destroyed Instances0Object
+logger.service.ts:77 [2025-09-23T11:02:23.785Z] [INFO] [DebugLogger] Instances by Class:
+debug-logger.service.ts:283 (index)totalactivedestroyed(index)totalactivedestroyed_DiscoveryRelayService110_AccountRelayService110_SharedRelayService110_UserRelayService17170Object
+debug-logger.service.ts:287 (index)Value(index)ValueTotal Subscriptions2Active Subscriptions1Closed Subscriptions1Object
+logger.service.ts:77 [2025-09-23T11:02:23.785Z] [INFO] [DebugLogger] Relay URLs:
+debug-logger.service.ts:307 (index)Instance CountActive SubscriptionsInstance IDs(index)Instance CountActive SubscriptionsInstance IDswss://discovery.eu.nostria.app/10'_DiscoveryRelayService-1'wss://relay.damus.io/171'_AccountRelayService-2, _UserRelayService-5, _User…ce-18, _UserRelayService-19, _UserRelayService-20'wss://relay.primal.net/171'_AccountRelayService-2, _UserRelayService-5, _User…ce-18, _UserRelayService-19, _UserRelayService-20'wss://relay.angor.io/171'_AccountRelayService-2, _UserRelayService-5, _User…ce-18, _UserRelayService-19, _UserRelayService-20'wss://ribo.eu.nostria.app/171'_AccountRelayService-2, _UserRelayService-5, _User…ce-18, _UserRelayService-19, _UserRelayService-20'wss://nos.lol/171'_AccountRelayService-2, _UserRelayService-5, _User…ce-18, _UserRelayService-19, _UserRelayService-20'Object
+logger.service.ts:77 [2025-09-23T11:02:23.785Z] [INFO] [DebugLogger] ================================
+[NEW] Explain Console errors by using Copilot in Edge: click
+         
+         to explain an error. 
+        Learn more
+        Don't show again
+account-state.service.ts:236  Timeout waiting for window.nostr to become available
+(anonymous) @ account-state.service.ts:236
+setTimeout
+load @ account-state.service.ts:234
+await in load
+load @ state.service.ts:48
+await in load
+(anonymous) @ state.service.ts:34
+run @ resource.mjs:205
+flushQueue @ root_effect_scheduler.mjs:4000
+flush @ root_effect_scheduler.mjs:3978
+synchronizeOnce @ debug_node.mjs:20335
+synchronize @ debug_node.mjs:20318
+tickImpl @ debug_node.mjs:20291
+_tick @ debug_node.mjs:20280
+(anonymous) @ debug_node.mjs:30951
+run @ debug_node.mjs:16761
+tick @ debug_node.mjs:30949
+(anonymous) @ debug_node.mjs:30889
+(anonymous) @ debug_node.mjs:16316
+setTimeout
+scheduleCallbackWithRafRace @ debug_node.mjs:16315
+(anonymous) @ debug_node.mjs:30889
+runOutsideAngular @ debug_node.mjs:16767
+notify @ debug_node.mjs:30889
+consumerMarkedDirty @ resource.mjs:236
+consumerMarkDirty @ signal.mjs:201
+producerNotifyConsumers @ signal.mjs:183
+signalValueChanged @ signal.mjs:555
+signalSetFn @ signal.mjs:529
+set @ signal.mjs:510
+changeAccount @ account-state.service.ts:328
+initialize @ nostr.service.ts:177
+await in initialize
+(anonymous) @ nostr.service.ts:113
+run @ resource.mjs:205
+flushQueue @ root_effect_scheduler.mjs:4000
+flush @ root_effect_scheduler.mjs:3978
+synchronizeOnce @ debug_node.mjs:20335
+synchronize @ debug_node.mjs:20318
+tickImpl @ debug_node.mjs:20291
+_tick @ debug_node.mjs:20280
+(anonymous) @ debug_node.mjs:30951
+run @ debug_node.mjs:16761
+tick @ debug_node.mjs:30949
+(anonymous) @ debug_node.mjs:30889
+(anonymous) @ debug_node.mjs:16321
+requestAnimationFrame
+scheduleCallbackWithRafRace @ debug_node.mjs:16320
+(anonymous) @ debug_node.mjs:30889
+runOutsideAngular @ debug_node.mjs:16767
+notify @ debug_node.mjs:30889
+consumerMarkedDirty @ resource.mjs:236
+consumerMarkDirty @ signal.mjs:201
+producerNotifyConsumers @ signal.mjs:183
+signalValueChanged @ signal.mjs:555
+signalSetFn @ signal.mjs:529
+set @ signal.mjs:510
+initDatabase @ storage.service.ts:370
+await in initDatabase
+init @ storage.service.ts:330
+await in init
+ngOnInit @ app.ts:424
+callHookInternal @ debug_node.mjs:860
+callHook @ debug_node.mjs:887
+callHooks @ debug_node.mjs:841
+executeInitAndCheckHooks @ debug_node.mjs:791
+refreshView @ debug_node.mjs:8984
+detectChangesInView @ debug_node.mjs:9189
+detectChangesInViewWhileDirty @ debug_node.mjs:8878
+detectChangesInternal @ debug_node.mjs:8866
+synchronizeOnce @ debug_node.mjs:20359
+synchronize @ debug_node.mjs:20318
+tickImpl @ debug_node.mjs:20291
+_tick @ debug_node.mjs:20280
+tick @ debug_node.mjs:20268
+_loadComponent @ debug_node.mjs:20438
+(anonymous) @ debug_node.mjs:20245
+run @ debug_node.mjs:16761
+bootstrapImpl @ debug_node.mjs:20205
+bootstrap @ debug_node.mjs:20201
+(anonymous) @ core.mjs:970
+Promise.then
+(anonymous) @ core.mjs:951
+_callAndReportToErrorHandler @ core.mjs:1012
+(anonymous) @ core.mjs:945
+run @ debug_node.mjs:16761
+bootstrap @ core.mjs:904
+internalCreateApplication @ core.mjs:2659
+(anonymous) @ browser.mjs:440
+Promise.then
+bootstrapApplication @ browser.mjs:440
+(anonymous) @ main.ts:22
+Promise.then
+(anonymous) @ main.ts:22
+logger.service.ts:71 [2025-09-23T11:02:24.762Z] [DEBUG] Cleaning up resources...
+logger.service.ts:71 [2025-09-23T11:02:24.763Z] [DEBUG] Unsubscribed from all feed subscriptions
+event.component.ts:93 EventPageComponent initialized with data: undefined
+event.component.ts:107 Router state event data: {id: '8fb262eee9892b953a7e011d7c69e8878e2e4cc7435ab540e566421f020771a2', pubkey: '5eca50a04afaefe55659fb74810b42654e2268c1acca6e53801b9862db74a83a', created_at: 1758596019, kind: 1, tags: Array(2), …}
+logger.service.ts:77 [2025-09-23T11:02:24.770Z] [INFO] loadEvent called with nevent: nevent1qvzqqqqqqypzqhk22zsy47h0u4t9n7m5sy95ye2wyf5vrtx2defcqxucvtdhf2p6qqsglvnzam5cj2u48flqz8tud85g0r3wfnr5xk44grjkvsslqgrhrgsejn4dr
+logger.service.ts:77 [2025-09-23T11:02:24.770Z] [INFO] loadEvent called with nevent: nevent1qvzqqqqqqypzqhk22zsy47h0u4t9n7m5sy95ye2wyf5vrtx2defcqxucvtdhf2p6qqsglvnzam5cj2u48flqz8tud85g0r3wfnr5xk44grjkvsslqgrhrgsejn4dr
+logger.service.ts:77 [2025-09-23T11:02:24.770Z] [INFO] Decoded event ID: 8fb262eee9892b953a7e011d7c69e8878e2e4cc7435ab540e566421f020771a2 Author: 5eca50a04afaefe55659fb74810b42654e2268c1acca6e53801b9862db74a83a
+logger.service.ts:71 [2025-09-23T11:02:24.771Z] [DEBUG] [DebugLogger] Registered relay instance: _UserRelayService-21 with URLs: []
+logger.service.ts:71 [2025-09-23T11:02:24.771Z] [DEBUG] Getting events with filters (account-relay): {authors: Array(1), kinds: Array(1)} ['wss://discovery.eu.nostria.app/']
+logger.service.ts:77 [2025-09-23T11:02:24.773Z] [INFO] loadReactions called with eventId: 8fb262eee9892b953a7e011d7c69e8878e2e4cc7435ab540e566421f020771a2 pubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:24.774Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:71 [2025-09-23T11:02:24.774Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), limit: 100, #e: Array(1)} (5) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://relay.angor.io/', 'wss://ribo.eu.nostria.app/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:24.774Z] [INFO] loadReposts called with eventId: 8fb262eee9892b953a7e011d7c69e8878e2e4cc7435ab540e566421f020771a2 userPubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:24.775Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:24.775Z] [INFO] loadReports called with eventId: 8fb262eee9892b953a7e011d7c69e8878e2e4cc7435ab540e566421f020771a2 pubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:24.775Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:24.776Z] [INFO] loadEvent called with nevent: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a
+logger.service.ts:77 [2025-09-23T11:02:24.776Z] [INFO] Input is hex string, encoding to nevent
+logger.service.ts:77 [2025-09-23T11:02:24.776Z] [INFO] Encoded to nevent: nevent1qqsx3l8t0pe0ss6w2qnydy3m4tvzrcfuzzwrdvs3r7544tu8zw2t7wsnm6wgq
+logger.service.ts:77 [2025-09-23T11:02:24.777Z] [INFO] Decoded event ID: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a Author: undefined
+logger.service.ts:71 [2025-09-23T11:02:24.777Z] [DEBUG] Getting events with filters (account-relay): {ids: Array(1)} (5) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://relay.angor.io/', 'wss://ribo.eu.nostria.app/', 'wss://nos.lol/']
+[Violation] Added non-passive event listener to a scroll-blocking <some> event. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+[Violation] Added non-passive event listener to a scroll-blocking <some> event. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+[Violation] Added non-passive event listener to a scroll-blocking <some> event. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+[Violation] Added non-passive event listener to a scroll-blocking <some> event. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+[Violation] Added non-passive event listener to a scroll-blocking <some> event. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+[Violation] Added non-passive event listener to a scroll-blocking <some> event. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+[Violation] Added non-passive event listener to a scroll-blocking <some> event. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+[Violation] Added non-passive event listener to a scroll-blocking <some> event. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+[Violation] Added non-passive event listener to a scroll-blocking <some> event. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+[Violation] Added non-passive event listener to a scroll-blocking <some> event. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+[Violation] Added non-passive event listener to a scroll-blocking <some> event. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+[Violation] Added non-passive event listener to a scroll-blocking <some> event. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+[Violation] Added non-passive event listener to a scroll-blocking <some> event. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+[Violation] Added non-passive event listener to a scroll-blocking <some> event. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+[Violation] Added non-passive event listener to a scroll-blocking <some> event. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+[Violation] Added non-passive event listener to a scroll-blocking <some> event. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+[Violation] Added non-passive event listener to a scroll-blocking <some> event. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+[Violation] Added non-passive event listener to a scroll-blocking <some> event. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+[Violation] Added non-passive event listener to a scroll-blocking <some> event. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+[Violation] Added non-passive event listener to a scroll-blocking <some> event. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+[Violation] Added non-passive event listener to a scroll-blocking <some> event. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+[Violation] Added non-passive event listener to a scroll-blocking <some> event. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+[Violation] Added non-passive event listener to a scroll-blocking <some> event. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+[Violation] Added non-passive event listener to a scroll-blocking <some> event. Consider marking event handler as 'passive' to make the page more responsive. See <URL>
+logger.service.ts:77 [2025-09-23T11:02:24.785Z] [INFO] loadReposts called with eventId: 8fb262eee9892b953a7e011d7c69e8878e2e4cc7435ab540e566421f020771a2 userPubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:24.786Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:71 [2025-09-23T11:02:24.843Z] [DEBUG] Received event from query {content: '', created_at: 1748931701, id: '7d5cb1b2b830c2d22e9104bdf3baa550dd562aedef6f1e72fa38fde58b74231b', kind: 10002, pubkey: '5eca50a04afaefe55659fb74810b42654e2268c1acca6e53801b9862db74a83a', …}
+logger.service.ts:71 [2025-09-23T11:02:24.843Z] [DEBUG] [DebugLogger] Updated relay URLs for instance: _UserRelayService-21 []
+logger.service.ts:71 [2025-09-23T11:02:24.843Z] [DEBUG] UserDataService initialized for pubkey: 5eca50a04afaefe55659fb74810b42654e2268c1acca6e53801b9862db74a83a
+logger.service.ts:77 [2025-09-23T11:02:24.843Z] [INFO] Loaded event from storage or relays: 8fb262eee9892b953a7e011d7c69e8878e2e4cc7435ab540e566421f020771a2
+logger.service.ts:71 [2025-09-23T11:02:24.844Z] [DEBUG] Getting events with filters (account-relay): {ids: Array(1)} (3) ['wss://relay.damus.io/', 'wss://nos.lol/', 'wss://relay.primal.net/']
+logger.service.ts:77 [2025-09-23T11:02:24.844Z] [INFO] loadReplies called with eventId: 8fb262eee9892b953a7e011d7c69e8878e2e4cc7435ab540e566421f020771a2 pubkey: 5eca50a04afaefe55659fb74810b42654e2268c1acca6e53801b9862db74a83a
+logger.service.ts:71 [2025-09-23T11:02:24.844Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://nos.lol/', 'wss://relay.primal.net/']
+logger.service.ts:77 [2025-09-23T11:02:24.844Z] [INFO] loadReactions called with eventId: 8fb262eee9892b953a7e011d7c69e8878e2e4cc7435ab540e566421f020771a2 pubkey: 5eca50a04afaefe55659fb74810b42654e2268c1acca6e53801b9862db74a83a
+logger.service.ts:71 [2025-09-23T11:02:24.844Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://nos.lol/', 'wss://relay.primal.net/']
+logger.service.ts:77 [2025-09-23T11:02:24.848Z] [INFO] loadReactions called with eventId: 8fb262eee9892b953a7e011d7c69e8878e2e4cc7435ab540e566421f020771a2 pubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:24.849Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:71 [2025-09-23T11:02:24.849Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), limit: 100, #e: Array(1)} (5) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://relay.angor.io/', 'wss://ribo.eu.nostria.app/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:24.850Z] [INFO] loadReposts called with eventId: 8fb262eee9892b953a7e011d7c69e8878e2e4cc7435ab540e566421f020771a2 userPubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:24.850Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:24.850Z] [INFO] loadReports called with eventId: 8fb262eee9892b953a7e011d7c69e8878e2e4cc7435ab540e566421f020771a2 pubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:24.851Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:24.851Z] [INFO] loadReposts called with eventId: 8fb262eee9892b953a7e011d7c69e8878e2e4cc7435ab540e566421f020771a2 userPubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:24.852Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+relay.ts:437 Subscriptions closed (5) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:71 [2025-09-23T11:02:25.046Z] [DEBUG] Received event from query {content: '#XChat v0.2.3 release\n\n- Added support for more No…d/v0.2.3-release/app-arm64-v8a-release-v0.2.3.apk', created_at: 1758594806, id: '68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a', kind: 1, pubkey: '5eca50a04afaefe55659fb74810b42654e2268c1acca6e53801b9862db74a83a', …}
+logger.service.ts:77 [2025-09-23T11:02:25.047Z] [INFO] Loaded event from storage or relays: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a
+relay.ts:437 Subscriptions closed (5) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:71 [2025-09-23T11:02:25.066Z] [DEBUG] Saved observed relay stats for: wss://relay.damus.io/
+logger.service.ts:71 [2025-09-23T11:02:25.066Z] [DEBUG] Saved observed relay stats for: wss://relay.damus.io/
+logger.service.ts:71 [2025-09-23T11:02:25.067Z] [DEBUG] Saved observed relay stats for: wss://relay.primal.net/
+logger.service.ts:71 [2025-09-23T11:02:25.067Z] [DEBUG] Saved observed relay stats for: wss://relay.primal.net/
+logger.service.ts:71 [2025-09-23T11:02:25.068Z] [DEBUG] Saved observed relay stats for: wss://nos.lol/
+logger.service.ts:71 [2025-09-23T11:02:25.068Z] [DEBUG] Saved observed relay stats for: wss://nos.lol/
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:25.219Z] [INFO] Successfully loaded reactions for event: 8fb262eee9892b953a7e011d7c69e8878e2e4cc7435ab540e566421f020771a2 reactions: 7
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:25.224Z] [INFO] Successfully loaded reposts for event: 8fb262eee9892b953a7e011d7c69e8878e2e4cc7435ab540e566421f020771a2 count: 5
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:25.224Z] [INFO] Successfully loaded reports for event: 8fb262eee9892b953a7e011d7c69e8878e2e4cc7435ab540e566421f020771a2 report types: []
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:25.231Z] [INFO] Successfully loaded reposts for event: 8fb262eee9892b953a7e011d7c69e8878e2e4cc7435ab540e566421f020771a2 count: 5
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:25.233Z] [INFO] Successfully loaded reactions for event: 8fb262eee9892b953a7e011d7c69e8878e2e4cc7435ab540e566421f020771a2 reactions: 7
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:25.237Z] [INFO] Successfully loaded reposts for event: 8fb262eee9892b953a7e011d7c69e8878e2e4cc7435ab540e566421f020771a2 count: 5
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:25.237Z] [INFO] Successfully loaded reports for event: 8fb262eee9892b953a7e011d7c69e8878e2e4cc7435ab540e566421f020771a2 report types: []
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:25.241Z] [INFO] Successfully loaded reposts for event: 8fb262eee9892b953a7e011d7c69e8878e2e4cc7435ab540e566421f020771a2 count: 5
+logger.service.ts:71 [2025-09-23T11:02:25.417Z] [DEBUG] Loading profile data for: 5eca50a04afaefe55659fb74810b42654e2268c1acca6e53801b9862db74a83a
+logger.service.ts:122 [2025-09-23T11:02:25.418Z] [DEBUG] Loading profile data in user profile5eca50a04afaefe55659fb74810b42654e2268c1acca6e53801b9862db74a83a: 0.00ms
+logger.service.ts:71 [2025-09-23T11:02:25.418Z] [DEBUG] Profile data loaded: {event: {…}, data: {…}}
+logger.service.ts:71 [2025-09-23T11:02:25.418Z] [DEBUG] Loading profile data for: 5eca50a04afaefe55659fb74810b42654e2268c1acca6e53801b9862db74a83a
+logger.service.ts:122 [2025-09-23T11:02:25.418Z] [DEBUG] Loading profile data in user profile5eca50a04afaefe55659fb74810b42654e2268c1acca6e53801b9862db74a83a: 0.10ms
+logger.service.ts:71 [2025-09-23T11:02:25.418Z] [DEBUG] Profile data loaded: {event: {…}, data: {…}}
+logger.service.ts:71 [2025-09-23T11:02:25.418Z] [DEBUG] Loading profile data for: 5eca50a04afaefe55659fb74810b42654e2268c1acca6e53801b9862db74a83a
+logger.service.ts:122 [2025-09-23T11:02:25.418Z] [DEBUG] Loading profile data in user profile5eca50a04afaefe55659fb74810b42654e2268c1acca6e53801b9862db74a83a: 0.00ms
+logger.service.ts:71 [2025-09-23T11:02:25.418Z] [DEBUG] Profile data loaded: {event: {…}, data: {…}}
+logger.service.ts:71 [2025-09-23T11:02:25.444Z] [DEBUG] Received event from query {content: '#XChat v0.2.3 release\n\n- Added support for more No…d/v0.2.3-release/app-arm64-v8a-release-v0.2.3.apk', created_at: 1758594806, id: '68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a', kind: 1, pubkey: '5eca50a04afaefe55659fb74810b42654e2268c1acca6e53801b9862db74a83a', …}
+logger.service.ts:77 [2025-09-23T11:02:25.445Z] [INFO] loadReplies called with eventId: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a pubkey: 5eca50a04afaefe55659fb74810b42654e2268c1acca6e53801b9862db74a83a
+logger.service.ts:71 [2025-09-23T11:02:25.445Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://nos.lol/', 'wss://relay.primal.net/']
+logger.service.ts:77 [2025-09-23T11:02:25.446Z] [INFO] loadReactions called with eventId: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a pubkey: 5eca50a04afaefe55659fb74810b42654e2268c1acca6e53801b9862db74a83a
+logger.service.ts:71 [2025-09-23T11:02:25.446Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://nos.lol/', 'wss://relay.primal.net/']
+logger.service.ts:77 [2025-09-23T11:02:25.447Z] [INFO] loadReactions called with eventId: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a pubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.447Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:71 [2025-09-23T11:02:25.448Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), limit: 100, #e: Array(1)} (5) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://relay.angor.io/', 'wss://ribo.eu.nostria.app/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.448Z] [INFO] loadReposts called with eventId: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a userPubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.448Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.449Z] [INFO] loadReports called with eventId: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a pubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.449Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.456Z] [INFO] loadReposts called with eventId: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a userPubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.457Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:25.463Z] [INFO] Successfully loaded replies for event: 8fb262eee9892b953a7e011d7c69e8878e2e4cc7435ab540e566421f020771a2 replies: 1
+logger.service.ts:71 [2025-09-23T11:02:25.469Z] [DEBUG] Saved observed relay stats for: wss://relay.damus.io/
+logger.service.ts:71 [2025-09-23T11:02:25.469Z] [DEBUG] Saved observed relay stats for: wss://relay.damus.io/
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:25.470Z] [INFO] Successfully loaded reactions for event: 8fb262eee9892b953a7e011d7c69e8878e2e4cc7435ab540e566421f020771a2 reactions: 7
+logger.service.ts:71 [2025-09-23T11:02:25.470Z] [DEBUG] Saved observed relay stats for: wss://nos.lol/
+logger.service.ts:71 [2025-09-23T11:02:25.470Z] [DEBUG] Saved observed relay stats for: wss://nos.lol/
+logger.service.ts:71 [2025-09-23T11:02:25.471Z] [DEBUG] Saved observed relay stats for: wss://relay.primal.net/
+logger.service.ts:71 [2025-09-23T11:02:25.472Z] [DEBUG] Saved observed relay stats for: wss://relay.primal.net/
+relay.ts:437 Subscriptions closed (5) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:25.788Z] [INFO] Successfully loaded reactions for event: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a reactions: 9
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:25.789Z] [INFO] Successfully loaded reposts for event: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a count: 7
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:25.790Z] [INFO] Successfully loaded reports for event: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a report types: []
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:25.793Z] [INFO] Successfully loaded reposts for event: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a count: 7
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:25.796Z] [INFO] Successfully loaded replies for event: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a replies: 20
+logger.service.ts:77 [2025-09-23T11:02:25.798Z] [INFO] loadReactions called with eventId: dc42c9fc7ad1a623b866f6d405fab2238a1ca30e8cc7d82aa5e9e077c47df318 pubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.799Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:71 [2025-09-23T11:02:25.799Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), limit: 100, #e: Array(1)} (5) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://relay.angor.io/', 'wss://ribo.eu.nostria.app/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.800Z] [INFO] loadReposts called with eventId: dc42c9fc7ad1a623b866f6d405fab2238a1ca30e8cc7d82aa5e9e077c47df318 userPubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.800Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.800Z] [INFO] loadReports called with eventId: dc42c9fc7ad1a623b866f6d405fab2238a1ca30e8cc7d82aa5e9e077c47df318 pubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.801Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.801Z] [INFO] loadEvent called with nevent: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a
+logger.service.ts:77 [2025-09-23T11:02:25.801Z] [INFO] Input is hex string, encoding to nevent
+logger.service.ts:77 [2025-09-23T11:02:25.801Z] [INFO] Encoded to nevent: nevent1qqsx3l8t0pe0ss6w2qnydy3m4tvzrcfuzzwrdvs3r7544tu8zw2t7wsnm6wgq
+logger.service.ts:77 [2025-09-23T11:02:25.802Z] [INFO] Decoded event ID: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a Author: undefined
+logger.service.ts:77 [2025-09-23T11:02:25.808Z] [INFO] loadReposts called with eventId: dc42c9fc7ad1a623b866f6d405fab2238a1ca30e8cc7d82aa5e9e077c47df318 userPubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.809Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.811Z] [INFO] loadReactions called with eventId: 6f6452538334fc06feeb15893f794686922e7d29df2962a102c4b7f0e3190b2f pubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.811Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:71 [2025-09-23T11:02:25.812Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), limit: 100, #e: Array(1)} (5) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://relay.angor.io/', 'wss://ribo.eu.nostria.app/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.812Z] [INFO] loadReposts called with eventId: 6f6452538334fc06feeb15893f794686922e7d29df2962a102c4b7f0e3190b2f userPubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.812Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.813Z] [INFO] loadReports called with eventId: 6f6452538334fc06feeb15893f794686922e7d29df2962a102c4b7f0e3190b2f pubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.813Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.814Z] [INFO] loadEvent called with nevent: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a
+logger.service.ts:77 [2025-09-23T11:02:25.814Z] [INFO] Input is hex string, encoding to nevent
+logger.service.ts:77 [2025-09-23T11:02:25.814Z] [INFO] Encoded to nevent: nevent1qqsx3l8t0pe0ss6w2qnydy3m4tvzrcfuzzwrdvs3r7544tu8zw2t7wsnm6wgq
+logger.service.ts:77 [2025-09-23T11:02:25.814Z] [INFO] Decoded event ID: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a Author: undefined
+logger.service.ts:77 [2025-09-23T11:02:25.815Z] [INFO] loadReactions called with eventId: ede3f8eb2688fed1d991abac48e4ce88548e3b38b4a6d9ece812ea657b8dd2c8 pubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.816Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:71 [2025-09-23T11:02:25.816Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), limit: 100, #e: Array(1)} (5) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://relay.angor.io/', 'wss://ribo.eu.nostria.app/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.817Z] [INFO] loadReposts called with eventId: ede3f8eb2688fed1d991abac48e4ce88548e3b38b4a6d9ece812ea657b8dd2c8 userPubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.817Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.818Z] [INFO] loadReports called with eventId: ede3f8eb2688fed1d991abac48e4ce88548e3b38b4a6d9ece812ea657b8dd2c8 pubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.818Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.819Z] [INFO] loadEvent called with nevent: 6f6452538334fc06feeb15893f794686922e7d29df2962a102c4b7f0e3190b2f
+logger.service.ts:77 [2025-09-23T11:02:25.819Z] [INFO] Input is hex string, encoding to nevent
+logger.service.ts:77 [2025-09-23T11:02:25.819Z] [INFO] Encoded to nevent: nevent1qqsx7ezj2wpnflqxlm43tzfl09rgdy3w055a72tz5ypvfdlsuvvsktc9ll4z9
+logger.service.ts:77 [2025-09-23T11:02:25.820Z] [INFO] Decoded event ID: 6f6452538334fc06feeb15893f794686922e7d29df2962a102c4b7f0e3190b2f Author: undefined
+logger.service.ts:71 [2025-09-23T11:02:25.820Z] [DEBUG] Getting events with filters (account-relay): {ids: Array(1)} (5) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://relay.angor.io/', 'wss://ribo.eu.nostria.app/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.827Z] [INFO] loadReposts called with eventId: ede3f8eb2688fed1d991abac48e4ce88548e3b38b4a6d9ece812ea657b8dd2c8 userPubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.827Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.835Z] [INFO] loadReposts called with eventId: 6f6452538334fc06feeb15893f794686922e7d29df2962a102c4b7f0e3190b2f userPubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.835Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.837Z] [INFO] loadReactions called with eventId: 46370f907e4592cc93297ade0c4ab2d2efa77f713b35714232cc45675502b648 pubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.837Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:71 [2025-09-23T11:02:25.838Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), limit: 100, #e: Array(1)} (5) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://relay.angor.io/', 'wss://ribo.eu.nostria.app/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.838Z] [INFO] loadReposts called with eventId: 46370f907e4592cc93297ade0c4ab2d2efa77f713b35714232cc45675502b648 userPubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.838Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.839Z] [INFO] loadReports called with eventId: 46370f907e4592cc93297ade0c4ab2d2efa77f713b35714232cc45675502b648 pubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.839Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.840Z] [INFO] loadEvent called with nevent: 8fb262eee9892b953a7e011d7c69e8878e2e4cc7435ab540e566421f020771a2
+logger.service.ts:77 [2025-09-23T11:02:25.840Z] [INFO] Input is hex string, encoding to nevent
+logger.service.ts:77 [2025-09-23T11:02:25.840Z] [INFO] Encoded to nevent: nevent1qqsglvnzam5cj2u48flqz8tud85g0r3wfnr5xk44grjkvsslqgrhrgsgjluqa
+logger.service.ts:77 [2025-09-23T11:02:25.840Z] [INFO] Decoded event ID: 8fb262eee9892b953a7e011d7c69e8878e2e4cc7435ab540e566421f020771a2 Author: undefined
+logger.service.ts:77 [2025-09-23T11:02:25.841Z] [INFO] loadReactions called with eventId: f530bb465f420fd125ea02de3ae72afcf1299c75a565e75e1d98733c65053e52 pubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.841Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:71 [2025-09-23T11:02:25.842Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), limit: 100, #e: Array(1)} (5) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://relay.angor.io/', 'wss://ribo.eu.nostria.app/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.842Z] [INFO] loadReposts called with eventId: f530bb465f420fd125ea02de3ae72afcf1299c75a565e75e1d98733c65053e52 userPubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.843Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.843Z] [INFO] loadReports called with eventId: f530bb465f420fd125ea02de3ae72afcf1299c75a565e75e1d98733c65053e52 pubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.843Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.844Z] [INFO] loadEvent called with nevent: 46370f907e4592cc93297ade0c4ab2d2efa77f713b35714232cc45675502b648
+logger.service.ts:77 [2025-09-23T11:02:25.844Z] [INFO] Input is hex string, encoding to nevent
+logger.service.ts:77 [2025-09-23T11:02:25.844Z] [INFO] Encoded to nevent: nevent1qqsyvdc0jplytykvjv5h4hsvf2ed9ma80acnkdt3ggevc3t825ptvjqhdsep7
+logger.service.ts:77 [2025-09-23T11:02:25.845Z] [INFO] Decoded event ID: 46370f907e4592cc93297ade0c4ab2d2efa77f713b35714232cc45675502b648 Author: undefined
+logger.service.ts:71 [2025-09-23T11:02:25.845Z] [DEBUG] Getting events with filters (account-relay): {ids: Array(1)} (5) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://relay.angor.io/', 'wss://ribo.eu.nostria.app/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.851Z] [INFO] loadReposts called with eventId: f530bb465f420fd125ea02de3ae72afcf1299c75a565e75e1d98733c65053e52 userPubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.852Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.859Z] [INFO] loadReposts called with eventId: 46370f907e4592cc93297ade0c4ab2d2efa77f713b35714232cc45675502b648 userPubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.860Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.861Z] [INFO] loadReactions called with eventId: 000039c2c32ad0c0489bc2262367bce205e9cc227ffcd4aedde5cc5d7a0d689f pubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.862Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:71 [2025-09-23T11:02:25.862Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), limit: 100, #e: Array(1)} (5) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://relay.angor.io/', 'wss://ribo.eu.nostria.app/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.863Z] [INFO] loadReposts called with eventId: 000039c2c32ad0c0489bc2262367bce205e9cc227ffcd4aedde5cc5d7a0d689f userPubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.863Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.864Z] [INFO] loadReports called with eventId: 000039c2c32ad0c0489bc2262367bce205e9cc227ffcd4aedde5cc5d7a0d689f pubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.864Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.864Z] [INFO] loadEvent called with nevent: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a
+logger.service.ts:77 [2025-09-23T11:02:25.865Z] [INFO] Input is hex string, encoding to nevent
+logger.service.ts:77 [2025-09-23T11:02:25.865Z] [INFO] Encoded to nevent: nevent1qqsx3l8t0pe0ss6w2qnydy3m4tvzrcfuzzwrdvs3r7544tu8zw2t7wsnm6wgq
+logger.service.ts:77 [2025-09-23T11:02:25.865Z] [INFO] Decoded event ID: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a Author: undefined
+logger.service.ts:77 [2025-09-23T11:02:25.865Z] [INFO] loadReactions called with eventId: 8490bed8e9360a39b947606006876b213d9af5ba7d30ea8c081bc6f7ee6d2ee0 pubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.866Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:71 [2025-09-23T11:02:25.866Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), limit: 100, #e: Array(1)} (5) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://relay.angor.io/', 'wss://ribo.eu.nostria.app/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.867Z] [INFO] loadReposts called with eventId: 8490bed8e9360a39b947606006876b213d9af5ba7d30ea8c081bc6f7ee6d2ee0 userPubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.867Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.868Z] [INFO] loadReports called with eventId: 8490bed8e9360a39b947606006876b213d9af5ba7d30ea8c081bc6f7ee6d2ee0 pubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.868Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.869Z] [INFO] loadEvent called with nevent: 000039c2c32ad0c0489bc2262367bce205e9cc227ffcd4aedde5cc5d7a0d689f
+logger.service.ts:77 [2025-09-23T11:02:25.869Z] [INFO] Input is hex string, encoding to nevent
+logger.service.ts:77 [2025-09-23T11:02:25.869Z] [INFO] Encoded to nevent: nevent1qqsqqqpectpj45xqfzduyf3rv77wyp0fes38llx54mw7tnza0gxk38ck5g442
+logger.service.ts:77 [2025-09-23T11:02:25.869Z] [INFO] Decoded event ID: 000039c2c32ad0c0489bc2262367bce205e9cc227ffcd4aedde5cc5d7a0d689f Author: undefined
+logger.service.ts:71 [2025-09-23T11:02:25.870Z] [DEBUG] Getting events with filters (account-relay): {ids: Array(1)} (5) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://relay.angor.io/', 'wss://ribo.eu.nostria.app/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.870Z] [INFO] loadReactions called with eventId: 000035ce553aa443737f4904c53d5c4da1a0a5b5f297dd814394359162425dd9 pubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.871Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:71 [2025-09-23T11:02:25.871Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), limit: 100, #e: Array(1)} (5) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://relay.angor.io/', 'wss://ribo.eu.nostria.app/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.872Z] [INFO] loadReposts called with eventId: 000035ce553aa443737f4904c53d5c4da1a0a5b5f297dd814394359162425dd9 userPubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.872Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.873Z] [INFO] loadReports called with eventId: 000035ce553aa443737f4904c53d5c4da1a0a5b5f297dd814394359162425dd9 pubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.873Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.874Z] [INFO] loadEvent called with nevent: 8490bed8e9360a39b947606006876b213d9af5ba7d30ea8c081bc6f7ee6d2ee0
+logger.service.ts:77 [2025-09-23T11:02:25.874Z] [INFO] Input is hex string, encoding to nevent
+logger.service.ts:77 [2025-09-23T11:02:25.874Z] [INFO] Encoded to nevent: nevent1qqsgfy97mr5nvz3eh9rkqcqxsa4jz0v67ka86v823syph3hhaekjacq95v3wc
+logger.service.ts:77 [2025-09-23T11:02:25.874Z] [INFO] Decoded event ID: 8490bed8e9360a39b947606006876b213d9af5ba7d30ea8c081bc6f7ee6d2ee0 Author: undefined
+logger.service.ts:71 [2025-09-23T11:02:25.875Z] [DEBUG] Getting events with filters (account-relay): {ids: Array(1)} (5) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://relay.angor.io/', 'wss://ribo.eu.nostria.app/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.876Z] [INFO] loadReactions called with eventId: 43f5a526d93c9fd4102f133c773da5c8f73a9c246bdb2f88bc877a2cac84ed54 pubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.876Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:71 [2025-09-23T11:02:25.877Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), limit: 100, #e: Array(1)} (5) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://relay.angor.io/', 'wss://ribo.eu.nostria.app/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.877Z] [INFO] loadReposts called with eventId: 43f5a526d93c9fd4102f133c773da5c8f73a9c246bdb2f88bc877a2cac84ed54 userPubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.878Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.878Z] [INFO] loadReports called with eventId: 43f5a526d93c9fd4102f133c773da5c8f73a9c246bdb2f88bc877a2cac84ed54 pubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.879Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.880Z] [INFO] loadEvent called with nevent: 000035ce553aa443737f4904c53d5c4da1a0a5b5f297dd814394359162425dd9
+logger.service.ts:77 [2025-09-23T11:02:25.880Z] [INFO] Input is hex string, encoding to nevent
+logger.service.ts:77 [2025-09-23T11:02:25.880Z] [INFO] Encoded to nevent: nevent1qqsqqqp4ee2n4fzrwdl5jpx984wymgdq5k6l997as9pegdv3vfp9mkgf52ehd
+logger.service.ts:77 [2025-09-23T11:02:25.880Z] [INFO] Decoded event ID: 000035ce553aa443737f4904c53d5c4da1a0a5b5f297dd814394359162425dd9 Author: undefined
+logger.service.ts:71 [2025-09-23T11:02:25.881Z] [DEBUG] Getting events with filters (account-relay): {ids: Array(1)} (5) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://relay.angor.io/', 'wss://ribo.eu.nostria.app/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.888Z] [INFO] loadReposts called with eventId: 43f5a526d93c9fd4102f133c773da5c8f73a9c246bdb2f88bc877a2cac84ed54 userPubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.888Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.896Z] [INFO] loadReposts called with eventId: 000035ce553aa443737f4904c53d5c4da1a0a5b5f297dd814394359162425dd9 userPubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.896Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.904Z] [INFO] loadReposts called with eventId: 8490bed8e9360a39b947606006876b213d9af5ba7d30ea8c081bc6f7ee6d2ee0 userPubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.904Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.906Z] [INFO] loadReactions called with eventId: 3915963214c7a3599d09298a68775773850135d674d76618770990f7ed681d1c pubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.906Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:71 [2025-09-23T11:02:25.907Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), limit: 100, #e: Array(1)} (5) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://relay.angor.io/', 'wss://ribo.eu.nostria.app/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.907Z] [INFO] loadReposts called with eventId: 3915963214c7a3599d09298a68775773850135d674d76618770990f7ed681d1c userPubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.908Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.908Z] [INFO] loadReports called with eventId: 3915963214c7a3599d09298a68775773850135d674d76618770990f7ed681d1c pubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.909Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.909Z] [INFO] loadEvent called with nevent: 000039c2c32ad0c0489bc2262367bce205e9cc227ffcd4aedde5cc5d7a0d689f
+logger.service.ts:77 [2025-09-23T11:02:25.909Z] [INFO] Input is hex string, encoding to nevent
+logger.service.ts:77 [2025-09-23T11:02:25.910Z] [INFO] Encoded to nevent: nevent1qqsqqqpectpj45xqfzduyf3rv77wyp0fes38llx54mw7tnza0gxk38ck5g442
+logger.service.ts:77 [2025-09-23T11:02:25.910Z] [INFO] Decoded event ID: 000039c2c32ad0c0489bc2262367bce205e9cc227ffcd4aedde5cc5d7a0d689f Author: undefined
+logger.service.ts:71 [2025-09-23T11:02:25.910Z] [DEBUG] Getting events with filters (account-relay): {ids: Array(1)} (5) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://relay.angor.io/', 'wss://ribo.eu.nostria.app/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.917Z] [INFO] loadReposts called with eventId: 3915963214c7a3599d09298a68775773850135d674d76618770990f7ed681d1c userPubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.917Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+logger.service.ts:77 [2025-09-23T11:02:25.924Z] [INFO] loadReposts called with eventId: 000039c2c32ad0c0489bc2262367bce205e9cc227ffcd4aedde5cc5d7a0d689f userPubkey: 17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515
+logger.service.ts:71 [2025-09-23T11:02:25.925Z] [DEBUG] Getting events with filters (account-relay): {kinds: Array(1), #e: Array(1)} (3) ['wss://relay.damus.io/', 'wss://relay.primal.net/', 'wss://nos.lol/']
+debug_node.mjs:16315 [Violation] 'setTimeout' handler took 129ms
+logger.service.ts:77 [2025-09-23T11:02:25.927Z] [INFO] Loaded event from storage or relays: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a
+logger.service.ts:77 [2025-09-23T11:02:25.927Z] [INFO] Loaded event from storage or relays: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a
+logger.service.ts:77 [2025-09-23T11:02:25.927Z] [INFO] Loaded event from storage or relays: 8fb262eee9892b953a7e011d7c69e8878e2e4cc7435ab540e566421f020771a2
+logger.service.ts:77 [2025-09-23T11:02:25.927Z] [INFO] Loaded event from storage or relays: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a
+logger.service.ts:77 [2025-09-23T11:02:25.928Z] [INFO] loadEvent called with nevent: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a
+logger.service.ts:77 [2025-09-23T11:02:25.928Z] [INFO] Input is hex string, encoding to nevent
+logger.service.ts:77 [2025-09-23T11:02:25.928Z] [INFO] Encoded to nevent: nevent1qqsx3l8t0pe0ss6w2qnydy3m4tvzrcfuzzwrdvs3r7544tu8zw2t7wsnm6wgq
+logger.service.ts:77 [2025-09-23T11:02:25.928Z] [INFO] Decoded event ID: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a Author: undefined
+logger.service.ts:77 [2025-09-23T11:02:25.928Z] [INFO] Loaded event from storage or relays: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.005Z] [INFO] Successfully loaded reactions for event: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a reactions: 9
+logger.service.ts:77 [2025-09-23T11:02:26.005Z] [INFO] Successfully completed progressive loading for event: 8fb262eee9892b953a7e011d7c69e8878e2e4cc7435ab540e566421f020771a2
+index.js:587 NOTICE from wss://relay.primal.net/: ERROR: too many concurrent REQs
+index.js:587 NOTICE from wss://relay.primal.net/: ERROR: too many concurrent REQs
+index.js:587 NOTICE from wss://nos.lol/: ERROR: too many concurrent REQs
+index.js:587 NOTICE from wss://relay.primal.net/: ERROR: too many concurrent REQs
+index.js:587 NOTICE from wss://nos.lol/: ERROR: too many concurrent REQs
+index.js:587 NOTICE from wss://nos.lol/: ERROR: too many concurrent REQs
+index.js:587 NOTICE from wss://relay.primal.net/: ERROR: too many concurrent REQs
+index.js:587 NOTICE from wss://relay.primal.net/: ERROR: too many concurrent REQs
+index.js:587 NOTICE from wss://nos.lol/: ERROR: too many concurrent REQs
+index.js:587 NOTICE from wss://relay.primal.net/: ERROR: too many concurrent REQs
+index.js:587 NOTICE from wss://nos.lol/: ERROR: too many concurrent REQs
+index.js:587 NOTICE from wss://relay.primal.net/: ERROR: too many concurrent REQs
+index.js:587 NOTICE from wss://nos.lol/: ERROR: too many concurrent REQs
+index.js:587 NOTICE from wss://relay.primal.net/: ERROR: too many concurrent REQs
+index.js:587 NOTICE from wss://nos.lol/: ERROR: too many concurrent REQs
+index.js:587 NOTICE from wss://relay.primal.net/: ERROR: too many concurrent REQs
+index.js:587 NOTICE from wss://nos.lol/: ERROR: too many concurrent REQs
+index.js:587 NOTICE from wss://relay.primal.net/: ERROR: too many concurrent REQs
+index.js:587 NOTICE from wss://nos.lol/: ERROR: too many concurrent REQs
+index.js:587 NOTICE from wss://relay.primal.net/: ERROR: too many concurrent REQs
+index.js:587 NOTICE from wss://nos.lol/: ERROR: too many concurrent REQs
+index.js:587 NOTICE from wss://relay.primal.net/: ERROR: too many concurrent REQs
+index.js:587 NOTICE from wss://nos.lol/: ERROR: too many concurrent REQs
+index.js:587 NOTICE from wss://relay.primal.net/: ERROR: too many concurrent REQs
+index.js:587 NOTICE from wss://nos.lol/: ERROR: too many concurrent REQs
+index.js:587 NOTICE from wss://relay.primal.net/: ERROR: too many concurrent REQs
+index.js:587 NOTICE from wss://nos.lol/: ERROR: too many concurrent REQs
+index.js:587 NOTICE from wss://relay.primal.net/: ERROR: too many concurrent REQs
+index.js:587 NOTICE from wss://nos.lol/: ERROR: too many concurrent REQs
+index.js:587 NOTICE from wss://nos.lol/: ERROR: too many concurrent REQs
+index.js:587 NOTICE from wss://relay.primal.net/: ERROR: too many concurrent REQs
+index.js:587 NOTICE from wss://relay.primal.net/: ERROR: too many concurrent REQs
+index.js:587 NOTICE from wss://nos.lol/: ERROR: too many concurrent REQs
+index.js:587 NOTICE from wss://relay.primal.net/: ERROR: too many concurrent REQs
+index.js:587 NOTICE from wss://relay.primal.net/: ERROR: too many concurrent REQs
+index.js:587 NOTICE from wss://nos.lol/: ERROR: too many concurrent REQs
+index.js:587 NOTICE from wss://relay.primal.net/: ERROR: too many concurrent REQs
+index.js:587 NOTICE from wss://nos.lol/: ERROR: too many concurrent REQs
+index.js:587 NOTICE from wss://nos.lol/: ERROR: too many concurrent REQs
+index.js:587 NOTICE from wss://nos.lol/: ERROR: too many concurrent REQs
+logger.service.ts:71 [2025-09-23T11:02:26.106Z] [DEBUG] Scrolled mat-drawer-content to top
+logger.service.ts:71 [2025-09-23T11:02:26.106Z] [DEBUG] Scrolled mat-drawer-content to top
+relay.ts:437 Subscriptions closed (5) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+relay.ts:437 Subscriptions closed (5) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+relay.ts:437 Subscriptions closed (5) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:71 [2025-09-23T11:02:26.123Z] [DEBUG] Received event from query {content: `I don't know how, but even though I selected "appr… in Amber discovered by how 0xChat is calling it?`, created_at: 1758598843, id: '6f6452538334fc06feeb15893f794686922e7d29df2962a102c4b7f0e3190b2f', kind: 1, pubkey: '21580a98aaf64f7d66705abe7bf7a7acf4ee440fcf6b59d0b76e16217824d895', …}
+logger.service.ts:77 [2025-09-23T11:02:26.123Z] [INFO] Loaded event from storage or relays: 6f6452538334fc06feeb15893f794686922e7d29df2962a102c4b7f0e3190b2f
+logger.service.ts:77 [2025-09-23T11:02:26.124Z] [INFO] loadEvent called with nevent: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a
+logger.service.ts:77 [2025-09-23T11:02:26.124Z] [INFO] Input is hex string, encoding to nevent
+logger.service.ts:77 [2025-09-23T11:02:26.124Z] [INFO] Encoded to nevent: nevent1qqsx3l8t0pe0ss6w2qnydy3m4tvzrcfuzzwrdvs3r7544tu8zw2t7wsnm6wgq
+logger.service.ts:77 [2025-09-23T11:02:26.124Z] [INFO] Decoded event ID: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a Author: undefined
+logger.service.ts:77 [2025-09-23T11:02:26.124Z] [INFO] Loaded event from storage or relays: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a
+relay.ts:437 Subscriptions closed (5) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+relay.ts:437 Subscriptions closed (5) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.141Z] [INFO] Successfully loaded reactions for event: dc42c9fc7ad1a623b866f6d405fab2238a1ca30e8cc7d82aa5e9e077c47df318 reactions: 1
+logger.service.ts:71 [2025-09-23T11:02:26.147Z] [DEBUG] Received event from query {content: 'meanwhile ios users: :(((', created_at: 1758597187, id: '46370f907e4592cc93297ade0c4ab2d2efa77f713b35714232cc45675502b648', kind: 1, pubkey: '9348cefce6967a7e293bbd8c64a9f877e94444c8c5554caa34210da9c40d64e3', …}
+logger.service.ts:77 [2025-09-23T11:02:26.148Z] [INFO] Loaded event from storage or relays: 46370f907e4592cc93297ade0c4ab2d2efa77f713b35714232cc45675502b648
+logger.service.ts:77 [2025-09-23T11:02:26.148Z] [INFO] loadEvent called with nevent: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a
+logger.service.ts:77 [2025-09-23T11:02:26.148Z] [INFO] Input is hex string, encoding to nevent
+logger.service.ts:77 [2025-09-23T11:02:26.148Z] [INFO] Encoded to nevent: nevent1qqsx3l8t0pe0ss6w2qnydy3m4tvzrcfuzzwrdvs3r7544tu8zw2t7wsnm6wgq
+logger.service.ts:77 [2025-09-23T11:02:26.148Z] [INFO] Decoded event ID: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a Author: undefined
+logger.service.ts:77 [2025-09-23T11:02:26.148Z] [INFO] Loaded event from storage or relays: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.149Z] [INFO] Successfully loaded reposts for event: dc42c9fc7ad1a623b866f6d405fab2238a1ca30e8cc7d82aa5e9e077c47df318 count: 0
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.160Z] [INFO] Successfully loaded reports for event: dc42c9fc7ad1a623b866f6d405fab2238a1ca30e8cc7d82aa5e9e077c47df318 report types: []
+logger.service.ts:71 [2025-09-23T11:02:26.160Z] [DEBUG] Saved observed relay stats for: wss://relay.damus.io/
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.163Z] [INFO] Successfully loaded reposts for event: dc42c9fc7ad1a623b866f6d405fab2238a1ca30e8cc7d82aa5e9e077c47df318 count: 0
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.164Z] [INFO] Successfully loaded reactions for event: 6f6452538334fc06feeb15893f794686922e7d29df2962a102c4b7f0e3190b2f reactions: 0
+logger.service.ts:71 [2025-09-23T11:02:26.168Z] [DEBUG] Saved observed relay stats for: wss://relay.damus.io/
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.169Z] [INFO] Successfully loaded reposts for event: 6f6452538334fc06feeb15893f794686922e7d29df2962a102c4b7f0e3190b2f count: 0
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.173Z] [INFO] Successfully loaded reports for event: 6f6452538334fc06feeb15893f794686922e7d29df2962a102c4b7f0e3190b2f report types: []
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.177Z] [INFO] Successfully loaded reactions for event: ede3f8eb2688fed1d991abac48e4ce88548e3b38b4a6d9ece812ea657b8dd2c8 reactions: 0
+logger.service.ts:71 [2025-09-23T11:02:26.177Z] [DEBUG] Saved observed relay stats for: wss://relay.primal.net/
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.177Z] [INFO] Successfully loaded reposts for event: ede3f8eb2688fed1d991abac48e4ce88548e3b38b4a6d9ece812ea657b8dd2c8 count: 0
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.179Z] [INFO] Successfully loaded reports for event: ede3f8eb2688fed1d991abac48e4ce88548e3b38b4a6d9ece812ea657b8dd2c8 report types: []
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.180Z] [INFO] Successfully loaded reposts for event: ede3f8eb2688fed1d991abac48e4ce88548e3b38b4a6d9ece812ea657b8dd2c8 count: 0
+logger.service.ts:71 [2025-09-23T11:02:26.180Z] [DEBUG] Saved observed relay stats for: wss://relay.primal.net/
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.184Z] [INFO] Successfully loaded reposts for event: 6f6452538334fc06feeb15893f794686922e7d29df2962a102c4b7f0e3190b2f count: 0
+logger.service.ts:71 [2025-09-23T11:02:26.188Z] [DEBUG] Saved observed relay stats for: wss://nos.lol/
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.189Z] [INFO] Successfully loaded reactions for event: 46370f907e4592cc93297ade0c4ab2d2efa77f713b35714232cc45675502b648 reactions: 1
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.194Z] [INFO] Successfully loaded reposts for event: 46370f907e4592cc93297ade0c4ab2d2efa77f713b35714232cc45675502b648 count: 0
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.197Z] [INFO] Successfully loaded reports for event: 46370f907e4592cc93297ade0c4ab2d2efa77f713b35714232cc45675502b648 report types: []
+logger.service.ts:71 [2025-09-23T11:02:26.197Z] [DEBUG] Saved observed relay stats for: wss://nos.lol/
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.200Z] [INFO] Successfully loaded reactions for event: f530bb465f420fd125ea02de3ae72afcf1299c75a565e75e1d98733c65053e52 reactions: 2
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.201Z] [INFO] Successfully loaded reposts for event: f530bb465f420fd125ea02de3ae72afcf1299c75a565e75e1d98733c65053e52 count: 0
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.205Z] [INFO] Successfully loaded reports for event: f530bb465f420fd125ea02de3ae72afcf1299c75a565e75e1d98733c65053e52 report types: []
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.206Z] [INFO] Successfully loaded reposts for event: f530bb465f420fd125ea02de3ae72afcf1299c75a565e75e1d98733c65053e52 count: 0
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.208Z] [INFO] Successfully loaded reposts for event: 46370f907e4592cc93297ade0c4ab2d2efa77f713b35714232cc45675502b648 count: 0
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.213Z] [INFO] Successfully loaded reactions for event: 000039c2c32ad0c0489bc2262367bce205e9cc227ffcd4aedde5cc5d7a0d689f reactions: 0
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.216Z] [INFO] Successfully loaded reposts for event: 000039c2c32ad0c0489bc2262367bce205e9cc227ffcd4aedde5cc5d7a0d689f count: 0
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.222Z] [INFO] Successfully loaded reports for event: 000039c2c32ad0c0489bc2262367bce205e9cc227ffcd4aedde5cc5d7a0d689f report types: []
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.226Z] [INFO] Successfully loaded reactions for event: 8490bed8e9360a39b947606006876b213d9af5ba7d30ea8c081bc6f7ee6d2ee0 reactions: 2
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.228Z] [INFO] Successfully loaded reposts for event: 8490bed8e9360a39b947606006876b213d9af5ba7d30ea8c081bc6f7ee6d2ee0 count: 1
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.229Z] [INFO] Successfully loaded reports for event: 8490bed8e9360a39b947606006876b213d9af5ba7d30ea8c081bc6f7ee6d2ee0 report types: []
+logger.service.ts:71 [2025-09-23T11:02:26.229Z] [DEBUG] Saved observed relay stats for: wss://relay.damus.io/
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.234Z] [INFO] Successfully loaded reactions for event: 000035ce553aa443737f4904c53d5c4da1a0a5b5f297dd814394359162425dd9 reactions: 0
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.234Z] [INFO] Successfully loaded reposts for event: 000035ce553aa443737f4904c53d5c4da1a0a5b5f297dd814394359162425dd9 count: 0
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.236Z] [INFO] Successfully loaded reports for event: 000035ce553aa443737f4904c53d5c4da1a0a5b5f297dd814394359162425dd9 report types: []
+logger.service.ts:71 [2025-09-23T11:02:26.236Z] [DEBUG] Saved observed relay stats for: wss://relay.damus.io/
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.241Z] [INFO] Successfully loaded reactions for event: 43f5a526d93c9fd4102f133c773da5c8f73a9c246bdb2f88bc877a2cac84ed54 reactions: 1
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.242Z] [INFO] Successfully loaded reposts for event: 43f5a526d93c9fd4102f133c773da5c8f73a9c246bdb2f88bc877a2cac84ed54 count: 0
+logger.service.ts:71 [2025-09-23T11:02:26.242Z] [DEBUG] Saved observed relay stats for: wss://relay.primal.net/
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.244Z] [INFO] Successfully loaded reports for event: 43f5a526d93c9fd4102f133c773da5c8f73a9c246bdb2f88bc877a2cac84ed54 report types: []
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.248Z] [INFO] Successfully loaded reposts for event: 43f5a526d93c9fd4102f133c773da5c8f73a9c246bdb2f88bc877a2cac84ed54 count: 0
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.249Z] [INFO] Successfully loaded reposts for event: 000035ce553aa443737f4904c53d5c4da1a0a5b5f297dd814394359162425dd9 count: 0
+logger.service.ts:71 [2025-09-23T11:02:26.249Z] [DEBUG] Saved observed relay stats for: wss://relay.primal.net/
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.254Z] [INFO] Successfully loaded reposts for event: 8490bed8e9360a39b947606006876b213d9af5ba7d30ea8c081bc6f7ee6d2ee0 count: 1
+logger.service.ts:71 [2025-09-23T11:02:26.254Z] [DEBUG] Saved observed relay stats for: wss://nos.lol/
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.256Z] [INFO] Successfully loaded reactions for event: 3915963214c7a3599d09298a68775773850135d674d76618770990f7ed681d1c reactions: 2
+logger.service.ts:71 [2025-09-23T11:02:26.256Z] [DEBUG] Saved observed relay stats for: wss://nos.lol/
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.262Z] [INFO] Successfully loaded reposts for event: 3915963214c7a3599d09298a68775773850135d674d76618770990f7ed681d1c count: 1
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.262Z] [INFO] Successfully loaded reports for event: 3915963214c7a3599d09298a68775773850135d674d76618770990f7ed681d1c report types: []
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.266Z] [INFO] Successfully loaded reposts for event: 3915963214c7a3599d09298a68775773850135d674d76618770990f7ed681d1c count: 1
+relay.ts:437 Subscriptions closed (3) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:77 [2025-09-23T11:02:26.267Z] [INFO] Successfully loaded reposts for event: 000039c2c32ad0c0489bc2262367bce205e9cc227ffcd4aedde5cc5d7a0d689f count: 0
+relay.ts:437 Subscriptions closed (5) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+relay.ts:437 Subscriptions closed (5) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:71 [2025-09-23T11:02:26.330Z] [DEBUG] Received event from query {content: 'GM\nIs there a good comparison between OxChat and XChat? What is the major difference?', created_at: 1758596774, id: '000039c2c32ad0c0489bc2262367bce205e9cc227ffcd4aedde5cc5d7a0d689f', kind: 1, pubkey: 'b7cf9f42a796b091e843dce919d3ef4c0dc82e029452edf0bdbcdeb9ecb93e78', …}
+logger.service.ts:77 [2025-09-23T11:02:26.331Z] [INFO] Loaded event from storage or relays: 000039c2c32ad0c0489bc2262367bce205e9cc227ffcd4aedde5cc5d7a0d689f
+logger.service.ts:77 [2025-09-23T11:02:26.334Z] [INFO] loadEvent called with nevent: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a
+logger.service.ts:77 [2025-09-23T11:02:26.335Z] [INFO] Input is hex string, encoding to nevent
+logger.service.ts:77 [2025-09-23T11:02:26.335Z] [INFO] Encoded to nevent: nevent1qqsx3l8t0pe0ss6w2qnydy3m4tvzrcfuzzwrdvs3r7544tu8zw2t7wsnm6wgq
+logger.service.ts:77 [2025-09-23T11:02:26.335Z] [INFO] Decoded event ID: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a Author: undefined
+logger.service.ts:77 [2025-09-23T11:02:26.335Z] [INFO] Loaded event from storage or relays: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a
+logger.service.ts:71 [2025-09-23T11:02:26.347Z] [DEBUG] Saved observed relay stats for: wss://relay.damus.io/
+logger.service.ts:71 [2025-09-23T11:02:26.348Z] [DEBUG] Saved observed relay stats for: wss://relay.damus.io/
+relay.ts:437 Subscriptions closed (5) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:71 [2025-09-23T11:02:26.349Z] [DEBUG] Saved observed relay stats for: wss://relay.primal.net/
+logger.service.ts:71 [2025-09-23T11:02:26.350Z] [DEBUG] Received event from query {content: '0xchat uses NIP-17 and NIP-29, while XChat uses NIP-EE (Nostr MLS).', created_at: 1758597335, id: '8490bed8e9360a39b947606006876b213d9af5ba7d30ea8c081bc6f7ee6d2ee0', kind: 1, pubkey: '5eca50a04afaefe55659fb74810b42654e2268c1acca6e53801b9862db74a83a', …}
+logger.service.ts:77 [2025-09-23T11:02:26.351Z] [INFO] Loaded event from storage or relays: 8490bed8e9360a39b947606006876b213d9af5ba7d30ea8c081bc6f7ee6d2ee0
+logger.service.ts:77 [2025-09-23T11:02:26.352Z] [INFO] loadEvent called with nevent: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a
+logger.service.ts:77 [2025-09-23T11:02:26.352Z] [INFO] Input is hex string, encoding to nevent
+logger.service.ts:77 [2025-09-23T11:02:26.352Z] [INFO] Encoded to nevent: nevent1qqsx3l8t0pe0ss6w2qnydy3m4tvzrcfuzzwrdvs3r7544tu8zw2t7wsnm6wgq
+logger.service.ts:77 [2025-09-23T11:02:26.352Z] [INFO] Decoded event ID: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a Author: undefined
+logger.service.ts:77 [2025-09-23T11:02:26.352Z] [INFO] Loaded event from storage or relays: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a
+logger.service.ts:71 [2025-09-23T11:02:26.359Z] [DEBUG] Saved observed relay stats for: wss://relay.primal.net/
+logger.service.ts:71 [2025-09-23T11:02:26.365Z] [DEBUG] Saved observed relay stats for: wss://nos.lol/
+logger.service.ts:71 [2025-09-23T11:02:26.366Z] [DEBUG] Saved observed relay stats for: wss://nos.lol/
+logger.service.ts:71 [2025-09-23T11:02:26.370Z] [DEBUG] Saved observed relay stats for: wss://relay.damus.io/
+logger.service.ts:71 [2025-09-23T11:02:26.370Z] [DEBUG] Saved observed relay stats for: wss://relay.damus.io/
+logger.service.ts:71 [2025-09-23T11:02:26.371Z] [DEBUG] Saved observed relay stats for: wss://relay.primal.net/
+logger.service.ts:71 [2025-09-23T11:02:26.371Z] [DEBUG] Saved observed relay stats for: wss://relay.primal.net/
+logger.service.ts:71 [2025-09-23T11:02:26.371Z] [DEBUG] Saved observed relay stats for: wss://nos.lol/
+logger.service.ts:71 [2025-09-23T11:02:26.372Z] [DEBUG] Saved observed relay stats for: wss://nos.lol/
+relay.ts:437 Subscriptions closed (5) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:71 [2025-09-23T11:02:26.524Z] [DEBUG] Received event from query {content: 'Thanks. Is XChat compatible with nostr:nprofile1qy…3q2wyfpmtxvxj9ppg3fp80x6erghdfk4pcmq8a7hhnx4qhy ?', created_at: 1758597899, id: '000035ce553aa443737f4904c53d5c4da1a0a5b5f297dd814394359162425dd9', kind: 1, pubkey: 'b7cf9f42a796b091e843dce919d3ef4c0dc82e029452edf0bdbcdeb9ecb93e78', …}
+logger.service.ts:77 [2025-09-23T11:02:26.525Z] [INFO] Loaded event from storage or relays: 000035ce553aa443737f4904c53d5c4da1a0a5b5f297dd814394359162425dd9
+logger.service.ts:77 [2025-09-23T11:02:26.525Z] [INFO] loadEvent called with nevent: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a
+logger.service.ts:77 [2025-09-23T11:02:26.525Z] [INFO] Input is hex string, encoding to nevent
+logger.service.ts:77 [2025-09-23T11:02:26.525Z] [INFO] Encoded to nevent: nevent1qqsx3l8t0pe0ss6w2qnydy3m4tvzrcfuzzwrdvs3r7544tu8zw2t7wsnm6wgq
+logger.service.ts:77 [2025-09-23T11:02:26.525Z] [INFO] Decoded event ID: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a Author: undefined
+logger.service.ts:77 [2025-09-23T11:02:26.526Z] [INFO] Loaded event from storage or relays: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a
+logger.service.ts:71 [2025-09-23T11:02:26.549Z] [DEBUG] Saved observed relay stats for: wss://relay.damus.io/
+logger.service.ts:71 [2025-09-23T11:02:26.550Z] [DEBUG] Saved observed relay stats for: wss://relay.damus.io/
+relay.ts:437 Subscriptions closed (5) ['closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose', 'closed automatically on eose']
+logger.service.ts:71 [2025-09-23T11:02:26.552Z] [DEBUG] Saved observed relay stats for: wss://relay.primal.net/
+logger.service.ts:71 [2025-09-23T11:02:26.552Z] [DEBUG] Received event from query {content: 'GM\nIs there a good comparison between OxChat and XChat? What is the major difference?', created_at: 1758596774, id: '000039c2c32ad0c0489bc2262367bce205e9cc227ffcd4aedde5cc5d7a0d689f', kind: 1, pubkey: 'b7cf9f42a796b091e843dce919d3ef4c0dc82e029452edf0bdbcdeb9ecb93e78', …}
+logger.service.ts:77 [2025-09-23T11:02:26.553Z] [INFO] Loaded event from storage or relays: 000039c2c32ad0c0489bc2262367bce205e9cc227ffcd4aedde5cc5d7a0d689f
+logger.service.ts:77 [2025-09-23T11:02:26.553Z] [INFO] loadEvent called with nevent: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a
+logger.service.ts:77 [2025-09-23T11:02:26.553Z] [INFO] Input is hex string, encoding to nevent
+logger.service.ts:77 [2025-09-23T11:02:26.553Z] [INFO] Encoded to nevent: nevent1qqsx3l8t0pe0ss6w2qnydy3m4tvzrcfuzzwrdvs3r7544tu8zw2t7wsnm6wgq
+logger.service.ts:77 [2025-09-23T11:02:26.553Z] [INFO] Decoded event ID: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a Author: undefined
+logger.service.ts:77 [2025-09-23T11:02:26.554Z] [INFO] Loaded event from storage or relays: 68fceb7872f8434e502646923baad821e13c109c36b2111fa95aaf871394bf3a
+logger.service.ts:71 [2025-09-23T11:02:26.560Z] [DEBUG] Saved observed relay stats for: wss://relay.primal.net/
+logger.service.ts:71 [2025-09-23T11:02:26.564Z] [DEBUG] Saved observed relay stats for: wss://nos.lol/
+logger.service.ts:71 [2025-09-23T11:02:26.565Z] [DEBUG] Saved observed relay stats for: wss://nos.lol/
+logger.service.ts:71 [2025-09-23T11:02:26.567Z] [DEBUG] Saved observed relay stats for: wss://relay.damus.io/
+logger.service.ts:71 [2025-09-23T11:02:26.567Z] [DEBUG] Saved observed relay stats for: wss://relay.damus.io/
+logger.service.ts:71 [2025-09-23T11:02:26.568Z] [DEBUG] Saved observed relay stats for: wss://relay.primal.net/
+logger.service.ts:71 [2025-09-23T11:02:26.568Z] [DEBUG] Saved observed relay stats for: wss://relay.primal.net/
+logger.service.ts:71 [2025-09-23T11:02:26.570Z] [DEBUG] Saved observed relay stats for: wss://nos.lol/
+logger.service.ts:71 [2025-09-23T11:02:26.570Z] [DEBUG] Saved observed relay stats for: wss://nos.lol/
+logger.service.ts:77 [2025-09-23T11:02:33.785Z] [INFO] [DebugLogger] === Relay Debug Statistics ===
+debug-logger.service.ts:274 (index)Value(index)ValueTotal Instances21Active Instances21Destroyed Instances0Object
+logger.service.ts:77 [2025-09-23T11:02:33.786Z] [INFO] [DebugLogger] Instances by Class:
+debug-logger.service.ts:283 (index)totalactivedestroyed(index)totalactivedestroyed_DiscoveryRelayService110_AccountRelayService110_SharedRelayService110_UserRelayService18180Object
+debug-logger.service.ts:287 (index)Value(index)ValueTotal Subscriptions2Active Subscriptions1Closed Subscriptions1Object
+logger.service.ts:77 [2025-09-23T11:02:33.786Z] [INFO] [DebugLogger] Relay URLs:
+debug-logger.service.ts:307 (index)Instance CountActive SubscriptionsInstance IDs(index)Instance CountActive SubscriptionsInstance IDswss://discovery.eu.nostria.app/10'_DiscoveryRelayService-1'wss://relay.damus.io/171'_AccountRelayService-2, _UserRelayService-5, _User…ce-18, _UserRelayService-19, _UserRelayService-20'wss://relay.primal.net/171'_AccountRelayService-2, _UserRelayService-5, _User…ce-18, _UserRelayService-19, _UserRelayService-20'wss://relay.angor.io/171'_AccountRelayService-2, _UserRelayService-5, _User…ce-18, _UserRelayService-19, _UserRelayService-20'wss://ribo.eu.nostria.app/171'_AccountRelayService-2, _UserRelayService-5, _User…ce-18, _UserRelayService-19, _UserRelayService-20'wss://nos.lol/171'_AccountRelayService-2, _UserRelayService-5, _User…ce-18, _UserRelayService-19, _UserRelayService-20'Object
+logger.service.ts:77 [2025-09-23T11:02:33.786Z] [INFO] [DebugLogger] ================================
+logger.service.ts:77 [2025-09-23T11:02:43.785Z] [INFO] [DebugLogger] === Relay Debug Statistics ===
+debug-logger.service.ts:274 (index)Value(index)ValueTotal Instances21Active Instances21Destroyed Instances0Object
+logger.service.ts:77 [2025-09-23T11:02:43.786Z] [INFO] [DebugLogger] Instances by Class:
+debug-logger.service.ts:283 (index)totalactivedestroyed(index)totalactivedestroyed_DiscoveryRelayService110_AccountRelayService110_SharedRelayService110_UserRelayService18180Object
+debug-logger.service.ts:287 (index)Value(index)ValueTotal Subscriptions2Active Subscriptions1Closed Subscriptions1Object
+logger.service.ts:77 [2025-09-23T11:02:43.786Z] [INFO] [DebugLogger] Relay URLs:
+debug-logger.service.ts:307 (index)Instance CountActive SubscriptionsInstance IDs(index)Instance CountActive SubscriptionsInstance IDswss://discovery.eu.nostria.app/10'_DiscoveryRelayService-1'wss://relay.damus.io/171'_AccountRelayService-2, _UserRelayService-5, _User…ce-18, _UserRelayService-19, _UserRelayService-20'wss://relay.primal.net/171'_AccountRelayService-2, _UserRelayService-5, _User…ce-18, _UserRelayService-19, _UserRelayService-20'wss://relay.angor.io/171'_AccountRelayService-2, _UserRelayService-5, _User…ce-18, _UserRelayService-19, _UserRelayService-20'wss://ribo.eu.nostria.app/171'_AccountRelayService-2, _UserRelayService-5, _User…ce-18, _UserRelayService-19, _UserRelayService-20'wss://nos.lol/171'_AccountRelayService-2, _UserRelayService-5, _User…ce-18, _UserRelayService-19, _UserRelayService-20'Object
+logger.service.ts:77 [2025-09-23T11:02:43.786Z] [INFO] [DebugLogger] ================================
+logger.service.ts:77 [2025-09-23T11:02:53.786Z] [INFO] [DebugLogger] === Relay Debug Statistics ===
+debug-logger.service.ts:274 (index)Value(index)ValueTotal Instances21Active Instances21Destroyed Instances0Object
+logger.service.ts:77 [2025-09-23T11:02:53.786Z] [INFO] [DebugLogger] Instances by Class:
+debug-logger.service.ts:283 (index)totalactivedestroyed(index)totalactivedestroyed_DiscoveryRelayService110_AccountRelayService110_SharedRelayService110_UserRelayService18180Object
+debug-logger.service.ts:287 (index)Value(index)ValueTotal Subscriptions2Active Subscriptions1Closed Subscriptions1Object
+logger.service.ts:77 [2025-09-23T11:02:53.786Z] [INFO] [DebugLogger] Relay URLs:
+debug-logger.service.ts:307 (index)Instance CountActive SubscriptionsInstance IDs(index)Instance CountActive SubscriptionsInstance IDswss://discovery.eu.nostria.app/10'_DiscoveryRelayService-1'wss://relay.damus.io/171'_AccountRelayService-2, _UserRelayService-5, _User…ce-18, _UserRelayService-19, _UserRelayService-20'wss://relay.primal.net/171'_AccountRelayService-2, _UserRelayService-5, _User…ce-18, _UserRelayService-19, _UserRelayService-20'wss://relay.angor.io/171'_AccountRelayService-2, _UserRelayService-5, _User…ce-18, _UserRelayService-19, _UserRelayService-20'wss://ribo.eu.nostria.app/171'_AccountRelayService-2, _UserRelayService-5, _User…ce-18, _UserRelayService-19, _UserRelayService-20'wss://nos.lol/171'_AccountRelayService-2, _UserRelayService-5, _User…ce-18, _UserRelayService-19, _UserRelayService-20'Object
+logger.service.ts:77 [2025-09-23T11:02:53.786Z] [INFO] [DebugLogger] ================================

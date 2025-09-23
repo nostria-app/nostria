@@ -8,6 +8,15 @@ export interface RelayInstanceInfo {
   relayUrls: string[];
   createdAt: number;
   destroyedAt?: number;
+  instance?: object; // Reference to the actual instance for debugging
+}
+
+export interface UserDataInstanceInfo {
+  id: string;
+  pubkey: string;
+  createdAt: number;
+  destroyedAt?: number;
+  instance?: object; // Reference to the actual instance for debugging
 }
 
 export interface SubscriptionInfo {
@@ -19,6 +28,15 @@ export interface SubscriptionInfo {
   closedAt?: number;
 }
 
+export interface CacheStats {
+  cacheHits: number;
+  cacheMisses: number;
+  deduplicationHits: number;
+  cachedEntries: number;
+  pendingSubscriptions: number;
+  hitRate: number;
+}
+
 export interface RelayDebugStats {
   instances: {
     total: number;
@@ -26,11 +44,17 @@ export interface RelayDebugStats {
     destroyed: number;
     byClass: Record<string, { total: number; active: number; destroyed: number }>;
   };
+  userDataInstances: {
+    total: number;
+    active: number;
+    destroyed: number;
+  };
   subscriptions: {
     total: number;
     active: number;
     closed: number;
   };
+  cache?: CacheStats;
   relayUrls: {
     url: string;
     instances: string[];
@@ -50,9 +74,16 @@ export class DebugLoggerService {
   private instances = new Map<string, RelayInstanceInfo>();
   private instanceCounter = 0;
 
+  // UserData instance tracking
+  private userDataInstances = new Map<string, UserDataInstanceInfo>();
+  private userDataInstanceCounter = 0;
+
   // Subscription tracking
   private subscriptions = new Map<string, SubscriptionInfo>();
   private subscriptionCounter = 0;
+
+  // Cache statistics (optional)
+  private cacheStats?: CacheStats;
 
   // Statistics interval
   private statsInterval?: NodeJS.Timeout;
@@ -65,22 +96,57 @@ export class DebugLoggerService {
   }
 
   /**
+   * Normalize relay URL to ensure consistent identification
+   */
+  private normalizeRelayUrl(url: string): string {
+    try {
+      // Remove trailing slashes and ensure consistent format
+      return url.replace(/\/+$/, '').toLowerCase();
+    } catch {
+      // If URL parsing fails, just return the cleaned string
+      return url.replace(/\/+$/, '').toLowerCase();
+    }
+  }
+
+  /**
+   * Normalize an array of relay URLs
+   */
+  private normalizeRelayUrls(urls: string[]): string[] {
+    return urls.map((url) => this.normalizeRelayUrl(url));
+  }
+
+  /**
+   * Update cache statistics (called by SubscriptionCacheService)
+   */
+  updateCacheStats(stats: CacheStats): void {
+    this.cacheStats = stats;
+  }
+
+  /**
    * Register a new relay instance
    */
-  registerInstance(className: string, relayUrls: string[]): string {
+  registerInstance(className: string, relayUrls: string[], instance?: object): string {
     const instanceId = `${className}-${++this.instanceCounter}`;
+    const normalizedUrls = this.normalizeRelayUrls(relayUrls);
     const info: RelayInstanceInfo = {
       id: instanceId,
       className,
-      relayUrls: [...relayUrls],
+      relayUrls: normalizedUrls,
       createdAt: Date.now(),
+      instance,
     };
 
     this.instances.set(instanceId, info);
     this.logger.debug(
       `[DebugLogger] Registered relay instance: ${instanceId} with URLs:`,
-      relayUrls,
+      normalizedUrls,
     );
+
+    // Make instance available in global scope for debugging
+    if (this.isBrowser() && instance) {
+      (globalThis as Record<string, unknown>)[`relayInstance_${instanceId}`] = instance;
+      console.log(`[DebugLogger] Relay instance available as: globalThis.relayInstance_${instanceId}`, instance);
+    }
 
     return instanceId;
   }
@@ -91,8 +157,12 @@ export class DebugLoggerService {
   updateInstanceRelayUrls(instanceId: string, relayUrls: string[]): void {
     const instance = this.instances.get(instanceId);
     if (instance) {
-      instance.relayUrls = [...relayUrls];
-      this.logger.debug(`[DebugLogger] Updated relay URLs for instance: ${instanceId}`, relayUrls);
+      const normalizedUrls = this.normalizeRelayUrls(relayUrls);
+      instance.relayUrls = normalizedUrls;
+      this.logger.debug(
+        `[DebugLogger] Updated relay URLs for instance: ${instanceId}`,
+        normalizedUrls,
+      );
     }
   }
 
@@ -111,6 +181,51 @@ export class DebugLoggerService {
           this.closeSubscription(subId);
         }
       });
+
+      // Clean up global reference
+      if (this.isBrowser()) {
+        delete (globalThis as Record<string, unknown>)[`relayInstance_${instanceId}`];
+      }
+    }
+  }
+
+  /**
+   * Register a new UserDataService instance
+   */
+  registerUserDataInstance(pubkey: string, instance?: object): string {
+    const instanceId = `UserData-${++this.userDataInstanceCounter}`;
+    const info: UserDataInstanceInfo = {
+      id: instanceId,
+      pubkey,
+      createdAt: Date.now(),
+      instance,
+    };
+
+    this.userDataInstances.set(instanceId, info);
+    this.logger.debug(`[DebugLogger] Registered UserDataService instance: ${instanceId} for pubkey: ${pubkey}`);
+
+    // Make instance available in global scope for debugging
+    if (this.isBrowser() && instance) {
+      (globalThis as Record<string, unknown>)[`userDataInstance_${instanceId}`] = instance;
+      console.log(`[DebugLogger] UserDataService instance available as: globalThis.userDataInstance_${instanceId}`, instance);
+    }
+
+    return instanceId;
+  }
+
+  /**
+   * Mark a UserDataService instance as destroyed
+   */
+  destroyUserDataInstance(instanceId: string): void {
+    const instance = this.userDataInstances.get(instanceId);
+    if (instance && !instance.destroyedAt) {
+      instance.destroyedAt = Date.now();
+      this.logger.debug(`[DebugLogger] Destroyed UserDataService instance: ${instanceId} for pubkey: ${instance.pubkey}`);
+
+      // Clean up global reference
+      if (this.isBrowser()) {
+        delete (globalThis as Record<string, unknown>)[`userDataInstance_${instanceId}`];
+      }
     }
   }
 
@@ -119,11 +234,12 @@ export class DebugLoggerService {
    */
   registerSubscription(instanceId: string, filters: unknown[], relayUrls: string[]): string {
     const subscriptionId = `sub-${++this.subscriptionCounter}`;
+    const normalizedUrls = this.normalizeRelayUrls(relayUrls);
     const info: SubscriptionInfo = {
       id: subscriptionId,
       instanceId,
       filters: JSON.parse(JSON.stringify(filters)), // Deep copy
-      relayUrls: [...relayUrls],
+      relayUrls: normalizedUrls,
       createdAt: Date.now(),
     };
 
@@ -157,6 +273,11 @@ export class DebugLoggerService {
         destroyed: 0,
         byClass: {},
       },
+      userDataInstances: {
+        total: this.userDataInstances.size,
+        active: 0,
+        destroyed: 0,
+      },
       subscriptions: {
         total: this.subscriptions.size,
         active: 0,
@@ -189,6 +310,17 @@ export class DebugLoggerService {
         stats.instances.byClass[instance.className].active++;
       } else {
         stats.instances.byClass[instance.className].destroyed++;
+      }
+    });
+
+    // Process UserDataService instances
+    this.userDataInstances.forEach((instance) => {
+      const isActive = !instance.destroyedAt;
+
+      if (isActive) {
+        stats.userDataInstances.active++;
+      } else {
+        stats.userDataInstances.destroyed++;
       }
     });
 
@@ -232,6 +364,11 @@ export class DebugLoggerService {
       instances: info.instances,
       activeSubscriptions: info.activeSubscriptions,
     }));
+
+    // Include cache statistics if available
+    if (this.cacheStats) {
+      stats.cache = { ...this.cacheStats };
+    }
 
     return stats;
   }
@@ -289,6 +426,19 @@ export class DebugLoggerService {
       'Active Subscriptions': stats.subscriptions.active,
       'Closed Subscriptions': stats.subscriptions.closed,
     });
+
+    // Log cache statistics if available
+    if (stats.cache) {
+      this.logger.info('[DebugLogger] Subscription Cache Stats:');
+      console.table({
+        'Cache Hits': stats.cache.cacheHits,
+        'Cache Misses': stats.cache.cacheMisses,
+        'Deduplication Hits': stats.cache.deduplicationHits,
+        'Hit Rate %': stats.cache.hitRate.toFixed(2),
+        'Cached Entries': stats.cache.cachedEntries,
+        'Pending Subscriptions': stats.cache.pendingSubscriptions,
+      });
+    }
 
     // Log relay URLs table
     if (stats.relayUrls.length > 0) {

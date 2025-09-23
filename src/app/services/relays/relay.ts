@@ -22,6 +22,11 @@ export abstract class RelayServiceBase {
   // Debug tracking
   protected debugInstanceId?: string;
 
+  // Activity tracking
+  protected lastActivityTime = Date.now();
+  protected activeSubscriptions = new Set<string>();
+  protected pendingRequests = 0;
+
   // Signal to notify when relays have been modified
   protected relaysModified = signal<string[]>([]);
 
@@ -36,8 +41,8 @@ export abstract class RelayServiceBase {
 
   constructor(pool: SimplePool) {
     this.#pool = pool;
-    // Register this instance with the debug logger
-    this.debugInstanceId = this.debugLogger.registerInstance(this.constructor.name, this.relayUrls);
+    // Register this instance with the debug logger, passing 'this' for debugging access
+    this.debugInstanceId = this.debugLogger.registerInstance(this.constructor.name, this.relayUrls, this);
   }
 
   getPool(): SimplePool {
@@ -62,15 +67,89 @@ export abstract class RelayServiceBase {
   }
 
   destroy() {
+    this.logger.debug(
+      `[${this.constructor.name}] destroy() called for instance ${this.debugInstanceId}`,
+    );
     // Mark instance as destroyed in debug logger
     if (this.debugInstanceId) {
+      this.logger.debug(
+        `[${this.constructor.name}] Calling destroyInstance for ${this.debugInstanceId}`,
+      );
       this.debugLogger.destroyInstance(this.debugInstanceId);
     }
     this.#pool.destroy();
+    this.logger.debug(
+      `[${this.constructor.name}] Pool destroyed for instance ${this.debugInstanceId}`,
+    );
   }
 
   getRelayUrls(): string[] {
     return this.relayUrls;
+  }
+
+  /**
+   * Update last activity time when instance is used
+   */
+  protected updateActivity(): void {
+    this.lastActivityTime = Date.now();
+  }
+
+  /**
+   * Track a subscription as active
+   */
+  protected addActiveSubscription(subscriptionId: string): void {
+    this.activeSubscriptions.add(subscriptionId);
+    this.updateActivity();
+  }
+
+  /**
+   * Remove a subscription from active tracking
+   */
+  protected removeActiveSubscription(subscriptionId: string): void {
+    this.activeSubscriptions.delete(subscriptionId);
+    this.updateActivity();
+  }
+
+  /**
+   * Track a pending request
+   */
+  protected incrementPendingRequests(): void {
+    this.pendingRequests++;
+    this.updateActivity();
+  }
+
+  /**
+   * Remove a pending request
+   */
+  protected decrementPendingRequests(): void {
+    this.pendingRequests = Math.max(0, this.pendingRequests - 1);
+    this.updateActivity();
+  }
+
+  /**
+   * Check if this instance is idle (no active subscriptions or pending requests)
+   */
+  isIdle(): boolean {
+    const idle = this.activeSubscriptions.size === 0 && this.pendingRequests === 0;
+    if (this.debugInstanceId) {
+      console.log(`[DEBUG] ${this.constructor.name} ${this.debugInstanceId} isIdle: ${idle} (subs: ${this.activeSubscriptions.size}, pending: ${this.pendingRequests})`);
+    }
+    return idle;
+  }
+
+  /**
+   * Get the time since last activity in milliseconds
+   */
+  getTimeSinceLastActivity(): number {
+    return Date.now() - this.lastActivityTime;
+  }
+
+  /**
+   * Check if this instance should be cleaned up due to inactivity
+   */
+  shouldCleanup(maxIdleTimeMs = 30000): boolean {
+    // 30 seconds default
+    return this.isIdle() && this.getTimeSinceLastActivity() > maxIdleTimeMs;
   }
 
   /**
@@ -328,6 +407,7 @@ export abstract class RelayServiceBase {
     const isNpub = filter.authors?.some((author) => author.startsWith('npub'));
 
     if (isNpub) {
+      // TODO: Handle npub format if needed
     }
 
     this.logger.debug('Getting events with filters (account-relay):', filter, urls);
@@ -338,6 +418,9 @@ export abstract class RelayServiceBase {
     }
 
     await this.acquireSemaphore();
+
+    // Track pending request
+    this.incrementPendingRequests();
 
     try {
       // Default timeout is 5 seconds if not specified
@@ -378,6 +461,8 @@ export abstract class RelayServiceBase {
       return null;
     } finally {
       this.releaseSemaphore();
+      // Remove pending request tracking
+      this.decrementPendingRequests();
     }
   }
 
@@ -409,6 +494,7 @@ export abstract class RelayServiceBase {
     const isNpub = filter.authors?.some((author) => author.startsWith('npub'));
 
     if (isNpub) {
+      // TODO: Handle npub format if needed
     }
 
     this.logger.debug('Getting events with filters (account-relay):', filter, urls);
@@ -586,6 +672,8 @@ export abstract class RelayServiceBase {
           filters,
           urls,
         );
+        // Track this subscription as active
+        this.addActiveSubscription(debugSubscriptionId);
       }
 
       // Create the subscription
@@ -606,9 +694,10 @@ export abstract class RelayServiceBase {
         },
         onclose: (reasons) => {
           console.log('Pool closed', reasons);
-          // Mark subscription as closed in debug logger
+          // Mark subscription as closed in debug logger and remove from active tracking
           if (debugSubscriptionId) {
             this.debugLogger.closeSubscription(debugSubscriptionId);
+            this.removeActiveSubscription(debugSubscriptionId);
           }
           if (onEose) {
             this.logger.debug('End of stored events reached');
@@ -628,9 +717,10 @@ export abstract class RelayServiceBase {
       return {
         close: () => {
           this.logger.debug('Close from events');
-          // Mark subscription as closed in debug logger
+          // Mark subscription as closed in debug logger and remove from active tracking
           if (debugSubscriptionId) {
             this.debugLogger.closeSubscription(debugSubscriptionId);
+            this.removeActiveSubscription(debugSubscriptionId);
           }
           sub.close();
         },

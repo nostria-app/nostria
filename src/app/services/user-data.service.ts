@@ -9,6 +9,7 @@ import { Cache, CacheOptions } from './cache';
 import { DiscoveryRelayService } from './relays/discovery-relay';
 import { SharedRelayService } from './relays/shared-relay';
 import { UserRelayService } from './relays/user-relay';
+import { DebugLoggerService } from './debug-logger.service';
 
 export interface DataOptions {
   cache?: boolean; // Whether to use cache
@@ -24,7 +25,9 @@ export class UserDataService {
   private readonly logger = inject(LoggerService);
   private readonly utilities = inject(UtilitiesService);
   private readonly cache = inject(Cache);
+  private readonly debugLogger = inject(DebugLoggerService);
   private userRelayEx!: UserRelayService;
+  private debugInstanceId?: string;
 
   // Map to track pending profile requests to prevent race conditions
   private pendingProfileRequests = new Map<string, Promise<NostrRecord | undefined>>();
@@ -32,6 +35,9 @@ export class UserDataService {
   async initialize(pubkey: string) {
     this.userRelayEx = await this.userRelayFactory.create(pubkey);
     this.logger.debug(`UserDataService initialized for pubkey: ${pubkey}`);
+    
+    // Register this instance with the debug logger
+    this.debugInstanceId = this.debugLogger.registerUserDataInstance(pubkey, this);
   }
 
   toRecord(event: Event) {
@@ -44,7 +50,7 @@ export class UserDataService {
 
   async getEventById(
     id: string,
-    options?: CacheOptions & DataOptions
+    options?: CacheOptions & DataOptions,
   ): Promise<NostrRecord | null> {
     let event: Event | null = null;
     let record: NostrRecord | undefined = undefined;
@@ -166,13 +172,15 @@ export class UserDataService {
   private async loadProfile(
     pubkey: string,
     cacheKey: string,
-    refresh: boolean
+    refresh: boolean,
   ): Promise<NostrRecord | undefined> {
     let metadata: Event | null = null;
     let record: NostrRecord | undefined = undefined;
 
-    // Try storage first
-    metadata = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Metadata);
+    // If not refreshing, try storage first
+    if (!refresh) {
+      metadata = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Metadata);
+    }
 
     if (metadata) {
       record = this.toRecord(metadata);
@@ -221,13 +229,13 @@ export class UserDataService {
     pubkey: string,
     kind: number,
     dTagValue: string,
-    options?: CacheOptions & DataOptions
+    options?: CacheOptions & DataOptions,
   ): Promise<NostrRecord | null> {
     // Validate pubkey parameter
     if (!pubkey || pubkey === 'undefined' || !pubkey.trim()) {
       this.logger.warn(
         'getEventByPubkeyAndKindAndReplaceableEvent called with invalid pubkey:',
-        pubkey
+        pubkey,
       );
       return null;
     }
@@ -279,7 +287,7 @@ export class UserDataService {
   async getEventByPubkeyAndKind(
     pubkey: string | string[],
     kind: number,
-    options?: CacheOptions & DataOptions
+    options?: CacheOptions & DataOptions,
   ): Promise<NostrRecord | null> {
     // Validate pubkey parameter
     if (!pubkey || (Array.isArray(pubkey) && pubkey.length === 0)) {
@@ -287,7 +295,7 @@ export class UserDataService {
       return null;
     }
 
-    if (Array.isArray(pubkey) && pubkey.some(pk => !pk || pk === 'undefined')) {
+    if (Array.isArray(pubkey) && pubkey.some((pk) => !pk || pk === 'undefined')) {
       this.logger.warn('getEventByPubkeyAndKind called with invalid pubkey in array:', pubkey);
       return null;
     }
@@ -340,7 +348,7 @@ export class UserDataService {
   async getEventsByPubkeyAndKind(
     pubkey: string | string[],
     kind: number,
-    options?: CacheOptions & DataOptions
+    options?: CacheOptions & DataOptions,
   ): Promise<NostrRecord[]> {
     // Validate pubkey parameter
     if (!pubkey || (Array.isArray(pubkey) && pubkey.length === 0)) {
@@ -348,7 +356,7 @@ export class UserDataService {
       return [];
     }
 
-    if (Array.isArray(pubkey) && pubkey.some(pk => !pk || pk === 'undefined')) {
+    if (Array.isArray(pubkey) && pubkey.some((pk) => !pk || pk === 'undefined')) {
       this.logger.warn('getEventsByPubkeyAndKind called with invalid pubkey in array:', pubkey);
       return [];
     }
@@ -386,7 +394,7 @@ export class UserDataService {
       return [];
     }
 
-    records = events.map(event => this.toRecord(event));
+    records = events.map((event) => this.toRecord(event));
 
     if (options?.cache || options?.invalidateCache) {
       this.cache.set(cacheKey, records, options);
@@ -404,7 +412,7 @@ export class UserDataService {
   async getEventsByKindAndEventTag(
     kind: number,
     eventTag: string,
-    options?: CacheOptions & DataOptions
+    options?: CacheOptions & DataOptions,
   ): Promise<NostrRecord[]> {
     const cacheKey = `${kind}-${eventTag}-all`;
     let events: Event[] = [];
@@ -421,7 +429,7 @@ export class UserDataService {
     // If the caller explicitly don't want to save, we will not check the storage.
     if (events.length === 0 && options?.save) {
       const allEvents = await this.storage.getEventsByKind(kind);
-      events = allEvents.filter(e => this.utilities.getTagValues('#e', e.tags)[0] === eventTag);
+      events = allEvents.filter((e) => this.utilities.getTagValues('#e', e.tags)[0] === eventTag);
     }
 
     if (events.length === 0) {
@@ -435,7 +443,7 @@ export class UserDataService {
       return [];
     }
 
-    records = events.map(event => this.toRecord(event));
+    records = events.map((event) => this.toRecord(event));
 
     if (options?.cache || options?.invalidateCache) {
       this.cache.set(cacheKey, records, options);
@@ -448,5 +456,39 @@ export class UserDataService {
     }
 
     return records;
+  }
+
+  /**
+   * Check if the underlying UserRelayService is idle
+   */
+  isIdle(): boolean {
+    if (this.userRelayEx && typeof this.userRelayEx.isIdle === 'function') {
+      return this.userRelayEx.isIdle();
+    }
+    // If no relay service or method doesn't exist, assume idle
+    return true;
+  }
+
+  /**
+   * Clean up resources and destroy the associated UserRelayService
+   */
+  destroy(): void {
+    this.logger.debug('UserDataService.destroy() called');
+    
+    // Unregister from debug logger
+    if (this.debugInstanceId) {
+      this.debugLogger.destroyUserDataInstance(this.debugInstanceId);
+    }
+    
+    if (this.userRelayEx) {
+      this.logger.debug('Calling userRelayEx.destroy()');
+      this.userRelayEx.destroy();
+      this.logger.debug('UserDataService destroyed and UserRelayService cleaned up');
+    } else {
+      this.logger.debug('UserRelayService was not initialized, nothing to destroy');
+    }
+
+    // Clear any pending requests
+    this.pendingProfileRequests.clear();
   }
 }
