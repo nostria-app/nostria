@@ -253,7 +253,7 @@ export class StorageService {
   private readonly utilities = inject(UtilitiesService);
   private db!: IDBPDatabase<NostriaDBSchema>;
   private readonly DB_NAME = 'nostria';
-  private readonly DB_VERSION = 2;
+  private readonly DB_VERSION = 4;
 
   // Signal to track database initialization status
   initialized = signal(false);
@@ -399,6 +399,16 @@ export class StorageService {
           eventsStore.createIndex('by-pubkey-kind', ['pubkey', 'kind']);
           eventsStore.createIndex('by-pubkey-kind-d-tag', ['pubkey', 'kind', 'dTag']);
           this.logger.debug('Created events object store');
+        } else if (oldVersion < 3) {
+          // For version 3 upgrade, recreate the events store to ensure all indexes exist
+          db.deleteObjectStore('events');
+          const eventsStore = db.createObjectStore('events', { keyPath: 'id' });
+          eventsStore.createIndex('by-kind', 'kind');
+          eventsStore.createIndex('by-pubkey', 'pubkey');
+          eventsStore.createIndex('by-created', 'created_at');
+          eventsStore.createIndex('by-pubkey-kind', ['pubkey', 'kind']);
+          eventsStore.createIndex('by-pubkey-kind-d-tag', ['pubkey', 'kind', 'dTag']);
+          this.logger.debug('Recreated events object store with all indexes');
         }
 
         if (!db.objectStoreNames.contains('info')) {
