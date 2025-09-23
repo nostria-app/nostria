@@ -83,7 +83,7 @@
       <div class="qr-code-container" (click)="copyNpubToClipboard()" (keydown.enter)="copyNpubToClipboard()"
         (keydown.space)="copyNpubToClipboard()" tabindex="0" role="button" title="Click to copy npub to clipboard"
         [attr.aria-label]="'Copy ' + npub() + ' to clipboard'">
-        <qr-code [qrdata]="'npub:' + npub()!" [width]="256" [errorCorrectionLevel]="'medium'"></qr-code>
+        <qr-code [qrdata]="'nostr:' + npub()!" [width]="256" [errorCorrectionLevel]="'medium'"></qr-code>
       </div>
       }
 
