@@ -10,13 +10,8 @@
         <div class="flex-container add-relay-container">
           <mat-form-field appearance="outline" class="relay-input" subscriptSizing="dynamic">
             <mat-label>Relay URL (wss://...)</mat-label>
-            <input
-              matInput
-              placeholder="wss://relay.example.com"
-              [value]="newRelayUrl()"
-              (input)="newRelayUrl.set($any($event.target).value)"
-              (keyup.enter)="addRelay()"
-            />
+            <input matInput placeholder="wss://relay.example.com" [value]="newRelayUrl()"
+              (input)="newRelayUrl.set($any($event.target).value)" (keyup.enter)="addRelay()" />
           </mat-form-field>
           <button mat-flat-button color="primary" class="add-button" (click)="addRelay()">
             Add Relay
@@ -24,124 +19,107 @@
         </div>
 
         <mat-card class="user-relays-card">
-          <app-info-tooltip
-            [content]="userRelaysInfoContent"
-            ariaLabel="Learn how acocunt relays work"
-          ></app-info-tooltip>
+          <app-info-tooltip [content]="userRelaysInfoContent"
+            ariaLabel="Learn how acocunt relays work"></app-info-tooltip>
           <mat-card-header>
             <mat-card-title>Account Relays</mat-card-title>
-            <mat-card-subtitle
-              >You have {{ userRelays().length }} relays configured</mat-card-subtitle
-            >
+            <mat-card-subtitle>You have {{ userRelays().length }} relays configured</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
             @if (userRelays().length === 0) {
-              <div class="text-center py-8 text-gray-500">
-                <p>You don't have any relays configured yet.</p>
-                <p>Add a relay using the input above.</p>
-              </div>
+            <div class="text-center py-8 text-gray-500">
+              <p>You don't have any relays configured yet.</p>
+              <p>Add a relay using the input above.</p>
+            </div>
             } @else {
-              <mat-list>
-                @for (relay of userRelays(); track relay.url) {
-                  <mat-list-item>
-                    <div class="relay-item-container">
-                      <div class="status-icon">
-                        <mat-icon [ngClass]="getStatusColor(relay.status)">
-                          {{ getStatusIcon(relay.status) }}
-                        </mat-icon>
-                      </div>
-                      <div class="relay-url">
-                        {{ formatRelayUrl(relay.url) }}
-                      </div>
-                      <div class="action-buttons">
-                        <button
-                          mat-icon-button
-                          color="primary"
-                          (click)="viewRelayInfo(relay.url)"
-                          aria-label="View relay info"
-                        >
-                          <mat-icon>info</mat-icon>
-                        </button>
-                        <button
-                          mat-icon-button
-                          color="warn"
-                          (click)="removeRelay(relay)"
-                          aria-label="Remove relay"
-                        >
-                          <mat-icon>delete</mat-icon>
-                        </button>
-                      </div>
-                    </div>
-                  </mat-list-item>
-                  @if (!$last) {
-                    <mat-divider></mat-divider>
-                  }
-                }
-              </mat-list>
+            <mat-list>
+              @for (relay of userRelays(); track relay.url) {
+              <mat-list-item>
+                <div class="relay-item-container">
+                  <div class="status-icon">
+                    <mat-icon [ngClass]="getStatusColor(relay.status)">
+                      {{ getStatusIcon(relay.status) }}
+                    </mat-icon>
+                  </div>
+                  <div class="relay-url">
+                    {{ formatRelayUrl(relay.url) }}
+                  </div>
+                  <div class="action-buttons">
+                    <button mat-icon-button color="primary" (click)="viewRelayInfo(relay.url)"
+                      aria-label="View relay info">
+                      <mat-icon>info</mat-icon>
+                    </button>
+                    <button mat-icon-button color="warn" (click)="removeRelay(relay)" aria-label="Remove relay">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </div>
+                </div>
+              </mat-list-item>
+              @if (!$last) {
+              <mat-divider></mat-divider>
+              }
+              }
+            </mat-list>
             }
           </mat-card-content>
         </mat-card>
 
         @if (showUpdateDMRelays()) {
-          <mat-card class="info-card">
-            <mat-card-header>
-              <mat-card-title>
-                <div class="info-title">
-                  <mat-icon class="info-icon">dns</mat-icon>
-                  Direct Message relays
-                </div>
-              </mat-card-title>
-            </mat-card-header>
-            <mat-card-content>
-              <p>
-                Nostria advices Nostr users to not use different relays for Direct Messages. If you
-                want this advanced feature, you can use a different Nostr client that supports it.
-              </p>
-              <p>
-                Click the button below to update your Direct Messages Relays to be the same relays
-                as your Account Relays.
-              </p>
-              <p>
-                <button mat-flat-button (click)="updateDirectMessageRelayList()">
-                  Update Direct Message Relay List
-                </button>
-              </p>
-            </mat-card-content>
-          </mat-card>
+        <mat-card class="info-card">
+          <mat-card-header>
+            <mat-card-title>
+              <div class="info-title">
+                <mat-icon class="info-icon">dns</mat-icon>
+                Direct Message relays
+              </div>
+            </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <p>
+              Nostria advices Nostr users to not use different relays for Direct Messages. If you
+              want this advanced feature, you can use a different Nostr client that supports it.
+            </p>
+            <p>
+              Click the button below to update your Direct Messages Relays to be the same relays
+              as your Account Relays.
+            </p>
+            <p>
+              <button mat-flat-button (click)="updateDirectMessageRelayList()">
+                Update Direct Message Relay List
+              </button>
+            </p>
+          </mat-card-content>
+        </mat-card>
         }
 
         @if (showFollowingRelayCleanup()) {
-          <mat-card class="info-card">
-            <mat-card-header>
-              <mat-card-title>
-                <div class="info-title">
-                  <mat-icon class="info-icon">warning</mat-icon>
-                  Deprecated Warning
-                </div>
-              </mat-card-title>
-            </mat-card-header>
-            <mat-card-content>
-              <p>
-                Your following list contains a list of
-                {{ followingRelayUrls().length }} relays. This is deprecated in the protocol.
-              </p>
-              <p>
-                We can remove these relays from your following list by clicking the button below.
-              </p>
-              <p>
-                <button
-                  mat-flat-button
-                  (click)="cleanFollowingList()"
-                  [disabled]="isCleaningFollowingList()"
-                >
-                  @if (isCleaningFollowingList()) {
-                    <mat-icon class="spinning-icon">sync</mat-icon>
-                  }
-                  Remove {{ followingRelayUrls().length }} Relays from Following List
-                </button>
-              </p>
-            </mat-card-content>
-          </mat-card>
+        <mat-card class="info-card">
+          <mat-card-header>
+            <mat-card-title>
+              <div class="info-title">
+                <mat-icon class="info-icon">warning</mat-icon>
+                Deprecated Warning
+              </div>
+            </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <p>
+              Your following list contains a list of
+              {{ followingRelayUrls().length }} relays. This is deprecated in the protocol.
+            </p>
+            <p>
+              We can remove these relays from your following list by clicking the button below.
+            </p>
+            <p>
+              <button mat-flat-button (click)="cleanFollowingList()" [disabled]="isCleaningFollowingList()">
+                @if (isCleaningFollowingList()) {
+                <mat-icon class="spinning-icon">sync</mat-icon>
+                }
+                Remove {{ followingRelayUrls().length }} Relays from Following List
+              </button>
+            </p>
+          </mat-card-content>
+        </mat-card>
         }
       </div>
     </mat-tab>
@@ -150,17 +128,12 @@
     <mat-tab label="Discovery Relays">
       <div class="tab-content">
         <div class="action-buttons-container">
-          <button
-            mat-flat-button
-            color="accent"
-            class="find-closest-button"
-            (click)="findClosestRelay()"
-            [disabled]="isCheckingRelays()"
-          >
+          <button mat-flat-button color="accent" class="find-closest-button" (click)="findClosestRelay()"
+            [disabled]="isCheckingRelays()">
             <mat-icon>network_check</mat-icon>
             <span>Find Closest Discovery Relay</span>
             @if (isCheckingRelays()) {
-              <mat-icon class="spinning-icon">sync</mat-icon>
+            <mat-icon class="spinning-icon">sync</mat-icon>
             }
           </button>
           <!-- <button mat-flat-button color="primary" class="add-button" (click)="discoveryRelayTest()">
@@ -173,13 +146,8 @@
         <div class="flex-container add-relay-container">
           <mat-form-field appearance="outline" class="relay-input" subscriptSizing="dynamic">
             <mat-label>Relay URL (wss://...)</mat-label>
-            <input
-              matInput
-              placeholder="wss://relay.example.com"
-              [value]="newBootstrapUrl()"
-              (input)="newBootstrapUrl.set($any($event.target).value)"
-              (keyup.enter)="addBootstrapRelay()"
-            />
+            <input matInput placeholder="wss://relay.example.com" [value]="newBootstrapUrl()"
+              (input)="newBootstrapUrl.set($any($event.target).value)" (keyup.enter)="addBootstrapRelay()" />
           </mat-form-field>
           <button mat-flat-button color="primary" class="add-button" (click)="addBootstrapRelay()">
             Add Discovery Relay
@@ -187,60 +155,171 @@
         </div>
 
         <mat-card class="discovery-relays-card">
-          <app-info-tooltip
-            [content]="discoveryRelaysInfoContent"
-            ariaLabel="Learn how discovery relays work"
-          ></app-info-tooltip>
+          <app-info-tooltip [content]="discoveryRelaysInfoContent"
+            ariaLabel="Learn how discovery relays work"></app-info-tooltip>
           <mat-card-header>
             <mat-card-title>Discovery Relays</mat-card-title>
-            <mat-card-subtitle
-              >These relays are used for discovery of Relay Lists of users</mat-card-subtitle
-            >
+            <mat-card-subtitle>These relays are used for discovery of Relay Lists of users</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
             @if (discoveryRelays().length === 0) {
-              <div class="text-center py-8 text-gray-500">
-                <p>You don't have any discovery relays configured.</p>
-                <p>Add a discovery relay using the input above.</p>
-              </div>
+            <div class="text-center py-8 text-gray-500">
+              <p>You don't have any discovery relays configured.</p>
+              <p>Add a discovery relay using the input above.</p>
+            </div>
             } @else {
-              <mat-list>
-                @for (relay of discoveryRelays(); track relay.url) {
-                  <mat-list-item>
-                    <div class="relay-item-container">
-                      <div class="status-icon">
-                        <mat-icon [ngClass]="getStatusColor(relay.status)">
-                          {{ getStatusIcon(relay.status) }}
-                        </mat-icon>
-                      </div>
-                      <div class="relay-url">
-                        {{ formatRelayUrl(relay.url) }}
-                      </div>
-                      <div class="action-buttons">
-                        <button
-                          mat-icon-button
-                          color="primary"
-                          (click)="viewRelayInfo(relay.url)"
-                          aria-label="View relay info"
-                        >
-                          <mat-icon>info</mat-icon>
-                        </button>
-                        <button
-                          mat-icon-button
-                          color="warn"
-                          (click)="removeDiscoveryRelay(relay.url)"
-                          aria-label="Remove discovery relay"
-                        >
-                          <mat-icon>delete</mat-icon>
-                        </button>
+            <mat-list>
+              @for (relay of discoveryRelays(); track relay.url) {
+              <mat-list-item>
+                <div class="relay-item-container">
+                  <div class="status-icon">
+                    <mat-icon [ngClass]="getStatusColor(relay.status)">
+                      {{ getStatusIcon(relay.status) }}
+                    </mat-icon>
+                  </div>
+                  <div class="relay-url">
+                    {{ formatRelayUrl(relay.url) }}
+                  </div>
+                  <div class="action-buttons">
+                    <button mat-icon-button color="primary" (click)="viewRelayInfo(relay.url)"
+                      aria-label="View relay info">
+                      <mat-icon>info</mat-icon>
+                    </button>
+                    <button mat-icon-button color="warn" (click)="removeDiscoveryRelay(relay.url)"
+                      aria-label="Remove discovery relay">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </div>
+                </div>
+              </mat-list-item>
+              @if (!$last) {
+              <mat-divider></mat-divider>
+              }
+              }
+            </mat-list>
+            }
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </mat-tab>
+
+    <!-- Observed Relays Tab -->
+    <mat-tab label="Observed Relays">
+      <div class="tab-content">
+        <div class="action-buttons-container">
+          <button mat-flat-button color="warn" (click)="clearObservedRelayData()"
+            [disabled]="observedRelays().length === 0">
+            <mat-icon>clear_all</mat-icon>
+            <span>Clear All Data</span>
+          </button>
+        </div>
+
+        <mat-card class="observed-relays-card">
+          <mat-card-header>
+            <mat-card-title>Observed Relays</mat-card-title>
+            <mat-card-subtitle>
+              Relays discovered from events and connection statistics ({{ observedRelays().length }} total)
+            </mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            @if (observedRelays().length === 0) {
+            <div class="text-center py-8 text-gray-500">
+              <p>No observed relays yet.</p>
+              <p>Relay statistics will appear here as you interact with the network.</p>
+            </div>
+            } @else {
+            <div class="sort-controls">
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Sort by</mat-label>
+                <select matNativeControl [value]="observedRelaysSortBy()"
+                  (change)="observedRelaysSortBy.set($any($event.target).value); onObservedRelaysSortChange()">
+                  <option value="lastUpdated">Last Updated</option>
+                  <option value="eventsReceived">Events Received</option>
+                  <option value="firstObserved">First Observed</option>
+                </select>
+              </mat-form-field>
+            </div>
+
+            <div class="observed-relays-grid">
+              @for (relay of observedRelays(); track relay.url) {
+              <div class="relay-card">
+                <div class="relay-card-header">
+                  <div class="relay-status">
+                    <mat-icon class="status-icon"
+                      [ngClass]="getStatusColor(relay.isConnected ? 'connected' : relay.isOffline ? 'error' : 'disconnected')">
+                      {{ relay.isConnected ? 'wifi' : relay.isOffline ? 'wifi_off' : 'wifi_tethering' }}
+                    </mat-icon>
+                    <div class="status-text">
+                      {{ relay.isConnected ? 'Connected' : relay.isOffline ? 'Offline' : 'Disconnected' }}
+                    </div>
+                  </div>
+                  <div class="relay-actions">
+                    <button mat-icon-button color="primary" (click)="viewRelayInfo(relay.url)"
+                      aria-label="View relay info" class="action-btn">
+                      <mat-icon>info</mat-icon>
+                    </button>
+                    <button mat-icon-button color="warn" (click)="deleteObservedRelay(relay.url)"
+                      aria-label="Remove observed relay" class="action-btn">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="relay-url-section">
+                  <div class="relay-url-main">{{ formatRelayUrl(relay.url) }}</div>
+                  <div class="performance-badge" [ngClass]="getPerformanceClass(getRelayPerformanceScore(relay.url))">
+                    <mat-icon class="performance-icon">speed</mat-icon>
+                    {{ getRelayPerformanceScore(relay.url) }}%
+                  </div>
+                </div>
+
+                <div class="relay-metrics">
+                  <div class="metric-group">
+                    <div class="metric-item primary">
+                      <mat-icon class="metric-icon">event</mat-icon>
+                      <div class="metric-content">
+                        <div class="metric-value">{{ formatEventsCount(relay.eventsReceived) }}</div>
+                        <div class="metric-label">Events</div>
                       </div>
                     </div>
-                  </mat-list-item>
-                  @if (!$last) {
-                    <mat-divider></mat-divider>
-                  }
-                }
-              </mat-list>
+                    <div class="metric-item">
+                      <mat-icon class="metric-icon">wifi</mat-icon>
+                      <div class="metric-content">
+                        <div class="metric-value">{{ relay.connectionAttempts || 0 }}</div>
+                        <div class="metric-label">Connections</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="time-info">
+                    <div class="time-item">
+                      <mat-icon class="time-icon">schedule</mat-icon>
+                      <div class="time-content">
+                        <div class="time-label">First seen</div>
+                        <div class="time-value">{{ formatTimestamp(relay.firstObserved) }}</div>
+                      </div>
+                    </div>
+                    <div class="time-item">
+                      <mat-icon class="time-icon">update</mat-icon>
+                      <div class="time-content">
+                        <div class="time-label">Last updated</div>
+                        <div class="time-value">{{ formatTimestamp(relay.lastUpdated) }}</div>
+                      </div>
+                    </div>
+                    @if (relay.lastSuccessfulConnection > 0) {
+                    <div class="time-item">
+                      <mat-icon class="time-icon">check_circle</mat-icon>
+                      <div class="time-content">
+                        <div class="time-label">Last connected</div>
+                        <div class="time-value">{{ formatTimestamp(relay.lastSuccessfulConnection) }}</div>
+                      </div>
+                    </div>
+                    }
+                  </div>
+                </div>
+              </div>
+              }
+            </div>
             }
           </mat-card-content>
         </mat-card>
