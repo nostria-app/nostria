@@ -27,7 +27,7 @@
     (selectedIndexChange)="onTabChanged($event)" animationDuration="300ms">
     <mat-tab class="following-tab" label="Relays"> -->
   <div class="following-content">
-    @if (profileState.relay?.getRelayUrls()?.length === 0) {
+    @if (getUserRelays().length === 0) {
       <div class="empty-list">
         <mat-icon>people_outline</mat-icon>
         <p>This user does not have any relays.</p>
@@ -40,7 +40,7 @@
         [maxBufferPx]="maxBufferPx"
       >
         <mat-list class="full-width-list">
-          @for (url of profileState.relay?.getRelayUrls(); track url) {
+          @for (url of getUserRelays(); track url) {
             {{ url }}<br />
             <!-- <app-user-profile [pubkey]="user.npub"></app-user-profile> -->
           }

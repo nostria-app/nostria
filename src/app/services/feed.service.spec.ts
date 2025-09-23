@@ -4,7 +4,7 @@ import { provideZonelessChangeDetection } from '@angular/core';
 import { FeedService } from './feed.service';
 import { LocalStorageService } from './local-storage.service';
 import { LoggerService } from './logger.service';
-import { RelayService } from './relays/relay';
+import { RelayServiceBase } from './relays/relay';
 import { ApplicationStateService } from './application-state.service';
 import { AccountStateService } from './account-state.service';
 import { DataService } from './data.service';
@@ -34,7 +34,7 @@ describe('FeedService', () => {
         FeedService,
         { provide: LocalStorageService, useValue: mockLocalStorageService },
         { provide: LoggerService, useValue: mockLoggerService },
-        { provide: RelayService, useValue: mockRelayService },
+        { provide: RelayServiceBase, useValue: mockRelayService },
         {
           provide: ApplicationStateService,
           useValue: mockApplicationStateService,

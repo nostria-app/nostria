@@ -40,6 +40,7 @@ export class UserDataService {
 
   async initialize(pubkey: string) {
     this.pubkey = pubkey;
+    // Get the singleton UserRelayService and ensure relays are discovered for this pubkey
     this.userRelayEx = await this.userRelayFactory.create(pubkey);
     this.logger.debug(`UserDataService initialized for pubkey: ${pubkey}`);
 
@@ -113,7 +114,7 @@ export class UserDataService {
 
     // If the caller explicitly supplies user relay, don't attempt to user account relay.
     if (!event) {
-      event = await this.userRelayEx.getEventById(id);
+      event = await this.userRelayEx.getEventById(this.pubkey, id);
     }
 
     if (!event) {
@@ -514,13 +515,9 @@ export class UserDataService {
 
     // Consider instance idle if:
     // 1. No recent access (more than 2 minutes)
-    // 2. Underlying relay service is idle
+    // For singleton UserRelayService, only consider local access time since singleton never reports idle
     const isRecentlyAccessed = idleTimeMs < 2 * 60 * 1000; // 2 minutes
-    const isRelayIdle = this.userRelayEx && typeof this.userRelayEx.isIdle === 'function'
-      ? this.userRelayEx.isIdle()
-      : true;
-
-    const instanceIsIdle = !isRecentlyAccessed && isRelayIdle;
+    const instanceIsIdle = !isRecentlyAccessed;
 
     // Log idle state changes for debugging
     if (instanceIsIdle !== this.wasLastIdle) {
@@ -533,11 +530,16 @@ export class UserDataService {
 
   // Track last idle state to avoid excessive logging
   private wasLastIdle = false;
+  private _destroyed = false;
 
   /**
    * Clean up resources and destroy the associated UserRelayService
    */
   destroy(): void {
+    if (this._destroyed) {
+      return;
+    }
+    this._destroyed = true;
     this.logger.debug('UserDataService.destroy() called');
 
     // Unregister from debug logger
@@ -545,12 +547,16 @@ export class UserDataService {
       this.debugLogger.destroyUserDataInstance(this.debugInstanceId);
     }
 
-    if (this.userRelayEx) {
-      this.logger.debug('Calling userRelayEx.destroy()');
-      this.userRelayEx.destroy();
-      this.logger.debug('UserDataService destroyed and UserRelayService cleaned up');
-    } else {
-      this.logger.debug('UserRelayService was not initialized, nothing to destroy');
+    try {
+      if (this.userRelayEx) {
+        // No longer destroy the singleton UserRelayService since it's shared
+        this.logger.debug('UserRelayService is singleton, skipping destroy()');
+        this.logger.debug('UserDataService destroyed (UserRelayService remains active)');
+      } else {
+        this.logger.debug('UserRelayService was not initialized, nothing to destroy');
+      }
+    } catch (e) {
+      this.logger.debug('Suppressed error during userRelayEx handling', e);
     }
 
     // Clear any pending requests

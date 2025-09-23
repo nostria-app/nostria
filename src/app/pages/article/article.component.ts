@@ -24,7 +24,6 @@ import { LayoutService } from '../../services/layout.service';
 import { LoggerService } from '../../services/logger.service';
 import { UrlUpdateService } from '../../services/url-update.service';
 import { UserDataFactoryService } from '../../services/user-data-factory.service';
-import type { UserDataService } from '../../services/user-data.service';
 import { UtilitiesService } from '../../services/utilities.service';
 
 @Component({
@@ -171,17 +170,13 @@ export class ArticleComponent implements OnDestroy {
       let event: NostrRecord | null = null;
 
       if (isNotCurrentUser) {
-        let userData = this.cache.get<UserDataService>('user-data-' + pubkey);
-
-        if (!userData) {
-          userData = await this.userDataFactory.create(pubkey);
-        }
-
-        event = await userData.getEventByPubkeyAndKindAndReplaceableEvent(
-          pubkey,
-          kinds.LongFormArticle,
-          slug,
-          { save: false, cache: false }
+        event = await this.userDataFactory.borrow(pubkey, uds =>
+          uds.getEventByPubkeyAndKindAndReplaceableEvent(
+            pubkey,
+            kinds.LongFormArticle,
+            slug,
+            { save: false, cache: false }
+          )
         );
       } else {
         event = await this.data.getEventByPubkeyAndKindAndReplaceableEvent(

@@ -134,43 +134,12 @@ export class ProfileStateService {
     // }
 
     this.relay?.subscribeEose(
-      [
-        {
-          kinds: [kinds.Contacts],
-          authors: [pubkey],
-          limit: 1,
-        },
-        {
-          kinds: [kinds.ShortTextNote],
-          authors: [pubkey],
-          limit: 20,
-        },
-        {
-          kinds: [kinds.LongFormArticle],
-          authors: [pubkey],
-          limit: 5,
-        },
-        {
-          kinds: [10063], // BUD-03: User Server List
-          authors: [pubkey],
-          limit: 1,
-        },
-        {
-          kinds: [kinds.Repost],
-          authors: [pubkey],
-          limit: 5,
-        },
-        {
-          kinds: [kinds.GenericRepost],
-          authors: [pubkey],
-          limit: 5,
-        },
-        {
-          kinds: [20, 21, 22], // Picture + Video
-          authors: [pubkey],
-          limit: 10,
-        },
-      ],
+      pubkey,
+      {
+        kinds: [kinds.Contacts],
+        authors: [pubkey],
+        limit: 1,
+      },
       (event: Event) => {
         console.log('Event received', event);
 
@@ -285,27 +254,14 @@ export class ProfileStateService {
         const newReplies: NostrRecord[] = [];
 
         this.relay!.subscribeEose(
-          [
-            {
-              kinds: [kinds.ShortTextNote],
-              authors: [pubkey],
-              until: oldestTimestamp,
-              limit: 10, // Increased limit to get more timeline content
-            },
-            {
-              kinds: [kinds.Repost],
-              authors: [pubkey],
-              until: oldestTimestamp,
-              limit: 5,
-            },
-            {
-              kinds: [kinds.GenericRepost],
-              authors: [pubkey],
-              until: oldestTimestamp,
-              limit: 5,
-            },
-          ],
-          event => {
+          pubkey,
+          {
+            kinds: [kinds.ShortTextNote, kinds.Repost, kinds.GenericRepost],
+            authors: [pubkey],
+            until: oldestTimestamp,
+            limit: 15, // Increased limit to get more timeline content
+          },
+          (event: Event) => {
             // Handle different event types
             if (event.kind === kinds.ShortTextNote) {
               // Create a NostrRecord
@@ -446,15 +402,14 @@ export class ProfileStateService {
         const newArticles: NostrRecord[] = [];
 
         this.relay!.subscribeEose(
-          [
-            {
-              kinds: [kinds.LongFormArticle],
-              authors: [pubkey],
-              until: oldestTimestamp,
-              limit: 10, // Load 10 more articles at a time
-            },
-          ],
-          event => {
+          pubkey,
+          {
+            kinds: [kinds.LongFormArticle],
+            authors: [pubkey],
+            until: oldestTimestamp,
+            limit: 10, // Load 10 more articles at a time
+          },
+          (event: Event) => {
             if (event.kind === kinds.LongFormArticle) {
               // Create a NostrRecord
               const record: NostrRecord = {

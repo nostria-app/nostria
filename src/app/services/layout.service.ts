@@ -465,7 +465,7 @@ export class LayoutService implements OnDestroy {
     if (type === 'nprofile') {
       const profilePointer: ProfilePointer = {
         pubkey: text,
-        relays: this.profileState.relay?.getRelayUrls(),
+        relays: this.profileState.relay?.getRelaysForPubkey(this.profileState.pubkey()),
       };
       text = nip19.nprofileEncode(profilePointer);
     }

@@ -80,7 +80,7 @@ export class DataService {
     if (!event) {
       if (userRelays) {
         // If userRelays is true, we will try to get the event from user relays.
-        event = await this.userRelayEx.getEventById(id);
+        event = await this.userRelayEx.getEventByIdGlobal(id);
       } else {
         // Try to get the event from the account relay.
         event = await this.accountRelayEx.getEventById(id);

@@ -83,7 +83,7 @@ export class PublishQueueService {
           await this.accountRelay.publish(signedEvent);
           // await this.nostr.publish(signedEvent);
         } else if (task.target === PublishTarget.User) {
-          await this.profileState.relay?.publish(task.event as Event);
+          await this.profileState.relay?.publish(this.accountState.pubkey(), task.event as Event);
         } else if (task.target === PublishTarget.Discovery) {
           this.discoveryRelay.publish(task.event as Event);
         }

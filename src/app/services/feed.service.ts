@@ -18,6 +18,7 @@ import { UtilitiesService } from './utilities.service';
 import { ApplicationService } from './application.service';
 import { Algorithms } from './algorithms';
 import { UserDataFactoryService } from './user-data-factory.service';
+import { OnDemandUserDataService } from './on-demand-user-data.service';
 import { UserRelayService } from './relays/user-relay';
 import { SharedRelayService } from './relays/shared-relay';
 import { UserRelayExFactoryService } from './user-relay-factory.service';
@@ -214,6 +215,8 @@ export class FeedService {
   private readonly sharedRelayEx = inject(SharedRelayService);
   private readonly userDataFactory = inject(UserDataFactoryService);
   private readonly userRelayFactory = inject(UserRelayExFactoryService);
+  // On-demand access for one-shot per-user fetches to avoid lingering sockets
+  private readonly onDemandUserData = inject(OnDemandUserDataService);
 
   private readonly algorithms = inject(Algorithms);
 
@@ -398,15 +401,30 @@ export class FeedService {
       }
 
       // Subscribe to relay events using the selected relay service
-      const sub = relayService.subscribe([item.filter], (event: Event) => {
-        // Filter out live events that are muted.
-        if (this.accountState.muted(event)) {
-          return;
-        }
+      let sub: { unsubscribe: () => void } | { close: () => void } | null;
+      if (relayService instanceof UserRelayService) {
+        // UserRelayService requires pubkey parameter
+        sub = await relayService.subscribe(this.accountState.pubkey(), [item.filter], (event: Event) => {
+          // Filter out live events that are muted.
+          if (this.accountState.muted(event)) {
+            return;
+          }
 
-        item.events.update((events: Event[]) => [event, ...events]);
-        this.logger.debug(`Column event received for ${column.id}:`, event);
-      });
+          item.events.update((events: Event[]) => [event, ...events]);
+          this.logger.debug(`Column event received for ${column.id}:`, event);
+        }) as { unsubscribe: () => void } | { close: () => void } | null;
+      } else {
+        // AccountRelayService uses the old signature
+        sub = relayService.subscribe([item.filter], (event: Event) => {
+          // Filter out live events that are muted.
+          if (this.accountState.muted(event)) {
+            return;
+          }
+
+          item.events.update((events: Event[]) => [event, ...events]);
+          this.logger.debug(`Column event received for ${column.id}:`, event);
+        });
+      }
 
       item.subscription = sub;
     }
@@ -603,7 +621,7 @@ export class FeedService {
     }
 
     // Second pass: Fill remaining slots with other events, maintaining diversity
-    for (const [pubkey, events] of userEventsMap) {
+    for (const [, events] of userEventsMap) {
       for (let i = 1; i < events.length; i++) {
         result.push(events[i]);
       }
@@ -654,19 +672,17 @@ export class FeedService {
     // Process users in parallel with incremental updates
     const fetchPromises = pubkeys.map(async pubkey => {
       try {
-        const userRelayEx = await this.userRelayFactory.create(pubkey);
-        // await this.userRelayEx.setUser(pubkey);
-
-        // Fetch events older than the last timestamp
-        const events = await userRelayEx.getEventsByPubkeyAndKind(
+        // One-shot fetch via on-demand pooled instance (auto released)
+        const recordResults = await this.onDemandUserData.getEventsByPubkeyAndKind(
           pubkey,
           feedData.filter?.kinds?.[0] || kinds.ShortTextNote
         );
+        const events = recordResults.map(r => r.event);
 
         if (events.length > 0) {
           // Filter events to exclude already loaded ones and ensure they're not too old
           const olderEvents = events
-            .filter(event => {
+            .filter((event: Event) => {
               const eventTime = (event.created_at || 0) * 1000;
               const eventAge = Date.now() - eventTime;
               return eventTime < (feedData.lastTimestamp || Date.now()) && eventAge <= maxAge;
