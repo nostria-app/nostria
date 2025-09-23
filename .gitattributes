@@ -1,0 +1,51 @@
+# Ensure CRLF line endings for all text files on Windows development
+* text=auto eol=crlf
+
+# Explicitly set line endings for specific file types
+*.ts text eol=crlf
+*.js text eol=crlf
+*.html text eol=crlf
+*.css text eol=crlf
+*.scss text eol=crlf
+*.json text eol=crlf
+*.md text eol=crlf
+*.xml text eol=crlf
+*.yaml text eol=crlf
+*.yml text eol=crlf
+*.toml text eol=crlf
+
+# Configuration files
+*.config.js text eol=crlf
+*.config.ts text eol=crlf
+.prettierrc text eol=crlf
+.editorconfig text eol=crlf
+.gitignore text eol=crlf
+.gitattributes text eol=crlf
+
+# Package files
+package.json text eol=crlf
+package-lock.json text eol=crlf
+*.lock text eol=crlf
+
+# Angular specific
+angular.json text eol=crlf
+tsconfig*.json text eol=crlf
+
+# Binary files - do not modify
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.zip binary
+*.tar binary
+*.gz binary
+*.apk binary
+*.dmg binary
+*.exe binary
+*.msi binary

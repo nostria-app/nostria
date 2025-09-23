@@ -5,7 +5,15 @@
   "trailingComma": "es5",
   "bracketSpacing": true,
   "arrowParens": "avoid",
-  "printWidth": 80,
-  "endOfLine": "auto",
-  "useTabs": false
+  "printWidth": 100,
+  "endOfLine": "crlf",
+  "useTabs": false,
+  "overrides": [
+    {
+      "files": "*.html",
+      "options": {
+        "parser": "angular"
+      }
+    }
+  ]
 }
