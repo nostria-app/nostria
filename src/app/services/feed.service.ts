@@ -38,6 +38,8 @@ export interface FeedItem {
   } | null;
   lastTimestamp?: number;
   subscription: { unsubscribe: () => void } | { close: () => void } | null;
+  isLoadingMore?: WritableSignal<boolean>;
+  hasMore?: WritableSignal<boolean>;
 }
 
 export interface ColumnConfig {
@@ -360,6 +362,8 @@ export class FeedService {
       events: signal<Event[]>([]),
       subscription: null,
       lastTimestamp: Date.now(), // Initialize with current timestamp
+      isLoadingMore: signal<boolean>(false),
+      hasMore: signal<boolean>(true),
     };
 
     // Build filter based on column configuration
@@ -636,24 +640,69 @@ export class FeedService {
    */
   async loadMoreEvents(columnId: string) {
     const feedData = this.data.get(columnId);
-    if (!feedData || !feedData.column.source || feedData.column.source !== 'following') {
+    if (!feedData || !feedData.isLoadingMore || !feedData.hasMore) {
+      this.logger.warn(`Cannot load more events for column ${columnId}: feedData not found or missing loading states`);
       return;
     }
 
+    // Prevent multiple simultaneous loads
+    if (feedData.isLoadingMore() || !feedData.hasMore()) {
+      this.logger.debug(`Skipping load more for column ${columnId}: already loading or no more data`);
+      return;
+    }
+
+    feedData.isLoadingMore.set(true);
+
     try {
-      // Check if this is an articles feed
-      const isArticlesFeed = feedData.filter?.kinds?.includes(30023);
+      const column = feedData.column;
 
-      // Get top engaged users again (they might have changed)
-      const topEngagedUsers = isArticlesFeed
-        ? await this.algorithms.getRecommendedUsersForArticles(20)
-        : await this.algorithms.getRecommendedUsers(10);
-      const topPubkeys = topEngagedUsers.map(user => user.pubkey);
+      if (column.source === 'following') {
+        // Check if this is an articles feed
+        const isArticlesFeed = feedData.filter?.kinds?.includes(30023);
 
-      // Fetch older events using the lastTimestamp
-      await this.fetchOlderEventsFromUsers(topPubkeys, feedData);
+        // Get top engaged users again (they might have changed)
+        const topEngagedUsers = isArticlesFeed
+          ? await this.algorithms.getRecommendedUsersForArticles(20)
+          : await this.algorithms.getRecommendedUsers(10);
+        const topPubkeys = topEngagedUsers.map(user => user.pubkey);
+
+        // Fetch older events using the lastTimestamp
+        await this.fetchOlderEventsFromUsers(topPubkeys, feedData);
+      } else {
+        // For public feeds, implement similar pagination logic
+        const currentEvents = feedData.events();
+        const oldestTimestamp = currentEvents.length > 0
+          ? Math.min(...currentEvents.map(e => e.created_at || 0)) - 1
+          : Math.floor(Date.now() / 1000);
+
+        const filter = {
+          ...feedData.filter,
+          until: oldestTimestamp,
+          limit: 10,
+        };
+
+        const newEvents = await this.accountRelay.getMany(filter, { timeout: 3000 });
+
+        // Filter out duplicates and append
+        const existingEventIds = new Set(currentEvents.map(e => e.id));
+        const uniqueNewEvents = newEvents.filter(e => !existingEventIds.has(e.id));
+
+        if (uniqueNewEvents.length > 0) {
+          const allEvents = [...currentEvents, ...uniqueNewEvents];
+          allEvents.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+          feedData.events.set(allEvents);
+          feedData.lastTimestamp = Math.min(...allEvents.map(e => (e.created_at || 0) * 1000));
+        }
+
+        // Check if we have more data
+        if (uniqueNewEvents.length < (filter.limit || 10)) {
+          feedData.hasMore.set(false);
+        }
+      }
     } catch (error) {
       this.logger.error('Error loading more events:', error);
+    } finally {
+      feedData.isLoadingMore.set(false);
     }
   }
 
@@ -783,6 +832,13 @@ export class FeedService {
         `Final pagination update: ${finalOlderEvents.length} older events from ${userEventsMap.size} users`
       );
     }
+
+    // Check if we should mark hasMore as false
+    // If we got fewer events than expected from users, assume no more data
+    const totalEventsFromUsers = Array.from(userEventsMap.values()).flat().length;
+    if (totalEventsFromUsers < userEventsMap.size * 2) { // Less than 2 events per user on average
+      feedData.hasMore?.set(false);
+    }
   } /**
    * Unsubscribe from a single feed (unsubscribes from all its columns)
    */
@@ -852,6 +908,15 @@ export class FeedService {
   // Helper method to get events for a specific column
   getEventsForColumn(columnId: string): Signal<Event[]> | undefined {
     return this.data.get(columnId)?.events;
+  }
+
+  // Helper methods to get loading states for columns
+  getColumnLoadingState(columnId: string): Signal<boolean> | undefined {
+    return this.data.get(columnId)?.isLoadingMore;
+  }
+
+  getColumnHasMore(columnId: string): Signal<boolean> | undefined {
+    return this.data.get(columnId)?.hasMore;
   }
 
   /**

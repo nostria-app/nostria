@@ -398,6 +398,17 @@ export class FeedsComponent implements OnDestroy {
       };
     });
 
+    // Set up scroll listeners for columns after they're rendered
+    effect(() => {
+      const columns = this.columns();
+      if (columns.length > 0 && this.layoutService.isBrowser()) {
+        // Wait for columns to be rendered
+        setTimeout(() => {
+          this.setupColumnScrollListeners(columns);
+        }, 500);
+      }
+    });
+
     // Automatic refresh effect
     // effect(() => {
     //   const interval = setInterval(() => {
@@ -408,6 +419,60 @@ export class FeedsComponent implements OnDestroy {
     //     clearInterval(interval);
     //   };
     // });
+  }
+
+  /**
+   * Set up scroll listeners for each column to detect when user scrolls to bottom
+   */
+  private setupColumnScrollListeners(columns: ColumnDefinition[]) {
+    columns.forEach(column => {
+      const columnElement = document.querySelector(`[data-column-id="${column.id}"] .column-scroll-container`);
+      if (columnElement) {
+        // Remove any existing listener to prevent duplicates
+        const existingListener = (columnElement as HTMLElement & { __scrollListener?: () => void }).__scrollListener;
+        if (existingListener) {
+          columnElement.removeEventListener('scroll', existingListener);
+        }
+
+        // Create new scroll listener
+        const scrollListener = () => {
+          const scrollTop = columnElement.scrollTop;
+          const scrollHeight = columnElement.scrollHeight;
+          const clientHeight = columnElement.clientHeight;
+
+          // Check if scrolled near the bottom (within 100px)
+          const scrolledToBottom = scrollTop + clientHeight >= scrollHeight - 100;
+
+          if (scrolledToBottom) {
+            this.loadMoreForColumn(column.id);
+          }
+        };
+
+        // Store listener reference for cleanup
+        (columnElement as HTMLElement & { __scrollListener?: () => void }).__scrollListener = scrollListener;
+        columnElement.addEventListener('scroll', scrollListener, { passive: true });
+      }
+    });
+  }
+
+  /**
+   * Load more content for a specific column
+   */
+  private async loadMoreForColumn(columnId: string) {
+    try {
+      // Check if already loading or no more content
+      const isLoading = this.feedService.getColumnLoadingState(columnId);
+      const hasMore = this.feedService.getColumnHasMore(columnId);
+
+      if (!isLoading || !hasMore || isLoading() || !hasMore()) {
+        return;
+      }
+
+      this.logger.debug(`Loading more content for column: ${columnId}`);
+      await this.feedService.loadMoreEventsForColumn(columnId);
+    } catch (error) {
+      this.logger.error(`Failed to load more content for column ${columnId}:`, error);
+    }
   }
 
   // setActiveSection(section: 'discover' | 'following' | 'media'): void {
