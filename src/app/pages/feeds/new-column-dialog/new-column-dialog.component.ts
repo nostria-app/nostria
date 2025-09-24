@@ -18,6 +18,7 @@ import { FeedService, ColumnConfig } from '../../../services/feed.service';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { AccountStateService } from '../../../services/account-state.service';
 import { Followset, StarterPack } from '../../../services/followset';
+import { DataService } from '../../../services/data.service';
 
 interface DialogData {
   icons: string[];
@@ -27,6 +28,8 @@ interface DialogData {
 interface UserProfile {
   pubkey: string;
   name?: string;
+  display_name?: string;
+  about?: string;
   npub: string;
 }
 
@@ -91,6 +94,7 @@ export class NewColumnDialogComponent {
   private feedService = inject(FeedService);
   private accountState = inject(AccountStateService);
   private followset = inject(Followset);
+  private dataService = inject(DataService);
   readonly data: DialogData = inject(MAT_DIALOG_DATA);
 
   // Form controls
@@ -118,6 +122,7 @@ export class NewColumnDialogComponent {
   selectedUsers = signal<UserProfile[]>([]);
   selectedStarterPacks = signal<StarterPack[]>([]);
   availableStarterPacks = signal<StarterPack[]>([]);
+  userProfiles = signal<Map<string, UserProfile>>(new Map()); // Cache for user profiles
 
   // Form controls for chips
   kindInputControl = new FormControl('');
@@ -130,18 +135,28 @@ export class NewColumnDialogComponent {
   columnTypes = signal(this.feedService.getFeedTypes());
   nostrKinds = signal(NOSTR_KINDS);
 
-  // Get following users from account state
+  // Get following users from account state with real profile data
   followingUsers = computed(() => {
     const followingPubkeys = this.accountState.followingList();
+    const profilesCache = this.userProfiles();
+
     if (!followingPubkeys || followingPubkeys.length === 0) return [];
 
-    // For now, just return basic user info. In a real implementation,
-    // we would fetch profiles for these pubkeys
-    return followingPubkeys.map(pubkey => ({
-      pubkey,
-      name: `User ${pubkey.slice(0, 8)}...`, // Placeholder name
-      npub: pubkey // TODO: Convert to npub format if needed
-    }));
+    return followingPubkeys.map(pubkey => {
+      const cachedProfile = profilesCache.get(pubkey);
+      if (cachedProfile) {
+        return cachedProfile;
+      }
+
+      // Return placeholder while profile is loading
+      return {
+        pubkey,
+        name: `User ${pubkey.slice(0, 8)}...`, // Temporary placeholder
+        npub: pubkey, // TODO: Convert to npub format if needed
+        display_name: undefined,
+        about: undefined
+      };
+    }).filter(user => user); // Filter out any null/undefined results
   });
 
   // Filtered options for autocomplete
@@ -187,6 +202,9 @@ export class NewColumnDialogComponent {
   constructor() {
     // Load starter packs when component initializes
     this.loadStarterPacks();
+
+    // Load user profiles for following list
+    this.loadUserProfiles();
 
     // Initialize selected items if editing existing column
     if (this.data.column) {
@@ -344,6 +362,53 @@ export class NewColumnDialogComponent {
       this.availableStarterPacks.set(starterPacks);
     } catch (error) {
       console.error('Failed to load starter packs:', error);
+    }
+  }
+
+  async loadUserProfiles(): Promise<void> {
+    try {
+      const followingPubkeys = this.accountState.followingList();
+      if (!followingPubkeys || followingPubkeys.length === 0) {
+        return;
+      }
+
+      // Load profiles in batches to avoid overwhelming the service
+      const batchSize = 20;
+      const profileMap = new Map<string, UserProfile>();
+
+      for (let i = 0; i < followingPubkeys.length; i += batchSize) {
+        const batch = followingPubkeys.slice(i, i + batchSize);
+
+        try {
+          const profiles = await this.dataService.getProfiles(batch);
+
+          if (profiles) {
+            profiles.forEach(record => {
+              if (record.event && record.data) {
+                const profileData = record.data as { name?: string; display_name?: string; about?: string; picture?: string };
+                const userProfile: UserProfile = {
+                  pubkey: record.event.pubkey,
+                  name: profileData.name || profileData.display_name,
+                  display_name: profileData.display_name,
+                  about: profileData.about,
+                  npub: record.event.pubkey // TODO: Convert to npub format if needed
+                };
+                profileMap.set(record.event.pubkey, userProfile);
+              }
+            });
+          }
+        } catch (error) {
+          console.error(`Error loading profiles for batch ${i}-${i + batchSize}:`, error);
+          // Continue with next batch even if this one fails
+        }
+      }
+
+      // Update the signal with all loaded profiles
+      this.userProfiles.set(profileMap);
+      console.log(`Loaded ${profileMap.size} user profiles from ${followingPubkeys.length} following`);
+
+    } catch (error) {
+      console.error('Failed to load user profiles:', error);
     }
   }
 
