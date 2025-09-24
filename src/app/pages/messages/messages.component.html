@@ -1,333 +1,287 @@
 <div class="messages">
   @if (isLoading() && !selectedChat()) {
-    <div class="loading-container">
-      <app-loading-overlay message="Loading messages..."></app-loading-overlay>
-    </div>
+  <div class="loading-container">
+    <app-loading-overlay message="Loading messages..."></app-loading-overlay>
+  </div>
   } @else if (error()) {
-    <div class="error-container">
-      <mat-icon color="warn">error</mat-icon>
-      <p>{{ error() }}</p>
-      <button mat-stroked-button color="primary" (click)="messaging.loadChats()">Try Again</button>
-    </div>
+  <div class="error-container">
+    <mat-icon color="warn">error</mat-icon>
+    <p>{{ error() }}</p>
+    <button mat-stroked-button color="primary" (click)="messaging.loadChats()">Try Again</button>
+  </div>
   } @else {
-    <div class="messages-left" [class.mobile-hidden]="layout.isHandset() && !showMobileList()">
-      <div class="message-threads-header">
-        <h2>Chats</h2>
-        <div class="spacer"></div>
-        <div>
-          <button mat-icon-button aria-label="New chat" (click)="startNewChat()">
-            <mat-icon>edit</mat-icon>
-          </button>
-        </div>
+  <div class="messages-left" [class.mobile-hidden]="layout.isHandset() && !showMobileList()">
+    <div class="message-threads-header">
+      <h2>Chats</h2>
+      <div class="spacer"></div>
+      <div>
+        <button mat-icon-button aria-label="New chat" (click)="startNewChat()">
+          <mat-icon>edit</mat-icon>
+        </button>
       </div>
-      <div class="message-threads">
-        @if (!hasChats()) {
-          <div class="empty-chats">
-            <mat-icon>forum</mat-icon>
-            <p>No messages yet</p>
+    </div>
+    <div class="message-threads">
+      @if (!hasChats()) {
+      <div class="empty-chats">
+        <mat-icon>forum</mat-icon>
+        <p>No messages yet</p>
+        <button mat-flat-button color="primary" (click)="startNewChat()">
+          <mat-icon>add</mat-icon>
+          Start a conversation
+        </button>
+      </div>
+      } @else {
+      <mat-tab-group [selectedIndex]="selectedTabIndex()" (selectedIndexChange)="onTabChange($event)" class="chat-tabs">
+        <mat-tab label="Following">
+          @if (hasFollowingChats()) {
+          <div class="tab-content">
+            <mat-nav-list class="chat-list">
+              @for (item of followingChats(); track item.chat.id) {
+              @let chat = item.chat;
+              <a mat-list-item class="chat-item" [class.active]="selectedChat()?.id === chat.id"
+                (click)="selectChat(chat)">
+                <div class="chat-item-content">
+                  <div class="chat-avatar">
+                    @if (chat.encryptionType === 'nip44') {
+                    <mat-icon inline="true" class="chat-encryption-icon">shield_lock</mat-icon>
+                    }
+
+                    <app-user-profile [pubkey]="chat.pubkey" view="icon" #profileComp>
+                      <!-- {{ profileComp.profile() }} -->
+
+                      <div class="chat-info">
+                        <div class="chat-name-row">
+                          <span class="chat-name">
+                            @if (profileComp.profile()) {
+                            {{ profileComp.profile().data | name }}
+                            } @else {
+                            Unknown
+                            }
+                          </span>
+                          @if (chat.unreadCount > 0) {
+                          <span class="unread-badge" matBadge="{{ chat.unreadCount }}" matBadgeOverlap="false"></span>
+                          }
+                          <span class="message-time-chats">{{
+                            chat.lastMessage?.created_at | ago
+                            }}</span>
+                        </div>
+                        <div class="chat-preview">
+                          @if (chat.lastMessage) {
+                          <span class="message-preview">
+                            @if (chat.lastMessage.isOutgoing) {
+                            <span class="outgoing-prefix">You: </span>
+                            }
+                            {{ chat.lastMessage.content }}
+                          </span>
+                          <!-- <span class="message-time">{{ chat.lastMessage?.created_at | ago }}</span> -->
+                          } @else {
+                          <span class="message-preview empty-message">New conversation</span>
+                          }
+                        </div>
+                      </div>
+                    </app-user-profile>
+                  </div>
+                </div>
+              </a>
+              }
+            </mat-nav-list>
+
+            <!-- Load more chats button for Following tab -->
+            @if (messaging.hasMoreChats()) {
+            <!-- <div class="load-more-chats">
+              <button mat-stroked-button color="primary" [disabled]="messaging.isLoadingMoreChats()"
+                (click)="loadMoreChats()" class="load-more-chats-button">
+                @if (messaging.isLoadingMoreChats()) {
+                <mat-spinner diameter="20"></mat-spinner>
+                <span>Loading...</span>
+                } @else {
+                <ng-container>
+                  <span>Load more conversations</span>
+                </ng-container>
+                }
+              </button>
+            </div> -->
+            }
+          </div>
+          } @else {
+          <div class="empty-tab-content">
+            <mat-icon>people</mat-icon>
+            <p>No messages from people you follow</p>
             <button mat-flat-button color="primary" (click)="startNewChat()">
               <mat-icon>add</mat-icon>
               Start a conversation
             </button>
           </div>
+          }
+        </mat-tab>
+
+        <mat-tab label="Others">
+          @if (hasOtherChats()) {
+          <div class="tab-content">
+            <mat-nav-list class="chat-list">
+              @for (item of otherChats(); track item.chat.id) {
+              @let chat = item.chat;
+              <a mat-list-item class="chat-item" [class.active]="selectedChat()?.id === chat.id"
+                (click)="selectChat(chat)">
+                <div class="chat-item-content">
+                  <div class="chat-avatar">
+                    <app-user-profile [pubkey]="chat.pubkey" view="small"></app-user-profile>
+                  </div>
+                  <div class="chat-info">
+                    <div class="chat-name-row">
+                      <span class="chat-name">{{ chat.pubkey | npub }}</span>
+                      @if (chat.unreadCount > 0) {
+                      <span class="unread-badge" matBadge="{{ chat.unreadCount }}" matBadgeOverlap="false"></span>
+                      }
+                    </div>
+                    <div class="chat-preview">
+                      @if (chat.lastMessage) {
+                      <span class="message-preview">
+                        @if (chat.lastMessage.isOutgoing) {
+                        <span class="outgoing-prefix">You: </span>
+                        }
+                        {{ chat.lastMessage.content }}
+                      </span>
+                      <span class="message-time">{{
+                        chat.lastMessage.created_at | ago
+                        }}</span>
+                      } @else {
+                      <span class="message-preview empty-message">New conversation</span>
+                      }
+                    </div>
+                  </div>
+                </div>
+              </a>
+              }
+            </mat-nav-list>
+
+            <!-- Load more chats button for Others tab -->
+            @if (messaging.hasMoreChats()) {
+            <!-- <div class="load-more-chats">
+              <button mat-stroked-button color="primary" [disabled]="messaging.isLoadingMoreChats()"
+                (click)="loadMoreChats()" class="load-more-chats-button">
+                @if (messaging.isLoadingMoreChats()) {
+                <mat-spinner diameter="20"></mat-spinner>
+                <span>Loading...</span>
+                } @else {
+                <ng-container>
+                  <span>Load more conversations</span>
+                </ng-container>
+                }
+              </button>
+            </div> -->
+            }
+          </div>
+          } @else {
+          <div class="empty-tab-content">
+            <mat-icon>forum</mat-icon>
+            <p>No messages from others</p>
+            <button mat-flat-button color="primary" (click)="startNewChat()">
+              <mat-icon>add</mat-icon>
+              Start a conversation
+            </button>
+          </div>
+          }
+        </mat-tab>
+      </mat-tab-group>
+      }
+    </div>
+    <div class="message-threads-load-more">
+      @if (messaging.hasMoreChats()) {
+      <div class="load-more-chats">
+        <button mat-stroked-button color="primary" [disabled]="messaging.isLoadingMoreChats()" (click)="loadMoreChats()"
+          class="load-more-chats-button">
+          @if (messaging.isLoadingMoreChats()) {
+          <mat-spinner diameter="20"></mat-spinner>
+          <span>Loading...</span>
+          } @else {
+          <ng-container>
+            <span>Load more conversations</span>
+          </ng-container>
+          }
+        </button>
+      </div>
+      }
+    </div>
+  </div>
+  <div class="messages-right" [class.mobile-hidden]="layout.isHandset() && showMobileList()">
+    <div class="message-list-header">
+      @if (selectedChat()) {
+      <div class="chat-header-user">
+        @if (layout.isHandset() && !showMobileList()) {
+        <button mat-icon-button class="back-button" (click)="backToList()">
+          <mat-icon>arrow_back</mat-icon>
+        </button>
+        }
+        <app-user-profile [pubkey]="selectedChat()!.pubkey" view="thread"></app-user-profile>
+      </div>
+      }
+    </div>
+
+    <div class="message-list" #messagesWrapper>
+      <router-outlet></router-outlet>
+
+      @if (hasMoreMessages() && !isLoadingMore()) {
+      <div class="load-more-indicator">
+        <p class="load-more-hint">Scroll up to load older messages</p>
+        <button mat-button color="primary" (click)="loadMoreMessages()">
+          <mat-icon>expand_less</mat-icon>
+          Load older messages
+        </button>
+      </div>
+      }
+
+      @if (isLoadingMore()) {
+      <div class="loading-more-indicator">
+        <mat-spinner diameter="24"></mat-spinner>
+        <p>Loading older messages...</p>
+      </div>
+      }
+
+      @for (message of messages(); track message.id) {
+      <div class="message-bubble-container" [class.outgoing]="message.isOutgoing">
+        <div class="message-bubble" [class.outgoing]="message.isOutgoing" [class.pending]="message.pending"
+          [class.failed]="message.failed">
+          {{ message.content }}
+
+          <div class="message-status">
+            @if (message.pending) {
+            <mat-spinner diameter="10" class="pending-spinner"></mat-spinner>
+            } @else if (message.failed) {
+            <mat-icon class="failed-icon">error_outline</mat-icon>
+            } @else if (message.isOutgoing && message.read) {
+            <mat-icon class="read-icon">done_all</mat-icon>
+            } @else if (message.isOutgoing && message.received) {
+            <mat-icon class="received-icon">done</mat-icon>
+            }
+            <span class="message-time">{{ message.created_at | timestamp }}</span>
+          </div>
+        </div>
+
+        @if (message.failed) {
+        <button mat-icon-button class="retry-button" (click)="retryMessage(message)">
+          <mat-icon>refresh</mat-icon>
+        </button>
+        }
+      </div>
+      }
+    </div>
+    <div class="message-input-container">
+      @if (selectedChat()) {
+      <mat-form-field appearance="outline" class="message-input" subscriptSizing="dynamic">
+        <input matInput [ngModel]="newMessageText()" (ngModelChange)="newMessageText.set($event)"
+          placeholder="Type a message..." [disabled]="isSending()" (keyup.enter)="sendMessage()" />
+      </mat-form-field>
+      <button mat-icon-button type="button" [disabled]="!newMessageText().trim() || isSending()"
+        (click)="sendMessage()">
+        @if (isSending()) {
+        <mat-spinner diameter="24"></mat-spinner>
         } @else {
-          <mat-tab-group
-            [selectedIndex]="selectedTabIndex()"
-            (selectedIndexChange)="onTabChange($event)"
-            class="chat-tabs"
-          >
-            <mat-tab label="Following">
-              @if (hasFollowingChats()) {
-                <div class="tab-content">
-                  <mat-nav-list class="chat-list">
-                    @for (item of followingChats(); track item.chat.id) {
-                      @let chat = item.chat;
-                      <a
-                        mat-list-item
-                        class="chat-item"
-                        [class.active]="selectedChat()?.id === chat.id"
-                        (click)="selectChat(chat)"
-                      >
-                        <div class="chat-item-content">
-                          <div class="chat-avatar">
-                            @if (chat.encryptionType === 'nip44') {
-                              <mat-icon inline="true" class="chat-encryption-icon"
-                                >shield_lock</mat-icon
-                              >
-                            }
-
-                            <app-user-profile [pubkey]="chat.pubkey" view="icon" #profileComp>
-                              <!-- {{ profileComp.profile() }} -->
-
-                              <div class="chat-info">
-                                <div class="chat-name-row">
-                                  <span class="chat-name">
-                                    @if (profileComp.profile()) {
-                                      {{ profileComp.profile().data | name }}
-                                    } @else {
-                                      Unknown
-                                    }
-                                  </span>
-                                  @if (chat.unreadCount > 0) {
-                                    <span
-                                      class="unread-badge"
-                                      matBadge="{{ chat.unreadCount }}"
-                                      matBadgeOverlap="false"
-                                    ></span>
-                                  }
-                                  <span class="message-time-chats">{{
-                                    chat.lastMessage?.created_at | ago
-                                  }}</span>
-                                </div>
-                                <div class="chat-preview">
-                                  @if (chat.lastMessage) {
-                                    <span class="message-preview">
-                                      @if (chat.lastMessage.isOutgoing) {
-                                        <span class="outgoing-prefix">You: </span>
-                                      }
-                                      {{ chat.lastMessage.content }}
-                                    </span>
-                                    <!-- <span class="message-time">{{ chat.lastMessage?.created_at | ago }}</span> -->
-                                  } @else {
-                                    <span class="message-preview empty-message"
-                                      >New conversation</span
-                                    >
-                                  }
-                                </div>
-                              </div>
-                            </app-user-profile>
-                          </div>
-                        </div>
-                      </a>
-                    }
-                  </mat-nav-list>
-
-                  <!-- Load more chats button for Following tab -->
-                  @if (messaging.hasMoreChats()) {
-                    <!-- <div class="load-more-chats">
-              <button mat-stroked-button color="primary" [disabled]="messaging.isLoadingMoreChats()"
-                (click)="loadMoreChats()" class="load-more-chats-button">
-                @if (messaging.isLoadingMoreChats()) {
-                <mat-spinner diameter="20"></mat-spinner>
-                <span>Loading...</span>
-                } @else {
-                <ng-container>
-                  <span>Load more conversations</span>
-                </ng-container>
-                }
-              </button>
-            </div> -->
-                  }
-                </div>
-              } @else {
-                <div class="empty-tab-content">
-                  <mat-icon>people</mat-icon>
-                  <p>No messages from people you follow</p>
-                  <button mat-flat-button color="primary" (click)="startNewChat()">
-                    <mat-icon>add</mat-icon>
-                    Start a conversation
-                  </button>
-                </div>
-              }
-            </mat-tab>
-
-            <mat-tab label="Others">
-              @if (hasOtherChats()) {
-                <div class="tab-content">
-                  <mat-nav-list class="chat-list">
-                    @for (item of otherChats(); track item.chat.id) {
-                      @let chat = item.chat;
-                      <a
-                        mat-list-item
-                        class="chat-item"
-                        [class.active]="selectedChat()?.id === chat.id"
-                        (click)="selectChat(chat)"
-                      >
-                        <div class="chat-item-content">
-                          <div class="chat-avatar">
-                            <app-user-profile
-                              [pubkey]="chat.pubkey"
-                              view="small"
-                            ></app-user-profile>
-                          </div>
-                          <div class="chat-info">
-                            <div class="chat-name-row">
-                              <span class="chat-name">{{ chat.pubkey | npub }}</span>
-                              @if (chat.unreadCount > 0) {
-                                <span
-                                  class="unread-badge"
-                                  matBadge="{{ chat.unreadCount }}"
-                                  matBadgeOverlap="false"
-                                ></span>
-                              }
-                            </div>
-                            <div class="chat-preview">
-                              @if (chat.lastMessage) {
-                                <span class="message-preview">
-                                  @if (chat.lastMessage.isOutgoing) {
-                                    <span class="outgoing-prefix">You: </span>
-                                  }
-                                  {{ chat.lastMessage.content }}
-                                </span>
-                                <span class="message-time">{{
-                                  chat.lastMessage.created_at | ago
-                                }}</span>
-                              } @else {
-                                <span class="message-preview empty-message">New conversation</span>
-                              }
-                            </div>
-                          </div>
-                        </div>
-                      </a>
-                    }
-                  </mat-nav-list>
-
-                  <!-- Load more chats button for Others tab -->
-                  @if (messaging.hasMoreChats()) {
-                    <!-- <div class="load-more-chats">
-              <button mat-stroked-button color="primary" [disabled]="messaging.isLoadingMoreChats()"
-                (click)="loadMoreChats()" class="load-more-chats-button">
-                @if (messaging.isLoadingMoreChats()) {
-                <mat-spinner diameter="20"></mat-spinner>
-                <span>Loading...</span>
-                } @else {
-                <ng-container>
-                  <span>Load more conversations</span>
-                </ng-container>
-                }
-              </button>
-            </div> -->
-                  }
-                </div>
-              } @else {
-                <div class="empty-tab-content">
-                  <mat-icon>forum</mat-icon>
-                  <p>No messages from others</p>
-                  <button mat-flat-button color="primary" (click)="startNewChat()">
-                    <mat-icon>add</mat-icon>
-                    Start a conversation
-                  </button>
-                </div>
-              }
-            </mat-tab>
-          </mat-tab-group>
+        <mat-icon>send</mat-icon>
         }
-      </div>
-      <div class="message-threads-load-more">
-        @if (messaging.hasMoreChats()) {
-          <div class="load-more-chats">
-            <button
-              mat-stroked-button
-              color="primary"
-              [disabled]="messaging.isLoadingMoreChats()"
-              (click)="loadMoreChats()"
-              class="load-more-chats-button"
-            >
-              @if (messaging.isLoadingMoreChats()) {
-                <mat-spinner diameter="20"></mat-spinner>
-                <span>Loading...</span>
-              } @else {
-                <ng-container>
-                  <span>Load more conversations</span>
-                </ng-container>
-              }
-            </button>
-          </div>
-        }
-      </div>
+      </button>
+      }
     </div>
-    <div class="messages-right" [class.mobile-hidden]="layout.isHandset() && showMobileList()">
-      <div class="message-list-header">
-        @if (selectedChat()) {
-          <div class="chat-header-user">
-            @if (layout.isHandset() && !showMobileList()) {
-              <button mat-icon-button class="back-button" (click)="backToList()">
-                <mat-icon>arrow_back</mat-icon>
-              </button>
-            }
-            <app-user-profile [pubkey]="selectedChat()!.pubkey" view="thread"></app-user-profile>
-          </div>
-        }
-      </div>
-
-      <div class="message-list" #messagesWrapper>
-        <router-outlet></router-outlet>
-
-        @if (hasMoreMessages() && !isLoadingMore()) {
-          <div class="load-more-indicator">
-            <p class="load-more-hint">Scroll up to load older messages</p>
-            <button mat-button color="primary" (click)="loadMoreMessages()">
-              <mat-icon>expand_less</mat-icon>
-              Load older messages
-            </button>
-          </div>
-        }
-
-        @if (isLoadingMore()) {
-          <div class="loading-more-indicator">
-            <mat-spinner diameter="24"></mat-spinner>
-            <p>Loading older messages...</p>
-          </div>
-        }
-
-        @for (message of messages(); track message.id) {
-          <div class="message-bubble-container" [class.outgoing]="message.isOutgoing">
-            <div
-              class="message-bubble"
-              [class.outgoing]="message.isOutgoing"
-              [class.pending]="message.pending"
-              [class.failed]="message.failed"
-            >
-              {{ message.content }}
-
-              <div class="message-status">
-                @if (message.pending) {
-                  <mat-spinner diameter="10" class="pending-spinner"></mat-spinner>
-                } @else if (message.failed) {
-                  <mat-icon class="failed-icon">error_outline</mat-icon>
-                } @else if (message.isOutgoing && message.read) {
-                  <mat-icon class="read-icon">done_all</mat-icon>
-                } @else if (message.isOutgoing && message.received) {
-                  <mat-icon class="received-icon">done</mat-icon>
-                }
-                <span class="message-time">{{ message.created_at | timestamp }}</span>
-              </div>
-            </div>
-
-            @if (message.failed) {
-              <button mat-icon-button class="retry-button" (click)="retryMessage(message)">
-                <mat-icon>refresh</mat-icon>
-              </button>
-            }
-          </div>
-        }
-      </div>
-      <div class="message-input-container">
-        @if (selectedChat()) {
-          <mat-form-field appearance="outline" class="message-input" subscriptSizing="dynamic">
-            <input
-              matInput
-              [ngModel]="newMessageText()"
-              (ngModelChange)="newMessageText.set($event)"
-              placeholder="Type a message..."
-              [disabled]="isSending()"
-              (keyup.enter)="sendMessage()"
-            />
-          </mat-form-field>
-          <button
-            mat-icon-button
-            type="button"
-            [disabled]="!newMessageText().trim() || isSending()"
-            (click)="sendMessage()"
-          >
-            @if (isSending()) {
-              <mat-spinner diameter="24"></mat-spinner>
-            } @else {
-              <mat-icon>send</mat-icon>
-            }
-          </button>
-        }
-      </div>
-    </div>
+  </div>
   }
 </div>

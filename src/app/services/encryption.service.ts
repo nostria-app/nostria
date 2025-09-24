@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
+import { EncryptionPermissionService } from './encryption-permission.service';
 import { hexToBytes, bytesToHex } from '@noble/hashes/utils';
 import { Event, nip04, nip44 } from 'nostr-tools';
 import { v2 } from 'nostr-tools/nip44';
@@ -22,7 +23,8 @@ export interface DecryptionResult {
 export class EncryptionService {
   private logger = inject(LoggerService);
   private readonly utilities = inject(UtilitiesService);
-  private accountState = inject(AccountStateService); /**
+  private accountState = inject(AccountStateService);
+  private encryptionPermission = inject(EncryptionPermissionService); /**
    * Encrypt a message using NIP-04 (legacy, less secure)
    * Uses AES-256-CBC encryption
    */
@@ -56,8 +58,8 @@ export class EncryptionService {
 
       // Check if we can use the browser extension
       if (account?.source === 'extension' && window.nostr?.nip04) {
-        const decrypted = await window.nostr.nip04.decrypt(pubkey, ciphertext);
-        return decrypted;
+        // Use the permission service to handle the decryption request
+        return await this.encryptionPermission.queueDecryptionRequest('nip04', ciphertext, pubkey);
       }
 
       if (!account?.privkey) {
@@ -107,7 +109,8 @@ export class EncryptionService {
 
       // Check if we can use the browser extension
       if (account?.source === 'extension' && window.nostr?.nip44) {
-        return await window.nostr.nip44.decrypt(senderPubkey, ciphertext);
+        // Use the permission service to handle the decryption request
+        return await this.encryptionPermission.queueDecryptionRequest('nip44', ciphertext, senderPubkey);
       }
 
       if (!account?.privkey) {
