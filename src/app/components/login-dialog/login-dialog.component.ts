@@ -90,7 +90,8 @@ export class LoginDialogComponent {
 
   // Input fields
   nsecKey = '';
-  previewPubkey = 'npub1sg6plzptd64u62a878hep2kev88swjh3tw00gjsfl8f237lmu63q0uf63m'; // jack
+  // previewPubkey = 'npub1sg6plzptd64u62a878hep2kev88swjh3tw00gjsfl8f237lmu63q0uf63m'; // jack
+  previewPubkey = 'npub1lmtv5qjrgjak504pc0a2885w72df69lmk8jfaet2xc3x2rppjy8sfzxvac' // Coffee
 
   constructor() {
     this.logger.debug('UnifiedLoginDialogComponent initialized');
