@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "app.nostria.twa",
+        "sha256_cert_fingerprints": ["0F:6D:3B:BC:4D:29:32:30:A1:67:5F:3C:28:DE:B8:77:89:88:02:EF:93:0F:1D:3A:5A:66:4A:E0:6E:06:86:E4"]
+      }
+    }]
