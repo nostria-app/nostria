@@ -55,6 +55,7 @@ import { ApplicationService } from '../../services/application.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { EncryptionService } from '../../services/encryption.service';
+import { EncryptionPermissionService } from '../../services/encryption-permission.service';
 import { DataService } from '../../services/data.service';
 import { MessagingService } from '../../services/messaging.service';
 import { LayoutService } from '../../services/layout.service';
@@ -87,15 +88,6 @@ interface DirectMessage {
   received?: boolean;
   read?: boolean;
   encryptionType?: 'nip04' | 'nip44';
-}
-
-interface DecryptionQueueItem {
-  id: string;
-  event: NostrEvent;
-  type: 'nip04' | 'nip44';
-  senderPubkey: string;
-  resolve: (result: any | null) => void;
-  reject: (error: Error) => void;
 }
 
 @Component({
@@ -146,14 +138,13 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   readonly utilities = inject(UtilitiesService);
   private readonly accountState = inject(AccountStateService);
   private readonly encryption = inject(EncryptionService);
+  private readonly encryptionPermission = inject(EncryptionPermissionService);
   layout = inject(LayoutService); // UI state signals
   isLoading = signal<boolean>(false);
   isLoadingMore = signal<boolean>(false);
   isSending = signal<boolean>(false);
   error = signal<string | null>(null);
   showMobileList = signal<boolean>(true);
-  isDecryptingMessages = signal<boolean>(false);
-  decryptionQueueLength = signal<number>(0);
   selectedTabIndex = signal<number>(0); // 0 = Following, 1 = Others
   private accountRelay = inject(AccountRelayService);
 
@@ -200,9 +191,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // Subscription management
   private messageSubscription: any = null;
-  private chatSubscription: any = null; // Decryption queue management
-  private decryptionQueue: DecryptionQueueItem[] = [];
-  private isProcessingQueue = false; // ViewChild for scrolling functionality
+  private chatSubscription: any = null;
+
+  // ViewChild for scrolling functionality
   @ViewChild('messagesWrapper', { static: false })
   messagesWrapper?: ElementRef<HTMLDivElement>;
 
@@ -384,16 +375,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     if (this.chatSubscription) {
       this.chatSubscription.close();
     }
-
-    // Clear the decryption queue
-    this.clearDecryptionQueue();
-  }
-
-  /**
-   * Clear the decryption queue (useful for cleanup)
-   */
-  private clearDecryptionQueue(): void {
-    this.messaging.clearDecryptionQueue();
   }
 
   /**
@@ -1003,5 +984,16 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       console.error('Error starting chat:', error);
       this.snackBar.open('Failed to start chat', 'Close', { duration: 3000 });
     }
+  }
+
+  /**
+   * Revoke encryption permission
+   */
+  revokeEncryptionPermission(): void {
+    this.encryptionPermission.revokePermission();
+    this.snackBar.open('Extension permission revoked', 'Close', { duration: 3000 });
+
+    // Clear messages since we can no longer decrypt them
+    this.messaging.clear();
   }
 }
