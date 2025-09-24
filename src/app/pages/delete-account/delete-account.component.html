@@ -1,0 +1,168 @@
+<div class="delete-account-container">
+  <mat-card class="main-card">
+    <mat-card-header>
+      <div mat-card-avatar>
+        <mat-icon class="danger-icon">delete_forever</mat-icon>
+      </div>
+      <mat-card-title>Delete Account Data</mat-card-title>
+      <mat-card-subtitle>
+        Permanently delete all events associated with your account
+      </mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <!-- Account Info -->
+      @if (currentAccount(); as account) {
+      <div class="account-info">
+        <h3>Current Account</h3>
+        <p class="account-pubkey">{{ account.pubkey }}</p>
+      </div>
+      }
+
+      <mat-divider></mat-divider>
+
+      <!-- Events Scan Section -->
+      <div class="scan-section">
+        <div class="section-header">
+          <h3>Account Data Analysis</h3>
+          <button mat-stroked-button (click)="rescanEvents()" [disabled]="scanning()" class="rescan-button">
+            <mat-icon>refresh</mat-icon>
+            {{ scanning() ? 'Scanning...' : 'Rescan' }}
+          </button>
+        </div>
+
+        @if (scanning()) {
+        <div class="scanning-indicator">
+          <mat-icon class="spinning">sync</mat-icon>
+          <span>Scanning your account data...</span>
+        </div>
+        } @else {
+        @if (hasEvents()) {
+        <div class="events-summary">
+          <div class="total-count">
+            <mat-icon>storage</mat-icon>
+            <span class="count">{{ totalEventsCount() }}</span>
+            <span class="label">Total Events Found</span>
+          </div>
+        </div>
+
+        <!-- Events by Kind -->
+        <div class="events-by-kind">
+          <h4>Events by Type</h4>
+          <div class="kind-list">
+            @for (kindInfo of eventKinds(); track kindInfo.kind) {
+            <div class="kind-item">
+              <div class="kind-header">
+                <span class="kind-name">{{ kindInfo.name }}</span>
+                <span class="kind-count">{{ kindInfo.count }}</span>
+              </div>
+              <div class="kind-description">{{ kindInfo.description }}</div>
+            </div>
+            }
+          </div>
+        </div>
+        } @else {
+        <div class="no-events">
+          <mat-icon>check_circle</mat-icon>
+          <h4>No Events Found</h4>
+          <p>Your account has no stored events to delete.</p>
+        </div>
+        }
+        }
+      </div>
+
+      <!-- Deletion Form Section -->
+      @if (hasEvents()) {
+      <mat-divider></mat-divider>
+
+      <div class="deletion-section">
+        <div class="warning-notice">
+          <mat-icon class="warning-icon">warning</mat-icon>
+          <div class="warning-content">
+            <h4>Permanent Action Warning</h4>
+            <p>
+              This will create NIP-09 deletion requests for <strong>all {{ totalEventsCount() }} events</strong>
+              in your account. While deletion requests will be published to relays, there is no guarantee
+              that all relays and clients will honor these requests.
+            </p>
+          </div>
+        </div>
+
+        <form [formGroup]="deleteForm" class="deletion-form">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Type "DELETE MY ACCOUNT" to confirm</mat-label>
+            <input matInput formControlName="confirmationText" placeholder="DELETE MY ACCOUNT"
+              [disabled]="deleting()" />
+            @if (deleteForm.get('confirmationText')?.hasError('required')) {
+            <mat-error>Confirmation text is required</mat-error>
+            }
+            @if (deleteForm.get('confirmationText')?.hasError('invalidConfirmation')) {
+            <mat-error>You must type "DELETE MY ACCOUNT" exactly</mat-error>
+            }
+          </mat-form-field>
+
+          <!-- Deletion Progress -->
+          @if (deleting()) {
+          <div class="deletion-progress">
+            <div class="progress-info">
+              <span>Deleting events...</span>
+              <span>{{ deletedCount() + failedCount() }} of {{ totalEventsCount() }}</span>
+            </div>
+            <mat-progress-bar mode="determinate" [value]="deletionProgress()" class="progress-bar">
+            </mat-progress-bar>
+            <div class="progress-stats">
+              <span class="success">✓ {{ deletedCount() }} deleted</span>
+              @if (failedCount() > 0) {
+              <span class="failed">✗ {{ failedCount() }} failed</span>
+              }
+            </div>
+          </div>
+          }
+
+          <div class="form-actions">
+            <button mat-stroked-button type="button" (click)="navigateBack()" [disabled]="deleting()">
+              <mat-icon>arrow_back</mat-icon>
+              Back to Privacy Settings
+            </button>
+
+            <button mat-flat-button color="warn" type="button" (click)="deleteAllEvents()"
+              [disabled]="!deleteForm.valid || deleting()">
+              @if (deleting()) {
+              <mat-icon class="spinning">sync</mat-icon>
+              Deleting...
+              } @else {
+              <mat-icon>delete_forever</mat-icon>
+              Delete All Events
+              }
+            </button>
+          </div>
+        </form>
+      </div>
+      }
+
+      <!-- NIP-09 Information -->
+      <mat-divider></mat-divider>
+
+      <div class="info-section">
+        <div class="info-header">
+          <mat-icon>info</mat-icon>
+          <h4>About Event Deletion (NIP-09)</h4>
+        </div>
+        <div class="info-content">
+          <p>
+            Event deletion in Nostr works through NIP-09 deletion requests. When you delete events:
+          </p>
+          <ul>
+            <li>Deletion requests are published to relays asking them to remove the original events</li>
+            <li>Well-behaved relays and clients should honor these requests and stop showing the events</li>
+            <li>However, there's no guarantee all relays will comply with deletion requests</li>
+            <li>Some copies of your events may persist on non-compliant relays or in backups</li>
+          </ul>
+          <p>
+            <strong>Consider this carefully before proceeding with account deletion.</strong>
+          </p>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

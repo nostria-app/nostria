@@ -41,6 +41,7 @@ import { RelaysComponent } from './pages/settings/relays/relays.component';
 import { DraftsComponent } from './pages/drafts/drafts.component';
 import { ProfileOpenComponent } from './pages/profile/profile-open.component';
 import { DeleteEventComponent } from './pages/delete-event/delete-event.component';
+import { DeleteAccountComponent } from './pages/delete-account/delete-account.component';
 
 const profileChildren: Routes = [
   {
@@ -273,6 +274,12 @@ export const routes: Routes = [
     component: DeleteEventComponent,
     data: { isRoot: true },
     title: 'Delete Event',
+  },
+  {
+    path: 'delete-account',
+    component: DeleteAccountComponent,
+    data: { isRoot: true },
+    title: 'Delete Account',
   },
   {
     path: 'debug/storage',

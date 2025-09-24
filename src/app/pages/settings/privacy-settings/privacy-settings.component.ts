@@ -150,4 +150,8 @@ export class PrivacySettingsComponent {
   navigateToDeleteEventPage(): void {
     this.router.navigate(['/delete-event']);
   }
+
+  navigateToDeleteAccountPage(): void {
+    this.router.navigate(['/delete-account']);
+  }
 }
