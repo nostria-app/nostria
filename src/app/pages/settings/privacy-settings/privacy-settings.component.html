@@ -155,12 +155,16 @@
   <section class="delete-section">
     <h3>Event Management</h3>
     <p class="section-description">
-      Manually request deletion of specific events you've published.
+      Manage and delete events you've published on Nostr.
     </p>
     <div class="delete-actions">
       <button mat-raised-button color="primary" (click)="navigateToDeleteEventPage()">
         <mat-icon>delete_outline</mat-icon>
         Delete Specific Event
+      </button>
+      <button mat-raised-button color="warn" (click)="navigateToDeleteAccountPage()">
+        <mat-icon>delete_forever</mat-icon>
+        Delete All Account Data
       </button>
     </div>
   </section>
