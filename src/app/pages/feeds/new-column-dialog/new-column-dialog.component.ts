@@ -16,10 +16,18 @@ import { MatChipInputEvent } from '@angular/material/chips';
 import { MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
 import { FeedService, ColumnConfig } from '../../../services/feed.service';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { AccountStateService } from '../../../services/account-state.service';
+import { Followset, StarterPack } from '../../../services/followset';
 
 interface DialogData {
   icons: string[];
   column?: ColumnConfig;
+}
+
+interface UserProfile {
+  pubkey: string;
+  name?: string;
+  npub: string;
 }
 
 // Common Nostr event kinds
@@ -81,6 +89,8 @@ export class NewColumnDialogComponent {
   private fb = inject(FormBuilder);
   private dialogRef = inject(MatDialogRef<NewColumnDialogComponent>);
   private feedService = inject(FeedService);
+  private accountState = inject(AccountStateService);
+  private followset = inject(Followset);
   readonly data: DialogData = inject(MAT_DIALOG_DATA);
 
   // Form controls
@@ -92,6 +102,8 @@ export class NewColumnDialogComponent {
     relayConfig: [this.data.column?.relayConfig || 'account'],
     customRelays: [this.data.column?.customRelays || []],
     type: [this.data.column?.type || 'custom'],
+    customUserInput: [''], // For user autocomplete input
+    customStarterPackInput: [''], // For starter pack autocomplete input
   });
 
   // Signals and state
@@ -101,6 +113,11 @@ export class NewColumnDialogComponent {
   customRelays = signal<string[]>(this.data.column?.customRelays || []);
   selectedRelayConfig = signal<string>(this.data.column?.relayConfig || 'account');
   showCustomRelays = computed(() => this.selectedRelayConfig() === 'custom');
+
+  // Custom source signals
+  selectedUsers = signal<UserProfile[]>([]);
+  selectedStarterPacks = signal<StarterPack[]>([]);
+  availableStarterPacks = signal<StarterPack[]>([]);
 
   // Form controls for chips
   kindInputControl = new FormControl('');
@@ -112,6 +129,20 @@ export class NewColumnDialogComponent {
   // Available options
   columnTypes = signal(this.feedService.getFeedTypes());
   nostrKinds = signal(NOSTR_KINDS);
+
+  // Get following users from account state
+  followingUsers = computed(() => {
+    const followingPubkeys = this.accountState.followingList();
+    if (!followingPubkeys || followingPubkeys.length === 0) return [];
+
+    // For now, just return basic user info. In a real implementation,
+    // we would fetch profiles for these pubkeys
+    return followingPubkeys.map(pubkey => ({
+      pubkey,
+      name: `User ${pubkey.slice(0, 8)}...`, // Placeholder name
+      npub: pubkey // TODO: Convert to npub format if needed
+    }));
+  });
 
   // Filtered options for autocomplete
   filteredKinds = computed(() => {
@@ -125,6 +156,43 @@ export class NewColumnDialogComponent {
       return matchesInput && notSelected;
     });
   });
+
+  // Filtered users for autocomplete
+  filteredUsers = computed(() => {
+    const input = this.columnForm.get('customUserInput')?.value?.toLowerCase() || '';
+    const following = this.followingUsers();
+    const selected = this.selectedUsers();
+
+    return following.filter(user => {
+      const matchesInput = user.name?.toLowerCase().includes(input) || user.pubkey.includes(input);
+      const notSelected = !selected.some(s => s.pubkey === user.pubkey);
+      return matchesInput && notSelected;
+    });
+  });
+
+  // Filtered starter packs for autocomplete
+  filteredStarterPacks = computed(() => {
+    const input = this.columnForm.get('customStarterPackInput')?.value?.toLowerCase() || '';
+    const available = this.availableStarterPacks();
+    const selected = this.selectedStarterPacks();
+
+    return available.filter(pack => {
+      const matchesInput = pack.title.toLowerCase().includes(input) ||
+        pack.description?.toLowerCase().includes(input);
+      const notSelected = !selected.some(s => s.id === pack.id);
+      return matchesInput && notSelected;
+    });
+  });
+
+  constructor() {
+    // Load starter packs when component initializes
+    this.loadStarterPacks();
+
+    // Initialize selected items if editing existing column
+    if (this.data.column) {
+      this.initializeSelectedItems();
+    }
+  }
 
   selectColumnType(typeKey: string): void {
     this.selectedColumnType.set(typeKey);
@@ -258,6 +326,8 @@ export class NewColumnDialogComponent {
         kinds: this.selectedKinds(),
         relayConfig: formValue.relayConfig as 'account' | 'custom',
         customRelays: formValue.relayConfig === 'custom' ? this.customRelays() : undefined,
+        customUsers: formValue.source === 'custom' ? this.selectedUsers().map(u => u.pubkey) : undefined,
+        customStarterPacks: formValue.source === 'custom' ? this.selectedStarterPacks().map(p => p.dTag) : undefined,
         filters: {},
         createdAt: this.data.column?.createdAt || Date.now(),
         updatedAt: Date.now(),
@@ -265,5 +335,70 @@ export class NewColumnDialogComponent {
 
       this.dialogRef.close(columnConfig);
     }
+  }
+
+  // Custom source methods
+  async loadStarterPacks(): Promise<void> {
+    try {
+      const starterPacks = await this.followset.fetchStarterPacks();
+      this.availableStarterPacks.set(starterPacks);
+    } catch (error) {
+      console.error('Failed to load starter packs:', error);
+    }
+  }
+
+  initializeSelectedItems(): void {
+    const column = this.data.column;
+    if (!column) return;
+
+    // Initialize selected users if customUsers exist
+    if (column.customUsers) {
+      const users = column.customUsers.map(pubkey => ({
+        pubkey,
+        name: `User ${pubkey.slice(0, 8)}...`,
+        npub: pubkey
+      }));
+      this.selectedUsers.set(users);
+    }
+
+    // Initialize selected starter packs if customStarterPacks exist
+    if (column.customStarterPacks) {
+      const packs = this.availableStarterPacks().filter(pack =>
+        column.customStarterPacks?.includes(pack.dTag)
+      );
+      this.selectedStarterPacks.set(packs);
+    }
+  }
+
+  onUserSelected(event: MatAutocompleteSelectedEvent): void {
+    const pubkey = event.option.value;
+    const user = this.followingUsers().find(u => u.pubkey === pubkey);
+
+    if (user && !this.selectedUsers().some(u => u.pubkey === pubkey)) {
+      this.selectedUsers.update(users => [...users, user]);
+    }
+
+    // Clear the input
+    this.columnForm.get('customUserInput')?.setValue('');
+  }
+
+  removeUser(user: UserProfile): void {
+    this.selectedUsers.update(users => users.filter(u => u.pubkey !== user.pubkey));
+  }
+
+  onStarterPackSelected(event: MatAutocompleteSelectedEvent): void {
+    const packId = event.option.value;
+    const pack = this.availableStarterPacks().find(p => p.id === packId);
+
+    if (pack && !this.selectedStarterPacks().some(p => p.id === packId)) {
+      this.selectedStarterPacks.update(packs => [...packs, pack]);
+    }
+
+    // Clear the input
+    this.columnForm.get('customStarterPackInput')?.setValue('');
+  }
+
+  removeStarterPack(pack: StarterPack): void {
+    this.selectedStarterPacks.update(packs => packs.filter(p => p.id !== pack.id));
   }
 }

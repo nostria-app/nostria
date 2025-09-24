@@ -23,6 +23,7 @@ import { UserRelayService } from './relays/user-relay';
 import { SharedRelayService } from './relays/shared-relay';
 import { UserRelayExFactoryService } from './user-relay-factory.service';
 import { AccountRelayService } from './relays/account-relay';
+import { Followset } from './followset';
 
 export interface FeedItem {
   column: ColumnConfig;
@@ -49,7 +50,9 @@ export interface ColumnConfig {
   path?: string;
   type: 'notes' | 'articles' | 'photos' | 'videos' | 'music' | 'custom';
   kinds: number[];
-  source?: 'following' | 'public';
+  source?: 'following' | 'public' | 'custom';
+  customUsers?: string[]; // Array of pubkeys for custom user selection
+  customStarterPacks?: string[]; // Array of starter pack identifiers (d tags)
   relayConfig: 'account' | 'custom';
   customRelays?: string[];
   filters?: Record<string, unknown>;
@@ -219,6 +222,7 @@ export class FeedService {
   private readonly userRelayFactory = inject(UserRelayExFactoryService);
   // On-demand access for one-shot per-user fetches to avoid lingering sockets
   private readonly onDemandUserData = inject(OnDemandUserDataService);
+  private readonly followset = inject(Followset);
 
   private readonly algorithms = inject(Algorithms);
 
@@ -383,6 +387,8 @@ export class FeedService {
     // If the source is following, use algorithm to get top engaged users
     if (column.source === 'following') {
       await this.loadFollowingFeed(item);
+    } else if (column.source === 'custom') {
+      await this.loadCustomFeed(item);
     } else {
       // Choose relay service based on column.relayConfig
       let relayService: AccountRelayService | UserRelayService;
@@ -500,6 +506,72 @@ export class FeedService {
       );
     } catch (error) {
       this.logger.error('Error loading following feed:', error);
+    }
+  }
+
+  /**
+   * Load custom feed using specified users and starter packs
+   *
+   * This method:
+   * 1. Collects pubkeys from customUsers array
+   * 2. Fetches starter pack data and extracts pubkeys
+   * 3. Combines all pubkeys and fetches events
+   * 4. Uses the same fetchEventsFromUsers logic as following feed
+   */
+  private async loadCustomFeed(feedData: FeedItem) {
+    try {
+      const column = feedData.column;
+      const allPubkeys = new Set<string>();
+
+      // Add custom users pubkeys
+      if (column.customUsers && column.customUsers.length > 0) {
+        column.customUsers.forEach(pubkey => allPubkeys.add(pubkey));
+        this.logger.debug(`Added ${column.customUsers.length} custom users`);
+      }
+
+      // Add pubkeys from starter packs
+      if (column.customStarterPacks && column.customStarterPacks.length > 0) {
+        try {
+          // Fetch starter packs to get the current data
+          const allStarterPacks = await this.followset.fetchStarterPacks();
+          
+          // Find the starter packs we need by matching dTag
+          const selectedPacks = allStarterPacks.filter(pack => 
+            column.customStarterPacks?.includes(pack.dTag)
+          );
+
+          // Extract pubkeys from selected starter packs
+          selectedPacks.forEach(pack => {
+            pack.pubkeys.forEach(pubkey => allPubkeys.add(pubkey));
+          });
+
+          this.logger.debug(
+            `Added ${selectedPacks.length} starter packs with total ${selectedPacks.reduce((sum, pack) => sum + pack.pubkeys.length, 0)} users`
+          );
+        } catch (error) {
+          this.logger.error('Error fetching starter pack data:', error);
+        }
+      }
+
+      const pubkeysArray = Array.from(allPubkeys);
+      
+      if (pubkeysArray.length === 0) {
+        this.logger.warn('No pubkeys found for custom feed, falling back to following');
+        // Fallback to following if no custom users are specified
+        const followingList = this.accountState.followingList();
+        const fallbackUsers = [...followingList].slice(-10).reverse();
+        await this.fetchEventsFromUsers(fallbackUsers, feedData);
+        return;
+      }
+
+      this.logger.debug(`Loading custom feed with ${pubkeysArray.length} unique users`);
+
+      // Fetch events from all specified users
+      await this.fetchEventsFromUsers(pubkeysArray, feedData);
+
+      this.logger.debug(`Loaded custom feed with ${pubkeysArray.length} users`);
+    } catch (error) {
+      this.logger.error('Error loading custom feed:', error);
     }
   }
 
@@ -668,6 +740,39 @@ export class FeedService {
 
         // Fetch older events using the lastTimestamp
         await this.fetchOlderEventsFromUsers(topPubkeys, feedData);
+      } else if (column.source === 'custom') {
+        // For custom feeds, collect the same pubkeys used in initial load
+        const allPubkeys = new Set<string>();
+
+        // Add custom users pubkeys
+        if (column.customUsers && column.customUsers.length > 0) {
+          column.customUsers.forEach(pubkey => allPubkeys.add(pubkey));
+        }
+
+        // Add pubkeys from starter packs
+        if (column.customStarterPacks && column.customStarterPacks.length > 0) {
+          try {
+            const allStarterPacks = await this.followset.fetchStarterPacks();
+            const selectedPacks = allStarterPacks.filter(pack => 
+              column.customStarterPacks?.includes(pack.dTag)
+            );
+            selectedPacks.forEach(pack => {
+              pack.pubkeys.forEach(pubkey => allPubkeys.add(pubkey));
+            });
+          } catch (error) {
+            this.logger.error('Error fetching starter pack data for pagination:', error);
+          }
+        }
+
+        const pubkeysArray = Array.from(allPubkeys);
+        
+        if (pubkeysArray.length > 0) {
+          // Fetch older events from the same custom users
+          await this.fetchOlderEventsFromUsers(pubkeysArray, feedData);
+        } else {
+          // No custom users, mark as no more data
+          feedData.hasMore.set(false);
+        }
       } else {
         // For public feeds, implement similar pagination logic
         const currentEvents = feedData.events();
