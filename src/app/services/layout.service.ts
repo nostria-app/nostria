@@ -1128,6 +1128,21 @@ export class LayoutService implements OnDestroy {
     this.copyToClipboard(url, 'profile URL');
   }
 
+  navigateToDeleteEventPage(event: Event) {
+    if (!event) {
+      return;
+    }
+
+    const neventId = nip19.neventEncode({
+      id: event.id,
+      author: event.pubkey,
+    });
+
+    this.router.navigate(['/delete-event'], {
+      queryParams: { eventId: neventId }
+    });
+  }
+
   toast(message: string, duration = 3000, panelClass = 'success-snackbar') {
     this.snackBar.open(message, 'Close', {
       duration,

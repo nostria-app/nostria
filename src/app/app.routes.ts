@@ -40,6 +40,7 @@ import { AlgorithmComponent } from './pages/settings/algorithm/algorithm';
 import { RelaysComponent } from './pages/settings/relays/relays.component';
 import { DraftsComponent } from './pages/drafts/drafts.component';
 import { ProfileOpenComponent } from './pages/profile/profile-open.component';
+import { DeleteEventComponent } from './pages/delete-event/delete-event.component';
 
 const profileChildren: Routes = [
   {
@@ -266,6 +267,12 @@ export const routes: Routes = [
     data: { isRoot: true },
     loadComponent: () => import('./pages/people/people.component').then(m => m.PeopleComponent),
     title: 'People',
+  },
+  {
+    path: 'delete-event',
+    component: DeleteEventComponent,
+    data: { isRoot: true },
+    title: 'Delete Event',
   },
   {
     path: 'debug/storage',

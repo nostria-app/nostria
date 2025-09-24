@@ -1,0 +1,114 @@
+<!-- Delete Event Page -->
+<div class="delete-event-container">
+  <mat-card class="delete-event-card">
+    <mat-card-header>
+      <mat-card-title>Delete Event</mat-card-title>
+      <mat-card-subtitle>Request deletion of a specific event</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div class="info-section">
+        <div class="info-box">
+          <mat-icon>info</mat-icon>
+          <div class="info-text">
+            <h3>How Event Deletion Works</h3>
+            <p>
+              When you request to delete an event, a deletion request (NIP-09) is published to the network.
+              This asks relays and clients to remove the original event, but <strong>deletion cannot be
+                guaranteed</strong>
+              because it's impossible to delete events from all relays and clients.
+            </p>
+            <p>
+              You can also choose "Delete" from the event menu anywhere in the app for a quicker deletion process.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <form [formGroup]="deleteForm" class="delete-form">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Event ID or nevent</mat-label>
+          <input matInput formControlName="eventId" placeholder="Enter event ID (hex) or nevent" (blur)="lookupEvent()">
+          <mat-icon matSuffix>event</mat-icon>
+          @if (deleteForm.get('eventId')?.hasError('invalidEventId') && deleteForm.get('eventId')?.touched) {
+          <mat-error>Please enter a valid event ID (64-character hex) or nevent</mat-error>
+          }
+        </mat-form-field>
+
+        <button mat-raised-button color="primary" type="button"
+          [disabled]="!deleteForm.get('eventId')?.valid || isLoading()" (click)="lookupEvent()">
+          @if (isLoading()) {
+          <ng-container>
+            <mat-icon>refresh</mat-icon>
+            Looking up...
+          </ng-container>
+          } @else {
+          <ng-container>
+            <mat-icon>search</mat-icon>
+            Lookup Event
+          </ng-container>
+          }
+        </button>
+      </form>
+
+      @if (event() && eventDisplay()) {
+      <div class="event-preview">
+        <h3>Event Preview</h3>
+        <div class="event-card">
+          <div class="event-header">
+            <strong>Event ID:</strong> {{ eventDisplay()!.id.slice(0, 16) }}...
+            <span class="event-kind">Kind {{ eventDisplay()!.kind }}</span>
+          </div>
+
+          <div class="event-content">
+            <strong>Content:</strong> {{ eventDisplay()!.content || '(no content)' }}
+          </div>
+
+          <div class="event-date">
+            <strong>Created:</strong> {{ eventDisplay()!.createdAt }}
+          </div>
+
+          @if (!eventDisplay()!.isOwn) {
+          <div class="not-owner-warning">
+            <mat-icon color="warn">warning</mat-icon>
+            <span>You can only delete your own events.</span>
+          </div>
+          }
+        </div>
+
+        @if (eventDisplay()!.isOwn) {
+        <mat-form-field appearance="outline" class="full-width reason-field">
+          <mat-label>Deletion reason (optional)</mat-label>
+          <textarea matInput formControlName="reason" placeholder="Why are you deleting this event?"
+            rows="3"></textarea>
+          <mat-icon matSuffix>edit_note</mat-icon>
+        </mat-form-field>
+
+        <div class="actions">
+          <button mat-raised-button color="warn" [disabled]="isLoading()" (click)="deleteEvent()">
+            @if (isLoading()) {
+            <ng-container>
+              <mat-icon>hourglass_empty</mat-icon>
+              Publishing...
+            </ng-container>
+            } @else {
+            <ng-container>
+              <mat-icon>delete_forever</mat-icon>
+              Delete Event
+            </ng-container>
+            }
+          </button>
+        </div>
+        }
+      </div>
+      }
+    </mat-card-content>
+
+    <mat-card-actions align="end">
+      <button mat-button (click)="goBack()">
+        <mat-icon>arrow_back</mat-icon>
+        Go Back
+      </button>
+    </mat-card-actions>
+  </mat-card>
+</div>
