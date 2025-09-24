@@ -8,6 +8,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { AccountStateService } from '../../../services/account-state.service';
 import { NostrService } from '../../../services/nostr.service';
 import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
@@ -38,6 +39,7 @@ export class PrivacySettingsComponent {
   nostrService = inject(NostrService);
   settingsService = inject(SettingsService);
   imageCacheService = inject(ImageCacheService);
+  router = inject(Router);
 
   // NIP-56 report types
   reportTypes = [
@@ -143,5 +145,9 @@ export class PrivacySettingsComponent {
       default:
         return true;
     }
+  }
+
+  navigateToDeleteEventPage(): void {
+    this.router.navigate(['/delete-event']);
   }
 }

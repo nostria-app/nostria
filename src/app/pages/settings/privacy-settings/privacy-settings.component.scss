@@ -63,6 +63,36 @@
   }
 }
 
+.delete-section {
+  margin-bottom: 32px;
+
+  .section-description {
+    margin-bottom: 16px;
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 0.875rem;
+    line-height: 1.4;
+  }
+
+  .delete-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+
+    button {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.875rem;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+    }
+  }
+}
+
 .settings-option {
   display: flex;
   align-items: center;
