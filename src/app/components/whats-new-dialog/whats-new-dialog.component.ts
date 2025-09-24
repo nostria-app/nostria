@@ -133,8 +133,8 @@ export class WhatsNewDialogComponent {
             {
               src: '/screenshots/2025-09-24-feed-column-custom-profiles.png',
               alt: 'Custom profiles and starter packs for feeds columns',
-              width: 520,
-              height: 700,
+              width: 954,
+              height: 956,
             },
           ],
         },
