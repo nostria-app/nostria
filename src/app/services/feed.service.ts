@@ -534,9 +534,9 @@ export class FeedService {
         try {
           // Fetch starter packs to get the current data
           const allStarterPacks = await this.followset.fetchStarterPacks();
-          
+
           // Find the starter packs we need by matching dTag
-          const selectedPacks = allStarterPacks.filter(pack => 
+          const selectedPacks = allStarterPacks.filter(pack =>
             column.customStarterPacks?.includes(pack.dTag)
           );
 
@@ -554,7 +554,7 @@ export class FeedService {
       }
 
       const pubkeysArray = Array.from(allPubkeys);
-      
+
       if (pubkeysArray.length === 0) {
         this.logger.warn('No pubkeys found for custom feed, falling back to following');
         // Fallback to following if no custom users are specified
@@ -753,7 +753,7 @@ export class FeedService {
         if (column.customStarterPacks && column.customStarterPacks.length > 0) {
           try {
             const allStarterPacks = await this.followset.fetchStarterPacks();
-            const selectedPacks = allStarterPacks.filter(pack => 
+            const selectedPacks = allStarterPacks.filter(pack =>
               column.customStarterPacks?.includes(pack.dTag)
             );
             selectedPacks.forEach(pack => {
@@ -765,7 +765,7 @@ export class FeedService {
         }
 
         const pubkeysArray = Array.from(allPubkeys);
-        
+
         if (pubkeysArray.length > 0) {
           // Fetch older events from the same custom users
           await this.fetchOlderEventsFromUsers(pubkeysArray, feedData);
