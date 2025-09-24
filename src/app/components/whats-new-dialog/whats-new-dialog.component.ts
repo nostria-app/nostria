@@ -126,6 +126,19 @@ export class WhatsNewDialogComponent {
           ],
         },
         {
+          title: 'Feeds Columns custom profiles and Starter Packs',
+          description:
+            'Custom profiles and starter packs for feeds columns, allowing for more personalized content.',
+          screenshots: [
+            {
+              src: '/screenshots/2025-09-24-feed-column-custom-profiles.png',
+              alt: 'Custom profiles and starter packs for feeds columns',
+              width: 520,
+              height: 700,
+            },
+          ],
+        },
+        {
           title: 'Profile image caching',
           description:
             'Profile images will be cached locally, maximum limit of 2000 and they are cached for 5 days.',
