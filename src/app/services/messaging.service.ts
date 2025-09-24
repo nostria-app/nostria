@@ -13,6 +13,7 @@ import {
 } from 'nostr-tools';
 import { UtilitiesService } from './utilities.service';
 import { EncryptionService } from './encryption.service';
+import { EncryptionPermissionService } from './encryption-permission.service';
 import { NostriaService } from '../interfaces';
 import { bytesToHex } from 'nostr-tools/utils';
 import { AccountRelayService } from './relays/account-relay';
@@ -62,10 +63,14 @@ export class MessagingService implements NostriaService {
   private readonly accountState = inject(AccountStateService);
   readonly utilities = inject(UtilitiesService);
   private readonly encryption = inject(EncryptionService);
+  private readonly encryptionPermission = inject(EncryptionPermissionService);
   isLoading = signal<boolean>(false);
   isLoadingMoreChats = signal<boolean>(false);
   hasMoreChats = signal<boolean>(true);
   error = signal<string | null>(null);
+
+  // Signal to track if we're waiting for permission
+  waitingForPermission = signal<boolean>(false);
 
   private chatsMap = signal<Map<string, Chat>>(new Map());
   private oldestChatTimestamp = signal<number | null>(null);
@@ -103,7 +108,7 @@ export class MessagingService implements NostriaService {
   isDecryptingMessages = signal<boolean>(false);
   decryptionQueueLength = signal<number>(0);
 
-  constructor() {}
+  constructor() { }
 
   hasMessage(chatId: string, messageId: string): boolean {
     const chat = this.chatsMap().get(chatId);
@@ -179,6 +184,7 @@ export class MessagingService implements NostriaService {
     this.isLoadingMoreChats.set(false);
     this.hasMoreChats.set(true);
     this.error.set(null);
+    this.waitingForPermission.set(false);
     this.clearDecryptionQueue();
   }
 
@@ -187,7 +193,21 @@ export class MessagingService implements NostriaService {
     this.oldestChatTimestamp.set(null);
   }
 
-  async load() {}
+  async load() { }
+
+  /**
+   * Continue loading chats after permission is granted
+   */
+  async continueLoadingAfterPermission() {
+    if (!this.encryptionPermission.hasPermission()) {
+      this.logger.warn('Attempted to continue loading without permission');
+      return;
+    }
+
+    this.logger.info('Continuing to load chats after permission granted');
+    this.waitingForPermission.set(false);
+    await this.loadChats();
+  }
 
   async createNip44Message(messageText: string, receiverPubkey: string, myPubkey: string) {
     try {
@@ -282,6 +302,7 @@ export class MessagingService implements NostriaService {
   async loadChats() {
     this.clear();
     this.isLoading.set(true);
+    this.waitingForPermission.set(false);
 
     try {
       const myPubkey = this.accountState.pubkey();
@@ -290,6 +311,12 @@ export class MessagingService implements NostriaService {
         this.error.set('You need to be logged in to view messages');
         this.isLoading.set(false);
         return;
+      }
+
+      // For extension users, we'll let the individual decryption requests handle permission
+      // Don't block chat loading - just log the info
+      if (this.encryptionPermission.needsPermission()) {
+        this.logger.info('Extension user - decryption requests will be queued for permission');
       }
 
       // This contains both incoming and outgoing messages for Giftwrapped messages.
