@@ -44,15 +44,6 @@ interface DirectMessage {
   encryptionType?: 'nip04' | 'nip44';
 }
 
-interface DecryptionQueueItem {
-  id: string;
-  event: NostrEvent;
-  type: 'nip04' | 'nip44';
-  senderPubkey: string;
-  resolve: (result: any | null) => void;
-  reject: (error: Error) => void;
-}
-
 @Injectable({
   providedIn: 'root',
 })
@@ -69,17 +60,10 @@ export class MessagingService implements NostriaService {
   hasMoreChats = signal<boolean>(true);
   error = signal<string | null>(null);
 
-  // Signal to track if we're waiting for permission
-  waitingForPermission = signal<boolean>(false);
-
   private chatsMap = signal<Map<string, Chat>>(new Map());
   private oldestChatTimestamp = signal<number | null>(null);
 
   MESSAGE_SIZE = 20;
-
-  // chats = computed(() => {
-  //   return this.chatsMap();
-  // });
 
   getChat(chatId: string): Chat | null {
     const chat = this.chatsMap().get(chatId);
@@ -95,20 +79,6 @@ export class MessagingService implements NostriaService {
         return bTime - aTime; // Most recent first
       });
   });
-
-  // selectedChatId = signal<string | null>(null);
-  // selectedChat = computed(() => {
-  //   const chatId = this.selectedChatId();
-  //   if (!chatId) return null;
-  //   return this.chats().find(chat => chat.id === chatId) || null;
-  // });
-
-  private decryptionQueue: DecryptionQueueItem[] = [];
-  private isProcessingQueue = false;
-  isDecryptingMessages = signal<boolean>(false);
-  decryptionQueueLength = signal<number>(0);
-
-  constructor() { }
 
   hasMessage(chatId: string, messageId: string): boolean {
     const chat = this.chatsMap().get(chatId);
@@ -184,8 +154,6 @@ export class MessagingService implements NostriaService {
     this.isLoadingMoreChats.set(false);
     this.hasMoreChats.set(true);
     this.error.set(null);
-    this.waitingForPermission.set(false);
-    this.clearDecryptionQueue();
   }
 
   reset() {
@@ -194,20 +162,6 @@ export class MessagingService implements NostriaService {
   }
 
   async load() { }
-
-  /**
-   * Continue loading chats after permission is granted
-   */
-  async continueLoadingAfterPermission() {
-    if (!this.encryptionPermission.hasPermission()) {
-      this.logger.warn('Attempted to continue loading without permission');
-      return;
-    }
-
-    this.logger.info('Continuing to load chats after permission granted');
-    this.waitingForPermission.set(false);
-    await this.loadChats();
-  }
 
   async createNip44Message(messageText: string, receiverPubkey: string, myPubkey: string) {
     try {
@@ -302,7 +256,6 @@ export class MessagingService implements NostriaService {
   async loadChats() {
     this.clear();
     this.isLoading.set(true);
-    this.waitingForPermission.set(false);
 
     try {
       const myPubkey = this.accountState.pubkey();
@@ -494,104 +447,14 @@ export class MessagingService implements NostriaService {
   }
 
   /**
-   * Unwrap and decrypt a NIP-04 direct message (queued version for user-facing calls)
+   * Unwrap and decrypt a NIP-04 direct message
    */
   async unwrapNip04Message(event: NostrEvent): Promise<any | null> {
-    const senderPubkey = event.pubkey;
-    return await this.queueMessageForDecryption(event, 'nip04', senderPubkey);
+    return await this.unwrapNip04MessageInternal(event);
   }
 
   /**
-   * Add a message to the decryption queue for sequential processing
-   */
-  private async queueMessageForDecryption(
-    event: NostrEvent,
-    type: 'nip04' | 'nip44',
-    senderPubkey: string
-  ): Promise<any | null> {
-    return new Promise((resolve, reject) => {
-      const queueItem: DecryptionQueueItem = {
-        id: `${event.id}-${Date.now()}`,
-        event,
-        type,
-        senderPubkey,
-        resolve,
-        reject,
-      };
-
-      this.decryptionQueue.push(queueItem);
-      this.decryptionQueueLength.set(this.decryptionQueue.length);
-      this.logger.debug(
-        `Added message to decryption queue. Queue length: ${this.decryptionQueue.length}`
-      );
-
-      // Start processing if not already processing
-      if (!this.isProcessingQueue) {
-        this.processDecryptionQueue();
-      }
-    });
-  }
-
-  /**
-   * Clear the decryption queue (useful for cleanup)
-   */
-  clearDecryptionQueue(): void {
-    // Reject all pending items
-    this.decryptionQueue.forEach(item => {
-      item.reject(new Error('Decryption queue cleared'));
-    });
-
-    this.decryptionQueue = [];
-    this.isProcessingQueue = false;
-    this.isDecryptingMessages.set(false);
-    this.decryptionQueueLength.set(0);
-    this.logger.debug('Decryption queue cleared');
-  }
-
-  /**
-   * Process the decryption queue sequentially
-   */
-  private async processDecryptionQueue(): Promise<void> {
-    if (this.isProcessingQueue || this.decryptionQueue.length === 0) {
-      return;
-    }
-    this.isProcessingQueue = true;
-    this.isDecryptingMessages.set(true);
-    this.logger.debug('Starting decryption queue processing');
-
-    while (this.decryptionQueue.length > 0) {
-      const item = this.decryptionQueue.shift()!;
-      this.decryptionQueueLength.set(this.decryptionQueue.length);
-
-      try {
-        this.logger.debug(`Processing decryption for message ${item.id}`);
-
-        let result: any | null = null;
-        if (item.type === 'nip04') {
-          result = await this.unwrapNip04MessageInternal(item.event);
-        } else if (item.type === 'nip44') {
-          result = await this.unwrapMessageInternal(item.event);
-        }
-
-        item.resolve(result);
-        this.logger.debug(`Successfully decrypted message ${item.id}`);
-
-        // Small delay between processing to prevent overwhelming the user with extension prompts
-        await new Promise(resolve => setTimeout(resolve, 100));
-      } catch (error) {
-        this.logger.error(`Failed to decrypt message ${item.id}:`, error);
-        item.reject(error as Error);
-      }
-    }
-
-    this.isProcessingQueue = false;
-    this.isDecryptingMessages.set(false);
-    this.decryptionQueueLength.set(0);
-    this.logger.debug('Finished processing decryption queue');
-  }
-
-  /**
-   * Internal unwrap and decrypt a NIP-04 direct message (direct processing)
+   * Internal unwrap and decrypt a NIP-04 direct message
    */
   private async unwrapNip04MessageInternal(event: NostrEvent): Promise<any | null> {
     const myPubkey = this.accountState.pubkey();

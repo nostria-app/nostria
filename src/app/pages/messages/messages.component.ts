@@ -90,15 +90,6 @@ interface DirectMessage {
   encryptionType?: 'nip04' | 'nip44';
 }
 
-interface DecryptionQueueItem {
-  id: string;
-  event: NostrEvent;
-  type: 'nip04' | 'nip44';
-  senderPubkey: string;
-  resolve: (result: any | null) => void;
-  reject: (error: Error) => void;
-}
-
 @Component({
   selector: 'app-messages',
   standalone: true,
@@ -154,8 +145,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   isSending = signal<boolean>(false);
   error = signal<string | null>(null);
   showMobileList = signal<boolean>(true);
-  isDecryptingMessages = signal<boolean>(false);
-  decryptionQueueLength = signal<number>(0);
   selectedTabIndex = signal<number>(0); // 0 = Following, 1 = Others
   private accountRelay = inject(AccountRelayService);
 
@@ -202,9 +191,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // Subscription management
   private messageSubscription: any = null;
-  private chatSubscription: any = null; // Decryption queue management
-  private decryptionQueue: DecryptionQueueItem[] = [];
-  private isProcessingQueue = false; // ViewChild for scrolling functionality
+  private chatSubscription: any = null;
+
+  // ViewChild for scrolling functionality
   @ViewChild('messagesWrapper', { static: false })
   messagesWrapper?: ElementRef<HTMLDivElement>;
 
@@ -386,16 +375,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     if (this.chatSubscription) {
       this.chatSubscription.close();
     }
-
-    // Clear the decryption queue
-    this.clearDecryptionQueue();
-  }
-
-  /**
-   * Clear the decryption queue (useful for cleanup)
-   */
-  private clearDecryptionQueue(): void {
-    this.messaging.clearDecryptionQueue();
   }
 
   /**
