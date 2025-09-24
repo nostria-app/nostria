@@ -208,6 +208,6 @@ export class DeleteEventComponent implements OnInit {
   }
 
   goBack() {
-    this.router.navigate(['/']);
+    this.router.navigate(['/settings/privacy']);
   }
 }
