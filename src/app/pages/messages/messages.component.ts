@@ -55,6 +55,7 @@ import { ApplicationService } from '../../services/application.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { EncryptionService } from '../../services/encryption.service';
+import { EncryptionPermissionService } from '../../services/encryption-permission.service';
 import { DataService } from '../../services/data.service';
 import { MessagingService } from '../../services/messaging.service';
 import { LayoutService } from '../../services/layout.service';
@@ -146,6 +147,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   readonly utilities = inject(UtilitiesService);
   private readonly accountState = inject(AccountStateService);
   private readonly encryption = inject(EncryptionService);
+  private readonly encryptionPermission = inject(EncryptionPermissionService);
   layout = inject(LayoutService); // UI state signals
   isLoading = signal<boolean>(false);
   isLoadingMore = signal<boolean>(false);
@@ -1003,5 +1005,16 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       console.error('Error starting chat:', error);
       this.snackBar.open('Failed to start chat', 'Close', { duration: 3000 });
     }
+  }
+
+  /**
+   * Revoke encryption permission
+   */
+  revokeEncryptionPermission(): void {
+    this.encryptionPermission.revokePermission();
+    this.snackBar.open('Extension permission revoked', 'Close', { duration: 3000 });
+
+    // Clear messages since we can no longer decrypt them
+    this.messaging.clear();
   }
 }
