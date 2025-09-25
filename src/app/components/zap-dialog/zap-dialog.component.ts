@@ -46,6 +46,16 @@ interface LnurlPayResponse {
 export type PaymentMethod = 'nwc' | 'native' | 'manual';
 export type DialogState = 'input' | 'confirmation';
 
+// File extension constants for content type detection
+const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico'];
+const VIDEO_EXTENSIONS = ['mp4', 'webm', 'ogg', 'avi', 'mov', 'wmv', 'flv', 'm4v'];
+const AUDIO_EXTENSIONS = ['mp3', 'wav', 'ogg', 'aac', 'flac', 'm4a', 'wma'];
+const DOCUMENT_EXTENSIONS = ['pdf', 'doc', 'docx', 'txt', 'rtf'];
+
+// Domain constants for content type detection
+const IMAGE_HOSTING_DOMAINS = ['imgur.com', 'i.imgur.com', 'imagebin.ca', 'postimg.cc', 'imgbb.com', 'prnt.sc'];
+const VIDEO_HOSTING_DOMAINS = ['youtube.com', 'youtu.be', 'vimeo.com', 'twitch.tv'];
+
 @Component({
   selector: 'app-zap-dialog',
   imports: [
@@ -130,6 +140,14 @@ export class ZapDialogComponent {
       minSats: lnurlInfo.minSendable / 1000,
       maxSats: lnurlInfo.maxSendable / 1000,
     };
+  });
+
+   contentInfo = computed(() => {
+    const content = this.data.eventContent;
+    if (!content) {
+      return { type: 'text', icon: 'article', display: content || '' };
+    }
+    return this.getContentInfo(content);
   });
 
   zapForm = new FormGroup({
@@ -439,6 +457,75 @@ export class ZapDialogComponent {
   truncateInvoice(invoice: string): string {
     if (invoice.length <= 20) return invoice;
     return `${invoice.substring(0, 10)}...${invoice.substring(invoice.length - 10)}`;
+  }
+
+  getContentInfo(content: string): { type: string; icon: string; display: string } {
+    if (!content) {
+      return { type: 'text', icon: 'article', display: content };
+    }
+
+    // Check if it's a URL
+    try {
+      const url = new URL(content);
+      const extension = url.pathname.split('.').pop()?.toLowerCase();
+      
+      // Image types
+      if (extension && IMAGE_EXTENSIONS.includes(extension)) {
+        return { type: 'image', icon: 'image', display: 'Image' };
+      }
+      
+      // Video types  
+      if (extension && VIDEO_EXTENSIONS.includes(extension)) {
+        return { type: 'video', icon: 'videocam', display: 'Video' };
+      }
+      
+      // Audio types
+      if (extension && AUDIO_EXTENSIONS.includes(extension)) {
+        return { type: 'audio', icon: 'audiotrack', display: 'Audio' };
+      }
+      
+      // Document types
+      if (extension && DOCUMENT_EXTENSIONS.includes(extension)) {
+        return { type: 'document', icon: 'description', display: 'Document' };
+      }
+      
+      // Check for common image hosting domains
+      const hostname = url.hostname.toLowerCase();
+      if (IMAGE_HOSTING_DOMAINS.some(domain => hostname.includes(domain))) {
+        return { type: 'image', icon: 'image', display: 'Image' };
+      }
+      
+      // Check for common video hosting domains
+      if (VIDEO_HOSTING_DOMAINS.some(domain => hostname.includes(domain))) {
+        return { type: 'video', icon: 'videocam', display: 'Video' };
+      }
+      
+      // Generic URL - show domain
+      return { type: 'link', icon: 'link', display: `Link (${hostname})` };
+    } catch {
+      // Not a valid URL, check for other patterns
+      
+      // Check if it looks like a data URL (base64 image)
+      if (content.startsWith('data:image/')) {
+        return { type: 'image', icon: 'image', display: 'Image' };
+      }
+      
+      if (content.startsWith('data:video/')) {
+        return { type: 'video', icon: 'videocam', display: 'Video' };
+      }
+      
+      if (content.startsWith('data:audio/')) {
+        return { type: 'audio', icon: 'audiotrack', display: 'Audio' };
+      }
+      
+      // Check if it's very long text (likely needs truncation)
+      if (content.length > 100) {
+        return { type: 'text', icon: 'article', display: content.substring(0, 97) + '...' };
+      }
+      
+      // Regular text
+      return { type: 'text', icon: 'article', display: content };
+    }
   }
 
   async confirmNwcPayment(): Promise<void> {

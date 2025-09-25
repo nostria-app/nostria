@@ -98,7 +98,7 @@ interface ZapHistoryEntry {
                             <span class="counterparty">
                               <app-user-profile
                                 [pubkey]="zap.counterparty"
-                                view="name"
+                                view="icon"
                                 [hostWidthAuto]="true"
                                 [prefetchedProfile]="prefetchedProfiles()[zap.counterparty]"
                               ></app-user-profile>
@@ -125,12 +125,8 @@ interface ZapHistoryEntry {
 
                         @if (zap.eventId) {
                           <div class="zap-context">
-                            <mat-chip-set>
-                              <mat-chip>
-                                <mat-icon matChipAvatar>note</mat-icon>
-                                For event {{ zap.eventId.substring(0, 8) }}...
-                              </mat-chip>
-                            </mat-chip-set>
+                            <mat-icon class="context-icon">note</mat-icon>
+                            <span class="context-text">For event {{ zap.eventId.substring(0, 8) }}...</span>
                           </div>
                         }
                       </div>
@@ -162,7 +158,7 @@ interface ZapHistoryEntry {
                             <span class="counterparty">
                               <app-user-profile
                                 [pubkey]="zap.counterparty"
-                                view="name"
+                                view="icon"
                                 [hostWidthAuto]="true"
                                 [prefetchedProfile]="prefetchedProfiles()[zap.counterparty]"
                               ></app-user-profile>
@@ -189,12 +185,8 @@ interface ZapHistoryEntry {
 
                         @if (zap.eventId) {
                           <div class="zap-context">
-                            <mat-chip-set>
-                              <mat-chip>
-                                <mat-icon matChipAvatar>note</mat-icon>
-                                For event {{ zap.eventId.substring(0, 8) }}...
-                              </mat-chip>
-                            </mat-chip-set>
+                            <mat-icon class="context-icon">note</mat-icon>
+                            <span class="context-text">For event {{ zap.eventId.substring(0, 8) }}...</span>
                           </div>
                         }
                       </div>
@@ -223,7 +215,7 @@ interface ZapHistoryEntry {
                             <span class="counterparty">
                               <app-user-profile
                                 [pubkey]="zap.counterparty"
-                                view="name"
+                                view="icon"
                                 [hostWidthAuto]="true"
                                 [prefetchedProfile]="prefetchedProfiles()[zap.counterparty]"
                               ></app-user-profile>
@@ -250,12 +242,8 @@ interface ZapHistoryEntry {
 
                         @if (zap.eventId) {
                           <div class="zap-context">
-                            <mat-chip-set>
-                              <mat-chip>
-                                <mat-icon matChipAvatar>note</mat-icon>
-                                For event {{ zap.eventId.substring(0, 8) }}...
-                              </mat-chip>
-                            </mat-chip-set>
+                            <mat-icon class="context-icon">note</mat-icon>
+                            <span class="context-text">For event {{ zap.eventId.substring(0, 8) }}...</span>
                           </div>
                         }
                       </div>
@@ -351,23 +339,18 @@ interface ZapHistoryEntry {
       }
 
       .zap-entry {
-        padding: 16px;
-        border: 1px solid var(--mat-sys-outline-variant, #e0e0e0);
-        border-radius: 8px;
+        padding: 20px;
+        border-radius: 16px;
         background: var(--mat-sys-color-surface-container);
-        transition: box-shadow 0.2s;
-      }
-
-      .zap-entry:hover {
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
       }
 
       .zap-entry.sent {
-        border-left: 4px solid var(--mat-sys-error);
+        background: rgba(0, 0, 0, 0.05);
       }
 
       .zap-entry.received {
-        border-left: 4px solid var(--mat-success-color);
+        background: rgba(255, 255, 255, 0.05);
       }
 
       .zap-header {
@@ -405,6 +388,11 @@ interface ZapHistoryEntry {
       .counterparty {
         /* Avoid setting font-weight; use color token */
         color: var(--mat-sys-on-surface);
+      }
+
+      .counterparty app-user-profile {
+        transform: scale(0.5);
+        transform-origin: left center;
       }
 
       .zap-amount {
@@ -453,7 +441,24 @@ interface ZapHistoryEntry {
       }
 
       .zap-context {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
         margin-top: 8px;
+        padding: 8px;
+        background: var(--mat-sys-surface-container-high, var(--mat-sys-color-surface-container));
+        border-radius: 4px;
+      }
+
+      .context-icon {
+        color: var(--mat-sys-on-surface-variant);
+        font-size: 16px;
+        margin-top: 2px;
+      }
+
+      .context-text {
+        color: var(--mat-sys-on-surface);
+        line-height: 1.4;
       }
 
       .empty-state {
