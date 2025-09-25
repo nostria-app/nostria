@@ -127,13 +127,15 @@
 
             <button mat-flat-button color="warn" type="button" (click)="deleteAllEvents()"
               [disabled]="!deleteForm.valid || deleting()">
-              @if (deleting()) {
-              <mat-icon class="spinning">sync</mat-icon>
-              Deleting...
-              } @else {
-              <mat-icon>delete_forever</mat-icon>
-              Delete All Events
-              }
+              <span>
+                @if (deleting()) {
+                <mat-icon class="spinning">sync</mat-icon>
+                Deleting...
+                } @else {
+                <mat-icon>delete_forever</mat-icon>
+                Delete All Events
+                }
+              </span>
             </button>
           </div>
         </form>

@@ -1,5 +1,6 @@
 @use '@angular/material' as mat;
 @use './theme.scss' as nostria-theme;
+@use './app/components/whats-new-dialog/whats-new-dialog-global.scss';
 
 html {
   --mat-success-color: #4caf50;
@@ -1006,6 +1007,3 @@ app-media-queue .media-list mat-list {
     font-size: 24px;
   }
 }
-
-// Import component-specific global styles
-@import './app/components/whats-new-dialog/whats-new-dialog-global.scss';
