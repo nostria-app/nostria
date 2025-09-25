@@ -132,6 +132,14 @@ export class ZapDialogComponent {
     };
   });
 
+   contentInfo = computed(() => {
+    const content = this.data.eventContent;
+    if (!content) {
+      return { type: 'text', icon: 'article', display: content || '' };
+    }
+    return this.getContentInfo(content);
+  });
+
   zapForm = new FormGroup({
     amount: new FormControl<string | number>(21, [Validators.required]),
     customAmount: new FormControl({ value: null, disabled: true }), // Start disabled

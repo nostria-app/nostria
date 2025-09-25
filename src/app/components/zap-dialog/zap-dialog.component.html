@@ -32,8 +32,8 @@
           </div>
           @if (data.eventContent) {
             <div class="event-context">
-              <mat-icon>{{ getContentInfo(data.eventContent).icon }}</mat-icon>
-              <span class="content-description">{{ getContentInfo(data.eventContent).display }}</span>
+              <mat-icon>{{ contentInfo().icon }}</mat-icon>
+              <span class="content-description">{{ contentInfo().display }}</span>
             </div>
           } @else if (!data.eventId) {
             <div class="event-context">
@@ -264,8 +264,8 @@
           </div>
           @if (data.eventContent) {
             <div class="event-context">
-              <mat-icon>{{ getContentInfo(data.eventContent).icon }}</mat-icon>
-              <span class="content-description">{{ getContentInfo(data.eventContent).display }}</span>
+              <mat-icon>{{ contentInfo().icon }}</mat-icon>
+              <span class="content-description">{{ contentInfo().display }}</span>
             </div>
           } @else if (!data.eventId) {
             <div class="event-context">
