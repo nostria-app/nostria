@@ -38,7 +38,6 @@ import { EventMenuComponent } from './event-menu/event-menu.component';
 import { ReportedContentComponent } from '../reported-content/reported-content.component';
 import { ReportingService } from '../../services/reporting.service';
 import { ZapButtonComponent } from '../zap-button/zap-button.component';
-import { ZapDisplayComponent } from '../zap-display/zap-display.component';
 import { ZapService } from '../../services/zap.service';
 import { ReactionsDialogComponent } from '../reactions-dialog/reactions-dialog.component';
 
@@ -71,7 +70,6 @@ type EventCardAppearance = 'card' | 'plain';
     BadgeComponent,
     ReportedContentComponent,
     ZapButtonComponent,
-    ZapDisplayComponent,
   ],
   templateUrl: './event.component.html',
   styleUrl: './event.component.scss',

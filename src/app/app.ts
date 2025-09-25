@@ -59,7 +59,6 @@ import { NavigationContextMenuComponent } from './components/navigation-context-
 import { Wallets } from './services/wallets';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { EventService } from './services/event';
-import { AgoPipe } from './pipes/ago.pipe';
 import { SleepModeService } from './services/sleep-mode.service';
 import { SleepModeOverlayComponent } from './components/sleep-mode-overlay/sleep-mode-overlay.component';
 import { WhatsNewDialogComponent } from './components/whats-new-dialog/whats-new-dialog.component';
@@ -104,7 +103,6 @@ interface NavItem {
     NavigationComponent,
     NavigationContextMenuComponent,
     SleepModeOverlayComponent,
-    AgoPipe,
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss',
