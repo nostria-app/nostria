@@ -296,19 +296,27 @@
   }
 
   &.compact {
-    width: auto; // Changed from 100px to auto
-    flex-shrink: 0;
+    width: 100%; // Changed to 100% to take available space
+    flex-shrink: 1; // Allow shrinking
+    min-width: 0; // Enable proper shrinking
 
     .user-profile-container {
-      justify-content: center; // Center the avatar
+      justify-content: flex-start; // Changed from center to flex-start
       padding: 0; // Removed padding
-      width: auto; // Container should only be as wide as its content
+      width: 100%; // Changed from auto to 100% to take available space
+    }
+
+    .user-profile-content {
+      flex: 1;
+      min-width: 0; // Enable text truncation
+      overflow: hidden;
     }
 
     .user-profile-avatar {
       width: 24px;
       height: 24px;
       margin: 0; // Removed margin
+      flex-shrink: 0;
     }
 
     .default-user-avatar {
@@ -319,6 +327,9 @@
     .user-profile-name {
       font-size: 14px;
       margin-top: 0; // Removed margin
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
   }
 

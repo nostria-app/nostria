@@ -223,7 +223,10 @@ export interface ReactionsDialogData {
       .tab-content {
         height: 100%;
         overflow-y: auto;
+        overflow-x: hidden;
         padding: 16px 0;
+        /* Ensure proper scrolling behavior */
+        -webkit-overflow-scrolling: touch;
       }
 
       .empty-state {
@@ -271,6 +274,8 @@ export interface ReactionsDialogData {
         flex-direction: column;
         gap: 12px;
         padding: 8px 16px;
+        /* Allow natural content flow without additional scrolling */
+        min-height: min-content;
       }
 
       .zap-item-custom {
@@ -294,12 +299,20 @@ export interface ReactionsDialogData {
         margin-bottom: 8px;
       }
 
+      .zap-header app-user-profile {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        max-width: calc(100% - 100px); // Reserve space for zap meta
+      }
+
       .zap-meta {
         display: flex;
         flex-direction: column;
         align-items: flex-end;
         gap: 4px;
         flex-shrink: 0;
+        min-width: 80px; // Ensure minimum space for amount and time
       }
 
       .zap-amount {
@@ -346,10 +359,17 @@ export interface ReactionsDialogData {
 
       ::ng-deep .mat-mdc-tab-group {
         height: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+
+      ::ng-deep .mat-mdc-tab-header {
+        flex-shrink: 0;
       }
 
       ::ng-deep .mat-mdc-tab-body-wrapper {
-        height: calc(100% - 48px);
+        flex: 1;
+        overflow: hidden;
       }
 
       ::ng-deep .mat-mdc-tab-body-content {
