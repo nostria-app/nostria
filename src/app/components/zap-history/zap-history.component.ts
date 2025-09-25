@@ -125,12 +125,8 @@ interface ZapHistoryEntry {
 
                         @if (zap.eventId) {
                           <div class="zap-context">
-                            <mat-chip-set>
-                              <mat-chip>
-                                <mat-icon matChipAvatar>note</mat-icon>
-                                For event {{ zap.eventId.substring(0, 8) }}...
-                              </mat-chip>
-                            </mat-chip-set>
+                            <mat-icon class="context-icon">note</mat-icon>
+                            <span class="context-text">For event {{ zap.eventId.substring(0, 8) }}...</span>
                           </div>
                         }
                       </div>
@@ -189,12 +185,8 @@ interface ZapHistoryEntry {
 
                         @if (zap.eventId) {
                           <div class="zap-context">
-                            <mat-chip-set>
-                              <mat-chip>
-                                <mat-icon matChipAvatar>note</mat-icon>
-                                For event {{ zap.eventId.substring(0, 8) }}...
-                              </mat-chip>
-                            </mat-chip-set>
+                            <mat-icon class="context-icon">note</mat-icon>
+                            <span class="context-text">For event {{ zap.eventId.substring(0, 8) }}...</span>
                           </div>
                         }
                       </div>
@@ -250,12 +242,8 @@ interface ZapHistoryEntry {
 
                         @if (zap.eventId) {
                           <div class="zap-context">
-                            <mat-chip-set>
-                              <mat-chip>
-                                <mat-icon matChipAvatar>note</mat-icon>
-                                For event {{ zap.eventId.substring(0, 8) }}...
-                              </mat-chip>
-                            </mat-chip-set>
+                            <mat-icon class="context-icon">note</mat-icon>
+                            <span class="context-text">For event {{ zap.eventId.substring(0, 8) }}...</span>
                           </div>
                         }
                       </div>
@@ -453,7 +441,24 @@ interface ZapHistoryEntry {
       }
 
       .zap-context {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
         margin-top: 8px;
+        padding: 8px;
+        background: var(--mat-sys-surface-container-high, var(--mat-sys-color-surface-container));
+        border-radius: 4px;
+      }
+
+      .context-icon {
+        color: var(--mat-sys-on-surface-variant);
+        font-size: 16px;
+        margin-top: 2px;
+      }
+
+      .context-text {
+        color: var(--mat-sys-on-surface);
+        line-height: 1.4;
       }
 
       .empty-state {
