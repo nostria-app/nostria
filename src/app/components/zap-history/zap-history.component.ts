@@ -98,7 +98,7 @@ interface ZapHistoryEntry {
                             <span class="counterparty">
                               <app-user-profile
                                 [pubkey]="zap.counterparty"
-                                view="name"
+                                view="icon"
                                 [hostWidthAuto]="true"
                                 [prefetchedProfile]="prefetchedProfiles()[zap.counterparty]"
                               ></app-user-profile>
@@ -162,7 +162,7 @@ interface ZapHistoryEntry {
                             <span class="counterparty">
                               <app-user-profile
                                 [pubkey]="zap.counterparty"
-                                view="name"
+                                view="icon"
                                 [hostWidthAuto]="true"
                                 [prefetchedProfile]="prefetchedProfiles()[zap.counterparty]"
                               ></app-user-profile>
@@ -223,7 +223,7 @@ interface ZapHistoryEntry {
                             <span class="counterparty">
                               <app-user-profile
                                 [pubkey]="zap.counterparty"
-                                view="name"
+                                view="icon"
                                 [hostWidthAuto]="true"
                                 [prefetchedProfile]="prefetchedProfiles()[zap.counterparty]"
                               ></app-user-profile>
@@ -351,23 +351,18 @@ interface ZapHistoryEntry {
       }
 
       .zap-entry {
-        padding: 16px;
-        border: 1px solid var(--mat-sys-outline-variant, #e0e0e0);
-        border-radius: 8px;
+        padding: 20px;
+        border-radius: 16px;
         background: var(--mat-sys-color-surface-container);
-        transition: box-shadow 0.2s;
-      }
-
-      .zap-entry:hover {
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
       }
 
       .zap-entry.sent {
-        border-left: 4px solid var(--mat-sys-error);
+        background: rgba(0, 0, 0, 0.05);
       }
 
       .zap-entry.received {
-        border-left: 4px solid var(--mat-success-color);
+        background: rgba(255, 255, 255, 0.05);
       }
 
       .zap-header {
@@ -405,6 +400,11 @@ interface ZapHistoryEntry {
       .counterparty {
         /* Avoid setting font-weight; use color token */
         color: var(--mat-sys-on-surface);
+      }
+
+      .counterparty app-user-profile {
+        transform: scale(0.5);
+        transform-origin: left center;
       }
 
       .zap-amount {
