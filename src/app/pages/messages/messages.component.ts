@@ -50,7 +50,7 @@ import {
   Event as NostrEvent,
   getEventHash,
 } from 'nostr-tools';
-import { bytesToHex } from '@noble/hashes/utils';
+import { bytesToHex } from '@noble/hashes/utils.js';
 import { ApplicationService } from '../../services/application.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { AccountStateService } from '../../services/account-state.service';
