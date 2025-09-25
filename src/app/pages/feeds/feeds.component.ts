@@ -575,9 +575,9 @@ export class FeedsComponent implements OnDestroy {
     this.notificationService.notify('Content shared');
   }
 
-  bookmarkContent(event: NostrRecord): void {
+  bookmarkContent(): void {
     // Implement bookmark functionality
-    this.notificationService.notify(`Content bookmarked: ${event.id ?? '[unknown id]'}`);
+    this.notificationService.notify('Content bookmarked');
   }
 
   // Method called when user completes followset onboarding
