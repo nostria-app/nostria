@@ -171,7 +171,7 @@ export class ZapButtonComponent {
         undefined,
       recipientMetadata: metadata,
       eventId: this.event()?.id,
-      eventContent: this.event()?.content || undefined,
+      eventContent: this.event()?.content ? this.truncateContent(this.event()!.content) : undefined,
     };
 
     // Open zap dialog
