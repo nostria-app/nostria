@@ -6,7 +6,6 @@ import {
   effect,
   inject,
   signal,
-  OnInit,
   OnDestroy,
   ChangeDetectorRef,
   untracked,
@@ -33,26 +32,21 @@ import {
   ConfirmDialogData,
 } from '../../components/confirm-dialog/confirm-dialog.component';
 import { ImageDialogComponent } from '../../components/image-dialog/image-dialog.component';
-import { LocalStorageService } from '../../services/local-storage.service';
 import { LoggerService } from '../../services/logger.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { FeedService, FeedConfig } from '../../services/feed.service';
+import { FeedService} from '../../services/feed.service';
 import {
   FeedsCollectionService,
-  FeedDefinition,
   ColumnDefinition,
 } from '../../services/feeds-collection.service';
 import { MediaItem, NostrRecord } from '../../interfaces';
 import { Event } from 'nostr-tools';
 import { decode } from 'blurhash';
-import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 import { UrlUpdateService } from '../../services/url-update.service';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { MatDividerModule } from '@angular/material/divider';
-import { ContentComponent } from '../../components/content/content.component';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ApplicationService } from '../../services/application.service';
-import { Link } from '../../components/link/link';
 import { Introduction } from '../../components/introduction/introduction';
 import {
   FollowsetComponent,
@@ -63,27 +57,8 @@ import { AccountStateService } from '../../services/account-state.service';
 import { Followset } from '../../services/followset';
 import { RepostService } from '../../services/repost.service';
 import { EventComponent } from '../../components/event/event.component';
-import {
-  VideoEventComponent,
-  PhotoEventComponent,
-  ArticleEventComponent,
-  PlaylistEventComponent,
-} from '../../components/event-types';
 
-interface NavLink {
-  id: string;
-  path: string;
-  label: string;
-  icon: string;
-  filters?: Record<string, any>;
-}
-
-const DEFAULT_COLUMNS: NavLink[] = [
-  { id: 'notes', path: 'notes', label: 'Notes', icon: 'chat' },
-  // { id: 'replies', path: 'replies', label: 'Replies', icon: 'reply_all' },
-  // { id: 'reads', path: 'reads', label: 'Reads', icon: 'bookmark' },
-  // { id: 'media', path: 'media', label: 'Media', icon: 'image' }
-];
+// NavLink interface removed because it was unused.
 
 @Component({
   selector: 'app-feeds',
@@ -101,17 +76,10 @@ const DEFAULT_COLUMNS: NavLink[] = [
     RouterModule,
     MatDialogModule,
     MatProgressSpinnerModule,
-    UserProfileComponent,
     MatDividerModule,
-    ContentComponent,
-    Link,
     Introduction,
     FollowsetComponent,
     EventComponent,
-    VideoEventComponent,
-    PhotoEventComponent,
-    ArticleEventComponent,
-    PlaylistEventComponent,
   ],
   templateUrl: './feeds.component.html',
   styleUrl: './feeds.component.scss',
@@ -602,14 +570,14 @@ export class FeedsComponent implements OnDestroy {
   //   }
   // }
 
-  shareContent(event: NostrRecord): void {
+  shareContent(): void {
     // Implement share functionality
     this.notificationService.notify('Content shared');
   }
 
   bookmarkContent(event: NostrRecord): void {
     // Implement bookmark functionality
-    this.notificationService.notify('Content bookmarked');
+    this.notificationService.notify(`Content bookmarked: ${event.id ?? '[unknown id]'}`);
   }
 
   // Method called when user completes followset onboarding

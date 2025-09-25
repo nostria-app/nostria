@@ -5,11 +5,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { Event } from 'nostr-tools';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { MediaItem } from '../../interfaces';
-import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { LayoutService } from '../../services/layout.service';
 import { MatMenuModule } from '@angular/material/menu';
-import { AgoPipe } from '../../pipes/ago.pipe';
 import { MatDividerModule } from '@angular/material/divider';
 
 interface PlaylistTrack {
@@ -34,10 +32,8 @@ interface PlaylistData {
     CommonModule,
     MatButtonModule,
     MatIconModule,
-    UserProfileComponent,
     MatTooltipModule,
     MatMenuModule,
-    AgoPipe,
     MatDividerModule,
   ],
   templateUrl: './playlist-event.component.html',

@@ -5,14 +5,13 @@ import { MatIconModule } from '@angular/material/icon';
 import { Event } from 'nostr-tools';
 import { nip19 } from 'nostr-tools';
 import { LayoutService } from '../../services/layout.service';
-import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { FormatService } from '../../services/format/format.service';
 import { SafeHtml } from '@angular/platform-browser';
 
 @Component({
   selector: 'app-article-event',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule, UserProfileComponent],
+  imports: [CommonModule, MatButtonModule, MatIconModule],
   templateUrl: './article-event.component.html',
   styleUrl: './article-event.component.scss',
 })
