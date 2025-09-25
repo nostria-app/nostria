@@ -65,7 +65,6 @@
 .amount-buttons button.selected {
   background-color: var(--mat-sys-primary);
   color: var(--mat-sys-on-primary);
-  border-color: var(--mat-sys-primary);
 }
 
 .amount-buttons button:hover:not(.selected) {
@@ -150,13 +149,26 @@
   font-size: 14px;
   margin-top: 8px;
   color: var(--mat-sys-on-surface-variant);
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .event-context mat-icon {
   font-size: 18px;
   width: 18px;
   height: 18px;
+  flex-shrink: 0; // Prevent icon from shrinking
 }
+
+.content-description {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0; // Allow text to shrink
+}
+
+
 
 .amount-display {
   display: flex;

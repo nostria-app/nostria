@@ -32,8 +32,8 @@
           </div>
           @if (data.eventContent) {
             <div class="event-context">
-              <mat-icon>article</mat-icon>
-              <span>{{ data.eventContent }}</span>
+              <mat-icon>{{ contentInfo().icon }}</mat-icon>
+              <span class="content-description">{{ contentInfo().display }}</span>
             </div>
           } @else if (!data.eventId) {
             <div class="event-context">
@@ -82,65 +82,82 @@
           <div class="amount-buttons">
             <button
               type="button"
-              mat-stroked-button
+              mat-raised-button
               [class.selected]="zapForm.get('amount')?.value === 21"
               [disabled]="!isAmountValid(21)"
               (click)="selectAmount(21)"
             >
-              ⚡ 21
+              <mat-icon>bolt</mat-icon>
+              21
             </button>
             <button
               type="button"
-              mat-stroked-button
+              mat-raised-button
+              [class.selected]="zapForm.get('amount')?.value === 210"
+              [disabled]="!isAmountValid(210)"
+              (click)="selectAmount(210)"
+            >
+              <mat-icon>bolt</mat-icon>
+              210
+            </button>
+            <button
+              type="button"
+              mat-raised-button
               [class.selected]="zapForm.get('amount')?.value === 420"
               [disabled]="!isAmountValid(420)"
               (click)="selectAmount(420)"
             >
-              ⚡ 420
+              <mat-icon>bolt</mat-icon>
+              420
             </button>
             <button
               type="button"
-              mat-stroked-button
+              mat-raised-button
               [class.selected]="zapForm.get('amount')?.value === 1000"
               [disabled]="!isAmountValid(1000)"
               (click)="selectAmount(1000)"
             >
-              ⚡ 1K
+              <mat-icon>bolt</mat-icon>
+              1K
             </button>
             <button
               type="button"
-              mat-stroked-button
+              mat-raised-button
               [class.selected]="zapForm.get('amount')?.value === 5000"
               [disabled]="!isAmountValid(5000)"
               (click)="selectAmount(5000)"
             >
-              ⚡ 5K
+              <mat-icon>bolt</mat-icon>
+              5K
             </button>
             <button
               type="button"
-              mat-stroked-button
+              mat-raised-button
               [class.selected]="zapForm.get('amount')?.value === 10000"
               [disabled]="!isAmountValid(10000)"
               (click)="selectAmount(10000)"
             >
-              ⚡ 10K
+              <mat-icon>bolt</mat-icon>
+              10K
             </button>
             <button
               type="button"
-              mat-stroked-button
+              mat-raised-button
               [class.selected]="zapForm.get('amount')?.value === 100000"
               [disabled]="!isAmountValid(100000)"
               (click)="selectAmount(100000)"
             >
-              ⚡ 100K
+              <mat-icon>bolt</mat-icon>
+              100K
             </button>
             <button
               type="button"
-              mat-stroked-button
+              mat-raised-button
               [class.selected]="zapForm.get('amount')?.value === 'custom'"
               (click)="selectAmount('custom')"
             >
-              ⚡ Custom
+              <mat-icon>bolt</mat-icon>
+              Custom
             </button>
           </div>
         </div>
@@ -247,8 +264,8 @@
           </div>
           @if (data.eventContent) {
             <div class="event-context">
-              <mat-icon>article</mat-icon>
-              <span>{{ data.eventContent }}</span>
+              <mat-icon>{{ contentInfo().icon }}</mat-icon>
+              <span class="content-description">{{ contentInfo().display }}</span>
             </div>
           } @else if (!data.eventId) {
             <div class="event-context">
@@ -289,7 +306,7 @@
 
           <div class="payment-method-buttons">
             <button
-              mat-stroked-button
+              mat-raised-button
               (click)="selectPaymentMethod('nwc')"
               [class.selected]="selectedPaymentMethod() === 'nwc'"
             >
@@ -298,7 +315,7 @@
             </button>
 
             <button
-              mat-stroked-button
+              mat-raised-button
               (click)="selectPaymentMethod('native')"
               [class.selected]="selectedPaymentMethod() === 'native'"
             >
@@ -307,7 +324,7 @@
             </button>
 
             <button
-              mat-stroked-button
+              mat-raised-button
               (click)="selectPaymentMethod('manual')"
               [class.selected]="selectedPaymentMethod() === 'manual'"
             >
