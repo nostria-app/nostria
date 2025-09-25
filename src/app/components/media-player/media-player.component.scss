@@ -1,8 +1,6 @@
 :host {
-  background: var(
-    --theme-background-color,
-    var(--mat-toolbar-container-background-color, var(--mat-sys-surface))
-  );
+  background: var(--theme-background-color,
+      var(--mat-toolbar-container-background-color, var(--mat-sys-surface)));
   height: 33px;
   z-index: 1500;
 
@@ -43,6 +41,8 @@
   height: 100%;
   align-items: center;
   z-index: 1500;
+  flex-wrap: nowrap;
+  min-width: 0;
 }
 
 /* Titlebar area displayed only when using window-controls-overlay */
@@ -80,7 +80,10 @@
 }
 
 .media-player-controls {
-  // margin-top: -4px;
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
 }
 
 .media-player-controls-footer {
@@ -90,6 +93,8 @@
   justify-content: center;
   // gap: 8px;
   width: 100%;
+  flex-wrap: nowrap;
+  min-width: 0;
 }
 
 .nodrag {
@@ -104,19 +109,15 @@ input {
 /* For macOS: */
 .search-controls-left {
   /* Remove hardcoded gradient, let theme color take precedence */
-  background: var(
-    --theme-background-color,
-    var(--mat-toolbar-container-background-color, var(--mat-sys-surface))
-  );
+  background: var(--theme-background-color,
+      var(--mat-toolbar-container-background-color, var(--mat-sys-surface)));
 }
 
 /* For Windows: */
 .search-controls-right {
   /* Remove hardcoded gradient, let theme color take precedence */
-  background: var(
-    --theme-background-color,
-    var(--mat-toolbar-container-background-color, var(--mat-sys-surface))
-  );
+  background: var(--theme-background-color,
+      var(--mat-toolbar-container-background-color, var(--mat-sys-surface)));
 }
 
 // @media (display-mode: window-controls-overlay) {

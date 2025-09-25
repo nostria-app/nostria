@@ -34,7 +34,7 @@ import {
 import { ImageDialogComponent } from '../../components/image-dialog/image-dialog.component';
 import { LoggerService } from '../../services/logger.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { FeedService} from '../../services/feed.service';
+import { FeedService } from '../../services/feed.service';
 import {
   FeedsCollectionService,
   ColumnDefinition,
@@ -577,7 +577,7 @@ export class FeedsComponent implements OnDestroy {
 
   bookmarkContent(event: NostrRecord): void {
     // Implement bookmark functionality
-    this.notificationService.notify(`Content bookmarked: ${event.id ?? '[unknown id]'}`);
+    this.notificationService.notify(`Content bookmarked: ${event.event.id ?? '[unknown id]'}`);
   }
 
   // Method called when user completes followset onboarding
