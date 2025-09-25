@@ -6,7 +6,7 @@ import {
   getPublicKey,
   UnsignedEvent,
 } from 'nostr-tools/pure';
-import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
+import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 import { nip19, nip98 } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { NostrEventData, StorageService, UserMetadata } from './storage.service';

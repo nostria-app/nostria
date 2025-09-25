@@ -2,8 +2,8 @@ import { Injectable, inject } from '@angular/core';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
 import { EncryptionPermissionService } from './encryption-permission.service';
-import { hexToBytes, bytesToHex } from '@noble/hashes/utils';
-import { Event, nip04, nip44 } from 'nostr-tools';
+import { hexToBytes } from '@noble/hashes/utils.js';
+import { Event, nip04 } from 'nostr-tools';
 import { v2 } from 'nostr-tools/nip44';
 import { UtilitiesService } from './utilities.service';
 
