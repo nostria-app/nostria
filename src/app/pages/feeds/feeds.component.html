@@ -65,17 +65,10 @@
             <!-- Column Selector for Mobile -->
             @if (columns().length > 0) {
             <div class="column-selector-container">
-              @if (columns().length > 1) {
               <button mat-stroked-button [matMenuTriggerFor]="columnMenu">
                 <mat-icon>{{ columns()[visibleColumnIndex()].icon }}</mat-icon>
                 {{ columns()[visibleColumnIndex()].label }}
               </button>
-              } @else {
-              <button mat-stroked-button [matMenuTriggerFor]="columnMenu">
-                <mat-icon>view_column</mat-icon>
-                Columns
-              </button>
-              }
 
               <mat-menu #columnMenu="matMenu">
                 @if (columns().length > 1) {
@@ -86,6 +79,7 @@
                 </button>
                 }
                 <mat-divider></mat-divider>
+                }
                 <button mat-menu-item (click)="addNewColumn()">
                   <mat-icon>add_column_right</mat-icon>
                   <span>New Column</span>
@@ -98,7 +92,6 @@
                   <mat-icon>delete</mat-icon>
                   <span>Remove Column</span>
                 </button>
-                }
               </mat-menu>
             </div>
             }
