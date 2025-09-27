@@ -260,6 +260,15 @@
   }
 }
 
+button {
+  .mat-icon {
+    font-size: 1.125rem;
+    height: 1.125rem;
+    width: 1.125rem;
+    margin-bottom: 0px;
+  }
+}
+
 // Responsive design
 @media (max-width: 768px) {
   .drafts-container {
