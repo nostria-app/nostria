@@ -60,14 +60,14 @@ export class NwcRelayService extends RelayServiceBase {
    * Subscribe to NWC responses on specific relays
    */
   subscribeToNwcResponse(
-    filters: Filter[],
+    filter: Filter,
     nwcRelayUrls: string[],
     onEvent: (event: Event) => void,
     onEose?: () => void
   ): { unsubscribe: () => void } {
     try {
       this.logger.debug('Subscribing to NWC responses on relays:', nwcRelayUrls);
-      this.logger.debug('Using filters:', filters);
+      this.logger.debug('Using filters:', filter);
 
       if (!nwcRelayUrls || nwcRelayUrls.length === 0) {
         throw new Error('No NWC relay URLs provided for subscription');
@@ -75,7 +75,7 @@ export class NwcRelayService extends RelayServiceBase {
 
       const pool = this.getPoolForRelays(nwcRelayUrls);
 
-      const subscription = pool.subscribeMany(nwcRelayUrls, filters, {
+      const subscription = pool.subscribeMany(nwcRelayUrls, filter, {
         onevent: (event: Event) => {
           this.logger.debug('Received NWC response event:', event);
           onEvent(event);

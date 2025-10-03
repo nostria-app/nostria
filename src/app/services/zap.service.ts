@@ -839,13 +839,11 @@ export class ZapService {
     this.logger.debug(`Subscribing to real-time zaps for event ${eventId}`);
 
     const subscription = this.accountRelay.subscribe(
-      [
-        {
-          kinds: [9735], // Zap receipts
-          '#e': [eventId],
-          since: Math.floor(Date.now() / 1000), // Only new zaps from now
-        },
-      ],
+      {
+        kinds: [9735], // Zap receipts
+        '#e': [eventId],
+        since: Math.floor(Date.now() / 1000), // Only new zaps from now
+      },
       (event: Event) => {
         this.logger.debug('Received new zap receipt for event:', event);
         onZapReceived(event);
@@ -887,13 +885,11 @@ export class ZapService {
     this.logger.debug(`Subscribing to real-time zaps for user ${pubkey}`);
 
     const subscription = this.accountRelay.subscribe(
-      [
-        {
-          kinds: [9735], // Zap receipts
-          '#p': [pubkey],
-          since: Math.floor(Date.now() / 1000), // Only new zaps from now
-        },
-      ],
+      {
+        kinds: [9735], // Zap receipts
+        '#p': [pubkey],
+        since: Math.floor(Date.now() / 1000), // Only new zaps from now
+      },
       (event: Event) => {
         this.logger.debug('Received new zap receipt for user:', event);
         onZapReceived(event);

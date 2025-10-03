@@ -702,7 +702,7 @@ export abstract class RelayServiceBase {
    * @returns Subscription object with unsubscribe method
    */
   subscribe<T extends Event = Event>(
-    filters: {
+    filter: {
       kinds?: number[];
       authors?: string[];
       '#e'?: string[];
@@ -710,11 +710,11 @@ export abstract class RelayServiceBase {
       since?: number;
       until?: number;
       limit?: number;
-    }[],
+    },
     onEvent: (event: T) => void,
     onEose?: () => void,
   ) {
-    this.logger.debug('Creating subscription with filters:', filters);
+    this.logger.debug('Creating subscription with filters:', filter);
 
     let urls = this.relayUrls;
 
@@ -747,7 +747,7 @@ export abstract class RelayServiceBase {
       if (this.debugInstanceId) {
         debugSubscriptionId = this.debugLogger.registerSubscription(
           this.debugInstanceId,
-          filters,
+          [filter],
           urls,
         );
         // Track this subscription as active
@@ -755,7 +755,7 @@ export abstract class RelayServiceBase {
       }
 
       // Create the subscription
-      const sub = this.#pool.subscribeMany(urls, filters, {
+      const sub = this.#pool.subscribeMany(urls, filter, {
         onevent: (evt) => {
           this.logger.debug(`Received event of kind ${evt.kind}`);
 
@@ -822,7 +822,7 @@ export abstract class RelayServiceBase {
    * @returns Subscription object with unsubscribe method
    */
   subscribeEose<T extends Event = Event>(
-    filters: {
+    filter: {
       kinds?: number[];
       authors?: string[];
       '#e'?: string[];
@@ -830,11 +830,11 @@ export abstract class RelayServiceBase {
       since?: number;
       until?: number;
       limit?: number;
-    }[],
+    },
     onEvent: (event: T) => void,
     onEose?: () => void,
   ) {
-    this.logger.debug('Creating subscription with filters:', filters);
+    this.logger.debug('Creating subscription with filters:', filter);
 
     let urls = this.relayUrls;
 
@@ -867,13 +867,13 @@ export abstract class RelayServiceBase {
       if (this.debugInstanceId) {
         debugSubscriptionId = this.debugLogger.registerSubscription(
           this.debugInstanceId,
-          filters,
+          [filter],
           urls,
         );
       }
 
       // Create the subscription
-      const sub = this.#pool.subscribeManyEose(urls, filters, {
+      const sub = this.#pool.subscribeManyEose(urls, filter, {
         onevent: (evt) => {
           this.logger.debug(`Received event of kind ${evt.kind}`);
 

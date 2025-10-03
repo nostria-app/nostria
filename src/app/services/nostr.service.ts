@@ -317,12 +317,11 @@ export class NostrService implements NostriaService {
   private async subscribeToAccountMetadata(pubkey: string) {
     this.logger.info('subscribeToAccountMetadata', { pubkey });
 
-    const filters = [
-      {
-        kinds: [kinds.Metadata, kinds.Contacts, kinds.RelayList],
-        authors: [pubkey],
-      },
-    ];
+    const filter =
+    {
+      kinds: [kinds.Metadata, kinds.Contacts, kinds.RelayList],
+      authors: [pubkey],
+    };
 
     const onEvent = async (event: Event) => {
       console.log('Received event on the account subscription:', event);
@@ -337,7 +336,7 @@ export class NostrService implements NostriaService {
       console.log('onEose on account subscription.');
     };
 
-    this.accountSubscription = this.accountRelay.subscribe(filters, onEvent, onEose);
+    this.accountSubscription = this.accountRelay.subscribe(filter, onEvent, onEose);
   }
 
   private async loadAccountFollowing(pubkey: string) {
@@ -432,7 +431,7 @@ export class NostrService implements NostriaService {
         break;
       case 'remote':
         const pool = new SimplePool();
-        const bunker = new BunkerSigner(
+        const bunker = BunkerSigner.fromBunker(
           hexToBytes(currentUser.privkey!),
           this.accountState.account()!.bunker!,
           { pool }
@@ -914,7 +913,7 @@ export class NostrService implements NostriaService {
       const privateKey = generateSecretKey();
 
       const pool = new SimplePool();
-      const bunker = new BunkerSigner(privateKey, bunkerParsed!, { pool });
+      const bunker = BunkerSigner.fromBunker(privateKey, bunkerParsed!, { pool });
       await bunker.connect();
 
       const remotePublicKey = await bunker.getPublicKey();
