@@ -283,13 +283,165 @@ export class MessagingService implements NostriaService {
         kinds: [kinds.EncryptedDirectMessage],
         authors: [myPubkey],
         limit: this.MESSAGE_SIZE,
-      }; // Store pubkeys of people who've messaged us
-      const chatPubkeys = new Set<string>();
+      };
+
+      // Store pubkeys of people who've messaged us
+      // const chatPubkeys = new Set<string>();
       let oldestTimestamp = this.oldestChatTimestamp() || Math.floor(Date.now() / 1000);
 
       // First, look for existing gift-wrapped messages
-      const sub = this.relay.subscribe(
-        [filterReceived, filterSent],
+      const sub1 = this.relay.subscribe(
+        filterReceived,
+        async (event: NostrEvent) => {
+          // Track the oldest timestamp
+          if (event.created_at < oldestTimestamp) {
+            oldestTimestamp = event.created_at;
+          }
+          // Handle incoming wrapped events
+          if (event.kind === kinds.GiftWrap) {
+            // let chats = this.chatsMap();
+            // let chat = chats.get(event.pubkey);
+
+            // if (!chat) {
+            //   chat = {
+            //     id: event.pubkey,
+            //     pubkey: event.pubkey,
+            //     unreadCount: 0,
+            //     lastMessage: null,
+            //     relays: [],
+            //     encryptionType: 'nip44',
+            //     isLegacy: false,
+            //     messages: new Map<string, DirectMessage>()
+            //   };
+            //   chats.set(event.pubkey, chat);
+            // }
+
+            const wrappedevent = await this.unwrapMessageInternal(event);
+
+            if (!wrappedevent) {
+              this.logger.warn('Failed to unwrap gift-wrapped message', event);
+              return;
+            }
+
+            // Create a DirectMessage object from the unwrapped content
+            const directMessage: DirectMessage = {
+              id: wrappedevent.id,
+              pubkey: wrappedevent.pubkey,
+              created_at: wrappedevent.created_at,
+              content: wrappedevent.content,
+              tags: wrappedevent.tags || [],
+              isOutgoing: wrappedevent.pubkey === myPubkey,
+              pending: false,
+              failed: false,
+              received: true,
+              read: false,
+              encryptionType: 'nip44', // Gift-wrapped messages are NIP-44
+            };
+
+            let targetPubkey = wrappedevent.pubkey;
+
+            // If this is outgoing, it means the target is in the tags on the kind 14.
+            if (directMessage.isOutgoing) {
+              targetPubkey = this.utilities.getPTagsValuesFromEvent(wrappedevent)[0];
+            }
+
+            // Add the message to the chat
+            this.addMessageToChat(targetPubkey, directMessage);
+
+            // Add all pubkeys to the list, including self, we might chat with ourselves for notes, etc.
+            // chatPubkeys.add(event.pubkey);
+
+            // // Look for 'p' tags for recipients other than ourselves
+            // const pTags = event.tags.filter(tag => tag[0] === 'p');
+            // for (const tag of pTags) {
+            //   const pubkey = tag[1];
+            //   if (pubkey !== myPubkey) {
+            //     chatPubkeys.add(pubkey);
+            //   }
+            // }
+            // this.relayPool?.publish(relays, event);
+          } else {
+            // Handle incoming NIP-04 direct messages
+            if (event.kind === kinds.EncryptedDirectMessage) {
+              let targetPubkey = event.pubkey;
+
+              // Target pubkey:
+              if (targetPubkey === myPubkey) {
+                // If the event pubkey is our own, we are the sender
+                // We need to check 'p' tags for recipients
+                const pTags = this.utilities.getPTagsValuesFromEvent(event);
+                if (pTags.length > 0) {
+                  // If we have p-tags, use the first one as the recipient
+                  targetPubkey = pTags[0];
+                } else {
+                  // No p-tags, we can't unwrap this message
+                  this.logger.warn('NIP-04 message has no recipients, ignoring.', event);
+                  return;
+                }
+              }
+
+              if (this.hasMessage(targetPubkey, event.id)) {
+                return; // Skip if we already have this message
+              }
+
+              // let chats = this.chatsMap();
+              // let chat = chats.get(targetPubkey);
+
+              // if (!chat) {
+              //   chat = {
+              //     id: targetPubkey,
+              //     pubkey: targetPubkey,
+              //     unreadCount: 0,
+              //     lastMessage: null,
+              //     relays: [],
+              //     encryptionType: 'nip04',
+              //     isLegacy: true,
+              //     messages: new Map<string, DirectMessage>()
+              //   };
+              //   chats.set(targetPubkey, chat);
+              // }
+
+              const unwrappedMessage = await this.unwrapNip04Message(event);
+
+              if (!unwrappedMessage) {
+                this.logger.warn('Failed to unwrap gift-wrapped message', event);
+                return;
+              }
+
+              // Create a DirectMessage object from the unwrapped content
+              const directMessage: DirectMessage = {
+                id: unwrappedMessage.id,
+                pubkey: unwrappedMessage.pubkey,
+                created_at: unwrappedMessage.created_at,
+                content: unwrappedMessage.content,
+                tags: unwrappedMessage.tags || [],
+                isOutgoing: event.pubkey === myPubkey,
+                pending: false,
+                failed: false,
+                received: true,
+                read: false,
+                encryptionType: 'nip04', // Gift-wrapped messages are NIP-04
+              };
+
+              // Add the message to the chat
+              this.addMessageToChat(targetPubkey, directMessage);
+            }
+          }
+        },
+        () => {
+          console.log('End of data for incoming messages.');
+
+          // Update the oldest timestamp for loading more chats
+          this.oldestChatTimestamp.set(oldestTimestamp);
+
+          // ...existing code...
+
+          this.isLoading.set(false);
+        }
+      );
+
+      const sub2 = this.relay.subscribe(
+        filterSent,
         async (event: NostrEvent) => {
           // Track the oldest timestamp
           if (event.created_at < oldestTimestamp) {
@@ -627,7 +779,79 @@ export class MessagingService implements NostriaService {
       // Use subscribe with EOSE to get historical messages
       await new Promise<void>((resolve, reject) => {
         const sub = this.relay.subscribe(
-          [filterReceived, filterSent],
+          filterReceived,
+          async (event: NostrEvent) => {
+            try {
+              // Skip if we already have this message
+              if (this.hasMessage(chatId, event.id)) {
+                return;
+              }
+
+              let decryptedMessage: any = null;
+
+              if (event.kind === kinds.EncryptedDirectMessage) {
+                // Handle NIP-04 messages
+                decryptedMessage = await this.unwrapNip04MessageInternal(event);
+              } else if (event.kind === kinds.GiftWrap) {
+                // Handle NIP-44 wrapped messages
+                decryptedMessage = await this.unwrapMessageInternal(event);
+              }
+
+              if (decryptedMessage) {
+                // Determine if this is an outgoing message
+                const isOutgoing = event.pubkey === myPubkey;
+
+                // Determine the other party's pubkey
+                let otherPubkey = chat.pubkey;
+                if (event.kind === kinds.EncryptedDirectMessage) {
+                  // For NIP-04, get the other party from 'p' tags
+                  const pTags = this.utilities.getPTagsValuesFromEvent(event);
+                  if (isOutgoing && pTags.length > 0) {
+                    otherPubkey = pTags[0];
+                  } else if (!isOutgoing) {
+                    otherPubkey = event.pubkey;
+                  }
+                }
+
+                const directMessage: DirectMessage = {
+                  id: decryptedMessage.id,
+                  pubkey: otherPubkey,
+                  created_at: decryptedMessage.created_at,
+                  content: decryptedMessage.content,
+                  isOutgoing: isOutgoing,
+                  tags: decryptedMessage.tags || [],
+                  pending: false,
+                  failed: false,
+                  received: true,
+                  read: false,
+                  encryptionType: chat.encryptionType,
+                };
+
+                loadedMessages.push(directMessage);
+                this.addMessageToChat(otherPubkey, directMessage);
+              }
+            } catch (error) {
+              this.logger.error('Failed to process older message:', error);
+            }
+          },
+          () => {
+            // EOSE callback - end of stored events
+            resolve();
+          }
+        );
+
+        // Set a timeout to prevent hanging
+        setTimeout(() => {
+          // if (sub) {
+          //   sub.close();
+          // }
+          resolve();
+        }, 10000);
+      });
+
+      await new Promise<void>((resolve, reject) => {
+        const sub = this.relay.subscribe(
+          filterSent,
           async (event: NostrEvent) => {
             try {
               // Skip if we already have this message
@@ -774,8 +998,128 @@ export class MessagingService implements NostriaService {
       };
 
       // Subscribe to get older messages
-      const sub = this.relay.subscribe(
-        [filterReceived, filterSent],
+      const sub1 = this.relay.subscribe(
+        filterReceived,
+        async (event: NostrEvent) => {
+          // Track the oldest timestamp
+          if (event.created_at < newOldestTimestamp) {
+            newOldestTimestamp = event.created_at;
+          }
+
+          // Increment pending decryptions counter
+          pendingDecryptions++;
+
+          try {
+            // Handle incoming wrapped events
+            if (event.kind === kinds.GiftWrap) {
+              const wrappedevent = await this.unwrapMessageInternal(event);
+
+              if (!wrappedevent) {
+                this.logger.warn('Failed to unwrap gift-wrapped message', event);
+                completedDecryptions++;
+                checkCompletion();
+                return;
+              }
+
+              // Create a DirectMessage object from the unwrapped content
+              const directMessage: DirectMessage = {
+                id: wrappedevent.id,
+                pubkey: wrappedevent.pubkey,
+                created_at: wrappedevent.created_at,
+                content: wrappedevent.content,
+                tags: wrappedevent.tags || [],
+                isOutgoing: event.pubkey === myPubkey,
+                pending: false,
+                failed: false,
+                received: true,
+                read: false,
+                encryptionType: 'nip44',
+              };
+
+              if (directMessage.isOutgoing) {
+                messagesSentFound++;
+              } else {
+                messagesReceivedFound++;
+              }
+
+              // Add the message to the chat (this will create new chats if needed)
+              this.addMessageToChat(wrappedevent.pubkey, directMessage);
+            } else if (event.kind === kinds.EncryptedDirectMessage) {
+              // Handle incoming NIP-04 direct messages
+              let targetPubkey = event.pubkey;
+
+              // Target pubkey logic
+              if (targetPubkey === myPubkey) {
+                const pTags = this.utilities.getPTagsValuesFromEvent(event);
+                if (pTags.length > 0) {
+                  targetPubkey = pTags[0];
+                } else {
+                  this.logger.warn('NIP-04 message has no recipients, ignoring.', event);
+                  completedDecryptions++;
+                  checkCompletion();
+                  return;
+                }
+              }
+
+              if (this.hasMessage(targetPubkey, event.id)) {
+                completedDecryptions++;
+                checkCompletion();
+                return; // Skip if we already have this message
+              }
+
+              const unwrappedMessage = await this.unwrapNip04Message(event);
+
+              if (!unwrappedMessage) {
+                this.logger.warn('Failed to unwrap NIP-04 message', event);
+                completedDecryptions++;
+                checkCompletion();
+                return;
+              }
+
+              // Create a DirectMessage object from the unwrapped content
+              const directMessage: DirectMessage = {
+                id: unwrappedMessage.id,
+                pubkey: unwrappedMessage.pubkey,
+                created_at: unwrappedMessage.created_at,
+                content: unwrappedMessage.content,
+                tags: unwrappedMessage.tags || [],
+                isOutgoing: event.pubkey === myPubkey,
+                pending: false,
+                failed: false,
+                received: true,
+                read: false,
+                encryptionType: 'nip04',
+              };
+
+              if (directMessage.isOutgoing) {
+                messagesSentFound++;
+              } else {
+                messagesReceivedFound++;
+              }
+
+              // Add the message to the chat (this will create new chats if needed)
+              this.addMessageToChat(targetPubkey, directMessage);
+            }
+          } catch (error) {
+            this.logger.error('Error processing message during loadMoreChats:', error);
+          } finally {
+            // Always increment completed counter and check for completion
+            completedDecryptions++;
+            checkCompletion();
+          }
+        },
+        () => {
+          // EOSE callback - just mark that we've received all events
+          this.logger.debug(
+            `EOSE received. Pending: ${pendingDecryptions}, Completed: ${completedDecryptions}`
+          );
+          eoseReceived = true;
+          checkCompletion();
+        }
+      );
+
+      const sub2 = this.relay.subscribe(
+        filterSent,
         async (event: NostrEvent) => {
           // Track the oldest timestamp
           if (event.created_at < newOldestTimestamp) {

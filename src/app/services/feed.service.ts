@@ -414,7 +414,7 @@ export class FeedService {
       let sub: { unsubscribe: () => void } | { close: () => void } | null;
       if (relayService instanceof UserRelayService) {
         // UserRelayService requires pubkey parameter
-        sub = await relayService.subscribe(this.accountState.pubkey(), [item.filter], (event: Event) => {
+        sub = await relayService.subscribe(this.accountState.pubkey(), item.filter, (event: Event) => {
           // Filter out live events that are muted.
           if (this.accountState.muted(event)) {
             return;
@@ -423,9 +423,9 @@ export class FeedService {
           item.events.update((events: Event[]) => [event, ...events]);
           this.logger.debug(`Column event received for ${column.id}:`, event);
         }) as { unsubscribe: () => void } | { close: () => void } | null;
-      } else {
+      } else {  
         // AccountRelayService uses the old signature
-        sub = relayService.subscribe([item.filter], (event: Event) => {
+        sub = relayService.subscribe(item.filter, (event: Event) => {
           // Filter out live events that are muted.
           if (this.accountState.muted(event)) {
             return;
@@ -1583,7 +1583,7 @@ export class FeedService {
     } else {
       // Subscribe to relay events again
       const sub = this.accountRelay.subscribe(
-        columnData.filter ? [columnData.filter] : [],
+        columnData.filter ? columnData.filter : {},
         event => {
           columnData.events.update((events: Event[]) => [event, ...events]);
           this.logger.debug(`Column event received for ${columnId}:`, event);

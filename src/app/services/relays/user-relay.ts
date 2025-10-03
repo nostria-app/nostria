@@ -305,7 +305,7 @@ export class UserRelayService {
    */
   async subscribe(
     pubkey: string,
-    filters: Filter[],
+    filter: Filter,
     onEvent: (event: Event) => void,
     onEose?: () => void
   ): Promise<unknown> {
@@ -317,7 +317,7 @@ export class UserRelayService {
       return null;
     }
 
-    return this.pool.subscribeMany(relayUrls, filters, {
+    return this.pool.subscribeMany(relayUrls, filter, {
       onevent: onEvent,
       oneose: onEose,
     });

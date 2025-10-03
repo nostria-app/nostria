@@ -353,13 +353,12 @@ export class Calendar {
     try {
       // Note: We need to use a more generic filter since the relay types may not support #d
       this.accountRelay.subscribe(
-        [
-          {
-            kinds: [parseInt(kind)],
-            authors: [pubkey],
-            limit: 10, // Get a few events and filter manually
-          },
-        ],
+        {
+          kinds: [parseInt(kind)],
+          authors: [pubkey],
+          limit: 10, // Get a few events and filter manually
+        }
+        ,
         (event: Event) => {
           // Check if this event has the matching d tag
           const eventDTag = event.tags.find(tag => tag[0] === 'd')?.[1];
@@ -389,13 +388,11 @@ export class Calendar {
     try {
       // Load calendars (kind 31924) for current user and followed users
       this.accountRelay.subscribe(
-        [
-          {
-            kinds: [31924], // Calendar collections
-            // authors: [this.app.accountState.pubkey()!], // Start with user's own calendars
-            limit: 50,
-          },
-        ],
+        {
+          kinds: [31924], // Calendar collections
+          // authors: [this.app.accountState.pubkey()!], // Start with user's own calendars
+          limit: 50,
+        },
         (event: Event) => {
           const calendar = this.parseCalendar(event);
           if (calendar) {
@@ -413,9 +410,7 @@ export class Calendar {
   private parseCalendar(event: Event): CalendarCollection | null {
     try {
       const tags = new Map(event.tags.map(tag => [tag[0], tag.slice(1)]));
-
       const title = tags.get('title')?.[0] || 'Untitled Calendar';
-      const dTag = tags.get('d')?.[0] || '';
 
       // Get event references (a tags)
       const events = event.tags.filter(tag => tag[0] === 'a').map(tag => tag[1]);
@@ -606,14 +601,12 @@ export class Calendar {
     try {
       // Create subscription for events in date range
       this.accountRelay.subscribe(
-        [
-          {
-            kinds: [31922, 31923], // Date-based and time-based calendar events
-            since,
-            until,
-            limit: 100,
-          },
-        ],
+        {
+          kinds: [31922, 31923], // Date-based and time-based calendar events
+          since,
+          until,
+          limit: 100,
+        },
         (event: Event) => {
           const calendarEvent = this.parseCalendarEvent(event);
           if (calendarEvent) {
