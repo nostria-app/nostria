@@ -1,14 +1,14 @@
 <h2 mat-dialog-title>
   <mat-icon>{{ isEditMode() ? 'edit' : 'add_column_right' }}</mat-icon>
-  {{ isEditMode() ? 'Edit Column' : 'Create New Column' }}
+  {{ isEditMode() ? 'Edit Feed' : 'Create New Feed' }}
 </h2>
 
 <mat-dialog-content class="mat-typography">
   <form [formGroup]="columnForm" (ngSubmit)="onSubmit()">
     <div class="settings-container">
-      <!-- Column Type Selection -->
+      <!-- Feed Type Selection -->
       <div class="section column-type-section">
-        <h3>Column Type</h3>
+        <h3>Feed Type</h3>
         <div class="column-type-cards">
           @for (type of columnTypes(); track type.key) {
           <mat-card class="column-type-card" [class.selected]="selectedColumnType() === type.key"
@@ -30,11 +30,11 @@
         <h3>Basic Information</h3>
         <div class="form-row">
           <mat-form-field class="full-width">
-            <mat-label>Column Name</mat-label>
-            <input matInput formControlName="label" placeholder="My Custom Column" />
+            <mat-label>Feed Name</mat-label>
+            <input matInput formControlName="label" placeholder="My Custom Feed" />
             <mat-icon matSuffix>label</mat-icon>
             @if (columnForm.get('label')?.hasError('required')) {
-            <mat-error>Column name is required</mat-error>
+            <mat-error>Feed name is required</mat-error>
             }
           </mat-form-field>
 
@@ -58,7 +58,7 @@
         <div class="form-group">
           <h4>Event Kinds</h4>
           <p class="section-description">
-            Select which types of Nostr events to include in this column
+            Select which types of Nostr events to include in this feed
           </p>
 
           <mat-form-field class="full-width" appearance="outline">
@@ -90,7 +90,7 @@
         <!-- Following or Public -->
         <div class="form-group">
           <h4>Content Source</h4>
-          <p class="section-description">Select source for events to include in this column</p>
+          <p class="section-description">Select source for events to include in this feed</p>
           <mat-button-toggle-group name="source" formControlName="source" class="source-toggle">
             <mat-button-toggle value="following">
               <mat-icon>people</mat-icon>
@@ -198,7 +198,7 @@
       <!-- Relay Configuration -->
       <div class="section relay-config-section">
         <h3>Relay Configuration</h3>
-        <p class="section-description">Choose which relays to use for this column</p>
+        <p class="section-description">Choose which relays to use for this feed</p>
 
         <div class="form-group">
           <mat-button-toggle-group name="relayConfig" formControlName="relayConfig" class="relay-toggle"
@@ -267,6 +267,6 @@
   <button mat-button mat-dialog-close type="button">Cancel</button>
   <button mat-flat-button color="primary" cdkFocusInitial (click)="onSubmit()" [disabled]="!columnForm.valid">
     <mat-icon>{{ isEditMode() ? 'save' : 'add' }}</mat-icon>
-    {{ isEditMode() ? 'Save Changes' : 'Create Column' }}
+    {{ isEditMode() ? 'Save Changes' : 'Create Feed' }}
   </button>
 </mat-dialog-actions>

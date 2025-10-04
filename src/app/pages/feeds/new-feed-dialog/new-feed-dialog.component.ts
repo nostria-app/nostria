@@ -17,7 +17,7 @@ interface DialogData {
   feed?: FeedConfig;
 }
 
-// Predefined feed templates with default columns
+// Predefined board templates with default feeds
 const FEED_TEMPLATES = [
   {
     key: 'following',
@@ -73,7 +73,7 @@ const FEED_TEMPLATES = [
     key: 'empty',
     label: 'Empty',
     icon: 'add_box',
-    description: 'Start with an empty feed and add your own columns',
+    description: 'Start with an empty board and add your own feeds',
     defaultColumns: [],
   },
 ];
