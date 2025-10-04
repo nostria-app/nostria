@@ -764,6 +764,25 @@ export class App implements OnInit {
     }
   }
 
+  onNavItemClick(event: MouseEvent, item: NavItem) {
+    // If the item has an action, execute it
+    if (item.action) {
+      event.preventDefault();
+      item.action();
+      return;
+    }
+
+    // For expandable items, we still want navigation to work
+    // The expand button handles expansion separately with stopPropagation
+    
+    // Close sidenav on mobile after navigation
+    if (this.layout.isHandset()) {
+      this.toggleSidenav();
+    }
+    
+    // Let the default routerLink behavior handle navigation
+  }
+
   async addAccount() {
     this.layout.showLoginDialog();
   }
