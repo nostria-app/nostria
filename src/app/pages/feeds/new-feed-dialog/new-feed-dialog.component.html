@@ -2,70 +2,67 @@
   <div class="dialog-header">
     <h2 mat-dialog-title>
       <mat-icon>{{ isEditMode() ? 'edit' : 'stacks' }}</mat-icon>
-      {{ isEditMode() ? 'Edit Feed' : 'Create New Feed' }}
+      {{ isEditMode() ? 'Edit Board' : 'Create New Board' }}
     </h2>
-    <p class="dialog-subtitle">Choose a feed template or create a custom feed</p>
+    <p class="dialog-subtitle">Choose a board template or create a custom board</p>
   </div>
 
   <div class="dialog-content">
     <form [formGroup]="feedForm" (ngSubmit)="onSubmit()">
       @if (!isEditMode()) {
-        <!-- Feed Template Selection -->
-        <div class="template-selection">
-          <h3>Feed Templates</h3>
-          <p class="section-description">Select a template to get started quickly</p>
+      <!-- Board Template Selection -->
+      <div class="template-selection">
+        <h3>Board Templates</h3>
+        <p class="section-description">Select a template to get started quickly</p>
 
-          <div class="template-cards">
-            @for (template of feedTemplates(); track template.key) {
-              <mat-card
-                class="template-card"
-                [class.selected]="selectedTemplate() === template.key"
-                (click)="selectTemplate(template.key)"
-              >
-                <mat-card-content>
-                  <div class="template-header">
-                    <mat-icon>{{ template.icon }}</mat-icon>
-                    <h4>{{ template.label }}</h4>
-                  </div>
-                  <p class="template-description">
-                    {{ template.description }}
-                  </p>
-                  @if (template.defaultColumns.length > 0) {
-                    <div class="template-columns">
-                      <span class="columns-label">Includes:</span>
-                      @for (column of template.defaultColumns; track $index) {
-                        <span class="column-chip">{{ column.label }}</span>
-                      }
-                    </div>
-                  }
-                </mat-card-content>
-              </mat-card>
-            }
-          </div>
+        <div class="template-cards">
+          @for (template of feedTemplates(); track template.key) {
+          <mat-card class="template-card" [class.selected]="selectedTemplate() === template.key"
+            (click)="selectTemplate(template.key)">
+            <mat-card-content>
+              <div class="template-header">
+                <mat-icon>{{ template.icon }}</mat-icon>
+                <h4>{{ template.label }}</h4>
+              </div>
+              <p class="template-description">
+                {{ template.description }}
+              </p>
+              @if (template.defaultColumns.length > 0) {
+              <div class="template-columns">
+                <span class="columns-label">Includes:</span>
+                @for (column of template.defaultColumns; track $index) {
+                <span class="column-chip">{{ column.label }}</span>
+                }
+              </div>
+              }
+            </mat-card-content>
+          </mat-card>
+          }
         </div>
+      </div>
 
-        <mat-divider></mat-divider>
+      <mat-divider></mat-divider>
       }
 
-      <!-- Basic Feed Configuration -->
+      <!-- Basic Board Configuration -->
       <div class="basic-config">
-        <h3>Feed Information</h3>
+        <h3>Board Information</h3>
 
         <div class="name-icon-row">
           <mat-form-field appearance="outline" class="name-field">
-            <mat-label>Feed Name</mat-label>
-            <input matInput formControlName="label" placeholder="My Custom Feed" />
+            <mat-label>Board Name</mat-label>
+            <input matInput formControlName="label" placeholder="My Custom Board" />
             @if (feedForm.get('label')?.hasError('required')) {
-              <mat-error>Feed name is required</mat-error>
+            <mat-error>Board name is required</mat-error>
             }
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="icon-field">
             <mat-select formControlName="icon">
               @for (icon of data.icons; track icon) {
-                <mat-option [value]="icon">
-                  <mat-icon>{{ icon }}</mat-icon>
-                </mat-option>
+              <mat-option [value]="icon">
+                <mat-icon>{{ icon }}</mat-icon>
+              </mat-option>
               }
             </mat-select>
             <mat-icon matSuffix>{{ feedForm.get('icon')?.value || 'widgets' }}</mat-icon>
@@ -74,46 +71,42 @@
 
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>URL Path (Optional)</mat-label>
-          <input matInput formControlName="path" placeholder="custom-column" />
-          <mat-hint>URL identifier for this column</mat-hint>
+          <input matInput formControlName="path" placeholder="custom-board" />
+          <mat-hint>URL identifier for this board</mat-hint>
           <mat-icon matSuffix>link</mat-icon>
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Description (Optional)</mat-label>
-          <input
-            matInput
-            formControlName="description"
-            placeholder="Brief description of this feed"
-          />
+          <input matInput formControlName="description" placeholder="Brief description of this board" />
           <mat-icon matSuffix>description</mat-icon>
         </mat-form-field>
       </div>
 
       @if (
-        selectedTemplate() &&
-        getSelectedTemplateConfig()?.defaultColumns &&
-        getSelectedTemplateConfig()!.defaultColumns.length > 0
+      selectedTemplate() &&
+      getSelectedTemplateConfig()?.defaultColumns &&
+      getSelectedTemplateConfig()!.defaultColumns.length > 0
       ) {
-        <mat-divider></mat-divider>
+      <mat-divider></mat-divider>
 
-        <!-- Template Preview -->
-        <div class="template-preview">
-          <h3>Columns to be Created</h3>
-          <p class="section-description">These columns will be automatically added to your feed</p>
+      <!-- Template Preview -->
+      <div class="template-preview">
+        <h3>Feeds to be Created</h3>
+        <p class="section-description">These feeds will be automatically added to your board</p>
 
-          <div class="preview-columns">
-            @for (column of getSelectedTemplateConfig()!.defaultColumns; track $index) {
-              <div class="preview-column">
-                <mat-icon>{{ column.icon }}</mat-icon>
-                <div class="column-info">
-                  <span class="column-name">{{ column.label }}</span>
-                  <span class="column-type">{{ getColumnTypeDescription(column.type) }}</span>
-                </div>
-              </div>
-            }
+        <div class="preview-columns">
+          @for (column of getSelectedTemplateConfig()!.defaultColumns; track $index) {
+          <div class="preview-column">
+            <mat-icon>{{ column.icon }}</mat-icon>
+            <div class="column-info">
+              <span class="column-name">{{ column.label }}</span>
+              <span class="column-type">{{ getColumnTypeDescription(column.type) }}</span>
+            </div>
           </div>
+          }
         </div>
+      </div>
       }
     </form>
   </div>
@@ -121,7 +114,7 @@
   <div class="dialog-actions" mat-dialog-actions>
     <button mat-button mat-dialog-close type="button">Cancel</button>
     <button mat-flat-button color="primary" (click)="onSubmit()" [disabled]="!feedForm.valid">
-      {{ isEditMode() ? 'Save Changes' : 'Create Feed' }}
+      {{ isEditMode() ? 'Save Changes' : 'Create Board' }}
     </button>
   </div>
 </div>

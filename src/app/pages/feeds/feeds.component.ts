@@ -877,7 +877,7 @@ export class FeedsComponent implements OnDestroy {
   addNewColumn(): void {
     const activeFeed = this.activeFeed();
     if (!activeFeed) {
-      this.notificationService.notify('Please add a feed first');
+      this.notificationService.notify('Please add a board first');
       return;
     }
 
@@ -908,7 +908,7 @@ export class FeedsComponent implements OnDestroy {
 
     dialogRef.afterClosed().subscribe(async result => {
       if (result && activeFeed) {
-        // Add the new column to the current feed
+        // Add the new feed to the current board
         const updatedFeed = {
           ...activeFeed,
           columns: [...activeFeed.columns, result],
@@ -932,7 +932,7 @@ export class FeedsComponent implements OnDestroy {
           [result.id]: false,
         }));
 
-        this.notificationService.notify(`Column "${result.label}" added to "${activeFeed.label}"`);
+        this.notificationService.notify(`Feed "${result.label}" added to "${activeFeed.label}"`);
       }
     });
   }
@@ -1249,7 +1249,7 @@ export class FeedsComponent implements OnDestroy {
   }
 
   /**
-   * Add a new feed
+   * Add a new board
    */ addNewFeed(): void {
     const dialogRef = this.dialog.open(NewFeedDialogComponent, {
       width: '900px',
@@ -1269,7 +1269,7 @@ export class FeedsComponent implements OnDestroy {
     dialogRef.afterClosed().subscribe(async result => {
       if (result) {
         // The dialog returns a FeedConfig, but FeedsCollectionService.addFeed expects FeedDefinition data
-        const newFeed = await this.feedsCollectionService.addFeed({
+        const newBoard = await this.feedsCollectionService.addFeed({
           label: result.label,
           icon: result.icon,
           description: result.description,
@@ -1277,18 +1277,18 @@ export class FeedsComponent implements OnDestroy {
           path: result.path,
         });
 
-        if (newFeed.path) {
-          this.url.updatePathSilently(['/f', newFeed.path]);
+        if (newBoard.path) {
+          this.url.updatePathSilently(['/f', newBoard.path]);
         }
 
-        // Set as active feed
-        this.feedsCollectionService.setActiveFeed(newFeed.id);
+        // Set as active board
+        this.feedsCollectionService.setActiveFeed(newBoard.id);
       }
     });
   }
 
   /**
-   * Edit the current feed
+   * Edit the current board
    */ editCurrentFeed(): void {
     const activeFeed = this.activeFeed();
     if (!activeFeed) return;
@@ -1322,7 +1322,7 @@ export class FeedsComponent implements OnDestroy {
     });
   }
   /**
-   * Delete the current feed
+   * Delete the current board
    */
   deleteCurrentFeed(): void {
     const activeFeed = this.activeFeed();
@@ -1331,9 +1331,9 @@ export class FeedsComponent implements OnDestroy {
     // Show confirmation dialog
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       data: {
-        title: 'Delete Feed',
-        message: `Are you sure you want to delete the feed "${activeFeed.label}"?`,
-        confirmText: 'Delete Feed',
+        title: 'Delete Board',
+        message: `Are you sure you want to delete the board "${activeFeed.label}"?`,
+        confirmText: 'Delete Board',
         cancelText: 'Cancel',
         confirmColor: 'warn',
       } as ConfirmDialogData,
