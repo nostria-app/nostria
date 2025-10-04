@@ -1,12 +1,11 @@
 @if (view() === 'full') {
   <button
-    mat-button
+    mat-icon-button
     [matMenuTriggerFor]="menu"
     aria-label="More options"
     (click)="$event.stopPropagation()"
   >
     <mat-icon>more_vert</mat-icon>
-    More options
   </button>
 } @else {
   <button
