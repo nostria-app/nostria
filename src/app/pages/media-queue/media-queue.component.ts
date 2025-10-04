@@ -1,4 +1,5 @@
 import { Component, inject, OnInit } from '@angular/core';
+import { RouterModule } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { AddMediaDialog, AddMediaDialogData } from './add-media-dialog/add-media-dialog';
 import { MediaItem } from '../../interfaces';
@@ -10,7 +11,7 @@ import { MatButtonModule } from '@angular/material/button';
 
 @Component({
   selector: 'app-media-queue',
-  imports: [MatButtonModule, MatIconModule, MatListModule],
+  imports: [MatButtonModule, MatIconModule, MatListModule, RouterModule],
   templateUrl: './media-queue.component.html',
   styleUrl: './media-queue.component.scss',
 })

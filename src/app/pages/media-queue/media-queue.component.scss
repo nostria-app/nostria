@@ -9,8 +9,28 @@
   margin-bottom: 16px;
   padding: 0 16px;
 
-  h2 {
-    margin: 0;
+  .queue-nav {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+
+    h2 {
+      margin: 0;
+    }
+
+    .playlists-link {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--mat-sys-primary);
+      text-decoration: none;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+    }
   }
 
   .queue-header-actions {

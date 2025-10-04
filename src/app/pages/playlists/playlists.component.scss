@@ -1,0 +1,232 @@
+.playlists-container {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.playlists-header {
+  margin-bottom: 32px;
+
+  .header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+
+    h1 {
+      margin: 0;
+      font-size: 2rem;
+      color: var(--mat-sys-on-surface);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+  }
+}
+
+.playlists-content {
+
+  .drafts-section,
+  .playlists-section {
+    margin-bottom: 48px;
+
+    h2 {
+      margin: 0 0 24px 0;
+      font-size: 1.5rem;
+      color: var(--mat-sys-on-surface);
+    }
+  }
+}
+
+.playlist-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+
+  &.list-view {
+    grid-template-columns: 1fr;
+
+    .playlist-card {
+      .mat-card-header {
+        .mat-card-title {
+          font-size: 1.25rem;
+        }
+
+        .mat-card-subtitle {
+          font-size: 0.875rem;
+        }
+      }
+    }
+  }
+}
+
+.playlist-card {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+
+  &:hover {
+    box-shadow: var(--mat-sys-level3);
+    transform: translateY(-2px);
+  }
+
+  &.draft-card {
+    border-left: 4px solid var(--mat-sys-tertiary);
+
+    .mat-card-header .mat-card-avatar mat-icon {
+      color: var(--mat-sys-tertiary);
+    }
+  }
+
+  .mat-card-header {
+    .mat-card-avatar {
+      background: transparent;
+
+      mat-icon {
+        color: var(--mat-sys-primary);
+        font-size: 32px;
+        width: 32px;
+        height: 32px;
+      }
+    }
+
+    .mat-card-title {
+      font-size: 1.125rem;
+      font-weight: 600;
+      line-height: 1.3;
+      margin-bottom: 4px;
+    }
+
+    .mat-card-subtitle {
+      color: var(--mat-sys-on-surface-variant);
+      font-size: 0.875rem;
+    }
+
+    .card-menu-button {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+    }
+  }
+
+  .mat-card-content {
+    .playlist-description {
+      margin: 0 0 12px 0;
+      color: var(--mat-sys-on-surface-variant);
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .playlist-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+
+      .tag {
+        background-color: var(--mat-sys-surface-container-high);
+        color: var(--mat-sys-on-surface-variant);
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 500;
+      }
+    }
+  }
+
+  .mat-card-actions {
+    padding: 8px 16px 16px;
+
+    button {
+      margin-right: 8px;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+    }
+  }
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 32px;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+
+  .empty-icon {
+    font-size: 4rem;
+    width: 4rem;
+    height: 4rem;
+    margin-bottom: 16px;
+    opacity: 0.6;
+  }
+
+  h3 {
+    margin: 0 0 8px 0;
+    font-size: 1.25rem;
+    color: var(--mat-sys-on-surface);
+  }
+
+  p {
+    margin: 0 0 24px 0;
+    font-size: 0.875rem;
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .playlists-container {
+    padding: 16px;
+  }
+
+  .playlists-header {
+    .header-content {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 16px;
+
+      h1 {
+        font-size: 1.75rem;
+      }
+
+      .header-actions {
+        justify-content: space-between;
+      }
+    }
+  }
+
+  .playlist-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+
+    &.list-view {
+      gap: 12px;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .playlist-card {
+    .mat-card-actions {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+
+      button {
+        margin: 0;
+        justify-content: flex-start;
+      }
+    }
+  }
+}

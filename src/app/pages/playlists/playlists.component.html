@@ -1,0 +1,141 @@
+<div class="playlists-container">
+  <header class="playlists-header">
+    <div class="header-content">
+      <h1>My Playlists</h1>
+      <div class="header-actions">
+        <button mat-icon-button [matTooltip]="selectedView() === 'grid' ? 'List view' : 'Grid view'"
+          (click)="toggleView()">
+          <mat-icon>{{ selectedView() === 'grid' ? 'view_list' : 'view_module' }}</mat-icon>
+        </button>
+        <button mat-flat-button color="primary" (click)="createNewPlaylist()">
+          <mat-icon>add</mat-icon>
+          New Playlist
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="playlists-content">
+    <!-- Drafts Section -->
+    @if (drafts().length > 0) {
+    <section class="drafts-section">
+      <h2>Drafts</h2>
+      <div class="playlist-grid" [class.list-view]="selectedView() === 'list'">
+        @for (draft of drafts(); track draft.id) {
+        <mat-card class="playlist-card draft-card">
+          <mat-card-header>
+            <mat-icon mat-card-avatar>draft</mat-icon>
+            <mat-card-title>{{ draft.title }}</mat-card-title>
+            <mat-card-subtitle>{{ draft.tracks.length }} tracks (Draft)</mat-card-subtitle>
+            <button mat-icon-button [matMenuTriggerFor]="draftMenu" class="card-menu-button">
+              <mat-icon>more_vert</mat-icon>
+            </button>
+            <mat-menu #draftMenu="matMenu">
+              <button mat-menu-item (click)="loadDraft(draft.id!)">
+                <mat-icon>edit</mat-icon>
+                Continue Editing
+              </button>
+              <button mat-menu-item (click)="deleteDraft(draft.id!)">
+                <mat-icon>delete</mat-icon>
+                Delete Draft
+              </button>
+            </mat-menu>
+          </mat-card-header>
+          <mat-card-content>
+            @if (draft.description) {
+            <p class="playlist-description">{{ draft.description }}</p>
+            }
+          </mat-card-content>
+          <mat-card-actions>
+            <button mat-button (click)="loadDraft(draft.id!)">
+              <mat-icon>edit</mat-icon>
+              Continue Editing
+            </button>
+          </mat-card-actions>
+        </mat-card>
+        }
+      </div>
+    </section>
+    }
+
+    <!-- Playlists Section -->
+    <section class="playlists-section">
+      <h2>Playlists</h2>
+      @if (playlists().length === 0) {
+      <div class="empty-state">
+        <mat-icon class="empty-icon">queue_music</mat-icon>
+        <h3>No playlists yet</h3>
+        <p>Create your first playlist to get started</p>
+        <button mat-flat-button color="primary" (click)="createNewPlaylist()">
+          <mat-icon>add</mat-icon>
+          Create Playlist
+        </button>
+      </div>
+      } @else {
+      <div class="playlist-grid" [class.list-view]="selectedView() === 'list'">
+        @for (playlist of playlists(); track playlist.id) {
+        <mat-card class="playlist-card">
+          <mat-card-header>
+            <mat-icon mat-card-avatar>queue_music</mat-icon>
+            <mat-card-title>{{ playlist.title }}</mat-card-title>
+            <mat-card-subtitle>
+              {{ playlist.tracks.length }} tracks
+              @if (playlist.totalDuration) {
+              · {{ playlist.totalDuration }}
+              }
+            </mat-card-subtitle>
+            <button mat-icon-button [matMenuTriggerFor]="playlistMenu" class="card-menu-button">
+              <mat-icon>more_vert</mat-icon>
+            </button>
+            <mat-menu #playlistMenu="matMenu">
+              <button mat-menu-item (click)="playPlaylist(playlist)">
+                <mat-icon>play_arrow</mat-icon>
+                Play
+              </button>
+              <button mat-menu-item (click)="addPlaylistToQueue(playlist)">
+                <mat-icon>playlist_add</mat-icon>
+                Add to Queue
+              </button>
+              <button mat-menu-item (click)="editPlaylist(playlist)">
+                <mat-icon>edit</mat-icon>
+                Edit
+              </button>
+              <button mat-menu-item (click)="deletePlaylist(playlist)">
+                <mat-icon>delete</mat-icon>
+                Delete
+              </button>
+            </mat-menu>
+          </mat-card-header>
+          <mat-card-content>
+            @if (playlist.description) {
+            <p class="playlist-description">{{ playlist.description }}</p>
+            }
+            @if (playlist.tags && playlist.tags.length > 0) {
+            <div class="playlist-tags">
+              @for (tag of playlist.tags; track tag) {
+              <span class="tag">{{ tag }}</span>
+              }
+            </div>
+            }
+          </mat-card-content>
+          <mat-card-actions>
+            <button mat-button (click)="playPlaylist(playlist)">
+              <mat-icon>play_arrow</mat-icon>
+              Play
+            </button>
+            <button mat-button (click)="addPlaylistToQueue(playlist)">
+              <mat-icon>playlist_add</mat-icon>
+              Add to Queue
+            </button>
+            <button mat-button (click)="editPlaylist(playlist)">
+              <mat-icon>edit</mat-icon>
+              Edit
+            </button>
+          </mat-card-actions>
+        </mat-card>
+        }
+      </div>
+      }
+    </section>
+  </main>
+</div>

@@ -24,6 +24,8 @@ import { FeedsComponent } from './pages/feeds/feeds.component';
 import { ArticleComponent } from './pages/article/article.component';
 import { EditorComponent } from './pages/article/editor/editor.component';
 import { MediaQueueComponent } from './pages/media-queue/media-queue.component';
+import { PlaylistsComponent } from './pages/playlists/playlists.component';
+import { PlaylistEditorComponent } from './pages/playlists/playlist-editor/playlist-editor.component';
 import { EventPageComponent } from './pages/event/event.component';
 import { NotificationManageComponent } from './pages/notifications/manage/manage.component';
 import { DataResolver } from './data-resolver';
@@ -159,6 +161,8 @@ export const routes: Routes = [
     ],
   },
   { path: 'media-queue', component: MediaQueueComponent, title: 'Media Queue' },
+  { path: 'playlists', component: PlaylistsComponent, title: 'Playlists' },
+  { path: 'playlists/edit/:id', component: PlaylistEditorComponent, title: 'Edit Playlist' },
   {
     path: 'notifications',
     component: NotificationsComponent,

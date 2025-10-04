@@ -1,0 +1,175 @@
+<div class="playlist-editor-container">
+  <header class="editor-header">
+    <div class="header-content">
+      <button mat-icon-button (click)="cancel()" matTooltip="Back to playlists">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
+      <div class="header-info">
+        <h1>{{ currentPlaylist()?.isNewPlaylist ? 'Create' : 'Edit' }} Playlist</h1>
+        <p class="track-count">
+          {{ tracks().length }} tracks
+          @if (totalDuration() !== '0:00') {
+          · {{ totalDuration() }}
+          }
+        </p>
+      </div>
+      <div class="header-actions">
+        <button mat-button (click)="saveDraft()" [disabled]="!currentPlaylist()">
+          <mat-icon>save</mat-icon>
+          Save Draft
+        </button>
+        <button mat-flat-button color="primary" (click)="savePlaylist()"
+          [disabled]="!playlistForm.valid || !currentPlaylist()">
+          <mat-icon>check</mat-icon>
+          {{ currentPlaylist()?.isNewPlaylist ? 'Create' : 'Save' }} Playlist
+        </button>
+        <button mat-stroked-button color="accent" (click)="publishPlaylist()"
+          [disabled]="!playlistForm.valid || !currentPlaylist()">
+          <mat-icon>publish</mat-icon>
+          Publish to Nostr
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="editor-content">
+    @if (currentPlaylist(); as playlist) {
+    <div class="editor-layout">
+      <!-- Playlist Details -->
+      <section class="playlist-details">
+        <form [formGroup]="playlistForm" class="details-form">
+          <div class="id-field-container">
+            <mat-form-field appearance="outline" class="id-field">
+              <mat-label>Playlist ID (d tag)</mat-label>
+              <input matInput formControlName="id" placeholder="unique-playlist-id">
+              @if (playlistForm.get('id')?.hasError('required')) {
+              <mat-error>Playlist ID is required</mat-error>
+              }
+              @if (playlistForm.get('id')?.hasError('duplicateId')) {
+              <mat-error>This playlist ID already exists</mat-error>
+              }
+              <mat-hint>Unique identifier for this playlist (used in Nostr events)</mat-hint>
+            </mat-form-field>
+            <button type="button" mat-icon-button (click)="generateRandomId()" matTooltip="Generate random ID"
+              class="generate-id-button">
+              <mat-icon>casino</mat-icon>
+            </button>
+          </div>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Playlist Title</mat-label>
+            <input matInput formControlName="title" placeholder="Enter playlist title">
+            @if (playlistForm.get('title')?.hasError('required')) {
+            <mat-error>Playlist title is required</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Description</mat-label>
+            <textarea matInput formControlName="description" placeholder="Enter playlist description" rows="3">
+              </textarea>
+          </mat-form-field>
+
+          <!-- Tags -->
+          <div class="tags-section">
+            <span class="tags-label">Tags</span>
+            <div class="tags-container">
+              @if (playlist.tags && playlist.tags.length > 0) {
+              <mat-chip-set>
+                @for (tag of playlist.tags; track tag) {
+                <mat-chip (removed)="removeTag(tag)">
+                  {{ tag }}
+                  <button type="button" matChipRemove>
+                    <mat-icon>cancel</mat-icon>
+                  </button>
+                </mat-chip>
+                }
+              </mat-chip-set>
+              }
+              <div class="add-tag">
+                <mat-form-field appearance="outline" class="tag-input">
+                  <mat-label>Add tag</mat-label>
+                  <input matInput [value]="newTag()" (input)="newTag.set($any($event.target).value)"
+                    (keyup.enter)="addTag()" placeholder="Genre, mood, etc.">
+                </mat-form-field>
+                <button type="button" mat-icon-button (click)="addTag()" [disabled]="!newTag().trim()">
+                  <mat-icon>add</mat-icon>
+                </button>
+              </div>
+            </div>
+          </div>
+        </form>
+      </section>
+
+      <mat-divider></mat-divider>
+
+      <!-- Tracks Section -->
+      <section class="tracks-section">
+        <div class="tracks-header">
+          <h2>Tracks</h2>
+          <div class="tracks-actions">
+            @if (tracks().length > 0) {
+            <button mat-button (click)="playAllTracks()">
+              <mat-icon>play_arrow</mat-icon>
+              Play All
+            </button>
+            }
+            <button mat-flat-button color="primary" (click)="addTrack()">
+              <mat-icon>add</mat-icon>
+              Add Track
+            </button>
+          </div>
+        </div>
+
+        @if (tracks().length === 0) {
+        <div class="empty-tracks">
+          <mat-icon class="empty-icon">music_note</mat-icon>
+          <h3>No tracks yet</h3>
+          <p>Add your first track to get started</p>
+          <button mat-flat-button color="primary" (click)="addTrack()">
+            <mat-icon>add</mat-icon>
+            Add Track
+          </button>
+        </div>
+        } @else {
+        <div class="tracks-list" cdkDropList (cdkDropListDropped)="onTrackDrop($event)">
+          @for (track of tracks(); track track.url; let i = $index) {
+          <div class="track-item" cdkDrag>
+            <div class="track-drag-handle" cdkDragHandle>
+              <mat-icon>drag_indicator</mat-icon>
+            </div>
+
+            <div class="track-number">{{ i + 1 }}</div>
+
+            <button mat-icon-button class="play-button" (click)="playTrack(i)" matTooltip="Play from this track">
+              <mat-icon>play_arrow</mat-icon>
+            </button>
+
+            <div class="track-info">
+              <div class="track-title">{{ track.title || 'Unknown Track' }}</div>
+              @if (track.artist) {
+              <div class="track-artist">{{ track.artist }}</div>
+              }
+              <div class="track-url">{{ track.url }}</div>
+            </div>
+
+            @if (track.duration) {
+            <div class="track-duration">{{ track.duration }}</div>
+            }
+
+            <button mat-icon-button class="remove-button" (click)="removeTrack(i)" matTooltip="Remove track">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+          }
+        </div>
+        }
+      </section>
+    </div>
+    } @else {
+    <div class="loading-state">
+      <p>Loading playlist...</p>
+    </div>
+    }
+  </main>
+</div>
