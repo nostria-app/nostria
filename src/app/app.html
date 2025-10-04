@@ -226,15 +226,14 @@
       <mat-nav-list>
         @for (item of navigationItems(); track $index) {
         <!-- Main navigation item -->
-        <a mat-list-item [routerLink]="item.action ? undefined : [item.path]"
-          routerLinkActive="active-link" [routerLinkActiveOptions]="{ exact: true }"
-          (click)="onNavItemClick($event, item)"
-          class="nav-item" [class.expandable-nav-item]="item.expandable">
+        <a mat-list-item [routerLink]="item.action ? undefined : [item.path]" routerLinkActive="active-link"
+          [routerLinkActiveOptions]="{ exact: true }" (click)="onNavItemClick($event, item)" class="nav-item"
+          [class.expandable-nav-item]="item.expandable">
           <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
           @if (displayLabels()) {
           <span class="nav-label">{{ item.label }}</span>
           @if (item.expandable) {
-          <button mat-icon-button class="expand-button" 
+          <button mat-icon-button class="expand-button"
             (click)="$event.stopPropagation(); $event.preventDefault(); toggleMenuExpansion('feeds')"
             [attr.aria-label]="item.expanded ? 'Collapse' : 'Expand'" tabindex="0">
             <mat-icon class="expand-icon">
