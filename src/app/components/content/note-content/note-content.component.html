@@ -1,72 +1,58 @@
 @for (token of contentTokens(); track token.id) {
-  @if (token.type === 'text') {
-    <span>{{ token.content }}</span>
-  } @else if (token.type === 'linebreak') {
-    <br />
-  } @else if (token.type === 'emoji') {
-    <span class="emoji-token" [title]="token.content">{{ token.emoji }}</span>
-  } @else if (token.type === 'url') {
-    &nbsp;<a [href]="token.content" target="_blank" rel="noopener noreferrer">{{ token.content }}</a
-    >&nbsp;
-  } @else if (token.type === 'youtube') {
-    <div class="media-container">
-      <iframe
-        width="560"
-        height="315"
-        [src]="token.processedUrl"
-        frameborder="0"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowfullscreen
-      >
-      </iframe>
+@if (token.type === 'text') {
+<span>{{ token.content }}</span>
+} @else if (token.type === 'linebreak') {
+<br />
+} @else if (token.type === 'emoji') {
+<span class="emoji-token" [title]="token.content">{{ token.emoji }}</span>
+} @else if (token.type === 'url') {
+&nbsp;<a [href]="token.content" target="_blank" rel="noopener noreferrer">{{ token.content }}</a>&nbsp;
+} @else if (token.type === 'youtube') {
+<div class="media-container">
+  <iframe width="560" height="315" [src]="token.processedUrl" frameborder="0"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen>
+  </iframe>
+</div>
+} @else if (token.type === 'image') {
+<div class="media-container">
+  <img [src]="token.content" alt="Content image" loading="lazy" (click)="openImageDialog(token.content)"
+    class="clickable-image" />
+</div>
+} @else if (token.type === 'audio') {
+<div class="media-container">
+  <audio controls>
+    <source [src]="token.content" />
+    Your browser does not support the audio element.
+  </audio>
+</div>
+} @else if (token.type === 'video') {
+<div class="media-container">
+  @if (isVideoFormatSupported(token.content)) {
+  <video controls (error)="onVideoError($event, token.content)">
+    <source [src]="token.content" type="video/{{ getVideoType(token.content) }}" />
+    Your browser does not support the video element.
+    <p>
+      <a [href]="token.content" target="_blank" rel="noopener noreferrer">
+        Download video file
+      </a>
+    </p>
+  </video>
+  } @else {
+  <div class="unsupported-video">
+    <div class="video-placeholder">
+      <mat-icon>videocam</mat-icon>
+      <p>Video format may not be supported in browser</p>
+      <a [href]="token.content" target="_blank" rel="noopener noreferrer" class="download-link">
+        View/Download Video
+      </a>
     </div>
-  } @else if (token.type === 'image') {
-    <div class="media-container">
-      <img
-        [src]="token.content"
-        alt="Content image"
-        loading="lazy"
-        (click)="openImageDialog(token.content)"
-        class="clickable-image"
-      />
-    </div>
-  } @else if (token.type === 'audio') {
-    <div class="media-container">
-      <audio controls>
-        <source [src]="token.content" />
-        Your browser does not support the audio element.
-      </audio>
-    </div>
-  } @else if (token.type === 'video') {
-    <div class="media-container">
-      @if (isVideoFormatSupported(token.content)) {
-        <video controls (error)="onVideoError($event, token.content)">
-          <source [src]="token.content" type="video/{{ getVideoType(token.content) }}" />
-          Your browser does not support the video element.
-          <p>
-            <a [href]="token.content" target="_blank" rel="noopener noreferrer">
-              Download video file
-            </a>
-          </p>
-        </video>
-      } @else {
-        <div class="unsupported-video">
-          <div class="video-placeholder">
-            <mat-icon>videocam</mat-icon>
-            <p>Video format may not be supported in browser</p>
-            <a [href]="token.content" target="_blank" rel="noopener noreferrer" class="download-link">
-              View/Download Video
-            </a>
-          </div>
-        </div>
-      }
-    </div>
-  } @else if (
-    token.type === 'nostr-mention' &&
-    (token.nostrData?.type === 'npub' || token.nostrData?.type === 'nprofile')
-  ) {
-    &nbsp;<a class="nostr-mention" (click)="onNostrMentionClick(token)"
-      >&#64;{{ token.nostrData?.displayName }}</a
-    >&nbsp;
+  </div>
   }
+</div>
+} @else if (
+token.type === 'nostr-mention' &&
+(token.nostrData?.type === 'npub' || token.nostrData?.type === 'nprofile')
+) {
+&nbsp;<a class="nostr-mention" (click)="onNostrMentionClick(token)">&#64;{{ token.nostrData?.displayName }}</a>&nbsp;
+}
 }
