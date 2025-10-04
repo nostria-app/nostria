@@ -350,19 +350,43 @@ mat-sidenav-content {
 }
 
 // Expandable navigation styles
-.nav-label {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.nav-item {
+  position: relative;
 }
 
-.expand-icon {
-  margin-left: auto;
-  transition: transform 0.2s ease;
-  font-size: 20px;
-  width: 20px;
-  height: 20px;
+.expandable-nav-item {
+  .nav-label {
+    padding-right: 40px; // Make room for expand button
+  }
+}
+
+.nav-label {
+  flex: 1;
+  display: block;
+}
+
+.expand-button {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  min-width: 32px;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+
+  &:hover {
+    opacity: 1;
+  }
+
+  .expand-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    transition: transform 0.2s ease;
+  }
 }
 
 .child-nav-item {
@@ -371,6 +395,7 @@ mat-sidenav-content {
   border: none !important;
   width: 100%;
   text-align: left;
+  margin-left: 16px; // Add some margin for better visual separation
 }
 
 .child-label {

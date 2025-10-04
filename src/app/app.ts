@@ -748,13 +748,19 @@ export class App implements OnInit {
   }
 
   async navigateToFeed(feedId: string) {
-    // Set the active feed and navigate to home
-    await this.feedsCollectionService.setActiveFeed(feedId);
-    this.router.navigate(['/']);
+    try {
+      // Set the active feed and navigate to home
+      await this.feedsCollectionService.setActiveFeed(feedId);
+      this.router.navigate(['/']);
 
-    // Close sidenav on mobile
-    if (this.layout.isHandset()) {
-      this.toggleSidenav();
+      // Close sidenav on mobile
+      if (this.layout.isHandset()) {
+        this.toggleSidenav();
+      }
+    } catch (error) {
+      this.logger.error('Error navigating to feed:', error);
+      // Fallback: just navigate to home page
+      this.router.navigate(['/']);
     }
   }
 
