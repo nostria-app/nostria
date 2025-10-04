@@ -5,6 +5,7 @@ import {
   ViewChild,
   afterNextRender,
   computed,
+  signal,
   PLATFORM_ID,
   DOCUMENT,
   OnInit,
@@ -63,6 +64,7 @@ import { SleepModeService } from './services/sleep-mode.service';
 import { SleepModeOverlayComponent } from './components/sleep-mode-overlay/sleep-mode-overlay.component';
 import { WhatsNewDialogComponent } from './components/whats-new-dialog/whats-new-dialog.component';
 import { UserDataFactoryService } from './services/user-data-factory.service';
+import { FeedsCollectionService } from './services/feeds-collection.service';
 
 interface NavItem {
   path: string;
@@ -72,6 +74,9 @@ interface NavItem {
   authenticated?: boolean;
   hideOnSubscribed?: boolean;
   action?: () => void;
+  expandable?: boolean;
+  children?: NavItem[];
+  expanded?: boolean;
 }
 
 @Component({
@@ -134,6 +139,7 @@ export class App implements OnInit {
   snackBar = inject(MatSnackBar);
   eventService = inject(EventService);
   userDataFactory = inject(UserDataFactoryService);
+  feedsCollectionService = inject(FeedsCollectionService);
   private readonly wallets = inject(Wallets);
   private readonly platform = inject(PLATFORM_ID);
   private readonly document = inject(DOCUMENT);
@@ -146,6 +152,9 @@ export class App implements OnInit {
   // Use local settings for sidenav state
   opened = computed(() => this.localSettings.menuOpen());
   displayLabels = computed(() => this.localSettings.menuExpanded());
+
+  // Signal to track expanded menu items
+  expandedMenuItems = signal<Record<string, boolean>>({});
 
   // Computed signal to count unread notifications
   unreadNotificationsCount = computed(() => {
@@ -170,9 +179,31 @@ export class App implements OnInit {
 
   navigationItems = computed(() => {
     const subscription = this.accountState.subscription();
+    const feeds = this.feedsCollectionService.feeds();
+    const expandedItems = this.expandedMenuItems();
+
     this.logger.info('navigationItems recomputing, subscription:', subscription);
 
-    return this.navItems.filter(item => {
+    return this.navItems.map(item => {
+      // For the Feeds item, add feed boards as children
+      if (item.label === 'Feeds') {
+        const feedChildren: NavItem[] = feeds.map(feed => ({
+          path: `/?feed=${feed.id}`, // Add feed parameter to navigate to specific feed
+          label: feed.label,
+          icon: feed.icon,
+          authenticated: false,
+        }));
+
+        return {
+          ...item,
+          expandable: true,
+          expanded: expandedItems['feeds'] || false,
+          children: feedChildren,
+        };
+      }
+
+      return item;
+    }).filter(item => {
       // Filter out items that are not authenticated if user is not logged in
       if (item.authenticated && !this.app.authenticated()) {
         return false;
@@ -706,6 +737,25 @@ export class App implements OnInit {
   }
   toggleMenuSize() {
     this.localSettings.toggleMenuExpanded();
+  }
+
+  toggleMenuExpansion(itemKey: string) {
+    const currentExpandedItems = this.expandedMenuItems();
+    this.expandedMenuItems.set({
+      ...currentExpandedItems,
+      [itemKey]: !currentExpandedItems[itemKey]
+    });
+  }
+
+  async navigateToFeed(feedId: string) {
+    // Set the active feed and navigate to home
+    await this.feedsCollectionService.setActiveFeed(feedId);
+    this.router.navigate(['/']);
+
+    // Close sidenav on mobile
+    if (this.layout.isHandset()) {
+      this.toggleSidenav();
+    }
   }
 
   async addAccount() {
