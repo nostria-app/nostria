@@ -126,18 +126,30 @@ export class UserRelayService {
   }
 
   /**
-   * Get events by kind and event tag (using discovery relays since no specific pubkey)
+   * Get events by kind and event tag (using broader relay set for better discovery)
    */
-  async getEventsByKindAndEventTag(kind: number, eventTag: string | string[]): Promise<Event[]> {
-    // For this method, we don't have a specific pubkey, so we need to use discovery relays
-    const relayUrls = this.getEffectiveRelayUrls(this.discoveryRelay.getRelayUrls());
+  async getEventsByKindAndEventTag(pubkey: string | string[], kind: number, eventTag: string | string[]): Promise<Event[]> {
+    // For multiple pubkeys, we need to get relays for each one
+    const pubkeys = Array.isArray(pubkey) ? pubkey : [pubkey];
+    const allRelayUrls = new Set<string>();
+
+    for (const pk of pubkeys) {
+      await this.ensureRelaysForPubkey(pk);
+      const relayUrls = this.getRelaysForPubkey(pk);
+      relayUrls.forEach(url => allRelayUrls.add(url));
+    }
+
+    const relayUrls = this.getEffectiveRelayUrls(Array.from(allRelayUrls));
 
     if (relayUrls.length === 0) {
-      this.logger.warn(`[UserRelayService] No default relays available for getEventsByKindAndEventTag`);
+      this.logger.warn(`[UserRelayService] No relays available for pubkeys: ${pubkeys.map(pk => pk.slice(0, 16)).join(', ')}...`);
       return [];
     }
 
     const events = Array.isArray(eventTag) ? eventTag : [eventTag];
+
+    this.logger.debug(`[UserRelayService] Searching for kind ${kind} events across ${relayUrls.length} relays`);
+
     return this.getEventsWithSubscription(relayUrls, { '#e': events, kinds: [kind] });
   }
 
@@ -206,17 +218,27 @@ export class UserRelayService {
   ): Promise<Event[]> {
     return new Promise<Event[]>((resolve) => {
       const events: Event[] = [];
-      const timeout = 5000; // 5 second timeout
+      const timeout = 8000; // Increased timeout to 8 seconds for better results
+
+      this.logger.debug(`[UserRelayService] Starting subscription with filter:`, filter, `on ${relayUrls.length} relays`);
 
       this.pool.subscribeEose(relayUrls, filter, {
         maxWait: timeout,
         onevent: (event) => {
           events.push(event);
+          this.logger.debug(`[UserRelayService] Received event kind ${event.kind} from subscription`);
         },
         onclose: () => {
+          this.logger.debug(`[UserRelayService] Subscription closed, received ${events.length} events`);
           resolve(events);
         },
       });
+
+      // Add timeout fallback in case onclose is not called
+      setTimeout(() => {
+        this.logger.debug(`[UserRelayService] Subscription timeout reached, resolving with ${events.length} events`);
+        resolve(events);
+      }, timeout + 1000);
     });
   }
 
@@ -247,6 +269,23 @@ export class UserRelayService {
    */
   getCachedPubkeys(): string[] {
     return Array.from(this.pubkeyRelayMap.keys());
+  }
+
+  /**
+   * Get all cached relay URLs from all pubkeys
+   */
+  getAllCachedRelayUrls(): string[] {
+    const allRelays = new Set<string>();
+
+    // Add discovery relays
+    this.discoveryRelay.getRelayUrls().forEach(relay => allRelays.add(relay));
+
+    // Add relays from all cached pubkeys
+    this.pubkeyRelayMap.forEach((relays) => {
+      relays.forEach(relay => allRelays.add(relay));
+    });
+
+    return Array.from(allRelays);
   }
 
   /**

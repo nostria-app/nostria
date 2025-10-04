@@ -481,7 +481,7 @@ export class UserDataService {
     }
 
     if (events.length === 0) {
-      const relayEvents = await this.userRelayEx.getEventsByKindAndEventTag(kind, eventTag);
+      const relayEvents = await this.userRelayEx.getEventsByKindAndEventTag(this.pubkey, kind, eventTag);
       if (relayEvents && relayEvents.length > 0) {
         events = relayEvents;
       }

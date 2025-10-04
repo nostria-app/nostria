@@ -13,9 +13,12 @@ export class ReactionService {
     const reactionEvent = this.nostrService.createEvent(kinds.Reaction, content, [
       ['e', event.id],
       ['p', event.pubkey],
+      ['k', event.kind.toString()], // Add kind tag for better relay filtering
     ]);
 
-    return this.nostrService.signAndPublish(reactionEvent);
+    const result = await this.nostrService.signAndPublish(reactionEvent);
+    console.log('Reaction added:', { content, eventId: event.id, success: result });
+    return result;
   }
 
   async addLike(event: Event): Promise<boolean> {
@@ -27,6 +30,9 @@ export class ReactionService {
   }
 
   async deleteReaction(event: Event): Promise<boolean> {
-    return this.nostrService.signAndPublish(this.nostrService.createRetractionEvent(event));
+    const deleteEvent = this.nostrService.createRetractionEvent(event);
+    const result = await this.nostrService.signAndPublish(deleteEvent);
+    console.log('Reaction deleted:', { eventId: event.id, success: result });
+    return result;
   }
 }
