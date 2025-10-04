@@ -270,9 +270,14 @@
 
       <!-- Like -->
       <div class="reaction-group">
-        <button mat-icon-button [ngClass]="{
-                active: !!likeReaction(),
-              }" [disabled]="isLoadingReactions()" (click)="toggleLike($event)">
+        <button mat-icon-button 
+                class="like-button" 
+                [ngClass]="{
+                  active: !!likeReaction(),
+                  liked: !!likeReaction()
+                }" 
+                [disabled]="isLoadingReactions()" 
+                (click)="toggleLike($event)">
           <mat-icon>favorite</mat-icon>
         </button>
         <button mat-button class="count-button" (click)="openReactionsDialog('likes'); $event.stopPropagation()">

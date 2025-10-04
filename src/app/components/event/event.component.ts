@@ -175,9 +175,13 @@ export class EventComponent {
   });
 
   likeReaction = computed<NostrRecord | undefined>(() => {
-    const myReactions = this.likes();
-    if (!myReactions) return;
-    return myReactions.find(r => r.event.pubkey === this.accountState.pubkey());
+    const myLikes = this.likes();
+    const userPubkey = this.accountState.pubkey();
+    
+    if (!myLikes || !userPubkey) return undefined;
+    
+    // Find the user's like reaction
+    return myLikes.find(r => r.event.pubkey === userPubkey && r.event.content === '+');
   });
 
   // Zap-related state
@@ -541,13 +545,104 @@ export class EventComponent {
 
     const currentEvent = this.event();
     if (!currentEvent) return;
-    const likeEvent = this.likeReaction();
-    if (likeEvent) {
-      await this.reactionService.deleteReaction(likeEvent.event);
-    } else {
-      await this.reactionService.addLike(currentEvent);
+    
+    const userPubkey = this.accountState.pubkey();
+    if (!userPubkey) return;
+
+    // Disable reaction loading temporarily to prevent interference
+    this.isLoadingReactions.set(true);
+
+    try {
+      const existingLikeReaction = this.likeReaction();
+      
+      if (existingLikeReaction) {
+        // Remove like - optimistically update UI first
+        this.updateReactionsOptimistically(userPubkey, '+', false);
+        
+        const success = await this.reactionService.deleteReaction(existingLikeReaction.event);
+        if (!success) {
+          // Revert optimistic update if failed
+          this.updateReactionsOptimistically(userPubkey, '+', true);
+          this.snackBar.open('Failed to remove like. Please try again.', 'Dismiss', { duration: 3000 });
+        } else {
+          console.log('Like removed successfully');
+        }
+      } else {
+        // Add like - optimistically update UI first
+        this.updateReactionsOptimistically(userPubkey, '+', true);
+        
+        const success = await this.reactionService.addLike(currentEvent);
+        if (!success) {
+          // Revert optimistic update if failed
+          this.updateReactionsOptimistically(userPubkey, '+', false);
+          this.snackBar.open('Failed to add like. Please try again.', 'Dismiss', { duration: 3000 });
+        } else {
+          console.log('Like added successfully');
+        }
+      }
+
+      // Reload reactions in the background to sync with the network
+      // Use a longer delay to allow network propagation
+      setTimeout(() => {
+        this.loadReactions(true);
+      }, 2000);
+      
+    } finally {
+      this.isLoadingReactions.set(false);
     }
-    await this.loadReactions(true);
+  }
+
+  /**
+   * Optimistically update reactions for immediate UI feedback
+   */
+  private updateReactionsOptimistically(userPubkey: string, emoji: string, isAdding: boolean) {
+    const currentReactions = this.reactions();
+    const currentEvents = [...currentReactions.events];
+    const currentData = new Map(currentReactions.data);
+
+    if (isAdding) {
+      // Create a temporary reaction event for optimistic UI
+      const tempReactionEvent = {
+        id: `temp-${userPubkey}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        pubkey: userPubkey,
+        created_at: Math.floor(Date.now() / 1000),
+        kind: 7,
+        content: emoji,
+        tags: [
+          ['e', this.event()?.id || ''],
+          ['p', this.event()?.pubkey || '']
+        ],
+        sig: ''
+      };
+
+      const tempRecord = {
+        event: tempReactionEvent,
+        data: emoji
+      };
+
+      currentEvents.push(tempRecord);
+      currentData.set(emoji, (currentData.get(emoji) || 0) + 1);
+    } else {
+      // Remove the user's reaction
+      const userReactionIndex = currentEvents.findIndex(
+        r => r.event.pubkey === userPubkey && r.event.content === emoji
+      );
+      
+      if (userReactionIndex !== -1) {
+        currentEvents.splice(userReactionIndex, 1);
+        const currentCount = currentData.get(emoji) || 0;
+        if (currentCount > 1) {
+          currentData.set(emoji, currentCount - 1);
+        } else {
+          currentData.delete(emoji);
+        }
+      }
+    }
+
+    this.reactions.set({
+      events: currentEvents,
+      data: currentData
+    });
   }
 
   onBookmarkClick(event: MouseEvent) {
