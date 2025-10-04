@@ -347,6 +347,24 @@ export class PlaylistService implements OnInitialized {
     return m3uContent;
   }
 
+  // Generate playlist event data for sharing (without signing)
+  generatePlaylistEvent(playlist: Playlist): Partial<Event> {
+    // Create the event content (M3U format)
+    const content = this.exportPlaylistToM3U(playlist);
+
+    // Create the tags
+    const tags = this.generateNostrEventTags(playlist);
+
+    // Create the event object
+    return {
+      kind: 32100,
+      created_at: Math.floor(Date.now() / 1000),
+      content,
+      tags,
+      pubkey: playlist.pubkey,
+    };
+  }
+
   // Publish playlist to Nostr as kind 32100 event
   async publishPlaylistToNostr(playlist: Playlist): Promise<Event | null> {
     try {

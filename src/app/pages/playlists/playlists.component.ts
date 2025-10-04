@@ -6,6 +6,8 @@ import { MatCardModule } from '@angular/material/card';
 import { MatDialog } from '@angular/material/dialog';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { nip19 } from 'nostr-tools';
 import { PlaylistService } from '../../services/playlist.service';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { Playlist } from '../../interfaces';
@@ -29,6 +31,7 @@ export class PlaylistsComponent {
   private mediaPlayer = inject(MediaPlayerService);
   private router = inject(Router);
   private dialog = inject(MatDialog);
+  private snackBar = inject(MatSnackBar);
 
   playlists = this.playlistService.playlists;
   drafts = this.playlistService.drafts;
@@ -140,5 +143,62 @@ export class PlaylistsComponent {
     }
 
     return 'Music';
+  }
+
+  /**
+   * Copy nevent address for the playlist to clipboard
+   */
+  async copyNeventAddress(playlist: Playlist): Promise<void> {
+    try {
+      // For playlist events (kind 32100), we use naddr instead of nevent
+      // since it's a replaceable event with a 'd' tag identifier
+      const naddr = nip19.naddrEncode({
+        kind: 32100,
+        pubkey: playlist.pubkey,
+        identifier: playlist.id,
+        // Add relay hints if available (optional)
+        relays: [] // TODO: Add user's preferred relays
+      });
+
+      await navigator.clipboard.writeText(naddr);
+      this.snackBar.open('Playlist address copied to clipboard!', 'Close', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom'
+      });
+    } catch (error) {
+      console.error('Failed to copy nevent address:', error);
+      this.snackBar.open('Failed to copy address', 'Close', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom'
+      });
+    }
+  }
+
+  /**
+   * Copy raw event data as JSON to clipboard
+   */
+  async copyEventData(playlist: Playlist): Promise<void> {
+    try {
+      // Generate the event data that would be published to Nostr
+      const eventData = this.playlistService.generatePlaylistEvent(playlist);
+
+      const jsonData = JSON.stringify(eventData, null, 2);
+      await navigator.clipboard.writeText(jsonData);
+
+      this.snackBar.open('Event data copied to clipboard!', 'Close', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom'
+      });
+    } catch (error) {
+      console.error('Failed to copy event data:', error);
+      this.snackBar.open('Failed to copy event data', 'Close', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom'
+      });
+    }
   }
 }

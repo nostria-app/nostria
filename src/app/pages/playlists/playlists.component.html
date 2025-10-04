@@ -96,6 +96,10 @@
                 <mat-icon>playlist_add</mat-icon>
                 Add to Queue
               </button>
+              <button mat-menu-item [matMenuTriggerFor]="copyMenu">
+                <mat-icon>content_copy</mat-icon>
+                Copy
+              </button>
               <button mat-menu-item (click)="editPlaylist(playlist)">
                 <mat-icon>edit</mat-icon>
                 Edit
@@ -103,6 +107,18 @@
               <button mat-menu-item (click)="deletePlaylist(playlist)">
                 <mat-icon>delete</mat-icon>
                 Delete
+              </button>
+            </mat-menu>
+
+            <!-- Copy submenu -->
+            <mat-menu #copyMenu="matMenu">
+              <button mat-menu-item (click)="copyNeventAddress(playlist)">
+                <mat-icon>link</mat-icon>
+                Copy Nevent Address
+              </button>
+              <button mat-menu-item (click)="copyEventData(playlist)">
+                <mat-icon>code</mat-icon>
+                Copy Event Data
               </button>
             </mat-menu>
           </mat-card-header>
