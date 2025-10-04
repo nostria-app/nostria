@@ -1,28 +1,9 @@
 @if (shouldShowReferences()) {
 <div class="tagged-references-container">
 
-  <!-- User Mentions -->
-  @if (mentions().length > 0) {
-  <div class="mentions-section">
-    <div class="mentions-list">
-      @for (mention of mentions(); track mention.pubkey) {
-      <button class="mention-item" (click)="onMentionClick(mention)" type="button" 
-        title="View profile of mentioned user"
-        [attr.aria-label]="'View profile of mentioned user'">
-        <app-profile-display-name [pubkey]="mention.pubkey"></app-profile-display-name>
-      </button>
-      }
-    </div>
-  </div>
-  }
-
   <!-- Article References -->
   @if (articles().length > 0) {
   <div class="articles-section">
-    <div class="section-header">
-      <mat-icon>article</mat-icon>
-      <span class="section-title">Referenced</span>
-    </div>
     <div class="articles-list">
       @for (article of articles(); track article.kind + ':' + article.pubkey + ':' + article.identifier) {
       <a class="article-preview-card" (click)="onArticleClick(article)" (keydown.enter)="onArticleClick(article)"
@@ -67,6 +48,23 @@
     </div>
   </div>
   }
+
+
+  <!-- User Mentions -->
+  @if (mentions().length > 0) {
+  <div class="mentions-section">
+    <span class="mentions-label">Mentioned: </span>
+    <div class="mentions-list">
+      @for (mention of mentions(); track mention.pubkey) {
+      <button class="mention-item" (click)="onMentionClick(mention)" type="button"
+        title="View profile of mentioned user" [attr.aria-label]="'View profile of mentioned user'">
+        <app-profile-display-name [pubkey]="mention.pubkey"></app-profile-display-name>
+      </button>
+      }
+    </div>
+  </div>
+  }
+
 
 </div>
 }
