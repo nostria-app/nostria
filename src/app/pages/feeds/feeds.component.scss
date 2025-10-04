@@ -85,13 +85,38 @@ app-user-profile {
 
           .mobile-selectors {
             display: flex;
-            justify-content: space-between;
             align-items: center;
             width: 100%;
-            gap: 8px;
+            gap: 12px;
+
+            .hierarchy-separator {
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              opacity: 0.6;
+              color: var(--mat-sys-on-surface-variant);
+              flex-shrink: 0;
+              background-color: var(--mat-sys-surface-container);
+              border-radius: 50%;
+              width: 24px;
+              height: 24px;
+              transition: opacity 0.2s ease;
+              
+              &:hover {
+                opacity: 0.8;
+              }
+              
+              mat-icon {
+                font-size: 16px;
+                width: 16px;
+                height: 16px;
+              }
+            }
 
             .column-selector-container {
-              margin-left: auto;
+              flex: 1;
+              display: flex;
+              justify-content: flex-end;
             }
           }
 
