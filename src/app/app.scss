@@ -36,6 +36,7 @@ nav {
 }
 
 @media (display-mode: window-controls-overlay) {
+
   /** This is for when the app is running in a window with custom title bar controls. */
   .app-container {
     padding-top: env(titlebar-area-height, 33px);
@@ -49,8 +50,7 @@ nav {
   /* Prevent horizontal scrolling */
 
   // Make space for mobile nav when on mobile
-  @media (max-width: 599px) {
-  }
+  @media (max-width: 599px) {}
 }
 
 // Configure mat-sidenav-content to be a flex container
@@ -306,9 +306,7 @@ mat-sidenav-content {
   font-size: 64px;
   height: 64px;
   width: 64px;
-  color: var(
-    --mat-card-title-text-color
-  ); // Changed from fixed white color to theme-dependent variable
+  color: var(--mat-card-title-text-color); // Changed from fixed white color to theme-dependent variable
 }
 
 .profile-header h2 {
@@ -349,6 +347,44 @@ mat-sidenav-content {
 
 .sidenav-small .logo-icon {
   width: 56px !important;
+}
+
+// Expandable navigation styles
+.nav-label {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.expand-icon {
+  margin-left: auto;
+  transition: transform 0.2s ease;
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+}
+
+.child-nav-item {
+  padding-left: 48px !important; // Indent child items
+  background: transparent !important;
+  border: none !important;
+  width: 100%;
+  text-align: left;
+}
+
+.child-label {
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+.child-nav-item:hover {
+  background-color: rgba(var(--mat-sys-primary-rgb), 0.08) !important;
+}
+
+.child-nav-item:focus {
+  background-color: rgba(var(--mat-sys-primary-rgb), 0.12) !important;
+  outline: none;
 }
 
 .current-account {
@@ -456,8 +492,7 @@ mat-sidenav-content {
   90% {
     opacity: 1;
     transform: scale(1) rotate(360deg);
-    border-color: var(--mat-sys-primary) var(--mat-sys-primary) var(--mat-sys-primary)
-      var(--mat-sys-primary);
+    border-color: var(--mat-sys-primary) var(--mat-sys-primary) var(--mat-sys-primary) var(--mat-sys-primary);
   }
 
   100% {
