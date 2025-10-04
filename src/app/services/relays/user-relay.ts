@@ -128,32 +128,28 @@ export class UserRelayService {
   /**
    * Get events by kind and event tag (using broader relay set for better discovery)
    */
-  async getEventsByKindAndEventTag(kind: number, eventTag: string | string[]): Promise<Event[]> {
-    // For reactions and reposts, we need to cast a wider net across relays
-    // Start with discovery relays
-    const discoveryRelays = this.discoveryRelay.getRelayUrls();
-    
-    // Get relays from all cached pubkeys (these are users we've interacted with)
-    const allUserRelays = new Set<string>(discoveryRelays);
-    
-    // Add relays from cached pubkeys to get better coverage
-    this.pubkeyRelayMap.forEach((relays) => {
-      relays.forEach(relay => allUserRelays.add(relay));
-    });
-    
-    // Get optimal relays from the combined set
-    const combinedRelays = Array.from(allUserRelays);
-    const relayUrls = this.getEffectiveRelayUrls(combinedRelays);
+  async getEventsByKindAndEventTag(pubkey: string | string[], kind: number, eventTag: string | string[]): Promise<Event[]> {
+    // For multiple pubkeys, we need to get relays for each one
+    const pubkeys = Array.isArray(pubkey) ? pubkey : [pubkey];
+    const allRelayUrls = new Set<string>();
+
+    for (const pk of pubkeys) {
+      await this.ensureRelaysForPubkey(pk);
+      const relayUrls = this.getRelaysForPubkey(pk);
+      relayUrls.forEach(url => allRelayUrls.add(url));
+    }
+
+    const relayUrls = this.getEffectiveRelayUrls(Array.from(allRelayUrls));
 
     if (relayUrls.length === 0) {
-      this.logger.warn(`[UserRelayService] No relays available for getEventsByKindAndEventTag`);
+      this.logger.warn(`[UserRelayService] No relays available for pubkeys: ${pubkeys.map(pk => pk.slice(0, 16)).join(', ')}...`);
       return [];
     }
 
     const events = Array.isArray(eventTag) ? eventTag : [eventTag];
-    
+
     this.logger.debug(`[UserRelayService] Searching for kind ${kind} events across ${relayUrls.length} relays`);
-    
+
     return this.getEventsWithSubscription(relayUrls, { '#e': events, kinds: [kind] });
   }
 
@@ -280,15 +276,15 @@ export class UserRelayService {
    */
   getAllCachedRelayUrls(): string[] {
     const allRelays = new Set<string>();
-    
+
     // Add discovery relays
     this.discoveryRelay.getRelayUrls().forEach(relay => allRelays.add(relay));
-    
+
     // Add relays from all cached pubkeys
     this.pubkeyRelayMap.forEach((relays) => {
       relays.forEach(relay => allRelays.add(relay));
     });
-    
+
     return Array.from(allRelays);
   }
 
