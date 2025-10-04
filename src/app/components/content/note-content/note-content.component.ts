@@ -2,13 +2,14 @@ import { Component, input, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { MatDialog } from '@angular/material/dialog';
+import { MatIconModule } from '@angular/material/icon';
 import { ImageDialogComponent } from '../../image-dialog/image-dialog.component';
 import { ContentToken } from '../../../services/parsing.service';
 
 @Component({
   selector: 'app-note-content',
   standalone: true,
-  imports: [],
+  imports: [MatIconModule],
   templateUrl: './note-content.component.html',
   styleUrl: './note-content.component.scss',
 })
@@ -57,6 +58,26 @@ export class NoteContentComponent {
         return 'x-matroska';
       default:
         return 'mp4';
+    }
+  }
+
+  /**
+   * Check if a video format is likely to be supported by modern browsers
+   */
+  isVideoFormatSupported(url: string): boolean {
+    const extension = url.split('.').pop()?.split('?')[0]?.toLowerCase();
+    // Only MP4 and WebM have good cross-browser support
+    return extension === 'mp4' || extension === 'webm';
+  }
+
+  /**
+   * Handle video load errors by showing a download link
+   */
+  onVideoError(event: Event, videoUrl: string): void {
+    const target = event.target as HTMLVideoElement;
+    if (target) {
+      console.warn('Video failed to load:', videoUrl);
+      // The template will handle showing the fallback
     }
   }
 

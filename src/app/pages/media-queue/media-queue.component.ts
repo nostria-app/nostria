@@ -19,7 +19,7 @@ export class MediaQueueComponent implements OnInit {
   media = inject(MediaPlayerService);
   private dialog = inject(MatDialog);
 
-  constructor() {}
+  constructor() { }
 
   ngOnInit() {
     // this.appState.showBackButton = true;
@@ -63,7 +63,7 @@ export class MediaQueueComponent implements OnInit {
             type: 'YouTube',
           });
         }
-      } else if (result.url.indexOf('.mp4') > -1 || result.url.indexOf('.webm') > -1) {
+      } else if (result.url.indexOf('.mp4') > -1 || result.url.indexOf('.webm') > -1 || result.url.indexOf('.mov') > -1 || result.url.indexOf('.avi') > -1 || result.url.indexOf('.wmv') > -1 || result.url.indexOf('.flv') > -1 || result.url.indexOf('.mkv') > -1) {
         this.media.enque({
           artist: '',
           artwork: '/logos/youtube.png',
