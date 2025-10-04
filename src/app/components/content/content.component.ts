@@ -1,16 +1,4 @@
-import {
-  Component,
-  Input,
-  ViewChild,
-  ElementRef,
-  AfterViewInit,
-  OnDestroy,
-  computed,
-  effect,
-  inject,
-  signal,
-  untracked,
-} from '@angular/core';
+import { Component, Input, ViewChild, ElementRef, AfterViewInit, OnDestroy, computed, effect, inject, signal, untracked, input } from '@angular/core';
 
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -27,6 +15,8 @@ import { AgoPipe } from '../../pipes/ago.pipe';
 import { DatePipe } from '@angular/common';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { LayoutService } from '../../services/layout.service';
+import { TaggedReferencesComponent } from './tagged-references/tagged-references.component';
+import { Event } from 'nostr-tools';
 
 interface SocialPreview {
   url: string;
@@ -49,6 +39,7 @@ interface SocialPreview {
     AgoPipe,
     DatePipe,
     UserProfileComponent,
+    TaggedReferencesComponent,
   ],
   templateUrl: './content.component.html',
   styleUrl: './content.component.scss',
@@ -64,6 +55,9 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
   @ViewChild('contentContainer') contentContainer!: ElementRef;
   // Input for raw content
   private _content = signal<string>('');
+
+  // Input for the event (to access tags for mentions/articles)
+  event = input<Event | null>(null);
 
   // Track visibility of the component
   private _isVisible = signal<boolean>(false);

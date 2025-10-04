@@ -5,353 +5,311 @@
 @let rootRecordData = rootRecord();
 
 @if (isLoadingEvent()) {
-  <div class="loading-container">
-    <mat-spinner diameter="32"></mat-spinner>
-    <p class="loading-text">Loading event...</p>
-  </div>
+<div class="loading-container">
+  <mat-spinner diameter="32"></mat-spinner>
+  <p class="loading-text">Loading event...</p>
+</div>
 } @else if (targetItem && item) {
-  <mat-card
-    class="note-card"
-    [class.plain]="isPlain()"
-    [class.selected]="isCurrentlySelected()"
-    appearance="outlined"
-    [attr.tabindex]="isCurrentlySelected() ? null : 0"
-    [style.cursor]="isCurrentlySelected() ? 'auto' : 'pointer'"
-    (click)="onCardClick($event)"
-  >
-    @if (repostedEvent) {
-      <!-- Repost structure -->
-      <mat-card-header class="repost-header">
-        <mat-icon>repeat</mat-icon>
-        <span>
-          <app-profile-display-name [pubkey]="item.event.pubkey"></app-profile-display-name>
-          reposted
-          <span
-            [matTooltip]="item.event.created_at * 1000 | date: 'medium'"
-            matTooltipPosition="below"
-          >
-            {{ item.event.created_at | ago }}
-          </span>
-        </span>
-        <app-event-menu [event]="item.event" class="note-footer-right"></app-event-menu>
-      </mat-card-header>
+<mat-card class="note-card" [class.plain]="isPlain()" [class.selected]="isCurrentlySelected()" appearance="outlined"
+  [attr.tabindex]="isCurrentlySelected() ? null : 0" [style.cursor]="isCurrentlySelected() ? 'auto' : 'pointer'"
+  (click)="onCardClick($event)">
+  @if (repostedEvent) {
+  <!-- Repost structure -->
+  <mat-card-header class="repost-header">
+    <mat-icon>repeat</mat-icon>
+    <span>
+      <app-profile-display-name [pubkey]="item.event.pubkey"></app-profile-display-name>
+      reposted
+      <span [matTooltip]="item.event.created_at * 1000 | date: 'medium'" matTooltipPosition="below">
+        {{ item.event.created_at | ago }}
+      </span>
+    </span>
+    <app-event-menu [event]="item.event" class="note-footer-right"></app-event-menu>
+  </mat-card-header>
+  <mat-card-content>
+    <mat-card appearance="outlined">
+      <app-event-header [event]="repostService.decodeRepost(item.event).event"></app-event-header>
       <mat-card-content>
-        <mat-card appearance="outlined">
-          <app-event-header
-            [event]="repostService.decodeRepost(item.event).event"
-          ></app-event-header>
-          <mat-card-content>
-            @if (targetItem.event.kind === 20) {
-              <app-photo-event [event]="targetItem.event"></app-photo-event>
-            }
-            <!-- Videos (NIP-71, kind 21/22) -->
-            @else if (targetItem.event.kind === 21 || targetItem.event.kind === 22) {
-              <app-video-event [event]="targetItem.event"></app-video-event>
-            }
-            <!-- Articles (kind 30023) -->
-            @else if (targetItem.event.kind === 30023) {
-              <app-article-event [event]="targetItem.event"></app-article-event>
-            }
-            <!-- M3U Playlists (kind 32100) -->
-            @else if (targetItem.event.kind === 32100) {
-              <app-playlist-event [event]="targetItem.event"></app-playlist-event>
-            }
-            <!-- Starter Packs (kind 39089) -->
-            @else if (targetItem.event.kind === 39089) {
-              <app-starter-pack-event [event]="targetItem.event"></app-starter-pack-event>
-            }
-            <!-- Profile events (kind 0) -->
-            @else if (targetItem.event.kind === 0) {
-              <app-user-profile [view]="'details'" [event]="targetItem.event"></app-user-profile>
-            } @else {
-              <app-content [content]="repostService.decodeRepost(item.event).data"></app-content>
-            }
-          </mat-card-content>
-        </mat-card>
-      </mat-card-content>
-    } @else if (isReply() && (parentRecordData || rootRecordData)) {
-      <!-- Reply structure with thread context -->
-      <mat-card-header class="reply-header">
-        <mat-icon>reply</mat-icon>
-        <span>
-          <app-profile-display-name [pubkey]="item.event.pubkey"></app-profile-display-name>
-          @if (isThreadedReply()) {
-            replied in thread
-          } @else {
-            replied to
-          }
-        </span>
-      </mat-card-header>
-      <mat-card-content>
-        <!-- Show thread context only in timeline mode -->
-        @if (mode() === 'timeline') {
-          <!-- Show thread context if this is a threaded reply -->
-          @if (isThreadedReply() && rootRecordData && parentRecordData) {
-            <!-- Root event (original post) -->
-            <div class="thread-context">
-              <h4 class="thread-label">Original Post</h4>
-              <mat-card appearance="outlined" class="root-event">
-                <app-event-header [event]="rootRecordData.event"></app-event-header>
-                <mat-card-content>
-                  @if (rootRecordData.event.kind === 20) {
-                    <app-photo-event [event]="rootRecordData.event"></app-photo-event>
-                  }
-                  <!-- Videos (NIP-71, kind 21/22) -->
-                  @else if (rootRecordData.event.kind === 21 || rootRecordData.event.kind === 22) {
-                    <app-video-event [event]="rootRecordData.event"></app-video-event>
-                  }
-                  <!-- Articles (kind 30023) -->
-                  @else if (rootRecordData.event.kind === 30023) {
-                    <app-article-event [event]="rootRecordData.event"></app-article-event>
-                  }
-                  <!-- M3U Playlists (kind 32100) -->
-                  @else if (rootRecordData.event.kind === 32100) {
-                    <app-playlist-event [event]="rootRecordData.event"></app-playlist-event>
-                  }
-                  <!-- Starter Packs (kind 39089) -->
-                  @else if (rootRecordData.event.kind === 39089) {
-                    <app-starter-pack-event [event]="rootRecordData.event"></app-starter-pack-event>
-                  }
-                  <!-- Profile events (kind 0) -->
-                  @else if (rootRecordData.event.kind === 0) {
-                    <app-user-profile
-                      [view]="'details'"
-                      [event]="rootRecordData.event"
-                    ></app-user-profile>
-                  } @else {
-                    <app-content [content]="rootRecordData.data"></app-content>
-                  }
-                </mat-card-content>
-              </mat-card>
-            </div>
-
-            <!-- Thread indicator -->
-            <div class="thread-indicator">
-              <hr />
-              <span>Thread continues</span>
-              <hr />
-            </div>
-          }
-
-          <!-- Immediate parent event (what this is replying to) -->
-          @if (parentRecordData) {
-            <div class="reply-context">
-              @if (isThreadedReply()) {
-                <h4 class="thread-label">Replying to</h4>
-              }
-              <mat-card appearance="outlined" class="parent-event">
-                <app-event-header [event]="parentRecordData.event"></app-event-header>
-                <mat-card-content>
-                  @if (parentRecordData.event.kind === 20) {
-                    <app-photo-event [event]="parentRecordData.event"></app-photo-event>
-                  }
-                  <!-- Videos (NIP-71, kind 21/22) -->
-                  @else if (
-                    parentRecordData.event.kind === 21 || parentRecordData.event.kind === 22
-                  ) {
-                    <app-video-event [event]="parentRecordData.event"></app-video-event>
-                  }
-                  <!-- Articles (kind 30023) -->
-                  @else if (parentRecordData.event.kind === 30023) {
-                    <app-article-event [event]="parentRecordData.event"></app-article-event>
-                  }
-                  <!-- M3U Playlists (kind 32100) -->
-                  @else if (parentRecordData.event.kind === 32100) {
-                    <app-playlist-event [event]="parentRecordData.event"></app-playlist-event>
-                  }
-                  <!-- Starter Packs (kind 39089) -->
-                  @else if (parentRecordData.event.kind === 39089) {
-                    <app-starter-pack-event
-                      [event]="parentRecordData.event"
-                    ></app-starter-pack-event>
-                  }
-                  <!-- Profile events (kind 0) -->
-                  @else if (parentRecordData.event.kind === 0) {
-                    <app-user-profile
-                      [view]="'details'"
-                      [event]="parentRecordData.event"
-                    ></app-user-profile>
-                  } @else {
-                    <app-content [content]="parentRecordData.data"></app-content>
-                  }
-                </mat-card-content>
-              </mat-card>
-            </div>
-          }
+        @if (targetItem.event.kind === 20) {
+        <app-photo-event [event]="targetItem.event"></app-photo-event>
         }
-
-        <!-- Current event (the reply) -->
-        <app-event-header [event]="item.event"></app-event-header>
-        @if (shouldHideContent()) {
-          <app-reported-content [event]="item.event"></app-reported-content>
+        <!-- Videos (NIP-71, kind 21/22) -->
+        @else if (targetItem.event.kind === 21 || targetItem.event.kind === 22) {
+        <app-video-event [event]="targetItem.event"></app-video-event>
+        }
+        <!-- Articles (kind 30023) -->
+        @else if (targetItem.event.kind === 30023) {
+        <app-article-event [event]="targetItem.event"></app-article-event>
+        }
+        <!-- M3U Playlists (kind 32100) -->
+        @else if (targetItem.event.kind === 32100) {
+        <app-playlist-event [event]="targetItem.event"></app-playlist-event>
+        }
+        <!-- Starter Packs (kind 39089) -->
+        @else if (targetItem.event.kind === 39089) {
+        <app-starter-pack-event [event]="targetItem.event"></app-starter-pack-event>
+        }
+        <!-- Profile events (kind 0) -->
+        @else if (targetItem.event.kind === 0) {
+        <app-user-profile [view]="'details'" [event]="targetItem.event"></app-user-profile>
         } @else {
-          @if (item.event.kind === 20) {
-            <app-photo-event [event]="item.event"></app-photo-event>
+        <app-content [content]="repostService.decodeRepost(item.event).data"
+          [event]="repostService.decodeRepost(item.event).event"></app-content>
+        }
+      </mat-card-content>
+    </mat-card>
+  </mat-card-content>
+  } @else if (isReply() && (parentRecordData || rootRecordData)) {
+  <!-- Reply structure with thread context -->
+  <mat-card-header class="reply-header">
+    <mat-icon>reply</mat-icon>
+    <span>
+      <app-profile-display-name [pubkey]="item.event.pubkey"></app-profile-display-name>
+      @if (isThreadedReply()) {
+      replied in thread
+      } @else {
+      replied to
+      }
+    </span>
+  </mat-card-header>
+  <mat-card-content>
+    <!-- Show thread context only in timeline mode -->
+    @if (mode() === 'timeline') {
+    <!-- Show thread context if this is a threaded reply -->
+    @if (isThreadedReply() && rootRecordData && parentRecordData) {
+    <!-- Root event (original post) -->
+    <div class="thread-context">
+      <h4 class="thread-label">Original Post</h4>
+      <mat-card appearance="outlined" class="root-event">
+        <app-event-header [event]="rootRecordData.event"></app-event-header>
+        <mat-card-content>
+          @if (rootRecordData.event.kind === 20) {
+          <app-photo-event [event]="rootRecordData.event"></app-photo-event>
           }
           <!-- Videos (NIP-71, kind 21/22) -->
-          @else if (item.event.kind === 21 || item.event.kind === 22) {
-            <app-video-event [event]="item.event"></app-video-event>
+          @else if (rootRecordData.event.kind === 21 || rootRecordData.event.kind === 22) {
+          <app-video-event [event]="rootRecordData.event"></app-video-event>
           }
           <!-- Articles (kind 30023) -->
-          @else if (item.event.kind === 30023) {
-            <app-article-event [event]="item.event"></app-article-event>
-          } @else if (item.event.kind === 3) {
-            <div class="following-event">
-              <mat-icon>people</mat-icon>
-              <span>Following {{ followingCount() }} accounts</span>
-            </div>
+          @else if (rootRecordData.event.kind === 30023) {
+          <app-article-event [event]="rootRecordData.event"></app-article-event>
           }
           <!-- M3U Playlists (kind 32100) -->
-          @else if (item.event.kind === 32100) {
-            <app-playlist-event [event]="item.event"></app-playlist-event>
-          } @else if (item.event.kind === 39089) {
-            <!-- Starter Packs (kind 39089) -->
-            <app-starter-pack-event [event]="item.event"></app-starter-pack-event>
-          } @else if (item.event.kind === 8) {
-            <app-badge [badge]="item.event"></app-badge>
+          @else if (rootRecordData.event.kind === 32100) {
+          <app-playlist-event [event]="rootRecordData.event"></app-playlist-event>
+          }
+          <!-- Starter Packs (kind 39089) -->
+          @else if (rootRecordData.event.kind === 39089) {
+          <app-starter-pack-event [event]="rootRecordData.event"></app-starter-pack-event>
           }
           <!-- Profile events (kind 0) -->
-          @else if (item.event.kind === 0) {
-            {{ item.data.about }}
-            <!-- <app-user-profile [view]="'details'" [event]="item.event"></app-user-profile> -->
+          @else if (rootRecordData.event.kind === 0) {
+          <app-user-profile [view]="'details'" [event]="rootRecordData.event"></app-user-profile>
           } @else {
-            <app-content [content]="item.data"></app-content>
+          <app-content [content]="rootRecordData.data" [event]="rootRecordData.event"></app-content>
           }
-        }
-      </mat-card-content>
-    } @else {
-      <!-- Normal event structure -->
-      <app-event-header [event]="item.event"></app-event-header>
-      <mat-card-content>
-        @if (shouldHideContent()) {
-          <app-reported-content [event]="item.event"></app-reported-content>
-        } @else {
-          @if (item.event.kind === 20) {
-            <app-photo-event [event]="item.event"></app-photo-event>
-          }
-          <!-- Videos (NIP-71, kind 21/22) -->
-          @else if (item.event.kind === 21 || item.event.kind === 22) {
-            <app-video-event [event]="item.event"></app-video-event>
-          }
-          <!-- Articles (kind 30023) -->
-          @else if (item.event.kind === 30023) {
-            <app-article-event [event]="item.event"></app-article-event>
-          } @else if (item.event.kind === 3) {
-            <div class="following-event">
-              <mat-icon>people</mat-icon>
-              <span>Following {{ followingCount() }} accounts</span>
-            </div>
-          }
-          <!-- M3U Playlists (kind 32100) -->
-          @else if (item.event.kind === 32100) {
-            <app-playlist-event [event]="targetItem.event"></app-playlist-event>
-          } @else if (item.event.kind === 39089) {
-            <!-- Starter Packs (kind 39089) -->
-            <app-starter-pack-event [event]="item.event"></app-starter-pack-event>
-          } @else if (item.event.kind === 8) {
-            <app-badge [badge]="targetItem.event"></app-badge>
-          }
-          <!-- Profile events (kind 0) -->
-          @else if (item.event.kind === 0) {
-            {{ item.data.about }}
-            <!-- <app-user-profile [view]="'details'" [event]="item.event"></app-user-profile> -->
-          } @else {
-            <app-content [content]="item.data"></app-content>
-          }
-        }
-      </mat-card-content>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <!-- Thread indicator -->
+    <div class="thread-indicator">
+      <hr />
+      <span>Thread continues</span>
+      <hr />
+    </div>
     }
 
-    <!-- Zap Display -->
-    <!-- @if (targetItem.event.kind === 1) {
+    <!-- Immediate parent event (what this is replying to) -->
+    @if (parentRecordData) {
+    <div class="reply-context">
+      @if (isThreadedReply()) {
+      <h4 class="thread-label">Replying to</h4>
+      }
+      <mat-card appearance="outlined" class="parent-event">
+        <app-event-header [event]="parentRecordData.event"></app-event-header>
+        <mat-card-content>
+          @if (parentRecordData.event.kind === 20) {
+          <app-photo-event [event]="parentRecordData.event"></app-photo-event>
+          }
+          <!-- Videos (NIP-71, kind 21/22) -->
+          @else if (
+          parentRecordData.event.kind === 21 || parentRecordData.event.kind === 22
+          ) {
+          <app-video-event [event]="parentRecordData.event"></app-video-event>
+          }
+          <!-- Articles (kind 30023) -->
+          @else if (parentRecordData.event.kind === 30023) {
+          <app-article-event [event]="parentRecordData.event"></app-article-event>
+          }
+          <!-- M3U Playlists (kind 32100) -->
+          @else if (parentRecordData.event.kind === 32100) {
+          <app-playlist-event [event]="parentRecordData.event"></app-playlist-event>
+          }
+          <!-- Starter Packs (kind 39089) -->
+          @else if (parentRecordData.event.kind === 39089) {
+          <app-starter-pack-event [event]="parentRecordData.event"></app-starter-pack-event>
+          }
+          <!-- Profile events (kind 0) -->
+          @else if (parentRecordData.event.kind === 0) {
+          <app-user-profile [view]="'details'" [event]="parentRecordData.event"></app-user-profile>
+          } @else {
+          <app-content [content]="parentRecordData.data" [event]="parentRecordData.event"></app-content>
+          }
+        </mat-card-content>
+      </mat-card>
+    </div>
+    }
+    }
+
+    <!-- Current event (the reply) -->
+    <app-event-header [event]="item.event"></app-event-header>
+    @if (shouldHideContent()) {
+    <app-reported-content [event]="item.event"></app-reported-content>
+    } @else {
+    @if (item.event.kind === 20) {
+    <app-photo-event [event]="item.event"></app-photo-event>
+    }
+    <!-- Videos (NIP-71, kind 21/22) -->
+    @else if (item.event.kind === 21 || item.event.kind === 22) {
+    <app-video-event [event]="item.event"></app-video-event>
+    }
+    <!-- Articles (kind 30023) -->
+    @else if (item.event.kind === 30023) {
+    <app-article-event [event]="item.event"></app-article-event>
+    } @else if (item.event.kind === 3) {
+    <div class="following-event">
+      <mat-icon>people</mat-icon>
+      <span>Following {{ followingCount() }} accounts</span>
+    </div>
+    }
+    <!-- M3U Playlists (kind 32100) -->
+    @else if (item.event.kind === 32100) {
+    <app-playlist-event [event]="item.event"></app-playlist-event>
+    } @else if (item.event.kind === 39089) {
+    <!-- Starter Packs (kind 39089) -->
+    <app-starter-pack-event [event]="item.event"></app-starter-pack-event>
+    } @else if (item.event.kind === 8) {
+    <app-badge [badge]="item.event"></app-badge>
+    }
+    <!-- Profile events (kind 0) -->
+    @else if (item.event.kind === 0) {
+    {{ item.data.about }}
+    <!-- <app-user-profile [view]="'details'" [event]="item.event"></app-user-profile> -->
+    } @else {
+    <app-content [content]="item.data" [event]="item.event"></app-content>
+    }
+    }
+  </mat-card-content>
+  } @else {
+  <!-- Normal event structure -->
+  <app-event-header [event]="item.event"></app-event-header>
+  <mat-card-content>
+    @if (shouldHideContent()) {
+    <app-reported-content [event]="item.event"></app-reported-content>
+    } @else {
+    @if (item.event.kind === 20) {
+    <app-photo-event [event]="item.event"></app-photo-event>
+    }
+    <!-- Videos (NIP-71, kind 21/22) -->
+    @else if (item.event.kind === 21 || item.event.kind === 22) {
+    <app-video-event [event]="item.event"></app-video-event>
+    }
+    <!-- Articles (kind 30023) -->
+    @else if (item.event.kind === 30023) {
+    <app-article-event [event]="item.event"></app-article-event>
+    } @else if (item.event.kind === 3) {
+    <div class="following-event">
+      <mat-icon>people</mat-icon>
+      <span>Following {{ followingCount() }} accounts</span>
+    </div>
+    }
+    <!-- M3U Playlists (kind 32100) -->
+    @else if (item.event.kind === 32100) {
+    <app-playlist-event [event]="targetItem.event"></app-playlist-event>
+    } @else if (item.event.kind === 39089) {
+    <!-- Starter Packs (kind 39089) -->
+    <app-starter-pack-event [event]="item.event"></app-starter-pack-event>
+    } @else if (item.event.kind === 8) {
+    <app-badge [badge]="targetItem.event"></app-badge>
+    }
+    <!-- Profile events (kind 0) -->
+    @else if (item.event.kind === 0) {
+    {{ item.data.about }}
+    <!-- <app-user-profile [view]="'details'" [event]="item.event"></app-user-profile> -->
+    } @else {
+    <app-content [content]="item.data" [event]="item.event"></app-content>
+    }
+    }
+  </mat-card-content>
+  }
+
+  <!-- Zap Display -->
+  <!-- @if (targetItem.event.kind === 1) {
   <app-zap-display [eventId]="targetItem.event.id"></app-zap-display>
   } -->
 
-    <mat-card-actions class="note-footer">
-      @if (item.event.kind === 1) {
-        <div class="reactions-row">
-          <!-- Reply -->
-          <div class="reaction-group">
-            <app-reply-button [event]="targetItem.event"></app-reply-button>
-            <button mat-button class="count-button" disabled>
-              <span>...</span>
-            </button>
-          </div>
+  <mat-card-actions class="note-footer">
+    @if (item.event.kind === 1) {
+    <div class="reactions-row">
+      <!-- Reply -->
+      <div class="reaction-group">
+        <app-reply-button [event]="targetItem.event"></app-reply-button>
+        <button mat-button class="count-button" disabled>
+          <span>...</span>
+        </button>
+      </div>
 
-          <!-- Repost -->
-          <div class="reaction-group">
-            <app-repost-button [event]="targetItem.event"></app-repost-button>
-            <button
-              mat-button
-              class="count-button"
-              (click)="openReactionsDialog('reposts'); $event.stopPropagation()"
-            >
-              <span>{{ repostCount() }}</span>
-            </button>
-          </div>
+      <!-- Repost -->
+      <div class="reaction-group">
+        <app-repost-button [event]="targetItem.event"></app-repost-button>
+        <button mat-button class="count-button" (click)="openReactionsDialog('reposts'); $event.stopPropagation()">
+          <span>{{ repostCount() }}</span>
+        </button>
+      </div>
 
-          <!-- Like -->
-          <div class="reaction-group">
-            <button
-              mat-icon-button
-              [ngClass]="{
+      <!-- Like -->
+      <div class="reaction-group">
+        <button mat-icon-button [ngClass]="{
                 active: !!likeReaction(),
-              }"
-              [disabled]="isLoadingReactions()"
-              (click)="toggleLike($event)"
-            >
-              <mat-icon>favorite</mat-icon>
-            </button>
-            <button
-              mat-button
-              class="count-button"
-              (click)="openReactionsDialog('likes'); $event.stopPropagation()"
-            >
-              <span>{{ likes().length }}</span>
-            </button>
-          </div>
+              }" [disabled]="isLoadingReactions()" (click)="toggleLike($event)">
+          <mat-icon>favorite</mat-icon>
+        </button>
+        <button mat-button class="count-button" (click)="openReactionsDialog('likes'); $event.stopPropagation()">
+          <span>{{ likes().length }}</span>
+        </button>
+      </div>
 
-          <!-- Zap -->
-          <div class="reaction-group">
-            <app-zap-button [event]="targetItem.event" [recipientPubkey]="targetItem.event.pubkey">
-            </app-zap-button>
-            <button
-              mat-button
-              class="count-button"
-              (click)="openReactionsDialog('zaps'); $event.stopPropagation()"
-            >
-              <span>
-                @if (totalZapAmount() > 0) {
-                  {{ formatZapAmount(totalZapAmount()) }} sats
-                } @else {
-                  0
-                }
-              </span>
-            </button>
-          </div>
-        </div>
-      }
-
-      <button
-        mat-icon-button
-        class="note-footer-right hide-small"
-        (click)="onBookmarkClick($event)"
-      >
-        <mat-icon
-          [matTooltip]="bookmark.getBookmarkTooltip(targetItem.event.id)"
-          matTooltipPosition="below"
-        >
-          {{ bookmark.getBookmarkIcon(targetItem.event.id) }}
-        </mat-icon>
-      </button>
-    </mat-card-actions>
-  </mat-card>
-} @else if (id() && !isLoadingEvent()) {
-  <div class="event-content">
-    @if (loadingError()) {
-      <p class="error-message">{{ loadingError() }}</p>
-    } @else {
-      <p>Event not found</p>
+      <!-- Zap -->
+      <div class="reaction-group">
+        <app-zap-button [event]="targetItem.event" [recipientPubkey]="targetItem.event.pubkey">
+        </app-zap-button>
+        <button mat-button class="count-button" (click)="openReactionsDialog('zaps'); $event.stopPropagation()">
+          <span>
+            @if (totalZapAmount() > 0) {
+            {{ formatZapAmount(totalZapAmount()) }} sats
+            } @else {
+            0
+            }
+          </span>
+        </button>
+      </div>
+    </div>
     }
-  </div>
+
+    <button mat-icon-button class="note-footer-right hide-small" (click)="onBookmarkClick($event)">
+      <mat-icon [matTooltip]="bookmark.getBookmarkTooltip(targetItem.event.id)" matTooltipPosition="below">
+        {{ bookmark.getBookmarkIcon(targetItem.event.id) }}
+      </mat-icon>
+    </button>
+  </mat-card-actions>
+</mat-card>
+} @else if (id() && !isLoadingEvent()) {
+<div class="event-content">
+  @if (loadingError()) {
+  <p class="error-message">{{ loadingError() }}</p>
+  } @else {
+  <p>Event not found</p>
+  }
+</div>
 }

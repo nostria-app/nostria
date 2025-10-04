@@ -1,37 +1,37 @@
 <div class="content-container" #contentContainer>
   @if (shouldShowContent()) {
-    <app-note-content [contentTokens]="contentTokens()"></app-note-content>
+  <app-note-content [contentTokens]="contentTokens()"></app-note-content>
 
-    @for (mention of eventMentions(); track mention.event.event.id) {
-      <mat-card>
-        <mat-card-header>
-          <app-user-profile [pubkey]="mention.event.event.pubkey" view="compact">
-            <a
-              class="date-link"
-              [matTooltip]="mention.event.event.created_at * 1000 | date: 'medium'"
-              matTooltipPosition="below"
-              tabindex="0"
-              role="button"
-              (click)="layoutService.openEvent(mention.event.event.id, mention.event.event)"
-            >
-              {{ mention.event.event.created_at | ago }}
-            </a>
-          </app-user-profile>
-        </mat-card-header>
-        <mat-card-content>
-          <div class="content-container">
-            <app-note-content [contentTokens]="mention.contentTokens"></app-note-content>
-          </div>
-        </mat-card-content>
-      </mat-card>
-    }
+  @for (mention of eventMentions(); track mention.event.event.id) {
+  <mat-card>
+    <mat-card-header>
+      <app-user-profile [pubkey]="mention.event.event.pubkey" view="compact">
+        <a class="date-link" [matTooltip]="mention.event.event.created_at * 1000 | date: 'medium'"
+          matTooltipPosition="below" tabindex="0" role="button"
+          (click)="layoutService.openEvent(mention.event.event.id, mention.event.event)">
+          {{ mention.event.event.created_at | ago }}
+        </a>
+      </app-user-profile>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="content-container">
+        <app-note-content [contentTokens]="mention.contentTokens"></app-note-content>
+      </div>
+    </mat-card-content>
+  </mat-card>
+  }
 
-    @for (preview of socialPreviews(); track preview.url) {
-      @if (settings.settings().socialSharingPreview) {
-        <app-social-preview class="social-preview" [url]="preview.url"></app-social-preview>
-      }
-    }
+  @for (preview of socialPreviews(); track preview.url) {
+  @if (settings.settings().socialSharingPreview) {
+  <app-social-preview class="social-preview" [url]="preview.url"></app-social-preview>
+  }
+  }
+
+  <!-- Tagged references (mentions and articles) -->
+  @if (event()) {
+  <app-tagged-references [event]="event()!"></app-tagged-references>
+  }
   } @else {
-    <div class="content-placeholder"></div>
+  <div class="content-placeholder"></div>
   }
 </div>

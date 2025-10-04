@@ -1,0 +1,67 @@
+@if (shouldShowReferences()) {
+<div class="tagged-references-container">
+
+  <!-- User Mentions -->
+  @if (mentions().length > 0) {
+  <div class="mentions-section">
+    <div class="section-header">
+      <mat-icon>person</mat-icon>
+      <span class="section-title">Mentioned</span>
+    </div>
+    <div class="mentions-list">
+      @for (mention of mentions(); track mention.pubkey) {
+      <div class="mention-item" (click)="onMentionClick(mention)" (keydown.enter)="onMentionClick(mention)"
+        (keydown.space)="onMentionClick(mention)" tabindex="0" role="button" [attr.aria-label]="'View profile'">
+        <mat-icon class="mention-icon">person</mat-icon>
+        <app-profile-display-name [pubkey]="mention.pubkey"></app-profile-display-name>
+        @if (mention.marker) {
+        <span class="mention-marker">{{ mention.marker }}</span>
+        }
+      </div>
+      }
+    </div>
+  </div>
+  }
+
+  <!-- Article References -->
+  @if (articles().length > 0) {
+  <div class="articles-section">
+    <div class="section-header">
+      <mat-icon>article</mat-icon>
+      <span class="section-title">Referenced</span>
+    </div>
+    <div class="articles-list">
+      @for (article of articles(); track article.kind + ':' + article.pubkey + ':' + article.identifier) {
+      <mat-card class="article-reference-card">
+        <mat-card-header>
+          <mat-card-title class="article-title">
+            {{ getArticleTitle(article) }}
+          </mat-card-title>
+          <mat-card-subtitle class="article-subtitle">
+            <span class="article-kind">{{ getKindDisplayName(article.kind) }}</span>
+            <span class="article-author">
+              by <app-profile-display-name [pubkey]="article.pubkey"></app-profile-display-name>
+            </span>
+            @if (article.marker) {
+            <span class="article-marker">{{ article.marker }}</span>
+            }
+          </mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <p class="article-description">{{ getArticleDescription(article) }}</p>
+        </mat-card-content>
+        <mat-card-actions align="end">
+          <button mat-button color="primary" (click)="onArticleClick(article)"
+            [attr.aria-label]="'Open ' + getKindDisplayName(article.kind)">
+            <mat-icon>open_in_new</mat-icon>
+            Open
+          </button>
+        </mat-card-actions>
+      </mat-card>
+      }
+    </div>
+  </div>
+  }
+
+</div>
+}
