@@ -15,7 +15,7 @@ export class UtilitiesService {
   private logger = inject(LoggerService);
 
   NIP05_REGEX = /^(?:([\w.+-]+)@)?([\w_-]+(\.[\w_-]+)+)$/;
-  regexpVideo = /(?:(?:https?)+\:\/\/+[a-zA-Z0-9\/\._-]{1,})+(?:(?:mp4|webm))/gi;
+  regexpVideo = /(?:(?:https?)+\:\/\/+[a-zA-Z0-9\/\._-]{1,})+(?:(?:mp4|webm|mov|avi|wmv|flv|mkv))/gi;
   regexpImage = /(?:(?:https?)+\:\/\/+[a-zA-Z0-9\/\._-]{1,})+(?:(?:jpe?g|png|gif|webp))/gi;
   regexpYouTube =
     /(?:https?:\/\/)?(?:www\.)?youtu\.?be(?:\.com)?\/?.*(?:watch|embed)?(?:.*v=|v\/|\/)([\w-_]+)/gim;
@@ -28,7 +28,7 @@ export class UtilitiesService {
   private readonly platformId = inject(PLATFORM_ID);
   readonly isBrowser = signal(isPlatformBrowser(this.platformId));
 
-  constructor() {}
+  constructor() { }
 
   /**
    * Validate if a string is a valid hex pubkey (64 character hex string)

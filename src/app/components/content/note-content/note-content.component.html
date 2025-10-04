@@ -39,10 +39,27 @@
     </div>
   } @else if (token.type === 'video') {
     <div class="media-container">
-      <video controls>
-        <source [src]="token.content" type="video/{{ getVideoType(token.content) }}" />
-        Your browser does not support the video element.
-      </video>
+      @if (isVideoFormatSupported(token.content)) {
+        <video controls (error)="onVideoError($event, token.content)">
+          <source [src]="token.content" type="video/{{ getVideoType(token.content) }}" />
+          Your browser does not support the video element.
+          <p>
+            <a [href]="token.content" target="_blank" rel="noopener noreferrer">
+              Download video file
+            </a>
+          </p>
+        </video>
+      } @else {
+        <div class="unsupported-video">
+          <div class="video-placeholder">
+            <mat-icon>videocam</mat-icon>
+            <p>Video format may not be supported in browser</p>
+            <a [href]="token.content" target="_blank" rel="noopener noreferrer" class="download-link">
+              View/Download Video
+            </a>
+          </div>
+        </div>
+      }
     </div>
   } @else if (
     token.type === 'nostr-mention' &&
