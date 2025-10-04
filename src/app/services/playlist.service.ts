@@ -1,6 +1,8 @@
 import { Injectable, signal, computed, inject, effect } from '@angular/core';
 import { LocalStorageService } from './local-storage.service';
 import { ApplicationService } from './application.service';
+import { NostrService } from './nostr.service';
+import { AccountRelayService } from './relays/account-relay';
 import { Playlist, PlaylistTrack, PlaylistDraft, OnInitialized, MediaItem } from '../interfaces';
 import { Event } from 'nostr-tools';
 
@@ -10,6 +12,8 @@ import { Event } from 'nostr-tools';
 export class PlaylistService implements OnInitialized {
   private localStorage = inject(LocalStorageService);
   private app = inject(ApplicationService);
+  private nostrService = inject(NostrService);
+  private accountRelay = inject(AccountRelayService);
 
   // Storage keys
   private readonly PLAYLISTS_STORAGE_KEY = 'nostria-playlists';
@@ -366,7 +370,7 @@ export class PlaylistService implements OnInitialized {
   }
 
   // Publish playlist to Nostr as kind 32100 event
-  async publishPlaylistToNostr(playlist: Playlist): Promise<Event | null> {
+  async publishPlaylistToNostr(playlist: Playlist): Promise<Event> {
     try {
       // Create the event content (M3U format)
       const content = this.exportPlaylistToM3U(playlist);
@@ -374,32 +378,31 @@ export class PlaylistService implements OnInitialized {
       // Create the tags
       const tags = this.generateNostrEventTags(playlist);
 
-      // Create the event object
-      const eventTemplate = {
-        kind: 32100,
-        created_at: Math.floor(Date.now() / 1000),
-        content,
-        tags,
-      };
+      // Create the event using NostrService
+      const event = this.nostrService.createEvent(32100, content, tags);
 
-      // TODO: Sign and publish the event using your Nostr service
-      // This would typically involve:
-      // 1. Getting the current user's private key
-      // 2. Signing the event
-      // 3. Publishing to relays
+      if (!event) {
+        throw new Error('Failed to create playlist event');
+      }
 
-      console.log('Event to publish:', eventTemplate);
+      // Sign the event
+      const signedEvent = await this.nostrService.signEvent(event);
+      if (!signedEvent) {
+        throw new Error('Failed to sign playlist event');
+      }
 
-      // For now, just return a mock event
-      // In a real implementation, you would:
-      // const signedEvent = await nostrService.signEvent(eventTemplate);
-      // await nostrService.publishEvent(signedEvent);
-      // return signedEvent;
+      // Publish to account relays
+      const publishPromises = await this.accountRelay.publish(signedEvent);
 
-      return null; // Placeholder until Nostr service integration
+      if (!publishPromises) {
+        throw new Error('Failed to publish playlist to relays');
+      }
+
+      console.log('Playlist published successfully:', signedEvent);
+      return signedEvent;
     } catch (error) {
       console.error('Failed to publish playlist to Nostr:', error);
-      return null;
+      throw error; // Re-throw so caller can handle the error
     }
   }
 
@@ -412,31 +415,33 @@ export class PlaylistService implements OnInitialized {
       // Then attempt to publish to Nostr
       const publishedEvent = await this.publishPlaylistToNostr(savedPlaylist);
 
-      if (publishedEvent) {
-        // Update the playlist with the event ID and mark as published
-        const updatedPlaylist: Playlist = {
-          ...savedPlaylist,
-          eventId: publishedEvent.id,
-          isLocal: false,
-        };
+      // Update the playlist with the event ID and mark as published
+      const updatedPlaylist: Playlist = {
+        ...savedPlaylist,
+        eventId: publishedEvent.id,
+        isLocal: false, // Mark as published to Nostr
+      };
 
-        // Update in storage
-        const playlists = this._playlists();
-        const index = playlists.findIndex(p => p.id === updatedPlaylist.id);
-        if (index >= 0) {
-          const newPlaylists = [...playlists];
-          newPlaylists[index] = updatedPlaylist;
-          this._playlists.set(newPlaylists);
-          this.savePlaylistsToStorage();
-        }
-
-        return updatedPlaylist;
+      // Update in storage
+      const playlists = this._playlists();
+      const index = playlists.findIndex(p => p.id === updatedPlaylist.id);
+      if (index >= 0) {
+        const newPlaylists = [...playlists];
+        newPlaylists[index] = updatedPlaylist;
+        this._playlists.set(newPlaylists);
+        this.savePlaylistsToStorage();
       }
 
-      return savedPlaylist;
+      return updatedPlaylist;
     } catch (error) {
       console.error('Failed to save and publish playlist:', error);
-      return null;
+      // Return the locally saved playlist even if publishing failed
+      try {
+        return this.savePlaylist();
+      } catch (saveError) {
+        console.error('Failed to save playlist locally:', saveError);
+        throw new Error('Failed to save playlist');
+      }
     }
   }
 
