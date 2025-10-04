@@ -129,7 +129,7 @@ export class TaggedReferencesComponent {
         const imageTag = event.tags?.find(tag => tag[0] === 'image');
         const bannerTag = event.tags?.find(tag => tag[0] === 'banner');
         const pictureTag = event.tags?.find(tag => tag[0] === 'picture');
-        
+
         if (imageTag?.[1]) {
           article.image = imageTag[1];
         } else if (bannerTag?.[1]) {
