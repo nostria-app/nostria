@@ -4,16 +4,18 @@
   line-height: 1.6;
   word-break: break-word;
   min-height: 20px; // Ensure there's at least some space to detect visibility
+
+  mat-card {
+    margin-top: 1rem;
+  }
 }
 
 .content-placeholder {
   min-height: 20px;
-  background: linear-gradient(
-    90deg,
-    rgba(0, 0, 0, 0.03) 0%,
-    rgba(0, 0, 0, 0.06) 50%,
-    rgba(0, 0, 0, 0.03) 100%
-  );
+  background: linear-gradient(90deg,
+      rgba(0, 0, 0, 0.03) 0%,
+      rgba(0, 0, 0, 0.06) 50%,
+      rgba(0, 0, 0, 0.03) 100%);
   background-size: 200% 100%;
   animation: placeholderShimmer 1.5s infinite;
   border-radius: 4px;
