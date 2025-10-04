@@ -1,0 +1,27 @@
+.track-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 400px;
+  padding: 8px 0;
+}
+
+.full-width {
+  width: 100%;
+}
+
+mat-dialog-content {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+mat-dialog-actions {
+  gap: 8px;
+  margin-top: 16px;
+}
+
+@media (max-width: 480px) {
+  .track-form {
+    min-width: 300px;
+  }
+}

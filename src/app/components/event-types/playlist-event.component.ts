@@ -146,16 +146,16 @@ export class PlaylistEventComponent {
 
   private getPlaylistData(event: Event): PlaylistData | null {
     try {
-      // Get title
-      const titleTag = event.tags.find(tag => tag[0] === 'title');
-      const title = titleTag?.[1] || 'Untitled Playlist';
-
-      // Get alt text/description
+      // Get title from 'alt' tag (main title, larger text)
       const altTag = event.tags.find(tag => tag[0] === 'alt');
-      const alt = altTag?.[1];
+      const title = altTag?.[1] || 'Untitled Playlist';
 
-      // Get playlist URL
-      const urlTag = event.tags.find(tag => tag[0] === 'url');
+      // Get descriptor from 'd' tag (shown below title)
+      const descriptorTag = event.tags.find(tag => tag[0] === 'd');
+      const alt = descriptorTag?.[1];
+
+      // Get playlist URL from 'u' tag as per NIP specification
+      const urlTag = event.tags.find(tag => tag[0] === 'u');
       const url = urlTag?.[1];
 
       // Parse M3U content from event content

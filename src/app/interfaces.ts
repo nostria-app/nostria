@@ -16,6 +16,40 @@ export interface MediaItem {
   type: 'Music' | 'Podcast' | 'YouTube' | 'Video';
 }
 
+// Playlist-related interfaces for Nostr kind 32100 events
+export interface PlaylistTrack {
+  url: string;
+  title?: string;
+  artist?: string;
+  duration?: string;
+}
+
+export interface PlaylistMetadata {
+  id: string; // From 'd' tag
+  title: string; // From 'alt' tag
+  description?: string; // From 'd' tag
+  tags?: string[]; // From 't' tags
+  url?: string; // From 'u' tag
+  created_at: number;
+  pubkey: string;
+  eventId?: string; // Nostr event id if published
+  isLocal: boolean; // True if only stored locally, false if published to Nostr
+}
+
+export interface Playlist extends PlaylistMetadata {
+  tracks: PlaylistTrack[];
+  totalDuration?: string;
+}
+
+export interface PlaylistDraft {
+  id?: string;
+  title: string;
+  description?: string;
+  tags?: string[];
+  tracks: PlaylistTrack[];
+  isNewPlaylist: boolean;
+}
+
 export declare interface OnInitialized {
   initialize(): void;
 }

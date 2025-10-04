@@ -1,0 +1,36 @@
+.playlist-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 400px;
+  padding: 8px 0;
+
+  .id-field-container {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+
+    .id-field {
+      flex: 1;
+    }
+
+    .generate-id-button {
+      margin-bottom: 1.34375em; // Align with form field baseline
+      color: var(--mat-sys-primary);
+    }
+  }
+}
+
+.full-width {
+  width: 100%;
+}
+
+mat-dialog-content {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+mat-dialog-actions {
+  gap: 8px;
+  margin-top: 16px;
+}

@@ -1,6 +1,6 @@
 import { effect, inject, Injectable, signal, computed } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-import { MediaItem, OnInitialized } from '../interfaces';
+import { MediaItem, OnInitialized, Playlist } from '../interfaces';
 import { UtilitiesService } from './utilities.service';
 import { ApplicationService } from './application.service';
 import { LocalStorageService } from './local-storage.service';
@@ -179,6 +179,79 @@ export class MediaPlayerService implements OnInitialized {
     navigator.mediaSession.playbackState = 'none';
 
     console.log('Media player completely exited and hidden');
+  }
+
+  playPlaylist(playlist: Playlist): void {
+    console.log('Playing playlist:', playlist.title);
+
+    if (playlist.tracks.length === 0) {
+      console.warn('No tracks in playlist');
+      return;
+    }
+
+    // Clear current queue
+    this.clearQueue();
+
+    // Convert playlist tracks to MediaItems
+    const mediaItems: MediaItem[] = playlist.tracks.map((track, index) => ({
+      source: track.url,
+      title: track.title || `Track ${index + 1}`,
+      artist: track.artist || 'Unknown Artist',
+      artwork: '/icons/icon-192x192.png', // Default artwork
+      type: this.getMediaType(track.url),
+    }));
+
+    // Play first track and add rest to queue
+    if (mediaItems.length > 0) {
+      this.play(mediaItems[0]);
+
+      // Add remaining tracks to queue
+      for (let i = 1; i < mediaItems.length; i++) {
+        this.enque(mediaItems[i]);
+      }
+    }
+  }
+
+  addPlaylistToQueue(playlist: Playlist): void {
+    console.log('Adding playlist to queue:', playlist.title);
+
+    if (playlist.tracks.length === 0) {
+      console.warn('No tracks in playlist');
+      return;
+    }
+
+    // Convert playlist tracks to MediaItems and add to queue
+    const mediaItems: MediaItem[] = playlist.tracks.map((track, index) => ({
+      source: track.url,
+      title: track.title || `Track ${index + 1}`,
+      artist: track.artist || 'Unknown Artist',
+      artwork: '/icons/icon-192x192.png', // Default artwork
+      type: this.getMediaType(track.url),
+    }));
+
+    // Add all tracks to queue
+    mediaItems.forEach(item => {
+      this.enque(item);
+    });
+  }
+
+  private getMediaType(url: string): 'Music' | 'Podcast' | 'YouTube' | 'Video' {
+    if (!url) return 'Music';
+
+    // Check for YouTube URLs
+    if (url.includes('youtube.com') || url.includes('youtu.be')) {
+      return 'YouTube';
+    }
+
+    // Check for video file extensions
+    const videoExtensions = ['.mp4', '.webm', '.ogg', '.avi', '.mov', '.wmv', '.flv', '.mkv'];
+    const lowercaseUrl = url.toLowerCase();
+    if (videoExtensions.some(ext => lowercaseUrl.includes(ext))) {
+      return 'Video';
+    }
+
+    // Default to Music for music playlists
+    return 'Music';
   }
 
   play(file: MediaItem) {
@@ -417,8 +490,8 @@ export class MediaPlayerService implements OnInitialized {
       this.audio.currentTime = 0;
       // Remove event listeners
       this.audio.removeEventListener('ended', this.handleMediaEnded);
-      this.audio.removeEventListener('canplay', () => {});
-      this.audio.removeEventListener('loadeddata', () => {});
+      this.audio.removeEventListener('canplay', () => { });
+      this.audio.removeEventListener('loadeddata', () => { });
     }
 
     // Stop and cleanup video
@@ -427,8 +500,8 @@ export class MediaPlayerService implements OnInitialized {
       this.videoElement.currentTime = 0;
       // Remove event listeners
       this.videoElement.removeEventListener('ended', this.handleMediaEnded);
-      this.videoElement.removeEventListener('canplay', () => {});
-      this.videoElement.removeEventListener('loadeddata', () => {});
+      this.videoElement.removeEventListener('canplay', () => { });
+      this.videoElement.removeEventListener('loadeddata', () => { });
     }
 
     // Clear video URLs to stop any playing videos
