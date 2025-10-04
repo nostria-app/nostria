@@ -125,6 +125,94 @@ export class PlaylistEventComponent {
     });
   }
 
+  downloadM3U(): void {
+    const event = this.event();
+    if (!event) return;
+
+    // Get the 'd' tag for filename
+    const dTag = event.tags.find(tag => tag[0] === 'd');
+    const filename = dTag?.[1] || 'playlist';
+
+    // Create filename with .m3u extension
+    const m3uFilename = `${filename}.m3u`;
+
+    // Generate enhanced M3U content with metadata
+    const m3uContent = this.generateEnhancedM3U(event);
+
+    // Create blob and download
+    const blob = new Blob([m3uContent], { type: 'audio/x-mpegurl' });
+    const url = URL.createObjectURL(blob);
+
+    // Create download link
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = m3uFilename;
+    link.style.display = 'none';
+
+    // Trigger download
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    // Clean up
+    URL.revokeObjectURL(url);
+
+    console.log(`Downloaded M3U file: ${m3uFilename}`);
+  }
+
+  private generateEnhancedM3U(event: Event): string {
+    const lines: string[] = [];
+
+    // Start with M3U header
+    lines.push('#EXTM3U');
+
+    // Add metadata headers
+    // Get playlist title from 'alt' tag
+    const altTag = event.tags.find(tag => tag[0] === 'alt');
+    const playlistTitle = altTag?.[1] || 'Untitled Playlist';
+    lines.push(`# Playlist: ${playlistTitle}`);
+
+    // Add creation date (convert from Nostr timestamp)
+    const createdAt = new Date(event.created_at * 1000).toISOString();
+    lines.push(`# Created: ${createdAt}`);
+
+    // Add tags if available
+    const tagTags = event.tags.filter(tag => tag[0] === 't');
+    if (tagTags.length > 0) {
+      tagTags.forEach(tag => {
+        if (tag[1]) {
+          lines.push(`# Tag: ${tag[1]}`);
+        }
+      });
+    }
+
+    // Add author (pubkey)
+    lines.push(`# Author: ${event.pubkey}`);
+
+    // Add empty line before tracks
+    lines.push('');
+
+    // Parse and add tracks with enhanced format
+    const tracks = this.parseM3UContent(event.content);
+    tracks.forEach(track => {
+      // Parse duration from track or default to -1
+      let durationSeconds = -1;
+      if (track.duration) {
+        durationSeconds = this.parseDuration(track.duration);
+      }
+
+      // Create track info line with group-title
+      const artist = track.artist || 'Unknown';
+      const title = track.title || 'Unknown Track';
+      const groupTitle = track.artist || 'Unknown';
+
+      lines.push(`#EXTINF:${durationSeconds} group-title="${groupTitle}", ${artist} - ${title}`);
+      lines.push(track.url);
+    });
+
+    return lines.join('\n');
+  }
+
   private getMediaType(url: string): 'Music' | 'Podcast' | 'YouTube' | 'Video' {
     if (!url) return 'Music';
 
