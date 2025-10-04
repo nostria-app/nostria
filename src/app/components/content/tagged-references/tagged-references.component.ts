@@ -46,7 +46,6 @@ export class TaggedReferencesComponent {
   // Parse p tags (user mentions) from the event
   mentions = computed<ParsedMention[]>(() => {
     const event = this.event();
-    console.log('TaggedReferences: event received:', event);
     if (!event || !event.tags) return [];
 
     const mentions = event.tags
@@ -61,7 +60,6 @@ export class TaggedReferencesComponent {
         array.findIndex(m => m.pubkey === mention.pubkey) === index
       );
 
-    console.log('TaggedReferences: parsed mentions:', mentions);
     return mentions;
   });
 
@@ -95,7 +93,6 @@ export class TaggedReferencesComponent {
       ) === index
     );
 
-    console.log('TaggedReferences: parsed articles:', articles);
     return articles;
   });
 
@@ -105,7 +102,7 @@ export class TaggedReferencesComponent {
   // Load article data when needed
   private async loadArticleData(article: ParsedArticle): Promise<void> {
     const key = `${article.kind}:${article.pubkey}:${article.identifier}`;
-    
+
     if (this.articleData().has(key)) return;
 
     try {
@@ -220,8 +217,6 @@ export class TaggedReferencesComponent {
   }
 
   shouldShowReferences = computed<boolean>(() => {
-    const show = this.mentions().length > 0 || this.articles().length > 0;
-    console.log('TaggedReferences: shouldShowReferences:', show, 'mentions:', this.mentions().length, 'articles:', this.articles().length);
-    return show;
+    return this.mentions().length > 0 || this.articles().length > 0;
   });
 }
