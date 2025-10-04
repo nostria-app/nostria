@@ -121,7 +121,7 @@
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Search and select users</mat-label>
               <input type="text" matInput placeholder="Type to search users..." [matAutocomplete]="userAutocomplete"
-                #userInput formControlName="customUserInput">
+                #userInput [formControl]="userInputControl">
               <mat-autocomplete #userAutocomplete="matAutocomplete" (optionSelected)="onUserSelected($event)">
                 @for (user of filteredUsers(); track user.pubkey) {
                 <mat-option [value]="user.pubkey">
@@ -159,7 +159,7 @@
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Search and select starter packs</mat-label>
               <input type="text" matInput placeholder="Type to search starter packs..."
-                [matAutocomplete]="starterPackAutocomplete" #starterPackInput formControlName="customStarterPackInput">
+                [matAutocomplete]="starterPackAutocomplete" #starterPackInput [formControl]="starterPackInputControl">
               <mat-autocomplete #starterPackAutocomplete="matAutocomplete"
                 (optionSelected)="onStarterPackSelected($event)">
                 @for (pack of filteredStarterPacks(); track pack.id) {

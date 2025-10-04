@@ -106,8 +106,6 @@ export class NewColumnDialogComponent {
     relayConfig: [this.data.column?.relayConfig || 'account'],
     customRelays: [this.data.column?.customRelays || []],
     type: [this.data.column?.type || 'custom'],
-    customUserInput: [''], // For user autocomplete input
-    customStarterPackInput: [''], // For starter pack autocomplete input
   });
 
   // Signals and state
@@ -124,9 +122,15 @@ export class NewColumnDialogComponent {
   availableStarterPacks = signal<StarterPack[]>([]);
   userProfiles = signal<Map<string, UserProfile>>(new Map()); // Cache for user profiles
 
-  // Form controls for chips
+  // Form controls for chips and autocomplete
   kindInputControl = new FormControl('');
   relayInputControl = new FormControl('');
+  userInputControl = new FormControl('');
+  starterPackInputControl = new FormControl('');
+
+  // Reactive signals for input values
+  userInputValue = signal('');
+  starterPackInputValue = signal('');
 
   // Chip separator keys
   readonly separatorKeysCodes = [ENTER, COMMA] as const;
@@ -174,7 +178,7 @@ export class NewColumnDialogComponent {
 
   // Filtered users for autocomplete
   filteredUsers = computed(() => {
-    const input = this.columnForm.get('customUserInput')?.value?.toLowerCase() || '';
+    const input = this.userInputValue().toLowerCase();
     const following = this.followingUsers();
     const selected = this.selectedUsers();
 
@@ -187,7 +191,7 @@ export class NewColumnDialogComponent {
 
   // Filtered starter packs for autocomplete
   filteredStarterPacks = computed(() => {
-    const input = this.columnForm.get('customStarterPackInput')?.value?.toLowerCase() || '';
+    const input = this.starterPackInputValue().toLowerCase();
     const available = this.availableStarterPacks();
     const selected = this.selectedStarterPacks();
 
@@ -200,6 +204,15 @@ export class NewColumnDialogComponent {
   });
 
   constructor() {
+    // Set up reactive input value tracking
+    this.userInputControl.valueChanges.subscribe(value => {
+      this.userInputValue.set(value || '');
+    });
+
+    this.starterPackInputControl.valueChanges.subscribe(value => {
+      this.starterPackInputValue.set(value || '');
+    });
+
     // Load starter packs when component initializes
     this.loadStarterPacks();
 
@@ -444,7 +457,8 @@ export class NewColumnDialogComponent {
     }
 
     // Clear the input
-    this.columnForm.get('customUserInput')?.setValue('');
+    this.userInputControl.setValue('');
+    this.userInputValue.set('');
   }
 
   removeUser(user: UserProfile): void {
@@ -460,7 +474,8 @@ export class NewColumnDialogComponent {
     }
 
     // Clear the input
-    this.columnForm.get('customStarterPackInput')?.setValue('');
+    this.starterPackInputControl.setValue('');
+    this.starterPackInputValue.set('');
   }
 
   removeStarterPack(pack: StarterPack): void {
