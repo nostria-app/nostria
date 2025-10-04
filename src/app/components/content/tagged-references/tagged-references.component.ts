@@ -216,6 +216,47 @@ export class TaggedReferencesComponent {
     }
   }
 
+  getArticleImage(article: ParsedArticle): string | null {
+    debugger;
+    const key = `${article.kind}:${article.pubkey}:${article.identifier}`;
+    const eventData = this.articleData().get(key);
+
+    if (eventData?.event) {
+      // Try to get image from tags
+      const imageTag = eventData.event.tags.find(tag => tag[0] === 'image');
+      if (imageTag?.[1]) {
+        return imageTag[1];
+      }
+
+      // Try to get banner from tags (for articles)
+      const bannerTag = eventData.event.tags.find(tag => tag[0] === 'banner');
+      if (bannerTag?.[1]) {
+        return bannerTag[1];
+      }
+
+      // Try to get picture from tags
+      const pictureTag = eventData.event.tags.find(tag => tag[0] === 'picture');
+      if (pictureTag?.[1]) {
+        return pictureTag[1];
+      }
+    }
+
+    return null;
+  }
+
+  getArticleIcon(kind: number): string {
+    switch (kind) {
+      case 30023:
+        return 'article';
+      case 32100:
+        return 'queue_music';
+      case 39089:
+        return 'group_add';
+      default:
+        return 'description';
+    }
+  }
+
   shouldShowReferences = computed<boolean>(() => {
     return this.mentions().length > 0 || this.articles().length > 0;
   });
