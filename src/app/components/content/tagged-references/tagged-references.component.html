@@ -32,32 +32,44 @@
     </div>
     <div class="articles-list">
       @for (article of articles(); track article.kind + ':' + article.pubkey + ':' + article.identifier) {
-      <mat-card class="article-reference-card">
-        <mat-card-header>
-          <mat-card-title class="article-title">
-            {{ getArticleTitle(article) }}
-          </mat-card-title>
-          <mat-card-subtitle class="article-subtitle">
-            <span class="article-kind">{{ getKindDisplayName(article.kind) }}</span>
-            <span class="article-author">
-              by <app-profile-display-name [pubkey]="article.pubkey"></app-profile-display-name>
-            </span>
-            @if (article.marker) {
-            <span class="article-marker">{{ article.marker }}</span>
-            }
-          </mat-card-subtitle>
-        </mat-card-header>
-        <mat-card-content>
-          <p class="article-description">{{ getArticleDescription(article) }}</p>
-        </mat-card-content>
-        <mat-card-actions align="end">
-          <button mat-button color="primary" (click)="onArticleClick(article)"
-            [attr.aria-label]="'Open ' + getKindDisplayName(article.kind)">
-            <mat-icon>open_in_new</mat-icon>
-            Open
-          </button>
-        </mat-card-actions>
-      </mat-card>
+      <a class="article-preview-card" (click)="onArticleClick(article)" (keydown.enter)="onArticleClick(article)"
+        (keydown.space)="onArticleClick(article)" tabindex="0" role="button"
+        [attr.aria-label]="'Open ' + getKindDisplayName(article.kind) + ': ' + getArticleTitle(article)">
+        <mat-card>
+          <div class="preview-content">
+            <div class="thumbnail-container">
+              @if (getArticleImage(article)) {
+              <img class="thumbnail" [src]="getArticleImage(article)!" alt="Article preview image"
+                title="Article preview image" />
+              } @else {
+              <div class="thumbnail-placeholder">
+                <mat-icon class="article-icon">{{ getArticleIcon(article.kind) }}</mat-icon>
+              </div>
+              }
+            </div>
+
+            <div class="text-content">
+              <div class="preview-title">
+                {{ getArticleTitle(article) }}
+              </div>
+              <div class="preview-description">
+                {{ getArticleDescription(article) }}
+              </div>
+              <div class="preview-metadata">
+                <span class="article-kind">{{ getKindDisplayName(article.kind) }}</span>
+                <span class="separator">•</span>
+                <span class="article-author">
+                  by <app-profile-display-name [pubkey]="article.pubkey"></app-profile-display-name>
+                </span>
+                @if (article.marker) {
+                <span class="separator">•</span>
+                <span class="article-marker">{{ article.marker }}</span>
+                }
+              </div>
+            </div>
+          </div>
+        </mat-card>
+      </a>
       }
     </div>
   </div>
