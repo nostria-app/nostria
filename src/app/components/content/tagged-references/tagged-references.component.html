@@ -4,20 +4,13 @@
   <!-- User Mentions -->
   @if (mentions().length > 0) {
   <div class="mentions-section">
-    <div class="section-header">
-      <mat-icon>person</mat-icon>
-      <span class="section-title">Mentioned</span>
-    </div>
     <div class="mentions-list">
       @for (mention of mentions(); track mention.pubkey) {
-      <div class="mention-item" (click)="onMentionClick(mention)" (keydown.enter)="onMentionClick(mention)"
-        (keydown.space)="onMentionClick(mention)" tabindex="0" role="button" [attr.aria-label]="'View profile'">
-        <mat-icon class="mention-icon">person</mat-icon>
+      <button class="mention-item" (click)="onMentionClick(mention)" type="button" 
+        title="View profile of mentioned user"
+        [attr.aria-label]="'View profile of mentioned user'">
         <app-profile-display-name [pubkey]="mention.pubkey"></app-profile-display-name>
-        @if (mention.marker) {
-        <span class="mention-marker">{{ mention.marker }}</span>
-        }
-      </div>
+      </button>
       }
     </div>
   </div>

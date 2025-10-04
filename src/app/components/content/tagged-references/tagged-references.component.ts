@@ -22,6 +22,9 @@ interface ParsedArticle {
   identifier: string;
   relay?: string;
   marker?: string;
+  image?: string; // Add image property
+  title?: string; // Add title property for caching
+  description?: string; // Add description property for caching
 }
 
 @Component({
@@ -74,13 +77,18 @@ export class TaggedReferencesComponent {
         const parts = tag[1].split(':');
         if (parts.length !== 3) return null;
 
-        return {
+        const article: ParsedArticle = {
           kind: parseInt(parts[0], 10),
           pubkey: parts[1],
           identifier: parts[2],
           relay: tag[2] || undefined,
           marker: tag[3] || undefined,
-        } as ParsedArticle;
+        };
+
+        // Try to load and cache the article data
+        this.loadArticleData(article);
+
+        return article;
       })
       .filter((article): article is ParsedArticle => article !== null);
 
@@ -112,6 +120,36 @@ export class TaggedReferencesComponent {
         article.identifier,
         { cache: true, save: true }
       );
+
+      // Cache image, title, and description in the article object
+      if (eventData?.event) {
+        const event = eventData.event;
+
+        // Look for image in event tags
+        const imageTag = event.tags?.find(tag => tag[0] === 'image');
+        const bannerTag = event.tags?.find(tag => tag[0] === 'banner');
+        const pictureTag = event.tags?.find(tag => tag[0] === 'picture');
+        
+        if (imageTag?.[1]) {
+          article.image = imageTag[1];
+        } else if (bannerTag?.[1]) {
+          article.image = bannerTag[1];
+        } else if (pictureTag?.[1]) {
+          article.image = pictureTag[1];
+        }
+
+        // Look for title
+        const titleTag = event.tags?.find(tag => tag[0] === 'title');
+        if (titleTag?.[1]) {
+          article.title = titleTag[1];
+        }
+
+        // Look for summary/description
+        const summaryTag = event.tags?.find(tag => tag[0] === 'summary');
+        if (summaryTag?.[1]) {
+          article.description = summaryTag[1];
+        }
+      }
 
       this.articleData.update(map => {
         const newMap = new Map(map);
@@ -217,7 +255,12 @@ export class TaggedReferencesComponent {
   }
 
   getArticleImage(article: ParsedArticle): string | null {
-    debugger;
+    // First check if we have cached image data
+    if (article.image) {
+      return article.image;
+    }
+
+    // If no cached data, try to get from loaded event data
     const key = `${article.kind}:${article.pubkey}:${article.identifier}`;
     const eventData = this.articleData().get(key);
 
