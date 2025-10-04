@@ -94,6 +94,30 @@
     }
   }
 
+  // Like button specific styling
+  .like-button {
+    color: #666;
+    transition: all 0.2s ease;
+
+    &:hover:not(.liked) {
+      color: #e91e63;
+      background-color: rgba(233, 30, 99, 0.05);
+    }
+
+    &.liked, &.active {
+      color: #e91e63 !important;
+      background-color: rgba(233, 30, 99, 0.1) !important;
+      
+      mat-icon {
+        color: #e91e63 !important;
+      }
+      
+      &:hover {
+        background-color: rgba(233, 30, 99, 0.15) !important;
+      }
+    }
+  }
+
   .zap-button {
     color: #ff6b1a !important;
 
