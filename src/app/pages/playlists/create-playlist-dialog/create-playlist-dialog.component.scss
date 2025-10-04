@@ -2,21 +2,30 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  min-width: 400px;
+  width: 100%;
+  max-width: min(500px, 90vw); // Responsive max width
+  min-width: 0; // Allow shrinking
   padding: 8px 0;
+  box-sizing: border-box;
 
   .id-field-container {
     display: flex;
     align-items: flex-end;
     gap: 8px;
+    width: 100%;
+    min-width: 0; // Allow container to shrink
 
     .id-field {
       flex: 1;
+      min-width: 0; // Allow field to shrink
+      max-width: calc(100% - 60px); // Reserve space for button
     }
 
     .generate-id-button {
       margin-bottom: 1.34375em; // Align with form field baseline
       color: var(--mat-sys-primary);
+      flex-shrink: 0; // Prevent button from shrinking
+      width: 52px; // Fixed button width
     }
   }
 }
