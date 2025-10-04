@@ -35,9 +35,13 @@
       <mat-icon>playlist_add</mat-icon>
       Add to Queue
     </button>
+    <button mat-button (click)="downloadM3U()" title="Download M3U file">
+      <mat-icon>download</mat-icon>
+      Download .m3u
+    </button>
     @if (playlist.url) {
     <a mat-icon-button [href]="playlist.url" target="_blank" rel="noopener noreferrer" title="Download playlist">
-      <mat-icon>download</mat-icon>
+      <mat-icon>link</mat-icon>
     </a>
     }
   </div>
