@@ -63,7 +63,6 @@ import { DataService } from '../../services/data.service';
       mat-icon {
         font-size: 20px;
         width: 20px;
-        height: 20px;
       }
     `,
   ],
