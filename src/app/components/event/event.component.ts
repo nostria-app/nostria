@@ -606,7 +606,7 @@ export class EventComponent {
         id: `temp-${userPubkey}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         pubkey: userPubkey,
         created_at: Math.floor(Date.now() / 1000),
-        kind: 7,
+        kind: kinds.Reaction,
         content: emoji,
         tags: [
           ['e', this.event()?.id || ''],
