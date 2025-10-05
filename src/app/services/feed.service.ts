@@ -420,10 +420,14 @@ export class FeedService {
             return;
           }
 
-          item.events.update((events: Event[]) => [event, ...events]);
+          // Add event and maintain chronological order (newest first)
+          item.events.update((events: Event[]) => {
+            const newEvents = [...events, event];
+            return newEvents.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+          });
           this.logger.debug(`Column event received for ${column.id}:`, event);
         }) as { unsubscribe: () => void } | { close: () => void } | null;
-      } else {  
+      } else {
         // AccountRelayService uses the old signature
         sub = relayService.subscribe(item.filter, (event: Event) => {
           // Filter out live events that are muted.
@@ -431,7 +435,11 @@ export class FeedService {
             return;
           }
 
-          item.events.update((events: Event[]) => [event, ...events]);
+          // Add event and maintain chronological order (newest first)
+          item.events.update((events: Event[]) => {
+            const newEvents = [...events, event];
+            return newEvents.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+          });
           this.logger.debug(`Column event received for ${column.id}:`, event);
         });
       }
