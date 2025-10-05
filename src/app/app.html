@@ -247,11 +247,19 @@
         <!-- Child items for expandable menus -->
         @if (item.expandable && item.expanded && item.children && displayLabels()) {
         @for (child of item.children; track child.path) {
-        <button mat-list-item class="child-nav-item" (click)="navigateToFeed(child.path.split('=')[1])"
-          (keyup.enter)="navigateToFeed(child.path.split('=')[1])">
-          <mat-icon matListItemIcon>{{ child.icon }}</mat-icon>
-          <span class="nav-label child-label">{{ child.label }}</span>
-        </button>
+        <div class="child-nav-item-container">
+          <button mat-list-item class="child-nav-item" (click)="navigateToFeed(child.path.split('=')[1])"
+            (keyup.enter)="navigateToFeed(child.path.split('=')[1])">
+            <mat-icon matListItemIcon>{{ child.icon }}</mat-icon>
+            <span class="nav-label child-label">{{ child.label }}</span>
+          </button>
+          @if (child.feedId) {
+          <button mat-icon-button class="feed-edit-button"
+            (click)="$event.stopPropagation(); openFeedEditDialog(child.feedId)" matTooltip="Edit board" tabindex="0">
+            <mat-icon>settings</mat-icon>
+          </button>
+          }
+        </div>
         }
         }
         }
