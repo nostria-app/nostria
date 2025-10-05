@@ -107,6 +107,50 @@ export class WhatsNewDialogComponent {
   // Sample updates - replace with real data
   updates: FeatureUpdate[] = [
     {
+      version: '1.0.5',
+      date: 'October 2025',
+      title: 'Playlists',
+      description: 'You can now create and manage playlists.',
+      features: [
+        {
+          title: 'Playlist editing',
+          description:
+            'You can now create and manage playlists.',
+          screenshots: [
+            {
+              src: '/screenshots/2025-10-05-playlist.png',
+              alt: 'Playlist editing',
+              width: 971,
+              height: 1168,
+            },
+          ],
+        },
+        {
+          title: 'Playlist feed view',
+          description:
+            'The playlist that is shown in feeds has been improved, with better name display and the download button.',
+          screenshots: [
+            {
+              src: '/screenshots/2025-10-05-playlist-feed.png',
+              alt: 'Playlist feed view',
+              width: 687,
+              height: 735,
+            },
+          ],
+        },
+        {
+          title: 'Boards and Feeds',
+          description:
+            'Feeds and Columns has been renamed into Boards and Feeds for improved usability. Additionally, the boards are shown in the main menu if expanded.',
+        },
+        {
+          title: 'Improvements and fixes',
+          description:
+            'Almost every day improvements and fixes are being made to enhance the overall user experience. These are deployed and available to you immediately to experience.',
+        },
+      ],
+    },
+    {
       version: '1.0.4',
       date: 'September 2025',
       title: 'Loading improvements',
