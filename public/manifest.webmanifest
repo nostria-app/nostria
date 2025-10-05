@@ -9,12 +9,17 @@
   "background_color": "#303030",
   "description": "Your Social Network",
   "orientation": "any",
-  "display_override": ["window-controls-overlay"],
+  "display_override": [
+    "window-controls-overlay"
+  ],
   "display": "standalone",
   "scope": "./",
   "start_url": "./",
   "launch_handler": {
-    "client_mode": ["focus-existing", "auto"]
+    "client_mode": [
+      "focus-existing",
+      "auto"
+    ]
   },
   "protocol_handlers": [
     {
@@ -22,8 +27,19 @@
       "url": "/?nostr=%s"
     }
   ],
-  "features": ["Cross Platform", "Nostr", "Social Media"],
-  "categories": ["entertainment", "music", "photo", "productivity", "social"],
+  "features": [
+    "Cross Platform",
+    "Nostr",
+    "Social Media"
+  ],
+  "categories": [
+    "entertainment",
+    "music",
+    "photo",
+    "productivity",
+    "social"
+  ],
+  "iarc_rating_id": "4543bbc1-c869-496b-8679-9be4cbf05ad6",
   "shortcuts": [
     {
       "name": "Profile",
@@ -31,8 +47,14 @@
       "description": "Open the profile page",
       "url": "/p",
       "icons": [
-        { "src": "icons/icon-128x128.png", "sizes": "128x128" },
-        { "src": "icons/icon-96x96.png", "sizes": "96x96" }
+        {
+          "src": "icons/icon-128x128.png",
+          "sizes": "128x128"
+        },
+        {
+          "src": "icons/icon-96x96.png",
+          "sizes": "96x96"
+        }
       ]
     },
     {
@@ -41,8 +63,14 @@
       "description": "Open the notifications",
       "url": "/notifications",
       "icons": [
-        { "src": "icons/icon-128x128.png", "sizes": "128x128" },
-        { "src": "icons/icon-96x96.png", "sizes": "96x96" }
+        {
+          "src": "icons/icon-128x128.png",
+          "sizes": "128x128"
+        },
+        {
+          "src": "icons/icon-96x96.png",
+          "sizes": "96x96"
+        }
       ]
     },
     {
@@ -51,8 +79,14 @@
       "description": "Open the settings",
       "url": "/settings",
       "icons": [
-        { "src": "icons/icon-128x128.png", "sizes": "128x128" },
-        { "src": "icons/icon-96x96.png", "sizes": "96x96" }
+        {
+          "src": "icons/icon-128x128.png",
+          "sizes": "128x128"
+        },
+        {
+          "src": "icons/icon-96x96.png",
+          "sizes": "96x96"
+        }
       ]
     }
   ],
