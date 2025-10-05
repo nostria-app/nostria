@@ -65,6 +65,7 @@ import { SleepModeOverlayComponent } from './components/sleep-mode-overlay/sleep
 import { WhatsNewDialogComponent } from './components/whats-new-dialog/whats-new-dialog.component';
 import { UserDataFactoryService } from './services/user-data-factory.service';
 import { FeedsCollectionService } from './services/feeds-collection.service';
+import { NewFeedDialogComponent } from './pages/feeds/new-feed-dialog/new-feed-dialog.component';
 
 interface NavItem {
   path: string;
@@ -77,6 +78,7 @@ interface NavItem {
   expandable?: boolean;
   children?: NavItem[];
   expanded?: boolean;
+  feedId?: string;
 }
 
 @Component({
@@ -192,6 +194,7 @@ export class App implements OnInit {
           label: feed.label,
           icon: feed.icon,
           authenticated: false,
+          feedId: feed.id,
         }));
 
         return {
@@ -801,6 +804,42 @@ export class App implements OnInit {
 
   openCreateOptions(): void {
     this.bottomSheet.open(CreateOptionsSheetComponent);
+  }
+
+  openFeedEditDialog(feedId: string): void {
+    const feed = this.feedsCollectionService.getFeedById(feedId);
+    if (!feed) {
+      this.logger.error('Feed not found:', feedId);
+      return;
+    }
+
+    const dialogRef = this.dialog.open(NewFeedDialogComponent, {
+      width: '900px',
+      maxWidth: '90vw',
+      data: {
+        icons: [
+          'dynamic_feed',
+          'bookmark',
+          'explore',
+          'trending_up',
+          'star',
+          'favorite',
+          'rss_feed',
+        ],
+        feed: feed,
+      },
+    });
+
+    dialogRef.afterClosed().subscribe(async result => {
+      if (result && feed) {
+        await this.feedsCollectionService.updateFeed(feed.id, {
+          label: result.label,
+          icon: result.icon,
+          description: result.description,
+          path: result.path,
+        });
+      }
+    });
   }
 
   showLoginDialog(): void {

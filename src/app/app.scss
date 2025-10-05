@@ -412,6 +412,38 @@ mat-sidenav-content {
   outline: none;
 }
 
+.child-nav-item-container {
+  display: flex;
+  align-items: center;
+  position: relative;
+
+  .child-nav-item {
+    flex: 1;
+  }
+
+  .feed-edit-button {
+    position: absolute;
+    right: 8px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    z-index: 1;
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+  }
+
+  &:hover .feed-edit-button {
+    opacity: 0.7;
+  }
+
+  .feed-edit-button:hover {
+    opacity: 1 !important;
+  }
+}
+
 .current-account {
   display: flex;
   align-items: center;
