@@ -2,7 +2,7 @@ import { Injectable, signal, computed, effect, untracked } from '@angular/core';
 import { NostrRecord } from '../interfaces';
 import { inject } from '@angular/core';
 import { UserRelayService } from './relays/user-relay';
-import { kinds, Event } from 'nostr-tools';
+import { kinds } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { UserRelayExFactoryService } from './user-relay-factory.service';
 import { UtilitiesService } from './utilities.service';
@@ -345,131 +345,139 @@ export class ProfileStateService {
 
       this.logger.debug(`Loading more notes for ${pubkey}, before timestamp: ${oldestTimestamp}`);
 
-      return new Promise<NostrRecord[]>(resolve => {
-        const newNotes: NostrRecord[] = [];
-        const newReplies: NostrRecord[] = [];
+      const newNotes: NostrRecord[] = [];
+      const newReplies: NostrRecord[] = [];
+      const newReposts: NostrRecord[] = [];
 
-        this.relay?.query(pubkey, {
-          kinds: [kinds.ShortTextNote, kinds.Repost, kinds.GenericRepost],
-          authors: [pubkey],
-          until: oldestTimestamp,
-          limit: 15,
-        });
-
-        this.relay!.subscribeEose(
-          pubkey,
-          {
-            kinds: [kinds.ShortTextNote, kinds.Repost, kinds.GenericRepost],
-            authors: [pubkey],
-            until: oldestTimestamp,
-            limit: 15, // Increased limit to get more timeline content
-          },
-          (event: Event) => {
-            // Handle different event types
-            if (event.kind === kinds.ShortTextNote) {
-              // Create a NostrRecord
-              const record: NostrRecord = {
-                event: event,
-                data: event.content,
-              };
-
-              // Check if this is a root post (not a reply)
-              const isRootPost = this.utilities.isRootPost(event);
-
-              if (isRootPost) {
-                // Check if we already have this note to avoid duplicates
-                const existingNotes = this.notes();
-                const exists = existingNotes.some(n => n.event.id === event.id);
-
-                if (!exists) {
-                  newNotes.push(record);
-                }
-              } else {
-                // This is a reply
-                // Check if we already have this reply to avoid duplicates
-                const existingReplies = this.replies();
-                const exists = existingReplies.some(r => r.event.id === event.id);
-
-                if (!exists) {
-                  newReplies.push(record);
-                }
-              }
-            } else if (event.kind === kinds.Repost || event.kind === kinds.GenericRepost) {
-              // Handle reposts
-              const record: NostrRecord = {
-                event: event,
-                data: event.content,
-              };
-
-              // Check if we already have this repost to avoid duplicates
-              const existingReposts = this.reposts();
-              const exists = existingReposts.some(r => r.event.id === event.id);
-
-              if (!exists) {
-                // Add to reposts directly since loadMoreNotes is for notes, but we should handle reposts too
-                this.reposts.update(existing => [...existing, record]);
-              }
-            }
-          },
-          () => {
-            // EOSE callback - subscription finished
-            this.logger.debug(
-              `Loaded ${newNotes.length} more notes and ${newReplies.length} more replies`
-            );
-
-            // Track if we added any new content
-            let addedAnyContent = false;
-
-            // Add new notes to the existing ones with final deduplication check
-            if (newNotes.length > 0) {
-              this.notes.update(existing => {
-                const filtered = newNotes.filter(
-                  newNote =>
-                    !existing.some(existingNote => existingNote.event.id === newNote.event.id)
-                );
-                console.log(
-                  `Adding ${filtered.length} new notes (${newNotes.length - filtered.length} duplicates filtered)`
-                );
-
-                if (filtered.length > 0) {
-                  addedAnyContent = true;
-                }
-
-                return [...existing, ...filtered];
-              });
-            }
-
-            // Add new replies to the existing ones with final deduplication check
-            if (newReplies.length > 0) {
-              this.replies.update(existing => {
-                const filtered = newReplies.filter(
-                  newReply =>
-                    !existing.some(existingReply => existingReply.event.id === newReply.event.id)
-                );
-                console.log(
-                  `Adding ${filtered.length} new replies (${newReplies.length - filtered.length} duplicates filtered)`
-                );
-
-                if (filtered.length > 0) {
-                  addedAnyContent = true;
-                }
-
-                return [...existing, ...filtered];
-              });
-            }
-
-            // Only keep hasMoreNotes true if we actually added new content
-            if (!addedAnyContent) {
-              this.hasMoreNotes.set(false);
-            } else {
-              this.hasMoreNotes.set(true);
-            }
-
-            this.isLoadingMoreNotes.set(false);
-            resolve([...newNotes, ...newReplies]);
-          }
-        );
+      // Query events using the async method
+      const events = await this.relay?.query(pubkey, {
+        kinds: [kinds.ShortTextNote, kinds.Repost, kinds.GenericRepost],
+        authors: [pubkey],
+        until: oldestTimestamp,
+        limit: 15, // Increased limit to get more timeline content
       });
+
+      // Process all returned events
+      for (const event of events || []) {
+        // Handle different event types
+        if (event.kind === kinds.ShortTextNote) {
+          // Create a NostrRecord
+          const record: NostrRecord = {
+            event: event,
+            data: event.content,
+          };
+
+          // Check if this is a root post (not a reply)
+          const isRootPost = this.utilities.isRootPost(event);
+
+          if (isRootPost) {
+            // Check if we already have this note to avoid duplicates
+            const existingNotes = this.notes();
+            const exists = existingNotes.some(n => n.event.id === event.id);
+
+            if (!exists) {
+              newNotes.push(record);
+            }
+          } else {
+            // This is a reply
+            // Check if we already have this reply to avoid duplicates
+            const existingReplies = this.replies();
+            const exists = existingReplies.some(r => r.event.id === event.id);
+
+            if (!exists) {
+              newReplies.push(record);
+            }
+          }
+        } else if (event.kind === kinds.Repost || event.kind === kinds.GenericRepost) {
+          // Handle reposts
+          const record: NostrRecord = {
+            event: event,
+            data: event.content,
+          };
+
+          // Check if we already have this repost to avoid duplicates
+          const existingReposts = this.reposts();
+          const exists = existingReposts.some(r => r.event.id === event.id);
+
+          if (!exists) {
+            newReposts.push(record);
+          }
+        }
+      }
+
+      this.logger.debug(
+        `Loaded ${newNotes.length} more notes, ${newReplies.length} more replies, and ${newReposts.length} more reposts`
+      );
+
+      // Track if we added any new content
+      let addedAnyContent = false;
+
+      // Add new notes to the existing ones with final deduplication check
+      if (newNotes.length > 0) {
+        this.notes.update(existing => {
+          const filtered = newNotes.filter(
+            newNote =>
+              !existing.some(existingNote => existingNote.event.id === newNote.event.id)
+          );
+          console.log(
+            `Adding ${filtered.length} new notes (${newNotes.length - filtered.length} duplicates filtered)`
+          );
+
+          if (filtered.length > 0) {
+            addedAnyContent = true;
+          }
+
+          return [...existing, ...filtered];
+        });
+      }
+
+      // Add new replies to the existing ones with final deduplication check
+      if (newReplies.length > 0) {
+        this.replies.update(existing => {
+          const filtered = newReplies.filter(
+            newReply =>
+              !existing.some(existingReply => existingReply.event.id === newReply.event.id)
+          );
+          console.log(
+            `Adding ${filtered.length} new replies (${newReplies.length - filtered.length} duplicates filtered)`
+          );
+
+          if (filtered.length > 0) {
+            addedAnyContent = true;
+          }
+
+          return [...existing, ...filtered];
+        });
+      }
+
+      // Add new reposts to the existing ones with final deduplication check
+      if (newReposts.length > 0) {
+        this.reposts.update(existing => {
+          const filtered = newReposts.filter(
+            newRepost =>
+              !existing.some(existingRepost => existingRepost.event.id === newRepost.event.id)
+          );
+          console.log(
+            `Adding ${filtered.length} new reposts (${newReposts.length - filtered.length} duplicates filtered)`
+          );
+
+          if (filtered.length > 0) {
+            addedAnyContent = true;
+          }
+
+          return [...existing, ...filtered];
+        });
+      }
+
+      // Only keep hasMoreNotes true if we actually added new content
+      if (!addedAnyContent) {
+        this.hasMoreNotes.set(false);
+      } else {
+        this.hasMoreNotes.set(true);
+      }
+
+      this.isLoadingMoreNotes.set(false);
+      return [...newNotes, ...newReplies, ...newReposts];
     } catch (error) {
       this.logger.error('Failed to load more notes:', error);
       this.isLoadingMoreNotes.set(false);
@@ -501,74 +509,70 @@ export class ProfileStateService {
         `Loading more articles for ${pubkey}, before timestamp: ${oldestTimestamp}`
       );
 
-      return new Promise<NostrRecord[]>(resolve => {
-        const newArticles: NostrRecord[] = [];
+      const newArticles: NostrRecord[] = [];
 
-        this.relay!.subscribeEose(
-          pubkey,
-          {
-            kinds: [kinds.LongFormArticle],
-            authors: [pubkey],
-            until: oldestTimestamp,
-            limit: 10, // Load 10 more articles at a time
-          },
-          (event: Event) => {
-            if (event.kind === kinds.LongFormArticle) {
-              // Create a NostrRecord
-              const record: NostrRecord = {
-                event: event,
-                data: event.content,
-              };
-
-              // Check if we already have this article to avoid duplicates
-              const existingArticles = this.articles();
-              const exists = existingArticles.some(a => a.event.id === event.id);
-
-              if (!exists) {
-                newArticles.push(record);
-              }
-            }
-          },
-          () => {
-            // EOSE callback - subscription finished
-            this.logger.debug(`Loaded ${newArticles.length} more articles`);
-
-            // Track if we added any new content
-            let addedAnyContent = false;
-
-            // Add new articles to the existing ones with final deduplication check
-            if (newArticles.length > 0) {
-              this.articles.update(existing => {
-                const filtered = newArticles.filter(
-                  newArticle =>
-                    !existing.some(
-                      existingArticle => existingArticle.event.id === newArticle.event.id
-                    )
-                );
-                console.log(
-                  `Adding ${filtered.length} new articles (${newArticles.length - filtered.length} duplicates filtered)`
-                );
-
-                if (filtered.length > 0) {
-                  addedAnyContent = true;
-                }
-
-                return [...existing, ...filtered];
-              });
-            }
-
-            // Only keep hasMoreArticles true if we actually added new content
-            if (!addedAnyContent) {
-              this.hasMoreArticles.set(false);
-            } else {
-              this.hasMoreArticles.set(true);
-            }
-
-            this.isLoadingMoreArticles.set(false);
-            resolve(newArticles);
-          }
-        );
+      // Query events using the async method
+      const events = await this.relay?.query(pubkey, {
+        kinds: [kinds.LongFormArticle],
+        authors: [pubkey],
+        until: oldestTimestamp,
+        limit: 10, // Load 10 more articles at a time
       });
+
+      // Process all returned events
+      for (const event of events || []) {
+        if (event.kind === kinds.LongFormArticle) {
+          // Create a NostrRecord
+          const record: NostrRecord = {
+            event: event,
+            data: event.content,
+          };
+
+          // Check if we already have this article to avoid duplicates
+          const existingArticles = this.articles();
+          const exists = existingArticles.some(a => a.event.id === event.id);
+
+          if (!exists) {
+            newArticles.push(record);
+          }
+        }
+      }
+
+      this.logger.debug(`Loaded ${newArticles.length} more articles`);
+
+      // Track if we added any new content
+      let addedAnyContent = false;
+
+      // Add new articles to the existing ones with final deduplication check
+      if (newArticles.length > 0) {
+        this.articles.update(existing => {
+          const filtered = newArticles.filter(
+            newArticle =>
+              !existing.some(
+                existingArticle => existingArticle.event.id === newArticle.event.id
+              )
+          );
+          console.log(
+            `Adding ${filtered.length} new articles (${newArticles.length - filtered.length} duplicates filtered)`
+          );
+
+          if (filtered.length > 0) {
+            addedAnyContent = true;
+          }
+
+          return [...existing, ...filtered];
+        });
+      }
+
+      // Only keep hasMoreArticles true if we actually added new content
+      if (!addedAnyContent) {
+        this.hasMoreArticles.set(false);
+      } else {
+        this.hasMoreArticles.set(true);
+      }
+
+      this.isLoadingMoreArticles.set(false);
+      return newArticles;
     } catch (error) {
       this.logger.error('Failed to load more articles:', error);
       this.isLoadingMoreArticles.set(false);
