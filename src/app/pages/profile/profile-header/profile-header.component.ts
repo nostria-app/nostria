@@ -169,6 +169,7 @@ export class ProfileHeaderComponent {
 
   getUserRelays = computed(() => {
     const pubkey = this.profileState.pubkey();
+    debugger;
     if (!pubkey) return [];
     return this.profileState.relay?.getRelaysForPubkey(pubkey) || [];
   });

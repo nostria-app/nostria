@@ -129,6 +129,7 @@ export class ProfileStateService {
   );
 
   async loadUserData(pubkey: string) {
+    debugger;
     // if (!this.relay || this.relay.relayUrls.length === 0) {
     //   return;
     // }

@@ -271,6 +271,9 @@ export class ProfileComponent {
 
             // Always set the profile pubkey first
             this.profileState.setCurrentProfilePubkey(id);
+
+            debugger;
+
             this.pubkey.set(id);
 
             // Update the tracked profile pubkey for router change detection

@@ -326,6 +326,15 @@ export class NostrService implements NostriaService {
     const onEvent = async (event: Event) => {
       console.log('Received event on the account subscription:', event);
 
+      // Save all events received from subscription
+      debugger;
+      // try {
+      //   await this.storage.saveEvent(event);
+      //   this.logger.debug(`Saved event from account subscription: ${event.id} (kind: ${event.kind})`);
+      // } catch (error) {
+      //   this.logger.warn(`Failed to save event from account subscription: ${event.id}`, error);
+      // }
+
       if (event.kind === kinds.Contacts) {
         // Refresh the following list in the account state
         this.accountState.parseFollowingList(event);
