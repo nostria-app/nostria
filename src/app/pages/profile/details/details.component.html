@@ -6,75 +6,154 @@
 
     <div class="profile-mini">
       @if (userProfile(); as profile) {
-        <div class="profile-mini-avatar">
-          @if (profile.picture) {
-            <img [src]="profile.picture" alt="Profile picture" />
-          } @else {
-            <mat-icon>account_circle</mat-icon>
-          }
-        </div>
-        <h1 class="profile-mini-name">{{ profile.name }}'s Following</h1>
+      <div class="profile-mini-avatar">
+        @if (profile.picture) {
+        <img [src]="profile.picture" alt="Profile picture" />
+        } @else {
+        <mat-icon>account_circle</mat-icon>
+        }
+      </div>
+      <h1 class="profile-mini-name">{{ profile.name }}'s Following</h1>
       } @else {
-        <div class="profile-mini-avatar">
-          <mat-icon>account_circle</mat-icon>
-        </div>
-        <h1 class="profile-mini-name">User Details</h1>
+      <div class="profile-mini-avatar">
+        <mat-icon>account_circle</mat-icon>
+      </div>
+      <h1 class="profile-mini-name">User Details</h1>
       }
     </div>
   </div>
 
   <div class="info-container">
     @if (info()) {
-      @if (info()['hasRelayList']) {
-        <div><mat-icon>thumb_up</mat-icon> Has Relay List</div>
-      }
+    @if (info()['hasRelayList']) {
+    <div><mat-icon>thumb_up</mat-icon> Has Relay List</div>
+    }
 
-      @if (info()['hasFollwingList']) {
-        <div><mat-icon>thumb_down</mat-icon> Has Following List</div>
-      }
+    @if (info()['hasFollwingList']) {
+    <div><mat-icon>thumb_down</mat-icon> Has Following List</div>
+    }
 
-      @if (info()['foundOnDiscoveryRelays']) {
-        <div><mat-icon>thumb_up</mat-icon> Found on Discovery Relays</div>
-      }
+    @if (info()['foundOnDiscoveryRelays']) {
+    <div><mat-icon>thumb_up</mat-icon> Found on Discovery Relays</div>
+    }
 
-      @if (info()['foundOnAccountRelays']) {
-        <div><mat-icon>thumb_down</mat-icon> Found on Account Relays</div>
-      }
+    @if (info()['foundOnAccountRelays']) {
+    <div><mat-icon>thumb_down</mat-icon> Found on Account Relays</div>
+    }
 
-      @if (info()['foundMetadataOnUserRelays']) {
-        <div><mat-icon>thumb_up</mat-icon> Found Profile on User Relays</div>
-      }
-
-      @if (info()['foundMetadataOnAccountRelays']) {
-        <div><mat-icon>thumb_down</mat-icon> Found Profile on Account Relays</div>
-      }
-
-      @if (info()['hasEmptyFollowingList']) {
-        <div>
-          <mat-icon>thumb_down</mat-icon> Has empty following list and no relay list. Impossible to
-          find profile.
-        </div>
-      }
-
-      @if (info()['foundZeroRelaysOnAccountRelays']) {
-        <div><mat-icon>thumb_down</mat-icon> Unable to find user relays.</div>
-      }
+    @if (info()['foundMetadataOnUserRelays']) {
+    <div><mat-icon>thumb_up</mat-icon> Found Profile on User Relays</div>
     }
 
     @if (info()['foundMetadataOnAccountRelays']) {
-      <div>
-        <button mat-flat-button (click)="broadcastProfile()">
-          Broadcast this profile to the user's relays
-        </button>
-      </div>
+    <div><mat-icon>thumb_down</mat-icon> Found Profile on Account Relays</div>
+    }
+
+    @if (info()['hasEmptyFollowingList']) {
+    <div>
+      <mat-icon>thumb_down</mat-icon> Has empty following list and no relay list. Impossible to
+      find profile.
+    </div>
+    }
+
+    @if (info()['foundZeroRelaysOnAccountRelays']) {
+    <div><mat-icon>thumb_down</mat-icon> Unable to find user relays.</div>
+    }
+
+    @if (info()['foundMetadataOnAccountRelays']) {
+    <div>
+      <button mat-flat-button (click)="broadcastProfile()">
+        Broadcast this profile to the user's relays
+      </button>
+    </div>
     }
 
     @if (info()['hasRelayList'] && !info()['foundOnDiscoveryRelays']) {
-      <div>
-        <button mat-flat-button (click)="broadcastRelayList()">
-          Broadcast this profile's Relay List to the Discovery Relays
-        </button>
+    <div>
+      <button mat-flat-button (click)="broadcastRelayList()">
+        Broadcast this profile's Relay List to the Discovery Relays
+      </button>
+    </div>
+    }
+    }
+
+    @if (metrics()) {
+    <div class="metrics-section">
+      <h3>Algorithm Metrics</h3>
+      <div class="metrics-grid">
+        <div class="metric-item">
+          <mat-icon>visibility</mat-icon>
+          <span class="metric-label">Views:</span>
+          <span class="metric-value">{{ metrics()!.viewed }}</span>
+        </div>
+
+        <div class="metric-item">
+          <mat-icon>touch_app</mat-icon>
+          <span class="metric-label">Profile Clicks:</span>
+          <span class="metric-value">{{ metrics()!.profileClicks }}</span>
+        </div>
+
+        <div class="metric-item">
+          <mat-icon>favorite</mat-icon>
+          <span class="metric-label">Liked:</span>
+          <span class="metric-value">{{ metrics()!.liked }}</span>
+        </div>
+
+        <div class="metric-item">
+          <mat-icon>article</mat-icon>
+          <span class="metric-label">Read:</span>
+          <span class="metric-value">{{ metrics()!.read }}</span>
+        </div>
+
+        <div class="metric-item">
+          <mat-icon>reply</mat-icon>
+          <span class="metric-label">Replied:</span>
+          <span class="metric-value">{{ metrics()!.replied }}</span>
+        </div>
+
+        <div class="metric-item">
+          <mat-icon>repeat</mat-icon>
+          <span class="metric-label">Reposted:</span>
+          <span class="metric-value">{{ metrics()!.reposted }}</span>
+        </div>
+
+        <div class="metric-item">
+          <mat-icon>format_quote</mat-icon>
+          <span class="metric-label">Quoted:</span>
+          <span class="metric-value">{{ metrics()!.quoted }}</span>
+        </div>
+
+        <div class="metric-item">
+          <mat-icon>message</mat-icon>
+          <span class="metric-label">Messaged:</span>
+          <span class="metric-value">{{ metrics()!.messaged }}</span>
+        </div>
+
+        <div class="metric-item">
+          <mat-icon>alternate_email</mat-icon>
+          <span class="metric-label">Mentioned:</span>
+          <span class="metric-value">{{ metrics()!.mentioned }}</span>
+        </div>
+
+        <div class="metric-item">
+          <mat-icon>schedule</mat-icon>
+          <span class="metric-label">Time Spent:</span>
+          <span class="metric-value">{{ metrics()!.timeSpent }}s</span>
+        </div>
+
+        <div class="metric-item highlight">
+          <mat-icon>insights</mat-icon>
+          <span class="metric-label">Engagement Score:</span>
+          <span class="metric-value">{{ metrics()!.engagementScore }}</span>
+        </div>
+
+        <div class="metric-item">
+          <mat-icon>access_time</mat-icon>
+          <span class="metric-label">Avg Time Per View:</span>
+          <span class="metric-value">{{ metrics()!.averageTimePerView?.toFixed(2) || 0 }}s</span>
+        </div>
       </div>
+    </div>
     }
 
     <!-- <br><br><br><br>

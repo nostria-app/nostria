@@ -4,7 +4,6 @@ import { nip19 } from 'nostr-tools';
 import { NostrRecord, ViewMode } from '../../interfaces';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { LayoutService } from '../../services/layout.service';
-import { UserDataFactoryService } from '../../services/user-data-factory.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -44,7 +43,7 @@ export class ArticleComponent {
   // Services
   private data = inject(DataService);
   private layout = inject(LayoutService);
-  private dataFactory = inject(UserDataFactoryService);
+  private userDataService = inject(UserDataService);
   private utilities = inject(UtilitiesService);
   private accountState = inject(AccountStateService);
   private cache = inject(Cache);
@@ -134,13 +133,7 @@ export class ArticleComponent {
       let event: NostrRecord | null = null;
 
       if (isNotCurrentUser) {
-        let userData = this.cache.get<UserDataService>('user-data-' + this.pubkey());
-
-        if (!userData) {
-          userData = await this.dataFactory.create(this.pubkey());
-        }
-
-        event = await userData.getEventByPubkeyAndKindAndReplaceableEvent(
+        event = await this.userDataService.getEventByPubkeyAndKindAndReplaceableEvent(
           this.pubkey(),
           this.kind(),
           this.slug(),

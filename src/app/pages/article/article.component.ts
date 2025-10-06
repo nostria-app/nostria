@@ -23,7 +23,7 @@ import { FormatService } from '../../services/format/format.service';
 import { LayoutService } from '../../services/layout.service';
 import { LoggerService } from '../../services/logger.service';
 import { UrlUpdateService } from '../../services/url-update.service';
-import { UserDataFactoryService } from '../../services/user-data-factory.service';
+import { UserDataService } from '../../services/user-data.service';
 import { UtilitiesService } from '../../services/utilities.service';
 
 @Component({
@@ -49,7 +49,7 @@ import { UtilitiesService } from '../../services/utilities.service';
 export class ArticleComponent implements OnDestroy {
   private route = inject(ActivatedRoute);
   private utilities = inject(UtilitiesService);
-  private readonly userDataFactory = inject(UserDataFactoryService);
+  private readonly userDataService = inject(UserDataService);
   private logger = inject(LoggerService);
   private data = inject(DataService);
   private layout = inject(LayoutService);
@@ -170,13 +170,11 @@ export class ArticleComponent implements OnDestroy {
       let event: NostrRecord | null = null;
 
       if (isNotCurrentUser) {
-        event = await this.userDataFactory.borrow(pubkey, uds =>
-          uds.getEventByPubkeyAndKindAndReplaceableEvent(
-            pubkey,
-            kinds.LongFormArticle,
-            slug,
-            { save: false, cache: false }
-          )
+        event = await this.userDataService.getEventByPubkeyAndKindAndReplaceableEvent(
+          pubkey,
+          kinds.LongFormArticle,
+          slug,
+          { save: false, cache: false }
         );
       } else {
         event = await this.data.getEventByPubkeyAndKindAndReplaceableEvent(

@@ -2,7 +2,6 @@ import { Injectable, inject, signal } from '@angular/core';
 import { Event } from 'nostr-tools';
 import { DataService } from './data.service';
 import { LoggerService } from './logger.service';
-import { UserDataFactoryService } from './user-data-factory.service'; // retained if needed elsewhere
 import { OnDemandUserDataService } from './on-demand-user-data.service';
 
 export interface StarterPack {
@@ -46,7 +45,6 @@ interface ParsedProfileMetadata {
 export class Followset {
   private readonly dataService = inject(DataService);
   private readonly logger = inject(LoggerService);
-  private readonly userDataFactory = inject(UserDataFactoryService); // legacy usage (will be removed if unused)
   private readonly onDemandUserData = inject(OnDemandUserDataService);
 
   // Signals for reactive updates
