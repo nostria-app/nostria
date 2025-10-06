@@ -18,13 +18,13 @@
   gap: 1.5rem; // Space between the two divs
 
   // First div should always be 168px width
-  > div:first-child {
+  >div:first-child {
     flex: 0 0 168px; // Don't grow or shrink, always 168px
     width: 168px;
   }
 
   // Second div should take remaining space
-  > div:last-child {
+  >div:last-child {
     flex: 1;
   }
 
@@ -57,7 +57,7 @@
     position: initial;
 
     // First div should be fixed at 80px in compact mode
-    > div:first-child {
+    >div:first-child {
       flex: 0 0 80px !important; // Don't grow or shrink, always 80px
       width: 80px !important;
       align-self: auto;
@@ -438,5 +438,24 @@
       outline-offset: 2px;
       border-radius: 4px;
     }
+  }
+}
+
+// Bio expansion styles
+.profile-bio {
+  margin-top: 1rem;
+
+  .bio-text {
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    transition: all 0.3s ease;
+  }
+
+  .bio-expand-btn {
+    // margin-top: 0.5rem;
+    // color: var(--mat-sys-primary);
+    // min-width: auto;
+    // padding: 0;
   }
 }

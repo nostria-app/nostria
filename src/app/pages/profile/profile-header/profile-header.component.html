@@ -133,7 +133,22 @@
       }
 
       @if (!compact() && profile()?.data.about) {
-      <div class="profile-bio">{{ profile()!.data.about }}</div>
+      <div class="profile-bio">
+        <div class="bio-text" [class.bio-expanded]="isBioExpanded()">{{ displayedBio() }}</div>
+        @if (shouldShowExpander()) {
+          @if (isBioExpanded()) {
+              <button mat-button class="bio-expand-btn" (click)="toggleBioExpansion()">
+            <mat-icon>expand_less</mat-icon>
+            Show less
+           </button>
+          } @else {
+              <button mat-button class="bio-expand-btn" (click)="toggleBioExpansion()">
+            <mat-icon>expand_more</mat-icon>
+            Show more
+           </button>
+          }
+        }
+      </div>
       }
 
       <div class="profile-extra-info">

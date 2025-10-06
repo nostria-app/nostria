@@ -80,6 +80,37 @@ export class ProfileHeaderComponent {
   showQrCode = signal<boolean>(false);
   showProfileQrCode = signal<boolean>(false);
 
+  // Add signal for bio expansion
+  isBioExpanded = signal<boolean>(false);
+
+  // Computed property to check if bio needs expansion
+  shouldShowExpander = computed(() => {
+    const about = this.profile()?.data.about;
+    if (!about || this.compact()) return false;
+
+    // Count line breaks and estimate lines based on text length
+    const lineBreaks = (about.match(/\n/g) || []).length;
+    const estimatedLines = Math.ceil(about.length / 80) + lineBreaks; // Rough estimate: 80 chars per line
+
+    return estimatedLines > 3;
+  });
+
+  // Computed property for displayed bio text
+  displayedBio = computed(() => {
+    const about = this.profile()?.data.about;
+    if (!about || this.compact() || this.isBioExpanded() || !this.shouldShowExpander()) {
+      return about;
+    }
+
+    // Truncate to approximately 3 lines worth of text
+    const lines = about.split('\n');
+    if (lines.length <= 3) {
+      return about.length > 240 ? about.substring(0, 240) + '...' : about;
+    }
+
+    return lines.slice(0, 3).join('\n') + '...';
+  });
+
   // Computed to get website URL with protocol prefix
   websiteUrl = computed(() => {
     const website = this.profile()?.data.website;
@@ -487,6 +518,13 @@ export class ProfileHeaderComponent {
         duration: 2000,
       });
     }
+  }
+
+  /**
+   * Toggles the bio expansion state
+   */
+  toggleBioExpansion(): void {
+    this.isBioExpanded.update(expanded => !expanded);
   }
 
   /**
