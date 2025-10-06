@@ -11,6 +11,7 @@ import { ScrollingModule } from '@angular/cdk/scrolling';
 import { ProfileStateService } from '../../../services/profile-state.service';
 import { LayoutService } from '../../../services/layout.service';
 import { LoggerService } from '../../../services/logger.service';
+import { UserRelayService } from '../../../services/relays/user-relay';
 
 @Component({
   selector: 'app-following',
@@ -50,6 +51,7 @@ export class ProfileRelaysComponent {
   layout = inject(LayoutService);
   private logger = inject(LoggerService);
   profileState = inject(ProfileStateService);
+  private userRelayService = inject(UserRelayService);
 
   @ViewChild('followingContainer') followingContainerRef!: ElementRef;
 
@@ -90,7 +92,7 @@ export class ProfileRelaysComponent {
   getUserRelays(): string[] {
     const pubkey = this.profileState.pubkey();
     if (!pubkey) return [];
-    return this.profileState.relay?.getRelaysForPubkey(pubkey) || [];
+    return this.userRelayService.getRelaysForPubkey(pubkey) || [];
   }
 
   goBack(): void {

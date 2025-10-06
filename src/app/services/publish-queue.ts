@@ -4,6 +4,7 @@ import { ProfileStateService } from './profile-state.service';
 import { AccountStateService } from './account-state.service';
 import { AccountRelayService } from './relays/account-relay';
 import { DiscoveryRelayService } from './relays/discovery-relay';
+import { UserRelayService } from './relays/user-relay';
 
 export enum PublishTarget {
   Account = 'account',
@@ -19,6 +20,7 @@ export class PublishQueueService {
   private readonly profileState = inject(ProfileStateService);
   private readonly accountState = inject(AccountStateService);
   private readonly accountRelay = inject(AccountRelayService);
+  private readonly userRelayService = inject(UserRelayService);
   private readonly injector = inject(Injector);
 
   // Lazy-loaded service reference
@@ -83,7 +85,7 @@ export class PublishQueueService {
           await this.accountRelay.publish(signedEvent);
           // await this.nostr.publish(signedEvent);
         } else if (task.target === PublishTarget.User) {
-          await this.profileState.relay?.publish(this.accountState.pubkey(), task.event as Event);
+          await this.userRelayService.publish(this.accountState.pubkey(), task.event as Event);
         } else if (task.target === PublishTarget.Discovery) {
           this.discoveryRelay.publish(task.event as Event);
         }

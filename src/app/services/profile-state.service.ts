@@ -4,7 +4,6 @@ import { inject } from '@angular/core';
 import { UserRelayService } from './relays/user-relay';
 import { kinds } from 'nostr-tools';
 import { LoggerService } from './logger.service';
-import { UserRelayExFactoryService } from './user-relay-factory.service';
 import { UtilitiesService } from './utilities.service';
 
 @Injectable({
@@ -12,7 +11,7 @@ import { UtilitiesService } from './utilities.service';
 })
 export class ProfileStateService {
   private readonly logger = inject(LoggerService);
-  private readonly relayFactory = inject(UserRelayExFactoryService);
+  private readonly userRelayService = inject(UserRelayService);
   private readonly utilities = inject(UtilitiesService);
 
   // Signal to store the current profile's following list
@@ -22,7 +21,6 @@ export class ProfileStateService {
   replies = signal<NostrRecord[]>([]);
   articles = signal<NostrRecord[]>([]);
   media = signal<NostrRecord[]>([]);
-  relay: UserRelayService | null = null;
 
   // Current profile pubkey
   currentProfileKey = signal<string>('');
@@ -55,19 +53,19 @@ export class ProfileStateService {
 
       if (pubkey) {
         untracked(async () => {
-          await this.createRelay(pubkey);
+          await this.ensureRelaysForPubkey(pubkey);
           await this.loadUserData(pubkey);
         });
       }
     });
   }
 
-  async createRelay(pubkey: string) {
+  async ensureRelaysForPubkey(pubkey: string) {
     try {
-      this.relay = await this.relayFactory.create(pubkey);
+      await this.userRelayService.ensureRelaysForPubkey(pubkey);
     } catch (err) {
-      console.error('Failed to create UserRelay:', err);
-      this.logger.error('Failed to create UserRelay:', err);
+      console.error('Failed to ensure relays for pubkey:', err);
+      this.logger.error('Failed to ensure relays for pubkey:', err);
     }
   }
 
@@ -129,14 +127,9 @@ export class ProfileStateService {
   );
 
   async loadUserData(pubkey: string) {
-    debugger;
-    // if (!this.relay || this.relay.relayUrls.length === 0) {
-    //   return;
-    // }
-
     // Subscribe to contacts separately since they need special handling (only 1 per user, potentially older)
     // Try user-specific relays first
-    const event = await this.relay?.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
+    const event = await this.userRelayService.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
 
     if (event && event.kind === kinds.Contacts) {
       const followingList = this.utilities.getPTagsValuesFromEvent(event);
@@ -151,17 +144,13 @@ export class ProfileStateService {
       if (this.followingList().length === 0) {
         console.log('No contacts found on user relays, trying discovery relays as fallback');
         try {
-          // Use the discovery relay service to search for contacts event
-          const discoveryRelay = this.relay;
-          if (discoveryRelay) {
-            // Try to get contacts event by searching author + kind
-            const contactsEvents = await discoveryRelay.getEventsByPubkeyAndKind(pubkey, kinds.Contacts);
-            if (contactsEvents && contactsEvents.length > 0) {
-              const contactsEvent = contactsEvents[0]; // Get the most recent one
-              const followingList = this.utilities.getPTagsValuesFromEvent(contactsEvent);
-              console.log('Following list found via discovery search:', followingList);
-              this.followingList.set(followingList);
-            }
+          // Try to get contacts event by searching author + kind
+          const contactsEvents = await this.userRelayService.getEventsByPubkeyAndKind(pubkey, kinds.Contacts);
+          if (contactsEvents && contactsEvents.length > 0) {
+            const contactsEvent = contactsEvents[0]; // Get the most recent one
+            const followingList = this.utilities.getPTagsValuesFromEvent(contactsEvent);
+            console.log('Following list found via discovery search:', followingList);
+            this.followingList.set(followingList);
           }
         } catch (error) {
           console.log('Fallback contacts search failed:', error);
@@ -170,7 +159,7 @@ export class ProfileStateService {
     }, 2000); // Wait 2 seconds before trying fallback
 
     // Subscribe to content events (notes, articles, reposts)
-    const events = await this.relay?.query(pubkey, {
+    const events = await this.userRelayService.query(pubkey, {
       kinds: [kinds.ShortTextNote, kinds.LongFormArticle, kinds.Repost, kinds.GenericRepost],
       authors: [pubkey],
       limit: 20,
@@ -328,7 +317,7 @@ export class ProfileStateService {
    * @param beforeTimestamp - Load notes before this timestamp
    */
   async loadMoreNotes(beforeTimestamp?: number): Promise<NostrRecord[]> {
-    if (this.isLoadingMoreNotes() || !this.hasMoreNotes() || !this.relay) {
+    if (this.isLoadingMoreNotes() || !this.hasMoreNotes()) {
       return [];
     }
 
@@ -350,7 +339,7 @@ export class ProfileStateService {
       const newReposts: NostrRecord[] = [];
 
       // Query events using the async method
-      const events = await this.relay?.query(pubkey, {
+      const events = await this.userRelayService.query(pubkey, {
         kinds: [kinds.ShortTextNote, kinds.Repost, kinds.GenericRepost],
         authors: [pubkey],
         until: oldestTimestamp,
@@ -490,7 +479,7 @@ export class ProfileStateService {
    * @param beforeTimestamp - Load articles before this timestamp
    */
   async loadMoreArticles(beforeTimestamp?: number): Promise<NostrRecord[]> {
-    if (this.isLoadingMoreArticles() || !this.hasMoreArticles() || !this.relay) {
+    if (this.isLoadingMoreArticles() || !this.hasMoreArticles()) {
       return [];
     }
 
@@ -512,7 +501,7 @@ export class ProfileStateService {
       const newArticles: NostrRecord[] = [];
 
       // Query events using the async method
-      const events = await this.relay?.query(pubkey, {
+      const events = await this.userRelayService.query(pubkey, {
         kinds: [kinds.LongFormArticle],
         authors: [pubkey],
         until: oldestTimestamp,

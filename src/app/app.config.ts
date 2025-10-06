@@ -16,7 +16,6 @@ import { routes } from './app.routes';
 import { LoggerService } from './services/logger.service';
 import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
-import { UserRelayExFactoryService } from './services/user-relay-factory.service';
 import { MatIconRegistry } from '@angular/material/icon';
 import { ApiConfiguration } from './api/api-configuration';
 import { environment } from '../environments/environment';
@@ -80,7 +79,6 @@ export const appConfig: ApplicationConfig = {
       provide: MAT_FORM_FIELD_DEFAULT_OPTIONS,
       useValue: { appearance: 'outline' },
     },
-    UserRelayExFactoryService,
     provideZonelessChangeDetection(),
     provideRouter(routes),
     provideAnimations(),

@@ -37,6 +37,7 @@ import {
   ZapDialogComponent,
   ZapDialogData,
 } from '../../../components/zap-dialog/zap-dialog.component';
+import { UserRelayService } from '../../../services/relays/user-relay';
 
 @Component({
   selector: 'app-profile-header',
@@ -75,6 +76,7 @@ export class ProfileHeaderComponent {
   private accountService = inject(AccountService);
   private reportingService = inject(ReportingService);
   private zapService = inject(ZapService);
+  private userRelayService = inject(UserRelayService);
 
   // Add signal for QR code visibility
   showQrCode = signal<boolean>(false);
@@ -169,9 +171,8 @@ export class ProfileHeaderComponent {
 
   getUserRelays = computed(() => {
     const pubkey = this.profileState.pubkey();
-    debugger;
     if (!pubkey) return [];
-    return this.profileState.relay?.getRelaysForPubkey(pubkey) || [];
+    return this.userRelayService.getRelaysForPubkey(pubkey) || [];
   });
 
   // Check if the current user is blocked

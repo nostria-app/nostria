@@ -8,21 +8,61 @@ import { RelaysService } from './relays';
 export class UserRelaysService {
   private readonly discoveryRelayService = inject(DiscoveryRelayService);
   private readonly relaysService = inject(RelaysService);
+
+  // High-performance cache with timestamp tracking
   private readonly cachedRelays = signal<Map<string, string[]>>(new Map());
+  private readonly cacheTimestamps = new Map<string, number>();
+
+  // Cache TTL: 5 minutes (in milliseconds)
+  private readonly CACHE_TTL = 5 * 60 * 1000;
+
+  // In-flight requests to prevent duplicate discovery calls
+  private readonly inflightRequests = new Map<string, Promise<string[]>>();
 
   /**
-   * Get optimal relays for a user's public key (legacy method)
-   * @deprecated Use getUserRelaysForReading() or getUserRelaysForPublishing() instead
-   * @param pubkey - The user's public key in hex format
-   * @returns Promise<string[]> - Array of relay URLs (limited to 10)
+   * Check if the cache is still valid for a given pubkey
    */
-  async getUserRelays(pubkey: string): Promise<string[]> {
-    // Check cache first
-    const cached = this.cachedRelays().get(pubkey);
-    if (cached && cached.length > 0) {
-      return cached;
+  private isCacheValid(pubkey: string): boolean {
+    const timestamp = this.cacheTimestamps.get(pubkey);
+    if (!timestamp) return false;
+
+    return Date.now() - timestamp < this.CACHE_TTL;
+  }
+
+  /**
+   * Ensure relays are discovered and cached for a pubkey
+   * This method is idempotent and safe to call multiple times
+   * It will only perform discovery if needed
+   */
+  async ensureRelaysForPubkey(pubkey: string): Promise<void> {
+    // Check if we have valid cached data
+    if (this.isCacheValid(pubkey)) {
+      return; // Already discovered and cache is valid
     }
 
+    // Check if there's already an in-flight request
+    const existingRequest = this.inflightRequests.get(pubkey);
+    if (existingRequest) {
+      await existingRequest; // Wait for the existing request to complete
+      return;
+    }
+
+    // Start a new discovery request
+    const discoveryPromise = this.discoverAndCacheRelays(pubkey);
+    this.inflightRequests.set(pubkey, discoveryPromise);
+
+    try {
+      await discoveryPromise;
+    } finally {
+      // Clean up the in-flight request
+      this.inflightRequests.delete(pubkey);
+    }
+  }
+
+  /**
+   * Internal method to discover and cache relays
+   */
+  private async discoverAndCacheRelays(pubkey: string): Promise<string[]> {
     let relays: string[] = [];
 
     try {
@@ -41,6 +81,7 @@ export class UserRelaysService {
           newCache.set(pubkey, relays);
           return newCache;
         });
+        this.cacheTimestamps.set(pubkey, Date.now());
       }
 
     } catch (error) {
@@ -49,13 +90,54 @@ export class UserRelaysService {
       // Fallback to relay hints if discovery fails
       try {
         relays = await this.relaysService.getFallbackRelaysForPubkey(pubkey);
+
+        if (relays.length > 0) {
+          this.cachedRelays.update(cache => {
+            const newCache = new Map(cache);
+            newCache.set(pubkey, relays);
+            return newCache;
+          });
+          this.cacheTimestamps.set(pubkey, Date.now());
+        }
       } catch (hintsError) {
         console.error('Error fetching relay hints:', hintsError);
         relays = [];
       }
     }
 
-    return this.optimizeRelays(relays);
+    return relays;
+  }
+
+  /**
+   * Get relay URLs for a specific pubkey (synchronous if cached)
+   * Returns empty array if not cached - call ensureRelaysForPubkey first
+   */
+  getRelaysForPubkey(pubkey: string): string[] {
+    const cached = this.cachedRelays().get(pubkey);
+    if (cached && this.isCacheValid(pubkey)) {
+      return cached;
+    }
+    return [];
+  }
+
+  /**
+   * Get optimal relays for a user's public key
+   * This method ensures relays are discovered and cached
+   * @param pubkey - The user's public key in hex format
+   * @returns Promise<string[]> - Array of relay URLs (limited to 10)
+   */
+  async getUserRelays(pubkey: string): Promise<string[]> {
+    // Ensure relays are discovered and cached
+    await this.ensureRelaysForPubkey(pubkey);
+
+    // Get from cache
+    const cached = this.cachedRelays().get(pubkey);
+    if (cached && cached.length > 0) {
+      return this.optimizeRelays(cached);
+    }
+
+    // If still no relays, return empty array
+    return [];
   }
 
   /**
@@ -65,7 +147,14 @@ export class UserRelaysService {
    * @returns Promise<string[]> - Array of optimal relay URLs for reading
    */
   async getUserRelaysForReading(pubkey: string, maxRelays = 3): Promise<string[]> {
-    const allRelays = await this.getUserRelays(pubkey);
+    // Ensure relays are discovered and cached
+    await this.ensureRelaysForPubkey(pubkey);
+
+    const allRelays = this.getRelaysForPubkey(pubkey);
+
+    if (allRelays.length === 0) {
+      return [];
+    }
 
     // Get performance-ranked relays from RelaysService
     const rankedRelays = this.relaysService.getOptimalRelays(allRelays, maxRelays);
@@ -82,21 +171,18 @@ export class UserRelaysService {
     const allRelays: string[] = [];
 
     try {
-      // 1. Get relays from discovery service (kind 10002 or kind 3)
-      const discoveryRelays = await this.discoveryRelayService.getUserRelayUrls(pubkey);
-      allRelays.push(...discoveryRelays);
+      // Ensure relays are discovered and cached
+      await this.ensureRelaysForPubkey(pubkey);
 
-      // 2. Get relays from observed relay hints
+      // 1. Get relays from cache (which includes discovery service results)
+      const cachedRelays = this.getRelaysForPubkey(pubkey);
+      allRelays.push(...cachedRelays);
+
+      // 2. Get relays from observed relay hints (additional sources)
       const fallbackRelays = await this.relaysService.getFallbackRelaysForPubkey(pubkey);
       allRelays.push(...fallbackRelays);
 
-      // 3. Get user's cached relays (if any)
-      const cached = this.cachedRelays().get(pubkey);
-      if (cached && cached.length > 0) {
-        allRelays.push(...cached);
-      }
-
-      // 4. Remove duplicates and normalize URLs
+      // 3. Remove duplicates and normalize URLs
       const uniqueRelays = [...new Set(allRelays)]
         .map(relay => relay.trim())
         .filter(relay => relay.length > 0)
@@ -108,7 +194,7 @@ export class UserRelaysService {
           return relay;
         });
 
-      // 5. For publishing, we want to include all discovered relays (no limit)
+      // 4. For publishing, we want to include all discovered relays (no limit)
       // but we can still sort by reliability
       const sortedRelays = this.relaysService.getOptimalRelays(uniqueRelays, uniqueRelays.length);
 
@@ -130,6 +216,7 @@ export class UserRelaysService {
       newCache.delete(pubkey);
       return newCache;
     });
+    this.cacheTimestamps.delete(pubkey);
   }
 
   /**
@@ -137,6 +224,19 @@ export class UserRelaysService {
    */
   clearAllCache(): void {
     this.cachedRelays.set(new Map());
+    this.cacheTimestamps.clear();
+  }
+
+  /**
+   * Force refresh relays for a specific user (bypasses cache)
+   * @param pubkey - The user's public key
+   */
+  async refreshUserRelays(pubkey: string): Promise<string[]> {
+    // Clear cache for this user
+    this.clearUserRelaysCache(pubkey);
+
+    // Discover fresh relays
+    return this.discoverAndCacheRelays(pubkey);
   }
 
   /**
