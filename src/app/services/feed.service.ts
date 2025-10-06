@@ -17,7 +17,7 @@ import { DataService } from './data.service';
 import { UtilitiesService } from './utilities.service';
 import { ApplicationService } from './application.service';
 import { Algorithms } from './algorithms';
-import { UserDataFactoryService } from './user-data-factory.service';
+import { UserDataService } from './user-data.service';
 import { OnDemandUserDataService } from './on-demand-user-data.service';
 import { UserRelayService } from './relays/user-relay';
 import { SharedRelayService } from './relays/shared-relay';
@@ -217,7 +217,7 @@ export class FeedService {
   private readonly app = inject(ApplicationService);
   private readonly userRelayEx = inject(UserRelayService);
   private readonly sharedRelayEx = inject(SharedRelayService);
-  private readonly userDataFactory = inject(UserDataFactoryService);
+  private readonly userDataService = inject(UserDataService);
   // On-demand access for one-shot per-user fetches to avoid lingering sockets
   private readonly onDemandUserData = inject(OnDemandUserDataService);
   private readonly followset = inject(Followset);

@@ -1,6 +1,5 @@
 import { inject, signal, Signal } from '@angular/core';
 import { LoggerService } from '../logger.service';
-import { DebugLoggerService } from '../debug-logger.service';
 import { Event, SimplePool } from 'nostr-tools';
 import { RelaysService } from './relays';
 
@@ -15,12 +14,8 @@ export abstract class RelayServiceBase {
   #pool!: SimplePool;
   protected relayUrls: string[] = [];
   protected logger = inject(LoggerService);
-  protected debugLogger = inject(DebugLoggerService);
   protected relaysService = inject(RelaysService);
   protected useOptimizedRelays = false;
-
-  // Debug tracking
-  protected debugInstanceId?: string;
 
   // Activity tracking
   protected lastActivityTime = Date.now();
@@ -43,8 +38,6 @@ export abstract class RelayServiceBase {
 
   constructor(pool: SimplePool) {
     this.#pool = pool;
-    // Register this instance with the debug logger, passing 'this' for debugging access
-    this.debugInstanceId = this.debugLogger.registerInstance(this.constructor.name, this.relayUrls, this);
   }
 
   getPool(): SimplePool {
@@ -83,28 +76,20 @@ export abstract class RelayServiceBase {
     this.relayUrls = relayUrls;
     this.updateRelaysSignal();
     this.notifyRelaysModified();
-
-    if (this.debugInstanceId) {
-      this.debugLogger.updateInstanceRelayUrls(this.debugInstanceId, relayUrls);
-    }
   }
 
   destroy() {
     if (this._destroyed) {
       return; // Already destroyed
     }
-    this.logger.debug(`[${this.constructor.name}] destroy() called for instance ${this.debugInstanceId}`);
-    if (this.debugInstanceId) {
-      this.logger.debug(`[${this.constructor.name}] Calling destroyInstance for ${this.debugInstanceId}`);
-      this.debugLogger.destroyInstance(this.debugInstanceId);
-    }
+    this.logger.debug(`[${this.constructor.name}] destroy() called`);
     try {
       this.#pool?.destroy();
     } catch (e) {
       this.logger.debug(`[${this.constructor.name}] Suppressed destroy error:`, e);
     }
     this._destroyed = true;
-    this.logger.debug(`[${this.constructor.name}] Pool destroyed for instance ${this.debugInstanceId}`);
+    this.logger.debug(`[${this.constructor.name}] Pool destroyed`);
   }
 
   getRelayUrls(): string[] {
@@ -155,9 +140,6 @@ export abstract class RelayServiceBase {
    */
   isIdle(): boolean {
     const idle = this.activeSubscriptions.size === 0 && this.pendingRequests === 0;
-    if (this.debugInstanceId) {
-      console.log(`[DEBUG] ${this.constructor.name} ${this.debugInstanceId} isIdle: ${idle} (subs: ${this.activeSubscriptions.size}, pending: ${this.pendingRequests})`);
-    }
     return idle;
   }
 
@@ -742,18 +724,6 @@ export abstract class RelayServiceBase {
     }
 
     try {
-      // Register subscription with debug logger
-      let debugSubscriptionId: string | undefined;
-      if (this.debugInstanceId) {
-        debugSubscriptionId = this.debugLogger.registerSubscription(
-          this.debugInstanceId,
-          [filter],
-          urls,
-        );
-        // Track this subscription as active
-        this.addActiveSubscription(debugSubscriptionId);
-      }
-
       // Create the subscription
       const sub = this.#pool.subscribeMany(urls, filter, {
         onevent: (evt) => {
@@ -772,11 +742,6 @@ export abstract class RelayServiceBase {
         },
         onclose: (reasons) => {
           console.log('Pool closed', reasons);
-          // Mark subscription as closed in debug logger and remove from active tracking
-          if (debugSubscriptionId) {
-            this.debugLogger.closeSubscription(debugSubscriptionId);
-            this.removeActiveSubscription(debugSubscriptionId);
-          }
           if (onEose) {
             this.logger.debug('End of stored events reached');
             onEose();
@@ -795,11 +760,6 @@ export abstract class RelayServiceBase {
       return {
         close: () => {
           this.logger.debug('Close from events');
-          // Mark subscription as closed in debug logger and remove from active tracking
-          if (debugSubscriptionId) {
-            this.debugLogger.closeSubscription(debugSubscriptionId);
-            this.removeActiveSubscription(debugSubscriptionId);
-          }
           sub.close();
         },
       };
@@ -862,16 +822,6 @@ export abstract class RelayServiceBase {
     }
 
     try {
-      // Register subscription with debug logger
-      let debugSubscriptionId: string | undefined;
-      if (this.debugInstanceId) {
-        debugSubscriptionId = this.debugLogger.registerSubscription(
-          this.debugInstanceId,
-          [filter],
-          urls,
-        );
-      }
-
       // Create the subscription
       const sub = this.#pool.subscribeManyEose(urls, filter, {
         onevent: (evt) => {
@@ -890,10 +840,6 @@ export abstract class RelayServiceBase {
         },
         onclose: (reasons) => {
           console.log('Pool closed', reasons);
-          // Mark subscription as closed in debug logger
-          if (debugSubscriptionId) {
-            this.debugLogger.closeSubscription(debugSubscriptionId);
-          }
           if (onEose) {
             this.logger.debug('End of stored events reached');
             onEose();
@@ -905,10 +851,6 @@ export abstract class RelayServiceBase {
       return {
         close: () => {
           this.logger.debug('Close from events');
-          // Mark subscription as closed in debug logger
-          if (debugSubscriptionId) {
-            this.debugLogger.closeSubscription(debugSubscriptionId);
-          }
           sub.close();
         },
       };

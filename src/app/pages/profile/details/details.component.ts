@@ -25,6 +25,8 @@ import { ApplicationService } from '../../../services/application.service';
 import { StorageService } from '../../../services/storage.service';
 import { AccountRelayService } from '../../../services/relays/account-relay';
 import { DiscoveryRelayService } from '../../../services/relays/discovery-relay';
+import { Metrics } from '../../../services/metrics';
+import { UserMetric } from '../../../interfaces/metrics';
 import { kinds } from 'nostr-tools';
 
 @Component({
@@ -69,6 +71,7 @@ export class DetailsComponent implements OnInit, AfterViewInit {
   profileState = inject(ProfileStateService);
   app = inject(ApplicationService);
   storage = inject(StorageService);
+  private metricsService = inject(Metrics);
 
   @ViewChild('followingContainer') followingContainerRef!: ElementRef;
 
@@ -88,6 +91,7 @@ export class DetailsComponent implements OnInit, AfterViewInit {
   readonly maxBufferPx = 400;
 
   info = signal<any>(null);
+  metrics = signal<UserMetric | null>(null);
 
   constructor() {
     // effect(async () => {
@@ -102,6 +106,10 @@ export class DetailsComponent implements OnInit, AfterViewInit {
         // TODO: make sure that the "npub" is hex.
         const info = await this.storage.getInfo(this.npub(), 'user');
         this.info.set(info);
+
+        // Load metrics for this user
+        const userMetrics = await this.metricsService.getUserMetric(this.npub());
+        this.metrics.set(userMetrics);
       }
     });
   }

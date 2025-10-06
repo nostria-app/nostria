@@ -1,7 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { SimplePool, Event } from 'nostr-tools';
 import { LoggerService } from '../logger.service';
-import { DebugLoggerService } from '../debug-logger.service';
 import { DiscoveryRelayService } from './discovery-relay';
 import { RelaysService } from './relays';
 
@@ -11,12 +10,8 @@ import { RelaysService } from './relays';
 export class SharedRelayService {
   #pool = new SimplePool();
   private logger = inject(LoggerService);
-  private debugLogger = inject(DebugLoggerService);
   private discoveryRelay = inject(DiscoveryRelayService);
   private readonly relaysService = inject(RelaysService);
-
-  // Debug tracking
-  private debugInstanceId: string;
 
   // Semaphore for controlling concurrent requests
   private readonly maxConcurrentRequests = 50; // Increased from 3 to handle many concurrent users
@@ -26,14 +21,6 @@ export class SharedRelayService {
   // Request deduplication cache
   private readonly requestCache = new Map<string, Promise<any>>();
   private readonly cacheTimeout = 1000; // 1 second cache
-
-  constructor() {
-    // Register this instance with the debug logger
-    this.debugInstanceId = this.debugLogger.registerInstance(
-      this.constructor.name,
-      [], // No specific relay URLs for shared service
-    );
-  }
 
   /**
    * Creates a unique cache key for request deduplication
@@ -262,14 +249,7 @@ export class SharedRelayService {
       // Execute the query
       const events: T[] = [];
       return new Promise<T[]>((resolve) => {
-        // Register subscription with debug logger
-        const debugSubscriptionId = this.debugLogger.registerSubscription(
-          this.debugInstanceId,
-          [filter],
-          relayUrls,
-        );
-
-        const sub = this.#pool!.subscribeEose(relayUrls, filter, {
+        this.#pool!.subscribeEose(relayUrls, filter, {
           maxWait: timeout,
           onevent: (event) => {
             // Add the received event to our collection
@@ -277,8 +257,6 @@ export class SharedRelayService {
           },
           onclose: (reasons) => {
             console.log('Subscriptions closed', reasons);
-            // Mark subscription as closed in debug logger
-            this.debugLogger.closeSubscription(debugSubscriptionId);
             resolve(events);
           },
         });

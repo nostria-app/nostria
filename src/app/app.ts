@@ -63,7 +63,6 @@ import { EventService } from './services/event';
 import { SleepModeService } from './services/sleep-mode.service';
 import { SleepModeOverlayComponent } from './components/sleep-mode-overlay/sleep-mode-overlay.component';
 import { WhatsNewDialogComponent } from './components/whats-new-dialog/whats-new-dialog.component';
-import { UserDataFactoryService } from './services/user-data-factory.service';
 import { FeedsCollectionService } from './services/feeds-collection.service';
 import { NewFeedDialogComponent } from './pages/feeds/new-feed-dialog/new-feed-dialog.component';
 
@@ -140,7 +139,6 @@ export class App implements OnInit {
   sleepModeService = inject(SleepModeService);
   snackBar = inject(MatSnackBar);
   eventService = inject(EventService);
-  userDataFactory = inject(UserDataFactoryService);
   feedsCollectionService = inject(FeedsCollectionService);
   private readonly wallets = inject(Wallets);
   private readonly platform = inject(PLATFORM_ID);
@@ -503,11 +501,6 @@ export class App implements OnInit {
     // Check for nostr protocol parameter in current URL
     this.logger.info('[App] Checking for nostr protocol in current URL');
     await this.checkForNostrProtocolInUrl();
-
-    // Enable global access to user data factory for debugging
-    if (this.app.isBrowser()) {
-      this.userDataFactory.enableGlobalAccess();
-    }
 
     this.logger.info('[App] ==> ngOnInit completed');
   }

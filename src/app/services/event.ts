@@ -8,8 +8,6 @@ import { NostrService } from './nostr.service';
 import { EventData } from '../data-resolver';
 import { minutes, NostrRecord } from '../interfaces';
 import { DiscoveryRelayService } from './relays/discovery-relay';
-import { UserDataFactoryService } from './user-data-factory.service';
-import { InstancePoolManagerService } from './instance-pool-manager.service';
 import { OnDemandUserDataService } from './on-demand-user-data.service';
 import { Cache } from './cache';
 import { UserDataService } from './user-data.service';
@@ -20,7 +18,6 @@ import {
   NoteEditorDialogData,
 } from '../components/note-editor-dialog/note-editor-dialog.component';
 import { MatDialog } from '@angular/material/dialog';
-import { DebugLoggerService } from './debug-logger.service';
 
 export interface Reaction {
   emoji: string;
@@ -73,35 +70,13 @@ export class EventService {
   private readonly utilities = inject(UtilitiesService);
   private readonly nostrService = inject(NostrService);
   private readonly discoveryRelay = inject(DiscoveryRelayService);
-  private readonly userDataFactory = inject(UserDataFactoryService);
-  private readonly poolManager = inject(InstancePoolManagerService);
+  private readonly userDataService = inject(UserDataService);
   private readonly onDemand = inject(OnDemandUserDataService);
   private readonly cache = inject(Cache);
   private readonly dialog = inject(MatDialog);
   private readonly relays = inject(RelaysService);
   private readonly subscriptionCache = inject(SubscriptionCacheService);
-  private readonly debugLogger = inject(DebugLoggerService);
 
-  // Removed internal userDataInstances map in favor of central InstancePoolManagerService
-  // Kept minimal shim methods (getUserDataService / releaseUserDataService) delegating to pool.
-  // Data remains cached in StorageService so immediate destruction after release is acceptable.
-
-  constructor() {
-    // Register with debug logger for stats (use setTimeout to avoid circular dependency)
-    setTimeout(() => {
-      this.debugLogger.setEventService(this);
-    }, 0);
-  }
-  // Acquire pooled instance
-  private async getUserDataService(pubkey: string): Promise<UserDataService> {
-    const instance = await this.userDataFactory.create(pubkey);
-    return instance; // refCount managed inside pool
-  }
-
-  // Release pooled instance
-  private async releaseUserDataService(pubkey: string): Promise<void> {
-    await this.poolManager.releaseInstance(pubkey);
-  }
 
   /**
    * Parse event tags to extract thread information
@@ -265,9 +240,6 @@ export class EventService {
   async loadEvent(nevent: string, item?: EventData): Promise<Event | null> {
     this.logger.info('loadEvent called with nevent:', nevent);
 
-    let userData: UserDataService | undefined;
-    let shouldReleaseUserData = false;
-
     // Handle hex string input
     if (this.utilities.isHex(nevent)) {
       this.logger.info('Input is hex string, encoding to nevent');
@@ -286,16 +258,10 @@ export class EventService {
     }
 
     try {
-      // If we have an author, we'll create a managed data factory for it.
       if (decoded.data.author) {
-        userData = await this.getUserDataService(decoded.data.author);
-        shouldReleaseUserData = true;
-      }
-
-      if (userData) {
-        // Try to get from user data service first
+        // Try to get from user data service with author pubkey
         try {
-          const event = await userData.getEventById(hex, { cache: true, ttl: minutes.five });
+          const event = await this.userDataService.getEventById(decoded.data.author, hex, { cache: true, ttl: minutes.five });
 
           if (event) {
             this.logger.info('Loaded event from storage or relays:', event.event.id);
@@ -320,11 +286,9 @@ export class EventService {
       }
 
       return null;
-    } finally {
-      // Release the UserDataService instance if we acquired one
-      if (shouldReleaseUserData && decoded.data.author) {
-        this.releaseUserDataService(decoded.data.author);
-      }
+    } catch (error) {
+      this.logger.error('Error in getEventFromUrl:', error);
+      return null;
     }
   }
 
@@ -334,20 +298,17 @@ export class EventService {
   async loadReplies(eventId: string, pubkey: string): Promise<Event[]> {
     this.logger.info('loadReplies called with eventId:', eventId, 'pubkey:', pubkey);
 
-    // Get managed UserDataService instance
-    const userData = await this.getUserDataService(pubkey);
-
     try {
       // Load replies (kind 1 events that reference this event)
-      const replyRecords = await userData.getEventsByKindAndEventTag(kinds.ShortTextNote, eventId, {
+      const replyRecords = await this.userDataService.getEventsByKindAndEventTag(pubkey, kinds.ShortTextNote, eventId, {
         cache: true,
         ttl: minutes.five,
       });
 
       // Extract events from records and filter valid replies
       const replies = replyRecords
-        .map((record) => record.event)
-        .filter((event) => event.content && event.content.trim().length > 0);
+        .map((record: NostrRecord) => record.event)
+        .filter((event: Event) => event.content && event.content.trim().length > 0);
 
       this.logger.info(
         'Successfully loaded replies for event:',
@@ -360,9 +321,6 @@ export class EventService {
     } catch (error) {
       this.logger.error('Error loading replies:', error);
       return [];
-    } finally {
-      // Release the UserDataService instance
-      this.releaseUserDataService(pubkey);
     }
   }
 
@@ -388,12 +346,10 @@ export class EventService {
       [eventId], // eventIds array
       'reactions', // subscription type
       async () => {
-        // Get managed UserDataService instance
-        const userData = await this.getUserDataService(pubkey);
-
         try {
           // Load reactions (kind 7 events that reference this event)
-          const reactionRecords = await userData.getEventsByKindAndEventTag(
+          const reactionRecords = await this.userDataService.getEventsByKindAndEventTag(
+            pubkey,
             kinds.Reaction,
             eventId,
             {
@@ -405,7 +361,7 @@ export class EventService {
 
           // Count reactions by emoji
           const reactionCounts = new Map<string, number>();
-          reactionRecords.forEach((record) => {
+          reactionRecords.forEach((record: NostrRecord) => {
             const event = record.event;
             if (event.content && event.content.trim()) {
               const emoji = event.content.trim();
@@ -429,9 +385,6 @@ export class EventService {
         } catch (error) {
           this.logger.error('Error loading reactions:', error);
           return { events: [], data: new Map() };
-        } finally {
-          // Release the UserDataService instance
-          this.releaseUserDataService(pubkey);
         }
       },
     );
@@ -449,12 +402,9 @@ export class EventService {
   ): Promise<ReportEvents> {
     this.logger.info('loadReports called with eventId:', eventId, 'pubkey:', pubkey);
 
-    // Get managed UserDataService instance
-    const userData = await this.getUserDataService(pubkey);
-
     try {
       // Load reports (kind 1984 events that reference this event)
-      const reportRecords = await userData.getEventsByKindAndEventTag(kinds.Report, eventId, {
+      const reportRecords = await this.userDataService.getEventsByKindAndEventTag(pubkey, kinds.Report, eventId, {
         cache: true,
         ttl: minutes.five,
         invalidateCache,
@@ -462,13 +412,13 @@ export class EventService {
 
       // Count reports by type from tags (NIP-56)
       const reportCounts = new Map<string, number>();
-      reportRecords.forEach((record) => {
+      reportRecords.forEach((record: NostrRecord) => {
         const event = record.event;
 
         // Look for report type in e-tags that reference this event
-        const eTags = event.tags.filter((tag) => tag[0] === 'e' && tag[1] === eventId);
+        const eTags = event.tags.filter((tag: string[]) => tag[0] === 'e' && tag[1] === eventId);
 
-        eTags.forEach((tag) => {
+        eTags.forEach((tag: string[]) => {
           // Report type is the 3rd element (index 2) in the tag according to NIP-56
           const reportType = tag[2];
           if (reportType && reportType.trim()) {
@@ -500,9 +450,6 @@ export class EventService {
     } catch (error) {
       this.logger.error('Error loading reports:', error);
       return { events: [], data: new Map() };
-    } finally {
-      // Release the UserDataService instance
-      this.releaseUserDataService(pubkey);
     }
   }
 
@@ -548,13 +495,10 @@ export class EventService {
       author = pTags[0];
     }
 
-    // Get managed UserDataService instance
-    const userData = await this.getUserDataService(author);
-
     try {
       // Load immediate parent (reply)
       if (replyId && replyId !== rootId) {
-        const replyEvent = await userData.getEventById(replyId, {
+        const replyEvent = await this.userDataService.getEventById(author, replyId, {
           cache: true,
           ttl: minutes.five,
         });
@@ -570,7 +514,7 @@ export class EventService {
 
       // Load root event if different from reply
       if (rootId && rootId !== replyId) {
-        const rootEvent = await userData.getEventById(rootId, {
+        const rootEvent = await this.userDataService.getEventById(author, rootId, {
           cache: true,
           ttl: minutes.five,
         });
@@ -584,9 +528,6 @@ export class EventService {
     } catch (error) {
       console.error('Error loading parent events:', error);
       return [];
-    } finally {
-      // Release the UserDataService instance
-      this.releaseUserDataService(author);
     }
   }
 
@@ -809,13 +750,10 @@ export class EventService {
       [eventId], // eventIds array
       'reposts', // subscription type
       async () => {
-        // Get managed UserDataService instance
-        const userData = await this.getUserDataService(userPubkey);
-
         const repostKind = eventKind === kinds.ShortTextNote ? kinds.Repost : kinds.GenericRepost;
 
         try {
-          const reposts = await userData.getEventsByKindAndEventTag(repostKind, eventId, {
+          const reposts = await this.userDataService.getEventsByKindAndEventTag(userPubkey, repostKind, eventId, {
             save: false,
             cache: true,
             invalidateCache,
@@ -831,9 +769,6 @@ export class EventService {
         } catch (error) {
           this.logger.error('Error loading reposts for event:', eventId, error);
           return [];
-        } finally {
-          // Release the UserDataService instance
-          this.releaseUserDataService(userPubkey);
         }
       },
     );

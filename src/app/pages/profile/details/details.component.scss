@@ -201,3 +201,91 @@
 ::ng-deep .mat-mdc-list-item {
   width: 100%;
 }
+
+.metrics-section {
+  padding: 1rem;
+  margin: 1rem 0;
+
+  h3 {
+    margin: 0 0 1rem 0;
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--mat-sys-on-surface);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.7;
+  }
+}
+
+.metrics-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.metric-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background-color: var(--mat-sys-surface-variant);
+  border-radius: 20px;
+  font-size: 0.875rem;
+  white-space: nowrap;
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-highest);
+  }
+
+  &.highlight {
+    background-color: var(--mat-sys-primary);
+    color: var(--mat-sys-on-primary);
+    font-weight: 500;
+
+    mat-icon {
+      color: var(--mat-sys-on-primary);
+    }
+
+    .metric-label,
+    .metric-value {
+      color: var(--mat-sys-on-primary);
+    }
+  }
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .metric-label {
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .metric-value {
+    font-weight: 600;
+    color: var(--mat-sys-on-surface);
+  }
+}
+
+@media (max-width: 600px) {
+  .metrics-section {
+    padding: 0.75rem 1rem;
+  }
+
+  .metrics-grid {
+    gap: 0.4rem;
+  }
+
+  .metric-item {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.8125rem;
+
+    mat-icon {
+      font-size: 14px;
+      width: 14px;
+      height: 14px;
+    }
+  }
+}

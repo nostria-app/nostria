@@ -1,4 +1,4 @@
-import { inject } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { StorageService } from './storage.service';
 import { NostrRecord } from '../interfaces';
 import { LoggerService } from './logger.service';
@@ -8,7 +8,6 @@ import { Cache, CacheOptions } from './cache';
 import { DiscoveryRelayService } from './relays/discovery-relay';
 import { SharedRelayService } from './relays/shared-relay';
 import { UserRelayService } from './relays/user-relay';
-import { DebugLoggerService } from './debug-logger.service';
 
 export interface DataOptions {
   cache?: boolean; // Whether to use cache
@@ -16,6 +15,9 @@ export interface DataOptions {
   save?: boolean; // Whether to save the event to storage
 }
 
+@Injectable({
+  providedIn: 'root',
+})
 export class UserDataService {
   private readonly storage = inject(StorageService);
   private readonly userRelayEx = inject(UserRelayService);
@@ -24,61 +26,9 @@ export class UserDataService {
   private readonly logger = inject(LoggerService);
   private readonly utilities = inject(UtilitiesService);
   private readonly cache = inject(Cache);
-  private readonly debugLogger = inject(DebugLoggerService);
-  private debugInstanceId?: string;
-
-  // Instance tracking for pool management
-  private pubkey!: string;
-  private lastAccessedAt = Date.now();
-  private accessCount = 0;
-  private createdAt = Date.now();
 
   // Map to track pending profile requests to prevent race conditions
   private pendingProfileRequests = new Map<string, Promise<NostrRecord | undefined>>();
-
-  async initialize(pubkey: string) {
-    this.pubkey = pubkey;
-    // Ensure relays are discovered for this pubkey
-    await this.userRelayEx.ensureRelaysForPubkey(pubkey);
-    this.logger.debug(`UserDataService initialized for pubkey: ${pubkey}`);
-
-    // Register this instance with the debug logger
-    this.debugInstanceId = this.debugLogger.registerUserDataInstance(pubkey, this);
-  }
-
-  /**
-   * Update the last accessed timestamp and increment access count
-   * This should be called by any method that performs significant work
-   */
-  private updateAccess(): void {
-    this.lastAccessedAt = Date.now();
-    this.accessCount++;
-  }
-
-  /**
-   * Get usage statistics for pool management
-   */
-  getUsageStats() {
-    const now = Date.now();
-    return {
-      pubkey: this.pubkey,
-      createdAt: this.createdAt,
-      lastAccessedAt: this.lastAccessedAt,
-      accessCount: this.accessCount,
-      ageMs: now - this.createdAt,
-      idleMs: now - this.lastAccessedAt,
-      debugInstanceId: this.debugInstanceId,
-    };
-  }
-
-  /**
-   * Reset usage counters (useful when reusing an instance)
-   */
-  resetUsageStats(): void {
-    this.accessCount = 0;
-    this.lastAccessedAt = Date.now();
-    this.logger.debug(`[UserDataService] Usage stats reset for pubkey: ${this.pubkey}`);
-  }
 
   toRecord(event: Event) {
     return this.utilities.toRecord(event);
@@ -89,11 +39,10 @@ export class UserDataService {
   }
 
   async getEventById(
+    pubkey: string,
     id: string,
     options?: CacheOptions & DataOptions,
   ): Promise<NostrRecord | null> {
-    this.updateAccess(); // Track usage
-
     let event: Event | null = null;
     let record: NostrRecord | undefined = undefined;
 
@@ -112,7 +61,7 @@ export class UserDataService {
 
     // If the caller explicitly supplies user relay, don't attempt to user account relay.
     if (!event) {
-      event = await this.userRelayEx.getEventById(this.pubkey, id);
+      event = await this.userRelayEx.getEventById(pubkey, id);
     }
 
     if (!event) {
@@ -176,8 +125,6 @@ export class UserDataService {
   }
 
   async getProfile(pubkey: string, refresh = false): Promise<NostrRecord | undefined> {
-    this.updateAccess(); // Track usage
-
     // Validate pubkey parameter
     if (!pubkey || pubkey === 'undefined' || !pubkey.trim()) {
       this.logger.warn('getProfile called with invalid pubkey:', pubkey);
@@ -333,8 +280,6 @@ export class UserDataService {
     kind: number,
     options?: CacheOptions & DataOptions,
   ): Promise<NostrRecord | null> {
-    this.updateAccess(); // Track usage
-
     // Validate pubkey parameter
     if (!pubkey || (Array.isArray(pubkey) && pubkey.length === 0)) {
       this.logger.warn('getEventByPubkeyAndKind called with invalid pubkey:', pubkey);
@@ -456,6 +401,7 @@ export class UserDataService {
   }
 
   async getEventsByKindAndEventTag(
+    pubkey: string,
     kind: number,
     eventTag: string,
     options?: CacheOptions & DataOptions,
@@ -479,7 +425,7 @@ export class UserDataService {
     }
 
     if (events.length === 0) {
-      const relayEvents = await this.userRelayEx.getEventsByKindAndEventTag(this.pubkey, kind, eventTag);
+      const relayEvents = await this.userRelayEx.getEventsByKindAndEventTag(pubkey, kind, eventTag);
       if (relayEvents && relayEvents.length > 0) {
         events = relayEvents;
       }
@@ -502,62 +448,5 @@ export class UserDataService {
     }
 
     return records;
-  }
-
-  /**
-   * Check if the underlying UserRelayService is idle
-   */
-  isIdle(): boolean {
-    const now = Date.now();
-    const idleTimeMs = now - this.lastAccessedAt;
-
-    // Consider instance idle if:
-    // 1. No recent access (more than 2 minutes)
-    // For singleton UserRelayService, only consider local access time since singleton never reports idle
-    const isRecentlyAccessed = idleTimeMs < 2 * 60 * 1000; // 2 minutes
-    const instanceIsIdle = !isRecentlyAccessed;
-
-    // Log idle state changes for debugging
-    if (instanceIsIdle !== this.wasLastIdle) {
-      this.logger.debug(`[UserDataService] Idle state changed to ${instanceIsIdle} for pubkey: ${this.pubkey.slice(0, 16)}... (idle for ${Math.round(idleTimeMs / 1000)}s)`);
-      this.wasLastIdle = instanceIsIdle;
-    }
-
-    return instanceIsIdle;
-  }
-
-  // Track last idle state to avoid excessive logging
-  private wasLastIdle = false;
-  private _destroyed = false;
-
-  /**
-   * Clean up resources and destroy the associated UserRelayService
-   */
-  destroy(): void {
-    if (this._destroyed) {
-      return;
-    }
-    this._destroyed = true;
-    this.logger.debug('UserDataService.destroy() called');
-
-    // Unregister from debug logger
-    if (this.debugInstanceId) {
-      this.debugLogger.destroyUserDataInstance(this.debugInstanceId);
-    }
-
-    try {
-      if (this.userRelayEx) {
-        // No longer destroy the singleton UserRelayService since it's shared
-        this.logger.debug('UserRelayService is singleton, skipping destroy()');
-        this.logger.debug('UserDataService destroyed (UserRelayService remains active)');
-      } else {
-        this.logger.debug('UserRelayService was not initialized, nothing to destroy');
-      }
-    } catch (e) {
-      this.logger.debug('Suppressed error during userRelayEx handling', e);
-    }
-
-    // Clear any pending requests
-    this.pendingProfileRequests.clear();
   }
 }
