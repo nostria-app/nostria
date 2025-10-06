@@ -106,6 +106,32 @@ export class WhatsNewDialogComponent {
 
   // Sample updates - replace with real data
   updates: FeatureUpdate[] = [
+        {
+      version: '1.0.6',
+      date: 'October 2025',
+      title: 'Relay resources optimization',
+      description: 'Some great new features and optimizations to reduce resource usage.',
+      features: [
+        {
+          title: 'Event mentions preview',
+          description:
+            'When an event is mentioned in a note, a preview of that event is shown directly in the content. This provides context and makes it easier to understand the reference without needing to navigate away.',
+          screenshots: [
+            {
+              src: '/screenshots/2025-10-06-event-mention.png',
+              alt: 'Event mentions preview',
+              width: 523,
+              height: 270,
+            },
+          ],
+        },
+        {
+          title: 'Relay resources optimization',
+          description:
+            'Optimized the way relay resources are managed and utilized, reducing resources usage on the device and improving overall performance.',
+        },
+      ],
+    },
     {
       version: '1.0.5',
       date: 'October 2025',

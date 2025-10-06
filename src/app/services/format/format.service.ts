@@ -126,7 +126,8 @@ export class FormatService {
 
       // Escape HTML in content
       const escapedContent = this.escapeHtml(previewContent);
-      const authorShort = author.substring(0, 8);
+      const authorShort = this.utilities.getTruncatedNpub(author);
+
 
       // Determine icon based on kind
       let icon = '📝';
