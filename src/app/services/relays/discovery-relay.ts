@@ -4,6 +4,7 @@ import { NostriaService } from '../../interfaces';
 import { UtilitiesService } from '../utilities.service';
 import { LocalStorageService } from '../local-storage.service';
 import { ApplicationStateService } from '../application-state.service';
+import { StorageService } from '../storage.service';
 import { kinds, SimplePool } from 'nostr-tools';
 
 @Injectable({
@@ -13,6 +14,7 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
   private readonly utilities = inject(UtilitiesService);
   private localStorage = inject(LocalStorageService);
   private appState = inject(ApplicationStateService);
+  private storage = inject(StorageService);
   private initialized = false;
 
   private readonly DEFAULT_BOOTSTRAP_RELAYS = ['wss://discovery.eu.nostria.app/'];
@@ -34,11 +36,30 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
 
     if (event) {
       relayUrls = this.utilities.getRelayUrls(event);
+
+      debugger;
+      // Save the relay list event to the database for future use
+      try {
+        await this.storage.saveEvent(event);
+        this.logger.debug(`Saved relay list event (kind 10002) for pubkey ${pubkey} to database`);
+      } catch (error) {
+        this.logger.warn(`Failed to save relay list event for pubkey ${pubkey}:`, error);
+      }
     } else {
       event = await this.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
 
       if (event) {
         relayUrls = this.utilities.getRelayUrlsFromFollowing(event);
+        // Save the contacts event to the database for future use
+
+        debugger;
+
+        try {
+          await this.storage.saveEvent(event);
+          this.logger.debug(`Saved contacts event (kind 3) for pubkey ${pubkey} to database`);
+        } catch (error) {
+          this.logger.warn(`Failed to save contacts event for pubkey ${pubkey}:`, error);
+        }
       }
     }
 
@@ -53,7 +74,7 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
     this.initialized = true;
   }
 
-  clear() {}
+  clear() { }
 
   save(relayUrls: string[]) {
     // Save to local storage
