@@ -351,6 +351,21 @@ export class UtilitiesService {
   }
 
   /**
+   * Get unique normalized relay URLs by removing duplicates and normalizing each URL
+   * @param urls - Array of relay URLs to deduplicate and normalize
+   * @returns Array of unique normalized relay URLs
+   */
+  getUniqueNormalizedRelayUrls(urls: string[]): string[] {
+    // Remove duplicates first
+    const uniqueUrls = [...new Set(urls)]
+      .map(url => url.trim())
+      .filter(url => url.length > 0);
+
+    // Normalize all URLs (normalizeRelayUrls already filters out invalid ones)
+    return this.normalizeRelayUrls(uniqueUrls);
+  }
+
+  /**
    * Normalizes relay URLs by ensuring root URLs have a trailing slash
    * but leaves URLs with paths unchanged
    */

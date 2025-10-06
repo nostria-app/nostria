@@ -1,6 +1,7 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { DiscoveryRelayService } from './discovery-relay';
 import { RelaysService } from './relays';
+import { UtilitiesService } from '../utilities.service';
 
 @Injectable({
   providedIn: 'root'
@@ -8,6 +9,7 @@ import { RelaysService } from './relays';
 export class UserRelaysService {
   private readonly discoveryRelayService = inject(DiscoveryRelayService);
   private readonly relaysService = inject(RelaysService);
+  private readonly utilitiesService = inject(UtilitiesService);
 
   // High-performance cache with timestamp tracking
   private readonly cachedRelays = signal<Map<string, string[]>>(new Map());
@@ -182,23 +184,12 @@ export class UserRelaysService {
       const fallbackRelays = await this.relaysService.getFallbackRelaysForPubkey(pubkey);
       allRelays.push(...fallbackRelays);
 
-      // 3. Remove duplicates and normalize URLs
-      const uniqueRelays = [...new Set(allRelays)]
-        .map(relay => relay.trim())
-        .filter(relay => relay.length > 0)
-        .map(relay => {
-          // Normalize relay URLs
-          if (!relay.startsWith('ws://') && !relay.startsWith('wss://')) {
-            return `wss://${relay}`;
-          }
-          return relay;
-        });
+      // 3. Remove duplicates and normalize URLs using utility function
+      const uniqueNormalizedRelays = this.utilitiesService.getUniqueNormalizedRelayUrls(allRelays);
 
-      // 4. For publishing, we want to include all discovered relays (no limit)
-      // but we can still sort by reliability
-      const sortedRelays = this.relaysService.getOptimalRelays(uniqueRelays, uniqueRelays.length);
-
-      return sortedRelays;
+      // 4. For publishing, we return ALL discovered relays (no optimization or limiting)
+      // This ensures maximum distribution of the event across the user's entire relay network
+      return uniqueNormalizedRelays;
 
     } catch (error) {
       console.error('Error fetching user relays for publishing:', error);
