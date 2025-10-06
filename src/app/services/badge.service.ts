@@ -8,7 +8,7 @@ import { AccountStateService } from './account-state.service';
 import { NostriaService } from '../interfaces';
 import { DataService } from './data.service';
 import { AccountRelayService } from './relays/account-relay';
-import { UserRelayExFactoryService } from './user-relay-factory.service';
+import { UserRelayService } from './relays/user-relay';
 
 export interface ParsedBadge {
   slug: string;
@@ -39,7 +39,7 @@ export class BadgeService implements NostriaService {
   private readonly nostr = inject(NostrService);
   private readonly accountRelay = inject(AccountRelayService);
   private readonly utilities = inject(UtilitiesService);
-  userRelayFactory = inject(UserRelayExFactoryService);
+  private readonly userRelayService = inject(UserRelayService);
   private readonly logger = inject(LoggerService);
   private readonly accountState = inject(AccountStateService);
   private readonly data = inject(DataService);
@@ -94,7 +94,7 @@ export class BadgeService implements NostriaService {
     }
   }
 
-  async load() {}
+  async load() { }
 
   async loadAcceptedBadges(pubkey: string): Promise<void> {
     this.isLoadingAccepted.set(true);
@@ -151,11 +151,13 @@ export class BadgeService implements NostriaService {
       );
       console.log('Badge definition not found in local storage, fetched from relay:', definition);
 
-      // If the definition is not found on the user's relays, try to fetch from author and then re-publish to user's relays.
+      // If the definition is not found on the user's relays, try to fetch from author's relays
       if (!definition) {
         try {
-          const userRelay = await this.userRelayFactory.create(pubkey);
-          definition = await userRelay.getEventByPubkeyAndKindAndTag(
+          // Ensure relays are discovered for this pubkey
+          await this.userRelayService.ensureRelaysForPubkey(pubkey);
+
+          definition = await this.userRelayService.getEventByPubkeyAndKindAndTag(
             pubkey,
             kinds.BadgeDefinition,
             { key: 'd', value: slug }
@@ -164,13 +166,12 @@ export class BadgeService implements NostriaService {
             'Badge definition not found on user relays, fetched from author relays:',
             definition
           );
-          userRelay.destroy();
 
           if (!definition) {
             this.logger.error('Badge definition not found on author relays.');
           }
-        } catch (err: any) {
-          this.logger.error(err.message);
+        } catch (err) {
+          this.logger.error('Error loading badge definition:', err);
         }
       }
     }

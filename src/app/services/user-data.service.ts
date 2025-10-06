@@ -3,7 +3,6 @@ import { StorageService } from './storage.service';
 import { NostrRecord } from '../interfaces';
 import { LoggerService } from './logger.service';
 import { Event, kinds } from 'nostr-tools';
-import { UserRelayExFactoryService } from './user-relay-factory.service';
 import { UtilitiesService } from './utilities.service';
 import { Cache, CacheOptions } from './cache';
 import { DiscoveryRelayService } from './relays/discovery-relay';
@@ -19,14 +18,13 @@ export interface DataOptions {
 
 export class UserDataService {
   private readonly storage = inject(StorageService);
-  private readonly userRelayFactory = inject(UserRelayExFactoryService);
+  private readonly userRelayEx = inject(UserRelayService);
   private readonly discoveryRelayEx = inject(DiscoveryRelayService);
   private readonly sharedRelayEx = inject(SharedRelayService);
   private readonly logger = inject(LoggerService);
   private readonly utilities = inject(UtilitiesService);
   private readonly cache = inject(Cache);
   private readonly debugLogger = inject(DebugLoggerService);
-  private userRelayEx!: UserRelayService;
   private debugInstanceId?: string;
 
   // Instance tracking for pool management
@@ -40,8 +38,8 @@ export class UserDataService {
 
   async initialize(pubkey: string) {
     this.pubkey = pubkey;
-    // Get the singleton UserRelayService and ensure relays are discovered for this pubkey
-    this.userRelayEx = await this.userRelayFactory.create(pubkey);
+    // Ensure relays are discovered for this pubkey
+    await this.userRelayEx.ensureRelaysForPubkey(pubkey);
     this.logger.debug(`UserDataService initialized for pubkey: ${pubkey}`);
 
     // Register this instance with the debug logger

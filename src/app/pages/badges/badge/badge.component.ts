@@ -20,7 +20,6 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { CommonModule, DatePipe } from '@angular/common';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { AccountRelayService } from '../../../services/relays/account-relay';
-import { UserRelayExFactoryService } from '../../../services/user-relay-factory.service';
 
 export type BadgeLayout = 'vertical' | 'horizontal';
 
@@ -62,7 +61,6 @@ export class BadgeComponent {
   data = inject(DataService);
   badgeService = inject(BadgeService);
   relay = inject(AccountRelayService);
-  userRelayFactory = inject(UserRelayExFactoryService);
 
   // Parsed badge data as signals
   id = signal<string>('');

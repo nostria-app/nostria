@@ -22,6 +22,7 @@ import {
   ReportDialogData,
 } from '../components/report-dialog/report-dialog.component';
 import { ReportTarget } from './reporting.service';
+import { UserRelayService } from './relays/user-relay';
 
 @Injectable({
   providedIn: 'root',
@@ -41,6 +42,7 @@ export class LayoutService implements OnDestroy {
 
   profileState = inject(ProfileStateService);
   accountStateService = inject(AccountStateService);
+  private userRelayService = inject(UserRelayService);
   overlayMode = signal(false);
   showMediaPlayer = signal(false);
   private readonly platformId = inject(PLATFORM_ID);
@@ -463,9 +465,10 @@ export class LayoutService implements OnDestroy {
     }
 
     if (type === 'nprofile') {
+      const pubkey = this.profileState.pubkey();
       const profilePointer: ProfilePointer = {
         pubkey: text,
-        relays: this.profileState.relay?.getRelaysForPubkey(this.profileState.pubkey()),
+        relays: pubkey ? this.userRelayService.getRelaysForPubkey(pubkey) : undefined,
       };
       text = nip19.nprofileEncode(profilePointer);
     }

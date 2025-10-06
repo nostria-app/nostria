@@ -37,7 +37,6 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
     if (event) {
       relayUrls = this.utilities.getRelayUrls(event);
 
-      debugger;
       // Save the relay list event to the database for future use
       try {
         await this.storage.saveEvent(event);
@@ -51,8 +50,6 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
       if (event) {
         relayUrls = this.utilities.getRelayUrlsFromFollowing(event);
         // Save the contacts event to the database for future use
-
-        debugger;
 
         try {
           await this.storage.saveEvent(event);

@@ -61,7 +61,6 @@ import { MessagingService } from '../../services/messaging.service';
 import { LayoutService } from '../../services/layout.service';
 import { NamePipe } from '../../pipes/name.pipe';
 import { AccountRelayService } from '../../services/relays/account-relay';
-import { UserRelayExFactoryService } from '../../services/user-relay-factory.service';
 import { UserRelayService } from '../../services/relays/user-relay';
 
 // Define interfaces for our DM data structures
@@ -127,7 +126,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   private logger = inject(LoggerService);
   messaging = inject(MessagingService);
   private notifications = inject(NotificationService);
-  private userRelayFactory = inject(UserRelayExFactoryService);
+  private userRelayService = inject(UserRelayService);
   private dialog = inject(MatDialog);
   private storage = inject(StorageService);
   private router = inject(Router);
@@ -517,7 +516,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       // TODO: Important, get all relays for the user we are sending DM to and include
       // it in this array for publishing the DM!!
       // const relays = this.relay.getAccountRelayUrls();
-      const userRelay = await this.userRelayFactory.create(receiverPubkey);
+
+      // Ensure relays are discovered for the receiver
+      await this.userRelayService.ensureRelaysForPubkey(receiverPubkey);
 
       // Create a unique ID for the pending message
       const pendingId = `pending-${Date.now()}-${Math.random()}`;
@@ -555,16 +556,14 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         finalMessage = await this.sendNip44Message(
           messageText,
           receiverPubkey,
-          myPubkey,
-          userRelay
+          myPubkey
         );
       } else {
         // Use NIP-04 encryption for backwards compatibility
         finalMessage = await this.sendNip04Message(
           messageText,
           receiverPubkey,
-          myPubkey,
-          userRelay
+          myPubkey
         );
       }
 
@@ -750,8 +749,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   private async sendNip04Message(
     messageText: string,
     receiverPubkey: string,
-    myPubkey: string,
-    userRelay: UserRelayService
+    myPubkey: string
   ): Promise<DirectMessage> {
     try {
       // Encrypt the message using NIP-04
@@ -770,7 +768,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       const signedEvent = await this.nostr.signEvent(event);
 
       // Publish to relays
-      await this.publishToRelays(signedEvent, userRelay, myPubkey);
+      await this.publishToRelays(signedEvent, receiverPubkey);
 
       // Return the message object
       return {
@@ -794,8 +792,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   private async sendNip44Message(
     messageText: string,
     receiverPubkey: string,
-    myPubkey: string,
-    userRelay: UserRelayService
+    myPubkey: string
   ): Promise<DirectMessage> {
     try {
       // Step 1: Create the message (unsigned event) - kind 14
@@ -891,7 +888,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       // const signedGiftWrapSelf = finalizeEvent(giftWrapSelf, ephemeralKey);
 
       // Publish the gift wrap to relays of the recipient
-      await this.publishToUserRelays(signedGiftWrap, userRelay, myPubkey);
+      await this.publishToUserRelays(signedGiftWrap, receiverPubkey);
 
       // Publish the gift wrap to account relays, so the chat can be discovered on other devices.
       await this.publishToAccountRelays(signedGiftWrap2);
@@ -915,16 +912,16 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   /**
    * Publish an event to multiple relays
    */
-  private async publishToRelays(event: NostrEvent, userRelay: UserRelayService, pubkey: string): Promise<void> {
-    const promisesUser = userRelay.publish(pubkey, event);
+  private async publishToRelays(event: NostrEvent, pubkey: string): Promise<void> {
+    const promisesUser = this.userRelayService.publish(pubkey, event);
     const promisesAccount = this.accountRelay.publish(event);
 
     // Wait for all publish attempts to complete
     await Promise.allSettled([promisesUser, promisesAccount]);
   }
 
-  private async publishToUserRelays(event: NostrEvent, userRelay: UserRelayService, pubkey: string): Promise<void> {
-    const promisesUser = userRelay.publish(pubkey, event);
+  private async publishToUserRelays(event: NostrEvent, pubkey: string): Promise<void> {
+    const promisesUser = this.userRelayService.publish(pubkey, event);
 
     // Wait for all publish attempts to complete
     await Promise.allSettled([promisesUser]);
