@@ -8,6 +8,9 @@ import { ParsingService } from '../parsing.service';
 import { UtilitiesService } from '../utilities.service';
 import markdownRenderer from './markdownRenderer';
 import { imageUrlsToMarkdown } from './utils';
+import { DataService } from '../data.service';
+import { RelayPoolService } from '../relays/relay-pool';
+import { UserRelaysService } from '../relays/user-relays';
 
 @Injectable({
   providedIn: 'root',
@@ -17,6 +20,149 @@ export class FormatService {
   private parsingService = inject(ParsingService);
   private utilities = inject(UtilitiesService);
   private sanitizer = inject(DomSanitizer);
+  private dataService = inject(DataService);
+  private relayPool = inject(RelayPoolService);
+  private userRelaysService = inject(UserRelaysService);
+
+  /**
+   * Escape HTML special characters to prevent XSS
+   */
+  private escapeHtml(text: string): string {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  /**
+   * Fetch event data from relays and create preview HTML
+   * Made public to allow usage in components that need to render event previews
+   */
+  async fetchEventPreview(
+    eventId: string,
+    authorPubkey?: string,
+    relayHints?: string[]
+  ): Promise<string | null> {
+    try {
+      this.logger.debug('[fetchEventPreview] Starting fetch for event:', {
+        eventId,
+        authorPubkey,
+        relayHints,
+      });
+
+      let event = null;
+      let relaysToUse: string[] = [];
+
+      // 1. If we have relay hints, use them first
+      if (relayHints && relayHints.length > 0) {
+        relaysToUse = this.utilities.normalizeRelayUrls(relayHints);
+        this.logger.debug('[fetchEventPreview] Trying relay hints:', relaysToUse);
+        event = await this.relayPool.get(relaysToUse, { ids: [eventId] }, 3000);
+
+        if (event) {
+          this.logger.debug('[fetchEventPreview] Event found via relay hints');
+        } else {
+          this.logger.debug('[fetchEventPreview] Event not found via relay hints');
+        }
+      }
+
+      // 2. If no event found and we have author pubkey, discover their relays
+      if (!event && authorPubkey) {
+        this.logger.debug('[fetchEventPreview] Discovering relays for author:', authorPubkey);
+        await this.userRelaysService.ensureRelaysForPubkey(authorPubkey);
+        relaysToUse = this.userRelaysService.getRelaysForPubkey(authorPubkey) || [];
+
+        this.logger.debug('[fetchEventPreview] Author relays discovered:', relaysToUse.length);
+
+        if (relaysToUse.length > 0) {
+          // Use optimal relays for better performance
+          const optimalRelays = this.utilities.pickOptimalRelays(relaysToUse, 5);
+          this.logger.debug('[fetchEventPreview] Trying optimal relays:', optimalRelays);
+          event = await this.relayPool.get(optimalRelays, { ids: [eventId] }, 3000);
+
+          if (event) {
+            this.logger.debug('[fetchEventPreview] Event found via author relays');
+          } else {
+            this.logger.debug('[fetchEventPreview] Event not found via author relays');
+          }
+        }
+      }
+
+      // 3. If still no event, try from cache or storage
+      if (!event) {
+        this.logger.debug('[fetchEventPreview] Trying cache/storage');
+        const record = await this.dataService.getEventById(eventId, { cache: true, save: true });
+        event = record?.event || null;
+
+        if (event) {
+          this.logger.debug('[fetchEventPreview] Event found in cache/storage');
+        } else {
+          this.logger.debug('[fetchEventPreview] Event not found in cache/storage');
+        }
+      }
+
+      if (!event) {
+        this.logger.warn('[fetchEventPreview] Could not fetch event for preview:', eventId);
+        return null;
+      }
+
+      this.logger.debug('[fetchEventPreview] Event fetched successfully:', {
+        id: event.id,
+        kind: event.kind,
+        author: event.pubkey.substring(0, 8),
+        contentLength: event.content?.length || 0,
+      });
+
+      // Extract preview information from the event
+      const author = event.pubkey;
+      const content = event.content || '';
+      const kind = event.kind;
+
+      // Truncate content for preview
+      const maxContentLength = 200;
+      let previewContent = content.trim();
+      if (previewContent.length > maxContentLength) {
+        previewContent = previewContent.substring(0, maxContentLength) + '…';
+      }
+
+      // Escape HTML in content
+      const escapedContent = this.escapeHtml(previewContent);
+      const authorShort = author.substring(0, 8);
+
+      // Determine icon based on kind
+      let icon = '📝';
+      let kindLabel = 'Note';
+      if (kind === 1) {
+        icon = '📝';
+        kindLabel = 'Note';
+      } else if (kind === 30023) {
+        icon = '📄';
+        kindLabel = 'Article';
+      } else if (kind === 6) {
+        icon = '🔁';
+        kindLabel = 'Repost';
+      } else if (kind === 7) {
+        icon = '❤️';
+        kindLabel = 'Reaction';
+      } else {
+        kindLabel = `Kind ${kind}`;
+      }
+
+      return `<div class="nostr-embed-preview" data-event-id="${eventId}" data-author="${author}" data-kind="${kind}">
+        <a href="/e/${nip19.noteEncode(eventId)}" class="nostr-embed-link">
+          <div class="nostr-embed-icon">
+            <span class="embed-icon">${icon}</span>
+          </div>
+          <div class="nostr-embed-content">
+            <div class="nostr-embed-title">${escapedContent}</div>
+            <div class="nostr-embed-meta">${kindLabel} · by ${authorShort}</div>
+          </div>
+        </a>
+      </div>`;
+    } catch (error) {
+      this.logger.error('[fetchEventPreview] Error fetching event preview:', error);
+      return null;
+    }
+  }
 
   // Helper method to process Nostr tokens and replace them with @username
   private async processNostrTokens(content: string): Promise<string> {
@@ -48,8 +194,20 @@ export class FormatService {
               }
 
               case 'note': {
-                // For notes, create a reference link
+                // For notes, try to create an embedded preview card
                 const noteId = nostrData.data;
+
+                // Attempt to fetch and render note preview
+                const preview = await this.fetchEventPreview(noteId);
+
+                if (preview) {
+                  return {
+                    original: match[0],
+                    replacement: preview,
+                  };
+                }
+
+                // Fallback to simple reference link if preview fails
                 const noteRef = nostrData.displayName || `note${noteId.substring(0, 8)}`;
                 const noteEncoded = nip19.noteEncode(noteId);
                 return {
@@ -59,8 +217,31 @@ export class FormatService {
               }
 
               case 'nevent': {
-                // For events, create a reference link
+                // For events, create an embedded preview card
                 const eventId = nostrData.data?.id || nostrData.data;
+                const authorPubkey = nostrData.data?.author || nostrData.data?.pubkey; // Try both 'author' and 'pubkey'
+                const relayHints = nostrData.data?.relays;
+
+                this.logger.debug('[processNostrTokens] nevent parsed:', {
+                  eventId,
+                  authorPubkey,
+                  relayHints,
+                  nostrData: nostrData.data,
+                });
+
+                // Attempt to fetch and render event preview
+                const preview = await this.fetchEventPreview(eventId, authorPubkey, relayHints);
+
+                if (preview) {
+                  this.logger.debug('[processNostrTokens] nevent preview generated successfully');
+                  return {
+                    original: match[0],
+                    replacement: preview,
+                  };
+                }
+
+                this.logger.debug('[processNostrTokens] nevent preview failed, using fallback');
+                // Fallback to simple reference link if preview fails
                 const eventRef = nostrData.displayName || `event${eventId.substring(0, 8)}`;
                 const neventEncoded = nip19.neventEncode(nostrData.data);
                 return {
@@ -70,16 +251,28 @@ export class FormatService {
               }
 
               case 'naddr': {
-                // For addresses (like articles), create a reference link
+                // For addresses (like articles), create an embedded preview card
                 const identifier = nostrData.data?.identifier || '';
                 const kind = nostrData.data?.kind || '';
                 const authorPubkey = nostrData.data?.pubkey || '';
                 const addrRef =
                   nostrData.displayName || identifier || `${kind}:${authorPubkey.substring(0, 8)}`;
                 const naddrEncoded = nip19.naddrEncode(nostrData.data);
+
+                // Create an embedded preview card for the article
                 return {
                   original: match[0],
-                  replacement: `<a href="/a/${naddrEncoded}" class="nostr-reference" data-identifier="${identifier}" data-kind="${kind}" data-type="article" title="View article">📄 ${addrRef}</a>`,
+                  replacement: `<div class="nostr-embed-preview" data-naddr="${naddrEncoded}" data-identifier="${identifier}" data-kind="${kind}" data-pubkey="${authorPubkey}">
+                    <a href="/a/${naddrEncoded}" class="nostr-embed-link">
+                      <div class="nostr-embed-icon">
+                        <span class="embed-icon">📄</span>
+                      </div>
+                      <div class="nostr-embed-content">
+                        <div class="nostr-embed-title">${this.escapeHtml(addrRef)}</div>
+                        <div class="nostr-embed-meta">Article · Kind ${kind}</div>
+                      </div>
+                    </a>
+                  </div>`,
                 };
               }
 

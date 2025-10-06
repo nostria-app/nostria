@@ -55,3 +55,67 @@
     }
   }
 }
+
+// Nostr event preview styling
+.nostr-event-preview {
+  margin: 1rem 0;
+
+  // Use global selector to style the embedded preview HTML
+  :global(.nostr-embed-preview) {
+    display: block;
+    text-decoration: none;
+    border: 1px solid var(--mat-sys-outline-variant);
+    border-radius: 12px;
+    padding: 1rem;
+    margin: 0.5rem 0;
+    background: var(--mat-sys-surface-container-low);
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: var(--mat-sys-surface-container);
+      border-color: var(--mat-sys-outline);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .nostr-embed-link {
+      display: flex;
+      gap: 1rem;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .nostr-embed-icon {
+      flex-shrink: 0;
+      font-size: 1.5rem;
+    }
+
+    .nostr-embed-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .nostr-embed-title {
+      font-weight: 500;
+      color: var(--mat-sys-on-surface);
+      margin-bottom: 0.25rem;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+
+    .nostr-embed-meta {
+      font-size: 0.875rem;
+      color: var(--mat-sys-on-surface-variant);
+    }
+  }
+
+  :global(.nostr-reference) {
+    color: var(--mat-sys-primary);
+    text-decoration: none;
+    font-family: monospace;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}

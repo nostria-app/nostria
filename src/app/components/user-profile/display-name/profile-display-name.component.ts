@@ -191,6 +191,19 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
   });
 
   /**
+   * Truncated npub value (first 8 characters) for display when profile is not found
+   */
+  truncatedNpubValue = computed<string>(() => {
+    const npub = this.npubValue();
+    if (!npub || npub.length <= 8) {
+      return npub;
+    }
+
+    // Return first 8 characters for concise display
+    return npub.substring(0, 8);
+  });
+
+  /**
    * Debounces the profile data loading to prevent excessive API calls during scrolling
    */
   private debouncedLoadProfileData(pubkeyValue: string): void {
