@@ -1,22 +1,21 @@
 import { Injectable, inject } from '@angular/core';
-import { SimplePool, Event, Filter } from 'nostr-tools';
+import { Event, Filter } from 'nostr-tools';
 import { DiscoveryRelayService } from './discovery-relay';
 import { LoggerService } from '../logger.service';
 import { RelaysService } from './relays';
+import { RelayPoolService } from './relay-pool';
 
 @Injectable({
   providedIn: 'root',
 })
 export class UserRelayService {
   private discoveryRelay = inject(DiscoveryRelayService);
+  private pool = inject(RelayPoolService);
   private logger = inject(LoggerService);
   private relaysService = inject(RelaysService);
 
   // Map from pubkey to relay URLs
   private pubkeyRelayMap = new Map<string, string[]>();
-
-  // Single shared pool for all relay operations
-  private pool = new SimplePool();
   private useOptimizedRelays = true;
 
   /**
@@ -63,6 +62,7 @@ export class UserRelayService {
 
     return this.pool.get(relayUrls, { ids: [id] });
   }
+
   async getEventById(pubkey: string, id: string): Promise<Event | null> {
     await this.ensureRelaysForPubkey(pubkey);
     const relayUrls = this.getEffectiveRelayUrls(this.getRelaysForPubkey(pubkey));
@@ -216,30 +216,7 @@ export class UserRelayService {
       limit?: number;
     }
   ): Promise<Event[]> {
-    return new Promise<Event[]>((resolve) => {
-      const events: Event[] = [];
-      const timeout = 8000; // Increased timeout to 8 seconds for better results
-
-      this.logger.debug(`[UserRelayService] Starting subscription with filter:`, filter, `on ${relayUrls.length} relays`);
-
-      this.pool.subscribeEose(relayUrls, filter, {
-        maxWait: timeout,
-        onevent: (event) => {
-          events.push(event);
-          this.logger.debug(`[UserRelayService] Received event kind ${event.kind} from subscription`);
-        },
-        onclose: () => {
-          this.logger.debug(`[UserRelayService] Subscription closed, received ${events.length} events`);
-          resolve(events);
-        },
-      });
-
-      // Add timeout fallback in case onclose is not called
-      setTimeout(() => {
-        this.logger.debug(`[UserRelayService] Subscription timeout reached, resolving with ${events.length} events`);
-        resolve(events);
-      }, timeout + 1000);
-    });
+    return this.pool.query(relayUrls, filter);
   }
 
   /**
@@ -345,8 +322,7 @@ export class UserRelayService {
   async subscribe(
     pubkey: string,
     filter: Filter,
-    onEvent: (event: Event) => void,
-    onEose?: () => void
+    onEvent: (event: Event) => void
   ): Promise<unknown> {
     await this.ensureRelaysForPubkey(pubkey);
     const relayUrls = this.getEffectiveRelayUrls(this.getRelaysForPubkey(pubkey));
@@ -356,10 +332,7 @@ export class UserRelayService {
       return null;
     }
 
-    return this.pool.subscribeMany(relayUrls, filter, {
-      onevent: onEvent,
-      oneose: onEose,
-    });
+    return this.pool.subscribe(relayUrls, filter, onEvent);
   }
 
   /**
@@ -367,10 +340,8 @@ export class UserRelayService {
    */
   async subscribeEose(
     pubkey: string,
-    filter: Filter,
-    onEvent: (event: Event) => void,
-    onEose?: () => void
-  ): Promise<unknown> {
+    filter: Filter
+  ): Promise<Event[] | null> {
     await this.ensureRelaysForPubkey(pubkey);
     const relayUrls = this.getEffectiveRelayUrls(this.getRelaysForPubkey(pubkey));
 
@@ -379,9 +350,21 @@ export class UserRelayService {
       return null;
     }
 
-    return this.pool.subscribeEose(relayUrls, filter, {
-      onevent: onEvent,
-      onclose: onEose,
-    });
+    return this.pool.query(relayUrls, filter);
+  }
+
+  async query(
+    pubkey: string,
+    filter: Filter
+  ): Promise<Event[] | null> {
+    await this.ensureRelaysForPubkey(pubkey);
+    const relayUrls = this.getEffectiveRelayUrls(this.getRelaysForPubkey(pubkey));
+
+    if (relayUrls.length === 0) {
+      this.logger.warn(`[UserRelayService] No relays available for subscribeEose for pubkey: ${pubkey.slice(0, 16)}...`);
+      return null;
+    }
+
+    return this.pool.query(relayUrls, filter);
   }
 }

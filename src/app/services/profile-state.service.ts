@@ -136,22 +136,13 @@ export class ProfileStateService {
 
     // Subscribe to contacts separately since they need special handling (only 1 per user, potentially older)
     // Try user-specific relays first
-    this.relay?.subscribeEose(
-      pubkey,
-      {
-        kinds: [kinds.Contacts],
-        authors: [pubkey],
-        limit: 1,
-      },
-      (event: Event) => {
-        console.log('Contacts event received', event);
-        if (event.kind === kinds.Contacts) {
-          const followingList = this.utilities.getPTagsValuesFromEvent(event);
-          console.log('Following list extracted:', followingList);
-          this.followingList.set(followingList);
-        }
-      }
-    );
+    const event = await this.relay?.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
+
+    if (event && event.kind === kinds.Contacts) {
+      const followingList = this.utilities.getPTagsValuesFromEvent(event);
+      console.log('Following list extracted:', followingList);
+      this.followingList.set(followingList);
+    }
 
     // Also try to get contacts from global/discovery relays as fallback
     // This is needed because contacts might be on different relays than recent content
@@ -179,84 +170,157 @@ export class ProfileStateService {
     }, 2000); // Wait 2 seconds before trying fallback
 
     // Subscribe to content events (notes, articles, reposts)
-    this.relay?.subscribeEose(
-      pubkey,
-      {
-        kinds: [kinds.ShortTextNote, kinds.LongFormArticle, kinds.Repost, kinds.GenericRepost],
-        authors: [pubkey],
-        limit: 20,
-      },
-      (event: Event) => {
-        console.log('Content event received', event);
+    const events = await this.relay?.query(pubkey, {
+      kinds: [kinds.ShortTextNote, kinds.LongFormArticle, kinds.Repost, kinds.GenericRepost],
+      authors: [pubkey],
+      limit: 20,
+    });
 
-        if (event.kind === kinds.LongFormArticle) {
-          const record = this.utilities.toRecord(event);
-          // Check for duplicates before adding
-          this.articles.update(articles => {
-            const exists = articles.some(a => a.event.id === event.id);
-            if (exists) {
-              console.log('Duplicate article event prevented:', event.id);
-              return articles;
-            }
-            console.log('Adding new article:', event.id);
-            return [...articles, record];
-          });
-        } else if (event.kind === kinds.ShortTextNote) {
-          const record = this.utilities.toRecord(event);
-          if (this.utilities.isRootPost(event)) {
-            // Check for duplicates before adding to notes
-            this.notes.update(events => {
-              const exists = events.some(n => n.event.id === event.id);
-              if (exists) {
-                console.log('Duplicate note event prevented:', event.id);
-                return events;
-              }
-              console.log('Adding new note:', event.id);
-              return [...events, record];
-            });
-          } else {
-            // Check for duplicates before adding to replies
-            this.replies.update(events => {
-              const exists = events.some(r => r.event.id === event.id);
-              if (exists) {
-                console.log('Duplicate reply event prevented:', event.id);
-                return events;
-              }
-              console.log('Adding new reply:', event.id);
-              return [...events, record];
-            });
+    for (const event of events || []) {
+      console.log('Initial content event received', event);
+      if (event.kind === kinds.LongFormArticle) {
+        const record = this.utilities.toRecord(event);
+        // Check for duplicates before adding
+        this.articles.update(articles => {
+          const exists = articles.some(a => a.event.id === event.id);
+          if (exists) {
+            console.log('Duplicate article event prevented:', event.id);
+            return articles;
           }
-        } else if (event.kind === kinds.Repost || event.kind === kinds.GenericRepost) {
-          const record = this.utilities.toRecord(event);
-          // Check for duplicates before adding to reposts
-          this.reposts.update(reposts => {
-            const exists = reposts.some(r => r.event.id === event.id);
+          console.log('Adding new article:', event.id);
+          return [...articles, record];
+        });
+      } else if (event.kind === kinds.ShortTextNote) {
+        const record = this.utilities.toRecord(event);
+        if (this.utilities.isRootPost(event)) {
+          // Check for duplicates before adding to notes
+          this.notes.update(events => {
+            const exists = events.some(n => n.event.id === event.id);
             if (exists) {
-              console.log('Duplicate repost event prevented:', event.id);
-              return reposts;
+              console.log('Duplicate note event prevented:', event.id);
+              return events;
             }
-            console.log('Adding new repost:', event.id);
-            return [...reposts, record];
+            console.log('Adding new note:', event.id);
+            return [...events, record];
           });
-        } else if (event.kind === 20 || event.kind === 21 || event.kind === 22) {
-          // Handle media events (20 = Picture, 21 = Video, 22 = Unknown/Other media)
-          const record = this.utilities.toRecord(event);
-          // Check for duplicates before adding to media
-          this.media.update(media => {
-            const exists = media.some(m => m.event.id === event.id);
+        } else {
+          // Check for duplicates before adding to replies
+          this.replies.update(events => {
+            const exists = events.some(r => r.event.id === event.id);
             if (exists) {
-              console.log('Duplicate media event prevented:', event.id);
-              return media;
+              console.log('Duplicate reply event prevented:', event.id);
+              return events;
             }
-            console.log('Adding new media:', event.id);
-            return [...media, record];
+            console.log('Adding new reply:', event.id);
+            return [...events, record];
           });
         }
-      },
-      () => {
-        console.log('Subscription closed');
+      } else if (event.kind === kinds.Repost || event.kind === kinds.GenericRepost) {
+        const record = this.utilities.toRecord(event);
+        // Check for duplicates before adding to reposts
+        this.reposts.update(reposts => {
+          const exists = reposts.some(r => r.event.id === event.id);
+          if (exists) {
+            console.log('Duplicate repost event prevented:', event.id);
+            return reposts;
+          }
+          console.log('Adding new repost:', event.id);
+          return [...reposts, record];
+        });
+      } else if (event.kind === 20 || event.kind === 21 || event.kind === 22) {
+        // Handle media events (20 = Picture, 21 = Video, 22 = Unknown/Other media)
+        const record = this.utilities.toRecord(event);
+        // Check for duplicates before adding to media
+        this.media.update(media => {
+          const exists = media.some(m => m.event.id === event.id);
+          if (exists) {
+            console.log('Duplicate media event prevented:', event.id);
+            return media;
+          }
+          console.log('Adding new media:', event.id);
+          return [...media, record];
+        });
       }
-    );
+    }
+
+    // this.relay?.subscribeEose(
+    //   pubkey,
+    //   {
+    //     kinds: [kinds.ShortTextNote, kinds.LongFormArticle, kinds.Repost, kinds.GenericRepost],
+    //     authors: [pubkey],
+    //     limit: 20,
+    //   },
+    //   (event: Event) => {
+    //     console.log('Content event received', event);
+
+    //     if (event.kind === kinds.LongFormArticle) {
+    //       const record = this.utilities.toRecord(event);
+    //       // Check for duplicates before adding
+    //       this.articles.update(articles => {
+    //         const exists = articles.some(a => a.event.id === event.id);
+    //         if (exists) {
+    //           console.log('Duplicate article event prevented:', event.id);
+    //           return articles;
+    //         }
+    //         console.log('Adding new article:', event.id);
+    //         return [...articles, record];
+    //       });
+    //     } else if (event.kind === kinds.ShortTextNote) {
+    //       const record = this.utilities.toRecord(event);
+    //       if (this.utilities.isRootPost(event)) {
+    //         // Check for duplicates before adding to notes
+    //         this.notes.update(events => {
+    //           const exists = events.some(n => n.event.id === event.id);
+    //           if (exists) {
+    //             console.log('Duplicate note event prevented:', event.id);
+    //             return events;
+    //           }
+    //           console.log('Adding new note:', event.id);
+    //           return [...events, record];
+    //         });
+    //       } else {
+    //         // Check for duplicates before adding to replies
+    //         this.replies.update(events => {
+    //           const exists = events.some(r => r.event.id === event.id);
+    //           if (exists) {
+    //             console.log('Duplicate reply event prevented:', event.id);
+    //             return events;
+    //           }
+    //           console.log('Adding new reply:', event.id);
+    //           return [...events, record];
+    //         });
+    //       }
+    //     } else if (event.kind === kinds.Repost || event.kind === kinds.GenericRepost) {
+    //       const record = this.utilities.toRecord(event);
+    //       // Check for duplicates before adding to reposts
+    //       this.reposts.update(reposts => {
+    //         const exists = reposts.some(r => r.event.id === event.id);
+    //         if (exists) {
+    //           console.log('Duplicate repost event prevented:', event.id);
+    //           return reposts;
+    //         }
+    //         console.log('Adding new repost:', event.id);
+    //         return [...reposts, record];
+    //       });
+    //     } else if (event.kind === 20 || event.kind === 21 || event.kind === 22) {
+    //       // Handle media events (20 = Picture, 21 = Video, 22 = Unknown/Other media)
+    //       const record = this.utilities.toRecord(event);
+    //       // Check for duplicates before adding to media
+    //       this.media.update(media => {
+    //         const exists = media.some(m => m.event.id === event.id);
+    //         if (exists) {
+    //           console.log('Duplicate media event prevented:', event.id);
+    //           return media;
+    //         }
+    //         console.log('Adding new media:', event.id);
+    //         return [...media, record];
+    //       });
+    //     }
+    //   },
+    //   () => {
+    //     console.log('Subscription closed');
+    //   }
+    // );
   }
 
   /**
@@ -284,6 +348,13 @@ export class ProfileStateService {
       return new Promise<NostrRecord[]>(resolve => {
         const newNotes: NostrRecord[] = [];
         const newReplies: NostrRecord[] = [];
+
+        this.relay?.query(pubkey, {
+          kinds: [kinds.ShortTextNote, kinds.Repost, kinds.GenericRepost],
+          authors: [pubkey],
+          until: oldestTimestamp,
+          limit: 15,
+        });
 
         this.relay!.subscribeEose(
           pubkey,
