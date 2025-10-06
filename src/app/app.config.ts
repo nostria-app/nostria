@@ -21,6 +21,7 @@ import { ApiConfiguration } from './api/api-configuration';
 import { environment } from '../environments/environment';
 import { nip98AuthInterceptor } from './services/interceptors/nip98Auth';
 import { MAT_FORM_FIELD_DEFAULT_OPTIONS } from '@angular/material/form-field';
+import { MAT_TOOLTIP_DEFAULT_OPTIONS, MatTooltipDefaultOptions } from '@angular/material/tooltip';
 
 let appLang = 'en';
 
@@ -51,6 +52,10 @@ bootstrapLogger.log('Configuring application');
 export const appConfig: ApplicationConfig = {
   providers: [
     { provide: LOCALE_ID, useValue: appLang },
+    {
+      provide: MAT_TOOLTIP_DEFAULT_OPTIONS,
+      useValue: { touchGestures: 'off' },
+    },
     provideBrowserGlobalErrorListeners(),
     provideAppInitializer(() => {
       const initializerFn = ((iconRegistry: MatIconRegistry) => () => {
