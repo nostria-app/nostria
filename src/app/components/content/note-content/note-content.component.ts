@@ -1,10 +1,12 @@
-import { Component, input, inject } from '@angular/core';
+import { Component, input, inject, effect, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { ImageDialogComponent } from '../../image-dialog/image-dialog.component';
 import { ContentToken } from '../../../services/parsing.service';
+import { FormatService } from '../../../services/format/format.service';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 
 @Component({
   selector: 'app-note-content',
@@ -18,6 +20,58 @@ export class NoteContentComponent {
   private router = inject(Router);
   private utilities = inject(UtilitiesService);
   private dialog = inject(MatDialog);
+  private formatService = inject(FormatService);
+  private sanitizer = inject(DomSanitizer);
+
+  // Store rendered HTML for nevent/note previews
+  private eventPreviewsMap = signal<Map<number, SafeHtml>>(new Map());
+
+  constructor() {
+    // When tokens change, fetch event previews for nevent/note types
+    effect(() => {
+      const tokens = this.contentTokens();
+      this.loadEventPreviews(tokens);
+    });
+  }
+
+  private async loadEventPreviews(tokens: ContentToken[]): Promise<void> {
+    const previewsMap = new Map<number, SafeHtml>();
+
+    for (const token of tokens) {
+      if (token.type === 'nostr-mention' && token.nostrData) {
+        const { type, data } = token.nostrData;
+
+        if (type === 'nevent' || type === 'note') {
+          try {
+            const eventId = type === 'nevent' ? data.id : data;
+            const authorPubkey = type === 'nevent' ? (data.author || data.pubkey) : undefined;
+            const relayHints = type === 'nevent' ? data.relays : undefined;
+
+            console.debug(`[NoteContent] Loading preview for ${type}:`, eventId);
+
+            const previewHtml = await this.formatService.fetchEventPreview(
+              eventId,
+              authorPubkey,
+              relayHints
+            );
+
+            if (previewHtml) {
+              previewsMap.set(token.id, this.sanitizer.bypassSecurityTrustHtml(previewHtml));
+              console.debug(`[NoteContent] Preview loaded for token ${token.id}`);
+            }
+          } catch (error) {
+            console.error(`[NoteContent] Error loading preview for token ${token.id}:`, error);
+          }
+        }
+      }
+    }
+
+    this.eventPreviewsMap.set(previewsMap);
+  }
+
+  getEventPreview(tokenId: number): SafeHtml | undefined {
+    return this.eventPreviewsMap().get(tokenId);
+  }
 
   onNostrMentionClick(token: ContentToken) {
     if (!token.nostrData) return;

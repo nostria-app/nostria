@@ -54,5 +54,14 @@ token.type === 'nostr-mention' &&
 (token.nostrData?.type === 'npub' || token.nostrData?.type === 'nprofile')
 ) {
 &nbsp;<a class="nostr-mention" (click)="onNostrMentionClick(token)">&#64;{{ token.nostrData?.displayName }}</a>&nbsp;
+} @else if (
+token.type === 'nostr-mention' &&
+(token.nostrData?.type === 'nevent' || token.nostrData?.type === 'note')
+) {
+@if (getEventPreview(token.id); as preview) {
+<div class="nostr-event-preview" [innerHTML]="preview"></div>
+} @else {
+&nbsp;<a class="nostr-reference">{{ token.nostrData?.displayName }}</a>&nbsp;
+}
 }
 }

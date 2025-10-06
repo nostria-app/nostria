@@ -85,17 +85,16 @@
       font-size: 2rem;
     }
   }
+
   .article-summary {
     font-size: 1.25rem;
     line-height: 1.6;
     color: var(--mat-sys-on-surface);
     margin-bottom: 24px;
     padding: 20px 24px;
-    background: linear-gradient(
-      135deg,
-      var(--mat-sys-surface-container) 0%,
-      var(--mat-sys-surface-container-high) 100%
-    );
+    background: linear-gradient(135deg,
+        var(--mat-sys-surface-container) 0%,
+        var(--mat-sys-surface-container-high) 100%);
     border-radius: 12px;
     border-left: 4px solid var(--mat-sys-primary);
     box-shadow: var(--mat-sys-level1);
@@ -109,12 +108,10 @@
       left: 0;
       right: 0;
       height: 1px;
-      background: linear-gradient(
-        90deg,
-        transparent 0%,
-        var(--mat-sys-primary) 50%,
-        transparent 100%
-      );
+      background: linear-gradient(90deg,
+          transparent 0%,
+          var(--mat-sys-primary) 50%,
+          transparent 100%);
       opacity: 0.6;
     }
 
@@ -124,6 +121,7 @@
       border-radius: 8px;
     }
   }
+
   .article-meta {
     display: flex;
     align-items: center;
@@ -195,6 +193,7 @@
   .markdown-content {
     line-height: 1.7;
     color: var(--mat-sys-on-surface);
+
     // Markdown styling
     h1,
     h2,
@@ -214,18 +213,23 @@
     h1 {
       font-size: 2.5rem;
     }
+
     h2 {
       font-size: 2rem;
     }
+
     h3 {
       font-size: 1.5rem;
     }
+
     h4 {
       font-size: 1.25rem;
     }
+
     h5 {
       font-size: 1.125rem;
     }
+
     h6 {
       font-size: 1rem;
     }
@@ -236,7 +240,9 @@
       &:last-child {
         margin-bottom: 0;
       }
-    } // Style for @username mentions from Nostr tokens
+    }
+
+    // Style for @username mentions from Nostr tokens
     :global(.nostr-mention) {
       color: var(--mat-sys-primary) !important;
       font-weight: 500;
@@ -290,6 +296,79 @@
         color: var(--mat-sys-secondary) !important;
       }
     }
+
+    // Style for embedded Nostr preview cards
+    :global(.nostr-embed-preview) {
+      margin: 1.5rem 0;
+      border: 1px solid var(--mat-sys-outline-variant, rgba(0, 0, 0, 0.12));
+      border-radius: 12px;
+      overflow: hidden;
+      transition: box-shadow 0.3s ease, border-color 0.3s ease, transform 0.2s ease;
+
+      &:hover {
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+        border-color: var(--mat-sys-primary, #6200ea);
+        transform: translateY(-2px);
+      }
+
+      :global(.nostr-embed-link) {
+        display: flex;
+        align-items: center;
+        padding: 16px;
+        text-decoration: none !important;
+        color: inherit;
+        gap: 16px;
+
+        &:hover {
+          background-color: var(--mat-sys-surface-variant, rgba(0, 0, 0, 0.04));
+        }
+      }
+
+      :global(.nostr-embed-icon) {
+        flex-shrink: 0;
+        width: 56px;
+        height: 56px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: var(--mat-sys-primary-container, rgba(98, 0, 234, 0.12));
+        border-radius: 12px;
+
+        :global(.embed-icon) {
+          font-size: 28px;
+        }
+      }
+
+      :global(.nostr-embed-content) {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      :global(.nostr-embed-title) {
+        font-weight: 600;
+        font-size: 15px;
+        line-height: 1.4;
+        color: var(--mat-sys-on-surface, rgba(0, 0, 0, 0.87));
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        -webkit-box-orient: vertical;
+      }
+
+      :global(.nostr-embed-meta) {
+        font-size: 13px;
+        color: var(--mat-sys-on-surface-variant, rgba(0, 0, 0, 0.6));
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+    }
+
     a {
       color: var(--mat-sys-primary);
       text-decoration: none;
@@ -348,6 +427,7 @@
     li {
       margin-bottom: 0.5rem;
     }
+
     img {
       max-width: 100%;
       height: auto;
@@ -369,7 +449,7 @@
         }
 
         // Handle multiple consecutive images
-        & + .article-image {
+        &+.article-image {
           margin-top: 1rem;
         }
 
@@ -378,7 +458,7 @@
           margin: 1.5rem auto;
           border-radius: 8px;
 
-          & + .article-image {
+          &+.article-image {
             margin-top: 0.75rem;
           }
         }
