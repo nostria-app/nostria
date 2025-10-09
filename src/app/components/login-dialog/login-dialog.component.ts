@@ -193,6 +193,12 @@ export class LoginDialogComponent {
     }
   }
 
+  clearProfileImage(): void {
+    this.logger.debug('Clearing profile image');
+    this.profileImage.set(null);
+    this.profileImageFile.set(null);
+  }
+
   // Region selection methods
   selectRegion(region: Region): void {
     if (region.enabled) {
