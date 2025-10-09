@@ -18,6 +18,7 @@ import {
   NoteEditorDialogData,
 } from '../components/note-editor-dialog/note-editor-dialog.component';
 import { MatDialog } from '@angular/material/dialog';
+import { BreakpointObserver } from '@angular/cdk/layout';
 
 export interface Reaction {
   emoji: string;
@@ -76,7 +77,6 @@ export class EventService {
   private readonly dialog = inject(MatDialog);
   private readonly relays = inject(RelaysService);
   private readonly subscriptionCache = inject(SubscriptionCacheService);
-
 
   /**
    * Parse event tags to extract thread information
@@ -780,8 +780,7 @@ export class EventService {
   createNote(data: NoteEditorDialogData = {}): void {
     // Open note editor dialog
     const dialogRef = this.dialog.open(NoteEditorDialogComponent, {
-      width: '600px',
-      maxWidth: '90vw',
+      panelClass: 'responsive-dialog',
       data,
     });
 
