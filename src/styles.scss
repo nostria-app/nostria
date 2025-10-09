@@ -1026,3 +1026,36 @@ app-media-queue .media-list mat-list {
     font-size: 24px;
   }
 }
+
+// Responsive dialog styles for smaller screens
+@media (max-width: 600px) {
+  .responsive-dialog .mat-mdc-dialog-container {
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  .mat-mdc-dialog-surface {
+    border-radius: 0 !important;
+  }
+
+  .responsive-dialog.cdk-overlay-pane {
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+  }
+
+  // Also target the global overlay wrapper for proper centering
+  .cdk-global-overlay-wrapper:has(.responsive-dialog) {
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+  }
+}
