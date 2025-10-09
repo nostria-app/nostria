@@ -14,27 +14,27 @@ export interface ServerInfo {
 export class DiscoveryService {
   private servers: ServerInfo[] = [
     {
-      url: 'https://discovery.eu.nostria.app/',
-      name: 'discovery.eu.nostria.app',
+      url: 'https://proxy.eu.nostria.app/api/ping',
+      name: 'proxy.eu.nostria.app',
       region: 'Europe',
     },
     {
-      url: 'https://discovery.us.nostria.app/',
-      name: 'discovery.us.nostria.app',
+      url: 'https://proxy.us.nostria.app/api/ping',
+      name: 'proxy.us.nostria.app',
       region: 'USA',
     },
     {
-      url: 'https://discovery.af.nostria.app/',
-      name: 'discovery.af.nostria.app',
+      url: 'https://proxy.af.nostria.app/api/ping',
+      name: 'proxy.af.nostria.app',
       region: 'Africa',
     },
-    // { url: 'https://discovery.as.nostria.app/', name: 'discovery.as.nostria.app', region: 'Asia' },
-    // { url: 'https://discovery.sa.nostria.app/', name: 'discovery.sa.nostria.app', region: 'South America' },
-    // { url: 'https://discovery.au.nostria.app/', name: 'discovery.au.nostria.app', region: 'Australia' },
-    // { url: 'https://discovery.jp.nostria.app/', name: 'discovery.jp.nostria.app', region: 'Japan' },
-    // { url: 'https://discovery.cn.nostria.app/', name: 'discovery.cn.nostria.app', region: 'China' },
-    // { url: 'https://discovery.in.nostria.app/', name: 'discovery.in.nostria.app', region: 'India' },
-    // { url: 'https://discovery.me.nostria.app/', name: 'discovery.me.nostria.app', region: 'Middle East' },
+    // { url: 'https://proxy.as.nostria.app/api/ping', name: 'proxy.as.nostria.app', region: 'Asia' },
+    // { url: 'https://proxy.sa.nostria.app/api/ping', name: 'proxy.sa.nostria.app', region: 'South America' },
+    // { url: 'https://proxy.au.nostria.app/api/ping', name: 'proxy.au.nostria.app', region: 'Australia' },
+    // { url: 'https://proxy.jp.nostria.app/api/ping', name: 'proxy.jp.nostria.app', region: 'Japan' },
+    // { url: 'https://proxy.cn.nostria.app/api/ping', name: 'proxy.cn.nostria.app', region: 'China' },
+    // { url: 'https://proxy.in.nostria.app/api/ping', name: 'proxy.in.nostria.app', region: 'India' },
+    // { url: 'https://proxy.me.nostria.app/api/ping', name: 'proxy.me.nostria.app', region: 'Middle East' },
   ];
 
   isChecking = signal<boolean>(false);
