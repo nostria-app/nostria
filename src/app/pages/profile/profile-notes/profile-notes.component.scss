@@ -2,6 +2,10 @@
   padding: 2rem 1rem;
   min-height: 300px;
   position: relative;
+
+  @media (max-width: 960px) {
+    padding: 1rem 0.4rem;
+  }
 }
 
 .notes-container {
@@ -49,9 +53,7 @@
     top: 1rem;
     flex: 1; // Make it take remaining space
     min-width: 200px; // Minimum width before it starts wrapping
-    max-width: calc(
-      100% - 680px - 2rem
-    ); // Maximum width based on container minus note width and gap
+    max-width: calc(100% - 680px - 2rem); // Maximum width based on container minus note width and gap
     height: fit-content; // Ensure it doesn't stretch vertically more than needed
 
     // At breakpoints where the note-card and options can't fit side by side
