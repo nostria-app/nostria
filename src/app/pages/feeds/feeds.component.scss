@@ -1672,12 +1672,26 @@ h1 {
 }
 
 @media (max-width: 1023px) {
-  .columns-wrapper {
-    gap: 0 !important;
+  .home-container {
+    .header-section {
+      padding: 0.75rem;
+    }
+
+    .columns-container {
+      .columns-wrapper {
+        gap: 0 !important;
+        padding: 0 !important;
+      }
+
+      .column-unit {
+        border-radius: 0 !important;
+        box-shadow: none !important;
+      }
+    }
   }
 
   .column-scroll-container {
-    padding: 10px 0 10px 0 !important;
+    padding: 10px 16px 10px 16px !important;
   }
 }
 
