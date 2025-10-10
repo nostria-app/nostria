@@ -1074,3 +1074,35 @@ app-media-queue .media-list mat-list {
     border-radius: 0 !important;
   }
 }
+
+// Window controls overlay support for PWA/installed apps
+// Ensure dialogs are not hidden behind the custom frame controls
+@media (display-mode: window-controls-overlay) {
+  // Apply offset to all dialogs on mobile/small screens
+  @media (max-width: 600px) {
+
+    // For full-screen dialogs, adjust position and height to account for titlebar
+    .image-dialog .mat-mdc-dialog-container,
+    .image-dialog-panel .mat-mdc-dialog-container,
+    .responsive-dialog .mat-mdc-dialog-container {
+      margin-top: calc(env(titlebar-area-height, 33px) + 8px) !important;
+      max-height: calc(100vh - env(titlebar-area-height, 33px) - 8px) !important;
+      height: calc(100vh - env(titlebar-area-height, 33px) - 8px) !important;
+    }
+
+    // Ensure the overlay pane itself uses full height
+    .image-dialog.cdk-overlay-pane,
+    .image-dialog-panel.cdk-overlay-pane,
+    .responsive-dialog.cdk-overlay-pane {
+      max-height: 100vh !important;
+      height: 100vh !important;
+    }
+
+    // Align content to top of overlay
+    .cdk-global-overlay-wrapper:has(.image-dialog),
+    .cdk-global-overlay-wrapper:has(.image-dialog-panel),
+    .cdk-global-overlay-wrapper:has(.responsive-dialog) {
+      align-items: flex-start !important;
+    }
+  }
+}
