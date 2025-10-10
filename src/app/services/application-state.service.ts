@@ -14,6 +14,7 @@ export class ApplicationStateService {
   showSuccess = signal(false);
   isLoading = signal(true);
   isOnline = signal(navigator.onLine);
+  isPublishing = signal(false); // Track when events are being published
   private document = inject(DOCUMENT);
   private platformId = inject(PLATFORM_ID);
 

@@ -5,6 +5,7 @@ import { RelaysService } from './relays/relays';
 import { RelayPoolService } from './relays/relay-pool';
 import { AccountRelayService } from './relays/account-relay';
 import { UserRelaysService } from './relays/user-relays';
+import { ApplicationStateService } from './application-state.service';
 
 /**
  * Options for publishing events
@@ -56,6 +57,7 @@ export class PublishService {
   private readonly pool = inject(RelayPoolService);
   private readonly accountRelay = inject(AccountRelayService);
   private readonly userRelaysService = inject(UserRelaysService);
+  private readonly appState = inject(ApplicationStateService);
 
   /**
    * Publish a signed event to relays.
@@ -69,13 +71,14 @@ export class PublishService {
     event: Event,
     options: PublishOptions = {}
   ): Promise<PublishResult> {
-    debugger;
-    
     this.logger.debug('[PublishService] Publishing event', {
       kind: event.kind,
       id: event.id,
       options,
     });
+
+    // Set publishing state to true
+    this.appState.isPublishing.set(true);
 
     const result: PublishResult = {
       success: false,
@@ -95,8 +98,23 @@ export class PublishService {
       // Get the appropriate relay service to use
       const publishPromises = await this.executePublish(event, relayUrls);
 
-      // Process results
-      const settledResults = await Promise.allSettled(publishPromises);
+      // Process results with timeout
+      const timeout = options.timeout || 10000;
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Publish timeout')), timeout)
+      );
+
+      const settledResults = await Promise.race([
+        Promise.allSettled(publishPromises),
+        timeoutPromise
+      ]).catch(error => {
+        // If timeout occurs, mark all as failed
+        this.logger.warn('[PublishService] Publish timed out', { timeout, error });
+        return publishPromises.map(() => ({
+          status: 'rejected' as const,
+          reason: new Error('Timeout')
+        }));
+      });
 
       settledResults.forEach((promiseResult, index) => {
         const relayUrl = relayUrls[index] || 'unknown';
@@ -125,6 +143,8 @@ export class PublishService {
     } catch (error) {
       this.logger.error('[PublishService] Error during publish', error);
       return result;
+    } finally {
+      this.appState.isPublishing.set(false);
     }
   }
 

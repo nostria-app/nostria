@@ -79,6 +79,12 @@
       <span class="progress-badge">{{ accountState.processingProgress() }}%</span>
     </button>
     }
+    @if (app.authenticated() && appState.isPublishing()) {
+    <button mat-icon-button class="profile-cache-button" matTooltip="Publishing event..."
+      aria-label="Publishing in progress">
+      <mat-icon class="spinning-icon">sync</mat-icon>
+    </button>
+    }
     @if (app.authenticated()) {
     <button class="notification-toolbar" mat-icon-button [matMenuTriggerFor]="menuNotifications">
       <mat-icon [class.pulsing-icon]="hasActivePendingNotifications()"
