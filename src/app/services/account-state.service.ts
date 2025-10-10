@@ -130,6 +130,10 @@ export class AccountStateService implements OnDestroy {
   // Signal to publish event
   publish = signal<Event | UnsignedEvent | undefined>(undefined);
 
+  // Signal to store newly followed pubkeys for the current publish operation
+  // This is used to notify only the newly followed users, not all followed users
+  newlyFollowedPubkeys = signal<string[]>([]);
+
   constructor() {
     // Cache configuration is now handled by the injected cache service
 
@@ -295,6 +299,9 @@ export class AccountStateService implements OnDestroy {
 
     // Add all new pubkeys to following list
     this.followingList.update(list => [...list, ...newPubkeys]);
+
+    // Store the newly followed pubkeys for the publish operation
+    this.newlyFollowedPubkeys.set(newPubkeys);
 
     // Publish the event to update the following list (single operation)
     try {
