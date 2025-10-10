@@ -1085,9 +1085,9 @@ app-media-queue .media-list mat-list {
     .image-dialog .mat-mdc-dialog-container,
     .image-dialog-panel .mat-mdc-dialog-container,
     .responsive-dialog .mat-mdc-dialog-container {
-      margin-top: calc(env(titlebar-area-height, 33px) + 8px) !important;
-      max-height: calc(100vh - env(titlebar-area-height, 33px) - 8px) !important;
-      height: calc(100vh - env(titlebar-area-height, 33px) - 8px) !important;
+      margin-top: env(titlebar-area-height, 33px) !important;
+      max-height: calc(100vh - env(titlebar-area-height, 33px)) !important;
+      height: calc(100vh - env(titlebar-area-height, 33px)) !important;
     }
 
     // Ensure the overlay pane itself uses full height
