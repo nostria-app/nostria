@@ -874,6 +874,7 @@ export class FeedsComponent implements OnDestroy {
       }
     }
   }
+
   addNewColumn(): void {
     const activeFeed = this.activeFeed();
     if (!activeFeed) {
@@ -883,8 +884,9 @@ export class FeedsComponent implements OnDestroy {
 
     const dialogRef = this.dialog.open(NewColumnDialogComponent, {
       width: '900px',
-      maxWidth: '95vw',
-      maxHeight: '90vh',
+      // maxWidth: '95vw',
+      // maxHeight: '90vh',
+      panelClass: 'responsive-dialog',
       data: {
         icons: [
           'chat',
@@ -948,6 +950,7 @@ export class FeedsComponent implements OnDestroy {
       width: '900px',
       maxWidth: '95vw',
       maxHeight: '90vh',
+      panelClass: 'responsive-dialog',
       data: {
         column: column,
         icons: [
@@ -1254,6 +1257,7 @@ export class FeedsComponent implements OnDestroy {
     const dialogRef = this.dialog.open(NewFeedDialogComponent, {
       width: '900px',
       maxWidth: '90vw',
+      panelClass: 'responsive-dialog',
       data: {
         icons: [
           'dynamic_feed',
@@ -1296,6 +1300,7 @@ export class FeedsComponent implements OnDestroy {
     const dialogRef = this.dialog.open(NewFeedDialogComponent, {
       width: '900px',
       maxWidth: '90vw',
+      panelClass: 'responsive-dialog',
       data: {
         icons: [
           'dynamic_feed',
