@@ -7,6 +7,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { RouterLink } from '@angular/router';
 import { Event, nip19 } from 'nostr-tools';
 import { EventPointer } from 'nostr-tools/nip19';
 import { firstValueFrom } from 'rxjs';
@@ -36,6 +37,7 @@ import { EventMenuComponent } from '../event-menu/event-menu.component';
     EventMenuComponent,
     AgoPipe,
     DatePipe,
+    RouterLink,
   ],
   templateUrl: './header.component.html',
   styleUrls: ['./header.component.scss'],
@@ -72,6 +74,21 @@ export class EventHeaderComponent {
     return nip19.neventEncode(eventPointer);
   });
 
+  eventUrl = computed<string>(() => {
+    const event = this.event();
+    if (!event) {
+      return '#';
+    }
+
+    const neventId = this.nevent();
+    // Generate the proper route based on event kind
+    if (event.kind === 30023) { // LongFormArticle
+      return `/a/${neventId}`;
+    } else {
+      return `/e/${neventId}`;
+    }
+  });
+
   constructor() {
     effect(() => {
       const event = this.event();
@@ -96,7 +113,16 @@ export class EventHeaderComponent {
   }
 
   openEventAndStopPropagation(event: MouseEvent) {
+    // Allow right-click (button 2) and middle-click (button 1) for "open in new tab"
+    // Only handle left-click (button 0) for programmatic navigation
+    if (event.button !== 0) {
+      return;
+    }
+
+    // Prevent default navigation for left-click so we can use router
+    event.preventDefault();
     event.stopPropagation();
+
     const currentEvent = this.event();
     this.layout.openEvent(currentEvent.id, currentEvent);
   }
