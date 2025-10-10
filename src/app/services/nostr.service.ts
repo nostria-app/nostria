@@ -26,6 +26,7 @@ import { SharedRelayService } from './relays/shared-relay';
 import { AccountRelayService } from './relays/account-relay';
 import { DiscoveryRelayService } from './relays/discovery-relay';
 import { LocalSettingsService } from './local-settings.service';
+import { PublishService } from './publish.service';
 
 export interface NostrUser {
   pubkey: string;
@@ -67,6 +68,7 @@ export class NostrService implements NostriaService {
   private readonly utilities = inject(UtilitiesService);
   private readonly publishQueueService = inject(PublishQueueService);
   private readonly settings = inject(LocalSettingsService);
+  private readonly publishService = inject(PublishService);
 
   initialized = signal(false);
   MAX_WAIT_TIME = 2000;
@@ -94,16 +96,40 @@ export class NostrService implements NostriaService {
   constructor() {
     this.logger.info('Initializing NostrService');
 
+    // Backwards compatibility: handle signal-based publishing
+    // This maintains the old pattern while using the new PublishService internally
     effect(async () => {
       const event = this.accountState.publish();
 
       if (event) {
-        const signedEvent = await this.sign(event);
-        await this.accountRelay.publish(signedEvent);
+        debugger;
+        try {
+          const signedEvent = await this.sign(event);
+
+          // Get newly followed pubkeys for kind 3 events
+          const newlyFollowedPubkeys = signedEvent.kind === kinds.Contacts
+            ? this.accountState.newlyFollowedPubkeys()
+            : undefined;
+
+          // Use the new PublishService with appropriate options
+          const options = signedEvent.kind === kinds.Contacts
+            ? {
+              notifyFollowed: true,
+              useOptimizedRelays: false,
+              newlyFollowedPubkeys  // Pass the newly followed pubkeys
+            }
+            : { useOptimizedRelays: true };
+
+          await this.publishService.publish(signedEvent, options);
+        } catch (error) {
+          this.logger.error('[NostrService] Error in publish effect', error);
+        }
       }
 
       untracked(() => {
         this.accountState.publish.set(undefined);
+        // Clear newly followed pubkeys after publish
+        this.accountState.newlyFollowedPubkeys.set([]);
       });
     });
 
@@ -465,14 +491,20 @@ export class NostrService implements NostriaService {
     if (!event) {
       throw new Error('Event parameter must not be null or undefined.');
     }
-    const signedEvent = await this.signEvent(event);
 
-    const publishPromises = await this.accountRelay.publish(signedEvent);
+    try {
+      const signedEvent = await this.signEvent(event);
 
-    if (publishPromises) {
-      await Promise.allSettled(publishPromises);
-      return true;
-    } else {
+      // Use the new PublishService
+      const options = signedEvent.kind === kinds.Contacts
+        ? { notifyFollowed: true, useOptimizedRelays: false } // For follows, notify all
+        : { useOptimizedRelays: true }; // For other events, use optimized relays
+
+      const result = await this.publishService.publish(signedEvent, options);
+
+      return result.success;
+    } catch (error) {
+      this.logger.error('[NostrService] Error in signAndPublish', error);
       return false;
     }
   }
