@@ -531,6 +531,7 @@ export class LayoutService implements OnDestroy {
     this.dialog.open(PublishDialogComponent, {
       data: dialogData,
       width: '600px',
+      panelClass: 'responsive-dialog',
       disableClose: false,
     });
   }
@@ -544,6 +545,7 @@ export class LayoutService implements OnDestroy {
     const dialogRef = this.dialog.open(ReportDialogComponent, {
       data: dialogData,
       width: '600px',
+      panelClass: 'responsive-dialog',
       disableClose: false,
     });
 

@@ -177,9 +177,9 @@ export class EventComponent {
   likeReaction = computed<NostrRecord | undefined>(() => {
     const myLikes = this.likes();
     const userPubkey = this.accountState.pubkey();
-    
+
     if (!myLikes || !userPubkey) return undefined;
-    
+
     // Find the user's like reaction
     return myLikes.find(r => r.event.pubkey === userPubkey && r.event.content === '+');
   });
@@ -527,6 +527,7 @@ export class EventComponent {
     this.dialog.open(ReactionsDialogComponent, {
       width: '650px',
       maxWidth: '90vw',
+      panelClass: 'responsive-dialog',
       data: {
         event: currentEvent,
         likes: this.likes(),
@@ -545,7 +546,7 @@ export class EventComponent {
 
     const currentEvent = this.event();
     if (!currentEvent) return;
-    
+
     const userPubkey = this.accountState.pubkey();
     if (!userPubkey) return;
 
@@ -554,11 +555,11 @@ export class EventComponent {
 
     try {
       const existingLikeReaction = this.likeReaction();
-      
+
       if (existingLikeReaction) {
         // Remove like - optimistically update UI first
         this.updateReactionsOptimistically(userPubkey, '+', false);
-        
+
         const success = await this.reactionService.deleteReaction(existingLikeReaction.event);
         if (!success) {
           // Revert optimistic update if failed
@@ -570,7 +571,7 @@ export class EventComponent {
       } else {
         // Add like - optimistically update UI first
         this.updateReactionsOptimistically(userPubkey, '+', true);
-        
+
         const success = await this.reactionService.addLike(currentEvent);
         if (!success) {
           // Revert optimistic update if failed
@@ -586,7 +587,7 @@ export class EventComponent {
       setTimeout(() => {
         this.loadReactions(true);
       }, 2000);
-      
+
     } finally {
       this.isLoadingReactions.set(false);
     }
@@ -627,7 +628,7 @@ export class EventComponent {
       const userReactionIndex = currentEvents.findIndex(
         r => r.event.pubkey === userPubkey && r.event.content === emoji
       );
-      
+
       if (userReactionIndex !== -1) {
         currentEvents.splice(userReactionIndex, 1);
         const currentCount = currentData.get(emoji) || 0;

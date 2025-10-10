@@ -157,6 +157,7 @@ export class MediaComponent {
   openUploadDialog(): void {
     const dialogRef = this.dialog.open(MediaUploadDialogComponent, {
       width: '500px',
+      panelClass: 'responsive-dialog',
       disableClose: true, // Prevent dialog from closing while uploading
     });
 
@@ -205,6 +206,7 @@ export class MediaComponent {
   openServerDialog(server?: string): void {
     const dialogRef = this.dialog.open(MediaServerDialogComponent, {
       width: '500px',
+      panelClass: 'responsive-dialog',
       data: server,
     });
 

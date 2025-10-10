@@ -808,7 +808,8 @@ export class App implements OnInit {
 
     const dialogRef = this.dialog.open(NewFeedDialogComponent, {
       width: '900px',
-      maxWidth: '90vw',
+      // maxWidth: '90vw',
+      panelClass: 'responsive-dialog',
       data: {
         icons: [
           'dynamic_feed',

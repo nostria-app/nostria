@@ -1,10 +1,20 @@
 .dialog-container {
   width: 100%;
-  max-width: 100%;
-  max-height: 90vh;
+  // max-width: 100%;
+  // max-height: 90vh;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+
+  min-width: 400px;
+  max-width: 600px;
+  width: 600px;
+  width: 100%;
+  // max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  // border: 2px solid red;
+  // padding: 1rem;
+  // margin: 1rem;
 }
 
 .dialog-header {
