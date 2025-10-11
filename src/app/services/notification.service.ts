@@ -19,6 +19,9 @@ export class NotificationService {
   private storage = inject(StorageService);
   private webPush = inject(WebPushService);
 
+  // BroadcastChannel for cross-tab communication
+  private broadcastChannel: BroadcastChannel | null = null;
+
   // Store all notifications
   private _notifications = signal<Notification[]>([]);
 
@@ -35,6 +38,9 @@ export class NotificationService {
   constructor() {
     this.logger.info('NotificationService initialized');
 
+    // Initialize BroadcastChannel for cross-tab communication
+    this.initBroadcastChannel();
+
     // Set up effect to persist notifications when they change
     effect(() => {
       // Don't save until initial load is complete
@@ -42,6 +48,60 @@ export class NotificationService {
         // this.persistNotifications();
       }
     });
+  }
+
+  /**
+   * Initialize BroadcastChannel for real-time cross-tab synchronization
+   */
+  private initBroadcastChannel(): void {
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        this.broadcastChannel = new BroadcastChannel('notifications-sync');
+        
+        this.broadcastChannel.onmessage = (event) => {
+          this.logger.debug('Received broadcast message:', event.data);
+          
+          switch (event.data.type) {
+            case 'notification-added':
+            case 'notification-updated':
+            case 'notifications-changed':
+              // Reload notifications from storage when another tab makes changes
+              this.loadNotifications();
+              break;
+            case 'notification-removed':
+              // Remove notification from current tab
+              this._notifications.update(notifications => 
+                notifications.filter(n => n.id !== event.data.notificationId)
+              );
+              break;
+            case 'all-notifications-cleared':
+              // Clear all notifications in current tab
+              this._notifications.set([]);
+              break;
+          }
+        };
+        
+        this.logger.info('BroadcastChannel initialized for cross-tab sync');
+      } else {
+        this.logger.warn('BroadcastChannel not supported in this browser');
+      }
+    } catch (error) {
+      this.logger.error('Failed to initialize BroadcastChannel', error);
+    }
+  }
+
+  /**
+   * Broadcast notification changes to other tabs
+   */
+  private broadcastChange(type: string, data?: Record<string, unknown>): void {
+    if (this.broadcastChannel) {
+      try {
+        this.broadcastChannel.postMessage({ type, ...data });
+        this.logger.debug(`Broadcasted ${type} to other tabs`);
+      } catch (error) {
+        this.logger.error('Failed to broadcast message', error);
+      }
+    }
   }
 
   /**
@@ -171,6 +231,9 @@ export class NotificationService {
   addNotification(notification: Notification): void {
     this._notifications.update(notifications => [notification, ...notifications]);
     this.logger.debug('Added notification', notification);
+    
+    // Broadcast to other tabs
+    this.broadcastChange('notification-added', { notificationId: notification.id });
   }
 
   /**
@@ -357,7 +420,15 @@ export class NotificationService {
       });
     });
 
-    // Storage will be updated via the effect
+    // Update in storage immediately
+    const notification = this._notifications().find(n => n.id === id);
+    if (notification) {
+      this.storage.saveNotification(notification)
+        .catch(error => this.logger.error(`Failed to update notification ${id} in storage`, error));
+    }
+
+    // Broadcast to other tabs
+    this.broadcastChange('notification-updated', { notificationId: id });
   }
 
   /**
@@ -409,6 +480,9 @@ export class NotificationService {
     // Remove action callback from memory
     this.actionCallbacks.delete(id);
 
+    // Broadcast to other tabs
+    this.broadcastChange('notification-removed', { notificationId: id });
+
     // Also remove from storage directly
     this.storage
       .deleteNotification(id)
@@ -423,6 +497,9 @@ export class NotificationService {
 
     // Clear all action callbacks
     this.actionCallbacks.clear();
+
+    // Broadcast to other tabs
+    this.broadcastChange('all-notifications-cleared');
 
     // Clear from storage
     this.storage
@@ -542,6 +619,9 @@ export class NotificationService {
               failedCount,
               relayNotification.event
             );
+            
+            // Broadcast completion to other tabs
+            this.broadcastChange('notification-updated', { notificationId: notification.id });
           }
 
           return {
@@ -554,7 +634,15 @@ export class NotificationService {
       });
     });
 
-    // Storage will be updated via the effect
+    // Update in storage immediately
+    const updatedNotification = this._notifications().find(n => n.id === notificationId);
+    if (updatedNotification) {
+      this.storage.saveNotification(updatedNotification)
+        .catch(error => this.logger.error(`Failed to update notification ${notificationId} in storage`, error));
+    }
+
+    // Broadcast update to other tabs
+    this.broadcastChange('notifications-changed');
   }
 
   /**

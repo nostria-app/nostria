@@ -93,45 +93,10 @@
     }
 
     <mat-menu #menuNotifications="matMenu">
-      @if (notificationService.notifications().length > 0) {
-      <!-- Display last 5 notifications -->
-      @for (
-      notification of notificationService.notifications().slice(0, 5);
-      track notification.id
-      ) {
       <button mat-menu-item routerLink="/notifications">
-        <mat-icon>
-          @if (notification.type === notificationType.SUCCESS) {
-          check_circle
-          } @else if (notification.type === notificationType.GENERAL) {
-          info
-          } @else if (notification.type === notificationType.WARNING) {
-          warning
-          } @else if (notification.type === notificationType.ERROR) {
-          error
-          } @else if (notification.type === notificationType.RELAY_PUBLISHING) {
-          sync
-          } @else {
-          notifications
-          }
-        </mat-icon>
-        <span>{{ notification.title }}</span>
-        <div class="notification-details dimmed">
-          {{ notification.timestamp | date: 'short' }}
-        </div>
+        <mat-icon>notifications</mat-icon>
+        <span>All notifications</span>
       </button>
-      }
-      <mat-divider></mat-divider>
-      <button mat-menu-item routerLink="/notifications">
-        <mat-icon>visibility</mat-icon>
-        <span>See all notifications</span>
-      </button>
-      } @else {
-      <button mat-menu-item routerLink="/notifications">
-        <mat-icon>notifications_off</mat-icon>
-        <span>No notifications</span>
-      </button>
-      }
       <mat-divider></mat-divider>
 
       <button mat-menu-item (click)="openWhatsNewDialog()">

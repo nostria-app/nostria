@@ -6,532 +6,538 @@ import {
   RelayPublishingNotification,
   GeneralNotification
 } from '../../services/storage.service';
-import { MatListModule } from '@angular/material/list';
+import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatRippleModule } from '@angular/material/core';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { DatePipe } from '@angular/common';
 
-/**
- * Notification List Component
- * 
- * Displays all notifications with full details including:
- * - Notification type and status
- * - Relay publishing progress (for relay notifications)
- * - Action buttons for read/unread, retry, and delete
- * - Timestamps and detailed information
- */
 @Component({
   selector: 'app-notification-list',
   imports: [
-    MatListModule,
+    MatCardModule,
     MatIconModule,
     MatButtonModule,
     MatBadgeModule,
     MatTooltipModule,
     MatChipsModule,
     MatDividerModule,
+    MatRippleModule,
+    MatProgressBarModule,
     DatePipe
   ],
   template: `
-    <div class="notification-list-container">
-      <div class="notification-header">
-        <h2>
-          <mat-icon>notifications</mat-icon>
-          Notifications
-          @if (notifications().length > 0) {
-            <span class="count-badge">{{ notifications().length }}</span>
-          }
-        </h2>
-        <div class="header-actions">
-          <button 
-            mat-button
-            (click)="markAllAsRead()"
-            [disabled]="unreadNotifications().length === 0"
-            matTooltip="Mark all as read">
-            <mat-icon>done_all</mat-icon>
-            Mark all read
-          </button>
-          <button 
-            mat-button
-            color="warn"
-            (click)="clearAll()"
-            [disabled]="notifications().length === 0"
-            matTooltip="Clear all notifications">
-            <mat-icon>delete_sweep</mat-icon>
-            Clear all
-          </button>
-        </div>
-      </div>
-
-      @if (notifications().length === 0) {
-        <div class="empty-state">
-          <mat-icon>notifications_none</mat-icon>
-          <h3>No Notifications</h3>
-          <p>You don't have any notifications yet. When you do, they'll appear here.</p>
-        </div>
-      } @else {
-        <mat-list class="notifications-list">
-          @for (notification of notifications(); track notification.id) {
-            <mat-list-item 
-              [class.unread]="!notification.read"
-              [class.relay-notification]="isRelayNotification(notification)">
-              
-              <!-- Icon -->
-              <mat-icon matListItemIcon [class]="getNotificationIconClass(notification.type)">
-                {{ getNotificationIcon(notification.type) }}
-              </mat-icon>
-              
-              <!-- Content -->
-              <div matListItemTitle class="notification-title">
-                {{ notification.title }}
-                @if (!notification.read) {
-                  <mat-icon class="unread-indicator" matTooltip="Unread">fiber_manual_record</mat-icon>
+    <div class="container">
+      <!-- Header -->
+      <mat-card class="header-card">
+        <mat-card-content>
+          <div class="header-content">
+            <div class="header-info">
+              <div class="title-section">
+                <mat-icon class="header-icon">notifications</mat-icon>
+                <h1 class="header-title">Notifications</h1>
+                @if (unreadNotifications().length > 0) {
+                  <mat-chip color="accent" highlighted class="unread-badge">
+                    {{ unreadNotifications().length }} new
+                  </mat-chip>
                 }
               </div>
-              
-              @if (notification.message) {
-                <div matListItemLine class="notification-message">
-                  {{ notification.message }}
-                </div>
+              <p class="header-subtitle">Stay updated with your latest activities</p>
+            </div>
+            <div class="header-actions">
+              @if (unreadNotifications().length > 0) {
+                <button mat-raised-button color="primary" (click)="markAllAsRead()" class="action-button">
+                  <mat-icon>done_all</mat-icon>
+                  Mark All Read
+                </button>
               }
-              
-              <!-- Relay Status (for relay notifications) -->
-              @if (isRelayNotification(notification)) {
-                <div matListItemLine class="relay-status">
-                  <div class="relay-chips">
-                    <mat-chip class="status-chip success-chip">
-                      <mat-icon>check_circle</mat-icon>
-                      {{ getSuccessCount(notification) }}
-                    </mat-chip>
-                    <mat-chip class="status-chip failed-chip">
-                      <mat-icon>error</mat-icon>
-                      {{ getFailedCount(notification) }}
-                    </mat-chip>
-                    <mat-chip class="status-chip pending-chip">
-                      <mat-icon>schedule</mat-icon>
-                      {{ getPendingCount(notification) }}
-                    </mat-chip>
-                  </div>
-                  
-                  @if (!notification.complete) {
-                    <span class="publishing-label">
-                      <mat-icon class="spinning">sync</mat-icon>
-                      Publishing...
-                    </span>
-                  } @else if (getFailedCount(notification) === 0) {
-                    <span class="complete-label success">
-                      <mat-icon>check_circle</mat-icon>
-                      All successful
-                    </span>
-                  } @else if (getSuccessCount(notification) === 0) {
-                    <span class="complete-label error">
-                      <mat-icon>error</mat-icon>
-                      All failed
-                    </span>
-                  } @else {
-                    <span class="complete-label warning">
-                      <mat-icon>warning</mat-icon>
-                      Partially successful
-                    </span>
-                  }
-                </div>
+              @if (notifications().length > 0) {
+                <button mat-stroked-button color="warn" (click)="clearAll()" class="action-button">
+                  <mat-icon>close</mat-icon>
+                  Clear All
+                </button>
               }
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
 
-              <!-- Detailed relay list -->
-              @if (isRelayNotification(notification) && hasRelayDetails(notification)) {
-                <div matListItemLine class="relay-details">
+      <!-- Empty State -->
+      @if (notifications().length === 0) {
+        <mat-card class="empty-state">
+          <mat-card-content>
+            <div class="empty-content">
+              <mat-icon>notifications_none</mat-icon>
+              <h2>No notifications yet</h2>
+              <p>You'll see your notifications here when they arrive.</p>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      } @else {
+        <!-- Notifications List -->
+        @for (notification of notifications(); track notification.id) {
+          <mat-card class="notification-card">
+            <mat-card-content>
+              <div class="notification-header">
+                <div class="notification-info">
+                  <mat-icon [color]="getIconColor(notification.type)" class="notification-icon">
+                    {{ getNotificationIcon(notification.type) }}
+                  </mat-icon>
+                  <div class="notification-details">
+                    <h3 class="notification-title">
+                      {{ notification.title }}
+                      @if (!notification.read) {
+                        <mat-chip color="accent" class="new-chip">NEW</mat-chip>
+                      }
+                    </h3>
+                    <div class="notification-time">
+                      <mat-icon>access_time</mat-icon>
+                      {{ notification.timestamp | date:'short' }}
+                    </div>
+                  </div>
+                </div>
+                <div class="notification-actions">
+                  @if (!notification.read) {
                     <button 
-                      mat-button 
-                      class="toggle-details-btn"
-                      (click)="toggleRelayDetails(notification.id)">
-                      <mat-icon>{{ isDetailsExpanded(notification.id) ? 'expand_less' : 'expand_more' }}</mat-icon>
-                      {{ isDetailsExpanded(notification.id) ? 'Hide' : 'Show' }} relay details
+                      mat-icon-button 
+                      (click)="markAsRead(notification.id)"
+                      matTooltip="Mark as read">
+                      <mat-icon>check</mat-icon>
                     </button>
-                    
-                    @if (isDetailsExpanded(notification.id)) {
-                      <div class="relay-list">
-                        @for (relay of notification.relayPromises; track relay.relayUrl) {
-                          <div class="relay-item" [class]="'status-' + relay.status">
-                            <mat-icon class="relay-status-icon">
-                              @if (relay.status === 'success') {
-                                check_circle
-                              } @else if (relay.status === 'failed') {
-                                error
-                              } @else {
-                                schedule
-                              }
-                            </mat-icon>
-                            <span class="relay-url">{{ relay.relayUrl }}</span>
-                            @if (relay.error) {
-                              <span class="relay-error" [matTooltip]="relay.error.message || relay.error">
-                                <mat-icon>info</mat-icon>
-                              </span>
-                            }
-                          </div>
-                        }
+                  }
+                  <button 
+                    mat-icon-button 
+                    (click)="remove(notification.id)"
+                    matTooltip="Delete">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Notification Message -->
+                @if (notification.message) {
+                  <p class="notification-message">{{ notification.message }}</p>
+                }
+
+                <!-- Relay Publishing Status -->
+                @if (isRelayNotification(notification)) {
+                  <div class="relay-status-section">
+                    <!-- Progress Bar -->
+                    @if (!notification.complete) {
+                      <mat-progress-bar 
+                        mode="indeterminate" 
+                        class="relay-progress">
+                      </mat-progress-bar>
+                      <div class="status-label publishing">
+                        <mat-icon class="spinning">sync</mat-icon>
+                        <span>Publishing to relays...</span>
                       </div>
                     }
+                    
+                    <!-- Status Summary -->
+                    <mat-chip-set>
+                      <mat-chip highlighted>
+                        <mat-icon>check_circle</mat-icon>
+                        {{ getSuccessCount(notification) }} Success
+                      </mat-chip>
+                      @if (getFailedCount(notification) > 0) {
+                        <mat-chip color="warn" highlighted>
+                          <mat-icon>error</mat-icon>
+                          {{ getFailedCount(notification) }} Failed
+                        </mat-chip>
+                      }
+                      @if (getPendingCount(notification) > 0) {
+                        <mat-chip color="accent" highlighted>
+                          <mat-icon>schedule</mat-icon>
+                          {{ getPendingCount(notification) }} Pending
+                        </mat-chip>
+                      }
+                    </mat-chip-set>
+
+                    <!-- Completion Status -->
+                    @if (notification.complete) {
+                      @if (getFailedCount(notification) === 0) {
+                        <mat-chip color="primary" highlighted>
+                          <mat-icon>check_circle</mat-icon>
+                          Successfully published to all relays
+                        </mat-chip>
+                      } @else if (getSuccessCount(notification) === 0) {
+                        <mat-chip color="warn" highlighted>
+                          <mat-icon>error</mat-icon>
+                          Failed to publish to all relays
+                        </mat-chip>
+                      } @else {
+                        <mat-chip color="accent" highlighted>
+                          <mat-icon>warning</mat-icon>
+                          Partially published
+                        </mat-chip>
+                      }
+                    }
+
+                    <!-- Relay Details Toggle -->
+                    @if (hasRelayDetails(notification)) {
+                      <button 
+                        mat-button 
+                        class="details-toggle"
+                        (click)="toggleRelayDetails(notification.id)">
+                        <mat-icon>{{ isDetailsExpanded(notification.id) ? 'expand_less' : 'expand_more' }}</mat-icon>
+                        {{ isDetailsExpanded(notification.id) ? 'Hide' : 'Show' }} relay details
+                      </button>
+
+                      @if (isDetailsExpanded(notification.id)) {
+                        <div class="relay-details">
+                          @for (relay of notification.relayPromises; track relay.relayUrl) {
+                            <mat-card>
+                              <mat-card-content>
+                                <div class="relay-info">
+                                  <mat-icon [color]="relay.status === 'success' ? 'primary' : relay.status === 'failed' ? 'warn' : 'accent'">
+                                    {{ relay.status === 'success' ? 'check_circle' : 
+                                       relay.status === 'failed' ? 'error' : 'schedule' }}
+                                  </mat-icon>
+                                  <span>{{ relay.relayUrl }}</span>
+                                  @if (relay.error) {
+                                    <mat-icon 
+                                      color="warn"
+                                      [matTooltip]="relay.error.message || relay.error">
+                                      info
+                                    </mat-icon>
+                                  }
+                                </div>
+                              </mat-card-content>
+                            </mat-card>
+                          }
+                        </div>
+
+                        @if (hasFailedRelays(notification)) {
+                          <button 
+                            mat-stroked-button 
+                            color="warn"
+                            class="retry-btn"
+                            (click)="retryFailed(notification)"
+                            disabled>
+                            <mat-icon>refresh</mat-icon>
+                            Retry Failed Relays
+                          </button>
+                        }
+                      }
+                    }
                   </div>
-              }
-
-              <!-- Action button (for general notifications) -->
-              @if (isGeneralNotification(notification) && hasAction(notification.id)) {
-                <div matListItemLine class="action-container">
-                  <button 
-                    mat-stroked-button 
-                    color="primary"
-                    (click)="executeAction(notification)">
-                    {{ getActionLabel(notification.id) }}
-                  </button>
-                </div>
-              }
-              
-              <!-- Timestamp -->
-              <div matListItemLine class="timestamp">
-                <mat-icon>schedule</mat-icon>
-                {{ notification.timestamp | date:'short' }}
-              </div>
-
-              <!-- Action buttons -->
-              <div matListItemMeta class="actions">
-                @if (!notification.read) {
-                  <button 
-                    mat-icon-button 
-                    (click)="markAsRead(notification.id)"
-                    matTooltip="Mark as read">
-                    <mat-icon>done</mat-icon>
-                  </button>
                 }
-                
-                @if (isRelayNotification(notification) && hasFailedRelays(notification)) {
-                  <button 
-                    mat-icon-button 
-                    color="warn"
-                    (click)="retryFailed(notification)"
-                    matTooltip="Retry failed relays"
-                    disabled>
-                    <mat-icon>refresh</mat-icon>
-                  </button>
+
+                <!-- Action Button (for general notifications) -->
+                @if (isGeneralNotification(notification) && hasAction(notification.id)) {
+                  <div class="action-section">
+                    <button 
+                      mat-flat-button 
+                      color="primary"
+                      class="notification-action-btn"
+                      (click)="executeAction(notification)">
+                      <mat-icon>touch_app</mat-icon>
+                      {{ getActionLabel(notification.id) }}
+                    </button>
+                  </div>
                 }
-                
-                <button 
-                  mat-icon-button 
-                  (click)="remove(notification.id)"
-                  matTooltip="Remove notification">
-                  <mat-icon>close</mat-icon>
-                </button>
-              </div>
-            </mat-list-item>
-            
-            <mat-divider></mat-divider>
-          }
-        </mat-list>
+            </mat-card-content>
+          </mat-card>
+        }
       }
     </div>
   `,
   styles: [`
-    .notification-list-container {
-      width: 100%;
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
     }
-
+    
+    /* Header Styles */
+    .header-card {
+      width: 100%;
+      box-sizing: border-box;
+    }
+    
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      width: 100%;
+      gap: 24px;
+    }
+    
+    .header-info {
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .title-section {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+    
+    .header-icon {
+      font-size: 32px;
+      width: 32px;
+      height: 32px;
+      color: #2196f3;
+    }
+    
+    .header-title {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 500;
+    }
+    
+    .unread-badge {
+      font-size: 12px !important;
+      height: 28px !important;
+    }
+    
+    .header-subtitle {
+      margin: 0;
+      font-size: 16px;
+      opacity: 0.7;
+      line-height: 1.4;
+    }
+    
+    .header-actions {
+      display: flex;
+      gap: 12px;
+      flex-shrink: 0;
+      align-items: flex-start;
+    }
+    
+    .action-button {
+      min-width: 120px;
+      height: 40px;
+      font-weight: 500;
+    }
+    
+    .action-button mat-icon {
+      margin-right: 8px;
+    }
+    
+    .notification-card {
+      width: 100%;
+      box-sizing: border-box;
+    }
+    
     .notification-header {
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      margin-bottom: 1rem;
-      padding: 0 1rem;
-      flex-wrap: wrap;
-      gap: 1rem;
-
-      h2 {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        margin: 0;
-        font-size: 1.5rem;
-
-        mat-icon {
-          font-size: 1.5rem;
-          width: 1.5rem;
-          height: 1.5rem;
-        }
-
-        .count-badge {
-          background: var(--mat-primary-color);
-          color: white;
-          padding: 0.125rem 0.5rem;
-          border-radius: 12px;
-          font-size: 0.875rem;
-          font-weight: 500;
-        }
-      }
-
-      .header-actions {
-        display: flex;
-        gap: 0.5rem;
-
-        button {
-          display: flex;
-          align-items: center;
-          gap: 0.25rem;
-        }
-      }
+      align-items: flex-start;
+      margin-bottom: 16px;
+      width: 100%;
     }
-
-    .empty-state {
-      text-align: center;
-      padding: 4rem 2rem;
-      color: rgba(0, 0, 0, 0.54);
-      
-      mat-icon {
-        font-size: 64px;
-        width: 64px;
-        height: 64px;
-        margin-bottom: 1rem;
-        opacity: 0.3;
-      }
-
-      h3 {
-        margin: 0 0 0.5rem 0;
-        font-size: 1.5rem;
-      }
-
-      p {
-        margin: 0;
-        font-size: 1rem;
-      }
+    
+    .notification-info {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      flex: 1;
+      min-width: 0;
     }
-
-    .notifications-list {
-      padding: 0;
-
-      mat-list-item {
-        min-height: 80px;
-        padding: 1rem;
-        transition: background-color 0.2s ease;
-
-        &.unread {
-          background-color: rgba(33, 150, 243, 0.08);
-          border-left: 4px solid var(--mat-primary-color);
-        }
-
-        &:hover {
-          background-color: rgba(0, 0, 0, 0.04);
-        }
-
-        &.relay-notification {
-          min-height: 120px;
-        }
-      }
+    
+    .notification-icon {
+      flex-shrink: 0;
+      font-size: 32px;
+      width: 32px;
+      height: 32px;
     }
-
+    
+    .notification-details {
+      flex: 1;
+      min-width: 0;
+    }
+    
     .notification-title {
-      font-size: 1rem;
+      margin: 0 0 8px 0;
+      font-size: 18px;
       font-weight: 500;
       display: flex;
       align-items: center;
-      gap: 0.5rem;
-
-      .unread-indicator {
-        font-size: 0.5rem;
-        width: 0.5rem;
-        height: 0.5rem;
-        color: var(--mat-primary-color);
-      }
-    }
-
-    .notification-message {
-      font-size: 0.875rem;
-      color: rgba(0, 0, 0, 0.7);
-      margin-top: 0.25rem;
-    }
-
-    .relay-status {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      margin-top: 0.5rem;
+      gap: 8px;
       flex-wrap: wrap;
-
-      .relay-chips {
-        display: flex;
-        gap: 0.5rem;
-
-        .status-chip {
-          height: 24px;
-          font-size: 0.75rem;
-          
-          mat-icon {
-            font-size: 1rem;
-            width: 1rem;
-            height: 1rem;
-            margin-right: 0.25rem;
-          }
-        }
-
-        .success-chip {
-          background-color: rgba(76, 175, 80, 0.1);
-          color: #2e7d32;
-        }
-
-        .failed-chip {
-          background-color: rgba(244, 67, 54, 0.1);
-          color: #c62828;
-        }
-
-        .pending-chip {
-          background-color: rgba(255, 152, 0, 0.1);
-          color: #ef6c00;
-        }
-      }
-
-      .publishing-label,
-      .complete-label {
-        display: flex;
-        align-items: center;
-        gap: 0.25rem;
-        font-size: 0.75rem;
-        font-weight: 500;
-
-        mat-icon {
-          font-size: 1rem;
-          width: 1rem;
-          height: 1rem;
-        }
-      }
-
-      .publishing-label {
-        color: #1976d2;
-
-        .spinning {
-          animation: spin 1s linear infinite;
-        }
-      }
-
-      .complete-label.success {
-        color: #2e7d32;
-      }
-
-      .complete-label.error {
-        color: #c62828;
-      }
-
-      .complete-label.warning {
-        color: #ef6c00;
-      }
     }
-
-    @keyframes spin {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
+    
+    .new-chip {
+      font-size: 12px !important;
+      height: 24px !important;
     }
-
+    
+    .notification-time {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 14px;
+      opacity: 0.7;
+    }
+    
+    .notification-time mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+    
+    .notification-actions {
+      display: flex;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    
+    .empty-state {
+      width: 100%;
+      box-sizing: border-box;
+    }
+    
+    .empty-content {
+      text-align: center;
+      padding: 64px 24px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    
+    .empty-content mat-icon {
+      font-size: 64px;
+      width: 64px;
+      height: 64px;
+      color: #9c27b0;
+      margin: 0 auto 24px auto;
+      display: block;
+    }
+    
+    .empty-content h2 {
+      margin: 0 0 16px 0;
+      font-size: 24px;
+      font-weight: 500;
+    }
+    
+    .empty-content p {
+      margin: 0;
+      font-size: 16px;
+      opacity: 0.7;
+      line-height: 1.5;
+      max-width: 400px;
+      margin: 0 auto;
+    }
+    
     .relay-details {
-      margin-top: 0.5rem;
-
-      .toggle-details-btn {
-        font-size: 0.75rem;
-        height: 28px;
-        line-height: 28px;
-        padding: 0 0.5rem;
-      }
-
-      .relay-list {
-        margin-top: 0.5rem;
-        padding: 0.5rem;
-        background: rgba(0, 0, 0, 0.02);
-        border-radius: 4px;
-
-        .relay-item {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          padding: 0.25rem 0;
-          font-size: 0.75rem;
-
-          .relay-status-icon {
-            font-size: 1rem;
-            width: 1rem;
-            height: 1rem;
-          }
-
-          .relay-url {
-            flex: 1;
-            font-family: monospace;
-          }
-
-          .relay-error mat-icon {
-            font-size: 0.875rem;
-            width: 0.875rem;
-            height: 0.875rem;
-            cursor: help;
-          }
-
-          &.status-success .relay-status-icon {
-            color: #2e7d32;
-          }
-
-          &.status-failed .relay-status-icon {
-            color: #c62828;
-          }
-
-          &.status-pending .relay-status-icon {
-            color: #ef6c00;
-          }
-        }
-      }
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 16px;
     }
-
-    .action-container {
-      margin-top: 0.5rem;
-    }
-
-    .timestamp {
+    
+    .relay-info {
       display: flex;
       align-items: center;
-      gap: 0.25rem;
-      font-size: 0.75rem;
-      color: rgba(0, 0, 0, 0.54);
-      margin-top: 0.5rem;
-
-      mat-icon {
-        font-size: 0.875rem;
-        width: 0.875rem;
-        height: 0.875rem;
-      }
+      gap: 8px;
     }
-
-    .actions {
-      display: flex;
-      gap: 0.25rem;
-      align-items: center;
-    }
-
-    // Notification type icon colors
-    .icon-general { color: #1976d2; }
-    .icon-success { color: #2e7d32; }
-    .icon-error { color: #c62828; }
-    .icon-warning { color: #ef6c00; }
-    .icon-relay { color: #7b1fa2; }
-
+    
+    /* Responsive Design */
     @media (max-width: 768px) {
+      .container {
+        padding: 12px;
+      }
+      
+      .header-content {
+        flex-direction: column;
+        gap: 16px;
+        align-items: stretch;
+      }
+      
+      .header-actions {
+        align-self: stretch;
+        justify-content: stretch;
+      }
+      
+      .action-button {
+        flex: 1;
+        min-width: auto;
+      }
+      
+      .header-title {
+        font-size: 24px;
+      }
+      
+      .header-icon {
+        font-size: 28px;
+        width: 28px;
+        height: 28px;
+      }
+      
       .notification-header {
         flex-direction: column;
-        align-items: flex-start;
-
-        .header-actions {
-          width: 100%;
-          justify-content: space-between;
-        }
+        gap: 12px;
       }
-
-      .relay-status {
+      
+      .notification-actions {
+        align-self: flex-end;
+      }
+      
+      .notification-title {
+        font-size: 16px;
+      }
+      
+      .notification-icon {
+        font-size: 28px;
+        width: 28px;
+        height: 28px;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .container {
+        padding: 8px;
+      }
+      
+      .header-actions {
         flex-direction: column;
-        align-items: flex-start;
+        gap: 8px;
+      }
+      
+      .header-title {
+        font-size: 20px;
+      }
+      
+      .title-section {
+        gap: 8px;
+      }
+      
+      .notification-info {
+        gap: 12px;
+      }
+      
+      .notification-title {
+        font-size: 15px;
+      }
+      
+      .empty-content {
+        padding: 48px 16px;
+      }
+      
+      .empty-content mat-icon {
+        font-size: 48px;
+        width: 48px;
+        height: 48px;
+      }
+      
+      .empty-content h2 {
+        font-size: 20px;
+      }
+      
+      .empty-content p {
+        font-size: 14px;
       }
     }
   `],
@@ -585,18 +591,21 @@ export class NotificationListComponent {
     }
   }
 
-  getNotificationIconClass(type: NotificationType): string {
+  /**
+   * Get Material Design color for icons based on notification type
+   */
+  getIconColor(type: NotificationType): 'primary' | 'accent' | 'warn' {
     switch (type) {
       case NotificationType.SUCCESS:
-        return 'icon-success';
+        return 'primary';
       case NotificationType.ERROR:
-        return 'icon-error';
+        return 'warn';
       case NotificationType.WARNING:
-        return 'icon-warning';
+        return 'accent';
       case NotificationType.RELAY_PUBLISHING:
-        return 'icon-relay';
+        return 'accent';
       default:
-        return 'icon-general';
+        return 'primary';
     }
   }
 
