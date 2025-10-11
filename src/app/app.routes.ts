@@ -20,6 +20,7 @@ import { AccountsComponent } from './pages/accounts/accounts.component';
 import { NotificationSettingsComponent } from './pages/notifications/settings/settings.component';
 import { LoginDialogComponent } from './components/login-dialog/login-dialog.component';
 import { ProfileEditComponent } from './pages/profile/profile-edit/profile-edit.component';
+import { NotificationTestComponent } from './pages/notification-test/notification-test.component';
 import { FeedsComponent } from './pages/feeds/feeds.component';
 import { ArticleComponent } from './pages/article/article.component';
 import { EditorComponent } from './pages/article/editor/editor.component';
@@ -170,6 +171,7 @@ export const routes: Routes = [
   },
   { path: 'notifications/settings', component: NotificationSettingsComponent },
   { path: 'notifications/manage', component: NotificationManageComponent },
+  { path: 'notifications/test', component: NotificationTestComponent, title: 'Test Notifications' },
   {
     path: 'credentials',
     component: CredentialsComponent,

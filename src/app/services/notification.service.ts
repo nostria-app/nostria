@@ -2,13 +2,14 @@ import { Injectable, effect, inject, signal } from '@angular/core';
 import { LoggerService } from './logger.service';
 import {
   GeneralNotification,
-  Notification,
+  type Notification,
   NotificationType,
   RelayPublishingNotification,
   RelayPublishPromise,
   StorageService,
 } from './storage.service';
 import { Event } from 'nostr-tools';
+import { WebPushService } from './webpush.service';
 
 @Injectable({
   providedIn: 'root',
@@ -16,9 +17,13 @@ import { Event } from 'nostr-tools';
 export class NotificationService {
   private logger = inject(LoggerService);
   private storage = inject(StorageService);
+  private webPush = inject(WebPushService);
 
   // Store all notifications
   private _notifications = signal<Notification[]>([]);
+
+  // Store action callbacks in memory (cannot be persisted to IndexedDB)
+  private actionCallbacks = new Map<string, () => void>();
 
   // Read-only signal exposing notifications
   readonly notifications = this._notifications.asReadonly();
@@ -101,7 +106,7 @@ export class NotificationService {
     });
 
     // Process each promise to update its status
-    relayPromiseObjects.forEach(async (relayPromise, i) => {
+    relayPromiseObjects.forEach(async (relayPromise) => {
       this.logger.debug(`Starting promise monitoring for relay ${relayPromise.relayUrl}`);
       try {
         this.logger.debug(`Awaiting promise for relay ${relayPromise.relayUrl}...`);
@@ -170,6 +175,7 @@ export class NotificationService {
 
   /**
    * Add a simple notification with optional action
+   * Also sends push notification to all registered devices
    */
   notify(
     title: string,
@@ -179,6 +185,11 @@ export class NotificationService {
     actionCallback?: () => void
   ): string {
     const id = `notification-${Date.now()}`;
+
+    // Store callback in memory if provided
+    if (actionLabel && actionCallback) {
+      this.actionCallbacks.set(id, actionCallback);
+    }
 
     const notification: GeneralNotification = {
       id,
@@ -197,8 +208,140 @@ export class NotificationService {
     };
 
     this.addNotification(notification);
-    this.persistNotificationToStorage(notification);
+    
+    // Create a version without the callback for storage
+    // IndexedDB cannot store functions, so we strip the action.callback
+    const notificationForStorage: Notification = {
+      id,
+      type,
+      timestamp: Date.now(),
+      read: false,
+      title,
+      message,
+    };
+    
+    this.persistNotificationToStorage(notificationForStorage);
+    
+    // Send push notification to all registered devices
+    this.sendPushNotification(title, message, type);
+    
+    // Show browser notification immediately (in addition to push)
+    this.showBrowserNotification(title, message, type);
+    
     return id;
+  }
+
+  /**
+   * Send push notification to all registered devices
+   * @param title Notification title
+   * @param body Notification body/message
+   * @param type Notification type for additional context
+   */
+  private async sendPushNotification(
+    title: string,
+    body?: string,
+    type: NotificationType = NotificationType.GENERAL
+  ): Promise<void> {
+    try {
+      // Check if webPush service is available and user has devices registered
+      if (!this.webPush || this.webPush.deviceList().length === 0) {
+        this.logger.debug('No devices registered for push notifications');
+        return;
+      }
+
+      // Prepare notification data
+      const data = {
+        type: type,
+        timestamp: Date.now(),
+        url: window.location.origin, // URL to open when notification is clicked
+      };
+
+      // Send push notification via WebPushService
+      await this.webPush.self(title, body || '', data);
+      
+      this.logger.debug(`Push notification sent: ${title}`);
+    } catch (error) {
+      // Don't throw error, just log it - push notifications are supplementary
+      this.logger.warn('Failed to send push notification:', error);
+    }
+  }
+
+  /**
+   * Show browser notification using Notification API
+   * This displays notifications immediately without requiring backend push
+   * @param title Notification title
+   * @param body Notification body/message
+   * @param type Notification type for styling
+   */
+  private async showBrowserNotification(
+    title: string,
+    body?: string,
+    type: NotificationType = NotificationType.GENERAL
+  ): Promise<void> {
+    // Only show browser notifications in browser environment
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      return;
+    }
+
+    try {
+      // Check permission
+      let permission = Notification.permission;
+
+      // Request permission if not granted or denied
+      if (permission === 'default') {
+        permission = await Notification.requestPermission();
+      }
+
+      // Only show if permission granted
+      if (permission !== 'granted') {
+        this.logger.debug('Browser notification permission not granted');
+        return;
+      }
+
+      // Determine icon based on notification type
+      const icon = '/icons/icon-192x192.png';
+      const badge = '/icons/icon-96x96.png';
+
+      // Show notification using service worker if available
+      if ('serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.ready;
+        await registration.showNotification(title, {
+          body: body || '',
+          icon: icon,
+          badge: badge,
+          tag: `nostria-${type}-${Date.now()}`,
+          requireInteraction: false,
+          data: {
+            type: type,
+            url: window.location.origin,
+          },
+        });
+        this.logger.debug(`Browser notification shown via service worker: ${title}`);
+      } else {
+        // Fallback to direct Notification API
+        const notification = new Notification(title, {
+          body: body || '',
+          icon: icon,
+          badge: badge,
+          tag: `nostria-${type}-${Date.now()}`,
+          requireInteraction: false,
+          data: {
+            type: type,
+            url: window.location.origin,
+          },
+        });
+
+        // Auto-close after 5 seconds
+        setTimeout(() => {
+          notification.close();
+        }, 5000);
+
+        this.logger.debug(`Browser notification shown: ${title}`);
+      }
+    } catch (error) {
+      // Don't throw error, just log it - browser notifications are supplementary
+      this.logger.debug('Failed to show browser notification:', error);
+    }
   }
 
   /**
@@ -218,12 +361,53 @@ export class NotificationService {
   }
 
   /**
+   * Execute action callback for a notification
+   * @param id Notification ID
+   */
+  executeAction(id: string): void {
+    const callback = this.actionCallbacks.get(id);
+    if (callback) {
+      try {
+        callback();
+      } catch (error) {
+        this.logger.error(`Error executing action callback for notification ${id}`, error);
+      }
+    } else {
+      this.logger.warn(`No action callback found for notification ${id}`);
+    }
+  }
+
+  /**
+   * Get action label for a notification (if it exists)
+   * @param id Notification ID
+   */
+  getActionLabel(id: string): string | undefined {
+    const notification = this._notifications().find(n => n.id === id);
+    if (notification && 'action' in notification) {
+      const generalNotification = notification as GeneralNotification;
+      return generalNotification.action?.label;
+    }
+    return undefined;
+  }
+
+  /**
+   * Check if notification has an action
+   * @param id Notification ID
+   */
+  hasAction(id: string): boolean {
+    return this.actionCallbacks.has(id);
+  }
+
+  /**
    * Remove a notification
    */
   removeNotification(id: string): void {
     this._notifications.update(notifications =>
       notifications.filter(notification => notification.id !== id)
     );
+
+    // Remove action callback from memory
+    this.actionCallbacks.delete(id);
 
     // Also remove from storage directly
     this.storage
@@ -237,6 +421,9 @@ export class NotificationService {
   clearNotifications(): void {
     this._notifications.set([]);
 
+    // Clear all action callbacks
+    this.actionCallbacks.clear();
+
     // Clear from storage
     this.storage
       .clearAllNotifications()
@@ -248,7 +435,7 @@ export class NotificationService {
    */
   async retryFailedRelays(
     notificationId: string,
-    retryFunction: (event: Event, relayUrl: string) => Promise<any>
+    retryFunction: (event: Event, relayUrl: string) => Promise<unknown>
   ): Promise<void> {
     this.logger.info(`Attempting to retry failed relays for notification ${notificationId}`);
 
@@ -280,15 +467,12 @@ export class NotificationService {
     for (const relayUrl of failedRelays) {
       this.logger.debug(`Retrying publish to relay ${relayUrl}`);
 
-      // Create a promise for this retry attempt
-      const retryPromise = await retryFunction(relayNotification.event, relayUrl);
-
       // Use the same promise-handling approach as in addRelayPublishingNotification
       try {
         this.logger.debug(`Awaiting retry promise for relay ${relayUrl}...`);
 
-        // Since this retry only does a single relay URL, we can get the first promise directly.
-        await retryPromise[0];
+        // Create a promise for this retry attempt and await it
+        await retryFunction(relayNotification.event, relayUrl);
         this.logger.debug(`Retry successful for relay ${relayUrl}`);
         this.updateRelayPromiseStatus(notificationId, relayUrl, 'success');
       } catch (error) {
@@ -307,7 +491,7 @@ export class NotificationService {
     notificationId: string,
     relayUrl: string,
     status: 'pending' | 'success' | 'failed',
-    error?: any
+    error?: unknown
   ): void {
     this.logger.debug(
       `Updating relay promise status for notification ${notificationId}, relay ${relayUrl} to ${status}`
@@ -351,6 +535,13 @@ export class NotificationService {
             this.logger.info(
               `Publishing notification ${notificationId} complete with ${successCount} successes and ${failedCount} failures`
             );
+            
+            // Send push notification when publishing is complete
+            this.sendRelayPublishingCompletePushNotification(
+              successCount,
+              failedCount,
+              relayNotification.event
+            );
           }
 
           return {
@@ -364,5 +555,64 @@ export class NotificationService {
     });
 
     // Storage will be updated via the effect
+  }
+
+  /**
+   * Send push notification when relay publishing completes
+   */
+  private async sendRelayPublishingCompletePushNotification(
+    successCount: number,
+    failedCount: number,
+    event: Event
+  ): Promise<void> {
+    try {
+      // Check if webPush service is available and user has devices registered
+      if (!this.webPush || this.webPush.deviceList().length === 0) {
+        this.logger.debug('No devices registered for relay publishing push notifications');
+        return;
+      }
+
+      let title: string;
+      let body: string;
+      let notificationType: NotificationType;
+
+      if (failedCount === 0) {
+        // All successful
+        title = 'Publishing Complete';
+        body = `Successfully published to all ${successCount} relays`;
+        notificationType = NotificationType.SUCCESS;
+      } else if (successCount === 0) {
+        // All failed
+        title = 'Publishing Failed';
+        body = `Failed to publish to all ${failedCount} relays`;
+        notificationType = NotificationType.ERROR;
+      } else {
+        // Partial success
+        title = 'Publishing Partially Complete';
+        body = `Published to ${successCount} relays, ${failedCount} failed`;
+        notificationType = NotificationType.WARNING;
+      }
+
+      // Prepare notification data
+      const data = {
+        type: notificationType,
+        timestamp: Date.now(),
+        url: window.location.origin,
+        eventId: event.id,
+        successCount,
+        failedCount,
+      };
+
+      // Send push notification via WebPushService
+      await this.webPush.self(title, body, data);
+      
+      this.logger.debug(`Relay publishing push notification sent: ${title}`);
+      
+      // Also show browser notification immediately
+      await this.showBrowserNotification(title, body, notificationType);
+    } catch (error) {
+      // Don't throw error, just log it - push notifications are supplementary
+      this.logger.warn('Failed to send relay publishing push notification:', error);
+    }
   }
 }
