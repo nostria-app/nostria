@@ -2,14 +2,14 @@ import { Component, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterModule } from '@angular/router';
 import { map } from 'rxjs';
 import { RouteDataService } from '../../services/route-data.service';
 import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-navigation',
-  imports: [MatButtonModule, MatIconModule, CommonModule],
+  imports: [MatButtonModule, MatIconModule, CommonModule, RouterModule],
   templateUrl: './navigation.html',
   styleUrl: './navigation.scss',
 })
