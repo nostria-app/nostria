@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, effect } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -7,9 +7,11 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { nip19 } from 'nostr-tools';
 import { PlaylistService } from '../../services/playlist.service';
 import { MediaPlayerService } from '../../services/media-player.service';
+import { ApplicationService } from '../../services/application.service';
 import { Playlist } from '../../interfaces';
 import { CreatePlaylistDialogComponent } from './create-playlist-dialog/create-playlist-dialog.component';
 
@@ -22,6 +24,7 @@ import { CreatePlaylistDialogComponent } from './create-playlist-dialog/create-p
     MatCardModule,
     MatMenuModule,
     MatTooltipModule,
+    MatProgressSpinnerModule,
   ],
   templateUrl: './playlists.component.html',
   styleUrl: './playlists.component.scss',
@@ -32,12 +35,40 @@ export class PlaylistsComponent {
   private router = inject(Router);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
+  private app = inject(ApplicationService);
 
   playlists = this.playlistService.playlists;
   drafts = this.playlistService.drafts;
 
   // Local state
   selectedView = signal<'grid' | 'list'>('grid');
+  isLoading = signal(false);
+
+  constructor() {
+    // Fetch playlists from Nostr when pubkey becomes available
+    effect(() => {
+      const pubkey = this.app.accountState.pubkey();
+      if (pubkey) {
+        this.loadPlaylists(pubkey);
+      }
+    });
+  }
+
+  private async loadPlaylists(pubkey: string): Promise<void> {
+    this.isLoading.set(true);
+    try {
+      await this.playlistService.fetchPlaylistsFromNostr(pubkey);
+    } catch (error) {
+      console.error('Failed to load playlists:', error);
+      this.snackBar.open('Failed to load playlists from Nostr', 'Close', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom'
+      });
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
 
   createNewPlaylist(): void {
     const dialogRef = this.dialog.open(CreatePlaylistDialogComponent, {
