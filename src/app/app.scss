@@ -45,9 +45,8 @@ nav {
 
 .sidenav-container {
   flex: 1;
-  overflow: auto;
-  overflow-x: hidden;
-  /* Prevent horizontal scrolling */
+  overflow: hidden;
+  /* Prevent scrolling on the container itself - only content-wrapper should scroll */
 
   // Make space for mobile nav when on mobile
   @media (max-width: 599px) {}
