@@ -25,6 +25,10 @@
     {
       "protocol": "web+nostr",
       "url": "/?nostr=%s"
+    },
+    {
+      "protocol": "nostr",
+      "url": "/?nostr=%s"
     }
   ],
   "features": [
