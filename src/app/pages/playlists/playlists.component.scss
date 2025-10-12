@@ -29,6 +29,25 @@
 
 .playlists-content {
 
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 64px 32px;
+    text-align: center;
+    color: var(--mat-sys-on-surface-variant);
+
+    mat-spinner {
+      margin-bottom: 16px;
+    }
+
+    p {
+      margin: 0;
+      font-size: 0.875rem;
+    }
+  }
+
   .drafts-section,
   .playlists-section {
     margin-bottom: 48px;

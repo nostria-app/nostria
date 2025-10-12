@@ -16,6 +16,13 @@
   </header>
 
   <main class="playlists-content">
+    <!-- Loading indicator -->
+    @if (isLoading()) {
+    <div class="loading-container">
+      <mat-spinner></mat-spinner>
+      <p>Loading playlists...</p>
+    </div>
+    } @else {
     <!-- Drafts Section -->
     @if (drafts().length > 0) {
     <section class="drafts-section">
@@ -153,5 +160,6 @@
       </div>
       }
     </section>
+    }
   </main>
 </div>
