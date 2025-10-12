@@ -27,7 +27,6 @@ import { InfoRecord } from '../../services/storage.service';
 import { Event, nip19 } from 'nostr-tools';
 import { UtilitiesService } from '../../services/utilities.service';
 import { DataService } from '../../services/data.service';
-import { RelaysService } from '../../services/relays/relays';
 import { SettingsService } from '../../services/settings.service';
 import { SharedRelayService } from '../../services/relays/shared-relay';
 import { ImageCacheService } from '../../services/image-cache.service';
@@ -62,7 +61,6 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
   private elementRef = inject(ElementRef);
   readonly utilities = inject(UtilitiesService);
   settingsService = inject(SettingsService);
-  private relaysService = inject(RelaysService);
   private readonly sharedRelay = inject(SharedRelayService);
   private readonly imageCacheService = inject(ImageCacheService);
   layout = inject(LayoutService);

@@ -94,7 +94,7 @@ export class FollowingComponent {
   userProfile = signal<ProfileData | null>(null);
 
   // Item size for virtual scrolling (approx. height of each item in pixels)
-  readonly itemSize = 72;
+  readonly itemSize = 44;
 
   // Buffer size determines how many items to render outside viewport
   readonly minBufferPx = 200;

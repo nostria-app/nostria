@@ -31,8 +31,8 @@ export class PlaylistService implements OnInitialized {
 
   // Computed signals
   userPlaylists = computed(() => {
-    // TODO: Filter by current user's pubkey when user management is implemented
-    return this._playlists().filter(playlist => playlist.isLocal || playlist.pubkey === 'current-user-pubkey');
+    const currentPubkey = this.getCurrentUserPubkey();
+    return this._playlists().filter(playlist => playlist.isLocal || playlist.pubkey === currentPubkey);
   });
 
   hasUnsavedChanges = computed(() => {
@@ -55,6 +55,34 @@ export class PlaylistService implements OnInitialized {
   initialize(): void {
     this.loadPlaylistsFromStorage();
     this.loadDraftsFromStorage();
+  }
+
+  /**
+   * Fetch all playlists from Nostr for the current user
+   * This should be called when the playlists page is opened to load fresh data
+   */
+  async fetchPlaylistsFromNostr(pubkey: string): Promise<void> {
+    try {
+      console.log('Fetching playlists from Nostr for pubkey:', pubkey);
+
+      // Query for playlist events (kind 32100) authored by the user
+      const events = await this.accountRelay.getMany<Event>({
+        kinds: [32100],
+        authors: [pubkey],
+      }, { timeout: 10000 }); // 10 second timeout
+
+      console.log(`Found ${events.length} playlist events`);
+
+      // Import each event and update the playlists signal
+      for (const event of events) {
+        this.importPlaylistFromNostrEvent(event);
+      }
+
+      console.log('Successfully loaded playlists from Nostr');
+    } catch (error) {
+      console.error('Failed to fetch playlists from Nostr:', error);
+      throw error;
+    }
   }
 
   private loadPlaylistsFromStorage(): void {
@@ -205,7 +233,7 @@ export class PlaylistService implements OnInitialized {
       tracks: current.tracks,
       totalDuration: this.calculateTotalDuration(current.tracks),
       created_at: Math.floor(Date.now() / 1000), // Nostr timestamp (seconds)
-      pubkey: 'current-user-pubkey', // TODO: Get from user service
+      pubkey: this.getCurrentUserPubkey(),
       isLocal: true,
     };
 
@@ -483,6 +511,10 @@ export class PlaylistService implements OnInitialized {
   }
 
   // Helper methods
+  private getCurrentUserPubkey(): string {
+    return this.app.accountState.pubkey() || '';
+  }
+
   private generatePlaylistId(): string {
     return `playlist_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }

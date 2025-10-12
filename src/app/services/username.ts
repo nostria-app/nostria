@@ -74,14 +74,18 @@ export class UsernameService {
 
     if (pubkey) return pubkey;
 
-    const publicProfile = await firstValueFrom(
-      this.accountService.getPublicAccount({ pubkeyOrUsername: username })
-    );
+    try {
+      const publicProfile = await firstValueFrom(
+        this.accountService.getPublicAccount({ pubkeyOrUsername: username })
+      );
 
-    if (publicProfile && publicProfile.success && publicProfile.result) {
-      const pubkey = publicProfile.result.pubkey || '';
-      this.saveUsernameToCache(username, pubkey);
-      return pubkey;
+      if (publicProfile && publicProfile.success && publicProfile.result) {
+        const pubkey = publicProfile.result.pubkey || '';
+        this.saveUsernameToCache(username, pubkey);
+        return pubkey;
+      }
+    } catch (error) {
+      this.logger.error('Failed to fetch pubkey for username:', username, error);
     }
 
     return '';
@@ -98,14 +102,18 @@ export class UsernameService {
 
     if (username) return username;
 
-    const publicProfile = await firstValueFrom(
-      this.accountService.getPublicAccount({ pubkeyOrUsername: pubkey })
-    );
+    try {
+      const publicProfile = await firstValueFrom(
+        this.accountService.getPublicAccount({ pubkeyOrUsername: pubkey })
+      );
 
-    if (publicProfile && publicProfile.success && publicProfile.result) {
-      const username = publicProfile.result.username || '';
-      this.saveUsernameToCache(username, pubkey);
-      return username;
+      if (publicProfile && publicProfile.success && publicProfile.result) {
+        const username = publicProfile.result.username || '';
+        this.saveUsernameToCache(username, pubkey);
+        return username;
+      }
+    } catch (error) {
+      this.logger.error('Failed to fetch username for pubkey:', pubkey, error);
     }
 
     return '';
