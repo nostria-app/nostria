@@ -6,6 +6,18 @@ import { ApplicationService } from './application.service';
 import { LocalStorageService } from './local-storage.service';
 import { LayoutService } from './layout.service';
 
+// YouTube Player API types
+interface YouTubePlayer {
+  destroy: () => void;
+  playVideo: () => void;
+  pauseVideo: () => void;
+  stopVideo: () => void;
+}
+
+interface YouTubePlayerEvent {
+  data: number;
+}
+
 export interface VideoWindowState {
   x: number;
   y: number;
@@ -70,10 +82,17 @@ export class MediaPlayerService implements OnInitialized {
 
   isFullscreen = this._isFullscreen.asReadonly();
 
+  // YouTube Player API reference
+  private youtubePlayer?: YouTubePlayer;
+  private youtubeApiReady = false;
+
   constructor() {
     if (!this.app.isBrowser()) {
       return;
     }
+
+    // Load YouTube IFrame API
+    this.loadYouTubeAPI();
 
     effect(() => {
       if (this.app.initialized()) {
@@ -89,8 +108,12 @@ export class MediaPlayerService implements OnInitialized {
       // Resume playback
       try {
         await this.audio.play();
-      } catch (err: any) {
-        console.error(err.name, err.message);
+      } catch (err) {
+        if (err instanceof Error) {
+          console.error(err.name, err.message);
+        } else {
+          console.error('Unknown error:', err);
+        }
       }
     });
 
@@ -137,6 +160,102 @@ export class MediaPlayerService implements OnInitialized {
     }
   }
 
+  private loadYouTubeAPI(): void {
+    // Check if API is already loaded
+    if ((window as unknown as { YT?: unknown }).YT) {
+      this.youtubeApiReady = true;
+      return;
+    }
+
+    // Create script tag to load YouTube IFrame API
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    const firstScriptTag = document.getElementsByTagName('script')[0];
+    firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
+
+    // Set up callback for when API is ready
+    (window as unknown as { onYouTubeIframeAPIReady?: () => void }).onYouTubeIframeAPIReady = () => {
+      this.youtubeApiReady = true;
+      console.log('YouTube IFrame API ready');
+    };
+  }
+
+  private initYouTubePlayer(): void {
+    if (!this.youtubeApiReady) {
+      console.warn('YouTube API not ready yet');
+      return;
+    }
+
+    const YT = (window as unknown as { YT: { Player: new (elementId: string, config: unknown) => YouTubePlayer; PlayerState: { ENDED: number } } }).YT;
+
+    // If player already exists, just clear the reference (don't destroy - it removes the iframe!)
+    // Angular will replace the iframe when the src binding changes
+    if (this.youtubePlayer) {
+      console.log('Clearing existing YouTube player reference for new iframe');
+      this.youtubePlayer = undefined;
+    }
+
+    // Poll for iframe to be in DOM with src attribute set (meaning Angular has rendered it)
+    let attempts = 0;
+    const maxAttempts = 20;
+    const pollInterval = 100;
+
+    const checkIframe = () => {
+      const iframe = document.getElementById('ytplayer') as HTMLIFrameElement | null;
+
+      if (!iframe) {
+        attempts++;
+        if (attempts < maxAttempts) {
+          setTimeout(checkIframe, pollInterval);
+        } else {
+          console.warn('YouTube iframe not found after polling');
+        }
+        return;
+      }
+
+      // Check if iframe has a src (meaning Angular has set it)
+      if (!iframe.src || iframe.src === 'about:blank') {
+        attempts++;
+        if (attempts < maxAttempts) {
+          setTimeout(checkIframe, pollInterval);
+        } else {
+          console.warn('YouTube iframe src not set after polling');
+        }
+        return;
+      }
+
+      // Iframe is ready, initialize player
+      try {
+        this.youtubePlayer = new YT.Player('ytplayer', {
+          events: {
+            onStateChange: (event: YouTubePlayerEvent) => {
+              // YT.PlayerState.ENDED = 0
+              if (event.data === 0) {
+                console.log('YouTube video ended');
+                this.handleMediaEnded();
+              }
+            },
+            onError: (event: { data: number }) => {
+              console.warn('YouTube player error:', event.data);
+              // Error codes: 2=invalid param, 5=HTML5 error, 100=not found, 101/150=not embeddable
+              // Auto-advance to next video on error
+              if (this.canNext()) {
+                console.log('Skipping failed video, advancing to next');
+                this.next();
+              }
+            },
+          },
+        });
+        console.log('YouTube player initialized');
+      } catch (error) {
+        console.error('Error initializing YouTube player:', error);
+      }
+    };
+
+    // Start polling
+    checkIframe();
+  }
+
   exit() {
     console.log('Exiting media player and hiding footer');
 
@@ -155,6 +274,16 @@ export class MediaPlayerService implements OnInitialized {
     if (this.videoElement) {
       this.videoElement.removeEventListener('ended', this.handleMediaEnded);
       this.setVideoElement(undefined);
+    }
+
+    // Destroy YouTube player completely on exit
+    if (this.youtubePlayer && typeof (this.youtubePlayer as { destroy?: () => void }).destroy === 'function') {
+      try {
+        (this.youtubePlayer as { destroy: () => void }).destroy();
+        this.youtubePlayer = undefined;
+      } catch (error) {
+        console.error('Error destroying YouTube player:', error);
+      }
     }
 
     // Reset all state
@@ -414,6 +543,12 @@ export class MediaPlayerService implements OnInitialized {
       this.videoUrl.set(undefined);
       const youTubeUrl = this.getYouTubeEmbedUrl()(file.source, 'autoplay=1');
       this.youtubeUrl.set(youTubeUrl);
+
+      // Initialize YouTube player to detect when video ends
+      // Use small initial delay, then poll for iframe readiness
+      setTimeout(() => {
+        this.initYouTubePlayer();
+      }, 200);
     } else if (file.type === 'Video') {
       this.videoMode.set(true);
       this.youtubeUrl.set(undefined);
@@ -490,8 +625,6 @@ export class MediaPlayerService implements OnInitialized {
       this.audio.currentTime = 0;
       // Remove event listeners
       this.audio.removeEventListener('ended', this.handleMediaEnded);
-      this.audio.removeEventListener('canplay', () => { });
-      this.audio.removeEventListener('loadeddata', () => { });
     }
 
     // Stop and cleanup video
@@ -500,8 +633,15 @@ export class MediaPlayerService implements OnInitialized {
       this.videoElement.currentTime = 0;
       // Remove event listeners
       this.videoElement.removeEventListener('ended', this.handleMediaEnded);
-      this.videoElement.removeEventListener('canplay', () => { });
-      this.videoElement.removeEventListener('loadeddata', () => { });
+    }
+
+    // Stop YouTube player (it will be destroyed and recreated for next video)
+    if (this.youtubePlayer && typeof (this.youtubePlayer as { stopVideo?: () => void }).stopVideo === 'function') {
+      try {
+        (this.youtubePlayer as { stopVideo: () => void }).stopVideo();
+      } catch (error) {
+        console.error('Error stopping YouTube player:', error);
+      }
     }
 
     // Clear video URLs to stop any playing videos
