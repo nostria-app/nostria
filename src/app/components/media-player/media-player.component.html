@@ -79,9 +79,8 @@
     @if (media.current?.type === 'YouTube') {
     <div class="media-info">
       @if (media.youtubeUrl()) {
-      <iframe sandbox="allow-scripts allow-same-origin allow-presentation" id="ytplayer" class="youtube-video"
-        type="text/html" [src]="media.youtubeUrl()" frameborder="0" allowfullscreen allow="autoplay"
-        title="YouTube video player"></iframe>
+      <iframe id="ytplayer" class="youtube-video" type="text/html" [src]="media.youtubeUrl()" frameborder="0"
+        allowfullscreen allow="autoplay" title="YouTube video player"></iframe>
       }
     </div>
     }
