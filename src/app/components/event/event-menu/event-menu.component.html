@@ -34,7 +34,6 @@
     <mat-icon>share</mat-icon>
     Share Event
   </button>
-
   <button mat-menu-item (click)="onBookmarkClick($event)">
     <mat-icon [matTooltip]="bookmark.getBookmarkTooltip(event().id)" matTooltipPosition="below">
       {{ bookmark.getBookmarkIcon(event().id) }}
@@ -44,11 +43,6 @@
     } @else {
       Add Bookmark
     }
-  </button>
-
-  <button mat-menu-item (click)="layout.shareEvent(event())">
-    <mat-icon>share</mat-icon>
-    Share Event
   </button>
   <button mat-menu-item (click)="layout.publishEvent(event())">
     <mat-icon>publish</mat-icon>
