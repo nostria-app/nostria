@@ -25,7 +25,7 @@
     <div class="profile-info" [class.compact]="compact()">
       <div class="profile-menu-actions">
         @if (isOwnProfile()) {
-        <button mat-flat-button routerLink="edit" class="hide-tiny">
+        <button mat-flat-button routerLink="edit" class="hide-small">
           <mat-icon>edit</mat-icon> Edit Profile
         </button>
         } @else {
@@ -198,7 +198,7 @@
         }
 
         @if (isOwnProfile()) {
-        <button mat-menu-item routerLink="edit" [queryParamsHandling]="'preserve'">
+        <button class="hide-small" mat-menu-item routerLink="edit" [queryParamsHandling]="'preserve'">
           <mat-icon>edit</mat-icon>
           <span>Edit Profile</span>
         </button>
