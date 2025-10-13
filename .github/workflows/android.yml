@@ -27,7 +27,7 @@ jobs:
 
       - name: Decode keystore
         run: |
-          echo "${{ secrets.KEYSTORE }}" | base64 -d > android.keystore
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android.keystore
           ls -la android.keystore
 
       - name: Generate Android TWA project
