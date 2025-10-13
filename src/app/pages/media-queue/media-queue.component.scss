@@ -2,6 +2,18 @@
   border-radius: 0 !important;
 }
 
+.queue-artwork-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background-color: var(--mat-sys-surface-variant);
+  color: var(--mat-sys-on-surface-variant);
+  border-radius: 4px;
+  font-size: 24px;
+}
+
 .queue-header {
   display: flex;
   justify-content: space-between;
