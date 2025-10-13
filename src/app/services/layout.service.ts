@@ -45,6 +45,7 @@ export class LayoutService implements OnDestroy {
   private userRelayService = inject(UserRelayService);
   overlayMode = signal(false);
   showMediaPlayer = signal(false);
+  fullscreenMediaPlayer = signal(false);
   private readonly platformId = inject(PLATFORM_ID);
   readonly isBrowser = signal(isPlatformBrowser(this.platformId));
   localStorage = inject(LocalStorageService);

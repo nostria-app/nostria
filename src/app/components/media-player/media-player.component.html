@@ -1,4 +1,5 @@
-<div [class]="footer() ? 'media-player-footer' : 'media-player'">
+<div [class]="footer() ? 'media-player-footer' : 'media-player'"
+  [class.fullscreen-mode]="layout.fullscreenMediaPlayer()">
   @if (!footer()) {
   <img class="media-player-icon" src="icons/icon.svg" width="16" height="16" alt="Nostria" />
 
@@ -191,6 +192,15 @@
         <button matTooltip="Queue" routerLink="/media-queue" class="hide-small" mat-icon-button>
           <mat-icon>queue_music</mat-icon>
         </button>
+
+        <button matTooltip="Fullscreen Media Player" (click)="toggleFullscreen()" class="hide-small" mat-icon-button>
+          @if (!layout.fullscreenMediaPlayer()) {
+          <mat-icon>open_in_full</mat-icon>
+          } @else {
+          <mat-icon>close_fullscreen</mat-icon>
+          }
+        </button>
+
         <button matTooltip="Exit Media Player" (click)="media.exit()" mat-icon-button>
           <mat-icon>close</mat-icon>
         </button>
@@ -215,6 +225,14 @@
 
         <button matTooltip="Queue" routerLink="/media-queue" class="hide-small" mat-icon-button>
           <mat-icon>queue_music</mat-icon>
+        </button>
+
+        <button matTooltip="Fullscreen Media Player" (click)="toggleFullscreen()" class="hide-small" mat-icon-button>
+          @if (!layout.fullscreenMediaPlayer()) {
+          <mat-icon>open_in_full</mat-icon>
+          } @else {
+          <mat-icon>close_fullscreen</mat-icon>
+          }
         </button>
 
         <button matTooltip="Exit Media Player" (click)="media.exit()" mat-icon-button>
