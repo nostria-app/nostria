@@ -1,0 +1,83 @@
+{
+  "packageId": "app.nostria.twa",
+  "host": "nostria.app",
+  "name": "Nostria",
+  "launcherName": "Nostria",
+  "display": "standalone",
+  "themeColor": "#5953A9",
+  "themeColorDark": "#000000",
+  "navigationColor": "#000000",
+  "navigationColorDark": "#000000",
+  "navigationDividerColor": "#000000",
+  "navigationDividerColorDark": "#000000",
+  "backgroundColor": "#303030",
+  "enableNotifications": true,
+  "startUrl": "/",
+  "iconUrl": "https://nostria.app/icons/icon-512x512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "/workspace/android.keystore",
+    "alias": "android"
+  },
+  "appVersionName": "3",
+  "appVersionCode": 3,
+  "shortcuts": [
+    {
+      "name": "Profile",
+      "shortName": "Profile",
+      "url": "https://nostria.app/p",
+      "chosenIconUrl": "https://nostria.app/icons/icon-128x128.png"
+    },
+    {
+      "name": "Notifications",
+      "shortName": "Notifications",
+      "url": "https://nostria.app/notifications",
+      "chosenIconUrl": "https://nostria.app/icons/icon-128x128.png"
+    },
+    {
+      "name": "Settings",
+      "shortName": "Settings",
+      "url": "https://nostria.app/settings",
+      "chosenIconUrl": "https://nostria.app/icons/icon-128x128.png"
+    }
+  ],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://nostria.app/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {
+    "playBilling": {
+      "enabled": true
+    }
+  },
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://nostria.app/",
+  "minSdkVersion": 21,
+  "orientation": "any",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "protocolHandlers": [
+    {
+      "protocol": "web+nostr",
+      "url": "https://nostria.app/?nostr=%s"
+    },
+    {
+      "protocol": "nostr",
+      "url": "https://nostria.app/?nostr=%s"
+    }
+  ],
+  "fileHandlers": [],
+  "launchHandlerClientMode": [
+    "focus-existing",
+    "auto"
+  ],
+  "displayOverride": [
+    "window-controls-overlay"
+  ],
+  "appVersion": "3"
+}
