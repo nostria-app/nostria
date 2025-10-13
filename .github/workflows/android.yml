@@ -2,6 +2,11 @@ name: Build Android
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to build (e.g., 1.0.1)"
+        required: true
+        default: "1.0.4"
 
 jobs:
   build-android:
@@ -69,14 +74,64 @@ jobs:
             -e BUBBLEWRAP_KEY_PASSWORD="${BUBBLEWRAP_KEY_PASSWORD}" \
             ghcr.io/googlechromelabs/bubblewrap:latest build
 
+      - name: Rename artifacts with version
+        run: |
+          # Rename APK with version
+          if [ -f "app-release-signed.apk" ]; then
+            mv app-release-signed.apk "nostria-android-v${{ github.event.inputs.version }}.apk"
+            echo "Renamed APK to nostria-android-v${{ github.event.inputs.version }}.apk"
+          fi
+
+          # Rename AAB with version
+          if [ -f "app-release-bundle.aab" ]; then
+            mv app-release-bundle.aab "nostria-android-v${{ github.event.inputs.version }}.aab"
+            echo "Renamed AAB to nostria-android-v${{ github.event.inputs.version }}.aab"
+          fi
+
+          # List files to verify
+          ls -la *.apk *.aab 2>/dev/null || echo "No APK/AAB files found"
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: release-apk
-          path: app-release-signed.apk
+          name: nostria-android-v${{ github.event.inputs.version }}-apk
+          path: nostria-android-v${{ github.event.inputs.version }}.apk
 
       - name: Upload AAB
         uses: actions/upload-artifact@v4
         with:
-          name: release-aab
-          path: app-release-bundle.aab
+          name: nostria-android-v${{ github.event.inputs.version }}-aab
+          path: nostria-android-v${{ github.event.inputs.version }}.aab
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-v${{ github.event.inputs.version }}
+          name: Android Release v${{ github.event.inputs.version }}
+          body: |
+            Android release for Nostria v${{ github.event.inputs.version }}
+
+            **Files included:**
+            - `nostria-android-v${{ github.event.inputs.version }}.apk` - Android APK for direct installation
+            - `nostria-android-v${{ github.event.inputs.version }}.aab` - Android App Bundle for Play Store
+
+            Built on: ${{ github.run_id }}
+          files: |
+            nostria-android-v${{ github.event.inputs.version }}.apk
+            nostria-android-v${{ github.event.inputs.version }}.aab
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # - name: Upload APK
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: release-apk
+      #     path: app-release-signed.apk
+
+      # - name: Upload AAB
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: release-aab
+      #     path: app-release-bundle.aab

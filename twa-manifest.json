@@ -19,8 +19,8 @@
     "path": "/workspace/android.keystore",
     "alias": "KEY_ALIAS"
   },
-  "appVersionName": "3",
-  "appVersionCode": 3,
+  "appVersionName": "4",
+  "appVersionCode": 4,
   "shortcuts": [
     {
       "name": "Profile",
@@ -79,5 +79,5 @@
   "displayOverride": [
     "window-controls-overlay"
   ],
-  "appVersion": "3"
+  "appVersion": "4"
 }
