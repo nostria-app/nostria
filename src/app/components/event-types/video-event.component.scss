@@ -40,14 +40,6 @@
     aspect-ratio: 16/9;
     cursor: pointer;
     overflow: hidden;
-    transition:
-      transform 0.2s ease,
-      box-shadow 0.2s ease;
-
-    &:hover {
-      transform: scale(1.02);
-      box-shadow: var(--mat-sys-level2);
-    }
 
     &:focus {
       outline: 2px solid var(--mat-sys-primary);
