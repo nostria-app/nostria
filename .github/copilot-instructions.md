@@ -54,3 +54,6 @@ Never set the font-weight in CSS. The current font for headlines does not suppor
 - Design services around a single responsibility
 - Use the `providedIn: 'root'` option for singleton services
 - Use the `inject()` function instead of constructor injection
+
+
+When you generate markdown documentation of what you have done, place those documents into the "docs" folder.
