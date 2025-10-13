@@ -10,7 +10,7 @@
   <p class="loading-text">Loading event...</p>
 </div>
 } @else if (targetItem && item) {
-<mat-card class="note-card" [class.plain]="isPlain()" [class.selected]="isCurrentlySelected()" appearance="outlined"
+<mat-card class="note-card" [class.plain]="isPlain()" [class.selected]="isCurrentlySelected()"
   [attr.tabindex]="isCurrentlySelected() ? null : 0" [style.cursor]="isCurrentlySelected() ? 'auto' : 'pointer'"
   (click)="onCardClick($event)">
   @if (repostedEvent) {
@@ -270,14 +270,10 @@
 
       <!-- Like -->
       <div class="reaction-group">
-        <button mat-icon-button 
-                class="like-button" 
-                [ngClass]="{
+        <button mat-icon-button class="like-button" [ngClass]="{
                   active: !!likeReaction(),
                   liked: !!likeReaction()
-                }" 
-                [disabled]="isLoadingReactions()" 
-                (click)="toggleLike($event)">
+                }" [disabled]="isLoadingReactions()" (click)="toggleLike($event)">
           <mat-icon>favorite</mat-icon>
         </button>
         <button mat-button class="count-button" (click)="openReactionsDialog('likes'); $event.stopPropagation()">
