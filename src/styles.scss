@@ -797,10 +797,8 @@ iframe {
 /* Clickable image styles */
 .clickable-image {
   cursor: pointer;
-  transition: transform 0.2s ease;
 
   &:hover {
-    transform: scale(1.02);
     box-shadow: var(--mat-sys-level1);
   }
 }

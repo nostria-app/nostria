@@ -70,19 +70,11 @@
   height: 100%;
   object-fit: cover;
   border-radius: 8px;
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
 
   &.main-image {
     cursor: pointer;
     position: relative;
     z-index: 2;
-
-    &:hover {
-      transform: scale(1.02);
-      box-shadow: var(--mat-sys-level2);
-    }
 
     &:focus {
       outline: 2px solid var(--mat-sys-primary);
