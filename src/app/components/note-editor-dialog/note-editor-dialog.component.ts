@@ -56,6 +56,7 @@ interface NoteAutoDraft {
   expirationEnabled: boolean;
   expirationDate: Date | null;
   expirationTime: string;
+  uploadOriginal: boolean;
   lastModified: number;
   // Context data to ensure draft matches current dialog state
   replyToId?: string;
@@ -90,7 +91,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
   data = inject(MAT_DIALOG_DATA) as NoteEditorDialogData;
   private nostrService = inject(NostrService);
   private accountRelay = inject(AccountRelayService);
-  private mediaService = inject(MediaService);
+  mediaService = inject(MediaService);
   private localStorage = inject(LocalStorageService);
   private accountState = inject(AccountStateService);
   private snackBar = inject(MatSnackBar);
@@ -118,6 +119,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
   expirationEnabled = signal(false);
   expirationDate = signal<Date | null>(null);
   expirationTime = signal<string>('12:00');
+  uploadOriginal = signal(false);
 
   private dragCounter = 0;
 
@@ -318,6 +320,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
       expirationEnabled: this.expirationEnabled(),
       expirationDate: this.expirationDate(),
       expirationTime: this.expirationTime(),
+      uploadOriginal: this.uploadOriginal(),
       lastModified: Date.now(),
       replyToId: this.data?.replyTo?.id,
       quoteId: this.data?.quote?.id,
@@ -378,6 +381,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
           this.expirationEnabled.set(autoDraft.expirationEnabled);
           this.expirationDate.set(autoDraft.expirationDate);
           this.expirationTime.set(autoDraft.expirationTime);
+          this.uploadOriginal.set(autoDraft.uploadOriginal ?? false);
 
           // Show restoration message
           this.snackBar.open('Draft restored', 'Dismiss', {
@@ -553,6 +557,10 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
     this.dialogRef.close({ published: false });
   }
 
+  dismissError(): void {
+    this.mediaService.clearError();
+  }
+
   // Preview functionality
   togglePreview(): void {
     this.showPreview.update(current => !current);
@@ -690,7 +698,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
         try {
           const result = await this.mediaService.uploadFile(
             file,
-            false,
+            this.uploadOriginal(),
             this.mediaService.mediaServers()
           );
 
@@ -701,7 +709,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
             return {
               success: false,
               fileName: file.name,
-              error: result.message,
+              error: result.message || 'Upload failed',
             };
           }
         } catch (error) {
@@ -726,15 +734,28 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
       }
 
       if (failed.length > 0) {
-        this.snackBar.open(`${failed.length} file(s) failed to upload`, 'Close', {
-          duration: 5000,
-        });
+        // Show detailed error message for each failed file
+        const errorMessages = failed
+          .map(f => `${f.fileName}: ${f.error}`)
+          .join('\n');
+
+        this.snackBar.open(
+          `Failed to upload ${failed.length} file(s):\n${errorMessages}`,
+          'Close',
+          {
+            duration: 8000,
+            panelClass: 'error-snackbar',
+          }
+        );
       }
     } catch (error) {
       this.snackBar.open(
         'Upload failed: ' + (error instanceof Error ? error.message : 'Unknown error'),
         'Close',
-        { duration: 5000 }
+        {
+          duration: 5000,
+          panelClass: 'error-snackbar',
+        }
       );
     } finally {
       this.isUploading.set(false);
@@ -784,9 +805,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
     const imageFiles: File[] = [];
 
     // Check for image files in clipboard
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-
+    for (const item of Array.from(items)) {
       if (item.kind === 'file') {
         const file = item.getAsFile();
         if (file && this.isImageFile(file)) {
