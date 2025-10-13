@@ -42,12 +42,14 @@
   &.footer-mode.fullscreen-host {
     /* Override relative positioning from footer-mode */
     position: fixed !important;
-    top: 0 !important;
+    /* Start below titlebar when window-controls-overlay is active */
+    top: env(titlebar-area-height, 0px) !important;
     left: 0 !important;
     right: 0 !important;
     bottom: 0 !important;
     width: 100vw !important;
-    height: 100vh !important;
+    /* Adjust height to account for titlebar */
+    height: calc(100vh - env(titlebar-area-height, 0px)) !important;
     z-index: 10000 !important;
     border: none !important;
   }
@@ -60,6 +62,8 @@
   z-index: 1500;
   flex-wrap: nowrap;
   min-width: 0;
+  /* Inherit drag behavior from host for toolbar mode */
+  -webkit-app-region: inherit;
 }
 
 /* Titlebar area displayed only when using window-controls-overlay */
@@ -114,6 +118,8 @@
   margin-left: 4px;
   margin-right: 4px;
   margin-top: -1px;
+  /* Allow dragging on the icon in toolbar mode */
+  -webkit-app-region: inherit;
 }
 
 .media-player-controls {
@@ -121,6 +127,8 @@
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
+  /* Inherit drag behavior in toolbar mode, allow buttons to override with nodrag */
+  -webkit-app-region: inherit;
 }
 
 .media-player-controls-footer {
@@ -135,6 +143,13 @@
 }
 
 .nodrag {
+  -webkit-app-region: no-drag;
+}
+
+/* Ensure buttons are explicitly not draggable */
+button.nodrag,
+.nodrag button,
+.media-player-controls button {
   -webkit-app-region: no-drag;
 }
 
@@ -327,12 +342,14 @@ input {
 /* Fullscreen media player styles */
 .media-player-footer.fullscreen-mode {
   position: fixed !important;
-  top: 0 !important;
+  /* Start below titlebar when window-controls-overlay is active */
+  top: env(titlebar-area-height, 0px) !important;
   left: 0 !important;
   right: 0 !important;
   bottom: 0 !important;
   width: 100vw !important;
-  height: 100vh !important;
+  /* Adjust height to account for titlebar */
+  height: calc(100vh - env(titlebar-area-height, 0px)) !important;
   z-index: 10000 !important;
   /* Higher than mobile-nav (1000) */
   background: var(--mat-sys-surface);
@@ -482,12 +499,14 @@ input {
 .media-player-footer.exiting-fullscreen {
   /* Keep fullscreen positioning during exit animation */
   position: fixed !important;
-  top: 0 !important;
+  /* Start below titlebar when window-controls-overlay is active */
+  top: env(titlebar-area-height, 0px) !important;
   left: 0 !important;
   right: 0 !important;
   bottom: 0 !important;
   width: 100vw !important;
-  height: 100vh !important;
+  /* Adjust height to account for titlebar */
+  height: calc(100vh - env(titlebar-area-height, 0px)) !important;
   z-index: 10000 !important;
   /* Higher than mobile-nav (1000) */
 
