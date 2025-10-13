@@ -1,4 +1,5 @@
-<div class="app-container" [class.dark-theme]="themeService.darkMode()">
+<div class="app-container" [class.dark-theme]="themeService.darkMode()"
+  [attr.data-fullscreen]="layout.fullscreenMediaPlayer()">
   <app-media-player></app-media-player>
   <!-- <app-video-player></app-video-player> -->
 
