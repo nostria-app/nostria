@@ -56,4 +56,6 @@ Never set the font-weight in CSS. The current font for headlines does not suppor
 - Use the `inject()` function instead of constructor injection
 
 
+Don't make documentation for every change, only important and hard to understand fixes.
+
 When you generate markdown documentation of what you have done, place those documents into the "docs" folder.
