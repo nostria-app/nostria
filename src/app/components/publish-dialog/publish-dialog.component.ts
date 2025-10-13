@@ -17,7 +17,8 @@ import { DiscoveryRelayService } from '../../services/relays/discovery-relay';
 import { UtilitiesService } from '../../services/utilities.service';
 
 export interface PublishDialogData {
-  event: Event;
+  event?: Event;
+  customMode?: boolean;
 }
 
 interface PublishOption {
@@ -69,6 +70,9 @@ export class PublishDialogComponent {
   loadingAuthorRelays = signal<boolean>(false);
   showJsonView = signal<boolean>(false);
   showRelaysView = signal<boolean>(false);
+  customMode = signal<boolean>(false);
+  customEventJson = signal<string>('');
+  customEventError = signal<string>('');
 
   publishOptions: PublishOption[] = [
     {
@@ -89,6 +93,13 @@ export class PublishDialogComponent {
   ];
 
   constructor() {
+    // Check if we're in custom mode
+    if (this.data?.customMode) {
+      this.customMode.set(true);
+      // Default to only account relays in custom mode
+      this.selectedOptions.set(new Set(['account']));
+    }
+
     // Load author's relays when component initializes
     effect(async () => {
       if (this.data?.event?.pubkey) {
@@ -195,13 +206,36 @@ export class PublishDialogComponent {
   }
 
   async publish(): Promise<void> {
+    console.log('Publish button clicked!');
     const targetRelays = this.getTargetRelays();
+    console.log('Target relays:', targetRelays);
 
     if (targetRelays.length === 0) {
       alert('No relays selected for publishing');
       return;
     }
 
+    // Get the event to publish
+    let eventToPublish: Event;
+    if (this.customMode()) {
+      console.log('Custom mode - parsing event');
+      // Parse and validate custom event JSON
+      const parsedEvent = this.parseCustomEvent();
+      if (!parsedEvent) {
+        console.log('Failed to parse custom event');
+        return;
+      }
+      eventToPublish = parsedEvent;
+    } else {
+      console.log('Normal mode - using provided event');
+      if (!this.data.event) {
+        alert('No event to publish');
+        return;
+      }
+      eventToPublish = this.data.event;
+    }
+
+    console.log('Event to publish:', eventToPublish);
     this.isPublishing.set(true);
 
     // Initialize publish results
@@ -213,7 +247,7 @@ export class PublishDialogComponent {
 
     try {
       // Use the pool to publish to multiple relays
-      const publishPromises = await this.accountRelay.publishToRelay(this.data.event, targetRelays);
+      const publishPromises = await this.accountRelay.publishToRelay(eventToPublish, targetRelays);
 
       if (!publishPromises) {
         console.error('Error during publishing: No promises returned.');
@@ -239,6 +273,65 @@ export class PublishDialogComponent {
     }
   }
 
+  parseCustomEvent(): Event | null {
+    const jsonString = this.customEventJson().trim();
+    console.log('Parsing custom event, JSON length:', jsonString.length);
+
+    if (!jsonString) {
+      this.customEventError.set('Please enter an event JSON');
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(jsonString);
+      console.log('JSON parsed successfully:', parsed);
+
+      // Validate required event fields
+      if (!parsed.id || typeof parsed.id !== 'string') {
+        this.customEventError.set('Event must have a valid "id" field');
+        console.log('Validation failed: id is missing or not a string', parsed.id);
+        return null;
+      }
+      if (!parsed.pubkey || typeof parsed.pubkey !== 'string') {
+        this.customEventError.set('Event must have a valid "pubkey" field');
+        console.log('Validation failed: pubkey is missing or not a string', parsed.pubkey);
+        return null;
+      }
+      if (typeof parsed.created_at !== 'number') {
+        this.customEventError.set('Event must have a valid "created_at" field');
+        console.log('Validation failed: created_at is not a number', typeof parsed.created_at, parsed.created_at);
+        return null;
+      }
+      if (typeof parsed.kind !== 'number') {
+        this.customEventError.set('Event must have a valid "kind" field');
+        console.log('Validation failed: kind is not a number', typeof parsed.kind, parsed.kind);
+        return null;
+      }
+      if (!Array.isArray(parsed.tags)) {
+        this.customEventError.set('Event must have a valid "tags" array');
+        console.log('Validation failed: tags is not an array', parsed.tags);
+        return null;
+      }
+      if (typeof parsed.content !== 'string') {
+        this.customEventError.set('Event must have a valid "content" field (string)');
+        console.log('Validation failed: content is not a string', typeof parsed.content);
+        return null;
+      }
+      if (!parsed.sig || typeof parsed.sig !== 'string') {
+        this.customEventError.set('Event must have a valid "sig" field');
+        console.log('Validation failed: sig is missing or not a string', parsed.sig);
+        return null;
+      }
+
+      this.customEventError.set('');
+      console.log('Event parsed successfully:', parsed);
+      return parsed as Event;
+    } catch (error) {
+      this.customEventError.set('Invalid JSON: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      return null;
+    }
+  }
+
   private updatePublishResult(url: string, status: 'success' | 'error', message?: string): void {
     this.publishResults.update(results =>
       results.map(result => (result.url === url ? { ...result, status, message } : result))
@@ -250,7 +343,29 @@ export class PublishDialogComponent {
   }
 
   canPublish(): boolean {
-    return !this.isPublishing() && this.getTargetRelays().length > 0;
+    const isPublishing = this.isPublishing();
+    const targetRelaysCount = this.getTargetRelays().length;
+    const customModeActive = this.customMode();
+    const customEventJsonEmpty = !this.customEventJson().trim();
+
+    console.log('canPublish check:', {
+      isPublishing,
+      targetRelaysCount,
+      customModeActive,
+      customEventJsonEmpty,
+      result: !isPublishing && targetRelaysCount > 0 && (!customModeActive || !customEventJsonEmpty)
+    });
+
+    if (isPublishing) {
+      return false;
+    }
+    if (targetRelaysCount === 0) {
+      return false;
+    }
+    if (customModeActive && customEventJsonEmpty) {
+      return false;
+    }
+    return true;
   }
 
   toggleJsonView(): void {
@@ -262,6 +377,18 @@ export class PublishDialogComponent {
   }
 
   getEventJson(): string {
+    if (this.customMode()) {
+      const parsed = this.parseCustomEvent();
+      return parsed ? JSON.stringify(parsed, null, 2) : this.customEventJson();
+    }
     return JSON.stringify(this.data.event, null, 2);
+  }
+
+  onCustomEventChange(value: string): void {
+    this.customEventJson.set(value);
+    // Clear error when user types
+    if (this.customEventError()) {
+      this.customEventError.set('');
+    }
   }
 }

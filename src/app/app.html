@@ -190,6 +190,10 @@
         <mat-icon>badge</mat-icon>
         <span>Badges</span>
       </button>
+      <button mat-menu-item (click)="layout.openPublishCustomEvent()">
+        <mat-icon>publish</mat-icon>
+        <span>Publish Event</span>
+      </button>
     </mat-menu>
 
     <button mat-icon-button [class.profile-button-picture]="accountState.profile()?.data?.picture"

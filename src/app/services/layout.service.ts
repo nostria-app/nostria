@@ -536,6 +536,19 @@ export class LayoutService implements OnDestroy {
     });
   }
 
+  openPublishCustomEvent() {
+    const dialogData: PublishDialogData = {
+      customMode: true,
+    };
+
+    this.dialog.open(PublishDialogComponent, {
+      data: dialogData,
+      width: '600px',
+      panelClass: 'responsive-dialog',
+      disableClose: false,
+    });
+  }
+
   async showReportDialog(target: ReportTarget, userDisplayName?: string) {
     const dialogData: ReportDialogData = {
       target,
