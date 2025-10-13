@@ -402,8 +402,20 @@ export class FeedsComponent implements OnDestroy {
           columnElement.removeEventListener('scroll', existingListener);
         }
 
-        // Create new scroll listener
+        // Track last scroll check time for throttling
+        let lastScrollCheck = 0;
+        const THROTTLE_MS = 300; // Only check scroll position every 300ms
+
+        // Create throttled scroll listener
         const scrollListener = () => {
+          const now = Date.now();
+
+          // Throttle: Only process scroll events every THROTTLE_MS milliseconds
+          if (now - lastScrollCheck < THROTTLE_MS) {
+            return;
+          }
+          lastScrollCheck = now;
+
           const scrollTop = columnElement.scrollTop;
           const scrollHeight = columnElement.scrollHeight;
           const clientHeight = columnElement.clientHeight;
@@ -429,10 +441,17 @@ export class FeedsComponent implements OnDestroy {
   private async loadMoreForColumn(columnId: string) {
     try {
       // Check if already loading or no more content
-      const isLoading = this.feedService.getColumnLoadingState(columnId);
-      const hasMore = this.feedService.getColumnHasMore(columnId);
+      const isLoadingSignal = this.feedService.getColumnLoadingState(columnId);
+      const hasMoreSignal = this.feedService.getColumnHasMore(columnId);
 
-      if (!isLoading || !hasMore || isLoading() || !hasMore()) {
+      // Guard: Ensure signals exist and check their values
+      if (!isLoadingSignal || !hasMoreSignal) {
+        this.logger.warn(`Cannot load more for column ${columnId}: loading state signals not found`);
+        return;
+      }
+
+      // Guard: Don't load if already loading or no more data available
+      if (isLoadingSignal() || !hasMoreSignal()) {
         return;
       }
 
