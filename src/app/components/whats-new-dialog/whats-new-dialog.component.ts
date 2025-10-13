@@ -106,7 +106,41 @@ export class WhatsNewDialogComponent {
 
   // Sample updates - replace with real data
   updates: FeatureUpdate[] = [
+    {
+      version: '1.0.7',
+      date: 'October 2025',
+      title: 'Quality of Life Improvements',
+      description: 'Full screen media viewer, file upload options for new Notes and more.',
+      features: [
         {
+          title: 'Media Player Fullscreen',
+          description:
+            'From the media player on the bottom bar, you can now enter fullscreen mode for an immersive experience when watching videos.',
+          screenshots: [
+            {
+              src: '/screenshots/2025-10-13-media-player-fullscreen.jpg',
+              alt: 'Media Player Fullscreen',
+              width: 1193,
+              height: 914,
+            },
+          ],
+        },
+        {
+          title: 'Post options',
+          description:
+            'There are now an option to upload files as originals in the Post dialog. This is useful when uploading videos that cannot be transcoded. Any errors that occurs after uploading, will also be displayed in the dialog.',
+          screenshots: [
+            {
+              src: '/screenshots/2025-10-13-post-options.jpg',
+              alt: 'Post options',
+              width: 540,
+              height: 656,
+            },
+          ],
+        },
+      ],
+    },
+    {
       version: '1.0.6',
       date: 'October 2025',
       title: 'Relay resources optimization',
