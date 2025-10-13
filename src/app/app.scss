@@ -132,6 +132,15 @@ mat-sidenav-content {
   justify-content: space-around;
   align-items: center;
   box-shadow: var(--mat-sys-level3);
+
+  /* Smooth transition for hide/show */
+  transition: opacity 0.3s ease-out, visibility 0.3s ease-out;
+}
+
+// Hide mobile nav completely when fullscreen is active
+.app-container[data-fullscreen="true"] .mobile-nav {
+  display: none !important;
+  /* Completely hide instead of z-index manipulation */
 }
 
 .mobile-nav a {

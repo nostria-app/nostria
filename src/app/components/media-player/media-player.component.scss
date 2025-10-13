@@ -38,9 +38,9 @@
     transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
   }
 
-  /* Fullscreen mode - ensure host element has highest z-index */
-  &.fullscreen-host {
-    z-index: 10000 !important;
+  /* Fullscreen mode - override footer-mode when both are active */
+  &.footer-mode.fullscreen-host {
+    /* Override relative positioning from footer-mode */
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
@@ -48,6 +48,8 @@
     bottom: 0 !important;
     width: 100vw !important;
     height: 100vh !important;
+    z-index: 10000 !important;
+    border: none !important;
   }
 }
 
@@ -341,6 +343,8 @@ input {
   align-items: center;
   padding: 0 !important;
   gap: 0;
+  overflow: hidden !important;
+  /* Prevent scrollbars during animation */
 
   /* Enhanced animation - faster and smoother */
   transition: all 0.4s cubic-bezier(0.4, 0.0, 0.2, 1),
@@ -444,6 +448,19 @@ input {
     /* Audio controls last */
     flex-shrink: 0;
     transition: all 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+  }
+
+  /* Keep important buttons visible in fullscreen */
+  .hide-small,
+  .hide-tiny {
+    display: inline-flex !important;
+    /* Show playlist and fullscreen buttons */
+  }
+
+  /* Hide Queue button in fullscreen mode - users should exit fullscreen first */
+  button[routerlink="/media-queue"],
+  button[routerLink="/media-queue"] {
+    display: none !important;
   }
 
   .media-timeline {
