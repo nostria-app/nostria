@@ -31,29 +31,31 @@
 }
 
 .note-card {
-  // border-radius: 1rem;
+  // Solid card background similar to Facebook UI
+  background-color: var(--mat-sys-surface-container-low);
+  border: none !important;
+  box-shadow: none !important;
   transition:
-    box-shadow 0.2s ease-in-out,
+    background-color 0.2s ease-in-out,
     transform 0.2s ease-in-out;
 
   &:hover:not(.selected) {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    background-color: var(--mat-sys-surface-container);
     // transform: translateY(-1px);
   }
 
   &.plain {
-    // border-radius: 0;
     border: none;
 
     &:hover:not(.selected) {
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      background-color: var(--mat-sys-surface-container);
       // transform: translateY(-1px);
     }
   }
 
   &.selected {
     // Disable hover effects for selected events
-    box-shadow: none;
+    background-color: var(--mat-sys-surface-container-low);
     transform: none;
     cursor: default;
   }
@@ -104,14 +106,15 @@
       background-color: rgba(233, 30, 99, 0.05);
     }
 
-    &.liked, &.active {
+    &.liked,
+    &.active {
       color: #e91e63 !important;
       background-color: rgba(233, 30, 99, 0.1) !important;
-      
+
       mat-icon {
         color: #e91e63 !important;
       }
-      
+
       &:hover {
         background-color: rgba(233, 30, 99, 0.15) !important;
       }
