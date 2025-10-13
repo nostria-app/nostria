@@ -189,6 +189,17 @@ toggleFullscreen(): void {
 }
 ```
 
+#### Z-Index Management
+- **Fullscreen media player**: `z-index: 10000`
+- **Mobile navigation**: `z-index: 1000`
+- Ensures media player controls remain visible and accessible above mobile menu on small screens
+
+#### Screen Space Optimization
+- Videos expand to full viewport width (`100vw` instead of `90vw`)
+- Media info container has zero padding in fullscreen mode
+- Maximizes available screen space for content
+- Controls positioned below content with adequate spacing
+
 #### Escape Key Handler
 ```typescript
 private escapeListener = (event: KeyboardEvent) => {

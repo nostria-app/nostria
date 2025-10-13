@@ -36,7 +36,12 @@
     <mat-list>
       @for (item of media.media(); track item; let i = $index) {
       <mat-list-item [class.current-playing]="isCurrentPlaying(item, i)">
-        <img matListItemAvatar class="queue-artwork" [src]="utilities.sanitizeImageUrl(item.artwork)" alt="Artwork" />
+        @if (hasArtwork(item)) {
+        <img matListItemAvatar class="queue-artwork" [src]="utilities.sanitizeImageUrl(getArtwork(item))"
+          (error)="onImageError($event, item)" alt="Artwork" />
+        } @else {
+        <mat-icon matListItemAvatar class="queue-artwork-icon">music_note</mat-icon>
+        }
         <span matListItemTitle>
           @if (isCurrentPlaying(item, i)) {
           <mat-icon class="playing-icon">play_circle</mat-icon>

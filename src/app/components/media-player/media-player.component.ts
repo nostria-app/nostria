@@ -51,6 +51,10 @@ declare global {
   ],
   templateUrl: './media-player.component.html',
   styleUrl: './media-player.component.scss',
+  host: {
+    '[class.footer-mode]': 'footer()',
+    '[class.fullscreen-host]': 'layout.fullscreenMediaPlayer()',
+  },
 })
 export class MediaPlayerComponent implements AfterViewInit, OnInit, OnDestroy {
   // expose layout to template so we can read overlayMode() there
