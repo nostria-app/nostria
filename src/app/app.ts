@@ -847,6 +847,10 @@ export class App implements OnInit {
 
   exitFullscreen(): void {
     this.media.exitFullscreen();
+    // Also turn off fullscreen media player mode so it doesn't auto-open next time
+    if (this.layout.fullscreenMediaPlayer()) {
+      this.layout.fullscreenMediaPlayer.set(false);
+    }
   }
 
   onSearchInputKeyDown(event: KeyboardEvent): void {
