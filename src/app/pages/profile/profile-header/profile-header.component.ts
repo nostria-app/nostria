@@ -90,11 +90,22 @@ export class ProfileHeaderComponent {
     const about = this.profile()?.data.about;
     if (!about || this.compact()) return false;
 
-    // Count line breaks and estimate lines based on text length
-    const lineBreaks = (about.match(/\n/g) || []).length;
-    const estimatedLines = Math.ceil(about.length / 80) + lineBreaks; // Rough estimate: 80 chars per line
+    // Split by actual newlines to count lines
+    const lines = about.split('\n');
 
-    return estimatedLines > 3;
+    // If there are more than 3 newline-separated lines, show expander
+    if (lines.length > 3) return true;
+
+    // Check if any of the first 3 lines are very long (more than 80 chars)
+    // which would likely wrap to multiple lines
+    const firstThreeLines = lines.slice(0, 3);
+    const hasLongLine = firstThreeLines.some((line: string) => line.length > 80);
+
+    // Estimate total character count that would fit in 3 lines
+    // Using conservative estimate of ~80 chars per line = 240 chars total
+    const totalLength = firstThreeLines.reduce((sum: number, line: string) => sum + line.length, 0);
+
+    return hasLongLine && totalLength > 240;
   });
 
   // Computed property for displayed bio text
