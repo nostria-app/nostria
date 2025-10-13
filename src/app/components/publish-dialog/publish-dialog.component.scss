@@ -3,6 +3,24 @@
   max-width: 600px;
 }
 
+.custom-event-section {
+  margin-bottom: 24px;
+
+  h3 {
+    margin-bottom: 16px;
+    font-weight: 500;
+  }
+
+  .full-width {
+    width: 100%;
+  }
+
+  .event-json-input {
+    font-family: monospace;
+    font-size: 0.875rem;
+  }
+}
+
 .publish-options {
   margin-bottom: 24px;
 
