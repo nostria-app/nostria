@@ -33,6 +33,9 @@
 
     display: flex;
     flex-direction: row;
+
+    /* Add smooth transitions for fullscreen mode */
+    transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
   }
 }
 
@@ -71,6 +74,26 @@
   justify-content: center;
   // padding: 12px 0;
   overflow: hidden;
+
+  /* Simple fade transition for footer mode - no transform animations */
+  transition: opacity 0.4s ease-out;
+
+  /* Add simple fade-in animation when returning to footer mode */
+  animation: footerFadeIn 0.4s ease-out forwards;
+
+  /* Ensure child elements also fade smoothly */
+  .media-info,
+  .media-controls,
+  .media-audio,
+  .youtube-video,
+  .event-video,
+  .music-album,
+  .media-info-text,
+  .music-title,
+  .music-artist,
+  .media-controls-container button {
+    transition: opacity 0.4s ease-out;
+  }
 }
 
 .media-player-icon {
@@ -284,5 +307,205 @@ input {
 @media only screen and (min-height: 201px) {
   .media-player-logo {
     display: none;
+  }
+}
+
+/* Fullscreen media player styles */
+.media-player-footer.fullscreen-mode {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 9999 !important;
+  background: var(--mat-sys-surface);
+  border: none !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 0 !important;
+  gap: 0;
+
+  /* Enhanced animation - faster and smoother */
+  transition: all 0.4s cubic-bezier(0.4, 0.0, 0.2, 1),
+    transform 0.4s cubic-bezier(0.4, 0.0, 0.2, 1),
+    opacity 0.4s ease-out;
+  animation: fullscreenExpand 0.4s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+
+  /* Reorder layout: media content first, then controls */
+  .media-player-controls-footer {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    justify-content: center;
+    align-items: center;
+    gap: 0;
+  }
+
+  /* Expand media info to take more space - positioned at top */
+  .media-info {
+    flex: 1 1 auto;
+    max-height: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 20px;
+    order: 1;
+    /* Content first */
+    transition: transform 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+  }
+
+  /* Expand video to fill available space */
+  .youtube-video {
+    width: 90vw;
+    height: calc(100vh - 200px);
+    /* Leave space for controls */
+    max-height: calc(100vh - 200px);
+    transition: all 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+  }
+
+  .event-video {
+    width: 90vw;
+    height: auto;
+    max-height: calc(100vh - 200px);
+    /* Leave space for controls */
+    transition: all 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+  }
+
+  /* Expand album artwork in audio mode */
+  .music-album {
+    height: auto;
+    max-height: calc(100vh - 250px);
+    max-width: calc(100vh - 250px);
+    width: auto;
+    object-fit: contain;
+    transition: all 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+  }
+
+  /* Show media info text even on small screens in fullscreen */
+  .media-info-text {
+    display: flex !important;
+    flex-direction: column;
+    padding: 20px;
+    transition: all 0.4s ease-in-out;
+  }
+
+  .music-title {
+    font-size: 1.8em;
+    margin-bottom: 0.5em;
+    transition: font-size 0.4s ease-in-out;
+  }
+
+  .music-artist {
+    font-size: 1.2em;
+    transition: font-size 0.4s ease-in-out;
+  }
+
+  /* Position controls below media content */
+  .media-controls {
+    width: 100%;
+    max-width: 900px;
+    height: auto;
+    padding: 20px 0;
+    order: 2;
+    /* Controls second */
+    flex-shrink: 0;
+    transition: all 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+  }
+
+  .media-controls-container button {
+    transform: scale(1.3);
+    transition: transform 0.4s ease-in-out;
+  }
+
+  /* Position audio controls at bottom */
+  .media-audio {
+    padding: 20px 40px;
+    order: 3;
+    /* Audio controls last */
+    flex-shrink: 0;
+    transition: all 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+  }
+
+  .media-timeline {
+    transform: scale(1.0);
+  }
+
+  /* Video controls - position at bottom with other controls */
+  .video-controls {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    flex-direction: row;
+    gap: 8px;
+    transition: all 0.4s ease-in-out;
+  }
+}
+
+/* Exiting fullscreen animation - apply reverse animation */
+.media-player-footer.exiting-fullscreen {
+  /* Keep fullscreen positioning during exit animation */
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 9999 !important;
+
+  /* Apply collapse animation with ease-in for smoother exit */
+  animation: fullscreenCollapse 0.4s cubic-bezier(0.4, 0.0, 0.6, 1) forwards;
+
+  /* Ensure child elements animate back */
+  .media-info,
+  .media-controls,
+  .media-audio,
+  .youtube-video,
+  .event-video,
+  .music-album {
+    transition: all 0.4s cubic-bezier(0.4, 0.0, 0.6, 1);
+  }
+}
+
+/* Keyframe animation for expanding to fullscreen */
+@keyframes fullscreenExpand {
+  0% {
+    transform: scale(0.9) translateY(20px);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Keyframe animation for collapsing from fullscreen */
+@keyframes fullscreenCollapse {
+  0% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(0.9) translateY(20px);
+    opacity: 0;
+  }
+}
+
+/* Simple fade-in animation for footer re-appearance */
+@keyframes footerFadeIn {
+  0% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 1;
   }
 }

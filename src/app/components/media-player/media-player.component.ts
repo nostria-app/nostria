@@ -75,9 +75,35 @@ export class MediaPlayerComponent implements AfterViewInit, OnInit, OnDestroy {
 
   private originalVideoParent?: HTMLElement;
   private originalVideoNextSibling?: Node | null;
+  private isExitingFullscreen = false;
 
   formatLabel(value: number): string {
     return TimePipe.time(value);
+  }
+
+  toggleFullscreen(): void {
+    const currentState = this.layout.fullscreenMediaPlayer();
+
+    if (currentState) {
+      // Exiting fullscreen - add exit animation class
+      this.isExitingFullscreen = true;
+      const element = this.elementRef.nativeElement.querySelector('.media-player-footer');
+      if (element) {
+        element.classList.add('exiting-fullscreen');
+      }
+
+      // Wait for animation to complete before removing fullscreen mode
+      setTimeout(() => {
+        this.layout.fullscreenMediaPlayer.set(false);
+        this.isExitingFullscreen = false;
+        if (element) {
+          element.classList.remove('exiting-fullscreen');
+        }
+      }, 400); // Match the animation duration (400ms)
+    } else {
+      // Entering fullscreen
+      this.layout.fullscreenMediaPlayer.set(true);
+    }
   }
 
   // Signals to track display mode state
@@ -285,6 +311,9 @@ export class MediaPlayerComponent implements AfterViewInit, OnInit, OnDestroy {
   private escapeListener = (event: KeyboardEvent) => {
     if (event.key === 'Escape' && this.media.isFullscreen()) {
       this.media.exitFullscreen();
+    }
+    if (event.key === 'Escape' && this.layout.fullscreenMediaPlayer()) {
+      this.toggleFullscreen(); // Use toggleFullscreen to get animation
     }
   };
 
