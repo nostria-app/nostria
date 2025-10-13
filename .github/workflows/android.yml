@@ -1,4 +1,4 @@
-name: Android Build
+name: Build Android
 
 on:
   workflow_dispatch:
@@ -33,6 +33,12 @@ jobs:
       - name: Generate Android TWA project
         run: |
           echo "Current twa-manifest.json signing key path:"
+          grep -A 3 '"signingKey"' twa-manifest.json
+
+          # Update the alias in twa-manifest.json with the environment variable
+          sed -i 's/"alias": "KEY_ALIAS"/"alias": "'${{ secrets.KEY_ALIAS }}'"/' twa-manifest.json
+
+          echo "Updated twa-manifest.json signing key:"
           grep -A 3 '"signingKey"' twa-manifest.json
 
           # Use bubblewrap Docker container to generate the Android project from the manifest
