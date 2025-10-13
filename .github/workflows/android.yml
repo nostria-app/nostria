@@ -8,6 +8,10 @@ on:
         required: true
         default: "1.0.4"
 
+permissions:
+  contents: write
+  packages: write
+
 jobs:
   build-android:
     runs-on: ubuntu-latest
@@ -119,7 +123,7 @@ jobs:
           files: |
             nostria-android-v${{ github.event.inputs.version }}.apk
             nostria-android-v${{ github.event.inputs.version }}.aab
-          draft: false
+          draft: true
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
