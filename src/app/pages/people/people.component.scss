@@ -37,6 +37,12 @@
     align-items: center;
     gap: 1rem;
 
+    button[mat-flat-button] {
+      mat-icon {
+        margin-right: 0.5rem;
+      }
+    }
+
     .view-options {
       display: flex;
     }
