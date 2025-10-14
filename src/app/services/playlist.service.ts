@@ -424,13 +424,16 @@ export class PlaylistService implements OnInitialized {
     // Create the tags
     const tags = this.generateNostrEventTags(playlist);
 
+    // Get the actual current user pubkey
+    const pubkey = this.getCurrentUserPubkey();
+
     // Create the event object
     return {
       kind: 32100,
       created_at: Math.floor(Date.now() / 1000),
       content,
       tags,
-      pubkey: playlist.pubkey,
+      pubkey: pubkey,
     };
   }
 
