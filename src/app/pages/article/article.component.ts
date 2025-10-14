@@ -1,8 +1,17 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, effect, inject, OnDestroy, signal } from '@angular/core';
+import {
+  afterNextRender,
+  Component,
+  computed,
+  effect,
+  inject,
+  OnDestroy,
+  signal,
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatDialog } from '@angular/material/dialog';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -12,6 +21,7 @@ import { type Event, kinds, nip19 } from 'nostr-tools';
 import type { Subscription } from 'rxjs';
 import { DateToggleComponent } from '../../components/date-toggle/date-toggle.component';
 import { EventMenuComponent } from '../../components/event/event-menu/event-menu.component';
+import { ImageDialogComponent } from '../../components/image-dialog/image-dialog.component';
 import { RepostButtonComponent } from '../../components/event/repost-button/repost-button.component';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 import type { NostrRecord } from '../../interfaces';
@@ -56,6 +66,7 @@ export class ArticleComponent implements OnDestroy {
   private formatService = inject(FormatService);
   private url = inject(UrlUpdateService);
   private readonly cache = inject(Cache);
+  private dialog = inject(MatDialog);
   bookmark = inject(BookmarkService);
   accountState = inject(AccountStateService);
   link = '';
@@ -79,6 +90,11 @@ export class ArticleComponent implements OnDestroy {
         // Scroll to top when navigating to a new article
         setTimeout(() => this.layout.scrollMainContentToTop(), 100);
       }
+    });
+
+    // Set up image click listeners after content is rendered
+    afterNextRender(() => {
+      this.setupImageClickListeners();
     });
   }
 
@@ -283,6 +299,11 @@ export class ArticleComponent implements OnDestroy {
     }
 
     this._parsedContent.set(await this.formatService.markdownToHtml(content));
+
+    // Set up image click listeners after content is rendered
+    setTimeout(() => {
+      this.setupImageClickListeners();
+    }, 0);
   });
 
   authorPubkey = computed(() => {
@@ -346,5 +367,40 @@ export class ArticleComponent implements OnDestroy {
         }
       }
     }
+  }
+
+  private setupImageClickListeners(): void {
+    // Find all images in the article content
+    const articleContent = document.querySelector('.markdown-content');
+    if (!articleContent) return;
+
+    const images = articleContent.querySelectorAll('img.article-image');
+    images.forEach(img => {
+      const imageElement = img as HTMLImageElement;
+
+      // Remove the inline onclick attribute
+      imageElement.removeAttribute('onclick');
+
+      // Add click event listener to open image dialog
+      imageElement.addEventListener('click', (event: MouseEvent) => {
+        event.preventDefault();
+        event.stopPropagation();
+        this.openImageDialog(imageElement.src);
+      });
+
+      // Ensure cursor pointer style is applied
+      imageElement.style.cursor = 'pointer';
+    });
+  }
+
+  private openImageDialog(imageUrl: string): void {
+    this.dialog.open(ImageDialogComponent, {
+      data: { imageUrl },
+      maxWidth: '95vw',
+      maxHeight: '95vh',
+      width: '100%',
+      height: '100%',
+      panelClass: ['image-dialog', 'responsive-dialog'],
+    });
   }
 }
