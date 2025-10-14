@@ -176,6 +176,13 @@ export class ProfileHeaderComponent {
     return followingList.includes(this.pubkey());
   });
 
+  // Check if the profile being viewed is following the logged-in user
+  isFollowingMe = computed(() => {
+    const myPubkey = this.accountState.pubkey();
+    const theirFollowingList = this.profileState.followingList();
+    return myPubkey ? theirFollowingList.includes(myPubkey) : false;
+  });
+
   isFavorite = computed(() => {
     return this.favoritesService.isFavorite(this.currentPubkey());
   });

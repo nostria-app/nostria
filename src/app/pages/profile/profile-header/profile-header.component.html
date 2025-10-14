@@ -31,7 +31,7 @@
         } @else {
         @if (!isFollowing()) {
         <button mat-flat-button class="hide-small" (click)="followUser()">
-          <mat-icon>person_add</mat-icon> Follow
+          <mat-icon>person_add</mat-icon> {{ isFollowingMe() ? 'Follow Back' : 'Follow' }}
         </button>
         } @else {
         <!-- <button mat-flat-button color="warn" (click)="unfollowUser()">
@@ -136,17 +136,17 @@
       <div class="profile-bio">
         <div class="bio-text" [class.bio-expanded]="isBioExpanded()">{{ displayedBio() }}</div>
         @if (shouldShowExpander()) {
-          @if (isBioExpanded()) {
-              <button mat-button class="bio-expand-btn" (click)="toggleBioExpansion()">
-            <mat-icon>expand_less</mat-icon>
-            Show less
-           </button>
-          } @else {
-              <button mat-button class="bio-expand-btn" (click)="toggleBioExpansion()">
-            <mat-icon>expand_more</mat-icon>
-            Show more
-           </button>
-          }
+        @if (isBioExpanded()) {
+        <button mat-button class="bio-expand-btn" (click)="toggleBioExpansion()">
+          <mat-icon>expand_less</mat-icon>
+          Show less
+        </button>
+        } @else {
+        <button mat-button class="bio-expand-btn" (click)="toggleBioExpansion()">
+          <mat-icon>expand_more</mat-icon>
+          Show more
+        </button>
+        }
         }
       </div>
       }
@@ -175,7 +175,7 @@
         @if (!isFollowing()) {
         <button mat-menu-item (click)="followUser()">
           <mat-icon>person_add</mat-icon>
-          <span>Follow</span>
+          <span>{{ isFollowingMe() ? 'Follow Back' : 'Follow' }}</span>
         </button>
         } @else {
         <button mat-menu-item (click)="unfollowUser()">
