@@ -30,6 +30,7 @@ import { EventPageComponent } from './pages/event/event.component';
 import { NotificationManageComponent } from './pages/notifications/manage/manage.component';
 import { DataResolver } from './data-resolver';
 import { UsernameResolver } from './usernameResolver';
+import { ArticleResolver } from './articleResolver';
 import { MessagesMain } from './pages/messages/main/main';
 import { MessagesList } from './pages/messages/list/list';
 import { PrivacySettingsComponent } from './pages/settings/privacy-settings/privacy-settings.component';
@@ -214,7 +215,7 @@ export const routes: Routes = [
     path: 'a/:id/:slug',
     component: ArticleComponent,
     title: 'Article',
-    resolve: { data: DataResolver },
+    resolve: { data: DataResolver, article: ArticleResolver },
   },
   {
     path: 'p',
