@@ -154,14 +154,15 @@ export class ArticleComponent implements OnDestroy {
           // NIP-05 was resolved, use the pubkey from resolver
           pubkey = articleData.pubkey;
           this.logger.debug('Using resolved pubkey from NIP-05:', articleData.identifier, '->', pubkey);
+          // Don't update URL - keep the NIP-05 alias as-is
         } else {
           // Regular npub/hex ID
           pubkey = this.utilities.getPubkeyFromNpub(naddr);
-        }
 
-        // Let's make the URL nicer, TODO add support for replacing with username, for now replace with npub.
-        const npub = this.utilities.getNpubFromPubkey(pubkey);
-        this.url.updatePathSilently(['/a', npub, slug]);
+          // Let's make the URL nicer, TODO add support for replacing with username, for now replace with npub.
+          const npub = this.utilities.getNpubFromPubkey(pubkey);
+          this.url.updatePathSilently(['/a', npub, slug]);
+        }
 
         const encoded = nip19.naddrEncode({
           identifier: slug,
