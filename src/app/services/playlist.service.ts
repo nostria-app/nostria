@@ -73,8 +73,22 @@ export class PlaylistService implements OnInitialized {
 
       console.log(`Found ${events.length} playlist events`);
 
-      // Import each event and update the playlists signal
+      // Group events by 'd' tag (identifier) and keep only the most recent for each
+      const eventsByDTag = new Map<string, Event>();
       for (const event of events) {
+        const dTag = event.tags.find(tag => tag[0] === 'd')?.[1];
+        if (!dTag) continue; // Skip events without 'd' tag
+
+        const existing = eventsByDTag.get(dTag);
+        if (!existing || event.created_at > existing.created_at) {
+          eventsByDTag.set(dTag, event);
+        }
+      }
+
+      console.log(`Found ${eventsByDTag.size} unique playlists (by 'd' tag)`);
+
+      // Import each unique event
+      for (const event of eventsByDTag.values()) {
         this.importPlaylistFromNostrEvent(event);
       }
 
@@ -347,10 +361,33 @@ export class PlaylistService implements OnInitialized {
         isLocal: false,
       };
 
-      // Add to playlists if not already exists
-      const existingIndex = this._playlists().findIndex(p => p.eventId === event.id);
+      // Check if playlist with same 'd' tag already exists and update it
+      // Otherwise, check by eventId for backwards compatibility
+      const playlists = this._playlists();
+      let existingIndex = -1;
+
+      if (dTag) {
+        // First try to find by 'd' tag (most accurate for replaceable events)
+        existingIndex = playlists.findIndex(p => p.id === dTag);
+      }
+
       if (existingIndex === -1) {
-        this._playlists.set([...this._playlists(), playlist]);
+        // Fall back to finding by eventId
+        existingIndex = playlists.findIndex(p => p.eventId === event.id);
+      }
+
+      if (existingIndex >= 0) {
+        // Update existing playlist if the new event is more recent
+        const existing = playlists[existingIndex];
+        if (event.created_at > existing.created_at) {
+          const newPlaylists = [...playlists];
+          newPlaylists[existingIndex] = playlist;
+          this._playlists.set(newPlaylists);
+          this.savePlaylistsToStorage();
+        }
+      } else {
+        // Add new playlist
+        this._playlists.set([...playlists, playlist]);
         this.savePlaylistsToStorage();
       }
 
