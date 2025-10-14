@@ -298,8 +298,9 @@ export class MediaPlayerService implements OnInitialized {
     // Clear media queue
     // this.media.set([]);
 
-    // Hide the media player footer
+    // Hide the media player footer and exit fullscreen mode
     this.layout.showMediaPlayer.set(false);
+    this.layout.fullscreenMediaPlayer.set(false);
 
     // Clear saved queue from localStorage
     this.localStorage.removeItem(this.MEDIA_STORAGE_KEY);
