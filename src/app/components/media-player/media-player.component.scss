@@ -360,11 +360,11 @@ input {
   // gap: 0;
   // overflow: hidden !important;
 
-  /* Enhanced animation - faster and smoother */
-  // transition: all 0.4s cubic-bezier(0.4, 0.0, 0.2, 1),
-  //   transform 0.4s cubic-bezier(0.4, 0.0, 0.2, 1),
-  //   opacity 0.4s ease-out;
-  // animation: fullscreenExpand 0.4s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+  /* Enhanced animation - faster and smoother, slides up from bottom */
+  transition: all 0.4s cubic-bezier(0.4, 0.0, 0.2, 1),
+    transform 0.4s cubic-bezier(0.4, 0.0, 0.2, 1),
+    opacity 0.4s ease-out;
+  animation: fullscreenExpand 0.4s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
 
   /* Reorder layout: media content first, then controls */
   .media-player-controls-footer {
@@ -391,13 +391,6 @@ input {
   }
 
   /* Expand video to fill available space - maximize screen usage */
-  .youtube-video {
-    // width: 100vw;
-    // height: calc(100vh - 160px);
-    // max-height: calc(100vh - 160px);
-    // transition: all 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
-  }
-
   .event-video {
     width: 100vw;
     height: auto;
@@ -518,10 +511,10 @@ input {
   }
 }
 
-/* Keyframe animation for expanding to fullscreen */
+/* Keyframe animation for expanding to fullscreen - comes from bottom */
 @keyframes fullscreenExpand {
   0% {
-    transform: scale(0.9) translateY(20px);
+    transform: scale(0.95) translateY(100vh);
     opacity: 0;
   }
 
