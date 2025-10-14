@@ -38,6 +38,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { QrcodeScanDialogComponent } from './components/qrcode-scan-dialog/qrcode-scan-dialog.component';
 import { ApplicationService } from './services/application.service';
 import { NPubPipe } from './pipes/npub.pipe';
+import { AgoPipe } from './pipes/ago.pipe';
 import { MatBadgeModule } from '@angular/material/badge';
 import { nip19 } from 'nostr-tools';
 import { NotificationService } from './services/notification.service';
@@ -65,6 +66,7 @@ import { SleepModeOverlayComponent } from './components/sleep-mode-overlay/sleep
 import { WhatsNewDialogComponent } from './components/whats-new-dialog/whats-new-dialog.component';
 import { FeedsCollectionService } from './services/feeds-collection.service';
 import { NewFeedDialogComponent } from './pages/feeds/new-feed-dialog/new-feed-dialog.component';
+import { NostrRecord } from './interfaces';
 
 interface NavItem {
   path: string;
@@ -101,6 +103,7 @@ interface NavItem {
     FormsModule,
     MatFormFieldModule,
     NPubPipe,
+    AgoPipe,
     MatBadgeModule,
     MatBottomSheetModule,
     WelcomeComponent,
@@ -155,6 +158,27 @@ export class App implements OnInit {
 
   // Signal to track expanded menu items
   expandedMenuItems = signal<Record<string, boolean>>({});
+
+  // Computed signal for account profiles with reactive updates
+  accountProfilesMap = computed(() => {
+    // This will reactively update when accountProfiles signal changes
+    return this.accountState.accountProfiles();
+  });
+
+  // Computed signal for accounts with their profiles for the UI
+  accountsWithProfiles = computed(() => {
+    const accounts = this.accountState.accounts();
+    const currentPubkey = this.accountState.account()?.pubkey;
+    // Access accountProfiles to track reactivity when profiles are loaded
+    void this.accountState.accountProfiles();
+
+    return accounts
+      .filter(account => account.pubkey !== currentPubkey)
+      .map(account => ({
+        account,
+        profile: this.accountState.getAccountProfileSync(account.pubkey)
+      }));
+  });
 
   // Computed signal to count unread notifications
   unreadNotificationsCount = computed(() => {
@@ -971,5 +995,13 @@ export class App implements OnInit {
       maxHeight: '90vh',
       panelClass: 'whats-new-dialog-container',
     });
+  }
+
+  /**
+   * Get account profile with fallback handling
+   * This method ensures we always try to get a profile, even if it wasn't pre-loaded
+   */
+  getAccountProfile(pubkey: string): NostrRecord | undefined {
+    return this.accountState.getAccountProfileSync(pubkey);
   }
 }
