@@ -406,7 +406,8 @@ export class PeopleComponent {
   openAddPersonDialog() {
     const dialogRef = this.dialog.open(AddPersonDialogComponent, {
       width: '600px',
-      maxWidth: '90vw',
+      // maxWidth: '90vw',
+      panelClass: 'responsive-dialog',
       disableClose: false,
       autoFocus: true,
     });

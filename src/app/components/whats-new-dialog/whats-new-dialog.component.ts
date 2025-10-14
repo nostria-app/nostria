@@ -138,6 +138,24 @@ export class WhatsNewDialogComponent {
             },
           ],
         },
+        {
+          title: 'Add Person',
+          description:
+            'You can already search for people from the search bar. Now there is also an "Add Person" button in the People section, making it even easier to find and follow new people.',
+          screenshots: [
+            {
+              src: '/screenshots/2025-10-14-people-add-person.jpg',
+              alt: 'Search Person',
+              width: 963,
+              height: 682,
+            },{
+              src: '/screenshots/2025-10-14-people-add-person-follow.jpg',
+              alt: 'Follow Person',
+              width: 654,
+              height: 412,
+            },
+          ],
+        },
       ],
     },
     {
