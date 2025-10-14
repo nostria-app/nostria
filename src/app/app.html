@@ -377,15 +377,12 @@
         <!-- Account selection menu -->
         @if (accountState.hasAccounts()) {
         <mat-nav-list class="accounts-list">
-          @for (account of accountState.accounts(); track account.pubkey) {
-          @if (account.pubkey !== accountState.account()?.pubkey) {
-          @let accountProfile = accountState.getAccountProfileSync(account.pubkey);
-
-          @if (accountProfile; as metadata) {
-          <a mat-list-item (click)="switchAccount(account.pubkey); toggleProfileSidenav()" class="account-item">
-            @if (metadata.data?.picture; as picture) {
+          @for (item of accountsWithProfiles(); track item.account.pubkey) {
+          @if (item.profile; as metadata) {
+          <a mat-list-item (click)="switchAccount(item.account.pubkey); toggleProfileSidenav()" class="account-item">
+            @if (metadata.data?.picture) {
             <div class="account-avatar" matListItemIcon>
-              <img [src]="metadata?.data?.picture" alt="Profile picture" class="avatar-image" />
+              <img [src]="metadata.data.picture" alt="Profile picture" class="avatar-image" />
             </div>
             } @else {
             <div class="account-avatar" matListItemIcon>
@@ -396,24 +393,24 @@
               {{
               metadata.data?.display_name ||
               metadata.data?.name ||
-              (account.pubkey | npub)
+              item.account.name ||
+              (item.account.pubkey | npub)
               }}
             </span>
             <span matListItemLine class="account-source">
-              {{ account.source }} - used {{ account.lastUsed | date: 'short' }}
+              {{ item.account.source }} - used {{ (item.account.lastUsed! / 1000) | ago }}
             </span>
           </a>
           } @else {
-          <a mat-list-item (click)="switchAccount(account.pubkey); toggleProfileSidenav()" class="account-item">
+          <a mat-list-item (click)="switchAccount(item.account.pubkey); toggleProfileSidenav()" class="account-item">
             <div class="account-avatar" matListItemIcon>
               <mat-icon>account_circle</mat-icon>
             </div>
-            <span matListItemTitle> {{ account.pubkey | npub }} </span>
+            <span matListItemTitle> {{ item.account.name || (item.account.pubkey | npub) }} </span>
             <span matListItemLine class="account-source">
-              {{ account.source }} - used {{ account.lastUsed | date: 'short' }}
+              {{ item.account.source }} - used {{ (item.account.lastUsed! / 1000) | ago }}
             </span>
           </a>
-          }
           }
           }
         </mat-nav-list>

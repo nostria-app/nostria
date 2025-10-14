@@ -736,9 +736,54 @@ export class AccountStateService implements OnDestroy {
   /**
    * Synchronous method to get pre-loaded account profile for templates
    * Returns undefined if profile hasn't been pre-loaded yet
+   * 
+   * Now with fallback to cache for better reliability
+   * IMPORTANT: Does NOT write to signals to avoid NG0600 error
    */
   getAccountProfileSync(pubkey: string): NostrRecord | undefined {
-    return this.accountProfiles().get(pubkey);
+    // First check pre-loaded profiles
+    const preloaded = this.accountProfiles().get(pubkey);
+    if (preloaded) {
+      return preloaded;
+    }
+
+    // Fallback to cache if not pre-loaded
+    const cached = this.getCachedProfile(pubkey);
+    if (cached) {
+      // Schedule update for next tick to avoid writing during render
+      setTimeout(() => {
+        this.accountProfiles.update(profiles => {
+          const newProfiles = new Map(profiles);
+          newProfiles.set(pubkey, cached);
+          return newProfiles;
+        });
+      }, 0);
+      return cached;
+    }
+
+    // If not found anywhere, trigger async load in background
+    // Use setTimeout to schedule for next tick
+    setTimeout(() => this.loadAccountProfileInBackground(pubkey), 0);
+
+    return undefined;
+  }
+
+  /**
+   * Load account profile in background and update the signal when ready
+   */
+  private async loadAccountProfileInBackground(pubkey: string): Promise<void> {
+    try {
+      const profile = await this.loadAccountProfileInternal(pubkey);
+      if (profile) {
+        this.accountProfiles.update(profiles => {
+          const newProfiles = new Map(profiles);
+          newProfiles.set(pubkey, profile);
+          return newProfiles;
+        });
+      }
+    } catch (error) {
+      console.warn('Failed to load account profile in background:', pubkey, error);
+    }
   }
 
   getCachedProfile(pubkey: string): NostrRecord | undefined {
