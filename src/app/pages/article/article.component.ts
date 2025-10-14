@@ -144,10 +144,20 @@ export class ArticleComponent implements OnDestroy {
     } else {
       const slugParam = params?.get('slug') || this.route.snapshot.paramMap.get('slug');
 
-      // If we have slug, the
+      // If we have slug, check if we have resolved article data from ArticleResolver
       if (slugParam) {
         slug = slugParam;
-        pubkey = this.utilities.getPubkeyFromNpub(naddr);
+
+        // Check if ArticleResolver resolved a NIP-05 address to pubkey
+        const articleData = this.route.snapshot.data['article'];
+        if (articleData?.pubkey) {
+          // NIP-05 was resolved, use the pubkey from resolver
+          pubkey = articleData.pubkey;
+          this.logger.debug('Using resolved pubkey from NIP-05:', articleData.identifier, '->', pubkey);
+        } else {
+          // Regular npub/hex ID
+          pubkey = this.utilities.getPubkeyFromNpub(naddr);
+        }
 
         // Let's make the URL nicer, TODO add support for replacing with username, for now replace with npub.
         const npub = this.utilities.getNpubFromPubkey(pubkey);
