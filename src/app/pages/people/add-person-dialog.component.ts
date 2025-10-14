@@ -7,7 +7,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FormsModule } from '@angular/forms';
-import { nip19 } from 'nostr-tools';
+import { nip05, nip19 } from 'nostr-tools';
 import { DiscoveryRelayService } from '../../services/relays/discovery-relay';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
@@ -42,14 +42,15 @@ type DialogState = 'input' | 'loading' | 'preview' | 'error' | 'success';
           @case ('input') {
             <div class="input-section">
               <p class="description">
-                Enter a public key (npub or hex format) to discover and follow someone new.
+                Enter a public key (npub or hex format) or a NIP-05 identifier to discover and follow
+                someone new.
               </p>
               <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Public Key</mat-label>
+                <mat-label>Public Key or NIP-05</mat-label>
                 <input
                   matInput
                   [(ngModel)]="inputValue"
-                  placeholder="npub1... or hex public key"
+                  placeholder="npub1..., hex, or name@domain.com"
                   (keyup.enter)="onSearch()"
                 />
                 @if (inputValue()) {
@@ -272,7 +273,7 @@ export class AddPersonDialogComponent {
     const input = this.inputValue().trim();
 
     if (!input) {
-      this.errorMessage.set('Please enter a public key');
+      this.errorMessage.set('Please enter a public key or NIP-05 identifier');
       return;
     }
 
@@ -280,10 +281,31 @@ export class AddPersonDialogComponent {
     this.errorMessage.set('');
 
     try {
-      // Parse the input - could be npub or hex
+      // Parse the input - could be npub, hex, nprofile, or NIP-05
       let pubkey: string;
 
-      if (input.startsWith('npub')) {
+      if (input.includes('@')) {
+        // Handle NIP-05 identifier
+        try {
+          this.logger.info('Resolving NIP-05 identifier:', input);
+          const profile = await nip05.queryProfile(input);
+
+          if (!profile || !profile.pubkey) {
+            this.logger.error('NIP-05 identifier not found');
+            this.errorMessage.set('NIP-05 identifier not found or invalid');
+            this.state.set('input');
+            return;
+          }
+
+          pubkey = profile.pubkey;
+          this.logger.info('Resolved NIP-05 to pubkey:', pubkey);
+        } catch (err) {
+          this.logger.error('Failed to resolve NIP-05', err);
+          this.errorMessage.set('Failed to resolve NIP-05 identifier. Please check the address.');
+          this.state.set('input');
+          return;
+        }
+      } else if (input.startsWith('npub')) {
         // Decode npub to hex
         try {
           const decoded = nip19.decode(input);
@@ -314,7 +336,9 @@ export class AddPersonDialogComponent {
       } else {
         // Assume it's a hex pubkey, validate it
         if (!/^[0-9a-f]{64}$/i.test(input)) {
-          this.errorMessage.set('Invalid public key format. Use npub or 64-character hex.');
+          this.errorMessage.set(
+            'Invalid format. Use npub, 64-character hex, or NIP-05 (name@domain.com).'
+          );
           this.state.set('input');
           return;
         }
