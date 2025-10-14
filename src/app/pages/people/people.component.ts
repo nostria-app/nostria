@@ -23,6 +23,8 @@ import { ApplicationService } from '../../services/application.service';
 import { LocalStorageService } from '../../services/local-storage.service';
 import { Metrics } from '../../services/metrics';
 import { FavoritesService } from '../../services/favorites.service';
+import { MatDialog } from '@angular/material/dialog';
+import { AddPersonDialogComponent } from './add-person-dialog.component';
 
 // Define filter options interface
 interface FilterOptions {
@@ -69,6 +71,7 @@ export class PeopleComponent {
   private readonly localStorage = inject(LocalStorageService);
   private metrics = inject(Metrics);
   private favoritesService = inject(FavoritesService);
+  private dialog = inject(MatDialog);
 
   // People data signals
   people = signal<string[]>([]);
@@ -398,5 +401,22 @@ export class PeopleComponent {
 
   viewProfile(pubkey: string) {
     this.router.navigate(['/p', pubkey]);
+  }
+
+  openAddPersonDialog() {
+    const dialogRef = this.dialog.open(AddPersonDialogComponent, {
+      width: '600px',
+      maxWidth: '90vw',
+      disableClose: false,
+      autoFocus: true,
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.logger.info('Person added:', result);
+        // Reload people list to include the newly followed person
+        this.loadPeople();
+      }
+    });
   }
 }
