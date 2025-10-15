@@ -357,15 +357,9 @@
 /* Server styles */
 .server-header {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   margin-bottom: 16px;
-
-  h2 {
-    margin: 0;
-    font-size: 20px;
-    font-weight: 500;
-  }
 
   .server-header-actions {
     display: flex;
