@@ -27,6 +27,7 @@ import { CommonModule } from '@angular/common';
 import { NostrService } from '../../services/nostr.service';
 import { MediaService } from '../../services/media.service';
 import { LocalStorageService } from '../../services/local-storage.service';
+import { LocalSettingsService } from '../../services/local-settings.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { ContentComponent } from '../content/content.component';
 import { Router } from '@angular/router';
@@ -57,6 +58,7 @@ interface NoteAutoDraft {
   expirationDate: Date | null;
   expirationTime: string;
   uploadOriginal: boolean;
+  addClientTag: boolean;
   lastModified: number;
   // Context data to ensure draft matches current dialog state
   replyToId?: string;
@@ -93,6 +95,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
   private accountRelay = inject(AccountRelayService);
   mediaService = inject(MediaService);
   private localStorage = inject(LocalStorageService);
+  private localSettings = inject(LocalSettingsService);
   private accountState = inject(AccountStateService);
   private snackBar = inject(MatSnackBar);
   private sanitizer = inject(DomSanitizer);
@@ -120,6 +123,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
   expirationDate = signal<Date | null>(null);
   expirationTime = signal<string>('12:00');
   uploadOriginal = signal(false);
+  addClientTag = signal(true); // Default to true, will be set from user preference in constructor
 
   private dragCounter = 0;
 
@@ -203,6 +207,9 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
   }
 
   constructor() {
+    // Set default value for addClientTag from user's local settings
+    this.addClientTag.set(this.localSettings.addClientTag());
+
     // Initialize content with quote if provided
     if (this.data?.quote) {
       const nevent = nip19.neventEncode({
@@ -321,6 +328,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
       expirationDate: this.expirationDate(),
       expirationTime: this.expirationTime(),
       uploadOriginal: this.uploadOriginal(),
+      addClientTag: this.addClientTag(),
       lastModified: Date.now(),
       replyToId: this.data?.replyTo?.id,
       quoteId: this.data?.quote?.id,
@@ -382,6 +390,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
           this.expirationDate.set(autoDraft.expirationDate);
           this.expirationTime.set(autoDraft.expirationTime);
           this.uploadOriginal.set(autoDraft.uploadOriginal ?? false);
+          this.addClientTag.set(autoDraft.addClientTag ?? this.localSettings.addClientTag());
 
           // Show restoration message
           this.snackBar.open('Draft restored', 'Dismiss', {
@@ -524,6 +533,11 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
         const expirationTimestamp = Math.floor(expirationDateTime.getTime() / 1000);
         tags.push(['expiration', expirationTimestamp.toString()]);
       }
+    }
+
+    // Add client tag if enabled
+    if (this.addClientTag()) {
+      tags.push(['client', 'nostria']);
     }
 
     return tags;

@@ -110,6 +110,18 @@
         </div>
       </div>
 
+      <!-- Add Client Tag Option -->
+      <div class="option-row">
+        <div class="option-header">
+          <mat-slide-toggle [checked]="addClientTag()" (change)="addClientTag.set($event.checked)" color="primary">
+            Add Client Tag
+          </mat-slide-toggle>
+          <span class="option-description">
+            Add the Nostria client tag to this event
+          </span>
+        </div>
+      </div>
+
       <!-- Expiration Option -->
       <div class="option-row">
         <div class="option-header">

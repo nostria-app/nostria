@@ -7,6 +7,8 @@ export interface LocalSettings {
   menuExpanded: boolean;
   locale: string;
   maxRelaysPerUser: number;
+  addClientTag: boolean;
+  showClientTag: boolean;
 }
 
 const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
@@ -14,6 +16,8 @@ const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
   menuExpanded: true,
   locale: 'en',
   maxRelaysPerUser: 3,
+  addClientTag: true,
+  showClientTag: true,
 };
 
 /**
@@ -36,6 +40,8 @@ export class LocalSettingsService {
   readonly menuExpanded = computed(() => this.settings().menuExpanded);
   readonly locale = computed(() => this.settings().locale);
   readonly maxRelaysPerUser = computed(() => this.settings().maxRelaysPerUser);
+  readonly addClientTag = computed(() => this.settings().addClientTag);
+  readonly showClientTag = computed(() => this.settings().showClientTag);
 
   constructor() {
     this.loadSettings();
@@ -125,6 +131,20 @@ export class LocalSettingsService {
    */
   setMaxRelaysPerUser(maxRelaysPerUser: number): void {
     this.updateSettings({ maxRelaysPerUser });
+  }
+
+  /**
+   * Set add client tag preference
+   */
+  setAddClientTag(addClientTag: boolean): void {
+    this.updateSettings({ addClientTag });
+  }
+
+  /**
+   * Set show client tag preference
+   */
+  setShowClientTag(showClientTag: boolean): void {
+    this.updateSettings({ showClientTag });
   }
 
   /**
