@@ -41,6 +41,12 @@
   }
 }
 
+// URL styling - allows long URLs to wrap properly
+.url-link {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
 // Dark theme support
 .dark-theme {
   .unsupported-video {

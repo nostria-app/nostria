@@ -6,7 +6,7 @@
 } @else if (token.type === 'emoji') {
 <span class="emoji-token" [title]="token.content">{{ token.emoji }}</span>
 } @else if (token.type === 'url') {
-&nbsp;<a [href]="token.content" target="_blank" rel="noopener noreferrer">{{ token.content }}</a>&nbsp;
+&nbsp;<a class="url-link" [href]="token.content" target="_blank" rel="noopener noreferrer">{{ token.content }}</a>&nbsp;
 } @else if (token.type === 'youtube') {
 <div class="media-container">
   <iframe width="560" height="315" [src]="token.processedUrl" frameborder="0"
