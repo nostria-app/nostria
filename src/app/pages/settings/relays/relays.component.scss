@@ -419,7 +419,7 @@ app-info-tooltip {
   .relay-expanded-details {
     grid-column: 1 / -1;
     padding: 20px 20px 20px 72px;
-    background: var(--mat-app-background-color);
+    background: var(--mat-sys-surface-container-low);
     border-bottom: 2px solid var(--mat-divider-color); // Match relay-row border thickness
     animation: slideDown 0.3s ease-out;
     overflow: hidden; // Prevent content overflow

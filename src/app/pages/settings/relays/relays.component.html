@@ -240,10 +240,8 @@
           <div class="sort-controls">
             <mat-form-field appearance="outline" subscriptSizing="dynamic">
               <mat-label>Sort by</mat-label>
-              <select matNativeControl title="Sort observed relays by" [value]="observedRelaysSortBy()" (change)="
-                    observedRelaysSortBy.set($any($event.target).value);
-                    onObservedRelaysSortChange()
-                  ">
+              <select matNativeControl title="Sort observed relays by" [value]="observedRelaysSortBy()"
+                (change)="observedRelaysSortBy.set($any($event.target).value)">
                 <option value="eventsReceived">Events Received</option>
                 <option value="lastUpdated">Last Updated</option>
                 <option value="firstObserved">First Observed</option>
