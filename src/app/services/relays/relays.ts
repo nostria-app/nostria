@@ -13,6 +13,51 @@ export interface RelayStats {
   connectionAttempts: number;
 }
 
+// NIP-11 Relay Information Document interface
+export interface Nip11RelayInfo {
+  name?: string;
+  description?: string;
+  banner?: string;
+  icon?: string;
+  pubkey?: string;
+  contact?: string;
+  supported_nips?: number[];
+  software?: string;
+  version?: string;
+  privacy_policy?: string;
+  terms_of_service?: string;
+  limitation?: {
+    max_message_length?: number;
+    max_subscriptions?: number;
+    max_limit?: number;
+    max_subid_length?: number;
+    max_event_tags?: number;
+    max_content_length?: number;
+    min_pow_difficulty?: number;
+    auth_required?: boolean;
+    payment_required?: boolean;
+    restricted_writes?: boolean;
+    created_at_lower_limit?: number;
+    created_at_upper_limit?: number;
+    default_limit?: number;
+  };
+  retention?: {
+    kinds?: (number | [number, number])[];
+    time?: number | null;
+    count?: number;
+  }[];
+  relay_countries?: string[];
+  language_tags?: string[];
+  tags?: string[];
+  posting_policy?: string;
+  payments_url?: string;
+  fees?: {
+    admission?: { amount: number; unit: string }[];
+    subscription?: { amount: number; unit: string; period?: number }[];
+    publication?: { kinds?: number[]; amount: number; unit: string }[];
+  };
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -408,6 +453,38 @@ export class RelaysService {
       } catch (error) {
         console.error(`Failed to persist initial relay stats for ${url}:`, error);
       }
+    }
+  }
+
+  /**
+   * Fetch NIP-11 relay information document from a relay
+   * @param relayUrl The WebSocket URL of the relay (wss://...)
+   * @returns Promise resolving to relay information or null if fetch fails
+   */
+  async fetchNip11Info(relayUrl: string): Promise<Nip11RelayInfo | null> {
+    try {
+      // Convert wss:// to https:// for HTTP request
+      const httpUrl = relayUrl.replace(/^wss:\/\//, 'https://').replace(/^ws:\/\//, 'http://');
+
+      const response = await fetch(httpUrl, {
+        method: 'GET',
+        headers: {
+          Accept: 'application/nostr+json',
+        },
+        // Add timeout to avoid hanging
+        signal: AbortSignal.timeout(10000), // 10 second timeout
+      });
+
+      if (!response.ok) {
+        console.warn(`NIP-11 fetch failed for ${relayUrl}: ${response.status}`);
+        return null;
+      }
+
+      const data = (await response.json()) as Nip11RelayInfo;
+      return data;
+    } catch (error) {
+      console.warn(`Failed to fetch NIP-11 info for ${relayUrl}:`, error);
+      return null;
     }
   }
 }

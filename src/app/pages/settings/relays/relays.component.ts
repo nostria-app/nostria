@@ -41,7 +41,7 @@ import { DataService } from '../../../services/data.service';
 import { InfoTooltipComponent } from '../../../components/info-tooltip/info-tooltip.component';
 import { Relay } from '../../../services/relays/relay';
 import { DiscoveryRelayService } from '../../../services/relays/discovery-relay';
-import { RelaysService } from '../../../services/relays/relays';
+import { RelaysService, Nip11RelayInfo } from '../../../services/relays/relays';
 
 @Component({
   selector: 'app-relays-page',
@@ -126,6 +126,10 @@ export class RelaysComponent implements OnInit, OnDestroy {
 
   // Track expanded relays for details view
   expandedRelays = signal<Set<string>>(new Set());
+
+  // Track NIP-11 relay information
+  nip11Info = signal<Map<string, Nip11RelayInfo | null>>(new Map());
+  nip11Loading = signal<Set<string>>(new Set());
 
   knownDiscoveryRelays = [
     'wss://discovery.eu.nostria.app',
@@ -788,18 +792,59 @@ export class RelaysComponent implements OnInit, OnDestroy {
   toggleRelayDetails(url: string): void {
     const expanded = this.expandedRelays();
     const newExpanded = new Set(expanded);
-    
+
     if (newExpanded.has(url)) {
       newExpanded.delete(url);
     } else {
       newExpanded.add(url);
+      // Fetch NIP-11 info when expanding if not already fetched
+      if (!this.nip11Info().has(url) && !this.nip11Loading().has(url)) {
+        this.fetchNip11InfoForRelay(url);
+      }
     }
-    
+
     this.expandedRelays.set(newExpanded);
   }
 
-  isRelayExpanded(url: string): boolean {
+  private async fetchNip11InfoForRelay(url: string): Promise<void> {
+    // Mark as loading
+    const loading = this.nip11Loading();
+    const newLoading = new Set(loading);
+    newLoading.add(url);
+    this.nip11Loading.set(newLoading);
+
+    try {
+      const info = await this.relaysService.fetchNip11Info(url);
+
+      // Store the result (even if null)
+      const currentInfo = this.nip11Info();
+      const newInfo = new Map(currentInfo);
+      newInfo.set(url, info);
+      this.nip11Info.set(newInfo);
+    } catch (error) {
+      console.error(`Error fetching NIP-11 info for ${url}:`, error);
+      // Store null to indicate fetch was attempted but failed
+      const currentInfo = this.nip11Info();
+      const newInfo = new Map(currentInfo);
+      newInfo.set(url, null);
+      this.nip11Info.set(newInfo);
+    } finally {
+      // Remove from loading set
+      const loading = this.nip11Loading();
+      const newLoading = new Set(loading);
+      newLoading.delete(url);
+      this.nip11Loading.set(newLoading);
+    }
+  } isRelayExpanded(url: string): boolean {
     return this.expandedRelays().has(url);
+  }
+
+  getNip11Info(url: string): Nip11RelayInfo | null | undefined {
+    return this.nip11Info().get(url);
+  }
+
+  isNip11Loading(url: string): boolean {
+    return this.nip11Loading().has(url);
   }
 
   getRelayDisplayName(url: string): string {
@@ -807,19 +852,19 @@ export class RelaysComponent implements OnInit, OnDestroy {
     try {
       const urlObj = new URL(url);
       const hostname = urlObj.hostname;
-      
+
       // Remove common prefixes and format nicely
       let name = hostname
         .replace(/^relay\./, '')
         .replace(/^nostr\./, '')
         .replace(/^ws\./, '');
-      
+
       // Capitalize first letter of each word
       name = name
         .split('.')
         .map(part => part.charAt(0).toUpperCase() + part.slice(1))
         .join('.');
-      
+
       return name;
     } catch {
       return 'Unknown Relay';
@@ -828,7 +873,7 @@ export class RelaysComponent implements OnInit, OnDestroy {
 
   getSignalClass(relay: { url: string; eventsReceived: number; isConnected?: boolean }): string {
     const score = this.getRelayPerformanceScore(relay.url);
-    
+
     if (score >= 80) return 'signal-excellent';
     if (score >= 60) return 'signal-good';
     if (score >= 40) return 'signal-fair';
@@ -837,16 +882,16 @@ export class RelaysComponent implements OnInit, OnDestroy {
 
   formatRelativeTime(timestamp: number): string {
     if (timestamp === 0) return 'never';
-    
+
     const now = Math.floor(Date.now() / 1000);
     const diff = now - timestamp;
-    
+
     if (diff < 60) return 'just now';
     if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
     if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
     if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
     if (diff < 2592000) return `${Math.floor(diff / 604800)}w ago`;
-    
+
     return new Date(timestamp * 1000).toLocaleDateString();
   }
 
