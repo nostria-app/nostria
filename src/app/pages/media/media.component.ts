@@ -300,9 +300,17 @@ export class MediaComponent {
       if (detectedRegion) {
         this.logger.info('Detected user region from relays', { region: detectedRegion.name });
 
-        const confirmed = confirm(
-          `We detected you're using the ${detectedRegion.name} region. Would you like to add the ${detectedRegion.name} Nostria media server (${detectedRegion.mediaServer})?`
-        );
+        const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+          data: {
+            title: 'Add Nostria Media Server',
+            message: `We detected you're using the ${detectedRegion.name} region. Would you like to add the ${detectedRegion.name} Nostria media server (${detectedRegion.mediaServer})?`,
+            confirmText: 'Add Server',
+            cancelText: 'Cancel',
+            confirmColor: 'primary',
+          },
+        });
+
+        const confirmed = await dialogRef.afterClosed().toPromise();
 
         if (confirmed) {
           try {
