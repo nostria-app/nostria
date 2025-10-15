@@ -508,3 +508,76 @@ app-info-tooltip {
     }
   }
 }
+
+// Styles for zero relays setup section
+.zero-relays-container {
+  padding: 2rem 1rem;
+
+  .large-icon {
+    font-size: 72px;
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 1rem;
+    display: block;
+  }
+
+  h3 {
+    margin: 1rem 0 0.5rem;
+    font-size: 1.5rem;
+    color: var(--mat-text-primary-color);
+  }
+
+  .setup-actions {
+    margin-top: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+
+    .setup-nostria-button {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 24px;
+      height: 56px;
+      font-size: 1rem;
+      font-weight: 600;
+      min-width: 280px;
+
+      mat-icon:first-child {
+        font-size: 24px;
+        width: 24px;
+        height: 24px;
+      }
+    }
+
+    .setup-description {
+      margin-top: 0.5rem;
+      font-size: 0.875rem;
+      color: var(--mat-text-secondary-color);
+    }
+  }
+}
+
+@media (max-width: 599px) {
+  .zero-relays-container {
+    padding: 1rem 0.5rem;
+
+    .large-icon {
+      font-size: 56px;
+      width: 56px;
+      height: 56px;
+    }
+
+    h3 {
+      font-size: 1.25rem;
+    }
+
+    .setup-actions {
+      .setup-nostria-button {
+        min-width: auto;
+        width: 100%;
+      }
+    }
+  }
+}

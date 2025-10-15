@@ -36,9 +36,34 @@
           </mat-card-header>
           <mat-card-content>
             @if (userRelays().length === 0) {
-              <div class="text-center py-8 text-gray-500">
-                <p>You don't have any relays configured yet.</p>
-                <p>Add a relay using the input above.</p>
+              <div class="zero-relays-container">
+                <div class="text-center py-8">
+                  <mat-icon class="large-icon text-gray-400">cloud_off</mat-icon>
+                  <h3>No Account Relays Configured</h3>
+                  <p class="text-gray-500">
+                    You don't have any relays configured yet. Relays are essential for using Nostr.
+                  </p>
+
+                  <div class="setup-actions">
+                    <button
+                      mat-flat-button
+                      color="primary"
+                      class="setup-nostria-button"
+                      (click)="setupNostriaRelays()"
+                      [disabled]="isSettingUpNostriaRelays()"
+                    >
+                      <mat-icon>auto_awesome</mat-icon>
+                      <span>Quick Setup with Nostria</span>
+                      @if (isSettingUpNostriaRelays()) {
+                        <mat-icon class="spinning-icon">sync</mat-icon>
+                      }
+                    </button>
+
+                    <p class="setup-description">
+                      Or manually add a relay using the input above
+                    </p>
+                  </div>
+                </div>
               </div>
             } @else {
               <mat-list>
