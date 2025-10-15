@@ -223,13 +223,17 @@ export class EventComponent {
     return this.repostService.decodeRepost(event);
   });
 
-  // Check if this event is a reply (has e-tags)
+  // Check if this event is a reply (has e-tags that are replies, not just mentions)
   isReply = computed<boolean>(() => {
     const event = this.event() || this.record()?.event;
     if (!event) return false;
 
-    const eTags = event.tags.filter(tag => tag[0] === 'e');
-    return eTags.length > 0;
+    // Use eventService to properly parse tags and distinguish mentions from replies
+    const eventTags = this.eventService.getEventTags(event);
+
+    // An event is a reply if it has a rootId or replyId (actual thread participation)
+    // Events with only mention tags are NOT replies
+    return !!(eventTags.rootId || eventTags.replyId);
   });
 
   // Get the immediate parent event ID (what this is replying to)

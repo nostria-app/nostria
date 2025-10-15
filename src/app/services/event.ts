@@ -18,7 +18,6 @@ import {
   NoteEditorDialogData,
 } from '../components/note-editor-dialog/note-editor-dialog.component';
 import { MatDialog } from '@angular/material/dialog';
-import { BreakpointObserver } from '@angular/cdk/layout';
 
 export interface Reaction {
   emoji: string;
@@ -50,6 +49,7 @@ export interface EventTags {
   pTags: string[];
   rootRelays: string[];
   replyRelays: string[];
+  mentionIds: string[]; // Event IDs that are mentioned (not replies)
 }
 
 export interface ThreadData {
@@ -80,6 +80,9 @@ export class EventService {
 
   /**
    * Parse event tags to extract thread information
+   * According to NIP-10, e-tags can have markers: "root", "reply", or "mention"
+   * Only "root" and "reply" (or unmarked positional tags) indicate actual thread participation
+   * "mention" tags are references but not replies
    */
   getEventTags(event: Event): EventTags {
     const eTags = event.tags.filter((tag) => tag[0] === 'e');
@@ -90,9 +93,19 @@ export class EventService {
     let author: string | null = null;
     const rootRelays: string[] = [];
     const replyRelays: string[] = [];
+    const mentionIds: string[] = [];
+
+    // Separate mention tags from thread tags
+    const mentionTags = eTags.filter((tag) => tag[3] === 'mention');
+    const threadTags = eTags.filter((tag) => tag[3] !== 'mention');
+
+    // Collect mention IDs
+    mentionTags.forEach((tag) => {
+      mentionIds.push(tag[1]);
+    });
 
     // Find root tag (NIP-10 marked format)
-    const rootTag = eTags.find((tag) => tag[3] === 'root');
+    const rootTag = threadTags.find((tag) => tag[3] === 'root');
     if (rootTag) {
       rootId = rootTag[1];
       // Extract author pubkey from root tag if present (5th element)
@@ -104,50 +117,50 @@ export class EventService {
     }
 
     // Find reply tag (NIP-10 marked format)
-    const replyTag = eTags.find((tag) => tag[3] === 'reply');
+    const replyTag = threadTags.find((tag) => tag[3] === 'reply');
     if (replyTag) {
       replyId = replyTag[1];
       // Extract relay URL from reply tag if present (3rd element)
       if (replyTag[2] && replyTag[2].trim() !== '') {
         replyRelays.push(replyTag[2]);
       }
-    } else if (eTags.length > 0 && !rootTag) {
-      // Fallback to positional format: assume replying to the last e tag
-      const lastETag = eTags[eTags.length - 1];
-      replyId = lastETag[1];
-      // Extract relay URL from last e tag if present
-      if (lastETag[2] && lastETag[2].trim() !== '') {
-        replyRelays.push(lastETag[2]);
+    } else if (threadTags.length > 0 && !rootTag) {
+      // Fallback to positional format: assume replying to the last e tag (that's not a mention)
+      const lastThreadTag = threadTags[threadTags.length - 1];
+      replyId = lastThreadTag[1];
+      // Extract relay URL from last thread tag if present
+      if (lastThreadTag[2] && lastThreadTag[2].trim() !== '') {
+        replyRelays.push(lastThreadTag[2]);
       }
     }
 
-    // If no marked root but we have e-tags, use positional format
-    if (!rootId && eTags.length > 0) {
-      if (eTags.length === 1) {
-        // Single e-tag is both root and reply
-        rootId = eTags[0][1];
-        replyId = eTags[0][1];
-        // Extract author from the single e-tag if present
-        author = eTags[0][4] || null;
+    // If no marked root but we have thread tags, use positional format
+    if (!rootId && threadTags.length > 0) {
+      if (threadTags.length === 1) {
+        // Single thread tag is both root and reply
+        rootId = threadTags[0][1];
+        replyId = threadTags[0][1];
+        // Extract author from the single thread tag if present
+        author = threadTags[0][4] || null;
         // Extract relay URL - use for both root and reply
-        if (eTags[0][2] && eTags[0][2].trim() !== '') {
-          const relayUrl = eTags[0][2];
+        if (threadTags[0][2] && threadTags[0][2].trim() !== '') {
+          const relayUrl = threadTags[0][2];
           rootRelays.push(relayUrl);
           replyRelays.push(relayUrl);
         }
-      } else if (eTags.length >= 2) {
-        // First e-tag is root in positional format
-        rootId = eTags[0][1];
-        // Extract author from the first e-tag if present
-        author = eTags[0][4] || null;
-        // Extract relay URL from first e-tag (root)
-        if (eTags[0][2] && eTags[0][2].trim() !== '') {
-          rootRelays.push(eTags[0][2]);
+      } else if (threadTags.length >= 2) {
+        // First thread tag is root in positional format
+        rootId = threadTags[0][1];
+        // Extract author from the first thread tag if present
+        author = threadTags[0][4] || null;
+        // Extract relay URL from first thread tag (root)
+        if (threadTags[0][2] && threadTags[0][2].trim() !== '') {
+          rootRelays.push(threadTags[0][2]);
         }
       }
     }
 
-    return { author, rootId, replyId, pTags, rootRelays, replyRelays };
+    return { author, rootId, replyId, pTags, rootRelays, replyRelays, mentionIds };
   }
 
   /**
