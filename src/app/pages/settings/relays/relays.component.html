@@ -272,13 +272,13 @@
             <div class="header-last-connected">Last Connected</div>
             <div class="header-actions"></div>
           </div>
-          
+
           @for (relay of observedRelays(); track relay.url) {
           <div class="relay-row" [class.is-connected]="relay.isConnected">
             <button class="relay-expand" mat-icon-button (click)="toggleRelayDetails(relay.url)">
               <mat-icon>{{ isRelayExpanded(relay.url) ? 'expand_less' : 'expand_more' }}</mat-icon>
             </button>
-            
+
             <div class="relay-info">
               <div class="relay-icon">
                 <mat-icon [ngClass]="getStatusColor(
@@ -329,25 +329,135 @@
 
           @if (isRelayExpanded(relay.url)) {
           <div class="relay-expanded-details">
-            <div class="detail-row">
-              <mat-icon class="detail-icon">schedule</mat-icon>
-              <span class="detail-label">First Observed:</span>
-              <span class="detail-value">{{ formatTimestamp(relay.firstObserved) }}</span>
-            </div>
-            <div class="detail-row">
-              <mat-icon class="detail-icon">update</mat-icon>
-              <span class="detail-label">Last Updated:</span>
-              <span class="detail-value">{{ formatTimestamp(relay.lastUpdated) }}</span>
-            </div>
-            <div class="detail-row">
-              <mat-icon class="detail-icon">speed</mat-icon>
-              <span class="detail-label">Performance Score:</span>
-              <span class="detail-value">
-                <span class="performance-badge" [ngClass]="getPerformanceClass(getRelayPerformanceScore(relay.url))">
-                  {{ getRelayPerformanceScore(relay.url) }}%
+            <div class="detail-section">
+              <h4 class="section-title">Statistics</h4>
+              <div class="detail-row">
+                <mat-icon class="detail-icon">schedule</mat-icon>
+                <span class="detail-label">First Observed:</span>
+                <span class="detail-value">{{ formatTimestamp(relay.firstObserved) }}</span>
+              </div>
+              <div class="detail-row">
+                <mat-icon class="detail-icon">update</mat-icon>
+                <span class="detail-label">Last Updated:</span>
+                <span class="detail-value">{{ formatTimestamp(relay.lastUpdated) }}</span>
+              </div>
+              <div class="detail-row">
+                <mat-icon class="detail-icon">speed</mat-icon>
+                <span class="detail-label">Performance Score:</span>
+                <span class="detail-value">
+                  <span class="performance-badge" [ngClass]="getPerformanceClass(getRelayPerformanceScore(relay.url))">
+                    {{ getRelayPerformanceScore(relay.url) }}%
+                  </span>
                 </span>
-              </span>
+              </div>
             </div>
+
+            <div class="detail-section">
+              <h4 class="section-title">
+                Relay Information (NIP-11)
+                @if (isNip11Loading(relay.url)) {
+                <mat-icon class="spinning-icon">sync</mat-icon>
+                }
+              </h4>
+
+              @if (isNip11Loading(relay.url)) {
+              <div class="nip11-loading">
+                <p>Loading relay information...</p>
+              </div>
+              } @else if (getNip11Info(relay.url)) {
+              <div class="nip11-info">
+                @if (getNip11Info(relay.url)?.name) {
+                <div class="detail-row">
+                  <mat-icon class="detail-icon">dns</mat-icon>
+                  <span class="detail-label">Name:</span>
+                  <span class="detail-value">{{ getNip11Info(relay.url)?.name }}</span>
+                </div>
+                }
+
+                @if (getNip11Info(relay.url)?.description) {
+                <div class="detail-row description-row">
+                  <mat-icon class="detail-icon">info</mat-icon>
+                  <span class="detail-label">Description:</span>
+                  <span class="detail-value description-text">{{ getNip11Info(relay.url)?.description }}</span>
+                </div>
+                }
+
+                @if (getNip11Info(relay.url)?.software) {
+                <div class="detail-row">
+                  <mat-icon class="detail-icon">code</mat-icon>
+                  <span class="detail-label">Software:</span>
+                  <span class="detail-value">
+                    <a [href]="getNip11Info(relay.url)?.software" target="_blank" rel="noopener noreferrer">
+                      {{ getNip11Info(relay.url)?.software }}
+                    </a>
+                  </span>
+                </div>
+                }
+
+                @if (getNip11Info(relay.url)?.version) {
+                <div class="detail-row">
+                  <mat-icon class="detail-icon">label</mat-icon>
+                  <span class="detail-label">Version:</span>
+                  <span class="detail-value">{{ getNip11Info(relay.url)?.version }}</span>
+                </div>
+                }
+
+                @if (getNip11Info(relay.url)?.supported_nips && getNip11Info(relay.url)!.supported_nips!.length > 0) {
+                <div class="detail-row nips-row">
+                  <mat-icon class="detail-icon">extension</mat-icon>
+                  <span class="detail-label">Supported NIPs:</span>
+                  <span class="detail-value nips-list">
+                    @for (nip of getNip11Info(relay.url)?.supported_nips; track nip) {
+                    <span class="nip-badge">{{ nip }}</span>
+                    }
+                  </span>
+                </div>
+                }
+
+                @if (getNip11Info(relay.url)?.limitation) {
+                <div class="detail-row limitations-row">
+                  <mat-icon class="detail-icon">warning</mat-icon>
+                  <span class="detail-label">Limitations:</span>
+                  <div class="detail-value limitations-list">
+                    @if (getNip11Info(relay.url)?.limitation?.payment_required) {
+                    <span class="limitation-badge payment">Payment Required</span>
+                    }
+                    @if (getNip11Info(relay.url)?.limitation?.auth_required) {
+                    <span class="limitation-badge auth">Auth Required</span>
+                    }
+                    @if (getNip11Info(relay.url)?.limitation?.restricted_writes) {
+                    <span class="limitation-badge restricted">Restricted Writes</span>
+                    }
+                    @if (getNip11Info(relay.url)?.limitation?.max_message_length) {
+                    <span class="limitation-badge">Max Message: {{
+                      getNip11Info(relay.url)?.limitation?.max_message_length }} bytes</span>
+                    }
+                  </div>
+                </div>
+                }
+
+                @if (getNip11Info(relay.url)?.contact || getNip11Info(relay.url)?.pubkey) {
+                <div class="detail-row">
+                  <mat-icon class="detail-icon">contact_mail</mat-icon>
+                  <span class="detail-label">Contact:</span>
+                  <span class="detail-value">
+                    {{ getNip11Info(relay.url)?.contact || ('npub: ' + getNip11Info(relay.url)?.pubkey?.slice(0, 16) +
+                    '...') }}
+                  </span>
+                </div>
+                }
+              </div>
+              } @else if (getNip11Info(relay.url) === null) {
+              <div class="nip11-error">
+                <p>Unable to fetch relay information. The relay may not support NIP-11.</p>
+              </div>
+              } @else {
+              <div class="nip11-placeholder">
+                <p>Relay information not yet loaded.</p>
+              </div>
+              }
+            </div>
+
             <div class="detail-actions">
               <button mat-stroked-button color="warn" (click)="deleteObservedRelay(relay.url)">
                 <mat-icon>delete</mat-icon>

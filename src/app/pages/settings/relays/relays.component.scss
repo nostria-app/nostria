@@ -244,7 +244,7 @@ app-info-tooltip {
     color: var(--mat-text-secondary-color);
     align-items: center;
 
-    > div {
+    >div {
       display: flex;
       align-items: center;
     }
@@ -399,17 +399,59 @@ app-info-tooltip {
     border-bottom: 1px solid var(--mat-divider-color);
     animation: slideDown 0.3s ease-out;
 
+    .detail-section {
+      margin-bottom: 24px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--mat-divider-color);
+
+      &:last-of-type {
+        border-bottom: none;
+        margin-bottom: 16px;
+        padding-bottom: 0;
+      }
+
+      .section-title {
+        font-size: 1rem;
+        font-weight: 600;
+        margin: 0 0 16px 0;
+        color: var(--mat-text-primary-color);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+    }
+
     .detail-row {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       gap: 12px;
       padding: 8px 0;
+
+      &.description-row,
+      &.nips-row,
+      &.limitations-row {
+        flex-direction: column;
+        align-items: flex-start;
+
+        .detail-label {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 4px;
+        }
+
+        .detail-icon {
+          margin-top: 0;
+        }
+      }
 
       .detail-icon {
         color: var(--mat-text-secondary-color);
         font-size: 20px;
         width: 20px;
         height: 20px;
+        flex-shrink: 0;
+        margin-top: 2px;
       }
 
       .detail-label {
@@ -417,6 +459,7 @@ app-info-tooltip {
         color: var(--mat-text-secondary-color);
         font-weight: 500;
         min-width: 140px;
+        flex-shrink: 0;
       }
 
       .detail-value {
@@ -424,6 +467,75 @@ app-info-tooltip {
         color: var(--mat-text-primary-color);
         font-weight: 600;
         font-family: 'Courier New', monospace;
+        flex: 1;
+
+        a {
+          color: var(--mat-primary-color);
+          text-decoration: none;
+          word-break: break-all;
+
+          &:hover {
+            text-decoration: underline;
+          }
+        }
+
+        &.description-text {
+          font-family: inherit;
+          font-weight: normal;
+          line-height: 1.5;
+          white-space: pre-wrap;
+          word-break: break-word;
+        }
+
+        &.nips-list {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+          font-family: inherit;
+
+          .nip-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 12px;
+            background: var(--mat-primary-color);
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+          }
+        }
+
+        &.limitations-list {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          font-family: inherit;
+
+          .limitation-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 12px;
+            border-radius: 14px;
+            background: var(--mat-text-disabled-color);
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 600;
+            font-family: inherit;
+
+            &.payment {
+              background: #ff9800;
+            }
+
+            &.auth {
+              background: #2196f3;
+            }
+
+            &.restricted {
+              background: #f44336;
+            }
+          }
+        }
 
         .performance-badge {
           display: inline-flex;
@@ -456,6 +568,26 @@ app-info-tooltip {
       }
     }
 
+    .nip11-loading,
+    .nip11-error,
+    .nip11-placeholder {
+      padding: 16px;
+      text-align: center;
+      font-size: 0.875rem;
+      color: var(--mat-text-secondary-color);
+      font-style: italic;
+    }
+
+    .nip11-error {
+      color: var(--mat-warn-color);
+    }
+
+    .nip11-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
     .detail-actions {
       margin-top: 16px;
       padding-top: 16px;
@@ -482,7 +614,7 @@ app-info-tooltip {
   .observed-relays-list {
     .list-header {
       grid-template-columns: 40px 1fr 80px 100px;
-      
+
       .header-connects,
       .header-last-connected {
         display: none;
