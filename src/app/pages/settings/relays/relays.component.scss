@@ -182,7 +182,415 @@ app-info-tooltip {
   position: relative;
 }
 
-// Styles for observed relays tab - Modern card-based design
+// Styles for observed relays tab - List-based design inspired by the screenshot
+.observed-relays-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding: 16px 0;
+  flex-wrap: wrap;
+  gap: 16px;
+
+  .sort-controls {
+    mat-form-field {
+      width: 220px;
+    }
+  }
+}
+
+.empty-state {
+  text-align: center;
+  padding: 64px 24px;
+  color: var(--mat-text-secondary-color);
+
+  .empty-icon {
+    font-size: 72px;
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 16px;
+    color: var(--mat-text-disabled-color);
+  }
+
+  h3 {
+    margin: 16px 0 8px;
+    font-size: 1.5rem;
+    color: var(--mat-text-primary-color);
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.95rem;
+  }
+}
+
+.observed-relays-list {
+  background: var(--mat-card-container-color);
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--mat-divider-color);
+
+  .list-header {
+    display: grid;
+    grid-template-columns: 40px 1fr 100px 100px 140px 120px;
+    gap: 16px;
+    padding: 16px 20px;
+    background: var(--mat-app-background-color);
+    border-bottom: 2px solid var(--mat-divider-color);
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--mat-text-secondary-color);
+    align-items: center;
+
+    > div {
+      display: flex;
+      align-items: center;
+    }
+
+    .header-relay {
+      grid-column: 1 / 3;
+    }
+  }
+
+  .relay-row {
+    display: grid;
+    grid-template-columns: 40px 1fr 100px 100px 140px 120px;
+    gap: 16px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--mat-divider-color);
+    transition: all 0.2s ease;
+    align-items: center;
+
+    &:hover {
+      background: var(--mat-app-background-color);
+    }
+
+    &.is-connected {
+      background: rgba(var(--mat-primary-rgb), 0.02);
+    }
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    .relay-expand {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+    }
+
+    .relay-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
+      .relay-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        background: var(--mat-app-background-color);
+        flex-shrink: 0;
+
+        mat-icon {
+          font-size: 24px;
+          width: 24px;
+          height: 24px;
+        }
+      }
+
+      .relay-details {
+        flex: 1;
+        min-width: 0;
+
+        .relay-name {
+          font-weight: 600;
+          font-size: 0.95rem;
+          color: var(--mat-text-primary-color);
+          margin-bottom: 4px;
+        }
+
+        .relay-url-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+
+          .relay-url {
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            color: var(--mat-text-secondary-color);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+
+          .relay-signal {
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+
+            mat-icon {
+              font-size: 16px;
+              width: 16px;
+              height: 16px;
+            }
+
+            &.signal-excellent {
+              color: #4caf50;
+            }
+
+            &.signal-good {
+              color: #8bc34a;
+            }
+
+            &.signal-fair {
+              color: #ff9800;
+            }
+
+            &.signal-poor {
+              color: #f44336;
+            }
+          }
+        }
+      }
+    }
+
+    .relay-events,
+    .relay-connects,
+    .relay-last-connected {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      .metric-value,
+      .time-value {
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: var(--mat-text-primary-color);
+      }
+    }
+
+    .relay-actions {
+      display: flex;
+      justify-content: flex-end;
+
+      button {
+        min-width: 90px;
+      }
+    }
+  }
+
+  .relay-expanded-details {
+    grid-column: 1 / -1;
+    padding: 20px 20px 20px 72px;
+    background: var(--mat-app-background-color);
+    border-bottom: 1px solid var(--mat-divider-color);
+    animation: slideDown 0.3s ease-out;
+
+    .detail-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 0;
+
+      .detail-icon {
+        color: var(--mat-text-secondary-color);
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+
+      .detail-label {
+        font-size: 0.875rem;
+        color: var(--mat-text-secondary-color);
+        font-weight: 500;
+        min-width: 140px;
+      }
+
+      .detail-value {
+        font-size: 0.875rem;
+        color: var(--mat-text-primary-color);
+        font-weight: 600;
+        font-family: 'Courier New', monospace;
+
+        .performance-badge {
+          display: inline-flex;
+          align-items: center;
+          padding: 4px 12px;
+          border-radius: 12px;
+          font-size: 0.75rem;
+          font-weight: 700;
+
+          &.performance-excellent {
+            background: #4caf50;
+            color: white;
+          }
+
+          &.performance-good {
+            background: #8bc34a;
+            color: white;
+          }
+
+          &.performance-fair {
+            background: #ff9800;
+            color: white;
+          }
+
+          &.performance-poor {
+            background: #f44336;
+            color: white;
+          }
+        }
+      }
+    }
+
+    .detail-actions {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--mat-divider-color);
+    }
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+    overflow: hidden;
+  }
+
+  to {
+    opacity: 1;
+    max-height: 500px;
+  }
+}
+
+// Mobile responsive design for observed relays list
+@media (max-width: 1024px) {
+  .observed-relays-list {
+    .list-header {
+      grid-template-columns: 40px 1fr 80px 100px;
+      
+      .header-connects,
+      .header-last-connected {
+        display: none;
+      }
+    }
+
+    .relay-row {
+      grid-template-columns: 40px 1fr 80px 100px;
+
+      .relay-connects,
+      .relay-last-connected {
+        display: none;
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .observed-relays-header {
+    flex-direction: column;
+    align-items: stretch;
+
+    .sort-controls mat-form-field {
+      width: 100%;
+    }
+
+    button {
+      width: 100%;
+    }
+  }
+
+  .observed-relays-list {
+    .list-header {
+      display: none;
+    }
+
+    .relay-row {
+      grid-template-columns: 40px 1fr;
+      gap: 8px;
+      padding: 12px 16px;
+
+      .relay-events,
+      .relay-connects,
+      .relay-last-connected {
+        display: none;
+      }
+
+      .relay-actions {
+        grid-column: 1 / -1;
+        justify-content: stretch;
+        margin-top: 8px;
+
+        button {
+          width: 100%;
+        }
+      }
+    }
+
+    .relay-expanded-details {
+      padding: 16px 16px 16px 56px;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .relay-row {
+    .relay-info {
+      .relay-icon {
+        width: 32px;
+        height: 32px;
+
+        mat-icon {
+          font-size: 20px;
+          width: 20px;
+          height: 20px;
+        }
+      }
+
+      .relay-details {
+        .relay-name {
+          font-size: 0.875rem;
+        }
+
+        .relay-url-row .relay-url {
+          font-size: 0.75rem;
+        }
+      }
+    }
+  }
+
+  .relay-expanded-details {
+    padding-left: 48px !important;
+
+    .detail-row {
+      flex-wrap: wrap;
+
+      .detail-label {
+        min-width: 100%;
+      }
+
+      .detail-value {
+        padding-left: 32px;
+      }
+    }
+  }
+}
+
+// Old card-based styles (keeping for backward compatibility if needed)
 .observed-relays-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));

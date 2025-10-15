@@ -236,7 +236,20 @@
     <!-- Observed Relays Tab -->
     <mat-tab label="Observed Relays">
       <div class="tab-content">
-        <div class="action-buttons-container">
+        <div class="observed-relays-header">
+          <div class="sort-controls">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Sort by</mat-label>
+              <select matNativeControl title="Sort observed relays by" [value]="observedRelaysSortBy()" (change)="
+                    observedRelaysSortBy.set($any($event.target).value);
+                    onObservedRelaysSortChange()
+                  ">
+                <option value="eventsReceived">Events Received</option>
+                <option value="lastUpdated">Last Updated</option>
+                <option value="firstObserved">First Observed</option>
+              </select>
+            </mat-form-field>
+          </div>
           <button mat-flat-button color="warn" (click)="clearObservedRelayData()"
             [disabled]="observedRelays().length === 0">
             <mat-icon>clear_all</mat-icon>
@@ -244,141 +257,108 @@
           </button>
         </div>
 
-        <mat-card class="observed-relays-card">
-          <mat-card-header>
-            <mat-card-title>Observed Relays</mat-card-title>
-            <mat-card-subtitle>
-              Relays discovered from events and connection statistics ({{ observedRelays().length }}
-              total)
-            </mat-card-subtitle>
-          </mat-card-header>
-          <mat-card-content>
-            @if (observedRelays().length === 0) {
-            <div class="text-center py-8 text-gray-500">
-              <p>No observed relays yet.</p>
-              <p>Relay statistics will appear here as you interact with the network.</p>
-            </div>
-            } @else {
-            <div class="sort-controls">
-              <mat-form-field appearance="outline" subscriptSizing="dynamic">
-                <mat-label>Sort by</mat-label>
-                <select matNativeControl [value]="observedRelaysSortBy()" (change)="
-                      observedRelaysSortBy.set($any($event.target).value);
-                      onObservedRelaysSortChange()
-                    ">
-                  <option value="lastUpdated">Last Updated</option>
-                  <option value="eventsReceived">Events Received</option>
-                  <option value="firstObserved">First Observed</option>
-                </select>
-              </mat-form-field>
-            </div>
-
-            <div class="observed-relays-grid">
-              @for (relay of observedRelays(); track relay.url) {
-              <div class="relay-card">
-                <div class="relay-card-header">
-                  <div class="relay-status">
-                    <mat-icon class="status-icon" [ngClass]="
-                            getStatusColor(
-                              relay.isConnected
-                                ? 'connected'
-                                : relay.isOffline
-                                  ? 'error'
-                                  : 'disconnected'
-                            )
-                          ">
-                      {{
+        @if (observedRelays().length === 0) {
+        <div class="empty-state">
+          <mat-icon class="empty-icon">cloud_off</mat-icon>
+          <h3>No Observed Relays</h3>
+          <p>Relay statistics will appear here as you interact with the network.</p>
+        </div>
+        } @else {
+        <div class="observed-relays-list">
+          <div class="list-header">
+            <div class="header-relay">Relay</div>
+            <div class="header-events">Events</div>
+            <div class="header-connects">Connects</div>
+            <div class="header-last-connected">Last Connected</div>
+            <div class="header-actions"></div>
+          </div>
+          
+          @for (relay of observedRelays(); track relay.url) {
+          <div class="relay-row" [class.is-connected]="relay.isConnected">
+            <button class="relay-expand" mat-icon-button (click)="toggleRelayDetails(relay.url)">
+              <mat-icon>{{ isRelayExpanded(relay.url) ? 'expand_less' : 'expand_more' }}</mat-icon>
+            </button>
+            
+            <div class="relay-info">
+              <div class="relay-icon">
+                <mat-icon [ngClass]="getStatusColor(
                       relay.isConnected
-                      ? 'wifi'
-                      : relay.isOffline
-                      ? 'wifi_off'
-                      : 'wifi_tethering'
-                      }}
-                    </mat-icon>
-                    <div class="status-text">
-                      {{
-                      relay.isConnected
-                      ? 'Connected'
-                      : relay.isOffline
-                      ? 'Offline'
-                      : 'Disconnected'
-                      }}
-                    </div>
-                  </div>
-                  <div class="relay-actions">
-                    <button mat-icon-button color="primary" (click)="viewRelayInfo(relay.url)"
-                      aria-label="View relay info" class="action-btn">
-                      <mat-icon>info</mat-icon>
-                    </button>
-                    <button mat-icon-button color="warn" (click)="deleteObservedRelay(relay.url)"
-                      aria-label="Remove observed relay" class="action-btn">
-                      <mat-icon>delete</mat-icon>
-                    </button>
-                  </div>
-                </div>
-
-                <div class="relay-url-section">
-                  <div class="relay-url-main">{{ formatRelayUrl(relay.url) }}</div>
-                  <div class="performance-badge" [ngClass]="getPerformanceClass(getRelayPerformanceScore(relay.url))">
-                    <mat-icon class="performance-icon">speed</mat-icon>
-                    {{ getRelayPerformanceScore(relay.url) }}%
-                  </div>
-                </div>
-
-                <div class="relay-metrics">
-                  <div class="metric-group">
-                    <div class="metric-item primary">
-                      <mat-icon class="metric-icon">event</mat-icon>
-                      <div class="metric-content">
-                        <div class="metric-value">
-                          {{ formatEventsCount(relay.eventsReceived) }}
-                        </div>
-                        <div class="metric-label">Events</div>
-                      </div>
-                    </div>
-                    <div class="metric-item">
-                      <mat-icon class="metric-icon">wifi</mat-icon>
-                      <div class="metric-content">
-                        <div class="metric-value">{{ relay.connectionAttempts || 0 }}</div>
-                        <div class="metric-label">Connections</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="time-info">
-                    <div class="time-item">
-                      <mat-icon class="time-icon">schedule</mat-icon>
-                      <div class="time-content">
-                        <div class="time-label">First seen</div>
-                        <div class="time-value">{{ formatTimestamp(relay.firstObserved) }}</div>
-                      </div>
-                    </div>
-                    <div class="time-item">
-                      <mat-icon class="time-icon">update</mat-icon>
-                      <div class="time-content">
-                        <div class="time-label">Last updated</div>
-                        <div class="time-value">{{ formatTimestamp(relay.lastUpdated) }}</div>
-                      </div>
-                    </div>
-                    @if (relay.lastSuccessfulConnection > 0) {
-                    <div class="time-item">
-                      <mat-icon class="time-icon">check_circle</mat-icon>
-                      <div class="time-content">
-                        <div class="time-label">Last connected</div>
-                        <div class="time-value">
-                          {{ formatTimestamp(relay.lastSuccessfulConnection) }}
-                        </div>
-                      </div>
-                    </div>
-                    }
-                  </div>
+                        ? 'connected'
+                        : relay.isOffline
+                          ? 'error'
+                          : 'disconnected'
+                    )">
+                  {{
+                  relay.isConnected
+                  ? 'wifi'
+                  : relay.isOffline
+                  ? 'wifi_off'
+                  : 'wifi_tethering'
+                  }}
+                </mat-icon>
+              </div>
+              <div class="relay-details">
+                <div class="relay-name">{{ getRelayDisplayName(relay.url) }}</div>
+                <div class="relay-url-row">
+                  <span class="relay-url">{{ formatRelayUrl(relay.url) }}</span>
+                  <span class="relay-signal" [class]="getSignalClass(relay)">
+                    <mat-icon>signal_cellular_alt</mat-icon>
+                  </span>
                 </div>
               </div>
-              }
             </div>
-            }
-          </mat-card-content>
-        </mat-card>
+
+            <div class="relay-events">
+              <span class="metric-value">{{ formatEventsCount(relay.eventsReceived) }}</span>
+            </div>
+
+            <div class="relay-connects">
+              <span class="metric-value">{{ relay.connectionAttempts || 0 }}</span>
+            </div>
+
+            <div class="relay-last-connected">
+              <span class="time-value">{{ formatRelativeTime(relay.lastSuccessfulConnection) }}</span>
+            </div>
+
+            <div class="relay-actions">
+              <button mat-button color="primary" (click)="viewRelayInfo(relay.url)">
+                Explore
+              </button>
+            </div>
+          </div>
+
+          @if (isRelayExpanded(relay.url)) {
+          <div class="relay-expanded-details">
+            <div class="detail-row">
+              <mat-icon class="detail-icon">schedule</mat-icon>
+              <span class="detail-label">First Observed:</span>
+              <span class="detail-value">{{ formatTimestamp(relay.firstObserved) }}</span>
+            </div>
+            <div class="detail-row">
+              <mat-icon class="detail-icon">update</mat-icon>
+              <span class="detail-label">Last Updated:</span>
+              <span class="detail-value">{{ formatTimestamp(relay.lastUpdated) }}</span>
+            </div>
+            <div class="detail-row">
+              <mat-icon class="detail-icon">speed</mat-icon>
+              <span class="detail-label">Performance Score:</span>
+              <span class="detail-value">
+                <span class="performance-badge" [ngClass]="getPerformanceClass(getRelayPerformanceScore(relay.url))">
+                  {{ getRelayPerformanceScore(relay.url) }}%
+                </span>
+              </span>
+            </div>
+            <div class="detail-actions">
+              <button mat-stroked-button color="warn" (click)="deleteObservedRelay(relay.url)">
+                <mat-icon>delete</mat-icon>
+                Remove from List
+              </button>
+            </div>
+          </div>
+          }
+          }
+        </div>
+        }
       </div>
     </mat-tab>
   </mat-tab-group>

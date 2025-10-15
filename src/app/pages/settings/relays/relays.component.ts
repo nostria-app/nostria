@@ -124,6 +124,9 @@ export class RelaysComponent implements OnInit, OnDestroy {
   });
   observedRelaysSortBy = signal<'eventsReceived' | 'lastUpdated' | 'firstObserved'>('lastUpdated');
 
+  // Track expanded relays for details view
+  expandedRelays = signal<Set<string>>(new Set());
+
   knownDiscoveryRelays = [
     'wss://discovery.eu.nostria.app',
     'wss://discovery.us.nostria.app',
@@ -780,6 +783,71 @@ export class RelaysComponent implements OnInit, OnDestroy {
     } catch (error) {
       this.snackBar.open('Failed to remove observed relay', 'OK', { duration: 3000 });
     }
+  }
+
+  toggleRelayDetails(url: string): void {
+    const expanded = this.expandedRelays();
+    const newExpanded = new Set(expanded);
+    
+    if (newExpanded.has(url)) {
+      newExpanded.delete(url);
+    } else {
+      newExpanded.add(url);
+    }
+    
+    this.expandedRelays.set(newExpanded);
+  }
+
+  isRelayExpanded(url: string): boolean {
+    return this.expandedRelays().has(url);
+  }
+
+  getRelayDisplayName(url: string): string {
+    // Extract a display name from the relay URL
+    try {
+      const urlObj = new URL(url);
+      const hostname = urlObj.hostname;
+      
+      // Remove common prefixes and format nicely
+      let name = hostname
+        .replace(/^relay\./, '')
+        .replace(/^nostr\./, '')
+        .replace(/^ws\./, '');
+      
+      // Capitalize first letter of each word
+      name = name
+        .split('.')
+        .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+        .join('.');
+      
+      return name;
+    } catch {
+      return 'Unknown Relay';
+    }
+  }
+
+  getSignalClass(relay: { url: string; eventsReceived: number; isConnected?: boolean }): string {
+    const score = this.getRelayPerformanceScore(relay.url);
+    
+    if (score >= 80) return 'signal-excellent';
+    if (score >= 60) return 'signal-good';
+    if (score >= 40) return 'signal-fair';
+    return 'signal-poor';
+  }
+
+  formatRelativeTime(timestamp: number): string {
+    if (timestamp === 0) return 'never';
+    
+    const now = Math.floor(Date.now() / 1000);
+    const diff = now - timestamp;
+    
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+    if (diff < 2592000) return `${Math.floor(diff / 604800)}w ago`;
+    
+    return new Date(timestamp * 1000).toLocaleDateString();
   }
 
   /**
