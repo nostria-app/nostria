@@ -195,6 +195,12 @@ export class RelaysComponent implements OnInit, OnDestroy {
         this.accountRelay.getRelayUrls().map(r => r)
       );
 
+      // Don't show the DM relay warning if user has zero account relays
+      if (userRelayUrls.length === 0) {
+        this.showUpdateDMRelays.set(false);
+        return;
+      }
+
       // Fetch existing DM relay list event (10050)
       const dmRelayEvent = await this.data.getEventByPubkeyAndKind(
         pubkey,
@@ -599,7 +605,12 @@ export class RelaysComponent implements OnInit, OnDestroy {
     };
 
     const signedEvent = await this.nostr.signEvent(relayListEvent);
-    const publishResults = this.accountRelay.publish(signedEvent);
+    await this.accountRelay.publish(signedEvent);
+    await this.storage.saveEvent(signedEvent);
+
+    // Hide the warning after updating
+    this.showUpdateDMRelays.set(false);
+    this.logger.info('DM relay list updated successfully');
   }
 
   async findClosestRelay(): Promise<void> {
@@ -863,6 +874,10 @@ export class RelaysComponent implements OnInit, OnDestroy {
 
             // Publish the relay list
             await this.publish();
+
+            // Automatically set DM relays to match account relays for new users
+            this.logger.info('Automatically setting DM relays to match account relays');
+            await this.updateDirectMessageRelayList();
 
             this.showMessage(
               `Successfully added ${selectedRegion.region} Nostria relay (${selectedRegion.pingTime}ms latency)`
