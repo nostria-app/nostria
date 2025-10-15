@@ -232,7 +232,7 @@ app-info-tooltip {
 
   .list-header {
     display: grid;
-    grid-template-columns: 40px 1fr 120px 120px 160px 140px;
+    grid-template-columns: 40px 1fr 90px 90px 130px 110px;
     gap: 16px;
     padding: 16px 20px;
     background: var(--mat-app-background-color);
@@ -266,7 +266,7 @@ app-info-tooltip {
 
   .relay-row {
     display: grid;
-    grid-template-columns: 40px 1fr 120px 120px 160px 140px;
+    grid-template-columns: 40px 1fr 90px 90px 130px 110px;
     gap: 16px;
     padding: 16px 20px;
     border-bottom: 2px solid var(--mat-divider-color); // Increased from 1px to 2px for better visibility
@@ -644,7 +644,7 @@ app-info-tooltip {
 @media (max-width: 1024px) {
   .observed-relays-list {
     .list-header {
-      grid-template-columns: 40px 1fr 100px 120px;
+      grid-template-columns: 40px 1fr 90px 110px;
 
       .header-connects,
       .header-last-connected {
@@ -661,7 +661,7 @@ app-info-tooltip {
     }
 
     .relay-row {
-      grid-template-columns: 40px 1fr 100px 120px;
+      grid-template-columns: 40px 1fr 90px 110px;
 
       .relay-connects,
       .relay-last-connected {
