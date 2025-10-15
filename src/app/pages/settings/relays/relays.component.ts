@@ -790,6 +790,10 @@ export class RelaysComponent implements OnInit, OnDestroy {
     this.isSettingUpNostriaRelays.set(true);
     this.logger.info('Starting Nostria relay setup for user with zero relays');
 
+    // Track if user had zero relays at the start
+    const hadZeroRelays = this.userRelays().length === 0;
+    const hadZeroDiscoveryRelays = this.discoveryRelay.getRelayUrls().length === 0;
+
     try {
       // Get relay URLs for each region (using first instance of each region)
       const relaysToCheck = this.nostriaRelayRegions.map(region => ({
@@ -864,12 +868,23 @@ export class RelaysComponent implements OnInit, OnDestroy {
             // Add the main relay to account relays
             this.accountRelay.addRelay(selectedRegion.relayUrl);
 
-            // If user had zero relays and added a Nostria relay, also update discovery relay
+            // Only automatically add discovery relay if user had zero relays initially
+            // and doesn't already have this discovery relay
             const discoveryRelayUrl = selectedRegion.discoveryRelay;
-            if (!this.discoveryRelay.getRelayUrls().includes(discoveryRelayUrl)) {
-              this.logger.info('Adding Nostria discovery relay', { discoveryRelayUrl });
+            if (hadZeroRelays && !this.discoveryRelay.getRelayUrls().includes(discoveryRelayUrl)) {
+              this.logger.info('Adding Nostria discovery relay for new user', {
+                discoveryRelayUrl,
+                hadZeroRelays,
+                hadZeroDiscoveryRelays
+              });
               this.discoveryRelay.addRelay(discoveryRelayUrl);
               this.discoveryRelay.setDiscoveryRelays(this.discoveryRelay.getRelayUrls());
+            } else if (this.discoveryRelay.getRelayUrls().includes(discoveryRelayUrl)) {
+              this.logger.debug('Discovery relay already exists, skipping', { discoveryRelayUrl });
+            } else {
+              this.logger.debug('User already had relays, not auto-adding discovery relay', {
+                hadZeroRelays
+              });
             }
 
             // Publish the relay list
