@@ -164,6 +164,22 @@
   margin-left: auto;
 }
 
+.client-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.6;
+  padding: 8px;
+
+  .client-logo {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+    display: block;
+    border-radius: 2px;
+  }
+}
+
 .repost-header {
   font-style: italic;
   opacity: 0.7;

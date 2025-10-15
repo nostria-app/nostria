@@ -14,6 +14,7 @@ import { ApplicationService } from '../../services/application.service';
 import { BookmarkService } from '../../services/bookmark.service';
 import { DataService } from '../../services/data.service';
 import { LayoutService } from '../../services/layout.service';
+import { LocalSettingsService } from '../../services/local-settings.service';
 import { RepostService } from '../../services/repost.service';
 import { ContentComponent } from '../content/content.component';
 import { ReplyButtonComponent } from './reply-button/reply-button.component';
@@ -98,6 +99,7 @@ export class EventComponent {
   router = inject(Router);
   reportingService = inject(ReportingService);
   zapService = inject(ZapService);
+  localSettings = inject(LocalSettingsService);
   reactions = signal<ReactionEvents>({ events: [], data: new Map() });
   reports = signal<ReactionEvents>({ events: [], data: new Map() });
 
@@ -648,6 +650,93 @@ export class EventComponent {
       events: currentEvents,
       data: currentData
     });
+  }
+
+  // Client logo mapping - maps client names to logo image paths
+  private readonly CLIENT_LOGO_MAP: Record<string, string> = {
+    'nostria': 'logos/clients/nostria.png',
+    'nosotros': 'logos/clients/nosotros.png',
+    'damus deck': 'logos/clients/damus.png',
+    'damus': 'logos/clients/damus.png',
+    'amethyst': 'logos/clients/amethyst.png',
+    'primal': 'logos/clients/primal.png',
+    'snort': 'logos/clients/snort.png',
+    'iris': 'logos/clients/iris.png',
+    'coracle': 'logos/clients/coracle.png',
+    'nos': 'logos/clients/nos.png',
+    'current': 'logos/clients/current.png',
+    'satellite': 'logos/clients/satellite.png',
+    'habla': 'logos/clients/habla.png',
+    'gossip': 'logos/clients/gossip.png',
+    'freefrom': 'logos/clients/freefrom.png',
+    'habla.news': 'logos/clients/habla.png',
+    'nostrudel': 'logos/clients/nostrudel.png',
+    'yakihonne': 'logos/clients/yakihonne.png',
+    'lume': 'logos/clients/lume.png',
+    'nostur': 'logos/clients/nostur.png',
+    'nostore': 'logos/clients/nostore.png',
+  };
+
+  /**
+   * Get the client tag value from an event
+   */
+  getClientTag(event: Event | null | undefined): string | null {
+    if (!event || !event.tags) return null;
+
+    const clientTag = event.tags.find(tag => tag[0] === 'client' && tag[1]);
+    return clientTag ? clientTag[1] : null;
+  }
+
+  /**
+   * Get the logo image path for a client
+   */
+  getClientLogo(clientName: string | null): string | null {
+    if (!clientName) return null;
+
+    const normalizedClient = clientName.toLowerCase().trim();
+    return this.CLIENT_LOGO_MAP[normalizedClient] || null;
+  }
+
+  /**
+   * Get the display name for a client (capitalized)
+   */
+  getClientDisplayName(clientName: string | null): string {
+    if (!clientName) return 'Unknown Client';
+
+    // Special case for known clients with specific capitalization
+    const normalizedClient = clientName.toLowerCase().trim();
+    const displayNames: Record<string, string> = {
+      'nostria': 'Nostria',
+      'nosotros': 'Nosotros',
+      'damus deck': 'Damus Deck',
+      'damus': 'Damus',
+      'amethyst': 'Amethyst',
+      'primal': 'Primal',
+      'snort': 'Snort',
+      'iris': 'Iris',
+      'coracle': 'Coracle',
+      'nos': 'Nos',
+      'current': 'Current',
+      'satellite': 'Satellite',
+      'habla': 'Habla',
+      'gossip': 'Gossip',
+      'freefrom': 'FreeFrom',
+      'habla.news': 'Habla.news',
+      'nostrudel': 'NoStrudel',
+      'yakihonne': 'YakiHonne',
+      'lume': 'Lume',
+      'nostur': 'Nostur',
+      'nostore': 'Nostore',
+    };
+
+    return displayNames[normalizedClient] || clientName;
+  }
+
+  /**
+   * Check if client tag should be shown based on user settings
+   */
+  shouldShowClientTag(): boolean {
+    return this.localSettings.showClientTag();
   }
 
   onBookmarkClick(event: MouseEvent) {

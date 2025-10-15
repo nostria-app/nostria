@@ -298,6 +298,16 @@
     </div>
     }
 
+    @if (shouldShowClientTag() && getClientTag(targetItem.event) && getClientLogo(getClientTag(targetItem.event))) {
+    <div class="note-footer-right hide-small client-indicator"
+      [matTooltip]="'Published with ' + getClientDisplayName(getClientTag(targetItem.event))"
+      matTooltipPosition="below">
+      <img [src]="getClientLogo(getClientTag(targetItem.event))"
+        [alt]="getClientDisplayName(getClientTag(targetItem.event)) + ' logo'" 
+        class="client-logo" />
+    </div>
+    }
+
     <button mat-icon-button class="note-footer-right hide-small" (click)="onBookmarkClick($event)">
       <mat-icon [matTooltip]="bookmark.getBookmarkTooltip(targetItem.event.id)" matTooltipPosition="below">
         {{ bookmark.getBookmarkIcon(targetItem.event.id) }}
