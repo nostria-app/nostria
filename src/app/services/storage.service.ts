@@ -265,12 +265,14 @@ export class StorageService {
     quotaInfo: any;
     initializationAttempts: number;
     lastError?: string;
+    isPermanentFailure?: boolean;
   }>({
     isIndexedDBAvailable: false,
     isPrivateMode: false,
     quotaInfo: null,
     initializationAttempts: 0,
     lastError: undefined,
+    isPermanentFailure: false,
   });
 
   // Database stats
@@ -294,7 +296,7 @@ export class StorageService {
   private fallbackStorage = new Map<string, any>();
   useFallbackMode = signal(false);
 
-  constructor() {}
+  constructor() { }
 
   async init(): Promise<void> {
     this.logger.info('StorageService.init() called');
@@ -370,7 +372,8 @@ export class StorageService {
       this.initialized.set(true);
     } catch (error) {
       this.logger.error('Failed to initialize IndexedDB', error);
-      this.handleInitializationError(error);
+      // Attempt fallback and propagate any errors
+      await this.handleInitializationError(error);
     }
   }
 
@@ -471,7 +474,7 @@ export class StorageService {
     });
   }
 
-  private handleInitializationError(error: any): void {
+  private async handleInitializationError(error: any): Promise<void> {
     this.logger.error('IndexedDB initialization failed', {
       error: error.message,
       name: error.name,
@@ -485,7 +488,8 @@ export class StorageService {
     this.initialized.set(false);
 
     // Attempt to fall back to a simpler database or memory storage
-    this.attemptFallbackInitialization();
+    // This will throw an error if fallback also fails with permanent failure
+    await this.attemptFallbackInitialization();
   }
 
   private detectPrivateMode(): boolean {
@@ -520,37 +524,48 @@ export class StorageService {
     this.logger.info('Attempting fallback IndexedDB initialization');
 
     try {
-      // Try to delete and recreate the database
-      this.logger.info('Deleting corrupted database');
-      await deleteDB(this.DB_NAME);
-
-      // Wait a bit before recreating
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Try again with a simplified approach
-      this.logger.info('Recreating database with simplified schema');
-      this.db = await openDB<NostriaDBSchema>(this.DB_NAME, 1, {
-        upgrade: async db => {
-          this.logger.info('Creating minimal database schema');
-
-          // Create only essential stores
-          if (!db.objectStoreNames.contains('events')) {
-            const eventsStore = db.createObjectStore('events', {
-              keyPath: 'id',
-            });
-            eventsStore.createIndex('by-kind', 'kind');
-            eventsStore.createIndex('by-pubkey', 'pubkey');
-            this.logger.debug('Created minimal events store');
-          }
-        },
+      // Add timeout for deletion and recreation
+      const fallbackInitPromise = this.performFallbackInit();
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('Fallback initialization timeout after 8 seconds'));
+        }, 8000);
       });
+
+      await Promise.race([fallbackInitPromise, timeoutPromise]);
 
       this.logger.info('Fallback IndexedDB initialization successful');
       this.initialized.set(true);
     } catch (fallbackError) {
       this.logger.error('Fallback initialization also failed', fallbackError);
 
-      // Final fallback: enable memory-only storage mode
+      // Check if this is a timeout or lock error
+      const errorMessage = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
+      const isPermanentFailure =
+        errorMessage.includes('timeout') ||
+        errorMessage.includes('blocked') ||
+        errorMessage.includes('lock') ||
+        errorMessage.includes('VersionError');
+
+      if (isPermanentFailure) {
+        this.logger.error('Permanent IndexedDB failure detected - database is locked or blocked');
+        this.storageInfo.update(info => ({
+          ...info,
+          lastError: 'IndexedDB permanently locked or blocked',
+          isPermanentFailure: true,
+          initializationAttempts: info.initializationAttempts + 1,
+        }));
+
+        // Set initialized to false to trigger error handling in app.ts
+        this.initialized.set(false);
+
+        // Throw error to propagate to app initialization
+        throw new Error(
+          'IndexedDB is permanently locked or blocked. Please close all browser tabs and restart your browser.'
+        );
+      }
+
+      // For other errors, try memory-only mode
       this.logger.warn('Enabling memory-only storage mode due to IndexedDB failure');
       this.useFallbackMode.set(true);
       this.initialized.set(true);
@@ -562,6 +577,33 @@ export class StorageService {
         initializationAttempts: info.initializationAttempts + 1,
       }));
     }
+  }
+
+  private async performFallbackInit(): Promise<void> {
+    // Try to delete and recreate the database
+    this.logger.info('Deleting corrupted database');
+    await deleteDB(this.DB_NAME);
+
+    // Wait a bit before recreating
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Try again with a simplified approach
+    this.logger.info('Recreating database with simplified schema');
+    this.db = await openDB<NostriaDBSchema>(this.DB_NAME, 1, {
+      upgrade: async db => {
+        this.logger.info('Creating minimal database schema');
+
+        // Create only essential stores
+        if (!db.objectStoreNames.contains('events')) {
+          const eventsStore = db.createObjectStore('events', {
+            keyPath: 'id',
+          });
+          eventsStore.createIndex('by-kind', 'kind');
+          eventsStore.createIndex('by-pubkey', 'pubkey');
+          this.logger.debug('Created minimal events store');
+        }
+      },
+    });
   }
 
   // Generate a composite key from key and type

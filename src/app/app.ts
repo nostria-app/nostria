@@ -67,6 +67,7 @@ import { WhatsNewDialogComponent } from './components/whats-new-dialog/whats-new
 import { FeedsCollectionService } from './services/feeds-collection.service';
 import { NewFeedDialogComponent } from './pages/feeds/new-feed-dialog/new-feed-dialog.component';
 import { NostrRecord } from './interfaces';
+import { DatabaseErrorDialogComponent } from './components/database-error-dialog/database-error-dialog.component';
 
 interface NavItem {
   path: string;
@@ -514,6 +515,15 @@ export class App implements OnInit {
 
         // Show user-friendly error message
         this.showStorageError(error, diagnostics);
+
+        // If this is a permanent failure, stop loading
+        const storageInfo = this.storage.storageInfo();
+        if (storageInfo.isPermanentFailure) {
+          this.appState.isLoading.set(false);
+          this.appState.loadingMessage.set('Database Error');
+          // Don't continue initialization for permanent failures
+          return;
+        }
       } catch (diagError) {
         this.logger.error('[App] Failed to collect diagnostic info', diagError);
       }
@@ -530,6 +540,19 @@ export class App implements OnInit {
   }
 
   private showStorageError(error: any, diagnostics: any): void {
+    // Check if this is a permanent failure (database locked/blocked)
+    const storageInfo = this.storage.storageInfo();
+    if (storageInfo.isPermanentFailure) {
+      // Show critical error dialog for permanent failures
+      this.dialog.open(DatabaseErrorDialogComponent, {
+        disableClose: true,
+        width: '90vw',
+        maxWidth: '550px',
+      });
+      return;
+    }
+
+    // For other errors, show a less critical message
     let errorMessage = 'Storage initialization failed. ';
 
     if (diagnostics.platform.isIOS && diagnostics.platform.isWebView) {
@@ -544,8 +567,8 @@ export class App implements OnInit {
 
     this.logger.warn('[App] User-friendly error message:', errorMessage);
 
-    // You could show a toast/snackbar here if needed
-    // this.snackBar.open(errorMessage, 'OK', { duration: 10000 });
+    // Show a snackbar for non-critical errors
+    this.snackBar.open(errorMessage, 'OK', { duration: 10000 });
   }
 
   /**
