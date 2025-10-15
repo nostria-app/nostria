@@ -120,7 +120,21 @@ export class RelaysComponent implements OnInit, OnDestroy {
 
   // For observed relays tab
   observedRelays = computed(() => {
-    return this.relaysService.observedRelaysSignal();
+    const sortBy = this.observedRelaysSortBy();
+    const relays = this.relaysService.observedRelaysSignal();
+
+    // Sort the relays based on the selected criteria
+    return [...relays].sort((a, b) => {
+      switch (sortBy) {
+        case 'eventsReceived':
+          return b.eventsReceived - a.eventsReceived;
+        case 'firstObserved':
+          return a.firstObserved - b.firstObserved;
+        case 'lastUpdated':
+        default:
+          return b.lastUpdated - a.lastUpdated;
+      }
+    });
   });
   observedRelaysSortBy = signal<'eventsReceived' | 'lastUpdated' | 'firstObserved'>('lastUpdated');
 
@@ -752,11 +766,6 @@ export class RelaysComponent implements OnInit, OnDestroy {
     if (score >= 60) return 'performance-good';
     if (score >= 40) return 'performance-fair';
     return 'performance-poor';
-  }
-
-  onObservedRelaysSortChange(): void {
-    // Trigger re-sort when sort criteria changes
-    // The computed signal will automatically update when observedRelaysSortBy changes
   }
 
   async clearObservedRelayData(): Promise<void> {
