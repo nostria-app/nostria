@@ -185,9 +185,9 @@ export class BadgeEditorComponent {
     this.tags.update(currentTags => currentTags.filter(t => t !== tag));
   }
 
-  // Navigate to media settings to add servers
+  // Navigate to media settings to add servers - specifically to the Media Servers tab
   navigateToMediaSettings(): void {
-    this.router.navigate(['/media']);
+    this.router.navigate(['/media'], { queryParams: { tab: 'servers' } });
   }
 
   // Form submission with file upload handling

@@ -501,9 +501,25 @@
             <mat-icon>cloud_off</mat-icon>
             <p>No media servers configured</p>
             <p class="subtitle">Add servers to store and distribute your media</p>
-            <button mat-raised-button color="primary" (click)="openServerDialog()">
-              Add Your First Server
-            </button>
+            <div class="empty-state-actions">
+              <button 
+                mat-raised-button 
+                color="primary" 
+                (click)="setupNostriaMediaServer()"
+                [disabled]="isSettingUpMediaServer()"
+              >
+                <mat-icon>auto_awesome</mat-icon>
+                Quick Setup with Nostria
+                @if (isSettingUpMediaServer()) {
+                  <mat-icon class="spinning-icon">sync</mat-icon>
+                }
+              </button>
+              <p class="or-text">or</p>
+              <button mat-stroked-button (click)="openServerDialog()">
+                <mat-icon>add</mat-icon>
+                Add Manually
+              </button>
+            </div>
           </div>
         } @else {
           <div cdkDropList class="server-list" (cdkDropListDropped)="reorderServers($event)">
