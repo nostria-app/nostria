@@ -23,15 +23,15 @@ export interface NostrData {
 export interface ContentToken {
   id: number;
   type:
-    | 'text'
-    | 'url'
-    | 'youtube'
-    | 'image'
-    | 'audio'
-    | 'video'
-    | 'linebreak'
-    | 'nostr-mention'
-    | 'emoji';
+  | 'text'
+  | 'url'
+  | 'youtube'
+  | 'image'
+  | 'audio'
+  | 'video'
+  | 'linebreak'
+  | 'nostr-mention'
+  | 'emoji';
   content: string;
   nostrData?: NostrData;
   emoji?: string;
@@ -272,8 +272,9 @@ export class ParsingService {
     const processedContent = content.replace(/\n/g, '##LINEBREAK##');
 
     // Regex for different types of content - updated to avoid capturing trailing LINEBREAK placeholders
-    // URL regex: capture potential trailing punctuation so we can trim logic-smart (e.g. parentheses, commas, periods)
-    const urlRegex = /(https?:\/\/[^\s##)\]\}>]+)(?=\s|##LINEBREAK##|$|[),.;!?:])/g;
+    // URL regex: matches http/https URLs, allows #, :, and . in the URL path
+    // Stops at whitespace, LINEBREAK markers, or common trailing punctuation
+    const urlRegex = /(https?:\/\/[^\s)}\]>]+?)(?=\s|##LINEBREAK##|$|[),;!?]\s|[),;!?]$)/g;
     const youtubeRegex =
       /(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})(?=\s|##LINEBREAK##|$)/g;
     const imageRegex =
