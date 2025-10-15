@@ -232,7 +232,7 @@ app-info-tooltip {
 
   .list-header {
     display: grid;
-    grid-template-columns: 40px 1fr 100px 100px 140px 120px;
+    grid-template-columns: 40px 1fr 120px 120px 160px 140px;
     gap: 16px;
     padding: 16px 20px;
     background: var(--mat-app-background-color);
@@ -252,16 +252,27 @@ app-info-tooltip {
     .header-relay {
       grid-column: 1 / 3;
     }
+
+    .header-events,
+    .header-connects,
+    .header-last-connected {
+      justify-content: center;
+    }
+
+    .header-actions {
+      justify-content: flex-end;
+    }
   }
 
   .relay-row {
     display: grid;
-    grid-template-columns: 40px 1fr 100px 100px 140px 120px;
+    grid-template-columns: 40px 1fr 120px 120px 160px 140px;
     gap: 16px;
     padding: 16px 20px;
-    border-bottom: 1px solid var(--mat-divider-color);
+    border-bottom: 2px solid var(--mat-divider-color); // Increased from 1px to 2px for better visibility
     transition: all 0.2s ease;
     align-items: center;
+    min-width: 0; // Ensure grid respects overflow constraints
 
     &:hover {
       background: var(--mat-app-background-color);
@@ -271,9 +282,8 @@ app-info-tooltip {
       background: rgba(var(--mat-primary-rgb), 0.02);
     }
 
-    &:last-child {
-      border-bottom: none;
-    }
+    // Always show border between rows
+    // Remove the last-child rule to ensure lines between all relays
 
     .relay-expand {
       width: 32px;
@@ -293,6 +303,8 @@ app-info-tooltip {
       display: flex;
       align-items: center;
       gap: 12px;
+      min-width: 0; // Critical for flex children to respect overflow
+      overflow: hidden; // Prevent overflow from breaking layout
 
       .relay-icon {
         display: flex;
@@ -313,19 +325,25 @@ app-info-tooltip {
 
       .relay-details {
         flex: 1;
-        min-width: 0;
+        min-width: 0; // Allow text truncation
+        overflow: hidden; // Prevent overflow
 
         .relay-name {
           font-weight: 600;
           font-size: 0.95rem;
           color: var(--mat-text-primary-color);
           margin-bottom: 4px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
 
         .relay-url-row {
           display: flex;
           align-items: center;
           gap: 8px;
+          min-width: 0; // Critical for overflow handling
+          overflow: hidden;
 
           .relay-url {
             font-family: 'Courier New', monospace;
@@ -334,6 +352,8 @@ app-info-tooltip {
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+            flex: 1; // Take available space
+            min-width: 0; // Allow shrinking below content size
           }
 
           .relay-signal {
@@ -373,6 +393,7 @@ app-info-tooltip {
       display: flex;
       align-items: center;
       justify-content: center;
+      text-align: center;
 
       .metric-value,
       .time-value {
@@ -385,9 +406,12 @@ app-info-tooltip {
     .relay-actions {
       display: flex;
       justify-content: flex-end;
+      align-items: center;
 
       button {
+        white-space: nowrap;
         min-width: 90px;
+        max-width: 120px;
       }
     }
   }
@@ -396,8 +420,10 @@ app-info-tooltip {
     grid-column: 1 / -1;
     padding: 20px 20px 20px 72px;
     background: var(--mat-app-background-color);
-    border-bottom: 1px solid var(--mat-divider-color);
+    border-bottom: 2px solid var(--mat-divider-color); // Match relay-row border thickness
     animation: slideDown 0.3s ease-out;
+    overflow: hidden; // Prevent content overflow
+    word-wrap: break-word; // Break long words if needed
 
     .detail-section {
       margin-bottom: 24px;
@@ -468,11 +494,16 @@ app-info-tooltip {
         font-weight: 600;
         font-family: 'Courier New', monospace;
         flex: 1;
+        min-width: 0; // Allow shrinking
+        overflow: hidden; // Prevent overflow
+        word-wrap: break-word; // Break long words
+        overflow-wrap: break-word; // Modern alternative
 
         a {
           color: var(--mat-primary-color);
           text-decoration: none;
-          word-break: break-all;
+          word-break: break-all; // Break URLs at any character
+          overflow-wrap: anywhere; // Break at any point if needed
 
           &:hover {
             text-decoration: underline;
@@ -613,20 +644,37 @@ app-info-tooltip {
 @media (max-width: 1024px) {
   .observed-relays-list {
     .list-header {
-      grid-template-columns: 40px 1fr 80px 100px;
+      grid-template-columns: 40px 1fr 100px 120px;
 
       .header-connects,
       .header-last-connected {
         display: none;
       }
+
+      .header-events {
+        justify-content: center;
+      }
+
+      .header-actions {
+        justify-content: flex-end;
+      }
     }
 
     .relay-row {
-      grid-template-columns: 40px 1fr 80px 100px;
+      grid-template-columns: 40px 1fr 100px 120px;
 
       .relay-connects,
       .relay-last-connected {
         display: none;
+      }
+
+      .relay-events {
+        justify-content: center;
+        text-align: center;
+      }
+
+      .relay-actions {
+        justify-content: flex-end;
       }
     }
   }
