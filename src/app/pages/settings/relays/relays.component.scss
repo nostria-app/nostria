@@ -510,6 +510,12 @@ app-info-tooltip {
 }
 
 // Styles for zero relays setup section
+.zero-relays-card {
+  margin-bottom: 2rem;
+  border: 2px solid var(--mat-sys-primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
 .zero-relays-container {
   padding: 2rem 1rem;
 
