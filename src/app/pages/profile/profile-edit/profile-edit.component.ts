@@ -355,8 +355,8 @@ export class ProfileEditComponent implements OnInit {
     }
   }
 
-  // Navigate to media settings
+  // Navigate to media settings - specifically to the Media Servers tab
   navigateToMediaSettings(): void {
-    this.router.navigate(['/media']);
+    this.router.navigate(['/media'], { queryParams: { tab: 'servers' } });
   }
 }

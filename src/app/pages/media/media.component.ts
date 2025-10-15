@@ -10,8 +10,6 @@ import { MatTabsModule } from '@angular/material/tabs';
 import {
   MatDialogModule,
   MatDialog,
-  MatDialogRef,
-  MAT_DIALOG_DATA,
 } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatMenuModule } from '@angular/material/menu';
@@ -23,7 +21,6 @@ import { MediaUploadDialogComponent } from './media-upload-dialog/media-upload-d
 import { MediaServerDialogComponent } from './media-server-dialog/media-server-dialog.component';
 import { ApplicationStateService } from '../../services/application-state.service';
 import { NostrService } from '../../services/nostr.service';
-import { standardizedTag } from '../../standardized-tags';
 import { TimestampPipe } from '../../pipes/timestamp.pipe';
 import { ApplicationService } from '../../services/application.service';
 import { MediaPreviewDialogComponent } from '../../components/media-preview-dialog/media-preview.component';
@@ -32,6 +29,10 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { LocalStorageService } from '../../services/local-storage.service';
 import { AccountStateService } from '../../services/account-state.service';
+import { RegionService } from '../../services/region.service';
+import { AccountRelayService } from '../../services/relays/account-relay';
+import { LoggerService } from '../../services/logger.service';
+import { RelayPingResultsDialogComponent } from '../settings/relays/relay-ping-results-dialog.component';
 
 @Component({
   selector: 'app-media',
@@ -68,10 +69,16 @@ export class MediaComponent {
   app = inject(ApplicationService);
   private readonly localStorage = inject(LocalStorageService);
   private readonly accountState = inject(AccountStateService);
+  private readonly regionService = inject(RegionService);
+  private readonly accountRelay = inject(AccountRelayService);
+  private readonly logger = inject(LoggerService);
 
   // View state
   activeTab = signal<'images' | 'videos' | 'files' | 'servers'>('images');
   selectedItems = signal<string[]>([]);
+  
+  // For automatic media server setup
+  isSettingUpMediaServer = signal(false);
 
   // Computed media lists
   images = signal<MediaItem[]>([]);
@@ -138,6 +145,13 @@ export class MediaComponent {
     // Check for upload query parameter and trigger upload dialog
     this.route.queryParamMap.subscribe(params => {
       const uploadParam = params.get('upload');
+      const tabParam = params.get('tab');
+      
+      // Handle tab parameter to open a specific tab
+      if (tabParam && ['images', 'videos', 'files', 'servers'].includes(tabParam)) {
+        this.activeTab.set(tabParam as 'images' | 'videos' | 'files' | 'servers');
+      }
+      
       if (uploadParam === 'true') {
         // Remove the query parameter from URL without navigation
         this.router.navigate([], {
@@ -246,6 +260,170 @@ export class MediaComponent {
         });
       }
     }
+  }
+
+  /**
+   * Setup Nostria media server for users with zero media servers.
+   * Detects the region from user's relay configuration and suggests the appropriate media server.
+   */
+  async setupNostriaMediaServer(): Promise<void> {
+    this.isSettingUpMediaServer.set(true);
+    this.logger.info('Starting Nostria media server setup');
+
+    try {
+      // Get user's account relays to detect region
+      const userRelays = this.accountRelay.getRelayUrls();
+      
+      // Nostria media server regions
+      const nostriaMediaRegions = [
+        { id: 'eu', name: 'Europe', mediaServer: 'https://mibo.eu.nostria.app' },
+        { id: 'us', name: 'North America', mediaServer: 'https://mibo.us.nostria.app' },
+        { id: 'af', name: 'Africa', mediaServer: 'https://mibo.af.nostria.app' },
+      ];
+
+      // Try to detect user's region from their relays
+      let detectedRegion: { id: string; name: string; mediaServer: string } | null = null;
+      
+      for (const relay of userRelays) {
+        for (const region of nostriaMediaRegions) {
+          if (relay.includes(`.${region.id}.nostria.app`)) {
+            detectedRegion = region;
+            break;
+          }
+        }
+        if (detectedRegion) break;
+      }
+
+      // If we detected a region, use it directly
+      if (detectedRegion) {
+        this.logger.info('Detected user region from relays', { region: detectedRegion.name });
+        
+        const confirmed = confirm(
+          `We detected you're using the ${detectedRegion.name} region. Would you like to add the ${detectedRegion.name} Nostria media server (${detectedRegion.mediaServer})?`
+        );
+        
+        if (confirmed) {
+          try {
+            await this.mediaService.addMediaServer(detectedRegion.mediaServer);
+            this.snackBar.open(
+              `Successfully added ${detectedRegion.name} Nostria media server`,
+              'Close',
+              { duration: 3000 }
+            );
+          } catch (error) {
+            this.logger.error('Failed to add media server', error);
+            this.snackBar.open('Error adding media server. Please try again.', 'Close', {
+              duration: 3000,
+            });
+          }
+        }
+      } else {
+        // No region detected, ping all regions and let user choose
+        this.logger.info('No region detected from relays, checking all media server regions');
+        this.snackBar.open('Checking Nostria media server regions for latency...', 'Close', {
+          duration: 2000,
+        });
+
+        const pingResults = await Promise.allSettled(
+          nostriaMediaRegions.map(async region => {
+            const pingTime = await this.checkMediaServerPing(region.mediaServer);
+            return {
+              region: region.name,
+              regionId: region.id,
+              mediaServer: region.mediaServer,
+              pingTime,
+            };
+          })
+        );
+
+        const successfulPings = pingResults
+          .map(result => {
+            if (result.status === 'fulfilled') {
+              return result.value;
+            }
+            return null;
+          })
+          .filter(result => result !== null)
+          .sort((a, b) => a!.pingTime - b!.pingTime);
+
+        if (successfulPings.length === 0) {
+          this.snackBar.open('No reachable Nostria media servers found. Please try again later.', 'Close', {
+            duration: 3000,
+          });
+          this.isSettingUpMediaServer.set(false);
+          return;
+        }
+
+        // Show dialog with results
+        const dialogResults = successfulPings.map(result => ({
+          url: `${result!.region} (${result!.mediaServer})`,
+          pingTime: result!.pingTime,
+          isAlreadyAdded: false,
+          regionData: result,
+        }));
+
+        const dialogRef = this.dialog.open(RelayPingResultsDialogComponent, {
+          width: '500px',
+          data: {
+            results: dialogResults,
+          },
+        });
+
+        dialogRef.afterClosed().subscribe(async result => {
+          if (result?.selected) {
+            const selectedRegion = result.selected.regionData;
+
+            try {
+              await this.mediaService.addMediaServer(selectedRegion.mediaServer);
+              this.snackBar.open(
+                `Successfully added ${selectedRegion.region} Nostria media server (${selectedRegion.pingTime}ms latency)`,
+                'Close',
+                { duration: 3000 }
+              );
+            } catch (error) {
+              this.logger.error('Failed to add media server', error);
+              this.snackBar.open('Error adding media server. Please try again.', 'Close', {
+                duration: 3000,
+              });
+            }
+          }
+
+          this.isSettingUpMediaServer.set(false);
+        });
+        return; // Exit early since we opened dialog
+      }
+    } catch (error) {
+      this.logger.error('Error during media server setup', error);
+      this.snackBar.open('Error checking media server latency. Please try again.', 'Close', {
+        duration: 3000,
+      });
+    } finally {
+      this.isSettingUpMediaServer.set(false);
+    }
+  }
+
+  /**
+   * Check the latency to a media server by making a HEAD request
+   */
+  private async checkMediaServerPing(serverUrl: string): Promise<number> {
+    return new Promise<number>((resolve, reject) => {
+      const startTime = performance.now();
+
+      const timeout = setTimeout(() => {
+        reject(new Error('Timeout'));
+      }, 5000); // 5 second timeout
+
+      fetch(serverUrl, { method: 'HEAD' })
+        .then(() => {
+          const pingTime = Math.round(performance.now() - startTime);
+          clearTimeout(timeout);
+          resolve(pingTime);
+        })
+        .catch(error => {
+          clearTimeout(timeout);
+          reject(error);
+        });
+    });
   }
 
   async testServer(url: string): Promise<void> {
