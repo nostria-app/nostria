@@ -33,6 +33,7 @@ import { RegionService } from '../../services/region.service';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { LoggerService } from '../../services/logger.service';
 import { RelayPingResultsDialogComponent } from '../settings/relays/relay-ping-results-dialog.component';
+import { InfoTooltipComponent } from '../../components/info-tooltip/info-tooltip.component';
 
 @Component({
   selector: 'app-media',
@@ -54,6 +55,7 @@ import { RelayPingResultsDialogComponent } from '../settings/relays/relay-ping-r
     TimestampPipe,
     MatTooltipModule,
     DragDropModule,
+    InfoTooltipComponent,
   ],
   templateUrl: './media.component.html',
   styleUrls: ['./media.component.scss'],
@@ -76,7 +78,7 @@ export class MediaComponent {
   // View state
   activeTab = signal<'images' | 'videos' | 'files' | 'servers'>('images');
   selectedItems = signal<string[]>([]);
-  
+
   // For automatic media server setup
   isSettingUpMediaServer = signal(false);
 
@@ -146,12 +148,12 @@ export class MediaComponent {
     this.route.queryParamMap.subscribe(params => {
       const uploadParam = params.get('upload');
       const tabParam = params.get('tab');
-      
+
       // Handle tab parameter to open a specific tab
       if (tabParam && ['images', 'videos', 'files', 'servers'].includes(tabParam)) {
         this.activeTab.set(tabParam as 'images' | 'videos' | 'files' | 'servers');
       }
-      
+
       if (uploadParam === 'true') {
         // Remove the query parameter from URL without navigation
         this.router.navigate([], {
@@ -273,7 +275,7 @@ export class MediaComponent {
     try {
       // Get user's account relays to detect region
       const userRelays = this.accountRelay.getRelayUrls();
-      
+
       // Nostria media server regions
       const nostriaMediaRegions = [
         { id: 'eu', name: 'Europe', mediaServer: 'https://mibo.eu.nostria.app' },
@@ -283,7 +285,7 @@ export class MediaComponent {
 
       // Try to detect user's region from their relays
       let detectedRegion: { id: string; name: string; mediaServer: string } | null = null;
-      
+
       for (const relay of userRelays) {
         for (const region of nostriaMediaRegions) {
           if (relay.includes(`.${region.id}.nostria.app`)) {
@@ -297,11 +299,11 @@ export class MediaComponent {
       // If we detected a region, use it directly
       if (detectedRegion) {
         this.logger.info('Detected user region from relays', { region: detectedRegion.name });
-        
+
         const confirmed = confirm(
           `We detected you're using the ${detectedRegion.name} region. Would you like to add the ${detectedRegion.name} Nostria media server (${detectedRegion.mediaServer})?`
         );
-        
+
         if (confirmed) {
           try {
             await this.mediaService.addMediaServer(detectedRegion.mediaServer);

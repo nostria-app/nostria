@@ -155,6 +155,7 @@
   0% {
     transform: rotate(0deg);
   }
+
   100% {
     transform: rotate(360deg);
   }
@@ -253,7 +254,8 @@
   position: relative;
   width: 100%;
   height: 0;
-  padding-bottom: 56.25%; /* 16:9 aspect ratio */
+  padding-bottom: 56.25%;
+  /* 16:9 aspect ratio */
   background-color: #000;
   overflow: hidden;
 
@@ -364,6 +366,12 @@
     font-size: 20px;
     font-weight: 500;
   }
+
+  .server-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
 }
 
 .server-description {
@@ -381,11 +389,13 @@
   gap: 16px;
   margin-bottom: 24px;
   width: 100%;
-  max-width: 600px; /* Limit the width for better readability */
+  max-width: 600px;
+  /* Limit the width for better readability */
 }
 
 .server-grid {
-  display: none; /* Hide the grid layout */
+  display: none;
+  /* Hide the grid layout */
 }
 
 .server-card {
@@ -393,8 +403,10 @@
   padding: 16px;
   box-shadow: var(--mat-sys-level1);
   transition: box-shadow 0.3s ease;
-  margin-bottom: 8px; /* Add space between cards */
-  width: 100%; /* Ensure cards take full width of container */
+  margin-bottom: 8px;
+  /* Add space between cards */
+  width: 100%;
+  /* Ensure cards take full width of container */
 
   &:hover {
     box-shadow: var(--mat-sys-level2);
@@ -582,7 +594,8 @@
 
     mat-icon {
       color: var(--mat-emphasis-color);
-      flex-shrink: 0; /* Prevent icon from shrinking */
+      flex-shrink: 0;
+      /* Prevent icon from shrinking */
     }
 
     .file-name-text {
