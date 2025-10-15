@@ -130,6 +130,21 @@ export class RelaysComponent implements OnInit, OnDestroy {
     'wss://discovery.af.nostria.app',
   ];
 
+  // Nostria relay regions for setup
+  nostriaRelayRegions = [
+    { id: 'eu', name: 'Europe', discoveryRelay: 'wss://discovery.eu.nostria.app' },
+    { id: 'us', name: 'North America', discoveryRelay: 'wss://discovery.us.nostria.app' },
+    { id: 'af', name: 'Africa', discoveryRelay: 'wss://discovery.af.nostria.app' },
+  ];
+
+  // Signal to track if user has zero account relays
+  hasZeroAccountRelays = computed(() => {
+    return this.userRelays().length === 0;
+  });
+
+  // Signal for Nostria setup process
+  isSettingUpNostriaRelays = signal(false);
+
   constructor() {
     effect(() => {
       if (this.app.authenticated()) {
@@ -753,6 +768,117 @@ export class RelaysComponent implements OnInit, OnDestroy {
       this.snackBar.open(`Removed observed relay: ${url}`, 'OK', { duration: 3000 });
     } catch (error) {
       this.snackBar.open('Failed to remove observed relay', 'OK', { duration: 3000 });
+    }
+  }
+
+  /**
+   * Setup Nostria relays for users with zero account relays.
+   * Pings all Nostria relay regions and lets user choose based on latency.
+   */
+  async setupNostriaRelays(): Promise<void> {
+    this.isSettingUpNostriaRelays.set(true);
+    this.logger.info('Starting Nostria relay setup for user with zero relays');
+
+    try {
+      // Get relay URLs for each region (using first instance of each region)
+      const relaysToCheck = this.nostriaRelayRegions.map(region => ({
+        region: region.name,
+        regionId: region.id,
+        discoveryRelay: region.discoveryRelay,
+        relayUrl: `wss://ribo.${region.id}.nostria.app`,
+      }));
+
+      this.logger.debug('Checking Nostria relay latencies', { relaysToCheck });
+      this.showMessage(`Checking ${relaysToCheck.length} Nostria relay regions for latency...`);
+
+      // Check latency for all regions
+      const pingResults = await Promise.allSettled(
+        relaysToCheck.map(async relay => {
+          const pingTime = await this.checkRelayPing(relay.relayUrl);
+          return {
+            region: relay.region,
+            regionId: relay.regionId,
+            discoveryRelay: relay.discoveryRelay,
+            relayUrl: relay.relayUrl,
+            pingTime,
+          };
+        })
+      );
+
+      // Process results
+      const successfulPings = pingResults
+        .map(result => {
+          if (result.status === 'fulfilled') {
+            return result.value;
+          }
+          return null;
+        })
+        .filter(result => result !== null)
+        .sort((a, b) => a!.pingTime - b!.pingTime);
+
+      this.logger.debug('Nostria relay latency results', { successfulPings });
+
+      if (successfulPings.length === 0) {
+        this.showMessage('No reachable Nostria relays found. Please try again later.');
+        this.isSettingUpNostriaRelays.set(false);
+        return;
+      }
+
+      // Show dialog with results - format for the existing dialog component
+      const dialogResults = successfulPings.map(result => ({
+        url: `${result!.region} (${this.formatRelayUrl(result!.relayUrl)})`,
+        pingTime: result!.pingTime,
+        isAlreadyAdded: false,
+        regionData: result,
+      }));
+
+      const dialogRef = this.dialog.open(RelayPingResultsDialogComponent, {
+        width: '500px',
+        data: {
+          results: dialogResults,
+        },
+      });
+
+      dialogRef.afterClosed().subscribe(async result => {
+        if (result?.selected) {
+          const selectedRegion = result.selected.regionData;
+
+          this.logger.info('User selected Nostria region', {
+            region: selectedRegion.region,
+            regionId: selectedRegion.regionId,
+            pingTime: selectedRegion.pingTime,
+          });
+
+          try {
+            // Add the main relay to account relays
+            this.accountRelay.addRelay(selectedRegion.relayUrl);
+
+            // If user had zero relays and added a Nostria relay, also update discovery relay
+            const discoveryRelayUrl = selectedRegion.discoveryRelay;
+            if (!this.discoveryRelay.getRelayUrls().includes(discoveryRelayUrl)) {
+              this.logger.info('Adding Nostria discovery relay', { discoveryRelayUrl });
+              this.discoveryRelay.addRelay(discoveryRelayUrl);
+              this.discoveryRelay.setDiscoveryRelays(this.discoveryRelay.getRelayUrls());
+            }
+
+            // Publish the relay list
+            await this.publish();
+
+            this.showMessage(
+              `Successfully added ${selectedRegion.region} Nostria relay (${selectedRegion.pingTime}ms latency)`
+            );
+          } catch (error) {
+            this.logger.error('Failed to setup Nostria relays', error);
+            this.showMessage('Error setting up Nostria relays. Please try again.');
+          }
+        }
+
+        this.isSettingUpNostriaRelays.set(false);
+      });
+    } catch (error) {
+      this.logger.error('Error during Nostria relay setup', error);
+      this.showMessage('Error checking relay latency. Please try again.');
+      this.isSettingUpNostriaRelays.set(false);
     }
   }
 }
