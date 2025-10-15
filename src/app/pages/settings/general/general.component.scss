@@ -27,3 +27,13 @@
   background-color: #f44336;
   color: white;
 }
+
+.setting-description {
+  font-size: 0.875rem;
+  color: rgba(0, 0, 0, 0.6);
+  margin: 0 0 16px 0;
+
+  @media (prefers-color-scheme: dark) {
+    color: rgba(255, 255, 255, 0.6);
+  }
+}

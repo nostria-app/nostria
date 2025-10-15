@@ -85,6 +85,14 @@ export class GeneralSettingsComponent {
     this.localSettings.setMaxRelaysPerUser(value);
   }
 
+  toggleAddClientTag(): void {
+    this.localSettings.setAddClientTag(!this.localSettings.addClientTag());
+  }
+
+  toggleShowClientTag(): void {
+    this.localSettings.setShowClientTag(!this.localSettings.showClientTag());
+  }
+
   wipeData(): void {
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       width: '400px',
