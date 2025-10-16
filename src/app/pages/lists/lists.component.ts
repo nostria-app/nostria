@@ -656,7 +656,7 @@ export class ListsComponent implements OnInit {
 
       // Sign and publish
       const signedEvent = await this.nostr.signEvent(unsignedEvent);
-      
+
       // Update local state immediately with the new event (optimistic update)
       const newListData = await this.parseListEvent(signedEvent, listType);
       if (newListData) {
@@ -669,32 +669,38 @@ export class ListsComponent implements OnInit {
           // Update or add to sets
           const currentSets = new Map(this.setsData());
           const existingSets = currentSets.get(listType.kind) || [];
-          
+
           // Find and replace existing set with same identifier, or add new
           const updatedSets = identifier
             ? existingSets.map(s => s.identifier === identifier ? newListData : s)
             : [...existingSets, newListData];
-          
+
           // If no existing set was found with this identifier, add it
           if (identifier && !existingSets.some(s => s.identifier === identifier)) {
             updatedSets.push(newListData);
           }
-          
+
           currentSets.set(listType.kind, updatedSets);
           this.setsData.set(currentSets);
         }
-        
+
         // Also save to local database immediately
         await this.storage.saveEvent(signedEvent);
+
+        // Invalidate cache so next load gets the fresh data
+        await this.data.getEventByPubkeyAndKind(pubkey, listType.kind, {
+          cache: true,
+          invalidateCache: true,
+        } as Parameters<typeof this.data.getEventByPubkeyAndKind>[2]);
       }
-      
+
       // Publish to relays (happens in background)
       await this.publish.publish(signedEvent, { useOptimizedRelays: true });
 
       this.snackBar.open('List saved successfully', 'Close', { duration: 3000 });
 
-      // Reload lists
-      await this.loadAllLists();
+      // No need to reload - optimistic update already updated the UI
+      // and we saved to storage. Reloading with cache would just get stale data.
     } catch (error) {
       this.logger.error('[ListsComponent] Error saving list', error);
       this.snackBar.open('Failed to save list', 'Close', { duration: 3000 });
