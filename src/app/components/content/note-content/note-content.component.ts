@@ -26,12 +26,42 @@ export class NoteContentComponent {
   // Store rendered HTML for nevent/note previews
   private eventPreviewsMap = signal<Map<number, SafeHtml>>(new Map());
 
+  // Track last processed tokens to prevent redundant re-execution
+  private lastProcessedTokens: ContentToken[] = [];
+
   constructor() {
     // When tokens change, fetch event previews for nevent/note types
     effect(() => {
       const tokens = this.contentTokens();
-      this.loadEventPreviews(tokens);
+
+      // Only process if tokens actually changed (not just reference change)
+      if (this.tokensHaveChanged(tokens)) {
+        this.lastProcessedTokens = [...tokens];
+        this.loadEventPreviews(tokens);
+      }
     });
+  }
+
+  /**
+   * Check if tokens have actually changed by comparing their content
+   */
+  private tokensHaveChanged(newTokens: ContentToken[]): boolean {
+    // If length changed, definitely changed
+    if (newTokens.length !== this.lastProcessedTokens.length) {
+      return true;
+    }
+
+    // Compare each token by id and type (shallow comparison is enough)
+    for (let i = 0; i < newTokens.length; i++) {
+      const newToken = newTokens[i];
+      const oldToken = this.lastProcessedTokens[i];
+
+      if (newToken.id !== oldToken.id || newToken.type !== oldToken.type) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   private async loadEventPreviews(tokens: ContentToken[]): Promise<void> {
@@ -47,8 +77,6 @@ export class NoteContentComponent {
             const authorPubkey = type === 'nevent' ? (data.author || data.pubkey) : undefined;
             const relayHints = type === 'nevent' ? data.relays : undefined;
 
-            console.debug(`[NoteContent] Loading preview for ${type}:`, eventId);
-
             const previewHtml = await this.formatService.fetchEventPreview(
               eventId,
               authorPubkey,
@@ -57,7 +85,6 @@ export class NoteContentComponent {
 
             if (previewHtml) {
               previewsMap.set(token.id, this.sanitizer.bypassSecurityTrustHtml(previewHtml));
-              console.debug(`[NoteContent] Preview loaded for token ${token.id}`);
             }
           } catch (error) {
             console.error(`[NoteContent] Error loading preview for token ${token.id}:`, error);

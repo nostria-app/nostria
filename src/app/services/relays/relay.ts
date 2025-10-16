@@ -451,7 +451,10 @@ export abstract class RelayServiceBase {
       // TODO: Handle npub format if needed
     }
 
-    this.logger.debug('Getting events with filters (explicit relays):', filter, urls);
+    // Only log for non-metadata requests to reduce console noise
+    if (!filter.kinds?.includes(0)) {
+      this.logger.debug('Getting events with filters (explicit relays):', filter, urls);
+    }
 
     if (urls.length === 0) {
       this.logger.warn('No relays available for query');
@@ -557,7 +560,10 @@ export abstract class RelayServiceBase {
       // TODO: Handle npub format if needed
     }
 
-    this.logger.debug('Getting events with filters (explicit relays):', filter, urls);
+    // Only log for non-metadata requests to reduce console noise
+    if (!filter.kinds?.includes(0)) {
+      this.logger.debug('Getting events with filters (explicit relays):', filter, urls);
+    }
 
     if (urls.length === 0) {
       this.logger.warn('No relays available for query');
