@@ -1,0 +1,197 @@
+<div class="editor-dialog">
+  <h2 mat-dialog-title>
+    <mat-icon>{{ listType.icon }}</mat-icon>
+    {{ mode === 'create' ? 'Create' : 'Edit' }} {{ listType.name }}
+  </h2>
+
+  <mat-dialog-content>
+    <!-- Metadata Section -->
+    <div class="metadata-section">
+      <h3>List Details</h3>
+
+      @if (!listType.isReplaceable) {
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Identifier (required)</mat-label>
+          <input matInput [(ngModel)]="identifier" placeholder="unique-identifier" required />
+          <mat-hint>Unique identifier for this set (cannot be changed after creation)</mat-hint>
+        </mat-form-field>
+      }
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Title</mat-label>
+        <input matInput [(ngModel)]="title" placeholder="My awesome list" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Description</mat-label>
+        <textarea
+          matInput
+          [(ngModel)]="description"
+          rows="3"
+          placeholder="What is this list about?"
+        ></textarea>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Image URL (optional)</mat-label>
+        <input matInput [(ngModel)]="image" type="url" placeholder="https://..." />
+      </mat-form-field>
+    </div>
+
+    <mat-divider></mat-divider>
+
+    <!-- Add Items Section -->
+    <div class="add-item-section">
+      <h3>Add Items</h3>
+
+      <div class="add-item-form">
+        <mat-form-field appearance="outline" class="tag-field">
+          <mat-label>Tag Type</mat-label>
+          <mat-select [(ngModel)]="newItemTag">
+            @for (tag of listType.expectedTags; track tag) {
+              <mat-option [value]="tag">
+                <mat-icon>{{ getTagIcon(tag) }}</mat-icon>
+                {{ tag }}
+              </mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="value-field">
+          <mat-label>Value</mat-label>
+          <input
+            matInput
+            [(ngModel)]="newItemValue"
+            placeholder="Enter value"
+            (keyup.enter)="addItem()"
+          />
+          <mat-hint>
+            @if (newItemTag() === 'p') {
+              Public key (hex)
+            } @else if (newItemTag() === 'e') {
+              Event ID (hex)
+            } @else if (newItemTag() === 'a') {
+              Event coordinates (kind:pubkey:identifier)
+            } @else if (newItemTag() === 't') {
+              Hashtag (without #)
+            } @else if (newItemTag() === 'r') {
+              URL
+            } @else {
+              Value for {{ newItemTag() }} tag
+            }
+          </mat-hint>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="relay-field">
+          <mat-label>Relay (optional)</mat-label>
+          <input
+            matInput
+            [(ngModel)]="newItemRelay"
+            type="url"
+            placeholder="wss://..."
+            (keyup.enter)="addItem()"
+          />
+        </mat-form-field>
+
+        <mat-slide-toggle [(ngModel)]="newItemIsPrivate" color="primary">
+          Private
+        </mat-slide-toggle>
+
+        <button
+          mat-raised-button
+          color="primary"
+          (click)="addItem()"
+          [disabled]="!newItemTag() || !newItemValue()"
+        >
+          <mat-icon>add</mat-icon>
+          Add
+        </button>
+      </div>
+
+      <p class="item-count">Total items: {{ totalItems() }}</p>
+    </div>
+
+    <mat-divider></mat-divider>
+
+    <!-- Items Lists -->
+    <mat-tab-group>
+      <!-- Public Items -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon>public</mat-icon>
+          Public Items ({{ publicItems().length }})
+        </ng-template>
+
+        <div class="items-list">
+          @if (publicItems().length > 0) {
+            @for (item of publicItems(); track $index) {
+              <mat-chip-row class="item-chip">
+                <mat-icon matChipAvatar>{{ getTagIcon(item.tag) }}</mat-icon>
+                <span class="item-text">{{ getItemDisplay(item) }}</span>
+                <button
+                  matChipRemove
+                  matTooltip="Move to private"
+                  (click)="moveToPrivate($index)"
+                >
+                  <mat-icon>lock</mat-icon>
+                </button>
+                <button matChipRemove matTooltip="Remove" (click)="removePublicItem($index)">
+                  <mat-icon>close</mat-icon>
+                </button>
+              </mat-chip-row>
+            }
+          } @else {
+            <p class="no-items">No public items yet. Add items above.</p>
+          }
+        </div>
+      </mat-tab>
+
+      <!-- Private Items -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon>lock</mat-icon>
+          Private Items ({{ privateItems().length }})
+        </ng-template>
+
+        <div class="items-list">
+          <div class="privacy-notice">
+            <mat-icon>info</mat-icon>
+            <p>
+              Private items are encrypted using NIP-44 and only you can read them. They are useful
+              for mute lists or personal bookmarks.
+            </p>
+          </div>
+
+          @if (privateItems().length > 0) {
+            @for (item of privateItems(); track $index) {
+              <mat-chip-row class="item-chip private">
+                <mat-icon matChipAvatar>{{ getTagIcon(item.tag) }}</mat-icon>
+                <span class="item-text">{{ getItemDisplay(item) }}</span>
+                <button
+                  matChipRemove
+                  matTooltip="Move to public"
+                  (click)="moveToPublic($index)"
+                >
+                  <mat-icon>public</mat-icon>
+                </button>
+                <button matChipRemove matTooltip="Remove" (click)="removePrivateItem($index)">
+                  <mat-icon>close</mat-icon>
+                </button>
+              </mat-chip-row>
+            }
+          } @else {
+            <p class="no-items">No private items yet. Toggle "Private" when adding items.</p>
+          }
+        </div>
+      </mat-tab>
+    </mat-tab-group>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button (click)="cancel()">Cancel</button>
+    <button mat-raised-button color="primary" (click)="save()" [disabled]="!isValid()">
+      <mat-icon>save</mat-icon>
+      {{ mode === 'create' ? 'Create List' : 'Save Changes' }}
+    </button>
+  </mat-dialog-actions>
+</div>
