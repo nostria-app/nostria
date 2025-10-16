@@ -19,18 +19,36 @@ NIP-51 defines lists of things that users can create on Nostr. Lists can contain
 Users can have **only one** of each type:
 - **Kind 10000**: Mute List - Users and content to hide
 - **Kind 10001**: Pinned Notes - Events showcased on profile
+- **Kind 10002**: Read/Write Relays - Publishing and mention relays (NIP-65)
 - **Kind 10003**: Bookmarks - Saved notes, articles, hashtags, URLs
 - **Kind 10004**: Communities - NIP-72 communities
 - **Kind 10005**: Public Chats - NIP-28 chat channels
+- **Kind 10006**: Blocked Relays - Relays to never connect to
+- **Kind 10007**: Search Relays - Relays for search queries
+- **Kind 10009**: Simple Groups - NIP-29 groups
+- **Kind 10012**: Relay Feeds - Favorite browsable relays
 - **Kind 10015**: Interests - Topics and interest sets
+- **Kind 10020**: Media Follows - Multimedia follow list
+- **Kind 10030**: Emojis - Preferred emojis and emoji sets
+- **Kind 10050**: DM Relays - NIP-17 direct message relays
+- **Kind 10101**: Good Wiki Authors - Recommended wiki authors
+- **Kind 10102**: Good Wiki Relays - Relays with useful wiki articles
 
 #### Sets (30000 series - Parameterized Replaceable Events)
 Users can have **multiple sets** of each type with different identifiers:
 - **Kind 30000**: Follow Sets - Categorized groups of users
+- **Kind 30002**: Relay Sets - User-defined relay groups
 - **Kind 30003**: Bookmark Sets - Categorized bookmarks
-- **Kind 30004**: Curation Sets - Curated articles and notes
+- **Kind 30004**: Curation Sets (Articles) - Curated articles and notes
+- **Kind 30005**: Curation Sets (Videos) - Curated video collections
+- **Kind 30007**: Kind Mute Sets - Mute pubkeys by event kinds
 - **Kind 30015**: Interest Sets - Interest topics by hashtags
 - **Kind 30030**: Emoji Sets - Categorized emoji groups
+- **Kind 30063**: Release Artifact Sets - Software release artifacts
+- **Kind 30267**: App Curation Sets - Curated software applications
+- **Kind 31924**: Calendar Sets - Categorized calendar events
+- **Kind 39089**: Starter Packs - Named set of profiles to follow together
+- **Kind 39092**: Media Starter Packs - Multimedia profile sets
 
 ### 2. Privacy Support
 
@@ -60,8 +78,10 @@ Each list type has expected tag types:
 - `a` - Event coordinates (kind:pubkey:identifier)
 - `t` - Hashtags
 - `r` - URLs
+- `relay` - Relay URLs (wss://...)
 - `word` - Text strings (for mute words)
-- `emoji` - Emoji definitions
+- `emoji` - Emoji definitions (shortcode and URL)
+- `group` - Group IDs (NIP-29)
 
 The editor intelligently shows appropriate hints based on the selected tag type.
 
