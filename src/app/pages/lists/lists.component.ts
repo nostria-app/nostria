@@ -353,6 +353,11 @@ export class ListsComponent implements OnInit {
 
   async ngOnInit() {
     await this.loadAllLists();
+
+    // Add to window for debugging
+    if (typeof window !== 'undefined') {
+      (window as unknown as { listComponent?: ListsComponent }).listComponent = this;
+    }
   }
 
   /**
@@ -494,6 +499,18 @@ export class ListsComponent implements OnInit {
         continue;
       }
 
+      // Skip chat metadata entries (likely application data that shouldn't be displayed)
+      if (value?.includes('chats/') && value?.includes('/lastOpened')) {
+        this.logger.debug('[ListsComponent] Skipping chat metadata entry:', value);
+        continue;
+      }
+
+      // Skip other common application metadata patterns
+      if (value?.startsWith('app:') || value?.startsWith('metadata:')) {
+        this.logger.debug('[ListsComponent] Skipping application metadata entry:', value);
+        continue;
+      }
+
       items.push({
         tag: tagName,
         value,
@@ -514,6 +531,12 @@ export class ListsComponent implements OnInit {
       return [];
     }
 
+    // Check if content appears to be encrypted before attempting decryption
+    if (!this.encryption.isContentEncrypted(content)) {
+      this.logger.debug('[ListsComponent] Content does not appear to be encrypted, skipping decryption');
+      return [];
+    }
+
     try {
       const pubkey = this.pubkey();
       if (!pubkey) return [];
@@ -527,7 +550,7 @@ export class ListsComponent implements OnInit {
         try {
           decrypted = await this.encryption.decryptNip04(content, pubkey);
         } catch {
-          this.logger.debug('[ListsComponent] Could not decrypt private items');
+          this.logger.debug('[ListsComponent] Could not decrypt private items - content may not be encrypted for this user');
           return [];
         }
       }
@@ -784,5 +807,31 @@ export class ListsComponent implements OnInit {
    */
   formatDate(timestamp: number): string {
     return new Date(timestamp * 1000).toLocaleDateString();
+  }
+
+  /**
+   * Debug method to log all raw list items for troubleshooting
+   * Can be called from browser console: window.listComponent?.debugListItems()
+   */
+  debugListItems(): void {
+    this.logger.info('[ListsComponent] Debug - Standard Lists:');
+    for (const [kind, listData] of this.standardListsData().entries()) {
+      this.logger.info(`Kind ${kind}:`, {
+        publicItems: listData.publicItems,
+        privateItems: listData.privateItems,
+        event: listData.event
+      });
+    }
+
+    this.logger.info('[ListsComponent] Debug - Sets:');
+    for (const [kind, sets] of this.setsData().entries()) {
+      this.logger.info(`Kind ${kind} sets:`, sets.map(set => ({
+        title: set.title,
+        identifier: set.identifier,
+        publicItems: set.publicItems,
+        privateItems: set.privateItems,
+        event: set.event
+      })));
+    }
   }
 }

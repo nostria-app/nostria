@@ -156,6 +156,11 @@ export class EncryptionService {
     senderPubkey: string,
     event: Event
   ): Promise<DecryptionResult> {
+    // First check if the content appears to be encrypted
+    if (!this.isContentEncrypted(ciphertext)) {
+      throw new Error('Content does not appear to be encrypted');
+    }
+
     if (ciphertext.includes('?iv=')) {
       // Fallback to NIP-04 (legacy format with ?iv=)
       try {
@@ -218,5 +223,56 @@ export class EncryptionService {
 
     // All other account types support legacy encryption
     return true;
+  }
+
+  /**
+   * Check if content appears to be encrypted
+   * This is a heuristic check to avoid attempting decryption on plain text
+   */
+  isContentEncrypted(content: string): boolean {
+    if (!content || content.trim() === '') {
+      return false;
+    }
+
+    // NIP-04 encrypted content contains '?iv=' parameter
+    if (content.includes('?iv=')) {
+      return true;
+    }
+
+    // NIP-44 encrypted content is base64-encoded and starts with specific prefixes
+    // It should be a base64 string without spaces and with proper length
+    const trimmedContent = content.trim();
+
+    // Basic base64 pattern check (contains only valid base64 characters)
+    const base64Pattern = /^[A-Za-z0-9+/]+=*$/;
+    if (base64Pattern.test(trimmedContent)) {
+      // NIP-44 encrypted content is typically longer than 32 characters
+      // and has a specific structure when decoded
+      if (trimmedContent.length > 32) {
+        try {
+          // Try to decode as base64 - if it fails, it's probably not encrypted
+          atob(trimmedContent);
+          return true;
+        } catch {
+          // If base64 decode fails, it's not encrypted with NIP-44
+          return false;
+        }
+      }
+    }
+
+    // Check if it looks like JSON (likely plain text)
+    try {
+      JSON.parse(content);
+      return false; // Successfully parsed as JSON, likely not encrypted
+    } catch {
+      // Not valid JSON, could be encrypted or just other plain text
+    }
+
+    // If content contains common plain text patterns, it's probably not encrypted
+    if (content.includes('{') || content.includes('[') || content.includes('chats/')) {
+      return false;
+    }
+
+    return false; // Default to not encrypted to avoid unnecessary decryption attempts
   }
 }

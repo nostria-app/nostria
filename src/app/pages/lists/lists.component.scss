@@ -170,12 +170,16 @@
 .set-card {
   width: 100%;
 
-  mat-card-header {
+  // Override Material Design card header to enable text clipping
+  ::ng-deep mat-card-header {
+    min-width: 0;
+
     img[mat-card-avatar] {
       width: 40px;
       height: 40px;
       border-radius: 50%;
       object-fit: cover;
+      flex-shrink: 0;
     }
 
     mat-icon[mat-card-avatar] {
@@ -185,6 +189,29 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      flex-shrink: 0;
+    }
+
+    // Target all possible Material subtitle classes
+    .mat-mdc-card-subtitle,
+    .mdc-card__subtitle,
+    mat-card-subtitle {
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      white-space: nowrap !important;
+      display: block !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+      box-sizing: border-box !important;
+    }
+
+    // Ensure the header text container properly constrains content
+    .mat-mdc-card-header-text {
+      min-width: 0 !important;
+      flex: 1 !important;
+      overflow: hidden !important;
+      max-width: calc(100% - 60px) !important; // Account for avatar width + margin
     }
   }
 
