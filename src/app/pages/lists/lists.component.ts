@@ -25,6 +25,7 @@ import { PublishService } from '../../services/publish.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { LayoutService } from '../../services/layout.service';
 import { EncryptionService } from '../../services/encryption.service';
+import { StorageService } from '../../services/storage.service';
 import { ListEditorDialogComponent } from './list-editor-dialog/list-editor-dialog.component';
 
 // NIP-51 List type definitions
@@ -81,7 +82,7 @@ const STANDARD_LISTS: ListType[] = [
     description: 'Where you publish and expect mentions (NIP-65)',
     icon: 'router',
     isReplaceable: true,
-    expectedTags: ['relay'],
+    expectedTags: ['r'], // NIP-65: uses 'r' tags, not 'relay'
   },
   {
     kind: 10003,
@@ -333,6 +334,7 @@ export class ListsComponent implements OnInit {
   private readonly dialog = inject(MatDialog);
   private readonly router = inject(Router);
   private readonly layout = inject(LayoutService);
+  private readonly storage = inject(StorageService);
 
   // Available list types
   standardLists = STANDARD_LISTS;
@@ -654,6 +656,39 @@ export class ListsComponent implements OnInit {
 
       // Sign and publish
       const signedEvent = await this.nostr.signEvent(unsignedEvent);
+      
+      // Update local state immediately with the new event (optimistic update)
+      const newListData = await this.parseListEvent(signedEvent, listType);
+      if (newListData) {
+        if (listType.isReplaceable) {
+          // Update standard list
+          const currentLists = new Map(this.standardListsData());
+          currentLists.set(listType.kind, newListData);
+          this.standardListsData.set(currentLists);
+        } else {
+          // Update or add to sets
+          const currentSets = new Map(this.setsData());
+          const existingSets = currentSets.get(listType.kind) || [];
+          
+          // Find and replace existing set with same identifier, or add new
+          const updatedSets = identifier
+            ? existingSets.map(s => s.identifier === identifier ? newListData : s)
+            : [...existingSets, newListData];
+          
+          // If no existing set was found with this identifier, add it
+          if (identifier && !existingSets.some(s => s.identifier === identifier)) {
+            updatedSets.push(newListData);
+          }
+          
+          currentSets.set(listType.kind, updatedSets);
+          this.setsData.set(currentSets);
+        }
+        
+        // Also save to local database immediately
+        await this.storage.saveEvent(signedEvent);
+      }
+      
+      // Publish to relays (happens in background)
       await this.publish.publish(signedEvent, { useOptimizedRelays: true });
 
       this.snackBar.open('List saved successfully', 'Close', { duration: 3000 });
