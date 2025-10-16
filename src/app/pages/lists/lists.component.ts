@@ -367,21 +367,30 @@ export class ListsComponent implements OnInit {
     const pubkey = this.pubkey();
     if (!pubkey) {
       this.logger.warn('[ListsComponent] No pubkey available');
+      this.loading.set(false);
       return;
     }
 
+    this.logger.info('[ListsComponent] Starting to load lists for pubkey:', pubkey);
     this.loading.set(true);
 
     try {
       // Load standard lists (10000 series)
+      this.logger.info('[ListsComponent] Loading standard lists...');
       await this.loadStandardLists(pubkey);
+      this.logger.info('[ListsComponent] Standard lists loaded successfully');
 
       // Load sets (30000 series)
+      this.logger.info('[ListsComponent] Loading sets...');
       await this.loadSets(pubkey);
+      this.logger.info('[ListsComponent] Sets loaded successfully');
+
+      this.logger.info('[ListsComponent] All lists loaded successfully');
     } catch (error) {
       this.logger.error('[ListsComponent] Error loading lists', error);
       this.snackBar.open('Failed to load lists', 'Close', { duration: 3000 });
     } finally {
+      this.logger.info('[ListsComponent] Setting loading to false');
       this.loading.set(false);
     }
   }
@@ -390,26 +399,33 @@ export class ListsComponent implements OnInit {
    * Load standard replaceable lists (10000 series)
    */
   private async loadStandardLists(pubkey: string) {
+    this.logger.debug(`[ListsComponent] Loading standard lists for ${STANDARD_LISTS.length} types`);
     const listsMap = new Map<number, ListData>();
 
     for (const listType of STANDARD_LISTS) {
       try {
+        this.logger.debug(`[ListsComponent] Loading standard list kind ${listType.kind}`);
         const record = await this.data.getEventByPubkeyAndKind(pubkey, listType.kind, {
           save: true,
           cache: true,
         });
 
         if (record?.event) {
+          this.logger.debug(`[ListsComponent] Found event for kind ${listType.kind}, parsing...`);
           const listData = await this.parseListEvent(record.event, listType);
           if (listData) {
             listsMap.set(listType.kind, listData);
+            this.logger.debug(`[ListsComponent] Successfully parsed list for kind ${listType.kind}`);
           }
+        } else {
+          this.logger.debug(`[ListsComponent] No event found for kind ${listType.kind}`);
         }
-      } catch {
-        this.logger.debug(`[ListsComponent] No list found for kind ${listType.kind}`);
+      } catch (error) {
+        this.logger.debug(`[ListsComponent] Error loading list for kind ${listType.kind}:`, error);
       }
     }
 
+    this.logger.debug(`[ListsComponent] Setting ${listsMap.size} standard lists`);
     this.standardListsData.set(listsMap);
   }
 
@@ -417,19 +433,23 @@ export class ListsComponent implements OnInit {
    * Load parameterized replaceable sets (30000 series)
    */
   private async loadSets(pubkey: string) {
+    this.logger.debug(`[ListsComponent] Loading sets for ${LIST_SETS.length} types`);
     const setsMap = new Map<number, ListData[]>();
 
     for (const listType of LIST_SETS) {
       try {
+        this.logger.debug(`[ListsComponent] Loading sets for kind ${listType.kind}`);
         const records = await this.data.getEventsByPubkeyAndKind(pubkey, listType.kind, {
           save: true,
           cache: true,
         });
 
         if (records && records.length > 0) {
+          this.logger.debug(`[ListsComponent] Found ${records.length} records for kind ${listType.kind}`);
           const sets: ListData[] = [];
           for (const record of records) {
             if (record.event) {
+              this.logger.debug(`[ListsComponent] Parsing set event for kind ${listType.kind}`);
               const listData = await this.parseListEvent(record.event, listType);
               if (listData) {
                 sets.push(listData);
@@ -439,13 +459,17 @@ export class ListsComponent implements OnInit {
 
           if (sets.length > 0) {
             setsMap.set(listType.kind, sets);
+            this.logger.debug(`[ListsComponent] Added ${sets.length} sets for kind ${listType.kind}`);
           }
+        } else {
+          this.logger.debug(`[ListsComponent] No records found for kind ${listType.kind}`);
         }
-      } catch {
-        this.logger.debug(`[ListsComponent] No sets found for kind ${listType.kind}`);
+      } catch (error) {
+        this.logger.debug(`[ListsComponent] Error loading sets for kind ${listType.kind}:`, error);
       }
     }
 
+    this.logger.debug(`[ListsComponent] Setting ${setsMap.size} set types`);
     this.setsData.set(setsMap);
   }
 
@@ -454,11 +478,17 @@ export class ListsComponent implements OnInit {
    */
   private async parseListEvent(event: Event, type: ListType): Promise<ListData | null> {
     try {
+      this.logger.debug(`[ListsComponent] Parsing list event ${event.id} for kind ${type.kind}`);
+
       // Parse public items from tags
+      this.logger.debug(`[ListsComponent] Parsing public items from ${event.tags.length} tags`);
       const publicItems = this.parsePublicItems(event.tags);
+      this.logger.debug(`[ListsComponent] Found ${publicItems.length} public items`);
 
       // Parse private items from encrypted content (if any)
+      this.logger.debug(`[ListsComponent] Parsing private items from content: ${event.content.substring(0, 50)}...`);
       const privateItems = await this.parsePrivateItems(event.content);
+      this.logger.debug(`[ListsComponent] Found ${privateItems.length} private items`);
 
       // Extract metadata
       const title = event.tags.find(t => t[0] === 'title')?.[1];
@@ -466,6 +496,7 @@ export class ListsComponent implements OnInit {
       const image = event.tags.find(t => t[0] === 'image')?.[1];
       const identifier = event.tags.find(t => t[0] === 'd')?.[1];
 
+      this.logger.debug(`[ListsComponent] Successfully parsed list event ${event.id}`);
       return {
         event,
         type,
@@ -528,39 +559,74 @@ export class ListsComponent implements OnInit {
    */
   private async parsePrivateItems(content: string): Promise<ListItem[]> {
     if (!content || content.trim() === '') {
+      this.logger.debug('[ListsComponent] No content to decrypt');
       return [];
     }
 
+    this.logger.debug('[ListsComponent] Checking if content is encrypted...');
     // Check if content appears to be encrypted before attempting decryption
-    if (!this.encryption.isContentEncrypted(content)) {
-      this.logger.debug('[ListsComponent] Content does not appear to be encrypted, skipping decryption');
+    try {
+      const isEncrypted = this.encryption.isContentEncrypted(content);
+      if (!isEncrypted) {
+        this.logger.debug('[ListsComponent] Content does not appear to be encrypted, skipping decryption');
+        return [];
+      }
+      this.logger.debug('[ListsComponent] Content appears to be encrypted, attempting decryption');
+    } catch (error) {
+      this.logger.error('[ListsComponent] Error checking if content is encrypted:', error);
       return [];
     }
 
     try {
       const pubkey = this.pubkey();
-      if (!pubkey) return [];
+      if (!pubkey) {
+        this.logger.debug('[ListsComponent] No pubkey available for decryption');
+        return [];
+      }
 
-      // Try to decrypt the content using NIP-44
+      // Add timeout to prevent hanging
+      const decryptionPromise = this.attemptDecryption(content, pubkey);
+      const timeoutPromise = new Promise<string>((_, reject) => {
+        setTimeout(() => reject(new Error('Decryption timeout')), 10000); // 10 second timeout
+      });
+
       let decrypted: string;
       try {
-        decrypted = await this.encryption.decryptNip44(content, pubkey);
-      } catch {
-        // Fallback to NIP-04 for backward compatibility
-        try {
-          decrypted = await this.encryption.decryptNip04(content, pubkey);
-        } catch {
-          this.logger.debug('[ListsComponent] Could not decrypt private items - content may not be encrypted for this user');
-          return [];
-        }
+        decrypted = await Promise.race([decryptionPromise, timeoutPromise]);
+        this.logger.debug('[ListsComponent] Successfully decrypted content');
+      } catch (error) {
+        this.logger.debug('[ListsComponent] Could not decrypt private items:', error);
+        return [];
       }
 
       // Parse the decrypted JSON array of tags
       const privateTags: string[][] = JSON.parse(decrypted);
-      return this.parsePublicItems(privateTags);
+      const items = this.parsePublicItems(privateTags);
+      this.logger.debug(`[ListsComponent] Parsed ${items.length} private items`);
+      return items;
     } catch (error) {
       this.logger.error('[ListsComponent] Error parsing private items', error);
       return [];
+    }
+  }
+
+  /**
+   * Attempt to decrypt content with both NIP-44 and NIP-04
+   */
+  private async attemptDecryption(content: string, pubkey: string): Promise<string> {
+    // Try to decrypt the content using NIP-44
+    try {
+      this.logger.debug('[ListsComponent] Attempting NIP-44 decryption...');
+      return await this.encryption.decryptNip44(content, pubkey);
+    } catch (nip44Error) {
+      this.logger.debug('[ListsComponent] NIP-44 decryption failed, trying NIP-04...', nip44Error);
+      // Fallback to NIP-04 for backward compatibility
+      try {
+        return await this.encryption.decryptNip04(content, pubkey);
+      } catch (nip04Error) {
+        this.logger.debug('[ListsComponent] NIP-04 decryption also failed', nip04Error);
+        throw new Error('Both NIP-44 and NIP-04 decryption failed');
+      }
     }
   }
 
