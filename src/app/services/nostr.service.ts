@@ -434,54 +434,70 @@ export class NostrService implements NostriaService {
 
     let signedEvent: Event | EventTemplate | null = null;
 
-    if (!('pubkey' in event) || !event.pubkey) {
-      (event as any).pubkey = currentUser.pubkey;
-    }
-
-    // Remove id and signature, ensuring they are re-created upon signing.
-    (event as any).id = undefined;
-    (event as any).sig = undefined;
-
-    // Let's update the created_at to ensure if this is old event being updated,
-    // we have a fresh creation date.
-    event.created_at = this.currentDate();
+    // Get the pubkey - either from the event if it's an Event, or use current user's
+    const eventPubkey = ('pubkey' in event) ? event.pubkey : currentUser.pubkey;
 
     switch (currentUser?.source) {
-      case 'extension':
+      case 'extension': {
         if (!window.nostr) {
           throw new Error(
             'Nostr extension not found. Please install Alby, nos2x, or another NIP-07 compatible extension.'
           );
         }
 
-        const extensionResult = await window.nostr.signEvent(event);
-
-        signedEvent = {
-          ...event,
-          id: extensionResult.id,
-          sig: extensionResult.sig,
+        // Create EventTemplate WITHOUT pubkey for NIP-07 extensions
+        // Extensions will add the pubkey themselves
+        const eventTemplate: EventTemplate = {
+          kind: event.kind,
+          created_at: this.currentDate(),
+          tags: event.tags,
+          content: event.content,
         };
 
+        // Pass event template to extension (no pubkey)
+        const extensionResult = await window.nostr.signEvent(eventTemplate);
+
+        signedEvent = extensionResult as Event;
+
         break;
-      case 'remote':
+      }
+      case 'remote': {
+        // For remote signing, we need to include pubkey
+        const cleanEvent: UnsignedEvent = {
+          kind: event.kind,
+          created_at: this.currentDate(),
+          tags: event.tags,
+          content: event.content,
+          pubkey: eventPubkey,
+        };
+
         const pool = new SimplePool();
         const bunker = BunkerSigner.fromBunker(
           hexToBytes(currentUser.privkey!),
           this.accountState.account()!.bunker!,
           { pool }
         );
-        signedEvent = await bunker.signEvent(event);
+        signedEvent = await bunker.signEvent(cleanEvent);
         this.logger.info('Using remote signer account');
         break;
-
+      }
       case 'preview':
         throw new Error(
           'Preview accounts cannot sign events. Please use a different account type.'
         );
         break;
-      case 'nsec':
-        signedEvent = finalizeEvent(event, hexToBytes(currentUser.privkey!));
+      case 'nsec': {
+        // For nsec signing, we need to include pubkey
+        const cleanEvent: UnsignedEvent = {
+          kind: event.kind,
+          created_at: this.currentDate(),
+          tags: event.tags,
+          content: event.content,
+          pubkey: eventPubkey,
+        };
+        signedEvent = finalizeEvent(cleanEvent, hexToBytes(currentUser.privkey!));
         break;
+      }
     }
 
     return signedEvent as Event;
@@ -1236,6 +1252,138 @@ export class NostrService implements NostriaService {
     await this.setAccount(newUser);
 
     return newUser;
+  }
+
+  async setupNewAccountWithDefaults(user: NostrUser, region?: string): Promise<void> {
+    this.logger.info('Setting up new account with default configuration', {
+      pubkey: user.pubkey,
+      region,
+    });
+
+    // If region is not provided, try to get it from the user or use a default
+    const accountRegion = region || user.region || 'us';
+
+    // Configure the discovery relay based on the user's region
+    const discoveryRelay = this.region.getDiscoveryRelay(accountRegion);
+    this.logger.info('Setting discovery relay for new user based on region', {
+      region: accountRegion,
+      discoveryRelay,
+    });
+    this.discoveryRelay.setDiscoveryRelays([discoveryRelay]);
+
+    const relayServerUrl = this.region.getRelayServer(accountRegion, 0);
+    const relayTags = this.createTags('r', [relayServerUrl!]);
+
+    // Initialize the account relay so we can start using it
+    this.accountRelay.init([relayServerUrl!]);
+
+    // Create and publish Relay List event
+    const relayListEvent: UnsignedEvent = {
+      pubkey: user.pubkey,
+      created_at: Math.floor(Date.now() / 1000),
+      kind: kinds.RelayList,
+      tags: relayTags,
+      content: '',
+    };
+
+    // Use the existing sign method which handles all account types properly
+    const signedRelayEvent = await this.signEvent(relayListEvent);
+
+    await this.storage.saveEvent(signedRelayEvent);
+    await this.accountRelay.publish(signedRelayEvent);
+    await this.discoveryRelay.publish(signedRelayEvent);
+
+    // Create and publish Media Server event
+    const mediaServerUrl = this.region.getMediaServer(accountRegion, 0);
+    const mediaTags = this.createTags('server', [mediaServerUrl!]);
+
+    const mediaServerEvent: UnsignedEvent = {
+      pubkey: user.pubkey,
+      created_at: Math.floor(Date.now() / 1000),
+      kind: MEDIA_SERVERS_EVENT_KIND,
+      tags: mediaTags,
+      content: '',
+    };
+
+    const signedMediaEvent = await this.signEvent(mediaServerEvent);
+
+    await this.storage.saveEvent(signedMediaEvent);
+    await this.accountRelay.publish(signedMediaEvent);
+
+    // Create and publish DM Relay List event
+    const relayDMTags = this.createTags('relay', [relayServerUrl!]);
+
+    const relayDMListEvent: UnsignedEvent = {
+      pubkey: user.pubkey,
+      created_at: Math.floor(Date.now() / 1000),
+      kind: kinds.DirectMessageRelaysList,
+      tags: relayDMTags,
+      content: '',
+    };
+
+    const signedDMEvent = await this.signEvent(relayDMListEvent);
+
+    await this.storage.saveEvent(signedDMEvent);
+    await this.accountRelay.publish(signedDMEvent);
+
+    // Update the user to mark as activated
+    user.hasActivated = true;
+    user.region = accountRegion;
+
+    this.logger.info('New account setup completed successfully', {
+      pubkey: user.pubkey,
+    });
+  }
+
+  /**
+   * Check if the user has any relay configuration discovered
+   * Returns true if relays were found, false otherwise
+   */
+  async hasRelayConfiguration(pubkey: string): Promise<boolean> {
+    this.logger.debug('Checking relay configuration for user', { pubkey });
+
+    // First check local storage
+    const relayListEvent = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
+    if (relayListEvent) {
+      const relayUrls = this.utilities.getRelayUrls(relayListEvent);
+      if (relayUrls.length > 0) {
+        this.logger.debug('Found relay list in storage', {
+          pubkey,
+          relayCount: relayUrls.length,
+        });
+        return true;
+      }
+    }
+
+    // Check contacts event (kind 3) in storage
+    const contactsEvent = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
+    if (contactsEvent) {
+      const relayUrls = this.utilities.getRelayUrlsFromFollowing(contactsEvent);
+      if (relayUrls.length > 0) {
+        this.logger.debug('Found relays in contacts event in storage', {
+          pubkey,
+          relayCount: relayUrls.length,
+        });
+        return true;
+      }
+    }
+
+    // Try to discover relays from discovery relays
+    try {
+      const discoveredRelays = await this.discoveryRelay.getUserRelayUrls(pubkey);
+      if (discoveredRelays.length > 0) {
+        this.logger.debug('Found relays via discovery', {
+          pubkey,
+          relayCount: discoveredRelays.length,
+        });
+        return true;
+      }
+    } catch (error) {
+      this.logger.warn('Failed to discover relays from discovery relay', error);
+    }
+
+    this.logger.info('No relay configuration found for user', { pubkey });
+    return false;
   }
 
   async loginWithExtension(): Promise<void> {
