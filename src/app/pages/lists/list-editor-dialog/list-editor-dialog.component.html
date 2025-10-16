@@ -12,8 +12,15 @@
       @if (!listType.isReplaceable) {
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Identifier (required)</mat-label>
-        <input matInput [(ngModel)]="identifier" placeholder="unique-identifier" required />
-        <mat-hint>Unique identifier for this set (cannot be changed after creation)</mat-hint>
+        <input matInput [(ngModel)]="identifier" placeholder="unique-identifier" required
+          [disabled]="identifierDisabled()" />
+        <mat-hint>
+          @if (mode === 'edit') {
+          Identifier cannot be changed (would create a duplicate set)
+          } @else {
+          Unique identifier for this set (cannot be changed after creation)
+          }
+        </mat-hint>
       </mat-form-field>
       }
 
@@ -166,11 +173,25 @@
     </mat-tab-group>
   </mat-dialog-content>
 
-  <mat-dialog-actions align="end">
-    <button mat-button (click)="cancel()">Cancel</button>
-    <button mat-raised-button color="primary" (click)="save()" [disabled]="!isValid()">
-      <mat-icon>save</mat-icon>
-      {{ mode === 'create' ? 'Create List' : 'Save Changes' }}
-    </button>
+  <mat-dialog-actions>
+    <div class="actions-left">
+      <button mat-button (click)="triggerImport()" matTooltip="Import list from JSON file">
+        <mat-icon>upload</mat-icon>
+        Import
+      </button>
+      <button mat-button (click)="downloadList()" [disabled]="totalItems() === 0"
+        matTooltip="Download list as JSON file">
+        <mat-icon>download</mat-icon>
+        Download
+      </button>
+    </div>
+
+    <div class="actions-right">
+      <button mat-button (click)="cancel()">Cancel</button>
+      <button mat-raised-button color="primary" (click)="save()" [disabled]="!isValid()">
+        <mat-icon>save</mat-icon>
+        {{ mode === 'create' ? 'Create List' : 'Save Changes' }}
+      </button>
+    </div>
   </mat-dialog-actions>
 </div>

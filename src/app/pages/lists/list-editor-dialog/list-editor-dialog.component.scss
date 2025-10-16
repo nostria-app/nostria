@@ -163,8 +163,16 @@
   }
 
   mat-dialog-actions {
+    display: flex;
+    justify-content: space-between;
     padding: 16px 24px;
     gap: 8px;
+
+    .actions-left,
+    .actions-right {
+      display: flex;
+      gap: 8px;
+    }
 
     button mat-icon {
       margin-right: 4px;
@@ -185,6 +193,20 @@
 
     mat-dialog-content {
       max-height: 60vh;
+    }
+
+    mat-dialog-actions {
+      flex-direction: column;
+      align-items: stretch;
+
+      .actions-left,
+      .actions-right {
+        width: 100%;
+
+        button {
+          flex: 1;
+        }
+      }
     }
   }
 }

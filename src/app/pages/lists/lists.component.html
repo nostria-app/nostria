@@ -4,7 +4,7 @@
       <mat-icon>list</mat-icon>
       Lists
     </h1>
-    <p class="subtitle">Manage your Nostr lists and sets (NIP-51)</p>
+    <p class="subtitle">Manage your Nostr lists and sets</p>
   </header>
 
   @if (loading()) {
@@ -14,11 +14,11 @@
   </div>
   } @else {
   <mat-tab-group [(selectedIndex)]="selectedTab" animationDuration="300ms">
-    <!-- Standard Lists Tab -->
-    <mat-tab label="Standard Lists">
+    <!-- Lists Tab -->
+    <mat-tab label="Lists">
       <div class="tab-content">
         <p class="tab-description">
-          Standard lists are replaceable events - you can have only one of each type.
+          Lists are replaceable events - you can have only one of each type.
         </p>
 
         <div class="lists-grid">
