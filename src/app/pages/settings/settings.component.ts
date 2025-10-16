@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, effect } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -7,6 +7,7 @@ import { MatListModule } from '@angular/material/list';
 import { MatDividerModule } from '@angular/material/divider';
 import { filter } from 'rxjs/operators';
 import { BreakpointObserver } from '@angular/cdk/layout';
+import { Title } from '@angular/platform-browser';
 import { ApplicationService } from '../../services/application.service';
 import { WebRequest } from '../../services/web-request';
 import { AccountStateService } from '../../services/account-state.service';
@@ -36,6 +37,7 @@ interface SettingsSection {
 })
 export class SettingsComponent {
   private breakpointObserver = inject(BreakpointObserver);
+  private titleService = inject(Title);
   app = inject(ApplicationService);
   router = inject(Router);
   private activatedRoute = inject(ActivatedRoute);
@@ -80,6 +82,22 @@ export class SettingsComponent {
     // Set initial active section
     const currentRoute = this.router.url.split('/').pop() || 'general';
     this.activeSection.set(currentRoute);
+
+    // Update page title based on mobile state and active section
+    effect(() => {
+      const mobile = this.isMobile();
+      const details = this.showDetails();
+      const section = this.activeSection();
+
+      // On mobile, when showing menu (not details), show "Settings" as title
+      // When showing details or on desktop, show the section title
+      if (mobile && !details) {
+        this.titleService.setTitle('Settings');
+      } else {
+        const sectionTitle = this.sections.find(s => s.id === section)?.title || 'Settings';
+        this.titleService.setTitle(sectionTitle);
+      }
+    });
   }
 
   selectSection(sectionId: string): void {
