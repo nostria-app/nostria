@@ -146,7 +146,7 @@ export const routes: Routes = [
       {
         path: 'general',
         component: GeneralSettingsComponent,
-        title: 'General Settings',
+        title: 'Settings',
       },
       { path: 'algorithm', component: AlgorithmComponent, title: 'Algorithm' },
       { path: 'relays', component: RelaysComponent, title: 'Relays' },
