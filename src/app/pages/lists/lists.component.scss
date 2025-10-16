@@ -59,6 +59,9 @@
 }
 
 .list-card {
+  width: 100%;
+
+
   mat-card-header {
     mat-icon[mat-card-avatar] {
       font-size: 40px;
@@ -165,6 +168,8 @@
 }
 
 .set-card {
+  width: 100%;
+
   mat-card-header {
     img[mat-card-avatar] {
       width: 40px;
