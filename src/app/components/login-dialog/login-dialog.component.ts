@@ -10,10 +10,11 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { FormsModule } from '@angular/forms';
-import { NostrService } from '../../services/nostr.service';
+import { NostrService, NostrUser } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
 import { QrcodeScanDialogComponent } from '../qrcode-scan-dialog/qrcode-scan-dialog.component';
 import { TermsOfUseDialogComponent } from '../terms-of-use-dialog/terms-of-use-dialog.component';
+import { SetupNewAccountDialogComponent } from '../setup-new-account-dialog/setup-new-account-dialog.component';
 import { Region, RegionService } from '../../services/region.service';
 import { DiscoveryService, ServerInfo } from '../../services/discovery.service';
 import { MatButtonModule } from '@angular/material/button';
@@ -270,6 +271,18 @@ export class LoginDialogComponent {
     try {
       await this.nostrService.loginWithExtension();
       this.logger.debug('Login with extension successful');
+
+      // Check if the user has relay configuration
+      const currentAccount = this.accountState.account();
+      if (currentAccount) {
+        const hasRelays = await this.nostrService.hasRelayConfiguration(currentAccount.pubkey);
+
+        if (!hasRelays) {
+          this.logger.info('No relay configuration found, showing setup dialog');
+          await this.showSetupNewAccountDialog(currentAccount);
+        }
+      }
+
       this.closeDialog();
     } catch (err) {
       this.logger.error('Login with extension failed', err);
@@ -280,15 +293,73 @@ export class LoginDialogComponent {
     }
   }
 
-  loginWithNsec(): void {
+  async loginWithNsec(): Promise<void> {
     this.logger.debug('Attempting login with nsec');
     try {
-      this.nostrService.loginWithNsec(this.nsecKey.trim());
+      await this.nostrService.loginWithNsec(this.nsecKey.trim());
       this.logger.debug('Login with nsec successful');
+
+      // Check if the user has relay configuration
+      const currentAccount = this.accountState.account();
+      if (currentAccount) {
+        const hasRelays = await this.nostrService.hasRelayConfiguration(currentAccount.pubkey);
+
+        if (!hasRelays) {
+          this.logger.info('No relay configuration found, showing setup dialog');
+          await this.showSetupNewAccountDialog(currentAccount);
+        }
+      }
+
       this.closeDialog();
     } catch (err) {
       this.logger.error('Login with nsec failed', err);
       // Could add error handling here
+    }
+  }
+
+  /**
+   * Show the setup new account dialog and handle the user's response
+   */
+  private async showSetupNewAccountDialog(user: NostrUser): Promise<void> {
+    const setupDialogRef = this.dialog.open(SetupNewAccountDialogComponent, {
+      width: '600px',
+      maxWidth: '90vw',
+      disableClose: true, // User must make a choice
+    });
+
+    const result = await setupDialogRef.afterClosed().toPromise();
+
+    if (result && result.confirmed) {
+      this.logger.info('User confirmed new account setup', {
+        region: result.region,
+      });
+      try {
+        await this.nostrService.setupNewAccountWithDefaults(user, result.region || undefined);
+        this.snackBar.open('Account setup completed successfully!', 'Dismiss', {
+          duration: 3000,
+          horizontalPosition: 'center',
+          verticalPosition: 'bottom',
+        });
+      } catch (error) {
+        this.logger.error('Failed to setup new account', error);
+        this.snackBar.open('Failed to setup account. Please try again.', 'Dismiss', {
+          duration: 3000,
+          horizontalPosition: 'center',
+          verticalPosition: 'bottom',
+        });
+      }
+    } else {
+      this.logger.info('User declined new account setup');
+      // User declined - they can continue with no relays but might have limited functionality
+      this.snackBar.open(
+        'Account setup skipped. You can configure relays later in settings.',
+        'Dismiss',
+        {
+          duration: 5000,
+          horizontalPosition: 'center',
+          verticalPosition: 'bottom',
+        }
+      );
     }
   }
 
@@ -311,7 +382,7 @@ export class LoginDialogComponent {
     }
 
     const reader = new FileReader();
-    reader.onload = e => {
+    reader.onload = async e => {
       try {
         const content = e.target?.result as string;
         const credentials = JSON.parse(content);
@@ -330,8 +401,20 @@ export class LoginDialogComponent {
         this.logger.debug('Credentials loaded from file, starting login process');
 
         try {
-          this.nostrService.loginWithNsec(credentials.nsec.trim());
+          await this.nostrService.loginWithNsec(credentials.nsec.trim());
           this.logger.debug('Login with loaded nsec successful');
+
+          // Check if the user has relay configuration
+          const currentAccount = this.accountState.account();
+          if (currentAccount) {
+            const hasRelays = await this.nostrService.hasRelayConfiguration(currentAccount.pubkey);
+
+            if (!hasRelays) {
+              this.logger.info('No relay configuration found, showing setup dialog');
+              await this.showSetupNewAccountDialog(currentAccount);
+            }
+          }
+
           this.snackBar.open('Login successful', 'Dismiss', {
             duration: 2000,
             horizontalPosition: 'center',
@@ -381,6 +464,18 @@ export class LoginDialogComponent {
     try {
       await this.nostrService.loginWithNostrConnect(this.nostrConnectUrl());
       this.logger.debug('Login with Nostr Connect successful');
+
+      // Check if the user has relay configuration
+      const currentAccount = this.accountState.account();
+      if (currentAccount) {
+        const hasRelays = await this.nostrService.hasRelayConfiguration(currentAccount.pubkey);
+
+        if (!hasRelays) {
+          this.logger.info('No relay configuration found, showing setup dialog');
+          await this.showSetupNewAccountDialog(currentAccount);
+        }
+      }
+
       this.closeDialog();
     } catch (err) {
       this.logger.error('Login with Nostr Connect failed', err);
