@@ -189,12 +189,11 @@ export class DataService {
 
     if (refresh) {
       // When refresh is true, skip storage and go directly to relays for fresh data
-      console.log('getProfile (refresh)', pubkey);
+      // Reduced logging to prevent console spam
       metadata = await this.sharedRelayEx.get(pubkey, {
         authors: [pubkey],
         kinds: [kinds.Metadata],
       });
-      console.log('gotProfile (refresh)', pubkey, metadata);
 
       if (metadata) {
         record = this.toRecord(metadata);
@@ -211,13 +210,11 @@ export class DataService {
         record = this.toRecord(metadata);
         this.cache.set(cacheKey, record);
       } else {
-        // Try to get from relays
-        console.log('getProfile', pubkey, metadata);
+        // Try to get from relays - reduced logging to prevent console spam
         metadata = await this.sharedRelayEx.get(pubkey, {
           authors: [pubkey],
           kinds: [kinds.Metadata],
         });
-        console.log('gotProfile', pubkey, metadata);
 
         if (metadata) {
           record = this.toRecord(metadata);

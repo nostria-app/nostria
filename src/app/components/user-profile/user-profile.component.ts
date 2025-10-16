@@ -105,10 +105,13 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
 
   constructor() {
     // If a prefetched profile is provided, initialize local profile with it
+    // This prevents redundant fetches when parent has already loaded the profile
     effect(() => {
       const pref = this.prefetchedProfile();
       if (pref) {
         this.profile.set(pref as unknown as Record<string, unknown>);
+        // Mark as loaded to prevent redundant fetches
+        this.isLoading.set(false);
       }
     });
     // Set up scroll detection

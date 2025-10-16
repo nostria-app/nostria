@@ -20,7 +20,7 @@ export class SharedRelayService {
 
   // Request deduplication cache
   private readonly requestCache = new Map<string, Promise<any>>();
-  private readonly cacheTimeout = 1000; // 1 second cache
+  private readonly cacheTimeout = 5000; // 5 seconds cache - increased from 1s to reduce redundant requests
 
   /**
    * Creates a unique cache key for request deduplication
@@ -123,7 +123,10 @@ export class SharedRelayService {
     },
     options: { timeout?: number } = {},
   ): Promise<T | null> {
-    this.logger.debug('Getting events with filters (account-relay):', filter);
+    // Only log for non-metadata requests to reduce console noise
+    if (!filter.kinds?.includes(0)) {
+      this.logger.debug('Getting events with filters (shared-relay):', filter);
+    }
 
     // Default timeout is 5 seconds if not specified
     const timeout = options.timeout || 5000;
@@ -133,7 +136,10 @@ export class SharedRelayService {
 
     // Check if we already have a pending request for the same parameters
     if (this.requestCache.has(cacheKey)) {
-      this.logger.debug('Returning cached request for duplicate query');
+      // Only log deduplication for non-metadata to reduce noise
+      if (!filter.kinds?.includes(0)) {
+        this.logger.debug('Returning cached request for duplicate query');
+      }
       return this.requestCache.get(cacheKey) as Promise<T | null>;
     }
 
@@ -163,7 +169,10 @@ export class SharedRelayService {
     let relayUrls = await this.discoveryRelay.getUserRelayUrls(pubkey);
     relayUrls = this.relaysService.getOptimalRelays(relayUrls);
 
-    console.log('relayUrls', relayUrls);
+    // Reduced logging for metadata requests to prevent console spam
+    if (!filter.kinds?.includes(0)) {
+      this.logger.debug('Using relay URLs:', relayUrls);
+    }
 
     if (relayUrls.length === 0) {
       this.logger.warn('No relays available for query');

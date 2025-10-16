@@ -286,7 +286,8 @@ export class FeedService {
       }
     }
 
-    console.log('Subscribed to feeds:', Array.from(this.data.keys()));
+    // Reduced logging to prevent console spam
+    this.logger.debug(`Subscribed to ${this.data.size} feed columns`);
   }
 
   /**
@@ -454,6 +455,7 @@ export class FeedService {
       return newMap;
     });
 
+    // Reduced logging to prevent console spam
     this.logger.debug(`Subscribed to column: ${column.id}`);
   }
 
@@ -610,7 +612,10 @@ export class FeedService {
           { timeout: 2500 }
         );
 
-        console.log('Events found:', events);
+        // Reduced logging to prevent console spam - only log summary at debug level
+        if (events.length > 0) {
+          this.logger.debug(`Found ${events.length} events for user ${pubkey.slice(0, 8)}...`);
+        }
 
         // Store events for this user
         if (events.length > 0) {
