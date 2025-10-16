@@ -76,6 +76,9 @@ export class ListEditorDialogComponent implements OnInit {
 
   totalItems = computed(() => this.publicItems().length + this.privateItems().length);
 
+  // In edit mode, identifier cannot be changed (would create duplicate)
+  identifierDisabled = computed(() => this.mode === 'edit' && !this.listType.isReplaceable);
+
   constructor() {
     this.listType = this.data.listType;
     this.mode = this.data.mode;
@@ -233,5 +236,186 @@ export class ListEditorDialogComponent implements OnInit {
    */
   cancel() {
     this.dialogRef.close();
+  }
+
+  /**
+   * Download list as Nostr event JSON file for backup
+   * Exports the raw event if editing, or creates a template if creating new
+   */
+  downloadList() {
+    let exportData: Record<string, unknown>;
+
+    if (this.mode === 'edit' && this.data.listData?.event) {
+      // Export the original Nostr event
+      exportData = { ...this.data.listData.event } as Record<string, unknown>;
+    } else {
+      // Export as a template (without event metadata - will be created on import)
+      exportData = {
+        kind: this.listType.kind,
+        tags: this.buildTags(),
+        content: this.buildContent(),
+        // Note: No id, sig, pubkey, created_at - these will be generated when imported
+        _isTemplate: true,
+        _metadata: {
+          listTypeName: this.listType.name,
+          exportedAt: new Date().toISOString(),
+        },
+      };
+    }
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const fileName = `nostr-${this.listType.kind}-${this.identifier() || 'list'
+      }-${Date.now()}.json`;
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Build tags array for the list (used for export and save)
+   */
+  private buildTags(): string[][] {
+    const tags: string[][] = [];
+
+    // Add identifier for sets
+    if (!this.listType.isReplaceable && this.identifier()) {
+      tags.push(['d', this.identifier()]);
+    }
+
+    // Add metadata tags
+    if (this.title()) {
+      tags.push(['title', this.title()]);
+    }
+    if (this.description()) {
+      tags.push(['description', this.description()]);
+    }
+    if (this.image()) {
+      tags.push(['image', this.image()]);
+    }
+
+    // Add public items
+    for (const item of this.publicItems()) {
+      const tag: string[] = [item.tag, item.value];
+      if (item.relay) tag.push(item.relay);
+      if (item.marker) tag.push(item.marker);
+      if (item.metadata) tag.push(item.metadata);
+      tags.push(tag);
+    }
+
+    return tags;
+  }
+
+  /**
+   * Build encrypted content for private items (used for export and save)
+   */
+  private buildContent(): string {
+    // Content would contain encrypted private items
+    // For template export, we'll include a note about private items
+    if (this.privateItems().length > 0) {
+      return JSON.stringify({
+        _note: 'Private items need to be encrypted when publishing',
+        _privateItemCount: this.privateItems().length,
+        _privateItems: this.privateItems(),
+      });
+    }
+    return '';
+  }
+
+  /**
+   * Import list from Nostr event JSON file
+   */
+  async importList(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+
+    const file = input.files[0];
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text) as Record<string, unknown>;
+
+      // Validate kind matches
+      if (typeof data['kind'] !== 'number' || data['kind'] !== this.listType.kind) {
+        alert(
+          `Invalid list type. Expected ${this.listType.name} (kind ${this.listType.kind})`
+        );
+        return;
+      }
+
+      // Parse tags array
+      const tags = data['tags'] as string[][];
+      if (!Array.isArray(tags)) {
+        alert('Invalid event format: missing or invalid tags array');
+        return;
+      }
+
+      // Clear existing items
+      this.publicItems.set([]);
+      this.privateItems.set([]);
+
+      // Parse tags
+      for (const tag of tags) {
+        if (!Array.isArray(tag) || tag.length < 2) continue;
+
+        const tagName = tag[0];
+        const tagValue = tag[1];
+
+        // Handle metadata tags
+        if (tagName === 'd' && this.mode === 'create') {
+          this.identifier.set(tagValue);
+        } else if (tagName === 'title') {
+          this.title.set(tagValue);
+        } else if (tagName === 'description') {
+          this.description.set(tagValue);
+        } else if (tagName === 'image') {
+          this.image.set(tagValue);
+        } else {
+          // Handle item tags
+          const item: ListItem = {
+            tag: tagName,
+            value: tagValue,
+            relay: tag[2],
+            marker: tag[3],
+            metadata: tag[4],
+          };
+          this.publicItems.update((items) => [...items, item]);
+        }
+      }
+
+      // Parse content for private items (if any)
+      const content = data['content'] as string;
+      if (content) {
+        try {
+          const parsed = JSON.parse(content);
+          if (parsed._privateItems && Array.isArray(parsed._privateItems)) {
+            this.privateItems.set(parsed._privateItems);
+          }
+        } catch {
+          // Content is not JSON or doesn't contain private items template
+          // This is fine - it might be encrypted or just a regular string
+        }
+      }
+
+      // Reset file input
+      input.value = '';
+    } catch (error) {
+      console.error('Failed to import list:', error);
+      alert('Failed to import list. Please check the file format.');
+    }
+  }
+
+  /**
+   * Trigger file input for import
+   */
+  triggerImport() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/json,.json';
+    input.onchange = (e) => this.importList(e);
+    input.click();
   }
 }
