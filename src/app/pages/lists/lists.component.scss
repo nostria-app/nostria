@@ -1,0 +1,258 @@
+.lists-container {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.page-header {
+  margin-bottom: 32px;
+
+  h1 {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 32px;
+    margin: 0 0 8px 0;
+
+    mat-icon {
+      font-size: 36px;
+      width: 36px;
+      height: 36px;
+    }
+  }
+
+  .subtitle {
+    color: var(--md-sys-color-on-surface-variant);
+    margin: 0;
+    font-size: 16px;
+  }
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px;
+  gap: 16px;
+
+  p {
+    color: var(--md-sys-color-on-surface-variant);
+  }
+}
+
+.tab-content {
+  padding: 24px 0;
+}
+
+.tab-description {
+  color: var(--md-sys-color-on-surface-variant);
+  margin: 0 0 24px 0;
+  font-size: 14px;
+}
+
+// Standard Lists Grid
+.lists-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.list-card {
+  mat-card-header {
+    mat-icon[mat-card-avatar] {
+      font-size: 40px;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+
+  .description {
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: 14px;
+    margin: 0 0 16px 0;
+  }
+
+  .list-info {
+    margin-top: 12px;
+
+    mat-chip-set {
+      justify-content: flex-start;
+    }
+  }
+
+  .no-list {
+    color: var(--md-sys-color-on-surface-variant);
+    font-style: italic;
+    margin: 0;
+  }
+
+  mat-card-actions {
+    display: flex;
+    gap: 8px;
+    padding: 16px;
+
+    button {
+      mat-icon {
+        margin-right: 4px;
+      }
+    }
+  }
+}
+
+// Sets Section
+.set-category {
+  margin-bottom: 32px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.set-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+
+  .set-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    mat-icon {
+      font-size: 28px;
+      width: 28px;
+      height: 28px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 24px;
+    }
+
+    .kind-badge {
+      background: var(--md-sys-color-secondary-container);
+      color: var(--md-sys-color-on-secondary-container);
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+  }
+
+  button {
+    mat-icon {
+      margin-right: 4px;
+    }
+  }
+}
+
+.set-description {
+  color: var(--md-sys-color-on-surface-variant);
+  margin: 0 0 16px 0;
+  font-size: 14px;
+}
+
+.sets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.set-card {
+  mat-card-header {
+    img[mat-card-avatar] {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    mat-icon[mat-card-avatar] {
+      font-size: 40px;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+
+  .set-desc {
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: 14px;
+    margin: 0 0 12px 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .set-info {
+    margin-top: 8px;
+
+    mat-chip-set {
+      justify-content: flex-start;
+    }
+  }
+
+  mat-card-actions {
+    display: flex;
+    gap: 8px;
+    padding: 16px;
+
+    button {
+      mat-icon {
+        margin-right: 4px;
+      }
+    }
+  }
+}
+
+.no-sets {
+  color: var(--md-sys-color-on-surface-variant);
+  font-style: italic;
+  margin: 16px 0 0 0;
+  padding: 32px;
+  text-align: center;
+  background: var(--md-sys-color-surface-variant);
+  border-radius: 8px;
+}
+
+// Responsive
+@media (max-width: 768px) {
+  .lists-container {
+    padding: 16px;
+  }
+
+  .page-header h1 {
+    font-size: 24px;
+
+    mat-icon {
+      font-size: 28px;
+      width: 28px;
+      height: 28px;
+    }
+  }
+
+  .lists-grid,
+  .sets-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .set-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+
+    button {
+      width: 100%;
+    }
+  }
+}

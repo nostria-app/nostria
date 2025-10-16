@@ -275,6 +275,12 @@ export const routes: Routes = [
     title: 'People',
   },
   {
+    path: 'lists',
+    data: { isRoot: true },
+    loadComponent: () => import('./pages/lists/lists.component').then(m => m.ListsComponent),
+    title: 'Lists',
+  },
+  {
     path: 'delete-event',
     component: DeleteEventComponent,
     data: { isRoot: true },

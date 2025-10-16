@@ -1,0 +1,190 @@
+.editor-dialog {
+  h2[mat-dialog-title] {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 0 16px 0;
+
+    mat-icon {
+      font-size: 28px;
+      width: 28px;
+      height: 28px;
+    }
+  }
+
+  mat-dialog-content {
+    max-height: 70vh;
+    padding: 0 24px;
+  }
+
+  .metadata-section,
+  .add-item-section {
+    padding: 16px 0;
+
+    h3 {
+      margin: 0 0 16px 0;
+      font-size: 18px;
+      color: var(--md-sys-color-primary);
+    }
+
+    .full-width {
+      width: 100%;
+      margin-bottom: 16px;
+    }
+  }
+
+  .add-item-form {
+    display: grid;
+    grid-template-columns: 120px 1fr 200px auto auto;
+    gap: 12px;
+    align-items: start;
+    margin-bottom: 16px;
+
+    .tag-field {
+      mat-option {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        mat-icon {
+          font-size: 20px;
+          width: 20px;
+          height: 20px;
+        }
+      }
+    }
+
+    mat-slide-toggle {
+      align-self: center;
+    }
+
+    button {
+      align-self: center;
+      height: 40px;
+
+      mat-icon {
+        margin-right: 4px;
+      }
+    }
+  }
+
+  .item-count {
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: 14px;
+    margin: 0;
+  }
+
+  mat-divider {
+    margin: 16px 0;
+  }
+
+  mat-tab-group {
+    margin-top: 16px;
+
+    ::ng-deep .mat-mdc-tab-label {
+      mat-icon {
+        margin-right: 8px;
+      }
+    }
+  }
+
+  .items-list {
+    padding: 16px 0;
+    min-height: 200px;
+    max-height: 400px;
+    overflow-y: auto;
+
+    .privacy-notice {
+      display: flex;
+      gap: 12px;
+      padding: 12px;
+      background: var(--md-sys-color-secondary-container);
+      color: var(--md-sys-color-on-secondary-container);
+      border-radius: 8px;
+      margin-bottom: 16px;
+
+      mat-icon {
+        flex-shrink: 0;
+      }
+
+      p {
+        margin: 0;
+        font-size: 14px;
+      }
+    }
+
+    .item-chip {
+      width: 100%;
+      margin-bottom: 8px;
+      height: auto;
+      min-height: 48px;
+      padding: 8px 12px;
+
+      &.private {
+        background: var(--md-sys-color-tertiary-container);
+        color: var(--md-sys-color-on-tertiary-container);
+      }
+
+      mat-icon[matChipAvatar] {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+
+      .item-text {
+        flex: 1;
+        word-break: break-all;
+        font-size: 14px;
+      }
+
+      button[matChipRemove] {
+        opacity: 0.7;
+        transition: opacity 0.2s;
+
+        &:hover {
+          opacity: 1;
+        }
+
+        mat-icon {
+          font-size: 18px;
+          width: 18px;
+          height: 18px;
+        }
+      }
+    }
+
+    .no-items {
+      color: var(--md-sys-color-on-surface-variant);
+      font-style: italic;
+      text-align: center;
+      padding: 32px;
+      margin: 0;
+    }
+  }
+
+  mat-dialog-actions {
+    padding: 16px 24px;
+    gap: 8px;
+
+    button mat-icon {
+      margin-right: 4px;
+    }
+  }
+}
+
+// Responsive
+@media (max-width: 768px) {
+  .editor-dialog {
+    .add-item-form {
+      grid-template-columns: 1fr;
+
+      button {
+        width: 100%;
+      }
+    }
+
+    mat-dialog-content {
+      max-height: 60vh;
+    }
+  }
+}

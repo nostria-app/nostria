@@ -1,0 +1,145 @@
+<div class="lists-container">
+  <header class="page-header">
+    <h1>
+      <mat-icon>list</mat-icon>
+      Lists
+    </h1>
+    <p class="subtitle">Manage your Nostr lists and sets (NIP-51)</p>
+  </header>
+
+  @if (loading()) {
+    <div class="loading-container">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p>Loading lists...</p>
+    </div>
+  } @else {
+    <mat-tab-group [(selectedIndex)]="selectedTab" animationDuration="300ms">
+      <!-- Standard Lists Tab -->
+      <mat-tab label="Standard Lists">
+        <div class="tab-content">
+          <p class="tab-description">
+            Standard lists are replaceable events - you can have only one of each type.
+          </p>
+
+          <div class="lists-grid">
+            @for (listType of standardLists; track listType.kind) {
+              <mat-card class="list-card">
+                <mat-card-header>
+                  <mat-icon mat-card-avatar>{{ listType.icon }}</mat-icon>
+                  <mat-card-title>{{ listType.name }}</mat-card-title>
+                  <mat-card-subtitle>Kind {{ listType.kind }}</mat-card-subtitle>
+                </mat-card-header>
+
+                <mat-card-content>
+                  <p class="description">{{ listType.description }}</p>
+
+                  @if (getStandardList(listType.kind); as list) {
+                    <div class="list-info">
+                      <mat-chip-set>
+                        <mat-chip>{{ getCountText(list) }}</mat-chip>
+                        <mat-chip>{{ formatDate(list.created) }}</mat-chip>
+                      </mat-chip-set>
+                    </div>
+                  } @else {
+                    <p class="no-list">No list created yet</p>
+                  }
+                </mat-card-content>
+
+                <mat-card-actions>
+                  @if (getStandardList(listType.kind); as list) {
+                    <button mat-button color="primary" (click)="editList(list)">
+                      <mat-icon>edit</mat-icon>
+                      Edit
+                    </button>
+                    <button mat-button color="warn" (click)="deleteList(list)">
+                      <mat-icon>delete</mat-icon>
+                      Delete
+                    </button>
+                  } @else {
+                    <button mat-raised-button color="primary" (click)="createList(listType)">
+                      <mat-icon>add</mat-icon>
+                      Create
+                    </button>
+                  }
+                </mat-card-actions>
+              </mat-card>
+            }
+          </div>
+        </div>
+      </mat-tab>
+
+      <!-- Sets Tab -->
+      <mat-tab label="Sets">
+        <div class="tab-content">
+          <p class="tab-description">
+            Sets are parameterized replaceable events - you can have multiple sets of each type.
+          </p>
+
+          @for (listType of listSets; track listType.kind) {
+            <div class="set-category">
+              <div class="set-header">
+                <div class="set-title">
+                  <mat-icon>{{ listType.icon }}</mat-icon>
+                  <h2>{{ listType.name }}</h2>
+                  <span class="kind-badge">Kind {{ listType.kind }}</span>
+                </div>
+                <button mat-raised-button color="primary" (click)="createList(listType)">
+                  <mat-icon>add</mat-icon>
+                  Create New
+                </button>
+              </div>
+              <p class="set-description">{{ listType.description }}</p>
+
+              @if (getSets(listType.kind); as sets) {
+                @if (sets.length > 0) {
+                  <div class="sets-grid">
+                    @for (set of sets; track set.event.id) {
+                      <mat-card class="set-card">
+                        <mat-card-header>
+                          @if (set.image) {
+                            <img mat-card-avatar [src]="set.image" [alt]="set.title || 'Set image'" [title]="set.title || 'Set image'" />
+                          } @else {
+                            <mat-icon mat-card-avatar>{{ listType.icon }}</mat-icon>
+                          }
+                          <mat-card-title>{{ set.title || 'Untitled Set' }}</mat-card-title>
+                          <mat-card-subtitle>{{ set.identifier }}</mat-card-subtitle>
+                        </mat-card-header>
+
+                        <mat-card-content>
+                          @if (set.description) {
+                            <p class="set-desc">{{ set.description }}</p>
+                          }
+
+                          <div class="set-info">
+                            <mat-chip-set>
+                              <mat-chip>{{ getCountText(set) }}</mat-chip>
+                              <mat-chip>{{ formatDate(set.created) }}</mat-chip>
+                            </mat-chip-set>
+                          </div>
+                        </mat-card-content>
+
+                        <mat-card-actions>
+                          <button mat-button color="primary" (click)="editList(set)">
+                            <mat-icon>edit</mat-icon>
+                            Edit
+                          </button>
+                          <button mat-button color="warn" (click)="deleteList(set)">
+                            <mat-icon>delete</mat-icon>
+                            Delete
+                          </button>
+                        </mat-card-actions>
+                      </mat-card>
+                    }
+                  </div>
+                } @else {
+                  <p class="no-sets">No sets created yet. Click "Create New" to start.</p>
+                }
+              }
+            </div>
+            <mat-divider></mat-divider>
+          }
+        </div>
+      </mat-tab>
+    </mat-tab-group>
+  }
+</div>
