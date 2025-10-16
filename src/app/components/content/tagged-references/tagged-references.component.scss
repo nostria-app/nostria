@@ -1,7 +1,7 @@
 .tagged-references-container {
   margin-top: 16px;
   padding: 16px 0;
-  border-top: 1px solid var(--mat-sys-outline-variant);
+  // border-top: 1px solid var(--mat-sys-outline-variant);
 }
 
 .section-header {
@@ -97,7 +97,7 @@
     height: 120px;
     box-shadow: var(--mat-sys-level1);
     transition: box-shadow 0.2s ease;
-    border: 1px solid var(--mat-sys-outline-variant);
+    // border: 1px solid var(--mat-sys-outline-variant);
   }
 
   &:hover mat-card {
