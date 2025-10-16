@@ -198,10 +198,14 @@ export class ListEditorDialogComponent implements OnInit {
         return 'tag';
       case 'r':
         return 'public';
+      case 'relay':
+        return 'router';
       case 'word':
         return 'text_fields';
       case 'emoji':
         return 'emoji_emotions';
+      case 'group':
+        return 'group_work';
       default:
         return 'label';
     }

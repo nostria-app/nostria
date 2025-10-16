@@ -76,6 +76,14 @@ const STANDARD_LISTS: ListType[] = [
     expectedTags: ['e'],
   },
   {
+    kind: 10002,
+    name: 'Read/Write Relays',
+    description: 'Where you publish and expect mentions (NIP-65)',
+    icon: 'router',
+    isReplaceable: true,
+    expectedTags: ['relay'],
+  },
+  {
     kind: 10003,
     name: 'Bookmarks',
     description: 'Saved notes, articles, hashtags, and URLs',
@@ -100,12 +108,84 @@ const STANDARD_LISTS: ListType[] = [
     expectedTags: ['e'],
   },
   {
+    kind: 10006,
+    name: 'Blocked Relays',
+    description: 'Relays clients should never connect to',
+    icon: 'block',
+    isReplaceable: true,
+    expectedTags: ['relay'],
+  },
+  {
+    kind: 10007,
+    name: 'Search Relays',
+    description: 'Relays to use when performing searches',
+    icon: 'search',
+    isReplaceable: true,
+    expectedTags: ['relay'],
+  },
+  {
+    kind: 10009,
+    name: 'Simple Groups',
+    description: 'NIP-29 groups you\'re in',
+    icon: 'group_work',
+    isReplaceable: true,
+    expectedTags: ['group', 'r'],
+  },
+  {
+    kind: 10012,
+    name: 'Relay Feeds',
+    description: 'Favorite browsable relays and relay sets',
+    icon: 'rss_feed',
+    isReplaceable: true,
+    expectedTags: ['relay', 'a'],
+  },
+  {
     kind: 10015,
     name: 'Interests',
     description: 'Topics and interest sets',
     icon: 'interests',
     isReplaceable: true,
     expectedTags: ['t', 'a'],
+  },
+  {
+    kind: 10020,
+    name: 'Media Follows',
+    description: 'Multimedia (photos, short video) follow list',
+    icon: 'perm_media',
+    isReplaceable: true,
+    expectedTags: ['p'],
+  },
+  {
+    kind: 10030,
+    name: 'Emojis',
+    description: 'Preferred emojis and emoji sets',
+    icon: 'emoji_emotions',
+    isReplaceable: true,
+    expectedTags: ['emoji', 'a'],
+  },
+  {
+    kind: 10050,
+    name: 'DM Relays',
+    description: 'Where to receive NIP-17 direct messages',
+    icon: 'mail',
+    isReplaceable: true,
+    expectedTags: ['relay'],
+  },
+  {
+    kind: 10101,
+    name: 'Good Wiki Authors',
+    description: 'Recommended NIP-54 wiki authors',
+    icon: 'article',
+    isReplaceable: true,
+    expectedTags: ['p'],
+  },
+  {
+    kind: 10102,
+    name: 'Good Wiki Relays',
+    description: 'Relays with useful wiki articles',
+    icon: 'library_books',
+    isReplaceable: true,
+    expectedTags: ['relay'],
   },
 ];
 
@@ -120,6 +200,14 @@ const LIST_SETS: ListType[] = [
     expectedTags: ['p'],
   },
   {
+    kind: 30002,
+    name: 'Relay Sets',
+    description: 'User-defined relay groups',
+    icon: 'hub',
+    isReplaceable: false,
+    expectedTags: ['relay'],
+  },
+  {
     kind: 30003,
     name: 'Bookmark Sets',
     description: 'Categorized bookmarks',
@@ -129,11 +217,27 @@ const LIST_SETS: ListType[] = [
   },
   {
     kind: 30004,
-    name: 'Curation Sets',
+    name: 'Curation Sets (Articles)',
     description: 'Curated articles and notes',
     icon: 'collections',
     isReplaceable: false,
     expectedTags: ['a', 'e'],
+  },
+  {
+    kind: 30005,
+    name: 'Curation Sets (Videos)',
+    description: 'Curated video collections',
+    icon: 'video_library',
+    isReplaceable: false,
+    expectedTags: ['e'],
+  },
+  {
+    kind: 30007,
+    name: 'Kind Mute Sets',
+    description: 'Mute pubkeys by event kinds',
+    icon: 'notifications_off',
+    isReplaceable: false,
+    expectedTags: ['p'],
   },
   {
     kind: 30015,
@@ -150,6 +254,46 @@ const LIST_SETS: ListType[] = [
     icon: 'emoji_emotions',
     isReplaceable: false,
     expectedTags: ['emoji'],
+  },
+  {
+    kind: 30063,
+    name: 'Release Artifact Sets',
+    description: 'Software release artifacts',
+    icon: 'package',
+    isReplaceable: false,
+    expectedTags: ['e', 'a'],
+  },
+  {
+    kind: 30267,
+    name: 'App Curation Sets',
+    description: 'Curated software applications',
+    icon: 'apps',
+    isReplaceable: false,
+    expectedTags: ['a'],
+  },
+  {
+    kind: 31924,
+    name: 'Calendar Sets',
+    description: 'Categorized calendar events',
+    icon: 'event',
+    isReplaceable: false,
+    expectedTags: ['a'],
+  },
+  {
+    kind: 39089,
+    name: 'Starter Packs',
+    description: 'Named set of profiles to follow together',
+    icon: 'group_add',
+    isReplaceable: false,
+    expectedTags: ['p'],
+  },
+  {
+    kind: 39092,
+    name: 'Media Starter Packs',
+    description: 'Multimedia (photos, video) profile sets',
+    icon: 'collections',
+    isReplaceable: false,
+    expectedTags: ['p'],
   },
 ];
 
@@ -197,7 +341,7 @@ export class ListsComponent implements OnInit {
   // State
   loading = signal(false);
   selectedTab = signal(0); // 0 = standard lists, 1 = sets
-  
+
   // Loaded lists data
   standardListsData = signal<Map<number, ListData>>(new Map());
   setsData = signal<Map<number, ListData[]>>(new Map()); // Multiple sets per kind
@@ -538,7 +682,7 @@ export class ListsComponent implements OnInit {
     try {
       // Create a deletion event (kind 5)
       const tags: string[][] = [['e', listData.event.id]];
-      
+
       if (listData.identifier) {
         // For parameterized replaceable events, include the coordinates
         tags.push(['a', `${listData.type.kind}:${listData.event.pubkey}:${listData.identifier}`]);
