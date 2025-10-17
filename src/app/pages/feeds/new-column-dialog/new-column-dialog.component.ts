@@ -129,6 +129,7 @@ export class NewColumnDialogComponent {
   starterPackInputControl = new FormControl('');
 
   // Reactive signals for input values
+  kindInputValue = signal('');
   userInputValue = signal('');
   starterPackInputValue = signal('');
 
@@ -165,7 +166,7 @@ export class NewColumnDialogComponent {
 
   // Filtered options for autocomplete
   filteredKinds = computed(() => {
-    const input = this.kindInputControl.value?.toString().toLowerCase() || '';
+    const input = this.kindInputValue().toLowerCase();
     const selected = this.selectedKinds();
 
     return this.nostrKinds().filter(kind => {
@@ -205,6 +206,10 @@ export class NewColumnDialogComponent {
 
   constructor() {
     // Set up reactive input value tracking
+    this.kindInputControl.valueChanges.subscribe(value => {
+      this.kindInputValue.set(value || '');
+    });
+
     this.userInputControl.valueChanges.subscribe(value => {
       this.userInputValue.set(value || '');
     });
