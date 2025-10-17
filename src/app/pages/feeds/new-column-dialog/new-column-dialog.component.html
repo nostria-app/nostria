@@ -6,6 +6,7 @@
 <mat-dialog-content class="mat-typography">
   <form [formGroup]="columnForm" (ngSubmit)="onSubmit()">
     <div class="settings-container">
+      @if (!isEditMode()) {
       <!-- Feed Type Selection -->
       <div class="section column-type-section">
         <h3>Feed Type</h3>
@@ -24,6 +25,7 @@
           }
         </div>
       </div>
+      }
 
       <!-- Basic Information -->
       <div class="section basic-info-section">
