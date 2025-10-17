@@ -2,22 +2,22 @@
   <div class="dialog-header">
     <h2 mat-dialog-title>
       <mat-icon>{{ isEditMode() ? 'edit' : 'stacks' }}</mat-icon>
-      {{ isEditMode() ? 'Edit Board' : 'Create New Board' }}
+      {{ isEditMode() ? 'Edit Feed' : 'Create New Feed' }}
     </h2>
   </div>
 
   <div class="dialog-content">
     <form [formGroup]="feedForm" (ngSubmit)="onSubmit()">
-      <!-- Basic Board Configuration -->
+      <!-- Basic Feed Configuration -->
       <div class="basic-config">
-        <h3>Board Information</h3>
+        <h3>Feed Information</h3>
 
         <div class="name-icon-row">
           <mat-form-field appearance="outline" class="name-field">
-            <mat-label>Board Name</mat-label>
-            <input matInput formControlName="label" placeholder="My Custom Board" />
+            <mat-label>Feed Name</mat-label>
+            <input matInput formControlName="label" placeholder="My Custom Feed" />
             @if (feedForm.get('label')?.hasError('required')) {
-            <mat-error>Board name is required</mat-error>
+            <mat-error>Feed name is required</mat-error>
             }
           </mat-form-field>
 
@@ -35,14 +35,14 @@
 
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>URL Path (Optional)</mat-label>
-          <input matInput formControlName="path" placeholder="custom-board" />
-          <mat-hint>URL identifier for this board</mat-hint>
+          <input matInput formControlName="path" placeholder="custom-feed" />
+          <mat-hint>URL identifier for this feed</mat-hint>
           <mat-icon matSuffix>link</mat-icon>
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Description (Optional)</mat-label>
-          <input matInput formControlName="description" placeholder="Brief description of this board" />
+          <input matInput formControlName="description" placeholder="Brief description of this feed" />
           <mat-icon matSuffix>description</mat-icon>
         </mat-form-field>
       </div>
@@ -52,7 +52,7 @@
   <div class="dialog-actions" mat-dialog-actions>
     <button mat-button mat-dialog-close type="button">Cancel</button>
     <button mat-flat-button color="primary" (click)="onSubmit()" [disabled]="!feedForm.valid">
-      {{ isEditMode() ? 'Save Changes' : 'Create Board' }}
+      {{ isEditMode() ? 'Save Changes' : 'Create Feed' }}
     </button>
   </div>
 </div>
