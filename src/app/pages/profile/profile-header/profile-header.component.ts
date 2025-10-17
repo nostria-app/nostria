@@ -203,6 +203,9 @@ export class ProfileHeaderComponent {
   // Signal to track the premium status
   premiumTier = signal<string | null>(null);
 
+  // Signal to track the username of the profile being viewed
+  profileUsername = signal<string | null>(null);
+
   // Computed to check if user has premium subscription
   isPremium = computed(() => {
     const tier = this.premiumTier();
@@ -557,6 +560,7 @@ export class ProfileHeaderComponent {
         // For current user, get tier from account state
         const subscription = this.accountState.subscription();
         this.premiumTier.set(subscription?.tier || null);
+        this.profileUsername.set(subscription?.username || null);
       } else {
         // For other users, fetch public account information
         const result = await firstValueFrom(
@@ -568,13 +572,16 @@ export class ProfileHeaderComponent {
         if (result?.result) {
           const publicAccount: PublicAccount = result.result;
           this.premiumTier.set(publicAccount?.tier || null);
+          this.profileUsername.set(publicAccount?.username || null);
         } else {
           this.premiumTier.set(null);
+          this.profileUsername.set(null);
         }
       }
     } catch (error) {
       this.logger.debug('Error fetching premium status:', error);
       this.premiumTier.set(null);
+      this.profileUsername.set(null);
     }
   }
 }
