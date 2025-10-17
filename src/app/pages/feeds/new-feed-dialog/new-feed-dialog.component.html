@@ -4,48 +4,10 @@
       <mat-icon>{{ isEditMode() ? 'edit' : 'stacks' }}</mat-icon>
       {{ isEditMode() ? 'Edit Board' : 'Create New Board' }}
     </h2>
-    @if (!isEditMode()) {
-    <p class="dialog-subtitle">Choose a board template or create a custom board</p>
-    }
   </div>
 
   <div class="dialog-content">
     <form [formGroup]="feedForm" (ngSubmit)="onSubmit()">
-      @if (!isEditMode()) {
-      <!-- Board Template Selection -->
-      <div class="template-selection">
-        <h3>Board Templates</h3>
-        <p class="section-description">Select a template to get started quickly</p>
-
-        <div class="template-cards">
-          @for (template of feedTemplates(); track template.key) {
-          <mat-card class="template-card" [class.selected]="selectedTemplate() === template.key"
-            (click)="selectTemplate(template.key)">
-            <mat-card-content>
-              <div class="template-header">
-                <mat-icon>{{ template.icon }}</mat-icon>
-                <h4>{{ template.label }}</h4>
-              </div>
-              <p class="template-description">
-                {{ template.description }}
-              </p>
-              @if (template.defaultColumns.length > 0) {
-              <div class="template-columns">
-                <span class="columns-label">Includes:</span>
-                @for (column of template.defaultColumns; track $index) {
-                <span class="column-chip">{{ column.label }}</span>
-                }
-              </div>
-              }
-            </mat-card-content>
-          </mat-card>
-          }
-        </div>
-      </div>
-
-      <mat-divider></mat-divider>
-      }
-
       <!-- Basic Board Configuration -->
       <div class="basic-config">
         <h3>Board Information</h3>
@@ -84,33 +46,6 @@
           <mat-icon matSuffix>description</mat-icon>
         </mat-form-field>
       </div>
-
-      @if (
-      !isEditMode() &&
-      selectedTemplate() &&
-      getSelectedTemplateConfig()?.defaultColumns &&
-      getSelectedTemplateConfig()!.defaultColumns.length > 0
-      ) {
-      <mat-divider></mat-divider>
-
-      <!-- Template Preview -->
-      <div class="template-preview">
-        <h3>Feeds to be Created</h3>
-        <p class="section-description">These feeds will be automatically added to your board</p>
-
-        <div class="preview-columns">
-          @for (column of getSelectedTemplateConfig()!.defaultColumns; track $index) {
-          <div class="preview-column">
-            <mat-icon>{{ column.icon }}</mat-icon>
-            <div class="column-info">
-              <span class="column-name">{{ column.label }}</span>
-              <span class="column-type">{{ getColumnTypeDescription(column.type) }}</span>
-            </div>
-          </div>
-          }
-        </div>
-      </div>
-      }
     </form>
   </div>
 
