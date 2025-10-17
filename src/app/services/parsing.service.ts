@@ -31,7 +31,10 @@ export interface ContentToken {
   | 'video'
   | 'linebreak'
   | 'nostr-mention'
-  | 'emoji';
+  | 'emoji'
+  | 'base64-image'
+  | 'base64-audio'
+  | 'base64-video';
   content: string;
   nostrData?: NostrData;
   emoji?: string;
@@ -286,6 +289,11 @@ export class ParsingService {
       /(nostr:(?:npub|nprofile|note|nevent|naddr)1[a-zA-Z0-9]+)(?=\s|##LINEBREAK##|$|[^\w])/g;
     const emojiRegex = /(:[a-zA-Z_]+:)/g;
 
+    // Base64 data URL regex - matches data URLs for images, audio, and video
+    const base64ImageRegex = /(data:image\/[a-zA-Z]+;base64,[A-Za-z0-9+/=]+)(?=\s|##LINEBREAK##|$)/g;
+    const base64AudioRegex = /(data:audio\/[a-zA-Z0-9]+;base64,[A-Za-z0-9+/=]+)(?=\s|##LINEBREAK##|$)/g;
+    const base64VideoRegex = /(data:video\/[a-zA-Z0-9]+;base64,[A-Za-z0-9+/=]+)(?=\s|##LINEBREAK##|$)/g;
+
     // Split content and generate tokens
     const tokens: ContentToken[] = [];
     let lastIndex = 0;
@@ -390,6 +398,17 @@ export class ParsingService {
       });
     }
 
+    // Find base64 images
+    base64ImageRegex.lastIndex = 0;
+    while ((match = base64ImageRegex.exec(processedContent)) !== null) {
+      matches.push({
+        start: match.index,
+        end: match.index + match[0].length,
+        content: match[0],
+        type: 'base64-image',
+      });
+    }
+
     // Find video URLs
     videoRegex.lastIndex = 0;
     while ((match = videoRegex.exec(processedContent)) !== null) {
@@ -401,6 +420,17 @@ export class ParsingService {
       });
     }
 
+    // Find base64 videos
+    base64VideoRegex.lastIndex = 0;
+    while ((match = base64VideoRegex.exec(processedContent)) !== null) {
+      matches.push({
+        start: match.index,
+        end: match.index + match[0].length,
+        content: match[0],
+        type: 'base64-video',
+      });
+    }
+
     // Find audio URLs
     audioRegex.lastIndex = 0;
     while ((match = audioRegex.exec(processedContent)) !== null) {
@@ -409,6 +439,17 @@ export class ParsingService {
         end: match.index + match[0].length,
         content: match[0],
         type: 'audio',
+      });
+    }
+
+    // Find base64 audio
+    base64AudioRegex.lastIndex = 0;
+    while ((match = base64AudioRegex.exec(processedContent)) !== null) {
+      matches.push({
+        start: match.index,
+        end: match.index + match[0].length,
+        content: match[0],
+        type: 'base64-audio',
       });
     }
 
