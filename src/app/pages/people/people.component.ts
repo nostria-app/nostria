@@ -25,6 +25,14 @@ import { Metrics } from '../../services/metrics';
 import { FavoritesService } from '../../services/favorites.service';
 import { MatDialog } from '@angular/material/dialog';
 import { AddPersonDialogComponent } from './add-person-dialog.component';
+import {
+  FollowsetComponent,
+  Interest,
+  SuggestedProfile,
+} from '../../components/followset/followset.component';
+import { Followset } from '../../services/followset';
+import { NotificationService } from '../../services/notification.service';
+import { FeedsCollectionService } from '../../services/feeds-collection.service';
 
 // Define filter options interface
 interface FilterOptions {
@@ -57,6 +65,7 @@ type SortOption = 'default' | 'reverse' | 'engagement-asc' | 'engagement-desc';
     ScrollingModule,
     UserProfileComponent,
     MatMenuModule,
+    FollowsetComponent,
   ],
   templateUrl: './people.component.html',
   styleUrls: ['./people.component.scss'],
@@ -72,6 +81,9 @@ export class PeopleComponent {
   private metrics = inject(Metrics);
   private favoritesService = inject(FavoritesService);
   private dialog = inject(MatDialog);
+  private followsetService = inject(Followset);
+  private notificationService = inject(NotificationService);
+  private feedsCollectionService = inject(FeedsCollectionService);
 
   // People data signals
   people = signal<string[]>([]);
@@ -191,6 +203,20 @@ export class PeopleComponent {
     return Object.values(activeFilters).some(val => val === true);
   });
 
+  // Followset-related properties for new users
+  showFollowset = signal<boolean>(false);
+  selectedInterests = signal<string[]>([]);
+  followingProfiles = signal<string[]>([]);
+  detectedRegion = signal('');
+  availableInterests = signal<Interest[]>([]);
+  isLoadingInterests = signal<boolean>(false);
+  suggestedProfiles = signal<SuggestedProfile[]>([]);
+
+  // Check if user has an empty following list
+  hasEmptyFollowingList = computed(() => {
+    return this.accountState.followingList().length === 0;
+  });
+
   constructor() {
     // Initialize search debounce
     this.searchChanged.pipe(debounceTime(300)).subscribe(term => {
@@ -201,6 +227,12 @@ export class PeopleComponent {
       if (this.app.initialized()) {
         // Load people data on component init
         this.loadPeople();
+
+        // If user has empty following, automatically show followset and load interests
+        if (this.hasEmptyFollowingList() && this.availableInterests().length === 0) {
+          this.showFollowset.set(true);
+          await this.initializeFollowsetData();
+        }
       }
     });
 
@@ -419,5 +451,125 @@ export class PeopleComponent {
         this.loadPeople();
       }
     });
+  }
+
+  // Followset methods - moved from FeedsComponent
+  /**
+   * Initialize followset data for new users
+   */
+  private async initializeFollowsetData(): Promise<void> {
+    try {
+      this.logger.debug('Fetching starter packs for followset...');
+      this.isLoadingInterests.set(true);
+
+      // Fetch starter packs from the followset service
+      const starterPacks = await this.followsetService.fetchStarterPacks();
+
+      if (starterPacks.length > 0) {
+        // Convert starter packs to interests
+        const interests = this.followsetService.convertStarterPacksToInterests(starterPacks);
+        this.availableInterests.set(interests);
+        this.logger.debug(`Loaded ${interests.length} interests from starter packs`);
+      } else {
+        this.logger.warn('No starter packs found, using default interests');
+      }
+    } catch (error) {
+      this.logger.error('Failed to initialize followset data:', error);
+    } finally {
+      this.isLoadingInterests.set(false);
+    }
+  }
+
+  /**
+   * Toggle followset display manually
+   */
+  async openFollowsetDialog() {
+    this.showFollowset.set(true);
+
+    // Load interests if not already loaded
+    if (this.availableInterests().length === 0) {
+      await this.initializeFollowsetData();
+    }
+  }
+
+  /**
+   * Handle followset completion
+   */
+  async onFollowsetComplete(data: {
+    selectedInterests: string[];
+    followsToAdd: string[];
+  }): Promise<void> {
+    try {
+      const { selectedInterests, followsToAdd } = data;
+
+      this.logger.debug('Followset onboarding completed', {
+        selectedInterests,
+        followsToAdd,
+      });
+
+      // Follow all selected profiles in a single batch operation
+      await this.accountState.follow(followsToAdd);
+
+      this.notificationService.notify(`Welcome! Following ${followsToAdd.length} accounts.`);
+
+      // Update local state
+      this.selectedInterests.set(selectedInterests);
+      this.followingProfiles.update(current => [...new Set([...current, ...followsToAdd])]);
+
+      // Hide followset UI
+      this.showFollowset.set(false);
+
+      // Refresh the people list
+      await this.loadPeople();
+
+      // Refresh following feeds to load content from newly followed accounts
+      await this.feedsCollectionService.refreshFollowingColumns();
+
+      // Reset followset display state
+      this.suggestedProfiles.set([]);
+    } catch (error) {
+      this.logger.error('Failed to complete followset onboarding:', error);
+      this.notificationService.notify('Error completing setup. Please try again.');
+    }
+  }
+
+  /**
+   * Toggle interest selection
+   */
+  async toggleInterest(interestId: string): Promise<void> {
+    this.selectedInterests.update(interests => {
+      if (interests.includes(interestId)) {
+        return interests.filter(id => id !== interestId);
+      } else {
+        return [...interests, interestId];
+      }
+    });
+
+    // Fetch suggested profiles based on selected interests
+    await this.updateSuggestedProfiles();
+  }
+
+  /**
+   * Update suggested profiles based on selected interests
+   */
+  private async updateSuggestedProfiles(): Promise<void> {
+    try {
+      const selectedInterests = this.selectedInterests();
+      if (selectedInterests.length === 0) {
+        this.suggestedProfiles.set([]);
+        return;
+      }
+
+      const starterPacks = this.followsetService.starterPacks();
+      const profiles = await this.followsetService.convertStarterPacksToProfiles(
+        starterPacks,
+        selectedInterests
+      );
+
+      this.suggestedProfiles.set(profiles);
+      this.logger.debug(`Updated suggested profiles: ${profiles.length} profiles`);
+    } catch (error) {
+      this.logger.error('Failed to update suggested profiles:', error);
+    }
   }
 }
