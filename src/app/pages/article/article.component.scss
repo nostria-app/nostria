@@ -630,3 +630,125 @@
     display: none !important;
   }
 }
+// JSON content styles
+.json-content {
+  font-family: 'Courier New', Courier, monospace;
+  padding: 24px;
+  background-color: var(--mat-sys-surface-container-low);
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 12px;
+  overflow-x: auto;
+  margin: 24px 0;
+}
+
+.json-object {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.json-property {
+  display: grid;
+  grid-template-columns: minmax(150px, auto) auto 1fr;
+  gap: 12px;
+  align-items: start;
+  padding: 12px;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container);
+  }
+}
+
+.json-key {
+  color: var(--mat-sys-primary);
+  font-weight: 600;
+  word-break: break-word;
+  font-size: 1rem;
+}
+
+.json-separator {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 1rem;
+}
+
+.json-value {
+  color: var(--mat-sys-on-surface);
+  word-break: break-word;
+  font-weight: 500;
+  font-size: 1rem;
+}
+
+.json-complex-value {
+  grid-column: 1 / -1;
+  margin: 12px 0 0 0;
+  padding: 16px;
+  background-color: var(--mat-sys-surface-container);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--mat-sys-on-surface);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  border-left: 4px solid var(--mat-sys-primary);
+}
+
+.json-raw {
+  margin: 0;
+  padding: 16px;
+  background-color: var(--mat-sys-surface-container);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--mat-sys-on-surface);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+// Responsive JSON view
+@media (max-width: 768px) {
+  .json-content {
+    padding: 16px;
+    margin: 16px 0;
+  }
+
+  .json-property {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .json-separator {
+    display: none;
+  }
+
+  .json-key {
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--mat-sys-outline-variant);
+    font-size: 0.95rem;
+  }
+
+  .json-value {
+    font-size: 0.95rem;
+  }
+
+  .json-complex-value {
+    grid-column: 1;
+    font-size: 0.85rem;
+    padding: 12px;
+  }
+}
+
+@media print {
+  .json-content {
+    page-break-inside: avoid;
+    border: 1pt solid #ccc;
+  }
+
+  .json-property {
+    page-break-inside: avoid;
+  }
+}
