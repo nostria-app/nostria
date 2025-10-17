@@ -4,7 +4,9 @@
       <mat-icon>{{ isEditMode() ? 'edit' : 'stacks' }}</mat-icon>
       {{ isEditMode() ? 'Edit Board' : 'Create New Board' }}
     </h2>
+    @if (!isEditMode()) {
     <p class="dialog-subtitle">Choose a board template or create a custom board</p>
+    }
   </div>
 
   <div class="dialog-content">
@@ -84,6 +86,7 @@
       </div>
 
       @if (
+      !isEditMode() &&
       selectedTemplate() &&
       getSelectedTemplateConfig()?.defaultColumns &&
       getSelectedTemplateConfig()!.defaultColumns.length > 0
