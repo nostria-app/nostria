@@ -5,6 +5,7 @@ import { Metrics } from './metrics';
 import { UserMetric } from '../interfaces/metrics';
 import { FavoritesService } from './favorites.service';
 import { UtilitiesService } from './utilities.service';
+import { RegionService } from './region.service';
 
 @Injectable({
   providedIn: 'root',
@@ -15,10 +16,19 @@ export class Algorithms {
   private readonly metrics = inject(Metrics);
   private readonly favoritesService = inject(FavoritesService);
   private readonly utilities = inject(UtilitiesService);
+  private readonly regionService = inject(RegionService);
 
   async calculateProfileViewed(limit: number, ascending: boolean): Promise<UserMetric[]> {
     // Get the list of users we follow
-    const following = this.accountState.followingList();
+    let following = this.accountState.followingList();
+
+    // If user has zero following, use default accounts based on their region
+    if (following.length === 0) {
+      const account = this.accountState.account();
+      const region = account?.region || 'us';
+      following = this.regionService.getDefaultAccountsForRegion(region);
+      console.log(`Using ${following.length} default accounts for region: ${region}`);
+    }
 
     // Filter out invalid pubkeys before processing
     const validFollowing = following.filter(pubkey => this.utilities.isValidPubkey(pubkey));
@@ -219,7 +229,15 @@ export class Algorithms {
   async getRecommendedUsersForArticles(limit = 20): Promise<UserMetric[]> {
     const allMetrics = await this.metrics.getMetrics();
     const favorites = this.favoritesService.favorites();
-    const following = this.accountState.followingList();
+    let following = this.accountState.followingList();
+
+    // If user has zero following, use default accounts based on their region
+    if (following.length === 0) {
+      const account = this.accountState.account();
+      const region = account?.region || 'us';
+      following = this.regionService.getDefaultAccountsForRegion(region);
+      console.log(`Using ${following.length} default accounts for articles, region: ${region}`);
+    }
 
     // For articles, use much more lenient criteria
     const candidateUsers = allMetrics.filter(metric => {
