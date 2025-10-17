@@ -5,7 +5,7 @@
   <!-- Header Section -->
   <header class="header-section">
     <div class="title-section">
-      <!-- Board Selector -->
+      <!-- Feed Selector -->
       <div class="feed-selector">
         <div class="feed-tabs">
           @if (isMobileView()) {
@@ -31,19 +31,19 @@
               <mat-divider></mat-divider>
               <button mat-menu-item (click)="addNewFeed()">
                 <mat-icon>add</mat-icon>
-                <span>New Board</span>
+                <span>New Feed</span>
               </button>
               <button mat-menu-item (click)="editCurrentFeed()" [disabled]="!activeFeed()">
                 <mat-icon>edit</mat-icon>
-                <span>Edit Board</span>
+                <span>Edit Feed</span>
               </button>
               <button mat-menu-item (click)="deleteCurrentFeed()" [disabled]="!activeFeed()">
                 <mat-icon>delete</mat-icon>
-                <span>Delete Board</span>
+                <span>Delete Feed</span>
               </button>
               <button mat-menu-item (click)="resetFeeds()">
                 <mat-icon>restore</mat-icon>
-                <span>Reset Boards</span>
+                <span>Reset Feeds</span>
               </button>
               <mat-divider></mat-divider>
               <button mat-menu-item routerLink="/settings/algorithm">
@@ -72,22 +72,22 @@
                 }
                 <button mat-menu-item (click)="addNewColumn()">
                   <mat-icon>add_column_right</mat-icon>
-                  <span>New Feed</span>
+                  <span>New Column</span>
                 </button>
                 <button mat-menu-item (click)="editColumn(visibleColumnIndex())">
                   <mat-icon>edit</mat-icon>
-                  <span>Edit Feed</span>
+                  <span>Edit Column</span>
                 </button>
                 <button mat-menu-item (click)="removeColumn(visibleColumnIndex())">
                   <mat-icon>delete</mat-icon>
-                  <span>Remove Feed</span>
+                  <span>Remove Column</span>
                 </button>
               </mat-menu>
             </div>
             }
           </div>
           } @else {
-          <button mat-icon-button (click)="addNewFeed()" matTooltip="Add board">
+          <button mat-icon-button (click)="addNewFeed()" matTooltip="Add feed">
             <mat-icon>add</mat-icon>
           </button>
 
@@ -101,33 +101,33 @@
           }
         </div>
 
-        <!-- Board Management Actions -->
+        <!-- Feed Management Actions -->
         @if (!isMobileView()) {
         <div class="feed-actions">
-          <button mat-icon-button [matMenuTriggerFor]="feedManagementMenu" matTooltip="Manage boards">
+          <button mat-icon-button [matMenuTriggerFor]="feedManagementMenu" matTooltip="Manage feeds">
             <mat-icon>more_vert</mat-icon>
           </button>
           <mat-menu #feedManagementMenu="matMenu">
             <button mat-menu-item (click)="addNewColumn()">
               <mat-icon>add_column_right</mat-icon>
-              <span>New Feed</span>
+              <span>New Column</span>
             </button>
             <mat-divider></mat-divider>
             <button mat-menu-item (click)="addNewFeed()">
               <mat-icon>add</mat-icon>
-              <span>New Board</span>
+              <span>New Feed</span>
             </button>
             <button mat-menu-item (click)="editCurrentFeed()" [disabled]="!activeFeed()">
               <mat-icon>edit</mat-icon>
-              <span>Edit Board</span>
+              <span>Edit Feed</span>
             </button>
             <button mat-menu-item (click)="deleteCurrentFeed()" [disabled]="!activeFeed()">
               <mat-icon>delete</mat-icon>
-              <span>Delete Board</span>
+              <span>Delete Feed</span>
             </button>
             <button mat-menu-item (click)="resetFeeds()">
               <mat-icon>restore</mat-icon>
-              <span>Reset Boards</span>
+              <span>Reset Feeds</span>
             </button>
             <mat-divider></mat-divider>
             <button mat-menu-item routerLink="/settings/algorithm">
@@ -162,7 +162,7 @@
       <button mat-icon-button (click)="toggleAdvancedFilters()" matTooltip="Toggle filters">
         <mat-icon>filter_list</mat-icon>
       </button> -->
-      <button mat-icon-button (click)="addNewColumn()" matTooltip="Add feed" [disabled]="feeds().length === 0">
+      <button mat-icon-button (click)="addNewColumn()" matTooltip="Add column" [disabled]="feeds().length === 0">
         <mat-icon>add_column_right</mat-icon>
       </button>
     </div>
@@ -366,10 +366,10 @@
       </div>
       }
 
-      <!-- Add feed button -->
+      <!-- Add column button -->
       <!-- @if (!isMobileView()) {
         <div class="add-column-button">
-          <button mat-mini-fab color="primary" (click)="addNewColumn()" matTooltip="Add new feed">
+          <button mat-mini-fab color="primary" (click)="addNewColumn()" matTooltip="Add new column">
             <mat-icon>add</mat-icon>
           </button>
         </div>

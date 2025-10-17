@@ -55,7 +55,7 @@ export class NewFeedDialogComponent {
         label: formValue.label!,
         icon: formValue.icon!,
         path: formValue.path || undefined,
-        description: formValue.description || `${formValue.label} board`,
+        description: formValue.description || `${formValue.label} feed`,
         columns: this.data.feed?.columns || [],
         createdAt: this.data.feed?.createdAt || Date.now(),
         updatedAt: Date.now(),
