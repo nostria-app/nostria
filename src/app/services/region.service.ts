@@ -139,12 +139,12 @@ export class RegionService {
       '472f440f29ef996e92a186b8d320ff180c855903882e59d50de1b8bd5669301e', // Marty Bent
       '85080d3bad70ccdcd7f74c29a44f55bb85cbcd3dd0cbb957da1d215bdb931204', // Preston Pysh
       'fa984bd7dbb282f07e16e7ae87b26a2a7b9b90b7246a44771f0cf5ae58018f52', // Pablo F7z
-      '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaaaaaaa9', // Derek Ross
-      '1bc70a0148b3f316da33fe3c89f23e3e71ac4ff998027ec712b905cd24f6a411', // Miljan
+      '3f770d65d3a764a9c5cb503ae123e62ec7598ad035d836e2a810f3877a745b24', // Derek Ross  
+      '1bc70a0148b3f316da33fe3c89f23e3e71ac4ff998027ec712b905cd24f6a411', // Karnage
       '04c915daefee38317fa734444acee390a8269fe5810b2241e5e6dd343dfbecc9', // Odell
       'c48e29f04b482cc01ca1f9ef8c86ef8318c059e0e9353235162f080f26e14c11', // Walker
       'eab0e756d32b80bcd464f3d844b8040303075a13eabc3599a762c9ac7ab91f4f', // Lyn Alden
-      '91c9a5e1a9744114c6fe2d61ae4de82629eaaa0fb52f48288093c7e7e036f832', // Carla
+      '91c9a5e1a9744114c6fe2d61ae4de82629eaaa0fb52f48288093c7e7e036f832', // ROCKSTAR
       '32e1827635450ebb3c5a7d12c1f8e7b2b514439ac10a67eef3d9fd9c5c68e245', // jb55
       'c4eabae1be3cf657bc1855ee05e69de9f059cb7a059227168b80b89761cbc4e0', // Jack Mallers
       '6e468422dfb74a5738702a8823b9b28168abab8655faacb6853cd0ee15deee93', // Gigi
@@ -156,12 +156,12 @@ export class RegionService {
       '472f440f29ef996e92a186b8d320ff180c855903882e59d50de1b8bd5669301e', // Marty Bent
       '85080d3bad70ccdcd7f74c29a44f55bb85cbcd3dd0cbb957da1d215bdb931204', // Preston Pysh
       'fa984bd7dbb282f07e16e7ae87b26a2a7b9b90b7246a44771f0cf5ae58018f52', // Pablo F7z
-      '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaaaaaaa9', // Derek Ross
+      '3f770d65d3a764a9c5cb503ae123e62ec7598ad035d836e2a810f3877a745b24', // Derek Ross
       '1bc70a0148b3f316da33fe3c89f23e3e71ac4ff998027ec712b905cd24f6a411', // Miljan
       '04c915daefee38317fa734444acee390a8269fe5810b2241e5e6dd343dfbecc9', // Odell
       'c48e29f04b482cc01ca1f9ef8c86ef8318c059e0e9353235162f080f26e14c11', // Walker
       'eab0e756d32b80bcd464f3d844b8040303075a13eabc3599a762c9ac7ab91f4f', // Lyn Alden
-      '91c9a5e1a9744114c6fe2d61ae4de82629eaaa0fb52f48288093c7e7e036f832', // Carla
+      '91c9a5e1a9744114c6fe2d61ae4de82629eaaa0fb52f48288093c7e7e036f832', // ROCKSTAR
       '32e1827635450ebb3c5a7d12c1f8e7b2b514439ac10a67eef3d9fd9c5c68e245', // jb55
       'c4eabae1be3cf657bc1855ee05e69de9f059cb7a059227168b80b89761cbc4e0', // Jack Mallers
       '6e468422dfb74a5738702a8823b9b28168abab8655faacb6853cd0ee15deee93', // Gigi
@@ -173,12 +173,12 @@ export class RegionService {
       '472f440f29ef996e92a186b8d320ff180c855903882e59d50de1b8bd5669301e', // Marty Bent
       '85080d3bad70ccdcd7f74c29a44f55bb85cbcd3dd0cbb957da1d215bdb931204', // Preston Pysh
       'fa984bd7dbb282f07e16e7ae87b26a2a7b9b90b7246a44771f0cf5ae58018f52', // Pablo F7z
-      '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaaaaaaa9', // Derek Ross
+      '3f770d65d3a764a9c5cb503ae123e62ec7598ad035d836e2a810f3877a745b24', // Derek Ross
       '1bc70a0148b3f316da33fe3c89f23e3e71ac4ff998027ec712b905cd24f6a411', // Miljan
       '04c915daefee38317fa734444acee390a8269fe5810b2241e5e6dd343dfbecc9', // Odell
       'c48e29f04b482cc01ca1f9ef8c86ef8318c059e0e9353235162f080f26e14c11', // Walker
       'eab0e756d32b80bcd464f3d844b8040303075a13eabc3599a762c9ac7ab91f4f', // Lyn Alden
-      '91c9a5e1a9744114c6fe2d61ae4de82629eaaa0fb52f48288093c7e7e036f832', // Carla
+      '91c9a5e1a9744114c6fe2d61ae4de82629eaaa0fb52f48288093c7e7e036f832', // ROCKSTAR
       '32e1827635450ebb3c5a7d12c1f8e7b2b514439ac10a67eef3d9fd9c5c68e245', // jb55
       'c4eabae1be3cf657bc1855ee05e69de9f059cb7a059227168b80b89761cbc4e0', // Jack Mallers
       '6e468422dfb74a5738702a8823b9b28168abab8655faacb6853cd0ee15deee93', // Gigi
@@ -190,12 +190,12 @@ export class RegionService {
       '472f440f29ef996e92a186b8d320ff180c855903882e59d50de1b8bd5669301e', // Marty Bent
       '85080d3bad70ccdcd7f74c29a44f55bb85cbcd3dd0cbb957da1d215bdb931204', // Preston Pysh
       'fa984bd7dbb282f07e16e7ae87b26a2a7b9b90b7246a44771f0cf5ae58018f52', // Pablo F7z
-      '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaaaaaaa9', // Derek Ross
+      '3f770d65d3a764a9c5cb503ae123e62ec7598ad035d836e2a810f3877a745b24', // Derek Ross
       '1bc70a0148b3f316da33fe3c89f23e3e71ac4ff998027ec712b905cd24f6a411', // Miljan
       '04c915daefee38317fa734444acee390a8269fe5810b2241e5e6dd343dfbecc9', // Odell
       'c48e29f04b482cc01ca1f9ef8c86ef8318c059e0e9353235162f080f26e14c11', // Walker
       'eab0e756d32b80bcd464f3d844b8040303075a13eabc3599a762c9ac7ab91f4f', // Lyn Alden
-      '91c9a5e1a9744114c6fe2d61ae4de82629eaaa0fb52f48288093c7e7e036f832', // Carla
+      '91c9a5e1a9744114c6fe2d61ae4de82629eaaa0fb52f48288093c7e7e036f832', // ROCKSTAR
       '32e1827635450ebb3c5a7d12c1f8e7b2b514439ac10a67eef3d9fd9c5c68e245', // jb55
       'c4eabae1be3cf657bc1855ee05e69de9f059cb7a059227168b80b89761cbc4e0', // Jack Mallers
       '6e468422dfb74a5738702a8823b9b28168abab8655faacb6853cd0ee15deee93', // Gigi
@@ -207,12 +207,12 @@ export class RegionService {
       '472f440f29ef996e92a186b8d320ff180c855903882e59d50de1b8bd5669301e', // Marty Bent
       '85080d3bad70ccdcd7f74c29a44f55bb85cbcd3dd0cbb957da1d215bdb931204', // Preston Pysh
       'fa984bd7dbb282f07e16e7ae87b26a2a7b9b90b7246a44771f0cf5ae58018f52', // Pablo F7z
-      '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaaaaaaa9', // Derek Ross
+      '3f770d65d3a764a9c5cb503ae123e62ec7598ad035d836e2a810f3877a745b24', // Derek Ross
       '1bc70a0148b3f316da33fe3c89f23e3e71ac4ff998027ec712b905cd24f6a411', // Miljan
       '04c915daefee38317fa734444acee390a8269fe5810b2241e5e6dd343dfbecc9', // Odell
       'c48e29f04b482cc01ca1f9ef8c86ef8318c059e0e9353235162f080f26e14c11', // Walker
       'eab0e756d32b80bcd464f3d844b8040303075a13eabc3599a762c9ac7ab91f4f', // Lyn Alden
-      '91c9a5e1a9744114c6fe2d61ae4de82629eaaa0fb52f48288093c7e7e036f832', // Carla
+      '91c9a5e1a9744114c6fe2d61ae4de82629eaaa0fb52f48288093c7e7e036f832', // ROCKSTAR
       '32e1827635450ebb3c5a7d12c1f8e7b2b514439ac10a67eef3d9fd9c5c68e245', // jb55
       'c4eabae1be3cf657bc1855ee05e69de9f059cb7a059227168b80b89761cbc4e0', // Jack Mallers
       '6e468422dfb74a5738702a8823b9b28168abab8655faacb6853cd0ee15deee93', // Gigi

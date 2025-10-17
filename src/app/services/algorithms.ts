@@ -125,6 +125,41 @@ export class Algorithms {
     // Combine all candidates
     const allCandidates = [...candidateUsers, ...favoriteMetrics];
 
+    // If no candidates found (new user with no metrics), use regional default accounts
+    if (allCandidates.length === 0) {
+      const following = this.accountState.followingList();
+
+      if (following.length === 0) {
+        const account = this.accountState.account();
+        const region = account?.region || 'us';
+        const defaultAccounts = this.regionService.getDefaultAccountsForRegion(region);
+
+        console.log(`Using ${defaultAccounts.length} default accounts for notes (region: ${region})`);
+
+        // Create minimal metrics for default accounts
+        const defaultMetrics: UserMetric[] = defaultAccounts.map(pubkey => ({
+          pubkey,
+          viewed: 0,
+          profileClicks: 0,
+          liked: 0,
+          read: 0,
+          replied: 0,
+          reposted: 0,
+          quoted: 0,
+          messaged: 0,
+          mentioned: 0,
+          timeSpent: 0,
+          lastInteraction: Date.now(),
+          firstInteraction: Date.now(),
+          updated: Date.now(),
+          engagementScore: 1,
+          finalScore: 1,
+        }));
+
+        return defaultMetrics.slice(0, limit);
+      }
+    }
+
     // Calculate final score with favorite boost
     const scoredUsers = allCandidates.map(metric => {
       const baseScore = metric.engagementScore || 0;
