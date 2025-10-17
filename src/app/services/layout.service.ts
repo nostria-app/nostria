@@ -1131,9 +1131,7 @@ export class LayoutService implements OnDestroy {
     }
   }
 
-  shareProfileUrl(npub: string | null | undefined): void {
-    const username = this.accountStateService.subscription()?.username;
-
+  shareProfileUrl(npub: string | null | undefined, username?: string | null): void {
     if (!npub && !username) {
       return;
     }
