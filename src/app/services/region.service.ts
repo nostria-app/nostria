@@ -133,6 +133,8 @@ export class RegionService {
   // to provide immediate content access while they build their network
   private defaultAccountsByRegion: Record<string, string[]> = {
     eu: [
+      'd1bd33333733dcc411f0ee893b38b8522fc0de227fff459d99044ced9e65581b', // Nostria
+      '17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515', // SondreB
       '82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbfbe6a2', // Jack Dorsey
       '04c915daefee38317fa734444acee390a8269fe5810b2241e5e6dd343dfbecc9', // Odell
       'e33fe65f1fde44c6dc17eeb38fdad0fceaf1cae8722084332ed1e32496291d42', // Saylor
@@ -150,6 +152,8 @@ export class RegionService {
       '6e468422dfb74a5738702a8823b9b28168abab8655faacb6853cd0ee15deee93', // Gigi
     ],
     us: [
+      'd1bd33333733dcc411f0ee893b38b8522fc0de227fff459d99044ced9e65581b', // Nostria
+      '17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515', // SondreB
       '82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbfbe6a2', // Jack Dorsey
       '04c915daefee38317fa734444acee390a8269fe5810b2241e5e6dd343dfbecc9', // Odell
       'e33fe65f1fde44c6dc17eeb38fdad0fceaf1cae8722084332ed1e32496291d42', // Saylor
@@ -167,6 +171,8 @@ export class RegionService {
       '6e468422dfb74a5738702a8823b9b28168abab8655faacb6853cd0ee15deee93', // Gigi
     ],
     af: [
+      'd1bd33333733dcc411f0ee893b38b8522fc0de227fff459d99044ced9e65581b', // Nostria
+      '17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515', // SondreB
       '82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbfbe6a2', // Jack Dorsey
       '04c915daefee38317fa734444acee390a8269fe5810b2241e5e6dd343dfbecc9', // Odell
       'e33fe65f1fde44c6dc17eeb38fdad0fceaf1cae8722084332ed1e32496291d42', // Saylor
@@ -184,6 +190,8 @@ export class RegionService {
       '6e468422dfb74a5738702a8823b9b28168abab8655faacb6853cd0ee15deee93', // Gigi
     ],
     sa: [
+      'd1bd33333733dcc411f0ee893b38b8522fc0de227fff459d99044ced9e65581b', // Nostria
+      '17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515', // SondreB
       '82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbfbe6a2', // Jack Dorsey
       '04c915daefee38317fa734444acee390a8269fe5810b2241e5e6dd343dfbecc9', // Odell
       'e33fe65f1fde44c6dc17eeb38fdad0fceaf1cae8722084332ed1e32496291d42', // Saylor
@@ -201,6 +209,8 @@ export class RegionService {
       '6e468422dfb74a5738702a8823b9b28168abab8655faacb6853cd0ee15deee93', // Gigi
     ],
     as: [
+      'd1bd33333733dcc411f0ee893b38b8522fc0de227fff459d99044ced9e65581b', // Nostria
+      '17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515', // SondreB
       '82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbfbe6a2', // Jack Dorsey
       '04c915daefee38317fa734444acee390a8269fe5810b2241e5e6dd343dfbecc9', // Odell
       'e33fe65f1fde44c6dc17eeb38fdad0fceaf1cae8722084332ed1e32496291d42', // Saylor
