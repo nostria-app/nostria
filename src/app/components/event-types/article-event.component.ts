@@ -45,11 +45,27 @@ export class ArticleEventComponent {
 
   previewContent = signal<SafeHtml>('');
   articleContent = signal<SafeHtml>('');
+  isJsonContent = signal<boolean>(false);
+  jsonData = signal<Record<string, unknown> | unknown[] | null>(null);
 
   constructor() {
     effect(async () => {
       const event = this.event();
       if (!event || !event.content) return;
+
+      // Check if content is JSON
+      const jsonResult = this.tryParseJson(event.content);
+      if (jsonResult.isJson) {
+        this.isJsonContent.set(true);
+        this.jsonData.set(jsonResult.data);
+        // For JSON, we'll render it specially, so set empty HTML
+        this.previewContent.set('');
+        this.articleContent.set('');
+        return;
+      }
+
+      this.isJsonContent.set(false);
+      this.jsonData.set(null);
 
       if (event.content.length > this.MAX_LENGTH) {
         this.previewContent.set(
@@ -162,5 +178,76 @@ export class ArticleEventComponent {
   private getEventTitle(event: Event): string | null {
     const titleTag = event.tags.find(tag => tag[0] === 'title');
     return titleTag?.[1] || null;
+  }
+
+  /**
+   * Try to parse content as JSON
+   */
+  private tryParseJson(content: string): { isJson: boolean; data: Record<string, unknown> | unknown[] | null } {
+    try {
+      const trimmed = content.trim();
+      if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) {
+        return { isJson: false, data: null };
+      }
+
+      const parsed = JSON.parse(trimmed);
+      // Only consider objects and arrays as JSON content
+      if (typeof parsed === 'object' && parsed !== null) {
+        return { isJson: true, data: parsed };
+      }
+      return { isJson: false, data: null };
+    } catch {
+      return { isJson: false, data: null };
+    }
+  }
+
+  /**
+   * Get keys from an object for template iteration
+   */
+  getObjectKeys(obj: unknown): string[] {
+    if (!obj || typeof obj !== 'object') return [];
+    return Object.keys(obj);
+  }
+
+  /**
+   * Get value from object by key
+   */
+  getObjectValue(obj: unknown, key: string): unknown {
+    if (!obj || typeof obj !== 'object') return null;
+    return (obj as Record<string, unknown>)[key];
+  }
+
+  /**
+   * Format JSON value for display
+   */
+  formatJsonValue(value: unknown): string {
+    if (value === null) return 'null';
+    if (value === undefined) return 'undefined';
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+    if (Array.isArray(value)) return `Array(${value.length})`;
+    if (typeof value === 'object') return 'Object';
+    return String(value);
+  }
+
+  /**
+   * Check if value is a primitive (string, number, boolean, null)
+   */
+  isPrimitive(value: unknown): boolean {
+    return value === null ||
+      typeof value === 'string' ||
+      typeof value === 'number' ||
+      typeof value === 'boolean';
+  }
+
+  /**
+   * Stringify complex values (objects/arrays) for display
+   */
+  stringifyValue(value: unknown): string {
+    try {
+      return JSON.stringify(value, null, 2);
+    } catch {
+      return String(value);
+    }
   }
 }
