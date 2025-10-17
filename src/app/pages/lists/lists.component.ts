@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -343,6 +343,7 @@ export class ListsComponent implements OnInit {
   // State
   loading = signal(false);
   selectedTab = signal(0); // 0 = standard lists, 1 = sets
+  private isLoadingLists = false; // Guard to prevent overlapping loads
 
   // Loaded lists data
   standardListsData = signal<Map<number, ListData>>(new Map());
@@ -351,13 +352,46 @@ export class ListsComponent implements OnInit {
   // Computed
   pubkey = computed(() => this.accountState.pubkey());
 
+  constructor() {
+    // Effect to reload lists when account changes
+    effect(() => {
+      const pubkey = this.pubkey();
+
+      // Clear existing lists first
+      this.standardListsData.set(new Map());
+      this.setsData.set(new Map());
+
+      // Reload lists for the new account (don't await - let it run in background)
+      if (pubkey) {
+        this.loadAllLists();
+      } else {
+        // No pubkey, ensure loading is false
+        this.loading.set(false);
+        this.isLoadingLists = false;
+      }
+    });
+  }
+
   async ngOnInit() {
-    await this.loadAllLists();
+    // Lists are loaded automatically by the effect when pubkey is available
+    // No need to call loadAllLists here
 
     // Add to window for debugging
     if (typeof window !== 'undefined') {
       (window as unknown as { listComponent?: ListsComponent }).listComponent = this;
     }
+  }
+
+  /**
+   * Helper to wrap promises with timeout
+   */
+  private withTimeout<T>(promise: Promise<T>, timeoutMs: number, operationName: string): Promise<T> {
+    return Promise.race([
+      promise,
+      new Promise<T>((_, reject) =>
+        setTimeout(() => reject(new Error(`${operationName} timed out after ${timeoutMs}ms`)), timeoutMs)
+      ),
+    ]);
   }
 
   /**
@@ -368,11 +402,29 @@ export class ListsComponent implements OnInit {
     if (!pubkey) {
       this.logger.warn('[ListsComponent] No pubkey available');
       this.loading.set(false);
+      this.isLoadingLists = false;
+      return;
+    }
+
+    // Prevent overlapping loads
+    if (this.isLoadingLists) {
+      this.logger.warn('[ListsComponent] Already loading lists, skipping duplicate call');
       return;
     }
 
     this.logger.info('[ListsComponent] Starting to load lists for pubkey:', pubkey);
+    this.isLoadingLists = true;
     this.loading.set(true);
+
+    // Set a maximum timeout for the entire load operation (30 seconds)
+    const timeoutId = setTimeout(() => {
+      if (this.isLoadingLists) {
+        this.logger.error('[ListsComponent] Load operation timed out after 30 seconds');
+        this.isLoadingLists = false;
+        this.loading.set(false);
+        this.snackBar.open('Failed to load lists (timeout)', 'Close', { duration: 5000 });
+      }
+    }, 30000);
 
     try {
       // Load standard lists (10000 series)
@@ -390,7 +442,9 @@ export class ListsComponent implements OnInit {
       this.logger.error('[ListsComponent] Error loading lists', error);
       this.snackBar.open('Failed to load lists', 'Close', { duration: 3000 });
     } finally {
+      clearTimeout(timeoutId); // Clear the timeout if we complete normally
       this.logger.info('[ListsComponent] Setting loading to false');
+      this.isLoadingLists = false;
       this.loading.set(false);
     }
   }
@@ -405,10 +459,16 @@ export class ListsComponent implements OnInit {
     for (const listType of STANDARD_LISTS) {
       try {
         this.logger.debug(`[ListsComponent] Loading standard list kind ${listType.kind}`);
-        const record = await this.data.getEventByPubkeyAndKind(pubkey, listType.kind, {
-          save: true,
-          cache: true,
-        });
+
+        // Add timeout to prevent hanging on individual fetches
+        const record = await this.withTimeout(
+          this.data.getEventByPubkeyAndKind(pubkey, listType.kind, {
+            save: true,
+            cache: true,
+          }),
+          10000, // 10 second timeout per fetch
+          `Loading standard list kind ${listType.kind}`
+        );
 
         if (record?.event) {
           this.logger.debug(`[ListsComponent] Found event for kind ${listType.kind}, parsing...`);
@@ -439,10 +499,16 @@ export class ListsComponent implements OnInit {
     for (const listType of LIST_SETS) {
       try {
         this.logger.debug(`[ListsComponent] Loading sets for kind ${listType.kind}`);
-        const records = await this.data.getEventsByPubkeyAndKind(pubkey, listType.kind, {
-          save: true,
-          cache: true,
-        });
+
+        // Add timeout to prevent hanging on individual fetches
+        const records = await this.withTimeout(
+          this.data.getEventsByPubkeyAndKind(pubkey, listType.kind, {
+            save: true,
+            cache: true,
+          }),
+          10000, // 10 second timeout per fetch
+          `Loading sets for kind ${listType.kind}`
+        );
 
         if (records && records.length > 0) {
           this.logger.debug(`[ListsComponent] Found ${records.length} records for kind ${listType.kind}`);
