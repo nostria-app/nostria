@@ -23,6 +23,7 @@ import { UserRelayService } from './relays/user-relay';
 import { SharedRelayService } from './relays/shared-relay';
 import { AccountRelayService } from './relays/account-relay';
 import { Followset } from './followset';
+import { RegionService } from './region.service';
 
 export interface FeedItem {
   column: ColumnConfig;
@@ -221,6 +222,7 @@ export class FeedService {
   // On-demand access for one-shot per-user fetches to avoid lingering sockets
   private readonly onDemandUserData = inject(OnDemandUserDataService);
   private readonly followset = inject(Followset);
+  private readonly regionService = inject(RegionService);
 
   private readonly algorithms = inject(Algorithms);
 
@@ -491,8 +493,17 @@ export class FeedService {
       if (topEngagedUsers.length === 0) {
         this.logger.warn('No engaged users found, falling back to recent following');
         // Fallback to users from following list
-        const followingList = this.accountState.followingList();
-        this.logger.debug(`Following list size: ${followingList.length}`);
+        let followingList = this.accountState.followingList();
+
+        // If following list is empty, use regional default accounts
+        if (followingList.length === 0) {
+          const account = this.accountState.account();
+          const region = account?.region || 'us';
+          followingList = this.regionService.getDefaultAccountsForRegion(region);
+          this.logger.debug(`Using ${followingList.length} default accounts for notes (region: ${region})`);
+        } else {
+          this.logger.debug(`Following list size: ${followingList.length}`);
+        }
 
         // For articles, use more users since articles are rarer
         const fallbackCount = isArticlesFeed ? 25 : 10;
@@ -566,7 +577,16 @@ export class FeedService {
       if (pubkeysArray.length === 0) {
         this.logger.warn('No pubkeys found for custom feed, falling back to following');
         // Fallback to following if no custom users are specified
-        const followingList = this.accountState.followingList();
+        let followingList = this.accountState.followingList();
+
+        // If following list is empty, use regional default accounts
+        if (followingList.length === 0) {
+          const account = this.accountState.account();
+          const region = account?.region || 'us';
+          followingList = this.regionService.getDefaultAccountsForRegion(region);
+          this.logger.debug(`Using ${followingList.length} default accounts for custom feed (region: ${region})`);
+        }
+
         const fallbackUsers = [...followingList].slice(-10).reverse();
         await this.fetchEventsFromUsers(fallbackUsers, feedData);
         return;
