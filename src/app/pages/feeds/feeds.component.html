@@ -271,7 +271,23 @@
         <!-- Feed Content with Individual Scrolling -->
         <div class="column-content">
           <div class="column-scroll-container">
-            @if (isLoading() && !columnContentLoaded()[column.id]) {
+            <!-- Empty following state message -->
+            @if (shouldShowEmptyFollowingMessage().get(column.id)) {
+            <div class="empty-following-state">
+              <div class="empty-state-content">
+                <mat-icon class="empty-state-icon">group_add</mat-icon>
+                <h3>You're not following anyone yet</h3>
+                <p>
+                  Start building your network by following interesting people.
+                  Let's discover profiles using Starter Packs!
+                </p>
+                <button mat-raised-button color="primary" (click)="navigateToPeople()" class="discover-people-btn">
+                  <mat-icon>explore</mat-icon>
+                  Discover People
+                </button>
+              </div>
+            </div>
+            } @else if (isLoading() && !columnContentLoaded()[column.id]) {
             <!-- Show skeleton items while content is loading -->
             <div class="column-skeleton-items">
               @for (item of [1, 2, 3, 4, 5, 6]; track $index) {
