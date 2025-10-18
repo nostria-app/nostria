@@ -11,13 +11,7 @@
 
           @if (isMobileView()) {
           <div class="mobile-selectors">
-            <button mat-icon-button (click)="addNewFeed()" matTooltip="Add feed">
-              <mat-icon>add</mat-icon>
-            </button>
 
-            <button mat-icon-button (click)="addNewColumn()" matTooltip="Add column" [disabled]="feeds().length === 0">
-              <mat-icon>add_column_right</mat-icon>
-            </button>
 
             <button mat-button [matMenuTriggerFor]="feedMenu">
               <mat-icon>{{ feedIcon() }}</mat-icon>
@@ -50,6 +44,14 @@
                 <span>Algorithm</span>
               </button> -->
             </mat-menu>
+
+            <button mat-icon-button (click)="addNewFeed()" matTooltip="Add feed">
+              <mat-icon>add</mat-icon>
+            </button>
+
+            <button mat-icon-button (click)="addNewColumn()" matTooltip="Add column" [disabled]="feeds().length === 0">
+              <mat-icon>add_column_right</mat-icon>
+            </button>
 
             <button mat-icon-button [matMenuTriggerFor]="feedMenuOptions">
               <mat-icon>more_vert</mat-icon>
@@ -110,6 +112,14 @@
           </div>
           } @else {
 
+          @for (feed of feeds(); track feed.id) {
+          <button class="feed-tab" mat-button [class.active]="feed.id === feedsCollectionService.activeFeedId()"
+            (click)="selectFeed(feed.id)" [matTooltip]="feed.description || feed.label">
+            <mat-icon>{{ feed.icon }}</mat-icon>
+            <span>{{ feed.label }}</span>
+          </button>
+          }
+
           <button mat-icon-button (click)="addNewFeed()" matTooltip="Add feed">
             <mat-icon>add</mat-icon>
           </button>
@@ -118,13 +128,6 @@
             <mat-icon>add_column_right</mat-icon>
           </button>
 
-          @for (feed of feeds(); track feed.id) {
-          <button class="feed-tab" mat-button [class.active]="feed.id === feedsCollectionService.activeFeedId()"
-            (click)="selectFeed(feed.id)" [matTooltip]="feed.description || feed.label">
-            <mat-icon>{{ feed.icon }}</mat-icon>
-            <span>{{ feed.label }}</span>
-          </button>
-          }
           }
         </div>
 
