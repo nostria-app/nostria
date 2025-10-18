@@ -31,15 +31,6 @@
       <div class="section basic-info-section">
         <h3>Basic Information</h3>
         <div class="form-row">
-          <mat-form-field class="full-width">
-            <mat-label>Column Name</mat-label>
-            <input matInput formControlName="label" placeholder="My Custom Column" />
-            <mat-icon matSuffix>label</mat-icon>
-            @if (columnForm.get('label')?.hasError('required')) {
-            <mat-error>Column name is required</mat-error>
-            }
-          </mat-form-field>
-
           <mat-form-field>
             <mat-label>Icon</mat-label>
             <mat-select formControlName="icon">

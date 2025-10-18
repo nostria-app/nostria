@@ -1203,7 +1203,7 @@ export class FeedsComponent implements OnDestroy {
     });
   }
 
-  resetFeeds(): void {
+  async resetFeeds(): Promise<void> {
     // Show confirmation dialog with strong warning
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       data: {
@@ -1215,9 +1215,9 @@ export class FeedsComponent implements OnDestroy {
         confirmColor: 'warn',
       } as ConfirmDialogData,
     });
-    dialogRef.afterClosed().subscribe(result => {
+    dialogRef.afterClosed().subscribe(async (result) => {
       if (result) {
-        this.feedsCollectionService.resetToDefaults();
+        await this.feedsCollectionService.resetToDefaults();
         this.notificationService.notify('Feeds have been reset to defaults');
       }
     });

@@ -10,7 +10,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatCardModule } from '@angular/material/card';
 import { MatDividerModule } from '@angular/material/divider';
-import { FormBuilder, Validators, ReactiveFormsModule, FormControl } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, FormControl } from '@angular/forms';
 import { COMMA, ENTER } from '@angular/cdk/keycodes';
 import { MatChipInputEvent } from '@angular/material/chips';
 import { MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
@@ -99,7 +99,6 @@ export class NewColumnDialogComponent {
 
   // Form controls
   columnForm = this.fb.group({
-    label: [this.data.column?.label || '', Validators.required],
     icon: [this.data.column?.icon || 'chat'],
     kinds: [this.data.column?.kinds || []],
     source: [this.data.column?.source || 'following'],
@@ -245,11 +244,10 @@ export class NewColumnDialogComponent {
         this.columnForm.patchValue({ kinds: columnType.kinds });
       }
 
-      // Update icon and label if not in edit mode
+      // Update icon if not in edit mode
       if (!this.isEditMode()) {
         this.columnForm.patchValue({
           icon: columnType.icon,
-          label: columnType.label,
         });
       }
     }
@@ -355,7 +353,7 @@ export class NewColumnDialogComponent {
       // Create column config
       const columnConfig: ColumnConfig = {
         id: this.data.column?.id || crypto.randomUUID(),
-        label: formValue.label!,
+        label: '',
         icon: formValue.icon!,
         type: formValue.type as 'photos' | 'videos' | 'notes' | 'articles' | 'music' | 'custom',
         source: formValue.source || 'public',
