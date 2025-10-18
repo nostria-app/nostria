@@ -54,12 +54,13 @@ export class UserDataService {
       }
     }
 
-    // If the caller explicitly don't want to save, we will not check the storage.
-    if (options?.save) {
+    // If invalidateCache is true, skip storage and fetch directly from relays
+    // Otherwise, check storage first if save option is enabled
+    if (options?.save && !options?.invalidateCache) {
       event = await this.storage.getEventById(id);
     }
 
-    // If the caller explicitly supplies user relay, don't attempt to user account relay.
+    // Fetch from relays if we don't have event yet (or invalidateCache forced relay fetch)
     if (!event) {
       event = await this.userRelayEx.getEventById(pubkey, id);
     }
@@ -243,13 +244,14 @@ export class UserDataService {
       }
     }
 
-    // If the caller explicitly don't want to save, we will not check the storage.
-    if (options?.save) {
+    // If invalidateCache is true, skip storage and fetch directly from relays
+    // Otherwise, check storage first if save option is enabled
+    if (options?.save && !options?.invalidateCache) {
       event =
         (await this.storage.getParameterizedReplaceableEvent(pubkey, kind, dTagValue)) || null;
     }
 
-    // If the caller explicitly supplies user relay, don't attempt to user account relay.
+    // Fetch from relays if we don't have event yet (or invalidateCache forced relay fetch)
     if (!event) {
       event = await this.userRelayEx.getEventByPubkeyAndKindAndTag(pubkey, kind, {
         key: 'd',
@@ -308,12 +310,13 @@ export class UserDataService {
       }
     }
 
-    // If the caller explicitly don't want to save, we will not check the storage.
-    if (options?.save) {
+    // If invalidateCache is true, skip storage and fetch directly from relays
+    // Otherwise, check storage first if save option is enabled
+    if (options?.save && !options?.invalidateCache) {
       event = await this.storage.getEventByPubkeyAndKind(pubkey, kind);
     }
 
-    // If the caller explicitly supplies user relay, don't attempt to user account relay.
+    // Fetch from relays if we don't have event yet (or invalidateCache forced relay fetch)
     if (!event) {
       // If userRelays is true, we will try to get the event from user relays.
       event = await this.userRelayEx.getEventByPubkeyAndKind(pubkey, kind);
@@ -369,11 +372,13 @@ export class UserDataService {
       }
     }
 
-    // If the caller explicitly don't want to save, we will not check the storage.
-    if (events.length === 0 && options?.save) {
+    // If invalidateCache is true, skip storage and fetch directly from relays
+    // Otherwise, check storage first if save option is enabled
+    if (events.length === 0 && options?.save && !options?.invalidateCache) {
       events = await this.storage.getEventsByPubkeyAndKind(pubkey, kind);
     }
 
+    // Fetch from relays if we don't have events yet (or invalidateCache forced relay fetch)
     if (events.length === 0) {
       const relayEvents = await this.userRelayEx.getEventsByPubkeyAndKind(pubkey, kind);
       if (relayEvents && relayEvents.length > 0) {
@@ -418,12 +423,14 @@ export class UserDataService {
       }
     }
 
-    // If the caller explicitly don't want to save, we will not check the storage.
-    if (events.length === 0 && options?.save) {
+    // If invalidateCache is true, skip storage and fetch directly from relays
+    // Otherwise, check storage first if save option is enabled
+    if (events.length === 0 && options?.save && !options?.invalidateCache) {
       const allEvents = await this.storage.getEventsByKind(kind);
       events = allEvents.filter((e) => this.utilities.getTagValues('#e', e.tags)[0] === eventTag);
     }
 
+    // Fetch from relays if we don't have events yet (or invalidateCache forced relay fetch)
     if (events.length === 0) {
       const relayEvents = await this.userRelayEx.getEventsByKindAndEventTag(pubkey, kind, eventTag);
       if (relayEvents && relayEvents.length > 0) {

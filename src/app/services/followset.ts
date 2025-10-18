@@ -3,6 +3,7 @@ import { Event } from 'nostr-tools';
 import { DataService } from './data.service';
 import { LoggerService } from './logger.service';
 import { OnDemandUserDataService } from './on-demand-user-data.service';
+import { UserDataService } from './user-data.service';
 
 export interface StarterPack {
   id: string;
@@ -46,6 +47,7 @@ export class Followset {
   private readonly dataService = inject(DataService);
   private readonly logger = inject(LoggerService);
   private readonly onDemandUserData = inject(OnDemandUserDataService);
+  private readonly userDataService = inject(UserDataService);
 
   // Signals for reactive updates
   starterPacks = signal<StarterPack[]>([]);
@@ -60,6 +62,13 @@ export class Followset {
 
   /**
    * Fetch starter packs from known curators using DataService
+   * 
+   * This method uses a cache-first strategy:
+   * 1. Returns cached/stored data immediately (fast)
+   * 2. Refreshes from relays in the background for next time
+   * 
+   * The OnDemandUserDataService already handles cache/storage via { cache: true, save: true }
+   * so we just need to trigger a background refresh after returning cached data.
    */
   async fetchStarterPacks(): Promise<StarterPack[]> {
     this.isLoading.set(true);
@@ -69,9 +78,11 @@ export class Followset {
       const starterPacks: StarterPack[] = [];
 
       // Fetch starter packs from each curator
+      // This will return cached data if available, or fetch from relays if not
       for (const pubkey of this.NOSTRIA_CURATORS) {
         try {
           // One-shot fetch via on-demand service to avoid holding sockets
+          // This uses cache: true, save: true - so it returns cached data quickly
           const events = await this.onDemandUserData.getEventsByPubkeyAndKind(
             pubkey,
             39089 // Starter pack kind
@@ -90,7 +101,11 @@ export class Followset {
       }
 
       this.starterPacks.set(starterPacks);
-      this.logger.info(`Fetched ${starterPacks.length} starter packs`);
+      this.logger.info(`Fetched ${starterPacks.length} starter packs from cache/storage`);
+
+      // Trigger background refresh from relays for next time
+      // This happens asynchronously and doesn't block the return
+      this.refreshStarterPacksInBackground();
 
       return starterPacks;
     } catch (error) {
@@ -100,6 +115,65 @@ export class Followset {
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  /**
+   * Refresh starter packs from relays in the background
+   * This updates the stored data for the next time fetchStarterPacks is called
+   * 
+   * Uses invalidateCache: true to force fetching fresh data from relays,
+   * bypassing cache and storage to ensure we get the latest updates
+   */
+  private refreshStarterPacksInBackground(): void {
+    // Use queueMicrotask to ensure this happens asynchronously
+    queueMicrotask(async () => {
+      try {
+        this.logger.debug('Starting background refresh of starter packs from relays');
+
+        const refreshedPacks: StarterPack[] = [];
+
+        for (const pubkey of this.NOSTRIA_CURATORS) {
+          try {
+            // Fetch fresh data from relays by bypassing cache
+            // invalidateCache: true forces fetching from relays, not cache/storage
+            // save: true ensures the fresh data is saved to storage for next time
+            const events = await this.userDataService.getEventsByPubkeyAndKind(
+              pubkey,
+              39089, // Starter pack kind
+              {
+                cache: true,        // Enable caching for future fast reads
+                invalidateCache: true,  // But bypass cache for this fetch (get from relays)
+                save: true          // Save fresh data to storage
+              }
+            );
+
+            // Parse and collect the refreshed starter packs
+            events.forEach(record => {
+              const starterPack = this.parseStarterPackEvent(record.event);
+              if (starterPack) {
+                refreshedPacks.push(starterPack);
+              }
+            });
+          } catch (error) {
+            this.logger.debug(`Background refresh failed for ${pubkey}:`, error);
+            // Don't throw - this is best-effort background refresh
+          }
+        }
+
+        // Update the signal with fresh data if we got any
+        if (refreshedPacks.length > 0) {
+          this.starterPacks.set(refreshedPacks);
+          this.logger.debug(
+            `Background refresh completed: Updated ${refreshedPacks.length} starter packs from relays`
+          );
+        }
+
+        this.logger.debug('Background refresh of starter packs completed');
+      } catch (error) {
+        this.logger.debug('Background refresh of starter packs failed:', error);
+        // Silently fail - this is a background operation
+      }
+    });
   }
 
   /**
