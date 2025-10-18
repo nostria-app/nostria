@@ -1,21 +1,4 @@
 <div class="people-page">
-  <!-- Followset Component for empty following or manual trigger -->
-  @if (showFollowset() || hasEmptyFollowingList()) {
-  <div class="followset-container">
-    @if (isLoadingInterests()) {
-    <!-- Show loading indicator while interests are being fetched -->
-    <div class="loading-container">
-      <mat-spinner diameter="40"></mat-spinner>
-      <p>Loading interests...</p>
-    </div>
-    } @else {
-    <app-followset title="Welcome! Let's get you started" [availableInterests]="availableInterests()"
-      [suggestedProfiles]="suggestedProfiles()" [selectedInterests]="selectedInterests()"
-      [followingProfiles]="followingProfiles()" [detectedRegion]="detectedRegion()"
-      (interestToggled)="toggleInterest($event)" (completed)="onFollowsetComplete($event)"></app-followset>
-    }
-  </div>
-  } @else {
   <!-- Header section with title and view options -->
   <div class="people-header">
     <div class="title-section">
@@ -24,8 +7,8 @@
     </div>
 
     <div class="controls-section">
-      <!-- Get Started Button - shown when user has following -->
-      <button mat-flat-button color="accent" (click)="openFollowsetDialog()" matTooltip="Find more people to follow">
+      <!-- Find People Button -->
+      <button mat-flat-button color="accent" routerLink="/people/discover" matTooltip="Discover new people to follow">
         <mat-icon>explore</mat-icon>
         Find People
       </button>
@@ -162,8 +145,8 @@
       } @else {
       <mat-icon>people_outline</mat-icon>
       <p>You aren't following anyone yet</p>
-      <button mat-flat-button color="primary" routerLink="/explore">
-        Explore people to follow
+      <button mat-flat-button color="primary" routerLink="/people/discover">
+        Discover People
       </button>
       }
     </div>
@@ -187,5 +170,4 @@
     </cdk-virtual-scroll-viewport>
     }
   </div>
-  }
 </div>

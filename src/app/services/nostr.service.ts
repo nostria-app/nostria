@@ -111,6 +111,10 @@ export class NostrService implements NostriaService {
             ? this.accountState.newlyFollowedPubkeys()
             : undefined;
 
+          // IMPORTANT: ALL events from the current account must go to ALL configured relays
+          // to prevent data fragmentation. This ensures complete data redundancy and 
+          // availability across the user's entire relay network.
+
           // Use the new PublishService with appropriate options
           const options = signedEvent.kind === kinds.Contacts
             ? {
@@ -118,7 +122,7 @@ export class NostrService implements NostriaService {
               useOptimizedRelays: false,
               newlyFollowedPubkeys  // Pass the newly followed pubkeys
             }
-            : { useOptimizedRelays: true };
+            : { useOptimizedRelays: false }; // Always use all relays for all events
 
           await this.publishService.publish(signedEvent, options);
         } catch (error) {
@@ -511,10 +515,10 @@ export class NostrService implements NostriaService {
     try {
       const signedEvent = await this.signEvent(event);
 
-      // Use the new PublishService
+      // IMPORTANT: ALL events must go to ALL configured relays to prevent data fragmentation
       const options = signedEvent.kind === kinds.Contacts
         ? { notifyFollowed: true, useOptimizedRelays: false } // For follows, notify all
-        : { useOptimizedRelays: true }; // For other events, use optimized relays
+        : { useOptimizedRelays: false }; // For all other events, use all relays too
 
       const result = await this.publishService.publish(signedEvent, options);
 

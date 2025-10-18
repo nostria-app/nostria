@@ -849,8 +849,8 @@ export class ListsComponent implements OnInit {
         } as Parameters<typeof this.data.getEventByPubkeyAndKind>[2]);
       }
 
-      // Publish to relays (happens in background)
-      await this.publish.publish(signedEvent, { useOptimizedRelays: true });
+      // Publish to ALL account relays (not optimized) - important for list persistence
+      await this.publish.publish(signedEvent, { useOptimizedRelays: false });
 
       this.snackBar.open('List saved successfully', 'Close', { duration: 3000 });
 
@@ -891,7 +891,9 @@ export class ListsComponent implements OnInit {
       );
 
       const signedEvent = await this.nostr.signEvent(unsignedEvent);
-      await this.publish.publish(signedEvent, { useOptimizedRelays: true });
+
+      // Publish to ALL account relays (not optimized) - important for deletion to propagate
+      await this.publish.publish(signedEvent, { useOptimizedRelays: false });
 
       this.snackBar.open('List deleted successfully', 'Close', { duration: 3000 });
 
