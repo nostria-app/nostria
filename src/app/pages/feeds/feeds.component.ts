@@ -34,7 +34,7 @@ import {
 import { ImageDialogComponent } from '../../components/image-dialog/image-dialog.component';
 import { LoggerService } from '../../services/logger.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { FeedService } from '../../services/feed.service';
+import { FeedService, ColumnConfig } from '../../services/feed.service';
 import {
   FeedsCollectionService,
   ColumnDefinition,
@@ -179,7 +179,34 @@ export class FeedsComponent implements OnDestroy {
         event.event.tags.some(tag => tag[0] === 't' && tags.includes(tag[1]))
       );
     }
-  }); // Drag state to prevent unnecessary re-renders during column reordering
+  });   // Computed signal to check if a column should show empty following message
+  shouldShowEmptyFollowingMessage = computed(() => {
+    const feedId = this.feedsCollectionService.activeFeedId();
+    if (!feedId) return new Map<string, boolean>();
+
+    const feedConfig = this.feedService.getFeedById(feedId);
+    if (!feedConfig) return new Map<string, boolean>();
+
+    const followingList = this.accountState.followingList();
+    const emptyColumnsMap = new Map<string, boolean>();
+
+    feedConfig.columns.forEach((column: ColumnConfig) => {
+      // Check if column source is 'following' and user has zero following
+      emptyColumnsMap.set(
+        column.id,
+        column.source === 'following' && followingList.length === 0
+      );
+    });
+
+    return emptyColumnsMap;
+  });
+
+  // Method to navigate to People page
+  navigateToPeople(): void {
+    this.router.navigate(['/people']);
+  }
+
+  // Drag state to prevent unnecessary re-renders during column reordering
   private isDragging = signal(false);
 
   // Cache to store events during drag operations
