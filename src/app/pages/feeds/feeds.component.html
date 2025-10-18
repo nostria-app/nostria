@@ -15,12 +15,6 @@
               {{ feedLabel() }}
             </button>
 
-            /
-            <!-- Hierarchy separator -->
-            <!-- <div class="hierarchy-separator">
-              <mat-icon>chevron_right</mat-icon>
-            </div> -->
-
             <mat-menu #feedMenu="matMenu">
               @for (feed of feeds(); track feed.id) {
               <button mat-menu-item (click)="selectFeed(feed.id)">
@@ -192,16 +186,21 @@
         [attr.aria-hidden]="isMobileView() && i !== visibleColumnIndex()" (cdkDragStarted)="onDragStarted()"
         (cdkDragEnded)="onDragEnded()">
         <!-- Feed Header (Connected to its content) -->
-        @if (!isMobileView()) {
         <div class="column-header">
           <div class="column-header-content">
-            @if (columns().length > 1) {
-            <div class="drag-handle" cdkDragHandle>
-              <mat-icon>drag_indicator</mat-icon>
+            @if (isMobileView() && columns().length > 1) {
+            <div class="column-navigation-buttons">
+              <button mat-icon-button (click)="navigateToPreviousColumn()" matTooltip="Previous column"
+                [disabled]="visibleColumnIndex() === 0">
+                <mat-icon>chevron_left</mat-icon>
+              </button>
+              <span class="column-counter">{{ visibleColumnIndex() + 1 }} / {{ columns().length }}</span>
+              <button mat-icon-button (click)="navigateToNextColumn()" matTooltip="Next column"
+                [disabled]="visibleColumnIndex() === columns().length - 1">
+                <mat-icon>chevron_right</mat-icon>
+              </button>
             </div>
             }
-
-            <mat-icon>{{ column.icon }}</mat-icon>
 
             <div class="column-header-actions">
               <button mat-icon-button (click)="refreshColumn(column)" matTooltip="Refresh content">
@@ -236,7 +235,6 @@
             </div>
           </div>
         </div>
-        }
 
         <!-- Filters Section -->
         @if (showAdvancedFilters()) {
