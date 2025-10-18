@@ -118,82 +118,41 @@ const COLUMN_TYPES = {
 
 const DEFAULT_FEEDS: FeedConfig[] = [
   {
-    id: 'default-feed-following',
-    label: 'Posts',
-    icon: 'dynamic_feed',
-    description: 'Default feed with notes from following',
+    id: 'default-feed-starter',
+    label: 'Starter Feed',
+    icon: 'rocket_launch',
+    description: 'Curated content from Nostr starter packs',
     columns: [
       {
-        id: 'notes',
-        label: 'Notes',
-        icon: 'notes',
+        id: 'starter-pack-column',
+        label: '',
+        icon: 'group',
+        type: 'notes',
+        kinds: [kinds.ShortTextNote, kinds.Repost],
+        source: 'custom',
+        // Will be populated with actual starter pack dTags when available
+        customStarterPacks: [],
+        relayConfig: 'account',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      },
+    ],
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  },
+  {
+    id: 'default-feed-following',
+    label: 'Following',
+    icon: 'dynamic_feed',
+    description: 'Content from people you follow',
+    columns: [
+      {
+        id: 'following-column',
+        label: '',
+        icon: 'people',
         type: 'notes',
         kinds: [kinds.ShortTextNote, kinds.Repost],
         source: 'following',
-        relayConfig: 'account',
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      },
-      {
-        id: 'articles',
-        label: 'Articles',
-        icon: 'article',
-        type: 'articles',
-        kinds: [kinds.LongFormArticle],
-        source: 'following',
-        relayConfig: 'account',
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      },
-    ],
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-  },
-  {
-    id: 'default-feed-media',
-    label: 'Media',
-    icon: 'perm_media',
-    description: 'Discover media content from the network',
-    columns: [
-      {
-        id: 'photos',
-        label: 'Photos',
-        icon: 'photo',
-        type: 'photos',
-        kinds: [20],
-        source: 'following',
-        relayConfig: 'account',
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      },
-      {
-        id: 'videos',
-        label: 'Videos',
-        icon: 'video_library',
-        type: 'videos',
-        kinds: [21, 22],
-        source: 'following',
-        relayConfig: 'account',
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      },
-    ],
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-  },
-  {
-    id: 'default-feed-music',
-    label: 'Music',
-    icon: 'library_music',
-    description: 'Discover music playlists from the network',
-    columns: [
-      {
-        id: 'music-playlists',
-        label: 'Music Playlists',
-        icon: 'music_note',
-        type: 'music',
-        kinds: [32100],
-        source: 'public',
         relayConfig: 'account',
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -1102,7 +1061,8 @@ export class FeedService {
       const pubkey = this.accountState.pubkey();
       if (!pubkey) {
         this.logger.warn('No pubkey found, using defaults');
-        this._feeds.set(DEFAULT_FEEDS);
+        const defaultFeeds = await this.initializeDefaultFeeds();
+        this._feeds.set(defaultFeeds);
         this.saveFeeds();
         return;
       }
@@ -1116,8 +1076,9 @@ export class FeedService {
         this.logger.debug('Loaded feeds from storage for pubkey', pubkey, storedFeeds);
       } else {
         const feedsByAccount: Record<string, FeedConfig[]> = {};
-        feedsByAccount[pubkey] = DEFAULT_FEEDS;
-        this._feeds.set(DEFAULT_FEEDS);
+        const defaultFeeds = await this.initializeDefaultFeeds();
+        feedsByAccount[pubkey] = defaultFeeds;
+        this._feeds.set(defaultFeeds);
         this.saveFeeds();
         this.logger.debug('No feeds found for pubkey, using defaults', pubkey);
       }
@@ -1128,6 +1089,33 @@ export class FeedService {
     }
 
     await this.subscribe();
+  }
+
+  /**
+   * Initialize default feeds with starter pack data
+   */
+  private async initializeDefaultFeeds(): Promise<FeedConfig[]> {
+    try {
+      // Fetch available starter packs
+      const starterPacks = await this.followset.fetchStarterPacks();
+
+      // Clone default feeds
+      const feeds = JSON.parse(JSON.stringify(DEFAULT_FEEDS)) as FeedConfig[];
+
+      // Find the starter feed and populate it with the first available starter pack
+      const starterFeed = feeds.find(f => f.id === 'default-feed-starter');
+      if (starterFeed && starterFeed.columns.length > 0 && starterPacks.length > 0) {
+        // Use the first starter pack's dTag
+        starterFeed.columns[0].customStarterPacks = [starterPacks[0].dTag];
+        this.logger.info('Initialized starter feed with starter pack:', starterPacks[0].dTag);
+      }
+
+      return feeds;
+    } catch (error) {
+      this.logger.error('Error initializing default feeds with starter packs:', error);
+      // Return default feeds without starter packs if there's an error
+      return JSON.parse(JSON.stringify(DEFAULT_FEEDS)) as FeedConfig[];
+    }
   }
 
   /**
@@ -1388,7 +1376,7 @@ export class FeedService {
   /**
    * Reset all feeds to default configuration
    */
-  resetToDefaults(): void {
+  async resetToDefaults(): Promise<void> {
     // Unsubscribe from all current feeds
     const currentFeeds = this._feeds();
     currentFeeds.forEach(feed => {
@@ -1398,8 +1386,9 @@ export class FeedService {
     // Clear active feed
     this._activeFeedId.set(null);
 
-    // Reset feeds to defaults
-    this._feeds.set(DEFAULT_FEEDS);
+    // Reset feeds to defaults with initialized starter packs
+    const defaultFeeds = await this.initializeDefaultFeeds();
+    this._feeds.set(defaultFeeds);
     this.saveFeeds();
 
     this.logger.debug('Reset all feeds to defaults');

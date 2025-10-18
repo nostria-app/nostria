@@ -57,7 +57,6 @@
             <div class="column-selector-container">
               <button mat-button [matMenuTriggerFor]="columnMenu">
                 <mat-icon>{{ columns()[visibleColumnIndex()].icon }}</mat-icon>
-                {{ columns()[visibleColumnIndex()].label }}
               </button>
 
               <mat-menu #columnMenu="matMenu">
@@ -65,7 +64,7 @@
                 @for (column of columns(); track column.id; let i = $index) {
                 <button mat-menu-item (click)="selectColumn(i)">
                   <mat-icon>{{ column.icon }}</mat-icon>
-                  <span>{{ column.label }}</span>
+                  <span>Column {{ i + 1 }}</span>
                 </button>
                 }
                 <mat-divider></mat-divider>
@@ -203,7 +202,6 @@
             }
 
             <mat-icon>{{ column.icon }}</mat-icon>
-            <span class="column-title">{{ column.label }}</span>
 
             <div class="column-header-actions">
               <button mat-icon-button (click)="refreshColumn(column)" matTooltip="Refresh content">
@@ -327,7 +325,6 @@
           <div class="column-drag-preview">
             <div class="preview-header">
               <mat-icon>{{ column.icon }}</mat-icon>
-              <span>{{ column.label }}</span>
             </div>
           </div>
         </ng-template>
