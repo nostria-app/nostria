@@ -74,7 +74,8 @@ app-user-profile {
 
       .feed-selector {
         display: flex;
-        align-items: flex-start;
+        align-items: center;
+        justify-content: space-between;
         gap: 1rem;
         flex-wrap: wrap;
 
@@ -82,43 +83,6 @@ app-user-profile {
           display: flex;
           flex-wrap: wrap;
           gap: 8px;
-
-          .mobile-selectors {
-            display: flex;
-            align-items: center;
-            width: 100%;
-            gap: 12px;
-
-            .hierarchy-separator {
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              opacity: 0.6;
-              color: var(--mat-sys-on-surface-variant);
-              flex-shrink: 0;
-              background-color: var(--mat-sys-surface-container);
-              border-radius: 50%;
-              width: 24px;
-              height: 24px;
-              transition: opacity 0.2s ease;
-
-              &:hover {
-                opacity: 0.8;
-              }
-
-              mat-icon {
-                font-size: 16px;
-                width: 16px;
-                height: 16px;
-              }
-            }
-
-            .column-selector-container {
-              flex: 1;
-              display: flex;
-              justify-content: flex-end;
-            }
-          }
 
           .feed-tab {
             display: flex;
