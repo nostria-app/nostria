@@ -201,9 +201,9 @@ export class FeedsComponent implements OnDestroy {
     return emptyColumnsMap;
   });
 
-  // Method to navigate to People page
+  // Method to navigate to People discovery page
   navigateToPeople(): void {
-    this.router.navigate(['/people']);
+    this.router.navigate(['/people/discover']);
   }
 
   // Drag state to prevent unnecessary re-renders during column reordering

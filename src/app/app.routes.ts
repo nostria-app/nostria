@@ -275,6 +275,12 @@ export const routes: Routes = [
     title: 'People',
   },
   {
+    path: 'people/discover',
+    data: { isRoot: true },
+    loadComponent: () => import('./pages/discover/discover.component').then(m => m.DiscoverComponent),
+    title: 'Discover People',
+  },
+  {
     path: 'lists',
     data: { isRoot: true },
     loadComponent: () => import('./pages/lists/lists.component').then(m => m.ListsComponent),

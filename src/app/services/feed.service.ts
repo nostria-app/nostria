@@ -118,8 +118,8 @@ const COLUMN_TYPES = {
 
 const DEFAULT_FEEDS: FeedConfig[] = [
   {
-    id: 'default-feed-starter',
-    label: 'Starter Feed',
+    id: 'default-feed-popular',
+    label: 'Popular',
     icon: 'rocket_launch',
     description: 'Curated content from Nostr starter packs',
     columns: [
