@@ -574,6 +574,21 @@ export class FeedsComponent implements OnDestroy {
     this.loadColumnContentIfNeeded(index);
   }
 
+  navigateToPreviousColumn(): void {
+    const currentIndex = this.visibleColumnIndex();
+    if (currentIndex > 0) {
+      this.selectColumn(currentIndex - 1);
+    }
+  }
+
+  navigateToNextColumn(): void {
+    const currentIndex = this.visibleColumnIndex();
+    const columnCount = this.columns().length;
+    if (currentIndex < columnCount - 1) {
+      this.selectColumn(currentIndex + 1);
+    }
+  }
+
   loadColumnContentIfNeeded(index: number): void {
     const selectedColumn = this.columns()[index];
     if (!selectedColumn) return;
