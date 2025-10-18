@@ -20,14 +20,11 @@ export class Algorithms {
 
   async calculateProfileViewed(limit: number, ascending: boolean): Promise<UserMetric[]> {
     // Get the list of users we follow
-    let following = this.accountState.followingList();
+    const following = this.accountState.followingList();
 
-    // If user has zero following, use default accounts based on their region
+    // If user has zero following, return empty array
     if (following.length === 0) {
-      const account = this.accountState.account();
-      const region = account?.region || 'us';
-      following = this.regionService.getDefaultAccountsForRegion(region);
-      console.log(`Using ${following.length} default accounts for region: ${region}`);
+      return [];
     }
 
     // Filter out invalid pubkeys before processing
@@ -125,39 +122,9 @@ export class Algorithms {
     // Combine all candidates
     const allCandidates = [...candidateUsers, ...favoriteMetrics];
 
-    // If no candidates found (new user with no metrics), use regional default accounts
+    // If no candidates found (new user with no metrics), return empty array
     if (allCandidates.length === 0) {
-      const following = this.accountState.followingList();
-
-      if (following.length === 0) {
-        const account = this.accountState.account();
-        const region = account?.region || 'us';
-        const defaultAccounts = this.regionService.getDefaultAccountsForRegion(region);
-
-        console.log(`Using ${defaultAccounts.length} default accounts for notes (region: ${region})`);
-
-        // Create minimal metrics for default accounts
-        const defaultMetrics: UserMetric[] = defaultAccounts.map(pubkey => ({
-          pubkey,
-          viewed: 0,
-          profileClicks: 0,
-          liked: 0,
-          read: 0,
-          replied: 0,
-          reposted: 0,
-          quoted: 0,
-          messaged: 0,
-          mentioned: 0,
-          timeSpent: 0,
-          lastInteraction: Date.now(),
-          firstInteraction: Date.now(),
-          updated: Date.now(),
-          engagementScore: 1,
-          finalScore: 1,
-        }));
-
-        return defaultMetrics.slice(0, limit);
-      }
+      return [];
     }
 
     // Calculate final score with favorite boost
@@ -264,14 +231,11 @@ export class Algorithms {
   async getRecommendedUsersForArticles(limit = 20): Promise<UserMetric[]> {
     const allMetrics = await this.metrics.getMetrics();
     const favorites = this.favoritesService.favorites();
-    let following = this.accountState.followingList();
+    const following = this.accountState.followingList();
 
-    // If user has zero following, use default accounts based on their region
+    // If user has zero following, return empty array
     if (following.length === 0) {
-      const account = this.accountState.account();
-      const region = account?.region || 'us';
-      following = this.regionService.getDefaultAccountsForRegion(region);
-      console.log(`Using ${following.length} default accounts for articles, region: ${region}`);
+      return [];
     }
 
     // For articles, use much more lenient criteria
