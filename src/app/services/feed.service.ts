@@ -452,17 +452,15 @@ export class FeedService {
       if (topEngagedUsers.length === 0) {
         this.logger.warn('No engaged users found, falling back to recent following');
         // Fallback to users from following list
-        let followingList = this.accountState.followingList();
+        const followingList = this.accountState.followingList();
 
-        // If following list is empty, use regional default accounts
+        // If following list is empty, use empty array
         if (followingList.length === 0) {
-          const account = this.accountState.account();
-          const region = account?.region || 'us';
-          followingList = this.regionService.getDefaultAccountsForRegion(region);
-          this.logger.debug(`Using ${followingList.length} default accounts for notes (region: ${region})`);
-        } else {
-          this.logger.debug(`Following list size: ${followingList.length}`);
+          this.logger.debug('Following list is empty, no users to fetch from');
+          return;
         }
+
+        this.logger.debug(`Following list size: ${followingList.length}`);
 
         // For articles, use more users since articles are rarer
         const fallbackCount = isArticlesFeed ? 25 : 10;
@@ -536,14 +534,12 @@ export class FeedService {
       if (pubkeysArray.length === 0) {
         this.logger.warn('No pubkeys found for custom feed, falling back to following');
         // Fallback to following if no custom users are specified
-        let followingList = this.accountState.followingList();
+        const followingList = this.accountState.followingList();
 
-        // If following list is empty, use regional default accounts
+        // If following list is empty, return early
         if (followingList.length === 0) {
-          const account = this.accountState.account();
-          const region = account?.region || 'us';
-          followingList = this.regionService.getDefaultAccountsForRegion(region);
-          this.logger.debug(`Using ${followingList.length} default accounts for custom feed (region: ${region})`);
+          this.logger.debug('Following list is empty, no users to fetch from for custom feed');
+          return;
         }
 
         const fallbackUsers = [...followingList].slice(-10).reverse();
