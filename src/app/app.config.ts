@@ -14,6 +14,7 @@ import { importProvidersFrom } from '@angular/core';
 import { DragDropModule } from '@angular/cdk/drag-drop';
 import { routes } from './app.routes';
 import { LoggerService } from './services/logger.service';
+import { ServiceWorkerManager } from './services/service-worker-manager.service';
 import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { MatIconRegistry } from '@angular/material/icon';
@@ -21,7 +22,7 @@ import { ApiConfiguration } from './api/api-configuration';
 import { environment } from '../environments/environment';
 import { nip98AuthInterceptor } from './services/interceptors/nip98Auth';
 import { MAT_FORM_FIELD_DEFAULT_OPTIONS } from '@angular/material/form-field';
-import { MAT_TOOLTIP_DEFAULT_OPTIONS, MatTooltipDefaultOptions } from '@angular/material/tooltip';
+import { MAT_TOOLTIP_DEFAULT_OPTIONS } from '@angular/material/tooltip';
 
 let appLang = 'en';
 
@@ -44,7 +45,7 @@ if (typeof window !== 'undefined') {
 // Create a logger for bootstrapping phase
 const bootstrapLogger = {
   log: (message: string) => console.log(`[BOOTSTRAP] ${message}`),
-  error: (message: string, error?: any) => console.error(`[BOOTSTRAP ERROR] ${message}`, error),
+  error: (message: string, error?: unknown) => console.error(`[BOOTSTRAP ERROR] ${message}`, error),
 };
 
 bootstrapLogger.log('Configuring application');
@@ -66,6 +67,17 @@ export const appConfig: ApplicationConfig = {
         iconRegistry.setDefaultFontSetClass(...outlinedFontSetClasses);
       })(inject(MatIconRegistry));
       return initializerFn();
+    }),
+    // Initialize ServiceWorkerManager for push notifications
+    provideAppInitializer(() => {
+      const initFn = () => {
+        if (typeof window !== 'undefined') {
+          // Initialize service worker manager after app loads
+          inject(ServiceWorkerManager);
+          bootstrapLogger.log('ServiceWorkerManager initialized for push notifications');
+        }
+      };
+      return initFn();
     }),
     {
       provide: LoggerService,
