@@ -73,7 +73,7 @@
 
               <div class="notification-meta">
                 <mat-icon class="time-icon">schedule</mat-icon>
-                <span class="notification-time">{{ notification.timestamp | ago }}</span>
+                <span class="notification-time">{{ (notification.timestamp / 1000) | ago }}</span>
                 @if (getAuthorPubkey(notification)) {
                 <span class="divider">•</span>
                 <button mat-button class="author-link"
@@ -140,7 +140,7 @@
 
               <div class="notification-meta">
                 <mat-icon class="time-icon">schedule</mat-icon>
-                <span class="notification-time">{{ notification.timestamp | ago }}</span>
+                <span class="notification-time">{{ (notification.timestamp / 1000) | ago }}</span>
               </div>
 
               @if (isRelayPublishingNotification(notification)) {
