@@ -220,9 +220,12 @@ export class NotificationsComponent implements OnInit {
    */
   viewEvent(notification: Notification): void {
     const contentNotif = notification as ContentNotification;
-    if (contentNotif.eventId) {
-      const noteId = nip19.noteEncode(contentNotif.eventId);
-      this.router.navigate(['/e', noteId]);
+    if (contentNotif.eventId && contentNotif.authorPubkey) {
+      const neventId = nip19.neventEncode({
+        id: contentNotif.eventId,
+        author: contentNotif.authorPubkey,
+      });
+      this.router.navigate(['/e', neventId]);
     }
   }
 
