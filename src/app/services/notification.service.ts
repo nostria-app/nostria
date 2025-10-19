@@ -205,6 +205,8 @@ export class NotificationService {
    * Mark a notification as read
    */
   markAsRead(id: string): void {
+    const updatedNotification = this._notifications().find(n => n.id === id);
+    
     this._notifications.update(notifications => {
       return notifications.map(notification => {
         if (notification.id === id) {
@@ -214,7 +216,10 @@ export class NotificationService {
       });
     });
 
-    // Storage will be updated via the effect
+    // Persist the updated notification to storage
+    if (updatedNotification) {
+      this.persistNotificationToStorage({ ...updatedNotification, read: true });
+    }
   }
 
   /**
