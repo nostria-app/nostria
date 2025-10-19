@@ -171,6 +171,16 @@
 
         <!-- Feed Content with Individual Scrolling -->
         <div class="column-content">
+          <!-- New posts notification button -->
+          @if (getPendingEventsCount(column.id) > 0) {
+          <div class="new-posts-notification">
+            <button mat-raised-button color="primary" (click)="loadNewPosts(column.id)" class="new-posts-button">
+              <mat-icon>arrow_upward</mat-icon>
+              {{ getPendingEventsCount(column.id) }} new {{ getPendingEventsCount(column.id) === 1 ? 'post' : 'posts' }}
+            </button>
+          </div>
+          }
+
           <div class="column-scroll-container">
             <!-- Empty following state message -->
             @if (shouldShowEmptyFollowingMessage().get(column.id)) {

@@ -42,6 +42,8 @@ export interface FeedItem {
   subscription: { unsubscribe: () => void } | { close: () => void } | null;
   isLoadingMore?: WritableSignal<boolean>;
   hasMore?: WritableSignal<boolean>;
+  pendingEvents?: WritableSignal<Event[]>;
+  lastCheckTimestamp?: number;
 }
 
 export interface ColumnConfig {
@@ -243,6 +245,9 @@ export class FeedService {
   private readonly _activeFeedId = signal<string | null>(null);
   private activeFeedSubscriptions = new Set<string>(); // Track column IDs with active subscriptions
 
+  // New event checking
+  private newEventCheckInterval: ReturnType<typeof setInterval> | null = null;
+
   // Public computed signals
   readonly feeds = computed(() => this._feeds());
   readonly userRelays = computed(() => this._userRelays());
@@ -305,6 +310,12 @@ export class FeedService {
     this.data.clear();
     this._feedData.set(new Map());
 
+    // Clear any existing new event check interval
+    if (this.newEventCheckInterval) {
+      clearInterval(this.newEventCheckInterval);
+      this.newEventCheckInterval = null;
+    }
+
     // Only subscribe to active feed if one is set
     const activeFeedId = this._activeFeedId();
     if (activeFeedId) {
@@ -312,6 +323,11 @@ export class FeedService {
       if (activeFeed) {
         await this.subscribeToFeed(activeFeed);
         this.logger.debug('Subscribed to active feed:', activeFeedId);
+
+        // Start checking for new events every 60 seconds
+        this.newEventCheckInterval = setInterval(() => {
+          this.checkForNewEvents();
+        }, 60000);
       }
     }
 
@@ -396,6 +412,8 @@ export class FeedService {
       lastTimestamp: Date.now(), // Initialize with current timestamp
       isLoadingMore: signal<boolean>(false),
       hasMore: signal<boolean>(true),
+      pendingEvents: signal<Event[]>([]),
+      lastCheckTimestamp: Math.floor(Date.now() / 1000), // Initialize with current timestamp in seconds
     };
 
     // Build filter based on column configuration
@@ -1147,7 +1165,222 @@ export class FeedService {
     this.data.forEach(item => this.closeSubscription(item.subscription));
     this.data.clear();
     this._feedData.set(new Map());
+
+    // Clear the new event check interval
+    if (this.newEventCheckInterval) {
+      clearInterval(this.newEventCheckInterval);
+      this.newEventCheckInterval = null;
+    }
+
     this.logger.debug('Unsubscribed from all feed subscriptions');
+  }
+
+  /**
+   * Check for new events across all active columns
+   */
+  private async checkForNewEvents(): Promise<void> {
+    const activeFeedId = this._activeFeedId();
+    if (!activeFeedId) return;
+
+    const activeFeed = this.getFeedById(activeFeedId);
+    if (!activeFeed) return;
+
+    // Check each column for new events
+    for (const column of activeFeed.columns) {
+      const feedData = this.data.get(column.id);
+      if (!feedData || !feedData.lastCheckTimestamp) continue;
+
+      // Skip if column is paused (no active subscription)
+      if (!feedData.subscription) continue;
+
+      await this.checkColumnForNewEvents(column.id);
+    }
+  }
+
+  /**
+   * Check a specific column for new events
+   */
+  private async checkColumnForNewEvents(columnId: string): Promise<void> {
+    const feedData = this.data.get(columnId);
+    if (!feedData || !feedData.pendingEvents || !feedData.lastCheckTimestamp) return;
+
+    const column = feedData.column;
+    const currentTime = Math.floor(Date.now() / 1000);
+
+    // Get events newer than the last check timestamp
+    let newEvents: Event[] = [];
+
+    if (column.source === 'following') {
+      newEvents = await this.fetchNewEventsForFollowing(feedData, currentTime);
+    } else if (column.source === 'custom') {
+      newEvents = await this.fetchNewEventsForCustom(feedData, currentTime);
+    } else {
+      // Public feed - use standard filter with since parameter
+      newEvents = await this.fetchNewEventsStandard(feedData, currentTime);
+    }
+
+    // Update pending events if we found any new ones
+    if (newEvents.length > 0) {
+      const currentPending = feedData.pendingEvents() || [];
+      const allPending = [...newEvents, ...currentPending];
+
+      // Remove duplicates and sort by created_at descending
+      const uniquePending = Array.from(
+        new Map(allPending.map(event => [event.id, event])).values()
+      ).sort((a, b) => b.created_at - a.created_at);
+
+      feedData.pendingEvents.set(uniquePending);
+
+      // Update reactive signal
+      this._feedData.update(map => new Map(map));
+
+      this.logger.debug(`Found ${newEvents.length} new events for column ${columnId}`);
+    }
+
+    // Update last check timestamp
+    feedData.lastCheckTimestamp = currentTime;
+  }
+
+  /**
+   * Fetch new events for following-based feeds
+   */
+  private async fetchNewEventsForFollowing(feedData: FeedItem, sinceTimestamp: number): Promise<Event[]> {
+    const isArticlesFeed = feedData.filter?.kinds?.includes(30023);
+
+    const topEngagedUsers = isArticlesFeed
+      ? await this.algorithms.getRecommendedUsersForArticles(10)
+      : await this.algorithms.getRecommendedUsers(10);
+
+    if (topEngagedUsers.length === 0) return [];
+
+    // Extract pubkeys from UserMetric objects
+    const pubkeys = topEngagedUsers.map(user => user.pubkey);
+
+    return this.fetchNewEventsFromUsers(pubkeys, feedData, sinceTimestamp);
+  }
+
+  /**
+   * Fetch new events for custom feeds (custom users + starter packs)
+   */
+  private async fetchNewEventsForCustom(feedData: FeedItem, sinceTimestamp: number): Promise<Event[]> {
+    const column = feedData.column;
+    const pubkeys: string[] = [...(column.customUsers || [])];
+
+    // Fetch starter pack data if needed
+    if (column.customStarterPacks && column.customStarterPacks.length > 0) {
+      // Implementation similar to loadCustomFeed
+      // For now, just use customUsers
+    }
+
+    if (pubkeys.length === 0) return [];
+
+    return this.fetchNewEventsFromUsers(pubkeys, feedData, sinceTimestamp);
+  }
+
+  /**
+   * Fetch new events from a list of users
+   */
+  private async fetchNewEventsFromUsers(
+    pubkeys: string[],
+    feedData: FeedItem,
+    sinceTimestamp: number
+  ): Promise<Event[]> {
+    const newEvents: Event[] = [];
+    const column = feedData.column;
+
+    // Get PoW minimum difficulty filter if set
+    const powMinDifficulty = (column.filters?.['powMinDifficulty'] as number) || 0;
+
+    // Fetch latest events from each user since the last check
+    const fetchPromises = pubkeys.map(async pubkey => {
+      try {
+        const events = await this.sharedRelayEx.getMany(
+          pubkey,
+          {
+            authors: [pubkey],
+            kinds: column.kinds,
+            limit: 2, // Only fetch 2 latest events per user for new event checks
+            since: sinceTimestamp,
+          },
+          { timeout: 2500 }
+        );
+
+        // Filter by PoW if needed
+        const filteredEvents = powMinDifficulty > 0
+          ? events.filter(event => this.meetsPoWRequirement(event, powMinDifficulty))
+          : events;
+
+        return filteredEvents;
+      } catch (error) {
+        this.logger.error(`Error fetching new events for user ${pubkey}:`, error);
+        return [];
+      }
+    });
+
+    const results = await Promise.all(fetchPromises);
+    results.forEach(events => newEvents.push(...events));
+
+    return newEvents;
+  }
+
+  /**
+   * Fetch new events using standard filter
+   */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  private async fetchNewEventsStandard(_feedData: FeedItem, _sinceTimestamp: number): Promise<Event[]> {
+    // For public feeds, we would query relays with a since filter
+    // This is a simplified implementation
+    return [];
+  }
+
+  /**
+   * Get pending events count for a column
+   */
+  getPendingEventsCount(columnId: string): number {
+    const feedData = this.data.get(columnId);
+    if (!feedData || !feedData.pendingEvents) return 0;
+    return feedData.pendingEvents().length;
+  }
+
+  /**
+   * Load pending events into the main feed for a column
+   */
+  loadPendingEvents(columnId: string): void {
+    const feedData = this.data.get(columnId);
+    if (!feedData || !feedData.pendingEvents) return;
+
+    const pending = feedData.pendingEvents();
+    if (pending.length === 0) return;
+
+    const currentEvents = feedData.events();
+    const allEvents = [...pending, ...currentEvents];
+
+    // Remove duplicates and sort by created_at descending
+    const uniqueEvents = Array.from(
+      new Map(allEvents.map(event => [event.id, event])).values()
+    ).sort((a, b) => b.created_at - a.created_at);
+
+    // Update events signal
+    feedData.events.set(uniqueEvents);
+
+    // Clear pending events
+    feedData.pendingEvents.set([]);
+
+    // Update last check timestamp to now
+    feedData.lastCheckTimestamp = Math.floor(Date.now() / 1000);
+
+    // Update reactive signal
+    this._feedData.update(map => new Map(map));
+
+    this.logger.debug(`Loaded ${pending.length} pending events for column ${columnId}`);
+  }
+
+  /**
+   * Get pending events signal for a column
+   */
+  getPendingEventsSignal(columnId: string): Signal<Event[]> | undefined {
+    const feedData = this.data.get(columnId);
+    return feedData?.pendingEvents;
   }
 
   /**
