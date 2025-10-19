@@ -42,6 +42,7 @@ import { AgoPipe } from './pipes/ago.pipe';
 import { MatBadgeModule } from '@angular/material/badge';
 import { nip19 } from 'nostr-tools';
 import { NotificationService } from './services/notification.service';
+import { ContentNotificationService } from './services/content-notification.service';
 import { MatBottomSheet, MatBottomSheetModule } from '@angular/material/bottom-sheet';
 import { CreateOptionsSheetComponent } from './components/create-options-sheet/create-options-sheet.component';
 import { LoginDialogComponent } from './components/login-dialog/login-dialog.component';
@@ -130,6 +131,7 @@ export class App implements OnInit {
   layout = inject(LayoutService);
   router = inject(Router);
   notificationService = inject(NotificationService);
+  contentNotificationService = inject(ContentNotificationService);
   notificationType = NotificationType;
   bottomSheet = inject(MatBottomSheet);
   logger = inject(LoggerService);
@@ -535,6 +537,33 @@ export class App implements OnInit {
     // Check for nostr protocol parameter in current URL
     this.logger.info('[App] Checking for nostr protocol in current URL');
     await this.checkForNostrProtocolInUrl();
+
+    // Initialize content notification service
+    this.logger.info('[App] Initializing content notification service');
+    try {
+      await this.contentNotificationService.initialize();
+      this.logger.info('[App] Content notification service initialized successfully');
+      
+      // Check for new notifications on startup if user is authenticated
+      if (this.app.authenticated()) {
+        await this.contentNotificationService.checkForNewNotifications();
+        this.logger.info('[App] Initial content notification check completed');
+      }
+      
+      // Set up periodic checks every 5 minutes for authenticated users
+      setInterval(async () => {
+        if (this.app.authenticated()) {
+          try {
+            await this.contentNotificationService.checkForNewNotifications();
+            this.logger.debug('[App] Periodic content notification check completed');
+          } catch (error) {
+            this.logger.error('[App] Periodic content notification check failed', error);
+          }
+        }
+      }, 5 * 60 * 1000); // 5 minutes
+    } catch (error) {
+      this.logger.error('[App] Failed to initialize content notification service', error);
+    }
 
     this.logger.info('[App] ==> ngOnInit completed');
   }
