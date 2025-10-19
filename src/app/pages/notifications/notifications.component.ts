@@ -21,6 +21,7 @@ import { AccountRelayService } from '../../services/relays/account-relay';
 import { Router } from '@angular/router';
 import { ContentNotification } from '../../services/storage.service';
 import { nip19 } from 'nostr-tools';
+import { AgoPipe } from '../../pipes/ago.pipe';
 
 @Component({
   selector: 'app-notifications',
@@ -35,6 +36,7 @@ import { nip19 } from 'nostr-tools';
     MatMenuModule,
     MatTooltipModule,
     RouterModule,
+    AgoPipe,
   ],
   templateUrl: './notifications.component.html',
   styleUrls: ['./notifications.component.scss'],
@@ -209,8 +211,7 @@ export class NotificationsComponent implements OnInit {
   viewAuthorProfile(notification: Notification): void {
     const contentNotif = notification as ContentNotification;
     if (contentNotif.authorPubkey) {
-      const npub = nip19.npubEncode(contentNotif.authorPubkey);
-      this.router.navigate(['/people', npub]);
+      this.router.navigate(['/p', contentNotif.authorPubkey]);
     }
   }
 
