@@ -45,11 +45,46 @@ export class NotificationsComponent implements OnInit {
   notificationType = NotificationType;
   lastViewedTimestamp = signal<number | null>(null);
 
+  // Helper to check if notification is a system notification (technical)
+  private isSystemNotification(type: NotificationType): boolean {
+    return [
+      NotificationType.RELAY_PUBLISHING,
+      NotificationType.GENERAL,
+      NotificationType.ERROR,
+      NotificationType.SUCCESS,
+      NotificationType.WARNING,
+    ].includes(type);
+  }
+
+  // Helper to check if notification is a content notification (social)
+  private isContentNotification(type: NotificationType): boolean {
+    return [
+      NotificationType.NEW_FOLLOWER,
+      NotificationType.MENTION,
+      NotificationType.REPOST,
+      NotificationType.REPLY,
+      NotificationType.REACTION,
+      NotificationType.ZAP,
+    ].includes(type);
+  }
+
+  // Separate system and content notifications
+  systemNotifications = computed(() => {
+    return this.notifications().filter(n => this.isSystemNotification(n.type));
+  });
+
+  contentNotifications = computed(() => {
+    return this.notifications().filter(n => this.isContentNotification(n.type));
+  });
+
+  // Count only content notifications (not system/technical ones)
   newNotificationCount = computed(() => {
     const lastViewed = this.lastViewedTimestamp();
-    if (!lastViewed) return this.notifications().length;
+    const contentNotifs = this.contentNotifications();
 
-    return this.notifications().filter(n => n.timestamp > lastViewed).length;
+    if (!lastViewed) return contentNotifs.length;
+
+    return contentNotifs.filter(n => n.timestamp > lastViewed && !n.read).length;
   });
 
   async ngOnInit(): Promise<void> {

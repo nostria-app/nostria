@@ -99,11 +99,20 @@ export interface InfoRecord {
 // }
 
 export enum NotificationType {
+  // System notifications (technical, not counted in badge)
   RELAY_PUBLISHING = 'relaypublishing',
   GENERAL = 'general',
   ERROR = 'error',
   SUCCESS = 'success',
   WARNING = 'warning',
+
+  // Content notifications (social interactions, counted in badge)
+  NEW_FOLLOWER = 'newfollower',
+  MENTION = 'mention',
+  REPOST = 'repost',
+  REPLY = 'reply',
+  REACTION = 'reaction',
+  ZAP = 'zap',
 }
 
 // User-facing notification types for push notifications
@@ -151,6 +160,20 @@ export interface GeneralNotification extends Notification {
   action?: {
     label: string;
     callback: () => void;
+  };
+}
+
+// Content notification (social interactions)
+export interface ContentNotification extends Notification {
+  // The pubkey of the user who triggered the notification (follower, reposter, etc.)
+  authorPubkey: string;
+  // Optional: the event ID that triggered this notification
+  eventId?: string;
+  // Optional: additional metadata
+  metadata?: {
+    content?: string; // For mentions/replies, the text content
+    reactionContent?: string; // For reactions, the emoji/content
+    zapAmount?: number; // For zaps, the amount in sats
   };
 }
 
