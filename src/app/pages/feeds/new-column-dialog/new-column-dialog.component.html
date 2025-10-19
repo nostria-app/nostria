@@ -188,6 +188,34 @@
         }
       </div>
 
+      <!-- Proof-of-Work Filter -->
+      <div class="section pow-filter-section">
+        <h3>Proof-of-Work Filter</h3>
+        <p class="section-description">Filter events by minimum Proof-of-Work difficulty</p>
+
+        <div class="form-group">
+          <div class="pow-slider-container">
+            <div class="pow-label">
+              Minimum Difficulty: {{ powMinDifficulty() }} bits
+              <span class="pow-strength">({{ getPowLabel(powMinDifficulty()) }})</span>
+            </div>
+            <mat-slider min="0" max="40" step="1" discrete showTickMarks [displayWith]="getPowLabel.bind(this)">
+              <input matSliderThumb [value]="powMinDifficulty()" (valueChange)="onPowDifficultyChange($event)"
+                aria-label="Proof-of-Work minimum difficulty">
+            </mat-slider>
+            <p class="pow-description">
+              @if (powMinDifficulty() === 0) {
+              <mat-icon>info</mat-icon>
+              No filtering applied - all events will be shown
+              } @else {
+              <mat-icon>verified</mat-icon>
+              Only events with at least {{ powMinDifficulty() }} bits of Proof-of-Work will be shown
+              }
+            </p>
+          </div>
+        </div>
+      </div>
+
       <!-- Relay Configuration -->
       <div class="section relay-config-section">
         <h3>Relay Configuration</h3>

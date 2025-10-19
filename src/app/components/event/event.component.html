@@ -299,7 +299,7 @@
     }
 
     @if (hasProofOfWork(targetItem.event)) {
-    <div class="note-footer-right hide-small pow-indicator" [matTooltip]="getProofOfWorkTooltip(targetItem.event)"
+    <div class="note-footer-right pow-indicator" [matTooltip]="getProofOfWorkTooltip(targetItem.event)"
       matTooltipPosition="below">
       <mat-icon [class.pow-strong]="getProofOfWorkDifficulty(targetItem.event) >= 20">verified</mat-icon>
       <span class="pow-difficulty">{{ getProofOfWorkDifficulty(targetItem.event) }}</span>
