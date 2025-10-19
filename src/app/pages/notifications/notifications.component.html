@@ -1,129 +1,83 @@
 <div class="notifications-page">
+  <!-- Header Section -->
   <div class="page-header">
-    <h1>Notifications</h1>
+    <div class="header-left">
+      <mat-icon class="header-icon">notifications</mat-icon>
+      <div class="header-text">
+        <h1>Notifications</h1>
+        @if (newNotificationCount() > 0) {
+        <span class="new-badge">{{ newNotificationCount() }} new</span>
+        }
+      </div>
+    </div>
     <div class="header-actions">
-      <button mat-icon-button [matMenuTriggerFor]="optionsMenu" aria-label="Options">
-        <mat-icon>more_vert</mat-icon>
+      @if (notifications().length > 0) {
+      <button mat-button (click)="markAllAsRead()" class="action-button">
+        <mat-icon>done_all</mat-icon>
+        Mark All Read
       </button>
-      <mat-menu #optionsMenu="matMenu">
-        <button mat-menu-item (click)="markAllAsRead()">
-          <mat-icon>done_all</mat-icon>
-          <span>Mark all as read</span>
-        </button>
-        <mat-divider></mat-divider>
-        <button mat-menu-item routerLink="/notifications/settings">
-          <mat-icon>settings</mat-icon>
-          <span>Notification settings</span>
-        </button>
-      </mat-menu>
+      <button mat-button (click)="clearNotifications()" class="action-button">
+        <mat-icon>close</mat-icon>
+        Clear All
+      </button>
+      }
     </div>
   </div>
 
+  <p class="page-subtitle">Stay updated with your latest activities</p>
+
+  <!-- Notifications Content -->
   <div class="notifications-container">
-    <mat-card appearance="outlined">
-      <mat-card-header>
-        <mat-card-title>Notifications</mat-card-title>
-        <div class="spacer"></div>
-        <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="Notification actions">
-          <mat-icon>more_vert</mat-icon>
-        </button>
-        <mat-menu #menu="matMenu">
-          <button mat-menu-item (click)="markAllAsRead()">
-            <mat-icon>done_all</mat-icon>
-            <span>Mark all as read</span>
-          </button>
-          <button mat-menu-item (click)="clearNotifications()">
-            <mat-icon>delete_sweep</mat-icon>
-            <span>Clear all notifications</span>
-          </button>
-        </mat-menu>
-      </mat-card-header>
+    @if (notifications().length === 0) {
+    <div class="empty-state">
+      <mat-icon class="empty-icon">notifications</mat-icon>
+      <h2>No notifications yet</h2>
+      <p>You'll see your notifications here when they arrive.</p>
+    </div>
+    } @else {
+    <div class="notification-list">
+      @for (notification of notifications(); track notification.id; let i = $index) {
+      <div class="notification-item" [class.unread]="!notification.read">
+        <div class="notification-icon-wrapper">
+          <mat-icon class="notification-bell">notifications</mat-icon>
+        </div>
 
-      <mat-card-content>
-        @if (notifications().length === 0) {
-          <div class="empty-notification">
-            <p>No notifications</p>
-          </div>
-        } @else {
-          <div class="notification-list">
-            @for (notification of notifications(); track notification.id; let i = $index) {
-              @if (shouldShowSeparator(i, notifications())) {
-                <div class="new-notifications-separator">
-                  <mat-divider></mat-divider>
-                  <span class="separator-text">New notifications</span>
-                  <mat-divider></mat-divider>
-                </div>
-              }
-
-              <div class="notification-item" [class.unread]="!notification.read">
-                <div class="notification-content">
-                  <div class="notification-icon">
-                    @if (notification.type === notificationType.SUCCESS) {
-                      <mat-icon color="accent">check_circle</mat-icon>
-                    } @else if (notification.type === notificationType.GENERAL) {
-                      <mat-icon color="primary">info</mat-icon>
-                    } @else if (notification.type === notificationType.WARNING) {
-                      <mat-icon color="warn">warning</mat-icon>
-                    } @else if (notification.type === notificationType.ERROR) {
-                      <mat-icon color="warn">error</mat-icon>
-                    } @else if (notification.type === notificationType.RELAY_PUBLISHING) {
-                      <mat-icon>sync</mat-icon>
-                    }
-                  </div>
-                  <div class="notification-details">
-                    <div class="notification-message">
-                      {{ notification.message }}
-                    </div>
-                    <div class="notification-time">
-                      {{ notification.timestamp | date: 'medium' }}
-                    </div>
-
-                    @if (isRelayPublishingNotification(notification)) {
-                      <app-relay-publish-status
-                        [notification]="notification"
-                        (retry)="onRetryPublish($event)"
-                      >
-                      </app-relay-publish-status>
-
-                      <!-- <app-relay-publish-status 
-                        [relayStatuses]="notification.relayStatuses" 
-                        [compact]="true">
-                      </app-relay-publish-status> -->
-
-                      <!-- @if (notification.hasFailures) {
-                        <button mat-button color="primary" (click)="onRetryPublish(notification.id)">
-                          Retry Failed
-                        </button>
-                      } -->
-                    }
-                  </div>
-                </div>
-                <div class="notification-actions">
-                  @if (!notification.read) {
-                    <button
-                      mat-icon-button
-                      (click)="markAsRead(notification.id)"
-                      matTooltip="Mark as read"
-                    >
-                      <mat-icon>visibility</mat-icon>
-                    </button>
-                  }
-                  <button
-                    mat-icon-button
-                    (click)="removeNotification(notification.id)"
-                    matTooltip="Remove"
-                  >
-                    <mat-icon>close</mat-icon>
-                  </button>
-                </div>
-              </div>
-              @if (i < notifications().length - 1) {
-                <mat-divider></mat-divider>
-              }
+        <div class="notification-content">
+          <div class="notification-header">
+            <span class="notification-title">{{ notification.message }}</span>
+            @if (!notification.read) {
+            <span class="new-indicator">NEW</span>
             }
           </div>
-        }
-      </mat-card-content>
-    </mat-card>
+
+          <div class="notification-meta">
+            <mat-icon class="time-icon">schedule</mat-icon>
+            <span class="notification-time">{{ formatTimestamp(notification.timestamp) }}</span>
+          </div>
+
+          @if (isRelayPublishingNotification(notification)) {
+          <div class="notification-extra">
+            <app-relay-publish-status [notification]="notification" (retry)="onRetryPublish($event)">
+            </app-relay-publish-status>
+          </div>
+          }
+        </div>
+
+        <div class="notification-actions">
+          @if (!notification.read) {
+          <button mat-icon-button (click)="markAsRead(notification.id)" matTooltip="Mark as read"
+            class="action-icon-button">
+            <mat-icon>check</mat-icon>
+          </button>
+          }
+          <button mat-icon-button (click)="removeNotification(notification.id)" matTooltip="Remove"
+            class="action-icon-button">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+      </div>
+      }
+    </div>
+    }
   </div>
 </div>
