@@ -25,7 +25,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { NostrService } from './services/nostr.service';
 import { LoadingOverlayComponent } from './components/loading-overlay/loading-overlay.component';
 import { FeatureLevel, LoggerService } from './services/logger.service';
-import { MatMenuModule } from '@angular/material/menu';
+import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import { FormsModule } from '@angular/forms';
 import {
   NotificationType,
@@ -156,6 +156,7 @@ export class App implements OnInit {
   @ViewChild('profileSidenav') profileSidenav!: MatSidenav;
   @ViewChild('appsSidenav') appsSidenav!: MatSidenav;
   @ViewChild(SearchResultsComponent) searchResults!: SearchResultsComponent;
+  @ViewChild('notificationMenuTrigger') notificationMenuTrigger!: MatMenuTrigger;
 
   // Use local settings for sidenav state
   opened = computed(() => this.localSettings.menuOpen());
@@ -1079,6 +1080,9 @@ export class App implements OnInit {
   onNotificationClick(notification: Notification, event: MouseEvent): void {
     event.preventDefault();
     event.stopPropagation();
+
+    // Close the menu
+    this.notificationMenuTrigger?.closeMenu();
 
     // Check if it's a content notification with an event ID
     if (this.isContentNotification(notification)) {

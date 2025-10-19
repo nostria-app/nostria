@@ -87,7 +87,8 @@
     </button>
     }
     @if (app.authenticated()) {
-    <button class="notification-toolbar" mat-icon-button [matMenuTriggerFor]="menuNotifications">
+    <button class="notification-toolbar" mat-icon-button [matMenuTriggerFor]="menuNotifications"
+      #notificationMenuTrigger="matMenuTrigger">
       <mat-icon [class.pulsing-icon]="hasActivePendingNotifications()"
         [matBadge]="unreadNotificationsCount() > 0 ? unreadNotificationsCount() : null">notifications</mat-icon>
     </button>
