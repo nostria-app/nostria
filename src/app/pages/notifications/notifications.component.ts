@@ -18,6 +18,9 @@ import {
 } from '../../services/storage.service';
 import { RouterModule } from '@angular/router';
 import { AccountRelayService } from '../../services/relays/account-relay';
+import { Router } from '@angular/router';
+import { ContentNotification } from '../../services/storage.service';
+import { nip19 } from 'nostr-tools';
 
 @Component({
   selector: 'app-notifications',
@@ -40,6 +43,7 @@ export class NotificationsComponent implements OnInit {
   private notificationService = inject(NotificationService);
   private accountRelay = inject(AccountRelayService);
   private nostrService = inject(NostrService);
+  private router = inject(Router);
 
   notifications = this.notificationService.notifications;
   notificationType = NotificationType;
@@ -68,13 +72,17 @@ export class NotificationsComponent implements OnInit {
     ].includes(type);
   }
 
-  // Separate system and content notifications
+  // Separate system and content notifications, sorted by timestamp (newest first)
   systemNotifications = computed(() => {
-    return this.notifications().filter(n => this.isSystemNotification(n.type));
+    return this.notifications()
+      .filter(n => this.isSystemNotification(n.type))
+      .sort((a, b) => b.timestamp - a.timestamp);
   });
 
   contentNotifications = computed(() => {
-    return this.notifications().filter(n => this.isContentNotification(n.type));
+    return this.notifications()
+      .filter(n => this.isContentNotification(n.type))
+      .sort((a, b) => b.timestamp - a.timestamp);
   });
 
   // Count only content notifications (not system/technical ones)
@@ -193,5 +201,54 @@ export class NotificationsComponent implements OnInit {
         minute: '2-digit'
       });
     }
+  }
+
+  /**
+   * Navigate to the author's profile page
+   */
+  viewAuthorProfile(notification: Notification): void {
+    const contentNotif = notification as ContentNotification;
+    if (contentNotif.authorPubkey) {
+      const npub = nip19.npubEncode(contentNotif.authorPubkey);
+      this.router.navigate(['/people', npub]);
+    }
+  }
+
+  /**
+   * Navigate to the event details page
+   */
+  viewEvent(notification: Notification): void {
+    const contentNotif = notification as ContentNotification;
+    if (contentNotif.eventId) {
+      const noteId = nip19.noteEncode(contentNotif.eventId);
+      this.router.navigate(['/e', noteId]);
+    }
+  }
+
+  /**
+   * Check if notification is a content notification with author/event info
+   */
+  isContentNotificationWithData(notification: Notification): notification is ContentNotification {
+    return this.isContentNotification(notification.type);
+  }
+
+  /**
+   * Get the author pubkey from a content notification
+   */
+  getAuthorPubkey(notification: Notification): string | undefined {
+    if (this.isContentNotificationWithData(notification)) {
+      return (notification as ContentNotification).authorPubkey;
+    }
+    return undefined;
+  }
+
+  /**
+   * Get the event ID from a content notification
+   */
+  getEventId(notification: Notification): string | undefined {
+    if (this.isContentNotificationWithData(notification)) {
+      return (notification as ContentNotification).eventId;
+    }
+    return undefined;
   }
 }

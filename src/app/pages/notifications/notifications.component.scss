@@ -166,6 +166,21 @@
     background: rgba(0, 0, 0, 0.03);
   }
 
+  &.clickable .notification-content {
+    cursor: pointer;
+    transition: opacity 0.2s;
+
+    &:hover {
+      opacity: 0.8;
+    }
+
+    &:focus {
+      outline: 2px solid var(--mat-app-primary);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+  }
+
   &:last-child {
     border-bottom: none;
   }
@@ -233,11 +248,40 @@
       gap: 4px;
       opacity: 0.6;
       font-size: 14px;
+      flex-wrap: wrap;
 
       .time-icon {
         font-size: 16px;
         width: 16px;
         height: 16px;
+      }
+
+      .divider {
+        margin: 0 4px;
+      }
+
+      .author-link {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 8px;
+        min-height: 0;
+        height: auto;
+        font-size: 13px;
+        opacity: 1;
+        color: var(--mat-app-primary);
+        text-transform: none;
+        letter-spacing: normal;
+
+        mat-icon {
+          font-size: 16px;
+          width: 16px;
+          height: 16px;
+        }
+
+        &:hover {
+          background: rgba(var(--mat-app-primary-rgb), 0.08);
+        }
       }
     }
 
