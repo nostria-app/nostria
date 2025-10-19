@@ -370,7 +370,7 @@ export class ContentNotificationService {
       if (data) {
         return parseInt(data, 10);
       }
-      
+
       // Default to 1 month ago instead of 0 (epoch time)
       // This prevents loading years of notification history on first run
       const oneMonthAgo = Math.floor(Date.now() / 1000) - (30 * 24 * 60 * 60); // 30 days in seconds
