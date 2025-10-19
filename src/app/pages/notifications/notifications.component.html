@@ -50,16 +50,16 @@
         } @else {
         <div class="notification-list">
           @for (notification of contentNotifications(); track notification.id) {
-          <div class="notification-item" [class.unread]="!notification.read" [class.clickable]="getEventId(notification)">
+          <div class="notification-item" [class.unread]="!notification.read"
+            [class.clickable]="getEventId(notification)">
             <div class="notification-icon-wrapper">
               <mat-icon class="notification-bell">notifications</mat-icon>
             </div>
 
-            <div class="notification-content" 
-                 (click)="getEventId(notification) ? viewEvent(notification) : null"
-                 (keydown.enter)="getEventId(notification) ? viewEvent(notification) : null"
-                 [attr.tabindex]="getEventId(notification) ? 0 : null"
-                 [attr.role]="getEventId(notification) ? 'button' : null">
+            <div class="notification-content" (click)="getEventId(notification) ? viewEvent(notification) : null"
+              (keydown.enter)="getEventId(notification) ? viewEvent(notification) : null"
+              [attr.tabindex]="getEventId(notification) ? 0 : null"
+              [attr.role]="getEventId(notification) ? 'button' : null">
               <div class="notification-header">
                 <span class="notification-title">{{ notification.title }}</span>
                 @if (!notification.read) {
@@ -73,10 +73,11 @@
 
               <div class="notification-meta">
                 <mat-icon class="time-icon">schedule</mat-icon>
-                <span class="notification-time">{{ formatTimestamp(notification.timestamp) }}</span>
+                <span class="notification-time">{{ notification.timestamp | ago }}</span>
                 @if (getAuthorPubkey(notification)) {
                 <span class="divider">•</span>
-                <button mat-button class="author-link" (click)="viewAuthorProfile(notification); $event.stopPropagation()" matTooltip="View profile">
+                <button mat-button class="author-link"
+                  (click)="viewAuthorProfile(notification); $event.stopPropagation()" matTooltip="View profile">
                   <mat-icon>person</mat-icon>
                   View Profile
                 </button>
@@ -86,13 +87,13 @@
 
             <div class="notification-actions">
               @if (!notification.read) {
-              <button mat-icon-button (click)="markAsRead(notification.id); $event.stopPropagation()" matTooltip="Mark as read"
-                class="action-icon-button">
+              <button mat-icon-button (click)="markAsRead(notification.id); $event.stopPropagation()"
+                matTooltip="Mark as read" class="action-icon-button">
                 <mat-icon>check</mat-icon>
               </button>
               }
-              <button mat-icon-button (click)="removeNotification(notification.id); $event.stopPropagation()" matTooltip="Remove"
-                class="action-icon-button">
+              <button mat-icon-button (click)="removeNotification(notification.id); $event.stopPropagation()"
+                matTooltip="Remove" class="action-icon-button">
                 <mat-icon>close</mat-icon>
               </button>
             </div>
@@ -139,7 +140,7 @@
 
               <div class="notification-meta">
                 <mat-icon class="time-icon">schedule</mat-icon>
-                <span class="notification-time">{{ formatTimestamp(notification.timestamp) }}</span>
+                <span class="notification-time">{{ notification.timestamp | ago }}</span>
               </div>
 
               @if (isRelayPublishingNotification(notification)) {
