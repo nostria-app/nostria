@@ -44,11 +44,17 @@
 
         <div class="notification-content">
           <div class="notification-header">
-            <span class="notification-title">{{ notification.message }}</span>
+            <span class="notification-title">{{ notification.title }}</span>
             @if (!notification.read) {
             <span class="new-indicator">NEW</span>
             }
           </div>
+
+          @if (notification.message) {
+          <div class="notification-message">
+            {{ notification.message }}
+          </div>
+          }
 
           <div class="notification-meta">
             <mat-icon class="time-icon">schedule</mat-icon>
