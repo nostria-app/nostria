@@ -38,8 +38,28 @@
             @if (contentNotifications().length > 0) {
             <span class="tab-badge">{{ contentNotifications().length }}</span>
             }
+            <button mat-icon-button class="filter-button" [matMenuTriggerFor]="filterMenu"
+              (click)="$event.stopPropagation()" matTooltip="Filter notifications">
+              <mat-icon>settings</mat-icon>
+            </button>
           </span>
         </ng-template>
+
+        <mat-menu #filterMenu="matMenu">
+          <div class="filter-menu-header">
+            <mat-icon>filter_list</mat-icon>
+            <span>Filter Activity</span>
+          </div>
+          <mat-divider></mat-divider>
+          @for (type of getFilterableNotificationTypes(); track type) {
+          <button mat-menu-item (click)="toggleNotificationFilter(type); $event.stopPropagation()"
+            (mousedown)="$event.stopPropagation()" class="filter-menu-item">
+            <mat-icon>{{ notificationFilters()[type] ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
+            <mat-icon class="type-icon">{{ getNotificationTypeIcon(type) }}</mat-icon>
+            <span>{{ getNotificationTypeLabel(type) }}</span>
+          </button>
+          }
+        </mat-menu>
 
         @if (contentNotifications().length === 0) {
         <div class="empty-state">

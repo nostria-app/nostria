@@ -51,6 +51,22 @@ export class NotificationsComponent implements OnInit {
   notificationType = NotificationType;
   lastViewedTimestamp = signal<number | null>(null);
 
+  // Notification type filter preferences
+  notificationFilters = signal<Record<NotificationType, boolean>>({
+    [NotificationType.NEW_FOLLOWER]: true,
+    [NotificationType.MENTION]: true,
+    [NotificationType.REPOST]: true,
+    [NotificationType.REPLY]: true,
+    [NotificationType.REACTION]: true,
+    [NotificationType.ZAP]: true,
+    // System notifications are not filtered
+    [NotificationType.RELAY_PUBLISHING]: true,
+    [NotificationType.GENERAL]: true,
+    [NotificationType.ERROR]: true,
+    [NotificationType.SUCCESS]: true,
+    [NotificationType.WARNING]: true,
+  });
+
   // Helper to check if notification is a system notification (technical)
   private isSystemNotification(type: NotificationType): boolean {
     return [
@@ -82,8 +98,9 @@ export class NotificationsComponent implements OnInit {
   });
 
   contentNotifications = computed(() => {
+    const filters = this.notificationFilters();
     return this.notifications()
-      .filter(n => this.isContentNotification(n.type))
+      .filter(n => this.isContentNotification(n.type) && filters[n.type])
       .sort((a, b) => b.timestamp - a.timestamp);
   });
 
@@ -254,5 +271,70 @@ export class NotificationsComponent implements OnInit {
       return (notification as ContentNotification).eventId;
     }
     return undefined;
+  }
+
+  /**
+   * Toggle a notification type filter
+   */
+  toggleNotificationFilter(type: NotificationType): void {
+    const currentFilters = this.notificationFilters();
+    this.notificationFilters.set({
+      ...currentFilters,
+      [type]: !currentFilters[type]
+    });
+  }
+
+  /**
+   * Get user-friendly label for notification type
+   */
+  getNotificationTypeLabel(type: NotificationType): string {
+    const labels: Record<NotificationType, string> = {
+      [NotificationType.NEW_FOLLOWER]: 'Following events',
+      [NotificationType.MENTION]: 'Mentions',
+      [NotificationType.REPOST]: 'Reposts',
+      [NotificationType.REPLY]: 'Replies',
+      [NotificationType.REACTION]: 'Reactions',
+      [NotificationType.ZAP]: 'Zap events',
+      [NotificationType.RELAY_PUBLISHING]: 'Relay Publishing',
+      [NotificationType.GENERAL]: 'General',
+      [NotificationType.ERROR]: 'Errors',
+      [NotificationType.SUCCESS]: 'Success',
+      [NotificationType.WARNING]: 'Warnings',
+    };
+    return labels[type] || type;
+  }
+
+  /**
+   * Get icon for notification type
+   */
+  getNotificationTypeIcon(type: NotificationType): string {
+    const icons: Record<NotificationType, string> = {
+      [NotificationType.NEW_FOLLOWER]: 'person_add',
+      [NotificationType.MENTION]: 'alternate_email',
+      [NotificationType.REPOST]: 'repeat',
+      [NotificationType.REPLY]: 'reply',
+      [NotificationType.REACTION]: 'favorite',
+      [NotificationType.ZAP]: 'bolt',
+      [NotificationType.RELAY_PUBLISHING]: 'sync',
+      [NotificationType.GENERAL]: 'info',
+      [NotificationType.ERROR]: 'error',
+      [NotificationType.SUCCESS]: 'check_circle',
+      [NotificationType.WARNING]: 'warning',
+    };
+    return icons[type] || 'notifications';
+  }
+
+  /**
+   * Get content notification types that can be filtered
+   */
+  getFilterableNotificationTypes(): NotificationType[] {
+    return [
+      NotificationType.NEW_FOLLOWER,
+      NotificationType.MENTION,
+      NotificationType.REPOST,
+      NotificationType.REPLY,
+      NotificationType.REACTION,
+      NotificationType.ZAP,
+    ];
   }
 }
