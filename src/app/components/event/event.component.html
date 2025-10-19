@@ -298,13 +298,20 @@
     </div>
     }
 
+    @if (hasProofOfWork(targetItem.event)) {
+    <div class="note-footer-right hide-small pow-indicator" [matTooltip]="getProofOfWorkTooltip(targetItem.event)"
+      matTooltipPosition="below">
+      <mat-icon [class.pow-strong]="getProofOfWorkDifficulty(targetItem.event) >= 20">verified</mat-icon>
+      <span class="pow-difficulty">{{ getProofOfWorkDifficulty(targetItem.event) }}</span>
+    </div>
+    }
+
     @if (shouldShowClientTag() && getClientTag(targetItem.event) && getClientLogo(getClientTag(targetItem.event))) {
     <div class="note-footer-right hide-small client-indicator"
       [matTooltip]="'Published with ' + getClientDisplayName(getClientTag(targetItem.event))"
       matTooltipPosition="below">
       <img [src]="getClientLogo(getClientTag(targetItem.event))"
-        [alt]="getClientDisplayName(getClientTag(targetItem.event)) + ' logo'" 
-        class="client-logo" />
+        [alt]="getClientDisplayName(getClientTag(targetItem.event)) + ' logo'" class="client-logo" />
     </div>
     }
 
