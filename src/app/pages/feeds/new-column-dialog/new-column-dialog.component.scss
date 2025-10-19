@@ -1,3 +1,9 @@
+// Prevent horizontal scroll in dialog
+.settings-container {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
 .column-type-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -179,6 +185,7 @@
 // PoW Filter styles
 .pow-slider-container {
   padding: 12px 0;
+  overflow: hidden; // Prevent slider from causing horizontal scroll
 
   .pow-label {
     display: block;
@@ -195,7 +202,9 @@
 
   mat-slider {
     width: 100%;
+    max-width: 100%;
     margin-bottom: 12px;
+    box-sizing: border-box;
   }
 
   .pow-description {
@@ -212,4 +221,9 @@
       height: 1.2rem;
     }
   }
+}
+
+// Prevent horizontal scroll in dialog content
+mat-dialog-content {
+  overflow-x: hidden !important;
 }
