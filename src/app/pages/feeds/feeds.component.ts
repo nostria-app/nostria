@@ -289,6 +289,24 @@ export class FeedsComponent implements OnDestroy {
     return pausedSet;
   });
 
+  // Computed signal to get pending events count for each column
+  pendingEventsCount = computed(() => {
+    const columns = this.columns();
+    const feedDataMap = this.feedService.feedDataReactive();
+    const countsMap = new Map<string, number>();
+
+    columns.forEach(column => {
+      const columnData = feedDataMap.get(column.id);
+      if (columnData && columnData.pendingEvents) {
+        countsMap.set(column.id, columnData.pendingEvents().length);
+      } else {
+        countsMap.set(column.id, 0);
+      }
+    });
+
+    return countsMap;
+  });
+
   // Helper method to check if a specific column is paused
   isColumnPaused(columnId: string): boolean {
     return this.pausedColumns().has(columnId);
@@ -968,6 +986,25 @@ export class FeedsComponent implements OnDestroy {
     await this.feedsCollectionService.continueColumn(column.id);
     this.notificationService.notify(`Column "${column.label}" continued`);
     console.log('📊 Column status after continue:', this.getColumnStatus(column.id));
+  }
+
+  /**
+   * Load pending new events into the main feed
+   */
+  loadNewPosts(columnId: string): void {
+    const pendingCount = this.pendingEventsCount().get(columnId) || 0;
+    this.feedService.loadPendingEvents(columnId);
+
+    if (pendingCount > 0) {
+      this.notificationService.notify(`Loaded ${pendingCount} new ${pendingCount === 1 ? 'post' : 'posts'}`);
+    }
+  }
+
+  /**
+   * Get pending events count for a column
+   */
+  getPendingEventsCount(columnId: string): number {
+    return this.pendingEventsCount().get(columnId) || 0;
   }
 
   // Video expansion state management methods

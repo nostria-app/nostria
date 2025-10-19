@@ -319,6 +319,48 @@ app-user-profile {
           display: flex;
           flex-direction: column;
           overflow: hidden;
+          position: relative;
+
+          // New posts notification
+          .new-posts-notification {
+            position: absolute;
+            top: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            animation: slideDown 0.3s ease-out;
+
+            .new-posts-button {
+              display: flex;
+              align-items: center;
+              gap: 8px;
+              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+              font-weight: 500;
+              padding: 8px 20px;
+
+              mat-icon {
+                font-size: 1.2rem;
+                width: 1.2rem;
+                height: 1.2rem;
+              }
+
+              &:hover {
+                box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+              }
+            }
+          }
+
+          @keyframes slideDown {
+            from {
+              transform: translateX(-50%) translateY(-100%);
+              opacity: 0;
+            }
+
+            to {
+              transform: translateX(-50%) translateY(0);
+              opacity: 1;
+            }
+          }
 
           .column-scroll-container {
             flex: 1;
