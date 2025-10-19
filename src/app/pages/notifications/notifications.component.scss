@@ -26,7 +26,7 @@
       font-size: 32px;
       width: 32px;
       height: 32px;
-      color: var(--mat-app-primary);
+      color: var(--mat-sys-primary);
     }
 
     .header-text {
@@ -40,8 +40,8 @@
       }
 
       .new-badge {
-        background: var(--mat-app-primary);
-        color: white;
+        background: var(--mat-sys-primary);
+        color: var(--mat-sys-on-primary);
         padding: 4px 12px;
         border-radius: 16px;
         font-size: 14px;
@@ -102,8 +102,8 @@
     }
 
     .tab-badge {
-      background: var(--mat-app-primary);
-      color: white;
+      background: var(--mat-sys-primary);
+      color: var(--mat-sys-on-primary);
       padding: 2px 8px;
       border-radius: 12px;
       font-size: 12px;
@@ -111,7 +111,8 @@
       text-align: center;
 
       &.secondary {
-        background: rgba(var(--mat-app-text-color), 0.2);
+        background: var(--mat-sys-secondary-container);
+        color: var(--mat-sys-on-secondary-container);
       }
     }
   }
@@ -130,8 +131,9 @@
     font-size: 120px;
     width: 120px;
     height: 120px;
-    color: var(--mat-app-primary);
+    color: var(--mat-sys-primary);
     margin-bottom: 24px;
+    opacity: 0.6;
   }
 
   h2 {
@@ -157,13 +159,13 @@
   align-items: flex-start;
   padding: 20px 24px;
   gap: 16px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
   transition: background-color 0.2s;
   min-width: 0; // Enable proper flex shrinking
   overflow: hidden; // Prevent horizontal overflow
 
   &:hover {
-    background: rgba(0, 0, 0, 0.03);
+    background: var(--mat-sys-surface-container-high);
   }
 
   &.clickable .notification-content {
@@ -223,13 +225,28 @@
       }
 
       .new-indicator {
-        background: var(--mat-app-primary);
-        color: white;
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-size: 12px;
-        letter-spacing: 0.5px;
+        background: var(--mat-sys-primary);
+        color: var(--mat-sys-on-primary);
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 1px;
+        text-transform: uppercase;
         flex-shrink: 0; // Don't shrink the badge
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        animation: pulse-glow 2s ease-in-out infinite;
+      }
+
+      @keyframes pulse-glow {
+        0%, 100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 0.9;
+          transform: scale(1.05);
+        }
       }
     }
 
@@ -269,7 +286,7 @@
         height: auto;
         font-size: 13px;
         opacity: 1;
-        color: var(--mat-app-primary);
+        color: var(--mat-sys-primary);
         text-transform: none;
         letter-spacing: normal;
 
@@ -280,7 +297,7 @@
         }
 
         &:hover {
-          background: rgba(var(--mat-app-primary-rgb), 0.08);
+          background: var(--mat-sys-primary-container);
         }
       }
     }

@@ -1083,10 +1083,13 @@ export class App implements OnInit {
     // Check if it's a content notification with an event ID
     if (this.isContentNotification(notification)) {
       const contentNotif = notification as ContentNotification;
-      if (contentNotif.eventId) {
-        // Navigate to the event
-        const noteId = nip19.noteEncode(contentNotif.eventId);
-        this.router.navigate(['/e', noteId]);
+      if (contentNotif.eventId && contentNotif.authorPubkey) {
+        // Navigate to the event using nevent encoding
+        const neventId = nip19.neventEncode({
+          id: contentNotif.eventId,
+          author: contentNotif.authorPubkey,
+        });
+        this.router.navigate(['/e', neventId]);
         return;
       }
     }
