@@ -124,11 +124,13 @@ export class NoteContentComponent {
     const extension = url.split('.').pop()?.split('?')[0]?.toLowerCase();
     switch (extension) {
       case 'mp4':
+      case 'm4v':
         return 'mp4';
       case 'webm':
         return 'webm';
       case 'mov':
-        return 'quicktime';
+        // Modern .mov files are typically MPEG-4 encoded and can be played as mp4
+        return 'mp4';
       case 'avi':
         return 'x-msvideo';
       case 'wmv':
@@ -137,6 +139,9 @@ export class NoteContentComponent {
         return 'x-flv';
       case 'mkv':
         return 'x-matroska';
+      case 'ogg':
+      case 'ogv':
+        return 'ogg';
       default:
         return 'mp4';
     }
@@ -144,11 +149,13 @@ export class NoteContentComponent {
 
   /**
    * Check if a video format is likely to be supported by modern browsers
+   * Modern .mov files are typically MPEG-4 encoded and can be played by browsers
    */
   isVideoFormatSupported(url: string): boolean {
     const extension = url.split('.').pop()?.split('?')[0]?.toLowerCase();
-    // Only MP4 and WebM have good cross-browser support
-    return extension === 'mp4' || extension === 'webm';
+    // MP4, WebM, and modern MOV files have good cross-browser support
+    // Modern .mov files are typically MPEG-4 which browsers can play
+    return extension === 'mp4' || extension === 'webm' || extension === 'mov' || extension === 'm4v';
   }
 
   /**
