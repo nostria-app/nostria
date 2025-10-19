@@ -41,6 +41,7 @@ import { ReportingService } from '../../services/reporting.service';
 import { ZapButtonComponent } from '../zap-button/zap-button.component';
 import { ZapService } from '../../services/zap.service';
 import { ReactionsDialogComponent } from '../reactions-dialog/reactions-dialog.component';
+import { PowService } from '../../services/pow.service';
 
 type EventCardAppearance = 'card' | 'plain';
 
@@ -100,6 +101,7 @@ export class EventComponent {
   reportingService = inject(ReportingService);
   zapService = inject(ZapService);
   localSettings = inject(LocalSettingsService);
+  powService = inject(PowService);
   reactions = signal<ReactionEvents>({ events: [], data: new Map() });
   reports = signal<ReactionEvents>({ events: [], data: new Map() });
 
@@ -737,6 +739,58 @@ export class EventComponent {
    */
   shouldShowClientTag(): boolean {
     return this.localSettings.showClientTag();
+  }
+
+  /**
+   * Check if an event has Proof-of-Work
+   */
+  hasProofOfWork(event: Event | null | undefined): boolean {
+    if (!event || !event.tags) return false;
+    return event.tags.some(tag => tag[0] === 'nonce');
+  }
+
+  /**
+   * Get the Proof-of-Work difficulty for an event
+   */
+  getProofOfWorkDifficulty(event: Event | null | undefined): number {
+    if (!event || !this.hasProofOfWork(event)) return 0;
+    return this.powService.countLeadingZeroBits(event.id);
+  }
+
+  /**
+   * Get the committed difficulty from the nonce tag
+   */
+  getCommittedDifficulty(event: Event | null | undefined): number {
+    if (!event || !event.tags) return 0;
+    const nonceTag = event.tags.find(tag => tag[0] === 'nonce');
+    if (!nonceTag || !nonceTag[2]) return 0;
+    return parseInt(nonceTag[2], 10) || 0;
+  }
+
+  /**
+   * Get the PoW strength label
+   */
+  getProofOfWorkLabel(difficulty: number): string {
+    if (difficulty < 10) return 'Minimal';
+    if (difficulty < 15) return 'Low';
+    if (difficulty < 20) return 'Moderate';
+    if (difficulty < 25) return 'Strong';
+    if (difficulty < 30) return 'Very Strong';
+    return 'Extreme';
+  }
+
+  /**
+   * Get the PoW tooltip text
+   */
+  getProofOfWorkTooltip(event: Event | null | undefined): string {
+    const difficulty = this.getProofOfWorkDifficulty(event);
+    const committed = this.getCommittedDifficulty(event);
+    const strength = this.getProofOfWorkLabel(difficulty);
+
+    if (committed > 0 && committed !== difficulty) {
+      return `Proof-of-Work: ${difficulty} bits (${strength})\nTarget: ${committed} bits`;
+    }
+    return `Proof-of-Work: ${difficulty} bits (${strength})`;
   }
 
   onBookmarkClick(event: MouseEvent) {
