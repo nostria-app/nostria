@@ -31,8 +31,9 @@ import { LocalSettingsService } from '../../services/local-settings.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { ContentComponent } from '../content/content.component';
 import { Router } from '@angular/router';
-import { nip19, Event as NostrEvent } from 'nostr-tools';
+import { nip19, Event as NostrEvent, UnsignedEvent } from 'nostr-tools';
 import { AccountRelayService } from '../../services/relays/account-relay';
+import { PowService, PowProgress } from '../../services/pow.service';
 
 export interface NoteEditorDialogData {
   replyTo?: {
@@ -100,6 +101,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
   private snackBar = inject(MatSnackBar);
   private sanitizer = inject(DomSanitizer);
   private router = inject(Router);
+  private powService = inject(PowService);
 
   @ViewChild('contentTextarea')
   contentTextarea!: ElementRef<HTMLTextAreaElement>;
@@ -124,6 +126,18 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
   expirationTime = signal<string>('12:00');
   uploadOriginal = signal(false);
   addClientTag = signal(true); // Default to true, will be set from user preference in constructor
+
+  // Proof of Work options
+  powEnabled = signal(false);
+  powTargetDifficulty = signal(20); // Default target difficulty
+  powProgress = signal<PowProgress>({
+    difficulty: 0,
+    nonce: 0,
+    attempts: 0,
+    isRunning: false,
+    bestEvent: null,
+  });
+  powMinedEvent = signal<UnsignedEvent | null>(null);
 
   private dragCounter = 0;
 
@@ -189,6 +203,18 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
 
   // Date constraints
   minDate = computed(() => new Date());
+
+  // PoW computed properties
+  isPowMining = computed(() => this.powProgress().isRunning);
+  hasPowResult = computed(() => this.powMinedEvent() !== null);
+  powDifficulty = computed(() => this.powProgress().difficulty);
+  powAttempts = computed(() => this.powProgress().attempts);
+  powProgressPercentage = computed(() => {
+    const target = this.powTargetDifficulty();
+    const current = this.powProgress().difficulty;
+    if (target === 0) return 0;
+    return Math.min((current / target) * 100, 100);
+  });
 
   ngAfterViewInit() {
     // Reset drag counter when component initializes
@@ -416,9 +442,17 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
     this.isPublishing.set(true);
 
     try {
-      const tags = this.buildTags();
-      const event = this.nostrService.createEvent(1, this.content().trim(), tags);
-      const signedEvent = await this.nostrService.signEvent(event);
+      let eventToSign: UnsignedEvent;
+
+      // Use the mined event if PoW is enabled and we have a result
+      if (this.powEnabled() && this.powMinedEvent()) {
+        eventToSign = this.powMinedEvent()!;
+      } else {
+        const tags = this.buildTags();
+        eventToSign = this.nostrService.createEvent(1, this.content().trim(), tags);
+      }
+
+      const signedEvent = await this.nostrService.signEvent(eventToSign);
 
       if (signedEvent) {
         await this.accountRelay.publish(signedEvent);
@@ -849,5 +883,95 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
     // Additional check by file extension as fallback
     const imageExtensions = /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico|tiff|avif|heic|heif)$/i;
     return imageExtensions.test(file.name);
+  }
+
+  // Proof of Work methods
+  onPowToggle(enabled: boolean): void {
+    this.powEnabled.set(enabled);
+    if (!enabled) {
+      this.stopPow();
+      this.powMinedEvent.set(null);
+      this.powService.reset();
+    }
+  }
+
+  onPowDifficultyChange(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    const difficulty = parseInt(target.value, 10);
+    if (!isNaN(difficulty) && difficulty >= 0) {
+      this.powTargetDifficulty.set(difficulty);
+    }
+  }
+
+  async startPow(): Promise<void> {
+    if (!this.content().trim()) {
+      this.snackBar.open('Please enter some content first', 'Close', { duration: 3000 });
+      return;
+    }
+
+    try {
+      // Build the base event
+      const tags = this.buildTags();
+      const baseEvent = this.nostrService.createEvent(1, this.content().trim(), tags);
+
+      // Start mining
+      this.snackBar.open('Starting Proof-of-Work mining...', 'Close', { duration: 2000 });
+
+      const result = await this.powService.mineEvent(
+        baseEvent,
+        this.powTargetDifficulty(),
+        (progress: PowProgress) => {
+          this.powProgress.set(progress);
+        }
+      );
+
+      if (result && result.event) {
+        this.powMinedEvent.set(result.event);
+        this.snackBar.open(
+          `Mining complete! Achieved difficulty: ${result.difficulty} bits (${result.attempts.toLocaleString()} attempts)`,
+          'Close',
+          { duration: 5000 }
+        );
+      } else if (!this.powService.isRunning()) {
+        // Mining was stopped by user
+        const bestEvent = this.powProgress().bestEvent;
+        if (bestEvent) {
+          this.powMinedEvent.set(bestEvent);
+          this.snackBar.open(
+            `Mining stopped. Best difficulty: ${this.powProgress().difficulty} bits`,
+            'Close',
+            { duration: 5000 }
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Error during PoW mining:', error);
+      this.snackBar.open('Error during Proof-of-Work mining', 'Close', { duration: 5000 });
+    }
+  }
+
+  stopPow(): void {
+    this.powService.stop();
+    const bestEvent = this.powProgress().bestEvent;
+    if (bestEvent) {
+      this.powMinedEvent.set(bestEvent);
+      this.snackBar.open(
+        `Mining stopped. Best difficulty: ${this.powProgress().difficulty} bits`,
+        'Close',
+        { duration: 3000 }
+      );
+    }
+  }
+
+  resetPow(): void {
+    this.powService.reset();
+    this.powMinedEvent.set(null);
+    this.powProgress.set({
+      difficulty: 0,
+      nonce: 0,
+      attempts: 0,
+      isRunning: false,
+      bestEvent: null,
+    });
   }
 }

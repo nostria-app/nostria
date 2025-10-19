@@ -425,11 +425,11 @@ export class NostrService implements NostriaService {
     }
   }
 
-  async signEvent(event: EventTemplate) {
+  async signEvent(event: EventTemplate | UnsignedEvent) {
     return this.sign(event);
   }
 
-  private async sign(event: EventTemplate | Event): Promise<Event> {
+  private async sign(event: EventTemplate | Event | UnsignedEvent): Promise<Event> {
     const currentUser = this.accountState.account();
 
     if (!currentUser) {
@@ -451,25 +451,36 @@ export class NostrService implements NostriaService {
 
         // Create EventTemplate WITHOUT pubkey for NIP-07 extensions
         // Extensions will add the pubkey themselves
-        const eventTemplate: EventTemplate = {
+        // Preserve created_at if already set (important for PoW)
+        // For PoW events, we need to include the pre-calculated ID
+        const eventTemplate: any = {
           kind: event.kind,
-          created_at: this.currentDate(),
+          created_at: event.created_at ?? this.currentDate(),
           tags: event.tags,
           content: event.content,
         };
 
-        // Pass event template to extension (no pubkey)
-        const extensionResult = await window.nostr.signEvent(eventTemplate);
+        // If this is a mined PoW event (has nonce tag and pubkey), include the ID
+        const hasNonceTag = event.tags.some(tag => tag[0] === 'nonce');
+        if (hasNonceTag && 'pubkey' in event) {
+          // Calculate and include the event ID for PoW events
+          const { getEventHash } = await import('nostr-tools');
+          eventTemplate.id = getEventHash(event as UnsignedEvent);
+          eventTemplate.pubkey = (event as UnsignedEvent).pubkey;
+        }
 
+        // Pass event template to extension
+        const extensionResult = await window.nostr.signEvent(eventTemplate);
         signedEvent = extensionResult as Event;
 
         break;
       }
       case 'remote': {
         // For remote signing, we need to include pubkey
+        // Preserve created_at if already set (important for PoW)
         const cleanEvent: UnsignedEvent = {
           kind: event.kind,
-          created_at: this.currentDate(),
+          created_at: event.created_at ?? this.currentDate(),
           tags: event.tags,
           content: event.content,
           pubkey: eventPubkey,
@@ -492,9 +503,10 @@ export class NostrService implements NostriaService {
         break;
       case 'nsec': {
         // For nsec signing, we need to include pubkey
+        // Preserve created_at if already set (important for PoW)
         const cleanEvent: UnsignedEvent = {
           kind: event.kind,
-          created_at: this.currentDate(),
+          created_at: event.created_at ?? this.currentDate(),
           tags: event.tags,
           content: event.content,
           pubkey: eventPubkey,
