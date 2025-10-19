@@ -31,6 +31,8 @@ import {
   NotificationType,
   RelayPublishingNotification,
   StorageService,
+  Notification,
+  ContentNotification,
 } from './services/storage.service';
 import { LayoutService } from './services/layout.service';
 import { ApplicationStateService } from './services/application-state.service';
@@ -1055,5 +1057,41 @@ export class App implements OnInit {
    */
   getAccountProfile(pubkey: string): NostrRecord | undefined {
     return this.accountState.getAccountProfileSync(pubkey);
+  }
+
+  /**
+   * Check if a notification is a content notification (has event to navigate to)
+   */
+  isContentNotification(notification: Notification): boolean {
+    return [
+      NotificationType.NEW_FOLLOWER,
+      NotificationType.MENTION,
+      NotificationType.REPOST,
+      NotificationType.REPLY,
+      NotificationType.REACTION,
+      NotificationType.ZAP,
+    ].includes(notification.type);
+  }
+
+  /**
+   * Handle notification click from toolbar menu
+   */
+  onNotificationClick(notification: Notification, event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    // Check if it's a content notification with an event ID
+    if (this.isContentNotification(notification)) {
+      const contentNotif = notification as ContentNotification;
+      if (contentNotif.eventId) {
+        // Navigate to the event
+        const noteId = nip19.noteEncode(contentNotif.eventId);
+        this.router.navigate(['/e', noteId]);
+        return;
+      }
+    }
+
+    // For system notifications or content notifications without eventId, go to notifications page
+    this.router.navigate(['/notifications']);
   }
 }

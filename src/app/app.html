@@ -100,7 +100,7 @@
       notification of notificationService.notifications().slice(0, 5);
       track notification.id
       ) {
-      <button mat-menu-item routerLink="/notifications">
+      <button mat-menu-item (click)="onNotificationClick(notification, $event)">
         <mat-icon>
           @if (notification.type === notificationType.SUCCESS) {
           check_circle
