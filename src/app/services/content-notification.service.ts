@@ -361,15 +361,25 @@ export class ContentNotificationService {
   }
 
   /**
-   * Get the last check timestamp from storage
+   * Get the last check timestamp from storage, or 1 month ago if never checked
+   * This prevents loading the entire notification history on first run
    */
   private async getLastCheckTimestamp(): Promise<number> {
     try {
       const data = this.localStorage.getItem('lastNotificationCheck');
-      return data ? parseInt(data, 10) : 0;
+      if (data) {
+        return parseInt(data, 10);
+      }
+      
+      // Default to 1 month ago instead of 0 (epoch time)
+      // This prevents loading years of notification history on first run
+      const oneMonthAgo = Math.floor(Date.now() / 1000) - (30 * 24 * 60 * 60); // 30 days in seconds
+      this.logger.debug(`No previous check found, defaulting to 1 month ago: ${oneMonthAgo}`);
+      return oneMonthAgo;
     } catch (error) {
       this.logger.error('Failed to get last check timestamp', error);
-      return 0;
+      // Return 1 month ago as fallback
+      return Math.floor(Date.now() / 1000) - (30 * 24 * 60 * 60);
     }
   }
 
