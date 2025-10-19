@@ -175,3 +175,41 @@
     color: #ff9800;
   }
 }
+
+// PoW Filter styles
+.pow-slider-container {
+  padding: 12px 0;
+
+  .pow-label {
+    display: block;
+    font-size: 1rem;
+    margin-bottom: 16px;
+    color: var(--mat-sys-on-surface);
+
+    .pow-strength {
+      color: var(--mat-sys-primary);
+      font-weight: 500;
+      margin-left: 8px;
+    }
+  }
+
+  mat-slider {
+    width: 100%;
+    margin-bottom: 12px;
+  }
+
+  .pow-description {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 12px 0 0 0;
+    font-size: 0.875rem;
+    opacity: 0.8;
+
+    mat-icon {
+      font-size: 1.2rem;
+      width: 1.2rem;
+      height: 1.2rem;
+    }
+  }
+}
