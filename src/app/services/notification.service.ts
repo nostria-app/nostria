@@ -206,7 +206,7 @@ export class NotificationService {
    */
   markAsRead(id: string): void {
     const updatedNotification = this._notifications().find(n => n.id === id);
-    
+
     this._notifications.update(notifications => {
       return notifications.map(notification => {
         if (notification.id === id) {
