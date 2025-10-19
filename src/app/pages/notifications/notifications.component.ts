@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -7,6 +7,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatTabsModule } from '@angular/material/tabs';
 import { RelayPublishStatusComponent } from '../../components/relay-publish-status/relay-publish-status.component';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { NostrService } from '../../services/nostr.service';
 import { kinds } from 'nostr-tools';
 import { NotificationService } from '../../services/notification.service';
@@ -20,7 +21,6 @@ import { AccountRelayService } from '../../services/relays/account-relay';
 
 @Component({
   selector: 'app-notifications',
-  standalone: true,
   imports: [
     CommonModule,
     MatCardModule,
@@ -30,6 +30,7 @@ import { AccountRelayService } from '../../services/relays/account-relay';
     MatTabsModule,
     RelayPublishStatusComponent,
     MatMenuModule,
+    MatTooltipModule,
     RouterModule,
   ],
   templateUrl: './notifications.component.html',
@@ -44,20 +45,26 @@ export class NotificationsComponent implements OnInit {
   notificationType = NotificationType;
   lastViewedTimestamp = signal<number | null>(null);
 
+  newNotificationCount = computed(() => {
+    const lastViewed = this.lastViewedTimestamp();
+    if (!lastViewed) return this.notifications().length;
+
+    return this.notifications().filter(n => n.timestamp > lastViewed).length;
+  });
+
   async ngOnInit(): Promise<void> {
     await this.recordNotificationsView();
     await this.getLastViewedTimestamp();
   }
 
   async recordNotificationsView(): Promise<void> {
-    const content = JSON.stringify({});
     const tags = [['d', 'client:notifications:seen']];
 
     const unsignedEvent = this.nostrService.createEvent(kinds.Application, '', tags);
     const signedEvent = await this.nostrService.signEvent(unsignedEvent);
 
     // We don't want to show in notifications the app settings publishing.
-    const publishResult = await this.accountRelay.publish(signedEvent);
+    await this.accountRelay.publish(signedEvent);
   }
 
   async getLastViewedTimestamp(): Promise<void> {
@@ -121,7 +128,35 @@ export class NotificationsComponent implements OnInit {
     }
   }
 
-  isRelayPublishingNotification(notification: any): notification is RelayPublishingNotification {
+  isRelayPublishingNotification(notification: Notification): notification is RelayPublishingNotification {
     return notification.type === NotificationType.RELAY_PUBLISHING;
+  }
+
+  formatTimestamp(timestamp: number): string {
+    const now = Date.now();
+    const diff = now - timestamp;
+
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) {
+      return 'Just now';
+    } else if (minutes < 60) {
+      return `${minutes}m ago`;
+    } else if (hours < 24) {
+      return `${hours}h ago`;
+    } else if (days < 7) {
+      return `${days}d ago`;
+    } else {
+      const date = new Date(timestamp);
+      return date.toLocaleDateString('en-US', {
+        month: 'numeric',
+        day: 'numeric',
+        year: '2-digit',
+        hour: 'numeric',
+        minute: '2-digit'
+      });
+    }
   }
 }

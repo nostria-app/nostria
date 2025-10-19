@@ -3,9 +3,9 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  max-width: 800px;
+  max-width: 900px;
   margin: 0 auto;
-  padding: 16px;
+  padding: 24px;
 }
 
 // Header styles
@@ -13,440 +13,247 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
+  padding: 16px 24px;
+  border-radius: 12px;
 
-  h1 {
-    margin: 0;
-    font-size: 24px;
-    font-weight: 500;
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+
+    .header-icon {
+      font-size: 32px;
+      width: 32px;
+      height: 32px;
+      color: var(--mat-app-primary);
+    }
+
+    .header-text {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
+      h1 {
+        margin: 0;
+        font-size: 28px;
+      }
+
+      .new-badge {
+        background: var(--mat-app-primary);
+        color: white;
+        padding: 4px 12px;
+        border-radius: 16px;
+        font-size: 14px;
+      }
+    }
   }
 
   .header-actions {
     display: flex;
     align-items: center;
     gap: 8px;
+
+    .action-button {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 8px;
+
+      mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+    }
   }
 }
 
-// Tab styles
-.tab-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-
-  mat-icon {
-    margin-right: 4px;
-  }
-
-  mat-chip {
-    font-size: 12px;
-    height: 20px;
-    min-width: 20px;
-  }
+.page-subtitle {
+  margin: 0 0 24px 0;
+  padding: 0 24px;
+  opacity: 0.7;
+  font-size: 16px;
 }
 
-// Notification list container
+// Notifications container
 .notifications-container {
   display: flex;
   flex-direction: column;
   flex-grow: 1;
-  padding: 20px;
-  max-width: 800px;
-  margin: 0 auto;
+  border-radius: 12px;
+  overflow: hidden;
 }
 
-.spacer {
-  flex: 1;
-}
-
-.notification-list {
-  padding: 10px 0;
-}
-
-.notifications-list {
+// Empty state
+.empty-state {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  flex-grow: 1;
-  height: calc(100vh - 200px);
+  align-items: center;
+  justify-content: center;
+  padding: 80px 24px;
+  text-align: center;
+
+  .empty-icon {
+    font-size: 120px;
+    width: 120px;
+    height: 120px;
+    color: var(--mat-app-primary);
+    margin-bottom: 24px;
+  }
+
+  h2 {
+    margin: 0 0 8px 0;
+    font-size: 24px;
+  }
+
+  p {
+    margin: 0;
+    opacity: 0.7;
+    font-size: 16px;
+  }
+}
+
+// Notification list
+.notification-list {
+  display: flex;
+  flex-direction: column;
 }
 
 .notification-item {
   display: flex;
-  padding: 10px 0;
-  justify-content: space-between;
+  align-items: flex-start;
+  padding: 20px 24px;
+  gap: 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  transition: background-color 0.2s;
 
-  &.unread {
-    background-color: rgba(63, 81, 181, 0.05);
+  &:hover {
+    background: rgba(0, 0, 0, 0.03);
   }
-}
 
-// Notification card styles
-.notification-card {
-  display: flex;
-  padding: 16px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-  position: relative;
-  box-shadow: var(--mat-sys-level1);
-  transition: background-color 0.3s ease;
+  &:last-child {
+    border-bottom: none;
+  }
 
-  &.unread {
-    background-color: rgba(var(--mat-sys-background), 0.05);
+  .notification-icon-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    height: 40px;
 
-    &::after {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 0;
-      bottom: 0;
-      width: 3px;
-      background-color: var(--mat-sys-primary);
+    .notification-bell {
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
     }
   }
 
-  &.read {
-    background-color: rgba(0, 0, 0, 0.03);
-  }
-
-  &:hover {
-    background-color: rgba(0, 0, 0, 0.02);
-  }
-}
-
-// Type icon for notifications
-.notification-type-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  margin-right: 12px;
-  background-color: rgba(0, 0, 0, 0.06);
-
-  mat-icon {
-    font-size: 20px;
-    width: 20px;
-    height: 20px;
-  }
-
-  &.mention {
-    background-color: rgba(25, 118, 210, 0.1);
-    color: #1976d2;
-  }
-
-  &.reaction {
-    background-color: rgba(233, 30, 99, 0.1);
-    color: #e91e63;
-  }
-
-  &.repost {
-    background-color: rgba(76, 175, 80, 0.1);
-    color: #4caf50;
-  }
-
-  &.follow {
-    background-color: rgba(156, 39, 176, 0.1);
-    color: #9c27b0;
-  }
-}
-
-// Avatar styles
-.notification-avatar {
-  margin-right: 12px;
-  cursor: pointer;
-}
-
-// Content section
-.notification-content {
-  display: flex;
-  flex: 1;
-
-  .notification-header {
+  .notification-content {
+    flex: 1;
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    margin-bottom: 4px;
-    position: relative;
+    flex-direction: column;
+    gap: 8px;
 
-    .username {
-      font-weight: 500;
-      margin-right: 4px;
-      color: var(--mat-sys-primary);
-      cursor: pointer;
+    .notification-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
 
-      &:hover {
-        text-decoration: underline;
+      .notification-title {
+        font-size: 16px;
+        flex: 1;
+      }
+
+      .new-indicator {
+        background: var(--mat-app-primary);
+        color: white;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        letter-spacing: 0.5px;
       }
     }
 
-    .notification-action {
-      color: rgba(0, 0, 0, 0.6);
+    .notification-meta {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      opacity: 0.6;
+      font-size: 14px;
+
+      .time-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+      }
     }
 
-    .notification-time {
-      margin-left: 8px;
-      font-size: 12px;
-      color: rgba(0, 0, 0, 0.38);
-    }
-
-    .unread-indicator {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background-color: var(--mat-sys-primary);
-      margin-left: auto;
-      cursor: pointer;
-    }
-  }
-
-  .notification-text {
-    margin-top: 8px;
-    color: rgba(0, 0, 0, 0.87);
-    cursor: pointer;
-
-    &:hover {
-      text-decoration: underline;
-    }
-  }
-
-  .reaction-content {
-    margin-top: 8px;
-
-    .reaction-emoji {
-      font-size: 24px;
+    .notification-extra {
+      margin-top: 8px;
     }
   }
 
   .notification-actions {
     display: flex;
-    margin-top: 8px;
+    align-items: flex-start;
+    gap: 4px;
 
-    button {
-      margin-right: 8px;
+    .action-icon-button {
+      width: 36px;
+      height: 36px;
+
+      mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
     }
   }
 }
 
-.notification-details {
-  flex: 1;
-}
+// Responsive
+@media (max-width: 768px) {
+  .notifications-page {
+    padding: 16px;
+  }
 
-.notification-time {
-  font-size: 12px;
-  color: #888;
-  margin-top: 4px;
-}
-
-.notification-actions {
-  display: flex;
-}
-
-// Notification icon
-.notification-icon {
-  margin-right: 15px;
-  display: flex;
-  align-items: flex-start;
-}
-
-// Dismiss button
-.dismiss-button {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-}
-
-// Loading state
-.loading-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 300px;
-
-  p {
-    margin-top: 16px;
-    color: rgba(0, 0, 0, 0.54);
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
   }
 }
 
-// Error state
-.error-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 300px;
-  text-align: center;
-  padding: 24px;
-
-  mat-icon {
-    font-size: 48px;
-    height: 48px;
-    width: 48px;
-    margin-bottom: 16px;
-  }
-
-  p {
-    margin-bottom: 24px;
-    color: rgba(0, 0, 0, 0.6);
-  }
-}
-
-// Empty state
-.empty-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 300px;
-  text-align: center;
-  padding: 24px;
-
-  mat-icon {
-    font-size: 64px;
-    height: 64px;
-    width: 64px;
-    margin-bottom: 16px;
-    color: rgba(0, 0, 0, 0.26);
-  }
-
-  p {
-    margin: 0;
-    color: rgba(0, 0, 0, 0.6);
-    font-size: 18px;
-
-    &.empty-subtitle {
-      font-size: 14px;
-      margin-top: 8px;
-    }
-  }
-}
-
-.empty-notification {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100px;
-  color: #888;
-}
-
-// Empty tab state
-.empty-tab {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 200px;
-  text-align: center;
-  padding: 24px;
-
-  mat-icon {
-    font-size: 48px;
-    height: 48px;
-    width: 48px;
-    margin-bottom: 16px;
-    color: rgba(0, 0, 0, 0.26);
-  }
-
-  p {
-    margin: 0;
-    color: rgba(0, 0, 0, 0.6);
-  }
-}
-
-// Empty state adjustments
-.empty-state {
-  text-align: center;
-  padding: 32px;
-
-  .empty-icon {
-    margin-bottom: 16px;
-
-    mat-icon {
-      font-size: 48px;
-      height: 48px;
-      width: 48px;
-      opacity: 0.5;
-    }
-  }
-
-  p {
-    font-size: 1.1em;
-    color: rgba(0, 0, 0, 0.6);
-  }
-}
-
-.new-notifications-separator {
-  display: flex;
-  align-items: center;
-  margin: 15px 0;
-  gap: 10px;
-
-  .separator-text {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--mat-primary);
-    white-space: nowrap;
-    padding: 0 10px;
-  }
-
-  mat-divider {
-    flex: 1;
-  }
-}
-
-// Dark mode adjustments
-@media (prefers-color-scheme: dark) {
-  .notification-card.unread {
-    background-color: rgba(var(--mat-sys-background), 0.15);
-  }
-
-  .notification-type-icon {
-    background-color: rgba(255, 255, 255, 0.06);
-  }
-
-  .notification-content .notification-header {
-    .notification-action {
-      color: rgba(255, 255, 255, 0.7);
-    }
-
-    .notification-time {
-      color: rgba(255, 255, 255, 0.5);
-    }
-  }
-
-  .notification-content .notification-text {
-    color: rgba(255, 255, 255, 0.87);
-  }
-
-  .empty-container,
-  .error-container,
-  .empty-tab {
-    mat-icon,
-    p {
-      color: rgba(255, 255, 255, 0.5);
-    }
-  }
-}
-
-// Responsive adjustments
 @media (max-width: 600px) {
   .notifications-page {
     padding: 8px;
   }
 
-  .notification-card {
-    padding: 12px;
+  .page-header .header-left .header-icon {
+    font-size: 28px;
+    width: 28px;
+    height: 28px;
   }
 
-  .notification-type-icon {
-    width: 32px;
-    height: 32px;
-    margin-right: 8px;
+  .page-header .header-left .header-text h1 {
+    font-size: 24px;
   }
 
-  .notification-avatar {
-    margin-right: 8px;
+  .notification-item {
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .empty-state {
+    padding: 60px 16px;
+
+    .empty-icon {
+      font-size: 80px;
+      width: 80px;
+      height: 80px;
+    }
   }
 }
