@@ -159,6 +159,8 @@
   gap: 16px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
   transition: background-color 0.2s;
+  min-width: 0; // Enable proper flex shrinking
+  overflow: hidden; // Prevent horizontal overflow
 
   &:hover {
     background: rgba(0, 0, 0, 0.03);
@@ -187,15 +189,22 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+    min-width: 0; // Allow container to shrink and enable text wrapping
+    overflow: hidden; // Prevent overflow
 
     .notification-header {
       display: flex;
       align-items: center;
       gap: 8px;
+      min-width: 0; // Allow flex items to shrink
 
       .notification-title {
         font-size: 16px;
         flex: 1;
+        min-width: 0; // Allow text to shrink
+        word-break: break-word; // Break long words
+        overflow-wrap: break-word; // Break long URLs/text
+        overflow: hidden; // Hide overflow
       }
 
       .new-indicator {
@@ -205,6 +214,7 @@
         border-radius: 4px;
         font-size: 12px;
         letter-spacing: 0.5px;
+        flex-shrink: 0; // Don't shrink the badge
       }
     }
 
@@ -212,6 +222,9 @@
       font-size: 14px;
       opacity: 0.8;
       line-height: 1.4;
+      word-break: break-word; // Break long words
+      overflow-wrap: break-word; // Break long URLs/text
+      overflow: hidden; // Hide overflow
     }
 
     .notification-meta {
