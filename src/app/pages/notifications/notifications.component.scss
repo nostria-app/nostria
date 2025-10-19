@@ -371,3 +371,72 @@
     }
   }
 }
+
+// Filter button in tab label
+.tab-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+
+  .filter-button {
+    margin-left: 4px;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover {
+      opacity: 1;
+    }
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      line-height: 18px;
+    }
+  }
+}
+
+// Filter menu styles
+.filter-menu-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  font-weight: 500;
+  color: var(--mat-sys-primary);
+  pointer-events: none;
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+}
+
+// Type icon in menu items
+.type-icon {
+  margin-left: 8px;
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  opacity: 0.7;
+}
+
+// Filter menu item styling
+.filter-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+
+  &:hover {
+    background-color: rgba(var(--mat-sys-primary-rgb), 0.08);
+  }
+}
