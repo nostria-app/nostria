@@ -86,6 +86,37 @@
   overflow: hidden;
 }
 
+// Tabs styling
+.notifications-tabs {
+  height: 100%;
+
+  .tab-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+
+    .tab-badge {
+      background: var(--mat-app-primary);
+      color: white;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      min-width: 20px;
+      text-align: center;
+
+      &.secondary {
+        background: rgba(var(--mat-app-text-color), 0.2);
+      }
+    }
+  }
+}
+
 // Empty state
 .empty-state {
   display: flex;

@@ -147,7 +147,7 @@ export class NotificationService {
   /**
    * Persist a single notification to storage
    */
-  private async persistNotificationToStorage(notification: Notification): Promise<void> {
+  async persistNotificationToStorage(notification: Notification): Promise<void> {
     if (!this.storage.initialized()) {
       this.logger.warn('Storage not initialized, skipping notification persistence');
       return;
@@ -189,11 +189,11 @@ export class NotificationService {
       message,
       ...(actionLabel &&
         actionCallback && {
-          action: {
-            label: actionLabel,
-            callback: actionCallback,
-          },
-        }),
+        action: {
+          label: actionLabel,
+          callback: actionCallback,
+        },
+      }),
     };
 
     this.addNotification(notification);

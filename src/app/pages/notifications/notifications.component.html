@@ -28,62 +28,137 @@
 
   <!-- Notifications Content -->
   <div class="notifications-container">
-    @if (notifications().length === 0) {
-    <div class="empty-state">
-      <mat-icon class="empty-icon">notifications</mat-icon>
-      <h2>No notifications yet</h2>
-      <p>You'll see your notifications here when they arrive.</p>
-    </div>
-    } @else {
-    <div class="notification-list">
-      @for (notification of notifications(); track notification.id; let i = $index) {
-      <div class="notification-item" [class.unread]="!notification.read">
-        <div class="notification-icon-wrapper">
-          <mat-icon class="notification-bell">notifications</mat-icon>
-        </div>
-
-        <div class="notification-content">
-          <div class="notification-header">
-            <span class="notification-title">{{ notification.title }}</span>
-            @if (!notification.read) {
-            <span class="new-indicator">NEW</span>
+    <mat-tab-group class="notifications-tabs">
+      <!-- Content Notifications Tab -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <span class="tab-label">
+            <mat-icon>people</mat-icon>
+            Activity
+            @if (contentNotifications().length > 0) {
+            <span class="tab-badge">{{ contentNotifications().length }}</span>
             }
-          </div>
+          </span>
+        </ng-template>
 
-          @if (notification.message) {
-          <div class="notification-message">
-            {{ notification.message }}
-          </div>
-          }
+        @if (contentNotifications().length === 0) {
+        <div class="empty-state">
+          <mat-icon class="empty-icon">people</mat-icon>
+          <h2>No activity yet</h2>
+          <p>You'll see mentions, follows, reposts, and other interactions here.</p>
+        </div>
+        } @else {
+        <div class="notification-list">
+          @for (notification of contentNotifications(); track notification.id) {
+          <div class="notification-item" [class.unread]="!notification.read">
+            <div class="notification-icon-wrapper">
+              <mat-icon class="notification-bell">notifications</mat-icon>
+            </div>
 
-          <div class="notification-meta">
-            <mat-icon class="time-icon">schedule</mat-icon>
-            <span class="notification-time">{{ formatTimestamp(notification.timestamp) }}</span>
-          </div>
+            <div class="notification-content">
+              <div class="notification-header">
+                <span class="notification-title">{{ notification.title }}</span>
+                @if (!notification.read) {
+                <span class="new-indicator">NEW</span>
+                }
+              </div>
 
-          @if (isRelayPublishingNotification(notification)) {
-          <div class="notification-extra">
-            <app-relay-publish-status [notification]="notification" (retry)="onRetryPublish($event)">
-            </app-relay-publish-status>
+              @if (notification.message) {
+              <div class="notification-message">{{ notification.message }}</div>
+              }
+
+              <div class="notification-meta">
+                <mat-icon class="time-icon">schedule</mat-icon>
+                <span class="notification-time">{{ formatTimestamp(notification.timestamp) }}</span>
+              </div>
+            </div>
+
+            <div class="notification-actions">
+              @if (!notification.read) {
+              <button mat-icon-button (click)="markAsRead(notification.id)" matTooltip="Mark as read"
+                class="action-icon-button">
+                <mat-icon>check</mat-icon>
+              </button>
+              }
+              <button mat-icon-button (click)="removeNotification(notification.id)" matTooltip="Remove"
+                class="action-icon-button">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
           </div>
           }
         </div>
+        }
+      </mat-tab>
 
-        <div class="notification-actions">
-          @if (!notification.read) {
-          <button mat-icon-button (click)="markAsRead(notification.id)" matTooltip="Mark as read"
-            class="action-icon-button">
-            <mat-icon>check</mat-icon>
-          </button>
-          }
-          <button mat-icon-button (click)="removeNotification(notification.id)" matTooltip="Remove"
-            class="action-icon-button">
-            <mat-icon>close</mat-icon>
-          </button>
+      <!-- System Notifications Tab -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <span class="tab-label">
+            <mat-icon>settings</mat-icon>
+            System
+            @if (systemNotifications().length > 0) {
+            <span class="tab-badge secondary">{{ systemNotifications().length }}</span>
+            }
+          </span>
+        </ng-template>
+
+        @if (systemNotifications().length === 0) {
+        <div class="empty-state">
+          <mat-icon class="empty-icon">settings</mat-icon>
+          <h2>No system notifications</h2>
+          <p>Technical notifications and system messages will appear here.</p>
         </div>
-      </div>
-      }
-    </div>
-    }
+        } @else {
+        <div class="notification-list">
+          @for (notification of systemNotifications(); track notification.id) {
+          <div class="notification-item" [class.unread]="!notification.read">
+            <div class="notification-icon-wrapper">
+              <mat-icon class="notification-bell">notifications</mat-icon>
+            </div>
+
+            <div class="notification-content">
+              <div class="notification-header">
+                <span class="notification-title">{{ notification.title }}</span>
+                @if (!notification.read) {
+                <span class="new-indicator">NEW</span>
+                }
+              </div>
+
+              @if (notification.message) {
+              <div class="notification-message">{{ notification.message }}</div>
+              }
+
+              <div class="notification-meta">
+                <mat-icon class="time-icon">schedule</mat-icon>
+                <span class="notification-time">{{ formatTimestamp(notification.timestamp) }}</span>
+              </div>
+
+              @if (isRelayPublishingNotification(notification)) {
+              <div class="notification-extra">
+                <app-relay-publish-status [notification]="notification" (retry)="onRetryPublish($event)">
+                </app-relay-publish-status>
+              </div>
+              }
+            </div>
+
+            <div class="notification-actions">
+              @if (!notification.read) {
+              <button mat-icon-button (click)="markAsRead(notification.id)" matTooltip="Mark as read"
+                class="action-icon-button">
+                <mat-icon>check</mat-icon>
+              </button>
+              }
+              <button mat-icon-button (click)="removeNotification(notification.id)" matTooltip="Remove"
+                class="action-icon-button">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+          </div>
+          }
+        </div>
+        }
+      </mat-tab>
+    </mat-tab-group>
   </div>
 </div>
