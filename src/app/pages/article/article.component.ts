@@ -28,6 +28,7 @@ import type { NostrRecord } from '../../interfaces';
 import { AccountStateService } from '../../services/account-state.service';
 import { BookmarkService } from '../../services/bookmark.service';
 import { Cache } from '../../services/cache';
+import { MentionHoverDirective } from '../../directives/mention-hover.directive';
 import { DataService } from '../../services/data.service';
 import { FormatService } from '../../services/format/format.service';
 import { LayoutService } from '../../services/layout.service';
@@ -52,6 +53,7 @@ import { UtilitiesService } from '../../services/utilities.service';
     RouterModule,
     RepostButtonComponent,
     EventMenuComponent,
+    MentionHoverDirective,
   ],
   templateUrl: './article.component.html',
   styleUrl: './article.component.scss',

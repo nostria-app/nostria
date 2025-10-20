@@ -7,11 +7,12 @@ import { nip19 } from 'nostr-tools';
 import { LayoutService } from '../../services/layout.service';
 import { FormatService } from '../../services/format/format.service';
 import { SafeHtml } from '@angular/platform-browser';
+import { MentionHoverDirective } from '../../directives/mention-hover.directive';
 
 @Component({
   selector: 'app-article-event',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule],
+  imports: [CommonModule, MatButtonModule, MatIconModule, MentionHoverDirective],
   templateUrl: './article-event.component.html',
   styleUrl: './article-event.component.scss',
 })

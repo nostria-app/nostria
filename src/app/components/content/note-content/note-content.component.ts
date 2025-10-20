@@ -1,4 +1,4 @@
-import { Component, input, inject, effect, signal } from '@angular/core';
+import { Component, input, inject, effect, signal, ViewContainerRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { MatDialog } from '@angular/material/dialog';
@@ -7,6 +7,9 @@ import { ImageDialogComponent } from '../../image-dialog/image-dialog.component'
 import { ContentToken } from '../../../services/parsing.service';
 import { FormatService } from '../../../services/format/format.service';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { Overlay, OverlayRef } from '@angular/cdk/overlay';
+import { ComponentPortal } from '@angular/cdk/portal';
+import { ProfileHoverCardComponent } from '../../user-profile/hover-card/profile-hover-card.component';
 
 @Component({
   selector: 'app-note-content',
@@ -22,12 +25,22 @@ export class NoteContentComponent {
   private dialog = inject(MatDialog);
   private formatService = inject(FormatService);
   private sanitizer = inject(DomSanitizer);
+  private overlay = inject(Overlay);
+  private viewContainerRef = inject(ViewContainerRef);
 
   // Store rendered HTML for nevent/note previews
   private eventPreviewsMap = signal<Map<number, SafeHtml>>(new Map());
 
   // Track last processed tokens to prevent redundant re-execution
   private lastProcessedTokens: ContentToken[] = [];
+
+  // Hover card overlay
+  private overlayRef: OverlayRef | null = null;
+  private hoverCardComponentRef: any = null; // eslint-disable-line @typescript-eslint/no-explicit-any
+  private hoverTimeout?: number;
+  private closeTimeout?: number;
+  private isMouseOverTrigger = signal(false);
+  private isMouseOverCard = signal(false);
 
   constructor() {
     // When tokens change, fetch event previews for nevent/note types
@@ -182,5 +195,163 @@ export class NoteContentComponent {
       height: '100%',
       panelClass: ['image-dialog', 'responsive-dialog'],
     });
+  }
+
+  /**
+   * Handle mouse enter on mention link
+   */
+  onMentionMouseEnter(event: MouseEvent, token: ContentToken): void {
+    if (this.hoverTimeout) {
+      clearTimeout(this.hoverTimeout);
+    }
+    this.isMouseOverTrigger.set(true);
+
+    // Only show hover card for npub/nprofile mentions
+    if (!token.nostrData) {
+      console.log('[NoteContent] No nostrData on token');
+      return;
+    }
+
+    const { type, data } = token.nostrData;
+    const record = data as Record<string, unknown>;
+    const pubkey = type === 'npub' ? String(data) : String(record['pubkey'] || '');
+
+    console.log('[NoteContent] Mention hover - type:', type, 'pubkey:', pubkey);
+
+    if (!pubkey) {
+      console.log('[NoteContent] No pubkey found');
+      return;
+    }
+
+    this.hoverTimeout = setTimeout(() => {
+      if (this.isMouseOverTrigger()) {
+        console.log('[NoteContent] Showing hover card for pubkey:', pubkey);
+        this.showMentionHoverCard(event.target as HTMLElement, pubkey);
+      }
+    }, 500) as unknown as number;
+  }
+
+  /**
+   * Handle mouse leave on mention link
+   */
+  onMentionMouseLeave(): void {
+    this.isMouseOverTrigger.set(false);
+    this.scheduleClose();
+  }
+
+  /**
+   * Show hover card for a mention
+   */
+  private showMentionHoverCard(element: HTMLElement, pubkey: string): void {
+    console.log('[NoteContent] showMentionHoverCard called with pubkey:', pubkey);
+
+    if (this.overlayRef) {
+      console.log('[NoteContent] Overlay already exists, skipping');
+      return;
+    }
+
+    const positionStrategy = this.overlay
+      .position()
+      .flexibleConnectedTo(element)
+      .withPositions([
+        {
+          originX: 'center',
+          originY: 'bottom',
+          overlayX: 'center',
+          overlayY: 'top',
+          offsetY: 8,
+        },
+        {
+          originX: 'center',
+          originY: 'top',
+          overlayX: 'center',
+          overlayY: 'bottom',
+          offsetY: -8,
+        },
+        {
+          originX: 'end',
+          originY: 'center',
+          overlayX: 'start',
+          overlayY: 'center',
+          offsetX: 8,
+        },
+        {
+          originX: 'start',
+          originY: 'center',
+          overlayX: 'end',
+          overlayY: 'center',
+          offsetX: -8,
+        },
+      ])
+      .withViewportMargin(16)
+      .withPush(true);
+
+    this.overlayRef = this.overlay.create({
+      positionStrategy,
+      scrollStrategy: this.overlay.scrollStrategies.close(),
+    });
+
+    const portal = new ComponentPortal(ProfileHoverCardComponent, this.viewContainerRef);
+    const componentRef = this.overlayRef.attach(portal);
+
+    console.log('[NoteContent] Setting pubkey on hover card instance:', pubkey);
+    componentRef.setInput('pubkey', pubkey);
+    this.hoverCardComponentRef = componentRef;
+
+    // Track mouse over card
+    const cardElement = this.overlayRef.overlayElement;
+    cardElement.addEventListener('mouseenter', () => {
+      this.isMouseOverCard.set(true);
+      if (this.closeTimeout) {
+        clearTimeout(this.closeTimeout);
+        this.closeTimeout = undefined;
+      }
+    });
+    cardElement.addEventListener('mouseleave', () => {
+      this.isMouseOverCard.set(false);
+      this.scheduleClose();
+    });
+  }
+
+  /**
+   * Schedule closing of the hover card
+   */
+  private scheduleClose(): void {
+    if (this.closeTimeout) {
+      clearTimeout(this.closeTimeout);
+    }
+
+    this.closeTimeout = setTimeout(() => {
+      // Check if menu is open
+      if (this.hoverCardComponentRef?.instance?.isMenuOpen?.()) {
+        this.scheduleClose(); // Reschedule
+        return;
+      }
+
+      if (!this.isMouseOverTrigger() && !this.isMouseOverCard()) {
+        this.closeHoverCard();
+      } else {
+        this.scheduleClose(); // Reschedule
+      }
+    }, 300) as unknown as number;
+  }
+
+  /**
+   * Close the hover card
+   */
+  private closeHoverCard(): void {
+    if (this.hoverTimeout) {
+      clearTimeout(this.hoverTimeout);
+      this.hoverTimeout = undefined;
+    }
+    if (this.closeTimeout) {
+      clearTimeout(this.closeTimeout);
+      this.closeTimeout = undefined;
+    }
+    if (this.overlayRef) {
+      this.overlayRef.dispose();
+      this.overlayRef = null;
+      this.hoverCardComponentRef = null;
+    }
   }
 }

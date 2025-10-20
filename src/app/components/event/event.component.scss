@@ -166,7 +166,9 @@
 }
 
 .note-footer-right {
-  margin-left: auto;
+  &:first-of-type {
+    margin-left: auto;
+  }
 }
 
 .pow-indicator {
