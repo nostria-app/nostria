@@ -352,18 +352,16 @@ export class PublishService {
    * Execute the actual publish operation to relays
    */
   private async executePublish(event: Event, relayUrls: string[]): Promise<Promise<void>[]> {
-    // Use the pool to publish
-    // Note: pool.publish returns void but internally handles Promise.allSettled
-    // We'll wrap it to return individual promises for each relay
-    const publishPromises = relayUrls.map(async relayUrl => {
-      try {
-        await this.pool.publish([relayUrl], event);
-      } catch (error) {
-        // Re-throw to be caught by Promise.allSettled
-        throw new Error(`Failed to publish to ${relayUrl}: ${error}`);
-      }
-    });
+    // Publish to all relays in a single call (more efficient)
+    try {
+      await this.pool.publish(relayUrls, event);
 
-    return publishPromises;
+      // Return resolved promises for all relays
+      return relayUrls.map(() => Promise.resolve());
+    } catch (error) {
+      this.logger.error('[PublishService] Error during batch publish:', error);
+      // Return rejected promises for all relays
+      return relayUrls.map(url => Promise.reject(new Error(`Failed to publish to ${url}: ${error}`)));
+    }
   }
 }

@@ -130,9 +130,9 @@ export class RelayPoolService {
     this.addRelays(relayUrls);
 
     try {
-      const results = await Promise.allSettled(
-        this.#pool.publish(relayUrls, event)
-      );
+      const publishPromises = this.#pool.publish(relayUrls, event);
+
+      const results = await Promise.allSettled(publishPromises);
 
       // Track publish results
       results.forEach((result, index) => {

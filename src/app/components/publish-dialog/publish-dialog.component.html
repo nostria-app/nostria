@@ -27,6 +27,8 @@
     <h3>Select Publishing Targets</h3>
 
     @for (option of publishOptions; track option.id) {
+    <!-- Only show "mentioned" option if there are p-tags in the event -->
+    @if (option.id !== 'mentioned' || hasMentionedUsers()) {
     <div class="publish-option">
       <mat-checkbox [checked]="isOptionSelected(option.id)" (change)="onOptionChange(option.id, $event.checked)">
         <div class="option-content">
@@ -44,6 +46,21 @@
           </div>
           }
 
+          @if (option.id === 'mentioned' && loadingMentionedRelays()) {
+          <mat-spinner diameter="20"></mat-spinner>
+          }
+
+          @if (option.id === 'mentioned' && !loadingMentionedRelays()) {
+          <div class="relay-count">
+            @if (isOptionSelected('mentioned')) {
+            {{ mentionedRelays().length }} relay{{ mentionedRelays().length !== 1 ? 's' : '' }}
+            from {{ getMentionedPubkeys().length }} user{{ getMentionedPubkeys().length !== 1 ? 's' : '' }}
+            } @else {
+            ? relays from {{ getMentionedPubkeys().length }} user{{ getMentionedPubkeys().length !== 1 ? 's' : '' }}
+            }
+          </div>
+          }
+
           @if (option.id === 'account') {
           <div class="relay-count">
             {{ accountRelay.getRelayUrls().length }} relay{{
@@ -55,6 +72,7 @@
         </div>
       </mat-checkbox>
     </div>
+    }
     }
   </div>
 

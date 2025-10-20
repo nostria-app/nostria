@@ -14,6 +14,7 @@ import { Event } from 'nostr-tools';
 import { NostrService } from '../../services/nostr.service';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { DiscoveryRelayService } from '../../services/relays/discovery-relay';
+import { UserRelaysService } from '../../services/relays/user-relays';
 import { UtilitiesService } from '../../services/utilities.service';
 
 export interface PublishDialogData {
@@ -22,7 +23,7 @@ export interface PublishDialogData {
 }
 
 interface PublishOption {
-  id: 'account' | 'author' | 'custom';
+  id: 'account' | 'author' | 'mentioned' | 'custom';
   label: string;
   description: string;
 }
@@ -57,17 +58,20 @@ export class PublishDialogComponent {
   data: PublishDialogData = inject(MAT_DIALOG_DATA);
   accountRelay = inject(AccountRelayService);
   private discoveryRelay = inject(DiscoveryRelayService);
+  private userRelaysService = inject(UserRelaysService);
   private nostrService = inject(NostrService);
   private utilities = inject(UtilitiesService);
   // relayService = inject(RelayService);
 
-  selectedOptions = signal<Set<'account' | 'author' | 'custom'>>(new Set(['account']));
+  selectedOptions = signal<Set<'account' | 'author' | 'mentioned' | 'custom'>>(new Set(['account']));
   customRelayInput = signal<string>('');
   customRelays = signal<string[]>([]);
   publishResults = signal<RelayPublishResult[]>([]);
   isPublishing = signal<boolean>(false);
   authorRelays = signal<string[]>([]);
   loadingAuthorRelays = signal<boolean>(false);
+  mentionedRelays = signal<string[]>([]);
+  loadingMentionedRelays = signal<boolean>(false);
   showJsonView = signal<boolean>(false);
   showRelaysView = signal<boolean>(false);
   customMode = signal<boolean>(false);
@@ -84,6 +88,11 @@ export class PublishDialogComponent {
       id: 'author',
       label: "Author's Relays",
       description: "Publish to the original author's relays",
+    },
+    {
+      id: 'mentioned',
+      label: 'Mentioned Users\' Relays',
+      description: 'Publish to all mentioned users\' relays',
     },
     {
       id: 'custom',
@@ -116,6 +125,64 @@ export class PublishDialogComponent {
         }
       }
     });
+  }
+
+  /** Get all mentioned pubkeys from p-tags in the event */
+  getMentionedPubkeys(): string[] {
+    const event = this.customMode() ? this.parseCustomEvent() : this.data.event;
+    if (!event) {
+      return [];
+    }
+
+    const pTags = event.tags.filter(tag => tag[0] === 'p' && tag[1]);
+    const pubkeys = pTags.map(tag => tag[1]);
+
+    // Remove duplicates
+    return [...new Set(pubkeys)];
+  }
+
+  /** Check if the event has any mentioned users (p-tags) */
+  hasMentionedUsers(): boolean {
+    return this.getMentionedPubkeys().length > 0;
+  }
+
+  /** Load relays for all mentioned users */
+  async loadMentionedUsersRelays(): Promise<void> {
+    const mentionedPubkeys = this.getMentionedPubkeys();
+    if (mentionedPubkeys.length === 0) {
+      this.mentionedRelays.set([]);
+      return;
+    }
+
+    this.loadingMentionedRelays.set(true);
+    try {
+      const allRelays = await this.getAllRelaysForPubkeys(mentionedPubkeys);
+      this.mentionedRelays.set(allRelays);
+    } catch (error) {
+      console.error('Error loading mentioned users relays:', error);
+      this.mentionedRelays.set([]);
+    } finally {
+      this.loadingMentionedRelays.set(false);
+    }
+  }
+
+  /** Get all relays for an array of pubkeys (processes in batches) */
+  private async getAllRelaysForPubkeys(pubkeys: string[]): Promise<string[]> {
+    const batchSize = 20;
+    const allRelays: string[] = [];
+
+    for (let i = 0; i < pubkeys.length; i += batchSize) {
+      const batch = pubkeys.slice(i, i + batchSize);
+      const batchPromises = batch.map(pubkey =>
+        this.userRelaysService.getUserRelaysForPublishing(pubkey)
+      );
+
+      const batchResults = await Promise.all(batchPromises);
+      batchResults.forEach(relays => allRelays.push(...relays));
+    }
+
+    // Remove duplicates and normalize
+    return [...new Set(allRelays)];
   }
 
   parseRelayUrl(relayUrl: string): string | null {
@@ -181,6 +248,10 @@ export class PublishDialogComponent {
       allRelays.push(...this.authorRelays());
     }
 
+    if (selectedOptions.has('mentioned')) {
+      allRelays.push(...this.mentionedRelays());
+    }
+
     if (selectedOptions.has('custom')) {
       allRelays.push(...this.customRelays());
     }
@@ -189,11 +260,16 @@ export class PublishDialogComponent {
     return [...new Set(allRelays)];
   }
 
-  onOptionChange(option: 'account' | 'author' | 'custom', checked: boolean): void {
+  onOptionChange(option: 'account' | 'author' | 'mentioned' | 'custom', checked: boolean): void {
     this.selectedOptions.update(options => {
       const newOptions = new Set(options);
       if (checked) {
         newOptions.add(option);
+
+        // If "mentioned" option is checked, load mentioned users' relays
+        if (option === 'mentioned') {
+          this.loadMentionedUsersRelays();
+        }
       } else {
         newOptions.delete(option);
       }
@@ -201,7 +277,7 @@ export class PublishDialogComponent {
     });
   }
 
-  isOptionSelected(option: 'account' | 'author' | 'custom'): boolean {
+  isOptionSelected(option: 'account' | 'author' | 'mentioned' | 'custom'): boolean {
     return this.selectedOptions().has(option);
   }
 
