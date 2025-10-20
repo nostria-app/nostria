@@ -14,7 +14,7 @@ export interface PublishOptions {
   /** Relay URLs to publish to. If not provided, defaults to account relays */
   relayUrls?: string[];
 
-  /** Whether to use optimized relay selection (default: true) */
+  /** Whether to use optimized relay selection (default: false for publishing) */
   useOptimizedRelays?: boolean;
 
   /** For kind 3 (follow list), whether to also publish to newly followed users' relays (default: true) */
@@ -22,6 +22,9 @@ export interface PublishOptions {
 
   /** For kind 3 events: specific pubkeys that were newly followed (for targeted notification) */
   newlyFollowedPubkeys?: string[];
+
+  /** For replies, reactions, reposts: whether to publish to mentioned users' relays (default: true) */
+  notifyMentioned?: boolean;
 
   /** Timeout for publish operation in milliseconds (default: 10000) */
   timeout?: number;
@@ -180,6 +183,9 @@ export class PublishService {
    * 
    * Special handling:
    * - Kind 3 (follow list): Publishes to account relays + followed users' relays
+   * - Kind 1 (notes with p-tags): Publishes to account relays + mentioned users' relays
+   * - Kind 6/16 (reposts): Publishes to account relays + reposted author's relays
+   * - Kind 7 (reactions): Publishes to account relays + reacted event author's relays
    * - Other kinds: Uses account relays or provided relay URLs
    */
   private async getRelayUrlsForPublish(
@@ -192,13 +198,13 @@ export class PublishService {
     }
 
     const accountRelayUrls = this.accountRelay.getRelayUrls();
+    const allRelayUrls = new Set<string>(accountRelayUrls);
 
     // Special handling for kind 3 (follow list) events
     if (event.kind === kinds.Contacts && options.notifyFollowed !== false) {
       const followedRelayUrls = await this.getFollowedUsersRelays(event, options.newlyFollowedPubkeys);
 
-      // Combine account relays with followed users' relays
-      const allRelayUrls = new Set([...accountRelayUrls, ...followedRelayUrls]);
+      followedRelayUrls.forEach(url => allRelayUrls.add(url));
 
       this.logger.debug('[PublishService] Kind 3 event - publishing to account + newly followed relays', {
         accountRelays: accountRelayUrls.length,
@@ -209,7 +215,40 @@ export class PublishService {
 
       // For kind 3, we DON'T optimize - we want to reach all relays of newly followed users
       return Array.from(allRelayUrls);
-    }    // For other events, use account relays with optional optimization
+    }
+
+    // Special handling for replies, reactions, and reposts (kinds 1, 6, 7, 16)
+    // These should be published to the relays of all mentioned users (p-tags)
+    if (
+      (event.kind === kinds.ShortTextNote ||
+        event.kind === kinds.Reaction ||
+        event.kind === kinds.Repost ||
+        event.kind === kinds.GenericRepost) &&
+      options.notifyMentioned !== false
+    ) {
+      const mentionedPubkeys = event.tags
+        .filter(tag => tag[0] === 'p' && tag[1])
+        .map(tag => tag[1]);
+
+      if (mentionedPubkeys.length > 0) {
+        const mentionedRelayUrls = await this.getMentionedUsersRelays(mentionedPubkeys);
+
+        mentionedRelayUrls.forEach(url => allRelayUrls.add(url));
+
+        this.logger.debug('[PublishService] Event with mentions - publishing to account + mentioned users relays', {
+          kind: event.kind,
+          accountRelays: accountRelayUrls.length,
+          mentionedUsers: mentionedPubkeys.length,
+          mentionedRelays: mentionedRelayUrls.length,
+          totalUnique: allRelayUrls.size,
+        });
+
+        // DON'T optimize - we want ALL relays of mentioned users to receive the event
+        return Array.from(allRelayUrls);
+      }
+    }
+
+    // For other events, use account relays with optional optimization
     return this.applyRelayOptimization(accountRelayUrls, options.useOptimizedRelays);
   }
 
@@ -239,21 +278,51 @@ export class PublishService {
       pubkeys: followedPubkeys.map(pk => pk.slice(0, 16)),
     });
 
+    return await this.getAllRelaysForPubkeys(followedPubkeys);
+  }
+
+  /**
+   * Get relay URLs for mentioned users (in replies, reactions, reposts).
+   * This ensures mentioned users receive notifications on ALL their relays.
+   * 
+   * @param mentionedPubkeys Array of pubkeys mentioned in the event
+   */
+  private async getMentionedUsersRelays(mentionedPubkeys: string[]): Promise<string[]> {
+    if (mentionedPubkeys.length === 0) {
+      return [];
+    }
+
+    this.logger.debug('[PublishService] Getting relays for mentioned users', {
+      count: mentionedPubkeys.length,
+      pubkeys: mentionedPubkeys.map(pk => pk.slice(0, 16)),
+    });
+
+    return await this.getAllRelaysForPubkeys(mentionedPubkeys);
+  }
+
+  /**
+   * Get ALL relay URLs for a list of pubkeys.
+   * This is used for publishing to ensure maximum distribution.
+   * Does NOT use optimization - returns ALL known relays.
+   * 
+   * @param pubkeys Array of pubkeys to get relays for
+   */
+  private async getAllRelaysForPubkeys(pubkeys: string[]): Promise<string[]> {
     const allRelayUrls = new Set<string>();
 
-    // Get relay URLs for each newly followed user
-    // We'll do this in batches to avoid overwhelming the system
+    // Process in batches to avoid overwhelming the system
     const batchSize = 20;
-    for (let i = 0; i < followedPubkeys.length; i += batchSize) {
-      const batch = followedPubkeys.slice(i, i + batchSize);
+    for (let i = 0; i < pubkeys.length; i += batchSize) {
+      const batch = pubkeys.slice(i, i + batchSize);
 
       await Promise.all(
         batch.map(async pubkey => {
           try {
-            const relayUrls = this.userRelaysService.getRelaysForPubkey(pubkey);
+            // Use getUserRelaysForPublishing to get ALL relays for this user
+            const relayUrls = await this.userRelaysService.getUserRelaysForPublishing(pubkey);
             relayUrls.forEach(url => allRelayUrls.add(url));
           } catch (error) {
-            this.logger.warn('[PublishService] Failed to get relays for newly followed user', {
+            this.logger.warn('[PublishService] Failed to get relays for user', {
               pubkey: pubkey.slice(0, 16),
               error,
             });
