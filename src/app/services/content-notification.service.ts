@@ -44,6 +44,12 @@ export class ContentNotificationService {
   // Track the last check timestamp to avoid duplicate notifications
   private lastCheckTimestamp = signal<number>(0);
 
+  resetLastCheckTimestamp(): void {
+    this.lastCheckTimestamp.set(0);
+    this.localStorage.removeItem(LAST_NOTIFICATION_CHECK_KEY);
+    this.logger.info('ContentNotificationService last check timestamp reset');
+  }
+
   // Track if we're currently checking for new content
   private isChecking = signal<boolean>(false);
 
@@ -68,6 +74,7 @@ export class ContentNotificationService {
    * Check for new content notifications since last check
    */
   async checkForNewNotifications(): Promise<void> {
+    debugger;
     if (this.isChecking()) {
       this.logger.debug('Already checking for notifications, skipping');
       return;
@@ -354,11 +361,13 @@ export class ContentNotificationService {
           title: 'Zapped you',
           message: zapAmount > 0 ? `${zapAmount} sats` : undefined,
           authorPubkey: zapperPubkey, // Use the actual zapper's pubkey
-          eventId: event.id, // The zap receipt ID
+          eventId: zapRequestEventId, // Use the zapped event ID (undefined for profile zaps)
           timestamp: event.created_at * 1000,
           metadata: {
             zapAmount,
             zappedEventId: zapRequestEventId, // Store which event was zapped
+            zapReceiptId: event.id, // Store the zap receipt ID for reference
+            recipientPubkey: pubkey, // Store recipient for profile zap navigation
           },
         });
       }
@@ -382,13 +391,18 @@ export class ContentNotificationService {
       reactionContent?: string;
       zapAmount?: number;
       zappedEventId?: string; // The event that was zapped (if any)
+      zapReceiptId?: string; // The zap receipt event ID (kind 9735)
+      recipientPubkey?: string; // For profile zaps, the recipient's pubkey
     };
   }): Promise<void> {
     // Use eventId in the notification ID to ensure uniqueness (especially important for zaps)
-    // Fall back to timestamp-based ID if no eventId is available
+    // For profile zaps without eventId, use zapReceiptId instead
+    // Fall back to timestamp-based ID if neither is available
     const notificationId = data.eventId
       ? `content-${data.type}-${data.eventId}`
-      : `content-${data.type}-${data.authorPubkey}-${data.timestamp}`;
+      : data.metadata?.zapReceiptId
+        ? `content-${data.type}-${data.metadata.zapReceiptId}`
+        : `content-${data.type}-${data.authorPubkey}-${data.timestamp}`;
 
     const notification: ContentNotification = {
       id: notificationId,

@@ -16,6 +16,9 @@ import { LocalSettingsService } from '../../../services/local-settings.service';
 import { StorageStatsComponent } from '../../../components/storage-stats/storage-stats.component';
 import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
 import { AccountStateService } from '../../../services/account-state.service';
+import { StorageService } from '../../../services/storage.service';
+import { NotificationService } from '../../../services/notification.service';
+import { ContentNotificationService } from '../../../services/content-notification.service';
 
 interface Language {
   code: string;
@@ -47,6 +50,9 @@ export class GeneralSettingsComponent {
   dialog = inject(MatDialog);
   localSettings = inject(LocalSettingsService);
   accountState = inject(AccountStateService);
+  storage = inject(StorageService);
+  notificationService = inject(NotificationService);
+  contentNotificationService = inject(ContentNotificationService);
 
   currentFeatureLevel = signal<FeatureLevel>(this.app.featureLevel());
 
@@ -91,6 +97,40 @@ export class GeneralSettingsComponent {
 
   toggleShowClientTag(): void {
     this.localSettings.setShowClientTag(!this.localSettings.showClientTag());
+  }
+
+  resetNotificationsCache(): void {
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      width: '400px',
+      data: {
+        title: 'Reset Notifications Cache',
+        message: 'Are you sure you want to delete all cached notifications? They will be refetched from relays on next check.',
+        confirmButtonText: 'Reset Cache',
+      },
+    });
+
+    dialogRef.afterClosed().subscribe(async confirmed => {
+      if (confirmed) {
+        // Clear notifications from IndexedDB
+        await this.storage.clearAllNotifications();
+
+        // Clear in-memory notification cache
+        this.notificationService.clearNotifications();
+
+        // Reset notification filters and last check timestamp
+        this.contentNotificationService.resetLastCheckTimestamp();
+        localStorage.removeItem('nostria-notification-filters');
+        this.logger.info('Notifications cache cleared');
+
+        // Start a fresh notification check to repopulate from relays
+        try {
+          await this.contentNotificationService.checkForNewNotifications();
+          this.logger.info('Fresh notifications fetched from relays');
+        } catch (error) {
+          this.logger.error('Failed to fetch fresh notifications', error);
+        }
+      }
+    });
   }
 
   wipeData(): void {

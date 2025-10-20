@@ -1087,6 +1087,8 @@ export class App implements OnInit {
     // Check if it's a content notification with an event ID
     if (this.isContentNotification(notification)) {
       const contentNotif = notification as ContentNotification;
+
+      // For zaps with a specific event, navigate to that event
       if (contentNotif.eventId && contentNotif.authorPubkey) {
         // Navigate to the event using nevent encoding
         const neventId = nip19.neventEncode({
@@ -1094,6 +1096,13 @@ export class App implements OnInit {
           author: contentNotif.authorPubkey,
         });
         this.router.navigate(['/e', neventId]);
+        return;
+      }
+
+      // For profile zaps (no specific event), navigate to recipient's profile
+      if (contentNotif.type === NotificationType.ZAP && contentNotif.metadata?.recipientPubkey) {
+        const npubId = nip19.npubEncode(contentNotif.metadata.recipientPubkey);
+        this.router.navigate(['/p', npubId]);
         return;
       }
     }
