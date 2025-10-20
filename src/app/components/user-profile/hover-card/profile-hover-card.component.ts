@@ -22,6 +22,7 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { ReportingService } from '../../../services/reporting.service';
 import { LayoutService } from '../../../services/layout.service';
 import { StorageService } from '../../../services/storage.service';
+import { UserDataService } from '../../../services/user-data.service';
 import { nip19 } from 'nostr-tools';
 
 interface ProfileData {
@@ -59,6 +60,7 @@ export class ProfileHoverCardComponent {
   private reportingService = inject(ReportingService);
   private layout = inject(LayoutService);
   private storage = inject(StorageService);
+  private userDataService = inject(UserDataService);
 
   pubkey = input.required<string>();
   profile = signal<ProfileData | null>(null);
@@ -135,7 +137,14 @@ export class ProfileHoverCardComponent {
       }
 
       // Get the target profile's following list (kind 3 event)
-      const targetFollowingEvent = await this.storage.getEventByPubkeyAndKind(pubkey, 3);
+      // Try storage first, then fetch from relays if not found
+      let targetFollowingEvent = await this.storage.getEventByPubkeyAndKind(pubkey, 3);
+
+      if (!targetFollowingEvent) {
+        // Not in cache, fetch from relays
+        const record = await this.userDataService.getEventByPubkeyAndKind(pubkey, 3);
+        targetFollowingEvent = record?.event || null;
+      }
 
       if (!targetFollowingEvent?.tags) {
         return;
