@@ -528,9 +528,10 @@ export class NostrService implements NostriaService {
       const signedEvent = await this.signEvent(event);
 
       // IMPORTANT: ALL events must go to ALL configured relays to prevent data fragmentation
+      // For replies, reactions, and reposts, we also publish to mentioned users' relays
       const options = signedEvent.kind === kinds.Contacts
         ? { notifyFollowed: true, useOptimizedRelays: false } // For follows, notify all
-        : { useOptimizedRelays: false }; // For all other events, use all relays too
+        : { notifyMentioned: true, useOptimizedRelays: false }; // For all other events, notify mentioned users
 
       const result = await this.publishService.publish(signedEvent, options);
 
