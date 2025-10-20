@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit, computed } from '@angular/core';
+import { Component, inject, signal, OnInit, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -22,6 +22,12 @@ import { Router } from '@angular/router';
 import { ContentNotification } from '../../services/storage.service';
 import { nip19 } from 'nostr-tools';
 import { AgoPipe } from '../../pipes/ago.pipe';
+import { LocalStorageService } from '../../services/local-storage.service';
+
+/**
+ * Local storage key for notification filter preferences
+ */
+const NOTIFICATION_FILTERS_KEY = 'nostria-notification-filters';
 
 @Component({
   selector: 'app-notifications',
@@ -46,6 +52,7 @@ export class NotificationsComponent implements OnInit {
   private accountRelay = inject(AccountRelayService);
   private nostrService = inject(NostrService);
   private router = inject(Router);
+  private localStorage = inject(LocalStorageService);
 
   notifications = this.notificationService.notifications;
   notificationType = NotificationType;
@@ -66,6 +73,14 @@ export class NotificationsComponent implements OnInit {
     [NotificationType.SUCCESS]: true,
     [NotificationType.WARNING]: true,
   });
+
+  constructor() {
+    // Save notification filters to localStorage whenever they change
+    effect(() => {
+      const filters = this.notificationFilters();
+      this.localStorage.setItem(NOTIFICATION_FILTERS_KEY, JSON.stringify(filters));
+    });
+  }
 
   // Helper to check if notification is a system notification (technical)
   private isSystemNotification(type: NotificationType): boolean {
@@ -115,8 +130,26 @@ export class NotificationsComponent implements OnInit {
   });
 
   async ngOnInit(): Promise<void> {
+    // Load saved notification filters from localStorage
+    this.loadNotificationFilters();
+
     await this.recordNotificationsView();
     await this.getLastViewedTimestamp();
+  }
+
+  /**
+   * Load notification filter preferences from localStorage
+   */
+  private loadNotificationFilters(): void {
+    try {
+      const savedFilters = this.localStorage.getItem(NOTIFICATION_FILTERS_KEY);
+      if (savedFilters) {
+        const filters = JSON.parse(savedFilters) as Record<NotificationType, boolean>;
+        this.notificationFilters.set(filters);
+      }
+    } catch (error) {
+      console.error('Failed to load notification filters from localStorage', error);
+    }
   }
 
   async recordNotificationsView(): Promise<void> {
