@@ -209,17 +209,6 @@
     flex: 1;
   }
 
-  button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-
-    mat-icon {
-      margin: 0;
-    }
-  }
-
   a {
     text-decoration: none;
     display: flex;
