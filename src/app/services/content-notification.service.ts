@@ -8,6 +8,11 @@ import { kinds } from 'nostr-tools';
 import { AccountStateService } from './account-state.service';
 
 /**
+ * Local storage key for tracking the last notification check timestamp
+ */
+const LAST_NOTIFICATION_CHECK_KEY = 'nostria-notification-lastcheck';
+
+/**
  * Service for managing content notifications (social interactions)
  * These are notifications about follows, mentions, reposts, replies, reactions, and zaps
  * that happen on the Nostr network.
@@ -396,7 +401,7 @@ export class ContentNotificationService {
    */
   private async getLastCheckTimestamp(): Promise<number> {
     try {
-      const data = this.localStorage.getItem('lastNotificationCheck');
+      const data = this.localStorage.getItem(LAST_NOTIFICATION_CHECK_KEY);
       if (data) {
         return parseInt(data, 10);
       }
@@ -418,7 +423,7 @@ export class ContentNotificationService {
    */
   private async updateLastCheckTimestamp(timestamp: number): Promise<void> {
     try {
-      this.localStorage.setItem('lastNotificationCheck', timestamp.toString());
+      this.localStorage.setItem(LAST_NOTIFICATION_CHECK_KEY, timestamp.toString());
       this.logger.debug(`Updated last check timestamp to ${timestamp}`);
     } catch (error) {
       this.logger.error('Failed to update last check timestamp', error);
