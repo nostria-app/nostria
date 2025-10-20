@@ -164,7 +164,9 @@
 
     <!-- Current event (the reply) -->
     <app-event-header [event]="item.event"></app-event-header>
-    @if (shouldHideContent()) {
+    @if (shouldHideContentDueToWarning()) {
+    <app-content-warning [reason]="contentWarningReason()" (approve)="approveContentWarning()"></app-content-warning>
+    } @else if (shouldHideContent()) {
     <app-reported-content [event]="item.event"></app-reported-content>
     } @else {
     @if (item.event.kind === 20) {
@@ -205,7 +207,9 @@
   <!-- Normal event structure -->
   <app-event-header [event]="item.event"></app-event-header>
   <mat-card-content>
-    @if (shouldHideContent()) {
+    @if (shouldHideContentDueToWarning()) {
+    <app-content-warning [reason]="contentWarningReason()" (approve)="approveContentWarning()"></app-content-warning>
+    } @else if (shouldHideContent()) {
     <app-reported-content [event]="item.event"></app-reported-content>
     } @else {
     @if (item.event.kind === 20) {

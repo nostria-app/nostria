@@ -42,6 +42,7 @@ import { ZapButtonComponent } from '../zap-button/zap-button.component';
 import { ZapService } from '../../services/zap.service';
 import { ReactionsDialogComponent } from '../reactions-dialog/reactions-dialog.component';
 import { PowService } from '../../services/pow.service';
+import { ContentWarningComponent } from '../content-warning/content-warning.component';
 
 type EventCardAppearance = 'card' | 'plain';
 
@@ -72,6 +73,7 @@ type EventCardAppearance = 'card' | 'plain';
     BadgeComponent,
     ReportedContentComponent,
     ZapButtonComponent,
+    ContentWarningComponent,
   ],
   templateUrl: './event.component.html',
   styleUrl: './event.component.scss',
@@ -313,6 +315,44 @@ export class EventComponent {
     if (activeReportTypes.length === 0) return false;
 
     return this.reportingService.shouldHideContentForReportTypes(activeReportTypes);
+  });
+
+  // NIP-36 Content Warning support
+  // Track if user has approved showing content with warning
+  contentWarningApproved = signal<Set<string>>(new Set());
+
+  // Check if event has content-warning tag (NIP-36)
+  hasContentWarning = computed<boolean>(() => {
+    const event = this.event() || this.record()?.event;
+    if (!event) return false;
+
+    return event.tags.some(tag => tag[0] === 'content-warning');
+  });
+
+  // Get content warning reason if provided
+  contentWarningReason = computed<string | null>(() => {
+    const event = this.event() || this.record()?.event;
+    if (!event) return null;
+
+    const warningTag = event.tags.find(tag => tag[0] === 'content-warning');
+    return warningTag && warningTag[1] ? warningTag[1] : null;
+  });
+
+  // Check if content should be hidden due to content warning
+  shouldHideContentDueToWarning = computed<boolean>(() => {
+    const event = this.event() || this.record()?.event;
+    if (!event) return false;
+
+    // If no content warning, don't hide
+    if (!this.hasContentWarning()) return false;
+
+    // If user has approved this specific event, don't hide
+    return !this.contentWarningApproved().has(event.id);
+  });
+
+  // Combined check for whether to hide content (reports OR content warning)
+  shouldHideContentOverall = computed<boolean>(() => {
+    return this.shouldHideContent() || this.shouldHideContentDueToWarning();
   });
 
   constructor() {
@@ -799,6 +839,21 @@ export class EventComponent {
     if (targetItem) {
       this.bookmark.toggleBookmark(targetItem.event.id);
     }
+  }
+
+  /**
+   * Approve showing content with content warning (NIP-36)
+   */
+  approveContentWarning(event?: MouseEvent) {
+    event?.stopPropagation();
+    const currentEvent = this.event() || this.record()?.event;
+    if (!currentEvent) return;
+
+    this.contentWarningApproved.update(approved => {
+      const newSet = new Set(approved);
+      newSet.add(currentEvent.id);
+      return newSet;
+    });
   }
 
   onCardClick(event: MouseEvent) {
