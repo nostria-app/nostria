@@ -288,12 +288,34 @@ export class ContentNotificationService {
         kinds: [9735], // Zap receipt
         '#p': [pubkey],
         since,
-        limit: 50,
+        limit: 100, // Increased limit to catch more zaps
       });
 
       this.logger.debug(`Found ${events.length} zap events`);
 
       for (const event of events) {
+        // Extract the zap sender's pubkey from the description tag (zap request)
+        const descriptionTag = event.tags.find(tag => tag[0] === 'description');
+        let zapperPubkey = event.pubkey; // Fallback to LNURL service pubkey
+        let zapRequestEventId: string | undefined;
+
+        if (descriptionTag && descriptionTag[1]) {
+          try {
+            const zapRequest = JSON.parse(descriptionTag[1]);
+            if (zapRequest && zapRequest.pubkey) {
+              zapperPubkey = zapRequest.pubkey; // This is the actual zapper
+
+              // Extract the event that was zapped (if any)
+              const eTag = zapRequest.tags?.find((t: string[]) => t[0] === 'e');
+              if (eTag && eTag[1]) {
+                zapRequestEventId = eTag[1];
+              }
+            }
+          } catch (err) {
+            this.logger.warn('Failed to parse zap request description', err);
+          }
+        }
+
         // Extract zap amount from bolt11 tag if available
         const bolt11Tag = event.tags.find(tag => tag[0] === 'bolt11');
         let zapAmount = 0;
@@ -312,11 +334,12 @@ export class ContentNotificationService {
           type: NotificationType.ZAP,
           title: 'Zapped you',
           message: zapAmount > 0 ? `${zapAmount} sats` : undefined,
-          authorPubkey: event.pubkey,
-          eventId: event.id,
+          authorPubkey: zapperPubkey, // Use the actual zapper's pubkey
+          eventId: event.id, // The zap receipt ID
           timestamp: event.created_at * 1000,
           metadata: {
             zapAmount,
+            zappedEventId: zapRequestEventId, // Store which event was zapped
           },
         });
       }
@@ -339,10 +362,17 @@ export class ContentNotificationService {
       content?: string;
       reactionContent?: string;
       zapAmount?: number;
+      zappedEventId?: string; // The event that was zapped (if any)
     };
   }): Promise<void> {
+    // Use eventId in the notification ID to ensure uniqueness (especially important for zaps)
+    // Fall back to timestamp-based ID if no eventId is available
+    const notificationId = data.eventId
+      ? `content-${data.type}-${data.eventId}`
+      : `content-${data.type}-${data.authorPubkey}-${data.timestamp}`;
+
     const notification: ContentNotification = {
-      id: `content-${data.type}-${data.authorPubkey}-${data.timestamp}`,
+      id: notificationId,
       type: data.type,
       title: data.title,
       message: data.message,
