@@ -1,0 +1,23 @@
+<div class="content-warning-overlay">
+  <div class="warning-container">
+    <mat-icon class="warning-icon">warning</mat-icon>
+    <h3 class="warning-title">Sensitive Content</h3>
+
+    @if (reason()) {
+    <p class="warning-reason">{{ reason() }}</p>
+    } @else {
+    <p class="warning-message">
+      This content has been marked as sensitive by the author.
+    </p>
+    }
+
+    <p class="warning-disclaimer">
+      Click below to view this content at your own discretion.
+    </p>
+
+    <button mat-raised-button color="primary" (click)="approveContent()">
+      <mat-icon>visibility</mat-icon>
+      Show Content
+    </button>
+  </div>
+</div>
