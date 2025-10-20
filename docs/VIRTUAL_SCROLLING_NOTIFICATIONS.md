@@ -128,7 +128,7 @@ Adjust if layout changes significantly.
 
 The exact number of rendered items depends on:
 - Viewport height
-- Item size (150px)
+- Item size (100px)
 - Buffer size (automatic, managed by CDK)
 
 ## Applied to Both Tabs

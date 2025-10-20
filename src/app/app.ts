@@ -1088,6 +1088,12 @@ export class App implements OnInit {
     if (this.isContentNotification(notification)) {
       const contentNotif = notification as ContentNotification;
 
+      // For new follower notifications, navigate to the follower's profile
+      if (contentNotif.type === NotificationType.NEW_FOLLOWER && contentNotif.authorPubkey) {
+        this.router.navigate(['/p', contentNotif.authorPubkey]);
+        return;
+      }
+
       // For zaps with a specific event, navigate to that event
       if (contentNotif.eventId && contentNotif.authorPubkey) {
         // Navigate to the event using nevent encoding
