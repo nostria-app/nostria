@@ -14,6 +14,7 @@ import { USE_NIP98 } from './interceptors/nip98Auth';
 import { UtilitiesService } from './utilities.service';
 import { Wallets } from './wallets';
 import { Cache } from './cache';
+import { AccountRelayService } from './relays/account-relay';
 
 interface ProfileProcessingState {
   isProcessing: boolean;
@@ -43,6 +44,7 @@ export class AccountStateService implements OnDestroy {
   private readonly utilities = inject(UtilitiesService);
   private readonly wallets = inject(Wallets);
   private readonly cache = inject(Cache);
+  private readonly accountRelay = inject(AccountRelayService);
 
   private destroy$ = new Subject<void>();
 
@@ -175,9 +177,19 @@ export class AccountStateService implements OnDestroy {
       return;
     }
 
-    // Get the existing following event so we don't loose existing structure.
-    // Ensure we keep original 'content' and relays/pet names.
-    const followingEvent = await this.storage.getEventByPubkeyAndKind([account.pubkey], 3);
+    // CRITICAL: Get the existing following event from relay FIRST
+    // This prevents overwriting changes made in other Nostria instances
+    let followingEvent = await this.accountRelay.getEventByPubkeyAndKind(account.pubkey, kinds.Contacts);
+
+    if (followingEvent) {
+      // Save fresh following list to storage
+      await this.storage.saveEvent(followingEvent);
+      console.log('Fetched fresh following list from relay before unfollowing');
+    } else {
+      // Fallback to storage only if relay fetch fails
+      console.warn('Could not fetch following list from relay, falling back to storage');
+      followingEvent = await this.storage.getEventByPubkeyAndKind([account.pubkey], 3);
+    }
 
     if (!followingEvent) {
       console.warn('No existing following event found. Cannot unfollow.', pubkey);
@@ -273,12 +285,22 @@ export class AccountStateService implements OnDestroy {
       return;
     }
 
-    // Get the existing following event so we don't lose existing structure.
-    // Ensure we keep original 'content' and relays/pet names.
-    let followingEvent: Event | UnsignedEvent | null = await this.storage.getEventByPubkeyAndKind(
-      [account.pubkey],
-      3
+    // CRITICAL: Get the existing following event from relay FIRST
+    // This prevents overwriting changes made in other Nostria instances
+    let followingEvent: Event | UnsignedEvent | null = await this.accountRelay.getEventByPubkeyAndKind(
+      account.pubkey,
+      kinds.Contacts
     );
+
+    if (followingEvent) {
+      // Save fresh following list to storage (relay always returns signed Event)
+      await this.storage.saveEvent(followingEvent as Event);
+      console.log('Fetched fresh following list from relay before following');
+    } else {
+      // Fallback to storage only if relay fetch fails
+      console.warn('Could not fetch following list from relay, falling back to storage');
+      followingEvent = await this.storage.getEventByPubkeyAndKind([account.pubkey], 3);
+    }
 
     if (!followingEvent) {
       console.warn(
