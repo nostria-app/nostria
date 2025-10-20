@@ -247,7 +247,7 @@ export class NostrService implements NostriaService {
         // Fallback to storage only if relay fetch completely fails
         this.logger.warn('Could not fetch metadata from relay, falling back to storage');
         const storedMetadataEvent = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Metadata);
-        
+
         if (storedMetadataEvent) {
           metadata = this.data.toRecord(storedMetadataEvent);
           this.accountState.addToCache(metadata.event.pubkey, metadata);
@@ -673,22 +673,17 @@ export class NostrService implements NostriaService {
 
   /** Get the BUD-03: User Server List */
   async getMediaServers(pubkey: string): Promise<Event | null> {
-    // Get from storage
-    let event = await this.storage.getEventByPubkeyAndKind(pubkey, 10063); // BUD-03: User Server List
+    // CRITICAL: Fetch from relay first to get latest media server list
+    let event = await this.accountRelay.getEventByPubkeyAndKind(pubkey, 10063); // BUD-03: User Server List
 
-    if (!event) {
-      event = await this.accountRelay.getEventByPubkeyAndKind(pubkey, 10063);
-
-      if (event) {
-        this.storage.saveEvent(event as Event);
-      }
+    if (event) {
+      // Save fresh data to storage
+      this.storage.saveEvent(event as Event);
+      this.logger.info('Loaded fresh media servers from relay');
     } else {
-      // Queue up refresh of this event in the background
-      this.accountRelay.getEventByPubkeyAndKind(pubkey, 10063).then(newEvent => {
-        if (newEvent) {
-          this.storage.saveEvent(newEvent as Event);
-        }
-      });
+      // Fallback to storage only if relay fetch fails
+      this.logger.warn('Could not fetch media servers from relay, falling back to storage');
+      event = await this.storage.getEventByPubkeyAndKind(pubkey, 10063);
     }
 
     return event;

@@ -191,7 +191,14 @@ export class RelaysComponent implements OnInit, OnDestroy {
   // Async method to detect if contact list (kind 3) contains relay URLs in content
   private async checkFollowingListForRelays(pubkey: string) {
     try {
-      const followingEvent = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
+      // CRITICAL: Fetch from relay first to check current state
+      let followingEvent = await this.accountRelay.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
+
+      if (!followingEvent) {
+        // Fallback to storage if relay fetch fails (e.g., offline)
+        followingEvent = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
+      }
+
       if (!followingEvent) {
         this.showFollowingRelayCleanup.set(false);
         return;
@@ -265,7 +272,18 @@ export class RelaysComponent implements OnInit, OnDestroy {
 
     (async () => {
       try {
-        const followingEvent = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
+        // CRITICAL: Fetch from relay first to ensure we're working with latest data
+        let followingEvent = await this.accountRelay.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
+
+        if (followingEvent) {
+          // Save fresh following list to storage
+          await this.storage.saveEvent(followingEvent);
+        } else {
+          // Fallback to storage only if relay fetch fails
+          console.warn('Could not fetch following list from relay, falling back to storage');
+          followingEvent = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
+        }
+
         if (!followingEvent) {
           this.showMessage('Following list not found');
           this.isCleaningFollowingList.set(false);
