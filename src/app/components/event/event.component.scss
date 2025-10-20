@@ -103,21 +103,26 @@
 
     &:hover:not(.liked) {
       color: #e91e63;
-      background-color: rgba(233, 30, 99, 0.05);
+      background-color: transparent;
     }
 
     &.liked,
     &.active {
       color: #e91e63 !important;
-      background-color: rgba(233, 30, 99, 0.1) !important;
+      background-color: transparent !important;
 
       mat-icon {
         color: #e91e63 !important;
       }
 
       &:hover {
-        background-color: rgba(233, 30, 99, 0.15) !important;
+        background-color: transparent !important;
       }
+    }
+
+    // Remove focus background effect
+    &:focus {
+      background-color: transparent !important;
     }
   }
 
