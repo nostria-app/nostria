@@ -86,8 +86,12 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
       return [];
     }
 
-    // Return the cached tokens
-    return this._cachedTokens();
+    // Return the cached tokens, but filter out nevent and note mentions
+    // since they're rendered separately in eventMentions()
+    return this._cachedTokens().filter(
+      token => !(token.type === 'nostr-mention' &&
+        (token.nostrData?.type === 'nevent' || token.nostrData?.type === 'note'))
+    );
   });
 
   // Social previews for URLs
@@ -179,9 +183,15 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
 
         const eventMentions = await Promise.all(
           newTokens
-            .filter(t => t.type === 'nostr-mention' && t.nostrData?.type === 'nevent')
+            .filter(t => t.type === 'nostr-mention' && (t.nostrData?.type === 'nevent' || t.nostrData?.type === 'note'))
             .map(async mention => {
-              const eventData = await this.data.getEventById(mention.nostrData?.data.id);
+              // For 'nevent', data is an object with .id
+              // For 'note', data is the event ID string directly
+              const eventId = mention.nostrData?.type === 'nevent'
+                ? mention.nostrData.data.id
+                : mention.nostrData?.data;
+
+              const eventData = await this.data.getEventById(eventId);
               if (!eventData) return null;
               const contentTokens = await this.parsing.parseContent(eventData?.data);
               return {

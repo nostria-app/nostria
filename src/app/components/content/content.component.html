@@ -3,7 +3,7 @@
   <app-note-content [contentTokens]="contentTokens()"></app-note-content>
 
   @for (mention of eventMentions(); track mention.event.event.id) {
-  <mat-card>
+  <mat-card appearance="outlined">
     <mat-card-header>
       <app-user-profile [pubkey]="mention.event.event.pubkey" view="compact">
         <a class="date-link" [matTooltip]="mention.event.event.created_at * 1000 | date: 'medium'"
