@@ -13,6 +13,20 @@ import { AccountStateService } from './account-state.service';
 const LAST_NOTIFICATION_CHECK_KEY = 'nostria-notification-lastcheck';
 
 /**
+ * Query limits for fetching notifications from relays
+ * These are set high to catch all recent activity for active accounts.
+ * For extremely active accounts with viral posts, consider implementing pagination.
+ */
+const NOTIFICATION_QUERY_LIMITS = {
+  FOLLOWERS: 200,   // New followers
+  MENTIONS: 500,    // Mentions in posts
+  REPOSTS: 300,     // Reposts/quotes
+  REPLIES: 500,     // Replies to your posts
+  REACTIONS: 500,   // Likes/reactions
+  ZAPS: 1000,       // Zap receipts (often the highest volume)
+};
+
+/**
  * Service for managing content notifications (social interactions)
  * These are notifications about follows, mentions, reposts, replies, reactions, and zaps
  * that happen on the Nostr network.
@@ -106,7 +120,7 @@ export class ContentNotificationService {
         kinds: [kinds.Contacts],
         '#p': [pubkey],
         since,
-        limit: 50,
+        limit: NOTIFICATION_QUERY_LIMITS.FOLLOWERS,
       });
 
       this.logger.debug(`Found ${events.length} potential follow events`);
@@ -144,7 +158,7 @@ export class ContentNotificationService {
         kinds: [kinds.ShortTextNote],
         '#p': [pubkey],
         since,
-        limit: 50,
+        limit: NOTIFICATION_QUERY_LIMITS.MENTIONS,
       });
 
       this.logger.debug(`Found ${events.length} potential mention events`);
@@ -186,7 +200,7 @@ export class ContentNotificationService {
         kinds: [kinds.Repost],
         '#p': [pubkey],
         since,
-        limit: 50,
+        limit: NOTIFICATION_QUERY_LIMITS.REPOSTS,
       });
 
       this.logger.debug(`Found ${events.length} repost events`);
@@ -216,7 +230,7 @@ export class ContentNotificationService {
         kinds: [kinds.ShortTextNote],
         '#p': [pubkey],
         since,
-        limit: 50,
+        limit: NOTIFICATION_QUERY_LIMITS.REPLIES,
       });
 
       this.logger.debug(`Found ${events.length} potential reply events`);
@@ -257,7 +271,7 @@ export class ContentNotificationService {
         kinds: [kinds.Reaction],
         '#p': [pubkey],
         since,
-        limit: 50,
+        limit: NOTIFICATION_QUERY_LIMITS.REACTIONS,
       });
 
       this.logger.debug(`Found ${events.length} reaction events`);
@@ -293,7 +307,7 @@ export class ContentNotificationService {
         kinds: [9735], // Zap receipt
         '#p': [pubkey],
         since,
-        limit: 100, // Increased limit to catch more zaps
+        limit: NOTIFICATION_QUERY_LIMITS.ZAPS,
       });
 
       this.logger.debug(`Found ${events.length} zap events`);
