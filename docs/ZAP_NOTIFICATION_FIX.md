@@ -43,25 +43,34 @@ if (descriptionTag && descriptionTag[1]) {
 authorPubkey: zapperPubkey, // Use the actual zapper's pubkey
 ```
 
-### 2. **Insufficient Query Limit**
+### 2. **Insufficient Query Limits**
 
 **The Bug:**
 ```typescript
-// OLD CODE
-limit: 50,  // Only fetches 50 most recent zaps
+// OLD CODE - All notification types
+limit: 50,  // Only fetches 50 most recent events (zaps had 100)
 ```
 
 **The Impact:**
-- If a user received more than 50 zaps since the last check, older zaps would be missed
-- Popular posts with many zaps would only show the first 50 in notifications
+- Active accounts or viral posts could easily exceed these limits
+- Missing notifications for events beyond the limit
+- Zaps were especially problematic as they're high-volume
+- Users would see notifications when viewing individual posts but not in the activity feed
 
 **The Fix:**
 ```typescript
-// NEW CODE
-limit: 100,  // Increased limit to catch more zaps
+// NEW CODE - Centralized limit configuration
+const NOTIFICATION_QUERY_LIMITS = {
+  FOLLOWERS: 200,   // New followers (was 50)
+  MENTIONS: 500,    // Mentions in posts (was 50)
+  REPOSTS: 300,     // Reposts/quotes (was 50)
+  REPLIES: 500,     // Replies to your posts (was 50)
+  REACTIONS: 500,   // Likes/reactions (was 50)
+  ZAPS: 1000,       // Zap receipts - highest volume (was 100)
+};
 ```
 
-While still not unlimited (to avoid performance issues), this doubles the window and should catch most cases.
+These significantly higher limits ensure even viral content with hundreds of interactions will have notifications captured. For extremely active accounts, pagination could be implemented in the future.
 
 ### 3. **Non-Unique Notification IDs**
 
@@ -145,9 +154,20 @@ The notification service correctly queries:
   kinds: [9735],      // Zap receipts
   '#p': [pubkey],     // Where you're the recipient
   since: timestamp,   // Since last check
-  limit: 100          // Fetch up to 100 recent zaps
+  limit: 1000         // Fetch up to 1000 recent zaps (increased from 100)
 }
 ```
+
+**Query Limits:**
+All notification query limits have been significantly increased to catch more activity:
+- **Followers**: 200 (was 50)
+- **Mentions**: 500 (was 50)
+- **Reposts**: 300 (was 50)
+- **Replies**: 500 (was 50)
+- **Reactions**: 500 (was 50)
+- **Zaps**: 1000 (was 100)
+
+These higher limits ensure that even viral posts with lots of engagement will have their notifications captured.
 
 This finds:
 - ✅ Zaps sent directly to your profile
@@ -207,18 +227,25 @@ Changes:
 - Verify the `since` timestamp mechanism works
 - Ensure zaps aren't duplicated on subsequent checks
 
+### 6. **High Volume Test**
+- Create a post that receives >100 zaps
+- Wait for notification check to run
+- Verify all zaps appear (up to the 1000 limit)
+- Test with accounts that receive high volumes of all notification types
+
 ## Future Improvements
 
-1. **Pagination**: Implement cursor-based pagination to fetch ALL zaps, not just first 100
+1. **Pagination for Extremely Active Accounts**: For accounts that exceed even the 1000 zap limit
    ```typescript
-   // Could use 'until' parameter to fetch older zaps
+   // Could use 'until' parameter to fetch older zaps in batches
    let allZaps = [];
    let until = null;
    while (true) {
-     const batch = await getMany({ ..., until, limit: 100 });
+     const batch = await getMany({ ..., until, limit: 1000 });
      if (batch.length === 0) break;
      allZaps.push(...batch);
      until = batch[batch.length - 1].created_at;
+     if (allZaps.length >= 5000) break; // Safety limit
    }
    ```
 
@@ -267,25 +294,33 @@ Changes:
 ## Performance Considerations
 
 **Query Cost:**
-- 1 query per notification check
-- Fetches up to 100 events
-- Parses JSON in description tag for each event
+- 1 query per notification type per check (6 queries total)
+- Zaps: Fetches up to 1000 events per check
+- Other types: 200-500 events per check
+- Parses JSON in zap description tag for each zap event
 
 **Optimization Opportunities:**
 - Cache parsed zap requests if checking frequently
 - Use relay-side filtering if available
 - Consider batch processing for high-volume accounts
+- Implement pagination for accounts exceeding 1000 zaps between checks
 
 **Storage Impact:**
-- Each zap notification ~500 bytes
-- 100 zaps = ~50 KB
-- 1000 zaps = ~500 KB (reasonable for IndexedDB)
+- Each zap notification ~500-800 bytes
+- 1000 zaps = ~500-800 KB (reasonable for IndexedDB)
+- Total notifications across all types: up to ~2-3 MB per check (still very manageable)
 
 ## Known Limitations
 
-1. **100 zap limit**: Extremely popular posts with >100 zaps since last check will miss older zaps
-2. **No deduplication**: If zap receipt is duplicated across relays, might create duplicate notifications (though unique event IDs should prevent this)
-3. **LNURL service pubkey fallback**: If description parsing fails, falls back to LNURL service pubkey (suboptimal but prevents crashes)
+1. **Query limits**: Posts with extreme viral engagement (>1000 zaps, >500 reactions, etc.) between checks will miss older notifications
+   - **Mitigation**: Higher limits (1000 for zaps) catch vast majority of cases
+   - **Future**: Implement pagination for truly exceptional viral content
+
+2. **No deduplication across relays**: If zap receipt is duplicated across relays, might create duplicate notifications
+   - **Mitigation**: Unique event IDs should prevent this in most cases
+
+3. **LNURL service pubkey fallback**: If description parsing fails, falls back to LNURL service pubkey
+   - **Impact**: Suboptimal but prevents crashes and ensures notification is still created
 4. **Amount parsing**: Regex-based bolt11 parsing is fragile and might miss amounts in non-standard formats
 
 ## Migration Notes
