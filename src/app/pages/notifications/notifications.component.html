@@ -71,9 +71,9 @@
         <div class="notification-list">
           @for (notification of contentNotifications(); track notification.id) {
           <div class="notification-item" [class.unread]="!notification.read"
-            [class.clickable]="getEventId(notification)">
-            <div class="notification-icon-wrapper">
-              <mat-icon class="notification-bell">notifications</mat-icon>
+            [class.clickable]="getEventId(notification)" [attr.data-notification-type]="notification.type">
+            <div class="notification-icon-wrapper" [attr.data-icon-type]="notification.type">
+              <mat-icon class="notification-icon">{{ getNotificationTypeIcon(notification.type) }}</mat-icon>
             </div>
 
             <div class="notification-content" (click)="getEventId(notification) ? viewEvent(notification) : null"
