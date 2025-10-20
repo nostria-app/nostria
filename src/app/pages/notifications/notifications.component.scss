@@ -149,6 +149,16 @@
 }
 
 // Notification list
+.notification-viewport {
+  height: calc(100vh - 320px); // Account for header, tabs, and padding
+  min-height: 400px;
+  width: 100%;
+
+  ::ng-deep .cdk-virtual-scroll-content-wrapper {
+    width: 100%;
+  }
+}
+
 .notification-list {
   display: flex;
   flex-direction: column;
