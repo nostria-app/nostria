@@ -273,6 +273,12 @@ export class NotificationsComponent implements OnInit {
   viewEvent(notification: Notification): void {
     const contentNotif = notification as ContentNotification;
 
+    // For new follower notifications, navigate to the follower's profile
+    if (contentNotif.type === NotificationType.NEW_FOLLOWER && contentNotif.authorPubkey) {
+      this.router.navigate(['/p', contentNotif.authorPubkey]);
+      return;
+    }
+
     // For zaps with a specific event, navigate to that event
     if (contentNotif.eventId && contentNotif.authorPubkey) {
       const neventId = nip19.neventEncode({
@@ -309,7 +315,7 @@ export class NotificationsComponent implements OnInit {
 
   /**
    * Get the event ID from a content notification
-   * For profile zaps without an event, returns a placeholder to indicate it's clickable
+   * For profile zaps and new followers without an event, returns a placeholder to indicate it's clickable
    */
   getEventId(notification: Notification): string | undefined {
     if (this.isContentNotificationWithData(notification)) {
@@ -323,6 +329,11 @@ export class NotificationsComponent implements OnInit {
       // For profile zaps without an eventId, return a placeholder to indicate it's clickable
       if (contentNotif.type === NotificationType.ZAP && contentNotif.metadata?.recipientPubkey) {
         return 'profile-zap'; // Placeholder to indicate clickable
+      }
+
+      // For new follower notifications, always clickable (navigate to follower's profile)
+      if (contentNotif.type === NotificationType.NEW_FOLLOWER && contentNotif.authorPubkey) {
+        return 'new-follower'; // Placeholder to indicate clickable
       }
     }
     return undefined;
