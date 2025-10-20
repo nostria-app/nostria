@@ -228,7 +228,8 @@ export class NostrService implements NostriaService {
         info = {};
       }
 
-      // This will fail for brand new accounts, only for existing.
+      // CRITICAL: Always fetch fresh metadata from relay first
+      // This prevents using stale profile data from storage
       const metadataEvent = await this.accountRelay.getEventByPubkeyAndKind(pubkey, kinds.Metadata);
 
       let metadata: NostrRecord | null | undefined = null;
@@ -239,11 +240,22 @@ export class NostrService implements NostriaService {
         this.accountState.addToCache(metadata.event.pubkey, metadata);
         this.accountState.profile.set(metadata);
 
-        this.logger.info('Found user metadata', { metadata });
+        this.logger.info('Found user metadata from relay', { metadata });
         this.appState.loadingMessage.set('Found your profile! 👍');
         await this.storage.saveEvent(metadata.event);
       } else {
-        this.logger.warn('No metadata found for user');
+        // Fallback to storage only if relay fetch completely fails
+        this.logger.warn('Could not fetch metadata from relay, falling back to storage');
+        const storedMetadataEvent = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Metadata);
+        
+        if (storedMetadataEvent) {
+          metadata = this.data.toRecord(storedMetadataEvent);
+          this.accountState.addToCache(metadata.event.pubkey, metadata);
+          this.accountState.profile.set(metadata);
+          this.logger.info('Using stored metadata as fallback');
+        } else {
+          this.logger.warn('No metadata found for user in relay or storage');
+        }
       }
 
       // After loading the relays and setting them, we load the following list:
@@ -378,21 +390,21 @@ export class NostrService implements NostriaService {
   }
 
   private async loadAccountFollowing(pubkey: string) {
-    let followingEvent = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
+    // CRITICAL: Always fetch from relay first to get the latest following list
+    // This prevents overwriting changes made in other Nostria instances
+    let followingEvent = await this.accountRelay.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
 
-    if (!followingEvent) {
-      followingEvent = await this.accountRelay.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
-
-      if (followingEvent) {
-        await this.storage.saveEvent(followingEvent);
-      }
-    } else {
-      // Queue up refresh of this event in the background
-      this.accountRelay.getEventByPubkeyAndKind(pubkey, kinds.Contacts).then(async evt => {
-        if (evt) {
-          this.accountState.parseFollowingList(evt);
-        }
+    if (followingEvent) {
+      // Save the latest event to storage
+      await this.storage.saveEvent(followingEvent);
+      this.logger.info('Loaded fresh following list from relay', {
+        pubkey,
+        followingCount: followingEvent.tags.filter(t => t[0] === 'p').length,
       });
+    } else {
+      // Fallback to storage only if relay fetch completely fails
+      this.logger.warn('Could not fetch following list from relay, falling back to storage');
+      followingEvent = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
     }
 
     if (followingEvent) {
@@ -402,22 +414,21 @@ export class NostrService implements NostriaService {
   }
 
   private async loadAccountMuteList(pubkey: string) {
-    let muteListEvent = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Mutelist);
+    // CRITICAL: Always fetch from relay first to get the latest mute list
+    // This prevents overwriting changes made in other Nostria instances
+    let muteListEvent = await this.accountRelay.getEventByPubkeyAndKind(pubkey, kinds.Mutelist);
 
-    if (!muteListEvent) {
-      muteListEvent = await this.accountRelay.getEventByPubkeyAndKind(pubkey, kinds.Mutelist);
-
-      if (muteListEvent) {
-        await this.storage.saveEvent(muteListEvent);
-      }
-    } else {
-      // Queue up refresh of this event in the background
-      this.accountRelay.getEventByPubkeyAndKind(pubkey, kinds.Mutelist).then(async evt => {
-        if (evt) {
-          this.accountState.muteList.set(evt);
-          await this.storage.saveEvent(evt);
-        }
+    if (muteListEvent) {
+      // Save the latest event to storage
+      await this.storage.saveEvent(muteListEvent);
+      this.logger.info('Loaded fresh mute list from relay', {
+        pubkey,
+        mutedCount: muteListEvent.tags.filter(t => t[0] === 'p').length,
       });
+    } else {
+      // Fallback to storage only if relay fetch completely fails
+      this.logger.warn('Could not fetch mute list from relay, falling back to storage');
+      muteListEvent = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Mutelist);
     }
 
     if (muteListEvent) {
