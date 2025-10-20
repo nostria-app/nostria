@@ -270,12 +270,21 @@ export class NotificationsComponent implements OnInit {
    */
   viewEvent(notification: Notification): void {
     const contentNotif = notification as ContentNotification;
+
+    // For zaps with a specific event, navigate to that event
     if (contentNotif.eventId && contentNotif.authorPubkey) {
       const neventId = nip19.neventEncode({
         id: contentNotif.eventId,
         author: contentNotif.authorPubkey,
       });
       this.router.navigate(['/e', neventId]);
+      return;
+    }
+
+    // For profile zaps (no specific event), navigate to recipient's profile
+    if (contentNotif.type === NotificationType.ZAP && contentNotif.metadata?.recipientPubkey) {
+      const npubId = nip19.npubEncode(contentNotif.metadata.recipientPubkey);
+      this.router.navigate(['/p', npubId]);
     }
   }
 
@@ -298,10 +307,21 @@ export class NotificationsComponent implements OnInit {
 
   /**
    * Get the event ID from a content notification
+   * For profile zaps without an event, returns a placeholder to indicate it's clickable
    */
   getEventId(notification: Notification): string | undefined {
     if (this.isContentNotificationWithData(notification)) {
-      return (notification as ContentNotification).eventId;
+      const contentNotif = notification as ContentNotification;
+
+      // If there's an eventId, return it
+      if (contentNotif.eventId) {
+        return contentNotif.eventId;
+      }
+
+      // For profile zaps without an eventId, return a placeholder to indicate it's clickable
+      if (contentNotif.type === NotificationType.ZAP && contentNotif.metadata?.recipientPubkey) {
+        return 'profile-zap'; // Placeholder to indicate clickable
+      }
     }
     return undefined;
   }

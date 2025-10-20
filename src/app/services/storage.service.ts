@@ -174,6 +174,9 @@ export interface ContentNotification extends Notification {
     content?: string; // For mentions/replies, the text content
     reactionContent?: string; // For reactions, the emoji/content
     zapAmount?: number; // For zaps, the amount in sats
+    zappedEventId?: string; // For zaps, the event that was zapped (if any)
+    zapReceiptId?: string; // For zaps, the zap receipt event ID (kind 9735)
+    recipientPubkey?: string; // For profile zaps, the recipient's pubkey
   };
 }
 

@@ -115,8 +115,23 @@
   <div class="setting-item danger-zone">
     <div>
       <h2>Danger Zone</h2>
-      <p>This will delete all your local app data and reload the application.</p>
+
+      <div class="danger-action">
+        <div>
+          <h3>Reset Notifications Cache</h3>
+          <p>This will delete all cached notifications from local storage. Your notifications will be refetched from
+            relays.</p>
+        </div>
+        <button mat-flat-button class="danger-button" (click)="resetNotificationsCache()">Reset Notifications</button>
+      </div>
+
+      <div class="danger-action">
+        <div>
+          <h3>Wipe All Data</h3>
+          <p>This will delete all your local app data and reload the application.</p>
+        </div>
+        <button mat-flat-button class="wipe-data-button" (click)="wipeData()">Wipe Data</button>
+      </div>
     </div>
-    <button mat-flat-button class="wipe-data-button" (click)="wipeData()">Wipe Data</button>
   </div>
 </div>
