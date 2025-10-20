@@ -1,4 +1,4 @@
-import { effect, inject, Injectable, signal } from '@angular/core';
+import { effect, inject, Injectable, signal, untracked } from '@angular/core';
 import { LayoutService } from './layout.service';
 import { isNip05, queryProfile } from 'nostr-tools/nip05';
 import { AccountStateService } from './account-state.service';
@@ -14,11 +14,20 @@ export class SearchService {
   // Search results from cached profiles
   searchResults = signal<NostrRecord[]>([]);
 
+  // Track last processed query to prevent redundant searches
+  #lastQuery = '';
+
   constructor() {
     effect(async () => {
       const query = this.layout.query();
-      let searchValue = query?.trim();
+      const searchValue = query?.trim() || '';
 
+      // Skip if query hasn't changed
+      if (searchValue === this.#lastQuery) {
+        return;
+      }
+
+      this.#lastQuery = searchValue;
       console.log('SearchService effect triggered with query:', query);
 
       if (searchValue) {
@@ -30,17 +39,22 @@ export class SearchService {
           'results for query:',
           searchValue
         );
-        this.searchResults.set(cachedResults);
+        
+        // Use untracked to prevent creating reactive dependencies
+        untracked(() => {
+          this.searchResults.set(cachedResults);
+        });
 
         // If query looks like an email (NIP-05), also try NIP-05 lookup
         if (searchValue.indexOf('@') > -1) {
-          if (!searchValue.startsWith('_')) {
-            searchValue = '_' + searchValue;
+          let nip05Value = searchValue;
+          if (!nip05Value.startsWith('_')) {
+            nip05Value = '_' + nip05Value;
           }
 
-          if (isNip05(searchValue)) {
+          if (isNip05(nip05Value)) {
             try {
-              const profile = await queryProfile(searchValue);
+              const profile = await queryProfile(nip05Value);
               console.log('Profile:', profile);
 
               if (profile?.pubkey) {
@@ -57,7 +71,9 @@ export class SearchService {
         }
       } else {
         // Clear results when query is empty
-        this.searchResults.set([]);
+        untracked(() => {
+          this.searchResults.set([]);
+        });
       }
     });
   }
@@ -66,11 +82,15 @@ export class SearchService {
   selectSearchResult(profile: NostrRecord): void {
     this.layout.openProfile(profile.event.pubkey);
     this.layout.toggleSearch();
-    this.searchResults.set([]);
+    untracked(() => {
+      this.searchResults.set([]);
+    });
   }
 
   // Method to clear search results
   clearResults(): void {
-    this.searchResults.set([]);
+    untracked(() => {
+      this.searchResults.set([]);
+    });
   }
 }
