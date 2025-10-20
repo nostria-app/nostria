@@ -1341,7 +1341,7 @@ export class StorageService {
       // Get all notifications sorted by timestamp (newest first)
       const tx = this.db.transaction('notifications', 'readonly');
       const index = tx.store.index('by-timestamp');
-      return await index.getAll(undefined, 100); // Limit to 100 most recent notifications
+      return await index.getAll(); // No limit - retrieve all stored notifications
     } catch (error) {
       this.logger.error('Error getting all notifications', error);
       return [];

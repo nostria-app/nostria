@@ -5,6 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTabsModule } from '@angular/material/tabs';
+import { ScrollingModule } from '@angular/cdk/scrolling';
 import { RelayPublishStatusComponent } from '../../components/relay-publish-status/relay-publish-status.component';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -38,6 +39,7 @@ const NOTIFICATION_FILTERS_KEY = 'nostria-notification-filters';
     MatIconModule,
     MatDividerModule,
     MatTabsModule,
+    ScrollingModule,
     RelayPublishStatusComponent,
     MatMenuModule,
     MatTooltipModule,
@@ -324,6 +326,14 @@ export class NotificationsComponent implements OnInit {
       }
     }
     return undefined;
+  }
+
+  /**
+   * TrackBy function for virtual scrolling performance
+   * Returns unique notification ID for Angular change detection
+   */
+  trackByNotificationId(_index: number, notification: Notification): string {
+    return notification.id;
   }
 
   /**
