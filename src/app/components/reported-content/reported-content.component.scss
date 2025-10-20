@@ -147,6 +147,74 @@
   }
 }
 
+// Dark mode overrides for report type chips - using !important to override specificity
+:host-context(.dark) .report-chips {
+  .report-chip {
+    &.report-type-nudity {
+      background-color: rgba(244, 67, 54, 0.2) !important;
+      color: #ef5350 !important;
+
+      mat-icon {
+        color: #ef5350 !important;
+      }
+    }
+
+    &.report-type-malware {
+      background-color: rgba(255, 152, 0, 0.2) !important;
+      color: #ffa726 !important;
+
+      mat-icon {
+        color: #ffa726 !important;
+      }
+    }
+
+    &.report-type-profanity {
+      background-color: rgba(156, 39, 176, 0.2) !important;
+      color: #ba68c8 !important;
+
+      mat-icon {
+        color: #ba68c8 !important;
+      }
+    }
+
+    &.report-type-illegal {
+      background-color: rgba(211, 47, 47, 0.2) !important;
+      color: #e57373 !important;
+
+      mat-icon {
+        color: #e57373 !important;
+      }
+    }
+
+    &.report-type-spam {
+      background-color: rgba(255, 193, 7, 0.2) !important;
+      color: #ffb74d !important;
+
+      mat-icon {
+        color: #ffb74d !important;
+      }
+    }
+
+    &.report-type-impersonation {
+      background-color: rgba(76, 175, 80, 0.2) !important;
+      color: #81c784 !important;
+
+      mat-icon {
+        color: #81c784 !important;
+      }
+    }
+
+    &.report-type-other {
+      background-color: rgba(158, 158, 158, 0.2) !important;
+      color: #bdbdbd !important;
+
+      mat-icon {
+        color: #bdbdbd !important;
+      }
+    }
+  }
+}
+
 .reported-actions {
   display: flex;
   gap: 1rem;
