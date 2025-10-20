@@ -82,7 +82,7 @@
       <h4 class="thread-label">Original Post</h4>
       <mat-card appearance="outlined" class="root-event">
         <app-event-header [event]="rootRecordData.event"></app-event-header>
-        <mat-card-content>
+        <mat-card-content [class.collapsed]="!isRootEventExpanded()">
           @if (rootRecordData.event.kind === 20) {
           <app-photo-event [event]="rootRecordData.event"></app-photo-event>
           }
@@ -109,6 +109,17 @@
           <app-content [content]="rootRecordData.data" [event]="rootRecordData.event"></app-content>
           }
         </mat-card-content>
+        @if (!isRootEventExpanded()) {
+        <button mat-button class="show-more-btn" (click)="isRootEventExpanded.set(true)">
+          <mat-icon>expand_more</mat-icon>
+          Show more
+        </button>
+        } @else {
+        <button mat-button class="show-less-btn" (click)="isRootEventExpanded.set(false)">
+          <mat-icon>expand_less</mat-icon>
+          Show less
+        </button>
+        }
       </mat-card>
     </div>
 
@@ -128,7 +139,7 @@
       }
       <mat-card appearance="outlined" class="parent-event">
         <app-event-header [event]="parentRecordData.event"></app-event-header>
-        <mat-card-content>
+        <mat-card-content [class.collapsed]="!isParentEventExpanded()">
           @if (parentRecordData.event.kind === 20) {
           <app-photo-event [event]="parentRecordData.event"></app-photo-event>
           }
@@ -157,6 +168,17 @@
           <app-content [content]="parentRecordData.data" [event]="parentRecordData.event"></app-content>
           }
         </mat-card-content>
+        @if (!isParentEventExpanded()) {
+        <button mat-button class="show-more-btn" (click)="isParentEventExpanded.set(true)">
+          <mat-icon>expand_more</mat-icon>
+          Show more
+        </button>
+        } @else {
+        <button mat-button class="show-less-btn" (click)="isParentEventExpanded.set(false)">
+          <mat-icon>expand_less</mat-icon>
+          Show less
+        </button>
+        }
       </mat-card>
     </div>
     }

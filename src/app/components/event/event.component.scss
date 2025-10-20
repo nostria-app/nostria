@@ -259,6 +259,39 @@
 
   mat-card-content {
     padding-bottom: 8px;
+
+    &.collapsed {
+      max-height: 6em; // Approximately 4 lines at 1.5em line height
+      overflow: hidden;
+      position: relative;
+
+      &::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 2em;
+        background: linear-gradient(
+          to bottom,
+          transparent,
+          var(--mat-sys-surface-container-low)
+        );
+        pointer-events: none;
+      }
+    }
+  }
+
+  .show-more-btn,
+  .show-less-btn {
+    width: 100%;
+    margin-top: 8px;
+    color: var(--mat-sys-primary);
+    justify-content: center;
+
+    mat-icon {
+      margin-right: 4px;
+    }
   }
 }
 
@@ -268,6 +301,39 @@
 
   mat-card-content {
     padding-bottom: 8px;
+
+    &.collapsed {
+      max-height: 6em; // Approximately 4 lines at 1.5em line height
+      overflow: hidden;
+      position: relative;
+
+      &::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 2em;
+        background: linear-gradient(
+          to bottom,
+          transparent,
+          var(--mat-sys-surface-container-low)
+        );
+        pointer-events: none;
+      }
+    }
+  }
+
+  .show-more-btn,
+  .show-less-btn {
+    width: 100%;
+    margin-top: 8px;
+    color: var(--mat-sys-primary);
+    justify-content: center;
+
+    mat-icon {
+      margin-right: 4px;
+    }
   }
 }
 
@@ -369,6 +435,20 @@
       span {
         font-size: 10px; // Further reduced from 11px
       }
+    }
+  }
+}
+
+// Dark mode adjustments for collapsed content gradient
+:host-context(.dark) {
+  .root-event,
+  .parent-event {
+    mat-card-content.collapsed::after {
+      background: linear-gradient(
+        to bottom,
+        transparent,
+        var(--mat-sys-surface-container-low)
+      ) !important;
     }
   }
 }

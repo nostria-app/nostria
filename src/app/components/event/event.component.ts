@@ -118,6 +118,10 @@ export class EventComponent {
   parentEvent = signal<Event | null>(null);
   rootEvent = signal<Event | null>(null);
 
+  // Expansion state for thread context in timeline mode
+  isRootEventExpanded = signal<boolean>(false);
+  isParentEventExpanded = signal<boolean>(false);
+
   // Check if this event is currently the one being displayed on the event page
   isCurrentlySelected = computed<boolean>(() => {
     const currentEvent = this.event() || this.record()?.event;
