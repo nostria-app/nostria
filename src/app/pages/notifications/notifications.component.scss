@@ -163,9 +163,51 @@
   transition: background-color 0.2s;
   min-width: 0; // Enable proper flex shrinking
   overflow: hidden; // Prevent horizontal overflow
+  position: relative;
+
+  // Left accent border based on notification type
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
 
   &:hover {
     background: var(--mat-sys-surface-container-high);
+
+    &::before {
+      opacity: 1;
+    }
+  }
+
+  // Type-specific accent colors
+  &[data-notification-type="zap"]::before {
+    background: linear-gradient(180deg, #f7931a 0%, #ffb347 100%);
+  }
+
+  &[data-notification-type="newfollower"]::before {
+    background: linear-gradient(180deg, #10b981 0%, #34d399 100%);
+  }
+
+  &[data-notification-type="mention"]::before {
+    background: linear-gradient(180deg, #8b5cf6 0%, #a78bfa 100%);
+  }
+
+  &[data-notification-type="repost"]::before {
+    background: linear-gradient(180deg, #3b82f6 0%, #60a5fa 100%);
+  }
+
+  &[data-notification-type="reply"]::before {
+    background: linear-gradient(180deg, #0ea5e9 0%, #38bdf8 100%);
+  }
+
+  &[data-notification-type="reaction"]::before {
+    background: linear-gradient(180deg, #ec4899 0%, #f472b6 100%);
   }
 
   &.clickable .notification-content {
@@ -191,13 +233,83 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    min-width: 40px;
-    height: 40px;
+    min-width: 48px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    transition: all 0.3s ease;
 
-    .notification-bell {
+    .notification-icon {
       font-size: 24px;
       width: 24px;
       height: 24px;
+    }
+
+    // Zap notifications - Bitcoin orange/gold
+    &[data-icon-type="zap"] {
+      background: linear-gradient(135deg, #f7931a 0%, #ffb347 100%);
+      box-shadow: 0 2px 8px rgba(247, 147, 26, 0.3);
+
+      .notification-icon {
+        color: #ffffff;
+        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+      }
+    }
+
+    // New follower - Cheerful green/teal
+    &[data-icon-type="newfollower"] {
+      background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+
+      .notification-icon {
+        color: #ffffff;
+      }
+    }
+
+    // Mentions - Purple/violet
+    &[data-icon-type="mention"] {
+      background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
+      box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+
+      .notification-icon {
+        color: #ffffff;
+      }
+    }
+
+    // Reposts - Blue
+    &[data-icon-type="repost"] {
+      background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+
+      .notification-icon {
+        color: #ffffff;
+      }
+    }
+
+    // Replies - Sky blue
+    &[data-icon-type="reply"] {
+      background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%);
+      box-shadow: 0 2px 8px rgba(14, 165, 233, 0.3);
+
+      .notification-icon {
+        color: #ffffff;
+      }
+    }
+
+    // Reactions (likes) - Pink/rose
+    &[data-icon-type="reaction"] {
+      background: linear-gradient(135deg, #ec4899 0%, #f472b6 100%);
+      box-shadow: 0 2px 8px rgba(236, 72, 153, 0.3);
+
+      .notification-icon {
+        color: #ffffff;
+      }
+    }
+
+    // Hover effect - slightly enlarge
+    &:hover {
+      transform: scale(1.1);
     }
   }
 
@@ -438,5 +550,42 @@
 
   &:hover {
     background-color: rgba(var(--mat-sys-primary-rgb), 0.08);
+  }
+}
+
+// Dark mode adjustments
+:host-context(.dark) {
+  .notification-icon-wrapper {
+
+    // Adjust gradients for better contrast in dark mode
+    &[data-icon-type="zap"] {
+      background: linear-gradient(135deg, #f7931a 0%, #d97706 100%);
+      box-shadow: 0 2px 12px rgba(247, 147, 26, 0.4);
+    }
+
+    &[data-icon-type="newfollower"] {
+      background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+      box-shadow: 0 2px 12px rgba(16, 185, 129, 0.4);
+    }
+
+    &[data-icon-type="mention"] {
+      background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%);
+      box-shadow: 0 2px 12px rgba(124, 58, 237, 0.4);
+    }
+
+    &[data-icon-type="repost"] {
+      background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+      box-shadow: 0 2px 12px rgba(37, 99, 235, 0.4);
+    }
+
+    &[data-icon-type="reply"] {
+      background: linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%);
+      box-shadow: 0 2px 12px rgba(2, 132, 199, 0.4);
+    }
+
+    &[data-icon-type="reaction"] {
+      background: linear-gradient(135deg, #db2777 0%, #ec4899 100%);
+      box-shadow: 0 2px 12px rgba(219, 39, 119, 0.4);
+    }
   }
 }
