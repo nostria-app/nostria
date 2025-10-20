@@ -192,6 +192,28 @@
     text-overflow: ellipsis;
   }
 
+  .user-profile-name-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    cursor: pointer;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  .user-profile-npub-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    cursor: pointer;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
   .user-profile-npub {
     color: var(--mat-sys-on-surface-variant);
     font-size: 14px;

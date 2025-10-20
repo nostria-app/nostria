@@ -1,0 +1,114 @@
+<mat-card class="profile-hover-card">
+  @if (isLoading()) {
+  <div class="loading-container">
+    <mat-spinner [diameter]="40"></mat-spinner>
+  </div>
+  } @else if (profile() && !profile()?.isEmpty) {
+  <div class="card-content">
+    <!-- Banner or placeholder -->
+    <div class="banner">
+      @if (profile()?.data?.banner) {
+      <img [src]="profile()!.data!.banner" alt="Banner" class="banner-image" />
+      } @else {
+      <div class="banner-placeholder"></div>
+      }
+    </div>
+
+    <!-- Profile Header -->
+    <div class="profile-header">
+      <a [routerLink]="['/p', npubValue()]" class="avatar-link">
+        @if (profile()?.data?.picture && !imageLoadError()) {
+        @if (settingsService.settings().imageCacheEnabled && profile()?.data?.picture) {
+        <img [src]="getOptimizedImageUrl(profile()!.data!.picture!)" (error)="onImageLoadError()" alt="User Avatar"
+          class="avatar" loading="lazy" />
+        } @else if (profile()?.data?.picture) {
+        <img [src]="profile()!.data!.picture!" (error)="onImageLoadError()" alt="User Avatar" class="avatar"
+          loading="lazy" />
+        }
+        } @else {
+        <mat-icon class="default-avatar">account_circle</mat-icon>
+        }
+      </a>
+
+      <!-- Context menu -->
+      <button mat-icon-button [matMenuTriggerFor]="menu" class="menu-button" (menuOpened)="isMenuOpen.set(true)"
+        (menuClosed)="isMenuOpen.set(false)">
+        <mat-icon>more_horiz</mat-icon>
+      </button>
+
+      <mat-menu #menu="matMenu">
+        <button mat-menu-item (click)="reportProfile()">
+          <mat-icon>flag</mat-icon>
+          <span>Report profile</span>
+        </button>
+        <button mat-menu-item (click)="blockUser()">
+          <mat-icon>block</mat-icon>
+          <span>Block user</span>
+        </button>
+      </mat-menu>
+    </div>
+
+    <!-- Profile Info -->
+    <div class="profile-info">
+      <a [routerLink]="['/p', npubValue()]" class="name-link">
+        <div class="display-name">
+          {{ profile()?.data?.display_name || profile()?.data?.name || 'Anonymous' }}
+        </div>
+      </a>
+      <a [routerLink]="['/p', npubValue()]" class="alias-link">
+        <div class="alias">{{ aliasOrNpub() }}</div>
+      </a>
+    </div>
+
+    <!-- About -->
+    @if (profile()?.data?.about) {
+    <div class="about">
+      {{ profile()!.data!.about }}
+    </div>
+    }
+
+    <!-- Mutual Follows -->
+    @if (getMutualFollowingText()) {
+    <div class="mutual-follows">
+      <mat-icon class="mutual-icon">people</mat-icon>
+      <span>{{ getMutualFollowingText() }}</span>
+    </div>
+    }
+
+    <!-- Actions -->
+    <div class="actions">
+      @if (!isFollowing()) {
+      <button mat-raised-button color="primary" (click)="toggleFollow()" [disabled]="isLoadingFollowing()">
+        @if (isLoadingFollowing()) {
+        <mat-spinner [diameter]="20"></mat-spinner>
+        } @else {
+        <ng-container>
+          <mat-icon>person_add</mat-icon>
+          <span>Follow</span>
+        </ng-container>
+        }
+      </button>
+      } @else {
+      <button mat-raised-button (click)="toggleFollow()" [disabled]="isLoadingFollowing()">
+        @if (isLoadingFollowing()) {
+        <mat-spinner [diameter]="20"></mat-spinner>
+        } @else {
+        <ng-container>
+          <mat-icon>person_remove</mat-icon>
+          <span>Unfollow</span>
+        </ng-container>
+        }
+      </button>
+      }
+      <a [routerLink]="['/p', npubValue()]" mat-stroked-button>
+        View Profile
+      </a>
+    </div>
+  </div>
+  } @else {
+  <div class="error-container">
+    <mat-icon>person_off</mat-icon>
+    <p>Profile not found</p>
+  </div>
+  }
+</mat-card>

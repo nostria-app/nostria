@@ -34,7 +34,8 @@
     @if (view() !== 'name' && view() !== 'tiny') {
     <a [routerLink]="['/p', npubValue()]" class="user-profile-avatar"
       [class.has-custom-tooltip]="view() === 'large' || view() === 'medium' || view() === 'small'"
-      [attr.data-tooltip]="getTooltipContent()" (touchstart)="showTooltipOnTouch($event)">
+      [attr.data-tooltip]="getTooltipContent()" (touchstart)="showTooltipOnTouch($event)" #avatarElement
+      (mouseenter)="onMouseEnter($event, avatarElement)" (mouseleave)="onMouseLeave()">
       @if (isLoading()) {
       <mat-spinner [diameter]="getSpinnerSize()" color="primary"></mat-spinner>
       } @else if (profile()?.data?.picture && !imageLoadError()) {
@@ -67,13 +68,18 @@
     view() !== 'tiny' &&
     view() !== 'name'
     ) {
-    <div class="user-profile-content">
+    <div class="user-profile-content" #contentElement (mouseenter)="onMouseEnter($event, contentElement)"
+      (mouseleave)="onMouseLeave()">
       <!-- Name section -->
-      <app-profile-display-name [pubkey]="pubkey()"></app-profile-display-name>
+      <a [routerLink]="['/p', npubValue()]" class="user-profile-name-link">
+        <app-profile-display-name [pubkey]="pubkey()"></app-profile-display-name>
+      </a>
 
       <!-- NPUB section - only shown in appropriate views -->
       @if (view() === 'list' || view() === 'details') {
-      <div class="user-profile-npub">{{ aliasOrNpub() }}</div>
+      <a [routerLink]="['/p', npubValue()]" class="user-profile-npub-link">
+        <div class="user-profile-npub">{{ aliasOrNpub() }}</div>
+      </a>
       }
 
       <!-- About section - only shown in details view -->
