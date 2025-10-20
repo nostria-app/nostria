@@ -272,11 +272,9 @@
         left: 0;
         right: 0;
         height: 2em;
-        background: linear-gradient(
-          to bottom,
-          transparent,
-          var(--mat-sys-surface-container-low)
-        );
+        background: linear-gradient(to bottom,
+            transparent,
+            var(--mat-sys-surface-container-low));
         pointer-events: none;
       }
     }
@@ -314,11 +312,9 @@
         left: 0;
         right: 0;
         height: 2em;
-        background: linear-gradient(
-          to bottom,
-          transparent,
-          var(--mat-sys-surface-container-low)
-        );
+        background: linear-gradient(to bottom,
+            transparent,
+            var(--mat-sys-surface-container-low));
         pointer-events: none;
       }
     }
@@ -441,14 +437,13 @@
 
 // Dark mode adjustments for collapsed content gradient
 :host-context(.dark) {
+
   .root-event,
   .parent-event {
     mat-card-content.collapsed::after {
-      background: linear-gradient(
-        to bottom,
-        transparent,
-        var(--mat-sys-surface-container-low)
-      ) !important;
+      background: linear-gradient(to bottom,
+          transparent,
+          var(--mat-sys-surface-container-low)) !important;
     }
   }
 }
