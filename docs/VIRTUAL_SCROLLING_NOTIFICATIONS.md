@@ -48,7 +48,7 @@ import { ScrollingModule } from '@angular/cdk/scrolling';
 
 **After** (virtual scrolling):
 ```html
-<cdk-virtual-scroll-viewport [itemSize]="150" class="notification-viewport">
+<cdk-virtual-scroll-viewport [itemSize]="100" class="notification-viewport">
   <div
     *cdkVirtualFor="let notification of contentNotifications(); trackBy: trackByNotificationId"
     class="notification-item"
@@ -96,7 +96,7 @@ The viewport has a fixed height calculated from viewport height minus headers/pa
 
 ### Item Size
 
-Set to `150px` based on the average height of notification items. This value is critical for:
+Set to `100px` based on the actual height of notification items. This value is critical for:
 - Accurate scroll position calculation
 - Smooth scrolling behavior
 - Proper buffer rendering
